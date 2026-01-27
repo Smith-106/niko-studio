@@ -295,7 +295,7 @@ class WriterAgent:
         3. Conflict Development (冲突展开)
         4. Resolution (场景结尾)
         """
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
         
         parser = StrOutputParser()
@@ -369,7 +369,7 @@ class WriterAgent:
     
     async def _run_chain(self, prompt_template: str, variables: dict) -> str:
         """运行单个Chain阶段"""
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
         
         prompt = ChatPromptTemplate.from_messages([
@@ -442,7 +442,7 @@ class WriterAgent:
         word_target: int = 500
     ) -> str:
         """续写功能"""
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
         
         prompt = ChatPromptTemplate.from_messages([
@@ -478,7 +478,7 @@ class WriterAgent:
         rewrite_type: str = "general"
     ) -> str:
         """改写指定段落"""
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
         
         type_guidance = {
@@ -574,7 +574,7 @@ def create_writer_chain(llm):
     这是一个单次调用版本，不使用 Prompt Chaining。
     适合快速测试 Prompt 效果。
     """
-    from langchain.prompts import ChatPromptTemplate
+    from langchain_core.prompts import ChatPromptTemplate
     from langchain_core.output_parsers import StrOutputParser
     
     prompt = ChatPromptTemplate.from_messages([
