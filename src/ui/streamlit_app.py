@@ -93,6 +93,26 @@ def load_messages(conn: sqlite3.Connection, session_id: str) -> list:
     return messages
 
 
+def save_draft(conn: sqlite3.Connection, session_id: str, content: str,
+               lock_scores: dict = None, quality_scores: dict = None) -> int:
+    """保存草稿版本"""
+    c = conn.cursor()
+    # 获取当前最大版本号
+    c.execute("SELECT MAX(version) FROM draft_versions WHERE session_id = ?", (session_id,))
+    result = c.fetchone()
+    current_version = result[0] if result[0] is not None else 0
+    new_version = current_version + 1
+
+    c.execute('''INSERT INTO draft_versions
+                 (session_id, version, content, lock_scores, quality_scores)
+                 VALUES (?, ?, ?, ?, ?)''',
+              (session_id, new_version, content,
+               json.dumps(lock_scores) if lock_scores else None,
+               json.dumps(quality_scores) if quality_scores else None))
+    conn.commit()
+    return new_version
+
+
 # === 初始化 ===
 conn = init_db()
 
@@ -337,8 +357,27 @@ with col_artifacts:
                     st.rerun()
         with col_btn2:
             if st.button("✅ 批准通过", use_container_width=True, type="primary"):
-                st.success("草稿已批准！")
-                # TODO: 保存最终版本
+                # 获取当前评分
+                critique = st.session_state.get("critique_result", {})
+                lock_scores = critique.get("lock_scores", {})
+                quality_scores = critique.get("quality_scores", {})
+
+                draft_content = st.session_state.get("current_draft", "")
+
+                if draft_content:
+                    version = save_draft(conn, st.session_state.session_id, draft_content, lock_scores, quality_scores)
+                    st.success(f"✅ Draft approved and saved as version {version}")
+
+                    # Add system message
+                    sys_msg = f"Draft approved and saved as version v{version}"
+                    st.session_state.messages.append({"role": "assistant", "content": sys_msg})
+                    save_message(conn, st.session_state.session_id, "assistant", sys_msg)
+
+                    # Optional: View All Versions button (user suggested not to rerun, but we can offer it)
+                    # if st.button("View All Versions"):
+                    #    st.rerun()
+                else:
+                    st.warning("当前没有草稿可保存")
 
     with tab2:
         # LOCK 评分雷达图
