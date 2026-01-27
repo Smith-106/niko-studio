@@ -116,20 +116,7 @@ def save_draft(conn: sqlite3.Connection, session_id: str, content: str,
 # === 初始化 ===
 conn = init_db()
 
-# --- Configuration for Status Display (WCAG Compliance) ---
-STATUS_DISPLAY = {
-    "DONE": {"icon": "✅", "text": "Completed", "color": "green", "graph_color": "palegreen"},
-    "WRITING": {"icon": "✏️", "text": "In Progress", "color": "orange", "graph_color": "lightyellow"},
-    "PENDING": {"icon": "⏳", "text": "Pending", "color": "gray", "graph_color": "lightgrey"},
-    "REVIEWING": {"icon": "👀", "text": "Under Review", "color": "blue", "graph_color": "lightblue"},
-    "FAILED": {"icon": "❌", "text": "Failed", "color": "red", "graph_color": "lightcoral"},
-    "UNKNOWN": {"icon": "❓", "text": "Unknown", "color": "gray", "graph_color": "lightgrey"}
-}
-
-def get_status_display(status: str) -> Dict[str, str]:
-    """获取状态显示信息，带容错处理"""
-    status = status.upper() if status else "UNKNOWN"
-    return STATUS_DISPLAY.get(status, STATUS_DISPLAY["UNKNOWN"])
+from src.ui.utils import get_status_display
 
 # Session State 初始化
 if "session_id" not in st.session_state:
@@ -493,7 +480,7 @@ with col_artifacts:
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])
                     # WCAG 1.4.1: Icon included in title
-                    c1.markdown(f"**{status_info['icon']} {scene.get('title', '未命名')}** (`{scene.get('id')}`)")
+                    c1.markdown(f"**{status_info['icon']} {scene.get('title', '未命名')}** (`{scene.get('id')}`")
                     # WCAG 1.4.1: Icon + Text + Code style for status
                     c2.markdown(f"{status_info['icon']} **{status_info['text']}** `{status}`")
                     
