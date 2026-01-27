@@ -19,6 +19,15 @@ try:
 except ImportError:
     HAS_GRAPHVIZ = False
 
+# 尝试导入多语言支持
+try:
+    from ..translations import t
+except ImportError:
+    def t(key):
+        return {
+            "graphviz_legend": "🟢 完成 | 🟡 进行中 | 🔵 审查中 | ⚪ 待处理 | 🔴 失败"
+        }.get(key, key)
+
 
 # --- 1. 数据加载层 (Data Layer) ---
 def load_scenes(task_dir: str = ".task") -> List[Dict[str, Any]]:
@@ -148,7 +157,7 @@ def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
              })
         st.dataframe(pd.DataFrame(dep_data), use_container_width=True)
 
-    st.caption("🟢 完成 | 🟡 进行中 | 🔵 审查中 | ⚪ 待处理 | 🔴 失败")
+    st.caption(t("graphviz_legend"))
 
 
 def render_dependency_graph_builtin(scenes: List[Dict[str, Any]]) -> None:
@@ -207,7 +216,7 @@ def render_dependency_graph_builtin(scenes: List[Dict[str, Any]]) -> None:
              })
         st.dataframe(pd.DataFrame(dep_data), use_container_width=True)
 
-    st.caption("🟢 完成 | 🟡 进行中 | 🔵 审查中 | ⚪ 待处理 | 🔴 失败")
+    st.caption(t("graphviz_legend"))
 
 
 def analyze_parallelization(scenes: List[Dict[str, Any]]) -> Dict[int, List[str]]:

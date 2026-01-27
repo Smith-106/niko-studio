@@ -14,6 +14,15 @@ import pandas as pd
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
+# 尝试导入多语言支持
+try:
+    from translations import t
+except ImportError:
+    def t(key):
+        return {
+            "graphviz_legend": "🟢 完成 | 🟡 进行中 | ⚪ 待处理"
+        }.get(key, key)
+
 # === 配置 ===
 st.set_page_config(
     layout="wide", 
@@ -576,7 +585,7 @@ with col_artifacts:
                     })
                 st.dataframe(pd.DataFrame(dep_data), use_container_width=True)
 
-            st.caption("🟢 完成 | 🟡 进行中 | ⚪ 待处理")
+            st.caption(t("graphviz_legend"))
             
             # 并行分析
             done_ids = {s.get("id") for s in scenes if s.get("status") == "DONE"}
