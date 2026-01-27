@@ -340,7 +340,7 @@ with col_artifacts:
         uploaded_file = st.file_uploader(
             t("upload_help"),
             type=['txt', 'md', 'pdf', 'docx'],
-            help="Context Injection"
+            help=t("context_injection_help")
         )
         if uploaded_file:
             st.success(t("file_loaded", filename=uploaded_file.name))
