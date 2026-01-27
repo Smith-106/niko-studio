@@ -118,10 +118,9 @@ class AgentKnowledgeLayer:
         cursor = conn.cursor()
         
         # Find entities whose name is in the query text
-        cursor.execute("SELECT * FROM entities")
-        for row in cursor:
-            if row["name"].lower() in query_text.lower():
-                results["entities"].append(dict(row))
+        # Optimized: Use SQL instr to check if name is substring of query (case-insensitive)
+        cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
+        results["entities"] = [dict(row) for row in cursor.fetchall()]
                 
         # If specific filters provided
         if entity_filter:
