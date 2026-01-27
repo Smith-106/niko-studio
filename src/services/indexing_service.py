@@ -21,6 +21,7 @@ except ImportError:
 
 try:
     import sqlite_vec
+    logger.info("sqlite-vec module imported successfully.")
 except ImportError:
     sqlite_vec = None
     logger.warning("sqlite-vec not installed. Vector search optimization disabled.")
@@ -46,9 +47,13 @@ class IndexingService:
 
         # Load vector extension if available
         if sqlite_vec:
-            conn.enable_load_extension(True)
-            sqlite_vec.load(conn)
-            conn.enable_load_extension(False)
+            try:
+                conn.enable_load_extension(True)
+                sqlite_vec.load(conn)
+                conn.enable_load_extension(False)
+                logger.debug("sqlite-vec extension loaded in SQLite connection.")
+            except Exception as e:
+                logger.error(f"Failed to load sqlite-vec extension: {e}")
 
         cursor = conn.cursor()
         
@@ -214,12 +219,14 @@ class IndexingService:
                             })
 
                 vector_search_success = True
+                logger.debug("Successfully performed optimized vector search.")
 
             except Exception as e:
                 logger.error(f"Vector search failed, falling back to brute-force: {e}")
                 vector_search_success = False
 
         if not vector_search_success:
+            logger.info("Performing brute-force search (fallback).")
             cursor.execute("SELECT id, content, source_type, embedding FROM document_chunks WHERE embedding IS NOT NULL")
             
             for row in cursor:
