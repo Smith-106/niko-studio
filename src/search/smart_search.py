@@ -1,6 +1,7 @@
 import logging
 import sqlite3
 import json
+import concurrent.futures
 from typing import List, Dict, Any, Optional
 from .vector_search import VectorSearch
 
@@ -14,6 +15,7 @@ class SmartSearch:
 
     def __init__(self, vector_search: VectorSearch):
         self.vector_search = vector_search
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
     def search(
         self,
@@ -29,19 +31,33 @@ class SmartSearch:
             type_filter: Filter by item type (memory, chunk).
             top_k: Number of results to return.
         """
-        # 1. Semantic Search
-        semantic_results = self.vector_search.search(
+        # Execute Semantic and Keyword search in parallel
+        future_semantic = self._executor.submit(
+            self.vector_search.search,
+            query,
+            type_filter=type_filter,
+            top_k=top_k
+        )
+        future_keyword = self._executor.submit(
+            self._keyword_search,
             query,
             type_filter=type_filter,
             top_k=top_k
         )
 
+        # 1. Semantic Search
+        try:
+            semantic_results = future_semantic.result()
+        except Exception as e:
+            logger.error(f"Semantic search failed: {e}")
+            semantic_results = []
+
         # 2. Keyword Search (Fuzzy-ish)
-        keyword_results = self._keyword_search(
-            query,
-            type_filter=type_filter,
-            top_k=top_k
-        )
+        try:
+            keyword_results = future_keyword.result()
+        except Exception as e:
+            logger.error(f"Keyword search failed: {e}")
+            keyword_results = []
 
         # 3. Fuse Results (RRF)
         return self._rrf_merge(semantic_results, keyword_results, k=60)[:top_k]
