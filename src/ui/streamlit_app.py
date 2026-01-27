@@ -86,6 +86,12 @@ def init_db() -> sqlite3.Connection:
     return conn
 
 
+# Cache the service instance to avoid reloading models
+@st.cache_resource
+def get_indexing_service():
+    return IndexingService(DB_PATH)
+
+
 def save_message(conn: sqlite3.Connection, session_id: str, role: str, 
                  content: str, agent_name: str = None, thought_process: dict = None):
     """保存消息到数据库"""
@@ -403,11 +409,6 @@ with col_artifacts:
                         chunks = text_splitter.split_text(text)
 
                         # Indexing
-                        # Cache the service instance to avoid reloading models
-                        @st.cache_resource
-                        def get_indexing_service():
-                            return IndexingService(DB_PATH)
-
                         service = get_indexing_service()
                         session_id = st.session_state.session_id
                         # Sanitize filename

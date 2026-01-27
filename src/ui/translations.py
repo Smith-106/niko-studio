@@ -130,6 +130,10 @@ TRANSLATIONS = {
         "en": "Support PDF/MD/TXT/DOCX",
         "zh": "支持 PDF/MD/TXT/DOCX"
     },
+    "context_injection_help": {
+        "en": "Uploaded files will be indexed for RAG context injection",
+        "zh": "上传的文件将被索引用于 RAG 上下文注入"
+    },
     "file_loaded": {
         "en": "✅ Loaded: {filename}",
         "zh": "✅ 已加载: {filename}"
