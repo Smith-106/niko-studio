@@ -26,7 +26,6 @@ from src.workflow.state import (
 )
 from src.workflow.base_state import BaseState
 
-load_dotenv()
 
 @AdapterRegistry.register(DomainType.NOVEL.value)
 class NovelAdapter(BaseDomainAdapter):
