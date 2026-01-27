@@ -281,7 +281,7 @@ def render_scene_dashboard() -> None:
     
     if not scenes:
         st.warning(t("no_scenes_warning"))
-        st.info("💡 Tip: Run Architect Agent to generate outline.")
+        st.info(t("architect_tip"))
         return
     
     # 全局指标
