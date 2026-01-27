@@ -19,6 +19,22 @@ except ImportError:
     HAS_GRAPHVIZ = False
 
 
+# --- Configuration ---
+STATUS_DISPLAY = {
+    "DONE": {"icon": "✅", "text": "Completed", "color": "green", "graph_color": "palegreen"},
+    "WRITING": {"icon": "✏️", "text": "In Progress", "color": "orange", "graph_color": "lightyellow"},
+    "PENDING": {"icon": "⏳", "text": "Pending", "color": "gray", "graph_color": "lightgrey"},
+    "REVIEWING": {"icon": "👀", "text": "Under Review", "color": "blue", "graph_color": "lightblue"},
+    "FAILED": {"icon": "❌", "text": "Failed", "color": "red", "graph_color": "lightcoral"},
+    "UNKNOWN": {"icon": "❓", "text": "Unknown", "color": "gray", "graph_color": "lightgrey"}
+}
+
+def get_status_display(status: str) -> Dict[str, str]:
+    """获取状态显示信息，带容错处理"""
+    status = status.upper() if status else "UNKNOWN"
+    return STATUS_DISPLAY.get(status, STATUS_DISPLAY["UNKNOWN"])
+
+
 # --- 1. 数据加载层 (Data Layer) ---
 def load_scenes(task_dir: str = ".task") -> List[Dict[str, Any]]:
     """
@@ -101,24 +117,17 @@ def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
     # 创建节点
     for s in scenes:
         status = s.get("status", "PENDING")
+        status_info = get_status_display(status)
         
-        # 状态颜色映射
-        colors = {
-            "DONE": "palegreen",
-            "WRITING": "lightyellow",
-            "REVIEWING": "lightblue",
-            "PENDING": "lightgrey",
-            "FAILED": "lightcoral"
-        }
-        color = colors.get(status, "lightgrey")
-        
-        # 节点标签
+        # 节点标签 (包含状态图标和文本)
         lock_scores = s.get("lock_scores", {})
         total_lock = sum(lock_scores.get(k, 0) for k in ["L", "O", "C", "K"])
         title = s.get("title", "")[:15]
-        label = f"{s['id']}\\n{title}\\n(LOCK: {total_lock})"
         
-        graph.node(s['id'], label=label, fillcolor=color)
+        # WCAG 1.4.1 compliance: Include icon and status text
+        label = f"{status_info['icon']} {s['id']}\\n{title}\\n{status_info['text']}\\n(LOCK: {total_lock})"
+
+        graph.node(s['id'], label=label, fillcolor=status_info['graph_color'])
     
     # 创建边 (依赖关系)
     scene_ids = {s['id'] for s in scenes}
@@ -143,24 +152,22 @@ def render_dependency_graph_builtin(scenes: List[Dict[str, Any]]) -> None:
     dot_lines.append("  rankdir=LR;")
     dot_lines.append('  node [shape=box, style=filled];')
     
-    status_styles = {
-        "DONE": 'fillcolor="#c8e6c9"',
-        "WRITING": 'fillcolor="#fff9c4"',
-        "REVIEWING": 'fillcolor="#bbdefb"',
-        "PENDING": 'fillcolor="#e0e0e0"',
-        "FAILED": 'fillcolor="#ffcdd2"'
-    }
-    
     for s in scenes:
         sid = s.get("id", "???")
         title = s.get("title", "")[:12]
         status = s.get("status", "PENDING")
-        style = status_styles.get(status, 'fillcolor="#e0e0e0"')
+        status_info = get_status_display(status)
         
         lock_scores = s.get("lock_scores", {})
         total = sum(lock_scores.get(k, 0) for k in ["L", "O", "C", "K"])
         
-        dot_lines.append(f'  "{sid}" [label="{sid}\\n{title}\\n(LOCK:{total})", {style}];')
+        # WCAG 1.4.1 compliance: Include icon and status text
+        label = f"{status_info['icon']} {sid}\\n{title}\\n{status_info['text']}\\n(LOCK:{total})"
+
+        # 使用 graph_color 作为填充色 (需要映射到 hex 或直接使用颜色名，Graphviz 支持常见颜色名)
+        style = f'fillcolor="{status_info["graph_color"]}"'
+
+        dot_lines.append(f'  "{sid}" [label="{label}", {style}];')
     
     for s in scenes:
         sid = s.get("id", "")
@@ -262,9 +269,9 @@ def render_parallelization_analysis(scenes: List[Dict[str, Any]]) -> None:
                 scene = next((s for s in scenes if s.get("id") == sid), None)
                 if scene:
                     status = scene.get("status", "PENDING")
-                    status_icons = {"DONE": "✅", "WRITING": "✍️", "PENDING": "⏳"}
-                    icon = status_icons.get(status, "❓")
-                    cols[i % len(cols)].markdown(f"{icon} `{sid}`")
+                    status_info = get_status_display(status)
+                    # WCAG 1.4.1 compliance: Include status text
+                    cols[i % len(cols)].markdown(f"{status_info['icon']} `{sid}` ({status_info['text']})")
     
     # JSON 详情
     with st.expander("📋 查看完整层级数据"):
@@ -311,19 +318,17 @@ def render_scene_dashboard() -> None:
     with tab_list:
         for s in scenes:
             status = s.get("status", "PENDING")
-            status_colors = {"DONE": "green", "WRITING": "orange", "REVIEWING": "blue", "PENDING": "gray"}
-            status_icons = {"DONE": "✅", "WRITING": "✍️", "REVIEWING": "🔍", "PENDING": "⏳"}
-            color = status_colors.get(status, "gray")
-            icon = status_icons.get(status, "❓")
+            status_info = get_status_display(status)
             
             with st.container(border=True):
                 c1, c2 = st.columns([3, 1])
                 with c1:
-                    st.subheader(f"{icon} {s.get('id')}: {s.get('title', '未命名')}")
+                    st.subheader(f"{status_info['icon']} {s.get('id')}: {s.get('title', '未命名')}")
                     if "summary" in s:
                         st.caption(f"📝 {s['summary']}")
                 with c2:
-                    st.markdown(f":{color}[**{status}**]")
+                    # WCAG 1.4.1 compliance: Icon + Text + Code style for status
+                    st.markdown(f"{status_info['icon']} **{status_info['text']}** `{status}`")
                     word_count = s.get("word_count", 0)
                     if word_count:
                         st.caption(f"📊 {word_count:,} 字")

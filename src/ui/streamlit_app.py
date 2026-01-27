@@ -116,6 +116,21 @@ def save_draft(conn: sqlite3.Connection, session_id: str, content: str,
 # === 初始化 ===
 conn = init_db()
 
+# --- Configuration for Status Display (WCAG Compliance) ---
+STATUS_DISPLAY = {
+    "DONE": {"icon": "✅", "text": "Completed", "color": "green", "graph_color": "palegreen"},
+    "WRITING": {"icon": "✏️", "text": "In Progress", "color": "orange", "graph_color": "lightyellow"},
+    "PENDING": {"icon": "⏳", "text": "Pending", "color": "gray", "graph_color": "lightgrey"},
+    "REVIEWING": {"icon": "👀", "text": "Under Review", "color": "blue", "graph_color": "lightblue"},
+    "FAILED": {"icon": "❌", "text": "Failed", "color": "red", "graph_color": "lightcoral"},
+    "UNKNOWN": {"icon": "❓", "text": "Unknown", "color": "gray", "graph_color": "lightgrey"}
+}
+
+def get_status_display(status: str) -> Dict[str, str]:
+    """获取状态显示信息，带容错处理"""
+    status = status.upper() if status else "UNKNOWN"
+    return STATUS_DISPLAY.get(status, STATUS_DISPLAY["UNKNOWN"])
+
 # Session State 初始化
 if "session_id" not in st.session_state:
     st.session_state.session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -473,15 +488,14 @@ with col_artifacts:
             # 渲染场景卡片
             for scene in scenes:
                 status = scene.get("status", "PENDING")
-                status_colors = {"DONE": "green", "WRITING": "orange", "PENDING": "gray"}
-                status_icons = {"DONE": "✅", "WRITING": "✍️", "PENDING": "⏳"}
-                color = status_colors.get(status, "gray")
-                icon = status_icons.get(status, "❓")
+                status_info = get_status_display(status)
                 
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])
-                    c1.markdown(f"**{icon} {scene.get('title', '未命名')}** (`{scene.get('id')}`")
-                    c2.markdown(f":{color}[{status}]")
+                    # WCAG 1.4.1: Icon included in title
+                    c1.markdown(f"**{status_info['icon']} {scene.get('title', '未命名')}** (`{scene.get('id')}`")
+                    # WCAG 1.4.1: Icon + Text + Code style for status
+                    c2.markdown(f"{status_info['icon']} **{status_info['text']}** `{status}`")
                     
                     lock_scores = scene.get("lock_scores", {})
                     if lock_scores and any(lock_scores.values()):
@@ -502,18 +516,17 @@ with col_artifacts:
             dot_lines.append("  rankdir=LR;")
             dot_lines.append('  node [shape=box, style=filled];')
             
-            status_styles = {
-                "DONE": 'fillcolor="#c8e6c9"',
-                "WRITING": 'fillcolor="#fff9c4"',
-                "PENDING": 'fillcolor="#e0e0e0"'
-            }
-            
             for scene in scenes:
                 sid = scene.get("id", "???")
                 title = scene.get("title", "")[:12]
                 status = scene.get("status", "PENDING")
-                style = status_styles.get(status, 'fillcolor="#e0e0e0"')
-                dot_lines.append(f'  "{sid}" [label="{sid}\\n{title}", {style}];')
+                status_info = get_status_display(status)
+
+                # WCAG 1.4.1 compliance: Include icon and status text
+                label = f"{status_info['icon']} {sid}\\n{title}\\n{status_info['text']}"
+
+                style = f'fillcolor="{status_info["graph_color"]}"'
+                dot_lines.append(f'  "{sid}" [label="{label}", {style}];')
             
             for scene in scenes:
                 sid = scene.get("id", "")
