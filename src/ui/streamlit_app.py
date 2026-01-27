@@ -262,12 +262,18 @@ with col_chat:
                 st.write(t("starting_langgraph"))
                 
                 # 构造初始状态
+                # Parse "L1: ..." -> 1
+                try:
+                    level_int = int(work_mode.split(":")[0].replace("L", ""))
+                except:
+                    level_int = 3
+
                 initial_state = {
                     "user_idea": user_input,
                     "revision_count": 0,
-                    "workflow_mode": work_mode,
+                    "workflow_level": level_int,
                     "model_name": model_name,
-                    "max_loops": max_loops
+                    "max_revisions": max_loops
                 }
                 
                 # 流式执行
