@@ -31,19 +31,39 @@ st.set_page_config(
 DB_PATH = os.path.join(os.path.dirname(__file__), "local_memory.db")
 
 
-@st.cache_data(ttl=5)
-def load_scenes(task_dir: str) -> List[Dict[str, Any]]:
+def get_directory_state(task_dir: str) -> tuple:
+    """Get a signature of the directory state (filenames and mtimes)."""
+    if not os.path.exists(task_dir):
+        return ()
+    # Only check SCENE-*.json as per logic
+    files = sorted(glob.glob(os.path.join(task_dir, "SCENE-*.json")))
+    state = []
+    for f in files:
+        try:
+            state.append((f, os.path.getmtime(f)))
+        except OSError:
+            pass
+    return tuple(state)
+
+
+@st.cache_data
+def _load_scenes_cached(task_dir: str, state_token: tuple) -> List[Dict[str, Any]]:
     """从 .task 目录加载场景文件 (Cached)"""
     scenes = []
-    if os.path.exists(task_dir):
-        for filepath in sorted(glob.glob(os.path.join(task_dir, "SCENE-*.json"))):
-            try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    scene = json.load(f)
-                    scenes.append(scene)
-            except:
-                pass
+    # Use state_token to iterate files, avoiding redundant glob
+    for filepath, _ in state_token:
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                scene = json.load(f)
+                scenes.append(scene)
+        except:
+            pass
     return scenes
+
+
+def load_scenes(task_dir: str) -> List[Dict[str, Any]]:
+    state_token = get_directory_state(task_dir)
+    return _load_scenes_cached(task_dir, state_token)
 
 
 def init_db() -> sqlite3.Connection:
