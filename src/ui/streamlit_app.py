@@ -263,9 +263,9 @@ with col_chat:
                 
                 # Parse work_mode string to int level (e.g. "L1: ..." -> 1)
                 try:
-                    wf_level = int(work_mode.split(":")[0].replace("L", ""))
+                    level_int = int(work_mode.split(":")[0].replace("L", ""))
                 except:
-                    wf_level = 3
+                    level_int = 3
 
                 # Update config with UI params
                 config = DEFAULT_CONFIG.copy()
@@ -278,7 +278,7 @@ with col_chat:
                 initial_state = {
                     "user_idea": user_input,
                     "revision_count": 0,
-                    "workflow_level": wf_level,
+                    "workflow_level": level_int,
                     "max_revisions": int(max_loops),
                     "metadata": {
                         "model_name": model_name
