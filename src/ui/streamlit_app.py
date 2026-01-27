@@ -12,6 +12,7 @@ import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from src.ui.components.trajectory_viewer import announce_workflow_step, render_execution_summary
+from src.ui.translations import t
 
 # === 配置 ===
 st.set_page_config(
