@@ -11,6 +11,9 @@ from langgraph.checkpoint.memory import MemorySaver
 import os
 from dotenv import load_dotenv
 
+# Load environment variables once at module level (Performance Optimization)
+load_dotenv()
+
 from .base_adapter import (
     BaseDomainAdapter, 
     AdapterRegistry,
@@ -85,7 +88,6 @@ class NovelAdapter(BaseDomainAdapter):
 
     def _get_llm(self):
         """获取LLM实例"""
-        load_dotenv()
         
         google_key = os.getenv("GOOGLE_API_KEY")
         if google_key:
