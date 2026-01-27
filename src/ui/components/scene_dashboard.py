@@ -116,10 +116,16 @@ def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
         # 节点标签
         lock_scores = s.get("lock_scores", {})
         total_lock = sum(lock_scores.get(k, 0) for k in ["L", "O", "C", "K"])
-        title = s.get("title", "")[:15]
-        label = f"{s['id']}\\n{title}\\n(LOCK: {total_lock})"
+        title_short = s.get("title", "")[:15]
+        full_title = s.get("title", t("untitled"))
         
-        graph.node(s['id'], label=label, fillcolor=color)
+        # Accessible Label: ID + Title + [Status] + LOCK
+        label = f"{s['id']}\\n{title_short}\\n[{status}]\\n(LOCK: {total_lock})"
+
+        # Accessible Tooltip
+        tooltip = f"Title: {full_title}\nStatus: {status}\nLOCK Score: {total_lock}/40"
+
+        graph.node(s['id'], label=label, fillcolor=color, tooltip=tooltip)
     
     # 创建边 (依赖关系)
     scene_ids = {s['id'] for s in scenes}
@@ -160,8 +166,11 @@ def render_dependency_graph_builtin(scenes: List[Dict[str, Any]]) -> None:
         
         lock_scores = s.get("lock_scores", {})
         total = sum(lock_scores.get(k, 0) for k in ["L", "O", "C", "K"])
+        full_title = s.get("title", t("untitled"))
+
+        tooltip = f"Title: {full_title} | Status: {status} | LOCK: {total}/40"
         
-        dot_lines.append(f'  "{sid}" [label="{sid}\\n{title}\\n(LOCK:{total})", {style}];')
+        dot_lines.append(f'  "{sid}" [label="{sid}\\n{title}\\n[{status}]\\n(LOCK:{total})", {style}, tooltip="{tooltip}"];')
     
     for s in scenes:
         sid = s.get("id", "")
