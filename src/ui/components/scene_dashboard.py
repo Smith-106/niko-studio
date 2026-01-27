@@ -121,10 +121,11 @@ def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
         graph.node(s['id'], label=label, fillcolor=color)
     
     # 创建边 (依赖关系)
+    scene_ids = {s['id'] for s in scenes}
     for s in scenes:
         deps = s.get("dependencies", [])
         for d in deps:
-            if any(sc['id'] == d for sc in scenes):
+            if d in scene_ids:
                 graph.edge(d, s['id'])
     
     st.graphviz_chart(graph)
