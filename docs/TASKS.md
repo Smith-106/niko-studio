@@ -49,10 +49,10 @@
   - [ ] **[New]** 添加 `Distillation` 節點
 
 ### 2.2 Level 1: Rapid (快速寫作) **[CCW]**
-- [ ] `src/workflow/levels/level1_rapid.py`
-  - [ ] 無工件、無狀態
-  - [ ] 快速修改/潤色
-  - [ ] 直接調用 Writer Agent
+- [x] `src/workflow/levels/level1_rapid.py`
+  - [x] 無工件、無狀態
+  - [x] 快速修改/潤色
+  - [x] 直接調用 Writer Agent
 
 ### 2.3 Level 2: Lightweight (輕量寫作) **[CCW]**
 - [ ] `src/workflow/levels/level2_lite.py`
@@ -61,11 +61,11 @@
   - [ ] `lite-execute` - 統一執行
 
 ### 2.4 Level 3: Standard (標準創作) **[CCW]**
-- [ ] `src/workflow/levels/level3_standard.py`
-  - [ ] `plan` - 完整計劃 (5 階段)
-  - [ ] `plan-verify` - 計劃驗證
-  - [ ] `execute` - 執行
-  - [ ] 會話持久化
+- [x] `src/workflow/levels/level3_standard.py`
+  - [x] `plan` - 完整計劃 (5 階段)
+  - [x] `plan-verify` - 計劃驗證
+  - [x] `execute` - 執行
+  - [x] 會話持久化
 
 ### 2.5 Level 4: Brainstorm (頭腦風暴) **[CCW]**
 - [ ] `src/workflow/levels/level4_brainstorm.py`
@@ -173,12 +173,12 @@
 > ⚠️ **優先級提升**: 根據 CCW 差距分析，此 Phase 從 P1 提升為 P0
 
 ### 5.1 Session Manager (寫作會話管理) **[CCW]** 🔴 最高優先
-- [ ] `src/workflow/session/session_manager.py`
-  - [ ] 生命週期: `init` / `list` / `read` / `write` / `archive` / `delete`
-  - [ ] 內容類型路由 (content_type → 文件路徑)
-  - [ ] 多位置支持 (active / archived / lite-plan)
-  - [ ] 任務統計 (`stats` operation)
-  - [ ] ContentType Enum: CHAPTER, OUTLINE, CHARACTER, WORLDVIEW, PLAN
+- [x] `src/workflow/session/session_manager.py`
+  - [x] 生命週期: `init` / `list` / `read` / `write` / `archive` / `delete`
+  - [x] 內容類型路由 (content_type → 文件路徑)
+  - [x] 多位置支持 (active / archived / lite-plan)
+  - [x] 任務統計 (`stats` operation)
+  - [x] ContentType Enum: CHAPTER, OUTLINE, CHARACTER, WORLDVIEW, PLAN
 
 ### 5.1.1 Session Cluster (會話聚類) **[CCW]**
 - [ ] `src/memory/session_cluster.py`
@@ -529,4 +529,3 @@
 ---
 
 *文檔更新: 2026-01-26 - V2.9 CCW + Cherry + OpenKL + AionUi Full Stack*
-
