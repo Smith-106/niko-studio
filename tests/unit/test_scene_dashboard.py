@@ -53,7 +53,7 @@ def test_analyze_parallelization_cycle():
     levels = analyze_parallelization(scenes)
     # The exact levels might vary depending on implementation details of cycle breaking,
     # but it should return something.
-    assert len(levels) > 0
+    assert levels == {1: ["2"], 2: ["1"]}
 
 def test_analyze_parallelization_disconnected():
     scenes = [
