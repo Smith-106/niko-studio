@@ -279,8 +279,8 @@ with col_chat:
                     "user_idea": user_input,
                     "revision_count": 0,
                     "workflow_level": level_int,
-                    "max_revisions": int(max_loops),
-                    "model_name": model_name
+                    "model_name": model_name,
+                    "max_revisions": int(max_loops)
                 }
                 
                 # 流式执行
