@@ -13,11 +13,12 @@ from agents.commander import CommanderAgent, WorkflowLevel
 
 def test_llm_routing():
     # Define expected responses for the tests
+    # Note: 'analysis' field removed as it is not part of the TaskAnalysis Pydantic model
     responses = [
-        {"analysis": "User wants to fix a typo.", "workflow_level": "rapid", "reasoning": "Keywords indicate rapid fix."},
-        {"analysis": "User wants to brainstorm world.", "workflow_level": "storm", "reasoning": "Keywords indicate brainstorming."},
-        {"analysis": "User wants to write a chapter.", "workflow_level": "standard", "reasoning": "Standard writing task."},
-        {"analysis": "User wants to fix brace issue.", "workflow_level": "rapid", "reasoning": "Fixing code."}
+        {"workflow_level": "rapid", "reasoning": "Keywords indicate rapid fix."},
+        {"workflow_level": "storm", "reasoning": "Keywords indicate brainstorming."},
+        {"workflow_level": "standard", "reasoning": "Standard writing task."},
+        {"workflow_level": "rapid", "reasoning": "Fixing code."}
     ]
 
     # Shared state for closure
@@ -64,3 +65,7 @@ def test_llm_fallback():
     # Test fallback to L5
     level = agent.route("Brainstorm ideas")
     assert level == WorkflowLevel.L5_BRAINSTORM
+
+    # Test fallback to default (L3)
+    level = agent.route("Just do something")
+    assert level == WorkflowLevel.L3_STANDARD
