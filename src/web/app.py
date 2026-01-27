@@ -12,6 +12,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 # Import workflow components
 # Note: We might need to adjust imports depending on how Python path is set
@@ -27,6 +28,23 @@ except ImportError:
 
 
 app = FastAPI(title="AI Writing Agent Platform")
+
+# 🛡️ Sentinel: Add CORS/CSWSH protection
+# Restrict WebSocket access to trusted origins to prevent Cross-Site WebSocket Hijacking
+origins = [
+    "http://localhost",
+    "http://localhost:8000",
+    "http://127.0.0.1",
+    "http://127.0.0.1:8000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
@@ -67,6 +85,15 @@ async def get(request: Request):
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    # 🛡️ Sentinel: Manual CSWSH check (Defense in Depth)
+    # Ensure Origin is trusted before accepting connection
+    if "origin" in websocket.headers:
+        origin = websocket.headers["origin"]
+        if origin not in origins:
+            print(f"Rejected WebSocket connection from untrusted origin: {origin}")
+            await websocket.close(code=1008)  # Policy Violation
+            return
+
     await manager.connect(websocket)
     try:
         while True:
