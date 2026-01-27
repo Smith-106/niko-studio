@@ -256,11 +256,24 @@ with col_chat:
             
             # 尝试导入并执行 LangGraph 工作流
             try:
-                from src.workflow.graph import app as langgraph_app
-                from src.workflow.state import WritingState
+                from src.workflow.graph import compile_graph
+                from src.workflow.state import WritingState, DEFAULT_CONFIG
                 
                 st.write(t("starting_langgraph"))
                 
+                # Parse work_mode string to int level (e.g. "L1: ..." -> 1)
+                try:
+                    level_int = int(work_mode.split(":")[0].replace("L", ""))
+                except:
+                    level_int = 3
+
+                # Update config with UI params
+                config = DEFAULT_CONFIG.copy()
+                config["max_revisions"] = int(max_loops)
+
+                # Compile graph
+                langgraph_app = compile_graph(config=config, use_memory=True)
+
                 # 构造初始状态
                 # Parse "L1: ..." -> 1
                 try:
