@@ -20,6 +20,10 @@ except ImportError:
 
 from src.ui.utils import get_status_display
 
+# Dummy translation helper since src/ui/translations.py is missing
+def t(key: str) -> str:
+    return "未命名" if key == "untitled" else key
+
 
 # --- 1. 数据加载层 (Data Layer) ---
 def load_scenes(task_dir: str = ".task") -> List[Dict[str, Any]]:
@@ -309,7 +313,7 @@ def render_scene_dashboard() -> None:
             with st.container(border=True):
                 c1, c2 = st.columns([3, 1])
                 with c1:
-                    st.subheader(f"{status_info['icon']} {s.get('id')}: {s.get('title', '未命名')}")
+                    st.subheader(f"{status_info['icon']} {s.get('id')}: {s.get('title', t('untitled'))}")
                     if "summary" in s:
                         st.caption(f"📝 {s['summary']}")
                 with c2:
