@@ -16,9 +16,9 @@ from workflow.state import (
     create_initial_state
 )
 from workflow.graph import (
-    should_continue,
     create_writing_graph
 )
+from workflow.adapters.novel_adapter import NovelAdapter
 
 
 class TestWritingState:
@@ -57,7 +57,10 @@ class TestWorkflowConfig:
 
 
 class TestShouldContinue:
-    """决策路由函数测试"""
+    """决策路由函数测试 (Testing NovelAdapter Logic)"""
+
+    def setup_method(self):
+        self.adapter = NovelAdapter()
     
     def test_approved_when_score_high_and_c_sufficient(self):
         """测试高分且C分足够时通过"""
@@ -70,8 +73,8 @@ class TestShouldContinue:
             "revision_count": 1
         }
         
-        result = should_continue(state)
-        assert result == "end"
+        result = self.adapter.route_after_critic(state)
+        assert result == "finalize"
     
     def test_continue_when_score_low(self):
         """测试低分时继续修改"""
@@ -84,8 +87,8 @@ class TestShouldContinue:
             "revision_count": 1
         }
         
-        result = should_continue(state)
-        assert result == "continue"
+        result = self.adapter.route_after_critic(state)
+        assert result == "writer"
     
     def test_human_when_max_revisions_reached(self):
         """测试达到最大修改次数时需要人工"""
@@ -98,8 +101,8 @@ class TestShouldContinue:
             "revision_count": 3  # 已达最大
         }
         
-        result = should_continue(state)
-        assert result == "human"
+        result = self.adapter.route_after_critic(state)
+        assert result == "human_reviewer"
     
     def test_human_when_score_too_low(self):
         """测试分数过低时需要人工"""
@@ -112,8 +115,8 @@ class TestShouldContinue:
             "revision_count": 1
         }
         
-        result = should_continue(state)
-        assert result == "human"
+        result = self.adapter.route_after_critic(state)
+        assert result == "human_reviewer"
     
     def test_human_when_c_score_low_despite_high_total(self):
         """测试总分高但C分低时需要人工审阅"""
@@ -126,9 +129,9 @@ class TestShouldContinue:
             "revision_count": 1
         }
         
-        result = should_continue(state)
+        result = self.adapter.route_after_critic(state)
         # 总分>=70 触发 HUMAN_REVIEW
-        assert result == "human"
+        assert result == "human_reviewer"
 
 
 class TestCreateWritingGraph:
