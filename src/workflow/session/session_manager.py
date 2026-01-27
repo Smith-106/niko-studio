@@ -55,8 +55,6 @@ class SessionInfo:
     updated_at: str = ""
     task_count: int = 0
     chapter_count: int = 0
-    total_words: int = 0
-    stats_cached: bool = False
     domain: str = "novel"        # novel | code | knowledge
 
 
@@ -123,7 +121,6 @@ class SessionManager:
             created_at=now,
             updated_at=now,
             domain=domain,
-            stats_cached=True,
         )
         
         # 保存 session.json
@@ -217,31 +214,11 @@ class SessionManager:
             是否成功
         """
         path = self._resolve_path(session_id, content_type, **kwargs)
-
-        # 處理統計緩存更新
-        stats_update = {}
-        if content_type == ContentType.CHAPTER:
-            # 如果是章節，嘗試更新統計
-            # 注意：這裡我們假設文件寫入是成功的，所以先計算差異
-            # 如果緩存無效，我們不做任何事，讓 stats() 之後去計算
-            info = self._load_session_info(session_id)
-            if info and info.stats_cached:
-                old_len = 0
-                is_new = not path.exists()
-                if not is_new:
-                    old_len = len(path.read_text(encoding="utf-8"))
-
-                new_len = len(content)
-                stats_update = {
-                    "total_words": info.total_words + (new_len - old_len),
-                    "chapter_count": info.chapter_count + (1 if is_new else 0)
-                }
-
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
         
-        # 更新會話時間戳 (同時更新統計信息)
-        self._update_timestamp(session_id, **stats_update)
+        # 更新會話時間戳
+        self._update_timestamp(session_id)
         
         return True
     
@@ -320,19 +297,6 @@ class SessionManager:
         if not info:
             return {}
         
-        # 如果緩存有效，直接返回
-        if info.stats_cached:
-            return {
-                "session_id": session_id,
-                "type": info.type,
-                "status": info.status,
-                "chapter_count": info.chapter_count,
-                "total_words": info.total_words,
-                "created_at": info.created_at,
-                "updated_at": info.updated_at,
-            }
-
-        # 緩存無效，重新計算
         session_path = self._get_session_path(session_id)
         chapters_path = session_path / "chapters"
         
@@ -345,12 +309,6 @@ class SessionManager:
                 content = chapter_file.read_text(encoding="utf-8")
                 total_words += len(content)
         
-        # 更新緩存
-        info.chapter_count = chapter_count
-        info.total_words = total_words
-        info.stats_cached = True
-        self._save_session_info(session_id, info)
-
         return {
             "session_id": session_id,
             "type": info.type,
@@ -424,12 +382,9 @@ class SessionManager:
         data = json.loads(path.read_text(encoding="utf-8"))
         return SessionInfo(**data)
     
-    def _update_timestamp(self, session_id: str, **kwargs):
+    def _update_timestamp(self, session_id: str):
         """更新時間戳"""
         info = self._load_session_info(session_id)
         if info:
             info.updated_at = datetime.now().isoformat()
-            for k, v in kwargs.items():
-                if hasattr(info, k):
-                    setattr(info, k, v)
             self._save_session_info(session_id, info)
