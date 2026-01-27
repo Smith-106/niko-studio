@@ -279,6 +279,7 @@ with col_chat:
                     "user_idea": user_input,
                     "revision_count": 0,
                     "workflow_level": wf_level,
+                    "max_revisions": int(max_loops),
                     "metadata": {
                         "model_name": model_name
                     }
