@@ -493,7 +493,7 @@ with col_artifacts:
                 with st.container(border=True):
                     c1, c2 = st.columns([3, 1])
                     # WCAG 1.4.1: Icon included in title
-                    c1.markdown(f"**{status_info['icon']} {scene.get('title', '未命名')}** (`{scene.get('id')}`")
+                    c1.markdown(f"**{status_info['icon']} {scene.get('title', '未命名')}** (`{scene.get('id')}`)")
                     # WCAG 1.4.1: Icon + Text + Code style for status
                     c2.markdown(f"{status_info['icon']} **{status_info['text']}** `{status}`")
                     
