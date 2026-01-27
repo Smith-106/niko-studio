@@ -12,6 +12,12 @@ import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from src.ui.translations import t
+from src.services.document_loader import DocumentLoader
+from src.services.indexing_service import IndexingService
+try:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except ImportError:
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # === 配置 ===
 st.set_page_config(
@@ -376,9 +382,51 @@ with col_artifacts:
             type=['txt', 'md', 'pdf', 'docx'],
             help=t("context_injection_help")
         )
+
+        if "processed_files" not in st.session_state:
+            st.session_state.processed_files = set()
+
         if uploaded_file:
-            st.success(t("file_loaded", filename=uploaded_file.name))
-            # TODO: 对接 RAG / Knowledge Memory
+            file_key = f"{uploaded_file.name}_{uploaded_file.size}"
+            if file_key not in st.session_state.processed_files:
+                try:
+                    # Load text
+                    with st.spinner(f"Processing {uploaded_file.name}..."):
+                        text = DocumentLoader.load_file(uploaded_file, uploaded_file.name)
+
+                        # Chunking
+                        text_splitter = RecursiveCharacterTextSplitter(
+                            chunk_size=1000,
+                            chunk_overlap=200,
+                            length_function=len,
+                        )
+                        chunks = text_splitter.split_text(text)
+
+                        # Indexing
+                        # Cache the service instance to avoid reloading models
+                        @st.cache_resource
+                        def get_indexing_service():
+                            return IndexingService(DB_PATH)
+
+                        service = get_indexing_service()
+                        session_id = st.session_state.session_id
+                        # Sanitize filename
+                        safe_filename = "".join([c for c in uploaded_file.name if c.isalnum() or c in (' ', '.', '_')]).replace(' ', '_')
+
+                        progress_bar = st.progress(0, text="Indexing chunks...")
+                        for i, chunk in enumerate(chunks):
+                            chunk_id = f"{session_id}_{safe_filename}_part_{i}"
+                            service.add_document(doc_id=chunk_id, content=chunk, source_type="uploaded_material")
+                            progress_bar.progress((i + 1) / len(chunks))
+
+                        progress_bar.empty()
+                        st.session_state.processed_files.add(file_key)
+                        st.success(t("file_loaded", filename=uploaded_file.name))
+
+                except Exception as e:
+                    st.error(f"Error processing file: {e}")
+            else:
+                st.success(t("file_loaded", filename=uploaded_file.name))
 
     # 2. 多格式预览 Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
