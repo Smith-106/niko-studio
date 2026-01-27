@@ -11,6 +11,8 @@ import os
 import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+from src.services.document_loader import DocumentLoader
+from src.services.knowledge_layer import AgentKnowledgeLayer
 
 # === 配置 ===
 st.set_page_config(
@@ -62,6 +64,12 @@ def init_db() -> sqlite3.Connection:
     
     conn.commit()
     return conn
+
+
+@st.cache_resource
+def get_knowledge_layer() -> AgentKnowledgeLayer:
+    """Initialize Knowledge Layer with caching"""
+    return AgentKnowledgeLayer(DB_PATH)
 
 
 def save_message(conn: sqlite3.Connection, session_id: str, role: str, 
@@ -305,8 +313,35 @@ with col_artifacts:
             help="上传的文件将作为 Context 注入到 Agent"
         )
         if uploaded_file:
-            st.success(f"✅ 已加载: {uploaded_file.name}")
-            # TODO: 对接 RAG / Knowledge Memory
+            # Check if processed
+            file_key = f"processed_{uploaded_file.name}_{uploaded_file.size}"
+            if file_key not in st.session_state:
+                with st.spinner(f"正在处理 {uploaded_file.name}..."):
+                    try:
+                        # Initialize services
+                        knowledge_layer = get_knowledge_layer()
+                        loader = DocumentLoader()
+
+                        # Load and chunk
+                        text = loader.load_file(uploaded_file, uploaded_file.name)
+                        chunks = loader.chunk_text(text)
+
+                        # Ingest
+                        progress_bar = st.progress(0, text="正在存入知识库...")
+                        for i, chunk in enumerate(chunks):
+                            # Use a consistent ID scheme
+                            chunk_id = f"{uploaded_file.name}_part_{i}"
+                            knowledge_layer.add_document(chunk_id, chunk, source_type="uploaded_file")
+                            progress_bar.progress((i + 1) / len(chunks))
+
+                        st.session_state[file_key] = True
+                        st.success(f"✅ 已加载: {uploaded_file.name} ({len(chunks)} chunks)")
+                        progress_bar.empty()
+
+                    except Exception as e:
+                        st.error(f"处理失败: {e}")
+            else:
+                st.success(f"✅ 已加载: {uploaded_file.name} (Cached)")
 
     # 2. 多格式预览 Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 草稿", "📊 LOCK", "🎯 8维度", "📇 场景卡片", "🕸️ 依赖图"])

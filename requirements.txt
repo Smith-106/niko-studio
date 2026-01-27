@@ -4,11 +4,16 @@
 pydantic>=2.0.0
 python-dotenv>=1.0.0
 
+# UI
+streamlit
+watchdog
+
 # LLM Framework
 langchain>=0.1.0
 langchain-core>=0.1.0
 langchain-google-genai>=1.0.0
 langchain-openai>=0.1.0
+langchain-text-splitters>=0.0.1
 
 # LangGraph (工作流编排)
 langgraph>=0.0.30
@@ -17,8 +22,13 @@ langgraph>=0.0.30
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 pytest-cov>=4.0.0
+pytest-mock
 
 # Utilities
 aiohttp>=3.8.0
 httpx>=0.24.0
 
+# Document Processing & RAG
+pypdf
+python-docx
+fastembed

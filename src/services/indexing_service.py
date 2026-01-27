@@ -10,11 +10,7 @@ import numpy as np
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("IndexingService")
 
-try:
-    from fastembed import TextEmbedding
-except ImportError:
-    logger.warning("FastEmbed not installed. Install with `pip install fastembed`.")
-    TextEmbedding = None
+from fastembed import TextEmbedding
 
 class IndexingService:
     """
@@ -54,8 +50,6 @@ class IndexingService:
     def embedder(self):
         """Lazy-load FastEmbed model."""
         if self._embedder is None:
-            if TextEmbedding is None:
-                raise ImportError("FastEmbed is required for Semantic Search.")
             logger.info(f"Loading embedding model: {self.model_name}")
             self._embedder = TextEmbedding(model_name=self.model_name)
         return self._embedder
