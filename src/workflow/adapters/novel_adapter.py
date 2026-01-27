@@ -23,6 +23,8 @@ from src.workflow.state import (
 )
 from src.workflow.base_state import BaseState
 
+load_dotenv()
+
 @AdapterRegistry.register(DomainType.NOVEL.value)
 class NovelAdapter(BaseDomainAdapter):
     
@@ -85,7 +87,6 @@ class NovelAdapter(BaseDomainAdapter):
 
     def _get_llm(self):
         """获取LLM实例"""
-        load_dotenv()
         
         google_key = os.getenv("GOOGLE_API_KEY")
         if google_key:
