@@ -30,7 +30,7 @@ class CommanderAgent(BaseAgent):
     falling back to keyword heuristics if the analysis fails.
     """
 
-    def __init__(self, llm, name: str = "Commander", config: Optional[Dict[str, Any]] = None):
+    def __init__(self, llm: 'Runnable', name: str = "Commander", config: Optional[Dict[str, Any]] = None):
         """
         Initialize the CommanderAgent.
 
