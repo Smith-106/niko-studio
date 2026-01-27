@@ -11,6 +11,7 @@ import os
 import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+from src.services.draft_service import DraftService
 
 # === 配置 ===
 st.set_page_config(
@@ -115,6 +116,7 @@ def save_draft(conn: sqlite3.Connection, session_id: str, content: str,
 
 # === 初始化 ===
 conn = init_db()
+draft_service = DraftService(DB_PATH)
 
 # Session State 初始化
 if "session_id" not in st.session_state:
@@ -365,17 +367,23 @@ with col_artifacts:
                 draft_content = st.session_state.get("current_draft", "")
 
                 if draft_content:
-                    version = save_draft(conn, st.session_state.session_id, draft_content, lock_scores, quality_scores)
-                    st.success(f"✅ Draft approved and saved as version {version}")
+                    # 使用 DraftService 保存最终版本
+                    result = draft_service.save_final_version(
+                        st.session_state.session_id,
+                        draft_content,
+                        lock_scores,
+                        quality_scores
+                    )
+
+                    msg = (f"✅ Draft approved and saved!\n\n"
+                           f"- Version: v{result['version']}\n"
+                           f"- Exported to: `{result['file_path']}`")
+                    st.success(msg)
 
                     # Add system message
-                    sys_msg = f"Draft approved and saved as version v{version}"
+                    sys_msg = f"Draft approved. Version v{result['version']} saved to {result['file_path']}"
                     st.session_state.messages.append({"role": "assistant", "content": sys_msg})
                     save_message(conn, st.session_state.session_id, "assistant", sys_msg)
-
-                    # Optional: View All Versions button (user suggested not to rerun, but we can offer it)
-                    # if st.button("View All Versions"):
-                    #    st.rerun()
                 else:
                     st.warning("当前没有草稿可保存")
 
