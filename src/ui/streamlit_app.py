@@ -347,7 +347,7 @@ with col_artifacts:
 
                     if chunks:
                         for chunk in chunks:
-                            doc_id = f"{chunk['metadata']['source']}_part_{chunk['metadata']['chunk_index']}"
+                            doc_id = f"{st.session_state.session_id}_{chunk['metadata']['source']}_part_{chunk['metadata']['chunk_index']}"
                             knowledge_layer.add_document(doc_id, chunk['content'], source_type="user_upload")
 
                         st.success(f"✅ 已加载: {uploaded_file.name} ({len(chunks)} chunks)")
