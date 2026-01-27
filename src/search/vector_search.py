@@ -184,6 +184,7 @@ class VectorSearch:
             try:
                 # Optimized vector search
                 # 1. Get similar vectors and fetch item details in a single query
+                # Uses a JOIN to avoid N+1 query problem where we would fetch rowids then items
                 limit = top_k * 2 if type_filter else top_k
 
                 cursor.execute(
