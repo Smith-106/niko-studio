@@ -11,6 +11,8 @@ from datetime import datetime
 from typing import Optional, List
 import json
 import shutil
+import fcntl
+from contextlib import contextmanager
 
 
 class SessionStatus(Enum):
@@ -56,6 +58,7 @@ class SessionInfo:
     task_count: int = 0
     chapter_count: int = 0
     domain: str = "novel"        # novel | code | knowledge
+    total_words: int = 0
 
 
 class SessionManager:
@@ -215,10 +218,40 @@ class SessionManager:
         """
         path = self._resolve_path(session_id, content_type, **kwargs)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
         
-        # 更新會話時間戳
-        self._update_timestamp(session_id)
+        if content_type == ContentType.CHAPTER:
+            with self._file_lock(session_id):
+                # 0. 檢查是否需要初始化統計數據
+                info = self._load_session_info(session_id)
+                if info and info.chapter_count == 0 and info.total_words == 0:
+                    self._recalculate_stats_impl(session_id)
+
+                # 1. 計算舊長度
+                old_len = 0
+                is_new_chapter = not path.exists()
+
+                if not is_new_chapter:
+                    try:
+                        old_len = len(path.read_text(encoding="utf-8"))
+                    except Exception:
+                        pass
+
+                # 2. 寫入新內容
+                path.write_text(content, encoding="utf-8")
+                new_len = len(content)
+
+                # 3. 增量更新 SessionInfo
+                info = self._load_session_info(session_id)
+                if info:
+                    if is_new_chapter:
+                        info.chapter_count += 1
+
+                    info.total_words = max(0, info.total_words - old_len + new_len)
+                    info.updated_at = datetime.now().isoformat()
+                    self._save_session_info(session_id, info)
+        else:
+            path.write_text(content, encoding="utf-8")
+            self._update_timestamp(session_id)
         
         return True
     
@@ -291,30 +324,22 @@ class SessionManager:
         
         return False
     
-    def stats(self, session_id: str) -> dict:
+    def stats(self, session_id: str, force_refresh: bool = False) -> dict:
         """獲取會話統計"""
         info = self._load_session_info(session_id)
         if not info:
             return {}
         
-        session_path = self._get_session_path(session_id)
-        chapters_path = session_path / "chapters"
-        
-        chapter_count = 0
-        total_words = 0
-        
-        if chapters_path.exists():
-            for chapter_file in chapters_path.glob("*.md"):
-                chapter_count += 1
-                content = chapter_file.read_text(encoding="utf-8")
-                total_words += len(content)
+        # 檢測是否需要自動遷移（舊數據：有章節但字數為0）或強制刷新
+        if force_refresh or (info.total_words == 0 and info.chapter_count > 0):
+            info = self._recalculate_stats(session_id) or info
         
         return {
             "session_id": session_id,
             "type": info.type,
             "status": info.status,
-            "chapter_count": chapter_count,
-            "total_words": total_words,
+            "chapter_count": info.chapter_count,
+            "total_words": info.total_words,
             "created_at": info.created_at,
             "updated_at": info.updated_at,
         }
@@ -384,7 +409,55 @@ class SessionManager:
     
     def _update_timestamp(self, session_id: str):
         """更新時間戳"""
+        with self._file_lock(session_id):
+            info = self._load_session_info(session_id)
+            if info:
+                info.updated_at = datetime.now().isoformat()
+                self._save_session_info(session_id, info)
+
+    @contextmanager
+    def _file_lock(self, session_id: str):
+        """文件鎖 context manager"""
+        session_path = self._get_session_path(session_id)
+        lock_file = session_path / ".session.lock"
+
+        # 確保目錄存在
+        if not session_path.exists():
+            yield
+            return
+
+        with open(lock_file, 'w') as f:
+            try:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                yield
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+    def _recalculate_stats(self, session_id: str) -> Optional[SessionInfo]:
+        """從磁盤重新計算統計信息並更新緩存"""
+        # 為了安全起見，我們在這裡獲取鎖
+        with self._file_lock(session_id):
+            return self._recalculate_stats_impl(session_id)
+
+    def _recalculate_stats_impl(self, session_id: str) -> Optional[SessionInfo]:
+        """實現統計重算（無鎖，由調用者負責鎖）"""
         info = self._load_session_info(session_id)
-        if info:
-            info.updated_at = datetime.now().isoformat()
-            self._save_session_info(session_id, info)
+        if not info:
+            return None
+
+        session_path = self._get_session_path(session_id)
+        chapters_path = session_path / "chapters"
+
+        chapter_count = 0
+        total_words = 0
+
+        if chapters_path.exists():
+            for chapter_file in chapters_path.glob("*.md"):
+                chapter_count += 1
+                content = chapter_file.read_text(encoding="utf-8")
+                total_words += len(content)
+
+        info.chapter_count = chapter_count
+        info.total_words = total_words
+        self._save_session_info(session_id, info)
+        return info
