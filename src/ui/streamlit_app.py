@@ -9,6 +9,8 @@ import sqlite3
 import json
 import os
 import glob
+import html
+import pandas as pd
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
@@ -19,6 +21,23 @@ st.set_page_config(
     page_icon="✍️",
     initial_sidebar_state="expanded"
 )
+
+# 注入无障碍 CSS
+st.markdown("""
+<style>
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # === AionUi 参考: SQLite 本地存储 ===
 DB_PATH = os.path.join(os.path.dirname(__file__), "local_memory.db")
@@ -399,8 +418,16 @@ with col_artifacts:
             "分数": list(lock_scores.values())
         })
         
+        # 无障碍文本摘要
+        lock_summary = "LOCK Scores Summary: " + ", ".join([f"{html.escape(str(k))}: {v}/10" for k, v in lock_scores.items()]) + "."
+        st.markdown(f'<p class="sr-only">{lock_summary}</p>', unsafe_allow_html=True)
+
         st.bar_chart(df_lock.set_index("维度"))
         
+        # 无障碍表格
+        with st.expander("View as Table (Accessible)"):
+             st.dataframe(df_lock, use_container_width=True)
+
         total_lock = sum(lock_scores.values())
         st.metric("LOCK 总分", f"{total_lock}/40", 
                   delta=f"{total_lock - lock_threshold}" if total_lock >= lock_threshold else f"{total_lock - lock_threshold}",
@@ -432,8 +459,16 @@ with col_artifacts:
             "分数": list(quality_scores.values())
         })
         
+        # 无障碍文本摘要
+        quality_summary = "Quality Scores Summary: " + ", ".join([f"{html.escape(str(k))}: {v}/100" for k, v in quality_scores.items()]) + "."
+        st.markdown(f'<p class="sr-only">{quality_summary}</p>', unsafe_allow_html=True)
+
         st.bar_chart(df_quality.set_index("维度"))
         
+        # 无障碍表格
+        with st.expander("View as Table (Accessible)"):
+             st.dataframe(df_quality, use_container_width=True)
+
         avg_quality = sum(quality_scores.values()) / len(quality_scores)
         st.metric("平均质量分", f"{avg_quality:.1f}/100",
                   delta=f"{avg_quality - quality_threshold:.1f}" if avg_quality >= quality_threshold else f"{avg_quality - quality_threshold:.1f}",
@@ -522,7 +557,25 @@ with col_artifacts:
             
             dot_lines.append("}")
             
+            # 无障碍文本摘要
+            dep_count = sum(1 for s in scenes if s.get("dependencies"))
+            dep_summary = f"Scene Dependency Graph Summary: Total scenes: {len(scenes)}. Completed: {sum(1 for s in scenes if s.get('status') == 'DONE')}. Scenes with dependencies: {dep_count}."
+            st.markdown(f'<p class="sr-only">{dep_summary}</p>', unsafe_allow_html=True)
+
             st.graphviz_chart("\n".join(dot_lines))
+
+            # 无障碍表格
+            with st.expander("View as Table (Accessible)"):
+                dep_data = []
+                for s in scenes:
+                    dep_data.append({
+                        "ID": s.get("id"),
+                        "Title": s.get("title"),
+                        "Status": s.get("status"),
+                        "Dependencies": ", ".join(s.get("dependencies", [])) or "-"
+                    })
+                st.dataframe(pd.DataFrame(dep_data), use_container_width=True)
+
             st.caption("🟢 完成 | 🟡 进行中 | ⚪ 待处理")
             
             # 并行分析

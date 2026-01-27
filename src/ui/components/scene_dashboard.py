@@ -9,6 +9,7 @@ import streamlit as st
 import json
 import glob
 import os
+import pandas as pd
 from typing import List, Dict, Any
 
 # 尝试导入 graphviz (可选依赖)
@@ -128,7 +129,25 @@ def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
             if d in scene_ids:
                 graph.edge(d, s['id'])
     
+    # 无障碍文本摘要
+    dep_count = sum(1 for s in scenes if s.get("dependencies"))
+    dep_summary = f"Scene Dependency Graph Summary: Total scenes: {len(scenes)}. Completed: {sum(1 for s in scenes if s.get('status') == 'DONE')}. Scenes with dependencies: {dep_count}."
+    st.markdown(f'<p class="sr-only">{dep_summary}</p>', unsafe_allow_html=True)
+
     st.graphviz_chart(graph)
+
+    # 无障碍表格
+    with st.expander("View as Table (Accessible)"):
+        dep_data = []
+        for s in scenes:
+             dep_data.append({
+                "ID": s.get("id"),
+                "Title": s.get("title"),
+                "Status": s.get("status"),
+                "Dependencies": ", ".join(s.get("dependencies", [])) or "-"
+             })
+        st.dataframe(pd.DataFrame(dep_data), use_container_width=True)
+
     st.caption("🟢 完成 | 🟡 进行中 | 🔵 审查中 | ⚪ 待处理 | 🔴 失败")
 
 
@@ -169,7 +188,25 @@ def render_dependency_graph_builtin(scenes: List[Dict[str, Any]]) -> None:
     
     dot_lines.append("}")
     
+    # 无障碍文本摘要
+    dep_count = sum(1 for s in scenes if s.get("dependencies"))
+    dep_summary = f"Scene Dependency Graph Summary: Total scenes: {len(scenes)}. Completed: {sum(1 for s in scenes if s.get('status') == 'DONE')}. Scenes with dependencies: {dep_count}."
+    st.markdown(f'<p class="sr-only">{dep_summary}</p>', unsafe_allow_html=True)
+
     st.graphviz_chart("\n".join(dot_lines))
+
+    # 无障碍表格
+    with st.expander("View as Table (Accessible)"):
+        dep_data = []
+        for s in scenes:
+             dep_data.append({
+                "ID": s.get("id"),
+                "Title": s.get("title"),
+                "Status": s.get("status"),
+                "Dependencies": ", ".join(s.get("dependencies", [])) or "-"
+             })
+        st.dataframe(pd.DataFrame(dep_data), use_container_width=True)
+
     st.caption("🟢 完成 | 🟡 进行中 | 🔵 审查中 | ⚪ 待处理 | 🔴 失败")
 
 

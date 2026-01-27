@@ -12,11 +12,12 @@ from .trajectory_viewer import (
     render_decision_tree
 )
 from .scene_dashboard import (
-    load_scene_cards,
-    render_scene_card,
+    load_scenes,
     render_scene_dashboard,
-    render_dependency_graph,
-    render_parallel_analysis
+    render_dependency_graph_graphviz,
+    render_dependency_graph_builtin,
+    analyze_parallelization,
+    render_parallelization_analysis
 )
 
 __all__ = [
@@ -26,9 +27,10 @@ __all__ = [
     "render_workflow_progress",
     "render_agent_timeline",
     "render_decision_tree",
-    "load_scene_cards",
-    "render_scene_card",
+    "load_scenes",
     "render_scene_dashboard",
-    "render_dependency_graph",
-    "render_parallel_analysis"
+    "render_dependency_graph_graphviz",
+    "render_dependency_graph_builtin",
+    "analyze_parallelization",
+    "render_parallelization_analysis"
 ]

@@ -6,6 +6,8 @@ LOCK 雷达图组件
 
 import streamlit as st
 import plotly.graph_objects as go
+import pandas as pd
+import html
 from typing import Dict, Optional
 
 
@@ -97,12 +99,32 @@ def render_lock_radar(
         margin=dict(l=80, r=80, t=60, b=80)
     )
     
-    # 渲染
-    st.plotly_chart(fig, use_container_width=True)
-    
     # 评分摘要
     total = sum(values)
     passed = total >= threshold
+
+    # 无障碍：屏幕阅读器文本摘要
+    summary_text = f"{html.escape(title)} Summary: Total {total}/40 ({'Passed' if passed else 'Failed'}). "
+    summary_items = []
+    for cat, val in zip(categories, values):
+        # 移除换行符使朗读更顺畅
+        clean_cat = cat.replace('\n', ' ')
+        summary_items.append(f"{html.escape(clean_cat)}: {val}/10")
+    summary_text += ", ".join(summary_items) + "."
+
+    st.markdown(f'<p class="sr-only">{summary_text}</p>', unsafe_allow_html=True)
+
+    # 渲染
+    st.plotly_chart(fig, use_container_width=True)
+
+    # 无障碍：数据表格替代方案
+    with st.expander("View as Table (Accessible)"):
+        df_scores = pd.DataFrame({
+            "Dimension": [c.replace('\n', ' ') for c in categories],
+            "Score": values,
+            "Max": [10] * 4
+        })
+        st.dataframe(df_scores, use_container_width=True)
     
     col1, col2, col3 = st.columns(3)
     with col1:
