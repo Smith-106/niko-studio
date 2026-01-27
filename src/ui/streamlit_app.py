@@ -280,9 +280,7 @@ with col_chat:
                     "revision_count": 0,
                     "workflow_level": level_int,
                     "max_revisions": int(max_loops),
-                    "metadata": {
-                        "model_name": model_name
-                    }
+                    "model_name": model_name
                 }
                 
                 # 流式执行
