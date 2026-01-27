@@ -5,11 +5,14 @@ import os
 from pathlib import Path
 import sys
 import numpy as np
+from unittest.mock import MagicMock, patch
+import sqlite3
 
 # Ensure src is in path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
 
 from services.indexing_service import IndexingService
+import services.indexing_service
 
 class MockEmbedding:
     def __init__(self, model_name="BAAI/bge-small-en-v1.5", **kwargs):
@@ -28,7 +31,6 @@ class MockEmbedding:
 @pytest.fixture
 def mock_embedding(monkeypatch):
     # Patch the class in the module where it is used
-    import services.indexing_service
     monkeypatch.setattr(services.indexing_service, "TextEmbedding", MockEmbedding)
 
 @pytest.fixture
@@ -53,19 +55,115 @@ def test_indexing_and_search(test_db_path, mock_embedding):
     for doc_id, content, source_type in docs:
         service.add_document(doc_id, content, source_type)
 
-    # Search should return relevant docs
-    # Note: With random vectors, semantic similarity won't work well unless we engineer it.
-    # But we just want to verify the pipeline runs.
-    # To make the test pass, we can assume that searching for exact content gives the highest score.
-
-    # Let's search for something that generates the same vector as doc "1"
-    # Actually, the test searches for "fox dog".
-    # With random vectors, "fox dog" will be random.
-    # Maybe we should make the mock more predictable or just check that we get results.
-
     results = service.search("The quick brown fox jumps over the lazy dog.", top_k=2)
 
-    # Since we search for the exact same text, the dot product should be 1.0 (max)
     assert len(results) >= 1
     assert results[0]['id'] == "1"
     assert results[0]['score'] > 0.9
+
+def test_search_optimized_path(test_db_path, mock_embedding, monkeypatch):
+    # Mock sqlite_vec being present
+    mock_vec_module = MagicMock()
+    monkeypatch.setattr(services.indexing_service, "sqlite_vec", mock_vec_module)
+
+    original_connect = services.indexing_service.sqlite3.connect
+
+    class MockCursor:
+        def __init__(self, real_cursor):
+            self.real_cursor = real_cursor
+            self.last_query = ""
+
+        def execute(self, sql, params=()):
+            self.last_query = sql
+            # Ignore virtual table creation and vector insertion/search
+            if "FROM vec_document_chunks" in sql:
+                return self
+            elif "CREATE VIRTUAL TABLE" in sql and "vec0" in sql:
+                return self
+            elif "INSERT INTO vec_document_chunks" in sql:
+                return self
+            return self.real_cursor.execute(sql, params)
+
+        def fetchall(self):
+            if "FROM vec_document_chunks" in self.last_query:
+                # Return docs in specific order: 3, 1, 2
+                # We assume rowids are 1, 2, 3 corresponding to insertion order
+                return [(3, 0.1), (1, 0.2), (2, 0.3)]
+            return self.real_cursor.fetchall()
+
+        def fetchone(self):
+            return self.real_cursor.fetchone()
+
+        @property
+        def lastrowid(self):
+            return self.real_cursor.lastrowid
+
+        def __getattr__(self, name):
+            return getattr(self.real_cursor, name)
+
+    class MockConnection:
+        def __init__(self, real_conn):
+            self.real_conn = real_conn
+            self.row_factory = None
+
+        def cursor(self):
+            self.real_conn.row_factory = self.row_factory
+            return MockCursor(self.real_conn.cursor())
+
+        def enable_load_extension(self, enabled):
+            pass
+
+        def close(self):
+            self.real_conn.close()
+
+        def commit(self):
+            self.real_conn.commit()
+
+        def __getattr__(self, name):
+            return getattr(self.real_conn, name)
+
+    def side_effect_connect(db_path, **kwargs):
+        real_conn = original_connect(db_path, **kwargs)
+        return MockConnection(real_conn)
+
+    # Patch connect for the entire duration of the test
+    with patch.object(services.indexing_service.sqlite3, 'connect', side_effect=side_effect_connect):
+        # Initialize service
+        service = IndexingService(str(test_db_path))
+
+        # Manually populate document_chunks using standard sqlite3 (bypassing the patch or using it)
+        # If we use sqlite3.connect directly (not the one in services.indexing_service), we get a real connection.
+        # But we need to use the SAME database file.
+        # And we need to make sure the table exists. IndexingService init should have created it
+        # (MockCursor allows real_cursor.execute for non-vec queries).
+
+        conn = sqlite3.connect(str(test_db_path))
+        cursor = conn.cursor()
+
+        docs = [
+            ("1", "Doc One", "type1"),
+            ("2", "Doc Two", "type2"),
+            ("3", "Doc Three", "type3"),
+        ]
+
+        for doc_id, content, stype in docs:
+            embedding = np.random.rand(384).astype(np.float32).tobytes()
+            cursor.execute(
+                "INSERT INTO document_chunks (id, source_id, source_type, content, embedding, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (doc_id, doc_id, stype, content, embedding, 0.0)
+            )
+        conn.commit()
+        conn.close()
+
+        results = service.search("query", top_k=3)
+
+        # Verify results
+        assert len(results) == 3
+        # Order should be preserved: 3, 1, 2 based on the mocked vector search result order
+        assert results[0]['id'] == "3"
+        assert results[1]['id'] == "1"
+        assert results[2]['id'] == "2"
+
+        # Check scores
+        # distance 0.1 -> score = 1 - 0.01/2 = 0.995
+        assert results[0]['score'] >= 0.99

@@ -200,23 +200,35 @@ class IndexingService:
                 )
                 vec_results = cursor.fetchall()
 
-                for rowid, distance in vec_results:
-                    # Retrieve metadata
-                    cursor.execute("SELECT id, content, source_type FROM document_chunks WHERE rowid = ?", (rowid,))
-                    doc_row = cursor.fetchone()
+                if vec_results:
+                    row_ids = [r[0] for r in vec_results]
 
-                    if doc_row:
-                        # Convert L2 distance to cosine similarity score
-                        # For normalized vectors: score = 1 - (distance^2 / 2)
-                        score = 1 - (distance ** 2) / 2
+                    # Batch retrieve metadata
+                    # Use parameter substitution for IN clause
+                    placeholders = ",".join("?" for _ in row_ids)
+                    cursor.execute(
+                        f"SELECT rowid, id, content, source_type FROM document_chunks WHERE rowid IN ({placeholders})",
+                        row_ids
+                    )
 
-                        if score >= min_score:
-                            matches.append({
-                                "id": doc_row["id"],
-                                "content": doc_row["content"],
-                                "source_type": doc_row["source_type"],
-                                "score": round(float(score), 4)
-                            })
+                    # Store in dict for O(1) lookup
+                    docs_by_rowid = {row['rowid']: row for row in cursor.fetchall()}
+
+                    for rowid, distance in vec_results:
+                        if rowid in docs_by_rowid:
+                            doc_row = docs_by_rowid[rowid]
+
+                            # Convert L2 distance to cosine similarity score
+                            # For normalized vectors: score = 1 - (distance^2 / 2)
+                            score = 1 - (distance ** 2) / 2
+
+                            if score >= min_score:
+                                matches.append({
+                                    "id": doc_row["id"],
+                                    "content": doc_row["content"],
+                                    "source_type": doc_row["source_type"],
+                                    "score": round(float(score), 4)
+                                })
 
                 vector_search_success = True
                 logger.debug("Successfully performed optimized vector search.")
