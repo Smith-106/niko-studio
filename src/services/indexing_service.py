@@ -1,4 +1,7 @@
-import sqlite3
+try:
+    import pysqlite3 as sqlite3
+except ImportError:
+    import sqlite3
 import json
 import time
 import logging
@@ -15,6 +18,12 @@ try:
 except ImportError:
     logger.warning("FastEmbed not installed. Install with `pip install fastembed`.")
     TextEmbedding = None
+
+try:
+    import sqlite_vec
+except ImportError:
+    sqlite_vec = None
+    logger.warning("sqlite-vec not installed. Vector search optimization disabled.")
 
 class IndexingService:
     """
@@ -34,6 +43,13 @@ class IndexingService:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         conn = sqlite3.connect(str(self.db_path))
+
+        # Load vector extension if available
+        if sqlite_vec:
+            conn.enable_load_extension(True)
+            sqlite_vec.load(conn)
+            conn.enable_load_extension(False)
+
         cursor = conn.cursor()
         
         # Schema adaptation from CCW memory_embedder.py
@@ -47,6 +63,17 @@ class IndexingService:
                 created_at REAL
             )
         """)
+
+        # Initialize vector table if extension is loaded
+        if sqlite_vec:
+            # Assuming 384 dimensions for BAAI/bge-small-en-v1.5
+            # TODO: dynamic dimension based on model
+            cursor.execute("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS vec_document_chunks USING vec0(
+                    embedding float[384]
+                )
+            """)
+
         conn.commit()
         conn.close()
 
@@ -81,7 +108,20 @@ class IndexingService:
 
         # Store in DB
         conn = sqlite3.connect(str(self.db_path))
+        if sqlite_vec:
+            conn.enable_load_extension(True)
+            sqlite_vec.load(conn)
+            conn.enable_load_extension(False)
+
         cursor = conn.cursor()
+
+        # Clean up old vector if it exists (for sync)
+        if sqlite_vec:
+            cursor.execute("SELECT rowid FROM document_chunks WHERE id = ?", (doc_id,))
+            row = cursor.fetchone()
+            if row:
+                cursor.execute("DELETE FROM vec_document_chunks WHERE rowid = ?", (row[0],))
+
         cursor.execute(
             """
             INSERT OR REPLACE INTO document_chunks (id, source_id, source_type, content, embedding, created_at)
@@ -89,6 +129,18 @@ class IndexingService:
             """,
             (doc_id, doc_id, source_type, content, embedding_bytes, time.time())
         )
+
+        # Insert into vector table
+        if sqlite_vec:
+            try:
+                new_rowid = cursor.lastrowid
+                cursor.execute(
+                    "INSERT INTO vec_document_chunks(rowid, embedding) VALUES (?, ?)",
+                    (new_rowid, embedding_bytes)
+                )
+            except Exception as e:
+                logger.error(f"Failed to index vector for document {doc_id}: {e}")
+
         conn.commit()
         conn.close()
         
@@ -114,36 +166,83 @@ class IndexingService:
         query_vector = next(query_gen)
         query_array = np.array(query_vector, dtype=np.float32)
 
-        # Retrieve candidates from DB
-        # TODO: optimization - use vector extension if available, currently brute-force in memory for simplicity
-        # This matches CCW's robust fallback implementation
+        # Retrieve candidates
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
+        
+        if sqlite_vec:
+            conn.enable_load_extension(True)
+            sqlite_vec.load(conn)
+            conn.enable_load_extension(False)
+
         cursor = conn.cursor()
         
-        cursor.execute("SELECT id, content, source_type, embedding FROM document_chunks WHERE embedding IS NOT NULL")
-        
         matches = []
-        for row in cursor:
-            emb_bytes = row["embedding"]
-            emb_array = np.frombuffer(emb_bytes, dtype=np.float32)
+        vector_search_success = False
+
+        if sqlite_vec:
+            # Use vector search
+            try:
+                cursor.execute(
+                    """
+                    SELECT rowid, distance
+                    FROM vec_document_chunks
+                    WHERE embedding MATCH ?
+                    ORDER BY distance
+                    LIMIT ?
+                    """,
+                    (query_array.tobytes(), top_k)
+                )
+                vec_results = cursor.fetchall()
+
+                for rowid, distance in vec_results:
+                    # Retrieve metadata
+                    cursor.execute("SELECT id, content, source_type FROM document_chunks WHERE rowid = ?", (rowid,))
+                    doc_row = cursor.fetchone()
+
+                    if doc_row:
+                        # Convert L2 distance to cosine similarity score
+                        # For normalized vectors: score = 1 - (distance^2 / 2)
+                        score = 1 - (distance ** 2) / 2
+
+                        if score >= min_score:
+                            matches.append({
+                                "id": doc_row["id"],
+                                "content": doc_row["content"],
+                                "source_type": doc_row["source_type"],
+                                "score": round(float(score), 4)
+                            })
+
+                vector_search_success = True
+
+            except Exception as e:
+                logger.error(f"Vector search failed, falling back to brute-force: {e}")
+                vector_search_success = False
+
+        if not vector_search_success:
+            cursor.execute("SELECT id, content, source_type, embedding FROM document_chunks WHERE embedding IS NOT NULL")
             
-            # Cosine similarity
-            score = float(
-                np.dot(query_array, emb_array) /
-                (np.linalg.norm(query_array) * np.linalg.norm(emb_array))
-            )
+            for row in cursor:
+                emb_bytes = row["embedding"]
+                emb_array = np.frombuffer(emb_bytes, dtype=np.float32)
+
+                # Cosine similarity
+                score = float(
+                    np.dot(query_array, emb_array) /
+                    (np.linalg.norm(query_array) * np.linalg.norm(emb_array))
+                )
+
+                if score >= min_score:
+                    matches.append({
+                        "id": row["id"],
+                        "content": row["content"],
+                        "source_type": row["source_type"],
+                        "score": round(score, 4)
+                    })
             
-            if score >= min_score:
-                matches.append({
-                    "id": row["id"],
-                    "content": row["content"],
-                    "source_type": row["source_type"],
-                    "score": round(score, 4)
-                })
+            # Sort and limit for brute-force
+            matches.sort(key=lambda x: x["score"], reverse=True)
+            matches = matches[:top_k]
         
         conn.close()
-        
-        # Sort and limit
-        matches.sort(key=lambda x: x["score"], reverse=True)
-        return matches[:top_k]
+        return matches
