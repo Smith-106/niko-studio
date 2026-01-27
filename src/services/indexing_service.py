@@ -69,16 +69,45 @@ class IndexingService:
             )
         """)
 
-        # Initialize vector table if extension is loaded
-        if sqlite_vec:
-            # Assuming 384 dimensions for BAAI/bge-small-en-v1.5
-            # TODO: dynamic dimension based on model
-            cursor.execute("""
-                CREATE VIRTUAL TABLE IF NOT EXISTS vec_document_chunks USING vec0(
-                    embedding float[384]
-                )
-            """)
+        conn.commit()
+        conn.close()
 
+    def _init_vector_db(self):
+        """Initialize SQLite vector table with dynamic dimension."""
+        if not sqlite_vec:
+            return
+
+        conn = sqlite3.connect(str(self.db_path))
+        try:
+            conn.enable_load_extension(True)
+            sqlite_vec.load(conn)
+            conn.enable_load_extension(False)
+        except Exception as e:
+            logger.error(f"Failed to load sqlite-vec extension: {e}")
+            conn.close()
+            return
+
+        cursor = conn.cursor()
+
+        # Get dimension from loaded embedder
+        try:
+            # Try to get dimension from loaded embedder instance
+            if hasattr(self._embedder, "embedding_size"):
+                dim = self._embedder.embedding_size
+            else:
+                # Fallback to model registry look up if possible or default
+                logger.warning("Could not determine embedding size from instance, defaulting to 384")
+                dim = 384
+        except Exception as e:
+            logger.warning(f"Error determining embedding size: {e}, defaulting to 384")
+            dim = 384
+
+        logger.debug(f"Initializing vector table with dimension: {dim}")
+        cursor.execute(f"""
+            CREATE VIRTUAL TABLE IF NOT EXISTS vec_document_chunks USING vec0(
+                embedding float[{dim}]
+            )
+        """)
         conn.commit()
         conn.close()
 
@@ -90,6 +119,8 @@ class IndexingService:
                 raise ImportError("FastEmbed is required for Semantic Search.")
             logger.info(f"Loading embedding model: {self.model_name}")
             self._embedder = TextEmbedding(model_name=self.model_name)
+            # Ensure vector table exists with correct dimension
+            self._init_vector_db()
         return self._embedder
 
     def add_document(self, doc_id: str, content: str, source_type: str = "general"):
