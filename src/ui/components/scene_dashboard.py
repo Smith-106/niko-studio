@@ -185,15 +185,16 @@ def analyze_parallelization(scenes: List[Dict[str, Any]]) -> Dict[int, List[str]
     """
     # 构建依赖图
     scene_map = {s.get("id"): s for s in scenes}
+    memo: Dict[str, int] = {}
     
-    def get_level(scene_id: str, visited: set = None) -> int:
-        """递归计算场景层级"""
-        if visited is None:
-            visited = set()
+    def get_level(scene_id: str, visited: set) -> int:
+        """递归计算场景层级 (带缓存)"""
+        # 检查缓存
+        if scene_id in memo:
+            return memo[scene_id]
         
         if scene_id in visited:
             return 0  # 避免循环依赖
-        visited.add(scene_id)
         
         scene = scene_map.get(scene_id)
         if not scene:
@@ -201,20 +202,25 @@ def analyze_parallelization(scenes: List[Dict[str, Any]]) -> Dict[int, List[str]
         
         deps = scene.get("dependencies", [])
         if not deps:
+            memo[scene_id] = 1
             return 1
         
+        visited.add(scene_id)
         max_dep_level = 0
         for dep in deps:
-            dep_level = get_level(dep, visited.copy())
+            dep_level = get_level(dep, visited)
             max_dep_level = max(max_dep_level, dep_level)
+        visited.remove(scene_id)
         
-        return max_dep_level + 1
+        result = max_dep_level + 1
+        memo[scene_id] = result
+        return result
     
     # 计算每个场景的层级
     levels: Dict[int, List[str]] = {}
     for s in scenes:
         sid = s.get("id")
-        level = get_level(sid)
+        level = get_level(sid, set())
         if level not in levels:
             levels[level] = []
         levels[level].append(sid)
