@@ -44,6 +44,8 @@ class VectorSearch:
                 raise ImportError("FastEmbed is required for VectorSearch. Install with `pip install fastembed`.")
             logger.info(f"Loading embedding model: {self.model_name}")
             self._embedder = TextEmbedding(model_name=self.model_name)
+            # Ensure vector table exists with correct dimension
+            self._init_vector_db()
         return self._embedder
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -81,15 +83,36 @@ class VectorSearch:
             )
         """)
 
-        # Virtual table for vector search
-        if sqlite_vec:
-            # Assuming 384 dimensions for BAAI/bge-small-en-v1.5
-            cursor.execute("""
-                CREATE VIRTUAL TABLE IF NOT EXISTS vec_items USING vec0(
-                    embedding float[384]
-                )
-            """)
+        conn.commit()
+        conn.close()
 
+    def _init_vector_db(self):
+        """Initialize SQLite vector table with dynamic dimension."""
+        if not sqlite_vec:
+            return
+
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # Get dimension from loaded embedder
+        try:
+            # Try to get dimension from loaded embedder instance
+            if hasattr(self._embedder, "embedding_size"):
+                dim = self._embedder.embedding_size
+            else:
+                # Fallback to model registry look up if possible or default
+                logger.warning("Could not determine embedding size from instance, defaulting to 384")
+                dim = 384
+        except Exception as e:
+            logger.warning(f"Error determining embedding size: {e}, defaulting to 384")
+            dim = 384
+
+        logger.debug(f"Initializing vector table with dimension: {dim}")
+        cursor.execute(f"""
+            CREATE VIRTUAL TABLE IF NOT EXISTS vec_items USING vec0(
+                embedding float[{dim}]
+            )
+        """)
         conn.commit()
         conn.close()
 
