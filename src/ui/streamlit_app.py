@@ -25,6 +25,21 @@ st.set_page_config(
 DB_PATH = os.path.join(os.path.dirname(__file__), "local_memory.db")
 
 
+@st.cache_data(ttl=5)
+def load_scenes(task_dir: str) -> List[Dict[str, Any]]:
+    """从 .task 目录加载场景文件 (Cached)"""
+    scenes = []
+    if os.path.exists(task_dir):
+        for filepath in sorted(glob.glob(os.path.join(task_dir, "SCENE-*.json"))):
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    scene = json.load(f)
+                    scenes.append(scene)
+            except:
+                pass
+    return scenes
+
+
 def init_db() -> sqlite3.Connection:
     """初始化 SQLite 数据库"""
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
@@ -483,15 +498,7 @@ with col_artifacts:
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         task_dir = os.path.join(project_root, ".task")
         
-        scenes = []
-        if os.path.exists(task_dir):
-            for filepath in sorted(glob.glob(os.path.join(task_dir, "SCENE-*.json"))):
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        scene = json.load(f)
-                        scenes.append(scene)
-                except:
-                    pass
+        scenes = load_scenes(task_dir)
         
         if scenes:
             # 统计摘要
