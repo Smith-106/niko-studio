@@ -70,15 +70,15 @@ class CoreMemoryStore:
         # We need to access DB for direct retrieval by ID since VectorSearch
         # is optimized for search, but it's backed by SQLite items table.
         # We can use the connection from vector_search cleanly.
-        conn = self.vector_search._get_connection()
-        cursor = conn.cursor()
+        with self.vector_search._get_connection() as conn:
+            cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT id, content, metadata FROM items WHERE id = ? AND type = 'memory'",
-            (memory_id,)
-        )
-        row = cursor.fetchone()
-        conn.close()
+            cursor.execute(
+                "SELECT id, content, metadata FROM items WHERE id = ? AND type = 'memory'",
+                (memory_id,)
+            )
+            row = cursor.fetchone()
+        
 
         if row:
             meta = json.loads(row["metadata"])
