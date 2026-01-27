@@ -12,6 +12,9 @@ import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
+from src.services.knowledge_layer import AgentKnowledgeLayer
+from src.services.document_loader import DocumentLoader
+
 # === 配置 ===
 st.set_page_config(
     layout="wide", 
@@ -64,6 +67,16 @@ def init_db() -> sqlite3.Connection:
     return conn
 
 
+@st.cache_resource
+def get_knowledge_layer() -> AgentKnowledgeLayer:
+    """Init Knowledge Layer (Singleton)"""
+    return AgentKnowledgeLayer(DB_PATH)
+
+@st.cache_resource
+def get_document_loader() -> DocumentLoader:
+    """Init Document Loader (Singleton)"""
+    return DocumentLoader()
+
 def save_message(conn: sqlite3.Connection, session_id: str, role: str, 
                  content: str, agent_name: str = None, thought_process: dict = None):
     """保存消息到数据库"""
@@ -115,6 +128,8 @@ def save_draft(conn: sqlite3.Connection, session_id: str, content: str,
 
 # === 初始化 ===
 conn = init_db()
+knowledge_layer = get_knowledge_layer()
+document_loader = get_document_loader()
 
 # Session State 初始化
 if "session_id" not in st.session_state:
@@ -325,8 +340,21 @@ with col_artifacts:
             help="上传的文件将作为 Context 注入到 Agent"
         )
         if uploaded_file:
-            st.success(f"✅ 已加载: {uploaded_file.name}")
-            # TODO: 对接 RAG / Knowledge Memory
+            try:
+                # 使用 DocumentLoader 处理
+                with st.spinner(f"正在处理 {uploaded_file.name}..."):
+                    chunks = document_loader.load_and_split(uploaded_file, uploaded_file.name)
+
+                    if chunks:
+                        for chunk in chunks:
+                            doc_id = f"{chunk['metadata']['source']}_part_{chunk['metadata']['chunk_index']}"
+                            knowledge_layer.add_document(doc_id, chunk['content'], source_type="user_upload")
+
+                        st.success(f"✅ 已加载: {uploaded_file.name} ({len(chunks)} chunks)")
+                    else:
+                        st.warning(f"未能从 {uploaded_file.name} 提取内容")
+            except Exception as e:
+                st.error(f"处理文件失败: {e}")
 
     # 2. 多格式预览 Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 草稿", "📊 LOCK", "🎯 8维度", "📇 场景卡片", "🕸️ 依赖图"])
