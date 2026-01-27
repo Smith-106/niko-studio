@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional, Type
 from dataclasses import dataclass
 from enum import Enum
 
-from .base_state import BaseState, BaseWorkflowConfig
+from src.workflow.base_state import BaseState, BaseWorkflowConfig
 
 
 # ============================================================

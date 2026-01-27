@@ -1,393 +1,342 @@
 """
-小說創作領域適配器 (Novel Adapter)
+小说领域适配器 (Novel Domain Adapter)
 
-實現小說創作專用的工作流狀態和圖構建。
-繼承 BaseDomainAdapter，實現 LOCK 評分系統。
-
-保持向後兼容，現有的 state.py 和 graph.py 可繼續使用。
+实现小说创作专用工作流:
+Architect -> Writer -> Critic -> Finalize
 """
 
-from typing import TypedDict, List, Optional, Dict, Any, Literal, Type
-from dataclasses import dataclass
-from datetime import datetime
-import uuid
-
+from typing import Dict, Any, Type, Literal, Optional
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
+import os
+from dotenv import load_dotenv
 
-from ..base_state import BaseState, create_base_state
-from ..base_adapter import (
+from .base_adapter import (
     BaseDomainAdapter, 
-    BaseEvaluationResult, 
     AdapterRegistry,
-    BaseWorkflowConfig
+    DomainType,
+    BaseEvaluationResult
 )
+from src.workflow.state import (
+    WritingState,
+    create_initial_state
+)
+from src.workflow.base_state import BaseState
 
-
-# ============================================================
-# 小說專用類型定義
-# ============================================================
-
-class LOCKScores(TypedDict):
-    """LOCK 評分"""
-    L: int  # Lead (主角)
-    O: int  # Objective (目標)
-    C: int  # Confrontation (冲突)
-    K: int  # Knockout (結尾)
-    total: float  # 加權總分 (C 權重 40%)
-
-
-class SceneCard(TypedDict, total=False):
-    """場景卡片"""
-    scene_id: str
-    chapter_num: int
-    scene_num: int
-    pov_character: str
-    objective: str
-    conflict: str
-    outcome: str
-    plot_beat: str
-    emotional_arc: str
-    sensory_guidance: Dict[str, str]
-    structural_function: str
-    hook: Optional[str]
-    foreshadows_to_plant: List[str]
-    foreshadows_to_harvest: List[str]
-
-
-class CritiqueResult(TypedDict, total=False):
-    """Critic 評估結果"""
-    decision: Literal["APPROVED", "HUMAN_REVIEW", "REVISE", "REWRITE"]
-    decision_reason: str
-    total_score: float
-    lock_score: float
-    style_score: float
-    logic_score: float
-    lock_analysis: Dict[str, Any]
-    actionable_feedback: str
-    revision_instructions: List[Dict[str, str]]
-
-
-# ============================================================
-# 小說工作流狀態
-# ============================================================
-
-class WritingState(BaseState, total=False):
-    """
-    小說寫作工作流狀態
-    
-    繼承 BaseState 通用字段，添加小說專用字段。
-    
-    狀態流轉:
-    1. user_idea → Architect → story_blueprint, scene_cards
-    2. current_scene → Writer → draft_content
-    3. draft_content → Critic → critique_result
-    4. If REVISE: 回到步驟 2
-    """
-    
-    # ========================================
-    # 小說輸入
-    # ========================================
-    user_idea: str                          # 用戶的故事靈感
-    genre: str                              # 類型: 玄幻/懸疑/科幻等
-    target_chapters: int                    # 目標章節數
-    target_wordcount: int                   # 目標總字數
-    
-    # ========================================
-    # 會話追蹤
-    # ========================================
-    current_chapter: int                    # 當前章節
-    current_scene_index: int                # 當前場景索引
-    
-    # ========================================
-    # Architect 產物
-    # ========================================
-    story_blueprint: Dict[str, Any]         # 完整故事藍圖
-    lock_analysis: Dict[str, Any]           # LOCK 系統分析
-    scene_cards: List[SceneCard]            # 場景卡片序列
-    current_scene: SceneCard                # 當前正在寫作的場景
-    
-    # ========================================
-    # 上下文 (來自 Context Agents)
-    # ========================================
-    character_profiles: List[Dict[str, Any]]  # 角色檔案
-    world_settings: Dict[str, Any]            # 世界觀設定
-    foreshadow_tracker: Dict[str, Any]        # 伏筆追蹤器
-    
-    # ========================================
-    # Writer 產物
-    # ========================================
-    draft_version: int                      # 草稿版本號
-    draft_wordcount: int                    # 草稿字數
-    writer_self_check: Dict[str, Any]       # Writer 自檢結果
-    
-    # ========================================
-    # Critic 產物 (Reflection)
-    # ========================================
-    critique_result: CritiqueResult         # Critic 評估結果
-    revision_history: List[Dict[str, Any]]  # 修改歷史記錄
-    
-    # ========================================
-    # 反饋上下文
-    # ========================================
-    feedback_context: str                   # Critic 的可執行反饋
-    
-    # ========================================
-    # 最終輸出
-    # ========================================
-    final_content: str                      # 最終通過的內容
-    final_score: float                      # 最終評分
-
-
-# ============================================================
-# 小說工作流配置
-# ============================================================
-
-class NovelWorkflowConfig(BaseWorkflowConfig, total=False):
-    """小說工作流配置"""
-    
-    # LOCK 專用閾值
-    min_c_score: int                        # C(冲突)維度最低分 (默認 7)
-    
-    # 小說專用
-    chapter_wordcount: int                  # 每章目標字數
-    genre_style: str                        # 類型風格指導
-
-
-DEFAULT_NOVEL_CONFIG: NovelWorkflowConfig = {
-    "pass_score": 80,
-    "human_review_score": 70,
-    "max_revisions": 3,
-    "auto_approve_timeout": 300,
-    "verbose": True,
-    "save_intermediate": True,
-    "domain": "novel",
-    "domain_config": {},
-    "min_c_score": 7,
-    "chapter_wordcount": 3000,
-    "genre_style": "",
-}
-
-
-# ============================================================
-# 小說評估結果
-# ============================================================
-
-@dataclass
-class NovelEvaluationResult(BaseEvaluationResult):
-    """小說評估結果，繼承基類並添加 LOCK 專用字段"""
-    lock_scores: LOCKScores = None
-    style_score: float = 0.0
-    logic_score: float = 0.0
-
-
-# ============================================================
-# 小說適配器
-# ============================================================
-
-@AdapterRegistry.register("novel")
+@AdapterRegistry.register(DomainType.NOVEL.value)
 class NovelAdapter(BaseDomainAdapter):
-    """
-    小說創作領域適配器
-    
-    實現:
-    - LOCK 評分系統
-    - Architect → Writer → Critic 工作流
-    - 場景卡片驅動的創作流程
-    """
     
     def get_domain_type(self) -> str:
-        return "novel"
+        return DomainType.NOVEL.value
     
-    def get_state_class(self) -> Type[WritingState]:
+    def get_state_class(self) -> Type[BaseState]:
         return WritingState
     
-    def create_initial_state(
-        self, 
-        user_request: str,
-        genre: str = "懸疑",
-        target_chapters: int = 30,
-        target_wordcount: int = 600000,
-        **kwargs
-    ) -> WritingState:
-        """創建小說工作流初始狀態"""
-        
-        base = create_base_state(
-            user_request=user_request,
-            domain="novel",
-            workflow_level=kwargs.get("workflow_level", 3),
-        )
-        
-        return WritingState(
-            **base,
-            
-            # 小說輸入
+    def create_initial_state(self, user_request: str, **kwargs) -> BaseState:
+        return create_initial_state(
             user_idea=user_request,
-            genre=genre,
-            target_chapters=target_chapters,
-            target_wordcount=target_wordcount,
-            
-            # 會話追蹤
-            current_chapter=1,
-            current_scene_index=0,
-            
-            # 初始化空值
-            story_blueprint={},
-            lock_analysis={},
-            scene_cards=[],
-            current_scene={},
-            character_profiles=[],
-            world_settings={},
-            foreshadow_tracker={},
-            draft_version=0,
-            draft_wordcount=0,
-            writer_self_check={},
-            critique_result={},
-            revision_history=[],
-            feedback_context="",
-            final_content="",
-            final_score=0.0,
+            genre=kwargs.get("genre", "悬疑"),
+            target_chapters=kwargs.get("target_chapters", 30),
+            target_wordcount=kwargs.get("target_wordcount", 600000)
         )
     
-    def evaluate(self, state: WritingState) -> NovelEvaluationResult:
-        """
-        評估小說草稿質量
-        
-        使用 LOCK 評分系統:
-        - L (Lead): 主角塑造
-        - O (Objective): 目標清晰
-        - C (Conflict): 冲突張力 (權重 40%)
-        - K (Knockout): 結尾吸引力
-        """
+    def evaluate(self, state: BaseState) -> BaseEvaluationResult:
         critique = state.get("critique_result", {})
+        lock_analysis = critique.get("lock_analysis", {})
         
-        lock_scores = critique.get("lock_analysis", {})
-        total_score = critique.get("total_score", 0)
-        decision = critique.get("decision", "REVISE")
-        
-        return NovelEvaluationResult(
-            decision=decision,
+        return BaseEvaluationResult(
+            decision=critique.get("decision", "REVISE"),
             decision_reason=critique.get("decision_reason", ""),
-            total_score=total_score,
-            dimension_scores={
-                "L": lock_scores.get("L", 0),
-                "O": lock_scores.get("O", 0),
-                "C": lock_scores.get("C", 0),
-                "K": lock_scores.get("K", 0),
-            },
+            total_score=critique.get("total_score", 0),
+            dimension_scores=lock_analysis.get("scores", {}),
             feedback=critique.get("actionable_feedback", ""),
-            revision_instructions=critique.get("revision_instructions", []),
-            lock_scores=lock_scores,
-            style_score=critique.get("style_score", 0),
-            logic_score=critique.get("logic_score", 0),
+            revision_instructions=critique.get("revision_instructions", [])
         )
-    
+
     def create_graph(self):
-        """
-        創建小說寫作工作流圖
+        workflow = StateGraph(WritingState)
+
+        # 使用绑定的方法作为节点
+        workflow.add_node("architect", self.architect_node)
+        workflow.add_node("writer", self.writer_node)
+        workflow.add_node("critic", self.critic_node)
+        workflow.add_node("human_reviewer", self.human_review_node)
+        workflow.add_node("finalize", self.finalize_node)
         
-        結構:
-        [Architect] → [Writer] → [Critic] → {條件路由}
-                         ↑                      │
-                         ├──────────────────────┘ (Loop if REVISE)
-                         │
-        [Finalize] ← [Human Review] ← (if HUMAN_REVIEW)
-             ↑
-             └─ (if APPROVED)
-        """
-        from ..graph import (
-            architect_node,
-            writer_node,
-            critic_node,
-            human_review_node,
-            finalize_node,
-        )
-        
-        # 創建圖
-        graph = StateGraph(WritingState)
-        
-        # 添加節點
-        graph.add_node("architect", architect_node)
-        graph.add_node("writer", writer_node)
-        graph.add_node("critic", critic_node)
-        graph.add_node("human_review", human_review_node)
-        graph.add_node("finalize", finalize_node)
-        
-        # 設置入口
-        graph.set_entry_point("architect")
-        
-        # 添加邊
-        graph.add_edge("architect", "writer")
-        graph.add_edge("writer", "critic")
-        
-        # 條件路由
-        def route_after_critic(state: WritingState) -> str:
-            return self.should_continue(state)
-        
-        graph.add_conditional_edges(
+        workflow.set_entry_point("architect")
+        workflow.add_edge("architect", "writer")
+        workflow.add_edge("writer", "critic")
+
+        workflow.add_conditional_edges(
             "critic",
-            route_after_critic,
+            self.route_after_critic,
             {
-                "revise": "writer",
-                "human_review": "human_review",
                 "finalize": "finalize",
+                "human_reviewer": "human_reviewer",
+                "writer": "writer"
             }
         )
         
-        graph.add_edge("human_review", "finalize")
-        graph.add_edge("finalize", END)
+        workflow.add_edge("human_reviewer", "finalize")
+        workflow.add_edge("finalize", END)
         
-        return graph.compile()
-    
-    def should_continue(self, state: WritingState) -> str:
-        """小說專用的繼續判斷邏輯"""
-        config = self.merge_config(self.config)
+        # 返回构建好的图 (未编译)
+        return workflow
+
+    def _get_llm(self):
+        """获取LLM实例"""
+        load_dotenv()
         
+        google_key = os.getenv("GOOGLE_API_KEY")
+        if google_key:
+            try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                return ChatGoogleGenerativeAI(
+                    model="gemini-pro",
+                    temperature=0.7,
+                    google_api_key=google_key
+                )
+            except Exception:
+                pass
+        
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openai_key:
+            try:
+                from langchain_openai import ChatOpenAI
+                return ChatOpenAI(
+                    model="gpt-4",
+                    temperature=0.7,
+                    openai_api_key=openai_key
+                )
+            except Exception:
+                pass
+        
+        raise RuntimeError("无法初始化LLM，请设置 GOOGLE_API_KEY 或 OPENAI_API_KEY")
+
+    # ============================================================
+    # 节点函数
+    # ============================================================
+
+    async def architect_node(self, state: WritingState) -> Dict[str, Any]:
+        print("\n" + "="*50)
+        print("🏗️ Architect Agent: 规划故事结构...")
+        print("="*50)
+        
+        from src.agents.architect import ArchitectAgent
+
+        llm = self._get_llm()
+        agent = ArchitectAgent(llm)
+
+        try:
+            blueprint = await agent.plan(
+                user_idea=state.get("user_idea", ""),
+                genre=state.get("genre", "悬疑"),
+                target_chapters=state.get("target_chapters", 30),
+                target_wordcount=state.get("target_wordcount", 600000)
+            )
+
+            scene_cards = [sc.model_dump() for sc in blueprint.scene_cards]
+            first_scene = scene_cards[0] if scene_cards else {}
+
+            print(f"✅ 生成 {len(scene_cards)} 个场景卡片")
+            print(f"   LOCK总分: {blueprint.lock_analysis.total_score}/40")
+
+            return {
+                "story_blueprint": blueprint.model_dump(),
+                "lock_analysis": blueprint.lock_analysis.model_dump(),
+                "scene_cards": scene_cards,
+                "current_scene": first_scene,
+                "current_scene_index": 0,
+                "revision_count": 0,
+                "draft_version": 0
+            }
+
+        except Exception as e:
+            print(f"❌ Architect 执行失败: {e}")
+            return {
+                "errors": state.get("errors", []) + [f"Architect Error: {str(e)}"],
+                "requires_human_intervention": True
+            }
+
+    async def writer_node(self, state: WritingState) -> Dict[str, Any]:
         revision_count = state.get("revision_count", 0)
-        max_revisions = config.get("max_revisions", 3)
+        version = state.get("draft_version", 0) + 1
+        
+        print("\n" + "="*50)
+        print(f"✍️ Writer Agent: 撰写第 {version} 版草稿...")
+        print("="*50)
+        
+        from src.agents.writer import WriterAgent, WriterInput
+
+        llm = self._get_llm()
+        agent = WriterAgent(llm)
+
+        scene = state.get("current_scene", {})
+
+        writer_input = WriterInput(
+            scene_id=scene.get("scene_id", "CH01-SC01"),
+            chapter_num=scene.get("chapter_num", 1),
+            pov_character=scene.get("pov_character", ""),
+            objective=scene.get("objective", ""),
+            conflict=scene.get("conflict", ""),
+            outcome=scene.get("outcome", "+"),
+            plot_beat=scene.get("plot_beat", ""),
+            emotional_arc=scene.get("emotional_arc", "平静→变化"),
+            sensory_guidance=scene.get("sensory_guidance", {}),
+            character_profiles=state.get("character_profiles", []),
+            world_settings=state.get("world_settings", {}),
+            foreshadows_to_plant=scene.get("foreshadows_to_plant", []),
+            foreshadows_to_harvest=scene.get("foreshadows_to_harvest", []),
+            word_target=2000
+        )
+
+        feedback = state.get("feedback_context", "")
+        if revision_count > 0 and feedback:
+            print(f"   📝 基于Critic反馈进行第 {revision_count} 次修改")
+            writer_input.previous_content = f"""
+## 上一版本存在的问题
+
+{feedback}
+
+## 请根据以上反馈重写内容
+"""
+        
+        try:
+            result = await agent.write(writer_input)
+
+            print(f"✅ 生成草稿: {result.wordcount} 字")
+            print(f"   感官描写: {', '.join(result.sensory_types_used)}")
+            if result.forbidden_words_found:
+                print(f"   ⚠️ 禁用词: {result.forbidden_words_found}")
+
+            return {
+                "draft_content": result.content,
+                "draft_version": version,
+                "draft_wordcount": result.wordcount,
+                "writer_self_check": {
+                    "sensory_types": result.sensory_types_used,
+                    "forbidden_words": result.forbidden_words_found,
+                    "needs_review": result.sections_needing_review
+                }
+            }
+
+        except Exception as e:
+            print(f"❌ Writer 执行失败: {e}")
+            return {
+                "errors": state.get("errors", []) + [f"Writer Error: {str(e)}"]
+            }
+
+    async def critic_node(self, state: WritingState) -> Dict[str, Any]:
+        revision_count = state.get("revision_count", 0)
+
+        print("\n" + "="*50)
+        print(f"🧐 Critic Agent: 审核稿件 (第 {revision_count + 1} 次审核)...")
+        print("="*50)
+
+        from src.agents.critic import CriticAgent
+
+        llm = self._get_llm()
+        agent = CriticAgent(llm)
+
+        try:
+            result = await agent.review(
+                draft_content=state.get("draft_content", ""),
+                scene_card=state.get("current_scene", {}),
+                character_profiles=state.get("character_profiles", []),
+                world_settings=state.get("world_settings", {})
+            )
+
+            print(f"📊 评分结果:")
+            print(f"   总分: {result.total_score}/100")
+            print(f"   LOCK: {result.lock_score}/40")
+            print(f"   风格: {result.style_score}/35")
+            print(f"   逻辑: {result.logic_score}/25")
+            print(f"   决策: {result.decision}")
+
+            history_entry = {
+                "version": state.get("draft_version", 1),
+                "score": result.total_score,
+                "decision": result.decision,
+                "feedback": result.actionable_feedback[:200] if result.actionable_feedback else ""
+            }
+            revision_history = state.get("revision_history", []) + [history_entry]
+
+            return {
+                "critique_result": result.model_dump(),
+                "revision_count": revision_count + 1,
+                "revision_history": revision_history,
+                "feedback_context": result.actionable_feedback,
+                "revision_instructions": [inst.model_dump() for inst in result.revision_instructions]
+            }
+
+        except Exception as e:
+            print(f"❌ Critic 执行失败: {e}")
+            return {
+                "errors": state.get("errors", []) + [f"Critic Error: {str(e)}"]
+            }
+
+    def human_review_node(self, state: WritingState) -> Dict[str, Any]:
+        print("\n" + "="*50)
+        print("⚠️ Human Review: 需要人工审阅")
+        print("="*50)
         
         critique = state.get("critique_result", {})
-        decision = critique.get("decision", "REVISE")
+
+        print(f"   总分: {critique.get('total_score', 'N/A')}")
+        print(f"   决策: {critique.get('decision', 'N/A')}")
+        print(f"   原因: {critique.get('decision_reason', 'N/A')}")
+        print(f"   修改次数: {state.get('revision_count', 0)}")
+
+        print("\n   [模拟] 人工审阅通过")
+
+        return {
+            "requires_human_intervention": False,
+            "final_content": state.get("draft_content", ""),
+            "final_score": critique.get("total_score", 0)
+        }
+
+    def finalize_node(self, state: WritingState) -> Dict[str, Any]:
+        print("\n" + "="*50)
+        print("✅ 写作完成!")
+        print("="*50)
+
+        critique = state.get("critique_result", {})
+
+        return {
+            "final_content": state.get("draft_content", ""),
+            "final_score": critique.get("total_score", 0)
+        }
+
+    def route_after_critic(self, state: WritingState) -> str:
+        critique = state.get("critique_result", {})
+        revision_count = state.get("revision_count", 0)
+
         total_score = critique.get("total_score", 0)
+        decision = critique.get("decision", "REVISE")
         
-        # 達到最大修改次數
-        if revision_count >= max_revisions:
-            return "human_review"
+        lock_analysis = critique.get("lock_analysis", {})
+        c_score = lock_analysis.get("C", {}).get("score", 0) if lock_analysis else 0
         
-        # 通過
-        if decision == "APPROVED":
+        pass_score = self.config.get("pass_score", 80)
+        min_c_score = self.config.get("min_c_score", 7)
+        max_revisions = self.config.get("max_revisions", 3)
+        human_review_score = self.config.get("human_review_score", 70)
+
+        if decision == "APPROVED" or (total_score >= pass_score and c_score >= min_c_score):
+            print(f"✅ 审核通过! (总分: {total_score}, C分: {c_score})")
             return "finalize"
         
-        # 人工審閱
-        if decision == "HUMAN_REVIEW":
-            return "human_review"
+        if revision_count >= max_revisions:
+            print(f"⚠️ 达到最大修改次数 ({max_revisions})，需要人工介入")
+            return "human_reviewer"
         
-        # 需要修改
-        if decision in ("REVISE", "REWRITE"):
-            return "revise"
+        if decision == "REWRITE":
+            print(f"❌ 质量过低 ({total_score})，需要人工介入")
+            return "human_reviewer"
         
-        # 默認繼續
-        return "revise"
-    
-    def get_default_config(self) -> NovelWorkflowConfig:
-        return DEFAULT_NOVEL_CONFIG.copy()
+        if decision == "HUMAN_REVIEW" or total_score >= human_review_score:
+            print(f"⚠️ 分数 {total_score} 建议人工审阅")
+            return "human_reviewer"
 
-
-# ============================================================
-# 向後兼容：導出舊接口
-# ============================================================
-
-# 為了保持向後兼容，導出創建函數
-def create_initial_state(
-    user_idea: str,
-    genre: str = "懸疑",
-    target_chapters: int = 30,
-    target_wordcount: int = 600000
-) -> WritingState:
-    """向後兼容的創建函數"""
-    adapter = NovelAdapter()
-    return adapter.create_initial_state(
-        user_request=user_idea,
-        genre=genre,
-        target_chapters=target_chapters,
-        target_wordcount=target_wordcount,
-    )
+        print(f"🔄 分数 {total_score} 未达标，退回 Writer 修改 (第 {revision_count}/{max_revisions} 次)...")
+        return "writer"

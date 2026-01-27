@@ -8,6 +8,8 @@
 from typing import TypedDict, List, Optional, Dict, Any, Literal
 from datetime import datetime
 
+from src.workflow.base_state import BaseState, BaseWorkflowConfig
+
 
 class LOCKScores(TypedDict):
     """LOCK评分"""
@@ -49,7 +51,7 @@ class CritiqueResult(TypedDict, total=False):
     revision_instructions: List[Dict[str, str]]
 
 
-class WritingState(TypedDict, total=False):
+class WritingState(BaseState, total=False):
     """
     写作工作流状态 - 所有Agent共享的记忆
     
@@ -127,23 +129,23 @@ class WritingState(TypedDict, total=False):
     requires_human_intervention: bool       # 是否需要人工介入
 
 
-class WorkflowConfig(TypedDict):
+class WorkflowConfig(BaseWorkflowConfig):
     """工作流配置"""
     
     # 质量阈值
-    pass_score: int                         # 通过分数阈值 (默认80)
+    # pass_score: int                         # (Base) 通过分数阈值 (默认80)
     min_c_score: int                        # C(冲突)维度最低分 (默认7)
     
     # 循环控制
-    max_revisions: int                      # 最大修改次数 (默认3)
+    # max_revisions: int                      # (Base) 最大修改次数 (默认3)
     
     # 人工介入
-    human_review_score: int                 # 触发人工审阅的分数 (默认70)
-    auto_approve_timeout: int               # 自动通过超时时间(秒)
+    # human_review_score: int                 # (Base) 触发人工审阅的分数 (默认70)
+    # auto_approve_timeout: int               # (Base) 自动通过超时时间(秒)
     
     # 调试
-    verbose: bool                           # 是否输出详细日志
-    save_intermediate: bool                 # 是否保存中间产物
+    # verbose: bool                           # (Base) 是否输出详细日志
+    # save_intermediate: bool                 # (Base) 是否保存中间产物
 
 
 # 默认配置

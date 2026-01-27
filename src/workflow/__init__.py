@@ -44,7 +44,7 @@ from .base_state import (
     create_base_state,
 )
 
-from .base_adapter import (
+from .adapters import (
     BaseDomainAdapter,
     BaseEvaluationResult,
     AdapterRegistry,
