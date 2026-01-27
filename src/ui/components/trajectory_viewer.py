@@ -187,48 +187,42 @@ def render_decision_tree(
         st.info(f"💡 **决策理由**: {reason}")
 
 
-# 测试代码
-if __name__ == "__main__":
-    st.set_page_config(page_title="Trajectory Viewer Test", layout="wide")
-    st.title("推理轨迹查看器测试")
+def announce_workflow_step(node_name: str, status_container: Any = None) -> None:
+    """
+    Announces the completion of a workflow step via Toast and updates the Status container.
+    Also renders a visual log entry in the current context.
     
-    # 测试数据
-    test_trajectory = [
-        {
-            "node": "Architect",
-            "action": "分析场景结构",
-            "thought": "用户要求写一个悬疑开场，需要设计足够的冲突...",
-            "result": {"scene_type": "opening", "conflict_level": "high"},
-            "timestamp": "2024-01-25 22:00:01",
-            "status": "completed"
-        },
-        {
-            "node": "Writer",
-            "action": "生成初稿",
-            "thought": "基于 Architect 的场景卡片，开始按五感描写...",
-            "result": {"draft_content": "夜幕低垂，雨点敲打着窗户..."},
-            "timestamp": "2024-01-25 22:00:15",
-            "status": "completed"
-        },
-        {
-            "node": "Critic",
-            "action": "评估质量",
-            "thought": "检查 LOCK 系统和 8 维度...",
-            "result": {
-                "lock_scores": {"L": 7, "O": 8, "C": 6, "K": 7},
-                "decision": "建议修改"
-            },
-            "timestamp": "2024-01-25 22:00:30",
-            "status": "completed"
-        }
-    ]
+    Args:
+        node_name: The name of the completed node/step.
+        status_container: The st.status container object (optional).
+    """
+    # 1. Visual log (Markdown) inside the container (caller context)
+    st.markdown(f"✅ **{node_name}** 完成")
     
-    render_trajectory_viewer(test_trajectory)
+    # 2. Toast notification (ARIA-live region in newer Streamlit)
+    st.toast(f"Step completed: {node_name}", icon="✅")
     
-    st.divider()
+    # 3. Update Status Container Label
+    if status_container:
+        status_container.update(label=f"🔄 正在执行... (刚刚完成: {node_name})", state="running")
+
+
+def render_execution_summary(completed_steps: List[str], final_status: str = "complete", error_message: str = None) -> None:
+    """
+    Renders a summary of the workflow execution.
     
-    render_workflow_progress(
-        current_node="Critic",
-        nodes=["Architect", "Writer", "Critic", "Human"],
-        completed_nodes=["Architect", "Writer", "Critic"]
-    )
+    Args:
+        completed_steps: List of completed node names.
+        final_status: 'complete' or 'error'.
+        error_message: Optional error message if failed.
+    """
+    with st.expander("📊 执行摘要 / Status Summary", expanded=True):
+        if final_status == "complete":
+            st.success("✅ 工作流执行成功 / Workflow completed successfully!")
+        else:
+            st.error(f"❌ 工作流执行失败 / Workflow failed: {error_message}")
+
+        st.write(f"**共完成步骤 / Completed steps:** {len(completed_steps)}")
+        if completed_steps:
+            path_str = " → ".join([f"`{s}`" for s in completed_steps])
+            st.markdown(f"**执行路径 / Execution Path:** {path_str}")

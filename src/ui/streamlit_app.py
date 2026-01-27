@@ -11,6 +11,7 @@ import os
 import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+from src.ui.components.trajectory_viewer import announce_workflow_step, render_execution_summary
 
 # === 配置 ===
 st.set_page_config(
@@ -242,10 +243,13 @@ with col_chat:
                     "max_loops": max_loops
                 }
                 
+                completed_steps = []
+
                 # 流式执行
                 for output in langgraph_app.stream(initial_state):
                     for node_name, node_content in output.items():
-                        st.write(f"✅ **{node_name}** 完成")
+                        announce_workflow_step(node_name, status)
+                        completed_steps.append(node_name)
                         
                         # 捕获草稿内容
                         if "draft_content" in node_content:
@@ -256,6 +260,7 @@ with col_chat:
                             st.session_state.critique_result = node_content["critique_result"]
                 
                 status.update(label="✅ 工作流完成", state="complete")
+                render_execution_summary(completed_steps, final_status="complete")
                 
                 # 添加助手消息
                 assistant_msg = {
