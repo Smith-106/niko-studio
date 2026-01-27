@@ -183,42 +183,41 @@ class VectorSearch:
         if sqlite_vec:
             try:
                 # Optimized vector search
-                # 1. Get similar vectors' rowids from virtual table
+                # 1. Get similar vectors and fetch item details in a single query
                 limit = top_k * 2 if type_filter else top_k
 
                 cursor.execute(
                     """
-                    SELECT rowid, distance
-                    FROM vec_items
-                    WHERE embedding MATCH ?
-                    ORDER BY distance
-                    LIMIT ?
+                    SELECT
+                        items.id,
+                        items.content,
+                        items.metadata,
+                        items.type,
+                        vec.distance
+                    FROM vec_items AS vec
+                    JOIN items ON items.rowid = vec.rowid
+                    WHERE vec.embedding MATCH ? AND k = ?
+                    ORDER BY vec.distance
                     """,
                     (query_array.tobytes(), limit)
                 )
-                vec_results = cursor.fetchall()
 
-                # 2. Fetch full items using rowids
-                for rowid, distance in vec_results:
-                    cursor.execute("SELECT id, content, metadata, type FROM items WHERE rowid = ?", (rowid,))
-                    item_row = cursor.fetchone()
-
-                    if not item_row:
+                for row in cursor:
+                    item_type = row["type"]
+                    if type_filter and item_type != type_filter:
                         continue
 
-                    if type_filter and item_row["type"] != type_filter:
-                        continue
-
+                    distance = row["distance"]
                     # Convert L2 distance to cosine similarity
                     # score = 1 - (distance^2 / 2) for normalized vectors
                     score = 1 - (distance ** 2) / 2
 
                     if score >= min_score:
                         matches.append({
-                            "id": item_row["id"],
-                            "content": item_row["content"],
-                            "metadata": json.loads(item_row["metadata"]),
-                            "type": item_row["type"],
+                            "id": row["id"],
+                            "content": row["content"],
+                            "metadata": json.loads(row["metadata"]),
+                            "type": item_type,
                             "score": round(float(score), 4)
                         })
 
