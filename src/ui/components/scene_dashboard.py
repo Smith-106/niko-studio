@@ -10,6 +10,7 @@ import json
 import glob
 import os
 from typing import List, Dict, Any
+from src.ui.translations import t
 
 # 尝试导入 graphviz (可选依赖)
 try:
@@ -66,20 +67,20 @@ def render_lock_metrics(lock_scores: Dict[str, Any]) -> None:
     """
     cols = st.columns(4)
     metrics = [
-        ("L", "主角", "Lead - 主角的吸引力"),
-        ("O", "目标", "Objective - 目标的清晰度"),
-        ("C", "冲突", "Confrontation - 冲突的强度 (权重最高)"),
-        ("K", "结尾", "Knockout - 结尾的冲击力")
+        ("L", t("lock_L"), t("lock_L_tooltip")),
+        ("O", t("lock_O"), t("lock_O_tooltip")),
+        ("C", t("lock_C"), t("lock_C_tooltip")),
+        ("K", t("lock_K"), t("lock_K_tooltip"))
     ]
     
     for idx, (key, label, tooltip) in enumerate(metrics):
         score = lock_scores.get(key, 0)
-        delta = score - 5  # 假设 5 分是及格线
+        delta = score - 5
         cols[idx].metric(label, f"{score}/10", delta=delta, help=tooltip)
     
     # 计算总分
     total = sum(lock_scores.get(k, 0) for k in ["L", "O", "C", "K"])
-    st.progress(total / 40, text=f"LOCK 总分: {total}/40")
+    st.progress(total / 40, text=f"{t('lock_total')}: {total}/40")
 
 
 def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
@@ -90,7 +91,7 @@ def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
         scenes: 场景列表
     """
     if not HAS_GRAPHVIZ:
-        st.warning("graphviz 库未安装，使用内置图表")
+        st.warning(t("graphviz_missing"))
         render_dependency_graph_builtin(scenes)
         return
     
@@ -129,7 +130,7 @@ def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
                 graph.edge(d, s['id'])
     
     st.graphviz_chart(graph)
-    st.caption("🟢 完成 | 🟡 进行中 | 🔵 审查中 | ⚪ 待处理 | 🔴 失败")
+    st.caption(t("graphviz_legend"))
 
 
 def render_dependency_graph_builtin(scenes: List[Dict[str, Any]]) -> None:
@@ -170,7 +171,7 @@ def render_dependency_graph_builtin(scenes: List[Dict[str, Any]]) -> None:
     dot_lines.append("}")
     
     st.graphviz_chart("\n".join(dot_lines))
-    st.caption("🟢 完成 | 🟡 进行中 | 🔵 审查中 | ⚪ 待处理 | 🔴 失败")
+    st.caption(t("graphviz_legend"))
 
 
 def analyze_parallelization(scenes: List[Dict[str, Any]]) -> Dict[int, List[str]]:
@@ -237,7 +238,7 @@ def render_parallelization_analysis(scenes: List[Dict[str, Any]]) -> None:
     
     # 统计
     l1_count = len(levels.get(1, []))
-    st.info(f"🚀 发现 **{l1_count}** 个场景可以立即并行启动 (L1 层级)")
+    st.info(t("parallel_found", count=l1_count))
     
     # 可执行分析
     done_ids = {s.get("id") for s in scenes if s.get("status") == "DONE"}
@@ -250,10 +251,10 @@ def render_parallelization_analysis(scenes: List[Dict[str, Any]]) -> None:
                 parallel_ready.append(s.get("id"))
     
     if parallel_ready:
-        st.success(f"✅ **可立即执行的场景**: {', '.join(parallel_ready)}")
+        st.success(t("parallel_ready_list", ids=', '.join(parallel_ready)))
     
     # 层级图
-    st.subheader("📊 执行层级图")
+    st.subheader(t("execution_level_graph"))
     for level, sids in levels.items():
         with st.container(border=True):
             st.markdown(f"**Level {level}** ({len(sids)} 个场景)")
@@ -267,20 +268,20 @@ def render_parallelization_analysis(scenes: List[Dict[str, Any]]) -> None:
                     cols[i % len(cols)].markdown(f"{icon} `{sid}`")
     
     # JSON 详情
-    with st.expander("📋 查看完整层级数据"):
+    with st.expander(t("view_full_level_data")):
         st.json(levels)
 
 
 # --- 3. 主仪表板入口 ---
 def render_scene_dashboard() -> None:
     """渲染完整的场景卡片仪表板"""
-    st.markdown("### 📇 故事场景控制台 (Scene Dashboard)")
+    st.markdown(f"### {t('scene_dashboard_main_title')}")
     
     scenes = load_scenes()
     
     if not scenes:
-        st.warning("⚠️ 未检测到场景卡片。场景将保存在 `.task/SCENE-*.json`")
-        st.info("💡 提示: 运行 Architect Agent 生成大纲，或手动创建场景 JSON 文件")
+        st.warning(t("no_scenes_warning"))
+        st.info("💡 Tip: Run Architect Agent to generate outline.")
         return
     
     # 全局指标
@@ -298,15 +299,15 @@ def render_scene_dashboard() -> None:
     
     # 顶部指标
     k1, k2, k3, k4 = st.columns(4)
-    k1.metric("总场景数", len(scenes))
-    k2.metric("已完成", f"{done_count}/{len(scenes)}")
-    k3.metric("进行中", writing_count)
-    k4.metric("平均 LOCK", f"{avg_lock:.1f}/40")
+    k1.metric(t("total_scenes"), len(scenes))
+    k2.metric(t("done"), f"{done_count}/{len(scenes)}")
+    k3.metric(t("writing"), writing_count)
+    k4.metric(t("avg_lock"), f"{avg_lock:.1f}/40")
     
     st.divider()
     
     # Tabs
-    tab_list, tab_graph, tab_analysis = st.tabs(["📇 卡片视图", "🕸️ 依赖关系图", "🚀 并行分析"])
+    tab_list, tab_graph, tab_analysis = st.tabs([t("tab_card_view"), t("tab_dependency"), t("tab_parallel_analysis")])
     
     with tab_list:
         for s in scenes:
@@ -319,37 +320,37 @@ def render_scene_dashboard() -> None:
             with st.container(border=True):
                 c1, c2 = st.columns([3, 1])
                 with c1:
-                    st.subheader(f"{icon} {s.get('id')}: {s.get('title', '未命名')}")
+                    st.subheader(f"{icon} {s.get('id')}: {s.get('title', t('untitled'))}")
                     if "summary" in s:
                         st.caption(f"📝 {s['summary']}")
                 with c2:
                     st.markdown(f":{color}[**{status}**]")
                     word_count = s.get("word_count", 0)
                     if word_count:
-                        st.caption(f"📊 {word_count:,} 字")
+                        st.caption(f"📊 {word_count:,} {t('word_count')}")
                 
                 # LOCK 详情折叠
-                with st.expander("📊 LOCK 评分与诊断"):
+                with st.expander(t("lock_diagnosis")):
                     lock_scores = s.get("lock_scores", {})
                     if lock_scores:
                         render_lock_metrics(lock_scores)
                     else:
-                        st.info("尚未评估")
+                        st.info(t("not_evaluated"))
                     
                     if "critique" in s:
-                        st.warning(f"💬 **批评意见**: {s['critique']}")
+                        st.warning(f"💬 **{t('critique')}**: {s['critique']}")
                     
                     # HITL 按钮
                     col_btn1, col_btn2 = st.columns(2)
                     with col_btn1:
-                        if st.button(f"✏️ 编辑", key=f"edit_{s['id']}"):
+                        if st.button(t("edit_btn"), key=f"edit_{s['id']}"):
                             st.session_state["editing_scene"] = s['id']
                     with col_btn2:
-                        if st.button(f"🔄 重新生成", key=f"regen_{s['id']}"):
-                            st.info(f"将重新生成 {s['id']}")
+                        if st.button(t("regen_btn"), key=f"regen_{s['id']}"):
+                            st.info(t("regen_info", id=s['id']))
     
     with tab_graph:
-        st.caption("基于 Graphviz 的场景依赖拓扑图")
+        st.caption(t("graphviz_caption"))
         if HAS_GRAPHVIZ:
             render_dependency_graph_graphviz(scenes)
         else:

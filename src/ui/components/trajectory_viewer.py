@@ -9,11 +9,12 @@ import streamlit as st
 import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime
+from src.ui.translations import t
 
 
 def render_trajectory_viewer(
     trajectory: List[Dict[str, Any]],
-    title: str = "🧠 Agent 推理轨迹"
+    title: str = None
 ) -> None:
     """
     渲染推理轨迹查看器
@@ -22,16 +23,19 @@ def render_trajectory_viewer(
         trajectory: 轨迹数据列表，每项包含 {node, action, thought, result, timestamp}
         title: 标题
     """
+    if title is None:
+        title = t("trajectory_title")
     st.subheader(title)
     
     if not trajectory:
-        st.info("暂无推理轨迹数据")
+        st.info(t("no_trajectory_data"))
         return
     
     # 时间线视图
     for i, step in enumerate(trajectory):
         node_name = step.get("node", f"Step {i+1}")
-        action = step.get("action", "执行")
+        default_action = "执行" if st.session_state.get("language") == "中文" else "Execute"
+        action = step.get("action", default_action)
         thought = step.get("thought", "")
         result = step.get("result", {})
         timestamp = step.get("timestamp", "")
@@ -54,12 +58,12 @@ def render_trajectory_viewer(
             
             # 思考过程
             if thought:
-                st.markdown("**思考过程:**")
+                st.markdown(f"**{t('thought_process')}:**")
                 st.markdown(f"> {thought}")
             
             # 结果
             if result:
-                st.markdown("**输出结果:**")
+                st.markdown(f"**{t('output_result')}:**")
                 if isinstance(result, dict):
                     # 特殊处理常见字段
                     if "draft_content" in result:
@@ -101,7 +105,7 @@ def render_workflow_progress(
         nodes: 所有节点列表
         completed_nodes: 已完成节点列表
     """
-    st.subheader("📊 工作流进度")
+    st.subheader(t("workflow_progress"))
     
     # 计算进度
     progress = len(completed_nodes) / len(nodes) if nodes else 0
@@ -130,7 +134,7 @@ def render_agent_timeline(
         events: 事件列表
         max_events: 最大显示事件数
     """
-    st.subheader("📅 Agent 事件时间线")
+    st.subheader(t("agent_timeline"))
     
     # 限制显示数量
     display_events = events[-max_events:] if len(events) > max_events else events
@@ -168,9 +172,9 @@ def render_decision_tree(
     Args:
         decision: 决策数据，包含 question, options, selected, reason
     """
-    st.subheader("🌳 决策点")
+    st.subheader(t("decision_point"))
     
-    question = decision.get("question", "决策问题")
+    question = decision.get("question", t("decision_question_default"))
     options = decision.get("options", [])
     selected = decision.get("selected", "")
     reason = decision.get("reason", "")
@@ -179,12 +183,12 @@ def render_decision_tree(
     
     for opt in options:
         if opt == selected:
-            st.success(f"✅ {opt} (已选择)")
+            st.success(f"✅ {opt} {t('selected_opt')}")
         else:
             st.caption(f"⚪ {opt}")
     
     if reason:
-        st.info(f"💡 **决策理由**: {reason}")
+        st.info(f"💡 **{t('decision_reason')}**: {reason}")
 
 
 # 测试代码

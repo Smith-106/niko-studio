@@ -7,12 +7,13 @@ LOCK 雷达图组件
 import streamlit as st
 import plotly.graph_objects as go
 from typing import Dict, Optional
+from src.ui.translations import t
 
 
 def render_lock_radar(
     scores: Dict[str, float],
     threshold: int = 28,
-    title: str = "LOCK 系统评分"
+    title: str = None
 ) -> None:
     """
     渲染 LOCK 评分雷达图
@@ -22,9 +23,16 @@ def render_lock_radar(
         threshold: 通过阈值 (总分)
         title: 图表标题
     """
+    if title is None:
+        title = t("lock_system_score")
+
     # 标准化维度名称
-    categories = ["Lead\n(主角魅力)", "Objective\n(目标明确)", 
-                  "Confrontation\n(冲突设计)", "Knockout\n(结尾冲击)"]
+    categories = [
+        t("lock_L"),
+        t("lock_O"),
+        t("lock_C"),
+        t("lock_K")
+    ]
     
     # 提取分数 (支持多种格式)
     values = []
@@ -56,7 +64,7 @@ def render_lock_radar(
         fill='toself',
         fillcolor='rgba(99, 102, 241, 0.3)',
         line=dict(color='rgb(99, 102, 241)', width=2),
-        name='当前评分'
+        name=t("current_score")
     ))
     
     # 添加阈值线 (平均每项需要达到的分数)
@@ -67,7 +75,7 @@ def render_lock_radar(
         theta=categories_closed,
         fill=None,
         line=dict(color='rgba(239, 68, 68, 0.5)', width=2, dash='dash'),
-        name=f'通过阈值 ({threshold})'
+        name=t("threshold_label", threshold=threshold)
     ))
     
     # 布局设置
@@ -106,12 +114,12 @@ def render_lock_radar(
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("总分", f"{total}/40")
+        st.metric(t("total_score"), f"{total}/40")
     with col2:
-        st.metric("阈值", str(threshold))
+        st.metric(t("threshold"), str(threshold))
     with col3:
-        st.metric("状态", "✅ 通过" if passed else "❌ 待改进",
-                  delta="通过" if passed else "未通过",
+        st.metric(t("status"), t("passed") if passed else t("needs_improvement"),
+                  delta=t("passed_delta") if passed else t("failed_delta"),
                   delta_color="normal" if passed else "inverse")
 
 
@@ -127,10 +135,10 @@ def render_lock_breakdown(
         analysis: 各维度分析文本
     """
     dimensions = [
-        ("L", "Lead (主角魅力)", "主角是否有足够的吸引力让读者想要跟随"),
-        ("O", "Objective (目标明确)", "主角的目标是否清晰、有吸引力"),
-        ("C", "Confrontation (冲突设计)", "障碍和冲突是否足够有挑战性 (权重最高: 40%)"),
-        ("K", "Knockout (结尾冲击)", "结尾是否有足够的冲击力和满足感")
+        ("L", t("lock_L_desc"), t("lock_L_tooltip")),
+        ("O", t("lock_O_desc"), t("lock_O_tooltip")),
+        ("C", t("lock_C_desc"), t("lock_C_tooltip")),
+        ("K", t("lock_K_desc"), t("lock_K_tooltip"))
     ]
     
     for key, name, description in dimensions:
@@ -157,7 +165,7 @@ def render_lock_breakdown(
             
             # 冲突维度的特殊提示
             if is_conflict:
-                st.info("💡 **冲突是故事的核心**: 拥有最高权重 (40%)，请确保场景有足够的对抗张力")
+                st.info(t("conflict_core_tip"))
 
 
 # 测试代码

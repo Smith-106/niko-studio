@@ -11,6 +11,7 @@ import os
 import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+from src.ui.translations import t
 
 # === 配置 ===
 st.set_page_config(
@@ -131,13 +132,28 @@ if "workflow_running" not in st.session_state:
 
 # === 1. Sidebar: AionUi 多代理协作设置 ===
 with st.sidebar:
-    st.title("🤖 Agent Orchestrator")
+    st.title(t("sidebar_title"))
+
+    # Language Toggle
+    if "language" not in st.session_state:
+        st.session_state.language = "中文"
+
+    lang_idx = 0 if st.session_state.language == "中文" else 1
+    selected_lang = st.selectbox(
+        "Language / 语言",
+        ["中文", "English"],
+        index=lang_idx,
+        key="language_select"
+    )
+    if selected_lang != st.session_state.language:
+        st.session_state.language = selected_lang
+        st.rerun()
     
     # 会话管理
-    st.subheader("📂 会话管理")
-    st.text_input("当前会话", value=st.session_state.session_id, disabled=True)
+    st.subheader(t("session_mgmt"))
+    st.text_input(t("current_session"), value=st.session_state.session_id, disabled=True)
     
-    if st.button("🆕 新建会话"):
+    if st.button(t("new_session")):
         st.session_state.session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         st.session_state.messages = []
         st.session_state.current_draft = ""
@@ -147,42 +163,54 @@ with st.sidebar:
     st.divider()
     
     # 模式选择 (参考 AionUi 预设 Assistants / CCW 5级工作流)
-    st.subheader("⚙️ 协作模式")
+    st.subheader(t("collab_mode"))
+
+    # Workflow options
+    workflow_options = [
+        "L1: 快速修改 (lite-lite-lite)",
+        "L2: 场景规划 (lite-plan)",
+        "L3: 章节开发 (plan + execute)",
+        "L4: 故事探索 (brainstorm)",
+        "L5: 全流程编排 (coordinator)"
+    ]
+    if st.session_state.language == "English":
+        workflow_options = [
+            "L1: Quick Edit (lite-lite-lite)",
+            "L2: Scene Planning (lite-plan)",
+            "L3: Chapter Dev (plan + execute)",
+            "L4: Story Explore (brainstorm)",
+            "L5: Full Orchestration (coordinator)"
+        ]
+
     work_mode = st.selectbox(
-        "工作流级别", 
-        [
-            "L1: 快速修改 (lite-lite-lite)",
-            "L2: 场景规划 (lite-plan)",
-            "L3: 章节开发 (plan + execute)",
-            "L4: 故事探索 (brainstorm)",
-            "L5: 全流程编排 (coordinator)"
-        ],
-        help="参考 Claude-Code-Workflow 的 5 级工作流系统"
+        t("workflow_level"),
+        workflow_options,
+        help=t("workflow_level_help")
     )
     
     # 模型路由 (参考 OpenRouter/AionUi 多模型)
     model_name = st.selectbox(
-        "底层模型", 
+        t("base_model"),
         ["gemini-2.0-flash", "gpt-4o", "claude-3-5-sonnet", "deepseek-chat"],
-        help="选择 LLM 模型"
+        help=t("select_model")
     )
     
     st.divider()
     
     # 参数设置 (参考 Cherry Studio)
-    st.subheader("🎛️ 生成参数")
+    st.subheader(t("gen_params"))
     temperature = st.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
-    max_loops = st.number_input("最大修改循环", min_value=1, max_value=10, value=3)
+    max_loops = st.number_input(t("max_loops"), min_value=1, max_value=10, value=3)
     
     # LOCK 评分阈值
-    st.subheader("📊 质量阈值")
-    lock_threshold = st.slider("LOCK 通过阈值", 20, 40, 28)
-    quality_threshold = st.slider("8维度通过阈值", 50, 100, 70)
+    st.subheader(t("quality_thresholds"))
+    lock_threshold = st.slider(t("lock_threshold"), 20, 40, 28)
+    quality_threshold = st.slider(t("dim8_threshold"), 50, 100, 70)
     
     st.divider()
     
     # 调试信息
-    with st.expander("🔧 调试信息"):
+    with st.expander(t("debug_info")):
         st.json({
             "session_id": st.session_state.session_id,
             "work_mode": work_mode,
@@ -196,7 +224,7 @@ col_chat, col_artifacts = st.columns([1, 1])
 
 # --- 左栏: 对话与指令 (Chat Stream) ---
 with col_chat:
-    st.subheader("💬 协作对话流")
+    st.subheader(t("collab_chat_stream"))
     
     # 渲染历史消息
     chat_container = st.container(height=500)
@@ -207,11 +235,11 @@ with col_chat:
                 
                 # 显示 Agent 的思考过程 (Trajectory)
                 if "thought_process" in msg and msg["thought_process"]:
-                    with st.expander(f"🧠 {msg.get('agent_name', 'Agent')} 思考过程"):
+                    with st.expander(t("agent_thought_process", agent_name=msg.get('agent_name', 'Agent'))):
                         st.json(msg["thought_process"])
 
     # 输入区
-    user_input = st.chat_input("输入指令 (支持 @ 语法路由到特定 Agent)...")
+    user_input = st.chat_input(t("chat_input_placeholder"))
     
     if user_input and not st.session_state.workflow_running:
         # 添加用户消息
@@ -223,15 +251,15 @@ with col_chat:
         st.session_state.workflow_running = True
         
         # 显示处理状态
-        with st.status("🔄 Agent 工作流执行中...", expanded=True) as status:
-            st.write("📥 解析用户指令...")
+        with st.status(t("workflow_running"), expanded=True) as status:
+            st.write(t("parsing_command"))
             
             # 尝试导入并执行 LangGraph 工作流
             try:
                 from src.workflow.graph import app as langgraph_app
                 from src.workflow.state import WritingState
                 
-                st.write("🚀 启动 LangGraph 状态机...")
+                st.write(t("starting_langgraph"))
                 
                 # 构造初始状态
                 initial_state = {
@@ -245,7 +273,7 @@ with col_chat:
                 # 流式执行
                 for output in langgraph_app.stream(initial_state):
                     for node_name, node_content in output.items():
-                        st.write(f"✅ **{node_name}** 完成")
+                        st.write(t("node_completed", node_name=node_name))
                         
                         # 捕获草稿内容
                         if "draft_content" in node_content:
@@ -255,12 +283,12 @@ with col_chat:
                         if "critique_result" in node_content:
                             st.session_state.critique_result = node_content["critique_result"]
                 
-                status.update(label="✅ 工作流完成", state="complete")
+                status.update(label=t("workflow_completed"), state="complete")
                 
                 # 添加助手消息
                 assistant_msg = {
                     "role": "assistant",
-                    "content": "✅ 任务完成。请查看右侧预览面板。",
+                    "content": t("task_completed_msg"),
                     "agent_name": "Coordinator"
                 }
                 st.session_state.messages.append(assistant_msg)
@@ -268,33 +296,23 @@ with col_chat:
                            assistant_msg["content"], "Coordinator")
                 
             except ImportError as e:
-                st.write(f"⚠️ LangGraph 模块未找到: {e}")
-                st.write("📝 进入模拟模式...")
+                st.write(t("langgraph_not_found", error=str(e)))
+                st.write(t("sim_mode"))
                 
                 # 模拟响应
                 mock_response = f"""
-**收到指令**: {user_input}
+**Command Received**: {user_input}
 
-**工作流模式**: {work_mode}
-**使用模型**: {model_name}
-
----
-
-由于 LangGraph 工作流尚未完全配置，这是一个模拟响应。
-
-在完整实现中，系统将:
-1. **Architect Agent** 规划场景结构 (LOCK 验证)
-2. **Writer Agent** 生成初稿
-3. **Critic Agent** 评估并反馈
-4. 循环直到质量达标或达到最大循环次数
+**Workflow**: {work_mode}
+**Model**: {model_name}
 
 ---
 
-*请确保 `src/workflow/graph.py` 正确配置后，系统将使用真实的 LangGraph 工作流。*
-                """
+*Simulation Mode / 模拟模式*
+"""
                 
                 st.session_state.current_draft = mock_response
-                status.update(label="⚠️ 模拟模式完成", state="complete")
+                status.update(label=t("sim_mode_completed"), state="complete")
                 
                 assistant_msg = {
                     "role": "assistant",
@@ -306,8 +324,8 @@ with col_chat:
                            mock_response, "Simulator")
             
             except Exception as e:
-                status.update(label=f"❌ 错误: {e}", state="error")
-                st.error(f"工作流执行失败: {e}")
+                status.update(label=t("workflow_failed", error=str(e)), state="error")
+                st.error(t("workflow_failed", error=str(e)))
         
         st.session_state.workflow_running = False
         st.rerun()
@@ -315,25 +333,27 @@ with col_chat:
 
 # --- 右栏: 文件预览与管理 (AionUi Files & Preview) ---
 with col_artifacts:
-    st.subheader("📂 文件与草稿预览")
+    st.subheader(t("files_preview"))
     
     # 1. 智能文件管理 (AionUi 拖拽上传)
-    with st.expander("📎 上传参考资料", expanded=False):
+    with st.expander(t("upload_material"), expanded=False):
         uploaded_file = st.file_uploader(
-            "支持 PDF/MD/TXT/DOCX", 
+            t("upload_help"),
             type=['txt', 'md', 'pdf', 'docx'],
-            help="上传的文件将作为 Context 注入到 Agent"
+            help="Context Injection"
         )
         if uploaded_file:
-            st.success(f"✅ 已加载: {uploaded_file.name}")
+            st.success(t("file_loaded", filename=uploaded_file.name))
             # TODO: 对接 RAG / Knowledge Memory
 
     # 2. 多格式预览 Tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📝 草稿", "📊 LOCK", "🎯 8维度", "📇 场景卡片", "🕸️ 依赖图"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        t("tab_draft"), t("tab_lock"), t("tab_8dim"), t("tab_scene_cards"), t("tab_dependency")
+    ])
     
     with tab1:
         # 当前草稿预览
-        draft = st.session_state.get("current_draft", "*尚无内容，请在左侧输入指令开始创作...*")
+        draft = st.session_state.get("current_draft", t("no_content_placeholder"))
         
         # Markdown 渲染
         preview_container = st.container(height=350)
@@ -342,21 +362,21 @@ with col_artifacts:
         
         # HITL 人工介入
         st.divider()
-        st.subheader("🛠️ Human-in-the-Loop")
-        feedback = st.text_area("修改意见", placeholder="输入您的修改建议...")
+        st.subheader(t("hitl_title"))
+        feedback = st.text_area(t("feedback_label"), placeholder=t("feedback_placeholder"))
         
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            if st.button("📤 提交反馈", use_container_width=True):
+            if st.button(t("submit_feedback"), use_container_width=True):
                 if feedback:
                     # 将反馈作为新消息
-                    feedback_msg = f"[HITL 反馈] {feedback}"
+                    feedback_msg = f"[HITL] {feedback}"
                     st.session_state.messages.append({"role": "user", "content": feedback_msg})
                     save_message(conn, st.session_state.session_id, "user", feedback_msg)
-                    st.success("反馈已提交，将在下次迭代中应用")
+                    st.success(t("feedback_submitted_msg"))
                     st.rerun()
         with col_btn2:
-            if st.button("✅ 批准通过", use_container_width=True, type="primary"):
+            if st.button(t("approve"), use_container_width=True, type="primary"):
                 # 获取当前评分
                 critique = st.session_state.get("critique_result", {})
                 lock_scores = critique.get("lock_scores", {})
@@ -366,22 +386,19 @@ with col_artifacts:
 
                 if draft_content:
                     version = save_draft(conn, st.session_state.session_id, draft_content, lock_scores, quality_scores)
-                    st.success(f"✅ Draft approved and saved as version {version}")
+                    st.success(t("draft_saved_msg", version=version))
 
                     # Add system message
                     sys_msg = f"Draft approved and saved as version v{version}"
                     st.session_state.messages.append({"role": "assistant", "content": sys_msg})
                     save_message(conn, st.session_state.session_id, "assistant", sys_msg)
 
-                    # Optional: View All Versions button (user suggested not to rerun, but we can offer it)
-                    # if st.button("View All Versions"):
-                    #    st.rerun()
                 else:
-                    st.warning("当前没有草稿可保存")
+                    st.warning(t("no_draft_warning"))
 
     with tab2:
         # LOCK 评分雷达图
-        st.subheader("LOCK 系统评分")
+        st.subheader(t("lock_system_score"))
         
         critique = st.session_state.get("critique_result", {})
         lock_scores = critique.get("lock_scores", {
@@ -402,18 +419,18 @@ with col_artifacts:
         st.bar_chart(df_lock.set_index("维度"))
         
         total_lock = sum(lock_scores.values())
-        st.metric("LOCK 总分", f"{total_lock}/40", 
+        st.metric(t("lock_total"), f"{total_lock}/40",
                   delta=f"{total_lock - lock_threshold}" if total_lock >= lock_threshold else f"{total_lock - lock_threshold}",
                   delta_color="normal" if total_lock >= lock_threshold else "inverse")
         
         # 显示详细分析
         if "lock_analysis" in critique:
-            with st.expander("📋 详细分析"):
+            with st.expander(t("detailed_analysis")):
                 st.markdown(critique["lock_analysis"])
 
     with tab3:
         # 8维度质量评分
-        st.subheader("8维度写作质量")
+        st.subheader(t("quality_8dim"))
         
         critique = st.session_state.get("critique_result", {})
         quality_scores = critique.get("quality_scores", {
@@ -435,13 +452,13 @@ with col_artifacts:
         st.bar_chart(df_quality.set_index("维度"))
         
         avg_quality = sum(quality_scores.values()) / len(quality_scores)
-        st.metric("平均质量分", f"{avg_quality:.1f}/100",
+        st.metric(t("avg_quality"), f"{avg_quality:.1f}/100",
                   delta=f"{avg_quality - quality_threshold:.1f}" if avg_quality >= quality_threshold else f"{avg_quality - quality_threshold:.1f}",
                   delta_color="normal" if avg_quality >= quality_threshold else "inverse")
 
     with tab4:
         # 场景卡片仪表板
-        st.subheader("📇 场景卡片状态")
+        st.subheader(t("scene_card_status"))
         
         # 加载 .task/ 目录下的场景文件
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -464,9 +481,9 @@ with col_artifacts:
             writing = sum(1 for s in scenes if s.get("status") == "WRITING")
             
             col1, col2, col3 = st.columns(3)
-            col1.metric("总计", total)
-            col2.metric("已完成", done)
-            col3.metric("进行中", writing)
+            col1.metric(t("total"), total)
+            col2.metric(t("done"), done)
+            col3.metric(t("writing"), writing)
             
             st.divider()
             
@@ -488,13 +505,13 @@ with col_artifacts:
                         total_lock = sum(lock_scores.values())
                         st.progress(total_lock / 40, text=f"LOCK: {total_lock}/40")
                     else:
-                        st.progress(0, text="LOCK: 待评估")
+                        st.progress(0, text=f"LOCK: {t('not_evaluated')}")
         else:
-            st.info("📭 尚无场景卡片。场景将保存在 `.task/SCENE-*.json`")
+            st.info(t("no_scene_cards"))
     
     with tab5:
         # 依赖关系图 (Graphviz)
-        st.subheader("🕸️ 场景依赖关系图")
+        st.subheader(t("scene_dependency_graph"))
         
         if scenes:
             # 构建 Graphviz DOT
@@ -523,7 +540,7 @@ with col_artifacts:
             dot_lines.append("}")
             
             st.graphviz_chart("\n".join(dot_lines))
-            st.caption("🟢 完成 | 🟡 进行中 | ⚪ 待处理")
+            st.caption(t("graphviz_legend"))
             
             # 并行分析
             done_ids = {s.get("id") for s in scenes if s.get("status") == "DONE"}
@@ -535,12 +552,11 @@ with col_artifacts:
                         parallel_ready.append(s.get("id"))
             
             if parallel_ready:
-                st.success(f"🚀 可并行执行: {', '.join(parallel_ready)}")
+                st.success(t("parallel_ready", ids=', '.join(parallel_ready)))
         else:
-            st.info("📭 尚无场景数据")
+            st.info(t("no_scene_data"))
 
 
 # === Footer ===
 st.divider()
-st.caption(f"AI Writing Workbench v0.1 | Session: {st.session_state.session_id} | "
-           f"Messages: {len(st.session_state.messages)}")
+st.caption(t("footer_msg", session_id=st.session_state.session_id, msg_count=len(st.session_state.messages)))
