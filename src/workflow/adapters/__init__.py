@@ -1,15 +1,12 @@
-"""
-工作流適配器模塊
-
-提供各領域 (小說/代碼/知識) 的工作流適配器。
-"""
-
-from .novel_adapter import NovelAdapter, WritingState
-from .code_adapter import CodeAdapter, CodingState
+from .base_adapter import BaseDomainAdapter, AdapterRegistry, DomainType, BaseEvaluationResult
+from .novel_adapter import NovelAdapter
+from .code_adapter import CodeAdapter
 
 __all__ = [
+    "BaseDomainAdapter",
+    "AdapterRegistry",
+    "DomainType",
+    "BaseEvaluationResult",
     "NovelAdapter",
-    "WritingState",
-    "CodeAdapter", 
-    "CodingState",
+    "CodeAdapter"
 ]

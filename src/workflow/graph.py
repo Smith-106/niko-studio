@@ -320,58 +320,16 @@ def create_writing_graph(config: WorkflowConfig = DEFAULT_CONFIG) -> StateGraph:
     """
     创建写作工作流图
     
-    结构:
-    [Architect] → [Writer] → [Critic] → {条件路由}
-                     ↑                      │
-                     ├──────────────────────┘ (Loop if REVISE)
-                     │
-    [Finalize] ← [Human Review] ← (if HUMAN_REVIEW)
-         ↑
-         └─ (if APPROVED)
+    Delegates to NovelAdapter for graph construction.
     """
+    from src.workflow.adapters import AdapterRegistry, DomainType
     
-    # 创建图
-    workflow = StateGraph(WritingState)
-    
-    # 添加节点
-    workflow.add_node("architect", architect_node)
-    workflow.add_node("writer", writer_node)
-    workflow.add_node("critic", critic_node)
-    workflow.add_node("human_reviewer", human_review_node)
-    workflow.add_node("finalize", finalize_node)
-    
-    # 定义边: Architect → Writer → Critic
-    workflow.set_entry_point("architect")
-    workflow.add_edge("architect", "writer")
-    workflow.add_edge("writer", "critic")
-    
-    # 条件路由: Critic之后的决策
-    def route_after_critic(state: WritingState) -> str:
-        result = should_continue(state, config)
-        if result == "end":
-            return "finalize"
-        elif result == "human":
-            return "human_reviewer"
-        else:
-            return "writer"  # 返回修改循环
-    
-    workflow.add_conditional_edges(
-        "critic",
-        route_after_critic,
-        {
-            "finalize": "finalize",
-            "human_reviewer": "human_reviewer",
-            "writer": "writer"
-        }
-    )
-    
-    # Human Review → Finalize
-    workflow.add_edge("human_reviewer", "finalize")
-    
-    # Finalize → END
-    workflow.add_edge("finalize", END)
-    
-    return workflow
+    # Create adapter and get graph
+    adapter = AdapterRegistry.create_adapter(DomainType.NOVEL.value, config)
+    if not adapter:
+        raise ValueError("Failed to create NovelAdapter")
+
+    return adapter.create_graph()
 
 
 def compile_graph(config: WorkflowConfig = DEFAULT_CONFIG, use_memory: bool = True):
