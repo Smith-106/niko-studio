@@ -56,7 +56,7 @@ class SmartSearch:
         Basic keyword search using SQLite LIKE.
         """
         conn = self.vector_search._get_connection()
-        conn.row_factory = sqlite3.Row
+        # conn.row_factory is already set in vector_search._get_connection()
         cursor = conn.cursor()
 
         # Simple token-based OR search

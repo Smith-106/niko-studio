@@ -445,3 +445,12 @@ async def run_writing_session(
             final_state = {**initial_state, **node_output} if final_state is None else {**final_state, **node_output}
     
     return final_state
+
+
+# Default compiled app for import
+try:
+    app = compile_graph()
+except Exception as e:
+    # Handle cases where LLM keys are missing during import time
+    print(f"Warning: Could not compile default graph on import: {e}")
+    app = None
