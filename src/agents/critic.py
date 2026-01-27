@@ -8,6 +8,8 @@ Critic Agent - 批评家
 from typing import List, Optional, Literal, Dict, Any
 from pydantic import BaseModel, Field
 import json
+import re
+from collections import Counter
 
 
 # ============================================================
@@ -309,6 +311,8 @@ class CriticAgent:
     
     def __init__(self, llm):
         self.llm = llm
+        # Pre-compile regex for forbidden words
+        self.forbidden_pattern = re.compile("|".join(map(re.escape, self.FORBIDDEN_WORDS)))
     
     async def review(
         self,
@@ -329,7 +333,7 @@ class CriticAgent:
         Returns:
             CriticOutput: 审核结果
         """
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import PydanticOutputParser
         
         parser = PydanticOutputParser(pydantic_object=CriticOutput)
@@ -366,13 +370,17 @@ class CriticAgent:
         content: str
     ) -> CriticOutput:
         """应用确定性规则检查"""
-        import re
         
         # 禁用词检查
         forbidden_found = []
+
+        # Use regex to find all occurrences in one pass
+        matches = self.forbidden_pattern.findall(content)
+        counts = Counter(matches)
+
         for word in self.FORBIDDEN_WORDS:
-            if word in content:
-                count = content.count(word)
+            if word in counts:
+                count = counts[word]
                 forbidden_found.append(f"「{word}」出现{count}次")
         
         if forbidden_found:

@@ -454,6 +454,25 @@
 
 ---
 
+## Phase 14: Cross-Domain Workflow Architecture (Completed)
+
+### 14.1 Platform Core
+- [x] `src/workflow/base_state.py`
+- [x] `src/workflow/base_workflow.py`
+- [x] `src/workflow/graph_factory.py`
+- [x] `src/workflow/state.py` (Inherits BaseState)
+
+### 14.2 Domain Adapters
+- [x] `src/workflow/adapters/base_adapter.py`
+- [x] `src/workflow/adapters/novel_adapter.py`
+- [x] `src/workflow/adapters/code_adapter.py`
+- [x] `src/workflow/adapters/__init__.py` (Registry)
+
+### 14.3 Refactoring
+- [x] Update `src/workflow/graph.py` to use Adapter Pattern
+
+---
+
 ## 附錄 A: Cherry Studio 移植參考
 
 | Cherry Studio 源文件 | 目標文件 | 狀態 |

@@ -121,10 +121,11 @@ def render_dependency_graph_graphviz(scenes: List[Dict[str, Any]]) -> None:
         graph.node(s['id'], label=label, fillcolor=color)
     
     # 创建边 (依赖关系)
+    scene_ids = {s['id'] for s in scenes}
     for s in scenes:
         deps = s.get("dependencies", [])
         for d in deps:
-            if any(sc['id'] == d for sc in scenes):
+            if d in scene_ids:
                 graph.edge(d, s['id'])
     
     st.graphviz_chart(graph)
@@ -185,29 +186,40 @@ def analyze_parallelization(scenes: List[Dict[str, Any]]) -> Dict[int, List[str]
     # 构建依赖图
     scene_map = {s.get("id"): s for s in scenes}
     
-    def get_level(scene_id: str, visited: set = None) -> int:
+    # 使用 memoization 避免重复计算
+    memo = {}
+    visiting = set()
+
+    def get_level(scene_id: str) -> int:
         """递归计算场景层级"""
-        if visited is None:
-            visited = set()
-        
-        if scene_id in visited:
+        if scene_id in memo:
+            return memo[scene_id]
+
+        if scene_id in visiting:
             return 0  # 避免循环依赖
-        visited.add(scene_id)
+
+        visiting.add(scene_id)
         
         scene = scene_map.get(scene_id)
         if not scene:
+            visiting.remove(scene_id)
             return 0
         
         deps = scene.get("dependencies", [])
         if not deps:
+            visiting.remove(scene_id)
+            memo[scene_id] = 1
             return 1
         
         max_dep_level = 0
         for dep in deps:
-            dep_level = get_level(dep, visited.copy())
+            dep_level = get_level(dep)
             max_dep_level = max(max_dep_level, dep_level)
         
-        return max_dep_level + 1
+        visiting.remove(scene_id)
+        result = max_dep_level + 1
+        memo[scene_id] = result
+        return result
     
     # 计算每个场景的层级
     levels: Dict[int, List[str]] = {}

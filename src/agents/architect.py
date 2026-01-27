@@ -355,7 +355,7 @@ class ArchitectAgent:
         Returns:
             StoryBlueprint: 完整的故事蓝图
         """
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import PydanticOutputParser
         
         parser = PydanticOutputParser(pydantic_object=StoryBlueprint)
@@ -494,7 +494,7 @@ def create_architect_chain(llm):
             "target_wordcount": 600000
         })
     """
-    from langchain.prompts import ChatPromptTemplate
+    from langchain_core.prompts import ChatPromptTemplate
     from langchain_core.output_parsers import PydanticOutputParser
     
     parser = PydanticOutputParser(pydantic_object=StoryBlueprint)

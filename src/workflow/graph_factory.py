@@ -8,7 +8,7 @@
 from typing import Optional, Dict, Any
 from enum import Enum
 
-from .base_adapter import BaseDomainAdapter, AdapterRegistry
+from src.workflow.adapters import BaseDomainAdapter, AdapterRegistry
 
 
 class WorkflowLevel(Enum):
