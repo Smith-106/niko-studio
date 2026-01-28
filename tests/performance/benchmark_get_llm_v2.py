@@ -22,13 +22,12 @@ sys.modules["langgraph.checkpoint.memory"] = langgraph.checkpoint.memory
 
 # Mock dotenv
 def mock_load_dotenv(dotenv_path=None, **kwargs):
-    # Simulate file I/O overhead
+    print("DEBUG: load_dotenv called!")
     try:
         path = dotenv_path or ".env"
         if os.path.exists(path):
             with open(path, "r") as f:
                 content = f.read()
-                # Extremely simple parsing to simulate work
                 for line in content.splitlines():
                     if "=" in line:
                         k, v = line.split("=", 1)
@@ -46,7 +45,7 @@ sys.path.append(os.getcwd())
 
 # Create a dummy .env file
 with open(".env", "w") as f:
-    f.write("DUMMY_VAR=1\n" * 10) # 10 lines of dummy vars
+    f.write("DUMMY_VAR=1\n" * 10)
 
 # Set env var so _get_llm proceeds
 os.environ["GOOGLE_API_KEY"] = "fake_key"
@@ -65,6 +64,7 @@ def benchmark():
         print(f"Failed to instantiate NovelAdapter: {e}")
         return
 
+    print("Starting benchmark loop...")
     start_time = time.time()
     iterations = 5000
     for _ in range(iterations):
