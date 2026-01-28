@@ -23,7 +23,8 @@ def test_dynamic_dimension_creation(mocker):
     mock_cursor = MagicMock()
     mock_conn.cursor.return_value = mock_cursor
 
-    # Patch sqlite3 in the module namespace to handle pysqlite3 aliasing
+    # Patch the sqlite3.connect used inside the service (which might be pysqlite3)
+    # This handles the aliasing of pysqlite3 as sqlite3 in the service module
     mocker.patch("services.indexing_service.sqlite3.connect", return_value=mock_conn)
 
     service = IndexingService("test.db", model_name="custom")
