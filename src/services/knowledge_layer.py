@@ -37,6 +37,38 @@ class AgentKnowledgeLayer:
             )
         """)
         
+        # FTS5 Entity Table for fast lookup
+        try:
+            cursor.execute("CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(name, entity_id UNINDEXED)")
+
+            # Triggers to keep FTS in sync
+            cursor.execute("""
+                CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
+                    INSERT INTO entities_fts(rowid, name, entity_id) VALUES (new.rowid, new.name, new.id);
+                END;
+            """)
+            cursor.execute("""
+                CREATE TRIGGER IF NOT EXISTS entities_ad AFTER DELETE ON entities BEGIN
+                    DELETE FROM entities_fts WHERE rowid = old.rowid;
+                END;
+            """)
+            cursor.execute("""
+                CREATE TRIGGER IF NOT EXISTS entities_au AFTER UPDATE ON entities BEGIN
+                    UPDATE entities_fts SET name = new.name, entity_id = new.id WHERE rowid = new.rowid;
+                END;
+            """)
+
+            # Backfill if needed (if entities exists but fts is empty)
+            cursor.execute("SELECT count(*) FROM entities_fts")
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("SELECT count(*) FROM entities")
+                if cursor.fetchone()[0] > 0:
+                    logger.info("Backfilling entities_fts index...")
+                    cursor.execute("INSERT INTO entities_fts(rowid, name, entity_id) SELECT rowid, name, id FROM entities")
+
+        except Exception as e:
+            logger.warning(f"Could not enable FTS5 optimization: {e}")
+
         # Relation Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS relations (
@@ -118,9 +150,32 @@ class AgentKnowledgeLayer:
         cursor = conn.cursor()
         
         # Find entities whose name is in the query text
-        # Optimized: Use SQL instr to check if name is substring of query (case-insensitive)
-        cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
-        results["entities"] = [dict(row) for row in cursor.fetchall()]
+        # Optimized: Use FTS5 to find candidates, then verify exact match
+        try:
+            # Tokenize query to create OR condition for FTS
+            tokens = [t for t in query_text.replace('"', '').replace("'", "").split()]
+            if tokens:
+                fts_query = " OR ".join(f'"{t}"' for t in tokens)
+
+                # Use FTS to find candidates (entities having at least one word from query in their name)
+                # Then verify exact substring match
+                query_sql = """
+                    SELECT e.*
+                    FROM entities e
+                    JOIN entities_fts f ON e.id = f.entity_id
+                    WHERE f.name MATCH ?
+                    AND instr(lower(?), lower(e.name)) > 0
+                """
+                cursor.execute(query_sql, (fts_query, query_text))
+                results["entities"] = [dict(row) for row in cursor.fetchall()]
+            else:
+                cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
+                results["entities"] = [dict(row) for row in cursor.fetchall()]
+
+        except sqlite3.OperationalError:
+            # Fallback if FTS table doesn't exist or error
+            cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
+            results["entities"] = [dict(row) for row in cursor.fetchall()]
                 
         # If specific filters provided
         if entity_filter:
