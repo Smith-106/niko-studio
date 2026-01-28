@@ -221,45 +221,32 @@ class IndexingService:
             try:
                 cursor.execute(
                     """
-                    SELECT rowid, distance
-                    FROM vec_document_chunks
-                    WHERE embedding MATCH ?
-                    ORDER BY distance
-                    LIMIT ?
+                    SELECT
+                        doc.id,
+                        doc.content,
+                        doc.source_type,
+                        vec.distance
+                    FROM vec_document_chunks AS vec
+                    JOIN document_chunks AS doc ON doc.rowid = vec.rowid
+                    WHERE vec.embedding MATCH ? AND k = ?
+                    ORDER BY vec.distance
                     """,
                     (query_array.tobytes(), top_k)
                 )
-                vec_results = cursor.fetchall()
 
-                if vec_results:
-                    row_ids = [r[0] for r in vec_results]
+                for row in cursor:
+                    distance = row["distance"]
+                    # Convert L2 distance to cosine similarity score
+                    # For normalized vectors: score = 1 - (distance^2 / 2)
+                    score = 1 - (distance ** 2) / 2
 
-                    # Batch retrieve metadata
-                    # Use parameter substitution for IN clause
-                    placeholders = ",".join("?" for _ in row_ids)
-                    cursor.execute(
-                        f"SELECT rowid, id, content, source_type FROM document_chunks WHERE rowid IN ({placeholders})",
-                        row_ids
-                    )
-
-                    # Store in dict for O(1) lookup
-                    docs_by_rowid = {row['rowid']: row for row in cursor.fetchall()}
-
-                    for rowid, distance in vec_results:
-                        if rowid in docs_by_rowid:
-                            doc_row = docs_by_rowid[rowid]
-
-                            # Convert L2 distance to cosine similarity score
-                            # For normalized vectors: score = 1 - (distance^2 / 2)
-                            score = 1 - (distance ** 2) / 2
-
-                            if score >= min_score:
-                                matches.append({
-                                    "id": doc_row["id"],
-                                    "content": doc_row["content"],
-                                    "source_type": doc_row["source_type"],
-                                    "score": round(float(score), 4)
-                                })
+                    if score >= min_score:
+                        matches.append({
+                            "id": row["id"],
+                            "content": row["content"],
+                            "source_type": row["source_type"],
+                            "score": round(float(score), 4)
+                        })
 
                 vector_search_success = True
                 logger.debug("Successfully performed optimized vector search.")
