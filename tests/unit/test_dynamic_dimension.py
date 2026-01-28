@@ -22,7 +22,8 @@ def test_dynamic_dimension_creation(mocker):
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
     mock_conn.cursor.return_value = mock_cursor
-    mocker.patch("sqlite3.connect", return_value=mock_conn)
+    # Patch the sqlite3.connect used inside the service (which might be pysqlite3)
+    mocker.patch("services.indexing_service.sqlite3.connect", return_value=mock_conn)
 
     service = IndexingService("test.db", model_name="custom")
 
