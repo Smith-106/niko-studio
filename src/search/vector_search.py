@@ -44,6 +44,8 @@ class VectorSearch:
                 raise ImportError("FastEmbed is required for VectorSearch. Install with `pip install fastembed`.")
             logger.info(f"Loading embedding model: {self.model_name}")
             self._embedder = TextEmbedding(model_name=self.model_name)
+            # Ensure vector table exists with correct dimension
+            self._init_vector_db()
         return self._embedder
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -81,15 +83,36 @@ class VectorSearch:
             )
         """)
 
-        # Virtual table for vector search
-        if sqlite_vec:
-            # Assuming 384 dimensions for BAAI/bge-small-en-v1.5
-            cursor.execute("""
-                CREATE VIRTUAL TABLE IF NOT EXISTS vec_items USING vec0(
-                    embedding float[384]
-                )
-            """)
+        conn.commit()
+        conn.close()
 
+    def _init_vector_db(self):
+        """Initialize SQLite vector table with dynamic dimension."""
+        if not sqlite_vec:
+            return
+
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # Get dimension from loaded embedder
+        try:
+            # Try to get dimension from loaded embedder instance
+            if hasattr(self._embedder, "embedding_size"):
+                dim = self._embedder.embedding_size
+            else:
+                # Fallback to model registry look up if possible or default
+                logger.warning("Could not determine embedding size from instance, defaulting to 384")
+                dim = 384
+        except Exception as e:
+            logger.warning(f"Error determining embedding size: {e}, defaulting to 384")
+            dim = 384
+
+        logger.debug(f"Initializing vector table with dimension: {dim}")
+        cursor.execute(f"""
+            CREATE VIRTUAL TABLE IF NOT EXISTS vec_items USING vec0(
+                embedding float[{dim}]
+            )
+        """)
         conn.commit()
         conn.close()
 
@@ -184,6 +207,7 @@ class VectorSearch:
             try:
                 # Optimized vector search
                 # 1. Get similar vectors and fetch item details in a single query
+                # Uses a JOIN to avoid N+1 query problem where we would fetch rowids then items
                 limit = top_k * 2 if type_filter else top_k
 
                 cursor.execute(
@@ -244,7 +268,9 @@ class VectorSearch:
         """Fallback brute force search using numpy."""
         cursor = conn.cursor()
 
-        query = "SELECT id, content, metadata, embedding, type FROM items"
+        # Optimization: Fetch only necessary columns for scoring (id, embedding, type)
+        # This prevents loading large content/metadata for items that will be filtered out.
+        query = "SELECT id, embedding, type FROM items"
         params = []
         if type_filter:
             query += " WHERE type = ?"
@@ -268,14 +294,38 @@ class VectorSearch:
             if score >= min_score:
                 matches.append({
                     "id": row["id"],
-                    "content": row["content"],
-                    "metadata": json.loads(row["metadata"]),
-                    "type": row["type"],
-                    "score": round(score, 4)
+                    "score": round(score, 4),
+                    "type": row["type"]
                 })
 
+        # Sort and take top_k
         matches.sort(key=lambda x: x["score"], reverse=True)
-        return matches[:top_k]
+        top_matches = matches[:top_k]
+
+        # Fetch full content and metadata only for the winners
+        if top_matches:
+            ids = [m["id"] for m in top_matches]
+            placeholders = ",".join("?" for _ in ids)
+
+            # Use a dictionary to map IDs to their rows for faster lookup
+            cursor.execute(
+                f"SELECT id, content, metadata FROM items WHERE id IN ({placeholders})",
+                ids
+            )
+
+            content_map = {row["id"]: row for row in cursor}
+
+            final_results = []
+            for m in top_matches:
+                if m["id"] in content_map:
+                    row = content_map[m["id"]]
+                    m["content"] = row["content"]
+                    m["metadata"] = json.loads(row["metadata"])
+                    final_results.append(m)
+
+            return final_results
+
+        return []
 
     def search_memory_vectors(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Specific search for memories."""
