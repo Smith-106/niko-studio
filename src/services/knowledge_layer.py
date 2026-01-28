@@ -2,6 +2,7 @@ import sqlite3
 import logging
 import json
 import time
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from .indexing_service import IndexingService
@@ -153,12 +154,16 @@ class AgentKnowledgeLayer:
         # Optimized: Use FTS5 to find candidates, then verify exact match
         try:
             # Tokenize query to create OR condition for FTS
-            tokens = [t for t in query_text.replace('"', '').replace("'", "").split()]
+            # Use robust cleaning (inspired by main branch) to avoid FTS syntax errors
+            clean_query = re.sub(r'[^\w\s]', ' ', query_text)
+            tokens = clean_query.split()
+
             if tokens:
+                # Wrap in quotes to handle exact tokens
                 fts_query = " OR ".join(f'"{t}"' for t in tokens)
 
                 # Use FTS to find candidates (entities having at least one word from query in their name)
-                # Then verify exact substring match
+                # Then verify exact substring match using JOIN for performance
                 query_sql = """
                     SELECT e.*
                     FROM entities e
@@ -169,11 +174,17 @@ class AgentKnowledgeLayer:
                 cursor.execute(query_sql, (fts_query, query_text))
                 results["entities"] = [dict(row) for row in cursor.fetchall()]
             else:
+                # Fallback if no tokens (e.g. query is all symbols)
                 cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
                 results["entities"] = [dict(row) for row in cursor.fetchall()]
 
         except sqlite3.OperationalError:
-            # Fallback if FTS table doesn't exist or error
+            # Fallback if FTS table doesn't exist
+            cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
+            results["entities"] = [dict(row) for row in cursor.fetchall()]
+        except Exception as e:
+            # Catch other FTS errors and fallback
+            logger.warning(f"FTS search failed: {e}. Falling back to scan.")
             cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
             results["entities"] = [dict(row) for row in cursor.fetchall()]
                 
