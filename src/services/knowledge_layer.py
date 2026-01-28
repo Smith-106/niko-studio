@@ -18,7 +18,7 @@ class AgentKnowledgeLayer:
 
     def __init__(self, db_path: str):
         self.db_path = Path(db_path)
-        self.vector_store = IndexingService(db_path) # Reuses the vector implementation
+        self.vector_store = IndexingService(db_path)  # Reuses the vector implementation
         self._init_graph_schema()
 
     def _init_graph_schema(self):
@@ -39,36 +39,27 @@ class AgentKnowledgeLayer:
         """)
         
         # FTS5 Entity Table for fast lookup
-        try:
-            cursor.execute("CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(name, entity_id UNINDEXED)")
-
-            # Triggers to keep FTS in sync
-            cursor.execute("""
-                CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
-                    INSERT INTO entities_fts(rowid, name, entity_id) VALUES (new.rowid, new.name, new.id);
-                END;
-            """)
-            cursor.execute("""
-                CREATE TRIGGER IF NOT EXISTS entities_ad AFTER DELETE ON entities BEGIN
-                    DELETE FROM entities_fts WHERE rowid = old.rowid;
-                END;
-            """)
-            cursor.execute("""
-                CREATE TRIGGER IF NOT EXISTS entities_au AFTER UPDATE ON entities BEGIN
-                    UPDATE entities_fts SET name = new.name, entity_id = new.id WHERE rowid = new.rowid;
-                END;
-            """)
-
-            # Backfill if needed (if entities exists but fts is empty)
-            cursor.execute("SELECT count(*) FROM entities_fts")
-            if cursor.fetchone()[0] == 0:
-                cursor.execute("SELECT count(*) FROM entities")
-                if cursor.fetchone()[0] > 0:
-                    logger.info("Backfilling entities_fts index...")
-                    cursor.execute("INSERT INTO entities_fts(rowid, name, entity_id) SELECT rowid, name, id FROM entities")
-
-        except Exception as e:
-            logger.warning(f"Could not enable FTS5 optimization: {e}")
+        cursor.execute("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts 
+            USING fts5(name, entity_id UNINDEXED, tokenize='unicode61')
+        """)
+        
+        # Triggers to keep FTS in sync
+        cursor.execute("""
+            CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
+                INSERT INTO entities_fts(name, entity_id) VALUES (new.name, new.id);
+            END;
+        """)
+        cursor.execute("""
+            CREATE TRIGGER IF NOT EXISTS entities_ad AFTER DELETE ON entities BEGIN
+                DELETE FROM entities_fts WHERE entity_id = old.id;
+            END;
+        """)
+        cursor.execute("""
+            CREATE TRIGGER IF NOT EXISTS entities_au AFTER UPDATE ON entities BEGIN
+                UPDATE entities_fts SET name = new.name WHERE entity_id = old.id;
+            END;
+        """)
 
         # Relation Table
         cursor.execute("""
@@ -93,7 +84,26 @@ class AgentKnowledgeLayer:
                 FOREIGN KEY(chunk_id) REFERENCES document_chunks(id)
             )
         """)
-        
+
+        # Backfill FTS if needed (if entities exists but fts is empty)
+        try:
+            cursor.execute("SELECT count(*) FROM entities")
+            ent_row = cursor.fetchone()
+            ent_count = ent_row[0] if ent_row else 0
+
+            cursor.execute("SELECT count(*) FROM entities_fts")
+            fts_row = cursor.fetchone()
+            fts_count = fts_row[0] if fts_row else 0
+
+            if ent_count > 0 and fts_count == 0:
+                logger.info("Backfilling entities_fts index...")
+                cursor.execute("""
+                    INSERT INTO entities_fts(name, entity_id) 
+                    SELECT name, id FROM entities
+                """)
+        except Exception as e:
+            logger.warning(f"Failed to populate FTS (schema might be initializing): {e}")
+
         conn.commit()
         conn.close()
 
@@ -111,10 +121,13 @@ class AgentKnowledgeLayer:
         """Add node to Knowledge Graph"""
         props_json = json.dumps(props or {})
         conn = sqlite3.connect(str(self.db_path))
+
+        # Update main table (triggers will handle FTS sync)
         conn.execute(
             "INSERT OR REPLACE INTO entities (id, name, type, description, properties, created_at) VALUES (?, ?, ?, ?, ?, ?)",
             (entity_id, name, type, desc, props_json, time.time())
         )
+
         conn.commit()
         conn.close()
 
@@ -134,7 +147,7 @@ class AgentKnowledgeLayer:
         """
         Hybrid Search:
         1. Semantic Search for relevant chunks.
-        2. Graph Search for entities mentioned in query (simple lookup for now).
+        2. Graph Search for entities mentioned in query (optimized with FTS).
         """
         results = {
             "chunks": [],
@@ -144,57 +157,64 @@ class AgentKnowledgeLayer:
         # 1. Vector Search
         results["chunks"] = self.vector_store.search(query_text, top_k=top_k)
         
-        # 2. Graph Search (Simple keyword match in name/desc for now)
-        # In a real Kuzu DB, this would be a Cypher query
+        # 2. Graph Search optimized with FTS
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        # Find entities whose name is in the query text
-        # Optimized: Use FTS5 to find candidates, then verify exact match
-        try:
-            # Tokenize query to create OR condition for FTS
-            # Use robust cleaning (inspired by main branch) to avoid FTS syntax errors
-            clean_query = re.sub(r'[^\w\s]', ' ', query_text)
-            tokens = clean_query.split()
-
-            if tokens:
-                # Wrap in quotes to handle exact tokens
-                fts_query = " OR ".join(f'"{t}"' for t in tokens)
-
-                # Use FTS to find candidates (entities having at least one word from query in their name)
-                # Then verify exact substring match using JOIN for performance
+        # Clean query to avoid FTS syntax errors
+        clean_query = re.sub(r'[^\w\s]', ' ', query_text)
+        tokens = [t.strip() for t in clean_query.split() if t.strip()]
+        
+        if tokens:
+            try:
+                # Construct FTS query with proper escaping
+                fts_terms = [f'"{t.replace('"', '""')}"' for t in tokens]
+                fts_query = " OR ".join(fts_terms)
+                
+                # Use FTS to find candidates, then verify with SQL substring match
+                # This approach is more efficient for large datasets
                 query_sql = """
-                    SELECT e.*
+                    SELECT DISTINCT e.*
                     FROM entities e
                     JOIN entities_fts f ON e.id = f.entity_id
                     WHERE f.name MATCH ?
                     AND instr(lower(?), lower(e.name)) > 0
+                    LIMIT 500
                 """
                 cursor.execute(query_sql, (fts_query, query_text))
                 results["entities"] = [dict(row) for row in cursor.fetchall()]
-            else:
-                # Fallback if no tokens (e.g. query is all symbols)
-                cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
-                results["entities"] = [dict(row) for row in cursor.fetchall()]
-
-        except sqlite3.OperationalError:
-            # Fallback if FTS table doesn't exist
-            cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
-            results["entities"] = [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
-            # Catch other FTS errors and fallback
-            logger.warning(f"FTS search failed: {e}. Falling back to scan.")
-            cursor.execute("SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0", (query_text,))
-            results["entities"] = [dict(row) for row in cursor.fetchall()]
                 
-        # If specific filters provided
+            except sqlite3.OperationalError as e:
+                # Fallback if FTS table doesn't exist or query is malformed
+                logger.warning(f"FTS search failed: {e}. Falling back to full scan.")
+                cursor.execute(
+                    "SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0",
+                    (query_text,)
+                )
+                results["entities"] = [dict(row) for row in cursor.fetchall()]
+                
+        else:
+            # No valid tokens, fallback to substring search
+            cursor.execute(
+                "SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0",
+                (query_text,)
+            )
+            results["entities"] = [dict(row) for row in cursor.fetchall()]
+        
+        # Apply entity filters if provided
         if entity_filter:
-            placeholders = ','.join(['?'] * len(entity_filter))
-            cursor.execute(f"SELECT * FROM entities WHERE id IN ({placeholders})", entity_filter)
-            filtered_entities = [dict(r) for r in cursor.fetchall()]
-            results["entities"].extend(filtered_entities)
-
+            existing_ids = {e['id'] for e in results["entities"]}
+            missing_ids = [eid for eid in entity_filter if eid not in existing_ids]
+            
+            if missing_ids:
+                placeholders = ','.join(['?'] * len(missing_ids))
+                cursor.execute(
+                    f"SELECT * FROM entities WHERE id IN ({placeholders})",
+                    missing_ids
+                )
+                results["entities"].extend([dict(r) for r in cursor.fetchall()])
+        
         conn.close()
         return results
 

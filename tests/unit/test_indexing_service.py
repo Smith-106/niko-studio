@@ -84,11 +84,20 @@ def test_search_optimized_path(test_db_path, mock_embedding, monkeypatch):
                 return self
             return self.real_cursor.execute(sql, params)
 
+        def __iter__(self):
+            if "FROM vec_document_chunks" in self.last_query:
+                # Simulate the result of the JOIN query
+                # SELECT doc.id, doc.content, doc.source_type, vec.distance
+                # Return docs in specific order: 3, 1, 2
+                yield {"id": "3", "content": "Doc Three", "source_type": "type3", "distance": 0.1}
+                yield {"id": "1", "content": "Doc One", "source_type": "type1", "distance": 0.2}
+                yield {"id": "2", "content": "Doc Two", "source_type": "type2", "distance": 0.3}
+            else:
+                yield from self.real_cursor
+
         def fetchall(self):
             if "FROM vec_document_chunks" in self.last_query:
-                # Return docs in specific order: 3, 1, 2
-                # We assume rowids are 1, 2, 3 corresponding to insertion order
-                return [(3, 0.1), (1, 0.2), (2, 0.3)]
+                return list(self)
             return self.real_cursor.fetchall()
 
         def fetchone(self):
