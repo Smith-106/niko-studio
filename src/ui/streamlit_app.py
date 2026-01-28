@@ -12,12 +12,8 @@ import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from src.ui.translations import t
-from src.services.document_loader import DocumentLoader
 from src.services.indexing_service import IndexingService
-try:
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-except ImportError:
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
+from src.ui.file_utils import process_uploaded_file
 
 # === 配置 ===
 st.set_page_config(
@@ -396,29 +392,16 @@ with col_artifacts:
             file_key = f"{uploaded_file.name}_{uploaded_file.size}"
             if file_key not in st.session_state.processed_files:
                 try:
-                    # Load text
                     with st.spinner(f"Processing {uploaded_file.name}..."):
-                        text = DocumentLoader.load_file(uploaded_file, uploaded_file.name)
-
-                        # Chunking
-                        text_splitter = RecursiveCharacterTextSplitter(
-                            chunk_size=1000,
-                            chunk_overlap=200,
-                            length_function=len,
-                        )
-                        chunks = text_splitter.split_text(text)
-
-                        # Indexing
                         service = get_indexing_service()
-                        session_id = st.session_state.session_id
-                        # Sanitize filename
-                        safe_filename = "".join([c for c in uploaded_file.name if c.isalnum() or c in (' ', '.', '_')]).replace(' ', '_')
-
                         progress_bar = st.progress(0, text="Indexing chunks...")
-                        for i, chunk in enumerate(chunks):
-                            chunk_id = f"{session_id}_{safe_filename}_part_{i}"
-                            service.add_document(doc_id=chunk_id, content=chunk, source_type="uploaded_material")
-                            progress_bar.progress((i + 1) / len(chunks))
+
+                        process_uploaded_file(
+                            uploaded_file,
+                            st.session_state.session_id,
+                            service,
+                            progress_callback=progress_bar.progress
+                        )
 
                         progress_bar.empty()
                         st.session_state.processed_files.add(file_key)
