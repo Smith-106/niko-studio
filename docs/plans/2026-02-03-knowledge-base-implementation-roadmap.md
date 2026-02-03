@@ -1,7 +1,7 @@
 # 知识库系统 - 实现路线图
 
-**版本**: 1.0
-**日期**: 2026-02-03
+**版本**: 1.1
+**日期**: 2026-02-04
 **状态**: 待实施
 
 ---
@@ -9,26 +9,31 @@
 ## 阶段概览
 
 ```
-Phase 1: 基础设施 (Week 1-2)
+Phase 0: 服务基础 (Week 1)
+    ├── LLM 服务抽象
+    ├── Embedding 服务抽象
+    └── ServiceManager
+
+Phase 1: 基础设施 (Week 2-3)
     ├── 存储适配层核心
     └── 基础数据结构
 
-Phase 2: 检索能力 (Week 3-4)
+Phase 2: 检索能力 (Week 4-5)
     ├── 向量搜索 + 图搜索
     ├── 查询分析器
     └── 基础路由
 
-Phase 3: 质量保障 (Week 5-6)
+Phase 3: 质量保障 (Week 6-7)
     ├── CRAG 分级评估
     ├── Self-RAG 验证
     └── 自动修订
 
-Phase 4: Agent 协作 (Week 7-8)
+Phase 4: Agent 协作 (Week 8-9)
     ├── 专业 Agent
     ├── Supervisor
     └── 完整集成
 
-Phase 5: 集成优化 (Week 9-10)
+Phase 5: 集成优化 (Week 10-11)
     ├── 全流程集成
     ├── 性能优化
     └── 生产级后端
@@ -40,10 +45,41 @@ Phase 5: 集成优化 (Week 9-10)
 
 | 层次 | 文档 |
 |------|------|
+| LLM/Embedding 服务层 | `2026-02-04-llm-embedding-service-design.md` |
 | 检索策略层 | `2026-02-03-adaptive-rag-retrieval-design.md` |
 | 质量保障层 | `2026-02-03-quality-assurance-layer-design.md` |
 | 存储适配层 | `2026-02-03-storage-adapter-layer-design.md` |
 | Agent 协作层 | `2026-02-03-agent-collaboration-layer-design.md` |
+
+---
+
+## Phase 0: 服务基础
+
+**目标**: 建立 LLM/Embedding 服务抽象层，为所有上层模块提供统一的模型调用接口
+
+| 任务 ID | 任务 | 依赖 | 产出 | 状态 |
+|---------|------|------|------|------|
+| **P0-01** | 服务层数据结构定义 | - | `services/models.py` | ⬜ |
+| **P0-02** | LLMService/EmbeddingService Protocol | P0-01 | `services/protocols.py` | ⬜ |
+| **P0-03** | OpenAI LLM Provider | P0-02 | `services/providers/openai.py` | ⬜ |
+| **P0-04** | Anthropic LLM Provider | P0-02 | `services/providers/anthropic.py` | ⬜ |
+| **P0-05** | OpenAI Embedding Provider | P0-02 | `services/providers/openai.py` | ⬜ |
+| **P0-06** | Local Embedding Provider | P0-02 | `services/providers/local.py` | ⬜ |
+| **P0-07** | Embedding 缓存实现 | - | `services/cache.py` | ⬜ |
+| **P0-08** | LLMService 实现 | P0-03,04 | `services/llm_service.py` | ⬜ |
+| **P0-09** | EmbeddingService 实现 | P0-05,06,07 | `services/embedding_service.py` | ⬜ |
+| **P0-10** | ServiceManager 统一管理器 | P0-08,09 | `services/manager.py` | ⬜ |
+| **P0-11** | 配置加载器 | - | `services/config.py` | ⬜ |
+| **P0-12** | 便捷函数与全局单例 | P0-10,11 | `services/__init__.py` | ⬜ |
+
+### 验收标准
+
+- [ ] 可以通过 `init_services()` 初始化服务
+- [ ] `llm.generate()` 可正常生成文本
+- [ ] `llm.generate_json()` 可生成并解析 JSON
+- [ ] `embedding.embed()` 可生成向量
+- [ ] `embedding.embed_batch()` 支持缓存命中
+- [ ] 健康检查正常工作
 
 ---
 
@@ -183,6 +219,20 @@ Phase 5: 集成优化 (Week 9-10)
 ## 任务依赖图
 
 ```
+P0-01 ── P0-02 ──┬── P0-03 ──┬── P0-08 ──┐
+                 ├── P0-04 ──┘           │
+                 ├── P0-05 ──┬── P0-09 ──┼── P0-10 ── P0-12
+                 └── P0-06 ──┤           │
+                             │           │
+P0-07 ───────────────────────┘           │
+P0-11 ───────────────────────────────────┘
+
+P0-10 ──► P1-03 (ChromaAdapter 使用 EmbeddingService)
+       ──► P2-02 (QueryAnalyzer 使用 LLMService)
+       ──► P2-10 (LLMArbiter 使用 LLMService)
+       ──► P3-02 (RelevanceGrader 使用 LLMService)
+       ──► P4-04 (BaseAgent 使用 LLMService)
+
 P1-01 ──┬── P1-02 ── P1-03 ──┐
         ├── P1-04 ── P1-05 ──┼── P1-08 ── P2-04/05/08
         ├── P1-06 ── P1-07 ──┘            │
@@ -208,6 +258,22 @@ P4-01 ── P4-02/03 ── P4-04 ── P4-05/06/07/08 ── P4-10 ── P4-
 niko-studio/
 ├── src/
 │   └── knowledge/                    # 知识库系统
+│       ├── services/                 # LLM/Embedding 服务层 (Phase 0)
+│       │   ├── __init__.py           # 便捷函数导出
+│       │   ├── models.py             # 数据结构定义
+│       │   ├── protocols.py          # Protocol 接口
+│       │   ├── providers/            # Provider 实现
+│       │   │   ├── __init__.py
+│       │   │   ├── base.py
+│       │   │   ├── openai.py
+│       │   │   ├── anthropic.py
+│       │   │   └── local.py
+│       │   ├── cache.py              # Embedding 缓存
+│       │   ├── llm_service.py        # LLM 服务实现
+│       │   ├── embedding_service.py  # Embedding 服务实现
+│       │   ├── manager.py            # ServiceManager
+│       │   └── config.py             # 配置加载
+│       │
 │       ├── models/                   # 数据模型
 │       │   ├── documents.py          # Document, Entity, Relation
 │       │   └── entities.py           # Community, NeighborhoodResult
@@ -293,12 +359,13 @@ niko-studio/
 
 | 里程碑 | 完成条件 | 目标日期 |
 |--------|----------|----------|
-| M1: 存储就绪 | Phase 1 全部完成 | Week 2 |
-| M2: 检索可用 | Phase 2 全部完成 | Week 4 |
-| M3: 质量保障 | Phase 3 全部完成 | Week 6 |
-| M4: Agent 协作 | Phase 4 全部完成 | Week 8 |
-| M5: 生产就绪 | Phase 5 全部完成 | Week 10 |
+| M0: 服务就绪 | Phase 0 全部完成 | Week 1 |
+| M1: 存储就绪 | Phase 1 全部完成 | Week 3 |
+| M2: 检索可用 | Phase 2 全部完成 | Week 5 |
+| M3: 质量保障 | Phase 3 全部完成 | Week 7 |
+| M4: Agent 协作 | Phase 4 全部完成 | Week 9 |
+| M5: 生产就绪 | Phase 5 全部完成 | Week 11 |
 
 ---
 
-*文档版本: 1.0 | 创建时间: 2026-02-03*
+*文档版本: 1.1 | 更新时间: 2026-02-04*
