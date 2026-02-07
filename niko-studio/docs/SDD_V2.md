@@ -40,7 +40,7 @@
 | **文件存儲** | **OpenKL File Contract** | 文件規範+圖派生，grep-friendly |
 | **圖數據庫** | **Kùzu DB (嵌入式)** | 支持 Cypher + HNSW + 本地部署 |
 | **會話管理** | **CCW Session Manager** | 成熟的會話生命週期 |
-| **斷點續傳** | **CCW Resume Strategy** | 多策略 (native/hybrid) |
+| **断点续传** | **CCW Resume Strategy** | 多策略 (native/hybrid) |
 | **引用系統** | **OpenKL Citations** | SHA256 驗證 + GC |
 | **技能系統** | **AionUi Skills** | Frontmatter + Markdown 可複用工作流 |
 | **存儲封裝** | **AionUi JsonFileBuilder** | 統一文件操作 API |
@@ -870,7 +870,7 @@ class SessionManager:
         pass
 ```
 
-### 7.4 Resume Strategy (斷點續傳)
+### 7.4 Resume Strategy (断点续传)
 
 ```python
 # src/workflow/session/resume_strategy.py
@@ -878,19 +878,20 @@ class SessionManager:
 from enum import Enum
 from dataclasses import dataclass
 
-class ResumeStrategy(Enum):
-    NATIVE = 'native'           # 原生恢復
+class ResumeMode(Enum):
+    NATIVE = 'native'           # 原生恢复
     PROMPT_CONCAT = 'prompt-concat'  # Prompt 拼接
-    HYBRID = 'hybrid'           # 混合 (主用原生 + 其他作為上下文)
+    HYBRID = 'hybrid'           # 混合 (主用原生 + 其他作为上下文)
     DISABLED = 'disabled'
 
 @dataclass
 class ResumeDecision:
-    strategy: ResumeStrategy
+    strategy: ResumeMode
     native_session_id: str = None
     is_latest: bool = False
     context_turns: list = None
     primary_conversation_id: str = None
+    context_format: ContextFormat = ContextFormat.YAML
 
 def determine_resume_strategy(
     tool: str,
@@ -900,21 +901,21 @@ def determine_resume_strategy(
     get_conversation_tool: callable = None
 ) -> ResumeDecision:
     """
-    決定最優恢復策略
-    
-    場景:
-    1. 單追加 (無 custom_id) → native (如果映射存在)
-    2. Fork (提供 custom_id) → prompt-concat (新對話)
-    3. 多合併 → hybrid (主用原生 + 其他作上下文)
+    决定最优恢复策略
+
+    场景:
+    1. 单追加 (无 custom_id) → native (如果映射存在)
+    2. Fork (提供 custom_id) → prompt-concat (新对话)
+    3. 多合并 → hybrid (主用原生 + 其他作上下文)
     4. 跨工具 → prompt-concat (工具不同)
     """
     pass
 
 def build_context_prefix(
     context_turns: list,
-    format: str = 'plain'  # 'plain' | 'yaml' | 'json'
+    format: str = 'yaml'  # 'plain' | 'yaml' | 'json'
 ) -> str:
-    """構建上下文前綴"""
+    """构建上下文前缀"""
     pass
 ```
 
@@ -927,53 +928,56 @@ from enum import Enum
 from dataclasses import dataclass
 
 class SearchMode(Enum):
-    FUZZY = 'fuzzy'       # FTS + ripgrep
-    SEMANTIC = 'semantic'  # Embedding + Reranker
+    FUZZY = 'fuzzy'        # FTS5 + ripgrep
+    SEMANTIC = 'semantic'  # Vector embeddings
+    HYBRID = 'hybrid'      # Fuzzy + semantic
+    AUTO = 'auto'          # Auto select
 
 @dataclass
 class SearchResult:
-    success: bool
-    results: list
-    metadata: dict = None
-    error: str = None
-
-@dataclass
-class SemanticMatch:
-    file: str
-    score: float
+    id: str
     content: str
-    symbol: str = None
-    relationships: list = None
+    score: float
+    type: str = "chunk"
+    source: str = "smart"
+    mode_used: str = "auto"
+    metadata: dict = None
+    loc: dict = None
+    snapshot_query: str = None
 
 class SmartSearch:
     """智能搜索 - 移植自 CCW"""
-    
+
     def search(
         self,
         query: str,
-        mode: SearchMode = SearchMode.FUZZY,
-        limit: int = 20,
-        offset: int = 0
-    ) -> SearchResult:
-        """執行搜索"""
+        mode: SearchMode = SearchMode.AUTO,
+        top_k: int = 5,
+        type_filter: str | None = None,
+        min_score: float = 0.0
+    ) -> list[SearchResult]:
+        """执行搜索"""
         pass
-    
+
     def fuzzy_search(self, query: str, **options) -> list:
         """FTS5 + ripgrep 融合搜索"""
         pass
-    
-    def semantic_search(self, query: str, **options) -> list[SemanticMatch]:
-        """Embedding + Reranker 語義搜索"""
+
+    def semantic_search(self, query: str, **options) -> list:
+        """Embedding 语义搜索 (优先 VectorIndex)"""
         pass
-    
+
     def rrf_merge(self, results_a: list, results_b: list, k: int = 60) -> list:
-        """Reciprocal Rank Fusion 合併排序"""
+        """Reciprocal Rank Fusion 合并排序"""
         pass
-    
+
     def auto_classify(self, query: str) -> SearchMode:
-        """根據查詢自動分類模式"""
+        """根据查询自动分类模式"""
         pass
 ```
+
+说明:
+- 回退路径：FTS5 → LIKE（同库）；语义搜索优先 VectorIndex，失败回退 VectorSearch。
 
 ---
 
@@ -1170,26 +1174,34 @@ class StoreManager:
 ```python
 # src/search/vector_search.py
 
-def create_vector_indexes(verbose: bool = False):
-    """創建 MemoryNote 和 Chunk 的 HNSW 向量索引"""
+def create_vector_index(
+    db_path: str = ".writing/vectors.db",
+    dimension: int = 384,
+    model_name: str = "BAAI/bge-small-en-v1.5"
+):
+    """创建 VectorIndex"""
     pass
 
-def search_memory_vectors(query_vector: list[float], k: int = 5) -> list[dict]:
-    """記憶向量搜索 (Kùzu HNSW)"""
+def search_memory_vectors(index, query: str, top_k: int = 5) -> list[dict]:
+    """记忆向量搜索"""
     pass
 
-def search_chunk_vectors(query_vector: list[float], k: int = 5) -> list[dict]:
-    """文檔塊向量搜索"""
+def search_chunk_vectors(index, query: str, top_k: int = 5) -> list[dict]:
+    """文档块向量搜索"""
     pass
 
-def hybrid_search(query_vector: list[float], memory_k: int = 3, chunk_k: int = 3) -> list[dict]:
+def hybrid_search(index, query: str, top_k: int = 5) -> list[dict]:
     """跨 Memory + Chunk 混合搜索"""
     pass
 
-def get_vector_stats() -> dict:
-    """向量索引統計"""
+def get_vector_stats(index) -> dict:
+    """向量索引统计"""
     pass
 ```
+
+说明:
+- VectorIndex 为默认实现；VectorSearch 为旧实现（SmartSearch 会回退使用）。
+- sqlite-vec 不可用时自动回退到 brute force。
 
 ### 8.7 Kùzu Schema (OpenKL 風格)
 
@@ -1376,9 +1388,9 @@ class SessionClusterManager:
 
 ---
 
-## 10. 斷點續傳策略 (Resume Strategy) **[CCW]**
+## 10. 断点续传策略 (Resume Strategy) **[CCW]**
 
-### 10.1 策略類型
+### 10.1 策略类型
 
 ```python
 # src/workflow/session/resume_strategy.py
@@ -1387,11 +1399,11 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Optional
 
-class ResumeStrategy(Enum):
-    NATIVE = 'native'           # 原生會話恢復 (Claude/Gemini 原生支持)
+class ResumeMode(Enum):
+    NATIVE = 'native'           # 原生会话恢复 (Claude/Gemini 原生支持)
     PROMPT_CONCAT = 'prompt-concat'  # 上下文拼接到 Prompt
     HYBRID = 'hybrid'           # 混合策略
-    DISABLED = 'disabled'       # 禁用續傳
+    DISABLED = 'disabled'       # 禁用续传
 
 class ContextFormat(Enum):
     PLAIN = 'plain'
@@ -1400,7 +1412,7 @@ class ContextFormat(Enum):
 
 @dataclass
 class ConversationTurn:
-    """對話輪次"""
+    """对话轮次"""
     role: str               # user | assistant | system
     content: str
     timestamp: datetime
@@ -1408,8 +1420,8 @@ class ConversationTurn:
 
 @dataclass
 class ResumeDecision:
-    """續傳決策結果"""
-    strategy: ResumeStrategy
+    """续传决策结果"""
+    strategy: ResumeMode
     native_session_id: Optional[str] = None
     is_latest: bool = True
     context_turns: Optional[list[ConversationTurn]] = None
@@ -1417,73 +1429,73 @@ class ResumeDecision:
     context_format: ContextFormat = ContextFormat.YAML
 ```
 
-### 10.2 策略決定邏輯
+### 10.2 策略决定逻辑
 
 ```python
 class ResumeStrategyResolver:
-    """斷點續傳策略解析器"""
-    
+    """断点续传策略解析器"""
+
     def determine_strategy(
         self,
         tool: str,                    # gemini | claude | qwen
-        resume_ids: list[str],        # 要恢復的會話 ID
+        resume_ids: list[str],        # 要恢复的会话 ID
         custom_id: Optional[str] = None
     ) -> ResumeDecision:
         """
-        決定最佳續傳策略
-        
-        場景類型:
-        - 單追加: resume_ids=[id], 繼續同一會話 → native
-        - Fork: 從某點分叉 → prompt-concat + new session
-        - 多合併: resume_ids=[id1, id2] → hybrid
-        - 跨工具: 從 Claude 切換到 Gemini → prompt-concat
+        决定最佳续传策略
+
+        场景类型:
+        - 单追加: resume_ids=[id], 继续同一会话 → native
+        - Fork: 从某点分叉 → prompt-concat + new session
+        - 多合并: resume_ids=[id1, id2] → hybrid
+        - 跨工具: 从 Claude 切换到 Gemini → prompt-concat
         """
-        # 單追加場景
+        # 单追加场景
         if len(resume_ids) == 1 and self._supports_native(tool):
             return ResumeDecision(
-                strategy=ResumeStrategy.NATIVE,
+                strategy=ResumeMode.NATIVE,
                 native_session_id=resume_ids[0],
                 is_latest=True
             )
-        
-        # 多會話合併
+
+        # 多会话合并
         if len(resume_ids) > 1:
             context = self._merge_contexts(resume_ids)
             return ResumeDecision(
-                strategy=ResumeStrategy.HYBRID,
+                strategy=ResumeMode.HYBRID,
                 context_turns=context,
                 context_format=ContextFormat.YAML
             )
-        
-        # 跨工具場景
+
+        # 跨工具场景
         return ResumeDecision(
-            strategy=ResumeStrategy.PROMPT_CONCAT,
+            strategy=ResumeMode.PROMPT_CONCAT,
             context_turns=self._load_context(resume_ids[0])
         )
-    
+
     def build_context_prefix(
         self,
         context_turns: list[ConversationTurn],
         format: ContextFormat = ContextFormat.YAML
     ) -> str:
-        """構建上下文前綴"""
+        """构建上下文前缀"""
         if format == ContextFormat.PLAIN:
             return self._build_plain(context_turns)
         elif format == ContextFormat.YAML:
             return self._build_yaml(context_turns)
         else:
             return self._build_json(context_turns)
-    
+
     def _supports_native(self, tool: str) -> bool:
-        """檢查工具是否支持原生續傳"""
+        """检查工具是否支持原生续传"""
         return tool in ['claude', 'gemini']
-    
+
     def _merge_contexts(self, session_ids: list[str]) -> list[ConversationTurn]:
-        """合併多個會話上下文"""
+        """合并多个会话上下文"""
         pass
-    
+
     def _load_context(self, session_id: str) -> list[ConversationTurn]:
-        """加載會話上下文"""
+        """加载会话上下文"""
         pass
 ```
 
@@ -1671,9 +1683,9 @@ class Level5Coordinator:
 
 ---
 
-## 12. 智能搜索增強 (SmartSearch Enhancement) **[CCW]**
+## 12. 智能搜索增强 (SmartSearch Enhancement) **[CCW]**
 
-### 12.1 雙模式搜索
+### 12.1 双模式搜索
 
 ```python
 # src/search/smart_search.py
@@ -1684,115 +1696,71 @@ from typing import Optional
 
 class SearchMode(Enum):
     FUZZY = 'fuzzy'         # FTS5 + ripgrep
-    SEMANTIC = 'semantic'   # Embedding + Reranker
-    HYBRID = 'hybrid'       # 兩者融合
+    SEMANTIC = 'semantic'   # Vector embeddings
+    HYBRID = 'hybrid'       # 两者融合
+    AUTO = 'auto'           # 自动选择
 
 @dataclass
 class SearchResult:
-    success: bool
-    results: list
+    id: str
+    content: str
+    score: float
+    type: str = "chunk"
+    source: str = "smart"
+    mode_used: str = "auto"
     metadata: Optional[dict] = None
-    error: Optional[str] = None
-
-@dataclass
-class FuzzyMatch:
-    """模糊匹配結果"""
-    file: str
-    line: int
-    content: str
-    score: float
-    highlights: list[tuple]  # (start, end) 高亮位置
-
-@dataclass
-class SemanticMatch:
-    """語義匹配結果"""
-    file: str
-    score: float
-    content: str
-    symbol: Optional[str] = None
-    relationships: Optional[list] = None
+    loc: Optional[dict] = None
+    snapshot_query: Optional[str] = None
 
 class SmartSearch:
     """智能搜索 - 移植自 CCW"""
-    
+
     def search(
         self,
         query: str,
-        mode: SearchMode = SearchMode.HYBRID,
-        limit: int = 20,
-        offset: int = 0,
-        filters: dict = None
-    ) -> SearchResult:
-        """統一搜索接口"""
-        if mode == SearchMode.FUZZY:
-            return self.fuzzy_search(query, limit, offset)
-        elif mode == SearchMode.SEMANTIC:
-            return self.semantic_search(query, limit, offset)
-        else:
-            return self.hybrid_search(query, limit, offset)
-    
-    def fuzzy_search(self, query: str, limit: int = 20, 
-                     offset: int = 0) -> SearchResult:
+        mode: SearchMode = SearchMode.AUTO,
+        top_k: int = 5,
+        type_filter: str | None = None,
+        min_score: float = 0.0
+    ) -> list[SearchResult]:
+        """统一搜索接口"""
+        pass
+
+    def fuzzy_search(self, query: str, top_k: int = 10,
+                     type_filter: str | None = None) -> list[SearchResult]:
         """模糊搜索 (FTS5 + ripgrep)"""
         pass
-    
-    def semantic_search(self, query: str, limit: int = 20,
-                        offset: int = 0) -> SearchResult:
-        """語義搜索 (Embedding + Reranker)"""
+
+    def semantic_search(self, query: str, top_k: int = 10,
+                        type_filter: str | None = None, min_score: float = 0.0) -> list[SearchResult]:
+        """语义搜索 (VectorIndex 优先, 失败回退 VectorSearch)"""
         pass
-    
-    def hybrid_search(self, query: str, limit: int = 20,
-                      offset: int = 0) -> SearchResult:
+
+    def hybrid_search(self, query: str, top_k: int = 10,
+                      type_filter: str | None = None) -> list[SearchResult]:
         """混合搜索 (RRF 融合)"""
-        fuzzy_results = self.fuzzy_search(query, limit * 2, 0)
-        semantic_results = self.semantic_search(query, limit * 2, 0)
-        merged = self.rrf_merge(fuzzy_results.results, 
-                                semantic_results.results, k=60)
-        return SearchResult(success=True, results=merged[:limit])
-    
-    def rrf_merge(self, results_a: list, results_b: list, 
+        pass
+
+    def rrf_merge(self, results_a: list, results_b: list,
                   k: int = 60) -> list:
-        """
-        Reciprocal Rank Fusion 合併排序
-        
-        公式: RRF(d) = Σ 1 / (k + rank(d))
-        """
-        scores = {}
-        
-        for rank, item in enumerate(results_a):
-            key = getattr(item, 'file', str(item))
-            scores[key] = scores.get(key, 0) + 1 / (k + rank + 1)
-        
-        for rank, item in enumerate(results_b):
-            key = getattr(item, 'file', str(item))
-            scores[key] = scores.get(key, 0) + 1 / (k + rank + 1)
-        
-        # 按分數排序
-        sorted_keys = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
-        return sorted_keys
-    
+        """Reciprocal Rank Fusion 合并排序"""
+        pass
+
     def auto_classify(self, query: str) -> SearchMode:
         """
-        根據查詢自動分類模式
-        
-        規則:
-        - 包含特殊字符 (*, ?, []) → FUZZY
-        - 短查詢 (<3 字) → FUZZY
-        - 自然語言問句 → SEMANTIC
+        根据查询自动分类模式
+
+        规则:
+        - 包含引号或特殊字符 → HYBRID
+        - 短查询 (<=2 词且非疑问词) → FUZZY
+        - 自然语言问句或长查询 → SEMANTIC
         - 其他 → HYBRID
         """
-        if any(c in query for c in '*?[]'):
-            return SearchMode.FUZZY
-        if len(query) < 3:
-            return SearchMode.FUZZY
-        if query.endswith('?') or query.startswith(('什麼', '如何', '為什麼')):
-            return SearchMode.SEMANTIC
-        return SearchMode.HYBRID
-    
-    def watch(self, paths: list[str], callback: callable):
-        """監控文件變更，觸發重新索引"""
         pass
 ```
+
+说明:
+- 回退路径：FTS5 → LIKE（同库）；语义搜索优先 VectorIndex，失败回退 VectorSearch。
 
 ---
 
@@ -2069,7 +2037,7 @@ class WritingStorage:
 | 功能領域 | CCW | Cherry Studio | OpenKL | AionUi | 採用 |
 |---------|-----|---------------|--------|--------|------|
 | **會話管理** | ✅ SessionManager | 🟡 基礎 | ❌ | 🟡 基礎 | **CCW** |
-| **斷點續傳** | ✅ ResumeStrategy | ❌ | ❌ | ❌ | **CCW** |
+| **断点续传** | ✅ ResumeMode | ❌ | ❌ | ❌ | **CCW** |
 | **分層工作流** | ✅ L1-L5 | ❌ | ❌ | ❌ | **CCW** |
 | **智能搜索** | ✅ RRF 融合 | 🟡 | ✅ HNSW | ❌ | **CCW + OpenKL** |
 | **向量記憶** | 🟡 CoreMemory | ✅ MemoryService | ✅ MemoryManager | ❌ | **Cherry** |
@@ -2096,7 +2064,7 @@ class WritingStorage:
 │   │   CCW       │   │   Cherry    │   │   OpenKL    │   │   AionUi   │  │
 │   │             │   │   Studio    │   │             │   │            │  │
 │   │ • 會話管理  │   │ • 向量記憶  │   │ • 引用系統  │   │ • Skills   │  │
-│   │ • 斷點續傳  │   │ • 備份服務  │   │ • 蒸餾模板  │   │ • 存儲封裝 │  │
+│   │ • 断点续传  │   │ • 备份服务  │   │ • 蒸馏模板  │   │ • 存储封装 │  │
 │   │ • L1-L5     │   │ • Reranker  │   │ • 時序組織  │   │            │  │
 │   │ • RRF 搜索  │   │ • 推理 MCP  │   │ • 文檔分塊  │   │            │  │
 │   └─────────────┘   └─────────────┘   └─────────────┘   └────────────┘  │

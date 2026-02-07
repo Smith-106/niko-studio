@@ -140,7 +140,9 @@ stats = manager.stats(session_id="session-001")
 from src.workflow.session.resume_strategy import (
     determine_resume_strategy,
     build_context_prefix,
-    ResumeStrategy
+    ResumeMode,
+    ResumeDecision,
+    ContextFormat,
 )
 
 # 决定恢复策略
@@ -149,14 +151,18 @@ decision = determine_resume_strategy(
     resume_ids=["conv-001", "conv-002"],
     custom_id=None
 )
-# 返回: ResumeDecision(strategy=ResumeStrategy.NATIVE, ...)
+# 返回: ResumeDecision(strategy=ResumeMode.HYBRID, ...)
 
 # 构建上下文前缀
 prefix = build_context_prefix(
     context_turns=[...],
-    format="yaml"  # plain | yaml | json
+    format="yaml"  # plain | yaml | json (默认 yaml)
 )
 ```
+
+说明:
+- ResumeMode 等价于文档中的 ResumeStrategy 枚举命名。
+- build_context_prefix 默认输出格式为 yaml。
 
 ---
 
@@ -170,12 +176,14 @@ from src.search.smart_search import SmartSearch, SearchMode
 search = SmartSearch()
 
 # 执行搜索
-result = search.search(
+results = search.search(
     query="张三的性格特点",
-    mode=SearchMode.SEMANTIC,  # FUZZY | SEMANTIC
-    limit=20,
-    offset=0
+    mode=SearchMode.SEMANTIC,  # FUZZY | SEMANTIC | HYBRID | AUTO
+    top_k=20,
+    type_filter=None,
+    min_score=0.0
 )
+# 返回: List[dict] (SmartSearchResult.to_dict)
 
 # 模糊搜索
 fuzzy_results = search.fuzzy_search(query="张三")
@@ -190,28 +198,35 @@ merged = search.rrf_merge(results_a, results_b, k=60)
 mode = search.auto_classify(query="张三")
 ```
 
+说明:
+- 回退路径: FTS5 → LIKE（同库）；语义搜索优先 VectorIndex，失败回退 VectorSearch。
+
 ### 3.2 VectorSearch
 
 ```python
 from src.search.vector_search import (
+    create_vector_index,
     search_memory_vectors,
     search_chunk_vectors,
     hybrid_search,
-    create_vector_indexes
 )
 
 # 创建向量索引
-create_vector_indexes(verbose=True)
+index = create_vector_index(db_path=".writing/vectors.db")
 
 # 搜索记忆向量
-results = search_memory_vectors(query_vector=[...], k=5)
+results = search_memory_vectors(index, query="张三", top_k=5)
 
 # 搜索文档块向量
-results = search_chunk_vectors(query_vector=[...], k=5)
+results = search_chunk_vectors(index, query="张三", top_k=5)
 
 # 混合搜索
-results = hybrid_search(query_vector=[...], memory_k=3, chunk_k=3)
+results = hybrid_search(index, query="张三", top_k=5)
 ```
+
+说明:
+- VectorIndex 为默认实现；VectorSearch 为旧实现（SmartSearch 会回退使用）。
+- sqlite-vec 不可用时自动回退到 brute force。
 
 ---
 
