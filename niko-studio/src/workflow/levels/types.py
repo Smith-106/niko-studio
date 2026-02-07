@@ -24,7 +24,7 @@ class WorkflowLevel(Enum):
     L3_STANDARD = 3
     L4_BRAINSTORM = 4
     L5_COORDINATOR = 5
-    L5_BRAINSTORM = 5  # backward-compatible alias
+    L5_BRAINSTORM = 4  # backward-compatible alias
 
     @property
     def name_zh(self) -> str:
@@ -88,10 +88,41 @@ class WorkflowLevel(Enum):
         return mapping.get(str(name).lower(), cls.L3_STANDARD)
 
     @classmethod
+    def is_valid_label(cls, label: object) -> bool:
+        """严格校验 workflowLevel 是否为合法输入"""
+        if label is None:
+            return False
+        if isinstance(label, cls):
+            return True
+        if isinstance(label, bool):
+            return False
+        if isinstance(label, int):
+            return 1 <= label <= 5
+        if not isinstance(label, str):
+            return False
+        normalized = label.strip().lower()
+        if not normalized:
+            return False
+        if normalized.startswith("l") and normalized[1:].isdigit():
+            normalized = normalized[1:]
+        if normalized.isdigit():
+            value = int(normalized)
+            return 1 <= value <= 5
+        return normalized in {
+            "rapid",
+            "lite",
+            "standard",
+            "brainstorm",
+            "coordinator",
+        }
+
+    @classmethod
     def from_label(cls, label: str) -> "WorkflowLevel":
         """从对外标识或数字解析层级"""
         if label is None:
             return cls.L3_STANDARD
+        if isinstance(label, cls):
+            return label
         normalized = str(label).strip().lower()
         if normalized.startswith("l") and normalized[1:].isdigit():
             normalized = normalized[1:]

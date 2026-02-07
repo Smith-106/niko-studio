@@ -216,7 +216,7 @@ class TestStreamErrorCases:
             "messages": [
                 {"role": "user", "content": "Write a scene"}
             ],
-            "workflowLevel": 5
+            "workflowLevel": True
         })
         assert response.status_code == 400
         data = response.json()

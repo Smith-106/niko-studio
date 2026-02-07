@@ -941,15 +941,12 @@ async def chat_endpoint(request: Request):
         messages = body.get("messages", [])
         from src.workflow.levels.types import WorkflowLevel, to_workflow_label, to_workflow_slug
         raw_workflow_level = body.get("workflowLevel", "L3")
-        if raw_workflow_level is None:
-            raw_workflow_level = "L3"
-        if not isinstance(raw_workflow_level, str):
-            return JSONResponse({"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"}, status_code=400)
-        normalized_level = raw_workflow_level.strip().upper()
-        allowed_levels = {"L1", "L2", "L3", "L4", "L5"}
-        if normalized_level not in allowed_levels:
-            return JSONResponse({"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"}, status_code=400)
-        workflow_level = WorkflowLevel.from_label(normalized_level)
+        if not WorkflowLevel.is_valid_label(raw_workflow_level):
+            return JSONResponse(
+                {"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"},
+                status_code=400,
+            )
+        workflow_level = WorkflowLevel.from_label(raw_workflow_level)
         skills = body.get("skills", [])
         context = body.get("context", {})
         allow_llm_fallback = bool(body.get("allowLlmFallback", True))
@@ -1199,15 +1196,12 @@ async def chat_stream_endpoint(request: Request):
         messages = body.get("messages", [])
         from src.workflow.levels.types import WorkflowLevel, to_workflow_label, to_workflow_slug
         raw_workflow_level = body.get("workflowLevel", "L3")
-        if raw_workflow_level is None:
-            raw_workflow_level = "L3"
-        if not isinstance(raw_workflow_level, str):
-            return JSONResponse({"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"}, status_code=400)
-        normalized_level = raw_workflow_level.strip().upper()
-        allowed_levels = {"L1", "L2", "L3", "L4", "L5"}
-        if normalized_level not in allowed_levels:
-            return JSONResponse({"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"}, status_code=400)
-        workflow_level = WorkflowLevel.from_label(normalized_level)
+        if not WorkflowLevel.is_valid_label(raw_workflow_level):
+            return JSONResponse(
+                {"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"},
+                status_code=400,
+            )
+        workflow_level = WorkflowLevel.from_label(raw_workflow_level)
         skills = body.get("skills", [])
         context = body.get("context", {})
         allow_llm_fallback = bool(body.get("allowLlmFallback", True))
