@@ -31,7 +31,7 @@ class CodeAdapter(BaseDomainAdapter):
             user_request=user_request,
             domain=DomainType.CODE.value,
             metadata=metadata,
-            **{key: value for key, value in kwargs.items() if key != "metadata"}
+            **{key: value for key, value in kwargs.items() if key not in ("metadata", "resume_decision")}
         )
     
     def evaluate(self, state: BaseState) -> BaseEvaluationResult:

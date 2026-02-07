@@ -408,9 +408,11 @@ class CitationManager:
                 with self._lock:
                     if original_id in self._transient_cache:
                         del self._transient_cache[original_id]
-            transient.citation_id = citation_id
-            with self._lock:
-                self._transient_cache[citation_id] = transient
+                    transient.citation_id = citation_id
+                    self._transient_cache[citation_id] = transient
+            else:
+                with self._lock:
+                    self._transient_cache[citation_id] = transient
         return transient
 
     def persist_citation(
