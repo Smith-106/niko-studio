@@ -1,0 +1,291 @@
+"""
+Gateway SSE Stream Endpoint Tests
+
+Tests for POST /chat/stream SSE endpoint.
+"""
+
+import json
+import pytest
+from unittest.mock import MagicMock, AsyncMock
+
+
+def parse_sse_events(content: str) -> list:
+    """Parse SSE events from response content"""
+    events = []
+    current_event = {}
+
+    for line in content.split("\n"):
+        line = line.strip()
+        if not line:
+            if current_event:
+                events.append(current_event)
+                current_event = {}
+            continue
+
+        if line.startswith("event:"):
+            current_event["event"] = line[6:].strip()
+        elif line.startswith("data:"):
+            data_str = line[5:].strip()
+            try:
+                current_event["data"] = json.loads(data_str)
+            except json.JSONDecodeError:
+                current_event["data"] = data_str
+
+    if current_event:
+        events.append(current_event)
+
+    return events
+
+
+class TestStreamEndpoint:
+    """Tests for POST /chat/stream endpoint"""
+
+    def test_stream_returns_200(self, client_no_lifespan):
+        """Test stream returns 200 status"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        assert response.status_code == 200
+
+    def test_stream_content_type_is_sse(self, client_no_lifespan):
+        """Test stream Content-Type is text/event-stream"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        assert "text/event-stream" in response.headers.get("content-type", "")
+
+    def test_stream_cache_control_headers(self, client_no_lifespan):
+        """Test stream has appropriate cache headers"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        assert response.headers.get("cache-control") == "no-cache"
+
+    def test_stream_returns_start_event(self, client_no_lifespan):
+        """Test stream returns start event"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        events = parse_sse_events(response.text)
+        start_events = [e for e in events if e.get("event") == "start"]
+        assert len(start_events) >= 1
+        assert start_events[0]["data"]["status"] == "started"
+
+    def test_stream_returns_routing_event(self, client_no_lifespan):
+        """Test stream returns routing event"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        events = parse_sse_events(response.text)
+        routing_events = [e for e in events if e.get("event") == "routing"]
+        assert len(routing_events) >= 1
+
+        routing_data = routing_events[0]["data"]
+        assert "level" in routing_data
+        assert "scene_type" in routing_data
+        assert "skills" in routing_data
+
+    def test_stream_returns_progress_events(self, client_no_lifespan):
+        """Test stream returns progress events"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        events = parse_sse_events(response.text)
+        progress_events = [e for e in events if e.get("event") == "progress"]
+        assert len(progress_events) >= 1
+
+        for progress in progress_events:
+            assert "step" in progress["data"]
+            assert "total" in progress["data"]
+            assert "message" in progress["data"]
+
+    def test_stream_returns_content_events(self, client_no_lifespan):
+        """Test stream returns content events"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        events = parse_sse_events(response.text)
+        content_events = [e for e in events if e.get("event") == "content"]
+        assert len(content_events) >= 1
+
+        for content in content_events:
+            assert "chunk" in content["data"]
+            assert "index" in content["data"]
+
+    def test_stream_returns_done_event(self, client_no_lifespan):
+        """Test stream returns done event"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        events = parse_sse_events(response.text)
+        done_events = [e for e in events if e.get("event") == "done"]
+        assert len(done_events) >= 1
+        assert done_events[0]["data"]["status"] == "completed"
+
+
+class TestStreamEventSequence:
+    """Tests for SSE event sequence"""
+
+    def test_event_sequence_order(self, client_no_lifespan):
+        """Test events arrive in correct order: start -> routing -> progress -> content -> done"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        events = parse_sse_events(response.text)
+        event_types = [e.get("event") for e in events if e.get("event")]
+
+        # Start should be first
+        assert event_types[0] == "start"
+
+        # Done should be last
+        assert event_types[-1] == "done"
+
+        # Routing should come before content
+        if "routing" in event_types and "content" in event_types:
+            routing_idx = event_types.index("routing")
+            first_content_idx = event_types.index("content")
+            assert routing_idx < first_content_idx
+
+    def test_done_event_includes_skills_used(self, client_no_lifespan):
+        """Test done event includes skills_used"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        events = parse_sse_events(response.text)
+        done_events = [e for e in events if e.get("event") == "done"]
+        assert len(done_events) >= 1
+        assert "skills_used" in done_events[0]["data"]
+
+
+class TestStreamErrorCases:
+    """Tests for stream endpoint error cases"""
+
+    def test_stream_empty_messages_returns_400(self, client_no_lifespan):
+        """Test stream with empty messages returns 400"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": []
+        })
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data
+
+    def test_stream_no_user_message_returns_400(self, client_no_lifespan):
+        """Test stream with no user message returns 400"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "assistant", "content": "Hello"}
+            ]
+        })
+        assert response.status_code == 400
+
+    def test_stream_invalid_workflow_level_returns_400(self, client_no_lifespan):
+        """Test stream with invalid workflowLevel returns 400"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ],
+            "workflowLevel": "L0"
+        })
+        assert response.status_code == 400
+        data = response.json()
+        assert data["error"] == "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"
+
+    def test_stream_non_string_workflow_level_returns_400(self, client_no_lifespan):
+        """Test stream with non-string workflowLevel returns 400"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ],
+            "workflowLevel": 5
+        })
+        assert response.status_code == 400
+        data = response.json()
+        assert data["error"] == "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"
+
+
+class TestStreamL1Mode:
+    """Tests for L1 rapid mode streaming"""
+
+    def test_stream_l1_mode(self, client_no_lifespan):
+        """Test stream with L1 rapid mode"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Fix this text"}
+            ],
+            "workflowLevel": "L1"
+        })
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+
+        routing_events = [e for e in events if e.get("event") == "routing"]
+        assert len(routing_events) >= 1
+        assert routing_events[0]["data"]["level"] == "L1"
+
+
+class TestStreamL3Mode:
+    """Tests for L3 standard mode streaming with evaluation"""
+
+    def test_stream_l3_includes_evaluation(self, client_no_lifespan):
+        """Test L3 stream includes evaluation event"""
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a chapter"}
+            ],
+            "workflowLevel": "L3"
+        })
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+
+        evaluation_events = [e for e in events if e.get("event") == "evaluation"]
+        assert len(evaluation_events) >= 1
+
+        eval_data = evaluation_events[0]["data"]
+        assert "score" in eval_data
+        assert "feedback" in eval_data
+
+
+class TestStreamErrorEvents:
+    """Tests for SSE error events"""
+
+    def test_stream_writer_failure_emits_error_event(self, client_no_lifespan, monkeypatch):
+        """Test stream emits error event when writer fails with fallback disabled"""
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        mock_writer.write = AsyncMock(side_effect=RuntimeError("writer down"))
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a chapter"}
+            ],
+            "workflowLevel": "L3",
+            "allowLlmFallback": False
+        })
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) >= 1
+        assert "Writer execution failed" in error_events[0]["data"]["error"]

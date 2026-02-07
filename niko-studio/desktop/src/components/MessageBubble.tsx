@@ -1,0 +1,105 @@
+import React from 'react'
+import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+  skills?: string[]
+}
+
+interface MessageBubbleProps {
+  message: Message
+}
+
+// Custom comparison function for React.memo
+function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubbleProps): boolean {
+  const prevMsg = prevProps.message
+  const nextMsg = nextProps.message
+
+  // Compare essential properties that affect rendering
+  if (prevMsg.id !== nextMsg.id) return false
+  if (prevMsg.content !== nextMsg.content) return false
+
+  // Compare skills arrays
+  const prevSkills = prevMsg.skills || []
+  const nextSkills = nextMsg.skills || []
+  if (prevSkills.length !== nextSkills.length) return false
+  for (let i = 0; i < prevSkills.length; i++) {
+    if (prevSkills[i] !== nextSkills[i]) return false
+  }
+
+  return true
+}
+
+function MessageBubbleComponent({ message }: MessageBubbleProps) {
+  const isUser = message.role === 'user'
+
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+          isUser
+            ? 'bg-blue-600 text-white'
+            : 'bg-gray-100 text-gray-800'
+        }`}
+      >
+        {/* Skills Badge */}
+        {message.skills && message.skills.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {message.skills.map((skill) => (
+              <span
+                key={skill}
+                className="px-2 py-0.5 bg-blue-500/20 text-blue-600 text-xs rounded-full"
+              >
+                📦 {skill}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="markdown-body">
+          <ReactMarkdown
+            components={{
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '')
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={oneDark}
+                    language={match[1]}
+                    PreTag="div"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                )
+              },
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        </div>
+
+        {/* Timestamp */}
+        <div
+          className={`text-xs mt-2 ${
+            isUser ? 'text-blue-200' : 'text-gray-400'
+          }`}
+        >
+          {new Date(message.timestamp).toLocaleTimeString()}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Export memoized component to prevent unnecessary re-renders
+export const MessageBubble = React.memo(MessageBubbleComponent, arePropsEqual)

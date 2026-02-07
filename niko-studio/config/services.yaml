@@ -1,0 +1,68 @@
+# LLM/Embedding 服务配置
+# 环境变量格式: ${ENV_VAR} 或 ${ENV_VAR:default_value}
+
+providers:
+  openai:
+    type: openai
+    api_key: ${OPENAI_API_KEY}
+    base_url: ${OPENAI_BASE_URL:}
+    models:
+      fast: gpt-4o-mini
+      default: gpt-4o
+      powerful: gpt-4-turbo
+    embedding_model: text-embedding-3-small
+    rate_limit_rpm: 60
+    timeout: 60.0
+
+  anthropic:
+    type: anthropic
+    api_key: ${ANTHROPIC_API_KEY}
+    models:
+      fast: claude-3-haiku-20240307
+      default: claude-3-5-sonnet-20241022
+      powerful: claude-3-opus-20240229
+    rate_limit_rpm: 40
+    timeout: 90.0
+
+  azure:
+    type: azure
+    api_key: ${AZURE_OPENAI_API_KEY}
+    base_url: ${AZURE_OPENAI_ENDPOINT}
+    models:
+      fast: gpt-4o-mini
+      default: gpt-4o
+      powerful: gpt-4-turbo
+    embedding_model: text-embedding-3-small
+    rate_limit_rpm: 60
+    timeout: 60.0
+
+  local:
+    type: local
+    base_url: ${LOCAL_LLM_BASE_URL:http://localhost:11434}
+    models:
+      fast: llama3
+      default: llama3
+      powerful: llama3
+    embedding_model: bge-large-zh-v1.5
+    rate_limit_rpm: 1000
+    timeout: 120.0
+
+# 默认提供商
+default_llm_provider: openai
+default_embedding_provider: openai
+
+# Embedding 缓存配置
+cache:
+  enabled: true
+  ttl: 86400        # 缓存有效期 (秒)，默认 24 小时
+  max_size: 100000  # 最大缓存条目数
+
+# 重试配置
+retry:
+  max_retries: 3
+  base_delay: 1.0       # 初始延迟 (秒)
+  max_delay: 60.0       # 最大延迟 (秒)
+  exponential_base: 2.0 # 指数退避基数
+
+# 健康检查间隔 (秒)
+health_check_interval: 60
