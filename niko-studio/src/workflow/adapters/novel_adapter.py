@@ -37,11 +37,17 @@ class NovelAdapter(BaseDomainAdapter):
         return WritingState
 
     def create_initial_state(self, user_request: str, **kwargs) -> BaseState:
+        metadata = kwargs.get("metadata") or {}
+        resume_decision = kwargs.get("resume_decision")
+        if resume_decision:
+            metadata = {**metadata, "resume_decision": resume_decision}
+
         return create_initial_state(
             user_idea=user_request,
             genre=kwargs.get("genre", "悬疑"),
             target_chapters=kwargs.get("target_chapters", 30),
-            target_wordcount=kwargs.get("target_wordcount", 600000)
+            target_wordcount=kwargs.get("target_wordcount", 600000),
+            metadata=metadata
         )
 
     def evaluate(self, state: BaseState) -> BaseEvaluationResult:

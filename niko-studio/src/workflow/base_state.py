@@ -149,6 +149,7 @@ def create_base_state(
     user_request: str,
     domain: str = DomainType.CUSTOM,
     workflow_level: int = 3,
+    metadata: Optional[dict] = None,
     **kwargs
 ) -> BaseState:
     """創建基礎狀態"""
@@ -189,7 +190,7 @@ def create_base_state(
         requires_human_intervention=False,
         
         # 擴展
-        metadata={},
+        metadata=metadata or {},
         tags=[],
         
         # 允許額外字段

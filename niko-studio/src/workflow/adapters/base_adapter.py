@@ -80,7 +80,7 @@ class BaseDomainAdapter(ABC):
     
     @abstractmethod
     def create_initial_state(self, user_request: str, **kwargs) -> BaseState:
-        """創建該領域的初始狀態"""
+        """創建該領域的初始狀態 (允許額外元數據透傳)"""
         pass
     
     @abstractmethod

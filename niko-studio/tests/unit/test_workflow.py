@@ -41,9 +41,15 @@ class TestWritingState:
     def test_initial_state_has_session_id(self):
         """测试初始状态包含会话ID"""
         state = create_initial_state("测试")
-        
+
         assert "session_id" in state
         assert len(state["session_id"]) > 0
+
+    def test_initial_state_has_metadata(self):
+        """测试初始状态包含 metadata"""
+        state = create_initial_state("测试", metadata={"resume": "yes"})
+
+        assert state.get("metadata") == {"resume": "yes"}
 
 
 class TestWorkflowConfig:

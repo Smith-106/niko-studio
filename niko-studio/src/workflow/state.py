@@ -185,7 +185,8 @@ def create_initial_state(
     user_idea: str,
     genre: str = "悬疑",
     target_chapters: int = 30,
-    target_wordcount: int = 600000
+    target_wordcount: int = 600000,
+    metadata: Optional[Dict[str, Any]] = None
 ) -> WritingState:
     """创建初始状态"""
     import uuid
@@ -223,5 +224,6 @@ def create_initial_state(
         final_content="",
         final_score=0.0,
         errors=[],
-        requires_human_intervention=False
+        requires_human_intervention=False,
+        metadata=metadata or {},
     )
