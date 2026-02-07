@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "lastUpdated": 1769894203751,
+  "plugins": [
+    {
+      "filename": "skill-creator",
+      "type": "skill",
+      "metadata": {
+        "sourcePath": "skills\\development\\skill-creator",
+        "filename": "skill-creator",
+        "name": "skill-creator",
+        "description": "Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.",
+        "category": "skills",
+        "type": "skill",
+        "size": 39179,
+        "contentHash": "8c0ce23bb87be91f5b0853c2e9815617c3858b63acdddfe5da47d2c2d3a60816",
+        "installedAt": 1769894203743,
+        "updatedAt": 1769894203743
+      }
+    }
+  ]
+}
