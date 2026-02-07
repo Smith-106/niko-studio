@@ -307,6 +307,10 @@ class CitationManager:
         expires = now + timedelta(seconds=self._transient_ttl)
 
         citation_id = self._generate_citation_id(source_text)
+        if metadata and isinstance(metadata, dict):
+            metadata_citation_id = metadata.get("citation_id") or metadata.get("id")
+            if metadata_citation_id:
+                citation_id = metadata_citation_id
 
         transient = TransientCitation(
             citation_id=citation_id,
@@ -329,22 +333,85 @@ class CitationManager:
 
     def create_transient_citation(
         self,
-        source_text: str,
-        location: Dict[str, Any],
+        source_text: Optional[str] = None,
+        location: Optional[Dict[str, Any]] = None,
+        source: Optional[Any] = None,
         **kwargs
     ) -> TransientCitation:
         """
         Alias for create_citation (ICitationService compatibility).
 
+        Supports:
+        - SearchResult or dict-like results
+        - Legacy id/surface/path/quote/loc args
+        - source_text + location
+
         Args:
             source_text: The text content to cite.
             location: Location information.
+            source: Optional SearchResult or dict-like result.
             **kwargs: Additional arguments (context_before, context_after, etc.).
 
         Returns:
             TransientCitation object.
         """
-        return self.create_citation(source_text, location, **kwargs)
+        if source is None and source_text is None and "content" in kwargs:
+            source = kwargs.pop("content")
+
+        if source is not None:
+            source_payload: Dict[str, Any]
+            if hasattr(source, "to_dict"):
+                source_payload = source.to_dict()
+            elif isinstance(source, dict):
+                source_payload = source
+            else:
+                source_payload = {}
+
+            source_text = source_text or source_payload.get("content")
+            location = location or {
+                "path": source_payload.get("metadata", {}).get("path"),
+                "surface": source_payload.get("metadata", {}).get("surface"),
+                "loc": source_payload.get("metadata", {}).get("loc") or source_payload.get("loc"),
+            }
+            kwargs.setdefault("score", source_payload.get("score"))
+            if "metadata" in source_payload:
+                kwargs.setdefault("metadata", source_payload.get("metadata"))
+            if "id" in source_payload and "citation_id" not in kwargs:
+                kwargs["citation_id"] = source_payload.get("id")
+
+        legacy_id = kwargs.pop("id", None)
+        legacy_surface = kwargs.pop("surface", None)
+        legacy_path = kwargs.pop("path", None)
+        legacy_quote = kwargs.pop("quote", None)
+        legacy_loc = kwargs.pop("loc", None)
+
+        citation_id = kwargs.pop("citation_id", None) or legacy_id
+        if legacy_quote is not None:
+            source_text = source_text or legacy_quote
+
+        if location is None:
+            location = {}
+        if legacy_path is not None:
+            location.setdefault("path", legacy_path)
+        if legacy_surface is not None:
+            location.setdefault("surface", legacy_surface)
+        if legacy_loc is not None:
+            location.setdefault("loc", legacy_loc)
+
+        if not source_text:
+            source_text = ""
+
+        transient = self.create_citation(source_text, location, **kwargs)
+        if citation_id:
+            original_id = transient.citation_id
+            if citation_id != original_id:
+                with self._lock:
+                    if original_id in self._transient_cache:
+                        del self._transient_cache[original_id]
+            transient.citation_id = citation_id
+            with self._lock:
+                self._transient_cache[citation_id] = transient
+        return transient
 
     def persist_citation(
         self,
@@ -788,6 +855,13 @@ class CitationManager:
     # ============================================================
     # Private Methods
     # ============================================================
+
+    def _generate_citation_id(self, source_text: str) -> str:
+        """Generate unique citation ID based on content hash and timestamp."""
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+        content_hash = hashlib.sha256(source_text.encode("utf-8")).hexdigest()[:8]
+        random_suffix = uuid.uuid4().hex[:6]
+        return f"cit-{timestamp}-{content_hash}-{random_suffix}"
 
     def _normalize_search_result_location(self, location: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize location payload to expected SearchResult location shape."""

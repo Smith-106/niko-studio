@@ -41,7 +41,7 @@ dotenv.load_dotenv = mock_load_dotenv
 sys.modules["dotenv"] = dotenv
 
 # Ensure src is in python path
-sys.path.append(os.getcwd())
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
 
 # Create a dummy .env file
 with open(".env", "w") as f:

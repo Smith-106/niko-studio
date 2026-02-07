@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableLambda
 
 # Ensure src is in path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../src")))
 
 from agents.commander import CommanderAgent, WorkflowLevel
 

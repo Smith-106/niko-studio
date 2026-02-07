@@ -114,16 +114,27 @@ class SearchResult:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
+        normalized = _normalize_search_result_fields(
+            result_id=self.id,
+            content=self.content,
+            score=self.score,
+            item_type=self.type,
+            source=self.source,
+            metadata=self.metadata,
+            loc=self.loc,
+            snapshot_query=self.snapshot_query,
+            mode_used=self.mode_used,
+        )
         return {
-            "id": self.id,
-            "content": self.content,
-            "score": round(self.score, 4),
-            "type": self.type,
-            "source": self.source,
-            "mode_used": self.mode_used,
-            "metadata": self.metadata,
-            "loc": self.loc,
-            "snapshot_query": self.snapshot_query,
+            "id": normalized.id,
+            "content": normalized.content,
+            "score": round(normalized.score, 4),
+            "type": normalized.type,
+            "source": normalized.source,
+            "mode_used": normalized.mode_used,
+            "metadata": normalized.metadata,
+            "loc": normalized.loc,
+            "snapshot_query": normalized.snapshot_query,
         }
 
 
@@ -188,6 +199,7 @@ def _normalize_search_result_fields(
         },
     )
     normalized_loc = _normalize_loc(loc) or built_metadata["loc"]
+    resolved_snapshot = snapshot_query or SAMPLE_SEARCH_QUERY
 
     return SearchResult(
         id=result_id,
@@ -198,7 +210,7 @@ def _normalize_search_result_fields(
         source=source,
         mode_used=mode_used,
         loc=normalized_loc,
-        snapshot_query=snapshot_query,
+        snapshot_query=resolved_snapshot,
     )
 
 @dataclass

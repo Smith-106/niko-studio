@@ -67,16 +67,27 @@ class SmartSearchResult:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
+        normalized = _normalize_search_result_fields(
+            result_id=self.id,
+            content=self.content,
+            score=self.score,
+            item_type=self.type,
+            source=self.source,
+            metadata=self.metadata,
+            loc=self.loc,
+            snapshot_query=self.snapshot_query,
+            mode_used=self.mode_used,
+        )
         return {
-            "id": self.id,
-            "content": self.content,
-            "score": round(self.score, 4),
-            "type": self.type,
-            "source": self.source,
-            "mode_used": self.mode_used,
-            "metadata": self.metadata,
-            "loc": self.loc,
-            "snapshot_query": self.snapshot_query,
+            "id": normalized.id,
+            "content": normalized.content,
+            "score": round(normalized.score, 4),
+            "type": normalized.type,
+            "source": normalized.source,
+            "mode_used": normalized.mode_used,
+            "metadata": normalized.metadata,
+            "loc": normalized.loc,
+            "snapshot_query": normalized.snapshot_query,
         }
 
     def __getitem__(self, key: str) -> Any:
@@ -230,12 +241,21 @@ class SmartSearch:
 
         # Update mode_used
         for r in filtered:
-            r.mode_used = mode.value
-            r.snapshot_query = SAMPLE_SEARCH_QUERY
-            if r.loc is None:
-                r.loc = r.metadata.get("loc")
-            if r.metadata.get("loc") is None and r.loc is not None:
-                r.metadata["loc"] = r.loc
+            normalized = _normalize_search_result_fields(
+                result_id=r.id,
+                content=r.content,
+                score=r.score,
+                item_type=r.type,
+                source=r.source,
+                metadata=r.metadata,
+                loc=r.loc,
+                snapshot_query=SAMPLE_SEARCH_QUERY,
+                mode_used=mode.value,
+            )
+            r.mode_used = normalized.mode_used
+            r.snapshot_query = normalized.snapshot_query
+            r.loc = normalized.loc
+            r.metadata = normalized.metadata
 
         return filtered[:top_k]
 
@@ -806,12 +826,21 @@ class SmartSearch:
             filtered = [r for r in merged if r.score >= min_score]
 
             for r in filtered:
-                r.mode_used = mode.value
-                r.snapshot_query = SAMPLE_SEARCH_QUERY
-                if r.loc is None:
-                    r.loc = r.metadata.get("loc")
-                if r.metadata.get("loc") is None and r.loc is not None:
-                    r.metadata["loc"] = r.loc
+                normalized = _normalize_search_result_fields(
+                    result_id=r.id,
+                    content=r.content,
+                    score=r.score,
+                    item_type=r.type,
+                    source=r.source,
+                    metadata=r.metadata,
+                    loc=r.loc,
+                    snapshot_query=SAMPLE_SEARCH_QUERY,
+                    mode_used=mode.value,
+                )
+                r.mode_used = normalized.mode_used
+                r.snapshot_query = normalized.snapshot_query
+                r.loc = normalized.loc
+                r.metadata = normalized.metadata
 
             return filtered[:top_k]
 

@@ -4,7 +4,7 @@ import sys
 import os
 
 # Ensure src is in path
-sys.path.append(os.getcwd())
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
 
 # Import from the new utility module
 from src.ui.file_utils import process_uploaded_file

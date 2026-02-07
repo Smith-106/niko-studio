@@ -10,7 +10,7 @@ import sys
 import os
 
 # Adjust path to import src
-sys.path.append(os.getcwd())
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
 
 # Mock IndexingService BEFORE importing AgentKnowledgeLayer
 import src.services.knowledge_layer
