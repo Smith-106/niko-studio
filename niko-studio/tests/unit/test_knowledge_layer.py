@@ -5,7 +5,7 @@ from pathlib import Path
 import sqlite3
 
 # Need to handle imports
-src_path = Path(__file__).parents[2] / "src"
+src_path = Path(__file__).parents[3] / "src"
 if str(src_path) not in sys.path:
     sys.path.append(str(src_path))
 

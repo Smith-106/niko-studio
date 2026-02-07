@@ -22,10 +22,16 @@ class CodeAdapter(BaseDomainAdapter):
         return BaseState
     
     def create_initial_state(self, user_request: str, **kwargs) -> BaseState:
+        metadata = kwargs.get("metadata") or {}
+        resume_decision = kwargs.get("resume_decision")
+        if resume_decision:
+            metadata = {**metadata, "resume_decision": resume_decision}
+
         return create_base_state(
             user_request=user_request,
             domain=DomainType.CODE.value,
-            **kwargs
+            metadata=metadata,
+            **{key: value for key, value in kwargs.items() if key not in ("metadata", "resume_decision")}
         )
     
     def evaluate(self, state: BaseState) -> BaseEvaluationResult:

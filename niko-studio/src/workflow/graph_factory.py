@@ -6,18 +6,11 @@
 """
 
 from typing import Optional, Dict, Any
-from enum import Enum
+from dataclasses import asdict
 
 from src.workflow.adapters import BaseDomainAdapter, AdapterRegistry
-
-
-class WorkflowLevel(Enum):
-    """工作流層級 (CCW 風格)"""
-    L1_RAPID = 1          # 快速模式 - 無狀態
-    L2_LIGHTWEIGHT = 2    # 輕量模式 - 內存計劃
-    L3_STANDARD = 3       # 標準模式 - 完整會話
-    L4_BRAINSTORM = 4     # 頭腦風暴 - 多角色並行
-    L5_COORDINATOR = 5    # 智能編排 - 自動規劃
+from src.workflow.levels.types import WorkflowLevel
+from src.workflow.session.resume_strategy import determine_resume_strategy, ResumeDecision
 
 
 class WorkflowFactory:
@@ -38,39 +31,41 @@ class WorkflowFactory:
     @staticmethod
     def create(
         domain: str,
-        level: WorkflowLevel = WorkflowLevel.L3_STANDARD,
+        level: WorkflowLevel | str | int = WorkflowLevel.L3_STANDARD,
         config: Optional[Dict[str, Any]] = None
     ):
         """
         創建工作流圖
-        
+
         Args:
             domain: 領域類型 ("novel" | "code" | "knowledge" | ...)
             level: 工作流層級 (L1-L5)
             config: 自定義配置
-            
+
         Returns:
             編譯後的 LangGraph 應用
-            
+
         Raises:
             ValueError: 如果領域未註冊
         """
+        if not isinstance(level, WorkflowLevel):
+            level = WorkflowLevel.from_label(level)
         adapter = AdapterRegistry.create_adapter(domain, config)
-        
+
         if adapter is None:
             available = AdapterRegistry.list_domains()
             raise ValueError(
                 f"Unknown domain: '{domain}'. "
                 f"Available domains: {available}"
             )
-        
+
         # 合併配置
         merged_config = adapter.merge_config(config)
         merged_config["workflow_level"] = level.value
-        
+
         # 創建圖
         graph = adapter.create_graph()
-        
+
         return graph
     
     @staticmethod
@@ -109,7 +104,7 @@ class WorkflowFactory:
                 "novel_use": "錯字修正、格式調整、快速潤色",
                 "code_use": "typo 修復、格式化、簡單重命名",
             },
-            WorkflowLevel.L2_LIGHTWEIGHT: {
+            WorkflowLevel.L2_LITE: {
                 "name": "Lightweight",
                 "description": "輕量模式 - 內存計劃、輕量持久化",
                 "novel_use": "單章節寫作、情節調整",
@@ -141,6 +136,32 @@ class WorkflowFactory:
 # 便捷函數
 # ============================================================
 
+def _build_resume_decision(
+    config: Optional[Dict[str, Any]],
+    tool: str,
+    resume_ids: Optional[list[str]] = None,
+    custom_id: Optional[str] = None,
+) -> Optional[ResumeDecision]:
+    if not config or not resume_ids:
+        return None
+
+    return determine_resume_strategy(
+        tool=tool,
+        resume_ids=resume_ids,
+        custom_id=custom_id,
+    )
+
+
+def _merge_resume_metadata(
+    metadata: Optional[Dict[str, Any]],
+    resume_decision: Optional[ResumeDecision],
+) -> Dict[str, Any]:
+    merged = dict(metadata or {})
+    if resume_decision:
+        merged.setdefault("resume_decision", asdict(resume_decision))
+    return merged
+
+
 def create_workflow(
     domain: str,
     user_request: str,
@@ -159,13 +180,29 @@ def create_workflow(
     Returns:
         (graph, initial_state) 元組
     """
-    workflow_level = WorkflowLevel(level)
-    
+    config = dict(config or {})
+    config.setdefault("workflow_level", level)
+
     adapter = WorkflowFactory.create_adapter(domain, config)
     if adapter is None:
         raise ValueError(f"Unknown domain: {domain}")
-    
+
     graph = adapter.create_graph()
-    initial_state = adapter.create_initial_state(user_request)
-    
+
+    resume_decision = _build_resume_decision(
+        config,
+        tool=config.get("tool", "gemini"),
+        resume_ids=config.get("resume_ids"),
+        custom_id=config.get("custom_id"),
+    )
+
+    base_metadata = config.get("metadata") if isinstance(config.get("metadata"), dict) else {}
+    metadata = _merge_resume_metadata(base_metadata, resume_decision)
+
+    initial_state = adapter.create_initial_state(
+        user_request,
+        metadata=metadata,
+        resume_decision=resume_decision,
+    )
+
     return graph, initial_state

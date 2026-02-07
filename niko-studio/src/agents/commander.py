@@ -156,11 +156,11 @@ class CommanderAgent(BaseAgent):
                 self.log_activity("Fallback: routing to L2_LITE based on keywords.", level="INFO")
                 return WorkflowLevel.L2_LITE
 
-            if any(kw in task_lower for kw in ["brainstorm", "idea", "concept", "world", "character", "setting", "头脑风暴", "构思", "世界观", "设定", "角色", "性格", "设计", "体系"]):
+            if any(kw in task_lower for kw in ["brainstorm", "idea", "concept", "world", "character", "setting", "story", "plot", "outline", "arc", "头脑风暴", "构思", "世界观", "设定", "角色", "性格", "设计", "体系", "大纲", "剧情", "情节", "规划", "计划"]):
                 self.log_activity("Fallback: routing to L5_BRAINSTORM based on keywords.", level="INFO")
                 return WorkflowLevel.L5_BRAINSTORM
 
-            if any(kw in task_lower for kw in ["project", "roadmap", "plan", "full", "novel", "全书", "规划", "项目"]):
+            if any(kw in task_lower for kw in ["project", "roadmap", "full", "novel", "全书", "项目"]):
                 self.log_activity("Fallback: routing to L5_COORDINATOR based on keywords.", level="INFO")
                 return WorkflowLevel.L5_COORDINATOR
 
@@ -248,6 +248,18 @@ class CommanderAgent(BaseAgent):
                 depends_on=[],
             ))
 
+        elif level == WorkflowLevel.L2_LITE:
+            # L2: Lightweight writer flow
+            assignments.append(TaskAssignment(
+                task_id="task-001",
+                agent_type="writer",
+                scene_type=scene_type,
+                instruction=f"Lightweight draft: {task_description}",
+                skills=skills,
+                context={"level": "L2", "target_words": 800},
+                depends_on=[],
+            ))
+
         elif level == WorkflowLevel.L3_STANDARD:
             # L3: Architect -> Writer -> Critic
             assignments.append(TaskAssignment(
@@ -278,15 +290,18 @@ class CommanderAgent(BaseAgent):
                 depends_on=["task-002"],
             ))
 
-        elif level == WorkflowLevel.L4_BRAINSTORM:
+        elif level == WorkflowLevel.L4_BRAINSTORM or level == WorkflowLevel.L5_BRAINSTORM:
             # Brainstorm flow
+            level_label = "L4"
+            if level == WorkflowLevel.L5_BRAINSTORM:
+                level_label = "L5"
             assignments.append(TaskAssignment(
                 task_id="task-001",
                 agent_type="worldbuilding",
                 scene_type=SceneType.WORLDBUILDING,
                 instruction=f"Brainstorm world context: {task_description}",
                 skills=["worldview-craft", "setting-craft"],
-                context={"level": "L4"},
+                context={"level": level_label},
                 depends_on=[],
             ))
             assignments.append(TaskAssignment(
@@ -295,7 +310,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=SceneType.CHARACTER_FOCUS,
                 instruction=f"Brainstorm character context: {task_description}",
                 skills=["character-forge", "four-selves"],
-                context={"level": "L4"},
+                context={"level": level_label},
                 depends_on=[],
             ))
             assignments.append(TaskAssignment(
@@ -304,7 +319,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Synthesize multi-angle ideas: {task_description}",
                 skills=["22-steps-outline", "pyramid-structure"],
-                context={"level": "L4"},
+                context={"level": level_label},
                 depends_on=["task-001", "task-002"],
             ))
             assignments.append(TaskAssignment(
@@ -313,7 +328,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Write based on brainstorm synthesis: {task_description}",
                 skills=skills,
-                context={"level": "L4", "target_words": 2500},
+                context={"level": level_label, "target_words": 2500},
                 depends_on=["task-003"],
             ))
             assignments.append(TaskAssignment(
@@ -322,7 +337,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction="Evaluate brainstorm output with 8-dimension LOCK matrix",
                 skills=["script-doctor", "self-knowledge-eval"],
-                context={"level": "L4"},
+                context={"level": level_label},
                 depends_on=["task-004"],
             ))
 
