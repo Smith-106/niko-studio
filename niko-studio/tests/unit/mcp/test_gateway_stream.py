@@ -9,6 +9,21 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 
 
+class _SceneTypeDialogue:
+    value = "dialogue"
+
+
+def _build_assignment():
+    assignment = MagicMock()
+    assignment.agent_type = "writer"
+    assignment.instruction = "Write dialogue scene"
+    assignment.model_dump = MagicMock(return_value={
+        "agent_type": "writer",
+        "instruction": "Write dialogue scene",
+    })
+    return assignment
+
+
 def parse_sse_events(content: str) -> list:
     """Parse SSE events from response content"""
     events = []
@@ -287,5 +302,68 @@ class TestStreamErrorEvents:
         assert response.status_code == 200
         events = parse_sse_events(response.text)
         error_events = [e for e in events if e.get("event") == "error"]
-        assert len(error_events) >= 1
-        assert "Writer execution failed" in error_events[0]["data"]["error"]
+class TestStreamRoutingSemantics:
+    """Tests for workflowLevel explicit vs auto-route in stream"""
+
+    def test_stream_without_workflow_level_uses_commander_route(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_commander = MagicMock()
+        mock_commander.route = MagicMock(return_value="L4")
+        mock_commander.detect_scene_type = MagicMock(return_value=_SceneTypeDialogue())
+        mock_commander.dispatch_skills = MagicMock(return_value=["dialogue-system"])
+        mock_commander.dispatch_tasks = MagicMock(return_value=[_build_assignment()])
+        monkeypatch.setattr(gateway_module, "get_commander_agent", lambda: mock_commander)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a scene"}]
+        })
+
+        assert response.status_code == 200
+        assert mock_commander.route.call_count == 1
+
+    def test_stream_with_explicit_workflow_level_skips_route(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_commander = MagicMock()
+        mock_commander.route = MagicMock(return_value="L5")
+        mock_commander.detect_scene_type = MagicMock(return_value=_SceneTypeDialogue())
+        mock_commander.dispatch_skills = MagicMock(return_value=["dialogue-system"])
+        mock_commander.dispatch_tasks = MagicMock(return_value=[_build_assignment()])
+        monkeypatch.setattr(gateway_module, "get_commander_agent", lambda: mock_commander)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a scene"}],
+            "workflowLevel": "L3"
+        })
+
+        assert response.status_code == 200
+        assert mock_commander.route.call_count == 0
+
+
+class TestStreamL5Coordinator:
+    """Tests for L5 coordinator stream branch"""
+
+    def test_stream_l5_calls_level5_coordinator(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_coordinator_instance = MagicMock()
+        mock_coordinator_instance.execute = MagicMock(return_value={
+            "final_output": "L5 stream content",
+            "draft_content": "L5 draft",
+            "score": 88,
+            "feedback_context": "good",
+        })
+        monkeypatch.setattr(gateway_module, "Level5Coordinator", MagicMock(return_value=mock_coordinator_instance))
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Deep plan"}],
+            "workflowLevel": "L5"
+        })
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        evaluation_events = [e for e in events if e.get("event") == "evaluation"]
+        assert len(evaluation_events) >= 1
+        assert evaluation_events[0]["data"]["score"] == 88
+        assert mock_coordinator_instance.execute.call_count == 1

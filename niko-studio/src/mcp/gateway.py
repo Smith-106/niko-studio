@@ -54,6 +54,8 @@ logger = logging.getLogger("niko-gateway")
 # ============ 延迟导入引擎 (通过 ServiceContainer) ============
 
 from src.container import get_container, reset_container
+from src.workflow.base_state import create_base_state
+from src.workflow.levels.level5_coordinator import Level5Coordinator
 
 
 def get_memory_engine():
@@ -919,7 +921,6 @@ async def skills_get_chain(task_type: str) -> list:
     except ValueError:
         return []
 
-
 # ============ Chat 统一入口 ============
 
 from starlette.requests import Request
@@ -940,13 +941,17 @@ async def chat_endpoint(request: Request):
         body = await request.json()
         messages = body.get("messages", [])
         from src.workflow.levels.types import WorkflowLevel, to_workflow_label, to_workflow_slug
-        raw_workflow_level = body.get("workflowLevel", "L3")
-        if not WorkflowLevel.is_valid_label(raw_workflow_level):
-            return JSONResponse(
-                {"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"},
-                status_code=400,
-            )
-        workflow_level = WorkflowLevel.from_label(raw_workflow_level)
+        has_explicit_workflow_level = "workflowLevel" in body
+        if has_explicit_workflow_level:
+            raw_workflow_level = body.get("workflowLevel")
+            if not isinstance(raw_workflow_level, str) or not WorkflowLevel.is_valid_label(raw_workflow_level):
+                return JSONResponse(
+                    {"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"},
+                    status_code=400,
+                )
+            workflow_level = WorkflowLevel.from_label(raw_workflow_level)
+        else:
+            workflow_level = None
         skills = body.get("skills", [])
         context = body.get("context", {})
         allow_llm_fallback = bool(body.get("allowLlmFallback", True))
@@ -971,7 +976,9 @@ async def chat_endpoint(request: Request):
         from src.workflow.levels.types import WorkflowLevel, to_workflow_label, to_workflow_slug
 
         # 路由任务
-        level = workflow_level
+        level = workflow_level if workflow_level is not None else commander.route(user_message)
+        if not isinstance(level, WorkflowLevel):
+            level = WorkflowLevel.from_label(level)
         scene_type = commander.detect_scene_type(user_message)
         dispatched_skills = commander.dispatch_skills(scene_type)
 
@@ -1008,7 +1015,29 @@ async def chat_endpoint(request: Request):
                 response_content = result
                 steps_completed = 1
 
-            # L3/L5: 标准/深度模式 - 完整创作流程
+            # L5: 协调者模式 - 专属执行链路
+            elif level == WorkflowLevel.L5_COORDINATOR:
+                coordinator_state = create_base_state(
+                    user_request=user_message,
+                    domain=context.get("domain", "novel"),
+                    workflow_level=5,
+                    metadata=context.get("metadata", {}),
+                )
+                coordinator_state["context"] = context.get("context", "")
+                if context.get("session_id"):
+                    coordinator_state["session_id"] = context.get("session_id")
+
+                coordinator = Level5Coordinator()
+                result_state = coordinator.execute(coordinator_state)
+
+                response_content = result_state.get("final_output") or result_state.get("draft_content", "")
+                evaluation_result = {
+                    "score": result_state.get("score", 0),
+                    "feedback": result_state.get("feedback_context", "") or result_state.get("decision_reason", ""),
+                }
+                steps_completed = len(getattr(coordinator._coordinator_state, "execution_units", [])) or 1
+
+            # L2/L3/L4: 保持现有 Writer 路径
             else:
                 from src.agents.writer import WriterInput
 
@@ -1195,13 +1224,17 @@ async def chat_stream_endpoint(request: Request):
         body = await request.json()
         messages = body.get("messages", [])
         from src.workflow.levels.types import WorkflowLevel, to_workflow_label, to_workflow_slug
-        raw_workflow_level = body.get("workflowLevel", "L3")
-        if not WorkflowLevel.is_valid_label(raw_workflow_level):
-            return JSONResponse(
-                {"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"},
-                status_code=400,
-            )
-        workflow_level = WorkflowLevel.from_label(raw_workflow_level)
+        has_explicit_workflow_level = "workflowLevel" in body
+        if has_explicit_workflow_level:
+            raw_workflow_level = body.get("workflowLevel")
+            if not isinstance(raw_workflow_level, str) or not WorkflowLevel.is_valid_label(raw_workflow_level):
+                return JSONResponse(
+                    {"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"},
+                    status_code=400,
+                )
+            workflow_level = WorkflowLevel.from_label(raw_workflow_level)
+        else:
+            workflow_level = None
         skills = body.get("skills", [])
         context = body.get("context", {})
         allow_llm_fallback = bool(body.get("allowLlmFallback", True))
@@ -1228,7 +1261,9 @@ async def chat_stream_endpoint(request: Request):
 
                 # 2. 路由分析
                 commander = get_commander_agent()
-                level = workflow_level
+                level = workflow_level if workflow_level is not None else commander.route(user_message)
+                if not isinstance(level, WorkflowLevel):
+                    level = WorkflowLevel.from_label(level)
                 scene_type = commander.detect_scene_type(user_message)
                 dispatched_skills = commander.dispatch_skills(scene_type)
                 all_skills = list(set(dispatched_skills + skills))
@@ -1272,8 +1307,37 @@ async def chat_stream_endpoint(request: Request):
                         logger.warning(f"Writer failed: {e}")
                         yield f"event: content\ndata: {json.dumps({'chunk': f'[写作服务暂时不可用，请检查 LLM 配置]'})}\n\n"
 
+                elif level == WorkflowLevel.L5_COORDINATOR:
+                    # L5 协调者模式
+                    yield f"event: progress\ndata: {json.dumps({'step': 2, 'total': 4, 'message': '协调器分析中...'})}\n\n"
+
+                    coordinator_state = create_base_state(
+                        user_request=user_message,
+                        domain=context.get("domain", "novel"),
+                        workflow_level=5,
+                        metadata=context.get("metadata", {}),
+                    )
+                    coordinator_state["context"] = context.get("context", "")
+                    if context.get("session_id"):
+                        coordinator_state["session_id"] = context.get("session_id")
+
+                    coordinator = Level5Coordinator()
+                    result_state = coordinator.execute(coordinator_state)
+                    content = result_state.get("final_output") or result_state.get("draft_content", "")
+
+                    yield f"event: progress\ndata: {json.dumps({'step': 3, 'total': 4, 'message': '生成结果中...'})}\n\n"
+
+                    chunks = adaptive_chunk_content(content, max_chunk_size=500, min_chunk_size=80)
+                    for i, chunk in enumerate(chunks):
+                        yield f"event: content\ndata: {json.dumps({'chunk': chunk, 'index': i})}\n\n"
+                        if i < len(chunks) - 1:
+                            await asyncio.sleep(0.005)
+
+                    yield f"event: progress\ndata: {json.dumps({'step': 4, 'total': 4, 'message': '质量评估...'})}\n\n"
+                    yield f"event: evaluation\ndata: {json.dumps({'score': result_state.get('score', 0), 'feedback': result_state.get('feedback_context', '') or result_state.get('decision_reason', '')})}\n\n"
+
                 else:
-                    # L3/L5 标准/深度模式
+                    # L2/L3/L4 标准路径
                     from src.agents.writer import WriterInput
 
                     yield f"event: progress\ndata: {json.dumps({'step': 2, 'total': 4, 'message': '构建场景...'})}\n\n"

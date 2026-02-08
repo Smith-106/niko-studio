@@ -7,6 +7,7 @@ L5 协调者模式 (Coordinator)
 
 import json
 import uuid
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -15,6 +16,17 @@ from enum import Enum
 
 from .base_level import BaseLevel, LevelRegistry
 from ..base_state import BaseState
+from ..session.session_manager import SessionManager, ContentType
+from .level2_lite import Level2Lite
+from .level3_standard import Level3Standard
+from .level4_brainstorm import Level4Brainstorm
+from ...memory.citation_manager import get_citation_manager
+from ...memory.memory_manager import get_memory_manager
+from ...search.smart_search import SmartSearch
+from ...search.vector_search import VectorSearch
+from ...services.distill_service import DistillService
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -414,6 +426,12 @@ class Level5Coordinator(BaseLevel):
 
         # 检查是否有可恢复的会话
         session_id = state.get("session_id", str(uuid.uuid4()))
+        state["session_id"] = session_id
+        try:
+            SessionManager().init(session_id, session_type="coordinator", domain=state.get("domain", "novel"))
+        except Exception as exc:
+            state["warnings"] = state.get("warnings", []) + [f"SessionManager 初始化失败: {exc}"]
+
         resume_state = self._try_resume(session_id)
 
         if resume_state:
@@ -655,9 +673,19 @@ class Level5Coordinator(BaseLevel):
         file_path = self.persist_dir / f"{coordinator_state.session_id}.json"
 
         coordinator_state.updated_at = datetime.now().isoformat()
+        payload = coordinator_state.to_dict()
 
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(coordinator_state.to_dict(), f, ensure_ascii=False, indent=2)
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+
+        try:
+            SessionManager().write(
+                coordinator_state.session_id,
+                ContentType.STATE,
+                json.dumps(payload, ensure_ascii=False, indent=2),
+            )
+        except Exception as exc:
+            logger.warning("SessionManager 状态持久化失败: %s", exc)
 
         return coordinator_state.session_id
 
@@ -671,6 +699,14 @@ class Level5Coordinator(BaseLevel):
         Returns:
             CoordinatorState or None
         """
+        try:
+            payload = SessionManager().read(session_id, ContentType.STATE)
+            if payload:
+                data = json.loads(payload)
+                return CoordinatorState.from_dict(data)
+        except Exception as exc:
+            logger.warning("SessionManager 状态恢复失败: %s", exc)
+
         file_path = self.persist_dir / f"{session_id}.json"
 
         if not file_path.exists():
@@ -745,8 +781,21 @@ class Level5Coordinator(BaseLevel):
             # 更新状态
             if "content" in result:
                 state["draft_content"] = result["content"]
+                state["final_output"] = result["content"]
             if "score" in result:
                 state["score"] = result["score"]
+            if "feedback" in result:
+                state["feedback_context"] = result["feedback"]
+            if "decision" in result:
+                state["decision"] = result["decision"]
+            if "plan" in result:
+                state["implementation_plan"] = result["plan"]
+            if "analysis" in result:
+                metadata = state.get("metadata")
+                if not isinstance(metadata, dict):
+                    metadata = {}
+                    state["metadata"] = metadata
+                metadata["analysis"] = result["analysis"]
 
         except Exception as e:
             unit.fail(str(e))
@@ -756,24 +805,188 @@ class Level5Coordinator(BaseLevel):
 
     def _execute_analyze(self, cmd: Command, state: BaseState) -> Dict:
         """执行分析命令"""
-        # 实际实现会调用对应的 Agent
-        return {"analysis": f"分析结果: {cmd.name}", "status": "completed"}
+        query = state.get("user_request", "") or cmd.description or cmd.name
+
+        search_results: List[Any] = []
+        warnings = state.get("warnings", [])
+
+        # 主检索：SmartSearch
+        try:
+            smart_search = SmartSearch(db_path=str(Path(".writing") / "vector.db"))
+            search_results = smart_search.search(query=query, top_k=5)
+        except Exception as exc:
+            warnings.append(f"SmartSearch 检索失败: {exc}")
+            # 回退检索：VectorSearch
+            try:
+                vector_search = VectorSearch(db_path=str(Path(".writing") / "vector.db"))
+                search_results = vector_search.search(query=query, top_k=5)
+            except Exception as fallback_exc:
+                warnings.append(f"VectorSearch 回退失败: {fallback_exc}")
+                search_results = []
+
+        state["warnings"] = warnings
+
+        # 统一写入 context（尽量可读）
+        if search_results:
+            lines: List[str] = []
+            for idx, item in enumerate(search_results[:5], start=1):
+                if hasattr(item, "to_dict"):
+                    item_dict = item.to_dict()
+                elif isinstance(item, dict):
+                    item_dict = item
+                else:
+                    item_dict = {"content": str(item)}
+                snippet = str(item_dict.get("content", ""))[:280]
+                lines.append(f"[{idx}] {snippet}")
+            state["context"] = "\n".join(lines)
+
+        # 引用生成（失败降级为 warning）
+        citation_ids: List[str] = []
+        try:
+            citation_manager = get_citation_manager()
+            for item in search_results[:5]:
+                transient = citation_manager.create_transient_citation(source=item)
+                persisted = citation_manager.persist_citation(transient.citation_id)
+                if persisted:
+                    citation_ids.append(persisted.citation_id)
+        except Exception as exc:
+            state["warnings"] = state.get("warnings", []) + [f"Citation 处理失败: {exc}"]
+
+        metadata = state.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+            state["metadata"] = metadata
+        if citation_ids:
+            metadata["citations"] = citation_ids
+
+        return {"analysis": search_results, "status": "completed"}
 
     def _execute_plan(self, cmd: Command, state: BaseState) -> Dict:
         """执行规划命令"""
-        return {"plan": f"规划结果: {cmd.name}", "status": "completed"}
+        planner_state = dict(state)
+        try:
+            planner = Level3Standard(config=self.config)
+            planner_state = planner._plan_phase(planner_state)
+            plan = planner_state.get("implementation_plan", {})
+        except Exception as exc:
+            state["warnings"] = state.get("warnings", []) + [f"L3 规划阶段失败: {exc}"]
+            plan = {}
+
+        state["implementation_plan"] = plan
+        return {"plan": plan, "status": "completed"}
+
+    def _select_execution_branch(self, cmd: Command) -> str:
+        """选择执行分支：standard | brainstorm | lite"""
+        workflow_branch = str(cmd.parameters.get("workflow_branch", "")).strip().lower()
+        if workflow_branch == "lite":
+            return "lite"
+        if workflow_branch == "brainstorm":
+            return "brainstorm"
+
+        requirement = self._coordinator_state.requirement_analysis if self._coordinator_state else None
+        if requirement and requirement.task_type == "brainstorm_synthesis":
+            return "brainstorm"
+
+        return "standard"
 
     def _execute_write(self, cmd: Command, state: BaseState) -> Dict:
         """执行写作命令"""
-        return {"content": f"内容: {cmd.name}", "status": "completed"}
+        branch = self._select_execution_branch(cmd)
+        next_state = dict(state)
+
+        if branch == "lite":
+            try:
+                lite = Level2Lite(config=self.config)
+                next_state = lite._execute_lite(next_state)
+            except Exception as exc:
+                state["warnings"] = state.get("warnings", []) + [f"L2 执行失败: {exc}"]
+        elif branch == "brainstorm":
+            try:
+                brainstorm = Level4Brainstorm(config=self.config)
+                next_state = brainstorm.execute(next_state)
+            except Exception as exc:
+                state["warnings"] = state.get("warnings", []) + [f"L4 执行失败: {exc}"]
+        else:
+            try:
+                standard = Level3Standard(config=self.config)
+                next_state = standard._execute_phase(next_state)
+            except Exception as exc:
+                state["warnings"] = state.get("warnings", []) + [f"L3 执行失败: {exc}"]
+
+        content = (
+            next_state.get("draft_content")
+            or next_state.get("final_output")
+            or state.get("draft_content", "")
+        )
+
+        # 蒸馏 + 记忆（失败降级）
+        if content:
+            try:
+                distill_result = DistillService().distill_chapter(content)
+                state["distillation_result"] = distill_result
+            except Exception as exc:
+                state["warnings"] = state.get("warnings", []) + [f"Distill 失败: {exc}"]
+
+            try:
+                get_memory_manager().add(
+                    content=content[:2000],
+                    source="coordinator",
+                    topics=["coordinator", "l5"],
+                    metadata={"command_id": cmd.command_id, "phase": cmd.command_type.value},
+                )
+            except Exception as exc:
+                state["warnings"] = state.get("warnings", []) + [f"Memory 写入失败: {exc}"]
+
+        return {"content": content, "status": "completed"}
 
     def _execute_verify(self, cmd: Command, state: BaseState) -> Dict:
         """执行验证命令"""
-        return {"score": 85, "feedback": f"验证通过: {cmd.name}", "status": "completed"}
+        branch = self._select_execution_branch(cmd)
+        next_state = dict(state)
+
+        if branch == "lite":
+            try:
+                lite = Level2Lite(config=self.config)
+                next_state = lite._verify_lite(next_state)
+            except Exception as exc:
+                state["warnings"] = state.get("warnings", []) + [f"L2 验证失败: {exc}"]
+        else:
+            try:
+                standard = Level3Standard(config=self.config)
+                next_state = standard._critic_phase(next_state)
+            except Exception as exc:
+                state["warnings"] = state.get("warnings", []) + [f"L3 验证失败: {exc}"]
+
+        score = float(next_state.get("score", state.get("score", 0.0)))
+        feedback = str(next_state.get("feedback_context", ""))
+        decision = str(next_state.get("decision", "REVISE"))
+
+        metadata = state.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+            state["metadata"] = metadata
+        citations = metadata.get("citations", []) if isinstance(metadata.get("citations"), list) else []
+        if citations:
+            feedback = (feedback + "\n\n引用摘要: " + ", ".join(citations[:5])).strip()
+
+        return {
+            "score": score,
+            "feedback": feedback,
+            "decision": decision,
+            "status": "completed",
+        }
 
     def _execute_revise(self, cmd: Command, state: BaseState) -> Dict:
         """执行修订命令"""
-        return {"content": f"修订内容: {cmd.name}", "status": "completed"}
+        revise_state = dict(state)
+        revise_state["context"] = (
+            (revise_state.get("context") or "")
+            + "\n\n[REVISION_FEEDBACK]\n"
+            + str(revise_state.get("feedback_context", ""))
+        ).strip()
+
+        result = self._execute_write(cmd, revise_state)
+        return {"content": result.get("content", ""), "status": "completed"}
 
     def _try_resume(self, session_id: str) -> Optional[CoordinatorState]:
         """尝试恢复会话"""

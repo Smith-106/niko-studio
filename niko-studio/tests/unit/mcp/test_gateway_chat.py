@@ -8,7 +8,19 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 
-class TestChatEndpoint:
+class _SceneTypeDialogue:
+    value = "dialogue"
+
+
+def _build_assignment():
+    assignment = MagicMock()
+    assignment.agent_type = "writer"
+    assignment.instruction = "Write dialogue scene"
+    assignment.model_dump = MagicMock(return_value={
+        "agent_type": "writer",
+        "instruction": "Write dialogue scene",
+    })
+    return assignment
     """Tests for POST /chat endpoint"""
 
     def test_chat_returns_200_with_valid_request(self, client_no_lifespan):
@@ -237,7 +249,69 @@ class TestChatWriterFailure:
             "workflowLevel": "L3"
         })
 
+class TestChatRoutingSemantics:
+    """Tests for workflowLevel explicit vs auto-route semantics"""
+
+    def test_chat_without_workflow_level_uses_commander_route(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_commander = MagicMock()
+        mock_commander.route = MagicMock(return_value="L4")
+        mock_commander.detect_scene_type = MagicMock(return_value=_SceneTypeDialogue())
+        mock_commander.dispatch_skills = MagicMock(return_value=["dialogue-system"])
+        mock_commander.dispatch_tasks = MagicMock(return_value=[_build_assignment()])
+        monkeypatch.setattr(gateway_module, "get_commander_agent", lambda: mock_commander)
+
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": "Write scene"}]
+        })
+
+        assert response.status_code == 200
+        assert mock_commander.route.call_count == 1
+        assert response.json()["workflow_info"]["level"] == "L4"
+
+    def test_chat_with_explicit_workflow_level_skips_route(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_commander = MagicMock()
+        mock_commander.route = MagicMock(return_value="L5")
+        mock_commander.detect_scene_type = MagicMock(return_value=_SceneTypeDialogue())
+        mock_commander.dispatch_skills = MagicMock(return_value=["dialogue-system"])
+        mock_commander.dispatch_tasks = MagicMock(return_value=[_build_assignment()])
+        monkeypatch.setattr(gateway_module, "get_commander_agent", lambda: mock_commander)
+
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": "Write scene"}],
+            "workflowLevel": "L3"
+        })
+
+        assert response.status_code == 200
+        assert mock_commander.route.call_count == 0
+        assert response.json()["workflow_info"]["level"] == "L3"
+
+
+class TestChatL5Coordinator:
+    """Tests for L5 coordinator branch"""
+
+    def test_chat_l5_calls_level5_coordinator(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_coordinator_instance = MagicMock()
+        mock_coordinator_instance.execute = MagicMock(return_value={
+            "final_output": "L5 Final Content",
+            "draft_content": "L5 Draft Content",
+            "score": 91,
+            "feedback_context": "L5 feedback",
+        })
+        monkeypatch.setattr(gateway_module, "Level5Coordinator", MagicMock(return_value=mock_coordinator_instance))
+
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": "Plan entire book structure"}],
+            "workflowLevel": "L5"
+        })
+
         assert response.status_code == 200
         data = response.json()
-        assert data["content"].startswith("## 任务分析")
-        assert data["workflow_info"]["steps_completed"] == 1
+        assert data["content"] == "L5 Final Content"
+        assert data["evaluation"]["score"] == 91
+        assert mock_coordinator_instance.execute.call_count == 1
