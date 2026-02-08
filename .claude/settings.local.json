@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 接入 resume 元数据与基础单测\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: 更新 API 与 SDD 文档\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: 同步搜索与相关测试调整\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: 处理 resume_decision 去重与缓存更新竞态\nEOF\n\\)\")",
+      "Skill(workflow:analyze-with-file)",
+      "mcp__ace-tool__search_context",
+      "Bash(export:*)",
+      "Bash(ccw cli:*)",
+      "Bash(find:*)",
+      "Bash(comm:*)",
+      "Bash(git worktree remove:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor: 清理项目结构，统一以 niko-studio 为主目录\n\n- 删除根目录旧代码 \\(src/, docs/, scripts/, skills/, tests/\\)\n- 删除冗余文件 \\(README.md, requirements.txt, dev_run.py 等\\)\n- 删除临时文件 \\(verification_screenshot.png, verify_web_ui.py\\)\n- 删除配置目录 \\(.github/, .jules/, .niko-studio/, .workflow/, .writing/\\)\n- 统一 distillation 路径至 DistillationManager，废弃 DistillService\n- 更新 niko-studio/README.md 和 PROJECT_STATUS_REPORT.md 进度状态\n- 清理 git worktree 分支\nEOF\n\\)\")"
+    ]
+  }
+}

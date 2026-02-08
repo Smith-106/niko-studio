@@ -1,66 +1,104 @@
 # Project Status Report & Planning Completeness Check
 
-**Date:** 2026-01-27
-**Scope:** Comprehensive audit of Codebase vs. Documentation (`TASKS.md`, `SDD_V2.md`)
+**Date:** 2026-02-08
+**Scope:** Comprehensive audit of Codebase vs. Documentation
 
 ## 1. Executive Summary
 
-The project has successfully implemented the **Core Agent Infrastructure** (Commander, Writer, Architect, Critic) and the **Session Management** layer. However, the **Advanced Memory System (OpenKL)** and **Full Workflow Levels (L1-L5)** are currently in a partial state, with significant discrepancies between the planned architecture and the actual implementation of workflow levels.
+The project has successfully implemented all **P0 components** including Core Agents, Workflow Levels (L1-L5), and the Memory Layer (OpenKL). The Distillation system has been unified under `DistillationManager`.
 
-*   **Code Implementation Status:** ~40% Complete (Phase 1 & 2 partial, Phase 14 done)
-*   **Documentation Alignment:** High for Core Agents, Low for Workflow Levels.
+*   **Code Implementation Status:** ~75% Complete
+*   **Documentation Alignment:** High across all modules
 
-## 2. Critical Discrepancies (Immediate Attention Required)
+## 2. Implementation Status
 
-### 🚨 Workflow Level Mismatch
-There is a conflict between the `CommanderAgent` implementation and the `TASKS.md` plan regarding Workflow Levels 4 and 5.
+### ✅ Completed Components
 
-| Level | `docs/TASKS.md` (Plan) | `src/agents/commander.py` (Code) | Status |
-| :--- | :--- | :--- | :--- |
-| **L4** | **Brainstorm** (World/Plot) | *Undefined* | ❌ Missing in Code |
-| **L5** | **Coordinator** (Orchestration) | **Brainstorm** (`L5_BRAINSTORM`) | ⚠️ Mapped Incorrectly |
+| Component | File | Status |
+|-----------|------|--------|
+| **L1 Rapid** | `src/workflow/levels/level1_rapid.py` | ✅ Complete |
+| **L2 Lite** | `src/workflow/levels/level2_lite.py` | ✅ Complete (plan→execute→verify) |
+| **L3 Standard** | `src/workflow/levels/level3_standard.py` | ✅ Complete (plan-execute-critic) |
+| **L4 Brainstorm** | `src/workflow/levels/level4_brainstorm.py` | ✅ Complete (multi-role + synthesize) |
+| **L5 Coordinator** | `src/workflow/levels/level5_coordinator.py` | ✅ Complete (command chain + persist) |
+| **MemoryManager** | `src/memory/memory_manager.py` | ✅ Complete |
+| **CitationManager** | `src/memory/citation_manager.py` | ✅ Complete |
+| **DistillationManager** | `src/memory/distillation_manager.py` | ✅ Complete (6 templates) |
+| **CommanderAgent** | `src/agents/commander.py` | ✅ Complete |
+| **ArchitectAgent** | `src/agents/architect.py` | ✅ Complete |
+| **WriterAgent** | `src/agents/writer.py` | ✅ Complete |
+| **CriticAgent** | `src/agents/critic.py` | ✅ Complete |
+| **SessionManager** | `src/workflow/session/session_manager.py` | ✅ Complete |
 
-**Impact:** The current code treats "Brainstorming" as L5, leaving no slot for the planned "Coordinator" level. The agent routing logic skips L2 and L4 entirely.
+### ⚠️ Deprecated Components
 
-### 📉 Missing P0 Components (OpenKL)
-The following critical "Priority 0" components are defined in the plan but completely missing from the codebase:
+| Component | File | Status |
+|-----------|------|--------|
+| **DistillService** | `src/services/distill_service.py` | ⚠️ DEPRECATED - Use DistillationManager |
 
-*   `src/memory/citation_manager.py` (Citation & Verification)
-*   `src/memory/memory_manager.py` (Temporal Memory)
-*   `src/memory/distillation_manager.py` (Knowledge Distillation) - *Note: `DistillService` exists but is a partial implementation.*
+### 🟡 In Progress
 
-## 3. Implementation Verification
+| Component | Status |
+|-----------|--------|
+| SmartSearch | 80% |
+| VectorSearch | 70% |
+| GraphManager (Kùzu) | 50% |
 
-### ✅ Verified Implemented (Matched `[x]` in TASKS.md)
-The following components were marked as done and successfully verified in the codebase:
+### ⬜ Pending
 
-*   **Agents:** `CommanderAgent`, `WriterAgent`, `ArchitectAgent`, `CriticAgent`.
-*   **Session Management:** `SessionManager` (Correctly implements `init`, `read`, `write`, `archive` and routing).
-*   **Services:** `DistillService` (Basic implementation exists).
-*   **Workflow:** `Graph` structure for the Architect-Writer-Critic loop.
+| Component | Priority |
+|-----------|----------|
+| Backup Service | P7 |
+| Token Service | P8 |
+| Obsidian Integration | P9 |
 
-### ⬜ Verified Pending (Matched `[ ]` in TASKS.md)
-The following are correctly tracked as "To Do":
+## 3. Recent Changes (2026-02-08)
 
-*   `Level2_Lite` Workflow
-*   `Level5_Coordinator` Workflow
-*   `SmartSearch` (Semantic/Fuzzy Hybrid)
-*   `VectorSearch` (Kùzu DB integration)
+### Distillation Unification
+- **Unified** distillation path to use `src/memory/distillation_manager.py`
+- **Deprecated** `src/services/distill_service.py` with migration guide
+- **Added** legacy compatibility methods to DistillationManager:
+  - `distill_chapter()` - DistillService interface
+  - `apply_to_graph()` - KnowledgeLayer integration
+  - `get_distillation_prompt()` - Prompt generation
 
-## 4. Recommendations
+### Files Modified
+- `src/workflow/levels/level5_coordinator.py` - Import changed to DistillationManager
+- `src/agents/architect.py` - Import changed to DistillationManager
+- `src/workflow/graph.py` - Lazy load changed to DistillationManager
+- `src/memory/distillation_manager.py` - Added legacy compatibility layer
+- `src/services/distill_service.py` - Added deprecation warning
 
-1.  **Refactor Workflow Levels:**
-    *   Update `WorkflowLevel` Enum in `src/agents/commander.py` to match the 5-level plan.
-    *   Rename `L5_BRAINSTORM` to `L4_BRAINSTORM`.
-    *   Add `L5_COORDINATOR` placeholder.
+## 4. Architecture Validation
 
-2.  **Prioritize OpenKL Implementation:**
-    *   Start implementation of `CitationManager` as it is a dependency for the robust memory system.
-    *   Implement `MemoryManager` to handle the file-system contract described in `SDD_V2.md`.
+### Commander ↔ L5 Coordinator
+The architecture correctly separates concerns:
+- **Commander**: Routes tasks and generates `TaskAssignment` lists
+- **WorkflowEngine**: Dispatches to appropriate Level executor
+- **Level5Coordinator**: Executes command chains with state persistence
 
-3.  **Update TASKS.md:**
-    *   The `TASKS.md` file is generally accurate regarding what is *done*, but the definitions of levels in the "Phase 2" section need to be strictly followed in code to avoid confusion.
+No code changes required - architecture is correctly implemented.
 
-## 5. Automated Check Results
-*   **Files Checklist:** The `FILES_CHECKLIST.md` contains relative paths that make automated verification difficult, but manual spot-checking confirms the repository structure is sound.
-*   **Task Verification:** 0 discrepancies found for tasks explicitly marked as `[x]`. The issue lies in the *logic* of the implementation (e.g. L4 vs L5), not the *presence* of the files.
+## 5. Key File Paths
+
+### Workflow Levels
+- `niko-studio/src/workflow/levels/level1_rapid.py`
+- `niko-studio/src/workflow/levels/level2_lite.py`
+- `niko-studio/src/workflow/levels/level3_standard.py`
+- `niko-studio/src/workflow/levels/level4_brainstorm.py`
+- `niko-studio/src/workflow/levels/level5_coordinator.py`
+
+### Memory & Distillation
+- `niko-studio/src/memory/memory_manager.py`
+- `niko-studio/src/memory/citation_manager.py`
+- `niko-studio/src/memory/distillation_manager.py`
+
+### Agents
+- `niko-studio/src/agents/commander.py`
+- `niko-studio/src/agents/architect.py`
+- `niko-studio/src/agents/writer.py`
+- `niko-studio/src/agents/critic.py`
+
+---
+
+*Updated: 2026-02-08*

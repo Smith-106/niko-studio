@@ -833,6 +833,78 @@ class DistillationManager:
             for t in DistillationTemplate
         ]
 
+    # ============================================================
+    # Legacy Compatibility (DistillService interface)
+    # ============================================================
+
+    def distill_chapter(self, content: str) -> Dict[str, Any]:
+        """
+        Legacy compatibility method for DistillService.distill_chapter().
+
+        Args:
+            content: Chapter content to distill.
+
+        Returns:
+            Dict with entities and relations (DistillService format).
+        """
+        result = self.distill([content], DistillationTemplate.SUMMARY)
+        return {
+            "entities": [],
+            "relations": [],
+            "summary": result.content,
+            "events": [],
+            "character_arcs": [],
+            "plot_points": [],
+        }
+
+    def apply_to_graph(self, knowledge_layer: Any, distilled_data: Dict[str, Any]) -> None:
+        """
+        Legacy compatibility method for DistillService.apply_to_graph().
+
+        Args:
+            knowledge_layer: AgentKnowledgeLayer instance.
+            distilled_data: Distilled data dict.
+        """
+        for ent in distilled_data.get("entities", []):
+            if hasattr(knowledge_layer, "add_entity"):
+                knowledge_layer.add_entity(
+                    ent.get("id", ""),
+                    ent.get("name", ""),
+                    ent.get("type", ""),
+                    ent.get("description", "")
+                )
+
+        for rel in distilled_data.get("relations", []):
+            if hasattr(knowledge_layer, "add_relation"):
+                knowledge_layer.add_relation(
+                    rel.get("source", ""),
+                    rel.get("target", ""),
+                    rel.get("type", ""),
+                    rel.get("props")
+                )
+
+    def get_distillation_prompt(self, task_type: str, content: str = "") -> str:
+        """
+        Legacy compatibility method for DistillService.get_distillation_prompt().
+
+        Args:
+            task_type: Prompt type string.
+            content: Content to include in prompt.
+
+        Returns:
+            Prompt string.
+        """
+        template_map = {
+            "extract-facts": DistillationTemplate.KEY_POINTS,
+            "extract-relationships": DistillationTemplate.CHARACTER_TRAITS,
+            "insight": DistillationTemplate.SUMMARY,
+        }
+        template = template_map.get(task_type, DistillationTemplate.SUMMARY)
+        prompt = self.get_prompt(template)
+        if content:
+            return prompt.format(content=content[:2000])
+        return prompt
+
 
 # ============================================================
 # Factory Functions

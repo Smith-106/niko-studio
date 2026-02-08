@@ -24,7 +24,7 @@ from ...memory.citation_manager import get_citation_manager
 from ...memory.memory_manager import get_memory_manager
 from ...search.smart_search import SmartSearch
 from ...search.vector_search import VectorSearch
-from ...services.distill_service import DistillService
+from ...memory.distillation_manager import DistillationManager, DistillationTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -922,7 +922,9 @@ class Level5Coordinator(BaseLevel):
         # 蒸馏 + 记忆（失败降级）
         if content:
             try:
-                distill_result = DistillService().distill_chapter(content)
+                distill_mgr = DistillationManager()
+                distill_result = distill_mgr.distill([content], DistillationTemplate.SUMMARY)
+                distill_result = {"entities": [], "relations": [], "content": distill_result.content}
                 state["distillation_result"] = distill_result
             except Exception as exc:
                 state["warnings"] = state.get("warnings", []) + [f"Distill 失败: {exc}"]

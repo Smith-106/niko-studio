@@ -1,10 +1,41 @@
+"""
+DEPRECATED: This module is deprecated and will be removed in a future version.
+
+Use `src.memory.distillation_manager.DistillationManager` instead, which provides:
+- 6 distillation templates (SUMMARY, KEY_POINTS, CHARACTER_TRAITS, etc.)
+- CitationManager integration for DerivedFrom tracking
+- MemoryManager integration for storing distilled content
+- Full persistence and result management
+
+Migration example:
+    # Old:
+    from src.services.distill_service import DistillService
+    service = DistillService()
+    result = service.distill_chapter(content)
+
+    # New:
+    from src.memory.distillation_manager import DistillationManager
+    manager = DistillationManager()
+    result = manager.distill_chapter(content)  # Legacy compatibility
+    # Or use new API:
+    result = manager.distill([content], DistillationTemplate.SUMMARY)
+"""
+
+import warnings
 from typing import List, Dict, Any, Optional
 import json
 import logging
 from ..agents.base import BaseAgent  # Import BaseAgent to reuse Prompt Protocol later if needed
-# In a real scenario, this would import an LLM Service to run the prompts.
 
 logger = logging.getLogger("DistillService")
+
+# Emit deprecation warning on import
+warnings.warn(
+    "DistillService is deprecated. Use src.memory.distillation_manager.DistillationManager instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
 
 class DistillService:
     """

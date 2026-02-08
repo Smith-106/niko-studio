@@ -152,10 +152,10 @@ class DistillationNode:
 
     @property
     def distill_service(self):
-        """延迟加载蒸馏服务"""
+        """延迟加载蒸馏服务 (使用统一的 DistillationManager)"""
         if self._distill_service is None:
-            from src.services.distill_service import DistillService
-            self._distill_service = DistillService()
+            from src.memory.distillation_manager import DistillationManager
+            self._distill_service = DistillationManager()
         return self._distill_service
 
     def process(self, state: WritingState) -> WritingState:

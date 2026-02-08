@@ -330,11 +330,11 @@ class ArchitectAgent:
             self.thinking_engine = None
             self._ThoughtType = None
 
-        # DistillService 集成
+        # DistillationManager 集成 (统一使用 memory 模块)
         if enable_distillation:
             try:
-                from ..services.distill_service import DistillService
-                self.distill_service = DistillService(llm_client=llm)
+                from ..memory.distillation_manager import DistillationManager
+                self.distill_service = DistillationManager()
             except ImportError:
                 self.distill_service = None
         else:
