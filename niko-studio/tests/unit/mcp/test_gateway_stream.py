@@ -302,6 +302,10 @@ class TestStreamErrorEvents:
         assert response.status_code == 200
         events = parse_sse_events(response.text)
         error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) >= 1
+        assert "Writer execution failed" in error_events[0]["data"]["error"]
+
+
 class TestStreamRoutingSemantics:
     """Tests for workflowLevel explicit vs auto-route in stream"""
 

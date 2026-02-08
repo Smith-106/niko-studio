@@ -21,6 +21,9 @@ def _build_assignment():
         "instruction": "Write dialogue scene",
     })
     return assignment
+
+
+class TestChatEndpoint:
     """Tests for POST /chat endpoint"""
 
     def test_chat_returns_200_with_valid_request(self, client_no_lifespan):
@@ -248,6 +251,11 @@ class TestChatWriterFailure:
             ],
             "workflowLevel": "L3"
         })
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["content"].startswith("## 任务分析")
+        assert data["workflow_info"]["steps_completed"] == 1
 
 class TestChatRoutingSemantics:
     """Tests for workflowLevel explicit vs auto-route semantics"""
