@@ -1,0 +1,12 @@
+{
+  "id": "IMPL-002",
+  "title": "添加异步初始化验证测试",
+  "stage": 1,
+  "priority": "P0",
+  "description": "创建测试验证 ServiceManager 生命周期正确性",
+  "files": ["tests/unit/test_service_manager.py"],
+  "acceptance_criteria": ["测试覆盖初始化、健康检查、关闭流程"],
+  "dependencies": ["IMPL-001"],
+  "status": "completed",
+  "result": "PASS - 12 个测试用例全部通过"
+}

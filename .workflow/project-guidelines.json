@@ -1,0 +1,37 @@
+{
+  "conventions": {
+    "coding_style": [],
+    "naming_patterns": [],
+    "file_structure": [],
+    "documentation": []
+  },
+  "constraints": {
+    "architecture": [],
+    "tech_stack": [],
+    "performance": [],
+    "security": []
+  },
+  "quality_rules": [],
+  "learnings": [
+    {
+      "date": "2026-02-09",
+      "session_id": "WFS-niko-complete-20260209",
+      "insight": "完成多组实现后，必须先以测试结果和 TODO 状态双重校验，再执行会话归档，避免状态与工件不同步。",
+      "category": "process",
+      "context": null
+    },
+    {
+      "date": "2026-02-09",
+      "session_id": "WFS-niko-full-impl-20260209",
+      "insight": "集成测试需验证 API 签名兼容性，避免因 Mock 对象与实际接口参数不匹配导致测试失败。",
+      "category": "testing",
+      "context": "9个集成测试因 WriterInput/ArchitectAgent 等类的 API 签名变更而失败"
+    }
+  ],
+  "_metadata": {
+    "created_at": "2026-02-09T00:00:00+08:00",
+    "updated_at": "2026-02-09T00:00:00+08:00",
+    "last_solidified_by": "WFS-niko-complete-20260209",
+    "version": "1.0.0"
+  }
+}

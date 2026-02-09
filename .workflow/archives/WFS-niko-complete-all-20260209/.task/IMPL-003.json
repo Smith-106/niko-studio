@@ -1,0 +1,176 @@
+{
+  "id": "IMPL-003",
+  "title": "CLI Orchestration Layer",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-niko-complete-all-20260209/.process/context-package.json",
+  "cli_execution_id": "WFS-niko-complete-all-20260209-IMPL-003",
+  "cli_execution": {
+    "strategy": "fork",
+    "resume_from": "WFS-niko-complete-all-20260209-IMPL-001"
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": null,
+    "module": "cli",
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": true
+    }
+  },
+  "context": {
+    "requirements": [
+      "Create 6 new files: [src/cli/__init__.py, src/cli/main.py, src/cli/commands/__init__.py, src/cli/commands/init.py, src/cli/commands/run.py, src/cli/commands/chat.py]",
+      "Implement 5 CLI commands: [init, run, chat, evaluate, export]",
+      "Use Click framework for CLI structure",
+      "Integrate with UnifiedMemoryEngine for session management",
+      "Support both interactive and batch modes"
+    ],
+    "focus_paths": [
+      "src/cli/"
+    ],
+    "acceptance": [
+      "6 files created: verify by ls src/cli/**/*.py | wc -l >= 6",
+      "5 commands implemented: verify by python -m src.cli --help | grep -c 'init\\|run\\|chat\\|evaluate\\|export' = 5",
+      "CLI entry point works: verify by python -m src.cli --version (exit code 0)",
+      "Session management works: verify by python -m src.cli init --name test && ls .niko/sessions/ | grep test"
+    ],
+    "depends_on": ["IMPL-001"],
+    "inherited": {
+      "from": "IMPL-001",
+      "context": ["Memory layer handlers available", "UnifiedMemoryEngine API"]
+    },
+    "shared_context": {
+      "tech_stack": ["Python 3.10+", "Click", "Rich"],
+      "patterns": ["Click command groups", "async command execution"],
+      "conventions": ["snake_case for commands", "rich console output"]
+    },
+    "artifacts": []
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package",
+        "commands": ["Read(.workflow/active/WFS-niko-complete-all-20260209/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_existing_entry_points",
+        "action": "Check for existing CLI patterns",
+        "commands": [
+          "Grep(pattern='argparse|click|typer', path='src/')",
+          "Read(src/ui/streamlit_app.py)"
+        ],
+        "output_to": "cli_patterns"
+      },
+      {
+        "step": "analyze_workflow_engine",
+        "action": "Understand workflow engine for run command",
+        "commands": ["Read(src/workflow/workflow_engine.py)"],
+        "output_to": "workflow_api"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "Create CLI package structure",
+        "description": "Set up CLI package with Click framework",
+        "modification_points": [
+          "Create src/cli/__init__.py with package exports",
+          "Create src/cli/main.py with Click app group",
+          "Create src/cli/commands/__init__.py"
+        ],
+        "logic_flow": [
+          "Create package directories",
+          "Set up Click application",
+          "Define main command group",
+          "Add version and help options"
+        ],
+        "depends_on": [],
+        "output": "cli_structure"
+      },
+      {
+        "step": 2,
+        "title": "Implement init command",
+        "description": "Create project/session initialization command",
+        "modification_points": [
+          "Create src/cli/commands/init.py (~80 lines)",
+          "Implement project scaffolding",
+          "Create session directory structure"
+        ],
+        "logic_flow": [
+          "Parse init options (name, template)",
+          "Create .niko/ directory structure",
+          "Initialize UnifiedMemoryEngine",
+          "Create default config"
+        ],
+        "depends_on": [1],
+        "output": "init_command"
+      },
+      {
+        "step": 3,
+        "title": "Implement run command",
+        "description": "Create workflow execution command",
+        "modification_points": [
+          "Create src/cli/commands/run.py (~100 lines)",
+          "Integrate with WorkflowEngine",
+          "Add progress display with Rich"
+        ],
+        "logic_flow": [
+          "Load session config",
+          "Initialize workflow engine",
+          "Execute workflow with progress",
+          "Display results"
+        ],
+        "depends_on": [2],
+        "output": "run_command"
+      },
+      {
+        "step": 4,
+        "title": "Implement chat command",
+        "description": "Create interactive chat command",
+        "modification_points": [
+          "Create src/cli/commands/chat.py (~120 lines)",
+          "Implement REPL loop",
+          "Integrate with CommanderAgent"
+        ],
+        "logic_flow": [
+          "Start interactive session",
+          "Read user input",
+          "Route to appropriate agent",
+          "Display formatted response"
+        ],
+        "depends_on": [2],
+        "output": "chat_command"
+      },
+      {
+        "step": 5,
+        "title": "Implement evaluate and export commands",
+        "description": "Add evaluation and export functionality",
+        "modification_points": [
+          "Create src/cli/commands/evaluate.py (~60 lines)",
+          "Create src/cli/commands/export.py (~60 lines)"
+        ],
+        "logic_flow": [
+          "Implement evaluate with CriticAgent",
+          "Implement export to various formats (md, json, docx)"
+        ],
+        "depends_on": [3, 4],
+        "output": "utility_commands"
+      }
+    ],
+    "target_files": [
+      "src/cli/__init__.py",
+      "src/cli/main.py",
+      "src/cli/commands/__init__.py",
+      "src/cli/commands/init.py",
+      "src/cli/commands/run.py",
+      "src/cli/commands/chat.py",
+      "src/cli/commands/evaluate.py",
+      "src/cli/commands/export.py"
+    ]
+  }
+}

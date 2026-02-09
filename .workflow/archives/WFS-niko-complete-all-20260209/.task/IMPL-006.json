@@ -1,0 +1,156 @@
+{
+  "id": "IMPL-006",
+  "title": "Storage Unification",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-niko-complete-all-20260209/.process/context-package.json",
+  "cli_execution_id": "WFS-niko-complete-all-20260209-IMPL-006",
+  "cli_execution": {
+    "strategy": "fork",
+    "resume_from": "WFS-niko-complete-all-20260209-IMPL-001"
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": null,
+    "module": "storage",
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": true
+    }
+  },
+  "context": {
+    "requirements": [
+      "Create 3 new files: [src/storage/__init__.py, src/storage/file_builder.py, src/storage/json_file_builder.py]",
+      "Implement FileBuilder base class with builder pattern",
+      "Implement JsonFileBuilder for structured data storage",
+      "Integrate with OpenKL file system contracts",
+      "Support atomic writes and rollback"
+    ],
+    "focus_paths": [
+      "src/storage/",
+      "src/store/"
+    ],
+    "acceptance": [
+      "3 files created: verify by ls src/storage/*.py | wc -l >= 3",
+      "FileBuilder implements builder pattern: verify by grep -c 'def with_\\|def build' src/storage/file_builder.py >= 3",
+      "JsonFileBuilder extends FileBuilder: verify by grep 'class JsonFileBuilder.*FileBuilder' src/storage/json_file_builder.py",
+      "Atomic writes work: verify by python -c 'from src.storage import JsonFileBuilder; JsonFileBuilder().with_path(\"/tmp/test.json\").with_data({}).build()' (exit code 0)"
+    ],
+    "depends_on": ["IMPL-001"],
+    "inherited": {
+      "from": "IMPL-001",
+      "context": ["Memory layer patterns", "OpenKL file structure"]
+    },
+    "shared_context": {
+      "tech_stack": ["Python 3.10+", "pathlib", "json"],
+      "patterns": ["Builder pattern", "atomic file operations", "YAML frontmatter"],
+      "existing_modules": ["store_manager.py", "openkl_contract.py"]
+    },
+    "artifacts": []
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package",
+        "commands": ["Read(.workflow/active/WFS-niko-complete-all-20260209/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_store_patterns",
+        "action": "Understand existing store patterns",
+        "commands": [
+          "Read(src/store/store_manager.py)",
+          "Read(src/store/openkl_contract.py)"
+        ],
+        "output_to": "store_patterns"
+      },
+      {
+        "step": "analyze_memory_file_ops",
+        "action": "Review memory manager file operations for patterns",
+        "commands": ["Grep(pattern='write_text|read_text|mkdir', path='src/memory/')"],
+        "output_to": "file_patterns"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "Create storage package structure",
+        "description": "Set up storage package",
+        "modification_points": [
+          "Create src/storage/__init__.py with exports",
+          "Define IFileBuilder Protocol"
+        ],
+        "logic_flow": [
+          "Create package structure",
+          "Define builder interface",
+          "Set up exports"
+        ],
+        "depends_on": [],
+        "output": "storage_structure"
+      },
+      {
+        "step": 2,
+        "title": "Implement FileBuilder base",
+        "description": "Create base builder with common functionality",
+        "modification_points": [
+          "Create src/storage/file_builder.py (~120 lines)",
+          "Implement with_path(), with_content(), with_encoding() methods",
+          "Implement build() with atomic write",
+          "Add rollback support"
+        ],
+        "logic_flow": [
+          "Define builder state dataclass",
+          "Implement fluent builder methods",
+          "Add atomic write (write to temp, rename)",
+          "Add backup and rollback"
+        ],
+        "depends_on": [1],
+        "output": "file_builder"
+      },
+      {
+        "step": 3,
+        "title": "Implement JsonFileBuilder",
+        "description": "Specialized builder for JSON files",
+        "modification_points": [
+          "Create src/storage/json_file_builder.py (~100 lines)",
+          "Extend FileBuilder",
+          "Add with_data(), with_indent(), with_schema() methods",
+          "Add JSON validation"
+        ],
+        "logic_flow": [
+          "Extend FileBuilder",
+          "Add JSON-specific methods",
+          "Implement schema validation",
+          "Add pretty-print options"
+        ],
+        "depends_on": [2],
+        "output": "json_builder"
+      },
+      {
+        "step": 4,
+        "title": "Add OpenKL integration",
+        "description": "Integrate builders with OpenKL contracts",
+        "modification_points": [
+          "Add OpenKLFileBuilder extending FileBuilder",
+          "Support YAML frontmatter format",
+          "Add topic linking support"
+        ],
+        "logic_flow": [
+          "Create OpenKL-specific builder",
+          "Add frontmatter generation",
+          "Integrate with memory manager patterns"
+        ],
+        "depends_on": [3],
+        "output": "openkl_builder"
+      }
+    ],
+    "target_files": [
+      "src/storage/__init__.py",
+      "src/storage/file_builder.py",
+      "src/storage/json_file_builder.py"
+    ]
+  }
+}

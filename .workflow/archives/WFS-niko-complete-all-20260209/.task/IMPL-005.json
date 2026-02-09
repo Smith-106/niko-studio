@@ -1,0 +1,176 @@
+{
+  "id": "IMPL-005",
+  "title": "Integration Validation",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-niko-complete-all-20260209/.process/context-package.json",
+  "cli_execution_id": "WFS-niko-complete-all-20260209-IMPL-005",
+  "cli_execution": {
+    "strategy": "merge_fork",
+    "merge_from": [
+      "WFS-niko-complete-all-20260209-IMPL-001",
+      "WFS-niko-complete-all-20260209-IMPL-002",
+      "WFS-niko-complete-all-20260209-IMPL-003",
+      "WFS-niko-complete-all-20260209-IMPL-004"
+    ]
+  },
+  "meta": {
+    "type": "test-gen",
+    "agent": "@code-developer",
+    "execution_group": null,
+    "module": "integration",
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": true
+    },
+    "test_framework": "pytest",
+    "coverage_target": "80%"
+  },
+  "context": {
+    "requirements": [
+      "Create 4 integration test files: [test_memory_workflow.py, test_cli_workflow.py, test_agent_chain.py, test_end_to_end.py]",
+      "Test 3 critical workflows: [memory-to-agent flow, CLI-to-workflow flow, full writing cycle]",
+      "Validate all new modules integrate correctly with existing agents",
+      "Verify backward compatibility with existing test suite"
+    ],
+    "focus_paths": [
+      "tests/integration/"
+    ],
+    "acceptance": [
+      "4 test files created: verify by ls tests/integration/test_*.py | wc -l >= 4",
+      "All integration tests pass: verify by pytest tests/integration/ -q (exit code 0)",
+      "Coverage >= 80%: verify by pytest tests/integration/ --cov=src --cov-report=term | grep TOTAL | awk '{print $4}' >= 80",
+      "No regressions: verify by pytest tests/ -q (exit code 0)"
+    ],
+    "depends_on": ["IMPL-001", "IMPL-002", "IMPL-003", "IMPL-004"],
+    "inherited": {
+      "from": "IMPL-001,IMPL-002,IMPL-003,IMPL-004",
+      "context": ["Memory system complete", "Writing theory verified", "CLI implemented", "AI tools ready"]
+    },
+    "shared_context": {
+      "tech_stack": ["pytest", "pytest-asyncio", "pytest-cov"],
+      "patterns": ["async test fixtures", "mock LLM responses"],
+      "existing_tests": ["tests/integration/test_workflow_integration.py"]
+    },
+    "artifacts": []
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package",
+        "commands": ["Read(.workflow/active/WFS-niko-complete-all-20260209/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_existing_tests",
+        "action": "Understand existing test patterns",
+        "commands": [
+          "Glob(pattern='tests/integration/*.py')",
+          "Read(tests/integration/test_workflow_integration.py)"
+        ],
+        "output_to": "test_patterns"
+      },
+      {
+        "step": "identify_integration_points",
+        "action": "Map integration points to test",
+        "commands": ["Grep(pattern='async def|class.*Agent', path='src/agents/')"],
+        "output_to": "integration_points"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "Create memory workflow integration tests",
+        "description": "Test memory system integration with agents",
+        "modification_points": [
+          "Create tests/integration/test_memory_workflow.py (~150 lines)",
+          "Test memory layer transitions",
+          "Test conflict resolution in workflow",
+          "Test temporal queries during execution"
+        ],
+        "logic_flow": [
+          "Set up test fixtures with UnifiedMemoryEngine",
+          "Test memory add/search in agent context",
+          "Test layer-specific retrieval",
+          "Test conflict resolution triggers"
+        ],
+        "depends_on": [],
+        "output": "memory_tests"
+      },
+      {
+        "step": 2,
+        "title": "Create CLI workflow integration tests",
+        "description": "Test CLI commands with full workflow",
+        "modification_points": [
+          "Create tests/integration/test_cli_workflow.py (~120 lines)",
+          "Test init command creates correct structure",
+          "Test run command executes workflow",
+          "Test chat command routes correctly"
+        ],
+        "logic_flow": [
+          "Use Click testing utilities",
+          "Test each command with mock inputs",
+          "Verify file system changes",
+          "Verify agent invocations"
+        ],
+        "depends_on": [1],
+        "output": "cli_tests"
+      },
+      {
+        "step": 3,
+        "title": "Create agent chain tests",
+        "description": "Test agent collaboration patterns",
+        "modification_points": [
+          "Create tests/integration/test_agent_chain_extended.py (~130 lines)",
+          "Test Commander -> Architect -> Writer chain",
+          "Test Writer -> Critic revision loop",
+          "Test skill injection during execution"
+        ],
+        "logic_flow": [
+          "Set up agent chain fixtures",
+          "Test message passing between agents",
+          "Test context preservation",
+          "Test error handling in chain"
+        ],
+        "depends_on": [2],
+        "output": "agent_chain_tests"
+      },
+      {
+        "step": 4,
+        "title": "Create end-to-end tests",
+        "description": "Full writing cycle integration test",
+        "modification_points": [
+          "Create tests/integration/test_end_to_end.py (~180 lines)",
+          "Test complete story generation workflow",
+          "Test evaluation and revision cycle",
+          "Test export functionality"
+        ],
+        "logic_flow": [
+          "Initialize project via CLI",
+          "Execute full workflow",
+          "Verify output quality",
+          "Test export formats"
+        ],
+        "depends_on": [3],
+        "output": "e2e_tests"
+      }
+    ],
+    "target_files": [
+      "tests/integration/test_memory_workflow.py",
+      "tests/integration/test_cli_workflow.py",
+      "tests/integration/test_agent_chain_extended.py",
+      "tests/integration/test_end_to_end.py"
+    ],
+    "reusable_test_tools": [
+      "tests/integration/conftest.py",
+      "tests/unit/conftest.py"
+    ],
+    "test_commands": {
+      "run_tests": "pytest tests/integration/",
+      "run_coverage": "pytest tests/integration/ --cov=src --cov-report=html",
+      "run_specific": "pytest tests/integration/{test_file}"
+    }
+  }
+}

@@ -1,0 +1,180 @@
+{
+  "id": "IMPL-001",
+  "title": "Memory System Layer Completion",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-niko-complete-all-20260209/.process/context-package.json",
+  "cli_execution_id": "WFS-niko-complete-all-20260209-IMPL-001",
+  "cli_execution": {
+    "strategy": "new"
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": null,
+    "module": "memory",
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false
+    }
+  },
+  "context": {
+    "requirements": [
+      "Create 4 new files: [memory_layers.py, temporal_memory.py, conflict_resolver.py, six_dimensional_memory.py]",
+      "Implement 4 layer handlers: [EphemeralLayer, SessionLayer, UserLayer, ProjectLayer]",
+      "Implement 6 dimension processors: [TimelineProcessor, ContextProcessor, CharacterProcessor, WorldviewProcessor, PreferenceProcessor, ExperienceProcessor]",
+      "Extract ConflictResolver from unified_memory.py into standalone module",
+      "Maintain compatibility with existing UnifiedMemoryEngine API"
+    ],
+    "focus_paths": [
+      "src/memory/"
+    ],
+    "acceptance": [
+      "4 files created: verify by ls src/memory/*.py | grep -E '(memory_layers|temporal_memory|conflict_resolver|six_dimensional)' | wc -l = 4",
+      "All layer handlers implement IMemoryLayer protocol: verify by grep -c 'class.*Layer.*:' src/memory/memory_layers.py >= 4",
+      "All dimension processors implement IDimensionProcessor: verify by grep -c 'class.*Processor' src/memory/six_dimensional_memory.py >= 6",
+      "Existing tests pass: verify by pytest tests/unit/memory/ -q (exit code 0)",
+      "New modules have type hints: verify by mypy src/memory/memory_layers.py src/memory/temporal_memory.py (exit code 0)"
+    ],
+    "depends_on": [],
+    "inherited": {},
+    "shared_context": {
+      "tech_stack": ["Python 3.10+", "SQLite", "FastEmbed"],
+      "patterns": ["Protocol for interfaces", "dataclass for DTOs", "async/await"],
+      "existing_interfaces": ["UnifiedMemory", "MemoryLayer enum", "MemoryDimension enum"]
+    },
+    "artifacts": []
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths and smart context",
+        "commands": ["Read(.workflow/active/WFS-niko-complete-all-20260209/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_existing_memory_modules",
+        "action": "Analyze existing memory module patterns and interfaces",
+        "commands": [
+          "Read(src/memory/unified_memory.py)",
+          "Read(src/memory/memory_manager.py)",
+          "Read(src/memory/distillation_manager.py)"
+        ],
+        "output_to": "existing_patterns",
+        "on_error": "fail"
+      },
+      {
+        "step": "identify_extraction_targets",
+        "action": "Identify ConflictResolver code to extract from unified_memory.py",
+        "commands": ["Grep(pattern='class ConflictResolver', path='src/memory/')"],
+        "output_to": "extraction_targets"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "Create memory_layers.py with layer handlers",
+        "description": "Implement IMemoryLayer protocol and 4 layer handler classes",
+        "modification_points": [
+          "Create src/memory/memory_layers.py (~200 lines)",
+          "Define IMemoryLayer Protocol with methods: store(), retrieve(), expire(), stats()",
+          "Implement EphemeralLayer (TTL < 1 hour)",
+          "Implement SessionLayer (current task scope)",
+          "Implement UserLayer (long-term preferences)",
+          "Implement ProjectLayer (novel-level scope)"
+        ],
+        "logic_flow": [
+          "Define IMemoryLayer Protocol",
+          "Implement base layer with common functionality",
+          "Create specialized layers with TTL and scope logic",
+          "Add layer factory function"
+        ],
+        "depends_on": [],
+        "output": "memory_layers_module"
+      },
+      {
+        "step": 2,
+        "title": "Create six_dimensional_memory.py",
+        "description": "Implement 6 dimension processors for content classification",
+        "modification_points": [
+          "Create src/memory/six_dimensional_memory.py (~250 lines)",
+          "Define IDimensionProcessor Protocol",
+          "Implement 6 processors: [Timeline, Context, Character, Worldview, Preference, Experience]",
+          "Add dimension router for automatic classification"
+        ],
+        "logic_flow": [
+          "Define IDimensionProcessor Protocol",
+          "Implement each dimension processor with specific logic",
+          "Create DimensionRouter for auto-classification",
+          "Add unit tests for each processor"
+        ],
+        "depends_on": [1],
+        "output": "six_dimensional_module"
+      },
+      {
+        "step": 3,
+        "title": "Extract ConflictResolver to standalone module",
+        "description": "Move ConflictResolver from unified_memory.py to dedicated module",
+        "modification_points": [
+          "Create src/memory/conflict_resolver.py (~150 lines)",
+          "Move ConflictResolver class from unified_memory.py",
+          "Add ConflictResolutionStrategy enum",
+          "Update unified_memory.py imports"
+        ],
+        "logic_flow": [
+          "Extract ConflictResolver class",
+          "Add strategy enum (auto, keep_old, keep_new, merge)",
+          "Enhance conflict detection with semantic similarity",
+          "Update imports in unified_memory.py"
+        ],
+        "depends_on": [1],
+        "output": "conflict_resolver_module"
+      },
+      {
+        "step": 4,
+        "title": "Create temporal_memory.py",
+        "description": "Implement temporal tracking and versioning",
+        "modification_points": [
+          "Create src/memory/temporal_memory.py (~180 lines)",
+          "Implement TemporalMemoryTracker class",
+          "Add validity window management",
+          "Add supersession chain tracking"
+        ],
+        "logic_flow": [
+          "Define temporal validity structure",
+          "Implement validity window queries",
+          "Add supersession chain navigation",
+          "Integrate with UnifiedMemoryEngine"
+        ],
+        "depends_on": [3],
+        "output": "temporal_memory_module"
+      },
+      {
+        "step": 5,
+        "title": "Update memory __init__.py exports",
+        "description": "Export new modules from memory package",
+        "modification_points": [
+          "Update src/memory/__init__.py to export new classes",
+          "Add 4 new module imports"
+        ],
+        "logic_flow": [
+          "Add imports for new modules",
+          "Update __all__ list",
+          "Verify import chain works"
+        ],
+        "depends_on": [1, 2, 3, 4],
+        "output": "updated_exports"
+      }
+    ],
+    "target_files": [
+      "src/memory/memory_layers.py",
+      "src/memory/six_dimensional_memory.py",
+      "src/memory/conflict_resolver.py",
+      "src/memory/temporal_memory.py",
+      "src/memory/__init__.py",
+      "src/memory/unified_memory.py:ConflictResolver:98-173"
+    ]
+  }
+}

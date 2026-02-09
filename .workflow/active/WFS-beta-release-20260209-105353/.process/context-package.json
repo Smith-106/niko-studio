@@ -1,0 +1,64 @@
+{
+  "project_context": {
+    "architecture_patterns": [
+      "依赖注入容器 (ServiceContainer)",
+      "多 Provider 适配器模式",
+      "混合检索 (Vector + Graph + FTS)",
+      "异步服务生命周期管理",
+      "Plugin 系统 (GraphEngine)"
+    ],
+    "tech_stack": [
+      "Python 3.11",
+      "LangChain/LangGraph",
+      "FastEmbed (BAAI/bge-small-en-v1.5)",
+      "SQLite + sqlite-vec",
+      "pytest + pytest-asyncio",
+      "OpenAI/Anthropic SDK"
+    ]
+  },
+  "exploration_results": {
+    "aggregated_insights": {
+      "critical_files": [
+        {"path": "src/services/knowledge_layer.py", "relevance": "P6 核心", "rationale": "统一知识层接口"},
+        {"path": "src/knowledge/services/manager.py", "relevance": "P7 核心", "rationale": "服务生命周期管理"},
+        {"path": "src/services/memory_service.py", "relevance": "P8 核心", "rationale": "向量记忆服务"},
+        {"path": "src/graph/graph_engine.py", "relevance": "P6 核心", "rationale": "图谱引擎"},
+        {"path": "src/search/vector_search.py", "relevance": "P6 核心", "rationale": "RRF 混合搜索"}
+      ],
+      "constraints": [
+        "Beta 版本测试覆盖率必须 ≥ 60%",
+        "ServiceManager 必须正确异步初始化",
+        "向量搜索降级策略 (sqlite-vec unavailable)",
+        "多 Provider 健康检查和 fallback"
+      ],
+      "missing_components": [
+        "test_service_manager.py",
+        "test_llm_service.py",
+        "test_embedding_service.py",
+        "test_graph_engine.py",
+        "test_hybrid_search.py",
+        "test_e2e_workflow.py 完善"
+      ]
+    }
+  },
+  "conflict_detection": {
+    "risk_level": "medium",
+    "potential_conflicts": [
+      {
+        "type": "async_initialization",
+        "location": "src/knowledge/services/manager.py",
+        "description": "ServiceManager 需要 await 调用"
+      },
+      {
+        "type": "test_coverage_gap",
+        "location": "tests/",
+        "description": "当前覆盖率约 45%,需补充 15-20 个测试文件"
+      }
+    ]
+  },
+  "prioritized_context": [
+    {"priority": 1, "category": "测试补充", "estimated_effort": "2-3 天"},
+    {"priority": 2, "category": "集成验证", "estimated_effort": "1 天"},
+    {"priority": 3, "category": "文档和 CI", "estimated_effort": "0.5 天"}
+  ]
+}

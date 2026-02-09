@@ -1,0 +1,12 @@
+{
+  "id": "IMPL-005",
+  "title": "端到端工作流测试",
+  "stage": 2,
+  "priority": "P0",
+  "description": "完善 E2E 测试，覆盖完整写作工作流",
+  "files": ["tests/integration/test_e2e_workflow.py"],
+  "acceptance_criteria": ["测试覆盖 L1-L5 工作流", "测试覆盖会话恢复"],
+  "dependencies": ["IMPL-002"],
+  "status": "completed",
+  "result": "PASS - 14 个测试用例全部通过"
+}

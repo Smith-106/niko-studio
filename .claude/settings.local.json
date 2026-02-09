@@ -14,7 +14,20 @@
       "Bash(comm:*)",
       "Bash(git worktree remove:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor: 清理项目结构，统一以 niko-studio 为主目录\n\n- 删除根目录旧代码 \\(src/, docs/, scripts/, skills/, tests/\\)\n- 删除冗余文件 \\(README.md, requirements.txt, dev_run.py 等\\)\n- 删除临时文件 \\(verification_screenshot.png, verify_web_ui.py\\)\n- 删除配置目录 \\(.github/, .jules/, .niko-studio/, .workflow/, .writing/\\)\n- 统一 distillation 路径至 DistillationManager，废弃 DistillService\n- 更新 niko-studio/README.md 和 PROJECT_STATUS_REPORT.md 进度状态\n- 清理 git worktree 分支\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor: 清理项目结构，统一以 niko-studio 为主目录\n\n- 删除根目录旧代码 \\(src/, docs/, scripts/, skills/, tests/\\)\n- 删除冗余文件 \\(README.md, requirements.txt, dev_run.py 等\\)\n- 删除临时文件 \\(verification_screenshot.png, verify_web_ui.py\\)\n- 删除配置目录 \\(.github/, .jules/, .niko-studio/, .workflow/, .writing/\\)\n- 统一 distillation 路径至 DistillationManager，废弃 DistillService\n- 更新 niko-studio/README.md 和 PROJECT_STATUS_REPORT.md 进度状态\n- 清理 git worktree 分支\nEOF\n\\)\")",
+      "Bash(test:*)",
+      "Bash(python:*)",
+      "Bash(pytest:*)",
+      "Bash(git -C \"D:/工作目录/niko-studio\" diff -- docs/INDEX.md src/services/__init__.py src/narrative/evaluators/__init__.py src/narrative/fictional_dream/__init__.py)",
+      "Bash(git -C \"D:/工作目录/niko-studio\" status:*)",
+      "Bash(ls:*)",
+      "Bash(if:*)",
+      "Bash(then echo \"ACTIVE\")",
+      "Bash(elif [ -d \".workflow/archives/WFS-niko-complete-all-20260209\" ])",
+      "Bash(then echo \"ARCHIVED\")",
+      "Bash(else echo \"NOT_FOUND\")",
+      "Bash(fi:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat\\(tests\\): 添加 Beta 版本测试套件\n\n- 添加 ServiceManager 生命周期测试 \\(12 个用例\\)\n- 添加 LLM/Embedding 服务测试 \\(20 个用例\\)\n- 添加 GraphEngine 测试 \\(20 个用例\\)\n- 覆盖异步初始化、Provider fallback、Cypher 查询等核心功能\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

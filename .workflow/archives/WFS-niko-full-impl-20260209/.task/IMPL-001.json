@@ -1,0 +1,176 @@
+{
+  "id": "IMPL-001",
+  "title": "TokenService Implementation",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-niko-full-impl-20260209/.process/context-package.json",
+  "cli_execution_id": "WFS-niko-full-impl-20260209-IMPL-001",
+  "cli_execution": {
+    "strategy": "new"
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": null,
+    "module": null,
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false
+    }
+  },
+  "context": {
+    "requirements": [
+      "实现 5 个核心类: [TokenService, TokenCounter, CostEstimator, BudgetTracker, ModelRegistry]",
+      "创建 1 个文件: src/services/token_service.py",
+      "修改 1 个文件: src/agents/base.py (集成 TokenService)",
+      "创建 1 个测试文件: tests/unit/services/test_token_service.py"
+    ],
+    "focus_paths": [
+      "src/services/token_service.py",
+      "src/agents/base.py",
+      "tests/unit/services/test_token_service.py"
+    ],
+    "acceptance": [
+      "TokenService 支持 tiktoken 和 fallback counting: 验证 TokenCounter.count(text) 返回正确 token 数",
+      "CostEstimator 支持 3 种模型定价: [GPT-4, Claude, Gemini]: 验证 CostEstimator.estimate(model, tokens) 返回正确成本",
+      "BudgetTracker 实现 2 种限制: [per-request, per-session]: 验证 BudgetTracker.check_limit() 正确触发异常",
+      "BaseAgent 集成无破坏性变更: 验证 pytest tests/unit/test_base_agent.py 全部通过",
+      "测试覆盖率 ≥85%: 验证 pytest --cov=src/services/token_service --cov-report=term | grep '85%'"
+    ],
+    "depends_on": [],
+    "inherited": {},
+    "shared_context": {
+      "tech_stack": ["Python 3.11+", "tiktoken", "pytest"],
+      "conventions": ["Google-style docstrings", "Type hints required", "Snake_case naming"],
+      "patterns": ["Follow MemoryManager service pattern", "Singleton for global registry", "Async-safe design"]
+    },
+    "artifacts": [
+      {
+        "type": "individual_role_analysis",
+        "source": "context_package",
+        "path": "src/memory/memory_manager.py",
+        "priority": "high",
+        "usage": "Reference implementation for service pattern",
+        "contains": "Service initialization, error handling, logging patterns"
+      },
+      {
+        "type": "individual_role_analysis",
+        "source": "context_package",
+        "path": "src/agents/base.py",
+        "priority": "highest",
+        "usage": "Integration point - existing token management code",
+        "contains": "count_tokens, estimate_cost, _get_tokenizer methods"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths and smart context",
+        "commands": ["Read(.workflow/active/WFS-niko-full-impl-20260209/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_base_agent_integration",
+        "action": "Analyze BaseAgent token management methods to understand integration points",
+        "commands": [
+          "Read(src/agents/base.py:107-129)",
+          "Read(src/agents/base.py:130-164)"
+        ],
+        "output_to": "base_agent_token_code",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_service_pattern",
+        "action": "Analyze MemoryManager for service implementation pattern",
+        "commands": [
+          "Read(src/memory/memory_manager.py:119-180)"
+        ],
+        "output_to": "service_pattern",
+        "on_error": "skip_optional"
+      },
+      {
+        "step": "search_existing_token_usage",
+        "action": "Search for existing token/cost references in codebase",
+        "commands": [
+          "bash(cd D:/工作目录/niko-studio && rg 'tiktoken|token.*count|estimate.*cost' --type py -n --max-count 10 2>NUL || echo 'No matches')"
+        ],
+        "output_to": "existing_token_refs",
+        "on_error": "skip_optional"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "Create TokenService core classes",
+        "description": "Implement TokenService, TokenCounter, CostEstimator, BudgetTracker, ModelRegistry",
+        "modification_points": [
+          "创建 1 个新文件: src/services/token_service.py (预估 400 行)",
+          "实现 5 个类: [TokenService(主入口), TokenCounter(token计数), CostEstimator(成本估算), BudgetTracker(预算追踪), ModelRegistry(模型注册表)]",
+          "实现 15 个核心方法: [TokenService.count_tokens(), TokenService.estimate_cost(), TokenService.track_usage(), TokenCounter._count_with_tiktoken(), TokenCounter._count_fallback(), CostEstimator.get_pricing(), BudgetTracker.check_limit(), BudgetTracker.record_usage(), ModelRegistry.register_model(), etc.]"
+        ],
+        "logic_flow": [
+          "设计 ModelRegistry: 管理所有 LLM 模型的 pricing 信息 (GPT-4, Claude, Gemini)",
+          "实现 TokenCounter: 使用 tiktoken (cl100k_base) 计数，fallback 到字符估算",
+          "实现 CostEstimator: 基于 ModelRegistry 和 token 数计算成本 (per 1M tokens)",
+          "实现 BudgetTracker: 追踪 per-request 和 per-session 使用量，触发预算限制",
+          "实现 TokenService: 统一入口，整合上述组件",
+          "添加 error handling: BudgetExceededError, TokenizationError",
+          "添加 logging: 记录所有 token 使用和成本"
+        ],
+        "depends_on": [],
+        "output": "token_service_implementation"
+      },
+      {
+        "step": 2,
+        "title": "Integrate TokenService into BaseAgent",
+        "description": "Replace BaseAgent's inline token management with TokenService",
+        "modification_points": [
+          "修改 1 个文件: src/agents/base.py",
+          "修改 BaseAgent.__init__: 添加 self.token_service = TokenService()",
+          "修改 3 个方法: [_get_tokenizer() → 委托给 TokenService, count_tokens() → 委托给 TokenService.count_tokens(), estimate_cost() → 委托给 TokenService.estimate_cost()]",
+          "保持向后兼容: 所有现有方法签名不变"
+        ],
+        "logic_flow": [
+          "导入 TokenService: from src.services.token_service import TokenService",
+          "初始化 TokenService 实例: self.token_service = TokenService(model=self._model_name)",
+          "重构 count_tokens(): return self.token_service.count_tokens(text)",
+          "重构 estimate_cost(): return self.token_service.estimate_cost(input_text, estimated_output_tokens, model)",
+          "保留现有 BudgetConfig: 传递给 TokenService",
+          "测试向后兼容性: 确保 BaseAgent 现有功能不变"
+        ],
+        "depends_on": [1],
+        "output": "base_agent_integration"
+      },
+      {
+        "step": 3,
+        "title": "Write comprehensive unit tests",
+        "description": "Create unit tests for TokenService and BaseAgent integration",
+        "modification_points": [
+          "创建 1 个测试文件: tests/unit/services/test_token_service.py (预估 300 行)",
+          "实现 12 个测试用例: [test_token_counter_tiktoken, test_token_counter_fallback, test_cost_estimator_gpt4, test_cost_estimator_claude, test_cost_estimator_gemini, test_budget_tracker_per_request, test_budget_tracker_per_session, test_budget_exceeded_error, test_model_registry, test_token_service_integration, test_base_agent_integration, test_backward_compatibility]"
+        ],
+        "logic_flow": [
+          "Setup fixtures: mock_tokenizer, sample_text, pricing_data",
+          "测试 TokenCounter: 验证 tiktoken 和 fallback 计数准确性",
+          "测试 CostEstimator: 验证各模型定价计算正确",
+          "测试 BudgetTracker: 验证预算限制触发",
+          "测试 BaseAgent integration: 验证现有功能不受影响",
+          "Mock tiktoken: 避免外部依赖",
+          "Achieve ≥85% coverage: 覆盖所有关键路径"
+        ],
+        "depends_on": [1, 2],
+        "output": "test_suite"
+      }
+    ],
+    "target_files": [
+      "src/services/token_service.py",
+      "src/agents/base.py:_get_tokenizer:107-113",
+      "src/agents/base.py:count_tokens:115-128",
+      "src/agents/base.py:estimate_cost:130-164",
+      "tests/unit/services/test_token_service.py"
+    ]
+  }
+}
