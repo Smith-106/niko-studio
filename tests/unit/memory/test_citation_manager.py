@@ -52,7 +52,7 @@ class TestCitationManager:
         citation_manager.add_citation(citation)
 
         # Verify success
-        result = citation_manager.verify_citation("cite-verify")
+        result = citation_manager.verify_citation_detailed("cite-verify")
         assert result["valid"] is True
         assert result["current_hash"] == real_hash
 
@@ -60,7 +60,7 @@ class TestCitationManager:
         sample_file.write_text("Modified Content", encoding="utf-8")
 
         # Verify failure
-        result = citation_manager.verify_citation("cite-verify")
+        result = citation_manager.verify_citation_detailed("cite-verify")
         assert result["valid"] is False
         assert result["current_hash"] != real_hash
 

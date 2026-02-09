@@ -47,7 +47,8 @@ app.add_middleware(
 )
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Templates
 templates = Jinja2Templates(directory="src/web/templates")
@@ -80,7 +81,25 @@ manager = ConnectionManager()
 
 @app.get("/", response_class=HTMLResponse)
 async def get(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Web UI is deprecated: Desktop + MCP Gateway is the primary entry.
+    # Default behavior: return 410 to indicate the UI is phased out.
+    # To temporarily forward, set WEB_UI_FORWARD_URL (e.g. http://127.0.0.1:8000).
+    forward_url = os.getenv("WEB_UI_FORWARD_URL", "").strip()
+    if forward_url:
+        target = forward_url.rstrip("/")
+        content = (
+            "<html>"
+            "<head><meta http-equiv=\"refresh\" content=\"0; url="
+            + target
+            + "\"/></head>"
+            "<body>Redirecting to Gateway...</body>"
+            "</html>"
+        )
+        return HTMLResponse(content, status_code=302)
+    return HTMLResponse(
+        "Web UI has been deprecated. Please use the Desktop client or MCP Gateway.",
+        status_code=410,
+    )
 
 
 @app.websocket("/ws/{client_id}")

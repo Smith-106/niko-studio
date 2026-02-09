@@ -1,0 +1,12 @@
+{
+  "id": "IMPL-004",
+  "title": "P6 知识层测试",
+  "stage": 2,
+  "priority": "P0",
+  "description": "创建 GraphEngine 和混合搜索测试",
+  "files": ["tests/unit/test_graph_engine.py"],
+  "acceptance_criteria": ["测试覆盖 Cypher 查询", "测试覆盖实体/关系 CRUD"],
+  "dependencies": ["IMPL-002"],
+  "status": "completed",
+  "result": "PASS - 20 个测试用例全部通过"
+}

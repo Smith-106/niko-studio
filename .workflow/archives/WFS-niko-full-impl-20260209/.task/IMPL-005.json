@@ -1,0 +1,168 @@
+{
+  "id": "IMPL-005",
+  "title": "ObsidianSyncService Implementation",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-niko-full-impl-20260209/.process/context-package.json",
+  "cli_execution_id": "WFS-niko-full-impl-20260209-IMPL-005",
+  "cli_execution": {
+    "strategy": "new"
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": "parallel-xyz456",
+    "module": null,
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false
+    }
+  },
+  "context": {
+    "requirements": [
+      "实现 3 个核心类: [ObsidianSyncService, VaultWatcher, ConflictResolver]",
+      "创建 1 个文件: src/services/obsidian_sync.py",
+      "支持 2 个同步模式: [one-way (niko → obsidian), two-way (bidirectional)]",
+      "使用 watchdog 监听文件变化: .writing/ 和 vault 目录",
+      "创建 1 个配置文件: config/obsidian.yaml",
+      "创建 1 个测试文件: tests/unit/services/test_obsidian_sync.py"
+    ],
+    "focus_paths": [
+      "src/services/obsidian_sync.py",
+      "config/obsidian.yaml",
+      "tests/unit/services/test_obsidian_sync.py"
+    ],
+    "acceptance": [
+      "同步 .writing/memories/ 到 Obsidian vault: 验证 sync() 方法复制文件",
+      "支持 2 种冲突策略: [latest-wins, manual]: 验证 ConflictResolver.resolve() 正确处理",
+      "文件变化实时同步: 验证 watchdog 触发 on_modified 事件",
+      "支持 Obsidian frontmatter 保留: 验证 YAML frontmatter 不被破坏",
+      "测试覆盖率 ≥75%: 验证 pytest --cov=src/services/obsidian_sync --cov-report=term | grep '75%'"
+    ],
+    "depends_on": [],
+    "inherited": {},
+    "shared_context": {
+      "tech_stack": ["Python 3.11+", "watchdog", "PyYAML", "pathlib"],
+      "conventions": ["Preserve Obsidian metadata", "Atomic file operations", "Conflict detection via hash"],
+      "patterns": ["File watcher → Change detection → Conflict resolution → Sync"]
+    },
+    "artifacts": [
+      {
+        "type": "individual_role_analysis",
+        "source": "context_package",
+        "path": "src/memory/memory_manager.py",
+        "priority": "high",
+        "usage": "OpenKL YAML frontmatter format reference",
+        "contains": "MemoryEntry.to_yaml_frontmatter(), from_yaml_file() methods"
+      },
+      {
+        "type": "individual_role_analysis",
+        "source": "context_package",
+        "path": "src/services/file_sync.py",
+        "priority": "medium",
+        "usage": "File sync patterns",
+        "contains": "Watchdog integration examples"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths",
+        "commands": ["Read(.workflow/active/WFS-niko-full-impl-20260209/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_memory_yaml_format",
+        "action": "Analyze MemoryManager YAML frontmatter format for Obsidian compatibility",
+        "commands": [
+          "Read(src/memory/memory_manager.py:58-84)"
+        ],
+        "output_to": "yaml_frontmatter_format",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_file_sync_patterns",
+        "action": "Analyze existing file_sync.py for watchdog patterns",
+        "commands": [
+          "Read(src/services/file_sync.py)"
+        ],
+        "output_to": "file_sync_code",
+        "on_error": "skip_optional"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "Implement ObsidianSyncService core classes",
+        "description": "Create ObsidianSyncService, VaultWatcher, ConflictResolver",
+        "modification_points": [
+          "创建 1 个新文件: src/services/obsidian_sync.py (预估 400 行)",
+          "实现 ObsidianSyncService: 主入口，管理同步逻辑",
+          "实现 VaultWatcher: 使用 watchdog 监听文件变化",
+          "实现 ConflictResolver: 检测冲突并应用解决策略",
+          "支持 2 种模式: [one-way (单向同步), two-way (双向同步)]",
+          "支持 2 种冲突策略: [latest-wins (最新优先), manual (手动解决)]"
+        ],
+        "logic_flow": [
+          "设计 ObsidianSyncService: sync(mode='one-way', conflict_strategy='latest-wins')",
+          "实现文件映射: .writing/memories/by_date/YYYY/MM/DD/*.md → vault/niko-studio/YYYY-MM-DD/*.md",
+          "实现 ConflictResolver: 计算文件 hash，比较 mtime，应用策略",
+          "实现 VaultWatcher: watchdog.Observer 监听 .writing/ 和 vault/",
+          "实现事件处理: on_created, on_modified, on_deleted → 触发 sync()",
+          "保留 YAML frontmatter: 解析 frontmatter，合并 Obsidian 特有字段 (tags, aliases)",
+          "实现冲突日志: 记录冲突到 .writing/.logs/sync_conflicts.log",
+          "实现同步状态: 记录最后同步时间到 .sync_state.json"
+        ],
+        "depends_on": [],
+        "output": "obsidian_sync_implementation"
+      },
+      {
+        "step": 2,
+        "title": "Create configuration file",
+        "description": "Implement config/obsidian.yaml",
+        "modification_points": [
+          "创建 config/obsidian.yaml: 定义 vault 路径、同步模式、冲突策略"
+        ],
+        "logic_flow": [
+          "设计 obsidian.yaml 结构: {vault_path, sync_mode, conflict_strategy, watch_patterns, exclude_patterns}",
+          "添加默认配置: vault_path='~/Documents/Obsidian/MyVault', sync_mode='one-way', conflict_strategy='latest-wins'",
+          "添加高级选项: watch_patterns=['*.md'], exclude_patterns=['.obsidian/', '.trash/']",
+          "实现配置加载: ObsidianSyncService.load_config(config_path)",
+          "添加配置验证: 检查 vault_path 是否存在"
+        ],
+        "depends_on": [1],
+        "output": "config_file"
+      },
+      {
+        "step": 3,
+        "title": "Write comprehensive unit tests",
+        "description": "Test ObsidianSyncService and all sync modes",
+        "modification_points": [
+          "创建 1 个测试文件: tests/unit/services/test_obsidian_sync.py",
+          "实现 8 个测试用例: [test_one_way_sync, test_two_way_sync, test_conflict_latest_wins, test_conflict_manual, test_frontmatter_preservation, test_watcher_triggers, test_file_mapping, test_config_loading]"
+        ],
+        "logic_flow": [
+          "Setup: 创建临时 .writing/ 和 vault/ 目录，添加测试文件",
+          "测试 one-way sync: 验证 .writing/ → vault 单向同步",
+          "测试 two-way sync: 验证双向同步，两边修改都被同步",
+          "测试冲突解决: 验证 latest-wins 策略选择最新文件",
+          "测试 frontmatter 保留: 验证 YAML frontmatter 不被破坏",
+          "测试 watcher: mock watchdog，验证文件变化触发 sync",
+          "测试文件映射: 验证路径转换正确",
+          "测试配置加载: 验证 config/obsidian.yaml 正确解析",
+          "Cleanup: 删除临时目录"
+        ],
+        "depends_on": [1, 2],
+        "output": "test_suite"
+      }
+    ],
+    "target_files": [
+      "src/services/obsidian_sync.py",
+      "config/obsidian.yaml",
+      "tests/unit/services/test_obsidian_sync.py"
+    ]
+  }
+}

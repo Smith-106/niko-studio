@@ -29,25 +29,31 @@ from src.workflow.base_state import BaseState
 
 @AdapterRegistry.register(DomainType.NOVEL.value)
 class NovelAdapter(BaseDomainAdapter):
-    
+
     def get_domain_type(self) -> str:
         return DomainType.NOVEL.value
-    
+
     def get_state_class(self) -> Type[BaseState]:
         return WritingState
-    
+
     def create_initial_state(self, user_request: str, **kwargs) -> BaseState:
+        metadata = kwargs.get("metadata") or {}
+        resume_decision = kwargs.get("resume_decision")
+        if resume_decision:
+            metadata = {**metadata, "resume_decision": resume_decision}
+
         return create_initial_state(
             user_idea=user_request,
             genre=kwargs.get("genre", "悬疑"),
             target_chapters=kwargs.get("target_chapters", 30),
-            target_wordcount=kwargs.get("target_wordcount", 600000)
+            target_wordcount=kwargs.get("target_wordcount", 600000),
+            metadata=metadata
         )
-    
+
     def evaluate(self, state: BaseState) -> BaseEvaluationResult:
         critique = state.get("critique_result", {})
         lock_analysis = critique.get("lock_analysis", {})
-        
+
         return BaseEvaluationResult(
             decision=critique.get("decision", "REVISE"),
             decision_reason=critique.get("decision_reason", ""),
@@ -60,16 +66,42 @@ class NovelAdapter(BaseDomainAdapter):
     def create_graph(self):
         workflow = StateGraph(WritingState)
 
-        # 使用绑定的方法作为节点
+        # 添加 Commander 节点
+        workflow.add_node("commander", self.commander_node)
         workflow.add_node("architect", self.architect_node)
         workflow.add_node("writer", self.writer_node)
+        workflow.add_node("distillation", self.distillation_node)
         workflow.add_node("critic", self.critic_node)
         workflow.add_node("human_reviewer", self.human_review_node)
         workflow.add_node("finalize", self.finalize_node)
-        
-        workflow.set_entry_point("architect")
+
+        # Commander 作为入口点
+        workflow.set_entry_point("commander")
+
+        # Commander 路由到不同工作流
+        workflow.add_conditional_edges(
+            "commander",
+            self.route_after_commander,
+            {
+                "architect": "architect",
+                "writer": "writer",  # L1 快速模式直接到 Writer
+            }
+        )
+
         workflow.add_edge("architect", "writer")
-        workflow.add_edge("writer", "critic")
+
+        # Writer -> Distillation (条件边)
+        workflow.add_conditional_edges(
+            "writer",
+            self.route_after_writer,
+            {
+                "distillation": "distillation",
+                "critic": "critic",
+            }
+        )
+
+        # Distillation -> Critic
+        workflow.add_edge("distillation", "critic")
 
         workflow.add_conditional_edges(
             "critic",
@@ -80,11 +112,10 @@ class NovelAdapter(BaseDomainAdapter):
                 "writer": "writer"
             }
         )
-        
+
         workflow.add_edge("human_reviewer", "finalize")
         workflow.add_edge("finalize", END)
-        
-        # 返回构建好的图 (未编译)
+
         return workflow
 
     def _get_llm(self):
@@ -119,6 +150,79 @@ class NovelAdapter(BaseDomainAdapter):
     # ============================================================
     # 节点函数
     # ============================================================
+
+    async def commander_node(self, state: WritingState) -> Dict[str, Any]:
+        """Commander Agent: 任务路由和技能调度"""
+        print("\n" + "="*50)
+        print("🎯 Commander Agent: 分析任务并路由...")
+        print("="*50)
+
+        from src.agents.commander import CommanderAgent, WorkflowLevel
+
+        llm = self._get_llm()
+        agent = CommanderAgent(llm)
+
+        try:
+            user_idea = state.get("user_idea", "")
+
+            # 路由到工作流级别
+            level = agent.route(user_idea)
+
+            # 检测场景类型并调度技能
+            scene_type = agent.detect_scene_type(user_idea)
+            skills = agent.dispatch_skills(scene_type)
+
+            # 分解任务
+            assignments = agent.dispatch_tasks(user_idea, level)
+
+            print(f"✅ 工作流级别: {level.value}")
+            print(f"   场景类型: {scene_type.value}")
+            print(f"   调度技能: {skills[:3]}...")
+            print(f"   任务数量: {len(assignments)}")
+
+            return {
+                "workflow_level": level.value,
+                "scene_type": scene_type.value,
+                "dispatched_skills": skills,
+                "task_assignments": [a.model_dump() for a in assignments],
+            }
+
+        except Exception as e:
+            print(f"❌ Commander 执行失败: {e}")
+            return {
+                "workflow_level": "standard",
+                "errors": state.get("errors", []) + [f"Commander Error: {str(e)}"]
+            }
+
+    def route_after_commander(self, state: WritingState) -> str:
+        """根据 Commander 的路由决策选择下一个节点"""
+        level = state.get("workflow_level", "standard")
+
+        if level == "rapid":
+            # L1 快速模式: 跳过 Architect 直接到 Writer
+            print("⚡ L1 快速模式: 直接进入 Writer")
+            return "writer"
+        else:
+            # L3/L5 标准/深度模式: 先经过 Architect
+            print("📋 标准模式: 进入 Architect 规划结构")
+            return "architect"
+
+    def route_after_writer(self, state: WritingState) -> str:
+        """Writer 后的路由决策: 是否执行蒸馏"""
+        # 检查是否需要蒸馏
+        has_draft = bool(state.get("draft_content"))
+        not_distilled = "distillation_result" not in state
+
+        # 配置允许蒸馏
+        config = self.config or {}
+        distill_enabled = config.get("enable_distillation", True)
+
+        if has_draft and not_distilled and distill_enabled:
+            print("🧪 进入知识蒸馏节点...")
+            return "distillation"
+        else:
+            print("⏭️ 跳过蒸馏，直接进入 Critic")
+            return "critic"
 
     async def architect_node(self, state: WritingState) -> Dict[str, Any]:
         print("\n" + "="*50)
@@ -227,6 +331,46 @@ class NovelAdapter(BaseDomainAdapter):
             print(f"❌ Writer 执行失败: {e}")
             return {
                 "errors": state.get("errors", []) + [f"Writer Error: {str(e)}"]
+            }
+
+    async def distillation_node(self, state: WritingState) -> Dict[str, Any]:
+        """Distillation Node: 知识蒸馏"""
+        print("\n" + "="*50)
+        print("🧪 Distillation Node: 执行知识蒸馏...")
+        print("="*50)
+
+        from src.workflow.graph import DistillationNode, DistillationTemplate
+
+        # 获取蒸馏模板配置
+        config = self.config or {}
+        template_name = config.get("distillation_template", "full")
+        template = DistillationTemplate.from_string(template_name)
+
+        # 创建蒸馏节点
+        node = DistillationNode(template=template)
+
+        try:
+            # 执行蒸馏
+            updated_state = node.process(state)
+
+            # 获取结果
+            result = updated_state.get("distillation_result", {})
+
+            print(f"✅ 蒸馏完成:")
+            print(f"   实体数: {result.get('entities_count', 0)}")
+            print(f"   关系数: {result.get('relations_count', 0)}")
+            print(f"   事件数: {result.get('events_count', 0)}")
+            print(f"   模板: {result.get('template', 'full')}")
+
+            return {
+                "distillation_result": result,
+                "distillation_state": updated_state.get("distillation_state", {}),
+            }
+
+        except Exception as e:
+            print(f"⚠️ 蒸馏失败 (不阻塞主流程): {e}")
+            return {
+                "errors": state.get("errors", []) + [f"Distillation warning: {str(e)}"]
             }
 
     async def critic_node(self, state: WritingState) -> Dict[str, Any]:

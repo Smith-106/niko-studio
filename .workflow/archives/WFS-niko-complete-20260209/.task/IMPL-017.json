@@ -1,0 +1,35 @@
+{
+  "id": "IMPL-017",
+  "title": "实现 tension_curve_analyzer.py 张力曲线分析器",
+  "status": "pending",
+  "meta": {
+    "type": "feature",
+    "agent": "code-developer",
+    "priority": "P0",
+    "execution_group": "analyzers-foundation",
+    "depends_on": ["IMPL-014"]
+  },
+  "context": {
+    "description": "实现张力曲线分析器，用于分析文本的情节张力变化",
+    "requirements": [
+      "继承 BaseAnalyzer 抽象基类",
+      "实现 async analyze(content: str) -> TensionCurve 方法",
+      "识别张力高点、低点和转折点",
+      "生成张力曲线数据用于可视化"
+    ],
+    "acceptance_criteria": [
+      "TensionCurveAnalyzer 类继承 BaseAnalyzer",
+      "analyze 方法返回 TensionCurve",
+      "TensionCurve 包含 points: List[TensionPoint] 和 peaks/valleys 分析"
+    ],
+    "reference_files": [
+      "src/narrative/evaluators/base.py",
+      "src/narrative/suspense_analyzer.py"
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      "读取 src/narrative/suspense_analyzer.py 了解悬念分析模式"
+    ]
+  }
+}

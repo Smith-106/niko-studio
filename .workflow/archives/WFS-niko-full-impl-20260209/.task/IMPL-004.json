@@ -1,0 +1,168 @@
+{
+  "id": "IMPL-004",
+  "title": "BackupService Implementation",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-niko-full-impl-20260209/.process/context-package.json",
+  "cli_execution_id": "WFS-niko-full-impl-20260209-IMPL-004",
+  "cli_execution": {
+    "strategy": "new"
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": "parallel-xyz456",
+    "module": null,
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false
+    }
+  },
+  "context": {
+    "requirements": [
+      "实现 4 个核心类: [BackupService, BackupScheduler, BackupArchiver, BackupRestore]",
+      "创建 1 个文件: src/services/backup_service.py",
+      "支持 3 种备份策略: [incremental, full, differential]",
+      "创建 1 个配置文件: config/backup.yaml",
+      "创建 1 个 CLI 工具: scripts/backup_manager.py",
+      "创建 1 个测试文件: tests/unit/services/test_backup_service.py"
+    ],
+    "focus_paths": [
+      "src/services/backup_service.py",
+      "config/backup.yaml",
+      "scripts/backup_manager.py",
+      "tests/unit/services/test_backup_service.py"
+    ],
+    "acceptance": [
+      "支持 scheduled backups: 验证 BackupScheduler.schedule(cron_expr) 正确触发",
+      "备份压缩并保留版本: 验证 BackupArchiver.create() 生成 .tar.gz 文件 (格式: backup-YYYYMMDD-HHMMSS.tar.gz)",
+      "支持 3 种策略: 验证 incremental/full/differential 模式正确执行",
+      "支持 restore 操作: 验证 BackupRestore.restore(timestamp) 恢复文件",
+      "配置化备份策略: 验证 config/backup.yaml 加载正确",
+      "测试覆盖率 ≥80%: 验证 pytest --cov=src/services/backup_service --cov-report=term | grep '80%'"
+    ],
+    "depends_on": [],
+    "inherited": {},
+    "shared_context": {
+      "tech_stack": ["Python 3.11+", "tarfile", "schedule", "PyYAML"],
+      "conventions": ["OpenKL file structure awareness", "Atomic operations", "Version retention policy"],
+      "patterns": ["Scheduled task → Archive → Store → Clean old versions"]
+    },
+    "artifacts": [
+      {
+        "type": "individual_role_analysis",
+        "source": "context_package",
+        "path": "src/memory/memory_manager.py",
+        "priority": "high",
+        "usage": "OpenKL file structure reference",
+        "contains": "File organization in .writing/ directory"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths",
+        "commands": ["Read(.workflow/active/WFS-niko-full-impl-20260209/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_writing_directory_structure",
+        "action": "Analyze .writing/ directory structure for backup scope",
+        "commands": [
+          "bash(cd D:/工作目录/niko-studio && dir /s /b .writing 2>NUL | head -20 || echo 'Directory not found')"
+        ],
+        "output_to": "writing_dir_structure",
+        "on_error": "skip_optional"
+      },
+      {
+        "step": "search_backup_patterns",
+        "action": "Search for existing backup/archive patterns in codebase",
+        "commands": [
+          "bash(cd D:/工作目录/niko-studio && rg 'tarfile|zipfile|backup|archive' --type py -n --max-count 10 2>NUL || echo 'No matches')"
+        ],
+        "output_to": "existing_backup_patterns",
+        "on_error": "skip_optional"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "Implement BackupService core classes",
+        "description": "Create BackupService, BackupScheduler, BackupArchiver, BackupRestore",
+        "modification_points": [
+          "创建 1 个新文件: src/services/backup_service.py (预估 500 行)",
+          "实现 BackupService: 主入口，协调其他组件",
+          "实现 BackupScheduler: 基于 schedule 库实现定时备份",
+          "实现 BackupArchiver: 使用 tarfile 创建压缩归档",
+          "实现 BackupRestore: 从归档恢复文件",
+          "支持 3 种策略: [full (全量备份), incremental (增量备份，基于 mtime), differential (差异备份，基于 baseline)]"
+        ],
+        "logic_flow": [
+          "设计 BackupArchiver: create_archive(source_dir, strategy, baseline=None) → tar.gz 文件",
+          "实现 full 策略: 打包整个 .writing/ 目录",
+          "实现 incremental 策略: 仅备份自上次备份后修改的文件",
+          "实现 differential 策略: 备份自 baseline 后修改的文件",
+          "实现 BackupScheduler: schedule.every().day.at('03:00').do(backup_job)",
+          "实现 BackupRestore: extract_archive(archive_path, target_dir)",
+          "实现版本管理: 保留最近 N 个备份，自动清理旧版本",
+          "添加 metadata: 记录备份时间、策略、文件数、大小到 .backup_meta.json"
+        ],
+        "depends_on": [],
+        "output": "backup_service_implementation"
+      },
+      {
+        "step": 2,
+        "title": "Create configuration and CLI tool",
+        "description": "Implement config/backup.yaml and scripts/backup_manager.py",
+        "modification_points": [
+          "创建 config/backup.yaml: 定义备份策略、保留策略、调度时间",
+          "创建 scripts/backup_manager.py: CLI 工具支持 backup/restore/list/clean 命令"
+        ],
+        "logic_flow": [
+          "设计 backup.yaml 结构: {backup_dir, strategy, schedule, retention: {max_backups, max_age_days}}",
+          "实现 backup_manager.py: argparse CLI with subcommands",
+          "实现 backup 命令: backup_service.create_backup(strategy)",
+          "实现 restore 命令: backup_service.restore(timestamp, target_dir)",
+          "实现 list 命令: 列出所有可用备份及元数据",
+          "实现 clean 命令: 手动清理旧备份",
+          "添加进度条: tqdm 显示备份/恢复进度",
+          "添加日志: 记录所有操作到 .writing/.logs/backup.log"
+        ],
+        "depends_on": [1],
+        "output": "config_and_cli"
+      },
+      {
+        "step": 3,
+        "title": "Write comprehensive unit tests",
+        "description": "Test BackupService and all strategies",
+        "modification_points": [
+          "创建 1 个测试文件: tests/unit/services/test_backup_service.py",
+          "实现 10 个测试用例: [test_full_backup, test_incremental_backup, test_differential_backup, test_restore, test_scheduler, test_version_management, test_cleanup, test_metadata, test_error_handling, test_cli_commands]"
+        ],
+        "logic_flow": [
+          "Setup: 创建临时 .writing/ 结构，添加测试文件",
+          "测试 full backup: 验证所有文件被打包",
+          "测试 incremental backup: 验证仅新增/修改文件被打包",
+          "测试 differential backup: 验证基于 baseline 的差异备份",
+          "测试 restore: 验证文件正确恢复",
+          "测试 scheduler: mock schedule 库，验证定时触发",
+          "测试 version management: 验证旧版本自动清理",
+          "测试 metadata: 验证 .backup_meta.json 正确生成",
+          "测试错误处理: 验证权限错误、磁盘空间不足等场景",
+          "Cleanup: 删除临时文件和归档"
+        ],
+        "depends_on": [1, 2],
+        "output": "test_suite"
+      }
+    ],
+    "target_files": [
+      "src/services/backup_service.py",
+      "config/backup.yaml",
+      "scripts/backup_manager.py",
+      "tests/unit/services/test_backup_service.py"
+    ]
+  }
+}

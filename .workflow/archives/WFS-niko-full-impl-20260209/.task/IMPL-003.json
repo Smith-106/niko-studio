@@ -1,0 +1,162 @@
+{
+  "id": "IMPL-003",
+  "title": "SequentialThinking Integration",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-niko-full-impl-20260209/.process/context-package.json",
+  "cli_execution_id": "WFS-niko-full-impl-20260209-IMPL-003",
+  "cli_execution": {
+    "strategy": "new"
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": "parallel-abc123",
+    "module": null,
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false
+    }
+  },
+  "context": {
+    "requirements": [
+      "验证现有实现: src/agents/sequential_thinking.py (文件已存在)",
+      "修改 1 个文件: src/agents/architect.py",
+      "实现 2 个新方法: [_apply_sequential_thinking (调用思维链), _extract_scene_decisions (提取决策)]",
+      "集成到 plan_scenes 方法: 在场景规划前调用 sequential thinking",
+      "创建 1 个单元测试: tests/unit/agents/test_architect_thinking.py"
+    ],
+    "focus_paths": [
+      "src/agents/sequential_thinking.py",
+      "src/agents/architect.py",
+      "tests/unit/agents/test_architect_thinking.py"
+    ],
+    "acceptance": [
+      "Architect 调用 SequentialThinking: 验证 _apply_sequential_thinking() 正确调用",
+      "思维链输出影响 scene cards: 验证 _extract_scene_decisions() 提取决策并应用",
+      "集成不破坏现有功能: 验证 pytest tests/unit/test_architect.py 全部通过",
+      "测试覆盖 SequentialThinking 路径: 验证 test_architect_thinking.py 包含 3+ 测试用例"
+    ],
+    "depends_on": [],
+    "inherited": {},
+    "shared_context": {
+      "tech_stack": ["Python 3.11+", "LangChain", "SequentialThinking MCP"],
+      "conventions": ["Async/await pattern", "Thinking chain before action", "Extract structured decisions"],
+      "patterns": ["Sequential Thinking → Decision Extraction → Scene Planning"]
+    },
+    "artifacts": [
+      {
+        "type": "individual_role_analysis",
+        "source": "context_package",
+        "path": "src/agents/sequential_thinking.py",
+        "priority": "highest",
+        "usage": "SequentialThinking implementation",
+        "contains": "thinking_chain method, decision extraction utilities"
+      },
+      {
+        "type": "individual_role_analysis",
+        "source": "context_package",
+        "path": "src/agents/architect.py",
+        "priority": "highest",
+        "usage": "Architect agent integration point",
+        "contains": "plan_scenes method, scene card generation logic"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths",
+        "commands": ["Read(.workflow/active/WFS-niko-full-impl-20260209/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_sequential_thinking_api",
+        "action": "Analyze SequentialThinking implementation and API",
+        "commands": [
+          "Read(src/agents/sequential_thinking.py)"
+        ],
+        "output_to": "sequential_thinking_api",
+        "on_error": "fail"
+      },
+      {
+        "step": "analyze_architect_plan_scenes",
+        "action": "Analyze Architect's plan_scenes method to identify integration point",
+        "commands": [
+          "bash(cd D:/工作目录/niko-studio && rg 'def plan_scenes|async def plan_scenes' src/agents/architect.py -A 20 2>NUL || echo 'Method not found')"
+        ],
+        "output_to": "architect_plan_scenes_code",
+        "on_error": "skip_optional"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "Verify SequentialThinking implementation",
+        "description": "Confirm SequentialThinking module is complete and functional",
+        "modification_points": [
+          "验证 SequentialThinking 类存在",
+          "验证 thinking_chain() 方法可调用",
+          "检查输出格式: 是否返回结构化思维过程"
+        ],
+        "logic_flow": [
+          "读取 src/agents/sequential_thinking.py",
+          "确认 thinking_chain() 方法签名和返回值",
+          "检查是否有示例用法或文档",
+          "运行简单测试: 调用 thinking_chain() 验证输出",
+          "如有缺陷，修复并补充测试"
+        ],
+        "depends_on": [],
+        "output": "sequential_thinking_verification"
+      },
+      {
+        "step": 2,
+        "title": "Implement Architect integration methods",
+        "description": "Add _apply_sequential_thinking and _extract_scene_decisions to Architect",
+        "modification_points": [
+          "修改 1 个文件: src/agents/architect.py",
+          "实现 _apply_sequential_thinking() 方法: 调用 SequentialThinking.thinking_chain()",
+          "实现 _extract_scene_decisions() 方法: 从思维链输出提取场景决策",
+          "修改 plan_scenes() 方法: 在规划前调用 _apply_sequential_thinking()"
+        ],
+        "logic_flow": [
+          "导入 SequentialThinking: from src.agents.sequential_thinking import SequentialThinking",
+          "初始化 SequentialThinking: self.thinking = SequentialThinking(llm=self.llm)",
+          "实现 _apply_sequential_thinking(context): 调用 self.thinking.thinking_chain(context)",
+          "实现 _extract_scene_decisions(thinking_output): 解析思维链输出，提取 scene 相关决策",
+          "修改 plan_scenes(): thinking = await self._apply_sequential_thinking(); decisions = self._extract_scene_decisions(thinking); 应用 decisions 到 scene_cards",
+          "添加配置开关: enable_sequential_thinking (default: True)"
+        ],
+        "depends_on": [1],
+        "output": "architect_integration"
+      },
+      {
+        "step": 3,
+        "title": "Write unit tests for integration",
+        "description": "Test Architect + SequentialThinking integration",
+        "modification_points": [
+          "创建 1 个测试文件: tests/unit/agents/test_architect_thinking.py",
+          "实现 4 个测试用例: [test_apply_sequential_thinking, test_extract_scene_decisions, test_plan_scenes_with_thinking, test_backward_compatibility]"
+        ],
+        "logic_flow": [
+          "Setup: Mock SequentialThinking, 准备测试 context",
+          "测试 _apply_sequential_thinking(): 验证调用 SequentialThinking.thinking_chain()",
+          "测试 _extract_scene_decisions(): 验证提取逻辑正确",
+          "测试 plan_scenes() with thinking: 验证思维链影响 scene cards",
+          "测试向后兼容: enable_sequential_thinking=False 时功能不变",
+          "Mock LLM: 避免实际 API 调用",
+          "Assert scene_cards 包含思维链影响的字段"
+        ],
+        "depends_on": [1, 2],
+        "output": "unit_tests"
+      }
+    ],
+    "target_files": [
+      "src/agents/sequential_thinking.py",
+      "src/agents/architect.py",
+      "tests/unit/agents/test_architect_thinking.py"
+    ]
+  }
+}

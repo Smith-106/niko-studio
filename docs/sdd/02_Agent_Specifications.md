@@ -72,10 +72,358 @@ class ValidationResult(BaseModel):
 
 ---
 
-## 二、Architect Agent (策划架构师)
+## 二、Commander Agent (指挥官)
 
-> **Persona**: 网文主编与结构大师  
-> **核心模式**: Planning Pattern + Chain of Thought  
+> **Persona**: 项目经理与任务协调者
+> **核心模式**: Router Pattern + Orchestration
+> **核心理论**: 五级工作流 (L1-L5) + 技能调度
+
+### 2.1 Interface Layer (接口层)
+
+#### 输入规格 (Input Specification)
+
+```python
+class CommanderInput(BaseModel):
+    """Commander Agent 输入"""
+    # 用户请求
+    user_request: str = Field(..., description="用户的原始请求")
+    request_type: Literal["create", "modify", "evaluate", "plan", "query"] = Field(
+        default="create", description="请求类型"
+    )
+
+    # 会话上下文
+    session_id: str = Field(..., description="会话ID")
+    session_state: Optional[dict] = Field(default=None, description="当前会话状态")
+
+    # 项目上下文
+    project_id: Optional[str] = Field(default=None, description="项目ID")
+    current_chapter: Optional[int] = Field(default=None, description="当前章节号")
+
+    # 可选参数
+    priority: Literal["low", "normal", "high", "urgent"] = Field(default="normal")
+    constraints: Optional[list[str]] = Field(default=None, description="约束条件")
+```
+
+#### 输出规格 (Output Schema)
+
+```python
+class WorkflowRoute(BaseModel):
+    """工作流路由决策"""
+    workflow_level: Literal["L1", "L2", "L3", "L4", "L5"]
+    workflow_name: str
+    estimated_steps: int
+    requires_human_review: bool = False
+
+class TaskAssignment(BaseModel):
+    """单个任务分配"""
+    task_id: str
+    target_agent: Literal["Architect", "Writer", "Critic", "Worldbuilding", "Character", "Plot"]
+    task_type: str
+    priority: int = Field(..., ge=1, le=5, description="优先级 1-5")
+    dependencies: list[str] = Field(default_factory=list, description="依赖的任务ID")
+
+    # 技能注入
+    required_skills: list[str] = Field(default_factory=list, description="需加载的技能包")
+    skill_priority: Literal["must", "should", "may"] = Field(default="should")
+
+    # 上下文传递
+    context_requirements: list[str] = Field(default_factory=list)
+    input_data: dict = Field(default_factory=dict)
+
+class CommanderOutput(BaseModel):
+    """Commander Agent 完整输出"""
+    # 路由决策
+    workflow_route: WorkflowRoute
+
+    # 任务分配
+    task_assignments: list[TaskAssignment]
+    execution_order: list[str] = Field(..., description="任务执行顺序")
+
+    # 技能调度
+    skill_dispatch: SkillDispatchPlan
+
+    # 检查点
+    checkpoint_strategy: CheckpointStrategy
+
+    # 元数据
+    reasoning: str = Field(..., description="路由决策的推理过程")
+    estimated_tokens: int = Field(default=0, description="预估Token消耗")
+
+class SkillDispatchPlan(BaseModel):
+    """技能调度计划"""
+    preload_skills: list[str] = Field(default_factory=list, description="预加载技能")
+    scene_skill_mapping: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="场景类型 → 技能列表映射"
+    )
+
+class CheckpointStrategy(BaseModel):
+    """检查点策略"""
+    auto_checkpoint: bool = True
+    checkpoint_triggers: list[str] = Field(
+        default=["chapter_complete", "major_revision", "critic_approved"]
+    )
+```
+
+---
+
+### 2.2 Cognitive Layer (认知层)
+
+#### 思考路径 (Chain of Thought)
+
+```yaml
+CommanderCoT:
+
+  Phase1_Request_Analysis:
+    description: 解析用户请求，识别意图和复杂度
+    思考步骤:
+      1. "用户想要做什么？创作/修改/评估/规划/查询？"
+      2. "这个任务的复杂度如何？"
+         - 简单问答 → L1
+         - 单段落生成 → L2
+         - 单章节创作 → L3
+         - 多章节连续 → L4
+         - 全书规划 → L5
+      3. "需要哪些上下文？世界观/角色/剧情？"
+      4. "有没有特殊约束？风格/字数/截止时间？"
+
+  Phase2_Workflow_Routing:
+    description: 根据复杂度选择工作流
+    路由规则:
+      L1_Rapid:
+        触发条件:
+          - 简单问答
+          - 快速润色 (< 500字)
+          - 单一修改点
+        执行路径: Commander → Writer → 返回
+        跳过: Architect, Critic
+
+      L2_Simple:
+        触发条件:
+          - 单段落生成
+          - 简单场景描写
+          - 对话生成
+        执行路径: Commander → Writer → Critic(简化) → 返回
+
+      L3_Standard:
+        触发条件:
+          - 单章节创作
+          - 需要结构规划
+          - 需要角色一致性
+        执行路径: Commander → Architect → Writer → Critic → 返回
+        检查点: 章节完成后
+
+      L4_Extended:
+        触发条件:
+          - 多章节连续创作
+          - 需要状态管理
+          - 伏笔追踪
+        执行路径: Commander → [Architect → Writer → Critic] × N
+        检查点: 每章节后
+        状态追踪: 必须
+
+      L5_Brainstorm:
+        触发条件:
+          - 全书规划
+          - 世界观构建
+          - 复杂角色关系
+        执行路径: Commander → Context Agents → Architect → 用户审阅
+        人工审阅: 必须
+
+  Phase3_Skill_Dispatch:
+    description: 根据场景类型匹配技能包
+    匹配规则:
+      场景类型识别:
+        - "开篇/第一章" → [opening-craft, tension-scene, character-forge]
+        - "对话场景" → [dialogue-system, psychology-craft, show-dont-tell]
+        - "动作场景" → [action-craft, tension-scene, pov-system]
+        - "高潮场景" → [conflict-escalation, tension-arc, emotion-arc]
+        - "结尾/收尾" → [ending-craft, foreshadowing-craft, emotion-arc]
+        - "转场过渡" → [transition-craft, timeline-craft]
+        - "世界观展示" → [worldview-craft, setting-craft, environment-craft]
+        - "角色刻画" → [character-forge, four-selves, psychology-craft]
+        - "悬念设置" → [suspense-craft, foreshadowing-craft, misdirection-twist]
+
+      技能优先级:
+        must: 必须加载，缺失则警告
+        should: 建议加载，提升质量
+        may: 可选加载，锦上添花
+
+      注入方式:
+        目标: Writer.style_guide 或 Critic.evaluation_criteria
+        格式: 技能内容摘要 + 关键检查点
+
+  Phase4_Task_Decomposition:
+    description: 将复杂任务分解为可执行子任务
+    分解原则:
+      - 单一职责: 每个任务只做一件事
+      - 明确输入输出: 任务间数据流清晰
+      - 依赖最小化: 减少任务间耦合
+      - 可回滚: 每个任务可独立回滚
+
+    任务模板:
+      上下文收集任务:
+        target_agent: Worldbuilding | Character | Plot
+        task_type: context_fetch
+        输出: 相关设定/角色/剧情信息
+
+      规划任务:
+        target_agent: Architect
+        task_type: scene_planning | chapter_planning | book_planning
+        输出: SceneCard | ChapterOutline | BookStructure
+
+      创作任务:
+        target_agent: Writer
+        task_type: draft_generation | revision
+        输出: 正文内容
+
+      评估任务:
+        target_agent: Critic
+        task_type: quality_evaluation
+        输出: 评分 + 反馈
+
+  Phase5_Result_Integration:
+    description: 整合各Agent输出，形成最终结果
+    整合策略:
+      成功路径:
+        - 所有任务成功 → 合并输出 → 返回用户
+        - Critic 通过 → 归档内容 → 更新状态
+
+      失败路径:
+        - Writer 输出不合格 → 触发修订循环
+        - Critic 拒绝 → 返回 Writer 重写
+        - 超过3次循环 → 请求人工介入
+
+      部分成功:
+        - 标记完成部分
+        - 记录失败原因
+        - 提供恢复建议
+```
+
+#### 技能调度业务规则 (Skill Dispatch Rules)
+
+```yaml
+SkillDispatchRules:
+
+  自动匹配:
+    触发: 每次任务分配时
+    策略:
+      1. 解析场景类型关键词
+      2. 查询 skills/ 目录技能清单
+      3. 按相关度排序
+      4. 取 top-3 技能注入
+
+  手动覆盖:
+    触发: 用户指定技能
+    优先级: 高于自动匹配
+    示例: "使用 tension-arc 技能写这一章"
+
+  技能冲突处理:
+    规则:
+      - 同类技能只取一个 (如 tension-scene vs tension-chapter)
+      - 层级技能可叠加 (如 tension-scene + tension-arc)
+      - 互补技能推荐叠加 (如 dialogue-system + psychology-craft)
+
+  技能缓存:
+    策略: Session 级别缓存已加载技能
+    刷新: 章节切换时重新评估
+```
+
+---
+
+### 2.3 Validation Layer (验证层)
+
+```yaml
+CommanderValidation:
+
+  必须通过的断言 (Must Pass):
+    - assert workflow_route is not None, "必须确定工作流路由"
+    - assert len(task_assignments) > 0, "必须有至少一个任务分配"
+    - assert all(t.target_agent in VALID_AGENTS for t in task_assignments), "目标Agent必须有效"
+    - assert execution_order contains all task_ids, "执行顺序必须包含所有任务"
+
+  质量门禁 (Quality Gates):
+    - 任务依赖无循环: detect_cycle(task_assignments) == False
+    - 技能匹配度: skill_relevance_score >= 0.5
+    - Token 预算: estimated_tokens <= session_token_limit
+
+  警告检查 (Warnings):
+    - L5 工作流未设置人工审阅点
+    - 技能包数量超过 5 个 (可能过载)
+    - 任务链超过 10 个步骤 (可能过于复杂)
+
+  决策规则 (Decision Rules):
+    路由验证:
+      - L1: 任务必须简单，不需要 Architect
+      - L3: 必须包含 Architect 和 Critic
+      - L5: 必须包含 Context Agents 和人工审阅
+
+    技能验证:
+      - must 级别技能缺失 → 警告并尝试加载
+      - 技能文件不存在 → 跳过并记录
+
+    检查点验证:
+      - L3+ 工作流必须有检查点策略
+      - 检查点触发条件必须明确
+```
+
+#### 2.4 Commander System Prompt
+
+```markdown
+# Commander Agent System Prompt
+
+你是 Niko-Studio 的指挥官 Agent，负责协调整个创作工作流。
+
+## 核心职责
+
+1. **请求解析**: 理解用户意图，识别任务复杂度
+2. **工作流路由**: 选择合适的 L1-L5 工作流
+3. **任务分解**: 将复杂任务拆解为可执行子任务
+4. **技能调度**: 为每个任务匹配合适的技能包
+5. **结果整合**: 合并各 Agent 输出，形成最终结果
+
+## 路由决策树
+
+```
+用户请求
+    │
+    ├─ 简单问答/快速润色? ──→ L1 Rapid
+    │
+    ├─ 单段落生成? ──→ L2 Simple
+    │
+    ├─ 单章节创作? ──→ L3 Standard
+    │
+    ├─ 多章节连续? ──→ L4 Extended
+    │
+    └─ 全书规划/世界观构建? ──→ L5 Brainstorm
+```
+
+## 技能调度规则
+
+根据场景类型自动匹配技能包：
+
+| 场景类型 | 核心技能 | 辅助技能 |
+|---------|---------|---------|
+| 开篇 | opening-craft | tension-scene, character-forge |
+| 对话 | dialogue-system | psychology-craft, show-dont-tell |
+| 高潮 | conflict-escalation | tension-arc, emotion-arc |
+| 结尾 | ending-craft | foreshadowing-craft |
+
+## 输出要求
+
+必须输出 JSON 格式，包含:
+- workflow_route: 工作流路由决策
+- task_assignments: 任务分配列表
+- skill_dispatch: 技能调度计划
+- reasoning: 决策推理过程
+```
+
+---
+
+## 三、Architect Agent (策划架构师)
+
+> **Persona**: 网文主编与结构大师
+> **核心模式**: Planning Pattern + Chain of Thought
 > **核心理论**: LOCK系统 + 两扇门结构
 
 ### 2.1 Interface Layer (接口层)

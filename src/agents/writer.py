@@ -277,18 +277,312 @@ CHAIN_RESOLUTION = """
 # ============================================================
 
 class WriterAgent:
-    """写作执行者 Agent"""
-    
+    """写作执行者 Agent - 集成 AgentKnowledgeLayer"""
+
     # 禁用词列表
     FORBIDDEN_WORDS = ["突然", "不禁", "竟然", "居然", "忍不住"]
-    
-    def __init__(self, llm):
+
+    def __init__(
+        self,
+        llm,
+        skill_loader=None,
+        knowledge_layer: Optional[Any] = None,
+        enable_knowledge_retrieval: bool = True
+    ):
+        """
+        Args:
+            llm: LangChain LLM 实例
+            skill_loader: 技能加载器
+            knowledge_layer: AgentKnowledgeLayer 实例
+            enable_knowledge_retrieval: 是否启用知识检索增强
+        """
         self.llm = llm
+        self.skill_loader = skill_loader
+        self.knowledge_layer = knowledge_layer
+        self.enable_knowledge_retrieval = enable_knowledge_retrieval
+        self._injected_skills: List[str] = []
+
+    # ========== AgentKnowledgeLayer 集成方法 ==========
+
+    async def retrieve_context(
+        self,
+        query: str,
+        context_types: Optional[List[str]] = None,
+        limit: int = 10
+    ) -> Dict[str, Any]:
+        """
+        从知识层检索相关上下文
+
+        Args:
+            query: 查询文本
+            context_types: 上下文类型过滤 ['character', 'location', 'event', 'foreshadow']
+            limit: 返回结果数量限制
+
+        Returns:
+            Dict: 检索到的上下文信息
+        """
+        if not self.knowledge_layer or not self.enable_knowledge_retrieval:
+            return {"entities": [], "relations": [], "memories": []}
+
+        context = {
+            "entities": [],
+            "relations": [],
+            "memories": []
+        }
+
+        try:
+            # 检索相关实体
+            if hasattr(self.knowledge_layer, 'search_entities'):
+                entities = await self._safe_call(
+                    self.knowledge_layer.search_entities,
+                    query, limit=limit
+                )
+                if context_types:
+                    entities = [e for e in entities if e.get('type') in context_types]
+                context["entities"] = entities
+
+            # 检索相关关系
+            if hasattr(self.knowledge_layer, 'get_related_entities'):
+                for entity in context["entities"][:3]:  # 限制关系检索
+                    relations = await self._safe_call(
+                        self.knowledge_layer.get_related_entities,
+                        entity.get('id')
+                    )
+                    context["relations"].extend(relations)
+
+            # 检索相关记忆/历史
+            if hasattr(self.knowledge_layer, 'search_memories'):
+                memories = await self._safe_call(
+                    self.knowledge_layer.search_memories,
+                    query, limit=limit
+                )
+                context["memories"] = memories
+
+        except Exception as e:
+            # 静默失败，不影响主流程
+            pass
+
+        return context
+
+    async def _safe_call(self, func, *args, **kwargs):
+        """安全调用，处理同步/异步函数"""
+        import asyncio
+        import inspect
+
+        if inspect.iscoroutinefunction(func):
+            return await func(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)
+
+    def _build_knowledge_context(self, retrieved: Dict[str, Any]) -> str:
+        """
+        将检索到的知识构建为上下文文本
+
+        Args:
+            retrieved: 检索结果
+
+        Returns:
+            str: 格式化的上下文文本
+        """
+        if not retrieved or (not retrieved.get("entities") and not retrieved.get("memories")):
+            return ""
+
+        parts = ["## 知识库上下文\n"]
+
+        # 实体信息
+        entities = retrieved.get("entities", [])
+        if entities:
+            parts.append("### 相关角色/地点")
+            for ent in entities[:5]:
+                name = ent.get("name", ent.get("id", "未知"))
+                ent_type = ent.get("type", "")
+                desc = ent.get("description", "")
+                parts.append(f"- **{name}** ({ent_type}): {desc}")
+            parts.append("")
+
+        # 关系信息
+        relations = retrieved.get("relations", [])
+        if relations:
+            parts.append("### 角色关系")
+            for rel in relations[:5]:
+                source = rel.get("source", "")
+                target = rel.get("target", "")
+                rel_type = rel.get("type", "")
+                parts.append(f"- {source} --[{rel_type}]--> {target}")
+            parts.append("")
+
+        # 历史记忆
+        memories = retrieved.get("memories", [])
+        if memories:
+            parts.append("### 相关历史")
+            for mem in memories[:3]:
+                content = mem.get("content", str(mem))[:200]
+                parts.append(f"- {content}")
+            parts.append("")
+
+        return "\n".join(parts)
+
+    async def write_with_knowledge(self, input_data: 'WriterInput', allow_llm_fallback: bool = True) -> 'WriterOutput':
+        """
+        使用知识层增强的写作方法
+
+        在写作前先检索相关知识，增强上下文理解。
+
+        Args:
+            input_data: WriterInput 输入数据
+            allow_llm_fallback: 是否允许 LLM 降级
+
+        Returns:
+            WriterOutput: 写作输出
+        """
+        # 构建查询
+        query_parts = [
+            input_data.pov_character,
+            input_data.objective,
+            input_data.conflict
+        ]
+        query = " ".join(filter(None, query_parts))
+
+        # 检索知识
+        retrieved = await self.retrieve_context(
+            query,
+            context_types=["character", "location", "event"],
+            limit=10
+        )
+
+        # 构建知识上下文
+        knowledge_context = self._build_knowledge_context(retrieved)
+
+        # 如果有知识上下文，增强角色信息
+        if knowledge_context and retrieved.get("entities"):
+            enhanced_profiles = list(input_data.character_profiles)
+            for ent in retrieved["entities"]:
+                if ent.get("type") == "character":
+                    # 检查是否已存在
+                    exists = any(
+                        p.get("name") == ent.get("name")
+                        for p in enhanced_profiles
+                    )
+                    if not exists:
+                        enhanced_profiles.append({
+                            "name": ent.get("name"),
+                            "description": ent.get("description", ""),
+                            "source": "knowledge_layer"
+                        })
+            input_data.character_profiles = enhanced_profiles
+
+        # 调用原始 write 方法
+        output = await self.write(input_data, allow_llm_fallback=allow_llm_fallback)
+
+        # 记录使用的知识到输出元数据
+        if hasattr(output, 'metadata'):
+            output.metadata = output.metadata or {}
+            output.metadata["knowledge_retrieved"] = {
+                "entities_count": len(retrieved.get("entities", [])),
+                "relations_count": len(retrieved.get("relations", [])),
+                "memories_count": len(retrieved.get("memories", []))
+            }
+
+        return output
+
+    async def sync_to_knowledge_layer(self, output: 'WriterOutput', scene_id: str) -> None:
+        """
+        将写作输出同步到知识层
+
+        Args:
+            output: WriterOutput 写作输出
+            scene_id: 场景 ID
+        """
+        if not self.knowledge_layer:
+            return
+
+        try:
+            # 同步出现的角色
+            if hasattr(self.knowledge_layer, 'add_entity'):
+                for char_name in output.characters_appeared:
+                    await self._safe_call(
+                        self.knowledge_layer.add_entity,
+                        char_name.lower().replace(" ", "_"),
+                        char_name,
+                        "character",
+                        f"Appeared in scene {scene_id}"
+                    )
+
+            # 同步地点
+            if hasattr(self.knowledge_layer, 'add_entity'):
+                for location in output.locations:
+                    await self._safe_call(
+                        self.knowledge_layer.add_entity,
+                        location.lower().replace(" ", "_"),
+                        location,
+                        "location",
+                        f"Featured in scene {scene_id}"
+                    )
+
+            # 同步伏笔
+            if hasattr(self.knowledge_layer, 'add_entity'):
+                for fs in output.foreshadows_planted:
+                    await self._safe_call(
+                        self.knowledge_layer.add_entity,
+                        f"foreshadow_{scene_id}_{hash(fs) % 10000}",
+                        fs,
+                        "foreshadow",
+                        f"Planted in scene {scene_id}"
+                    )
+
+        except Exception as e:
+            # 静默失败
+            pass
+
+    def inject_skills(self, skill_ids: List[str]) -> str:
+        """
+        注入技能包内容到风格指南
+
+        Args:
+            skill_ids: 要注入的技能ID列表
+
+        Returns:
+            合并后的技能指导文本
+        """
+        if not self.skill_loader:
+            return ""
+
+        self._injected_skills = skill_ids
+        skill_contents = []
+
+        for skill_id in skill_ids:
+            try:
+                skill = self.skill_loader.load_skill(skill_id)
+                if skill:
+                    skill_contents.append(f"### {skill.get('name', skill_id)}\n{skill.get('content', '')}")
+            except Exception as e:
+                print(f"Warning: Failed to load skill {skill_id}: {e}")
+
+        return "\n\n".join(skill_contents)
+
+    def _build_enhanced_prompt(self, base_prompt: str, skill_ids: List[str]) -> str:
+        """构建带技能注入的增强 Prompt"""
+        skill_guidance = self.inject_skills(skill_ids)
+
+        if not skill_guidance:
+            return base_prompt
+
+        enhanced = f"""{base_prompt}
+
+## 技能包指导
+
+以下是本场景需要应用的写作技能：
+
+{skill_guidance}
+
+请在创作中融入以上技能的要点。
+"""
+        return enhanced
     
-    async def write(self, input_data: WriterInput) -> WriterOutput:
+    async def write(self, input_data: WriterInput, allow_llm_fallback: bool = True) -> WriterOutput:
         """
         执行 Prompt Chaining 生成完整场景
-        
+
         分为4个阶段：
         1. Scene Setup (场景开头)
         2. Character Entry (角色登场)
@@ -297,9 +591,18 @@ class WriterAgent:
         """
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
-        
+
         parser = StrOutputParser()
-        
+
+        # 从上下文自动注入技能（可选）
+        skill_ids = []
+        if isinstance(input_data.world_settings, dict):
+            candidate_skills = input_data.world_settings.get("recommended_skills") or input_data.world_settings.get("skill_ids")
+            if isinstance(candidate_skills, list):
+                skill_ids = [s for s in candidate_skills if isinstance(s, str) and s]
+        if skill_ids:
+            self.inject_skills(skill_ids)
+
         # 解析情绪弧线
         emotional_parts = input_data.emotional_arc.split("→")
         emotional_start = emotional_parts[0].strip() if len(emotional_parts) > 0 else "平静"
@@ -319,9 +622,10 @@ class WriterAgent:
                 "atmosphere": atmosphere,
                 "sensory_guidance": json.dumps(input_data.sensory_guidance, ensure_ascii=False),
                 "emotional_start": emotional_start
-            }
+            },
+            allow_llm_fallback=allow_llm_fallback
         )
-        
+
         # Chain 2: 角色登场
         character_entry = await self._run_chain(
             CHAIN_CHARACTER_ENTRY,
@@ -330,9 +634,10 @@ class WriterAgent:
                 "character_profiles": json.dumps(input_data.character_profiles, ensure_ascii=False),
                 "pov_character": input_data.pov_character,
                 "objective": input_data.objective
-            }
+            },
+            allow_llm_fallback=allow_llm_fallback
         )
-        
+
         # Chain 3: 冲突展开
         conflict_dev = await self._run_chain(
             CHAIN_CONFLICT_DEVELOPMENT,
@@ -341,13 +646,14 @@ class WriterAgent:
                 "conflict": input_data.conflict,
                 "emotional_start": emotional_start,
                 "emotional_end": emotional_end
-            }
+            },
+            allow_llm_fallback=allow_llm_fallback
         )
-        
+
         # Chain 4: 场景结尾
         is_chapter_end = input_data.scene_id.endswith("-SC01") or True  # 简化判断
         hook_requirement = "必须有强烈的钩子(Cliffhanger)" if is_chapter_end else "完成情绪转变即可"
-        
+
         resolution = await self._run_chain(
             CHAIN_RESOLUTION,
             {
@@ -356,7 +662,8 @@ class WriterAgent:
                 "hook_requirement": hook_requirement,
                 "foreshadows_to_plant": ", ".join(input_data.foreshadows_to_plant) or "无",
                 "foreshadows_to_harvest": ", ".join(input_data.foreshadows_to_harvest) or "无"
-            }
+            },
+            allow_llm_fallback=allow_llm_fallback
         )
         
         # 合并完整内容
@@ -367,19 +674,33 @@ class WriterAgent:
         
         return output
     
-    async def _run_chain(self, prompt_template: str, variables: dict) -> str:
+    async def _run_chain(self, prompt_template: str, variables: dict, allow_llm_fallback: bool = True) -> str:
         """运行单个Chain阶段"""
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
-        
+
+        if not self.llm:
+            raise RuntimeError("LLM not configured for WriterAgent")
+
+        system_prompt = WRITER_SYSTEM_PROMPT
+        if self._injected_skills and self.skill_loader:
+            skill_guidance = self.inject_skills(self._injected_skills)
+            if skill_guidance:
+                system_prompt = f"{WRITER_SYSTEM_PROMPT}\n\n## 技能包指导\n\n{skill_guidance}\n\n请在创作中融入以上技能要点。"
+
         prompt = ChatPromptTemplate.from_messages([
-            ("system", WRITER_SYSTEM_PROMPT),
+            ("system", system_prompt),
             ("human", prompt_template)
         ])
-        
+
         chain = prompt | self.llm | StrOutputParser()
-        
-        return await chain.ainvoke(variables)
+
+        try:
+            return await chain.ainvoke(variables)
+        except Exception as exc:
+            if not allow_llm_fallback:
+                raise RuntimeError("LLM execution failed with fallback disabled") from exc
+            raise
     
     def _post_process(self, content: str, input_data: WriterInput) -> WriterOutput:
         """后处理和自检"""
@@ -436,15 +757,19 @@ class WriterAgent:
         )
     
     async def continue_writing(
-        self, 
-        existing_content: str, 
+        self,
+        existing_content: str,
         continuation_hint: str,
-        word_target: int = 500
+        word_target: int = 500,
+        allow_llm_fallback: bool = True
     ) -> str:
         """续写功能"""
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
-        
+
+        if not self.llm:
+            raise RuntimeError("LLM not configured for WriterAgent")
+
         prompt = ChatPromptTemplate.from_messages([
             ("system", WRITER_SYSTEM_PROMPT),
             ("human", """
@@ -462,14 +787,19 @@ class WriterAgent:
 请自然地续写，保持风格一致：
 """)
         ])
-        
+
         chain = prompt | self.llm | StrOutputParser()
-        
-        return await chain.ainvoke({
-            "existing_content": existing_content,
-            "continuation_hint": continuation_hint,
-            "word_target": word_target
-        })
+
+        try:
+            return await chain.ainvoke({
+                "existing_content": existing_content,
+                "continuation_hint": continuation_hint,
+                "word_target": word_target
+            })
+        except Exception as exc:
+            if not allow_llm_fallback:
+                raise RuntimeError("LLM execution failed with fallback disabled") from exc
+            raise
     
     async def rewrite_section(
         self,
@@ -515,6 +845,105 @@ class WriterAgent:
             "type_guidance": type_guidance.get(rewrite_type, type_guidance["general"])
         })
 
+    async def revise(self, draft: str, feedback: Dict[str, Any], allow_llm_fallback: bool = True) -> WriterOutput:
+        """
+        根据 Critic 反馈修订稿件
+
+        Args:
+            draft: 原始稿件
+            feedback: Critic 返回的反馈，包含 issues 和 suggestions
+            allow_llm_fallback: 是否允许 LLM 降级
+
+        Returns:
+            WriterOutput: 修订后的输出
+        """
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_core.output_parsers import StrOutputParser
+
+        if not self.llm:
+            raise RuntimeError("LLM not configured for WriterAgent")
+
+        # 解析反馈
+        issues = feedback.get("issues", [])
+        suggestions = feedback.get("suggestions", [])
+        dimension_scores = feedback.get("dimension_scores", {})
+
+        # 构建修订指令
+        revision_instructions = []
+
+        # 根据维度分数确定修订重点
+        low_score_dims = [
+            dim for dim, score in dimension_scores.items()
+            if score < 7
+        ]
+
+        if low_score_dims:
+            revision_instructions.append(f"重点改进以下维度: {', '.join(low_score_dims)}")
+
+        if issues:
+            revision_instructions.append("修复以下问题:")
+            for issue in issues[:5]:  # 限制问题数量
+                revision_instructions.append(f"  - {issue}")
+
+        if suggestions:
+            revision_instructions.append("采纳以下建议:")
+            for suggestion in suggestions[:3]:
+                revision_instructions.append(f"  - {suggestion}")
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", WRITER_SYSTEM_PROMPT),
+            ("human", """
+## 任务：修订稿件
+
+### 原稿
+{draft}
+
+### 修订要求
+{revision_instructions}
+
+### 注意事项
+1. 保留原稿中优秀的部分
+2. 针对性地修复指出的问题
+3. 保持整体风格一致
+4. 修订后字数应与原稿相近
+
+请输出修订后的完整内容：
+""")
+        ])
+
+        chain = prompt | self.llm | StrOutputParser()
+
+        try:
+            revised_content = await chain.ainvoke({
+                "draft": draft,
+                "revision_instructions": "\n".join(revision_instructions)
+            })
+        except Exception as exc:
+            if not allow_llm_fallback:
+                raise RuntimeError("LLM execution failed with fallback disabled") from exc
+            raise
+
+        # 构建输出
+        wordcount = len(revised_content)
+
+        # 检测禁用词
+        forbidden_found = [
+            word for word in self.FORBIDDEN_WORDS
+            if word in revised_content
+        ]
+
+        return WriterOutput(
+            content=revised_content,
+            wordcount=wordcount,
+            characters_appeared=[],
+            locations=[],
+            foreshadows_planted=[],
+            foreshadows_harvested=[],
+            sensory_types_used=[],
+            forbidden_words_found=forbidden_found,
+            sections_needing_review=[]
+        )
+
 
 # ============================================================
 # LangGraph Node
@@ -547,7 +976,7 @@ def create_writer_node(llm):
             word_target=state.get("word_target", 2000)
         )
         
-        result = await agent.write(input_data)
+        result = await agent.write(input_data, allow_llm_fallback=state.get("allow_llm_fallback", True))
         
         return {
             **state,

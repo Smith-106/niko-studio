@@ -13,6 +13,11 @@
 
 ## Phase 1: 核心 Agent 實現 (Priority: P0)
 
+### M1 核心契約 (Frozen)
+- 依賴順序: Memory -> Search -> Citation -> Distillation -> Memory(writeback)
+- 模組邊界: Memory/ Search/ Citation/ Distillation 僅透過核心資料結構交互
+- 字段清單: 見 docs/SDD_V2.md 1.5.1 (MemoryRecord / SearchResult / Citation / DistillationResult)
+
 ### 1.1 基礎設施 & 協議
 - [x] `src/agents/base.py` - BaseAgent 抽象類
   - [x] 實現 `construct_prompt()` (CCW Protocol)

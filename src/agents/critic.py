@@ -11,6 +11,8 @@ import json
 import re
 from collections import Counter
 
+from src.narrative.evaluators.critic_engine import CriticEngine as NarrativeCriticEngine
+
 
 # ============================================================
 # Interface Layer (接口层) - Pydantic 数据模型
@@ -99,14 +101,15 @@ class LOCKAnalysisResult(BaseModel):
 
 class CriticOutput(BaseModel):
     """Critic Agent 输出"""
-    
+
     # 元数据
     agent_role: str = Field(default="Critic_LOCK_Judge")
     evaluation_timestamp: Optional[str] = None
-    
+    narrative_report: Optional[Dict[str, Any]] = None
+
     # LOCK分析 (核心!)
     lock_analysis: Optional[LOCKAnalysisResult] = None
-    
+
     # 决策
     decision: Literal["APPROVED", "HUMAN_REVIEW", "REVISE", "REWRITE"]
     decision_reason: str
@@ -311,6 +314,7 @@ class CriticAgent:
     
     def __init__(self, llm):
         self.llm = llm
+        self.narrative_engine = NarrativeCriticEngine(llm_client=llm)
         # Pre-compile regex for forbidden words
         self.forbidden_pattern = re.compile("|".join(map(re.escape, self.FORBIDDEN_WORDS)))
     
@@ -319,22 +323,27 @@ class CriticAgent:
         draft_content: str,
         scene_card: Dict[str, Any],
         character_profiles: List[Dict[str, Any]],
-        world_settings: Dict[str, Any]
+        world_settings: Dict[str, Any],
+        allow_llm_fallback: bool = True
     ) -> CriticOutput:
         """
         审核内容
-        
+
         Args:
             draft_content: 草稿内容
             scene_card: 场景卡片
             character_profiles: 角色档案
             world_settings: 世界观设定
-            
+            allow_llm_fallback: 是否允许 LLM 降级
+
         Returns:
             CriticOutput: 审核结果
         """
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import PydanticOutputParser
+
+        if not self.llm:
+            raise RuntimeError("LLM not configured for CriticAgent")
         
         parser = PydanticOutputParser(pydantic_object=CriticOutput)
         
@@ -345,25 +354,71 @@ class CriticAgent:
         
         chain = prompt | self.llm | parser
         
-        result = await chain.ainvoke({
-            "draft_content": draft_content,
-            "scene_id": scene_card.get("scene_id", ""),
-            "pov_character": scene_card.get("pov_character", ""),
-            "scene_objective": scene_card.get("objective", ""),
-            "scene_conflict": scene_card.get("conflict", ""),
-            "scene_outcome": scene_card.get("outcome", ""),
-            "is_climax": scene_card.get("structural_function", "") in ["Climax", "Door2"],
-            "character_profiles": json.dumps(character_profiles, ensure_ascii=False, indent=2),
-            "world_settings": json.dumps(world_settings, ensure_ascii=False, indent=2),
-            "forbidden_words": ", ".join(self.FORBIDDEN_WORDS),
-            "format_instructions": parser.get_format_instructions()
-        })
+        try:
+            result = await chain.ainvoke({
+                "draft_content": draft_content,
+                "scene_id": scene_card.get("scene_id", ""),
+                "pov_character": scene_card.get("pov_character", ""),
+                "scene_objective": scene_card.get("objective", ""),
+                "scene_conflict": scene_card.get("conflict", ""),
+                "scene_outcome": scene_card.get("outcome", ""),
+                "is_climax": scene_card.get("structural_function", "") in ["Climax", "Door2"],
+                "character_profiles": json.dumps(character_profiles, ensure_ascii=False, indent=2),
+                "world_settings": json.dumps(world_settings, ensure_ascii=False, indent=2),
+                "forbidden_words": ", ".join(self.FORBIDDEN_WORDS),
+                "format_instructions": parser.get_format_instructions()
+            })
+        except Exception as exc:
+            if not allow_llm_fallback:
+                raise RuntimeError("LLM execution failed with fallback disabled") from exc
+            raise
         
         # 补充规则检查
         result = self._apply_rule_checks(result, draft_content)
-        
+
+        # Narrative CriticEngine 综合评估（不改变现有决策，仅补充报告）
+        narrative_report = await self._evaluate_narrative_report(
+            content=draft_content,
+            scene_card=scene_card,
+            character_profiles=character_profiles,
+            world_settings=world_settings,
+        )
+        if narrative_report:
+            result.narrative_report = narrative_report
+
         return result
-    
+
+    async def _evaluate_narrative_report(
+        self,
+        content: str,
+        scene_card: Dict[str, Any],
+        character_profiles: List[Dict[str, Any]],
+        world_settings: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """调用 narrative/evaluators/CriticEngine，返回综合评估摘要。"""
+        if not self.narrative_engine:
+            return None
+
+        context = {
+            "scene_card": scene_card,
+            "character_profiles": character_profiles,
+            "world_settings": world_settings,
+        }
+
+        try:
+            report = await self.narrative_engine.evaluate(content, context=context)
+            return {
+                "overall_score": round(report.overall_score, 2),
+                "overall_level": report.overall_level.value,
+                "module_scores": report.module_scores,
+                "summary": report.summary,
+                "recommended_skills": report.recommended_skills,
+                "issues_count": len(report.all_issues),
+                "critical_count": len(report.critical_issues),
+            }
+        except Exception:
+            return None
+
     def _apply_rule_checks(
         self, 
         result: CriticOutput, 
@@ -446,19 +501,19 @@ class CriticAgent:
         lines = ["## 审核结果\n"]
         lines.append(f"**决策**: {result.decision}")
         lines.append(f"**总分**: {result.total_score}/100\n")
-        
+
         if result.suggestions_high:
             lines.append("### 🔴 必须修改\n")
             for i, s in enumerate(result.suggestions_high, 1):
                 lines.append(f"{i}. {s}")
             lines.append("")
-        
+
         if result.suggestions_medium:
             lines.append("### 🟡 建议修改\n")
             for i, s in enumerate(result.suggestions_medium, 1):
                 lines.append(f"{i}. {s}")
             lines.append("")
-        
+
         if result.revision_instructions:
             lines.append("### 📝 具体修改指令\n")
             for inst in result.revision_instructions:
@@ -466,8 +521,78 @@ class CriticAgent:
                 lines.append(f"**问题**: {inst.issue}")
                 lines.append(f"**建议**: {inst.suggestion}")
                 lines.append(f"**优先级**: {inst.priority}\n")
-        
+
         return "\n".join(lines)
+
+    def generate_actionable_feedback(self, result: CriticOutput) -> Dict[str, Any]:
+        """
+        生成结构化的可执行反馈，供 Writer.revise() 使用
+
+        Args:
+            result: CriticOutput 评估结果
+
+        Returns:
+            Dict 包含 issues, suggestions, dimension_scores
+        """
+        # 收集所有问题
+        issues = []
+        for detail in result.dimension_details:
+            issues.extend(detail.issues)
+
+        # 收集所有建议
+        suggestions = []
+        suggestions.extend(result.suggestions_high)
+        suggestions.extend(result.suggestions_medium[:3])  # 限制建议数量
+
+        # 提取维度分数
+        dimension_scores = {}
+        for detail in result.dimension_details:
+            dimension_scores[detail.dimension] = detail.score
+
+        # 添加 LOCK 分数
+        if result.lock_analysis:
+            dimension_scores["L_lead"] = result.lock_analysis.L.score
+            dimension_scores["O_objective"] = result.lock_analysis.O.score
+            dimension_scores["C_confrontation"] = result.lock_analysis.C.score
+            dimension_scores["K_knockout"] = result.lock_analysis.K.score
+
+        # 生成修订指令
+        revision_instructions = []
+        for inst in result.revision_instructions:
+            revision_instructions.append({
+                "target": inst.target,
+                "issue": inst.issue,
+                "suggestion": inst.suggestion,
+                "priority": inst.priority
+            })
+
+        return {
+            "decision": result.decision,
+            "total_score": result.total_score,
+            "issues": issues,
+            "suggestions": suggestions,
+            "dimension_scores": dimension_scores,
+            "revision_instructions": revision_instructions,
+            "lock_score": result.lock_score,
+            "style_score": result.style_score,
+            "logic_score": result.logic_score,
+        }
+
+    def should_revise(self, result: CriticOutput) -> bool:
+        """判断是否需要修订"""
+        return result.decision in ["REVISE", "REWRITE"]
+
+    def should_human_review(self, result: CriticOutput) -> bool:
+        """判断是否需要人工审阅"""
+        return result.decision == "HUMAN_REVIEW"
+
+    def get_low_score_dimensions(self, result: CriticOutput, threshold: float = 7.0) -> List[str]:
+        """获取低分维度列表"""
+        low_dims = []
+        for detail in result.dimension_details:
+            if detail.score < threshold:
+                low_dims.append(detail.dimension)
+        return low_dims
 
 
 # ============================================================
@@ -484,7 +609,8 @@ def create_critic_node(llm):
             draft_content=state.get("draft_content", ""),
             scene_card=state.get("current_scene_card", {}),
             character_profiles=state.get("character_profiles", []),
-            world_settings=state.get("world_settings", {})
+            world_settings=state.get("world_settings", {}),
+            allow_llm_fallback=state.get("allow_llm_fallback", True)
         )
         
         return {

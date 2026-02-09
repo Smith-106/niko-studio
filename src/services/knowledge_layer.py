@@ -3,11 +3,22 @@ import logging
 import json
 import time
 import re
+import hashlib
+import threading
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Callable
 from .indexing_service import IndexingService
 
 logger = logging.getLogger("KnowledgeLayer")
+
+# File sync imports
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler, FileSystemEvent
+    WATCHDOG_AVAILABLE = True
+except ImportError:
+    WATCHDOG_AVAILABLE = False
+    logger.warning("watchdog not installed. File sync disabled.")
 
 class AgentKnowledgeLayer:
     """
@@ -223,14 +234,132 @@ class AgentKnowledgeLayer:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        
+
         cursor.execute("""
             SELECT r.type as rel_type, e.name as target_name, e.type as target_type, e.description
             FROM relations r
             JOIN entities e ON r.target_id = e.id
             WHERE r.source_id = ?
         """, (entity_id,))
-        
+
         neighbors = [dict(r) for r in cursor.fetchall()]
         conn.close()
         return neighbors
+
+    # ========== File Sync Integration ==========
+
+    def sync_file(self, file_path: str, force: bool = False) -> Dict[str, Any]:
+        """
+        Sync a file to the knowledge layer.
+
+        Detects file changes, updates index, and syncs to memories/citations.
+
+        Args:
+            file_path: Path to file to sync.
+            force: Force sync even if file unchanged.
+
+        Returns:
+            Dict with sync result: {success, action, message, content_hash}
+        """
+        path = Path(file_path)
+
+        if not path.exists():
+            logger.warning(f"File does not exist: {file_path}")
+            return {"success": False, "action": "error", "message": "File not found"}
+
+        try:
+            # Read content
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Compute hash for change detection
+            content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+            # Generate doc_id from path
+            doc_id = hashlib.md5(str(path.resolve()).encode()).hexdigest()[:16]
+
+            # Determine source type based on path
+            path_str = str(path).lower()
+            if "citations" in path_str:
+                source_type = "citation"
+            elif "memories" in path_str:
+                source_type = "memory"
+            else:
+                source_type = "document"
+
+            # Add to vector store
+            self.add_document(doc_id, content, source_type=source_type)
+
+            logger.info(f"Synced file to knowledge layer: {file_path} (type={source_type})")
+
+            return {
+                "success": True,
+                "action": "synced",
+                "message": f"Synced as {source_type}",
+                "content_hash": content_hash,
+                "doc_id": doc_id
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to sync file {file_path}: {e}")
+            return {"success": False, "action": "error", "message": str(e)}
+
+    def create_file_watcher(self, watch_dirs: List[str] = None) -> 'FileWatcher':
+        """
+        Create a FileWatcher configured to sync to this knowledge layer.
+
+        Args:
+            watch_dirs: Directories to watch (default: .writing subdirs)
+
+        Returns:
+            Configured FileWatcher instance
+        """
+        if not WATCHDOG_AVAILABLE:
+            raise ImportError("watchdog not installed. Run: pip install watchdog")
+
+        from .file_sync import FileWatcher
+
+        watcher = FileWatcher(patterns=["*.md", "*.txt", "*.json"])
+
+        # Register sync callback
+        def on_change(event):
+            if event.event_type != "deleted":
+                self.sync_file(event.path)
+
+        watcher.on_change(on_change)
+
+        # Start watching directories
+        if watch_dirs:
+            for dir_path in watch_dirs:
+                watcher.watch(dir_path)
+
+        return watcher
+
+    def sync_directory(self, directory: str, patterns: List[str] = None) -> List[Dict[str, Any]]:
+        """
+        Sync all matching files in a directory.
+
+        Args:
+            directory: Directory path to sync.
+            patterns: File patterns (default: ["*.md", "*.txt"])
+
+        Returns:
+            List of sync results for each file.
+        """
+        patterns = patterns or ["*.md", "*.txt", "*.json"]
+        results = []
+        dir_path = Path(directory)
+
+        if not dir_path.exists():
+            logger.warning(f"Directory does not exist: {directory}")
+            return results
+
+        for pattern in patterns:
+            for file_path in dir_path.rglob(pattern):
+                if file_path.is_file():
+                    result = self.sync_file(str(file_path))
+                    result["path"] = str(file_path)
+                    results.append(result)
+
+        logger.info(f"Directory sync complete: {len(results)} files")
+        return results

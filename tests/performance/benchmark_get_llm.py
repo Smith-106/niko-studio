@@ -8,7 +8,7 @@ sys.modules["langchain_google_genai"] = MagicMock()
 sys.modules["langchain_openai"] = MagicMock()
 
 # Ensure src is in python path
-sys.path.append(os.getcwd())
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
 
 # Create a dummy .env file to make load_dotenv actually do something
 with open(".env", "w") as f:

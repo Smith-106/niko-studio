@@ -1,0 +1,36 @@
+{
+  "id": "IMPL-3",
+  "title": "TensionCurveAnalyzer LLM 辅助分析实现",
+  "status": "pending",
+  "meta": {
+    "type": "feature",
+    "agent": "code-developer",
+    "priority": "high",
+    "estimated_complexity": "medium"
+  },
+  "context": {
+    "target_file": "src/narrative/analyzers/tension_curve_analyzer.py",
+    "todo_location": "line 161",
+    "method": "_analyze_with_llm",
+    "data_classes": ["TensionPoint", "TensionCurve", "TensionLevel", "PointType"],
+    "llm_interface": "self.llm_client.generate_json()"
+  },
+  "requirements": [
+    "实现 _analyze_with_llm 方法替换 TODO 注释",
+    "构建中文分析提示词识别张力变化和转折点",
+    "解析 LLM JSON 响应为 TensionCurve 对象",
+    "LLM 识别高潮点、转折点等叙事结构",
+    "保留 quick_analyze 作为无 LLM 时的 fallback"
+  ],
+  "acceptance_criteria": [
+    "TODO 注释被移除",
+    "LLM 分析返回 AnalysisResult[TensionCurve]",
+    "无 LLM 客户端时降级正常"
+  ],
+  "flow_control": {
+    "pre_analysis": [
+      {"step": "read", "path": "src/narrative/analyzers/tension_curve_analyzer.py"},
+      {"step": "read", "path": "src/knowledge/services/llm_service.py"}
+    ]
+  }
+}

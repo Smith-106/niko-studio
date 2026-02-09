@@ -51,6 +51,21 @@ class CritiqueResult(TypedDict, total=False):
     revision_instructions: List[Dict[str, str]]
 
 
+class DistillationResult(TypedDict, total=False):
+    """知识蒸馏结果"""
+    entities_count: int                    # 实体数量
+    relations_count: int                   # 关系数量
+    events_count: int                      # 事件数量
+    entities: List[Dict[str, Any]]         # 提取的实体列表
+    relations: List[Dict[str, Any]]        # 提取的关系列表
+    events: List[Dict[str, Any]]           # 提取的事件列表
+    template: str                          # 使用的蒸馏模板
+    scene_id: str                          # 关联的场景ID
+    summary: Optional[str]                 # 摘要 (如果使用 summary 模板)
+    character_arcs: List[Dict[str, Any]]   # 角色弧线 (如果使用 character_arc 模板)
+    plot_points: List[Dict[str, Any]]      # 情节点 (如果使用 plot_structure 模板)
+
+
 class WritingState(BaseState, total=False):
     """
     写作工作流状态 - 所有Agent共享的记忆
@@ -109,6 +124,12 @@ class WritingState(BaseState, total=False):
     critique_result: CritiqueResult         # Critic评估结果
     revision_count: int                     # 修改次数 (防止死循环)
     revision_history: List[Dict[str, Any]]  # 修改历史记录
+
+    # ========================================
+    # Distillation 产物 (知识蒸馏)
+    # ========================================
+    distillation_result: DistillationResult  # 蒸馏结果
+    distillation_state: Dict[str, Any]       # 蒸馏状态详情
     
     # ========================================
     # 反馈上下文 (Writer重写时使用)
@@ -164,7 +185,8 @@ def create_initial_state(
     user_idea: str,
     genre: str = "悬疑",
     target_chapters: int = 30,
-    target_wordcount: int = 600000
+    target_wordcount: int = 600000,
+    metadata: Optional[Dict[str, Any]] = None
 ) -> WritingState:
     """创建初始状态"""
     import uuid
@@ -202,5 +224,6 @@ def create_initial_state(
         final_content="",
         final_score=0.0,
         errors=[],
-        requires_human_intervention=False
+        requires_human_intervention=False,
+        metadata=metadata or {},
     )

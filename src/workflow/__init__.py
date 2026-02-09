@@ -1,101 +1,15 @@
+# Workflow Engine
 """
-workflow 包 - LangGraph 工作流編排
+工作流引擎 - L1-L5 五级模式
 
-支持多領域工作流:
-- 小說創作 (Novel)
-- 代碼開發 (Code)
-- 自定義領域 (Custom)
+级别说明:
+- L1: 简单问答 (单轮)
+- L2: 段落生成 (多轮)
+- L3: 章节创作 (Plan-Act)
+- L4: 多章连续 (状态管理)
+- L5: 全书规划 (完整工作流)
 """
 
-# ============================================================
-# 向後兼容導出 (舊接口)
-# ============================================================
+from .workflow_engine import WorkflowEngine
 
-from .state import (
-    WritingState,
-    WorkflowConfig,
-    DEFAULT_CONFIG,
-    create_initial_state,
-    SceneCard,
-    CritiqueResult,
-    LOCKScores
-)
-
-from .graph import (
-    create_writing_graph,
-    compile_graph,
-    run_writing_session,
-)
-
-# ============================================================
-# 新跨領域架構導出
-# ============================================================
-
-from .base_state import (
-    BaseState,
-    BaseWorkflowConfig,
-    DomainType,
-    DecisionType,
-    create_base_state,
-)
-
-from .adapters import (
-    BaseDomainAdapter,
-    BaseEvaluationResult,
-    AdapterRegistry,
-)
-
-from .graph_factory import (
-    WorkflowFactory,
-    WorkflowLevel,
-    create_workflow,
-)
-
-# 適配器 (延遲導入避免循環依賴)
-from .adapters import (
-    NovelAdapter,
-    CodeAdapter,
-)
-
-__all__ = [
-    # ========================================
-    # 向後兼容 (舊接口)
-    # ========================================
-    # State
-    "WritingState",
-    "WorkflowConfig",
-    "DEFAULT_CONFIG",
-    "create_initial_state",
-    "SceneCard",
-    "CritiqueResult",
-    "LOCKScores",
-    
-    # Graph
-    "create_writing_graph",
-    "compile_graph",
-    "run_writing_session",
-    
-    # ========================================
-    # 跨領域架構 (新接口)
-    # ========================================
-    # Base Classes
-    "BaseState",
-    "BaseWorkflowConfig",
-    "BaseDomainAdapter",
-    "BaseEvaluationResult",
-    
-    # Factory
-    "WorkflowFactory",
-    "WorkflowLevel",
-    "create_workflow",
-    
-    # Registry
-    "AdapterRegistry",
-    "DomainType",
-    "DecisionType",
-    
-    # Adapters
-    "NovelAdapter",
-    "CodeAdapter",
-]
-
+__all__ = ["WorkflowEngine"]
