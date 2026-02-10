@@ -346,6 +346,48 @@ class MemoryManager:
 
         return MemoryEntry.from_yaml_file(file_path)
 
+    def get_batch(self, memory_ids: List[str]) -> List[MemoryEntry]:
+        """
+        Batch get multiple memories (avoids N+1 queries).
+
+        Args:
+            memory_ids: List of memory identifiers
+
+        Returns:
+            List of MemoryEntry objects (skips missing entries)
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        if not memory_ids:
+            return []
+
+        # For small batches, use sequential reading
+        if len(memory_ids) <= 5:
+            entries = []
+            for memory_id in memory_ids:
+                entry = self.get(memory_id)
+                if entry:
+                    entries.append(entry)
+            return entries
+
+        # For larger batches, use parallel file reading
+        entries = []
+
+        def load_entry(memory_id: str) -> Optional[MemoryEntry]:
+            return self.get(memory_id)
+
+        with ThreadPoolExecutor(max_workers=min(8, len(memory_ids))) as executor:
+            futures = {executor.submit(load_entry, mid): mid for mid in memory_ids}
+            for future in as_completed(futures):
+                try:
+                    entry = future.result()
+                    if entry:
+                        entries.append(entry)
+                except Exception as e:
+                    logger.warning(f"Failed to load memory {futures[future]}: {e}")
+
+        return entries
+
     def update(
         self,
         memory_id: str,
@@ -527,13 +569,8 @@ class MemoryManager:
         if topic not in self._index["topics"]:
             return []
 
-        entries = []
-        for memory_id in self._index["topics"][topic]:
-            entry = self.get(memory_id)
-            if entry:
-                entries.append(entry)
-
-        return entries
+        memory_ids = self._index["topics"][topic]
+        return self.get_batch(memory_ids)
 
     def get_by_entity(self, entity_id: str) -> List[MemoryEntry]:
         """
@@ -548,13 +585,8 @@ class MemoryManager:
         if entity_id not in self._index["entities"]:
             return []
 
-        entries = []
-        for memory_id in self._index["entities"][entity_id]:
-            entry = self.get(memory_id)
-            if entry:
-                entries.append(entry)
-
-        return entries
+        memory_ids = self._index["entities"][entity_id]
+        return self.get_batch(memory_ids)
 
     def get_by_date(
         self,
@@ -796,12 +828,9 @@ class MemoryManager:
                     unique_candidates.append(c)
             candidates = unique_candidates
         else:
-            # Search all memories
-            candidates = []
-            for memory_id in self._index["memories"]:
-                entry = self.get(memory_id)
-                if entry:
-                    candidates.append(entry)
+            # Search all memories - use batch loading
+            memory_ids = list(self._index["memories"].keys())
+            candidates = self.get_batch(memory_ids)
 
         # Filter by query
         for entry in candidates:

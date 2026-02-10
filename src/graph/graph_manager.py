@@ -287,6 +287,33 @@ class GraphManager:
             updated_at=updated_at,
         )
 
+    def get_entities_batch(self, entity_ids: List[str]) -> Dict[str, Entity]:
+        """
+        Batch get multiple entities (avoids N+1 queries).
+
+        Args:
+            entity_ids: List of entity identifiers
+
+        Returns:
+            Dict mapping entity_id to Entity (missing entities excluded)
+        """
+        if not entity_ids:
+            return {}
+
+        # Use WHERE IN for batch query
+        placeholders = ",".join("?" * len(entity_ids))
+        cursor = self._conn.execute(
+            f"SELECT * FROM entities WHERE id IN ({placeholders})",
+            entity_ids,
+        )
+
+        result = {}
+        for row in cursor.fetchall():
+            entity = self._row_to_entity(row)
+            result[entity.id] = entity
+
+        return result
+
     def _row_to_relationship(self, row: sqlite3.Row) -> Relationship:
         """将数据库行转换为 Relationship 对象"""
         props = json.loads(row["properties"]) if row["properties"] else {}
@@ -857,12 +884,12 @@ class GraphManager:
                 return GraphPath(nodes=[entity], edges=[], total_weight=0)
             return None
 
-        # BFS
+        # BFS - 先收集路径中的实体 ID，最后批量获取
         visited = {source_id}
-        queue = deque([(source_id, [], [])])  # (current_id, path_nodes, path_edges)
+        queue = deque([(source_id, [], [])])  # (current_id, path_node_ids, path_edges)
 
         while queue:
-            current_id, path_nodes, path_edges = queue.popleft()
+            current_id, path_node_ids, path_edges = queue.popleft()
 
             # 获取邻居
             cursor = self._conn.execute(
@@ -885,14 +912,13 @@ class GraphManager:
 
                 rel = self._row_to_relationship(row)
                 new_path_edges = path_edges + [rel]
-
-                neighbor_entity = self.get_entity(neighbor_id)
-                new_path_nodes = path_nodes + [neighbor_entity]
+                new_path_node_ids = path_node_ids + [neighbor_id]
 
                 if neighbor_id == target_id:
-                    # 找到路径
-                    source_entity = self.get_entity(source_id)
-                    all_nodes = [source_entity] + new_path_nodes
+                    # 找到路径 - 批量获取所有实体
+                    all_entity_ids = [source_id] + new_path_node_ids
+                    entity_map = self.get_entities_batch(all_entity_ids)
+                    all_nodes = [entity_map.get(eid) for eid in all_entity_ids if eid in entity_map]
                     total_weight = sum(e.weight for e in new_path_edges)
 
                     return GraphPath(
@@ -902,7 +928,7 @@ class GraphManager:
                     )
 
                 visited.add(neighbor_id)
-                queue.append((neighbor_id, new_path_nodes, new_path_edges))
+                queue.append((neighbor_id, new_path_node_ids, new_path_edges))
 
         return None
 
@@ -956,22 +982,19 @@ class GraphManager:
                     if neighbor_id not in visited:
                         queue.append((neighbor_id, depth + 1))
 
-        # 获取实体
-        entities = []
-        for eid in entity_ids:
-            entity = self.get_entity(eid)
-            if entity:
-                entities.append(entity)
+        # 获取实体 - 使用批量查询避免 N+1
+        entity_map = self.get_entities_batch(list(entity_ids))
+        entities = list(entity_map.values())
 
-        # 获取关系
+        # 获取关系 - 使用批量查询避免 N+1
         relationships = []
-        for rid in relationship_ids:
+        if relationship_ids:
+            placeholders = ",".join("?" * len(relationship_ids))
             cursor = self._conn.execute(
-                "SELECT * FROM relationships WHERE id = ?",
-                (rid,),
+                f"SELECT * FROM relationships WHERE id IN ({placeholders})",
+                list(relationship_ids),
             )
-            row = cursor.fetchone()
-            if row:
+            for row in cursor.fetchall():
                 relationships.append(self._row_to_relationship(row))
 
         return SubGraph(

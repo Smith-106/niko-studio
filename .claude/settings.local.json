@@ -27,7 +27,21 @@
       "Bash(then echo \"ARCHIVED\")",
       "Bash(else echo \"NOT_FOUND\")",
       "Bash(fi:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat\\(tests\\): 添加 Beta 版本测试套件\n\n- 添加 ServiceManager 生命周期测试 \\(12 个用例\\)\n- 添加 LLM/Embedding 服务测试 \\(20 个用例\\)\n- 添加 GraphEngine 测试 \\(20 个用例\\)\n- 覆盖异步初始化、Provider fallback、Cypher 查询等核心功能\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat\\(tests\\): 添加 Beta 版本测试套件\n\n- 添加 ServiceManager 生命周期测试 \\(12 个用例\\)\n- 添加 LLM/Embedding 服务测试 \\(20 个用例\\)\n- 添加 GraphEngine 测试 \\(20 个用例\\)\n- 覆盖异步初始化、Provider fallback、Cypher 查询等核心功能\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: 更新项目状态报告，确认 100% 交付就绪\n\n- 代码实现状态从 75% 更新为 100% Complete\n- 确认所有 \"In Progress\" 和 \"Pending\" 组件已完成\n- 新增 10 个已验证完成的组件（含代码行数）\n- 添加代码验证摘要：7,579 行生产代码\n- 标记 Obsidian 集成为已完成 \\(616 行\\)\n- 更新发布就绪状态为 Production release\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git fetch:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git pull:*)",
+      "Bash(done)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: 更新开发进度表，反映实际完成状态\n\n- P5-P9 全部更新为 100% 完成\n- 新增代码行数统计列\n- 补充各模块详细组件信息\n- 测试覆盖率更新为 45% \\(74 测试文件\\)\n- 添加项目总代码量统计 \\(62,163 行源码 + 18,183 行测试\\)\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "mcp__ccw-tools__write_file",
+      "Bash(claude:*)",
+      "Bash(npm update:*)",
+      "Bash(gemini:*)",
+      "Skill(ccw-coordinator)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: 修复离线搜索降级与会话兼容接口，恢复全量测试通过\n\n在向量模型不可用时为核心记忆与智能搜索增加 SQLite 降级路径，并补齐 session/agent 兼容 API 及并发写保护，确保集成测试与全量测试稳定通过。\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor: 优化批量查询与层级依赖注入，提升稳定性\n\n为图谱与记忆管理增加批量读取以减少 N+1 查询，并调整 L1/L3 层级的依赖注入与构造兼容，修复并发与配置传递场景下的稳定性问题。\nEOF\n\\)\")"
     ]
   }
 }
