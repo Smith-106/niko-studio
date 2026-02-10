@@ -291,6 +291,44 @@ class SessionManager:
         
         return False
     
+    def create_session(
+        self,
+        project_id: str,
+        goal: str = "",
+        session_type: str = "standard",
+        domain: str = "novel"
+    ) -> dict:
+        """兼容旧接口：创建会话并返回字典结果。"""
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        session_id = f"{project_id}-{timestamp}"
+        info = self.init(
+            session_id=session_id,
+            session_type=session_type,
+            project_name=project_id,
+            domain=domain,
+        )
+        return {
+            "session_id": info.id,
+            "project_id": project_id,
+            "goal": goal,
+            "status": info.status,
+            "created_at": info.created_at,
+        }
+
+    def list_sessions(self, location: str = "active") -> List[dict]:
+        """兼容旧接口：列出会话字典列表。"""
+        sessions = self.list(location=location)
+        return [
+            {
+                "session_id": s.id,
+                "project_id": s.project_name,
+                "status": s.status,
+                "created_at": s.created_at,
+                "updated_at": s.updated_at,
+            }
+            for s in sessions
+        ]
+
     def stats(self, session_id: str) -> dict:
         """獲取會話統計"""
         info = self._load_session_info(session_id)

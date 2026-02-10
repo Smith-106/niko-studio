@@ -76,6 +76,11 @@ class LevelRegistry:
     def create(cls, level_num: int, config: Optional[Dict] = None) -> Optional[BaseLevel]:
         """創建層級實例"""
         level_class = cls.get(level_num)
-        if level_class:
+        if not level_class:
+            return None
+
+        # 优先使用命名参数传递 config，兼容各层级构造函数参数顺序差异
+        try:
+            return level_class(config=config)
+        except TypeError:
             return level_class(config)
-        return None

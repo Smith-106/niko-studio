@@ -246,7 +246,8 @@ class ResumeStrategy(ABC):
         checkpoints = self.list_checkpoints(session_id)
         if not checkpoints:
             return None
-        return max(checkpoints, key=lambda x: x.created_at)
+        # 检查点按写入顺序保存，直接取最后一个可避免同时间戳并列导致的误判
+        return checkpoints[-1]
 
 
 # ============================================================
@@ -662,6 +663,16 @@ class HybridStrategy(ResumeStrategy):
                 "merge_count": len(session_ids),
             },
         )
+
+
+class PromptConcatResumeStrategy(PromptConcatStrategy):
+    """兼容旧命名：PromptConcatResumeStrategy。"""
+    pass
+
+
+class HybridResumeStrategy(HybridStrategy):
+    """兼容旧命名：HybridResumeStrategy。"""
+    pass
 
 
 # ============================================================

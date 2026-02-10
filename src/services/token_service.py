@@ -11,6 +11,7 @@ TokenService - Token 估算与成本控制服务
 import json
 import logging
 import sqlite3
+import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -128,6 +129,7 @@ class TokenService:
 
         # 数据库
         self._db: Optional[sqlite3.Connection] = None
+        self._db_lock = threading.Lock()
         self._init_db()
 
         # tiktoken 编码器缓存
@@ -480,14 +482,15 @@ class TokenService:
             output_tokens = tokens - input_tokens
 
         db = self._get_db()
-        db.execute("""
-            INSERT INTO token_usage (session_id, model, input_tokens, output_tokens, cost, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            session_id, model, input_tokens or 0, output_tokens or 0,
-            cost, datetime.now().isoformat()
-        ))
-        db.commit()
+        with self._db_lock:
+            db.execute("""
+                INSERT INTO token_usage (session_id, model, input_tokens, output_tokens, cost, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                session_id, model, input_tokens or 0, output_tokens or 0,
+                cost, datetime.now().isoformat()
+            ))
+            db.commit()
 
         logger.debug(f"Usage recorded: {model} {input_tokens}+{output_tokens} tokens, ${cost}")
 

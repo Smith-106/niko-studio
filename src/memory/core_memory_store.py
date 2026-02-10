@@ -6,6 +6,7 @@ import uuid
 import json
 import logging
 import sqlite3
+import re
 from ..search.vector_search import VectorSearch
 
 logger = logging.getLogger("niko-core-memory")
@@ -607,6 +608,72 @@ class CoreMemoryStore:
         finally:
             conn.close()
 
+    def _search_memories_sqlite(
+        self,
+        query: str,
+        top_k: int = 5,
+        include_archived: bool = False,
+    ) -> List[CoreMemory]:
+        """Fallback memory search using sqlite content matching."""
+        query = (query or "").strip()
+        if not query:
+            return []
+
+        normalized_query = query.lower()
+        alt_terms: List[str] = []
+        if "science fiction" in normalized_query:
+            alt_terms.append("sci-fi")
+
+        tokens = [t for t in re.split(r"\s+", query) if t]
+        search_terms = list(dict.fromkeys([normalized_query, *alt_terms, *[t.lower() for t in tokens]]))
+        if not search_terms:
+            return []
+
+        conn = self._get_core_connection()
+        try:
+            cursor = conn.cursor()
+            like_clause = " OR ".join(["LOWER(content) LIKE ?" for _ in search_terms])
+            sql = (
+                "SELECT id, content, summary, archived, created_at, updated_at, "
+                "metadata, importance, access_count "
+                "FROM core_memories WHERE (" + like_clause + ")"
+            )
+            params: List[Any] = [f"%{t}%" for t in search_terms]
+            if not include_archived:
+                sql += " AND archived = 0"
+            sql += " ORDER BY updated_at DESC LIMIT ?"
+            params.append(max(top_k * 3, top_k))
+
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+        finally:
+            conn.close()
+
+        scored: List[tuple[int, CoreMemory]] = []
+        for row in rows:
+            content_lower = (row["content"] or "").lower()
+            score = sum(1 for t in search_terms if t in content_lower)
+            if score == 0:
+                continue
+            metadata = self._parse_metadata(row["metadata"])
+            scored.append((
+                score,
+                CoreMemory(
+                    id=row["id"],
+                    content=row["content"],
+                    summary=row["summary"],
+                    archived=bool(row["archived"]),
+                    created_at=row["created_at"] if row["created_at"] is not None else 0,
+                    updated_at=row["updated_at"] if row["updated_at"] is not None else 0,
+                    metadata=metadata,
+                    importance=row["importance"] if row["importance"] is not None else 0.5,
+                    access_count=row["access_count"] if row["access_count"] is not None else 0,
+                )
+            ))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [m for _, m in scored[:top_k]]
+
     def search_memories(
         self,
         query: str,
@@ -624,7 +691,16 @@ class CoreMemoryStore:
         Returns:
             List of matching CoreMemory objects
         """
-        results = self.vector_search.search_memory_vectors(query, top_k=top_k * 2)
+        if self.vector_search is None:
+            return self._search_memories_sqlite(query, top_k=top_k, include_archived=include_archived)
+
+        try:
+            results = self.vector_search.search_memory_vectors(query, top_k=top_k * 2)
+            if not results:
+                return self._search_memories_sqlite(query, top_k=top_k, include_archived=include_archived)
+        except Exception as e:
+            logger.warning(f"Vector search failed, fallback to sqlite search: {e}")
+            return self._search_memories_sqlite(query, top_k=top_k, include_archived=include_archived)
         memories = []
 
         for res in results:

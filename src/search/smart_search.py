@@ -231,6 +231,8 @@ class SmartSearch:
             results = self.fuzzy_search(query, top_k=top_k * 2, type_filter=type_filter)
         elif mode == SearchMode.SEMANTIC:
             results = self.semantic_search(query, top_k=top_k * 2, type_filter=type_filter)
+            if not results:
+                results = self.fuzzy_search(query, top_k=top_k * 2, type_filter=type_filter)
         elif mode == SearchMode.HYBRID:
             results = self.hybrid_search(query, top_k=top_k * 2, type_filter=type_filter)
         else:
@@ -428,7 +430,7 @@ class SmartSearch:
         params = [f"%{t}%" for t in tokens]
         where_clause = " OR ".join(conditions)
 
-        # Try vector_items table first, fall back to items
+        # Try vector_items table first, then items, finally core_memories fallback
         for table in ["vector_items", "items"]:
             try:
                 sql = f"SELECT id, content, metadata, type FROM {table} WHERE ({where_clause})"
@@ -473,12 +475,61 @@ class SmartSearch:
                     ))
 
                 results.sort(key=lambda x: x.score, reverse=True)
-                return results[:top_k]
+                if results:
+                    return results[:top_k]
 
             except sqlite3.OperationalError:
                 continue
 
-        return []
+        # Last fallback: core_memories table (for offline vector failure cases)
+        try:
+            conditions = [f"LOWER(content) LIKE ?" for _ in tokens]
+            params_cm = [f"%{t.lower()}%" for t in tokens]
+            where_cm = " OR ".join(conditions)
+
+            sql_cm = f"""
+                SELECT id, content, metadata
+                FROM core_memories
+                WHERE ({where_cm})
+            """
+            if type_filter and type_filter != "memory":
+                return []
+            sql_cm += f" LIMIT {top_k * 2}"
+
+            cursor.execute(sql_cm, params_cm)
+            results_cm: List[SmartSearchResult] = []
+            for row in cursor:
+                content_lower = (row["content"] or "").lower()
+                match_count = sum(1 for t in tokens if t.lower() in content_lower)
+                score = match_count / len(tokens) if tokens else 0
+                raw_metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+
+                results_cm.append(SmartSearchResult(
+                    id=row["id"],
+                    content=row["content"],
+                    score=score,
+                    type="memory",
+                    metadata=_build_search_metadata(
+                        path=raw_metadata.get("path"),
+                        doc_id=raw_metadata.get("doc_id"),
+                        surface=raw_metadata.get("surface"),
+                        loc=raw_metadata.get("loc"),
+                        chunk_index=raw_metadata.get("chunk_index"),
+                        extra={
+                            k: v
+                            for k, v in raw_metadata.items()
+                            if k not in {"path", "doc_id", "surface", "loc", "chunk_index"}
+                        },
+                    ),
+                    source="like",
+                    loc=_normalize_loc(raw_metadata.get("loc")),
+                    snapshot_query=SAMPLE_SEARCH_QUERY,
+                ))
+
+            results_cm.sort(key=lambda x: x.score, reverse=True)
+            return results_cm[:top_k]
+        except sqlite3.OperationalError:
+            return []
 
     def _ripgrep_search(
         self,

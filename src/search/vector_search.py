@@ -1246,7 +1246,11 @@ class VectorSearch:
 
     def search_memory_vectors(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Specific search for memories."""
-        return self.search(query, type_filter="memory", top_k=top_k)
+        try:
+            return self.search(query, type_filter="memory", top_k=top_k)
+        except Exception as e:
+            logger.warning(f"Vector memory search failed: {e}")
+            return []
 
     def search_chunk_vectors(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Specific search for document chunks."""

@@ -7,7 +7,7 @@ Writer Agent - 写作执行者
 """
 
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 import json
 
 
@@ -17,34 +17,60 @@ import json
 
 class WriterInput(BaseModel):
     """Writer Agent 输入"""
-    
+
+    # 兼容集成测试：允许传入 scene_card，并在验证阶段映射到标准字段
+    scene_card: Optional[Dict[str, Any]] = None
+
     # 场景信息 (来自Architect)
-    scene_id: str
-    chapter_num: int
-    pov_character: str
-    objective: str = Field(..., description="主角在此场景想要什么")
-    conflict: str = Field(..., description="什么阻止了主角")
-    outcome: str = Field(..., description="正向(+)/负向(-)")
-    
+    scene_id: str = ""
+    chapter_num: int = 1
+    pov_character: str = ""
+    objective: str = Field(default="", description="主角在此场景想要什么")
+    conflict: str = Field(default="", description="什么阻止了主角")
+    outcome: str = Field(default="+", description="正向(+)/负向(-)")
+
     # 叙事信息
-    plot_beat: str = Field(..., description="剧情节拍描述")
-    emotional_arc: str = Field(..., description="情绪变化，如：紧张→恐惧")
+    plot_beat: str = Field(default="", description="剧情节拍描述")
+    emotional_arc: str = Field(default="平静→变化", description="情绪变化，如：紧张→恐惧")
     sensory_guidance: Dict[str, str] = Field(
-        default_factory=dict, 
+        default_factory=dict,
         description="感官描写指引"
     )
-    
+
     # 上下文
     character_profiles: List[Dict[str, Any]] = Field(default_factory=list)
     world_settings: Dict[str, Any] = Field(default_factory=dict)
     previous_content: Optional[str] = Field(None, description="之前的内容（续写时使用）")
-    
+
     # 伏笔任务
     foreshadows_to_plant: List[str] = Field(default_factory=list)
     foreshadows_to_harvest: List[str] = Field(default_factory=list)
-    
+
     # 目标
     word_target: int = Field(default=2000, description="目标字数")
+
+    @model_validator(mode="after")
+    def _normalize_from_scene_card(self):
+        """兼容 scene_card 输入格式并补齐默认值。"""
+        card = self.scene_card or {}
+        if not self.scene_id:
+            self.scene_id = card.get("scene_id", "scene-001")
+        if not self.pov_character:
+            self.pov_character = card.get("pov_character", "主角")
+        if not self.objective:
+            self.objective = card.get("objective", "推进剧情")
+        if not self.conflict:
+            self.conflict = card.get("conflict", "遭遇阻碍")
+        if not self.outcome:
+            self.outcome = card.get("outcome", "+")
+        if not self.plot_beat:
+            self.plot_beat = card.get("plot_beat", "场景推进")
+        if not self.emotional_arc:
+            self.emotional_arc = card.get("emotional_arc", "平静→变化")
+        chapter_num = card.get("chapter_num")
+        if chapter_num is not None:
+            self.chapter_num = chapter_num
+        return self
 
 
 class WriterOutput(BaseModel):
