@@ -89,10 +89,10 @@ python dev_run.py
 ## 📁 Project Structure
 
 ```
-ai-agent-platform/
+niko-studio/
 ├── docs/
-│   ├── SDD_V2.md           # System Design Document (V2.1)
-│   └── TASKS.md            # Development Task List (V2.7)
+│   ├── SDD_V8_FINAL.md     # System Design Document (V8)
+│   └── TASKS_V10_OPTIMIZED.md # Development Task List (V10)
 ├── src/
 │   ├── agents/             # Core Agents (Commander, Architect, Writer, Critic)
 │   ├── memory/             # Memory Layer (MemoryManager, CitationManager)
@@ -104,12 +104,12 @@ ai-agent-platform/
 ├── tests/
 │   ├── unit/               # Unit Tests
 │   └── integration/        # Integration Tests
-├── .writing/               # Runtime Data (OpenKL Contract)
-│   ├── memories/           # Long-term memories
+├── .niko/                  # Runtime Data (Project Workspace)
 │   ├── sessions/           # Active/Archived sessions
-│   ├── store/              # Document store
-│   ├── citations/          # Citation JSONs
-│   └── .ok/                # Kùzu database
+│   ├── memory/             # Long-term memories
+│   ├── config/             # Project configuration
+│   ├── drafts/             # Draft versions
+│   └── exports/            # Export output
 └── README.md
 ```
 

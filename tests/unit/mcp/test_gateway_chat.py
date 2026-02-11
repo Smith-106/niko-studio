@@ -128,17 +128,27 @@ class TestChatEndpointErrors:
         data = response.json()
         assert data["error"] == "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"
 
-    def test_chat_non_string_workflow_level_returns_400(self, client_no_lifespan):
-        """Test chat with non-string workflowLevel returns 400"""
+    def test_chat_invalid_type_workflow_level_returns_400(self, client_no_lifespan):
+        """Test chat with invalid type workflowLevel returns 400"""
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ],
+            "workflowLevel": [3]
+        })
+        assert response.status_code == 400
+        data = response.json()
+        assert data["error"] == "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"
+
+    def test_chat_int_workflow_level_accepted(self, client_no_lifespan):
+        """Test chat with int workflowLevel (1-5) is accepted"""
         response = client_no_lifespan.post("/chat", json={
             "messages": [
                 {"role": "user", "content": "Write a scene"}
             ],
             "workflowLevel": 3
         })
-        assert response.status_code == 400
-        data = response.json()
-        assert data["error"] == "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"
+        assert response.status_code == 200
 
 
 class TestChatWorkflowLevels:

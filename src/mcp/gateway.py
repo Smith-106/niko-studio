@@ -809,6 +809,8 @@ async def skills_list(category: str = None) -> list:
 
     result = []
     for skill_id, info in all_skills.items():
+        if category and info.get("category", "") != category:
+            continue
         skill_entry = {
             "id": skill_id,
             "name": info.get("name", skill_id),
@@ -945,7 +947,7 @@ async def chat_endpoint(request: Request):
         has_explicit_workflow_level = "workflowLevel" in body
         if has_explicit_workflow_level:
             raw_workflow_level = body.get("workflowLevel")
-            if not isinstance(raw_workflow_level, str) or not WorkflowLevel.is_valid_label(raw_workflow_level):
+            if not isinstance(raw_workflow_level, (str, int)) or not WorkflowLevel.is_valid_label(raw_workflow_level):
                 return JSONResponse(
                     {"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"},
                     status_code=400,
@@ -1228,7 +1230,7 @@ async def chat_stream_endpoint(request: Request):
         has_explicit_workflow_level = "workflowLevel" in body
         if has_explicit_workflow_level:
             raw_workflow_level = body.get("workflowLevel")
-            if not isinstance(raw_workflow_level, str) or not WorkflowLevel.is_valid_label(raw_workflow_level):
+            if not isinstance(raw_workflow_level, (str, int)) or not WorkflowLevel.is_valid_label(raw_workflow_level):
                 return JSONResponse(
                     {"error": "Invalid workflowLevel. Expected one of: L1, L2, L3, L4, L5"},
                     status_code=400,

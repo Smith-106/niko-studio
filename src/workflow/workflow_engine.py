@@ -10,6 +10,7 @@
 
 import json
 import logging
+import re
 import uuid
 import subprocess
 from dataclasses import dataclass, field
@@ -96,7 +97,7 @@ class WorkflowEngine:
         max_score = 0
 
         for level, keywords in self._get_level_indicators().items():
-            score = sum(1 for kw in keywords if kw in task_lower)
+            score = sum(1 for kw in keywords if re.search(kw, task_lower))
             if score > max_score:
                 max_score = score
                 matched_level = level
@@ -245,6 +246,10 @@ class WorkflowEngine:
             if dep_step and dep_step.status != "completed":
                 return {"error": f"Dependency '{dep_id}' not completed"}
         
+        # 标记计划为运行中
+        if plan.status == "created":
+            plan.status = "running"
+
         # 执行步骤
         step.status = "running"
         step.started_at = datetime.now().isoformat()
@@ -310,9 +315,9 @@ class WorkflowEngine:
         
         if auto_commit:
             try:
-                # Git add
+                # Git add - 仅暂存工作区目录下的文件，避免误伤
                 subprocess.run(
-                    ["git", "add", "-A"],
+                    ["git", "add", str(self.workspace)],
                     cwd=self.workspace,
                     capture_output=True,
                     check=True
@@ -335,7 +340,7 @@ class WorkflowEngine:
                         capture_output=True,
                         text=True
                     )
-                    commit_hash = hash_result.stdout.strip()[:8]
+                    commit_hash = hash_result.stdout.strip()
                 
             except subprocess.CalledProcessError as e:
                 logger.warning(f"Git operation failed: {e}")
