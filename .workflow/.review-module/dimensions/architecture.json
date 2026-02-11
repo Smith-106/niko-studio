@@ -1,0 +1,150 @@
+{
+  "dimension": "architecture",
+  "analyzed_at": "2026-02-09T12:00:00Z",
+  "scope": {
+    "path": "src/**/*.py",
+    "file_count": 166,
+    "line_count": 62163
+  },
+  "findings": [
+    {
+      "id": "arch-001",
+      "severity": "high",
+      "category": "coupling",
+      "file": "src/workflow/levels/level1_rapid.py",
+      "line": 38,
+      "title": "Workflow level directly instantiates Agent",
+      "description": "Level1Rapid imports and directly instantiates WriterAgent inside execute(), creating tight coupling between workflow and agent layers. This violates the Dependency Inversion Principle.",
+      "recommendation": "Inject agents via constructor or use ServiceContainer to resolve agent dependencies. Workflow levels should depend on agent abstractions, not concrete implementations."
+    },
+    {
+      "id": "arch-002",
+      "severity": "high",
+      "category": "coupling",
+      "file": "src/workflow/levels/level3_standard.py",
+      "line": 122,
+      "title": "Multiple agent instantiations in workflow level",
+      "description": "Level3Standard directly instantiates ArchitectAgent, WriterAgent, and CriticAgent in _plan_phase, _execute_phase, and _critic_phase methods. Each invocation creates new instances without lifecycle management.",
+      "recommendation": "Use dependency injection via ServiceContainer. Pass pre-configured agent instances or use factory pattern to centralize agent creation."
+    },
+    {
+      "id": "arch-003",
+      "severity": "medium",
+      "category": "layering",
+      "file": "src/memory/core_memory_store.py",
+      "line": 9,
+      "title": "Memory layer depends on Search layer",
+      "description": "CoreMemoryStore imports VectorSearch from search module using relative import `from ..search.vector_search`. This creates a horizontal dependency between peer modules.",
+      "recommendation": "Consider extracting VectorSearch interface to a shared protocols module, or inject VectorSearch as a dependency rather than importing directly."
+    },
+    {
+      "id": "arch-004",
+      "severity": "medium",
+      "category": "coupling",
+      "file": "src/services/distill_service.py",
+      "line": 28,
+      "title": "Service layer imports from Agent layer",
+      "description": "DistillService imports BaseAgent from agents layer. Services should not depend on agent implementations.",
+      "recommendation": "If only using BaseAgent for Prompt Protocol, extract the protocol to a shared module. Services should remain independent of agent layer."
+    },
+    {
+      "id": "arch-005",
+      "severity": "medium",
+      "category": "pattern-violation",
+      "file": "src/container.py",
+      "line": 139,
+      "title": "Container properties return Any type",
+      "description": "All engine properties (memory, graph, search, workflow, critic, commander, writer) return `Any` type. This eliminates type safety benefits and IDE autocompletion.",
+      "recommendation": "Define Protocol/Interface types for each engine and use proper return type annotations. Example: `def memory(self) -> IMemoryEngine:`"
+    },
+    {
+      "id": "arch-006",
+      "severity": "low",
+      "category": "cohesion",
+      "file": "src/container.py",
+      "line": 86,
+      "title": "Configuration loading mixed with DI container",
+      "description": "_load_gateway_engine_config defines inline dataclasses and loads configuration. This mixes configuration concerns with dependency injection responsibilities.",
+      "recommendation": "Extract EnginePluginConfig and GatewayEngineConfig to a dedicated config module. Container should only handle dependency resolution."
+    },
+    {
+      "id": "arch-007",
+      "severity": "low",
+      "category": "pattern-violation",
+      "file": "src/agents/base.py",
+      "line": 83,
+      "title": "BaseAgent handles too many responsibilities",
+      "description": "BaseAgent combines prompt construction (CCW 6-Field Protocol), token counting, cost estimation, budget control, and usage tracking. This violates Single Responsibility Principle.",
+      "recommendation": "Extract TokenCostEstimator and BudgetController to separate utility classes. BaseAgent should focus on agent abstraction and prompt building."
+    },
+    {
+      "id": "arch-008",
+      "severity": "low",
+      "category": "consistency",
+      "file": "src/workflow/adapters/base_adapter.py",
+      "line": 149,
+      "title": "Inconsistent config type annotation",
+      "description": "get_default_config returns BaseWorkflowConfig but returns a dict literal. BaseWorkflowConfig is likely a TypeAlias for Dict, creating confusion.",
+      "recommendation": "Use explicit TypedDict or dataclass for configuration. Ensure type annotations match actual return types."
+    },
+    {
+      "id": "arch-009",
+      "severity": "low",
+      "category": "layering",
+      "file": "src/mcp/gateway.py",
+      "line": 56,
+      "title": "MCP Gateway imports from multiple layers",
+      "description": "Gateway imports from container, workflow.base_state, workflow.levels, knowledge.services, and config. While expected for an entry point, the import list is extensive.",
+      "recommendation": "Consider a facade pattern to reduce direct dependencies. Gateway should orchestrate through a smaller set of high-level interfaces."
+    },
+    {
+      "id": "arch-010",
+      "severity": "medium",
+      "category": "pattern-violation",
+      "file": "src/narrative/critic_engine.py",
+      "line": 17,
+      "title": "Duplicate CriticEngine implementations",
+      "description": "CriticEngine exists in both src/narrative/critic_engine.py and src/narrative/evaluators/critic_engine.py. The agents/critic.py imports from evaluators version.",
+      "recommendation": "Consolidate to single CriticEngine implementation. Remove duplicate or clearly differentiate responsibilities if both are needed."
+    }
+  ],
+  "summary": {
+    "total_findings": 10,
+    "critical": 0,
+    "high": 2,
+    "medium": 3,
+    "low": 5
+  },
+  "architecture_overview": {
+    "layers": [
+      {"name": "agents", "path": "src/agents/", "role": "Agent abstraction, prompt building, LLM interaction"},
+      {"name": "memory", "path": "src/memory/", "role": "Four-layer memory, six-dimensional classification"},
+      {"name": "workflow", "path": "src/workflow/", "role": "L1-L5 workflow levels, adapters, session management"},
+      {"name": "services", "path": "src/services/", "role": "Platform services (backup, token, obsidian)"},
+      {"name": "graph", "path": "src/graph/", "role": "Knowledge graph storage and queries"},
+      {"name": "narrative", "path": "src/narrative/", "role": "Writing quality evaluation, critic engine"},
+      {"name": "search", "path": "src/search/", "role": "Vector search, smart search, retrieval"},
+      {"name": "knowledge/services", "path": "src/knowledge/services/", "role": "LLM/Embedding provider abstraction"}
+    ],
+    "patterns_used": [
+      "Dependency Injection (ServiceContainer)",
+      "Registry Pattern (AdapterRegistry, LevelRegistry)",
+      "Protocol/Interface Pattern (knowledge/services/protocols.py)",
+      "Abstract Factory (agent creation)",
+      "Strategy Pattern (workflow levels, domain adapters)"
+    ],
+    "strengths": [
+      "Clear layer separation with distinct responsibilities",
+      "Lazy loading and plugin system in ServiceContainer",
+      "Consistent use of dataclasses for DTOs",
+      "Protocol-based abstractions for LLM/Embedding services",
+      "Registry pattern enables extensibility"
+    ],
+    "weaknesses": [
+      "Workflow levels tightly coupled to agent implementations",
+      "Cross-layer dependencies (memory->search, services->agents)",
+      "Lack of type safety in container (Any return types)",
+      "Mixed responsibilities in BaseAgent class"
+    ]
+  }
+}

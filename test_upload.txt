@@ -1,5 +1,0 @@
-This is a test upload file content for RAG integration verification.
-It contains some text to be chunked and indexed.
-Repeating text to ensure it has some length.
-Repeating text to ensure it has some length.
-Repeating text to ensure it has some length.

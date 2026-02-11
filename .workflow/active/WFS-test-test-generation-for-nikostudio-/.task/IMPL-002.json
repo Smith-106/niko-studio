@@ -1,0 +1,164 @@
+{
+  "id": "IMPL-002",
+  "title": "修复测试失败并稳定自动化",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-test-test-generation-for-nikostudio-/.process/context-package.json",
+  "cli_execution_id": "WFS-test-test-generation-for-nikostudio--IMPL-002",
+  "cli_execution": {
+    "strategy": "resume",
+    "resume_from": "WFS-test-test-generation-for-nikostudio--IMPL-001.5"
+  },
+  "meta": {
+    "type": "test-fix",
+    "agent": "@test-fix-agent",
+    "execution_group": null,
+    "module": null,
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false,
+      "previous_cli_id": null
+    },
+    "test_framework": "pytest",
+    "coverage_target": "70%"
+  },
+  "context": {
+    "requirements": [
+      "修复 3 类测试失败: [单元测试失败, 集成测试失败, 覆盖率门槛失败]",
+      "校验 2 个验证脚本执行结果: [scripts/verify_project_status.py, scripts/verify_vector_search.py]",
+      "确认 1 套自动化入口稳定: [.github/workflows/integration-tests.yml]"
+    ],
+    "focus_paths": [
+      "tests/unit",
+      "tests/integration",
+      "tests/performance",
+      "src/workflow",
+      "src/memory",
+      "src/graph",
+      "src/services",
+      "scripts",
+      ".github/workflows"
+    ],
+    "acceptance": [
+      "单元测试通过: verify by pytest tests/unit -q (exit code 0)",
+      "集成测试通过: verify by pytest tests/integration -q (exit code 0)",
+      "覆盖率门槛满足 70%: verify by coverage report --fail-under=70 (exit code 0)",
+      "验证脚本执行成功: verify by python scripts/verify_project_status.py && python scripts/verify_vector_search.py",
+      "CI 自动化入口稳定: verify by .github/workflows/integration-tests.yml includes verify steps"
+    ],
+    "depends_on": ["IMPL-001.5"],
+    "inherited": {
+      "from": "IMPL-001.5",
+      "context": ["质量评审结论已确认", "覆盖率门槛与 pytest 参数已对齐"]
+    },
+    "shared_context": {
+      "tech_stack": ["Python", "pytest", "pytest-asyncio"],
+      "coverage_gate": "70%",
+      "ci_entry": ".github/workflows/integration-tests.yml"
+    },
+    "artifacts": [
+      {
+        "type": "test_analysis",
+        "source": "test_analysis_results",
+        "path": ".workflow/active/WFS-test-test-generation-for-nikostudio-/.process/TEST_ANALYSIS_RESULTS.md",
+        "priority": "highest",
+        "usage": "Identify failure classes and remediation priorities",
+        "contains": "coverage mismatch, missing tests"
+      },
+      {
+        "type": "test_analysis",
+        "source": "test_concept_analysis",
+        "path": ".workflow/active/WFS-test-test-generation-for-nikostudio-/.process/gemini-test-analysis.md",
+        "priority": "high",
+        "usage": "Layered testing requirements",
+        "contains": "L0-L3 testing requirements"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths and smart context",
+        "commands": ["Read(.workflow/active/WFS-test-test-generation-for-nikostudio-/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "load_role_analysis_artifacts",
+        "action": "Load role analyses from context-package.json (none expected)",
+        "commands": [
+          "Read(.workflow/active/WFS-test-test-generation-for-nikostudio-/.process/context-package.json)",
+          "Extract(brainstorm_artifacts.role_analyses[].files[].path)",
+          "Read(extracted paths progressively)"
+        ],
+        "output_to": "role_analysis_artifacts",
+        "on_error": "skip_optional"
+      },
+      {
+        "step": "identify_test_failures",
+        "action": "Run targeted tests to capture failures",
+        "commands": [
+          "pytest tests/unit -q",
+          "pytest tests/integration -q",
+          "coverage report --fail-under=70"
+        ],
+        "output_to": "test_failure_results",
+        "on_error": "fail"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "修复单元与集成测试失败",
+        "description": "针对失败测试修复代码或测试逻辑，保持覆盖率门槛",
+        "modification_points": [
+          "Fix failing unit tests: [tests/unit/*]",
+          "Fix failing integration tests: [tests/integration/*]",
+          "Adjust coverage gaps in 4 modules: [workflow, memory, graph, services]"
+        ],
+        "logic_flow": [
+          "Review failing test outputs",
+          "Update test fixtures or code paths to resolve failures",
+          "Re-run targeted tests"
+        ],
+        "depends_on": [],
+        "output": "tests_stabilized"
+      },
+      {
+        "step": 2,
+        "title": "验证自动化脚本与覆盖率门槛",
+        "description": "确保验证脚本与 coverage gate 均通过",
+        "modification_points": [
+          "Run 2 scripts: [scripts/verify_project_status.py, scripts/verify_vector_search.py]",
+          "Confirm coverage gate: [coverage report --fail-under=70]"
+        ],
+        "logic_flow": [
+          "Run verification scripts",
+          "Confirm coverage gate pass",
+          "Document pass status"
+        ],
+        "depends_on": [1],
+        "output": "automation_verified"
+      }
+    ],
+    "target_files": [
+      "tests/unit",
+      "tests/integration",
+      "src/workflow",
+      "src/memory",
+      "src/graph",
+      "src/services",
+      "scripts/verify_project_status.py",
+      "scripts/verify_vector_search.py"
+    ],
+    "reusable_test_tools": [
+      "tests/unit/mcp/conftest.py"
+    ],
+    "test_commands": {
+      "run_tests": "pytest",
+      "run_coverage": "pytest --cov=src --cov-report=term",
+      "run_specific": "pytest {test_file}"
+    }
+  }
+}

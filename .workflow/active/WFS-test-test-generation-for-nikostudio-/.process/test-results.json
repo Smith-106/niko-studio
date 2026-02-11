@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-02-10T17:10:00Z",
+  "commands": [
+    "pytest tests/unit -q",
+    "pytest tests/integration -q",
+    "pytest --cov=src --cov-report=term"
+  ],
+  "total": 1021,
+  "passed": 1019,
+  "failed": 0,
+  "skipped": 2,
+  "pass_rate": 99.8,
+  "criticality": {
+    "high": [],
+    "medium": [],
+    "low": []
+  },
+  "failed_tests": [],
+  "summary": "全量测试通过率达到阈值且无失败用例。"
+}

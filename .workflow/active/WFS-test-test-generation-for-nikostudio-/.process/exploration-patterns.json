@@ -1,0 +1,85 @@
+{
+  "project_structure": "项目以 src/ 为核心应用层，tests/ 下分 unit/integration/performance 分层测试；自动化测试入口主要在 .github/workflows 中的 CI 工作流，scripts/ 下提供可脚本化的 smoke/验证脚本；CLI 入口集中在 src/cli，便于自动化触发工作流与评估。",
+  "relevant_files": [
+    {
+      "path": ".github/workflows/integration-tests.yml",
+      "relevance": 0.9,
+      "rationale": "CI 自动化测试入口与覆盖率门槛配置。"
+    },
+    {
+      "path": "tests/unit/mcp/conftest.py",
+      "relevance": 0.85,
+      "rationale": "统一 fixtures/mocks 与容器重置模式，决定测试自动化隔离策略。"
+    },
+    {
+      "path": "tests/unit/mcp/test_gateway_chat.py",
+      "relevance": 0.8,
+      "rationale": "API 级自动验证用例，覆盖成功/错误/回退分支。"
+    },
+    {
+      "path": "tests/unit/test_workflow.py",
+      "relevance": 0.75,
+      "rationale": "工作流质量阈值与路由决策的核心断言。"
+    },
+    {
+      "path": "src/workflow/state.py",
+      "relevance": 0.7,
+      "rationale": "默认质量阈值与配置定义，影响自动验证标准。"
+    },
+    {
+      "path": "src/workflow/adapters/novel_adapter.py",
+      "relevance": 0.7,
+      "rationale": "质量决策路由逻辑，可作为验证链路的断言依据。"
+    },
+    {
+      "path": "scripts/verify_vector_search.py",
+      "relevance": 0.55,
+      "rationale": "脚本化 smoke 校验样例，可作为自动验证补充阶段。"
+    }
+  ],
+  "patterns": "1) CI 驱动自动化：使用 GitHub Actions 执行 pytest + coverage gate（.github/workflows/integration-tests.yml:20-33）。2) fixtures/mocks 统一约定：tests/unit/mcp/conftest.py 使用 autouse fixture 重置容器，AsyncMock/MagicMock 注入引擎，TestClient 以无 lifespan 模式构建测试应用（tests/unit/mcp/conftest.py:24-239）。3) API 契约测试：/chat 的成功与错误分支、skills 限制、LLM fallback 行为都有断言（tests/unit/mcp/test_gateway_chat.py:28-257）。4) 质量阈值驱动的路由验证：DEFAULT_CONFIG 定义 pass_score/min_c_score/human_review_score，并在 NovelAdapter.route_after_critic 中执行分支判定（src/workflow/state.py:172-179；src/workflow/adapters/novel_adapter.py:457-489），tests/unit/test_workflow.py 对阈值与人审分支有明确断言（tests/unit/test_workflow.py:57-139）。5) 脚本化验证：scripts/verify_vector_search.py 通过独立脚本完成 add/search/表结构验证，用于非 pytest 的快速健康检查（scripts/verify_vector_search.py:32-73）。",
+  "dependencies": "测试体系以 pytest 为核心，CI 显式安装 pytest/pytest-asyncio/pytest-cov（.github/workflows/integration-tests.yml:20-28）；单元测试大量使用 unittest.mock 的 MagicMock/AsyncMock 与 starlette TestClient（tests/unit/mcp/conftest.py:10-239）。CLI 入口基于 click，可作为自动化测试触发点（src/cli/main.py:20-44；src/cli/__main__.py:7-10）。",
+  "integration_points": "1) CI 入口：.github/workflows/integration-tests.yml:20-33（pytest tests/integration/ + coverage report --fail-under=70）。2) 测试隔离与依赖注入：tests/unit/mcp/conftest.py:24-239（autouse 重置容器 + mock 引擎 + TestClient）。3) API 自动验证断言：tests/unit/mcp/test_gateway_chat.py:28-257（/chat 返回结构与错误分支）。4) 质量阈值与路由判定：src/workflow/state.py:172-179 + src/workflow/adapters/novel_adapter.py:457-489（pass_score/min_c_score/human_review_score），并由 tests/unit/test_workflow.py:57-139 断言覆盖。5) 脚本化 smoke：scripts/verify_vector_search.py:32-73（独立执行验证向量检索链路）。",
+  "constraints": "CI 当前仅跑 integration 测试（.github/workflows/integration-tests.yml:26-28），unit/performance 未进入自动门禁；覆盖率标准存在冲突（CI 70 vs 文档 80），自动验证阈值需统一；仓库未落地 pytest.ini（文档提供模板但不在仓库），可能导致本地/CI 行为不一致；测试中使用的 fixture 可能依赖未声明插件（需核对 pytest-mock 等）。",
+  "clarification_needs": [
+    {
+      "question": "自动化测试的基线范围应该包含哪些测试套件？",
+      "context": "当前 CI 仅运行 tests/integration，unit/performance 未纳入；需要明确自动执行范围以满足“无人工干预”要求。",
+      "options": [
+        "仅集成测试（与现有 CI 一致）",
+        "集成 + 单元测试",
+        "集成 + 单元 + 性能测试"
+      ],
+      "recommended": 1
+    },
+    {
+      "question": "覆盖率门槛应以哪个标准为准？",
+      "context": "CI 门槛为 70，但测试文档规划为 80，自动验证需要统一阈值。",
+      "options": [
+        "保持 70（与现有 CI 一致）",
+        "提升到 80（与文档一致）",
+        "分层阈值（integration=70，unit=80）"
+      ],
+      "recommended": 2
+    },
+    {
+      "question": "是否将 scripts/verify_*.py 作为自动验证的后置 smoke 阶段？",
+      "context": "脚本提供非 pytest 的快速校验能力，但会引入额外执行时间与依赖。",
+      "options": [
+        "不加入，保持 pytest-only",
+        "加入 verify_vector_search.py",
+        "加入所有 verify_*.py"
+      ],
+      "recommended": 1
+    }
+  ],
+  "_metadata": {
+    "timestamp": "2026-02-10T05:40:00Z",
+    "task_description": "测试 nikostudio 的所有代码能否正常工作，测试自动执行，无需人工干预，测试完成后自动验证",
+    "source": "cli-explore-agent",
+    "exploration_angle": "patterns",
+    "exploration_index": 1,
+    "total_explorations": 1,
+    "duration_seconds": 720
+  }
+}

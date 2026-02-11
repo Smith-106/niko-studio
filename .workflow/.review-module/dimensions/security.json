@@ -1,0 +1,103 @@
+{
+  "dimension": "security",
+  "scan_timestamp": "2026-02-09T12:00:00Z",
+  "scope": {
+    "path": "src/**/*.py",
+    "files_scanned": 166,
+    "lines_analyzed": 62163
+  },
+  "findings": [
+    {
+      "id": "sec-001",
+      "severity": "medium",
+      "category": "exposure",
+      "file": "src/config.py",
+      "line": 175,
+      "title": "WebDAV credentials stored in plain text configuration",
+      "description": "WebDAV password is stored as a plain text string field in the BackupConfig dataclass. While the default is empty, when configured, credentials are stored without encryption in the configuration object.",
+      "snippet": "webdav_password: str = \"\"",
+      "recommendation": "Use environment variables or a secure secrets manager for credential storage. Consider using keyring library for local credential storage."
+    },
+    {
+      "id": "sec-002",
+      "severity": "low",
+      "category": "injection",
+      "file": "src/search/smart_search.py",
+      "line": 164,
+      "title": "Subprocess execution with external command",
+      "description": "Uses subprocess.run to execute ripgrep (rg) command. While the command itself is hardcoded, search patterns could potentially be crafted maliciously if not properly sanitized upstream.",
+      "snippet": "result = subprocess.run([\"rg\", \"--version\"], capture_output=True, text=True, timeout=5)",
+      "recommendation": "Ensure all user-provided search patterns are sanitized before passing to ripgrep. Current implementation appears safe as patterns go through the search API."
+    },
+    {
+      "id": "sec-003",
+      "severity": "low",
+      "category": "injection",
+      "file": "src/workflow/workflow_engine.py",
+      "line": 314,
+      "title": "Git command execution via subprocess",
+      "description": "Uses subprocess.run to execute git commands for checkpoint management. The commit message includes user-provided description which could be exploited if not sanitized.",
+      "snippet": "commit_msg = f\"[checkpoint:{checkpoint_id}] {description or 'Auto checkpoint'}\"",
+      "recommendation": "Sanitize the description parameter to prevent shell injection via git commit message. Current risk is low as git handles message as a single argument."
+    },
+    {
+      "id": "sec-004",
+      "severity": "low",
+      "category": "deserialization",
+      "file": "src/web/app.py",
+      "line": 120,
+      "title": "JSON deserialization from WebSocket messages",
+      "description": "WebSocket messages are deserialized using json.loads without schema validation. Malformed or malicious JSON payloads could cause unexpected behavior.",
+      "snippet": "message = json.loads(data)",
+      "recommendation": "Implement JSON schema validation for incoming WebSocket messages. Use pydantic or similar for strict input validation."
+    },
+    {
+      "id": "sec-005",
+      "severity": "low",
+      "category": "deserialization",
+      "file": "src/narrative/character_depth.py",
+      "line": 284,
+      "title": "LLM response deserialization without validation",
+      "description": "Multiple narrative analysis modules parse LLM responses as JSON without validation. While LLM outputs are generally trusted, malformed responses could cause crashes.",
+      "snippet": "result = json.loads(response.content)",
+      "recommendation": "Wrap json.loads in try-except blocks with proper error handling. Consider using pydantic models for response validation."
+    },
+    {
+      "id": "sec-006",
+      "severity": "medium",
+      "category": "auth",
+      "file": "src/services/backup_manager.py",
+      "line": 524,
+      "title": "HTTP requests with credentials over network",
+      "description": "WebDAV backup uploads credentials via HTTP requests. While requests library defaults to SSL verification, the credential transmission security depends on proper HTTPS configuration.",
+      "snippet": "response = requests.put(...)",
+      "recommendation": "Enforce HTTPS-only connections for WebDAV. Add explicit verify=True and consider certificate pinning for sensitive backup operations."
+    },
+    {
+      "id": "sec-007",
+      "severity": "low",
+      "category": "exposure",
+      "file": "src/knowledge/services/llm_service.py",
+      "line": 220,
+      "title": "API response parsing without error boundaries",
+      "description": "LLM service parses JSON responses without comprehensive error handling, which could expose internal details on failure.",
+      "snippet": "return json.loads(response.content)",
+      "recommendation": "Add try-except with generic error messages to prevent information leakage on parse failures."
+    }
+  ],
+  "summary": {
+    "total_findings": 7,
+    "critical": 0,
+    "high": 0,
+    "medium": 2,
+    "low": 5
+  },
+  "positive_observations": [
+    "SQL operations use parameterized queries (db/pool.py) - no SQL injection risk",
+    "No eval() or exec() with user input detected",
+    "No pickle.load() or yaml.load() with untrusted data found",
+    "No SSL verification disabled (verify=False not found)",
+    "Subprocess calls use list format, preventing shell injection",
+    "File operations use pathlib with proper path handling"
+  ]
+}

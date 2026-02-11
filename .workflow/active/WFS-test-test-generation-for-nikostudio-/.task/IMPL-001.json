@@ -1,0 +1,196 @@
+{
+  "id": "IMPL-001",
+  "title": "生成 L0-L3 测试与 pytest 配置",
+  "status": "pending",
+  "context_package_path": ".workflow/active/WFS-test-test-generation-for-nikostudio-/.process/context-package.json",
+  "cli_execution_id": "WFS-test-test-generation-for-nikostudio--IMPL-001",
+  "cli_execution": {
+    "strategy": "new"
+  },
+  "meta": {
+    "type": "test-gen",
+    "agent": "@code-developer",
+    "execution_group": null,
+    "module": null,
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false,
+      "previous_cli_id": null
+    },
+    "test_framework": "pytest",
+    "coverage_target": "70%"
+  },
+  "context": {
+    "requirements": [
+      "新增 1 个 pytest 配置文件: [pytest.ini]",
+      "新增 4 组 L0-L3 测试集合: [L0 CLI/workflow smoke, L1 unit for workflow/memory/graph/services, L2 integration workflow+memory+services, L3 e2e/performance baseline]",
+      "扩展 4 个单元测试覆盖范围: [src/workflow/state.py, src/memory, src/graph, src/services]",
+      "扩展 3 个集成测试覆盖范围: [tests/integration/test_e2e_workflow.py, tests/integration/test_memory_integration.py, tests/integration/test_service_layer.py]",
+      "新增 2 个自动验证脚本入口: [scripts/verify_project_status.py, scripts/verify_vector_search.py]"
+    ],
+    "focus_paths": [
+      "tests/unit",
+      "tests/integration",
+      "tests/performance",
+      "src/workflow",
+      "src/memory",
+      "src/graph",
+      "src/services",
+      "scripts",
+      ".github/workflows"
+    ],
+    "acceptance": [
+      "pytest.ini 存在: verify by ls pytest.ini | wc -l = 1",
+      "L0-L3 测试清单覆盖 4 组: verify by docs/tdd/03_Test_Cases_Inventory.md 列表包含 L0/L1/L2/L3",
+      "覆盖 4 个核心模块的单元测试新增: verify by pytest tests/unit -q --co or coverage report includes workflow/memory/graph/services",
+      "3 个集成测试文件更新: verify by git diff --name-only tests/integration | wc -l = 3",
+      "2 个验证脚本纳入自动化入口: verify by grep -n \"verify_project_status|verify_vector_search\" .github/workflows/integration-tests.yml"
+    ],
+    "depends_on": [],
+    "inherited": null,
+    "shared_context": {
+      "tech_stack": ["Python", "pytest", "pytest-asyncio"],
+      "coverage_gate": "70%",
+      "ci_entry": ".github/workflows/integration-tests.yml",
+      "conventions": ["Reuse fixtures from tests/unit/mcp/conftest.py", "Follow existing pytest naming patterns"]
+    },
+    "artifacts": [
+      {
+        "type": "test_analysis",
+        "source": "test_analysis_results",
+        "path": ".workflow/active/WFS-test-test-generation-for-nikostudio-/.process/TEST_ANALYSIS_RESULTS.md",
+        "priority": "highest",
+        "usage": "Define L0-L3 coverage gaps and priorities",
+        "contains": "coverage gaps, L0-L3 requirements"
+      },
+      {
+        "type": "test_analysis",
+        "source": "test_concept_analysis",
+        "path": ".workflow/active/WFS-test-test-generation-for-nikostudio-/.process/gemini-test-analysis.md",
+        "priority": "high",
+        "usage": "Define layered testing strategy and coverage thresholds",
+        "contains": "testing layers, coverage targets"
+      },
+      {
+        "type": "documentation",
+        "source": "tdd_docs",
+        "path": "docs/tdd/01_Unit_Tests_Plan.md",
+        "priority": "medium",
+        "usage": "Unit test standards and configuration guidance",
+        "contains": "pytest config guidance"
+      },
+      {
+        "type": "documentation",
+        "source": "tdd_docs",
+        "path": "docs/tdd/03_Test_Cases_Inventory.md",
+        "priority": "medium",
+        "usage": "Test inventory baseline",
+        "contains": "test case lists"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths and smart context",
+        "commands": ["Read(.workflow/active/WFS-test-test-generation-for-nikostudio-/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "load_role_analysis_artifacts",
+        "action": "Load role analyses from context-package.json (none expected)",
+        "commands": [
+          "Read(.workflow/active/WFS-test-test-generation-for-nikostudio-/.process/context-package.json)",
+          "Extract(brainstorm_artifacts.role_analyses[].files[].path)",
+          "Read(extracted paths progressively)"
+        ],
+        "output_to": "role_analysis_artifacts",
+        "on_error": "skip_optional"
+      },
+      {
+        "step": "analyze_test_entrypoints",
+        "action": "Review CI test entrypoints and coverage gate",
+        "commands": [
+          "Read(.github/workflows/integration-tests.yml)",
+          "Read(docs/tdd/01_Unit_Tests_Plan.md)",
+          "Read(docs/tdd/03_Test_Cases_Inventory.md)"
+        ],
+        "output_to": "test_entrypoints",
+        "on_error": "fail"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "补齐 pytest 配置与测试清单",
+        "description": "建立 pytest.ini 并补齐 L0-L3 测试清单与覆盖率门槛说明",
+        "modification_points": [
+          "Create 1 file: [pytest.ini]",
+          "Update 2 docs: [docs/tdd/01_Unit_Tests_Plan.md, docs/tdd/03_Test_Cases_Inventory.md]"
+        ],
+        "logic_flow": [
+          "Align pytest.ini settings with CI parameters",
+          "List L0-L3 test cases with explicit scope",
+          "Record coverage gate 70% as baseline"
+        ],
+        "depends_on": [],
+        "output": "pytest_config_and_test_inventory"
+      },
+      {
+        "step": 2,
+        "title": "新增 L0/L1/L2/L3 测试覆盖",
+        "description": "按层级新增 smoke、unit、integration、e2e/performance 测试，覆盖核心模块",
+        "modification_points": [
+          "Create 4 test groups: [L0, L1, L2, L3]",
+          "Modify 4 module scopes: [src/workflow, src/memory, src/graph, src/services]",
+          "Modify 3 integration tests: [tests/integration/test_e2e_workflow.py, tests/integration/test_memory_integration.py, tests/integration/test_service_layer.py]"
+        ],
+        "logic_flow": [
+          "Implement L0 smoke tests for CLI and workflow minimal path",
+          "Add L1 unit tests for workflow/memory/graph/services branches",
+          "Expand L2 integration tests to cover workflow templates",
+          "Add L3 e2e/performance baseline tests in tests/performance"
+        ],
+        "depends_on": [1],
+        "output": "layered_tests_added"
+      },
+      {
+        "step": 3,
+        "title": "纳入验证脚本自动化入口",
+        "description": "将 verify 脚本加入 CI 或独立自动化执行入口",
+        "modification_points": [
+          "Modify 1 CI config: [.github/workflows/integration-tests.yml]",
+          "Reference 2 scripts: [scripts/verify_project_status.py, scripts/verify_vector_search.py]"
+        ],
+        "logic_flow": [
+          "Add verify scripts to CI steps",
+          "Ensure scripts run after tests"
+        ],
+        "depends_on": [2],
+        "output": "verification_scripts_automated"
+      }
+    ],
+    "target_files": [
+      "pytest.ini",
+      "docs/tdd/01_Unit_Tests_Plan.md",
+      "docs/tdd/03_Test_Cases_Inventory.md",
+      "tests/unit",
+      "tests/integration/test_e2e_workflow.py",
+      "tests/integration/test_memory_integration.py",
+      "tests/integration/test_service_layer.py",
+      "tests/performance",
+      ".github/workflows/integration-tests.yml"
+    ],
+    "reusable_test_tools": [
+      "tests/unit/mcp/conftest.py"
+    ],
+    "test_commands": {
+      "run_tests": "pytest",
+      "run_coverage": "pytest --cov=src --cov-report=term",
+      "run_specific": "pytest {test_file}"
+    }
+  }
+}

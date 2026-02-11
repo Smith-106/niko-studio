@@ -1,13 +1,8 @@
 # 文档索引
 
-AI Agent Platform V2.7 文档目录
+Niko-Studio V8 文档目录
 
 ---
-
-## 说明
-
-- 当前仓库的权威文档层级为 `docs/`。
-- `docs/docs/` 为历史镜像层级，保留用于兼容旧链接，不作为维护入口。
 
 ## 核心文档
 
@@ -16,15 +11,14 @@ AI Agent Platform V2.7 文档目录
 | [README.md](../README.md) | 项目概览、快速开始 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 架构设计、组件概览 |
 | [API_REFERENCE.md](API_REFERENCE.md) | API 参考、代码示例 |
-| [TASKS.md](TASKS.md) | 开发任务清单 V2.7 |
-| [SDD_V2.md](SDD_V2.md) | 系统设计规格 V2.1 |
+| [SDD_V8_FINAL.md](SDD_V8_FINAL.md) | 系统设计规格 V8 |
+| [TASKS_V10_OPTIMIZED.md](TASKS_V10_OPTIMIZED.md) | 开发任务清单 |
 
 ## 开发指南
 
 | 文档 | 说明 |
 |------|------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献指南 |
-| [JULES.md](../.github/JULES.md) | Jules 自动开发指南 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
 | [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md) | 发布流程与验收记录 |
 | [operations/ROLLBACK.md](operations/ROLLBACK.md) | 回退触发条件与操作手册 |
@@ -46,10 +40,8 @@ AI Agent Platform V2.7 文档目录
 
 | 文档 | 说明 |
 |------|------|
-| [SDD_V3_THEORY.md](SDD_V3_THEORY.md) | 理论基础 |
-| [SDD_V4_CHERRY.md](SDD_V4_CHERRY.md) | Cherry 集成 |
 | [reference/](reference/) | 外部参考 |
 
 ---
 
-*更新时间: 2026-02-09*
+*更新时间: 2026-02-11*

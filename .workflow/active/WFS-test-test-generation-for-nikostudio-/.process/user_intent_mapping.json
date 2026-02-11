@@ -1,0 +1,40 @@
+{
+  "session_id": "WFS-test-test-generation-for-nikostudio-",
+  "task_description": "测试 nikostudio 的所有代码能否正常工作，测试自动执行，无需人工干预，测试完成后自动验证",
+  "user_intent": {
+    "goal": "测试 nikostudio 的所有代码能否正常工作，测试自动执行，无需人工干预，测试完成后自动验证",
+    "key_constraints": []
+  },
+  "keyword_mapping": [
+    {
+      "keyword": "自动化测试",
+      "targets": [
+        {"path": ".github/workflows/integration-tests.yml", "priority_score": 0.95},
+        {"path": "tests/integration", "priority_score": 0.9},
+        {"path": "tests/unit", "priority_score": 0.85}
+      ]
+    },
+    {
+      "keyword": "覆盖率门槛",
+      "targets": [
+        {"path": ".github/workflows/integration-tests.yml", "priority_score": 0.9},
+        {"path": "docs/tdd/01_Unit_Tests_Plan.md", "priority_score": 0.8}
+      ]
+    },
+    {
+      "keyword": "自动验证脚本",
+      "targets": [
+        {"path": "scripts/verify_project_status.py", "priority_score": 0.7},
+        {"path": "scripts/verify_vector_search.py", "priority_score": 0.65}
+      ]
+    },
+    {
+      "keyword": "工作流质量阈值",
+      "targets": [
+        {"path": "src/workflow/state.py", "priority_score": 0.7},
+        {"path": "src/workflow/adapters/novel_adapter.py", "priority_score": 0.68},
+        {"path": "tests/unit/test_workflow.py", "priority_score": 0.72}
+      ]
+    }
+  ]
+}

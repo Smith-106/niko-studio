@@ -1,0 +1,178 @@
+{
+  "dimension": "performance",
+  "findings": [
+    {
+      "id": "perf-001",
+      "severity": "high",
+      "category": "n-plus-one",
+      "file": "src/memory/memory_manager.py",
+      "line": 530,
+      "title": "N+1 Query Pattern in get_by_topic",
+      "description": "The get_by_topic method iterates over memory IDs and calls self.get() for each one, resulting in N+1 database reads. Each get() call reads a file from disk independently.",
+      "snippet": "for memory_id in self._index[\"topics\"][topic]:\n    entry = self.get(memory_id)\n    if entry:\n        entries.append(entry)",
+      "recommendation": "Batch file reads by collecting all file paths first, then reading them in parallel using asyncio.gather or concurrent.futures.ThreadPoolExecutor."
+    },
+    {
+      "id": "perf-002",
+      "severity": "high",
+      "category": "n-plus-one",
+      "file": "src/memory/memory_manager.py",
+      "line": 551,
+      "title": "N+1 Query Pattern in get_by_entity",
+      "description": "Same N+1 pattern as get_by_topic - iterates over entity memory IDs and calls self.get() individually for each.",
+      "snippet": "for memory_id in self._index[\"entities\"][entity_id]:\n    entry = self.get(memory_id)\n    if entry:\n        entries.append(entry)",
+      "recommendation": "Implement batch file reading to reduce I/O operations."
+    },
+    {
+      "id": "perf-003",
+      "severity": "high",
+      "category": "n-plus-one",
+      "file": "src/memory/memory_manager.py",
+      "line": 800,
+      "title": "N+1 Query Pattern in search method",
+      "description": "When no entity_id or topics filter is provided, the search method iterates over ALL memory IDs and calls self.get() for each, causing severe performance degradation with large memory stores.",
+      "snippet": "for memory_id in self._index[\"memories\"]:\n    entry = self.get(memory_id)\n    if entry:\n        candidates.append(entry)",
+      "recommendation": "Implement indexed search or use a proper database query instead of loading all entries into memory. Consider adding FTS support for text search."
+    },
+    {
+      "id": "perf-004",
+      "severity": "high",
+      "category": "n-plus-one",
+      "file": "src/graph/graph_manager.py",
+      "line": 889,
+      "title": "N+1 Query in find_shortest_path BFS",
+      "description": "During BFS traversal, get_entity() is called for each neighbor node individually, causing multiple database queries per BFS level.",
+      "snippet": "neighbor_entity = self.get_entity(neighbor_id)\nnew_path_nodes = path_nodes + [neighbor_entity]",
+      "recommendation": "Batch load entities by collecting neighbor IDs at each BFS level, then fetch them in a single query using WHERE id IN (...)."
+    },
+    {
+      "id": "perf-005",
+      "severity": "high",
+      "category": "n-plus-one",
+      "file": "src/graph/graph_manager.py",
+      "line": 959,
+      "title": "N+1 Query in get_subgraph",
+      "description": "After BFS traversal, entities and relationships are fetched one by one in separate loops, causing 2*N queries.",
+      "snippet": "for eid in entity_ids:\n    entity = self.get_entity(eid)\n    if entity:\n        entities.append(entity)\n\nfor rid in relationship_ids:\n    cursor = self._conn.execute(...)",
+      "recommendation": "Use batch queries: SELECT * FROM entities WHERE id IN (...) and SELECT * FROM relationships WHERE id IN (...)."
+    },
+    {
+      "id": "perf-006",
+      "severity": "medium",
+      "category": "n-plus-one",
+      "file": "src/graph/graph_manager.py",
+      "line": 600,
+      "title": "N+1 Query in find_related_entities BFS",
+      "description": "Similar to find_shortest_path, get_entity() is called individually for each visited node during traversal.",
+      "snippet": "if depth > 0:\n    entity = self.get_entity(current_id)\n    if entity:\n        results.append(entity)",
+      "recommendation": "Collect entity IDs during traversal, then batch fetch after BFS completes."
+    },
+    {
+      "id": "perf-007",
+      "severity": "medium",
+      "category": "inefficient-algorithm",
+      "file": "src/search/vector_search.py",
+      "line": 514,
+      "title": "O(n) Brute Force Vector Search Fallback",
+      "description": "When sqlite-vec is unavailable, _brute_force_search loads ALL vectors from the database and computes cosine similarity for each, resulting in O(n) complexity.",
+      "snippet": "cursor.execute(sql, params)\nfor row in cursor:\n    emb = np.frombuffer(row[\"embedding\"], dtype=np.float32)\n    score = float(np.dot(query_vector, emb) / (norm_q * norm_e))",
+      "recommendation": "Implement approximate nearest neighbor (ANN) fallback using libraries like faiss or annoy. At minimum, add LIMIT clause and early termination when enough high-score results are found."
+    },
+    {
+      "id": "perf-008",
+      "severity": "medium",
+      "category": "blocking",
+      "file": "src/search/smart_search.py",
+      "line": 658,
+      "title": "Sequential Execution in hybrid_search",
+      "description": "In the synchronous hybrid_search method, fuzzy_search and semantic_search are executed sequentially, doubling latency when both succeed.",
+      "snippet": "fuzzy_results = self.fuzzy_search(query, top_k=top_k * 2, type_filter=type_filter)\nsemantic_results = self.semantic_search(query, top_k=top_k * 2, type_filter=type_filter)",
+      "recommendation": "Use concurrent.futures.ThreadPoolExecutor to run both searches in parallel, or always use the async search_async method which already uses asyncio.gather."
+    },
+    {
+      "id": "perf-009",
+      "severity": "medium",
+      "category": "memory-leak",
+      "file": "src/graph/graph_manager.py",
+      "line": 191,
+      "title": "Long-lived SQLite Connection Without Cleanup",
+      "description": "GraphManager creates a SQLite connection in __init__ that persists for the object lifetime. In long-running processes, this can lead to connection leaks if GraphManager instances are created but not properly closed.",
+      "snippet": "self._conn: Optional[sqlite3.Connection] = None\nself._lock = threading.RLock()\nself._init_db()",
+      "recommendation": "Implement connection pooling or use context manager pattern consistently. Add __del__ method as safety net, or document that close() must be called."
+    },
+    {
+      "id": "perf-010",
+      "severity": "medium",
+      "category": "missing-cache",
+      "file": "src/graph/graph_manager.py",
+      "line": 661,
+      "title": "No Caching for Frequently Accessed Entities",
+      "description": "get_entity() always queries the database, even for the same entity_id accessed multiple times in quick succession (e.g., during graph traversal).",
+      "snippet": "def get_entity(self, entity_id: str) -> Optional[Entity]:\n    cursor = self._conn.execute(\n        \"SELECT * FROM entities WHERE id = ?\",\n        (entity_id,),\n    )",
+      "recommendation": "Add an LRU cache decorator or implement a simple in-memory cache with TTL for entity lookups, especially beneficial during graph traversal operations."
+    },
+    {
+      "id": "perf-011",
+      "severity": "low",
+      "category": "inefficient-query",
+      "file": "src/graph/graph_manager.py",
+      "line": 527,
+      "title": "Multiple COUNT Queries in get_entity_stats",
+      "description": "get_entity_stats executes 4 separate queries to collect statistics that could be combined into fewer queries.",
+      "snippet": "cursor = self._conn.execute(\"SELECT COUNT(*) FROM entities\")\ncursor = self._conn.execute(\"SELECT COUNT(*) FROM relationships\")\ncursor = self._conn.execute(\"SELECT type, COUNT(*) FROM entities GROUP BY type\")\ncursor = self._conn.execute(\"SELECT type, COUNT(*) FROM relationships GROUP BY type\")",
+      "recommendation": "Combine into 2 queries using UNION ALL or a single query with multiple CTEs. This reduces round-trips to the database."
+    },
+    {
+      "id": "perf-012",
+      "severity": "low",
+      "category": "inefficient-algorithm",
+      "file": "src/memory/memory_manager.py",
+      "line": 181,
+      "title": "Full Directory Scan in _rebuild_index",
+      "description": "Index rebuild scans all directories recursively using nested loops (O(years * months * days * files)), which can be slow for large memory stores.",
+      "snippet": "for year_dir in self.by_date_dir.iterdir():\n    for month_dir in year_dir.iterdir():\n        for day_dir in month_dir.iterdir():\n            for memory_file in day_dir.glob(\"*.md\"):",
+      "recommendation": "Use pathlib.glob('**/*.md') for simpler code, or implement incremental index updates to avoid full rebuilds."
+    },
+    {
+      "id": "perf-013",
+      "severity": "low",
+      "category": "blocking",
+      "file": "src/search/smart_search.py",
+      "line": 483,
+      "title": "Synchronous Subprocess in _ripgrep_search",
+      "description": "ripgrep is executed synchronously with subprocess.run(), blocking the thread during file search operations.",
+      "snippet": "proc = subprocess.run(\n    cmd,\n    capture_output=True,\n    text=True,\n    timeout=10\n)",
+      "recommendation": "Use asyncio.create_subprocess_exec for async execution, or run in a thread pool executor to avoid blocking the event loop."
+    },
+    {
+      "id": "perf-014",
+      "severity": "low",
+      "category": "missing-index",
+      "file": "src/search/vector_search.py",
+      "line": 841,
+      "title": "LIKE Query Without Index in Fallback Search",
+      "description": "_like_search uses LIKE '%term%' patterns which cannot use indexes and require full table scans.",
+      "snippet": "conditions = [f\"content LIKE ?\" for _ in tokens]\nparams = [f\"%{t}%\" for t in tokens]",
+      "recommendation": "This is expected for LIKE with leading wildcards. Consider using FTS5 as primary search method and ensure it's always available, or implement trigram indexing for substring search."
+    }
+  ],
+  "summary": {
+    "total_findings": 14,
+    "critical": 0,
+    "high": 5,
+    "medium": 5,
+    "low": 4
+  },
+  "metadata": {
+    "analyzed_at": "2026-02-09",
+    "scope": "src/**/*.py",
+    "focus_areas": [
+      "N+1 query problems",
+      "Inefficient algorithms",
+      "Memory leaks",
+      "Blocking operations",
+      "Missing caching",
+      "Database optimization"
+    ]
+  }
+}
