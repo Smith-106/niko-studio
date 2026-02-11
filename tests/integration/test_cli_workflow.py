@@ -18,6 +18,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from cli.main import cli
+from src import __version__
 
 
 class TestInitCommand:
@@ -177,7 +178,7 @@ class TestCLIIntegration:
         result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
-        assert "0.1.0" in result.output or "version" in result.output.lower()
+        assert __version__ in result.output or "version" in result.output.lower()
 
     def test_cli_help(self, runner):
         """Test CLI main help."""

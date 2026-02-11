@@ -13,7 +13,7 @@ Click-based CLI application with command groups for:
 import click
 from rich.console import Console
 
-__version__ = "0.1.0"
+from src import __version__
 
 console = Console()
 

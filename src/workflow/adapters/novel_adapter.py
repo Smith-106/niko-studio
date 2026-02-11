@@ -9,10 +9,6 @@ from typing import Dict, Any, Type, Literal, Optional
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 import os
-from dotenv import load_dotenv
-
-# Load environment variables once at module level (Performance Optimization)
-load_dotenv()
 
 from .base_adapter import (
     BaseDomainAdapter, 
@@ -25,6 +21,7 @@ from src.workflow.state import (
     create_initial_state
 )
 from src.workflow.base_state import BaseState
+from src.config import get_config
 
 
 @AdapterRegistry.register(DomainType.NOVEL.value)
@@ -120,8 +117,9 @@ class NovelAdapter(BaseDomainAdapter):
 
     def _get_llm(self):
         """获取LLM实例"""
-        
-        google_key = os.getenv("GOOGLE_API_KEY")
+
+        app_config = get_config()
+        google_key = app_config.agent.google_api_key or os.getenv("GOOGLE_API_KEY")
         if google_key:
             try:
                 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -132,8 +130,8 @@ class NovelAdapter(BaseDomainAdapter):
                 )
             except Exception:
                 pass
-        
-        openai_key = os.getenv("OPENAI_API_KEY")
+
+        openai_key = app_config.agent.openai_api_key or os.getenv("OPENAI_API_KEY")
         if openai_key:
             try:
                 from langchain_openai import ChatOpenAI
@@ -144,8 +142,8 @@ class NovelAdapter(BaseDomainAdapter):
                 )
             except Exception:
                 pass
-        
-        raise RuntimeError("无法初始化LLM，请设置 GOOGLE_API_KEY 或 OPENAI_API_KEY")
+
+        raise RuntimeError("无法初始化 LLM，请设置 GOOGLE_API_KEY 或 OPENAI_API_KEY")
 
     # ============================================================
     # 节点函数

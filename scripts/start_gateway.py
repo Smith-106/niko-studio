@@ -60,6 +60,11 @@ def main():
     
     try:
         import uvicorn
+        from src.config import init_config, ensure_environment
+
+        init_config(hot_reload=False)
+        ensure_environment(strict=False)
+
         uvicorn.run(
             "src.mcp.gateway:app",
             host=args.host,

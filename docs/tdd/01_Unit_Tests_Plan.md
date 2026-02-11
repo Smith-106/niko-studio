@@ -644,10 +644,10 @@ CoverageRequirements:
 
 ```bash
 # 运行测试并生成覆盖率报告
-pytest --cov=src --cov-report=html --cov-report=term-missing
+pytest -m "not e2e" --cov=src --cov-report=html --cov-report=term-missing
 
 # 检查覆盖率是否满足要求
-pytest --cov=src --cov-fail-under=80
+pytest -m "not e2e" --cov=src --cov-fail-under=80
 ```
 
 ---

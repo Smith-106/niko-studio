@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Iterable
 from pathlib import Path
 
+from src import __version__
 from src.config import get_config_value
 from src.knowledge.services import get_services
 
@@ -1441,7 +1442,7 @@ async def health_check(request):
 
     return JSONResponse({
         "status": "healthy",
-        "version": "8.2.0",
+        "version": __version__,
         "services": {
             "memory": "ok",
             "graph": "ok",
@@ -1500,7 +1501,7 @@ def create_gateway() -> Starlette:
     @contextlib.asynccontextmanager
     async def lifespan(app: Starlette):
         """管理所有 MCP 服务的生命周期 (优化: 并行启动)"""
-        logger.info("🚀 Starting Niko-Studio MCP Gateway v8.2.0...")
+        logger.info(f"🚀 Starting Niko-Studio MCP Gateway v{__version__}...")
 
         async with contextlib.AsyncExitStack() as stack:
             # Start all MCP sessions in parallel using asyncio.gather

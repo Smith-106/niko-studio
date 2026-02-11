@@ -18,8 +18,11 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, TypeVar, Generic
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
+from dotenv import load_dotenv
 import yaml
 import logging
+
+from src import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +94,8 @@ class AgentConfig:
 
     # 默认模型
     default_model: str = "gpt-4o"
+    google_api_key: str = ""
+    openai_api_key: str = ""
 
     # 日志级别
     log_level: str = "INFO"
@@ -206,7 +211,7 @@ class AppConfig:
     """应用主配置"""
     # 基础
     app_name: str = "niko-studio"
-    version: str = "0.1.0"
+    version: str = __version__
     debug: bool = False
     env: str = "development"
 
@@ -281,7 +286,8 @@ class ConfigManager:
             # 1. 从默认值开始
             self._config = AppConfig()
 
-            # 2. 从环境变量加载
+            # 2. 加载 .env 并从环境变量加载
+            load_dotenv(override=False)
             self._load_from_env()
 
             # 3. 从配置文件加载
@@ -307,6 +313,10 @@ class ConfigManager:
         # Agent 配置
         if os.getenv('NIKO_DEFAULT_MODEL'):
             self._config.agent.default_model = os.getenv('NIKO_DEFAULT_MODEL')
+        if os.getenv('GOOGLE_API_KEY'):
+            self._config.agent.google_api_key = os.getenv('GOOGLE_API_KEY', '')
+        if os.getenv('OPENAI_API_KEY'):
+            self._config.agent.openai_api_key = os.getenv('OPENAI_API_KEY', '')
         if os.getenv('NIKO_MAX_COST_PER_REQUEST'):
             self._config.agent.max_cost_per_request = float(os.getenv('NIKO_MAX_COST_PER_REQUEST'))
         if os.getenv('NIKO_MAX_COST_PER_SESSION'):
@@ -397,17 +407,19 @@ class ConfigManager:
 
         self._config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        default_config = """# Niko-Studio 配置文件
+        default_config = f"""# Niko-Studio 配置文件
 # 此文件支持热加载，修改后自动生效
 
 app_name: niko-studio
-version: "0.1.0"
+version: "{__version__}"
 debug: false
 env: development
 data_dir: .writing
 
 agent:
   default_model: gpt-4o
+  google_api_key: ""
+  openai_api_key: ""
   max_cost_per_request: 1.0
   max_cost_per_session: 10.0
   max_tokens_per_request: 100000
@@ -587,6 +599,37 @@ writing:
 # ========== 便捷函数 ==========
 
 _config_manager: Optional[ConfigManager] = None
+
+
+def validate_environment(strict: bool = False) -> List[str]:
+    """校验关键环境变量，返回错误列表。"""
+    config = get_config()
+    errors: List[str] = []
+
+    if not (config.agent.google_api_key or config.agent.openai_api_key):
+        errors.append("缺少 LLM 凭证：请设置 GOOGLE_API_KEY 或 OPENAI_API_KEY")
+
+    if strict and config.env != "development":
+        if not config.graph.db_path:
+            errors.append("缺少 NIKO_GRAPH_DB_PATH 或 graph.db_path 配置")
+
+    return errors
+
+
+def ensure_environment(strict: bool = False) -> None:
+    """执行启动前环境校验。
+
+    开发环境仅 warning，非开发环境（或 strict=True）抛出异常。
+    """
+    config = get_config()
+    errors = validate_environment(strict=strict)
+    if not errors:
+        return
+    msg = "环境预检问题：\n- " + "\n- ".join(errors)
+    if config.env == "development" and not strict:
+        logger.warning(msg)
+    else:
+        raise RuntimeError(msg)
 
 
 def init_config(

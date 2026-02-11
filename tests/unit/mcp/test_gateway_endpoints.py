@@ -23,10 +23,11 @@ class TestHealthEndpoint:
         assert data["status"] == "healthy"
 
     def test_health_check_returns_version(self, client_no_lifespan):
-        """Test health check returns version 8.2.0"""
+        """Test health check returns current __version__"""
+        from src import __version__
         response = client_no_lifespan.get("/health")
         data = response.json()
-        assert data["version"] == "8.2.0"
+        assert data["version"] == __version__
 
     def test_health_check_returns_all_services(self, client_no_lifespan):
         """Test health check returns all 7 services"""

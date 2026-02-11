@@ -65,6 +65,13 @@ pip install -r requirements.txt
 uv sync
 ```
 
+### 测试命令（交付基线）
+
+```bash
+# 单元 + 集成（排除 e2e），覆盖率门槛 80%
+pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80
+```
+
 ### Initialize Database
 
 ```bash

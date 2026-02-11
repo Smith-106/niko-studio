@@ -26,6 +26,8 @@ AI Agent Platform V2.7 文档目录
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献指南 |
 | [JULES.md](../.github/JULES.md) | Jules 自动开发指南 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
+| [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md) | 发布流程与验收记录 |
+| [operations/ROLLBACK.md](operations/ROLLBACK.md) | 回退触发条件与操作手册 |
 
 ## 规格文档
 
