@@ -686,7 +686,7 @@ class StyleAnalyzer:
             sentence_variation = 0.5
 
         # 对话节奏 (对话标记密度)
-        dialogue_markers = text.count(""") + text.count('"') + text.count("「")
+        dialogue_markers = text.count('"') + text.count("「") + text.count("」")
         dialogue_pacing = min(dialogue_markers / len(paragraphs) * 0.5, 1.0)
 
         return {
@@ -789,9 +789,9 @@ class StyleAnalyzer:
         dialogue_chars = 0
         in_dialogue = False
         for char in text:
-            if char in [""", "「", '"']:
+            if char in ['"', "「"]:
                 in_dialogue = True
-            elif char in [""", "」", '"']:
+            elif char in ['"', "」"]:
                 in_dialogue = False
             elif in_dialogue:
                 dialogue_chars += 1

@@ -109,15 +109,13 @@ src\services\reranker\models.py:21
 ---------- coverage: platform win32, python 3.12.10-final-0 ----------
 Coverage XML written to file coverage.xml
 
-Required test coverage of 80% reached. Total coverage: 82.79%
-4692 passed, 2 skipped, 14 deselected, 2 warnings in 322.61s (0:05:22)
+Required test coverage of 80% reached. Total coverage: 80.94%
+4692 passed, 2 skipped, 14 deselected, 2 warnings in 325.96s (0:05:25)
 
 C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
 The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
 
   warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
-C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\coverage\report_core.py:107: CoverageWarning: Couldn't parse Python file 'D:\����Ŀ¼\niko-studio\src\narrative\style_system.py' (couldnt-parse); see https://coverage.readthedocs.io/en/7.13.1/messages.html#warning-couldnt-parse
-  coverage._warn(msg, slug="couldnt-parse")
 ```
 
 ### 3) e2e smoke
@@ -127,7 +125,7 @@ C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\coverag
 
 ```text
 ..............                                                           [100%]
-14 passed in 7.21s
+14 passed in 7.14s
 
 C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
 The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
