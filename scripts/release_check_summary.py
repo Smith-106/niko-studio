@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-"""发布检查汇总脚本：版本一致性、e2e、coverage 文件状态。"""
+"""发布检查汇总脚本：版本一致性、baseline/e2e、coverage 与生产配置守卫。"""
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -12,7 +13,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = PROJECT_ROOT / "release-check-summary.md"
 
 
-def run_cmd(cmd: list[str]) -> tuple[int, str]:
+def run_cmd(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str]:
+    merged_env = os.environ.copy()
+    if env:
+        merged_env.update(env)
+
     result = subprocess.run(
         cmd,
         cwd=PROJECT_ROOT,
@@ -20,12 +25,13 @@ def run_cmd(cmd: list[str]) -> tuple[int, str]:
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=merged_env,
     )
     output = (result.stdout or "") + ("\n" + result.stderr if result.stderr else "")
     return result.returncode, output.strip()
 
 
-def parse_e2e_counts(output: str) -> tuple[str, str]:
+def parse_pytest_counts(output: str) -> tuple[str, str]:
     match = re.search(r"(\d+)\s+passed", output)
     if match:
         return "passed", match.group(1)
@@ -37,6 +43,23 @@ def parse_e2e_counts(output: str) -> tuple[str, str]:
 
 def main() -> int:
     version_code, version_output = run_cmd([sys.executable, "scripts/check_versions.py"])
+
+    baseline_code, baseline_output = run_cmd([
+        sys.executable,
+        "-m",
+        "pytest",
+        "-o",
+        "addopts=",
+        "tests/unit",
+        "tests/integration",
+        "-m",
+        "not e2e",
+        "--cov=src",
+        "--cov-report=xml",
+        "--cov-fail-under=80",
+        "-q",
+        "--tb=no",
+    ])
 
     e2e_code, e2e_output = run_cmd([
         sys.executable,
@@ -51,7 +74,23 @@ def main() -> int:
         "--tb=no",
     ])
 
-    e2e_status, e2e_passed = parse_e2e_counts(e2e_output)
+    prod_guard_code, prod_guard_output = run_cmd([
+        sys.executable,
+        "-c",
+        (
+            "from src.mcp.gateway import _resolve_reload_enabled, _resolve_cors_origins;"
+            "assert _resolve_reload_enabled() is False;"
+            "origins = _resolve_cors_origins();"
+            "assert origins and all(o not in {'*','http://localhost:3000','http://127.0.0.1:3000'} for o in origins);"
+            "print('production guard ok')"
+        ),
+    ], env={
+        "NIKO_ENV": "production",
+        "NIKO_CORS_PROD_ORIGINS": "https://app.example.com,https://gray.example.com",
+    })
+
+    baseline_status, baseline_passed = parse_pytest_counts(baseline_output)
+    e2e_status, e2e_passed = parse_pytest_counts(e2e_output)
 
     coverage_xml = PROJECT_ROOT / "coverage.xml"
     codecov_state = "available" if coverage_xml.exists() else "missing"
@@ -59,7 +98,9 @@ def main() -> int:
     report = f"""# Release Check Summary
 
 - Version check: {'PASS' if version_code == 0 else 'FAIL'}
+- Baseline tests (unit+integration, not e2e): {'PASS' if baseline_code == 0 else 'FAIL'}
 - e2e smoke: {'PASS' if e2e_code == 0 else 'FAIL'}
+- Production guard (reload/cors): {'PASS' if prod_guard_code == 0 else 'FAIL'}
 - Codecov signal (coverage.xml): {codecov_state}
 
 ## Details
@@ -70,7 +111,16 @@ def main() -> int:
 {version_output}
 ```
 
-### 2) e2e smoke
+### 2) Baseline tests
+
+- status: {baseline_status}
+- passed_count: {baseline_passed}
+
+```text
+{baseline_output}
+```
+
+### 3) e2e smoke
 
 - status: {e2e_status}
 - passed_count: {e2e_passed}
@@ -79,7 +129,13 @@ def main() -> int:
 {e2e_output}
 ```
 
-### 3) Codecov prerequisite
+### 4) Production guard (reload/cors)
+
+```text
+{prod_guard_output}
+```
+
+### 5) Codecov prerequisite
 
 - coverage.xml exists: {'yes' if coverage_xml.exists() else 'no'}
 - expected CI upload policy:
@@ -90,7 +146,7 @@ def main() -> int:
     REPORT_PATH.write_text(report, encoding="utf-8")
     print(f"Report generated: {REPORT_PATH}")
 
-    final_ok = version_code == 0 and e2e_code == 0
+    final_ok = version_code == 0 and baseline_code == 0 and e2e_code == 0 and prod_guard_code == 0
     return 0 if final_ok else 1
 
 

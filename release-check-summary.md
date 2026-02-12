@@ -1,8 +1,10 @@
 # Release Check Summary
 
 - Version check: PASS
+- Baseline tests (unit+integration, not e2e): PASS
 - e2e smoke: PASS
-- Codecov signal (coverage.xml): missing
+- Production guard (reload/cors): PASS
+- Codecov signal (coverage.xml): available
 
 ## Details
 
@@ -19,14 +21,111 @@ expected version: 8.0.0
 �汾һ���Լ��ͨ����
 ```
 
-### 2) e2e smoke
+### 2) Baseline tests
+
+- status: passed
+- passed_count: 4692
+
+```text
+........................................................................ [  1%]
+........................................................................ [  3%]
+........................................................................ [  4%]
+........................................................................ [  6%]
+........................................................................ [  7%]
+........................................................................ [  9%]
+........................................................................ [ 10%]
+........................................................................ [ 12%]
+........................................................................ [ 13%]
+........................................................................ [ 15%]
+........................................................................ [ 16%]
+........................................................................ [ 18%]
+........................................................................ [ 19%]
+........................................................................ [ 21%]
+........................................................................ [ 23%]
+........................................................................ [ 24%]
+........................................................................ [ 26%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+........................................................................ [ 30%]
+........................................................................ [ 32%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+........................................................................ [ 36%]
+........................................................................ [ 38%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 47%]
+........................................................................ [ 49%]
+........................................................................ [ 50%]
+........................................................................ [ 52%]
+........................................................................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 56%]
+..........s............................................................. [ 58%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................................ [ 62%]
+........................................................................ [ 64%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 70%]
+........................................................................ [ 72%]
+........................................................................ [ 73%]
+........................................................................ [ 75%]
+........................................................................ [ 76%]
+........................................................................ [ 78%]
+........................................................................ [ 79%]
+........................................................................ [ 81%]
+........................................................................ [ 82%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 87%]
+........................................................................ [ 88%]
+........................................................................ [ 90%]
+......................................................................s. [ 92%]
+........................................................................ [ 93%]
+........................................................................ [ 95%]
+........................................................................ [ 96%]
+........................................................................ [ 98%]
+........................................................................ [ 99%]
+..............                                                           [100%]
+============================== warnings summary ===============================
+src\services\__init__.py:29
+  D:\����Ŀ¼\niko-studio\src\services\__init__.py:29: DeprecationWarning: DistillService is deprecated. Use src.memory.distillation_manager.DistillationManager instead.
+    from src.services.distill_service import DistillService
+
+src\services\reranker\models.py:21
+  D:\����Ŀ¼\niko-studio\src\services\reranker\models.py:21: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class RankedDocument(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+---------- coverage: platform win32, python 3.12.10-final-0 ----------
+Coverage XML written to file coverage.xml
+
+Required test coverage of 80% reached. Total coverage: 82.79%
+4692 passed, 2 skipped, 14 deselected, 2 warnings in 287.13s (0:04:47)
+
+C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\coverage\report_core.py:107: CoverageWarning: Couldn't parse Python file 'D:\����Ŀ¼\niko-studio\src\narrative\style_system.py' (couldnt-parse); see https://coverage.readthedocs.io/en/7.13.1/messages.html#warning-couldnt-parse
+  coverage._warn(msg, slug="couldnt-parse")
+```
+
+### 3) e2e smoke
 
 - status: passed
 - passed_count: 14
 
 ```text
 ..............                                                           [100%]
-14 passed in 6.98s
+14 passed in 6.36s
 
 C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
 The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
@@ -34,9 +133,15 @@ The event loop scope for asynchronous fixtures will default to the fixture cachi
   warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
 ```
 
-### 3) Codecov prerequisite
+### 4) Production guard (reload/cors)
 
-- coverage.xml exists: no
+```text
+production guard ok
+```
+
+### 5) Codecov prerequisite
+
+- coverage.xml exists: yes
 - expected CI upload policy:
   - internal: fail_ci_if_error=false
   - external: fail_ci_if_error=true
