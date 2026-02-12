@@ -15,6 +15,10 @@ on:
         required: false
         type: string
         default: external
+      run_metrics_guard:
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   gate:
@@ -32,6 +36,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Run production runtime guards (${{ inputs.gate_label }})
+        if: ${{ inputs.run_metrics_guard }}
+        env:
+          NIKO_ENV: production
+          NIKO_CORS_PROD_ORIGINS: https://app.example.com,https://gray.example.com
+          NIKO_GATEWAY_METRICS_ENABLED: "true"
+        run: |
+          python -c "from src.mcp.gateway import _resolve_reload_enabled, _resolve_cors_origins; from src.config import init_config, get_config_value; init_config(config_path='config/niko-studio.production.yaml', hot_reload=False); assert _resolve_reload_enabled() is False; origins = _resolve_cors_origins(); assert origins and all(o not in {'*','http://localhost:3000','http://127.0.0.1:3000'} for o in origins); assert bool(get_config_value('gateway.metrics_enabled', True)) is True; print('external production guards ok')"
 
       - name: Run e2e smoke (${{ inputs.gate_label }})
         run: |

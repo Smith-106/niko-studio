@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""发布检查汇总脚本：版本一致性、baseline/e2e、coverage 与生产配置守卫。"""
+"""发布检查汇总脚本：版本一致性、baseline/e2e、coverage、生产配置与观测守卫。"""
 
 from __future__ import annotations
 
@@ -89,6 +89,20 @@ def main() -> int:
         "NIKO_CORS_PROD_ORIGINS": "https://app.example.com,https://gray.example.com",
     })
 
+    metrics_guard_code, metrics_guard_output = run_cmd([
+        sys.executable,
+        "-c",
+        (
+            "from src.config import init_config, get_config_value;"
+            "init_config(config_path='config/niko-studio.production.yaml', hot_reload=False);"
+            "assert bool(get_config_value('gateway.metrics_enabled', True)) is True;"
+            "print('metrics guard ok')"
+        ),
+    ], env={
+        "NIKO_ENV": "production",
+        "NIKO_GATEWAY_METRICS_ENABLED": "true",
+    })
+
     baseline_status, baseline_passed = parse_pytest_counts(baseline_output)
     e2e_status, e2e_passed = parse_pytest_counts(e2e_output)
 
@@ -101,6 +115,7 @@ def main() -> int:
 - Baseline tests (unit+integration, not e2e): {'PASS' if baseline_code == 0 else 'FAIL'}
 - e2e smoke: {'PASS' if e2e_code == 0 else 'FAIL'}
 - Production guard (reload/cors): {'PASS' if prod_guard_code == 0 else 'FAIL'}
+- Metrics guard (production): {'PASS' if metrics_guard_code == 0 else 'FAIL'}
 - Codecov signal (coverage.xml): {codecov_state}
 
 ## Details
@@ -135,7 +150,13 @@ def main() -> int:
 {prod_guard_output}
 ```
 
-### 5) Codecov prerequisite
+### 5) Metrics guard
+
+```text
+{metrics_guard_output}
+```
+
+### 6) Codecov prerequisite
 
 - coverage.xml exists: {'yes' if coverage_xml.exists() else 'no'}
 - expected CI upload policy:
@@ -146,7 +167,13 @@ def main() -> int:
     REPORT_PATH.write_text(report, encoding="utf-8")
     print(f"Report generated: {REPORT_PATH}")
 
-    final_ok = version_code == 0 and baseline_code == 0 and e2e_code == 0 and prod_guard_code == 0
+    final_ok = (
+        version_code == 0
+        and baseline_code == 0
+        and e2e_code == 0
+        and prod_guard_code == 0
+        and metrics_guard_code == 0
+    )
     return 0 if final_ok else 1
 
 

@@ -52,6 +52,7 @@ jobs:
     uses: ./.github/workflows/external-release-gate.yml
     with:
       run_codecov: false
+      run_metrics_guard: false
       gate_label: pr-precheck
 
   external-e2e-smoke:
@@ -60,6 +61,7 @@ jobs:
     uses: ./.github/workflows/external-release-gate.yml
     with:
       run_codecov: false
+      run_metrics_guard: true
       gate_label: external
 
   external-quality-signals:
@@ -69,4 +71,5 @@ jobs:
     with:
       run_codecov: true
       codecov_fail_ci_if_error: true
+      run_metrics_guard: true
       gate_label: external-quality

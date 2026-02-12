@@ -41,14 +41,15 @@ pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=sho
 
 5. 质量信号完整：覆盖率报告生成并上传成功（external 场景下 Codecov 上传失败即 No-Go），并且 CI 产出 `coverage-xml`、`pytest-baseline-report`、`pytest-e2e-report-*` 工件可追溯。
 
-6. 生产安全配置有效：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位。
-   - Python: `python -c "import src; print(src.__version__)"`
-   - CLI: `python -m src.cli.main --version`
-   - Desktop: `npm --prefix desktop pkg get version`
+6. 生产安全配置有效：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位，且 `reload` 必须关闭。
+   - 推荐使用 `config/niko-studio.production.yaml` 启动 external。
+   - 启动命令：`python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml`
 
-7. 回退预案已确认：`docs/operations/ROLLBACK.md` 中 external 回退触发与验证项均可执行。
+7. 生产可观测性守卫通过：`gateway.metrics_enabled=true`，并通过 external workflow 的 runtime guard。
 
-8. 发布检查汇总完成：
+8. 回退预案已确认：`docs/operations/ROLLBACK.md` 中 external 回退触发与验证项均可执行。
+
+9. 发布检查汇总完成：
 
 ```bash
 python scripts/release_check_summary.py
@@ -67,8 +68,9 @@ python scripts/release_check_summary.py
 1. 执行 internal 全部步骤。
 2. 执行 e2e 冒烟。
 3. 确认质量信号完整（覆盖率 + CI 关键信号）。
-4. 核对回退预案与回滚验证路径。
-5. 评审 Go/No-Go 并登记结果。
+4. 验证生产守卫（CORS / reload / metrics）通过。
+5. 核对回退预案与回滚验证路径。
+6. 评审 Go/No-Go 并登记结果。
 
 ## 验收记录模板
 
@@ -80,5 +82,6 @@ python scripts/release_check_summary.py
 - 基线测试与覆盖率：
 - e2e 冒烟（external 必填）：通过 / 失败 / 跳过（internal）
 - 质量信号完整性（覆盖率上传、CI 关键步骤）：完整 / 不完整
+- 生产守卫（CORS / reload / metrics）：通过 / 失败
 - 回退预案确认：是 / 否
 - 结论：Go / No-Go

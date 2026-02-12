@@ -5,6 +5,7 @@ Niko-Studio MCP Gateway 启动脚本
 使用方法:
     python scripts/start_gateway.py
     python scripts/start_gateway.py --port 8000 --host 0.0.0.0
+    python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml
 """
 
 import argparse
@@ -24,9 +25,10 @@ def main():
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
     parser.add_argument("--log-level", default="info", help="Log level (default: info)")
     parser.add_argument("--env", choices=["development", "production"], default=None, help="Runtime env override")
+    parser.add_argument("--config", default=None, help="Config file path override")
 
     args = parser.parse_args()
-    
+
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
     ║                                                               ║
@@ -41,7 +43,7 @@ def main():
     ║                                                               ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
-    
+
     try:
         import uvicorn
         from src.config import init_config, ensure_environment, get_config_value
@@ -49,7 +51,15 @@ def main():
         if args.env:
             os.environ["NIKO_ENV"] = args.env
 
-        init_config(hot_reload=False)
+        env_flag = str(os.getenv("NIKO_ENV", "")).lower()
+        is_production_flag = env_flag in {"prod", "production"}
+        default_prod_config = project_root / "config" / "niko-studio.production.yaml"
+
+        config_path = args.config or os.getenv("NIKO_CONFIG_PATH")
+        if not config_path and is_production_flag and default_prod_config.exists():
+            config_path = str(default_prod_config)
+
+        init_config(config_path=config_path, hot_reload=False)
         ensure_environment(strict=False)
 
         host = str(args.host or get_config_value("gateway.host", "0.0.0.0"))
@@ -72,6 +82,9 @@ def main():
                 print("❌ Error: production CORS whitelist is empty")
                 print("   Set NIKO_CORS_PROD_ORIGINS or gateway.cors_prod_origins with real domains")
                 sys.exit(1)
+
+        if config_path:
+            print(f"🧩 Config file: {config_path}")
 
         print(f"🚀 Starting MCP Gateway on http://{host}:{port}")
         print()

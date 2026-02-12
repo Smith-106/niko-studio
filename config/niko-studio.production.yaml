@@ -1,0 +1,63 @@
+# Niko-Studio 配置文件（生产）
+# external 发布推荐使用该配置文件启动：
+#   python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml
+
+app_name: niko-studio
+version: "8.0.0"
+debug: false
+env: production
+data_dir: .writing
+
+agent:
+  default_model: gpt-4o
+  google_api_key: ""
+  openai_api_key: ""
+  max_cost_per_request: 1.0
+  max_cost_per_session: 10.0
+  max_tokens_per_request: 100000
+  budget_warn_threshold: 0.8
+  log_level: INFO
+
+memory:
+  vector_db_path: .writing/vector_store
+  embedding_model: text-embedding-3-small
+  embedding_dimension: 1536
+  cache_enabled: true
+  cache_ttl: 86400
+  cache_max_size: 10000
+  chunk_size: 1000
+  chunk_overlap: 200
+
+workflow:
+  session_timeout: 3600
+  max_concurrent_sessions: 10
+  checkpoint_enabled: true
+  checkpoint_interval: 300
+  resume_strategy: from_last_checkpoint
+
+graph:
+  db_path: .writing/graph_db
+  max_connections: 10
+  max_entities_per_query: 100
+  relation_depth: 3
+
+writing:
+  character_depth_dimensions: 5
+  max_character_traits: 20
+  scene_coherence_threshold: 0.8
+  contradiction_sensitivity: medium
+  foreshadowing_max_distance: 50
+  foreshadowing_reminder_threshold: 10
+  style_vector_dimensions: 30
+  style_sample_min_words: 5000
+
+gateway:
+  host: 0.0.0.0
+  port: 8000
+  reload: false
+  cors_dev_origins:
+    - "*"
+  cors_prod_origins:
+    - https://app.example.com
+    - https://gray.example.com
+  metrics_enabled: true

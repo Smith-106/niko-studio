@@ -87,7 +87,7 @@ pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=sho
 
 ### Gateway 部署配置（CORS / reload）
 
-`config/niko-studio.yaml`：
+开发配置：`config/niko-studio.yaml`
 
 ```yaml
 gateway:
@@ -97,6 +97,18 @@ gateway:
   reload: true
   cors_dev_origins:
     - "*"
+  cors_prod_origins:
+    - https://app.example.com
+    - https://gray.example.com
+  metrics_enabled: true
+```
+
+生产推荐配置：`config/niko-studio.production.yaml`
+
+```yaml
+env: production
+gateway:
+  reload: false
   cors_prod_origins:
     - https://app.example.com
     - https://gray.example.com
@@ -125,6 +137,14 @@ gateway:
 - 平均延迟：`latency_ms_avg > 500ms` 持续 5 分钟告警。
 - 最大延迟：`latency_ms_max > 2000ms` 连续 3 次采集告警。
 
+### 发布检查汇总（含 production 守卫）
+
+```bash
+python scripts/release_check_summary.py
+```
+
+汇总将包含：版本一致性、baseline、e2e、production CORS/reload 守卫、metrics 守卫、coverage 信号。
+
 ### Initialize Database
 
 ```bash
@@ -139,7 +159,10 @@ python -c "from src.graph.graph_manager import init_schema; init_schema()"
 python scripts/start_gateway.py --host 0.0.0.0 --port 8000 --reload
 
 # 生产环境（默认关闭 reload，并启用生产 CORS 白名单）
-NIKO_ENV=production NIKO_CORS_PROD_ORIGINS="https://app.example.com,https://gray.example.com" python scripts/start_gateway.py --host 0.0.0.0 --port 8000
+python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml --host 0.0.0.0 --port 8000
+
+# 若需环境变量覆盖
+NIKO_CORS_PROD_ORIGINS="https://app.example.com,https://gray.example.com" python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml
 ```
 
 可用运维端点：
