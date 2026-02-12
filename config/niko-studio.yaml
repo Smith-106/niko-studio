@@ -49,3 +49,14 @@ writing:
   foreshadowing_reminder_threshold: 10
   style_vector_dimensions: 30
   style_sample_min_words: 5000
+
+gateway:
+  host: 0.0.0.0
+  port: 8000
+  reload: true
+  cors_dev_origins:
+    - "*"
+  cors_prod_origins:
+    - https://app.example.com
+    - https://gray.example.com
+  metrics_enabled: true

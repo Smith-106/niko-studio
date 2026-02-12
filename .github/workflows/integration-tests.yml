@@ -25,10 +25,48 @@ jobs:
 
       - name: Run unit + integration tests (delivery baseline)
         run: |
-          pytest --cov-report=xml
+          pytest --cov-report=xml --junitxml=pytest-baseline.xml
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+      - name: Upload baseline test report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-baseline-report
+          path: pytest-baseline.xml
+
+      - name: Upload coverage to Codecov (internal)
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.xml
           fail_ci_if_error: false
+
+  external-precheck-e2e:
+    if: github.event_name == 'pull_request'
+    needs: tests
+    continue-on-error: true
+    uses: ./.github/workflows/external-release-gate.yml
+    with:
+      run_codecov: false
+      gate_label: pr-precheck
+
+  external-e2e-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: tests
+    uses: ./.github/workflows/external-release-gate.yml
+    with:
+      run_codecov: false
+      gate_label: external
+
+  external-quality-signals:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: tests
+    uses: ./.github/workflows/external-release-gate.yml
+    with:
+      run_codecov: true
+      codecov_fail_ci_if_error: true
+      gate_label: external-quality

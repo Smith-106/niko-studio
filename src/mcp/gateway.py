@@ -2,7 +2,10 @@
 Niko-Studio MCP Gateway - 统一入口，支持多模型并行调用
 
 运行方式:
+    # 开发环境（默认支持 reload）
     uvicorn src.mcp.gateway:app --host 0.0.0.0 --port 8000 --reload
+    # 生产环境（默认关闭 reload）
+    NIKO_ENV=production uvicorn src.mcp.gateway:app --host 0.0.0.0 --port 8000
 
 客户端连接:
     - http://localhost:8000/memory   (记忆服务)
@@ -27,6 +30,8 @@ Niko-Studio MCP Gateway - 统一入口，支持多模型并行调用
 import contextlib
 import logging
 import asyncio
+import time
+import os
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Iterable
 from pathlib import Path
@@ -45,12 +50,115 @@ def _is_llm_available() -> bool:
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, StreamingResponse
 from mcp.server.fastmcp import FastMCP
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("niko-gateway")
+
+# ============ 网关运行时指标 ============
+
+_METRICS = {
+    "requests_total": 0,
+    "requests_failed_total": 0,
+    "latency_ms_total": 0.0,
+    "latency_ms_max": 0.0,
+}
+
+
+def _record_request_metrics(status_code: int, latency_ms: float) -> None:
+    _METRICS["requests_total"] += 1
+    if status_code >= 400:
+        _METRICS["requests_failed_total"] += 1
+    _METRICS["latency_ms_total"] += latency_ms
+    if latency_ms > _METRICS["latency_ms_max"]:
+        _METRICS["latency_ms_max"] = latency_ms
+
+
+def _get_metrics_snapshot() -> dict:
+    requests_total = _METRICS["requests_total"]
+    requests_failed = _METRICS["requests_failed_total"]
+    latency_total = _METRICS["latency_ms_total"]
+    avg_latency = latency_total / requests_total if requests_total else 0.0
+    return {
+        "requests_total": requests_total,
+        "requests_failed_total": requests_failed,
+        "requests_success_total": requests_total - requests_failed,
+        "latency_ms_avg": round(avg_latency, 2),
+        "latency_ms_max": round(_METRICS["latency_ms_max"], 2),
+    }
+
+
+def _is_production_env() -> bool:
+    env = str(os.getenv("NIKO_ENV") or get_config_value("env", "development")).lower()
+    return env in {"prod", "production"}
+
+
+def _resolve_reload_enabled() -> bool:
+    if _is_production_env():
+        return False
+    raw = os.getenv("NIKO_GATEWAY_RELOAD")
+    if raw is not None:
+        return str(raw).strip().lower() in {"true", "1", "yes", "on"}
+    return bool(get_config_value("gateway.reload", True))
+
+
+def _resolve_gateway_host_port() -> tuple[str, int]:
+    host = str(os.getenv("NIKO_GATEWAY_HOST") or get_config_value("gateway.host", "0.0.0.0"))
+    port = int(os.getenv("NIKO_GATEWAY_PORT") or get_config_value("gateway.port", 8000))
+    return host, port
+
+
+def _parse_origins(raw: Any) -> list[str]:
+    if isinstance(raw, str):
+        return [item.strip() for item in raw.split(",") if item.strip()]
+    if isinstance(raw, Iterable):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    return []
+
+
+def _resolve_cors_origins() -> list[str]:
+    if _is_production_env():
+        raw = os.getenv("NIKO_CORS_PROD_ORIGINS")
+        origins = _parse_origins(raw) if raw is not None else _parse_origins(
+            get_config_value("gateway.cors_prod_origins", [])
+        )
+    else:
+        raw = os.getenv("NIKO_CORS_DEV_ORIGINS")
+        origins = _parse_origins(raw) if raw is not None else _parse_origins(
+            get_config_value("gateway.cors_dev_origins", ["*"])
+        )
+
+    if not origins:
+        origins = ["*"] if not _is_production_env() else []
+
+    if _is_production_env():
+        forbidden = {"*", "http://localhost:3000", "http://127.0.0.1:3000"}
+        origins = [origin for origin in origins if origin not in forbidden]
+        if not origins:
+            raise RuntimeError(
+                "Production CORS origins are empty. Set NIKO_CORS_PROD_ORIGINS or gateway.cors_prod_origins."
+            )
+
+    return origins
+
+
+class GatewayMetricsMiddleware(BaseHTTPMiddleware):
+    """网关请求指标采集中间件"""
+
+    async def dispatch(self, request, call_next):
+        start = time.perf_counter()
+        response = None
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            status_code = response.status_code if response is not None else 500
+            _record_request_metrics(status_code, elapsed_ms)
+
 
 # ============ 延迟导入引擎 (通过 ServiceContainer) ============
 
@@ -1427,36 +1535,62 @@ async def chat_stream_endpoint(request: Request):
 async def health_check(request):
     """健康检查"""
     engine_health = {}
-    for name, getter in (
+    dependency_getters = (
         ("memory", get_memory_engine),
         ("graph", get_graph_engine),
+        ("search", get_search_engine),
         ("workflow", get_workflow_engine),
         ("critic", get_critic_engine),
-    ):
+    )
+
+    for name, getter in dependency_getters:
         try:
             engine = getter()
             if hasattr(engine, "health_check"):
-                engine_health[name] = await engine.health_check()
+                health = await engine.health_check()
+                if isinstance(health, dict):
+                    engine_health[name] = health
+                else:
+                    engine_health[name] = {"status": "ok"}
             else:
                 engine_health[name] = {"status": "ok"}
         except Exception as exc:
             engine_health[name] = {"status": "error", "error": str(exc)}
 
-    return JSONResponse({
-        "status": "healthy",
+    core_dependencies = ["memory", "graph", "search", "workflow", "critic"]
+    degraded = any(engine_health.get(name, {}).get("status") != "ok" for name in core_dependencies)
+    status = "degraded" if degraded else "healthy"
+
+    services = {
+        "memory": engine_health["memory"].get("status", "ok"),
+        "graph": engine_health["graph"].get("status", "ok"),
+        "search": engine_health["search"].get("status", "ok"),
+        "workflow": engine_health["workflow"].get("status", "ok"),
+        "critic": engine_health["critic"].get("status", "ok"),
+        "agent": "ok",
+        "skills": "ok",
+    }
+
+    response = JSONResponse({
+        "status": status,
         "version": __version__,
-        "services": {
-            "memory": "ok",
-            "graph": "ok",
-            "search": "ok",
-            "workflow": "ok",
-            "critic": "ok",
-            "agent": "ok",
-            "skills": "ok"
-        },
+        "services": services,
         "engine_health": engine_health,
         "agents": ["commander", "architect", "writer", "critic", "worldbuilding", "character", "plot"],
-        "skills_count": 40
+        "skills_count": 40,
+    })
+    return response
+
+
+async def metrics_endpoint(request):
+    """最小指标端点"""
+    metrics_enabled = bool(get_config_value("gateway.metrics_enabled", True))
+    if not metrics_enabled:
+        return JSONResponse({"status": "disabled"}, status_code=404)
+
+    return JSONResponse({
+        "status": "ok",
+        "metrics": _get_metrics_snapshot(),
     })
 
 
@@ -1554,22 +1688,24 @@ def create_gateway() -> Starlette:
             Mount("/skills", skills_mcp.streamable_http_app()),
             # 辅助端点
             Route("/health", health_check, methods=["GET"]),
+            Route("/metrics", metrics_endpoint, methods=["GET"]),
             Route("/tools", list_tools, methods=["GET"]),
             Route("/chat", chat_endpoint, methods=["POST"]),
             Route("/chat/stream", chat_stream_endpoint, methods=["POST"]),
         ],
         lifespan=lifespan,
     )
-    
+    gateway.add_middleware(GatewayMetricsMiddleware)
+
     # 添加 CORS 支持
     gateway = CORSMiddleware(
         gateway,
-        allow_origins=["*"],
+        allow_origins=_resolve_cors_origins(),
         allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
         allow_headers=["*"],
         expose_headers=["Mcp-Session-Id"],  # 重要: Session 管理必需
     )
-    
+
     return gateway
 
 
@@ -1579,10 +1715,14 @@ app = create_gateway()
 
 if __name__ == "__main__":
     import uvicorn
+
+    host, port = _resolve_gateway_host_port()
+    reload_enabled = _resolve_reload_enabled()
+
     uvicorn.run(
         "src.mcp.gateway:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
+        host=host,
+        port=port,
+        reload=reload_enabled,
         log_level="info"
     )

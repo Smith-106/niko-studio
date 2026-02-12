@@ -312,6 +312,23 @@ class TestConfigManagerLoadFromEnv:
             cm = ConfigManager(config_path=None, hot_reload=False)
             assert cm.config.memory.embedding_model == "ada-002"
 
+    def test_env_gateway_overrides(self):
+        with patch.dict(os.environ, {
+            "NIKO_GATEWAY_HOST": "127.0.0.1",
+            "NIKO_GATEWAY_PORT": "9000",
+            "NIKO_GATEWAY_RELOAD": "false",
+            "NIKO_CORS_DEV_ORIGINS": "http://localhost:3000,http://127.0.0.1:3000",
+            "NIKO_CORS_PROD_ORIGINS": "https://app.example.com,https://gray.example.com",
+            "NIKO_GATEWAY_METRICS_ENABLED": "false",
+        }, clear=False):
+            cm = ConfigManager(config_path=None, hot_reload=False)
+            assert cm.config.gateway.host == "127.0.0.1"
+            assert cm.config.gateway.port == 9000
+            assert cm.config.gateway.reload is False
+            assert cm.config.gateway.cors_dev_origins == ["http://localhost:3000", "http://127.0.0.1:3000"]
+            assert cm.config.gateway.cors_prod_origins == ["https://app.example.com", "https://gray.example.com"]
+            assert cm.config.gateway.metrics_enabled is False
+
 
 class TestConfigManagerGetSet:
 

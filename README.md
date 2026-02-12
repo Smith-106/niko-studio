@@ -1,6 +1,6 @@
 # AI Agent Platform
 
-> **Version**: 2.7 (Platform Edition)  
+> **Version**: 8.0.0 (Platform Edition)
 > **Architecture**: Multi-Agent Collaboration + OpenKL Memory + CCW Workflow  
 > **Positioning**: Cherry Studio / Claude-Code-Workflow style AI Agent Platform
 
@@ -65,6 +65,12 @@ pip install -r requirements.txt
 uv sync
 ```
 
+### 发布口径（internal / external）
+
+- `internal`：内部 dry-run，允许跳过 e2e 冒烟，质量信号以告警为主。
+- `external`：对外交付，必须通过 e2e 冒烟，且覆盖率与 CI 质量信号完整。
+- 详细准入条件与回退要求见：`docs/release/RELEASE_NOTES.md`、`docs/operations/ROLLBACK.md`。
+
 ### 测试命令（交付基线）
 
 ```bash
@@ -72,12 +78,75 @@ uv sync
 pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80
 ```
 
+### 外部发布附加验证（external）
+
+```bash
+# external 必须通过 e2e 冒烟（按 e2e marker 执行）
+pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=short
+```
+
+### Gateway 部署配置（CORS / reload）
+
+`config/niko-studio.yaml`：
+
+```yaml
+gateway:
+  host: 0.0.0.0
+  port: 8000
+  # 仅开发环境使用；生产环境默认强制关闭 reload
+  reload: true
+  cors_dev_origins:
+    - "*"
+  cors_prod_origins:
+    - https://app.example.com
+    - https://gray.example.com
+  metrics_enabled: true
+```
+
+- 开发环境（`env: development`）：允许宽松 CORS，支持热重载。
+- 生产环境（`env: production`）：CORS 使用白名单，`reload` 默认关闭。
+
+> 生产环境必须设置 `NIKO_CORS_PROD_ORIGINS`（逗号分隔）或在 `gateway.cors_prod_origins` 中配置真实域名，不能使用 `*` 或 localhost 占位。
+
+生产域名白名单配置清单（上线前逐项确认）：
+- 真实生产域名（例如 `https://app.example.com`）。
+- 灰度/预发布域名（例如 `https://gray.example.com`）。
+- 运维/回归验证来源域（如独立前端域名）。
+- 禁止在生产白名单中保留 `*`。
+
+### /metrics 采集说明与最低告警建议
+
+采集方式：
+- 周期采集 `GET /metrics`（建议 30s~60s 间隔）。
+- 关注字段：`requests_total`、`requests_failed_total`、`latency_ms_avg`、`latency_ms_max`。
+
+最低告警建议（可按业务流量调整）：
+- 请求失败率：5 分钟窗口内 `requests_failed_total / requests_total > 1%` 告警。
+- 平均延迟：`latency_ms_avg > 500ms` 持续 5 分钟告警。
+- 最大延迟：`latency_ms_max > 2000ms` 连续 3 次采集告警。
+
 ### Initialize Database
 
 ```bash
 # Initialize Kùzu database and create schema
 python -c "from src.graph.graph_manager import init_schema; init_schema()"
 ```
+
+### 运行 Gateway
+
+```bash
+# 开发环境（允许 reload）
+python scripts/start_gateway.py --host 0.0.0.0 --port 8000 --reload
+
+# 生产环境（默认关闭 reload，并启用生产 CORS 白名单）
+NIKO_ENV=production NIKO_CORS_PROD_ORIGINS="https://app.example.com,https://gray.example.com" python scripts/start_gateway.py --host 0.0.0.0 --port 8000
+```
+
+可用运维端点：
+- `GET /health`
+- `GET /metrics`
+- `GET /tools`
+- `POST /chat`
 
 ### Run Development Server
 
@@ -152,7 +221,7 @@ This project is designed for **Jules** automated development. See:
 ## 📚 Documentation
 
 - [System Design (SDD V2.1)](docs/SDD_V2.md) - Architecture & API specifications
-- [Task List (V2.7)](docs/TASKS.md) - Development roadmap
+- [Task List (V8.0.0)](docs/TASKS.md) - Development roadmap
 - [OpenKL Design](openkl/rfcs/0000-openkl-design.md) - Memory layer design
 
 ## 📄 License
@@ -168,4 +237,4 @@ Built on concepts from:
 
 ---
 
-*Version 2.7 Platform Edition | Updated: 2026-01-26*
+*Version 8.0.0 Platform Edition | Updated: 2026-02-12*

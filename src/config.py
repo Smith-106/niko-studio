@@ -167,6 +167,17 @@ class WritingConfig:
 
 
 @dataclass
+class GatewayConfig:
+    """Gateway 相关配置"""
+    host: str = "0.0.0.0"
+    port: int = 8000
+    reload: bool = True
+    cors_dev_origins: List[str] = field(default_factory=lambda: ["*"])
+    cors_prod_origins: List[str] = field(default_factory=lambda: ["https://app.example.com", "https://gray.example.com"])
+    metrics_enabled: bool = True
+
+
+@dataclass
 class BackupConfig:
     """备份相关配置"""
     backup_dir: str = ".writing/backups"
@@ -228,6 +239,7 @@ class AppConfig:
     backup: BackupConfig = field(default_factory=BackupConfig)
     token: TokenConfig = field(default_factory=TokenConfig)
     obsidian: ObsidianConfig = field(default_factory=ObsidianConfig)
+    gateway: GatewayConfig = field(default_factory=GatewayConfig)
 
 
 class ConfigManager:
@@ -304,9 +316,16 @@ class ConfigManager:
 
     def _load_from_env(self) -> None:
         """从环境变量加载配置"""
+
+        def _parse_bool(raw: str) -> bool:
+            return str(raw).strip().lower() in ('true', '1', 'yes', 'on')
+
+        def _parse_csv(raw: str) -> List[str]:
+            return [item.strip() for item in str(raw).split(',') if item.strip()]
+
         # 基础配置
         if os.getenv('NIKO_DEBUG'):
-            self._config.debug = os.getenv('NIKO_DEBUG', '').lower() in ('true', '1', 'yes')
+            self._config.debug = _parse_bool(os.getenv('NIKO_DEBUG', ''))
         if os.getenv('NIKO_ENV'):
             self._config.env = os.getenv('NIKO_ENV', 'development')
 
@@ -331,6 +350,20 @@ class ConfigManager:
         # Graph 配置
         if os.getenv('NIKO_GRAPH_DB_PATH'):
             self._config.graph.db_path = os.getenv('NIKO_GRAPH_DB_PATH')
+
+        # Gateway 配置
+        if os.getenv('NIKO_GATEWAY_HOST'):
+            self._config.gateway.host = os.getenv('NIKO_GATEWAY_HOST', self._config.gateway.host)
+        if os.getenv('NIKO_GATEWAY_PORT'):
+            self._config.gateway.port = int(os.getenv('NIKO_GATEWAY_PORT', self._config.gateway.port))
+        if os.getenv('NIKO_GATEWAY_RELOAD'):
+            self._config.gateway.reload = _parse_bool(os.getenv('NIKO_GATEWAY_RELOAD', ''))
+        if os.getenv('NIKO_CORS_DEV_ORIGINS'):
+            self._config.gateway.cors_dev_origins = _parse_csv(os.getenv('NIKO_CORS_DEV_ORIGINS', ''))
+        if os.getenv('NIKO_CORS_PROD_ORIGINS'):
+            self._config.gateway.cors_prod_origins = _parse_csv(os.getenv('NIKO_CORS_PROD_ORIGINS', ''))
+        if os.getenv('NIKO_GATEWAY_METRICS_ENABLED'):
+            self._config.gateway.metrics_enabled = _parse_bool(os.getenv('NIKO_GATEWAY_METRICS_ENABLED', ''))
 
     def _load_from_file(self) -> None:
         """从 YAML 文件加载配置"""
@@ -395,6 +428,13 @@ class ConfigManager:
                 if hasattr(self._config.writing, key):
                     setattr(self._config.writing, key, value)
 
+        # Gateway 配置
+        if 'gateway' in data:
+            gateway_data = data['gateway']
+            for key, value in gateway_data.items():
+                if hasattr(self._config.gateway, key):
+                    setattr(self._config.gateway, key, value)
+
     def _apply_overrides(self) -> None:
         """应用运行时覆盖"""
         for key, value in self._overrides.items():
@@ -458,6 +498,17 @@ writing:
   foreshadowing_reminder_threshold: 10
   style_vector_dimensions: 30
   style_sample_min_words: 5000
+
+gateway:
+  host: 0.0.0.0
+  port: 8000
+  reload: true
+  cors_dev_origins:
+    - "*"
+  cors_prod_origins:
+    - https://app.example.com
+    - https://gray.example.com
+  metrics_enabled: true
 """
         with open(self._config_path, 'w', encoding='utf-8') as f:
             f.write(default_config)

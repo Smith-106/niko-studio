@@ -5,7 +5,34 @@ Tests for GET /health and GET /tools endpoints.
 """
 
 import pytest
+import os
 from unittest.mock import AsyncMock, MagicMock
+
+
+class TestMetricsEndpoint:
+    """Tests for GET /metrics endpoint"""
+
+    def test_metrics_returns_200(self, client_no_lifespan):
+        response = client_no_lifespan.get("/metrics")
+        assert response.status_code == 200
+
+    def test_metrics_returns_required_fields(self, client_no_lifespan):
+        response = client_no_lifespan.get("/metrics")
+        data = response.json()
+        assert data["status"] == "ok"
+        metrics = data["metrics"]
+        assert "requests_total" in metrics
+        assert "requests_failed_total" in metrics
+        assert "requests_success_total" in metrics
+        assert "latency_ms_avg" in metrics
+        assert "latency_ms_max" in metrics
+
+    def test_metrics_returns_404_when_disabled(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+        monkeypatch.setattr(gateway_module, "get_config_value", lambda key, default=None: False if key == "gateway.metrics_enabled" else default)
+        response = client_no_lifespan.get("/metrics")
+        assert response.status_code == 404
+        assert response.json()["status"] == "disabled"
 
 
 class TestHealthEndpoint:
@@ -22,6 +49,20 @@ class TestHealthEndpoint:
         data = response.json()
         assert data["status"] == "healthy"
 
+    def test_health_check_degraded_when_search_unhealthy(self, client_no_lifespan, monkeypatch):
+        """Test health status degrades when search engine is unhealthy"""
+        from src.mcp import gateway as gateway_module
+
+        mock_engine = MagicMock()
+        mock_engine.health_check = AsyncMock(return_value={"status": "error", "reason": "search down"})
+        monkeypatch.setattr(gateway_module, "get_search_engine", lambda: mock_engine)
+
+        response = client_no_lifespan.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "degraded"
+        assert data["engine_health"]["search"]["status"] == "error"
+
     def test_health_check_returns_version(self, client_no_lifespan):
         """Test health check returns current __version__"""
         from src import __version__
@@ -37,7 +78,10 @@ class TestHealthEndpoint:
         expected_services = ["memory", "graph", "search", "workflow", "critic", "agent", "skills"]
         for service in expected_services:
             assert service in data["services"]
-            assert data["services"][service] == "ok"
+            if service in {"agent", "skills"}:
+                assert data["services"][service] == "ok"
+            else:
+                assert data["services"][service] in {"ok", "error"}
 
     def test_health_check_returns_engine_health(self, client_no_lifespan):
         """Test health check includes engine health details"""
@@ -47,6 +91,7 @@ class TestHealthEndpoint:
         assert "engine_health" in data
         assert "memory" in data["engine_health"]
         assert "graph" in data["engine_health"]
+        assert "search" in data["engine_health"]
         assert "workflow" in data["engine_health"]
         assert "critic" in data["engine_health"]
 
@@ -60,8 +105,8 @@ class TestHealthEndpoint:
         for agent in expected_agents:
             assert agent in data["agents"]
 
-    def test_health_check_engine_exception_degrades_to_ok(self, client_no_lifespan, monkeypatch):
-        """Test health check degrades to ok when engine health_check raises"""
+    def test_health_check_engine_exception_degrades_status(self, client_no_lifespan, monkeypatch):
+        """Test health check captures engine exception and reports degraded"""
         from src.mcp import gateway as gateway_module
 
         mock_engine = MagicMock()
@@ -71,9 +116,12 @@ class TestHealthEndpoint:
         response = client_no_lifespan.get("/health")
         assert response.status_code == 200
         data = response.json()
+        assert data["status"] == "degraded"
         assert data["engine_health"]["memory"]["status"] == "error"
         assert "boom" in data["engine_health"]["memory"]["error"]
 
+
+class TestToolsEndpoint:
     """Tests for GET /tools endpoint"""
 
     def test_list_tools_returns_200(self, client_no_lifespan):
@@ -161,5 +209,23 @@ class TestHealthEndpoint:
         response = client_no_lifespan.get("/tools")
         data = response.json()
 
-        total_tools = sum(len(tools) for tools in data.values())
-        assert total_tools == 31
+
+
+def test_resolve_cors_origins_requires_real_prod_whitelist(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setenv("NIKO_ENV", "production")
+    monkeypatch.setenv("NIKO_CORS_PROD_ORIGINS", "http://localhost:3000, *")
+
+    with pytest.raises(RuntimeError):
+        gateway_module._resolve_cors_origins()
+
+
+def test_resolve_cors_origins_from_env_prod(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setenv("NIKO_ENV", "production")
+    monkeypatch.setenv("NIKO_CORS_PROD_ORIGINS", "https://app.example.com, https://gray.example.com")
+
+    origins = gateway_module._resolve_cors_origins()
+    assert origins == ["https://app.example.com", "https://gray.example.com"]

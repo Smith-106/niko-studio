@@ -152,6 +152,11 @@ class TestCreateDefaultConfigFile:
         assert "graph" in content
         assert "writing" in content
         assert content["debug"] is False
+        assert content["env"] == "development"
+        assert content["gateway"]["cors_prod_origins"] == [
+            "https://app.example.com",
+            "https://gray.example.com",
+        ]
 
     def test_no_create_when_disabled(self, tmp_path):
         cfg_file = tmp_path / "no_create.yaml"
