@@ -169,6 +169,7 @@ class TestSyncFile:
         return AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
 
     def test_sync_existing_file(self, kl, tmp_path):
+        kl.add_document = MagicMock()
         f = tmp_path / "doc.md"
         f.write_text("# Test Document", encoding="utf-8")
         result = kl.sync_file(str(f))
@@ -182,6 +183,7 @@ class TestSyncFile:
         assert result["action"] == "error"
 
     def test_sync_citation_type(self, kl, tmp_path):
+        kl.add_document = MagicMock()
         d = tmp_path / "citations"
         d.mkdir()
         f = d / "ref.md"
@@ -191,6 +193,7 @@ class TestSyncFile:
         assert "citation" in result["message"]
 
     def test_sync_memory_type(self, kl, tmp_path):
+        kl.add_document = MagicMock()
         d = tmp_path / "memories"
         d.mkdir()
         f = d / "mem.md"
@@ -245,6 +248,7 @@ class TestQueryHybrid:
 
     def test_basic_query(self, tmp_path):
         kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        kl.vector_store.search = MagicMock(return_value=[])
         kl.add_entity("e1", "李明", "Character", "勇敢的战士")
 
         results = kl.query_hybrid("李明")
@@ -253,6 +257,7 @@ class TestQueryHybrid:
 
     def test_with_entity_filter(self, tmp_path):
         kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        kl.vector_store.search = MagicMock(return_value=[])
         kl.add_entity("e1", "Alice", "Character")
         kl.add_entity("e2", "Bob", "Character")
 

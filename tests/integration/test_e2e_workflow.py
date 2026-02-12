@@ -13,6 +13,8 @@ from unittest.mock import Mock, AsyncMock, patch
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+pytestmark = [pytest.mark.e2e]
+
 
 class MockLLMResponse:
     """模拟 LLM 响应"""

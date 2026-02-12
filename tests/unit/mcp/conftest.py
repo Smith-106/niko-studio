@@ -71,6 +71,7 @@ def mock_graph_engine():
 def mock_search_engine():
     """Mock IterativeRetriever"""
     mock = MagicMock()
+    mock.health_check = AsyncMock(return_value={"status": "ok"})
     mock.hybrid_search = AsyncMock(return_value=[])
     mock.iterative_retrieve = AsyncMock(return_value={
         "answer": "test answer",
@@ -226,12 +227,13 @@ def client_no_lifespan(
     from starlette.testclient import TestClient
     from starlette.applications import Starlette
     from starlette.routing import Route
-    from src.mcp.gateway import health_check, list_tools, chat_endpoint, chat_stream_endpoint
+    from src.mcp.gateway import health_check, metrics_endpoint, list_tools, chat_endpoint, chat_stream_endpoint
 
     # Create minimal app without MCP lifespan
     app = Starlette(
         routes=[
             Route("/health", health_check, methods=["GET"]),
+            Route("/metrics", metrics_endpoint, methods=["GET"]),
             Route("/tools", list_tools, methods=["GET"]),
             Route("/chat", chat_endpoint, methods=["POST"]),
             Route("/chat/stream", chat_stream_endpoint, methods=["POST"]),

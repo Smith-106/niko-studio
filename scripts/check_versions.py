@@ -6,6 +6,8 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -31,11 +33,20 @@ def read_cargo_version(path: Path) -> str:
     return match.group(1)
 
 
+def read_yaml_version(path: Path) -> str:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    version = data.get("version")
+    if not version:
+        raise RuntimeError(f"未在 {path} 找到 version")
+    return str(version)
+
+
 def main() -> int:
     expected = read_python_version()
 
     checks = {
         "python.__version__": expected,
+        "config/niko-studio.yaml": read_yaml_version(PROJECT_ROOT / "config" / "niko-studio.yaml"),
         "desktop/package.json": read_json_version(PROJECT_ROOT / "desktop" / "package.json"),
         "desktop/src-tauri/tauri.conf.json": read_json_version(PROJECT_ROOT / "desktop" / "src-tauri" / "tauri.conf.json"),
         "desktop/src-tauri/Cargo.toml": read_cargo_version(PROJECT_ROOT / "desktop" / "src-tauri" / "Cargo.toml"),

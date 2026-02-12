@@ -20,8 +20,14 @@ Niko-Studio V8 文档目录
 |------|------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献指南 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
-| [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md) | 发布流程与验收记录 |
-| [operations/ROLLBACK.md](operations/ROLLBACK.md) | 回退触发条件与操作手册 |
+| [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md) | 发布流程、发布级别矩阵（internal / external）与 Go/No-Go 条件 |
+| [operations/ROLLBACK.md](operations/ROLLBACK.md) | 回退触发条件、external 回退验证与操作手册 |
+
+## 当前有效发布口径
+
+- 内部验证使用 `internal` 口径：允许跳过 e2e 冒烟，质量信号以告警为主。
+- 对外交付使用 `external` 口径：e2e 冒烟与质量信号完整性为强制门禁。
+- 详情请以 [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md) 与 [operations/ROLLBACK.md](operations/ROLLBACK.md) 为准。
 
 ## 规格文档
 
