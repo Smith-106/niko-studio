@@ -55,6 +55,8 @@ pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=sho
 python scripts/release_check_summary.py
 ```
 
+> 说明：`release-check-summary.md` 属于本地检查快照；external 是否放行以 CI workflow 结果为准。
+
 ## 发布步骤
 
 ### internal（dry-run）

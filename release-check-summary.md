@@ -110,7 +110,7 @@ src\services\reranker\models.py:21
 Coverage XML written to file coverage.xml
 
 Required test coverage of 80% reached. Total coverage: 82.79%
-4692 passed, 2 skipped, 14 deselected, 2 warnings in 308.74s (0:05:08)
+4692 passed, 2 skipped, 14 deselected, 2 warnings in 322.61s (0:05:22)
 
 C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
 The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
@@ -127,7 +127,7 @@ C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\coverag
 
 ```text
 ..............                                                           [100%]
-14 passed in 6.90s
+14 passed in 7.21s
 
 C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
 The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"

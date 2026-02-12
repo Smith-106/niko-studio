@@ -23,9 +23,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Run version consistency check
+        run: |
+          python scripts/check_versions.py
+
       - name: Run unit + integration tests (delivery baseline)
         run: |
-          pytest --cov-report=xml --junitxml=pytest-baseline.xml
+          pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
