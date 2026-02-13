@@ -110,7 +110,7 @@ src\services\reranker\models.py:21
 Coverage XML written to file coverage.xml
 
 Required test coverage of 80% reached. Total coverage: 81.25%
-4706 passed, 2 skipped, 14 deselected, 2 warnings in 324.21s (0:05:24)
+4706 passed, 2 skipped, 14 deselected, 2 warnings in 283.22s (0:04:43)
 ```
 
 ### 3) e2e smoke
@@ -120,7 +120,7 @@ Required test coverage of 80% reached. Total coverage: 81.25%
 
 ```text
 ..............                                                           [100%]
-14 passed in 6.16s
+14 passed in 6.37s
 ```
 
 ### 4) Production guard (reload/cors)
@@ -147,21 +147,13 @@ metrics guard ok
 
 ### 7) CI Integration Tests latest
 
-- workflow: Integration Tests
-- run_id: 22003160893
-- run_url: https://github.com/Smith-106/niko-studio/actions/runs/22003160893
-- overall: failed
+- policy: 不再在仓库文件中回填动态 run_id / run_url，避免“回填提交触发新 CI”的循环。
+- source_of_truth: GitHub Actions `Integration Tests` 最新运行结果。
+- workflow_url: https://github.com/Smith-106/niko-studio/actions/workflows/integration-tests.yml
 
 ```text
-jobs:
-- tests: failed (Run delivery semantic gate: failed)
-- desktop-build: success
-- external-e2e-smoke: skipped (tests 失败未触发)
-- external-quality-signals: skipped (tests 失败未触发)
-- external-precheck-e2e: skipped (push 事件预期)
-
-key steps:
-- tests -> Run version consistency check: success
-- tests -> Run delivery semantic gate: failed (exit code 1)
-- desktop-build -> Build desktop frontend (TypeScript + Vite): success
+查看方式：
+1) 打开 workflow_url
+2) 以最新一次 main 分支运行结论作为交付门禁事实来源
+3) 重点核对 jobs：tests / desktop-build / external-* gate
 ```

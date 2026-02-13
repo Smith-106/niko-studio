@@ -164,6 +164,19 @@ def main() -> int:
 - expected CI upload policy:
   - internal: fail_ci_if_error=false
   - external: fail_ci_if_error=true (and CODECOV_TOKEN required)
+
+### 7) CI Integration Tests latest
+
+- policy: 不再在仓库文件中回填动态 run_id / run_url，避免“回填提交触发新 CI”的循环。
+- source_of_truth: GitHub Actions `Integration Tests` 最新运行结果。
+- workflow_url: https://github.com/Smith-106/niko-studio/actions/workflows/integration-tests.yml
+
+```text
+查看方式：
+1) 打开 workflow_url
+2) 以最新一次 main 分支运行结论作为交付门禁事实来源
+3) 重点核对 jobs：tests / desktop-build / external-* gate
+```
 """
 
     REPORT_PATH.write_text(report, encoding="utf-8")
