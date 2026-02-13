@@ -1,6 +1,7 @@
 # Niko-Studio V8 Dependencies
 
 # === Core Framework ===
+fastapi>=0.115.0
 starlette>=0.37.0
 uvicorn>=0.29.0
 mcp>=1.0.0
@@ -16,6 +17,11 @@ fastembed>=0.3.0
 pydantic>=2.0.0
 watchdog>=4.0.0
 tiktoken>=0.7.0
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-text-splitters>=0.3.0
+langgraph>=0.2.0
+sqlite-vec>=0.1.6
 
 # === Development ===
 pytest>=8.0.0

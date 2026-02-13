@@ -180,7 +180,10 @@ class AgentKnowledgeLayer:
         if tokens:
             try:
                 # Construct FTS query with proper escaping
-                fts_terms = [f'"{t.replace("\"", "\"\"")}"' for t in tokens]
+                fts_terms = []
+                for t in tokens:
+                    escaped_term = t.replace('"', '""')
+                    fts_terms.append(f'"{escaped_term}"')
                 fts_query = " OR ".join(fts_terms)
                 
                 # Use FTS to find candidates, then verify with SQL substring match
