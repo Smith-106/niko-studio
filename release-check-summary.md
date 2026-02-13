@@ -148,21 +148,20 @@ metrics guard ok
 ### 7) CI Integration Tests latest
 
 - workflow: Integration Tests
-- run_id: 22002466538
-- run_url: https://github.com/Smith-106/niko-studio/actions/runs/22002466538
-- overall: success
+- run_id: 22003017189
+- run_url: https://github.com/Smith-106/niko-studio/actions/runs/22003017189
+- overall: failed
 
 ```text
 jobs:
-- tests: success
+- tests: failed (Run delivery semantic gate: failed)
 - desktop-build: success
-- external-e2e-smoke / gate: success
-- external-quality-signals / gate: success
+- external-e2e-smoke: skipped (tests 失败未触发)
+- external-quality-signals: skipped (tests 失败未触发)
 - external-precheck-e2e: skipped (push 事件预期)
 
 key steps:
-- tests -> Run unit + integration tests (delivery baseline): success
+- tests -> Run version consistency check: success
+- tests -> Run delivery semantic gate: failed (exit code 1)
 - desktop-build -> Build desktop frontend (TypeScript + Vite): success
-- external-e2e-smoke / gate -> Run e2e smoke (external): success
-- external-quality-signals / gate -> Upload coverage to Codecov: success
 ```
