@@ -327,11 +327,61 @@ class TestCodeAdapter:
         )
         assert "resume_decision" in state["metadata"]
 
-    def test_evaluate_auto_approved(self, adapter):
+    def test_evaluate_defaults_to_revise(self, adapter):
         state = {}
         result = adapter.evaluate(state)
+        assert result.decision == "REVISE"
+        assert result.total_score < 80
+
+    def test_evaluate_approved_when_all_signals_pass(self, adapter):
+        state = {
+            "tests_passed": True,
+            "lint_passed": True,
+            "build_passed": True,
+            "coverage": 85,
+        }
+        result = adapter.evaluate(state)
         assert result.decision == "APPROVED"
-        assert result.total_score == 100.0
+        assert result.total_score >= 80
+
+    def test_evaluate_revise_when_tests_fail(self, adapter):
+        state = {
+            "tests_passed": False,
+            "lint_passed": True,
+            "build_passed": True,
+            "coverage": 95,
+        }
+        result = adapter.evaluate(state)
+        assert result.decision == "REVISE"
+        assert any(item["target"] == "tests" for item in result.revision_instructions)
+
+    def test_evaluate_human_review_after_max_revisions(self):
+        from src.workflow.adapters.code_adapter import CodeAdapter
+
+        adapter = CodeAdapter(config={"max_revisions": 3})
+        state = {
+            "revision_count": 3,
+            "tests_passed": False,
+            "lint_passed": False,
+            "build_passed": True,
+            "coverage": 90,
+        }
+        result = adapter.evaluate(state)
+        assert result.decision == "HUMAN_REVIEW"
+
+    def test_evaluate_reads_metadata_quality_signals(self, adapter):
+        state = {
+            "metadata": {
+                "quality_signals": {
+                    "tests_passed": "true",
+                    "lint_passed": "true",
+                    "build_passed": "true",
+                    "coverage": "82%",
+                }
+            }
+        }
+        result = adapter.evaluate(state)
+        assert result.decision == "APPROVED"
 
     def test_create_graph(self, adapter):
         graph = adapter.create_graph()

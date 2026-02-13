@@ -168,8 +168,30 @@ class CommanderAgent(BaseAgent):
             return WorkflowLevel.L3_STANDARD
 
     def run(self, input_data: Any) -> Any:
-        # Placeholder for main execution logic
-        pass
+        import asyncio
+
+        task_description = self._extract_task_description(input_data)
+        return asyncio.run(self.execute(task_description))
+
+    def _extract_task_description(self, input_data: Any) -> str:
+        if isinstance(input_data, str):
+            task_description = input_data
+        elif isinstance(input_data, dict):
+            task_description = (
+                input_data.get("task_description")
+                or input_data.get("user_request")
+                or input_data.get("user_idea")
+                or input_data.get("task")
+                or ""
+            )
+        else:
+            raise TypeError("input_data must be str or dict")
+
+        task_description = task_description.strip()
+        if not task_description:
+            raise ValueError("task_description is required")
+
+        return task_description
 
     def detect_scene_type(self, task_description: str) -> SceneType:
         """

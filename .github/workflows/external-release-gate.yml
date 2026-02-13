@@ -68,10 +68,18 @@ jobs:
         with:
           name: coverage-xml
 
+      - name: Enforce Codecov token for strict external gate
+        if: ${{ inputs.run_codecov && inputs.codecov_fail_ci_if_error }}
+        run: |
+          if [ -z "${{ secrets.CODECOV_TOKEN }}" ]; then
+            echo "::error::CODECOV_TOKEN is required when codecov_fail_ci_if_error=true"
+            exit 1
+          fi
+
       - name: Upload coverage to Codecov
         if: ${{ inputs.run_codecov }}
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: ${{ inputs.codecov_fail_ci_if_error && secrets.CODECOV_TOKEN != '' }}
+          fail_ci_if_error: ${{ inputs.codecov_fail_ci_if_error }}
