@@ -52,7 +52,6 @@ jobs:
   external-precheck-e2e:
     if: github.event_name == 'pull_request'
     needs: tests
-    continue-on-error: true
     uses: ./.github/workflows/external-release-gate.yml
     with:
       run_codecov: false
