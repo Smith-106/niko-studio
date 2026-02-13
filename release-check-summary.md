@@ -6,6 +6,10 @@
 - Production guard (reload/cors): PASS
 - Metrics guard (production): PASS
 - Codecov signal (coverage.xml): available
+- CI Integration Tests replay (run 21977255134): PASS
+  - tests: PASS
+  - external-e2e-smoke / gate: PASS
+  - external-quality-signals / gate: PASS
 
 ## Details
 
@@ -138,9 +142,22 @@ INFO:src.config:Config loaded: env=production, debug=False
 metrics guard ok
 ```
 
-### 6) Codecov prerequisite
+### 7) CI gate replay (P0-5)
 
-- coverage.xml exists: yes
-- expected CI upload policy:
-  - internal: fail_ci_if_error=false
-  - external: fail_ci_if_error=true
+- workflow: Integration Tests
+- run_id: 21977255134 (rerun)
+- overall: success
+
+```text
+jobs:
+- tests: success
+- external-quality-signals / gate: success
+- external-e2e-smoke / gate: success
+- external-precheck-e2e: skipped (push 事件预期)
+
+key steps:
+- tests -> Run unit + integration tests (delivery baseline): success
+- external-quality-signals / gate -> Download coverage artifact: success
+- external-quality-signals / gate -> Upload coverage to Codecov: success
+- external-e2e-smoke / gate -> Run e2e smoke (external): success
+```

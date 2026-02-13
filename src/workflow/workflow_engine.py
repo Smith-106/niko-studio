@@ -283,24 +283,161 @@ class WorkflowEngine:
     
     async def _execute_step(self, plan: WorkflowPlan, step: WorkflowStep) -> Any:
         """执行具体步骤"""
-        # 这里是步骤执行的占位实现
-        # 实际应用中会调用相应的引擎
-        
-        step_handlers = {
-            "analyze": lambda: {"analysis": f"Task analysis for: {plan.task[:50]}..."},
-            "match_skills": lambda: {"skills": ["fictional-dream", "character-forge"]},
-            "load_context": lambda: {"context_loaded": True},
-            "plan_structure": lambda: {"structure": ["开场", "发展", "冲突", "高潮", "结局"]},
-            "generate_draft": lambda: {"draft": "Initial draft content..."},
-            "generate": lambda: {"content": "Generated content..."},
-            "evaluate": lambda: {"score": 7.5, "feedback": "Good overall structure"},
-            "revise": lambda: {"revised": True},
-            "checkpoint": lambda: {"checkpoint_id": str(uuid.uuid4())[:8]},
-            "answer": lambda: {"answer": "Direct answer to the question"},
+        if step.name == "analyze":
+            return self._run_analyze(plan)
+
+        if step.name == "match_skills":
+            return self._run_match_skills(plan)
+
+        if step.name == "load_context":
+            return self._run_load_context(plan)
+
+        if step.name == "plan_structure":
+            return self._run_plan_structure(plan)
+
+        if step.name == "generate_draft":
+            return self._run_generate_draft(plan)
+
+        if step.name == "generate":
+            return self._run_generate(plan)
+
+        if step.name == "evaluate":
+            return self._run_evaluate(plan)
+
+        if step.name == "revise":
+            return self._run_revise(plan)
+
+        if step.name == "checkpoint":
+            checkpoint = await self.create_checkpoint(
+                description=f"plan:{plan.id} step:{step.id}",
+                auto_commit=False
+            )
+            return {
+                "checkpoint_id": checkpoint["checkpoint_id"],
+                "created_at": checkpoint["created_at"],
+            }
+
+        if step.name == "answer":
+            return self._run_answer(plan)
+
+        raise ValueError(f"Unsupported workflow step: {step.name}")
+
+    def _get_step_output(self, plan: WorkflowPlan, step_name: str) -> Optional[Dict[str, Any]]:
+        for candidate in plan.steps:
+            if candidate.name == step_name and isinstance(candidate.output, dict):
+                return candidate.output
+        return None
+
+    def _run_analyze(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        task = plan.task.strip()
+        keywords = [kw for kw in ["写", "章节", "角色", "冲突", "大纲", "修订"] if kw in task]
+
+        return {
+            "task": task,
+            "task_length": len(task),
+            "intent": "chapter_creation" if "章" in task else "general_writing",
+            "keywords": keywords,
         }
-        
-        handler = step_handlers.get(step.name, lambda: {"executed": True})
-        return handler()
+
+    def _run_match_skills(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        task = plan.task
+        skills: List[str] = []
+
+        if any(k in task for k in ["对话", "台词"]):
+            skills.append("dialogue-system")
+        if any(k in task for k in ["人物", "角色"]):
+            skills.append("character-forge")
+        if any(k in task for k in ["悬念", "反转", "冲突"]):
+            skills.append("suspense-builder")
+
+        if not skills:
+            skills = ["scene-builder"]
+
+        return {"skills": skills, "skill_count": len(skills)}
+
+    def _run_load_context(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        analyze_output = self._get_step_output(plan, "analyze") or {}
+
+        return {
+            "workspace": str(self.workspace),
+            "task": plan.task,
+            "analysis": analyze_output,
+            "context_loaded": True,
+        }
+
+    def _run_plan_structure(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        task = plan.task
+
+        if "对话" in task:
+            structure = ["开场", "人物出场", "对话推进", "冲突显化", "收束"]
+        elif "大纲" in task:
+            structure = ["核心设定", "章节分段", "主线冲突", "高潮设计", "结局"]
+        else:
+            structure = ["开场", "发展", "冲突", "高潮", "结局"]
+
+        return {"structure": structure, "section_count": len(structure)}
+
+    def _run_generate_draft(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        structure_output = self._get_step_output(plan, "plan_structure") or {}
+        sections = structure_output.get("structure", ["开场", "发展", "结尾"])
+        draft = "\n".join(f"{idx + 1}. {section}" for idx, section in enumerate(sections))
+
+        return {
+            "draft": draft,
+            "source_task": plan.task,
+            "section_count": len(sections),
+        }
+
+    def _run_generate(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        skills_output = self._get_step_output(plan, "match_skills") or {}
+        skills = ", ".join(skills_output.get("skills", []))
+
+        content = f"任务：{plan.task}\n采用技能：{skills or 'scene-builder'}"
+
+        return {
+            "content": content,
+            "task": plan.task,
+        }
+
+    def _run_evaluate(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        draft_output = self._get_step_output(plan, "generate_draft")
+        generate_output = self._get_step_output(plan, "generate")
+
+        text = ""
+        if draft_output:
+            text = draft_output.get("draft", "")
+        elif generate_output:
+            text = generate_output.get("content", "")
+
+        score = min(100.0, max(60.0, 60.0 + len(text) / 8.0))
+
+        return {
+            "score": round(score, 1),
+            "feedback": "结构完整，可进入修订" if score >= 75 else "需要补充细节",
+            "length": len(text),
+        }
+
+    def _run_revise(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        evaluate_output = self._get_step_output(plan, "evaluate") or {}
+        draft_output = self._get_step_output(plan, "generate_draft") or {}
+
+        draft = draft_output.get("draft", "")
+        score = evaluate_output.get("score", 0)
+
+        revised = f"{draft}\n\n修订说明：根据评分 {score} 进行了表达与衔接优化。".strip()
+
+        return {
+            "revised": True,
+            "score": score,
+            "content": revised,
+        }
+
+    def _run_answer(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        return {
+            "answer": f"已接收任务：{plan.task}。建议按步骤执行并在关键节点创建检查点。",
+            "task": plan.task,
+        }
+
     
     async def create_checkpoint(
         self,

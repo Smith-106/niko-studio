@@ -622,6 +622,33 @@ class TestStateDetection:
         issues = d._detect_state_contradictions()
         assert len(issues) == 0
 
+    def test_object_ownership_change_without_transfer_in_state_detection(self):
+        d = SceneCoherenceDetector()
+        d.create_scene("s1", "T1", "C1", 0)
+        d.create_scene("s2", "T2", "C2", 1)
+        d.create_scene("s3", "T3", "C3", 2)
+        d.record_state("s1", "o1", "object", "宝剑", {"owner": "李明"})
+        d.record_state("s3", "o1", "object", "宝剑", {"owner": "王芳"})
+
+        issues = d._detect_state_contradictions()
+
+        assert len(issues) == 1
+        assert issues[0].type == ContradictionType.OBJECT_STATE
+        assert "所有权" in issues[0].description
+
+    def test_object_ownership_change_with_transfer_in_state_detection(self):
+        d = SceneCoherenceDetector()
+        d.create_scene("s1", "T1", "C1", 0)
+        d.create_scene("s2", "T2", "C2", 1)
+        d.scenes["s2"].events = ["李明将宝剑交给了王芳"]
+        d.create_scene("s3", "T3", "C3", 2)
+        d.record_state("s1", "o1", "object", "宝剑", {"owner": "李明"})
+        d.record_state("s3", "o1", "object", "宝剑", {"owner": "王芳"})
+
+        issues = d._detect_state_contradictions()
+
+        assert len(issues) == 0
+
 
 # ============================================================
 # Causality Detection

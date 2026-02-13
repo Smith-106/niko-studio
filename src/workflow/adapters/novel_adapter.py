@@ -424,18 +424,19 @@ class NovelAdapter(BaseDomainAdapter):
         print("\n" + "="*50)
         print("⚠️ Human Review: 需要人工审阅")
         print("="*50)
-        
+
         critique = state.get("critique_result", {})
 
         print(f"   总分: {critique.get('total_score', 'N/A')}")
         print(f"   决策: {critique.get('decision', 'N/A')}")
         print(f"   原因: {critique.get('decision_reason', 'N/A')}")
         print(f"   修改次数: {state.get('revision_count', 0)}")
-
-        print("\n   [模拟] 人工审阅通过")
+        print("\n   [待处理] 人工审阅未完成，流程标记为需人工介入")
 
         return {
-            "requires_human_intervention": False,
+            "requires_human_intervention": True,
+            "human_review_status": "pending",
+            "human_review_notes": critique.get("decision_reason", ""),
             "final_content": state.get("draft_content", ""),
             "final_score": critique.get("total_score", 0)
         }

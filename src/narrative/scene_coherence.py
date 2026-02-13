@@ -1066,11 +1066,38 @@ class SceneCoherenceDetector:
             prev_owner = prev.properties.get("owner")
             curr_owner = curr.properties.get("owner")
             if prev_owner and curr_owner and prev_owner != curr_owner:
-                # 检查是否有转移事件
-                # TODO: 需要事件追踪系统配合
-                pass
+                transfer_found = self._has_ownership_transfer_event_between(prev_scene, curr_scene)
+                if not transfer_found:
+                    return Contradiction(
+                        id=self._generate_contradiction_id(),
+                        type=ContradictionType.OBJECT_STATE,
+                        severity=Severity.MAJOR,
+                        description=f"物品{prev.entity_name}所有权从{prev_owner}变为{curr_owner}，但无转移场景",
+                        scene_a=prev.scene_id,
+                        scene_b=curr.scene_id,
+                        entity_involved=prev.entity_name,
+                        expected_value="所有权转移事件",
+                        actual_value="无转移记录",
+                        suggestion="添加物品转移的场景或事件",
+                    )
 
         return None
+
+    def _has_ownership_transfer_event_between(self, prev_scene: Scene, curr_scene: Scene) -> bool:
+        """检查两个场景之间是否存在所有权转移事件。"""
+        transfer_keywords = ["转交", "交给", "给"]
+
+        intermediate_scenes = [
+            s for s in self.get_ordered_scenes()
+            if prev_scene.order < s.order < curr_scene.order
+        ]
+
+        for scene in intermediate_scenes:
+            for event in scene.events:
+                if any(keyword in event for keyword in transfer_keywords):
+                    return True
+
+        return False
 
     def _calculate_coherence_score(
         self, critical: int, major: int, minor: int, info: int

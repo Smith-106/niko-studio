@@ -225,7 +225,8 @@ class TestWorkflowEngine:
 
         # Step 1: analyze
         r1 = await engine.execute(plan_id)
-        assert "analysis" in r1["result"]
+        assert "task" in r1["result"]
+        assert "intent" in r1["result"]
 
         # Step 2: match_skills
         r2 = await engine.execute(plan_id)
@@ -234,6 +235,34 @@ class TestWorkflowEngine:
         # Step 3: generate
         r3 = await engine.execute(plan_id)
         assert "content" in r3["result"]
+        assert r3["result"]["content"].startswith("任务：")
+
+    @pytest.mark.asyncio
+    async def test_execute_unknown_step_returns_error(self, engine):
+        plan_result = await engine.plan("task", level="L1")
+        plan_id = plan_result["plan_id"]
+
+        engine.plans[plan_id].steps[0].name = "unknown_step"
+
+        result = await engine.execute(plan_id)
+        assert "error" in result
+        assert "Unsupported workflow step" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_execute_l3_checkpoint_uses_engine_checkpoint(self, engine):
+        plan_result = await engine.plan("写一章完整的小说", level="L3")
+        plan_id = plan_result["plan_id"]
+
+        while True:
+            result = await engine.execute(plan_id)
+            if result.get("step_name") == "checkpoint":
+                break
+            if result.get("status") == "completed" and result.get("message") == "All steps completed":
+                pytest.fail("checkpoint step was not executed")
+
+        assert "checkpoint_id" in result["result"]
+        checkpoint_id = result["result"]["checkpoint_id"]
+        assert checkpoint_id in engine.checkpoints
 
     def test_get_plan_status_not_found(self, engine):
         result = engine.get_plan_status("nonexistent")

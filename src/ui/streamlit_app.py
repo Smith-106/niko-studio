@@ -361,32 +361,18 @@ with col_chat:
                            assistant_msg["content"], "Coordinator")
                 
             except ImportError as e:
-                st.write(t("langgraph_not_found", error=str(e)))
-                st.write(t("sim_mode"))
-                
-                # 模拟响应
-                mock_response = f"""
-**Command Received**: {user_input}
+                error_msg = t("workflow_dependency_missing", error=str(e))
+                status.update(label=error_msg, state="error")
+                st.error(error_msg)
 
-**Workflow**: {work_mode}
-**Model**: {model_name}
-
----
-
-*Simulation Mode / 模拟模式*
-"""
-                
-                st.session_state.current_draft = mock_response
-                status.update(label=t("sim_mode_completed"), state="complete")
-                
                 assistant_msg = {
                     "role": "assistant",
-                    "content": mock_response,
-                    "agent_name": "Simulator"
+                    "content": error_msg,
+                    "agent_name": "System"
                 }
                 st.session_state.messages.append(assistant_msg)
                 save_message(conn, st.session_state.session_id, "assistant",
-                           mock_response, "Simulator")
+                           error_msg, "System")
             
             except Exception as e:
                 status.update(label=t("workflow_failed", error=str(e)), state="error")

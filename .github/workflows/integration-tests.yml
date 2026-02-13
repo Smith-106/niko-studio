@@ -27,6 +27,11 @@ jobs:
         run: |
           python scripts/check_versions.py
 
+      - name: Print test tool versions
+        run: |
+          pytest --version
+          python -c "import pytest_asyncio; print(f'pytest-asyncio {pytest_asyncio.__version__}')"
+
       - name: Run unit + integration tests (delivery baseline)
         run: |
           pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml

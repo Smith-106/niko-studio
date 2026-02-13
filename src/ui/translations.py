@@ -102,6 +102,10 @@ TRANSLATIONS = {
         "en": "✅ Task completed. Please check the preview panel on the right.",
         "zh": "✅ 任务完成。请查看右侧预览面板。"
     },
+    "workflow_dependency_missing": {
+        "en": "❌ Workflow dependency missing: {error}. Please install required dependencies and retry.",
+        "zh": "❌ 工作流依赖缺失：{error}。请安装所需依赖后重试。"
+    },
     "langgraph_not_found": {
         "en": "⚠️ LangGraph module not found: {error}",
         "zh": "⚠️ LangGraph 模块未找到: {error}"
