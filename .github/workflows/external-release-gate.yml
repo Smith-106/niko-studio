@@ -19,6 +19,10 @@ on:
         required: false
         type: boolean
         default: true
+      run_e2e:
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   gate:
@@ -47,10 +51,12 @@ jobs:
           python -c "from src.mcp.gateway import _resolve_reload_enabled, _resolve_cors_origins; from src.config import init_config, get_config_value; init_config(config_path='config/niko-studio.production.yaml', hot_reload=False); assert _resolve_reload_enabled() is False; origins = _resolve_cors_origins(); assert origins and all(o not in {'*','http://localhost:3000','http://127.0.0.1:3000'} for o in origins); assert bool(get_config_value('gateway.metrics_enabled', True)) is True; print('external production guards ok')"
 
       - name: Run e2e smoke (${{ inputs.gate_label }})
+        if: ${{ inputs.run_e2e }}
         run: |
           pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=short --junitxml=pytest-e2e.xml
 
       - name: Upload e2e report artifact
+        if: ${{ inputs.run_e2e }}
         uses: actions/upload-artifact@v4
         with:
           name: pytest-e2e-report-${{ inputs.gate_label }}

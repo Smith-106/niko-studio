@@ -110,12 +110,7 @@ src\services\reranker\models.py:21
 Coverage XML written to file coverage.xml
 
 Required test coverage of 80% reached. Total coverage: 80.94%
-4692 passed, 2 skipped, 14 deselected, 2 warnings in 304.12s (0:05:04)
-
-C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
-The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
-
-  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+4692 passed, 2 skipped, 14 deselected, 2 warnings in 301.90s (0:05:01)
 ```
 
 ### 3) e2e smoke
@@ -125,18 +120,16 @@ The event loop scope for asynchronous fixtures will default to the fixture cachi
 
 ```text
 ..............                                                           [100%]
-14 passed in 6.59s
-
-C:\Users\32852\AppData\Local\Programs\Python\Python312\Lib\site-packages\pytest_asyncio\plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
-The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
-
-  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+14 passed in 6.30s
 ```
 
 ### 4) Production guard (reload/cors)
 
 ```text
 production guard ok
+
+INFO:src.config:Config loaded from config\niko-studio.production.yaml
+INFO:src.config:Config loaded: env=production, debug=False
 ```
 
 ### 5) Metrics guard

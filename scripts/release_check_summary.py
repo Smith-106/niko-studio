@@ -79,6 +79,8 @@ def main() -> int:
         "-c",
         (
             "from src.mcp.gateway import _resolve_reload_enabled, _resolve_cors_origins;"
+            "from src.config import init_config;"
+            "init_config(config_path='config/niko-studio.production.yaml', hot_reload=False);"
             "assert _resolve_reload_enabled() is False;"
             "origins = _resolve_cors_origins();"
             "assert origins and all(o not in {'*','http://localhost:3000','http://127.0.0.1:3000'} for o in origins);"
