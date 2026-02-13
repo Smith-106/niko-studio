@@ -163,7 +163,7 @@ def main() -> int:
 - coverage.xml exists: {'yes' if coverage_xml.exists() else 'no'}
 - expected CI upload policy:
   - internal: fail_ci_if_error=false
-  - external: fail_ci_if_error=true
+  - external: fail_ci_if_error=true (and CODECOV_TOKEN required)
 """
 
     REPORT_PATH.write_text(report, encoding="utf-8")

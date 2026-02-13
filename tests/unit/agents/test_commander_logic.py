@@ -477,9 +477,21 @@ class TestRouteFallback:
 
 class TestRun:
 
-    def test_run_returns_none(self):
+    def test_run_requires_task_description(self):
         cmd = _make_commander()
-        assert cmd.run("anything") is None
+        with pytest.raises(ValueError, match="task_description is required"):
+            cmd.run("   ")
+
+    def test_run_requires_valid_input_type(self):
+        cmd = _make_commander()
+        with pytest.raises(TypeError, match="input_data must be str or dict"):
+            cmd.run(123)
+
+    def test_run_executes_and_returns_output(self):
+        cmd = _make_commander()
+        out = cmd.run("Write a short paragraph")
+        assert isinstance(out, CommanderOutput)
+        assert out.total_steps > 0
 
 
 # ============================================================
