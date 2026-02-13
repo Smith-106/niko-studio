@@ -148,7 +148,7 @@ metrics guard ok
 ### 7) CI Integration Tests latest
 
 - workflow: Integration Tests
-- run_id: 22000706391
+- run_id: 22000962462
 - overall: success
 
 ```text
