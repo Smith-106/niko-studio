@@ -148,8 +148,8 @@ metrics guard ok
 ### 7) CI Integration Tests latest
 
 - workflow: Integration Tests
-- run_id: 22001707054
-- run_url: https://github.com/Smith-106/niko-studio/actions/runs/22001707054
+- run_id: 22001819963
+- run_url: https://github.com/Smith-106/niko-studio/actions/runs/22001819963
 - overall: success
 
 ```text
