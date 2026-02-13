@@ -78,7 +78,7 @@ jobs:
     uses: ./.github/workflows/external-release-gate.yml
     with:
       run_codecov: true
-      codecov_fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}
+      codecov_fail_ci_if_error: true
       run_metrics_guard: true
       run_e2e: false
       gate_label: external-quality
