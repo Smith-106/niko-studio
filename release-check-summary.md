@@ -144,3 +144,24 @@ metrics guard ok
 - expected CI upload policy:
   - internal: fail_ci_if_error=false
   - external: fail_ci_if_error=true (and CODECOV_TOKEN required)
+
+### 7) CI Integration Tests latest
+
+- workflow: Integration Tests
+- run_id: 22000706391
+- overall: success
+
+```text
+jobs:
+- tests: success
+- desktop-build: success
+- external-e2e-smoke / gate: success
+- external-quality-signals / gate: success
+- external-precheck-e2e: skipped (push 事件预期)
+
+key steps:
+- tests -> Run unit + integration tests (delivery baseline): success
+- desktop-build -> Build desktop frontend (TypeScript + Vite): success
+- external-e2e-smoke / gate -> Run e2e smoke (external): success
+- external-quality-signals / gate -> Upload coverage to Codecov: success
+```
