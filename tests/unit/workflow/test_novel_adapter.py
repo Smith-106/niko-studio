@@ -283,7 +283,7 @@ class TestHumanReviewNode:
         }
         result = adapter.human_review_node(state)
         assert result["requires_human_intervention"] is True
-        assert result["human_review_status"] == "pending"
+        assert result["human_review_status"] == "review_required"
         assert result["human_review_notes"] == "边界"
         assert result["final_content"] == "draft text"
         assert result["final_score"] == 75
