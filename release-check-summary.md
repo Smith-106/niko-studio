@@ -25,6 +25,11 @@
   - external-e2e-smoke / gate: PASS
   - external-quality-signals / gate: PASS
   - note: CODECOV_TOKEN missing -> strict mode downgraded with warning (expected)
+- CI Integration Tests latest (run 21996757163): PASS
+  - tests: PASS
+  - external-e2e-smoke / gate: PASS
+  - external-quality-signals / gate: PASS
+  - note: CODECOV_TOKEN missing -> strict mode downgraded with warning (expected)
 
 ## Details
 
