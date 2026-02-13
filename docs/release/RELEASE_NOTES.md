@@ -5,7 +5,7 @@
 | 级别 | 用途 | e2e 冒烟 | Codecov 上传失败 | 结论 |
 |---|---|---|---|---|
 | internal | 内部 dry-run / 日常集成验证 | 可跳过 | 告警，不阻断 | 用于内部验证 |
-| external | 对外交付 / 正式发布 | 必须通过 | 阻断发布 | 满足 Go/No-Go 条件后放行 |
+| external | 对外交付 / 正式发布 | 必须通过 | 有 `CODECOV_TOKEN` 时阻断；无 token 时告警并登记风险 | 满足 Go/No-Go 条件后放行 |
 
 ## External 发布准入条件（Go/No-Go）
 
@@ -39,7 +39,8 @@ pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=sho
 
 > 约定：external 冒烟用例需显式标注 `@pytest.mark.e2e`，以保证门禁与测试分类一致。
 
-5. 质量信号完整：覆盖率报告生成并上传成功（external 场景下 Codecov 上传失败即 No-Go），并且 CI 产出 `coverage-xml`、`pytest-baseline-report`、`pytest-e2e-report-*` 工件可追溯。
+5. 质量信号完整：覆盖率报告生成并上传成功，并且 CI 产出 `coverage-xml`、`pytest-baseline-report`、`pytest-e2e-report-*` 工件可追溯。
+   - external 场景下：当已配置 `CODECOV_TOKEN` 且 `codecov_fail_ci_if_error=true` 时，Codecov 上传失败为 No-Go；当缺失 token 时允许降级并输出告警，必须在发布记录中登记风险。
 
 6. 生产安全配置有效：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位，且 `reload` 必须关闭。
    - 推荐使用 `config/niko-studio.production.yaml` 启动 external。
@@ -84,6 +85,8 @@ external 对外“100% 完成度”仅指核心可达链路：
 1. 执行 internal 全部步骤。
 2. 执行 e2e 冒烟。
 3. 确认质量信号完整（覆盖率 + CI 关键信号）。
+   - 若已配置 `CODECOV_TOKEN`，按 strict 模式执行并将上传失败判定为 No-Go。
+   - 若缺失 `CODECOV_TOKEN`，允许降级为告警，但必须在发布验收记录中注明该风险。
 4. 验证生产守卫（CORS / reload / metrics）通过。
 5. 核对回退预案与回滚验证路径。
 6. 评审 Go/No-Go 并登记结果。

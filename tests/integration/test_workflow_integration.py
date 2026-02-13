@@ -295,6 +295,41 @@ class TestWorkflowTemplates:
         assert "world_building" in names
 
 
+class TestCodeDomainWorkflowSmoke:
+    """Code 域工作流冒烟测试"""
+
+    @pytest.mark.asyncio
+    async def test_code_domain_adapter_path(self):
+        from workflow.graph_factory import WorkflowFactory
+
+        adapter = WorkflowFactory.create_adapter("code")
+        assert adapter is not None
+
+        state = adapter.create_initial_state(
+            "实现一个简单 CLI",
+            metadata={
+                "quality_signals": {
+                    "tests_passed": True,
+                    "lint_passed": True,
+                    "build_passed": True,
+                    "coverage": 85,
+                }
+            },
+        )
+
+        planner_output = await adapter.planner_node(state)
+        coder_input = {**state, **planner_output}
+        coder_output = await adapter.coder_node(coder_input)
+
+        evaluator_input = {**coder_input, **coder_output}
+        evaluator_output = await adapter.evaluator_node(evaluator_input)
+        assert evaluator_output["decision"] == "APPROVED"
+
+        finalize_input = {**evaluator_input, **evaluator_output}
+        finalize_output = await adapter.finalize_node(finalize_input)
+        assert finalize_output["current_step"] == "finalize"
+
+
 # 运行测试
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
