@@ -149,6 +149,7 @@ metrics guard ok
 
 - workflow: Integration Tests
 - run_id: 22000962462
+- run_url: https://github.com/Smith-106/niko-studio/actions/runs/22000962462
 - overall: success
 
 ```text
