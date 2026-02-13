@@ -14,6 +14,9 @@ from typing import Optional, Dict, Any, List
 from src.ui.translations import t
 from src.services.indexing_service import IndexingService
 from src.ui.file_utils import process_uploaded_file
+from src.ui.components.lock_radar import render_lock_radar
+from src.ui.components.trajectory_viewer import render_trajectory_viewer
+from src.ui.components.scene_dashboard import render_scene_dashboard
 
 # === 配置 ===
 st.set_page_config(
@@ -485,7 +488,7 @@ with col_artifacts:
     with tab2:
         # LOCK 评分雷达图
         st.subheader(t("lock_system_score"))
-        
+
         critique = st.session_state.get("critique_result", {})
         lock_scores = critique.get("lock_scores", {
             "L (Lead)": 7,
@@ -493,22 +496,14 @@ with col_artifacts:
             "C (Confrontation)": 6,
             "K (Knockout)": 7
         })
-        
-        # 使用 Streamlit 内置图表
-        import pandas as pd
-        
-        df_lock = pd.DataFrame({
-            "维度": list(lock_scores.keys()),
-            "分数": list(lock_scores.values())
-        })
-        
-        st.bar_chart(df_lock.set_index("维度"))
-        
+
+        render_lock_radar(lock_scores, threshold=lock_threshold)
+
         total_lock = sum(lock_scores.values())
         st.metric(t("lock_total"), f"{total_lock}/40",
                   delta=f"{total_lock - lock_threshold}" if total_lock >= lock_threshold else f"{total_lock - lock_threshold}",
                   delta_color="normal" if total_lock >= lock_threshold else "inverse")
-        
+
         # 显示详细分析
         if "lock_analysis" in critique:
             with st.expander(t("detailed_analysis")):
@@ -517,7 +512,7 @@ with col_artifacts:
     with tab3:
         # 8维度质量评分
         st.subheader(t("quality_8dim"))
-        
+
         critique = st.session_state.get("critique_result", {})
         quality_scores = critique.get("quality_scores", {
             "五感描写平衡": 75,
@@ -529,110 +524,43 @@ with col_artifacts:
             "叙事逻辑": 82,
             "语言风格": 76
         })
-        
+
+        import pandas as pd
+
         df_quality = pd.DataFrame({
             "维度": list(quality_scores.keys()),
             "分数": list(quality_scores.values())
         })
-        
+
         st.bar_chart(df_quality.set_index("维度"))
-        
+
         avg_quality = sum(quality_scores.values()) / len(quality_scores)
         st.metric(t("avg_quality"), f"{avg_quality:.1f}/100",
                   delta=f"{avg_quality - quality_threshold:.1f}" if avg_quality >= quality_threshold else f"{avg_quality - quality_threshold:.1f}",
                   delta_color="normal" if avg_quality >= quality_threshold else "inverse")
 
+        trajectory_data = []
+        for msg in st.session_state.messages:
+            if msg.get("thought_process"):
+                trajectory_data.append({
+                    "node": msg.get("agent_name", "Agent"),
+                    "action": "workflow",
+                    "thought": msg.get("content", ""),
+                    "result": msg.get("thought_process", {}),
+                    "timestamp": "",
+                    "status": "completed"
+                })
+        if trajectory_data:
+            with st.expander(t("agent_thought_process", agent_name="Trajectory"), expanded=False):
+                render_trajectory_viewer(trajectory_data)
+
     with tab4:
-        # 场景卡片仪表板
         st.subheader(t("scene_card_status"))
-        
-        # 加载 .task/ 目录下的场景文件
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        task_dir = os.path.join(project_root, ".task")
-        
-        scenes = load_scenes(task_dir)
-        
-        if scenes:
-            # 统计摘要
-            total = len(scenes)
-            done = sum(1 for s in scenes if s.get("status") == "DONE")
-            writing = sum(1 for s in scenes if s.get("status") == "WRITING")
-            
-            col1, col2, col3 = st.columns(3)
-            col1.metric(t("total"), total)
-            col2.metric(t("done"), done)
-            col3.metric(t("writing"), writing)
-            
-            st.divider()
-            
-            # 渲染场景卡片
-            for scene in scenes:
-                status = scene.get("status", "PENDING")
-                status_colors = {"DONE": "green", "WRITING": "orange", "PENDING": "gray"}
-                status_icons = {"DONE": "✅", "WRITING": "✍️", "PENDING": "⏳"}
-                color = status_colors.get(status, "gray")
-                icon = status_icons.get(status, "❓")
-                
-                with st.container(border=True):
-                    c1, c2 = st.columns([3, 1])
-                    c1.markdown(f"**{icon} {scene.get('title', '未命名')}** (`{scene.get('id')}`")
-                    c2.markdown(f":{color}[{status}]")
-                    
-                    lock_scores = scene.get("lock_scores", {})
-                    if lock_scores and any(lock_scores.values()):
-                        total_lock = sum(lock_scores.values())
-                        st.progress(total_lock / 40, text=f"LOCK: {total_lock}/40")
-                    else:
-                        st.progress(0, text=f"LOCK: {t('not_evaluated')}")
-        else:
-            st.info(t("no_scene_cards"))
-    
+        render_scene_dashboard()
+
     with tab5:
-        # 依赖关系图 (Graphviz)
         st.subheader(t("scene_dependency_graph"))
-        
-        if scenes:
-            # 构建 Graphviz DOT
-            dot_lines = ["digraph SceneDependency {"]
-            dot_lines.append("  rankdir=LR;")
-            dot_lines.append('  node [shape=box, style=filled];')
-            
-            status_styles = {
-                "DONE": 'fillcolor="#c8e6c9"',
-                "WRITING": 'fillcolor="#fff9c4"',
-                "PENDING": 'fillcolor="#e0e0e0"'
-            }
-            
-            for scene in scenes:
-                sid = scene.get("id", "???")
-                title = scene.get("title", "")[:12]
-                status = scene.get("status", "PENDING")
-                style = status_styles.get(status, 'fillcolor="#e0e0e0"')
-                dot_lines.append(f'  "{sid}" [label="{sid}\\n{title}", {style}];')
-            
-            for scene in scenes:
-                sid = scene.get("id", "")
-                for dep in scene.get("dependencies", []):
-                    dot_lines.append(f'  "{dep}" -> "{sid}";')
-            
-            dot_lines.append("}")
-            
-            st.graphviz_chart("\n".join(dot_lines))
-            st.caption(t("graphviz_legend"))
-            
-            # 并行分析
-            done_ids = {s.get("id") for s in scenes if s.get("status") == "DONE"}
-            parallel_ready = []
-            for s in scenes:
-                if s.get("status") in ["PENDING", "WRITING"]:
-                    deps = s.get("dependencies", [])
-                    if not deps or all(d in done_ids for d in deps):
-                        parallel_ready.append(s.get("id"))
-            
-            if parallel_ready:
-                st.success(t("parallel_ready", ids=', '.join(parallel_ready)))
-        else:
-            st.info(t("no_scene_data"))
+        render_scene_dashboard()
 
 
 # === Footer ===

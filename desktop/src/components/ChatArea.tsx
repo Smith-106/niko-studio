@@ -9,6 +9,7 @@ import { useI18n } from '../i18n'
 export function ChatArea() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [streamingContent, setStreamingContent] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { t, translate } = useI18n()
 
@@ -42,23 +43,41 @@ export function ChatArea() {
 
     try {
       const request = {
-        messages: [{ role: 'user', content: userMessage }],
+        messages: [{ role: 'user' as const, content: userMessage }],
         workflowLevel,
         skills: selectedSkills,
         allowLlmFallback,
       }
 
-      // Call backend API
-      const response = await chat(request)
+      let streamFailed = false
+      let hasStreamContent = false
+      let streamText = ''
 
-      if (response.success && response.data) {
-        addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+      await chatStream(request, {
+        onContent: (chunk) => {
+          hasStreamContent = true
+          streamText += chunk
+          setStreamingContent(streamText)
+        },
+        onError: () => {
+          streamFailed = true
+        },
+      })
+
+      if (!streamFailed && hasStreamContent) {
+        addMessage('assistant', streamText || '处理完成', selectedSkills)
       } else {
-        addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
+        const response = await chat(request)
+        if (response.success && response.data) {
+          addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+        } else {
+          addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
+        }
       }
-    } catch (error) {
+    } catch {
       addMessage('assistant', '无法连接到后端服务，请确保服务已启动。')
     } finally {
+      setStreamingContent('')
       setIsLoading(false)
     }
   }
@@ -86,6 +105,17 @@ export function ChatArea() {
           messages.map((message) => (
             <MessageBubble key={message.id} message={message} />
           ))
+        )}
+        {isLoading && streamingContent && (
+          <MessageBubble
+            message={{
+              id: 'streaming-assistant',
+              role: 'assistant',
+              content: streamingContent,
+              timestamp: new Date(),
+              skills: selectedSkills,
+            }}
+          />
         )}
         {isLoading && (
           <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-secondary">

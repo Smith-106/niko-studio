@@ -1,7 +1,6 @@
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import type { Components } from 'react-markdown'
 
 interface Message {
   id: string
@@ -38,6 +37,17 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
 function MessageBubbleComponent({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user'
 
+  const markdownComponents: Components = {
+    code({ className, children }) {
+      const codeText = String(children).replace(/\n$/, '')
+      return (
+        <pre className="rounded-md overflow-x-auto bg-[#1f2937] text-[#f9fafb] p-3 text-sm">
+          <code className={className}>{codeText}</code>
+        </pre>
+      )
+    },
+  }
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -64,25 +74,7 @@ function MessageBubbleComponent({ message }: MessageBubbleProps) {
         {/* Content */}
         <div className="markdown-body">
           <ReactMarkdown
-            components={{
-              code({ node, inline, className, children, ...props }) {
-                const match = /language-(\w+)/.exec(className || '')
-                return !inline && match ? (
-                  <SyntaxHighlighter
-                    style={oneDark}
-                    language={match[1]}
-                    PreTag="div"
-                    {...props}
-                  >
-                    {String(children).replace(/\n$/, '')}
-                  </SyntaxHighlighter>
-                ) : (
-                  <code className={className} {...props}>
-                    {children}
-                  </code>
-                )
-              },
-            }}
+            components={markdownComponents}
           >
             {message.content}
           </ReactMarkdown>

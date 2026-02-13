@@ -1,4 +1,4 @@
-import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3 } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
 import { useI18n } from '../i18n'
@@ -6,9 +6,12 @@ import { useI18n } from '../i18n'
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  onOpenKnowledge: () => void
+  onOpenSettings: () => void
+  onOpenEvaluation: () => void
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, onOpenEvaluation }: SidebarProps) {
   // Use selective selectors for better performance
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
@@ -104,11 +107,24 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Footer */}
       <div className="border-t border-gray-700 p-2">
-        <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300">
+        <button
+          onClick={onOpenEvaluation}
+          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+        >
+          <BarChart3 size={18} />
+          {!collapsed && <span className="text-sm">评估面板</span>}
+        </button>
+        <button
+          onClick={onOpenKnowledge}
+          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+        >
           <BookOpen size={18} />
           {!collapsed && <span className="text-sm">{t.knowledgeBase}</span>}
         </button>
-        <button className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300">
+        <button
+          onClick={onOpenSettings}
+          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+        >
           <Settings size={18} />
           {!collapsed && <span className="text-sm">{t.settings}</span>}
         </button>

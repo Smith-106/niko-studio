@@ -65,11 +65,16 @@ pip install -r requirements.txt
 uv sync
 ```
 
-### 发布口径（internal / external）
+## 交付口径与可达能力（external）
 
-- `internal`：内部 dry-run，允许跳过 e2e 冒烟，质量信号以告警为主。
-- `external`：对外交付，必须通过 e2e 冒烟，且覆盖率与 CI 质量信号完整。
-- 详细准入条件与回退要求见：`docs/release/RELEASE_NOTES.md`、`docs/operations/ROLLBACK.md`。
+为确保“完成度”口径与实际一致，external 对外口径限定为**核心可达链路 100%**，定义如下：
+
+- Desktop：Sidebar 可直接打开 `Knowledge`、`Settings`、`Evaluation`。
+- Chat：默认走 `/chat/stream`，异常自动降级 `/chat`，用户消息不丢失。
+- Streamlit：tab4/tab5 使用组件化入口（`scene_dashboard`），不再保留重复内联实现。
+
+不在上述核心链路中的规划项，按 roadmap 与 issue 状态单独披露，不纳入 external“100%”表述。
+
 
 ### 测试命令（交付基线）
 

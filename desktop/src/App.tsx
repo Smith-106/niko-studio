@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { ChatArea } from './components/ChatArea'
+import { SettingsModal } from './components/SettingsModal'
+import { KnowledgeModal } from './components/KnowledgeModal'
+import { EvaluationPanel } from './components/EvaluationPanel'
 import { useAppStore } from './stores/appStore'
+import { useMessages } from './stores/selectors'
 import { useTheme } from './hooks/useTheme'
 import { useI18n } from './i18n'
 
 function App() {
   const { backendStatus, checkBackend } = useAppStore()
+  const messages = useMessages()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [knowledgeOpen, setKnowledgeOpen] = useState(false)
+  const [evaluationOpen, setEvaluationOpen] = useState(false)
   const { t } = useI18n()
 
   // 应用主题
@@ -53,6 +61,9 @@ function App() {
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onOpenKnowledge={() => setKnowledgeOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenEvaluation={() => setEvaluationOpen(true)}
       />
 
       {/* Main Content */}
@@ -73,6 +84,15 @@ function App() {
         {/* Chat Area */}
         <ChatArea />
       </main>
+
+      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <KnowledgeModal isOpen={knowledgeOpen} onClose={() => setKnowledgeOpen(false)} />
+      {evaluationOpen && (
+        <EvaluationPanel
+          content={messages.filter((m) => m.role === 'assistant').slice(-1)[0]?.content || ''}
+          onClose={() => setEvaluationOpen(false)}
+        />
+      )}
     </div>
   )
 }

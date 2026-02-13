@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
+import { checkBackendHealth } from '../api/client'
 import { useSettingsStore, LLMProvider } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
@@ -57,13 +58,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setTestResults((prev) => ({ ...prev, [provider.id]: null }))
 
     try {
-      // 简单的连接测试
-      const response = await fetch(`${localSettings.apiBaseUrl}/health`)
-      if (response.ok) {
-        setTestResults((prev) => ({ ...prev, [provider.id]: 'success' }))
-      } else {
-        setTestResults((prev) => ({ ...prev, [provider.id]: 'error' }))
-      }
+      const healthy = await checkBackendHealth()
+      setTestResults((prev) => ({ ...prev, [provider.id]: healthy ? 'success' : 'error' }))
     } catch {
       setTestResults((prev) => ({ ...prev, [provider.id]: 'error' }))
     } finally {

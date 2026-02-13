@@ -57,7 +57,21 @@ python scripts/release_check_summary.py
 
 > 说明：`release-check-summary.md` 属于本地检查快照；external 是否放行以 CI workflow 结果为准。
 
-## 发布步骤
+## external 口径对齐说明（新增）
+
+external 对外“100% 完成度”仅指核心可达链路：
+
+1. Desktop 主入口可达：`Knowledge` / `Settings` / `Evaluation`。
+2. Chat 默认流式：优先 `/chat/stream`，失败自动降级 `/chat`。
+3. Streamlit UI 闭环：tab4/tab5 使用组件渲染（`scene_dashboard`），避免内联重复逻辑。
+
+证据链建议在同一次发布中保留：
+
+- Desktop 构建日志：`npm --prefix "D:/工作目录/niko-studio/desktop" run build`
+- Python 测试日志：
+  - `pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80`
+  - `pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=short`
+- 发布汇总输出：`python scripts/release_check_summary.py`
 
 ### internal（dry-run）
 
