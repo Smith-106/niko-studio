@@ -39,6 +39,7 @@ from pathlib import Path
 from src import __version__
 from src.config import get_config_value
 from src.knowledge.services import get_services
+from src.knowledge.services.config import load_config as load_services_config
 
 
 def _is_llm_available() -> bool:
@@ -1674,6 +1675,46 @@ async def list_tools(request):
     return JSONResponse(tools)
 
 
+async def list_models(request):
+    """列出模型配置（支持按 provider 过滤）"""
+    provider_filter = (request.query_params.get("provider") or "").strip().lower()
+
+    try:
+        service_config = load_services_config()
+    except Exception as exc:
+        logger.error(f"Load services config failed: {exc}")
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+    provider_models: Dict[str, List[str]] = {}
+    for provider_cfg in service_config.providers:
+        provider_id = provider_cfg.provider.value
+        candidates = [
+            provider_cfg.model_mapping.get(tier, "")
+            for tier in provider_cfg.model_mapping
+        ]
+        if provider_cfg.embedding_model:
+            candidates.append(provider_cfg.embedding_model)
+
+        models = list(dict.fromkeys([model for model in candidates if model]))
+        provider_models[provider_id] = models
+
+    if provider_filter:
+        if provider_filter not in provider_models:
+            return JSONResponse({"status": "not_found", "provider": provider_filter, "models": []}, status_code=404)
+        return JSONResponse({
+            "status": "ok",
+            "provider": provider_filter,
+            "models": provider_models[provider_filter],
+        })
+
+    merged_models = list(dict.fromkeys([m for models in provider_models.values() for m in models]))
+    return JSONResponse({
+        "status": "ok",
+        "models": merged_models,
+        "providers": provider_models,
+    })
+
+
 # ============ REST 兼容端点（供 Desktop 前端调用） ============
 
 async def memory_search_endpoint(request: Request):
@@ -1924,6 +1965,7 @@ def create_gateway() -> Starlette:
             Route("/health", health_check, methods=["GET"]),
             Route("/metrics", metrics_endpoint, methods=["GET"]),
             Route("/tools", list_tools, methods=["GET"]),
+            Route("/models", list_models, methods=["GET"]),
             Route("/memory/search", memory_search_endpoint, methods=["POST"]),
             Route("/memory/add", memory_add_endpoint, methods=["POST"]),
             Route("/memory/temporal", memory_temporal_endpoint, methods=["POST"]),

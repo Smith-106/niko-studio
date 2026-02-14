@@ -10,6 +10,10 @@ export interface LLMProvider {
   baseUrl: string
   models: string[]
   defaultModel: string
+  fetchedModels?: string[]
+  customModels?: string[]
+  modelSelectionMode?: 'list' | 'custom'
+  lastModelSyncAt?: string
 }
 
 interface Settings {
@@ -48,6 +52,9 @@ const defaultProviders: LLMProvider[] = [
     baseUrl: 'https://api.anthropic.com',
     models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
     defaultModel: 'claude-3-sonnet-20240229',
+    fetchedModels: [],
+    customModels: [],
+    modelSelectionMode: 'list',
   },
   {
     id: 'openai',
@@ -57,6 +64,9 @@ const defaultProviders: LLMProvider[] = [
     baseUrl: 'https://api.openai.com/v1',
     models: ['gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'],
     defaultModel: 'gpt-4-turbo',
+    fetchedModels: [],
+    customModels: [],
+    modelSelectionMode: 'list',
   },
   {
     id: 'google',
@@ -66,6 +76,9 @@ const defaultProviders: LLMProvider[] = [
     baseUrl: 'https://generativelanguage.googleapis.com',
     models: ['gemini-pro', 'gemini-pro-vision'],
     defaultModel: 'gemini-pro',
+    fetchedModels: [],
+    customModels: [],
+    modelSelectionMode: 'list',
   },
   {
     id: 'openrouter',
@@ -75,6 +88,9 @@ const defaultProviders: LLMProvider[] = [
     baseUrl: 'https://openrouter.ai/api/v1',
     models: ['anthropic/claude-3-opus', 'openai/gpt-4-turbo', 'google/gemini-pro'],
     defaultModel: 'anthropic/claude-3-opus',
+    fetchedModels: [],
+    customModels: [],
+    modelSelectionMode: 'list',
   },
   {
     id: 'local',
@@ -84,6 +100,9 @@ const defaultProviders: LLMProvider[] = [
     baseUrl: 'http://localhost:11434',
     models: ['llama2', 'mistral', 'codellama'],
     defaultModel: 'mistral',
+    fetchedModels: [],
+    customModels: [],
+    modelSelectionMode: 'list',
   },
 ]
 
@@ -105,6 +124,18 @@ const defaultSettings: Settings = {
   sidebarCollapsed: false,
 }
 
+const normalizeProvider = (provider: LLMProvider): LLMProvider => ({
+  ...provider,
+  fetchedModels: provider.fetchedModels ?? [],
+  customModels: provider.customModels ?? [],
+  modelSelectionMode: provider.modelSelectionMode ?? 'list',
+})
+
+const normalizeSettings = (settings: Settings): Settings => ({
+  ...settings,
+  llmProviders: settings.llmProviders.map(normalizeProvider),
+})
+
 interface SettingsStore {
   settings: Settings
   updateSettings: (partial: Partial<Settings>) => void
@@ -117,21 +148,21 @@ interface SettingsStore {
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set, get) => ({
-      settings: defaultSettings,
+      settings: normalizeSettings(defaultSettings),
       updateSettings: (partial) =>
         set((state) => ({
-          settings: { ...state.settings, ...partial },
+          settings: normalizeSettings({ ...state.settings, ...partial }),
         })),
       updateProvider: (providerId, updates) =>
         set((state) => ({
           settings: {
             ...state.settings,
             llmProviders: state.settings.llmProviders.map((p) =>
-              p.id === providerId ? { ...p, ...updates } : p
+              p.id === providerId ? normalizeProvider({ ...p, ...updates }) : normalizeProvider(p)
             ),
           },
         })),
-      resetSettings: () => set({ settings: defaultSettings }),
+      resetSettings: () => set({ settings: normalizeSettings(defaultSettings) }),
       getEnabledProviders: () => {
         return get().settings.llmProviders.filter((p) => p.enabled && p.apiKey)
       },

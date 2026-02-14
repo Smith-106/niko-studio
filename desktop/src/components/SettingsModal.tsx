@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
-import { checkBackendHealth } from '../api/client'
+import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools } from '../api/client'
 import { useSettingsStore, LLMProvider } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
@@ -18,6 +18,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [testingProvider, setTestingProvider] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<Record<string, 'success' | 'error' | null>>({})
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false)
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null)
+  const [gatewayMetrics, setGatewayMetrics] = useState<GatewayMetrics | null>(null)
+  const [gatewayTools, setGatewayTools] = useState<GatewayTools | null>(null)
+  const [modelSyncLoading, setModelSyncLoading] = useState<Record<string, boolean>>({})
+  const [modelSyncError, setModelSyncError] = useState<Record<string, string | null>>({})
+  const [customModelInputs, setCustomModelInputs] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useI18n()
 
@@ -54,6 +61,55 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }))
   }
 
+  const deduplicateModels = (models: string[]): string[] => {
+    return Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)))
+  }
+
+  const getEffectiveModels = (provider: LLMProvider): string[] => {
+    return deduplicateModels([
+      ...provider.models,
+      ...(provider.fetchedModels ?? []),
+      ...(provider.customModels ?? []),
+    ])
+  }
+
+  const refreshProviderModels = async (provider: LLMProvider) => {
+    setModelSyncLoading((prev) => ({ ...prev, [provider.id]: true }))
+    setModelSyncError((prev) => ({ ...prev, [provider.id]: null }))
+
+    try {
+      const res = await fetchProviderModels(provider.id, provider.baseUrl, provider.apiKey)
+      if (res.success && res.data?.models) {
+        updateLocalProvider(provider.id, {
+          fetchedModels: res.data.models,
+          lastModelSyncAt: new Date().toISOString(),
+        })
+      } else {
+        setModelSyncError((prev) => ({ ...prev, [provider.id]: '模型拉取失败，请继续使用预置或自定义模型。' }))
+      }
+    } catch {
+      setModelSyncError((prev) => ({ ...prev, [provider.id]: '模型拉取失败，请继续使用预置或自定义模型。' }))
+    } finally {
+      setModelSyncLoading((prev) => ({ ...prev, [provider.id]: false }))
+    }
+  }
+
+  const applyCustomModel = (provider: LLMProvider) => {
+    const value = (customModelInputs[provider.id] ?? '').trim()
+    if (!value) {
+      return
+    }
+
+    const nextCustomModels = deduplicateModels([...(provider.customModels ?? []), value])
+    updateLocalProvider(provider.id, {
+      customModels: nextCustomModels,
+      defaultModel: value,
+      modelSelectionMode: 'custom',
+    })
+    setCustomModelInputs((prev) => ({ ...prev, [provider.id]: '' }))
+    setModelSyncError((prev) => ({ ...prev, [provider.id]: null }))
+  }
+
   const testConnection = async (provider: LLMProvider) => {
     setTestingProvider(provider.id)
     setTestResults((prev) => ({ ...prev, [provider.id]: null }))
@@ -65,6 +121,36 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setTestResults((prev) => ({ ...prev, [provider.id]: 'error' }))
     } finally {
       setTestingProvider(null)
+    }
+  }
+
+  const refreshDiagnostics = async () => {
+    setDiagnosticsLoading(true)
+    setDiagnosticsError(null)
+    try {
+      const [metricsRes, toolsRes] = await Promise.all([
+        getGatewayMetrics(),
+        listGatewayTools(),
+      ])
+      if (metricsRes.success && metricsRes.data?.metrics) {
+        setGatewayMetrics(metricsRes.data.metrics)
+      } else {
+        setGatewayMetrics(null)
+      }
+      if (toolsRes.success && toolsRes.data) {
+        setGatewayTools(toolsRes.data)
+      } else {
+        setGatewayTools(null)
+      }
+      if (!(metricsRes.success && metricsRes.data?.metrics) || !(toolsRes.success && toolsRes.data)) {
+        setDiagnosticsError('诊断拉取失败，请稍后重试。')
+      }
+    } catch {
+      setGatewayMetrics(null)
+      setGatewayTools(null)
+      setDiagnosticsError('诊断拉取失败，请稍后重试。')
+    } finally {
+      setDiagnosticsLoading(false)
     }
   }
 
@@ -153,6 +239,58 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
           </section>
 
+          {/* 系统诊断 */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">系统诊断</h3>
+              <button
+                onClick={refreshDiagnostics}
+                disabled={diagnosticsLoading}
+                className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+              >
+                {diagnosticsLoading ? '刷新中...' : '刷新诊断'}
+              </button>
+            </div>
+
+            {diagnosticsError && (
+              <p className="text-xs text-red-500 mb-2">{diagnosticsError}</p>
+            )}
+
+            <div className="space-y-3">
+              <div className="border dark:border-dark-border rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">网关指标</div>
+                {gatewayMetrics ? (
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-dark-text">
+                    <div>请求总数：{gatewayMetrics.requests_total}</div>
+                    <div>失败请求：{gatewayMetrics.requests_failed_total}</div>
+                    <div>平均延迟：{gatewayMetrics.latency_ms_avg} ms</div>
+                    <div>最大延迟：{gatewayMetrics.latency_ms_max} ms</div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">暂无指标数据</div>
+                )}
+              </div>
+
+              <div className="border dark:border-dark-border rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">工具清单</div>
+                {gatewayTools && Object.keys(gatewayTools).length > 0 ? (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {Object.entries(gatewayTools).map(([service, tools]) => (
+                      <div key={service}>
+                        <div className="text-xs font-medium text-gray-700 dark:text-dark-text">{service}</div>
+                        <div className="text-xs text-gray-500 dark:text-dark-text-secondary break-all">
+                          {tools.join('，')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">暂无工具数据</div>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* LLM 提供商配置 */}
           <section>
             <div className="flex items-center justify-between mb-3">
@@ -180,7 +318,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
 
             <div className="space-y-4">
-              {localSettings.llmProviders.map((provider) => (
+              {localSettings.llmProviders.map((provider) => {
+                const effectiveModels = getEffectiveModels(provider)
+                return (
                 <div
                   key={provider.id}
                   className={`border rounded-lg p-4 transition-colors ${
@@ -253,13 +393,54 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">默认模型</label>
                           <select
                             value={provider.defaultModel}
-                            onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value })}
+                            onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value, modelSelectionMode: 'list' })}
                             className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                           >
-                            {provider.models.map((model) => (
+                            {effectiveModels.map((model) => (
                               <option key={model} value={model}>{model}</option>
                             ))}
                           </select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">模型来源</label>
+                          <button
+                            onClick={() => refreshProviderModels(provider)}
+                            disabled={modelSyncLoading[provider.id]}
+                            className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                          >
+                            {modelSyncLoading[provider.id] ? '刷新中...' : '刷新模型'}
+                          </button>
+                        </div>
+                        {modelSyncError[provider.id] && (
+                          <p className="text-xs text-red-500">{modelSyncError[provider.id]}</p>
+                        )}
+                        {provider.lastModelSyncAt && !modelSyncError[provider.id] && (
+                          <p className="text-xs text-gray-400 dark:text-dark-text-secondary">
+                            最近同步：{new Date(provider.lastModelSyncAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">自定义模型</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={customModelInputs[provider.id] ?? ''}
+                            onChange={(e) => setCustomModelInputs((prev) => ({ ...prev, [provider.id]: e.target.value }))}
+                            placeholder="例如：gpt-4.1-mini"
+                            className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => applyCustomModel(provider)}
+                            className="text-xs px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          >
+                            使用该模型
+                          </button>
                         </div>
                       </div>
 
@@ -278,7 +459,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           </section>
 

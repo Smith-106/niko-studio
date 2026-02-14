@@ -40,6 +40,25 @@ interface ApiResponse<T> {
   error?: string
 }
 
+export interface GatewayMetrics {
+  requests_total: number
+  requests_failed_total: number
+  requests_success_total: number
+  latency_ms_avg: number
+  latency_ms_max: number
+}
+
+export type GatewayTools = Record<string, string[]>
+
+export interface GatewayHealth {
+  status: string
+  version: string
+  services: Record<string, string>
+  engine_health?: Record<string, { status: string; error?: string }>
+  agents?: string[]
+  skills_count?: number
+}
+
 /**
  * 统一 API 调用方法
  * 在 Tauri 环境中使用 invoke，否则直接 fetch
@@ -80,6 +99,131 @@ async function callApi<T>(
   }
 }
 
+function deduplicateModels(models: string[]): string[] {
+  return Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)))
+}
+
+function normalizeModelName(model: string): string {
+  if (model.startsWith('models/')) {
+    return model.slice('models/'.length)
+  }
+  return model
+}
+
+function extractModelsFromPayload(payload: unknown): string[] {
+  if (!payload) {
+    return []
+  }
+
+  if (Array.isArray(payload)) {
+    const parsed = payload
+      .map((item) => {
+        if (typeof item === 'string') return item
+        if (!item || typeof item !== 'object') return ''
+        const record = item as Record<string, unknown>
+        if (typeof record.id === 'string') return record.id
+        if (typeof record.name === 'string') return normalizeModelName(record.name)
+        if (typeof record.model === 'string') return record.model
+        return ''
+      })
+      .filter(Boolean)
+
+    return deduplicateModels(parsed)
+  }
+
+  if (typeof payload === 'object') {
+    const record = payload as Record<string, unknown>
+    const candidateKeys = ['models', 'data', 'items', 'result']
+
+    for (const key of candidateKeys) {
+      if (record[key] !== undefined) {
+        const models = extractModelsFromPayload(record[key])
+        if (models.length > 0) {
+          return models
+        }
+      }
+    }
+  }
+
+  return []
+}
+
+async function requestJson(url: string, init?: RequestInit): Promise<unknown> {
+  const response = await fetch(url, init)
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status}`)
+  }
+  return response.json()
+}
+
+export async function fetchProviderModels(
+  providerId: string,
+  baseUrl: string,
+  apiKey: string
+): Promise<ApiResponse<{ models: string[] }>> {
+  try {
+    const gatewayRes = await callApi<unknown>(`/models?provider=${encodeURIComponent(providerId)}`, 'GET')
+    if (gatewayRes.success && gatewayRes.data) {
+      const gatewayModels = extractModelsFromPayload(gatewayRes.data)
+      if (gatewayModels.length > 0) {
+        return { success: true, data: { models: gatewayModels } }
+      }
+    }
+
+    const normalizedBase = normalizeBaseUrl(baseUrl.trim())
+    let payload: unknown
+
+    switch (providerId) {
+      case 'local': {
+        payload = await requestJson(`${normalizedBase}/api/tags`)
+        break
+      }
+      case 'google': {
+        if (!apiKey.trim()) {
+          return { success: false, error: 'Google provider requires API key' }
+        }
+        payload = await requestJson(`${normalizedBase}/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`)
+        break
+      }
+      case 'anthropic': {
+        if (!apiKey.trim()) {
+          return { success: false, error: 'Anthropic provider requires API key' }
+        }
+        payload = await requestJson(`${normalizedBase}/v1/models`, {
+          headers: {
+            'x-api-key': apiKey.trim(),
+            'anthropic-version': '2023-06-01',
+          },
+        })
+        break
+      }
+      case 'openai':
+      case 'openrouter':
+      default: {
+        if (!apiKey.trim()) {
+          return { success: false, error: `${providerId} provider requires API key` }
+        }
+        payload = await requestJson(`${normalizedBase}/models`, {
+          headers: {
+            Authorization: `Bearer ${apiKey.trim()}`,
+          },
+        })
+        break
+      }
+    }
+
+    const models = extractModelsFromPayload(payload)
+    if (models.length === 0) {
+      return { success: false, error: 'No models found from provider' }
+    }
+
+    return { success: true, data: { models } }
+  } catch (error) {
+    console.error('Fetch provider models failed:', error)
+    return { success: false, error: String(error) }
+  }
+}
+
 // ============ Backend Control (Tauri Only) ============
 
 export async function startBackend(): Promise<ApiResponse<string>> {
@@ -109,6 +253,18 @@ export async function checkBackendHealth(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+export async function getGatewayHealth(): Promise<ApiResponse<GatewayHealth>> {
+  return callApi('/health', 'GET')
+}
+
+export async function getGatewayMetrics(): Promise<ApiResponse<{ status: string; metrics: GatewayMetrics }>> {
+  return callApi('/metrics', 'GET')
+}
+
+export async function listGatewayTools(): Promise<ApiResponse<GatewayTools>> {
+  return callApi('/tools', 'GET')
 }
 
 // ============ Chat API (Main Interface) ============

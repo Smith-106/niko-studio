@@ -6,6 +6,7 @@ Tests for GET /health and GET /tools endpoints.
 
 import pytest
 import os
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 
@@ -119,6 +120,77 @@ class TestHealthEndpoint:
         assert data["status"] == "degraded"
         assert data["engine_health"]["memory"]["status"] == "error"
         assert "boom" in data["engine_health"]["memory"]["error"]
+
+
+class TestModelsEndpoint:
+    """Tests for GET /models endpoint"""
+
+    def test_models_returns_200_with_aggregated_models(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_config = SimpleNamespace(providers=[
+            SimpleNamespace(
+                provider=SimpleNamespace(value="openai"),
+                model_mapping={"fast": "gpt-4o-mini", "default": "gpt-4o", "powerful": "gpt-4o"},
+                embedding_model="text-embedding-3-small",
+            ),
+            SimpleNamespace(
+                provider=SimpleNamespace(value="anthropic"),
+                model_mapping={"fast": "claude-3-haiku-20240307", "default": "claude-3-5-sonnet-20241022", "powerful": "claude-3-opus-20240229"},
+                embedding_model="",
+            ),
+        ])
+
+        monkeypatch.setattr(gateway_module, "load_services_config", lambda: mock_config)
+
+        response = client_no_lifespan.get("/models")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "providers" in data
+        assert data["providers"]["openai"] == ["gpt-4o-mini", "gpt-4o", "text-embedding-3-small"]
+        assert "gpt-4o" in data["models"]
+        assert "claude-3-5-sonnet-20241022" in data["models"]
+
+    def test_models_returns_provider_filtered_result(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_config = SimpleNamespace(providers=[
+            SimpleNamespace(
+                provider=SimpleNamespace(value="openai"),
+                model_mapping={"fast": "gpt-4o-mini", "default": "gpt-4o", "powerful": "gpt-4-turbo"},
+                embedding_model="text-embedding-3-small",
+            )
+        ])
+
+        monkeypatch.setattr(gateway_module, "load_services_config", lambda: mock_config)
+
+        response = client_no_lifespan.get("/models?provider=openai")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["provider"] == "openai"
+        assert data["models"] == ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "text-embedding-3-small"]
+
+    def test_models_returns_404_for_unknown_provider(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_config = SimpleNamespace(providers=[
+            SimpleNamespace(
+                provider=SimpleNamespace(value="openai"),
+                model_mapping={"fast": "gpt-4o-mini", "default": "gpt-4o", "powerful": "gpt-4-turbo"},
+                embedding_model="text-embedding-3-small",
+            )
+        ])
+
+        monkeypatch.setattr(gateway_module, "load_services_config", lambda: mock_config)
+
+        response = client_no_lifespan.get("/models?provider=unknown")
+        assert response.status_code == 404
+        data = response.json()
+        assert data["status"] == "not_found"
+        assert data["provider"] == "unknown"
+        assert data["models"] == []
 
 
 class TestToolsEndpoint:
