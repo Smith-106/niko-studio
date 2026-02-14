@@ -110,7 +110,7 @@ src\services\reranker\models.py:21
 Coverage XML written to file coverage.xml
 
 Required test coverage of 80% reached. Total coverage: 81.25%
-4706 passed, 2 skipped, 14 deselected, 2 warnings in 283.22s (0:04:43)
+4706 passed, 2 skipped, 14 deselected, 2 warnings in 273.98s (0:04:33)
 ```
 
 ### 3) e2e smoke
@@ -120,7 +120,7 @@ Required test coverage of 80% reached. Total coverage: 81.25%
 
 ```text
 ..............                                                           [100%]
-14 passed in 6.37s
+14 passed in 6.03s
 ```
 
 ### 4) Production guard (reload/cors)
