@@ -23,7 +23,7 @@
 {
   "decision": "GO",
   "go_no_go_reasons": [],
-  "generated_at": "2026-02-14T18:30:45.290848+00:00",
+  "generated_at": "2026-02-14T19:49:01.110886+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -203,7 +203,7 @@ src\services\reranker\models.py:21
 Coverage XML written to file coverage.xml
 
 Required test coverage of 80% reached. Total coverage: 80.76%
-4709 passed, 2 skipped, 14 deselected, 2 warnings in 303.15s (0:05:03)
+4709 passed, 2 skipped, 14 deselected, 2 warnings in 309.19s (0:05:09)
 ```
 
 ### 4) desktop_check
@@ -235,7 +235,7 @@ computing gzip size...
 [2mdist/[22m[32mindex.html                 [39m[1m[2m  0.47 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
 [2mdist/[22m[35massets/index-B64qZ9mu.css  [39m[1m[2m 20.61 kB[22m[1m[22m[2m │ gzip:   4.75 kB[22m
 [2mdist/[22m[36massets/index-DC1DA39X.js   [39m[1m[2m345.56 kB[22m[1m[22m[2m │ gzip: 106.34 kB[22m
-[32m✓ built in 6.88s[39m
+[32m✓ built in 7.15s[39m
 ```
 
 ### 5) external_e2e_smoke
@@ -245,7 +245,7 @@ computing gzip size...
 
 ```text
 ..............                                                           [100%]
-14 passed in 6.92s
+14 passed in 6.56s
 ```
 
 ### 6) production_guard
