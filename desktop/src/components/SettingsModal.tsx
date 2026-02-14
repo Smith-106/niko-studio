@@ -25,6 +25,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [modelSyncLoading, setModelSyncLoading] = useState<Record<string, boolean>>({})
   const [modelSyncError, setModelSyncError] = useState<Record<string, string | null>>({})
   const [customModelInputs, setCustomModelInputs] = useState<Record<string, string>>({})
+  const [providerSearch, setProviderSearch] = useState('')
+  const [modelValidateLoading, setModelValidateLoading] = useState<Record<string, boolean>>({})
+  const [modelValidateMessage, setModelValidateMessage] = useState<Record<string, { type: 'success' | 'error'; text: string } | null>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useI18n()
 
@@ -147,6 +150,82 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     })
     setCustomModelInputs((prev) => ({ ...prev, [provider.id]: '' }))
     setModelSyncError((prev) => ({ ...prev, [provider.id]: null }))
+  }
+
+  const getModelGroups = (provider: LLMProvider): Array<{ label: string; models: string[] }> => {
+    const staticModels = deduplicateModels(provider.models ?? [])
+    const fetchedModels = deduplicateModels(provider.fetchedModels ?? [])
+    const customModels = deduplicateModels(provider.customModels ?? [])
+
+    const groups: Array<{ label: string; models: string[] }> = []
+
+    if (staticModels.length > 0) {
+      groups.push({ label: '预置模型', models: staticModels })
+    }
+    if (fetchedModels.length > 0) {
+      groups.push({ label: '自动拉取', models: fetchedModels })
+    }
+    if (customModels.length > 0) {
+      groups.push({ label: '自定义模型', models: customModels })
+    }
+
+    return groups
+  }
+
+  const getFilteredProviders = (): LLMProvider[] => {
+    const keyword = providerSearch.trim().toLowerCase()
+    if (!keyword) {
+      return localSettings.llmProviders
+    }
+
+    return localSettings.llmProviders.filter((provider) => {
+      if (provider.name.toLowerCase().includes(keyword)) {
+        return true
+      }
+
+      const effectiveModels = getEffectiveModels(provider)
+      return effectiveModels.some((model) => model.toLowerCase().includes(keyword))
+    })
+  }
+
+  const validateProviderDefaultModel = async (provider: LLMProvider) => {
+    setModelValidateLoading((prev) => ({ ...prev, [provider.id]: true }))
+    setModelValidateMessage((prev) => ({ ...prev, [provider.id]: null }))
+
+    try {
+      const res = await fetchProviderModels(provider.id, provider.baseUrl, provider.apiKey)
+      const data = res.data
+      if (!res.success || !data?.models?.length) {
+        setModelValidateMessage((prev) => ({
+          ...prev,
+          [provider.id]: { type: 'error', text: '默认模型校验失败：无法拉取模型列表。' },
+        }))
+        return
+      }
+
+      const fetchedModels = data.models
+      const defaultModel = provider.defaultModel.trim().toLowerCase()
+      const isValid = fetchedModels.some((model) => model.toLowerCase() === defaultModel)
+
+      if (isValid) {
+        setModelValidateMessage((prev) => ({
+          ...prev,
+          [provider.id]: { type: 'success', text: `默认模型可用（来源：${data.source === 'gateway' ? '网关' : '直连'}）。` },
+        }))
+      } else {
+        setModelValidateMessage((prev) => ({
+          ...prev,
+          [provider.id]: { type: 'error', text: '默认模型不在当前可用模型列表中。' },
+        }))
+      }
+    } catch {
+      setModelValidateMessage((prev) => ({
+        ...prev,
+        [provider.id]: { type: 'error', text: '默认模型校验失败，请稍后重试。' },
+      }))
+    } finally {
+      setModelValidateLoading((prev) => ({ ...prev, [provider.id]: false }))
+    }
   }
 
   const testConnection = async (provider: LLMProvider) => {
@@ -357,8 +436,18 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
 
             <div className="space-y-4">
-              {localSettings.llmProviders.map((provider) => {
-                const effectiveModels = getEffectiveModels(provider)
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">检索 Provider / 模型</label>
+                <input
+                  type="text"
+                  value={providerSearch}
+                  onChange={(e) => setProviderSearch(e.target.value)}
+                  placeholder="输入 provider 名称或模型关键字"
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+
+              {getFilteredProviders().map((provider) => {
                 return (
                 <div
                   key={provider.id}
@@ -435,8 +524,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value, modelSelectionMode: 'list' })}
                             className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                           >
-                            {effectiveModels.map((model) => (
-                              <option key={model} value={model}>{model}</option>
+                            {getModelGroups(provider).map((group) => (
+                              <optgroup key={group.label} label={group.label}>
+                                {group.models.map((model) => (
+                                  <option key={`${group.label}-${model}`} value={model}>{model}</option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
                         </div>
@@ -445,14 +538,29 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">模型来源</label>
-                          <button
-                            onClick={() => refreshProviderModels(provider)}
-                            disabled={modelSyncLoading[provider.id]}
-                            className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
-                          >
-                            {modelSyncLoading[provider.id] ? '刷新中...' : '刷新模型'}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => validateProviderDefaultModel(provider)}
+                              disabled={modelValidateLoading[provider.id]}
+                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                            >
+                              {modelValidateLoading[provider.id] ? '校验中...' : '校验默认模型'}
+                            </button>
+                            <button
+                              onClick={() => refreshProviderModels(provider)}
+                              disabled={modelSyncLoading[provider.id]}
+                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                            >
+                              {modelSyncLoading[provider.id] ? '刷新中...' : '刷新模型'}
+                            </button>
+                          </div>
                         </div>
+                        {modelValidateMessage[provider.id] && (
+                          <p className={`text-xs ${modelValidateMessage[provider.id]?.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                            {modelValidateMessage[provider.id]?.text}
+                          </p>
+                        )}
                         {modelSyncError[provider.id] && (
                           <p className="text-xs text-red-500">{modelSyncError[provider.id]}</p>
                         )}
