@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Send, Paperclip, Mic } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback } from '../stores/selectors'
-import { chat, chatStream } from '../api/client'
+import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { useI18n } from '../i18n'
 
@@ -10,6 +10,8 @@ export function ChatArea() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
+  const [chatMode, setChatMode] = useState<'chat' | 'agent'>('chat')
+  const [agentAction, setAgentAction] = useState<'write' | 'revise' | 'context'>('write')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { t, translate } = useI18n()
 
@@ -49,30 +51,92 @@ export function ChatArea() {
         allowLlmFallback,
       }
 
-      let streamFailed = false
-      let hasStreamContent = false
-      let streamText = ''
+      const runNormalChat = async () => {
+        let streamFailed = false
+        let hasStreamContent = false
+        let streamText = ''
 
-      await chatStream(request, {
-        onContent: (chunk) => {
-          hasStreamContent = true
-          streamText += chunk
-          setStreamingContent(streamText)
-        },
-        onError: () => {
-          streamFailed = true
-        },
-      })
+        await chatStream(request, {
+          onContent: (chunk) => {
+            hasStreamContent = true
+            streamText += chunk
+            setStreamingContent(streamText)
+          },
+          onError: () => {
+            streamFailed = true
+          },
+        })
 
-      if (!streamFailed && hasStreamContent) {
-        addMessage('assistant', streamText || '处理完成', selectedSkills)
-      } else {
+        if (!streamFailed && hasStreamContent) {
+          addMessage('assistant', streamText || '处理完成', selectedSkills)
+          return
+        }
+
         const response = await chat(request)
         if (response.success && response.data) {
           addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
         } else {
           addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
         }
+      }
+
+      if (chatMode === 'agent') {
+        let handled = false
+
+        if (agentAction === 'write') {
+          const routeResult = await agentRoute(userMessage)
+          if (routeResult.success && routeResult.data) {
+            const writeResult = await agentWrite(
+              {
+                task: userMessage,
+                scene_type: routeResult.data.scene_type,
+                workflow_level: routeResult.data.workflow_level,
+                task_assignments: routeResult.data.task_assignments,
+              },
+              selectedSkills
+            )
+            if (writeResult.success && writeResult.data?.content) {
+              addMessage('assistant', writeResult.data.content, selectedSkills)
+              handled = true
+            }
+          }
+        }
+
+        if (agentAction === 'revise') {
+          const lastAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')
+          const reviseResult = await agentRevise(
+            lastAssistantMessage?.content || userMessage,
+            {
+              instruction: userMessage,
+              workflow_level: workflowLevel,
+              skills: selectedSkills,
+            }
+          )
+          if (reviseResult.success && reviseResult.data?.content) {
+            addMessage('assistant', reviseResult.data.content, selectedSkills)
+            handled = true
+          }
+        }
+
+        if (agentAction === 'context') {
+          const contextResult = await agentGetContext(
+            {
+              task: userMessage,
+              workflow_level: workflowLevel,
+            },
+            ['memory', 'graph', 'skills']
+          )
+          if (contextResult.success && contextResult.data) {
+            addMessage('assistant', `上下文信息：\n\n${JSON.stringify(contextResult.data, null, 2)}`)
+            handled = true
+          }
+        }
+
+        if (!handled) {
+          await runNormalChat()
+        }
+      } else {
+        await runNormalChat()
       }
     } catch {
       addMessage('assistant', '无法连接到后端服务，请确保服务已启动。')
@@ -127,6 +191,41 @@ export function ChatArea() {
 
       {/* Input Area */}
       <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs text-gray-500 dark:text-dark-text-secondary">模式：</span>
+          <button
+            onClick={() => setChatMode('chat')}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              chatMode === 'chat'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            普通聊天
+          </button>
+          <button
+            onClick={() => setChatMode('agent')}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              chatMode === 'agent'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+          >
+            Agent 高级
+          </button>
+          {chatMode === 'agent' && (
+            <select
+              value={agentAction}
+              onChange={(e) => setAgentAction(e.target.value as 'write' | 'revise' | 'context')}
+              className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded"
+            >
+              <option value="write">写作</option>
+              <option value="revise">润色/重写</option>
+              <option value="context">取上下文</option>
+            </select>
+          )}
+        </div>
+
         {/* Workflow Level Selector */}
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.workflow}:</span>

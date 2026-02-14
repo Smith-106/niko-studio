@@ -1,4 +1,5 @@
-import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3 } from 'lucide-react'
+import { useEffect } from 'react'
+import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
 import { useI18n } from '../i18n'
@@ -9,9 +10,10 @@ interface SidebarProps {
   onOpenKnowledge: () => void
   onOpenSettings: () => void
   onOpenEvaluation: () => void
+  onOpenMcpStatus: () => void
 }
 
-export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, onOpenEvaluation }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, onOpenEvaluation, onOpenMcpStatus }: SidebarProps) {
   // Use selective selectors for better performance
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
@@ -23,8 +25,13 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
     availableSkills,
     selectedSkills,
     toggleSkill,
+    refreshAvailableSkills,
   } = useAppStore()
   const { t } = useI18n()
+
+  useEffect(() => {
+    void refreshAvailableSkills()
+  }, [refreshAvailableSkills])
 
   return (
     <aside
@@ -107,6 +114,13 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
 
       {/* Footer */}
       <div className="border-t border-gray-700 p-2">
+        <button
+          onClick={onOpenMcpStatus}
+          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+        >
+          <Server size={18} />
+          {!collapsed && <span className="text-sm">MCP 状态</span>}
+        </button>
         <button
           onClick={onOpenEvaluation}
           className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"

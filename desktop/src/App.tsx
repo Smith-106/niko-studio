@@ -4,6 +4,7 @@ import { ChatArea } from './components/ChatArea'
 import { SettingsModal } from './components/SettingsModal'
 import { KnowledgeModal } from './components/KnowledgeModal'
 import { EvaluationPanel } from './components/EvaluationPanel'
+import { McpStatusPanel } from './components/McpStatusPanel'
 import { useAppStore } from './stores/appStore'
 import { useMessages } from './stores/selectors'
 import { useTheme } from './hooks/useTheme'
@@ -16,6 +17,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [knowledgeOpen, setKnowledgeOpen] = useState(false)
   const [evaluationOpen, setEvaluationOpen] = useState(false)
+  const [mcpStatusOpen, setMcpStatusOpen] = useState(false)
   const { t } = useI18n()
 
   // 应用主题
@@ -64,6 +66,7 @@ function App() {
         onOpenKnowledge={() => setKnowledgeOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenEvaluation={() => setEvaluationOpen(true)}
+        onOpenMcpStatus={() => setMcpStatusOpen(true)}
       />
 
       {/* Main Content */}
@@ -93,6 +96,7 @@ function App() {
           onClose={() => setEvaluationOpen(false)}
         />
       )}
+      {mcpStatusOpen && <McpStatusPanel onClose={() => setMcpStatusOpen(false)} />}
     </div>
   )
 }

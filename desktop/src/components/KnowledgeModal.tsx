@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Search, Plus, Folder, FileText, User, MapPin, BookOpen, Sparkles } from 'lucide-react'
-import { searchMemory, queryGraph } from '../api/client'
+import { searchMemory, queryGraph, listSkills, loadSkill, matchSkills, getSkillChain } from '../api/client'
 
 interface KnowledgeModalProps {
   isOpen: boolean
@@ -31,6 +31,10 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [items, setItems] = useState<KnowledgeItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [selectedSkillId, setSelectedSkillId] = useState<string>('')
+  const [skillDetails, setSkillDetails] = useState<string>('')
+  const [skillMatches, setSkillMatches] = useState<Array<{ skill_id: string; relevance: number }>>([])
+  const [skillChain, setSkillChain] = useState<Array<{ skill_id: string; step: number }>>([])
 
   useEffect(() => {
     if (isOpen) {
@@ -68,18 +72,28 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
           setItems((plotResult.data as KnowledgeItem[]) || [])
           break
         }
-        case 'skills':
-          setItems([
-            { name: 'character-forge', description: '角色塑造' },
-            { name: 'suspense-craft', description: '悬念张力' },
-            { name: 'dialogue-system', description: '对话系统' },
-            { name: 'tension-arc', description: '张力曲线' },
-            { name: 'emotion-arc', description: '情感弧光' },
-            { name: 'opening-craft', description: '开篇技巧' },
-            { name: 'ending-craft', description: '结尾技巧' },
-            { name: 'conflict-escalation', description: '冲突升级' },
-          ])
+        case 'skills': {
+          const skillsResult = await listSkills()
+          if (skillsResult.success && Array.isArray(skillsResult.data)) {
+            setItems(skillsResult.data.map((skill) => ({
+              id: skill.id,
+              name: skill.name || skill.id,
+              description: '',
+            })))
+          } else {
+            setItems([
+              { name: 'character-forge', description: '角色塑造' },
+              { name: 'suspense-craft', description: '悬念张力' },
+              { name: 'dialogue-system', description: '对话系统' },
+              { name: 'tension-arc', description: '张力曲线' },
+              { name: 'emotion-arc', description: '情感弧光' },
+              { name: 'opening-craft', description: '开篇技巧' },
+              { name: 'ending-craft', description: '结尾技巧' },
+              { name: 'conflict-escalation', description: '冲突升级' },
+            ])
+          }
           break
+        }
       }
     } catch (error) {
       console.error('Failed to load items:', error)
@@ -88,6 +102,35 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     }
   }
 
+  const loadSkillDetails = async () => {
+    if (!selectedSkillId) return
+    const response = await loadSkill(selectedSkillId)
+    if (response.success && response.data?.content) {
+      setSkillDetails(response.data.content)
+    } else {
+      setSkillDetails('加载技能详情失败')
+    }
+  }
+
+  const runSkillMatch = async () => {
+    const keywords = searchQuery.trim() ? searchQuery.trim().split(/\s+/).slice(0, 5) : undefined
+    const response = await matchSkills(undefined, keywords)
+    if (response.success && Array.isArray(response.data)) {
+      setSkillMatches(response.data)
+    } else {
+      setSkillMatches([])
+    }
+  }
+
+  const loadSkillChain = async () => {
+    if (!selectedSkillId) return
+    const response = await getSkillChain(selectedSkillId)
+    if (response.success && Array.isArray(response.data)) {
+      setSkillChain(response.data)
+    } else {
+      setSkillChain([])
+    }
+  }
   const filteredItems = items.filter((item) =>
     JSON.stringify(item).toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -143,9 +186,66 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+          {activeTab === 'skills' && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                onClick={runSkillMatch}
+                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+              >
+                任务匹配
+              </button>
+              <button
+                onClick={loadSkillDetails}
+                disabled={!selectedSkillId}
+                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+              >
+                技能详情
+              </button>
+              <button
+                onClick={loadSkillChain}
+                disabled={!selectedSkillId}
+                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+              >
+                推荐链路
+              </button>
+              {selectedSkillId && (
+                <span className="text-xs text-blue-600 dark:text-blue-400">当前技能：{selectedSkillId}</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
+          {activeTab === 'skills' && (
+            <div className="mb-4 space-y-2">
+              {skillDetails && (
+                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
+                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">技能详情</div>
+                  <pre className="text-xs text-gray-600 dark:text-dark-text-secondary whitespace-pre-wrap break-all">{skillDetails}</pre>
+                </div>
+              )}
+              {skillMatches.length > 0 && (
+                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
+                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">任务匹配</div>
+                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                    {skillMatches.map((item) => `${item.skill_id} (${item.relevance})`).join('，')}
+                  </div>
+                </div>
+              )}
+              {skillChain.length > 0 && (
+                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
+                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">推荐链路</div>
+                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                    {skillChain
+                      .slice()
+                      .sort((a, b) => a.step - b.step)
+                      .map((item) => `Step ${item.step}: ${item.skill_id}`)
+                      .join(' → ')}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">加载中...</div>
           ) : filteredItems.length === 0 ? (
@@ -162,6 +262,11 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
               {filteredItems.map((item, index) => (
                 <div
                   key={index}
+                  onClick={() => {
+                    if (activeTab === 'skills') {
+                      setSelectedSkillId((item.id as string) || (item.name as string) || '')
+                    }
+                  }}
                   className="p-4 border border-gray-200 dark:border-dark-border rounded-lg hover:border-blue-500 hover:shadow-md cursor-pointer transition-all"
                 >
                   <div className="flex items-start gap-3">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
-import { evaluateContent } from '../api/client'
+import { evaluateContent, createCheckpoint, listCheckpoints, restoreCheckpoint } from '../api/client'
+import { useAppStore } from '../stores/appStore'
 
 interface EvaluationPanelProps {
   content: string
@@ -16,6 +17,12 @@ interface EvaluationViewModel {
   }[]
   suggestions: string[]
   decision: 'APPROVED' | 'REVISE' | 'REWRITE' | 'HUMAN_REVIEW'
+}
+
+interface CheckpointItem {
+  id: string
+  description: string
+  created_at: string
 }
 
 const buildDimensions = (data: {
@@ -34,10 +41,18 @@ const buildDimensions = (data: {
 export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const [loading, setLoading] = useState(true)
   const [result, setResult] = useState<EvaluationViewModel | null>(null)
+  const [checkpointDescription, setCheckpointDescription] = useState('')
+  const [checkpoints, setCheckpoints] = useState<CheckpointItem[]>([])
+  const [checkpointError, setCheckpointError] = useState<string | null>(null)
+  const { addMessage } = useAppStore()
 
   useEffect(() => {
     runEvaluation()
   }, [content])
+
+  useEffect(() => {
+    refreshCheckpoints()
+  }, [])
 
   const runEvaluation = async () => {
     setLoading(true)
@@ -59,6 +74,50 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       setResult(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const refreshCheckpoints = async () => {
+    setCheckpointError(null)
+    try {
+      const response = await listCheckpoints(20)
+      if (response.success && Array.isArray(response.data)) {
+        setCheckpoints(response.data)
+      } else {
+        setCheckpointError('加载 checkpoint 失败')
+      }
+    } catch {
+      setCheckpointError('加载 checkpoint 失败')
+    }
+  }
+
+  const handleCreateCheckpoint = async () => {
+    setCheckpointError(null)
+    try {
+      const response = await createCheckpoint(checkpointDescription || '手动保存 checkpoint')
+      if (response.success) {
+        setCheckpointDescription('')
+        await refreshCheckpoints()
+      } else {
+        setCheckpointError(response.error || '创建 checkpoint 失败')
+      }
+    } catch {
+      setCheckpointError('创建 checkpoint 失败')
+    }
+  }
+
+  const handleRestoreCheckpoint = async (checkpointId: string) => {
+    setCheckpointError(null)
+    try {
+      const response = await restoreCheckpoint(checkpointId)
+      if (response.success) {
+        addMessage('assistant', `系统提示：已恢复 checkpoint ${checkpointId}`)
+        await refreshCheckpoints()
+      } else {
+        setCheckpointError(response.error || '恢复 checkpoint 失败')
+      }
+    } catch {
+      setCheckpointError('恢复 checkpoint 失败')
     }
   }
 
@@ -165,6 +224,50 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
             </ul>
           </div>
         )}
+
+        <div className="mt-6 border-t border-gray-200 dark:border-dark-border pt-4">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">Checkpoint</h3>
+          <div className="flex gap-2 mb-3">
+            <input
+              value={checkpointDescription}
+              onChange={(e) => setCheckpointDescription(e.target.value)}
+              placeholder="checkpoint 描述"
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+            />
+            <button
+              onClick={handleCreateCheckpoint}
+              className="px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              保存
+            </button>
+            <button
+              onClick={refreshCheckpoints}
+              className="px-3 py-2 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+            >
+              刷新
+            </button>
+          </div>
+          {checkpointError && (
+            <p className="text-xs text-red-500 mb-2">{checkpointError}</p>
+          )}
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {checkpoints.map((checkpoint) => (
+              <div
+                key={checkpoint.id}
+                className="p-2 border border-gray-200 dark:border-dark-border rounded"
+              >
+                <div className="text-xs text-gray-700 dark:text-dark-text">{checkpoint.description || checkpoint.id}</div>
+                <div className="text-[11px] text-gray-500 dark:text-dark-text-secondary">{checkpoint.created_at}</div>
+                <button
+                  onClick={() => handleRestoreCheckpoint(checkpoint.id)}
+                  className="mt-1 px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                >
+                  恢复
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )

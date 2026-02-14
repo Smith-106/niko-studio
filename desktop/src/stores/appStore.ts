@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { checkBackendHealth } from '@/api/client'
+import { checkBackendHealth, listSkills } from '@/api/client'
 import { useSettingsStore } from './settingsStore'
 
 export interface Message {
@@ -38,6 +38,7 @@ interface AppState {
   availableSkills: string[]
   selectedSkills: string[]
   toggleSkill: (skill: string) => void
+  refreshAvailableSkills: () => Promise<void>
 
   // Workflow level
   workflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
@@ -140,6 +141,29 @@ export const useAppStore = create<AppState>((set, get) => ({
         ? state.selectedSkills.filter((s) => s !== skill)
         : [...state.selectedSkills, skill],
     }))
+  },
+  refreshAvailableSkills: async () => {
+    try {
+      const response = await listSkills()
+      if (!response.success || !Array.isArray(response.data) || response.data.length === 0) {
+        return
+      }
+      const nextSkills = response.data
+        .map((skill) => (typeof skill?.id === 'string' && skill.id.trim() ? skill.id.trim() : ''))
+        .filter(Boolean)
+      if (nextSkills.length === 0) {
+        return
+      }
+      set((state) => {
+        const selectedSkills = state.selectedSkills.filter((skill) => nextSkills.includes(skill))
+        return {
+          availableSkills: nextSkills,
+          selectedSkills,
+        }
+      })
+    } catch {
+      // 忽略动态拉取失败，保留静态兜底列表
+    }
   },
 
   // Workflow level
