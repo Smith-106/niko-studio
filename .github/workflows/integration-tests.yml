@@ -75,6 +75,10 @@ jobs:
         run: npm ci
         working-directory: desktop
 
+      - name: Audit desktop dependencies (high+)
+        run: npm audit --audit-level=high
+        working-directory: desktop
+
       - name: Build desktop frontend (TypeScript + Vite)
         run: npm run build
         working-directory: desktop
