@@ -12,7 +12,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings, updateProvider, resetSettings } = useSettingsStore()
-  const { setAllowLlmFallback } = useAppStore()
+  const { setAllowLlmFallback, checkBackend } = useAppStore()
   const [localSettings, setLocalSettings] = useState(settings)
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({})
   const [testingProvider, setTestingProvider] = useState<string | null>(null)
@@ -23,13 +23,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   if (!isOpen) return null
 
-  const handleSave = () => {
+  const handleSave = async () => {
     updateSettings(localSettings)
     setAllowLlmFallback(localSettings.allowLlmFallback)
     // 同步更新各个 provider
     localSettings.llmProviders.forEach((provider) => {
       updateProvider(provider.id, provider)
     })
+    await checkBackend()
     onClose()
   }
 

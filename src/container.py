@@ -9,6 +9,7 @@ Replaces global singletons with a centralized container for:
 
 import asyncio
 import logging
+import os
 from typing import Any, Dict, Optional, List
 
 logger = logging.getLogger("niko-container")
@@ -195,7 +196,59 @@ class ServiceContainer:
         """Get writer agent (lazy loaded)."""
         def factory():
             from src.agents.writer import WriterAgent
-            return WriterAgent(llm=None)
+            from src.config import get_config
+
+            config = get_config()
+            google_key = (
+                config.agent.google_api_key
+                or os.getenv("GOOGLE_API_KEY")
+                or os.getenv("GEMINI_API_KEY")
+            )
+            openai_key = config.agent.openai_api_key or os.getenv("OPENAI_API_KEY")
+
+            llm = None
+
+            if google_key:
+                try:
+                    from langchain_google_genai import ChatGoogleGenerativeAI
+                    llm = ChatGoogleGenerativeAI(
+                        model="gemini-pro",
+                        temperature=0.7,
+                        google_api_key=google_key,
+                    )
+                except Exception as exc:
+                    logger.warning(f"Failed to initialize Google LLM for WriterAgent: {exc}")
+
+            if llm is None and openai_key:
+                try:
+                    from langchain_openai import ChatOpenAI
+
+                    openai_base = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE")
+                    if openai_base:
+                        normalized = openai_base.rstrip("/")
+                        if not normalized.endswith("/v1"):
+                            normalized = f"{normalized}/v1"
+                        openai_base = normalized
+                    openai_model = (
+                        os.getenv("OPENAI_MODEL")
+                        or os.getenv("OPENAI_CHAT_MODEL")
+                        or config.agent.default_model
+                        or "gpt-4o"
+                    )
+
+                    chat_openai_kwargs = {
+                        "model": openai_model,
+                        "temperature": 0.7,
+                        "openai_api_key": openai_key,
+                    }
+                    if openai_base:
+                        chat_openai_kwargs["openai_api_base"] = openai_base
+
+                    llm = ChatOpenAI(**chat_openai_kwargs)
+                except Exception as exc:
+                    logger.warning(f"Failed to initialize OpenAI LLM for WriterAgent: {exc}")
+
+            return WriterAgent(llm=llm)
         return self._get_or_create("writer", factory)
 
     @property

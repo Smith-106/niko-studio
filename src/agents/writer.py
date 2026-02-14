@@ -8,7 +8,10 @@ Writer Agent - 写作执行者
 
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, model_validator
+import asyncio
 import json
+import os
+import requests
 
 
 # ============================================================
@@ -327,6 +330,73 @@ class WriterAgent:
         self.knowledge_layer = knowledge_layer
         self.enable_knowledge_retrieval = enable_knowledge_retrieval
         self._injected_skills: List[str] = []
+
+    def _get_openai_proxy_config(self) -> Optional[Dict[str, str]]:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return None
+
+        base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE")
+        if not base_url:
+            return None
+
+        normalized_base = base_url.rstrip("/")
+        if not normalized_base.endswith("/v1"):
+            normalized_base = f"{normalized_base}/v1"
+
+        model = os.getenv("OPENAI_MODEL") or os.getenv("OPENAI_CHAT_MODEL") or "gpt-5.3-codex"
+
+        return {
+            "api_key": api_key,
+            "base_url": normalized_base,
+            "model": model,
+        }
+
+    async def _call_openai_proxy(self, messages: List[Any]) -> str:
+        cfg = self._get_openai_proxy_config()
+        if not cfg:
+            raise RuntimeError("OpenAI proxy config missing")
+
+        role_map = {
+            "SystemMessage": "system",
+            "HumanMessage": "user",
+            "AIMessage": "assistant",
+        }
+        request_messages = []
+        for message in messages:
+            role = role_map.get(message.__class__.__name__, "user")
+            request_messages.append({"role": role, "content": str(message.content)})
+
+        payload = {
+            "model": cfg["model"],
+            "messages": request_messages,
+            "temperature": 0.7,
+        }
+        headers = {
+            "Authorization": f"Bearer {cfg['api_key']}",
+            "Content-Type": "application/json",
+        }
+
+        def _post() -> requests.Response:
+            return requests.post(
+                f"{cfg['base_url']}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60,
+            )
+
+        response = await asyncio.to_thread(_post)
+        response.raise_for_status()
+
+        data = response.json()
+        choices = data.get("choices", [])
+        if not choices:
+            raise RuntimeError("OpenAI proxy returned empty choices")
+
+        content = choices[0].get("message", {}).get("content", "")
+        if not content:
+            raise RuntimeError("OpenAI proxy returned empty content")
+        return content
 
     # ========== AgentKnowledgeLayer 集成方法 ==========
 
@@ -724,6 +794,12 @@ class WriterAgent:
         try:
             return await chain.ainvoke(variables)
         except Exception as exc:
+            if allow_llm_fallback and self._get_openai_proxy_config():
+                try:
+                    messages = prompt.format_messages(**variables)
+                    return await self._call_openai_proxy(messages)
+                except Exception:
+                    pass
             if not allow_llm_fallback:
                 raise RuntimeError("LLM execution failed with fallback disabled") from exc
             raise
@@ -823,6 +899,16 @@ class WriterAgent:
                 "word_target": word_target
             })
         except Exception as exc:
+            if allow_llm_fallback and self._get_openai_proxy_config():
+                try:
+                    messages = prompt.format_messages(
+                        existing_content=existing_content,
+                        continuation_hint=continuation_hint,
+                        word_target=word_target,
+                    )
+                    return await self._call_openai_proxy(messages)
+                except Exception:
+                    pass
             if not allow_llm_fallback:
                 raise RuntimeError("LLM execution failed with fallback disabled") from exc
             raise

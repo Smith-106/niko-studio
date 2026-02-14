@@ -662,7 +662,7 @@ async def evaluate_content(
 
     Args:
         content: 待评估内容
-        scene_card: 场景卡片 (可选)
+        scene_card: 场景卡片 (兼容参数，当前未使用)
         dimensions: 评估维度 (默认全部)
             - lock: LOCK系统 (L/O/C/K)
             - style: 风格质量 (感官/狄更斯/对话/人设/节奏)
@@ -680,7 +680,49 @@ async def evaluate_content(
         }
     """
     engine = get_critic_engine()
-    return await engine.evaluate(content, scene_card, dimensions)
+
+    # 当前容器中的 CriticEngine.evaluate 签名为 evaluate(content, dimensions=None)
+    raw = await engine.evaluate(content, dimensions)
+
+    # 兼容两种结果结构：
+    # 1) legacy: total_score/lock_score/style_score/logic_score/actionable_feedback
+    # 2) narrative engine: overall_score/dimensions/issues/recommended_skills
+    if isinstance(raw, dict) and "total_score" in raw and "actionable_feedback" in raw:
+        return raw
+
+    dim_result = raw.get("dimensions", {}) if isinstance(raw, dict) else {}
+
+    def _dim_score(name: str) -> float:
+        value = dim_result.get(name, {}).get("score", 0)
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    # 将 0-10 维度分映射到前端现有 0-100 结构
+    lock_score = _dim_score("dream") * 4
+    style_score = _dim_score("voice") * 3.5
+    logic_score = ((_dim_score("suspense") + _dim_score("character") + _dim_score("premise")) / 3 if dim_result else 0) * 2.5
+
+    overall_score = raw.get("overall_score", 0) if isinstance(raw, dict) else 0
+    total_score = float(overall_score) * 10
+
+    issue_list = raw.get("issues", []) if isinstance(raw, dict) else []
+    feedback = "；".join(issue_list[:3]) if issue_list else "评估完成"
+
+    suggestions = raw.get("recommended_skills", []) if isinstance(raw, dict) else []
+
+    decision = "APPROVED" if total_score >= 80 else "REVISE" if total_score >= 60 else "REWRITE"
+
+    return {
+        "decision": decision,
+        "total_score": round(total_score, 1),
+        "lock_score": round(lock_score, 1),
+        "style_score": round(style_score, 1),
+        "logic_score": round(logic_score, 1),
+        "actionable_feedback": feedback,
+        "suggestions": suggestions,
+    }
 
 
 @critic_mcp.tool()
@@ -769,7 +811,7 @@ async def agent_route(task: str) -> dict:
         "workflow_level_slug": to_workflow_slug(level),
         "scene_type": scene_type.value,
         "dispatched_skills": skills,
-        "task_assignments": [a.model_dump() for a in assignments]
+        "task_assignments": [a.model_dump(mode="json") for a in assignments]
     }
 
 
@@ -1625,6 +1667,199 @@ async def list_tools(request):
     return JSONResponse(tools)
 
 
+# ============ REST 兼容端点（供 Desktop 前端调用） ============
+
+async def memory_search_endpoint(request: Request):
+    body = await request.json()
+    result = await memory_search(
+        query=body.get("query", ""),
+        layer=body.get("layer"),
+        dimensions=body.get("dimensions"),
+        entity_id=body.get("entity_id"),
+        at_time=body.get("at_time"),
+        limit=body.get("limit", 10),
+    )
+    return JSONResponse(result)
+
+
+async def memory_add_endpoint(request: Request):
+    body = await request.json()
+    result = await memory_add(
+        content=body.get("content", ""),
+        layer=body.get("layer", "session"),
+        dimension=body.get("dimension"),
+        entity_id=body.get("entity_id"),
+        valid_from=body.get("valid_from"),
+        valid_until=body.get("valid_until"),
+        importance=body.get("importance", 0.5),
+        tags=body.get("tags") or [],
+    )
+    return JSONResponse(result)
+
+
+async def memory_temporal_endpoint(request: Request):
+    body = await request.json()
+    result = await memory_get_temporal(
+        entity_id=body.get("entity_id", ""),
+        at_time=body.get("at_time"),
+    )
+    return JSONResponse(result)
+
+
+async def graph_query_endpoint(request: Request):
+    body = await request.json()
+    result = await graph_query(cypher=body.get("cypher", ""))
+    return JSONResponse(result)
+
+
+async def graph_character_endpoint(request: Request):
+    body = await request.json()
+    result = await graph_get_character(
+        name=body.get("name", ""),
+        include_relations=body.get("include_relations", True),
+        include_timeline=body.get("include_timeline", False),
+    )
+    return JSONResponse(result)
+
+
+async def graph_foreshadows_endpoint(request: Request):
+    body = await request.json()
+    result = await graph_get_foreshadows(
+        status=body.get("status", "pending"),
+        chapter=body.get("chapter"),
+    )
+    return JSONResponse(result)
+
+
+async def critic_evaluate_endpoint(request: Request):
+    body = await request.json()
+    result = await evaluate_content(
+        content=body.get("content", ""),
+        scene_card=body.get("scene_card"),
+        dimensions=body.get("dimensions"),
+    )
+    return JSONResponse(result)
+
+
+async def critic_suggestions_endpoint(request: Request):
+    body = await request.json()
+    result = await get_improvement_suggestions(
+        content=body.get("content", ""),
+        issues=body.get("issues"),
+        max_suggestions=body.get("max_suggestions", 5),
+    )
+    return JSONResponse(result)
+
+
+async def workflow_route_endpoint(request: Request):
+    body = await request.json()
+    result = await workflow_route(task=body.get("task", ""))
+    return JSONResponse(result)
+
+
+async def workflow_plan_endpoint(request: Request):
+    body = await request.json()
+    result = await workflow_plan(
+        task=body.get("task", ""),
+        level=body.get("level"),
+    )
+    return JSONResponse(result)
+
+
+async def workflow_execute_endpoint(request: Request):
+    body = await request.json()
+    result = await workflow_execute(
+        plan_id=body.get("plan_id", ""),
+        step_id=body.get("step_id"),
+    )
+    return JSONResponse(result)
+
+
+async def checkpoint_create_endpoint(request: Request):
+    body = await request.json()
+    result = await checkpoint_create(
+        description=body.get("description", ""),
+        auto_commit=body.get("auto_commit", True),
+    )
+    return JSONResponse(result)
+
+
+async def checkpoint_restore_endpoint(request: Request):
+    body = await request.json()
+    result = await checkpoint_restore(checkpoint_id=body.get("checkpoint_id", ""))
+    return JSONResponse(result)
+
+
+async def checkpoint_list_endpoint(request: Request):
+    body = await request.json()
+    result = await checkpoint_list(limit=body.get("limit", 10))
+    return JSONResponse(result)
+
+
+async def agent_route_endpoint(request: Request):
+    body = await request.json()
+    result = await agent_route(task=body.get("task", ""))
+    return JSONResponse(result)
+
+
+async def agent_write_endpoint(request: Request):
+    body = await request.json()
+    result = await agent_write(
+        scene_card=body.get("scene_card") or {},
+        skills=body.get("skills"),
+        word_target=body.get("word_target", 2000),
+        allow_llm_fallback=body.get("allow_llm_fallback", True),
+    )
+    return JSONResponse(result)
+
+
+async def agent_revise_endpoint(request: Request):
+    body = await request.json()
+    result = await agent_revise(
+        draft=body.get("draft", ""),
+        feedback=body.get("feedback") or {},
+        allow_llm_fallback=body.get("allow_llm_fallback", True),
+    )
+    return JSONResponse(result)
+
+
+async def agent_context_endpoint(request: Request):
+    body = await request.json()
+    result = await agent_get_context(
+        scene_info=body.get("scene_info") or {},
+        context_types=body.get("context_types"),
+    )
+    return JSONResponse(result)
+
+
+async def skills_list_endpoint(request: Request):
+    category = request.query_params.get("category")
+    result = await skills_list(category=category)
+    return JSONResponse(result)
+
+
+async def skills_load_endpoint(request: Request):
+    body = await request.json()
+    result = await skills_load(skill_id=body.get("skill_id", ""))
+    return JSONResponse(result)
+
+
+async def skills_match_endpoint(request: Request):
+    body = await request.json()
+    result = await skills_match(
+        task_type=body.get("task_type"),
+        keywords=body.get("keywords"),
+        issue=body.get("issue"),
+    )
+    return JSONResponse(result)
+
+
+async def skills_chain_endpoint(request: Request):
+    body = await request.json()
+    result = await skills_get_chain(task_type=body.get("task_type", ""))
+    return JSONResponse(result)
+
+
 # ============ 创建 Gateway ============
 
 def create_gateway() -> Starlette:
@@ -1678,6 +1913,34 @@ def create_gateway() -> Starlette:
     # 创建应用
     gateway = Starlette(
         routes=[
+            # 辅助端点
+            Route("/health", health_check, methods=["GET"]),
+            Route("/metrics", metrics_endpoint, methods=["GET"]),
+            Route("/tools", list_tools, methods=["GET"]),
+            Route("/memory/search", memory_search_endpoint, methods=["POST"]),
+            Route("/memory/add", memory_add_endpoint, methods=["POST"]),
+            Route("/memory/temporal", memory_temporal_endpoint, methods=["POST"]),
+            Route("/graph/query", graph_query_endpoint, methods=["POST"]),
+            Route("/graph/character", graph_character_endpoint, methods=["POST"]),
+            Route("/graph/foreshadows", graph_foreshadows_endpoint, methods=["POST"]),
+            Route("/critic/evaluate", critic_evaluate_endpoint, methods=["POST"]),
+            Route("/critic/suggestions", critic_suggestions_endpoint, methods=["POST"]),
+            Route("/workflow/route", workflow_route_endpoint, methods=["POST"]),
+            Route("/workflow/plan", workflow_plan_endpoint, methods=["POST"]),
+            Route("/workflow/execute", workflow_execute_endpoint, methods=["POST"]),
+            Route("/workflow/checkpoint/create", checkpoint_create_endpoint, methods=["POST"]),
+            Route("/workflow/checkpoint/restore", checkpoint_restore_endpoint, methods=["POST"]),
+            Route("/workflow/checkpoint/list", checkpoint_list_endpoint, methods=["POST"]),
+            Route("/agent/route", agent_route_endpoint, methods=["POST"]),
+            Route("/agent/write", agent_write_endpoint, methods=["POST"]),
+            Route("/agent/revise", agent_revise_endpoint, methods=["POST"]),
+            Route("/agent/context", agent_context_endpoint, methods=["POST"]),
+            Route("/skills/list", skills_list_endpoint, methods=["GET"]),
+            Route("/skills/load", skills_load_endpoint, methods=["POST"]),
+            Route("/skills/match", skills_match_endpoint, methods=["POST"]),
+            Route("/skills/chain", skills_chain_endpoint, methods=["POST"]),
+            Route("/chat", chat_endpoint, methods=["POST"]),
+            Route("/chat/stream", chat_stream_endpoint, methods=["POST"]),
             # MCP 服务挂载 (7个服务)
             Mount("/memory", memory_mcp.streamable_http_app()),
             Mount("/graph", graph_mcp.streamable_http_app()),
@@ -1686,12 +1949,6 @@ def create_gateway() -> Starlette:
             Mount("/critic", critic_mcp.streamable_http_app()),
             Mount("/agent", agent_mcp.streamable_http_app()),
             Mount("/skills", skills_mcp.streamable_http_app()),
-            # 辅助端点
-            Route("/health", health_check, methods=["GET"]),
-            Route("/metrics", metrics_endpoint, methods=["GET"]),
-            Route("/tools", list_tools, methods=["GET"]),
-            Route("/chat", chat_endpoint, methods=["POST"]),
-            Route("/chat/stream", chat_stream_endpoint, methods=["POST"]),
         ],
         lifespan=lifespan,
     )
