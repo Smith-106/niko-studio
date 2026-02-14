@@ -87,6 +87,29 @@ class CommanderAgent(BaseAgent):
         self.llm = llm
         self.skill_router = SkillRouter()
 
+    def _route_by_heuristics(self, task_description: str) -> WorkflowLevel:
+        """LLM 不可用或失败时的启发式路由。"""
+        task_lower = task_description.lower()
+
+        if any(kw in task_lower for kw in ["typo", "fix", "polish", "correct", "grammar", "修复", "错别字", "纠正", "语法"]):
+            self.log_activity("Fallback: routing to L1_RAPID based on keywords.", level="INFO")
+            return WorkflowLevel.L1_RAPID
+
+        if any(kw in task_lower for kw in ["paragraph", "short", "snippet", "段落", "片段", "短文"]):
+            self.log_activity("Fallback: routing to L2_LITE based on keywords.", level="INFO")
+            return WorkflowLevel.L2_LITE
+
+        if any(kw in task_lower for kw in ["brainstorm", "idea", "concept", "world", "character", "setting", "story", "plot", "outline", "arc", "头脑风暴", "构思", "世界观", "设定", "角色", "性格", "设计", "体系", "大纲", "剧情", "情节", "规划", "计划"]):
+            self.log_activity("Fallback: routing to L5_BRAINSTORM based on keywords.", level="INFO")
+            return WorkflowLevel.L5_BRAINSTORM
+
+        if any(kw in task_lower for kw in ["project", "roadmap", "full", "novel", "全书", "项目"]):
+            self.log_activity("Fallback: routing to L5_COORDINATOR based on keywords.", level="INFO")
+            return WorkflowLevel.L5_COORDINATOR
+
+        self.log_activity("Fallback: default routing to L3_STANDARD.", level="INFO")
+        return WorkflowLevel.L3_STANDARD
+
     def route(self, task_description: str) -> WorkflowLevel:
         """
         Analyzes the task complexity and returns the appropriate workflow level.
@@ -129,6 +152,9 @@ class CommanderAgent(BaseAgent):
             prompt_str + "\n\n{format_instructions}"
         )
 
+        if self.llm is None:
+            return self._route_by_heuristics(task_description)
+
         llm_runnable = self.llm
         if not isinstance(self.llm, Runnable):
             llm_runnable = RunnableLambda(lambda x: self.llm.invoke(x))
@@ -142,30 +168,10 @@ class CommanderAgent(BaseAgent):
 
             self.log_activity(f"Routing '{task_description}' to {result.workflow_level} (Reason: {result.reasoning})")
             return result.workflow_level
-            
+
         except Exception as e:
             self.log_activity(f"LLM routing failed: {e}. Falling back to heuristics.", level="WARNING")
-            # Fallback to heuristics
-            task_lower = task_description.lower()
-
-            if any(kw in task_lower for kw in ["typo", "fix", "polish", "correct", "grammar", "修复", "错别字", "纠正", "语法"]):
-                self.log_activity("Fallback: routing to L1_RAPID based on keywords.", level="INFO")
-                return WorkflowLevel.L1_RAPID
-
-            if any(kw in task_lower for kw in ["paragraph", "short", "snippet", "段落", "片段", "短文"]):
-                self.log_activity("Fallback: routing to L2_LITE based on keywords.", level="INFO")
-                return WorkflowLevel.L2_LITE
-
-            if any(kw in task_lower for kw in ["brainstorm", "idea", "concept", "world", "character", "setting", "story", "plot", "outline", "arc", "头脑风暴", "构思", "世界观", "设定", "角色", "性格", "设计", "体系", "大纲", "剧情", "情节", "规划", "计划"]):
-                self.log_activity("Fallback: routing to L5_BRAINSTORM based on keywords.", level="INFO")
-                return WorkflowLevel.L5_BRAINSTORM
-
-            if any(kw in task_lower for kw in ["project", "roadmap", "full", "novel", "全书", "项目"]):
-                self.log_activity("Fallback: routing to L5_COORDINATOR based on keywords.", level="INFO")
-                return WorkflowLevel.L5_COORDINATOR
-
-            self.log_activity("Fallback: default routing to L3_STANDARD.", level="INFO")
-            return WorkflowLevel.L3_STANDARD
+            return self._route_by_heuristics(task_description)
 
     def run(self, input_data: Any) -> Any:
         import asyncio

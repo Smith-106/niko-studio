@@ -775,9 +775,6 @@ class WriterAgent:
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
 
-        if not self.llm:
-            raise RuntimeError("LLM not configured for WriterAgent")
-
         system_prompt = WRITER_SYSTEM_PROMPT
         if self._injected_skills and self.skill_loader:
             skill_guidance = self.inject_skills(self._injected_skills)
@@ -789,20 +786,23 @@ class WriterAgent:
             ("human", prompt_template)
         ])
 
-        chain = prompt | self.llm | StrOutputParser()
+        if allow_llm_fallback and self._get_openai_proxy_config():
+            messages = prompt.format_messages(**variables)
+            try:
+                return await self._call_openai_proxy(messages)
+            except Exception:
+                pass
 
-        try:
-            return await chain.ainvoke(variables)
-        except Exception as exc:
-            if allow_llm_fallback and self._get_openai_proxy_config():
-                try:
-                    messages = prompt.format_messages(**variables)
-                    return await self._call_openai_proxy(messages)
-                except Exception:
-                    pass
-            if not allow_llm_fallback:
-                raise RuntimeError("LLM execution failed with fallback disabled") from exc
-            raise
+        if self.llm:
+            chain = prompt | self.llm | StrOutputParser()
+            try:
+                return await chain.ainvoke(variables)
+            except Exception as exc:
+                if not allow_llm_fallback:
+                    raise RuntimeError("LLM execution failed with fallback disabled") from exc
+                raise
+
+        raise RuntimeError("LLM not configured for WriterAgent")
     
     def _post_process(self, content: str, input_data: WriterInput) -> WriterOutput:
         """后处理和自检"""
@@ -869,9 +869,6 @@ class WriterAgent:
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
 
-        if not self.llm:
-            raise RuntimeError("LLM not configured for WriterAgent")
-
         prompt = ChatPromptTemplate.from_messages([
             ("system", WRITER_SYSTEM_PROMPT),
             ("human", """
@@ -890,28 +887,29 @@ class WriterAgent:
 """)
         ])
 
-        chain = prompt | self.llm | StrOutputParser()
+        variables = {
+            "existing_content": existing_content,
+            "continuation_hint": continuation_hint,
+            "word_target": word_target
+        }
 
-        try:
-            return await chain.ainvoke({
-                "existing_content": existing_content,
-                "continuation_hint": continuation_hint,
-                "word_target": word_target
-            })
-        except Exception as exc:
-            if allow_llm_fallback and self._get_openai_proxy_config():
-                try:
-                    messages = prompt.format_messages(
-                        existing_content=existing_content,
-                        continuation_hint=continuation_hint,
-                        word_target=word_target,
-                    )
-                    return await self._call_openai_proxy(messages)
-                except Exception:
-                    pass
-            if not allow_llm_fallback:
-                raise RuntimeError("LLM execution failed with fallback disabled") from exc
-            raise
+        if allow_llm_fallback and self._get_openai_proxy_config():
+            messages = prompt.format_messages(**variables)
+            try:
+                return await self._call_openai_proxy(messages)
+            except Exception:
+                pass
+
+        if self.llm:
+            chain = prompt | self.llm | StrOutputParser()
+            try:
+                return await chain.ainvoke(variables)
+            except Exception as exc:
+                if not allow_llm_fallback:
+                    raise RuntimeError("LLM execution failed with fallback disabled") from exc
+                raise
+
+        raise RuntimeError("LLM not configured for WriterAgent")
     
     async def rewrite_section(
         self,

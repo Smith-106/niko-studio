@@ -1591,7 +1591,14 @@ async def health_check(request):
             if hasattr(engine, "health_check"):
                 health = await engine.health_check()
                 if isinstance(health, dict):
-                    engine_health[name] = health
+                    normalized = dict(health)
+                    if "status" not in normalized:
+                        db_ok = normalized.get("db_ok")
+                        if db_ok is False:
+                            normalized["status"] = "error"
+                        else:
+                            normalized["status"] = "ok"
+                    engine_health[name] = normalized
                 else:
                     engine_health[name] = {"status": "ok"}
             else:
