@@ -59,6 +59,11 @@ export interface GatewayHealth {
   skills_count?: number
 }
 
+export interface ModelFetchResult {
+  models: string[]
+  source: 'gateway' | 'direct'
+}
+
 /**
  * 统一 API 调用方法
  * 在 Tauri 环境中使用 invoke，否则直接 fetch
@@ -100,7 +105,19 @@ async function callApi<T>(
 }
 
 function deduplicateModels(models: string[]): string[] {
-  return Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)))
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const model of models) {
+    const normalized = model.trim()
+    if (!normalized) continue
+    const key = normalized.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(normalized)
+  }
+
+  return result
 }
 
 function normalizeModelName(model: string): string {
@@ -160,19 +177,28 @@ export async function fetchProviderModels(
   providerId: string,
   baseUrl: string,
   apiKey: string
-): Promise<ApiResponse<{ models: string[] }>> {
+): Promise<ApiResponse<ModelFetchResult>> {
+  let gatewayError: string | null = null
+
   try {
     const gatewayRes = await callApi<unknown>(`/models?provider=${encodeURIComponent(providerId)}`, 'GET')
     if (gatewayRes.success && gatewayRes.data) {
       const gatewayModels = extractModelsFromPayload(gatewayRes.data)
       if (gatewayModels.length > 0) {
-        return { success: true, data: { models: gatewayModels } }
+        return { success: true, data: { models: gatewayModels, source: 'gateway' } }
       }
+      gatewayError = 'gateway returned empty models'
+    } else {
+      gatewayError = gatewayRes.error ?? 'gateway unavailable'
     }
+  } catch (error) {
+    gatewayError = String(error)
+  }
 
-    const normalizedBase = normalizeBaseUrl(baseUrl.trim())
-    let payload: unknown
+  const normalizedBase = normalizeBaseUrl(baseUrl.trim())
+  let payload: unknown
 
+  try {
     switch (providerId) {
       case 'local': {
         payload = await requestJson(`${normalizedBase}/api/tags`)
@@ -214,13 +240,19 @@ export async function fetchProviderModels(
 
     const models = extractModelsFromPayload(payload)
     if (models.length === 0) {
-      return { success: false, error: 'No models found from provider' }
+      return {
+        success: false,
+        error: `No models found (gateway=${gatewayError ?? 'n/a'}, direct=empty)`
+      }
     }
 
-    return { success: true, data: { models } }
+    return { success: true, data: { models, source: 'direct' } }
   } catch (error) {
     console.error('Fetch provider models failed:', error)
-    return { success: false, error: String(error) }
+    return {
+      success: false,
+      error: `Fetch failed (gateway=${gatewayError ?? 'n/a'}, direct=${String(error)})`
+    }
   }
 }
 

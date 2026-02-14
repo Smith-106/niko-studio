@@ -52,12 +52,46 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     setShowApiKeys((prev) => ({ ...prev, [providerId]: !prev[providerId] }))
   }
 
+  const validateCustomModelInput = (value: string): { ok: boolean; reason?: string } => {
+    if (!value) {
+      return { ok: false, reason: '模型名称不能为空。' }
+    }
+    if (value.length > 120) {
+      return { ok: false, reason: '模型名称过长（最多 120 个字符）。' }
+    }
+    if (/\s/.test(value)) {
+      return { ok: false, reason: '模型名称不能包含空白字符。' }
+    }
+    return { ok: true }
+  }
+
+  const ensureValidDefaultModel = (provider: LLMProvider, updates: Partial<LLMProvider>): Partial<LLMProvider> => {
+    const nextProvider: LLMProvider = { ...provider, ...updates }
+    const effectiveModels = getEffectiveModels(nextProvider)
+    if (effectiveModels.length === 0) {
+      return updates
+    }
+
+    const requestedDefault = (nextProvider.defaultModel ?? '').trim()
+    const hasRequestedDefault = effectiveModels.some((model) => model.toLowerCase() === requestedDefault.toLowerCase())
+    const safeDefaultModel = hasRequestedDefault ? requestedDefault : effectiveModels[0]
+
+    return {
+      ...updates,
+      defaultModel: safeDefaultModel,
+      modelSelectionMode: updates.modelSelectionMode ?? (hasRequestedDefault ? nextProvider.modelSelectionMode : 'list'),
+    }
+  }
+
   const updateLocalProvider = (providerId: string, updates: Partial<LLMProvider>) => {
     setLocalSettings((prev) => ({
       ...prev,
-      llmProviders: prev.llmProviders.map((p) =>
-        p.id === providerId ? { ...p, ...updates } : p
-      ),
+      llmProviders: prev.llmProviders.map((p) => {
+        if (p.id !== providerId) {
+          return p
+        }
+        return { ...p, ...ensureValidDefaultModel(p, updates) }
+      }),
     }))
   }
 
@@ -85,7 +119,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           lastModelSyncAt: new Date().toISOString(),
         })
       } else {
-        setModelSyncError((prev) => ({ ...prev, [provider.id]: '模型拉取失败，请继续使用预置或自定义模型。' }))
+        const reason = res.error?.includes('gateway=')
+          ? `模型拉取失败（网关/直连均失败）：${res.error}`
+          : '模型拉取失败，请继续使用预置或自定义模型。'
+        setModelSyncError((prev) => ({ ...prev, [provider.id]: reason }))
       }
     } catch {
       setModelSyncError((prev) => ({ ...prev, [provider.id]: '模型拉取失败，请继续使用预置或自定义模型。' }))
@@ -96,7 +133,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const applyCustomModel = (provider: LLMProvider) => {
     const value = (customModelInputs[provider.id] ?? '').trim()
-    if (!value) {
+    const validation = validateCustomModelInput(value)
+    if (!validation.ok) {
+      setModelSyncError((prev) => ({ ...prev, [provider.id]: validation.reason ?? '自定义模型不合法。' }))
       return
     }
 

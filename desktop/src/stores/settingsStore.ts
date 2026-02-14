@@ -124,12 +124,43 @@ const defaultSettings: Settings = {
   sidebarCollapsed: false,
 }
 
-const normalizeProvider = (provider: LLMProvider): LLMProvider => ({
-  ...provider,
-  fetchedModels: provider.fetchedModels ?? [],
-  customModels: provider.customModels ?? [],
-  modelSelectionMode: provider.modelSelectionMode ?? 'list',
-})
+const normalizeModelId = (model: string): string => model.trim()
+
+const deduplicateModels = (models: string[]): string[] => {
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const model of models) {
+    const normalized = normalizeModelId(model)
+    if (!normalized) continue
+    const key = normalized.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(normalized)
+  }
+
+  return result
+}
+
+const normalizeProvider = (provider: LLMProvider): LLMProvider => {
+  const models = deduplicateModels(provider.models ?? [])
+  const fetchedModels = deduplicateModels(provider.fetchedModels ?? [])
+  const customModels = deduplicateModels(provider.customModels ?? [])
+  const effectiveModels = deduplicateModels([...models, ...fetchedModels, ...customModels])
+
+  const fallbackDefaultModel = effectiveModels[0] ?? provider.defaultModel
+  const currentDefault = normalizeModelId(provider.defaultModel)
+  const hasCurrentDefault = effectiveModels.some((model) => model.toLowerCase() === currentDefault.toLowerCase())
+
+  return {
+    ...provider,
+    models,
+    fetchedModels,
+    customModels,
+    modelSelectionMode: provider.modelSelectionMode ?? 'list',
+    defaultModel: hasCurrentDefault ? currentDefault : fallbackDefaultModel,
+  }
+}
 
 const normalizeSettings = (settings: Settings): Settings => ({
   ...settings,
