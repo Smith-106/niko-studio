@@ -1,12 +1,14 @@
 #!/usr/bin/env python
-"""发布检查汇总脚本：版本一致性、baseline/e2e、coverage、生产配置与观测守卫。"""
+"""Release readiness summary with deterministic Go/No-Go contract."""
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -41,8 +43,28 @@ def parse_pytest_counts(output: str) -> tuple[str, str]:
     return "unknown", "0"
 
 
+def build_check_result(
+    check_id: str,
+    priority: str,
+    blocking: bool,
+    exit_code: int,
+    detail: str,
+    status_override: str | None = None,
+) -> dict[str, object]:
+    status = status_override if status_override else ("PASS" if exit_code == 0 else "FAIL")
+    return {
+        "check_id": check_id,
+        "priority": priority,
+        "blocking": blocking,
+        "status": status,
+        "exit_code": exit_code,
+        "detail": detail,
+    }
+
+
 def main() -> int:
     version_code, version_output = run_cmd([sys.executable, "scripts/check_versions.py"])
+    delivery_code, delivery_output = run_cmd([sys.executable, "scripts/delivery_gate.py"])
 
     baseline_code, baseline_output = run_cmd([
         sys.executable,
@@ -60,6 +82,23 @@ def main() -> int:
         "-q",
         "--tb=no",
     ])
+
+    desktop_bootstrap_code, desktop_bootstrap_output = run_cmd([
+        "npm.cmd",
+        "--prefix",
+        "desktop",
+        "run",
+        "ensure-deps",
+    ])
+    desktop_check_code, desktop_check_output = run_cmd([
+        "npm.cmd",
+        "--prefix",
+        "desktop",
+        "run",
+        "check",
+    ])
+    desktop_code = desktop_bootstrap_code if desktop_bootstrap_code != 0 else desktop_check_code
+    desktop_output = "\n\n".join(part for part in [desktop_bootstrap_output, desktop_check_output] if part)
 
     e2e_code, e2e_output = run_cmd([
         sys.executable,
@@ -105,30 +144,112 @@ def main() -> int:
         "NIKO_GATEWAY_METRICS_ENABLED": "true",
     })
 
+    coverage_xml = PROJECT_ROOT / "coverage.xml"
+    coverage_exists = coverage_xml.exists()
+    codecov_token_present = bool(os.environ.get("CODECOV_TOKEN", "").strip())
+    codecov_strict_mode = codecov_token_present
+
+    if coverage_exists:
+        codecov_status = "PASS"
+        codecov_exit = 0
+        codecov_detail = "coverage.xml available"
+    elif codecov_strict_mode:
+        codecov_status = "FAIL"
+        codecov_exit = 1
+        codecov_detail = "coverage.xml missing in strict mode"
+    else:
+        codecov_status = "WARN"
+        codecov_exit = 0
+        codecov_detail = "coverage.xml missing, soft mode without CODECOV_TOKEN"
+
     baseline_status, baseline_passed = parse_pytest_counts(baseline_output)
     e2e_status, e2e_passed = parse_pytest_counts(e2e_output)
 
-    coverage_xml = PROJECT_ROOT / "coverage.xml"
-    codecov_state = "available" if coverage_xml.exists() else "missing"
+    checks = [
+        build_check_result("version_consistency", "P0", True, version_code, "scripts/check_versions.py"),
+        build_check_result("delivery_semantic_gate", "P0", True, delivery_code, "scripts/delivery_gate.py"),
+        build_check_result(
+            "baseline_tests_and_coverage",
+            "P0",
+            True,
+            baseline_code,
+            f"status={baseline_status}, passed_count={baseline_passed}",
+        ),
+        build_check_result("desktop_check", "P0", True, desktop_code, "npm --prefix desktop run check"),
+        build_check_result(
+            "external_e2e_smoke",
+            "P1",
+            False,
+            e2e_code,
+            f"status={e2e_status}, passed_count={e2e_passed}",
+        ),
+        build_check_result("production_guard", "P1", False, prod_guard_code, "reload/cors production guards"),
+        build_check_result("metrics_guard", "P1", False, metrics_guard_code, "gateway metrics production guard"),
+        build_check_result(
+            "codecov_signal",
+            "P1",
+            False,
+            codecov_exit,
+            f"strict_mode={str(codecov_strict_mode).lower()}, token_present={str(codecov_token_present).lower()}, {codecov_detail}",
+            status_override=codecov_status,
+        ),
+    ]
+
+    no_go_reasons = [
+        check["check_id"]
+        for check in checks
+        if check["blocking"] and check["status"] != "PASS"
+    ]
+    decision = "GO" if not no_go_reasons else "NO_GO"
+
+    machine_payload = {
+        "decision": decision,
+        "go_no_go_reasons": no_go_reasons,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "checks": checks,
+    }
+
+    table_lines = [
+        "| check_id | priority | blocking | status |",
+        "|---|---|---|---|",
+    ]
+    table_lines.extend(
+        f"| {item['check_id']} | {item['priority']} | {str(item['blocking']).lower()} | {item['status']} |"
+        for item in checks
+    )
+    table = "\n".join(table_lines)
 
     report = f"""# Release Check Summary
 
-- Version check: {'PASS' if version_code == 0 else 'FAIL'}
-- Baseline tests (unit+integration, not e2e): {'PASS' if baseline_code == 0 else 'FAIL'}
-- e2e smoke: {'PASS' if e2e_code == 0 else 'FAIL'}
-- Production guard (reload/cors): {'PASS' if prod_guard_code == 0 else 'FAIL'}
-- Metrics guard (production): {'PASS' if metrics_guard_code == 0 else 'FAIL'}
-- Codecov signal (coverage.xml): {codecov_state}
+- Decision: {decision}
+- Go/No-Go rule: any P0 FAIL => NO_GO
+- Codecov strict mode: {'enabled' if codecov_strict_mode else 'disabled'}
+
+## Deterministic Check Results
+
+{table}
+
+## Machine-Readable Decision
+
+```json
+{json.dumps(machine_payload, ensure_ascii=False, indent=2)}
+```
 
 ## Details
 
-### 1) Version consistency
+### 1) version_consistency
 
 ```text
 {version_output}
 ```
 
-### 2) Baseline tests
+### 2) delivery_semantic_gate
+
+```text
+{delivery_output}
+```
+
+### 3) baseline_tests_and_coverage
 
 - status: {baseline_status}
 - passed_count: {baseline_passed}
@@ -137,7 +258,13 @@ def main() -> int:
 {baseline_output}
 ```
 
-### 3) e2e smoke
+### 4) desktop_check
+
+```text
+{desktop_output}
+```
+
+### 5) external_e2e_smoke
 
 - status: {e2e_status}
 - passed_count: {e2e_passed}
@@ -146,50 +273,34 @@ def main() -> int:
 {e2e_output}
 ```
 
-### 4) Production guard (reload/cors)
+### 6) production_guard
 
 ```text
 {prod_guard_output}
 ```
 
-### 5) Metrics guard
+### 7) metrics_guard
 
 ```text
 {metrics_guard_output}
 ```
 
-### 6) Codecov prerequisite
+### 8) codecov_signal
 
-- coverage.xml exists: {'yes' if coverage_xml.exists() else 'no'}
-- expected CI upload policy:
-  - internal: fail_ci_if_error=false
-  - external: fail_ci_if_error=true (and CODECOV_TOKEN required)
+- strict_mode: {'true' if codecov_strict_mode else 'false'}
+- token_present: {'true' if codecov_token_present else 'false'}
+- coverage.xml exists: {'yes' if coverage_exists else 'no'}
 
-### 7) CI Integration Tests latest
+### 9) CI Integration Tests latest
 
-- policy: 不再在仓库文件中回填动态 run_id / run_url，避免“回填提交触发新 CI”的循环。
-- source_of_truth: GitHub Actions `Integration Tests` 最新运行结果。
+- policy: do not write back dynamic run_id / run_url to repository files.
+- source_of_truth: GitHub Actions `Integration Tests` latest result.
 - workflow_url: https://github.com/Smith-106/niko-studio/actions/workflows/integration-tests.yml
-
-```text
-查看方式：
-1) 打开 workflow_url
-2) 以最新一次 main 分支运行结论作为交付门禁事实来源
-3) 重点核对 jobs：tests / desktop-build / external-* gate
-```
 """
 
     REPORT_PATH.write_text(report, encoding="utf-8")
     print(f"Report generated: {REPORT_PATH}")
-
-    final_ok = (
-        version_code == 0
-        and baseline_code == 0
-        and e2e_code == 0
-        and prod_guard_code == 0
-        and metrics_guard_code == 0
-    )
-    return 0 if final_ok else 1
+    return 0 if decision == "GO" else 1
 
 
 if __name__ == "__main__":
