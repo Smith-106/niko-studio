@@ -5,6 +5,14 @@ export interface Translations {
   appTitle: string
   serviceRunning: string
   serviceOffline: string
+  contextUsage: string
+  checkpoint: string
+  restore: string
+  restoreSuccess: string
+  restoreFailed: string
+  loadingCheckpoints: string
+  noCheckpoints: string
+  contextEstimated: string
 
   // Sidebar
   nikoStudio: string
@@ -80,6 +88,14 @@ export const translations: Record<Language, Translations> = {
     appTitle: '小说创作助手',
     serviceRunning: '服务运行中',
     serviceOffline: '服务未启动',
+    contextUsage: '上下文',
+    checkpoint: '还原点',
+    restore: '恢复',
+    restoreSuccess: '恢复成功',
+    restoreFailed: '恢复失败',
+    loadingCheckpoints: '加载还原点中...',
+    noCheckpoints: '暂无还原点',
+    contextEstimated: '估算',
 
     // Sidebar
     nikoStudio: 'Niko-Studio',
@@ -153,6 +169,14 @@ export const translations: Record<Language, Translations> = {
     appTitle: 'Novel Writing Assistant',
     serviceRunning: 'Service Running',
     serviceOffline: 'Service Offline',
+    contextUsage: 'Context',
+    checkpoint: 'Checkpoint',
+    restore: 'Restore',
+    restoreSuccess: 'Restore successful',
+    restoreFailed: 'Restore failed',
+    loadingCheckpoints: 'Loading checkpoints...',
+    noCheckpoints: 'No checkpoints',
+    contextEstimated: 'Estimated',
 
     // Sidebar
     nikoStudio: 'Niko-Studio',

@@ -6,7 +6,11 @@ import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext 
 import { MessageBubble } from './MessageBubble'
 import { useI18n } from '../i18n'
 
-export function ChatArea() {
+interface ChatAreaProps {
+  onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
+}
+
+export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
@@ -21,6 +25,18 @@ export function ChatArea() {
   const workflowLevel = useWorkflowLevel()
   const selectedSkills = useSelectedSkills()
   const allowLlmFallback = useAllowLlmFallback()
+
+  useEffect(() => {
+    if (!onContextUsageChange) return
+
+    const messageChars = messages.reduce((total, message) => total + message.content.length, 0)
+    const usedChars = messageChars + streamingContent.length
+    const totalK = 128
+    const usedK = Number((usedChars / 1000).toFixed(1))
+    const percent = Number(Math.min((usedChars / (totalK * 1000)) * 100, 999).toFixed(1))
+
+    onContextUsageChange({ usedChars, usedK, totalK, percent })
+  }, [messages, streamingContent, onContextUsageChange])
 
   // Get actions directly from store (these don't cause re-renders)
   const { addMessage, setWorkflowLevel, createConversation } = useAppStore()
