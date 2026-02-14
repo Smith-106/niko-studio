@@ -79,8 +79,8 @@ jobs:
         run: npm audit --audit-level=high
         working-directory: desktop
 
-      - name: Build desktop frontend (TypeScript + Vite)
-        run: npm run build
+      - name: Check desktop frontend constraints (typecheck + build)
+        run: npm run check
         working-directory: desktop
 
   external-precheck-e2e:

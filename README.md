@@ -65,90 +65,34 @@ pip install -r requirements.txt
 uv sync
 ```
 
-## 交付口径与可达能力（external）
+## Web 交付模型
 
-为确保“完成度”口径与实际一致，external 对外口径限定为**核心可达链路 100%**，定义如下：
+当前 Web 交付模型以 **Desktop + MCP Gateway** 为主路径：
 
-- Desktop：Sidebar 可直接打开 `Knowledge`、`Settings`、`Evaluation`。
-- Chat：默认走 `/chat/stream`，异常自动降级 `/chat`，用户消息不丢失。
-- Streamlit：tab4/tab5 使用组件化入口（`scene_dashboard`），不再保留重复内联实现。
+- 主交付路径：Desktop 客户端 + `scripts/start_gateway.py` 启动的 Gateway。
+- Deprecated 路径：`src/web/app.py` 的 `GET /` 默认返回 `410`；仅在设置 `WEB_UI_FORWARD_URL` 时临时 `302` 转发。
+- Streamlit 路径：用于原型与辅助验证，不作为主交付入口。
 
-不在上述核心链路中的规划项，按 roadmap 与 issue 状态单独披露，不纳入 external“100%”表述。
-
-
-### 测试命令（交付基线）
-
-```bash
-# 单元 + 集成（排除 e2e），覆盖率门槛 80%
-pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80
-```
-
-### 外部发布附加验证（external）
-
-```bash
-# external 必须通过 e2e 冒烟（按 e2e marker 执行）
-pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=short
-```
-
-### Gateway 部署配置（CORS / reload）
-
-开发配置：`config/niko-studio.yaml`
-
-```yaml
-gateway:
-  host: 0.0.0.0
-  port: 8000
-  # 仅开发环境使用；生产环境默认强制关闭 reload
-  reload: true
-  cors_dev_origins:
-    - "*"
-  cors_prod_origins:
-    - https://app.example.com
-    - https://gray.example.com
-  metrics_enabled: true
-```
-
-生产推荐配置：`config/niko-studio.production.yaml`
-
-```yaml
-env: production
-gateway:
-  reload: false
-  cors_prod_origins:
-    - https://app.example.com
-    - https://gray.example.com
-  metrics_enabled: true
-```
-
-- 开发环境（`env: development`）：允许宽松 CORS，支持热重载。
-- 生产环境（`env: production`）：CORS 使用白名单，`reload` 默认关闭。
-
-> 生产环境必须设置 `NIKO_CORS_PROD_ORIGINS`（逗号分隔）或在 `gateway.cors_prod_origins` 中配置真实域名，不能使用 `*` 或 localhost 占位。
-
-生产域名白名单配置清单（上线前逐项确认）：
-- 真实生产域名（例如 `https://app.example.com`）。
-- 灰度/预发布域名（例如 `https://gray.example.com`）。
-- 运维/回归验证来源域（如独立前端域名）。
-- 禁止在生产白名单中保留 `*`。
-
-### /metrics 采集说明与最低告警建议
-
-采集方式：
-- 周期采集 `GET /metrics`（建议 30s~60s 间隔）。
-- 关注字段：`requests_total`、`requests_failed_total`、`latency_ms_avg`、`latency_ms_max`。
-
-最低告警建议（可按业务流量调整）：
-- 请求失败率：5 分钟窗口内 `requests_failed_total / requests_total > 1%` 告警。
-- 平均延迟：`latency_ms_avg > 500ms` 持续 5 分钟告警。
-- 最大延迟：`latency_ms_max > 2000ms` 连续 3 次采集告警。
-
-### 发布检查汇总（含 production 守卫）
+### 单命令验收入口
 
 ```bash
 python scripts/release_check_summary.py
 ```
 
-汇总将包含：版本一致性、baseline、e2e、production CORS/reload 守卫、metrics 守卫、coverage 信号。
+该命令会汇总版本一致性、baseline/e2e、production 守卫（reload/CORS/metrics）以及 CI 观察点。
+
+## 前端工程约束（统一口径）
+
+- 本地质量入口：`npm --prefix desktop run check`
+- CI（Integration Tests / `desktop-build`）入口：`npm run check`
+- 依赖审计：`npm audit --audit-level=high`
+
+## 安全意图可见化（摘要）
+
+- 运行时守卫、构建门禁、fallback/rollback 与发布前清单集中见：
+  - [docs/SECURITY_VISIBILITY.md](docs/SECURITY_VISIBILITY.md)
+- 回滚操作手册：
+  - [docs/operations/ROLLBACK.md](docs/operations/ROLLBACK.md)
 
 ### Initialize Database
 
