@@ -12,6 +12,7 @@ interface Message {
 
 interface MessageBubbleProps {
   message: Message
+  onAssistantSelection?: (payload: { messageId: string; selectedText: string }) => void
 }
 
 // Custom comparison function for React.memo
@@ -34,8 +35,16 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
   return true
 }
 
-function MessageBubbleComponent({ message }: MessageBubbleProps) {
+function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubbleProps) {
   const isUser = message.role === 'user'
+
+  const handleMouseUp = () => {
+    if (isUser || !onAssistantSelection) return
+    const selection = window.getSelection()
+    const text = selection?.toString().trim() || ''
+    if (!text) return
+    onAssistantSelection({ messageId: message.id, selectedText: text })
+  }
 
   const markdownComponents: Components = {
     code({ className, children }) {
@@ -72,7 +81,7 @@ function MessageBubbleComponent({ message }: MessageBubbleProps) {
         )}
 
         {/* Content */}
-        <div className="markdown-body">
+        <div className="markdown-body" onMouseUp={handleMouseUp}>
           <ReactMarkdown
             components={markdownComponents}
           >

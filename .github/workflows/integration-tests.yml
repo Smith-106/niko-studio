@@ -79,6 +79,16 @@ jobs:
         run: npm audit --audit-level=high
         working-directory: desktop
 
+      - name: Run desktop unit tests
+        run: npm run test:ci
+        working-directory: desktop
+
+      - name: Upload desktop test report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-vitest-report
+          path: desktop/test-results/vitest.junit.xml
+
       - name: Check desktop frontend constraints (typecheck + build)
         run: npm run check
         working-directory: desktop

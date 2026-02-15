@@ -35,6 +35,22 @@ export interface Translations {
   planning: string
   selectedSkills: string
   inputPlaceholder: string
+  streamCanceled: string
+  streamRestoreHint: string
+  streamRestoreToBeforeSend: string
+  streamRestoreBeforeSendSuccess: string
+  inlineNeedSelection: string
+  inlineActionFailed: string
+  inlineSelectedTextInfo: string
+  inlineContinue: string
+  inlineRevise: string
+  inlineGenerate: string
+  inlineRun: string
+  inlineClearSelection: string
+  inlineReviseDefaultInstruction: string
+  inlineContinuePromptPrefix: string
+  inlineGeneratePromptPrefix: string
+  inlineGenerateContextFallback: string
 
   // Settings
   settingsTitle: string
@@ -118,6 +134,22 @@ export const translations: Record<Language, Translations> = {
     planning: '规划',
     selectedSkills: '已选 {count} 个技能',
     inputPlaceholder: '告诉我你想创作什么...',
+    streamCanceled: '已取消本次生成。',
+    streamRestoreHint: '发送失败，可恢复到发送前状态。',
+    streamRestoreToBeforeSend: '恢复到发送前',
+    streamRestoreBeforeSendSuccess: '已恢复到发送前状态。',
+    inlineNeedSelection: '请先选中文本后再改写。',
+    inlineActionFailed: '内联 AI 操作失败，请重试。',
+    inlineSelectedTextInfo: '已选中文本（{count} 字符）',
+    inlineContinue: '续写',
+    inlineRevise: '改写',
+    inlineGenerate: '生成',
+    inlineRun: '执行',
+    inlineClearSelection: '清除选区',
+    inlineReviseDefaultInstruction: '请改写这段内容并保持原意。',
+    inlineContinuePromptPrefix: '请基于以下内容继续写作：',
+    inlineGeneratePromptPrefix: '请基于以下内容生成新文本：',
+    inlineGenerateContextFallback: '根据当前对话上下文生成。',
 
     // Settings
     settingsTitle: '设置',
@@ -199,6 +231,22 @@ export const translations: Record<Language, Translations> = {
     planning: 'Planning',
     selectedSkills: '{count} skills selected',
     inputPlaceholder: 'Tell me what you want to create...',
+    streamCanceled: 'Generation canceled.',
+    streamRestoreHint: 'Send failed. You can restore to the state before sending.',
+    streamRestoreToBeforeSend: 'Restore to before send',
+    streamRestoreBeforeSendSuccess: 'Restored to the state before sending.',
+    inlineNeedSelection: 'Please select text before revising.',
+    inlineActionFailed: 'Inline AI action failed. Please try again.',
+    inlineSelectedTextInfo: 'Selected text ({count} chars)',
+    inlineContinue: 'Continue',
+    inlineRevise: 'Revise',
+    inlineGenerate: 'Generate',
+    inlineRun: 'Run',
+    inlineClearSelection: 'Clear Selection',
+    inlineReviseDefaultInstruction: 'Please revise this text while preserving the original meaning.',
+    inlineContinuePromptPrefix: 'Please continue writing based on the following content:',
+    inlineGeneratePromptPrefix: 'Please generate new text based on the following content:',
+    inlineGenerateContextFallback: 'Generate based on the current conversation context.',
 
     // Settings
     settingsTitle: 'Settings',

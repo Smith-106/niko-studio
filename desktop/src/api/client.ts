@@ -553,6 +553,10 @@ export interface StreamCallbacks {
   onError?: (error: string) => void
 }
 
+export interface StreamOptions {
+  signal?: AbortSignal
+}
+
 /**
  * SSE 流式聊天 - 优化版本
  *
@@ -563,7 +567,8 @@ export interface StreamCallbacks {
  */
 export async function chatStream(
   request: ChatRequest,
-  callbacks: StreamCallbacks
+  callbacks: StreamCallbacks,
+  options?: StreamOptions
 ): Promise<void> {
   const url = `${getResolvedApiBase()}/chat/stream`
 
@@ -600,6 +605,7 @@ export async function chatStream(
         'Accept': 'text/event-stream',
       },
       body: JSON.stringify(request),
+      signal: options?.signal,
     })
 
     if (!response.ok) {

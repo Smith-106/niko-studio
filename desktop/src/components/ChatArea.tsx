@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Send, Paperclip, Mic } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback } from '../stores/selectors'
-import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext } from '../api/client'
+import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint } from '../api/client'
+import type { ChatRequest } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { useI18n } from '../i18n'
 
@@ -10,16 +11,30 @@ interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
 }
 
+type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'aborted'
+type InlineAction = 'continue' | 'revise' | 'generate' | null
+
+interface SelectionMeta {
+  messageId: string
+}
+
 export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
+  const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')
   const [chatMode, setChatMode] = useState<'chat' | 'agent'>('chat')
   const [agentAction, setAgentAction] = useState<'write' | 'revise' | 'context'>('write')
+  const [recoverableCheckpointId, setRecoverableCheckpointId] = useState<string | null>(null)
+  const [recoverStatus, setRecoverStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
+  const [selectedText, setSelectedText] = useState('')
+  const [selectionMeta, setSelectionMeta] = useState<SelectionMeta | null>(null)
+  const [inlineAction, setInlineAction] = useState<InlineAction>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const streamRequestIdRef = useRef(0)
   const { t, translate } = useI18n()
 
-  // Use selective selectors for better performance
   const currentConversationId = useCurrentConversationId()
   const messages = useMessages()
   const workflowLevel = useWorkflowLevel()
@@ -38,62 +53,220 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
     onContextUsageChange({ usedChars, usedK, totalK, percent })
   }, [messages, streamingContent, onContextUsageChange])
 
-  // Get actions directly from store (these don't cause re-renders)
   const { addMessage, setWorkflowLevel, createConversation } = useAppStore()
 
-  // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const handleCancelStream = () => {
+    abortControllerRef.current?.abort()
+  }
+
+  const resetInlineState = () => {
+    setInlineAction(null)
+    setSelectionMeta(null)
+    setSelectedText('')
+  }
+
+  const runNormalChat = async (request: ChatRequest, checkpointId?: string | null): Promise<StreamPhase> => {
+    let streamFailed = false
+    let hasStreamContent = false
+    let streamText = ''
+    let finalPhase: StreamPhase | null = null
+    let finalized = false
+    let streamDone = false
+
+    const requestId = ++streamRequestIdRef.current
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+    setStreamPhase('streaming')
+
+    const finalize = (phase: StreamPhase) => {
+      if (finalized || requestId !== streamRequestIdRef.current) return
+      finalized = true
+      finalPhase = phase
+      setStreamPhase(phase)
+    }
+
+    await chatStream(
+      request,
+      {
+        onContent: (chunk) => {
+          hasStreamContent = true
+          streamText += chunk
+          setStreamingContent(streamText)
+        },
+        onDone: () => {
+          streamDone = true
+          finalize('done')
+        },
+        onError: (error) => {
+          if (abortController.signal.aborted || error.toLowerCase().includes('abort')) {
+            finalize('aborted')
+            return
+          }
+          streamFailed = true
+          finalize('error')
+        },
+      },
+      { signal: abortController.signal }
+    )
+
+    if (abortControllerRef.current === abortController) {
+      abortControllerRef.current = null
+    }
+
+    if (!finalized) {
+      if (abortController.signal.aborted) {
+        finalize('aborted')
+      } else if (streamDone || hasStreamContent) {
+        finalize('done')
+      } else if (streamFailed) {
+        finalize('error')
+      } else {
+        finalize('error')
+      }
+    }
+
+    if (finalPhase === 'done' && hasStreamContent) {
+      addMessage('assistant', streamText || '处理完成', selectedSkills)
+      setRecoverableCheckpointId(null)
+      setRecoverStatus(null)
+      return 'done'
+    }
+
+    if (finalPhase === 'aborted') {
+      addMessage('assistant', t.streamCanceled)
+      return 'aborted'
+    }
+
+    const response = await chat(request)
+    if (response.success && response.data) {
+      addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+      setRecoverableCheckpointId(null)
+      setRecoverStatus(null)
+      return finalPhase ?? 'done'
+    }
+
+    addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
+    if (checkpointId) {
+      setRecoverStatus({ type: 'error', message: t.streamRestoreHint })
+    }
+    return 'error'
+  }
+
+  const runInlineAction = async () => {
+    if (!inlineAction || isLoading) return
+
+    const promptText = input.trim()
+    setIsLoading(true)
+    setStreamingContent('')
+    setStreamPhase('streaming')
+    setRecoverStatus(null)
+
+    try {
+      if (inlineAction === 'revise') {
+        if (!selectedText) {
+          setRecoverStatus({ type: 'error', message: t.inlineNeedSelection })
+          return
+        }
+        const reviseResult = await agentRevise(selectedText, {
+          instruction: promptText || t.inlineReviseDefaultInstruction,
+          workflow_level: workflowLevel,
+          skills: selectedSkills,
+        })
+        if (reviseResult.success && reviseResult.data?.content) {
+          setStreamingContent(reviseResult.data.content)
+          addMessage('assistant', reviseResult.data.content, selectedSkills)
+          setStreamPhase('done')
+          resetInlineState()
+          return
+        }
+      } else {
+        const task = inlineAction === 'continue'
+          ? (promptText || `${t.inlineContinuePromptPrefix}\n${selectedText}`)
+          : (promptText || `${t.inlineGeneratePromptPrefix}\n${selectedText || t.inlineGenerateContextFallback}`)
+
+        const writeResult = await agentWrite(
+          {
+            task,
+            scene_type: inlineAction === 'continue' ? 'inline_continue' : 'inline_generate',
+            workflow_level: workflowLevel,
+            selected_text: selectedText,
+            selection_meta: selectionMeta,
+          },
+          selectedSkills
+        )
+
+        if (writeResult.success && writeResult.data?.content) {
+          setStreamingContent(writeResult.data.content)
+          addMessage('assistant', writeResult.data.content, selectedSkills)
+          setStreamPhase('done')
+          resetInlineState()
+          return
+        }
+      }
+
+      setStreamPhase('error')
+      setRecoverStatus({ type: 'error', message: t.inlineActionFailed })
+    } catch {
+      setStreamPhase('error')
+      setRecoverStatus({ type: 'error', message: t.inlineActionFailed })
+    } finally {
+      setStreamingContent('')
+      setIsLoading(false)
+    }
+  }
+
+  const handleRestoreToCheckpoint = async () => {
+    if (!recoverableCheckpointId || isLoading) return
+
+    try {
+      const response = await restoreCheckpoint(recoverableCheckpointId)
+      if (response.success) {
+        setRecoverStatus({ type: 'success', message: t.streamRestoreBeforeSendSuccess })
+        setRecoverableCheckpointId(null)
+      } else {
+        setRecoverStatus({ type: 'error', message: response.error || t.restoreFailed })
+      }
+    } catch {
+      setRecoverStatus({ type: 'error', message: t.restoreFailed })
+    }
+  }
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
 
-    // Create conversation if none exists
     if (!currentConversationId) {
       createConversation()
     }
 
     const userMessage = input.trim()
     setInput('')
-    addMessage('user', userMessage)
-    setIsLoading(true)
+    setRecoverStatus(null)
+
+    let checkpointId: string | null = null
 
     try {
-      const request = {
-        messages: [{ role: 'user' as const, content: userMessage }],
+      const checkpointResponse = await createCheckpoint(`before-send:${Date.now()}`)
+      checkpointId = checkpointResponse.success && checkpointResponse.data?.checkpoint_id
+        ? checkpointResponse.data.checkpoint_id
+        : null
+      if (checkpointId) {
+        setRecoverableCheckpointId(checkpointId)
+      }
+
+      addMessage('user', userMessage)
+      setIsLoading(true)
+      setStreamingContent('')
+      setStreamPhase('idle')
+
+      const request: ChatRequest = {
+        messages: [{ role: 'user', content: userMessage }],
         workflowLevel,
         skills: selectedSkills,
         allowLlmFallback,
-      }
-
-      const runNormalChat = async () => {
-        let streamFailed = false
-        let hasStreamContent = false
-        let streamText = ''
-
-        await chatStream(request, {
-          onContent: (chunk) => {
-            hasStreamContent = true
-            streamText += chunk
-            setStreamingContent(streamText)
-          },
-          onError: () => {
-            streamFailed = true
-          },
-        })
-
-        if (!streamFailed && hasStreamContent) {
-          addMessage('assistant', streamText || '处理完成', selectedSkills)
-          return
-        }
-
-        const response = await chat(request)
-        if (response.success && response.data) {
-          addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
-        } else {
-          addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
-        }
       }
 
       if (chatMode === 'agent') {
@@ -113,6 +286,7 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
             )
             if (writeResult.success && writeResult.data?.content) {
               addMessage('assistant', writeResult.data.content, selectedSkills)
+              setRecoverableCheckpointId(null)
               handled = true
             }
           }
@@ -130,6 +304,7 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
           )
           if (reviseResult.success && reviseResult.data?.content) {
             addMessage('assistant', reviseResult.data.content, selectedSkills)
+            setRecoverableCheckpointId(null)
             handled = true
           }
         }
@@ -144,22 +319,34 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
           )
           if (contextResult.success && contextResult.data) {
             addMessage('assistant', `上下文信息：\n\n${JSON.stringify(contextResult.data, null, 2)}`)
+            setRecoverableCheckpointId(null)
             handled = true
           }
         }
 
         if (!handled) {
-          await runNormalChat()
+          await runNormalChat(request, checkpointId)
         }
       } else {
-        await runNormalChat()
+        await runNormalChat(request, checkpointId)
       }
     } catch {
+      setStreamPhase('error')
       addMessage('assistant', '无法连接到后端服务，请确保服务已启动。')
+      if (checkpointId) {
+        setRecoverStatus({ type: 'error', message: t.streamRestoreHint })
+      }
     } finally {
       setStreamingContent('')
       setIsLoading(false)
+      abortControllerRef.current = null
     }
+  }
+
+  const handleAssistantSelection = (payload: { messageId: string; selectedText: string }) => {
+    setSelectionMeta({ messageId: payload.messageId })
+    setSelectedText(payload.selectedText)
+    setInlineAction(null)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -171,7 +358,6 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-dark-surface">
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
@@ -183,7 +369,7 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
           </div>
         ) : (
           messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble key={message.id} message={message} onAssistantSelection={handleAssistantSelection} />
           ))
         )}
         {isLoading && streamingContent && (
@@ -199,14 +385,79 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
         )}
         {isLoading && (
           <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-secondary">
-            <div className="animate-pulse">{t.thinking}</div>
+            <div className="animate-pulse">
+              {streamPhase === 'streaming' ? t.thinking : streamPhase === 'aborted' ? t.streamCanceled : t.thinking}
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
+      {recoverStatus && (
+        <div
+          className={`px-4 py-2 text-xs ${
+            recoverStatus.type === 'success'
+              ? 'text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
+              : 'text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span>{recoverStatus.message}</span>
+            {recoverableCheckpointId && recoverStatus.type === 'error' && (
+              <button
+                onClick={handleRestoreToCheckpoint}
+                className="px-2 py-1 rounded bg-white/80 dark:bg-dark-border dark:text-dark-text"
+              >
+                {t.streamRestoreToBeforeSend}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg">
+        {selectionMeta && (
+          <div className="mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-2">
+            <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">
+              {translate('inlineSelectedTextInfo', { count: Math.min(selectedText.length, 80) })}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setInlineAction('continue')}
+                className={`px-2 py-1 text-xs rounded ${inlineAction === 'continue' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'}`}
+              >
+                {t.inlineContinue}
+              </button>
+              <button
+                onClick={() => setInlineAction('revise')}
+                disabled={!selectedText}
+                className={`px-2 py-1 text-xs rounded ${inlineAction === 'revise' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'} disabled:opacity-50`}
+              >
+                {t.inlineRevise}
+              </button>
+              <button
+                onClick={() => setInlineAction('generate')}
+                className={`px-2 py-1 text-xs rounded ${inlineAction === 'generate' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'}`}
+              >
+                {t.inlineGenerate}
+              </button>
+              <button
+                onClick={runInlineAction}
+                disabled={!inlineAction || isLoading}
+                className="px-2 py-1 text-xs rounded bg-emerald-600 text-white disabled:opacity-50"
+              >
+                {t.inlineRun}
+              </button>
+              <button
+                onClick={resetInlineState}
+                className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text"
+              >
+                {t.inlineClearSelection}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-gray-500 dark:text-dark-text-secondary">模式：</span>
           <button
@@ -242,7 +493,6 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
           )}
         </div>
 
-        {/* Workflow Level Selector */}
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.workflow}:</span>
           {([
@@ -271,7 +521,6 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
           )}
         </div>
 
-        {/* Input Box */}
         <div className="flex items-end gap-2">
           <div className="flex-1 relative">
             <textarea
@@ -292,13 +541,22 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
               </button>
             </div>
           </div>
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Send size={20} />
-          </button>
+          {isLoading ? (
+            <button
+              onClick={handleCancelStream}
+              className="px-4 py-3 bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-colors"
+            >
+              {t.cancel}
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Send size={20} />
+            </button>
+          )}
         </div>
       </div>
     </div>
