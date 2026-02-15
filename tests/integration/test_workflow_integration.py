@@ -264,9 +264,15 @@ class TestRecommendationsReplay:
             },
         )
 
-        restore = await engine.restore_checkpoint(checkpoint["checkpoint_id"])
+        pending = await engine.restore_checkpoint(checkpoint["checkpoint_id"])
+
+        assert pending["status"] == "waiting_confirmation"
+        assert pending["replay"]["applied"] is False
+
+        restore = await engine.restore_checkpoint(checkpoint["checkpoint_id"], confirm_token="ok")
 
         assert "error" in restore
+        assert restore["gate"]["confirmed"] is True
         assert restore["replay"]["applied"] is True
         assert restore["replay"]["plan_hash"] == plan["plan_hash"]
         assert engine.plans[plan_id].recommendations[0]["id"] == "rec-01"

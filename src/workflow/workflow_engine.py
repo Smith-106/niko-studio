@@ -86,6 +86,7 @@ MAINTENANCE_TO_SESSION_STATUS = {
 }
 
 DESTRUCTIVE_STEP_NAMES = {"revise", "checkpoint", "final_review"}
+AUTO_ROLLBACK_CONFIRM_TOKEN = "__auto_rollback__"
 
 
 @dataclass
@@ -233,15 +234,24 @@ class WorkflowEngine:
         }
         self.session_manager.append_audit(session_id=session_id, event=event)
 
+    def _has_valid_confirm_token(self, confirm_token: Optional[str]) -> bool:
+        return isinstance(confirm_token, str) and bool(confirm_token.strip())
+
+    def _redacted_confirm_token(self, confirm_token: Optional[str]) -> Optional[str]:
+        if not self._has_valid_confirm_token(confirm_token):
+            return None
+        return "<provided>"
+
     def _is_destructive_step(self, step: WorkflowStep, recommendations: Optional[List[Dict[str, Any]]] = None) -> bool:
+        destructive_tokens = ("overwrite", "delete", "remove", "destructive", "覆盖", "删除", "移除", "破坏")
         if step.name in DESTRUCTIVE_STEP_NAMES:
             return True
         for item in recommendations or []:
             action = str(item.get("action") or "").lower()
             title = str(item.get("title") or "").lower()
-            if any(token in action for token in ("overwrite", "delete", "remove", "destructive")):
+            if any(token in action for token in destructive_tokens):
                 return True
-            if any(token in title for token in ("覆盖", "删除", "移除", "破坏")):
+            if any(token in title for token in destructive_tokens):
                 return True
         return False
 
@@ -259,7 +269,7 @@ class WorkflowEngine:
         destructive = self._is_destructive_step(step, recommendations)
 
         if destructive:
-            confirmed = bool(confirm_token)
+            confirmed = self._has_valid_confirm_token(confirm_token)
             decision = WorkflowDecision.GO if confirmed else WorkflowDecision.NO_GO
             reason = (
                 "destructive write confirmed, hard gate passed"
@@ -292,7 +302,7 @@ class WorkflowEngine:
             "blocking": blocking,
             "destructive": destructive,
             "confirm_required": confirm_required,
-            "confirm_token": confirm_token,
+            "confirm_token": self._redacted_confirm_token(confirm_token),
             "confirmed": confirmed,
         }
 
@@ -319,7 +329,10 @@ class WorkflowEngine:
             return {"error": f"Plan '{plan_id}' not found"}
 
         plan = self.plans[plan_id]
-        restore_result = await self.restore_checkpoint(checkpoint_id)
+        restore_result = await self.restore_checkpoint(
+            checkpoint_id,
+            confirm_token=AUTO_ROLLBACK_CONFIRM_TOKEN,
+        )
 
         self._append_audit_event(
             plan,
@@ -710,6 +723,8 @@ class WorkflowEngine:
             step = next((s for s in plan.steps if s.id == step_id), None)
             if not step:
                 return {"error": f"Step '{step_id}' not found"}
+            if step.status != "pending":
+                return {"error": f"Step '{step_id}' is not pending (current status: {step.status})"}
         else:
             # 找到下一个待执行的步骤
             step = next((s for s in plan.steps if s.status == "pending"), None)
@@ -782,7 +797,7 @@ class WorkflowEngine:
                     "risk": gate.get("risk"),
                     "decision": gate.get("decision"),
                     "confirmed": True,
-                    "confirm_token": confirm_token,
+                    "confirm_token_provided": gate.get("confirmed"),
                     "rollback_checkpoint_id": precheck_checkpoint_id,
                 },
             )
@@ -1077,18 +1092,18 @@ class WorkflowEngine:
             return {"error": f"Checkpoint '{checkpoint_id}' not found"}
 
         checkpoint = self.checkpoints[checkpoint_id]
-        replay_result = self._apply_replay_payload(checkpoint)
         destructive = bool(checkpoint.replay_payload)
+        confirmed = (not destructive) or self._has_valid_confirm_token(confirm_token)
 
         gate = {
             "decision": (
                 WorkflowDecision.GO.value
-                if ((not destructive) or bool(confirm_token))
+                if confirmed
                 else WorkflowDecision.NO_GO.value
             ),
             "reason": (
                 "destructive restore confirmed, hard gate passed"
-                if (destructive and bool(confirm_token))
+                if (destructive and confirmed)
                 else (
                     "destructive restore requires secondary confirmation"
                     if destructive
@@ -1097,11 +1112,11 @@ class WorkflowEngine:
             ),
             "risk": "high" if destructive else "low",
             "gate_profile": "restore-selective-hard" if destructive else "restore-soft",
-            "blocking": destructive and (not bool(confirm_token)),
+            "blocking": destructive and (not confirmed),
             "destructive": destructive,
             "confirm_required": destructive,
-            "confirm_token": confirm_token,
-            "confirmed": (not destructive) or bool(confirm_token),
+            "confirm_token": self._redacted_confirm_token(confirm_token),
+            "confirmed": confirmed,
         }
 
         plan = self.plans.get(checkpoint.plan_id) if checkpoint.plan_id else None
@@ -1117,6 +1132,7 @@ class WorkflowEngine:
                         "reason": gate["reason"],
                     },
                 )
+            replay_result = {"applied": False, "reason": "waiting_confirmation"}
             return self._with_contract({
                 "status": "waiting_confirmation",
                 "error": "destructive restore requires secondary confirmation",
@@ -1126,6 +1142,8 @@ class WorkflowEngine:
                 "replay": replay_result,
                 "gate": gate,
             })
+
+        replay_result = self._apply_replay_payload(checkpoint)
 
         if checkpoint.commit_hash:
             try:
@@ -1144,7 +1162,7 @@ class WorkflowEngine:
                             "operation": "restore_checkpoint",
                             "checkpoint_id": checkpoint_id,
                             "confirmed": True,
-                            "confirm_token": confirm_token,
+                            "confirm_token_provided": gate.get("confirmed"),
                         },
                     )
 
@@ -1169,7 +1187,7 @@ class WorkflowEngine:
                     "operation": "restore_checkpoint",
                     "checkpoint_id": checkpoint_id,
                     "confirmed": True,
-                    "confirm_token": confirm_token,
+                    "confirm_token_provided": gate.get("confirmed"),
                 },
             )
 

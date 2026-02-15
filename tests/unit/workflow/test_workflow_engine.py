@@ -501,9 +501,15 @@ class TestCheckpoints:
         )
         engine.checkpoints[checkpoint.id] = checkpoint
 
-        result = await engine.restore_checkpoint("cp-replay")
+        pending = await engine.restore_checkpoint("cp-replay")
+
+        assert pending["status"] == "waiting_confirmation"
+        assert pending["replay"]["applied"] is False
+
+        result = await engine.restore_checkpoint("cp-replay", confirm_token="ok")
 
         assert "error" in result
+        assert result["gate"]["confirmed"] is True
         assert result["replay"]["applied"] is True
         assert result["replay"]["plan_id"] == plan_id
         assert engine.plans[plan_id].recommendations[0]["id"] == "rec-01"
@@ -532,9 +538,15 @@ class TestCheckpoints:
         )
         engine.checkpoints[checkpoint.id] = checkpoint
 
-        result = await engine.restore_checkpoint("cp-mismatch")
+        pending = await engine.restore_checkpoint("cp-mismatch")
+
+        assert pending["status"] == "waiting_confirmation"
+        assert pending["replay"]["applied"] is False
+
+        result = await engine.restore_checkpoint("cp-mismatch", confirm_token="ok")
 
         assert "error" in result
+        assert result["gate"]["confirmed"] is True
         assert result["replay"]["applied"] is False
         assert result["replay"]["reason"] == "plan_hash_mismatch"
 
@@ -698,4 +710,154 @@ class TestRiskGateAudit:
         assert "error" in confirmed
         assert confirmed["gate"]["confirm_required"] is True
         assert confirmed["gate"]["confirmed"] is True
+
+    @pytest.mark.asyncio
+    async def test_execute_whitespace_confirm_token_still_requires_confirmation(self, engine):
+        plan_result = await engine.plan("写一章完整的小说", level="L3")
+        plan_id = plan_result["plan_id"]
+
+        waiting = None
+        while True:
+            result = await engine.execute(plan_id)
+            if result.get("status") == "waiting_confirmation":
+                waiting = result
+                break
+            if result.get("status") == "completed" and result.get("message") == "All steps completed":
+                pytest.fail("destructive step was not reached")
+
+        retried = await engine.execute(plan_id, step_id=waiting["step_id"], confirm_token="   ")
+        assert retried["status"] == "waiting_confirmation"
+        assert retried["gate"]["confirmed"] is False
+
+    @pytest.mark.asyncio
+    async def test_restore_waiting_confirmation_does_not_apply_replay(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L1",
+            recommendations=[{"title": "原始建议", "reason": "origin"}],
+        )
+        plan_id = plan_result["plan_id"]
+        plan = engine.plans[plan_id]
+        original_recommendations = json.loads(json.dumps(plan.recommendations, ensure_ascii=False))
+
+        checkpoint = Checkpoint(
+            id="cp-restore-replay-guard",
+            description="restore replay guard",
+            commit_hash=None,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "plan_hash": plan.plan_hash,
+                "recommendations": [{"title": "恢复建议", "reason": "replay"}],
+                "recommendations_frozen": True,
+            },
+        )
+        engine.checkpoints[checkpoint.id] = checkpoint
+
+        pending = await engine.restore_checkpoint("cp-restore-replay-guard")
+        assert pending["status"] == "waiting_confirmation"
+        assert engine.plans[plan_id].recommendations == original_recommendations
+
+        confirmed = await engine.restore_checkpoint("cp-restore-replay-guard", confirm_token="ok")
+        assert "error" in confirmed
+        assert engine.plans[plan_id].recommendations[0]["title"] == "恢复建议"
+
+    @pytest.mark.asyncio
+    async def test_restore_whitespace_confirm_token_still_requires_confirmation(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L1",
+            recommendations=[{"title": "恢复建议"}],
+        )
+        plan_id = plan_result["plan_id"]
+        plan = engine.plans[plan_id]
+
+        checkpoint = Checkpoint(
+            id="cp-restore-whitespace-token",
+            description="restore whitespace token",
+            commit_hash=None,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "plan_hash": plan.plan_hash,
+                "recommendations": [{"title": "恢复建议", "reason": "回放"}],
+                "recommendations_frozen": True,
+            },
+        )
+        engine.checkpoints[checkpoint.id] = checkpoint
+
+        pending = await engine.restore_checkpoint("cp-restore-whitespace-token", confirm_token="  ")
+        assert pending["status"] == "waiting_confirmation"
+        assert pending["gate"]["confirmed"] is False
+
+    @pytest.mark.asyncio
+    async def test_quick_rollback_auto_confirms_destructive_restore(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L1",
+            recommendations=[{"title": "原始建议", "reason": "origin"}],
+        )
+        plan_id = plan_result["plan_id"]
+        plan = engine.plans[plan_id]
+
+        checkpoint = Checkpoint(
+            id="cp-quick-rollback-guard",
+            description="quick rollback guard",
+            commit_hash=None,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "plan_hash": plan.plan_hash,
+                "recommendations": [{"title": "回滚后建议", "reason": "rollback"}],
+                "recommendations_frozen": True,
+            },
+        )
+        engine.checkpoints[checkpoint.id] = checkpoint
+
+        result = await engine.quick_rollback(plan_id=plan_id, checkpoint_id=checkpoint.id, reason="auto rollback")
+        assert result["restored"] is True
+        assert result["restore"]["gate"]["confirmed"] is True
+        assert engine.plans[plan_id].recommendations[0]["title"] == "回滚后建议"
+
+    @pytest.mark.asyncio
+    async def test_confirm_token_redacted_and_not_persisted_in_audit(self, engine):
+        plan_result = await engine.plan("写一章完整的小说", level="L3")
+        plan_id = plan_result["plan_id"]
+
+        waiting = None
+        while True:
+            result = await engine.execute(plan_id)
+            if result.get("status") == "waiting_confirmation":
+                waiting = result
+                break
+            if result.get("status") == "completed" and result.get("message") == "All steps completed":
+                pytest.fail("destructive step was not reached")
+
+        resumed = await engine.execute(
+            plan_id,
+            step_id=waiting["step_id"],
+            confirm_token="super-secret-token",
+        )
+        assert resumed["gate"]["confirm_token"] == "<provided>"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        confirm_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "confirm_trace"]
+        assert confirm_events
+        latest_confirm = confirm_events[-1]
+        assert "confirm_token" not in latest_confirm["payload"]
+        assert latest_confirm["payload"].get("confirm_token_provided") is True
+
+    @pytest.mark.asyncio
+    async def test_execute_rejects_non_pending_step(self, engine):
+        plan_result = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = plan_result["plan_id"]
+        first = await engine.execute(plan_id)
+        step_id = first["step_id"]
+        assert first["status"] == "completed"
+
+        replay = await engine.execute(plan_id, step_id=step_id)
+        assert "error" in replay
+        assert "is not pending" in replay["error"]
 
