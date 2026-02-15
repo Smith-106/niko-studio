@@ -1,0 +1,101 @@
+{
+  "id": "IMPL-010",
+  "title": "收敛回归与发布就绪归档（Go/No-Go）",
+  "status": "completed",
+  "context_package_path": ".workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json",
+  "meta": {
+    "type": "feature",
+    "agent": "@test-fix-agent",
+    "priority": "P2",
+    "depends_on": ["IMPL-008", "IMPL-009"],
+    "execution_group": null,
+    "cli_execution_id": "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-010",
+    "cli_execution": {
+      "strategy": "merge_fork",
+      "resume_from": null,
+      "merge_from": [
+        "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-008",
+        "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-009"
+      ]
+    }
+  },
+  "context": {
+    "requirements": [
+      "执行 4 组回归命令：[backend baseline、workflow targeted、desktop baseline、ci gate workflow]",
+      "输出 2 类结论：[Go/No-Go 判定、阻断项清单]",
+      "完成 1 次归档前一致性校验：[TODO_LIST 状态与任务 JSON 状态一致]"
+    ],
+    "focus_paths": [
+      "src/mcp/gateway.py",
+      "src/workflow/workflow_engine.py",
+      "desktop/src/api/client.ts",
+      "tests/unit/workflow/test_workflow_engine.py"
+    ],
+    "acceptance": [
+      "4 组回归命令均执行：验证命令 `python -m pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80`、`python -m pytest tests/unit/workflow/test_workflow_engine.py -q`、`pnpm --dir desktop run test:ci`、`python -m pytest tests/unit/test_ci_gate_workflows.py -q` 全部退出码 = 0",
+      "Go/No-Go 可机读：验证输出包含 `go|soft_go|no_go` 三态之一",
+      "会话任务状态一致：验证命令 `python - <<'PY'\nimport json,glob,sys\nfiles=glob.glob('.workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.task/IMPL-*.json')\nassert files\nfor f in files:\n    json.load(open(f,'r',encoding='utf-8'))\nprint('ok')\nPY` 退出码 = 0"
+    ],
+    "depends_on": ["IMPL-008", "IMPL-009"],
+    "shared_context": {
+      "tech_stack": ["pytest", "vitest"],
+      "release_policy": "regression first, then summarize decision",
+      "completion_policy": "all planning tasks traceable"
+    },
+    "artifacts": [
+      {
+        "type": "session_planning",
+        "source": "planning-notes",
+        "path": ".workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/planning-notes.md",
+        "priority": "high",
+        "usage": "最终判定依据与 N+1 递延项",
+        "contains": "Consolidated Constraints 与 Task Generation 决策"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_planning_notes",
+        "action": "Load planning notes and consolidated constraints",
+        "commands": [
+          "Read(.workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/planning-notes.md)"
+        ],
+        "output_to": "planning_notes",
+        "on_error": "fail"
+      },
+      {
+        "step": "load_context_package",
+        "action": "Load context package for targeted regression scope",
+        "commands": [
+          "Read(.workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json)"
+        ],
+        "output_to": "context_package",
+        "on_error": "fail"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "执行全链路回归",
+        "description": "按预定义顺序执行 backend/workflow/desktop/ci gate 回归并收集结果",
+        "depends_on": [],
+        "output": "regression_results_collected"
+      },
+      {
+        "step": 2,
+        "title": "输出 Go/No-Go 判定",
+        "description": "根据测试结果与关键链路状态输出发布判定与阻断项",
+        "depends_on": [1],
+        "output": "release_readiness_decision"
+      }
+    ],
+    "target_files": [
+      "tests/unit/workflow/test_workflow_engine.py",
+      "tests/unit/mcp/test_gateway_stream.py",
+      "tests/unit/test_ci_gate_workflows.py",
+      "desktop/src/api/client.test.ts",
+      "desktop/src/components/ChatArea.test.tsx"
+    ]
+  }
+}

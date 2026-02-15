@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ci": "mkdir -p test-results && vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/vitest.junit.xml",
+    "test:ci": "node -e \"require('fs').mkdirSync('test-results',{recursive:true})\" && vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/vitest.junit.xml",
     "check": "npm run typecheck && npm run build",
     "build": "npm run ensure-deps && tsc && vite build",
     "preview": "vite preview",

@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
-import { evaluateContent, createCheckpoint, listCheckpoints, restoreCheckpoint } from '../api/client'
+import {
+  evaluateContent,
+  createCheckpoint,
+  listCheckpoints,
+  restoreCheckpoint,
+  applyRecommendation,
+  undoRecommendation,
+  batchApplyRecommendations,
+  type RecommendationPayload,
+  type RecommendationExecutionResult,
+} from '../api/client'
 import { useAppStore } from '../stores/appStore'
 
 interface EvaluationPanelProps {
@@ -15,8 +25,21 @@ interface EvaluationViewModel {
     score: number
     feedback: string
   }[]
-  suggestions: string[]
+  suggestions: RecommendationPayload[]
   decision: 'APPROVED' | 'REVISE' | 'REWRITE' | 'HUMAN_REVIEW'
+}
+
+interface SuggestionActionState {
+  mode: 'idle' | 'processing' | 'rollback-ready'
+  status: 'idle' | 'success' | 'error'
+  message?: string
+}
+
+interface BatchActionState {
+  mode: 'idle' | 'processing' | 'rollback-ready'
+  status: 'idle' | 'success' | 'error'
+  message?: string
+  lastAppliedIds: string[]
 }
 
 interface CheckpointItem {
@@ -38,12 +61,84 @@ const buildDimensions = (data: {
   ]
 }
 
+const toRecommendationPayload = (raw: unknown, index: number): RecommendationPayload => {
+  if (typeof raw === 'string') {
+    const title = raw.trim()
+    return {
+      id: `rec-${String(index + 1).padStart(2, '0')}`,
+      title,
+      reason: title,
+      action: 'apply',
+    }
+  }
+
+  if (!raw || typeof raw !== 'object') {
+    const fallback = `recommendation-${index + 1}`
+    return {
+      id: `rec-${String(index + 1).padStart(2, '0')}`,
+      title: fallback,
+      reason: fallback,
+      action: 'apply',
+    }
+  }
+
+  const record = raw as Record<string, unknown>
+  const titleRaw = record.title ?? record.name ?? record.recommendation
+  const title = typeof titleRaw === 'string' && titleRaw.trim() ? titleRaw.trim() : `recommendation-${index + 1}`
+  const reasonRaw = record.reason
+  const actionRaw = record.action
+
+  return {
+    id: typeof record.id === 'string' && record.id.trim() ? record.id.trim() : `rec-${String(index + 1).padStart(2, '0')}`,
+    title,
+    reason: typeof reasonRaw === 'string' && reasonRaw.trim() ? reasonRaw.trim() : title,
+    action: typeof actionRaw === 'string' && actionRaw.trim() ? actionRaw.trim() : 'apply',
+  }
+}
+
+const normalizeSuggestionPayloads = (rawSuggestions: unknown): RecommendationPayload[] => {
+  if (!Array.isArray(rawSuggestions)) {
+    return []
+  }
+
+  return rawSuggestions
+    .map((item, index) => toRecommendationPayload(item, index))
+    .filter((item) => item.title.length > 0)
+}
+
+const defaultSuggestionState = (): SuggestionActionState => ({
+  mode: 'idle',
+  status: 'idle',
+})
+
+const defaultBatchState = (): BatchActionState => ({
+  mode: 'idle',
+  status: 'idle',
+  lastAppliedIds: [],
+})
+
+const formatSuggestionMessage = (result: RecommendationExecutionResult, fallbackAction: 'apply' | 'undo'): string => {
+  const actionLabel = fallbackAction === 'apply' ? '应用' : '撤销'
+  if (result.error) {
+    return `${actionLabel}失败：${result.error}`
+  }
+  if (result.message) {
+    return result.message
+  }
+  if (result.status === 'failed') {
+    return `${actionLabel}失败`
+  }
+  return fallbackAction === 'apply' ? '建议已应用' : '建议已撤销'
+}
+
 export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const [loading, setLoading] = useState(true)
   const [result, setResult] = useState<EvaluationViewModel | null>(null)
   const [checkpointDescription, setCheckpointDescription] = useState('')
   const [checkpoints, setCheckpoints] = useState<CheckpointItem[]>([])
   const [checkpointError, setCheckpointError] = useState<string | null>(null)
+  const [suggestionStates, setSuggestionStates] = useState<Record<string, SuggestionActionState>>({})
+  const [batchState, setBatchState] = useState<BatchActionState>(defaultBatchState())
   const { addMessage } = useAppStore()
 
   useEffect(() => {
@@ -54,18 +149,36 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     refreshCheckpoints()
   }, [])
 
+  const setSuggestionState = (id: string, next: SuggestionActionState) => {
+    setSuggestionStates((prev) => ({
+      ...prev,
+      [id]: next,
+    }))
+  }
+
+  const resetSuggestionStates = (suggestions: RecommendationPayload[]) => {
+    const next: Record<string, SuggestionActionState> = {}
+    for (const suggestion of suggestions) {
+      next[suggestion.id] = defaultSuggestionState()
+    }
+    setSuggestionStates(next)
+  }
+
   const runEvaluation = async () => {
     setLoading(true)
     try {
       const response = await evaluateContent(content)
       if (response.success && response.data) {
         const data = response.data
+        const suggestions = normalizeSuggestionPayloads(data.suggestions)
         setResult({
           score: Number((data.total_score / 10).toFixed(1)),
           dimensions: buildDimensions(data),
-          suggestions: data.suggestions || [],
+          suggestions,
           decision: data.decision,
         })
+        resetSuggestionStates(suggestions)
+        setBatchState(defaultBatchState())
       } else {
         setResult(null)
       }
@@ -119,6 +232,150 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     } catch {
       setCheckpointError('恢复 checkpoint 失败')
     }
+  }
+
+  const handleApplySuggestion = async (suggestion: RecommendationPayload) => {
+    if (!result) return
+
+    setSuggestionState(suggestion.id, {
+      mode: 'processing',
+      status: 'idle',
+      message: '执行中...'
+    })
+
+    const response = await applyRecommendation(content, suggestion)
+    if (!response.success || !response.data) {
+      setSuggestionState(suggestion.id, {
+        mode: 'rollback-ready',
+        status: 'error',
+        message: response.error || '应用失败',
+      })
+      return
+    }
+
+    const nextMode = response.data.status === 'applied' ? 'rollback-ready' : 'rollback-ready'
+    const nextStatus = response.data.status === 'applied' ? 'success' : 'error'
+
+    setSuggestionState(suggestion.id, {
+      mode: nextMode,
+      status: nextStatus,
+      message: formatSuggestionMessage(response.data, 'apply'),
+    })
+  }
+
+  const handleUndoSuggestion = async (suggestion: RecommendationPayload) => {
+    if (!result) return
+
+    setSuggestionState(suggestion.id, {
+      mode: 'processing',
+      status: 'idle',
+      message: '撤销中...'
+    })
+
+    const response = await undoRecommendation(content, suggestion)
+    if (!response.success || !response.data) {
+      setSuggestionState(suggestion.id, {
+        mode: 'rollback-ready',
+        status: 'error',
+        message: response.error || '撤销失败',
+      })
+      return
+    }
+
+    const nextMode = response.data.status === 'undone' ? 'idle' : 'rollback-ready'
+    const nextStatus = response.data.status === 'undone' ? 'success' : 'error'
+
+    setSuggestionState(suggestion.id, {
+      mode: nextMode,
+      status: nextStatus,
+      message: formatSuggestionMessage(response.data, 'undo'),
+    })
+  }
+
+  const handleBatchApply = async () => {
+    if (!result || result.suggestions.length === 0) {
+      return
+    }
+
+    setBatchState({
+      mode: 'processing',
+      status: 'idle',
+      message: '批量执行中...',
+      lastAppliedIds: [],
+    })
+
+    const response = await batchApplyRecommendations(content, result.suggestions)
+    if (!response.success || !response.data) {
+      setBatchState({
+        mode: 'rollback-ready',
+        status: 'error',
+        message: response.error || '批量应用失败',
+        lastAppliedIds: [],
+      })
+      return
+    }
+
+    const appliedIds = response.data.results
+      .filter((item) => item.status === 'applied')
+      .map((item) => item.recommendation_id)
+
+    for (const item of response.data.results) {
+      setSuggestionState(item.recommendation_id, {
+        mode: item.status === 'applied' ? 'rollback-ready' : 'rollback-ready',
+        status: item.status === 'applied' ? 'success' : 'error',
+        message: formatSuggestionMessage(item, 'apply'),
+      })
+    }
+
+    setBatchState({
+      mode: response.data.failed > 0 || appliedIds.length > 0 ? 'rollback-ready' : 'idle',
+      status: response.data.failed > 0 ? 'error' : 'success',
+      message: `批量结果：成功 ${response.data.applied}，失败 ${response.data.failed}`,
+      lastAppliedIds: appliedIds,
+    })
+  }
+
+  const handleBatchUndo = async () => {
+    if (!result || batchState.lastAppliedIds.length === 0) {
+      return
+    }
+
+    setBatchState((prev) => ({
+      ...prev,
+      mode: 'processing',
+      status: 'idle',
+      message: '批量撤销中...',
+    }))
+
+    const appliedSuggestions = result.suggestions.filter((item) => batchState.lastAppliedIds.includes(item.id))
+    let successCount = 0
+    let failedCount = 0
+
+    for (const suggestion of appliedSuggestions) {
+      const response = await undoRecommendation(content, suggestion)
+      if (response.success && response.data && response.data.status === 'undone') {
+        successCount += 1
+        setSuggestionState(suggestion.id, {
+          mode: 'idle',
+          status: 'success',
+          message: formatSuggestionMessage(response.data, 'undo'),
+        })
+      } else {
+        failedCount += 1
+        setSuggestionState(suggestion.id, {
+          mode: 'rollback-ready',
+          status: 'error',
+          message: response.error || '撤销失败',
+        })
+      }
+    }
+
+    setBatchState({
+      mode: failedCount > 0 ? 'rollback-ready' : 'idle',
+      status: failedCount > 0 ? 'error' : 'success',
+      message: `批量撤销结果：成功 ${successCount}，失败 ${failedCount}`,
+      lastAppliedIds: failedCount > 0 ? batchState.lastAppliedIds : [],
+    })
   }
 
   const getScoreColor = (score: number) => {
@@ -214,13 +471,63 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
               <TrendingUp size={16} />
               改进建议
             </h3>
+            <div className="mb-3 flex items-center gap-2">
+              <button
+                onClick={handleBatchApply}
+                disabled={batchState.mode === 'processing'}
+                className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+              >
+                批量应用
+              </button>
+              <button
+                onClick={handleBatchUndo}
+                disabled={batchState.mode === 'processing' || batchState.lastAppliedIds.length === 0}
+                className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+              >
+                批量撤销
+              </button>
+            </div>
+            {batchState.message && (
+              <p className={`mb-3 text-xs ${batchState.status === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+                {batchState.message}
+              </p>
+            )}
             <ul className="space-y-2">
-              {result.suggestions.map((suggestion, index) => (
-                <li key={index} className="text-sm text-gray-600 dark:text-dark-text-secondary flex items-start gap-2">
-                  <span className="text-blue-500">•</span>
-                  {suggestion}
-                </li>
-              ))}
+              {result.suggestions.map((suggestion) => {
+                const actionState = suggestionStates[suggestion.id] || defaultSuggestionState()
+                return (
+                  <li key={suggestion.id} className="text-sm text-gray-600 dark:text-dark-text-secondary border border-gray-200 dark:border-dark-border rounded p-2">
+                    <div className="flex items-start gap-2">
+                      <span className="text-blue-500">•</span>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-700 dark:text-dark-text">{suggestion.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-dark-text-secondary">{suggestion.reason}</p>
+                        {actionState.message && (
+                          <p className={`text-xs mt-1 ${actionState.status === 'error' ? 'text-red-500' : actionState.status === 'success' ? 'text-green-600' : 'text-gray-500'}`}>
+                            {actionState.message}
+                          </p>
+                        )}
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => handleApplySuggestion(suggestion)}
+                            disabled={actionState.mode === 'processing'}
+                            className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+                          >
+                            apply
+                          </button>
+                          <button
+                            onClick={() => handleUndoSuggestion(suggestion)}
+                            disabled={actionState.mode === 'processing'}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+                          >
+                            undo
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           </div>
         )}

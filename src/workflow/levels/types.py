@@ -6,7 +6,97 @@
 
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any, Callable
+from typing import List, Dict, Optional, Any, Callable, Mapping
+
+
+class WorkflowDecision(Enum):
+    """统一工作流决策语义（机读）"""
+
+    GO = "go"
+    SOFT_GO = "soft_go"
+    NO_GO = "no_go"
+
+
+ANALYSIS_SCHEMA_VERSION = "2026-02"
+LEGACY_CONTRACT_FIELD_MAP: Dict[str, str] = {
+    "contract_version": "analysis_schema_version",
+    "workflowLevel": "workflow_level",
+    "level": "workflow_level",
+    "level_slug": "workflow_level_slug",
+    "decision_result": "decision",
+}
+
+LEGACY_DECISION_MAP: Dict[str, str] = {
+    "approved": WorkflowDecision.GO.value,
+    "pass": WorkflowDecision.GO.value,
+    "go": WorkflowDecision.GO.value,
+    "revise": WorkflowDecision.SOFT_GO.value,
+    "soft_go": WorkflowDecision.SOFT_GO.value,
+    "rewrite": WorkflowDecision.NO_GO.value,
+    "human_review": WorkflowDecision.NO_GO.value,
+    "no_go": WorkflowDecision.NO_GO.value,
+}
+
+CONTRACT_NULLABLE_DEFAULTS: Dict[str, Any] = {
+    "compatibility": {},
+    "diagnostics": {},
+    "legacy_contract_fields": {},
+}
+
+
+def build_legacy_contract_fields(payload: Mapping[str, Any]) -> Dict[str, Any]:
+    """根据映射表生成 legacy 字段回放数据。"""
+    legacy_fields: Dict[str, Any] = {}
+    for legacy_key, canonical_key in LEGACY_CONTRACT_FIELD_MAP.items():
+        value = payload.get(canonical_key)
+        if value is None:
+            value = payload.get(legacy_key)
+        legacy_fields[legacy_key] = value
+    return legacy_fields
+
+
+def _normalize_decision_value(payload: Mapping[str, Any]) -> str:
+    raw_decision = payload.get("decision")
+    if raw_decision is None:
+        raw_decision = payload.get("decision_result")
+    normalized = str(raw_decision or WorkflowDecision.GO.value).strip().lower()
+    return LEGACY_DECISION_MAP.get(normalized, WorkflowDecision.GO.value)
+
+
+def apply_contract_defaults(payload: Mapping[str, Any]) -> Dict[str, Any]:
+    """填充契约默认字段，保持软门禁与向后兼容。"""
+    normalized = dict(payload)
+    normalized["decision"] = _normalize_decision_value(normalized)
+    if "analysis_schema_version" not in normalized:
+        normalized["analysis_schema_version"] = ANALYSIS_SCHEMA_VERSION
+
+    compatibility = normalized.get("compatibility")
+    if not isinstance(compatibility, dict):
+        compatibility = {}
+    compatibility.setdefault("policy", "incremental_fields")
+    compatibility.setdefault("soft_gate", True)
+    compatibility.setdefault("legacy_field_map", dict(LEGACY_CONTRACT_FIELD_MAP))
+    normalized["compatibility"] = compatibility
+
+    diagnostics = normalized.get("diagnostics")
+    if not isinstance(diagnostics, dict):
+        diagnostics = {}
+    diagnostics.setdefault("schema_version", normalized["analysis_schema_version"])
+    normalized["diagnostics"] = diagnostics
+
+    for key, default in CONTRACT_NULLABLE_DEFAULTS.items():
+        if normalized.get(key) is None:
+            normalized[key] = default.copy() if isinstance(default, dict) else default
+
+    normalized["legacy_contract_fields"] = build_legacy_contract_fields(normalized)
+    for legacy_key, legacy_value in normalized["legacy_contract_fields"].items():
+        normalized.setdefault(legacy_key, legacy_value)
+    return normalized
+
+
+def ensure_contract_payload(payload: Mapping[str, Any]) -> Dict[str, Any]:
+    """统一 contract 校验入口，输出兼容字段。"""
+    return apply_contract_defaults(payload)
 
 
 class WorkflowLevel(Enum):
@@ -19,6 +109,7 @@ class WorkflowLevel(Enum):
     L4 Brainstorm: 多角色并行分析
     L5 Coordinator: 智能链推荐、状态持久化
     """
+
     L1_RAPID = 1
     L2_LITE = 2
     L3_STANDARD = 3
@@ -527,6 +618,7 @@ WorkflowConfig = LevelConfig
 __all__ = [
     # 核心枚举
     "WorkflowLevel",
+    "WorkflowDecision",
     # 配置类
     "LevelConfig",
     "WorkflowConfig",  # 别名

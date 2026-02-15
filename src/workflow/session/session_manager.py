@@ -8,7 +8,7 @@ from pathlib import Path
 from enum import Enum
 from dataclasses import dataclass, asdict
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import json
 import shutil
 
@@ -29,6 +29,8 @@ class ContentType(Enum):
     TODO = "todo"
     SUMMARY = "summary"
     STATE = "state"
+    SNAPSHOT_INDEX = "snapshot_index"
+    AUDIT = "audit"
 
 
 # 內容類型路由表
@@ -41,6 +43,8 @@ PATH_ROUTES = {
     ContentType.TODO: "{base}/TODO_LIST.md",
     ContentType.SUMMARY: "{base}/SUMMARY.md",
     ContentType.STATE: "{base}/.data/state.json",
+    ContentType.SNAPSHOT_INDEX: "{base}/.data/snapshot-index.json",
+    ContentType.AUDIT: "{base}/.data/audit.jsonl",
 }
 
 
@@ -56,6 +60,9 @@ class SessionInfo:
     task_count: int = 0
     chapter_count: int = 0
     domain: str = "novel"        # novel | code | knowledge
+    runner_state: str = "pending"
+    last_checkpoint_id: str = ""
+    lifecycle_updated_at: str = ""
 
 
 class SessionManager:
@@ -203,23 +210,37 @@ class SessionManager:
     ) -> bool:
         """
         寫入會話內容
-        
+
         Args:
             session_id: 會話 ID
             content_type: 內容類型
             content: 內容
             **kwargs: 額外參數
-        
+
         Returns:
             是否成功
         """
         path = self._resolve_path(session_id, content_type, **kwargs)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
-        
+
         # 更新會話時間戳
         self._update_timestamp(session_id)
-        
+        self._append_snapshot_index(session_id, content_type, path)
+
+        return True
+
+    def append_audit(self, session_id: str, event: Dict[str, Any]) -> bool:
+        """追加审计事件到 session 级审计日志。"""
+        path = self._resolve_path(session_id, ContentType.AUDIT)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        line = json.dumps(event, ensure_ascii=False)
+        with path.open("a", encoding="utf-8") as fp:
+            fp.write(line + "\n")
+
+        self._update_timestamp(session_id)
+        self._append_snapshot_index(session_id, ContentType.AUDIT, path)
         return True
     
     def archive(self, session_id: str) -> bool:
@@ -267,13 +288,72 @@ class SessionManager:
         
         return True
     
+    def sync_lifecycle(
+        self,
+        session_id: str,
+        runner_state: str,
+        checkpoint_id: Optional[str] = None,
+        status_map: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        """同步 loop-runner 生命周期到会话持久态。"""
+        default_status_map = {
+            "running": "active",
+            "paused": "checkpointed",
+            "stopped": "archived",
+            "pending": "active",
+        }
+        effective_status_map = dict(default_status_map)
+        if status_map:
+            effective_status_map.update(status_map)
+        target_status = effective_status_map.get(runner_state, "active")
+
+        if target_status == "active":
+            if not (self.active_path / session_id).exists() and (self.archived_path / session_id).exists():
+                self.restore(session_id)
+            elif not (self.active_path / session_id).exists():
+                self.init(session_id=session_id, session_type="standard", project_name="workflow", domain="code")
+        elif target_status == "archived":
+            if (self.active_path / session_id).exists():
+                self.archive(session_id)
+            elif not (self.archived_path / session_id).exists():
+                self.init(session_id=session_id, session_type="standard", project_name="workflow", domain="code")
+                self.archive(session_id)
+        else:
+            if not (self.active_path / session_id).exists() and (self.archived_path / session_id).exists():
+                self.restore(session_id)
+            elif not (self.active_path / session_id).exists():
+                self.init(session_id=session_id, session_type="standard", project_name="workflow", domain="code")
+
+        base = self.archived_path if target_status == "archived" else self.active_path
+        info = self._load_session_info(session_id, base)
+        if not info:
+            return {"session_id": session_id, "status": target_status}
+
+        now = datetime.now().isoformat()
+        info.status = target_status
+        info.runner_state = runner_state
+        info.lifecycle_updated_at = now
+        info.updated_at = now
+        if checkpoint_id:
+            info.last_checkpoint_id = checkpoint_id
+        self._save_session_info(session_id, info, base)
+        return {
+            "session_id": session_id,
+            "status": info.status,
+            "runner_state": info.runner_state,
+            "last_checkpoint_id": info.last_checkpoint_id,
+        }
+
     def delete(self, session_id: str, force: bool = False) -> bool:
         """
         刪除會話
-        
+
         Args:
             session_id: 會話 ID
             force: 是否強制刪除 (跳過歸檔)
+
+        Returns:
+            是否成功
         """
         # 先檢查 active
         path = self.active_path / session_id
@@ -282,13 +362,13 @@ class SessionManager:
                 return self.archive(session_id)
             shutil.rmtree(path)
             return True
-        
+
         # 再檢查 archived
         path = self.archived_path / session_id
         if path.exists():
             shutil.rmtree(path)
             return True
-        
+
         return False
     
     def create_session(
@@ -419,7 +499,34 @@ class SessionManager:
         
         data = json.loads(path.read_text(encoding="utf-8"))
         return SessionInfo(**data)
-    
+
+    def _append_snapshot_index(self, session_id: str, content_type: ContentType, path: Path):
+        """追加 session 级增量快照索引"""
+        index_path = self._resolve_path(session_id, ContentType.SNAPSHOT_INDEX)
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+
+        snapshots = []
+        if index_path.exists():
+            try:
+                snapshots = json.loads(index_path.read_text(encoding="utf-8"))
+                if not isinstance(snapshots, list):
+                    snapshots = []
+            except json.JSONDecodeError:
+                snapshots = []
+
+        snapshots.append(
+            {
+                "ts": datetime.now().isoformat(),
+                "content_type": content_type.value,
+                "path": str(path),
+            }
+        )
+
+        index_path.write_text(
+            json.dumps(snapshots, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+
     def _update_timestamp(self, session_id: str):
         """更新時間戳"""
         info = self._load_session_info(session_id)

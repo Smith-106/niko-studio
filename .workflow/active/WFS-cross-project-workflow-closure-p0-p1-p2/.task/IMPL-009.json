@@ -1,0 +1,93 @@
+{
+  "id": "IMPL-009",
+  "title": "P2-3 CI 门禁分层升级与契约回归固化",
+  "status": "completed",
+  "context_package_path": ".workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json",
+  "meta": {
+    "type": "test",
+    "agent": "@code-developer",
+    "priority": "P2",
+    "depends_on": ["IMPL-005", "IMPL-007"],
+    "execution_group": "parallel-p2-governance",
+    "cli_execution_id": "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-009",
+    "cli_execution": {
+      "strategy": "merge_fork",
+      "resume_from": null,
+      "merge_from": [
+        "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-005",
+        "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-007"
+      ]
+    }
+  },
+  "context": {
+    "requirements": [
+      "实现 3 级门禁策略：[baseline soft warn、high-risk soft fail、P2 selected hard fail]",
+      "补齐 4 组 CI 断言：[gateway stream contract、workflow decision、desktop parser、evaluation apply/undo]",
+      "确保 2 条测试基线不退化：[pytest coverage >= 80、desktop test:ci 全绿]"
+    ],
+    "focus_paths": [
+      "tests/unit/workflow/test_workflow_engine.py",
+      "tests/unit/mcp/test_gateway_stream.py",
+      "desktop/src/api/client.ts",
+      "desktop/src/components/EvaluationPanel.tsx"
+    ],
+    "acceptance": [
+      "CI 门禁断言可执行：验证命令 `python -m pytest tests/unit/test_ci_gate_workflows.py -q` 退出码 = 0",
+      "后端契约回归通过：验证命令 `python -m pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80` 退出码 = 0",
+      "desktop 测试基线通过：验证命令 `pnpm --dir desktop run test:ci` 退出码 = 0"
+    ],
+    "depends_on": ["IMPL-005", "IMPL-007"],
+    "shared_context": {
+      "tech_stack": ["pytest", "vitest", "GitHub Actions"],
+      "gate_rollout": "soft first then selective hard",
+      "quality_policy": "no regression on existing baseline"
+    },
+    "artifacts": [
+      {
+        "type": "testing_context",
+        "source": "context-package",
+        "path": ".workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json",
+        "priority": "highest",
+        "usage": "测试文件与门禁路径映射",
+        "contains": "tests 与 CI workflow 关键入口"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package testing assets and constraints",
+        "commands": [
+          "Read(.workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json)"
+        ],
+        "output_to": "context_package",
+        "on_error": "fail"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "扩展 CI 门禁断言",
+        "description": "补齐 workflow/gateway/desktop contract 的门禁测试与分层策略",
+        "depends_on": [],
+        "output": "ci_gate_assertions_extended"
+      },
+      {
+        "step": 2,
+        "title": "执行基线验证",
+        "description": "按 backend + desktop 基线命令回归，固化报告产出路径",
+        "depends_on": [1],
+        "output": "ci_baseline_verified"
+      }
+    ],
+    "target_files": [
+      "tests/unit/test_ci_gate_workflows.py",
+      "tests/unit/workflow/test_workflow_engine.py",
+      "tests/unit/mcp/test_gateway_stream.py",
+      "desktop/src/api/client.test.ts",
+      "desktop/src/components/EvaluationPanel.test.tsx",
+      ".github/workflows/integration-tests.yml"
+    ]
+  }
+}

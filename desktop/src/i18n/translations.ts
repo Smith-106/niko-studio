@@ -36,6 +36,8 @@ export interface Translations {
   selectedSkills: string
   inputPlaceholder: string
   streamCanceled: string
+  streamInterrupted: string
+  streamRecovered: string
   streamRestoreHint: string
   streamRestoreToBeforeSend: string
   streamRestoreBeforeSendSuccess: string
@@ -51,6 +53,8 @@ export interface Translations {
   inlineContinuePromptPrefix: string
   inlineGeneratePromptPrefix: string
   inlineGenerateContextFallback: string
+  streamGateSoftGo: string
+  streamGateNoGo: string
 
   // Settings
   settingsTitle: string
@@ -135,6 +139,8 @@ export const translations: Record<Language, Translations> = {
     selectedSkills: '已选 {count} 个技能',
     inputPlaceholder: '告诉我你想创作什么...',
     streamCanceled: '已取消本次生成。',
+    streamInterrupted: '流式生成已中断。',
+    streamRecovered: '已从流式降级恢复，结果可继续使用。',
     streamRestoreHint: '发送失败，可恢复到发送前状态。',
     streamRestoreToBeforeSend: '恢复到发送前',
     streamRestoreBeforeSendSuccess: '已恢复到发送前状态。',
@@ -150,6 +156,8 @@ export const translations: Record<Language, Translations> = {
     inlineContinuePromptPrefix: '请基于以下内容继续写作：',
     inlineGeneratePromptPrefix: '请基于以下内容生成新文本：',
     inlineGenerateContextFallback: '根据当前对话上下文生成。',
+    streamGateSoftGo: '已降级执行（Soft Go）：结果可用，建议继续关注。',
+    streamGateNoGo: '当前结果未通过质量门（No-Go），请调整后重试。',
 
     // Settings
     settingsTitle: '设置',
@@ -232,6 +240,8 @@ export const translations: Record<Language, Translations> = {
     selectedSkills: '{count} skills selected',
     inputPlaceholder: 'Tell me what you want to create...',
     streamCanceled: 'Generation canceled.',
+    streamInterrupted: 'Streaming generation was interrupted.',
+    streamRecovered: 'Recovered from stream fallback; the result remains usable.',
     streamRestoreHint: 'Send failed. You can restore to the state before sending.',
     streamRestoreToBeforeSend: 'Restore to before send',
     streamRestoreBeforeSendSuccess: 'Restored to the state before sending.',
@@ -247,6 +257,8 @@ export const translations: Record<Language, Translations> = {
     inlineContinuePromptPrefix: 'Please continue writing based on the following content:',
     inlineGeneratePromptPrefix: 'Please generate new text based on the following content:',
     inlineGenerateContextFallback: 'Generate based on the current conversation context.',
+    streamGateSoftGo: 'Executed with fallback (Soft Go): output is available, please keep monitoring.',
+    streamGateNoGo: 'The current output did not pass the quality gate (No-Go). Please adjust and retry.',
 
     // Settings
     settingsTitle: 'Settings',

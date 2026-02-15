@@ -166,6 +166,36 @@ class GatewayMetricsMiddleware(BaseHTTPMiddleware):
 from src.container import get_container, reset_container
 from src.workflow.base_state import create_base_state
 from src.workflow.levels.level5_coordinator import Level5Coordinator
+from src.workflow.levels.types import ensure_contract_payload
+
+
+def _with_contract(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return ensure_contract_payload(payload)
+
+
+def _with_terminal_contract(payload: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = _with_contract(payload)
+    if "decision" not in normalized:
+        normalized["decision"] = "go"
+    if "terminal" not in normalized:
+        normalized["terminal"] = "done"
+
+    terminal = normalized.get("terminal")
+    legacy_terminal = terminal
+    if terminal == "interrupted":
+        legacy_terminal = "aborted"
+    elif terminal == "recovered":
+        legacy_terminal = "done"
+
+    legacy_fields = normalized.get("legacy_contract_fields")
+    if not isinstance(legacy_fields, dict):
+        legacy_fields = {}
+    legacy_fields.setdefault("decision", normalized.get("decision"))
+    legacy_fields.setdefault("terminal", legacy_terminal)
+    legacy_fields.setdefault("terminal_state", legacy_terminal)
+    normalized["legacy_contract_fields"] = legacy_fields
+    normalized.setdefault("terminal_state", legacy_terminal)
+    return normalized
 
 
 def get_memory_engine():
@@ -563,7 +593,8 @@ async def workflow_route(task: str) -> dict:
 @workflow_mcp.tool()
 async def workflow_plan(
     task: str,
-    level: str = None
+    level: str = None,
+    recommendations: list = None,
 ) -> dict:
     """
     生成执行计划 (Plan 模式)
@@ -576,26 +607,64 @@ async def workflow_plan(
         {"plan_id": "...", "steps": [...], "dependencies": [...]}
     """
     engine = get_workflow_engine()
-    return await engine.plan(task, level)
+    return await engine.plan(task, level, recommendations=recommendations)
 
 
 @workflow_mcp.tool()
 async def workflow_execute(
     plan_id: str,
-    step_id: str = None
+    step_id: str = None,
+    recommendations: list = None,
+    confirm_token: str = None,
 ) -> dict:
     """
     执行计划 (Act 模式)
-    
+
     Args:
         plan_id: 计划ID
         step_id: 指定步骤ID (可选,默认执行下一步)
-    
+
     Returns:
         执行结果
     """
     engine = get_workflow_engine()
-    return await engine.execute(plan_id, step_id)
+    return await engine.execute(
+        plan_id,
+        step_id,
+        recommendations=recommendations,
+        confirm_token=confirm_token,
+    )
+
+
+@workflow_mcp.tool()
+async def workflow_quick_rollback(
+    plan_id: str,
+    checkpoint_id: str,
+    reason: str = "",
+) -> dict:
+    """执行快速撤销，恢复到指定 checkpoint。"""
+    engine = get_workflow_engine()
+    return await engine.quick_rollback(plan_id=plan_id, checkpoint_id=checkpoint_id, reason=reason)
+
+
+@workflow_mcp.tool()
+async def workflow_lifecycle(
+    plan_id: str,
+    action: str = "status"
+) -> dict:
+    """
+    loop-runner 生命周期控制。
+
+    支持动作:
+      - start
+      - pause
+      - resume
+      - stop
+      - status
+    """
+    engine = get_workflow_engine()
+    return await engine.lifecycle(plan_id, action)
+
 
 
 @workflow_mcp.tool()
@@ -618,18 +687,18 @@ async def checkpoint_create(
 
 
 @workflow_mcp.tool()
-async def checkpoint_restore(checkpoint_id: str) -> dict:
+async def checkpoint_restore(checkpoint_id: str, confirm_token: str = None) -> dict:
     """
     恢复到检查点
-    
+
     Args:
         checkpoint_id: 检查点ID
-    
+
     Returns:
         恢复结果
     """
     engine = get_workflow_engine()
-    return await engine.restore_checkpoint(checkpoint_id)
+    return await engine.restore_checkpoint(checkpoint_id, confirm_token=confirm_token)
 
 
 @workflow_mcp.tool()
@@ -1267,7 +1336,7 @@ async def chat_endpoint(request: Request):
 """
             steps_completed = 1
 
-        return JSONResponse({
+        return JSONResponse(_with_contract({
             "content": response_content,
             "skills_used": all_skills[:5],
             "workflow_info": {
@@ -1277,8 +1346,10 @@ async def chat_endpoint(request: Request):
                 "steps_completed": steps_completed,
                 "total_steps": len(assignments)
             },
+            "workflow_level": to_workflow_label(level),
+            "workflow_level_slug": to_workflow_slug(level),
             "evaluation": evaluation_result
-        })
+        }))
 
     except Exception as e:
         logger.error(f"Chat endpoint error: {e}")
@@ -1409,9 +1480,18 @@ async def chat_stream_endpoint(request: Request):
 
         async def generate_stream():
             """SSE 事件生成器"""
+            stream_diagnostics = {
+                "fallback_reason": None,
+                "failure_reason": None,
+                "error_type": None,
+            }
             try:
                 # 1. 发送开始事件
-                yield f"event: start\ndata: {json.dumps({'status': 'started'})}\n\n"
+                start_payload = _with_contract({
+                    "status": "started",
+                    "diagnostics": stream_diagnostics,
+                })
+                yield f"event: start\ndata: {json.dumps(start_payload)}\n\n"
 
                 # 2. 路由分析
                 commander = get_commander_agent()
@@ -1459,6 +1539,8 @@ async def chat_stream_endpoint(request: Request):
                         if not allow_llm_fallback:
                             raise RuntimeError("Writer execution failed with fallback disabled") from e
                         logger.warning(f"Writer failed: {e}")
+                        stream_diagnostics["fallback_reason"] = "writer_unavailable_l1"
+                        stream_diagnostics["failure_reason"] = str(e)
                         yield f"event: content\ndata: {json.dumps({'chunk': f'[写作服务暂时不可用，请检查 LLM 配置]'})}\n\n"
 
                 elif level == WorkflowLevel.L5_COORDINATOR:
@@ -1542,20 +1624,44 @@ async def chat_stream_endpoint(request: Request):
                             if not allow_llm_fallback:
                                 raise RuntimeError("Critic evaluation failed with fallback disabled") from e
                             logger.warning(f"Critic evaluation failed: {e}")
+                            stream_diagnostics["fallback_reason"] = "critic_unavailable"
+                            stream_diagnostics["failure_reason"] = str(e)
                             yield f"event: evaluation\ndata: {json.dumps({'score': 75, 'feedback': '自动评估暂不可用'})}\n\n"
 
                     except Exception as e:
                         if not allow_llm_fallback:
                             raise RuntimeError("Writer execution failed with fallback disabled") from e
                         logger.warning(f"Writer failed: {e}")
+                        stream_diagnostics["fallback_reason"] = "writer_unavailable_l234"
+                        stream_diagnostics["failure_reason"] = str(e)
                         yield f"event: content\ndata: {json.dumps({'chunk': f'[写作服务暂时不可用: {str(e)[:50]}]'})}\n\n"
 
                 # 6. 完成事件
-                yield f"event: done\ndata: {json.dumps({'status': 'completed', 'skills_used': all_skills[:5]})}\n\n"
+                decision = "soft_go" if stream_diagnostics["fallback_reason"] else "go"
+                terminal_state = "recovered" if stream_diagnostics["fallback_reason"] else "done"
+                done_payload = _with_terminal_contract({
+                    "status": "completed",
+                    "terminal": terminal_state,
+                    "decision": decision,
+                    "skills_used": all_skills[:5],
+                    "diagnostics": stream_diagnostics,
+                    "workflow_level": to_workflow_label(level),
+                    "workflow_level_slug": to_workflow_slug(level),
+                })
+                yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
 
             except Exception as e:
                 logger.error(f"Stream error: {e}")
-                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+                stream_diagnostics["failure_reason"] = str(e)
+                stream_diagnostics["error_type"] = e.__class__.__name__
+                terminal_state = "interrupted" if isinstance(e, (asyncio.CancelledError, TimeoutError)) else "error"
+                error_payload = _with_terminal_contract({
+                    "error": str(e),
+                    "terminal": terminal_state,
+                    "decision": "no_go",
+                    "diagnostics": stream_diagnostics,
+                })
+                yield f"event: error\ndata: {json.dumps(error_payload)}\n\n"
 
         return StreamingResponse(
             generate_stream(),
@@ -1810,6 +1916,7 @@ async def workflow_plan_endpoint(request: Request):
     result = await workflow_plan(
         task=body.get("task", ""),
         level=body.get("level"),
+        recommendations=body.get("recommendations"),
     )
     return JSONResponse(result)
 
@@ -1819,6 +1926,18 @@ async def workflow_execute_endpoint(request: Request):
     result = await workflow_execute(
         plan_id=body.get("plan_id", ""),
         step_id=body.get("step_id"),
+        recommendations=body.get("recommendations"),
+        confirm_token=body.get("confirm_token"),
+    )
+    return JSONResponse(result)
+
+
+async def workflow_quick_rollback_endpoint(request: Request):
+    body = await request.json()
+    result = await workflow_quick_rollback(
+        plan_id=body.get("plan_id", ""),
+        checkpoint_id=body.get("checkpoint_id", ""),
+        reason=body.get("reason", ""),
     )
     return JSONResponse(result)
 
@@ -1834,7 +1953,10 @@ async def checkpoint_create_endpoint(request: Request):
 
 async def checkpoint_restore_endpoint(request: Request):
     body = await request.json()
-    result = await checkpoint_restore(checkpoint_id=body.get("checkpoint_id", ""))
+    result = await checkpoint_restore(
+        checkpoint_id=body.get("checkpoint_id", ""),
+        confirm_token=body.get("confirm_token"),
+    )
     return JSONResponse(result)
 
 
@@ -1977,6 +2099,7 @@ def create_gateway() -> Starlette:
             Route("/workflow/route", workflow_route_endpoint, methods=["POST"]),
             Route("/workflow/plan", workflow_plan_endpoint, methods=["POST"]),
             Route("/workflow/execute", workflow_execute_endpoint, methods=["POST"]),
+            Route("/workflow/quick-rollback", workflow_quick_rollback_endpoint, methods=["POST"]),
             Route("/workflow/checkpoint/create", checkpoint_create_endpoint, methods=["POST"]),
             Route("/workflow/checkpoint/restore", checkpoint_restore_endpoint, methods=["POST"]),
             Route("/workflow/checkpoint/list", checkpoint_list_endpoint, methods=["POST"]),

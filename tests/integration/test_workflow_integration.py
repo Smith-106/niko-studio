@@ -220,6 +220,162 @@ class TestCheckpointManagement:
         assert "error" in result
 
 
+class TestRecommendationsReplay:
+    """recommendations 注入与 checkpoint 回放测试"""
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_plan_recommendation_fields_present(self, engine):
+        result = await engine.plan(
+            "写一章：冲突升级",
+            level="L3",
+            recommendations=[
+                {"title": "增加悬念", "reason": "提升张力"},
+                "补充角色动机",
+            ],
+        )
+
+        assert result["recommendations"][0]["id"] == "rec-01"
+        assert result["recommendations"][1]["id"] == "rec-02"
+        assert result["plan_hash"]
+        assert result["recommendations_frozen"] is False
+
+    @pytest.mark.asyncio
+    async def test_checkpoint_replay_preserves_plan_hash(self, engine):
+        plan = await engine.plan(
+            "写一章：冲突升级",
+            level="L1",
+            recommendations=[{"title": "先埋伏笔", "reason": "节奏"}],
+        )
+        plan_id = plan["plan_id"]
+
+        checkpoint = await engine.create_checkpoint(
+            description="manual replay",
+            auto_commit=False,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "plan_hash": plan["plan_hash"],
+                "recommendations": [{"title": "先埋伏笔", "reason": "节奏"}],
+                "recommendations_frozen": True,
+            },
+        )
+
+        restore = await engine.restore_checkpoint(checkpoint["checkpoint_id"])
+
+        assert "error" in restore
+        assert restore["replay"]["applied"] is True
+        assert restore["replay"]["plan_hash"] == plan["plan_hash"]
+        assert engine.plans[plan_id].recommendations[0]["id"] == "rec-01"
+
+
+class TestHardGateIntegration:
+    """风险门与高风险写入集成测试（hard_gate）"""
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_execute_hard_gate_waiting_confirmation(self, engine):
+        plan = await engine.plan("写一章完整的小说", level="L3")
+        plan_id = plan["plan_id"]
+
+        waiting = None
+        while True:
+            result = await engine.execute(plan_id)
+            if result.get("status") == "waiting_confirmation":
+                waiting = result
+                break
+            if result.get("status") == "completed" and result.get("message") == "All steps completed":
+                pytest.fail("destructive step was not reached")
+
+        assert waiting is not None
+        assert waiting["gate"]["confirm_required"] is True
+        assert waiting["gate"]["confirmed"] is False
+        assert waiting["gate"]["destructive"] is True
+
+    @pytest.mark.asyncio
+    async def test_restore_risk_gate_confirm_token(self, engine):
+        plan = await engine.plan(
+            "写一章：风险恢复测试",
+            level="L1",
+            recommendations=[{"title": "恢复建议", "reason": "风险回放"}],
+        )
+        plan_id = plan["plan_id"]
+
+        checkpoint = await engine.create_checkpoint(
+            description="risk restore",
+            auto_commit=False,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "plan_hash": plan["plan_hash"],
+                "recommendations": plan["recommendations"],
+                "recommendations_frozen": True,
+            },
+        )
+
+        pending = await engine.restore_checkpoint(checkpoint["checkpoint_id"])
+        assert pending["status"] == "waiting_confirmation"
+        assert pending["gate"]["confirm_required"] is True
+        assert pending["gate"]["confirmed"] is False
+
+        confirmed = await engine.restore_checkpoint(checkpoint["checkpoint_id"], confirm_token="ok")
+        assert confirmed["gate"]["confirm_required"] is True
+        assert confirmed["gate"]["confirmed"] is True
+
+
+class TestAdaptiveRouteIntegration:
+    """指标驱动自适应路由集成测试（adaptive_route）"""
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_adaptive_route_maintenance_level_adjust(self, engine):
+        result = await engine.plan("maintenance 修复任务", level="L2")
+
+        assert result["template_meta"]["lane"] == "maintenance"
+        assert result["template_meta"]["gate_profile"] == "maintenance-selective-hard"
+        assert result["level"] == "L4"
+        assert result["level_slug"] == "brainstorm"
+
+
+class TestSessionStatusIntegration:
+    """maintenance lane 会话状态持久化集成测试（session_status）"""
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_session_status_maintenance_lifecycle(self, engine):
+        plan = await engine.plan("maintenance 修复任务", level="L2")
+        plan_id = plan["plan_id"]
+
+        started = await engine.lifecycle(plan_id, "start")
+        assert started["session_status"] == "active"
+
+        paused = await engine.lifecycle(plan_id, "pause")
+        assert paused["session_status"] == "checkpointed"
+
+        resumed = await engine.lifecycle(plan_id, "resume")
+        assert resumed["session_status"] == "active"
+
+        stopped = await engine.lifecycle(plan_id, "stop")
+        assert stopped["session_status"] == "active"
+        assert stopped["state_mapping"]["stopped"] == "active"
+
+        status = await engine.lifecycle(plan_id, "status")
+        assert status["session_status"] == "active"
+        assert status["lane"] == "maintenance"
+
+
 class TestPlanStatus:
     """计划状态测试"""
 

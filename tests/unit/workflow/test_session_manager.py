@@ -49,6 +49,7 @@ class TestContentType:
         assert ContentType.TODO.value == "todo"
         assert ContentType.SUMMARY.value == "summary"
         assert ContentType.STATE.value == "state"
+        assert ContentType.SNAPSHOT_INDEX.value == "snapshot_index"
 
     def test_all_in_path_routes(self):
         for ct in ContentType:
@@ -172,6 +173,15 @@ class TestSessionManagerReadWrite:
         sm.write("sess-rw", ContentType.TODO, "todo content")
         info_after = sm._load_session_info("sess-rw")
         assert info_after.updated_at >= ts_before
+
+    def test_write_appends_snapshot_index(self, sm):
+        sm.write("sess-rw", ContentType.TODO, "todo content")
+        snapshot_raw = sm.read("sess-rw", ContentType.SNAPSHOT_INDEX)
+        assert snapshot_raw
+        snapshot_index = json.loads(snapshot_raw)
+        assert isinstance(snapshot_index, list)
+        assert snapshot_index[-1]["content_type"] == ContentType.TODO.value
+        assert "TODO_LIST.md" in snapshot_index[-1]["path"]
 
 
 # ============================================================

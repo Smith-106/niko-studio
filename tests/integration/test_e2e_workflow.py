@@ -331,6 +331,68 @@ class TestErrorHandling:
             engine.close()
 
 
+class TestDestructiveE2E:
+    """高风险写入二次确认与快速撤销 e2e 测试"""
+
+    @pytest.mark.asyncio
+    async def test_destructive_execute_requires_confirmation_then_allows(self, tmp_path):
+        from workflow.workflow_engine import WorkflowEngine
+
+        engine = WorkflowEngine(workspace=str(tmp_path))
+        plan = await engine.plan("写一章完整的小说", level="L3")
+        plan_id = plan["plan_id"]
+
+        waiting = None
+        while True:
+            result = await engine.execute(plan_id)
+            if result.get("status") == "waiting_confirmation":
+                waiting = result
+                break
+            if result.get("status") == "completed" and result.get("message") == "All steps completed":
+                pytest.fail("destructive step was not reached")
+
+        assert waiting is not None
+        assert waiting["gate"]["confirm_required"] is True
+        assert waiting["gate"]["confirmed"] is False
+
+        resumed = await engine.execute(plan_id, step_id=waiting["step_id"], confirm_token="ok")
+        assert resumed["gate"]["confirm_required"] is True
+        assert resumed["gate"]["confirmed"] is True
+
+    @pytest.mark.asyncio
+    async def test_destructive_restore_requires_confirmation_then_allows(self, tmp_path):
+        from workflow.workflow_engine import WorkflowEngine
+
+        engine = WorkflowEngine(workspace=str(tmp_path))
+        plan = await engine.plan(
+            "写一章：恢复流程测试",
+            level="L1",
+            recommendations=[{"title": "恢复建议", "reason": "风险场景"}],
+        )
+        plan_id = plan["plan_id"]
+
+        checkpoint = await engine.create_checkpoint(
+            description="destructive restore e2e",
+            auto_commit=False,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "plan_hash": plan["plan_hash"],
+                "recommendations": plan["recommendations"],
+                "recommendations_frozen": True,
+            },
+        )
+
+        pending = await engine.restore_checkpoint(checkpoint["checkpoint_id"])
+        assert pending["status"] == "waiting_confirmation"
+        assert pending["gate"]["confirm_required"] is True
+        assert pending["gate"]["confirmed"] is False
+
+        confirmed = await engine.restore_checkpoint(checkpoint["checkpoint_id"], confirm_token="ok")
+        assert confirmed["gate"]["confirm_required"] is True
+        assert confirmed["gate"]["confirmed"] is True
+
+
 # 运行测试
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

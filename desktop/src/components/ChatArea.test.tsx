@@ -110,9 +110,45 @@ describe('ChatArea P0 flows', () => {
     await userEvent.click(cancelButton)
 
     await waitFor(() => {
-      expect(screen.getByText('已取消本次生成。')).toBeInTheDocument()
+      expect(screen.getByText('流式生成已中断。')).toBeInTheDocument()
     })
     expect(mockedChat).not.toHaveBeenCalled()
+  })
+
+  it('shows interrupted message when stream is interrupted', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onError?.('stream interrupted', { terminal: 'interrupted', status: 'aborted' })
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByRole('textbox')
+    await userEvent.type(input, '触发中断{enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText('流式生成已中断。')).toBeInTheDocument()
+    })
+    expect(mockedChat).not.toHaveBeenCalled()
+  })
+
+  it('shows recovered hint when stream emits recovered terminal', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('已恢复内容', 0)
+      callbacks.onDone?.({
+        status: 'completed',
+        terminal: 'recovered',
+        decision: 'soft_go',
+        diagnostics: { fallback_reason: 'critic_unavailable' },
+      })
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByRole('textbox')
+    await userEvent.type(input, '触发恢复态{enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText('已恢复内容')).toBeInTheDocument()
+      expect(screen.getByText('已从流式降级恢复，结果可继续使用。')).toBeInTheDocument()
+    })
   })
 
   it('shows restore entry when stream fails and fallback chat also fails', async () => {

@@ -3,7 +3,7 @@ import { Send, Paperclip, Mic } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback } from '../stores/selectors'
 import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint } from '../api/client'
-import type { ChatRequest } from '../api/client'
+import type { ChatRequest, StreamDonePayload } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { useI18n } from '../i18n'
 
@@ -11,11 +11,22 @@ interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
 }
 
-type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'aborted'
+type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'interrupted' | 'recovered'
+type StreamTerminal = 'done' | 'error' | 'interrupted' | 'recovered'
 type InlineAction = 'continue' | 'revise' | 'generate' | null
 
 interface SelectionMeta {
   messageId: string
+}
+
+interface StreamRuntimeMeta {
+  terminal: StreamTerminal
+  decision?: 'go' | 'soft_go' | 'no_go'
+  diagnostics?: {
+    fallback_reason?: string | null
+    failure_reason?: string | null
+    error_type?: string | null
+  }
 }
 
 export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
@@ -76,17 +87,50 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
     let finalPhase: StreamPhase | null = null
     let finalized = false
     let streamDone = false
+    let streamMeta: StreamRuntimeMeta | null = null
 
     const requestId = ++streamRequestIdRef.current
     const abortController = new AbortController()
     abortControllerRef.current = abortController
     setStreamPhase('streaming')
 
-    const finalize = (phase: StreamPhase) => {
+    const finalize = (phase: StreamPhase, meta?: StreamRuntimeMeta) => {
       if (finalized || requestId !== streamRequestIdRef.current) return
       finalized = true
       finalPhase = phase
+      streamMeta = meta ?? streamMeta
       setStreamPhase(phase)
+    }
+
+    const normalizeTerminal = (payload?: StreamDonePayload): StreamTerminal => {
+      if (payload?.terminal === 'done' || payload?.terminal === 'error' || payload?.terminal === 'interrupted' || payload?.terminal === 'recovered') {
+        return payload.terminal
+      }
+      if (payload?.status === 'aborted') {
+        return 'interrupted'
+      }
+      if (payload?.status === 'restored') {
+        return 'recovered'
+      }
+      return 'done'
+    }
+
+    const maybeShowGateHint = (payload?: StreamDonePayload) => {
+      if (!payload?.decision) return
+      if (payload.decision === 'soft_go') {
+        setRecoverStatus({ type: 'error', message: t.streamGateSoftGo })
+      }
+      if (payload.decision === 'no_go') {
+        setRecoverStatus({ type: 'error', message: t.streamGateNoGo })
+      }
+      streamMeta = {
+        terminal: normalizeTerminal(payload),
+        decision: payload.decision,
+        diagnostics: payload.diagnostics,
+      }
+      if (streamMeta.terminal === 'recovered') {
+        setRecoverStatus({ type: 'success', message: t.streamRecovered })
+      }
     }
 
     await chatStream(
@@ -97,17 +141,20 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
           streamText += chunk
           setStreamingContent(streamText)
         },
-        onDone: () => {
+        onDone: (payload) => {
           streamDone = true
-          finalize('done')
+          maybeShowGateHint(payload)
+          const terminal = normalizeTerminal(payload)
+          finalize(terminal, { terminal, decision: payload.decision, diagnostics: payload.diagnostics })
         },
-        onError: (error) => {
-          if (abortController.signal.aborted || error.toLowerCase().includes('abort')) {
-            finalize('aborted')
+        onError: (error, payload) => {
+          const terminal = payload?.terminal === 'interrupted' ? 'interrupted' : 'error'
+          if (abortController.signal.aborted || terminal === 'interrupted' || error.toLowerCase().includes('abort')) {
+            finalize('interrupted', { terminal: 'interrupted', diagnostics: payload?.diagnostics })
             return
           }
           streamFailed = true
-          finalize('error')
+          finalize('error', { terminal: 'error', diagnostics: payload?.diagnostics })
         },
       },
       { signal: abortController.signal }
@@ -119,26 +166,30 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
 
     if (!finalized) {
       if (abortController.signal.aborted) {
-        finalize('aborted')
+        finalize('interrupted', { terminal: 'interrupted' })
       } else if (streamDone || hasStreamContent) {
-        finalize('done')
+        finalize('done', { terminal: 'done' })
       } else if (streamFailed) {
-        finalize('error')
+        finalize('error', { terminal: 'error' })
       } else {
-        finalize('error')
+        finalize('error', { terminal: 'error' })
       }
     }
 
-    if (finalPhase === 'done' && hasStreamContent) {
+    if ((finalPhase === 'done' || finalPhase === 'recovered') && hasStreamContent) {
       addMessage('assistant', streamText || '处理完成', selectedSkills)
       setRecoverableCheckpointId(null)
-      setRecoverStatus(null)
-      return 'done'
+      if (finalPhase === 'recovered') {
+        setRecoverStatus({ type: 'success', message: t.streamRecovered })
+      } else {
+        setRecoverStatus(null)
+      }
+      return finalPhase
     }
 
-    if (finalPhase === 'aborted') {
-      addMessage('assistant', t.streamCanceled)
-      return 'aborted'
+    if (finalPhase === 'interrupted') {
+      addMessage('assistant', t.streamInterrupted)
+      return 'interrupted'
     }
 
     const response = await chat(request)
@@ -151,7 +202,10 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
 
     addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
     if (checkpointId) {
-      setRecoverStatus({ type: 'error', message: t.streamRestoreHint })
+      const streamMetaValue = streamMeta as StreamRuntimeMeta | null
+      const diagnosticsText = streamMetaValue?.diagnostics?.fallback_reason || streamMetaValue?.diagnostics?.failure_reason
+      const message = diagnosticsText ? `${t.streamRestoreHint}（${diagnosticsText}）` : t.streamRestoreHint
+      setRecoverStatus({ type: 'error', message })
     }
     return 'error'
   }
@@ -386,7 +440,7 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
         {isLoading && (
           <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-secondary">
             <div className="animate-pulse">
-              {streamPhase === 'streaming' ? t.thinking : streamPhase === 'aborted' ? t.streamCanceled : t.thinking}
+              {streamPhase === 'streaming' ? t.thinking : streamPhase === 'interrupted' ? t.streamInterrupted : t.thinking}
             </div>
           </div>
         )}

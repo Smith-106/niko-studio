@@ -23,9 +23,40 @@ def test_external_release_gate_uses_resolved_fail_ci_flag_output():
     assert "fail_ci_if_error: ${{ steps.codecov_mode.outputs.fail_ci_if_error }}" in content
 
 
-def test_integration_workflow_external_quality_job_keeps_strict_codecov():
+def test_integration_workflow_keeps_i18n_check_warn_mode():
     content = _read(".github/workflows/integration-tests.yml")
-    assert "external-quality-signals" in content
-    assert "run_codecov: true" in content
-    assert "codecov_fail_ci_if_error: true" in content
+    assert "i18n-check" in content
+    assert "continue-on-error: true" in content
+    assert "python scripts/check_i18n_keys.py" in content
 
+
+def test_integration_workflow_defines_three_level_gate_lanes():
+    content = _read(".github/workflows/integration-tests.yml")
+    assert "p2-baseline-soft-warn" in content
+    assert "p2-high-risk-soft-fail" in content
+    assert "p2-selected-hard-fail" in content
+
+
+def test_integration_workflow_gate_lane_policies_match_expected():
+    content = _read(".github/workflows/integration-tests.yml")
+    assert "p2-baseline-soft-warn:" in content
+    assert "continue-on-error: true" in content
+    assert "p2-high-risk-soft-fail:" in content
+    assert "p2-selected-hard-fail:" in content
+    assert "needs: [tests, desktop-build, p2-baseline-soft-warn, p2-high-risk-soft-fail]" in content
+
+
+def test_integration_workflow_contains_all_four_contract_groups():
+    content = _read(".github/workflows/integration-tests.yml")
+    assert "test_workflow_engine.py -k \"decision\"" in content
+    assert "test_gateway_stream.py -k \"contract\"" in content
+    assert "src/api/client.test.ts" in content
+    assert "src/components/EvaluationPanel.test.tsx" in content
+
+
+def test_integration_workflow_hard_gate_runs_selected_contracts():
+    content = _read(".github/workflows/integration-tests.yml")
+    assert "Run P2 selected hard gate contracts" in content
+    assert "pytest tests/unit/workflow/test_workflow_engine.py -k \"decision\" -q" in content
+    assert "pytest tests/unit/mcp/test_gateway_stream.py -k \"contract\" -q" in content
+    assert "npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx" in content

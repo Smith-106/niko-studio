@@ -8,6 +8,8 @@ import json
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 
+from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION, LEGACY_CONTRACT_FIELD_MAP
+
 
 class _SceneTypeDialogue:
     value = "dialogue"
@@ -92,7 +94,12 @@ class TestStreamEndpoint:
         events = parse_sse_events(response.text)
         start_events = [e for e in events if e.get("event") == "start"]
         assert len(start_events) >= 1
-        assert start_events[0]["data"]["status"] == "started"
+        start_data = start_events[0]["data"]
+        assert start_data["status"] == "started"
+        assert start_data["analysis_schema_version"] == ANALYSIS_SCHEMA_VERSION
+        assert start_data["contract_version"] == ANALYSIS_SCHEMA_VERSION
+        assert start_data["compatibility"]["legacy_field_map"] == LEGACY_CONTRACT_FIELD_MAP
+        assert "diagnostics" in start_data
 
     def test_stream_returns_routing_event(self, client_no_lifespan):
         """Test stream returns routing event"""
@@ -152,6 +159,9 @@ class TestStreamEndpoint:
         done_events = [e for e in events if e.get("event") == "done"]
         assert len(done_events) >= 1
         assert done_events[0]["data"]["status"] == "completed"
+        assert done_events[0]["data"]["terminal"] == "done"
+        assert done_events[0]["data"]["decision"] in {"go", "soft_go"}
+        assert "diagnostics" in done_events[0]["data"]
 
 
 class TestStreamEventSequence:
@@ -304,6 +314,9 @@ class TestStreamErrorEvents:
         error_events = [e for e in events if e.get("event") == "error"]
         assert len(error_events) >= 1
         assert "Writer execution failed" in error_events[0]["data"]["error"]
+        assert error_events[0]["data"]["terminal"] == "error"
+        assert error_events[0]["data"]["decision"] == "no_go"
+        assert error_events[0]["data"]["diagnostics"]["error_type"] in {"RuntimeError", "Exception"}
 
 
 class TestStreamRoutingSemantics:
@@ -345,6 +358,86 @@ class TestStreamRoutingSemantics:
         assert mock_commander.route.call_count == 0
 
 
+class TestStreamContractCompatibility:
+    """Contract baseline tests for schema and legacy replay."""
+
+    def test_stream_done_event_contract_legacy_replay(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a scene"}
+            ]
+        })
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        done_events = [e for e in events if e.get("event") == "done"]
+        assert len(done_events) >= 1
+
+        payload = done_events[0]["data"]
+        assert payload["analysis_schema_version"] == ANALYSIS_SCHEMA_VERSION
+        assert payload["contract_version"] == ANALYSIS_SCHEMA_VERSION
+        assert payload["compatibility"]["legacy_field_map"] == LEGACY_CONTRACT_FIELD_MAP
+        assert payload["legacy_contract_fields"]["level"] == payload["workflow_level"]
+        assert payload["legacy_contract_fields"]["level_slug"] == payload["workflow_level_slug"]
+
+    def test_stream_error_event_contract_legacy_replay(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        mock_writer.write = AsyncMock(side_effect=RuntimeError("writer down"))
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a chapter"}
+            ],
+            "workflowLevel": "L3",
+            "allowLlmFallback": False
+        })
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) >= 1
+
+        payload = error_events[0]["data"]
+        assert payload["analysis_schema_version"] == ANALYSIS_SCHEMA_VERSION
+        assert payload["contract_version"] == ANALYSIS_SCHEMA_VERSION
+        assert payload["compatibility"]["legacy_field_map"] == LEGACY_CONTRACT_FIELD_MAP
+        assert payload["terminal"] == "error"
+        assert payload["decision"] == "no_go"
+
+
+class TestStreamSoftGateRecovery:
+    """Tests for soft gate terminal semantics."""
+
+    def test_soft_gate_done_event_uses_recovered_terminal(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_critic = MagicMock()
+        mock_critic.evaluate = AsyncMock(side_effect=RuntimeError("critic down"))
+        monkeypatch.setattr(gateway_module, "get_critic_engine", lambda: mock_critic)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [
+                {"role": "user", "content": "Write a chapter"}
+            ],
+            "workflowLevel": "L3",
+            "allowLlmFallback": True,
+        })
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        done_events = [e for e in events if e.get("event") == "done"]
+        assert len(done_events) >= 1
+
+        payload = done_events[0]["data"]
+        assert payload["decision"] == "soft_go"
+        assert payload["terminal"] == "recovered"
+        assert payload["legacy_contract_fields"]["terminal"] == "done"
+        assert payload["diagnostics"]["fallback_reason"] in {"critic_unavailable", "writer_unavailable_l234", "writer_unavailable_l1"}
+
+
 class TestStreamL5Coordinator:
     """Tests for L5 coordinator stream branch"""
 
@@ -371,3 +464,4 @@ class TestStreamL5Coordinator:
         assert len(evaluation_events) >= 1
         assert evaluation_events[0]["data"]["score"] == 88
         assert mock_coordinator_instance.execute.call_count == 1
+

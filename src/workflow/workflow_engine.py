@@ -12,6 +12,8 @@ import json
 import logging
 import re
 import uuid
+import hashlib
+import copy
 import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -20,12 +22,70 @@ from typing import List, Dict, Optional, Any
 
 from src.workflow.levels.types import (
     WorkflowLevel,
+    WorkflowDecision,
     LevelRouter,
     to_workflow_label,
     to_workflow_slug,
+    ensure_contract_payload,
 )
+from src.workflow.session.session_manager import SessionManager
 
 logger = logging.getLogger("niko-workflow")
+
+
+TEMPLATE_METADATA_MAP: Dict[WorkflowLevel, Dict[str, Any]] = {
+    WorkflowLevel.L1_RAPID: {
+        "level": "L1",
+        "scene": "quick_reply",
+        "risk": "low",
+        "gate_profile": "rapid-soft",
+    },
+    WorkflowLevel.L2_LITE: {
+        "level": "L2",
+        "scene": "single_turn",
+        "risk": "low",
+        "gate_profile": "lite-soft",
+    },
+    WorkflowLevel.L3_STANDARD: {
+        "level": "L3",
+        "scene": "chapter",
+        "risk": "medium",
+        "gate_profile": "standard-soft",
+    },
+    WorkflowLevel.L4_BRAINSTORM: {
+        "level": "L4",
+        "scene": "brainstorm",
+        "risk": "medium",
+        "gate_profile": "brainstorm-soft",
+    },
+    WorkflowLevel.L5_COORDINATOR: {
+        "level": "L5",
+        "scene": "coordinator",
+        "risk": "high",
+        "gate_profile": "coordinator-soft",
+    },
+}
+
+RUNNER_ALLOWED_TRANSITIONS = {
+    "pending": {"running", "stopped"},
+    "running": {"paused", "stopped"},
+    "paused": {"running", "stopped"},
+    "stopped": set(),
+}
+
+RUNNER_TO_SESSION_STATUS = {
+    "running": "active",
+    "paused": "checkpointed",
+    "stopped": "archived",
+}
+
+MAINTENANCE_TO_SESSION_STATUS = {
+    "running": "active",
+    "paused": "checkpointed",
+    "stopped": "active",
+}
+
+DESTRUCTIVE_STEP_NAMES = {"revise", "checkpoint", "final_review"}
 
 
 @dataclass
@@ -49,8 +109,16 @@ class WorkflowPlan:
     level: str
     steps: List[WorkflowStep] = field(default_factory=list)
     status: str = "created"  # created/running/completed/failed
+    runner_state: str = "pending"  # pending/running/paused/stopped
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     completed_at: str = None
+    template_meta: Dict[str, Any] = field(default_factory=dict)
+    gate_decision: str = WorkflowDecision.GO.value
+    recommendations: List[Dict[str, Any]] = field(default_factory=list)
+    recommendations_frozen: bool = False
+    plan_hash: str = ""
+    lane: str = "default"
+    quality_metrics: Dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -61,11 +129,64 @@ class Checkpoint:
     commit_hash: str = None
     plan_id: str = None
     step_id: str = None
+    replay_payload: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
 
 class WorkflowEngine:
     """工作流引擎"""
+
+    def _with_contract(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return ensure_contract_payload(payload)
+
+    def _resolve_template_meta(self, level: WorkflowLevel) -> Dict[str, Any]:
+        return dict(TEMPLATE_METADATA_MAP.get(level, TEMPLATE_METADATA_MAP[WorkflowLevel.L3_STANDARD]))
+
+    def _build_quality_metrics(self, task: str) -> Dict[str, float]:
+        task_length = len(task or "")
+        pass_rate = 92.0 if task_length < 80 else 86.0
+        risk_score = 0.82 if re.search(r"维护|maintenance|回收|修复", task or "", re.IGNORECASE) else 0.38
+        recovery_latency = 280.0 if task_length >= 100 else 120.0
+        return {
+            "pass_rate": round(pass_rate, 2),
+            "risk_score": round(risk_score, 2),
+            "recovery_latency": round(recovery_latency, 2),
+        }
+
+    def _determine_lane(self, metrics: Dict[str, float]) -> str:
+        if (
+            metrics.get("risk_score", 0.0) >= 0.75
+            or metrics.get("recovery_latency", 0.0) >= 240.0
+            or metrics.get("pass_rate", 100.0) < 88.0
+        ):
+            return "maintenance"
+        return "default"
+
+    def _resolve_adaptive_level(self, level: WorkflowLevel, lane: str, metrics: Dict[str, float]) -> WorkflowLevel:
+        if lane != "maintenance":
+            return level
+
+        pass_rate = metrics.get("pass_rate", 100.0)
+        risk_score = metrics.get("risk_score", 0.0)
+        recovery_latency = metrics.get("recovery_latency", 0.0)
+
+        if risk_score >= 0.9 or pass_rate < 80.0:
+            return WorkflowLevel.L5_COORDINATOR
+        if risk_score >= 0.75 or recovery_latency >= 240.0:
+            return WorkflowLevel.L4_BRAINSTORM
+        if pass_rate < 88.0:
+            return WorkflowLevel.L3_STANDARD
+        return level
+
+    def _resolve_gate_profile(self, level: WorkflowLevel, lane: str, metrics: Dict[str, float]) -> str:
+        if lane == "maintenance":
+            if metrics.get("risk_score", 0.0) >= 0.9:
+                return "maintenance-hard"
+            if metrics.get("risk_score", 0.0) >= 0.75 or metrics.get("recovery_latency", 0.0) >= 240.0:
+                return "maintenance-selective-hard"
+            return "maintenance-soft"
+
+        return self._resolve_template_meta(level).get("gate_profile", "default-soft")
 
     def _get_level_indicators(self) -> Dict[WorkflowLevel, List[str]]:
         return {
@@ -80,9 +201,255 @@ class WorkflowEngine:
         self.workspace = Path(workspace) if workspace else Path.cwd()
         self.plans: Dict[str, WorkflowPlan] = {}
         self.checkpoints: Dict[str, Checkpoint] = {}
+        self.plan_sessions: Dict[str, str] = {}
         self.router = LevelRouter()
+        self.session_manager = SessionManager(base_path=str(self.workspace / ".writing" / "sessions"))
 
         logger.info(f"Workflow engine initialized: {self.workspace}")
+
+    def _session_id_for_plan(self, plan_id: str) -> str:
+        return self.plan_sessions.setdefault(plan_id, f"workflow-{plan_id}")
+
+    def _sync_session_lifecycle(self, plan: WorkflowPlan, checkpoint_id: str = None) -> Dict[str, Any]:
+        session_id = self._session_id_for_plan(plan.id)
+        status_map = MAINTENANCE_TO_SESSION_STATUS if plan.lane == "maintenance" else RUNNER_TO_SESSION_STATUS
+        return self.session_manager.sync_lifecycle(
+            session_id=session_id,
+            runner_state=plan.runner_state,
+            checkpoint_id=checkpoint_id,
+            status_map=status_map,
+        )
+
+    def _resolve_lane_status_map(self, plan: WorkflowPlan) -> Dict[str, str]:
+        return MAINTENANCE_TO_SESSION_STATUS if plan.lane == "maintenance" else RUNNER_TO_SESSION_STATUS
+
+    def _append_audit_event(self, plan: WorkflowPlan, event_type: str, payload: Dict[str, Any]) -> None:
+        session_id = self._session_id_for_plan(plan.id)
+        event = {
+            "ts": datetime.now().isoformat(),
+            "event_type": event_type,
+            "plan_id": plan.id,
+            "payload": payload,
+        }
+        self.session_manager.append_audit(session_id=session_id, event=event)
+
+    def _is_destructive_step(self, step: WorkflowStep, recommendations: Optional[List[Dict[str, Any]]] = None) -> bool:
+        if step.name in DESTRUCTIVE_STEP_NAMES:
+            return True
+        for item in recommendations or []:
+            action = str(item.get("action") or "").lower()
+            title = str(item.get("title") or "").lower()
+            if any(token in action for token in ("overwrite", "delete", "remove", "destructive")):
+                return True
+            if any(token in title for token in ("覆盖", "删除", "移除", "破坏")):
+                return True
+        return False
+
+    def _evaluate_risk_gate(
+        self,
+        level: WorkflowLevel,
+        step: WorkflowStep,
+        recommendations: Optional[List[Dict[str, Any]]] = None,
+        confirm_token: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        template_meta = self._resolve_template_meta(level)
+        risk = template_meta.get("risk", "low")
+
+        needs_soft_review = step.name in {"checkpoint", "final_review"} and risk in {"medium", "high"}
+        destructive = self._is_destructive_step(step, recommendations)
+
+        if destructive:
+            confirmed = bool(confirm_token)
+            decision = WorkflowDecision.GO if confirmed else WorkflowDecision.NO_GO
+            reason = (
+                "destructive write confirmed, hard gate passed"
+                if confirmed
+                else "destructive write requires secondary confirmation"
+            )
+            confirm_required = True
+            blocking = not confirmed
+            gate_profile = "selective-hard"
+        elif needs_soft_review:
+            decision = WorkflowDecision.SOFT_GO
+            reason = f"{step.name} requires soft gate review under {risk} risk"
+            confirm_required = False
+            confirmed = True
+            blocking = False
+            gate_profile = template_meta.get("gate_profile", "default-soft")
+        else:
+            decision = WorkflowDecision.GO
+            reason = "soft gate passed"
+            confirm_required = False
+            confirmed = True
+            blocking = False
+            gate_profile = template_meta.get("gate_profile", "default-soft")
+
+        return {
+            "decision": decision.value,
+            "reason": reason,
+            "risk": "high" if destructive else risk,
+            "gate_profile": gate_profile,
+            "blocking": blocking,
+            "destructive": destructive,
+            "confirm_required": confirm_required,
+            "confirm_token": confirm_token,
+            "confirmed": confirmed,
+        }
+
+    def _build_plan_replay_payload(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        return {
+            "plan_id": plan.id,
+            "plan_hash": plan.plan_hash or self._compute_plan_hash(plan),
+            "recommendations": copy.deepcopy(plan.recommendations),
+            "recommendations_frozen": plan.recommendations_frozen,
+        }
+
+    async def _create_rollback_checkpoint(self, plan: WorkflowPlan, step: WorkflowStep) -> str:
+        checkpoint = await self.create_checkpoint(
+            description=f"destructive-precheck:{plan.id}:{step.id}",
+            auto_commit=False,
+            plan_id=plan.id,
+            step_id=step.id,
+            replay_payload=self._build_plan_replay_payload(plan),
+        )
+        return checkpoint.get("checkpoint_id")
+
+    async def quick_rollback(self, plan_id: str, checkpoint_id: str, reason: str = "") -> Dict[str, Any]:
+        if plan_id not in self.plans:
+            return {"error": f"Plan '{plan_id}' not found"}
+
+        plan = self.plans[plan_id]
+        restore_result = await self.restore_checkpoint(checkpoint_id)
+
+        self._append_audit_event(
+            plan,
+            "rollback_trace",
+            {
+                "reason": reason,
+                "checkpoint_id": checkpoint_id,
+                "restore_status": restore_result.get("status", "error"),
+                "restore_error": restore_result.get("error"),
+            },
+        )
+
+        return {
+            "plan_id": plan_id,
+            "checkpoint_id": checkpoint_id,
+            "restored": restore_result.get("status") == "restored" or bool(restore_result.get("replay", {}).get("applied")),
+            "restore": restore_result,
+        }
+
+    def _set_runner_state(self, plan: WorkflowPlan, target_state: str, checkpoint_id: Optional[str] = None) -> Dict[str, Any]:
+        current_state = plan.runner_state
+        allowed = RUNNER_ALLOWED_TRANSITIONS.get(current_state, set())
+        if target_state != current_state and target_state not in allowed:
+            raise ValueError(f"Invalid runner transition: {current_state} -> {target_state}")
+
+        plan.runner_state = target_state
+        session_state = self._sync_session_lifecycle(plan, checkpoint_id=checkpoint_id)
+
+        if target_state == "running" and plan.status == "created":
+            plan.status = "running"
+        if target_state == "stopped" and plan.status not in {"completed", "failed"}:
+            plan.status = "failed"
+
+        return session_state
+
+    def _canonicalize_recommendations(self, recommendations: Optional[List[Any]]) -> List[Dict[str, Any]]:
+        normalized: List[Dict[str, Any]] = []
+        for index, raw in enumerate(recommendations or []):
+            if isinstance(raw, dict):
+                title = str(raw.get("title") or raw.get("name") or raw.get("recommendation") or "").strip()
+                reason = str(raw.get("reason") or raw.get("rationale") or "").strip()
+                action = str(raw.get("action") or raw.get("suggestion") or title or "").strip()
+                if not action:
+                    action = f"recommendation-{index + 1}"
+            else:
+                text = str(raw).strip()
+                if not text:
+                    continue
+                title = text
+                reason = ""
+                action = text
+
+            normalized.append({
+                "id": f"rec-{index + 1:02d}",
+                "title": title,
+                "reason": reason,
+                "action": action,
+                "index": index,
+            })
+
+        return normalized
+
+    def _compute_plan_hash(self, plan: WorkflowPlan) -> str:
+        payload = {
+            "task": plan.task,
+            "level": plan.level,
+            "steps": [
+                {
+                    "name": step.name,
+                    "description": step.description,
+                    "dependencies": list(step.dependencies),
+                }
+                for step in plan.steps
+            ],
+            "template_meta": plan.template_meta,
+            "recommendations": [
+                {
+                    "id": item.get("id"),
+                    "title": item.get("title", ""),
+                    "reason": item.get("reason", ""),
+                    "action": item.get("action", ""),
+                    "index": item.get("index"),
+                }
+                for item in plan.recommendations
+            ],
+        }
+        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+    def _freeze_recommendations(self, plan: WorkflowPlan) -> None:
+        if plan.recommendations_frozen:
+            return
+        plan.recommendations = copy.deepcopy(plan.recommendations)
+        plan.recommendations_frozen = True
+
+    def _apply_replay_payload(self, checkpoint: Checkpoint) -> Dict[str, Any]:
+        payload = checkpoint.replay_payload or {}
+        if not payload:
+            return {"applied": False, "reason": "no_replay_payload"}
+
+        plan_id = payload.get("plan_id") or checkpoint.plan_id
+        if not plan_id:
+            return {"applied": False, "reason": "no_plan_id"}
+
+        plan = self.plans.get(plan_id)
+        if not plan:
+            return {"applied": False, "reason": f"plan_not_found:{plan_id}"}
+
+        expected_hash = payload.get("plan_hash")
+        if expected_hash:
+            current_hash = self._compute_plan_hash(plan)
+            if current_hash != expected_hash:
+                return {
+                    "applied": False,
+                    "reason": "plan_hash_mismatch",
+                    "expected_plan_hash": expected_hash,
+                    "current_plan_hash": current_hash,
+                }
+
+        replay_recommendations = self._canonicalize_recommendations(payload.get("recommendations"))
+        plan.recommendations = replay_recommendations
+        plan.recommendations_frozen = bool(payload.get("recommendations_frozen", True))
+        plan.plan_hash = expected_hash or self._compute_plan_hash(plan)
+
+        return {
+            "applied": True,
+            "plan_id": plan_id,
+            "plan_hash": plan.plan_hash,
+            "recommendation_count": len(plan.recommendations),
+        }
 
     async def route(self, task: str) -> dict:
         """
@@ -165,7 +532,7 @@ class WorkflowEngine:
         }
         return templates.get(level, templates[WorkflowLevel.L2_LITE])
     
-    async def plan(self, task: str, level: str = None) -> dict:
+    async def plan(self, task: str, level: str = None, recommendations: Optional[List[Any]] = None) -> dict:
         """
         生成执行计划 (Plan 模式)
         """
@@ -176,8 +543,18 @@ class WorkflowEngine:
 
         workflow_level = WorkflowLevel.from_label(level)
 
+        quality_metrics = self._build_quality_metrics(task)
+        lane = self._determine_lane(quality_metrics)
+        adaptive_level = self._resolve_adaptive_level(workflow_level, lane, quality_metrics)
+
         # 获取模板
-        template = self._get_workflow_template(workflow_level)
+        template = self._get_workflow_template(adaptive_level)
+        template_meta = self._resolve_template_meta(adaptive_level)
+        template_meta["lane"] = lane
+        template_meta["quality_metrics"] = quality_metrics
+        template_meta["gate_profile"] = self._resolve_gate_profile(adaptive_level, lane, quality_metrics)
+        if adaptive_level != workflow_level:
+            template_meta["adaptive_from_level"] = workflow_level.label
 
         # 创建计划
         plan_id = str(uuid.uuid4())[:8]
@@ -192,21 +569,33 @@ class WorkflowEngine:
             )
             steps.append(step)
 
+        canonical_recommendations = self._canonicalize_recommendations(recommendations)
+
         plan = WorkflowPlan(
             id=plan_id,
             task=task,
-            level=workflow_level.label,
-            steps=steps
+            level=adaptive_level.label,
+            steps=steps,
+            template_meta=template_meta,
+            recommendations=canonical_recommendations,
+            lane=lane,
+            quality_metrics=quality_metrics,
         )
+        plan.plan_hash = self._compute_plan_hash(plan)
 
         self.plans[plan_id] = plan
 
         logger.info(f"Created plan: {plan_id} (Level: {workflow_level.label}, Steps: {len(steps)})")
 
-        return {
+        return self._with_contract({
             "plan_id": plan_id,
-            "level": workflow_level.label,
-            "level_slug": workflow_level.slug,
+            "level": adaptive_level.label,
+            "level_slug": adaptive_level.slug,
+            "template_meta": template_meta,
+            "gate_decision": plan.gate_decision,
+            "recommendations": plan.recommendations,
+            "recommendations_frozen": plan.recommendations_frozen,
+            "plan_hash": plan.plan_hash,
             "steps": [
                 {
                     "id": s.id,
@@ -218,17 +607,104 @@ class WorkflowEngine:
                 for s in steps
             ],
             "total_steps": len(steps)
-        }
+        })
     
-    async def execute(self, plan_id: str, step_id: str = None) -> dict:
+    async def lifecycle(self, plan_id: str, action: str) -> dict:
+        """loop-runner 生命周期控制入口"""
+        if plan_id not in self.plans:
+            return {"error": f"Plan '{plan_id}' not found"}
+
+        plan = self.plans[plan_id]
+        normalized_action = (action or "").strip().lower()
+        if normalized_action == "status":
+            session_state = self._sync_session_lifecycle(plan)
+            return self._with_contract({
+                "plan_id": plan.id,
+                "action": "status",
+                "runner_state": plan.runner_state,
+                "plan_status": plan.status,
+                "session_status": session_state.get("status"),
+                "lane": plan.lane,
+                "quality_metrics": plan.quality_metrics,
+                "state_mapping": self._resolve_lane_status_map(plan),
+            })
+
+        target_by_action = {
+            "start": "running",
+            "pause": "paused",
+            "resume": "running",
+            "stop": "stopped",
+        }
+        if normalized_action not in target_by_action:
+            return {"error": f"Unsupported lifecycle action: {action}"}
+
+        checkpoint_id = None
+        if normalized_action == "pause":
+            replay_payload = {
+                "plan_id": plan.id,
+                "plan_hash": plan.plan_hash or self._compute_plan_hash(plan),
+                "recommendations": copy.deepcopy(plan.recommendations),
+                "recommendations_frozen": plan.recommendations_frozen,
+            }
+            checkpoint = await self.create_checkpoint(
+                description=f"loop-pause:{plan.id}",
+                auto_commit=False,
+                plan_id=plan.id,
+                replay_payload=replay_payload,
+            )
+            checkpoint_id = checkpoint.get("checkpoint_id")
+
+        try:
+            session_state = self._set_runner_state(
+                plan,
+                target_by_action[normalized_action],
+                checkpoint_id=checkpoint_id,
+            )
+        except ValueError as exc:
+            return {"error": str(exc)}
+
+        return self._with_contract({
+            "plan_id": plan.id,
+            "action": normalized_action,
+            "runner_state": plan.runner_state,
+            "plan_status": plan.status,
+            "session_status": session_state.get("status"),
+            "checkpoint_id": checkpoint_id,
+            "lane": plan.lane,
+            "quality_metrics": plan.quality_metrics,
+            "state_mapping": self._resolve_lane_status_map(plan),
+        })
+
+    async def execute(
+        self,
+        plan_id: str,
+        step_id: str = None,
+        recommendations: Optional[List[Any]] = None,
+        confirm_token: Optional[str] = None,
+    ) -> dict:
         """
         执行计划 (Act 模式)
         """
         if plan_id not in self.plans:
             return {"error": f"Plan '{plan_id}' not found"}
-        
+
         plan = self.plans[plan_id]
-        
+        if plan.runner_state == "stopped":
+            return {"error": "Loop runner is stopped"}
+        if plan.runner_state == "paused":
+            return {"error": "Loop runner is paused"}
+        if plan.runner_state == "pending":
+            self._set_runner_state(plan, "running")
+
+        if recommendations:
+            plan.recommendations = self._canonicalize_recommendations(recommendations)
+            plan.recommendations_frozen = False
+            plan.plan_hash = self._compute_plan_hash(plan)
+
+        self._freeze_recommendations(plan)
+        if not plan.plan_hash:
+            plan.plan_hash = self._compute_plan_hash(plan)
+
         # 找到要执行的步骤
         if step_id:
             step = next((s for s in plan.steps if s.id == step_id), None)
@@ -239,13 +715,13 @@ class WorkflowEngine:
             step = next((s for s in plan.steps if s.status == "pending"), None)
             if not step:
                 return {"status": "completed", "message": "All steps completed"}
-        
+
         # 检查依赖
         for dep_id in step.dependencies:
             dep_step = next((s for s in plan.steps if s.id == dep_id), None)
             if dep_step and dep_step.status != "completed":
                 return {"error": f"Dependency '{dep_id}' not completed"}
-        
+
         # 标记计划为运行中
         if plan.status == "created":
             plan.status = "running"
@@ -253,33 +729,107 @@ class WorkflowEngine:
         # 执行步骤
         step.status = "running"
         step.started_at = datetime.now().isoformat()
-        
+
+        level_enum = WorkflowLevel.from_label(plan.level)
+        gate = self._evaluate_risk_gate(
+            level_enum,
+            step,
+            recommendations=plan.recommendations,
+            confirm_token=confirm_token,
+        )
+        plan.gate_decision = gate["decision"]
+        logger.info(
+            "Risk gate decision: %s plan=%s step=%s reason=%s",
+            gate["decision"],
+            plan.id,
+            step.name,
+            gate["reason"],
+        )
+
+        if gate.get("confirm_required") and not gate.get("confirmed"):
+            step.status = "pending"
+            self._append_audit_event(
+                plan,
+                "confirm_trace",
+                {
+                    "step_id": step.id,
+                    "step_name": step.name,
+                    "risk": gate.get("risk"),
+                    "decision": gate.get("decision"),
+                    "confirmed": False,
+                    "reason": gate.get("reason"),
+                },
+            )
+            return self._with_contract({
+                "step_id": step.id,
+                "step_name": step.name,
+                "status": "waiting_confirmation",
+                "gate": gate,
+                "plan_status": plan.status,
+                "runner_state": plan.runner_state,
+                "remaining_steps": sum(1 for s in plan.steps if s.status == "pending"),
+            })
+
+        precheck_checkpoint_id = None
+        if gate.get("destructive"):
+            precheck_checkpoint_id = await self._create_rollback_checkpoint(plan, step)
+            self._append_audit_event(
+                plan,
+                "confirm_trace",
+                {
+                    "step_id": step.id,
+                    "step_name": step.name,
+                    "risk": gate.get("risk"),
+                    "decision": gate.get("decision"),
+                    "confirmed": True,
+                    "confirm_token": confirm_token,
+                    "rollback_checkpoint_id": precheck_checkpoint_id,
+                },
+            )
+
         try:
             # 根据步骤名称执行对应操作
             result = await self._execute_step(plan, step)
-            
+
             step.status = "completed"
             step.completed_at = datetime.now().isoformat()
             step.output = result
-            
+
             # 检查是否所有步骤完成
             if all(s.status == "completed" for s in plan.steps):
                 plan.status = "completed"
                 plan.completed_at = datetime.now().isoformat()
-            
-            return {
+
+            return self._with_contract({
                 "step_id": step.id,
                 "step_name": step.name,
                 "status": "completed",
                 "result": result,
+                "gate": gate,
+                "rollback_checkpoint_id": precheck_checkpoint_id,
                 "plan_status": plan.status,
+                "runner_state": plan.runner_state,
                 "remaining_steps": sum(1 for s in plan.steps if s.status == "pending")
-            }
-        
+            })
+
         except Exception as e:
             step.status = "failed"
+            plan.status = "failed"
             logger.error(f"Step execution failed: {e}")
-            return {"error": str(e), "step_id": step.id}
+
+            rollback = None
+            if precheck_checkpoint_id:
+                rollback = await self.quick_rollback(
+                    plan_id=plan.id,
+                    checkpoint_id=precheck_checkpoint_id,
+                    reason=f"step failed: {step.id}",
+                )
+
+            return {
+                "error": str(e),
+                "step_id": step.id,
+                "rollback": rollback,
+            }
     
     async def _execute_step(self, plan: WorkflowPlan, step: WorkflowStep) -> Any:
         """执行具体步骤"""
@@ -310,11 +860,20 @@ class WorkflowEngine:
         if step.name == "checkpoint":
             checkpoint = await self.create_checkpoint(
                 description=f"plan:{plan.id} step:{step.id}",
-                auto_commit=False
+                auto_commit=False,
+                plan_id=plan.id,
+                step_id=step.id,
+                replay_payload={
+                    "plan_id": plan.id,
+                    "plan_hash": plan.plan_hash,
+                    "recommendations": copy.deepcopy(plan.recommendations),
+                    "recommendations_frozen": plan.recommendations_frozen,
+                },
             )
             return {
                 "checkpoint_id": checkpoint["checkpoint_id"],
                 "created_at": checkpoint["created_at"],
+                "replay_payload": checkpoint.get("replay_payload", {}),
             }
 
         if step.name == "answer":
@@ -442,7 +1001,10 @@ class WorkflowEngine:
     async def create_checkpoint(
         self,
         description: str = "",
-        auto_commit: bool = True
+        auto_commit: bool = True,
+        plan_id: str = None,
+        step_id: str = None,
+        replay_payload: Optional[Dict[str, Any]] = None,
     ) -> dict:
         """
         创建检查点 (Git-based)
@@ -487,7 +1049,10 @@ class WorkflowEngine:
         checkpoint = Checkpoint(
             id=checkpoint_id,
             description=description,
-            commit_hash=commit_hash
+            commit_hash=commit_hash,
+            plan_id=plan_id,
+            step_id=step_id,
+            replay_payload=copy.deepcopy(replay_payload) if replay_payload else {},
         )
         
         self.checkpoints[checkpoint_id] = checkpoint
@@ -498,18 +1063,70 @@ class WorkflowEngine:
             "checkpoint_id": checkpoint_id,
             "commit_hash": commit_hash,
             "description": description,
+            "plan_id": checkpoint.plan_id,
+            "step_id": checkpoint.step_id,
+            "replay_payload": checkpoint.replay_payload,
             "created_at": checkpoint.created_at
         }
     
-    async def restore_checkpoint(self, checkpoint_id: str) -> dict:
+    async def restore_checkpoint(self, checkpoint_id: str, confirm_token: Optional[str] = None) -> dict:
         """
         恢复到检查点
         """
         if checkpoint_id not in self.checkpoints:
             return {"error": f"Checkpoint '{checkpoint_id}' not found"}
-        
+
         checkpoint = self.checkpoints[checkpoint_id]
-        
+        replay_result = self._apply_replay_payload(checkpoint)
+        destructive = bool(checkpoint.replay_payload)
+
+        gate = {
+            "decision": (
+                WorkflowDecision.GO.value
+                if ((not destructive) or bool(confirm_token))
+                else WorkflowDecision.NO_GO.value
+            ),
+            "reason": (
+                "destructive restore confirmed, hard gate passed"
+                if (destructive and bool(confirm_token))
+                else (
+                    "destructive restore requires secondary confirmation"
+                    if destructive
+                    else "soft gate passed"
+                )
+            ),
+            "risk": "high" if destructive else "low",
+            "gate_profile": "restore-selective-hard" if destructive else "restore-soft",
+            "blocking": destructive and (not bool(confirm_token)),
+            "destructive": destructive,
+            "confirm_required": destructive,
+            "confirm_token": confirm_token,
+            "confirmed": (not destructive) or bool(confirm_token),
+        }
+
+        plan = self.plans.get(checkpoint.plan_id) if checkpoint.plan_id else None
+        if destructive and not gate["confirmed"]:
+            if plan:
+                self._append_audit_event(
+                    plan,
+                    "confirm_trace",
+                    {
+                        "operation": "restore_checkpoint",
+                        "checkpoint_id": checkpoint_id,
+                        "confirmed": False,
+                        "reason": gate["reason"],
+                    },
+                )
+            return self._with_contract({
+                "status": "waiting_confirmation",
+                "error": "destructive restore requires secondary confirmation",
+                "checkpoint_id": checkpoint_id,
+                "plan_id": checkpoint.plan_id,
+                "step_id": checkpoint.step_id,
+                "replay": replay_result,
+                "gate": gate,
+            })
+
         if checkpoint.commit_hash:
             try:
                 subprocess.run(
@@ -518,17 +1135,51 @@ class WorkflowEngine:
                     capture_output=True,
                     check=True
                 )
-                
-                return {
+
+                if plan:
+                    self._append_audit_event(
+                        plan,
+                        "confirm_trace",
+                        {
+                            "operation": "restore_checkpoint",
+                            "checkpoint_id": checkpoint_id,
+                            "confirmed": True,
+                            "confirm_token": confirm_token,
+                        },
+                    )
+
+                return self._with_contract({
                     "status": "restored",
                     "checkpoint_id": checkpoint_id,
-                    "commit_hash": checkpoint.commit_hash
-                }
-            
+                    "commit_hash": checkpoint.commit_hash,
+                    "plan_id": checkpoint.plan_id,
+                    "step_id": checkpoint.step_id,
+                    "replay": replay_result,
+                    "gate": gate,
+                })
+
             except subprocess.CalledProcessError as e:
-                return {"error": f"Git restore failed: {e}"}
-        
-        return {"error": "No commit hash available for this checkpoint"}
+                return {"error": f"Git restore failed: {e}", "replay": replay_result, "gate": gate}
+
+        if plan and destructive:
+            self._append_audit_event(
+                plan,
+                "confirm_trace",
+                {
+                    "operation": "restore_checkpoint",
+                    "checkpoint_id": checkpoint_id,
+                    "confirmed": True,
+                    "confirm_token": confirm_token,
+                },
+            )
+
+        return {
+            "error": "No commit hash available for this checkpoint",
+            "plan_id": checkpoint.plan_id,
+            "step_id": checkpoint.step_id,
+            "replay": replay_result,
+            "gate": gate,
+        }
     
     async def list_checkpoints(self, limit: int = 10) -> list:
         """
@@ -556,12 +1207,21 @@ class WorkflowEngine:
             return {"error": f"Plan '{plan_id}' not found"}
         
         plan = self.plans[plan_id]
-        
-        return {
+        session_state = self._sync_session_lifecycle(plan)
+
+        return self._with_contract({
             "plan_id": plan.id,
             "task": plan.task,
             "level": plan.level,
             "status": plan.status,
+            "runner_state": plan.runner_state,
+            "session_status": session_state.get("status"),
+            "state_mapping": RUNNER_TO_SESSION_STATUS,
+            "template_meta": plan.template_meta,
+            "gate_decision": plan.gate_decision,
+            "recommendations": plan.recommendations,
+            "recommendations_frozen": plan.recommendations_frozen,
+            "plan_hash": plan.plan_hash,
             "steps": [
                 {
                     "id": s.id,
@@ -572,4 +1232,4 @@ class WorkflowEngine:
                 for s in plan.steps
             ],
             "progress": f"{sum(1 for s in plan.steps if s.status == 'completed')}/{len(plan.steps)}"
-        }
+        })

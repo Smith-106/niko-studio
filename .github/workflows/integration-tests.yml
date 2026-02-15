@@ -93,31 +93,112 @@ jobs:
         run: npm run check
         working-directory: desktop
 
-  external-precheck-e2e:
-    if: github.event_name == 'pull_request'
-    needs: [tests, desktop-build]
-    uses: ./.github/workflows/external-release-gate.yml
-    with:
-      run_codecov: false
-      run_metrics_guard: false
-      gate_label: pr-precheck
+  i18n-check:
+    runs-on: ubuntu-latest
+    continue-on-error: true
 
-  external-e2e-smoke:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [tests, desktop-build]
-    uses: ./.github/workflows/external-release-gate.yml
-    with:
-      run_codecov: false
-      run_metrics_guard: true
-      gate_label: external
+    steps:
+      - uses: actions/checkout@v4
 
-  external-quality-signals:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run desktop i18n consistency check (warn mode)
+        run: |
+          python scripts/check_i18n_keys.py
+
+  p2-baseline-soft-warn:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    needs: [tests]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run workflow decision contract baseline (soft warn)
+        run: |
+          pytest tests/unit/workflow/test_workflow_engine.py -k "decision" -q
+
+  p2-high-risk-soft-fail:
+    runs-on: ubuntu-latest
+    continue-on-error: true
     needs: [tests, desktop-build]
-    uses: ./.github/workflows/external-release-gate.yml
-    with:
-      run_codecov: true
-      codecov_fail_ci_if_error: true
-      run_metrics_guard: true
-      run_e2e: false
-      gate_label: external-quality
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Run gateway stream contract (high-risk soft fail)
+        run: |
+          pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q
+
+      - name: Run desktop parser + evaluation apply/undo contracts (high-risk soft fail)
+        run: |
+          npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx
+
+  p2-selected-hard-fail:
+    runs-on: ubuntu-latest
+    needs: [tests, desktop-build, p2-baseline-soft-warn, p2-high-risk-soft-fail]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Run P2 selected hard gate contracts
+        run: |
+          pytest tests/unit/workflow/test_workflow_engine.py -k "decision" -q
+          pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q
+          npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx
+

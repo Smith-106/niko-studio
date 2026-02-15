@@ -340,16 +340,303 @@ export async function chat(request: ChatRequest): Promise<ApiResponse<ChatRespon
 
 // ============ Workflow API ============
 
+export interface RecommendationPayload {
+  id: string
+  title: string
+  reason: string
+  action: string
+}
+
+export type RecommendationInput = string | Partial<RecommendationPayload> | Record<string, unknown>
+
+export interface RecommendationExecutionResult {
+  recommendation_id: string
+  status: 'applied' | 'undone' | 'failed'
+  plan_id?: string
+  step_id?: string
+  message?: string
+  error?: string
+}
+
+export interface RecommendationBatchResult {
+  total: number
+  applied: number
+  undone: number
+  failed: number
+  results: RecommendationExecutionResult[]
+}
+
+function toRecommendationPayload(input: RecommendationInput, index: number, action = 'apply'): RecommendationPayload {
+  if (typeof input === 'string') {
+    const title = input.trim()
+    return {
+      id: `rec-${String(index + 1).padStart(2, '0')}`,
+      title,
+      reason: title,
+      action,
+    }
+  }
+
+  const record = input as Record<string, unknown>
+  const title = String(record.title ?? record.name ?? record.recommendation ?? '').trim()
+  const safeTitle = title || `recommendation-${index + 1}`
+  const reasonRaw = record.reason
+  const reason = typeof reasonRaw === 'string' && reasonRaw.trim() ? reasonRaw.trim() : safeTitle
+  const idRaw = record.id
+  const normalizedActionRaw = record.action
+  const normalizedAction = typeof normalizedActionRaw === 'string' && normalizedActionRaw.trim()
+    ? normalizedActionRaw.trim()
+    : action
+
+  return {
+    id: typeof idRaw === 'string' && idRaw.trim() ? idRaw.trim() : `rec-${String(index + 1).padStart(2, '0')}`,
+    title: safeTitle,
+    reason,
+    action: normalizedAction,
+  }
+}
+
+function normalizeRecommendations(recommendations?: RecommendationInput[], action = 'apply'): RecommendationPayload[] {
+  if (!recommendations || recommendations.length === 0) {
+    return []
+  }
+
+  return recommendations
+    .map((item, index) => toRecommendationPayload(item, index, action))
+    .filter((item) => item.title.length > 0)
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object') {
+    return {}
+  }
+  return value as Record<string, unknown>
+}
+
+function readPlanId(payload: unknown): string | undefined {
+  const record = readRecord(payload)
+  const planId = record.plan_id
+  return typeof planId === 'string' && planId.trim() ? planId : undefined
+}
+
+function readStepId(payload: unknown): string | undefined {
+  const record = readRecord(payload)
+  const stepId = record.step_id
+  return typeof stepId === 'string' && stepId.trim() ? stepId : undefined
+}
+
+function readError(payload: unknown): string | undefined {
+  const record = readRecord(payload)
+  const error = record.error
+  if (typeof error === 'string' && error.trim()) {
+    return error
+  }
+  const status = record.status
+  if (status === 'failed') {
+    return 'workflow execute failed'
+  }
+  return undefined
+}
+
+export function mergeRecommendationBatchResults(results: RecommendationExecutionResult[]): RecommendationBatchResult {
+  return {
+    total: results.length,
+    applied: results.filter((item) => item.status === 'applied').length,
+    undone: results.filter((item) => item.status === 'undone').length,
+    failed: results.filter((item) => item.status === 'failed').length,
+    results,
+  }
+}
+
 export async function routeWorkflow(task: string, level?: string): Promise<ApiResponse<unknown>> {
   return callApi('/workflow/route', 'POST', { task, level })
 }
 
-export async function createPlan(task: string, level?: string): Promise<ApiResponse<unknown>> {
-  return callApi('/workflow/plan', 'POST', { task, level })
+export async function createPlan(
+  task: string,
+  level?: string,
+  recommendations?: RecommendationInput[]
+): Promise<ApiResponse<unknown>> {
+  const normalizedRecommendations = normalizeRecommendations(recommendations)
+  return callApi('/workflow/plan', 'POST', {
+    task,
+    level,
+    recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
+  })
 }
 
-export async function executePlan(planId: string, stepId?: string): Promise<ApiResponse<unknown>> {
-  return callApi('/workflow/execute', 'POST', { plan_id: planId, step_id: stepId })
+export async function executePlan(
+  planId: string,
+  stepId?: string,
+  recommendations?: RecommendationInput[]
+): Promise<ApiResponse<unknown>> {
+  const normalizedRecommendations = normalizeRecommendations(recommendations)
+  return callApi('/workflow/execute', 'POST', {
+    plan_id: planId,
+    step_id: stepId,
+    recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
+  })
+}
+
+export async function applyRecommendation(
+  task: string,
+  recommendation: RecommendationInput,
+  level?: string
+): Promise<ApiResponse<RecommendationExecutionResult>> {
+  const normalized = normalizeRecommendations([recommendation], 'apply')
+  if (normalized.length === 0) {
+    return {
+      success: false,
+      error: 'invalid recommendation payload',
+    }
+  }
+
+  const planResponse = await createPlan(task, level, normalized)
+  if (!planResponse.success) {
+    return {
+      success: false,
+      error: planResponse.error || 'create plan failed',
+    }
+  }
+
+  const planId = readPlanId(planResponse.data)
+  if (!planId) {
+    return {
+      success: false,
+      error: 'missing plan_id from workflow plan response',
+    }
+  }
+
+  const executeResponse = await executePlan(planId, undefined, normalized)
+  if (!executeResponse.success) {
+    return {
+      success: false,
+      error: executeResponse.error || 'execute plan failed',
+    }
+  }
+
+  const executeError = readError(executeResponse.data)
+  if (executeError) {
+    return {
+      success: true,
+      data: {
+        recommendation_id: normalized[0].id,
+        status: 'failed',
+        plan_id: planId,
+        step_id: readStepId(executeResponse.data),
+        error: executeError,
+      },
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      recommendation_id: normalized[0].id,
+      status: 'applied',
+      plan_id: planId,
+      step_id: readStepId(executeResponse.data),
+      message: 'recommendation applied',
+    },
+  }
+}
+
+export async function undoRecommendation(
+  task: string,
+  recommendation: RecommendationInput,
+  level?: string
+): Promise<ApiResponse<RecommendationExecutionResult>> {
+  const normalized = normalizeRecommendations([recommendation], 'undo')
+  if (normalized.length === 0) {
+    return {
+      success: false,
+      error: 'invalid recommendation payload',
+    }
+  }
+
+  const planResponse = await createPlan(task, level, normalized)
+  if (!planResponse.success) {
+    return {
+      success: false,
+      error: planResponse.error || 'create plan failed',
+    }
+  }
+
+  const planId = readPlanId(planResponse.data)
+  if (!planId) {
+    return {
+      success: false,
+      error: 'missing plan_id from workflow plan response',
+    }
+  }
+
+  const executeResponse = await executePlan(planId, undefined, normalized)
+  if (!executeResponse.success) {
+    return {
+      success: false,
+      error: executeResponse.error || 'execute plan failed',
+    }
+  }
+
+  const executeError = readError(executeResponse.data)
+  if (executeError) {
+    return {
+      success: true,
+      data: {
+        recommendation_id: normalized[0].id,
+        status: 'failed',
+        plan_id: planId,
+        step_id: readStepId(executeResponse.data),
+        error: executeError,
+      },
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      recommendation_id: normalized[0].id,
+      status: 'undone',
+      plan_id: planId,
+      step_id: readStepId(executeResponse.data),
+      message: 'recommendation undone',
+    },
+  }
+}
+
+export async function batchApplyRecommendations(
+  task: string,
+  recommendations: RecommendationInput[],
+  level?: string
+): Promise<ApiResponse<RecommendationBatchResult>> {
+  if (recommendations.length === 0) {
+    return {
+      success: true,
+      data: mergeRecommendationBatchResults([]),
+    }
+  }
+
+  const normalized = normalizeRecommendations(recommendations, 'apply')
+  const results: RecommendationExecutionResult[] = []
+
+  for (const recommendation of normalized) {
+    const response = await applyRecommendation(task, recommendation, level)
+    if (response.success && response.data) {
+      results.push(response.data)
+      continue
+    }
+
+    results.push({
+      recommendation_id: recommendation.id,
+      status: 'failed',
+      error: response.error || 'apply recommendation failed',
+    })
+  }
+
+  return {
+    success: true,
+    data: mergeRecommendationBatchResults(results),
+  }
 }
 
 // ============ Agent API ============
@@ -543,14 +830,82 @@ export interface StreamEvent {
   data: Record<string, unknown>
 }
 
+export type StreamTerminal = 'done' | 'error' | 'interrupted' | 'recovered'
+
+interface StreamDiagnostics {
+  fallback_reason?: string | null
+  failure_reason?: string | null
+  error_type?: string | null
+}
+
+interface StreamTerminalPayload {
+  status?: string
+  terminal?: StreamTerminal
+  diagnostics?: StreamDiagnostics
+}
+
+export interface StreamDonePayload extends StreamTerminalPayload {
+  skills_used?: string[]
+  decision?: 'go' | 'soft_go' | 'no_go'
+}
+
+function normalizeTerminalValue(raw: unknown): StreamTerminal | undefined {
+  if (raw === 'done' || raw === 'error' || raw === 'interrupted' || raw === 'recovered') {
+    return raw
+  }
+  if (raw === 'aborted') {
+    return 'interrupted'
+  }
+  return undefined
+}
+
+function parseLegacyTerminal(data: Record<string, unknown>): StreamTerminal | undefined {
+  const legacy = data.legacy_contract_fields
+  if (!legacy || typeof legacy !== 'object') {
+    return undefined
+  }
+
+  const legacyRecord = legacy as Record<string, unknown>
+  const keys = ['terminal', 'terminal_state', 'status']
+  for (const key of keys) {
+    const value = legacyRecord[key]
+    const normalized = normalizeTerminalValue(value)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return undefined
+}
+
+function parseLegacyDecision(data: Record<string, unknown>): 'go' | 'soft_go' | 'no_go' | undefined {
+  const decision = data.decision
+  if (decision === 'go' || decision === 'soft_go' || decision === 'no_go') {
+    return decision
+  }
+
+  const legacy = data.legacy_contract_fields
+  if (!legacy || typeof legacy !== 'object') {
+    return undefined
+  }
+
+  const legacyDecision = (legacy as Record<string, unknown>).decision
+  if (legacyDecision === 'go' || legacyDecision === 'soft_go' || legacyDecision === 'no_go') {
+    return legacyDecision
+  }
+
+  return undefined
+}
+
+
 export interface StreamCallbacks {
   onStart?: () => void
   onRouting?: (data: { level: string; scene_type: string; skills: string[] }) => void
   onProgress?: (data: { step: number; total: number; message: string }) => void
   onContent?: (chunk: string, index: number) => void
   onEvaluation?: (data: { score: number; feedback: string }) => void
-  onDone?: (data: { status: string; skills_used: string[] }) => void
-  onError?: (error: string) => void
+  onDone?: (data: StreamDonePayload) => void
+  onError?: (error: string, payload?: StreamTerminalPayload) => void
 }
 
 export interface StreamOptions {
@@ -662,7 +1017,30 @@ export async function chatStream(
     // 确保刷新任何待处理的内容
     flushContentBuffer()
     console.error('Stream error:', error)
-    callbacks.onError?.(String(error))
+    const message = String(error)
+    const aborted = options?.signal?.aborted || message.toLowerCase().includes('abort')
+    callbacks.onError?.(
+      message,
+      aborted ? { terminal: 'interrupted', status: 'aborted' } : { terminal: 'error', status: 'failed' }
+    )
+  }
+}
+
+function toStreamTerminalPayload(data: Record<string, unknown>): StreamTerminalPayload {
+  const terminal = normalizeTerminalValue(data.terminal)
+    ?? parseLegacyTerminal(data)
+    ?? (() => {
+      if (data.status === 'aborted') return 'interrupted'
+      if (data.status === 'restored') return 'recovered'
+      return undefined
+    })()
+
+  return {
+    status: typeof data.status === 'string' ? data.status : undefined,
+    terminal,
+    diagnostics: typeof data.diagnostics === 'object' && data.diagnostics !== null
+      ? (data.diagnostics as StreamDiagnostics)
+      : undefined,
   }
 }
 
@@ -689,12 +1067,27 @@ function handleStreamEventOptimized(
     case 'evaluation':
       callbacks.onEvaluation?.(data as { score: number; feedback: string })
       break
-    case 'done':
-      callbacks.onDone?.(data as { status: string; skills_used: string[] })
+    case 'done': {
+      const terminalPayload = toStreamTerminalPayload(data)
+      callbacks.onDone?.({
+        ...terminalPayload,
+        terminal: terminalPayload.terminal === 'recovered' ? 'done' : terminalPayload.terminal,
+        skills_used: Array.isArray(data.skills_used) ? (data.skills_used as string[]) : [],
+        decision: parseLegacyDecision(data),
+      })
       break
-    case 'error':
-      callbacks.onError?.(data.error as string)
+    }
+    case 'error': {
+      const terminalPayload = toStreamTerminalPayload(data)
+      callbacks.onError?.(
+        String(data.error ?? 'Stream error'),
+        {
+          ...terminalPayload,
+          terminal: terminalPayload.terminal === 'recovered' ? 'error' : terminalPayload.terminal,
+        }
+      )
       break
+    }
   }
 }
 

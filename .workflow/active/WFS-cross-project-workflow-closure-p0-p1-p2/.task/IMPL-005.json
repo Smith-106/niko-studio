@@ -1,0 +1,119 @@
+{
+  "id": "IMPL-005",
+  "title": "P1-2 EvaluationPanel 建议 apply/undo/batch 流程闭环",
+  "status": "completed",
+  "context_package_path": ".workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json",
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "priority": "P1",
+    "depends_on": ["IMPL-003", "IMPL-004"],
+    "execution_group": null,
+    "cli_execution_id": "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-005",
+    "cli_execution": {
+      "strategy": "merge_fork",
+      "resume_from": null,
+      "merge_from": [
+        "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-003",
+        "WFS-cross-project-workflow-closure-p0-p1-p2-IMPL-004"
+      ]
+    }
+  },
+  "context": {
+    "requirements": [
+      "实现 3 类建议动作：[apply 单条、undo 单条、batch 批量]",
+      "补齐 2 条状态可视反馈：[执行中状态、失败可回滚状态]",
+      "新增 2 条 API 对齐处理：[recommendation payload parse、batch result merge]"
+    ],
+    "focus_paths": [
+      "desktop/src/api/client.ts",
+      "desktop/src/components/ChatArea.tsx",
+      "desktop/src/components/EvaluationPanel.tsx"
+    ],
+    "acceptance": [
+      "3 类建议动作可执行：验证命令 `pnpm --dir desktop vitest run src/components/EvaluationPanel.test.tsx -t \"apply|undo|batch\"` 退出码 = 0",
+      "API 解析与合并逻辑可回归：验证命令 `pnpm --dir desktop vitest run src/api/client.test.ts -t recommendation` 退出码 = 0",
+      "与 ChatArea 恢复流程不冲突：验证命令 `pnpm --dir desktop vitest run src/components/ChatArea.test.tsx -t recovery` 退出码 = 0"
+    ],
+    "depends_on": ["IMPL-003", "IMPL-004"],
+    "inherited": {
+      "from": "IMPL-003",
+      "context": ["terminal semantic normalization", "checkpoint recovery state"]
+    },
+    "shared_context": {
+      "tech_stack": ["TypeScript", "React", "vitest"],
+      "ui_policy": "前端仅消费 canonical contract",
+      "rollback_policy": "失败时可 undo"
+    },
+    "artifacts": [
+      {
+        "type": "smart_context",
+        "source": "context-package",
+        "path": ".workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json",
+        "priority": "high",
+        "usage": "EvaluationPanel 与 client 契约映射",
+        "contains": "desktop 关键组件与测试文件"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths and smart context",
+        "commands": ["Read(.workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "load_role_analysis_artifacts",
+        "action": "Load role analyses from context-package.json (progressive loading by priority)",
+        "commands": [
+          "Read(.workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/.process/context-package.json)",
+          "Extract(brainstorm_artifacts.role_analyses[].files[].path)",
+          "Read(extracted paths progressively)"
+        ],
+        "output_to": "role_analysis_artifacts",
+        "on_error": "skip_optional"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "实现 apply/undo/batch 核心动作",
+        "description": "在 EvaluationPanel 建立建议执行与回滚链路",
+        "modification_points": [
+          "实现 3 个动作处理器：[apply, undo, batch]",
+          "新增 2 个 UI 状态：[processing, rollback-ready]"
+        ],
+        "logic_flow": [
+          "定义动作状态机",
+          "对接 client.ts recommendation API",
+          "在失败场景触发 undo 入口"
+        ],
+        "depends_on": [],
+        "output": "evaluation_action_flow"
+      },
+      {
+        "step": 2,
+        "title": "补齐 desktop 回归",
+        "description": "补充建议动作与恢复兼容回归测试",
+        "modification_points": [
+          "新增 3 类测试：[apply, undo, batch]"
+        ],
+        "logic_flow": [
+          "扩展 EvaluationPanel.test.tsx",
+          "验证 client.ts payload parse",
+          "验证与 ChatArea 恢复协同"
+        ],
+        "depends_on": [1],
+        "output": "evaluation_flow_verified"
+      }
+    ],
+    "target_files": [
+      "desktop/src/api/client.ts",
+      "desktop/src/components/ChatArea.tsx",
+      "desktop/src/components/EvaluationPanel.tsx"
+    ]
+  }
+}
