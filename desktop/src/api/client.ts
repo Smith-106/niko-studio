@@ -772,7 +772,7 @@ export interface EvaluationResult {
   style_score: number
   logic_score: number
   actionable_feedback: string
-  suggestions: string[]
+  suggestions: RecommendationInput[]
 }
 
 export async function evaluateContent(

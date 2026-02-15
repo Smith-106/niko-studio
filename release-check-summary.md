@@ -1,6 +1,6 @@
 # Release Check Summary
 
-- Decision: NO_GO
+- Decision: GO
 - Go/No-Go rule: any P0 FAIL => NO_GO
 - Codecov strict mode: disabled
 
@@ -10,8 +10,8 @@
 |---|---|---|---|
 | version_consistency | P0 | true | PASS |
 | delivery_semantic_gate | P0 | true | PASS |
-| baseline_tests_and_coverage | P0 | true | FAIL |
-| desktop_check | P0 | true | FAIL |
+| baseline_tests_and_coverage | P0 | true | PASS |
+| desktop_check | P0 | true | PASS |
 | external_e2e_smoke | P1 | false | PASS |
 | production_guard | P1 | false | PASS |
 | metrics_guard | P1 | false | PASS |
@@ -21,12 +21,9 @@
 
 ```json
 {
-  "decision": "NO_GO",
-  "go_no_go_reasons": [
-    "baseline_tests_and_coverage",
-    "desktop_check"
-  ],
-  "generated_at": "2026-02-15T13:44:14.587316+00:00",
+  "decision": "GO",
+  "go_no_go_reasons": [],
+  "generated_at": "2026-02-15T20:58:14.181147+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -48,16 +45,16 @@
       "check_id": "baseline_tests_and_coverage",
       "priority": "P0",
       "blocking": true,
-      "status": "FAIL",
-      "exit_code": 1,
-      "detail": "status=passed, passed_count=4735"
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "status=passed, passed_count=4744"
     },
     {
       "check_id": "desktop_check",
       "priority": "P0",
       "blocking": true,
-      "status": "FAIL",
-      "exit_code": 2,
+      "status": "PASS",
+      "exit_code": 0,
       "detail": "npm --prefix desktop run check"
     },
     {
@@ -122,7 +119,7 @@ delivery gate: ok
 ### 3) baseline_tests_and_coverage
 
 - status: passed
-- passed_count: 4735
+- passed_count: 4744
 
 ```text
 ........................................................................ [  1%]
@@ -151,9 +148,9 @@ delivery gate: ok
 ........................................................................ [ 36%]
 ........................................................................ [ 37%]
 ........................................................................ [ 39%]
-........................................................................ [ 41%]
+........................................................................ [ 40%]
 ........................................................................ [ 42%]
-........................................................................ [ 44%]
+........................................................................ [ 43%]
 ........................................................................ [ 45%]
 ........................................................................ [ 47%]
 ........................................................................ [ 48%]
@@ -163,7 +160,7 @@ delivery gate: ok
 ........................................................................ [ 54%]
 ........................................................................ [ 56%]
 ....................s................................................... [ 57%]
-.....................................F....................F..F.......... [ 59%]
+........................................................................ [ 59%]
 ........................................................................ [ 60%]
 ........................................................................ [ 62%]
 ........................................................................ [ 63%]
@@ -178,19 +175,19 @@ delivery gate: ok
 ........................................................................ [ 77%]
 ........................................................................ [ 78%]
 ........................................................................ [ 80%]
-........................................................................ [ 82%]
+........................................................................ [ 81%]
 ........................................................................ [ 83%]
-........................................................................ [ 85%]
+........................................................................ [ 84%]
 ........................................................................ [ 86%]
-........................................................................ [ 88%]
+........................................................................ [ 87%]
 ........................................................................ [ 89%]
 ........................................................................ [ 91%]
-.....................................s.................................. [ 92%]
+...........................................s............................ [ 92%]
 ........................................................................ [ 94%]
 ........................................................................ [ 95%]
 ........................................................................ [ 97%]
 ........................................................................ [ 98%]
-............................................................             [100%]
+..................................................................       [100%]
 ============================== warnings summary ===============================
 src\services\__init__.py:29
   D:\����Ŀ¼\niko-studio\src\services\__init__.py:29: DeprecationWarning: DistillService is deprecated. Use src.memory.distillation_manager.DistillationManager instead.
@@ -205,12 +202,8 @@ src\services\reranker\models.py:21
 ---------- coverage: platform win32, python 3.12.10-final-0 ----------
 Coverage XML written to file coverage.xml
 
-Required test coverage of 80% reached. Total coverage: 80.68%
-=========================== short test summary info ===========================
-FAILED tests/unit/test_config.py::TestConfigManagerGetSet::test_get_nested - ...
-FAILED tests/unit/test_config.py::TestValidateEnvironment::test_missing_keys
-FAILED tests/unit/test_config.py::TestEnsureEnvironment::test_strict_raises
-3 failed, 4735 passed, 2 skipped, 16 deselected, 2 warnings in 360.36s (0:06:00)
+Required test coverage of 80% reached. Total coverage: 81.04%
+4744 passed, 2 skipped, 16 deselected, 2 warnings in 1108.10s (0:18:28)
 ```
 
 ### 4) desktop_check
@@ -226,8 +219,23 @@ FAILED tests/unit/test_config.py::TestEnsureEnvironment::test_strict_raises
 > niko-studio-desktop@8.0.0 typecheck
 > tsc --noEmit
 
-src/components/EvaluationPanel.test.tsx(54,11): error TS2322: Type '{ id: string; title: string; reason: string; action: string; }' is not assignable to type 'string'.
-src/components/EvaluationPanel.test.tsx(55,11): error TS2322: Type '{ id: string; title: string; reason: string; action: string; }' is not assignable to type 'string'.
+
+> niko-studio-desktop@8.0.0 build
+> npm run ensure-deps && tsc && vite build
+
+
+> niko-studio-desktop@8.0.0 ensure-deps
+> node -e "const fs=require('fs');const cp=require('child_process');if(!fs.existsSync('node_modules/typescript/bin/tsc')){console.log('Dependencies missing, running npm ci...');cp.execSync('npm ci',{stdio:'inherit'});}"
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 1656 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                 [39m[1m[2m  0.47 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
+[2mdist/[22m[35massets/index-CQnRsHfr.css  [39m[1m[2m 21.30 kB[22m[1m[22m[2m │ gzip:   4.88 kB[22m
+[2mdist/[22m[36massets/index-5Dv2pNxK.js   [39m[1m[2m362.87 kB[22m[1m[22m[2m │ gzip: 111.26 kB[22m
+[32m✓ built in 6.57s[39m
 ```
 
 ### 5) external_e2e_smoke
@@ -237,7 +245,7 @@ src/components/EvaluationPanel.test.tsx(55,11): error TS2322: Type '{ id: string
 
 ```text
 ................                                                         [100%]
-16 passed in 6.70s
+16 passed in 22.95s
 ```
 
 ### 6) production_guard

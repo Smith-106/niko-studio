@@ -337,8 +337,11 @@ class TestConfigManagerGetSet:
         assert cm.get("app_name") == "niko-studio"
 
     def test_get_nested(self):
-        cm = ConfigManager(config_path=None, hot_reload=False)
-        assert cm.get("agent.default_model") == "gpt-4o"
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("src.config.load_dotenv", return_value=False):
+                ConfigManager.reset_instance()
+                cm = ConfigManager(config_path=None, hot_reload=False)
+                assert cm.get("agent.default_model") == "gpt-4o"
 
     def test_get_default(self):
         cm = ConfigManager(config_path=None, hot_reload=False)
@@ -486,11 +489,12 @@ class TestValidateEnvironment:
             env.pop("GOOGLE_API_KEY", None)
             env.pop("OPENAI_API_KEY", None)
             with patch.dict(os.environ, env, clear=True):
-                ConfigManager.reset_instance()
-                import src.config as cfg_mod
-                cfg_mod._config_manager = None
-                errors = validate_environment()
-                assert any("LLM" in e or "凭证" in e for e in errors)
+                with patch("src.config.load_dotenv", return_value=False):
+                    ConfigManager.reset_instance()
+                    import src.config as cfg_mod
+                    cfg_mod._config_manager = None
+                    errors = validate_environment()
+                    assert any("LLM" in e or "凭证" in e for e in errors)
 
     def test_with_google_key(self):
         with patch.dict(os.environ, {"GOOGLE_API_KEY": "testkey"}, clear=False):
@@ -522,8 +526,9 @@ class TestEnsureEnvironment:
             env.pop("OPENAI_API_KEY", None)
             env["NIKO_ENV"] = "production"
             with patch.dict(os.environ, env, clear=True):
-                ConfigManager.reset_instance()
-                import src.config as cfg_mod
-                cfg_mod._config_manager = None
-                with pytest.raises(RuntimeError):
-                    ensure_environment(strict=True)
+                with patch("src.config.load_dotenv", return_value=False):
+                    ConfigManager.reset_instance()
+                    import src.config as cfg_mod
+                    cfg_mod._config_manager = None
+                    with pytest.raises(RuntimeError):
+                        ensure_environment(strict=True)
