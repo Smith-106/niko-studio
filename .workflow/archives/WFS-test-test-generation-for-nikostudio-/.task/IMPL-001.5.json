@@ -1,7 +1,7 @@
 {
   "id": "IMPL-001.5",
   "title": "测试质量评审与覆盖率门槛校验",
-  "status": "pending",
+  "status": "completed",
   "context_package_path": ".workflow/active/WFS-test-test-generation-for-nikostudio-/.process/context-package.json",
   "cli_execution_id": "WFS-test-test-generation-for-nikostudio--IMPL-001.5",
   "cli_execution": {

@@ -71,5 +71,42 @@
         "持续监控 stream/checkpoint/gate 三条关键链路"
       ]
     }
+  },
+  {
+    "session_id": "WFS-fix-six-critical-risks",
+    "description": "修复关键风险点（全部六项）",
+    "title": "IMPL Plan - WFS-fix-six-critical-risks",
+    "summary": "六项关键风险修复会话，采用 soft gate 到 selective hard gate 收敛策略，完成终态语义、checkpoint 恢复、plan_hash 一致性、状态迁移、label/slug 映射与 gateway 契约回归闭环。",
+    "archived_at": "2026-02-15T15:42:22Z",
+    "archive_path": ".workflow/archives/WFS-fix-six-critical-risks",
+    "metrics": {
+      "duration_hours": 15.7,
+      "tasks_completed": 8,
+      "summaries_generated": 8,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "workflow",
+      "risk-fix",
+      "checkpoint",
+      "gateway",
+      "regression"
+    ],
+    "lessons": {
+      "successes": [
+        "完成六项关键风险的端到端收敛并通过主要回归链路",
+        "通过 waiver 机制闭环 synthesis 缺口且不放宽测试门禁"
+      ],
+      "challenges": [
+        "plan 叙事链路与 task DAG 表述出现轻微不一致"
+      ],
+      "watch_patterns": [
+        "进入 hard gate 前需确保 .brainstorming 证据链完备或有临时 waiver",
+        "持续保持 TODO_LIST 与 .task 状态同步"
+      ]
+    }
   }
 ]

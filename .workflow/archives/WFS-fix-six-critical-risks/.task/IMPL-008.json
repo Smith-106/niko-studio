@@ -1,0 +1,184 @@
+{
+  "id": "IMPL-008",
+  "title": "按先 soft 后 hard 策略收敛门禁并执行全链路回归",
+  "status": "completed",
+  "status_history": [
+    {
+      "status": "pending",
+      "at": "2026-02-15T00:00:00Z",
+      "note": "initial"
+    },
+    {
+      "status": "completed",
+      "at": "2026-02-15T23:00:00Z",
+      "note": "workflow execution completed"
+    }
+  ],
+  "context_package_path": ".workflow/active/WFS-fix-six-critical-risks/.process/context-package.json",
+  "cli_execution_id": "WFS-fix-six-critical-risks-IMPL-008",
+  "cli_execution": {
+    "strategy": "merge_fork",
+    "resume_from": null,
+    "merge_from": [
+      "WFS-fix-six-critical-risks-IMPL-005",
+      "WFS-fix-six-critical-risks-IMPL-007"
+    ]
+  },
+  "meta": {
+    "type": "test-fix",
+    "agent": "@test-fix-agent",
+    "execution_group": null,
+    "module": "quality-gate",
+    "test_framework": "pytest+vitest",
+    "coverage_target": "80%",
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false,
+      "previous_cli_id": null
+    }
+  },
+  "context": {
+    "requirements": [
+      "执行 2 阶段门禁策略: [soft gate collect, selective hard gate enforce]",
+      "覆盖 5 组关键回归命令: [pytest baseline, workflow decision, gateway contract, desktop targeted vitest, desktop test:ci]",
+      "生成 1 份收敛结果标准: [all critical chains pass with backward compatibility]"
+    ],
+    "focus_paths": [
+      ".github/workflows/integration-tests.yml",
+      "tests/unit/workflow/test_workflow_engine.py",
+      "tests/unit/mcp/test_gateway_stream.py",
+      "desktop/src/api/client.test.ts",
+      "desktop/src/components/EvaluationPanel.test.tsx"
+    ],
+    "acceptance": [
+      "soft gate 观测完成且无新增关键失败: verify by `pytest tests/unit/workflow/test_workflow_engine.py -k \"decision\" -q && pytest tests/unit/mcp/test_gateway_stream.py -k \"contract\" -q`",
+      "hard gate 关键三组通过: verify by `pytest tests/unit/workflow/test_workflow_engine.py -k \"decision\" -q && pytest tests/unit/mcp/test_gateway_stream.py -k \"contract\" -q && npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx`",
+      "全链路基线通过: verify by `pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml && npm --prefix desktop run test:ci`"
+    ],
+    "depends_on": ["IMPL-005", "IMPL-007"],
+    "inherited": {
+      "from": "IMPL-007",
+      "context": ["desktop semantic regression ready", "session migration stabilized"]
+    },
+    "shared_context": {
+      "gate_strategy": "soft first then selective hard",
+      "quality_goal": "zero regression on six risks",
+      "compatibility_goal": "backward compatible contracts"
+    },
+    "artifacts": [
+      {
+        "type": "topic_framework",
+        "source": "planning_notes",
+        "path": ".workflow/active/WFS-fix-six-critical-risks/planning-notes.md",
+        "priority": "highest",
+        "usage": "gate progression policy",
+        "contains": "soft gate first, selective hard gate"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths and smart context",
+        "commands": ["Read(.workflow/active/WFS-fix-six-critical-risks/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "load_role_analysis_artifacts",
+        "action": "Load role analyses from context-package.json (progressive loading by priority)",
+        "commands": [
+          "Read(.workflow/active/WFS-fix-six-critical-risks/.process/context-package.json)",
+          "Extract(brainstorm_artifacts.role_analyses[].files[].path)",
+          "Read(extracted paths progressively)"
+        ],
+        "output_to": "role_analysis_artifacts",
+        "on_error": "skip_optional"
+      },
+      {
+        "step": "verify_gate_command_matrix",
+        "action": "Verify pytest and vitest command matrix from CI workflow",
+        "commands": [
+          "Read(.github/workflows/integration-tests.yml)",
+          "Read(pytest.ini)",
+          "Read(desktop/package.json)"
+        ],
+        "output_to": "gate_commands",
+        "on_error": "fail"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "执行 soft gate 收敛",
+        "description": "先运行 soft gate 关键命令收集风险收敛状态",
+        "modification_points": [
+          "执行 2 组 soft 命令: [workflow decision, gateway contract]"
+        ],
+        "logic_flow": [
+          "运行 workflow decision 回归",
+          "运行 gateway contract 回归",
+          "记录告警不阻断"
+        ],
+        "depends_on": [],
+        "output": "soft_gate_result"
+      },
+      {
+        "step": 2,
+        "title": "启用 selective hard gate",
+        "description": "仅对高风险三组断言启用 hard fail",
+        "modification_points": [
+          "执行 3 组 hard 命令: [workflow decision, gateway contract, desktop parser/evaluation]"
+        ],
+        "logic_flow": [
+          "复跑关键后端断言",
+          "执行 desktop targeted vitest",
+          "失败则回滚到 soft 阶段策略"
+        ],
+        "depends_on": [1],
+        "output": "hard_gate_result"
+      },
+      {
+        "step": 3,
+        "title": "执行全链路基线回归",
+        "description": "运行 pytest baseline 与 desktop test:ci 作为最终收敛验证",
+        "modification_points": [
+          "执行 2 条基线命令: [pytest baseline, desktop test:ci]"
+        ],
+        "logic_flow": [
+          "运行 Python baseline 覆盖率门槛",
+          "运行 desktop CI 测试",
+          "确认六项风险无回归"
+        ],
+        "depends_on": [2],
+        "output": "full_regression_pass"
+      }
+    ],
+    "reusable_test_tools": [
+      "tests/conftest.py",
+      "desktop/src/test/setup.ts",
+      "tests/fixtures"
+    ],
+    "test_commands": {
+      "run_tests": "pytest",
+      "run_coverage": "pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml",
+      "run_specific": "pytest {test_file} -q"
+    },
+    "acceptance_commands": [
+      "pytest tests/unit/workflow/test_workflow_engine.py -k \"decision\" -q",
+      "pytest tests/unit/mcp/test_gateway_stream.py -k \"contract\" -q",
+      "npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx",
+      "pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml",
+      "npm --prefix desktop run test:ci"
+    ],
+    "target_files": [
+      ".github/workflows/integration-tests.yml",
+      "tests/unit/workflow/test_workflow_engine.py",
+      "tests/unit/mcp/test_gateway_stream.py",
+      "desktop/src/api/client.test.ts",
+      "desktop/src/components/EvaluationPanel.test.tsx"
+    ]
+  }
+}

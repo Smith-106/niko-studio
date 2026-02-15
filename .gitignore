@@ -46,6 +46,17 @@ htmlcov/
 *.db
 *.log
 
+# Local workflow artifacts
+.tmp/
+.niko-studio/
+.workflow/.analysis/
+node_modules/
+desktop/node_modules/
+test-results/
+desktop/test-results/
+coverage.xml
+pytest-*.xml
+
 # Reference projects (submodules or downloaded)
 cherry-studio/
 Claude-Code-Workflow/

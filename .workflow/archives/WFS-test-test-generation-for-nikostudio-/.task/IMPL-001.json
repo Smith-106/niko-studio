@@ -1,7 +1,7 @@
 {
   "id": "IMPL-001",
   "title": "生成 L0-L3 测试与 pytest 配置",
-  "status": "pending",
+  "status": "completed",
   "context_package_path": ".workflow/active/WFS-test-test-generation-for-nikostudio-/.process/context-package.json",
   "cli_execution_id": "WFS-test-test-generation-for-nikostudio--IMPL-001",
   "cli_execution": {

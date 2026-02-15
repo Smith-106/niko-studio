@@ -1,0 +1,79 @@
+{
+  "session_id": "WFS-fix-six-critical-risks",
+  "mode": "auto_yes",
+  "status": "resolved",
+  "generated_at": "2026-02-15T00:00:00Z",
+  "source_context": ".workflow/active/WFS-fix-six-critical-risks/.process/context-package.json",
+  "risk_assessment": {
+    "risk_level": "high",
+    "eligible_for_resolution": true,
+    "reason": "conflict_detection.risk_level 为 high，满足冲突解决执行条件"
+  },
+  "conflicts": [
+    {
+      "conflict_id": "CF-001-terminal-semantics-drift",
+      "type": "ContractDrift",
+      "severity": "high",
+      "title": "终态 recovered/done 语义漂移风险",
+      "description": "workflow 端与 desktop 端对 terminal 字段解释可能漂移，导致 UI phase 状态错误。",
+      "recommended_strategy": "保留 canonical 语义并维持 legacy_contract_fields 回填兼容",
+      "resolution": "adopted",
+      "status": "resolved_by_strategy"
+    },
+    {
+      "conflict_id": "CF-002-level-label-slug-mismatch",
+      "type": "SchemaMismatch",
+      "severity": "high",
+      "title": "workflow_level 与 workflow_level_slug 映射不一致",
+      "description": "标签与 slug 双表达存在解释分歧，可能影响 route-driven UX。",
+      "recommended_strategy": "以 types.py 中转换函数作为单一映射来源并保持向后兼容字段",
+      "resolution": "adopted",
+      "status": "resolved_by_strategy"
+    },
+    {
+      "conflict_id": "CF-003-plan-hash-replay-consistency",
+      "type": "ReplayConsistency",
+      "severity": "high",
+      "title": "recommendations 注入与 plan_hash 重算一致性",
+      "description": "checkpoint 恢复与 recommendation 注入链路若重算不一致，会破坏回放确定性。",
+      "recommended_strategy": "保持既有 deterministic 规则并绑定现有 integration/unit 回归断言",
+      "resolution": "adopted",
+      "status": "resolved_by_strategy"
+    }
+  ],
+  "custom_conflicts": [
+    {
+      "conflict_id": "CF-CUSTOM-001-missing-brainstorm-artifacts",
+      "type": "MissingArtifact",
+      "severity": "medium",
+      "title": "brainstorm 工件缺失",
+      "description": "未检测到 guidance/synthesis brainstorming 文件，按要求不报错中断。",
+      "status": "resolved_by_constraints",
+      "handling": "写入 planning_constraints 并继续规划层处理"
+    }
+  ],
+  "planning_constraints": [
+    {
+      "constraint": "当 .brainstorming/guidance-specification.md 缺失时，不阻断冲突解决流程；以 context-package 的 conflict_detection 与历史冲突策略作为决策依据。",
+      "source": "auto-fallback",
+      "applies_to": "WFS-fix-six-critical-risks"
+    },
+    {
+      "constraint": "当 .brainstorming/synthesis-specification.md 缺失时，不阻断冲突解决流程；将待补齐项记录到 planning_constraints。",
+      "source": "auto-fallback",
+      "applies_to": "WFS-fix-six-critical-risks"
+    },
+    {
+      "constraint": "保持最小改动、向后兼容、先 soft gate 后 selective hard gate，并以现有 integration/unit 测试作为回归护栏。",
+      "source": "context-package.conflict_detection.mitigation_strategy",
+      "applies_to": "WFS-fix-six-critical-risks"
+    }
+  ],
+  "summary": {
+    "total_conflicts": 4,
+    "resolved_with_strategy": 3,
+    "custom_handling": 1,
+    "fallback_constraints": 3
+  },
+  "failed_modifications": []
+}

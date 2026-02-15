@@ -1,0 +1,163 @@
+{
+  "id": "IMPL-001",
+  "title": "建立六项风险修复基线与软门禁校验矩阵",
+  "status": "completed",
+  "status_history": [
+    {
+      "status": "pending",
+      "at": "2026-02-15T00:00:00Z",
+      "note": "initial"
+    },
+    {
+      "status": "completed",
+      "at": "2026-02-15T23:00:00Z",
+      "note": "workflow execution completed"
+    }
+  ],
+  "context_package_path": ".workflow/active/WFS-fix-six-critical-risks/.process/context-package.json",
+  "cli_execution_id": "WFS-fix-six-critical-risks-IMPL-001",
+  "cli_execution": {
+    "strategy": "new",
+    "resume_from": null,
+    "merge_from": []
+  },
+  "meta": {
+    "type": "bugfix",
+    "agent": "@action-planning-agent",
+    "execution_group": null,
+    "module": null,
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false,
+      "previous_cli_id": null
+    }
+  },
+  "context": {
+    "requirements": [
+      "定义 6 项风险映射: [terminal semantics, checkpoint restore, recommendations+plan_hash, session migration, L1-L5 label/slug, gateway mount contract]",
+      "生成 8 条任务依赖边: [001->002, 001->003, 002->004, 003->004, 003->005, 002->006, 004+006->007, 005+007->008]",
+      "建立 4 组测试基线命令: [pytest baseline, workflow unit, gateway contract, desktop vitest]"
+    ],
+    "focus_paths": [
+      ".workflow/active/WFS-fix-six-critical-risks/planning-notes.md",
+      ".workflow/active/WFS-fix-six-critical-risks/.process/context-package.json",
+      ".workflow/active/WFS-fix-six-critical-risks/.process/conflict-resolution.json",
+      ".github/workflows/integration-tests.yml"
+    ],
+    "acceptance": [
+      "6 项风险均有任务映射: verify by `python - <<'PY'\nimport json,glob\nfiles=glob.glob('.workflow/active/WFS-fix-six-critical-risks/.task/IMPL-*.json')\nassert len(files)>=8\nprint(len(files))\nPY`",
+      "pytest 基线命令可执行: verify by `pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml`",
+      "desktop vitest 基线命令可执行: verify by `npm --prefix desktop run test:ci`"
+    ],
+    "depends_on": [],
+    "inherited": {
+      "from": null,
+      "context": []
+    },
+    "shared_context": {
+      "tech_stack": ["Python", "TypeScript", "pytest", "vitest"],
+      "mitigation_strategy": "最小改动、向后兼容、先 soft gate 后 selective hard gate",
+      "conventions": ["保持 legacy_contract_fields 回填", "禁止破坏现有 endpoint 契约"]
+    },
+    "artifacts": [
+      {
+        "type": "topic_framework",
+        "source": "planning_notes",
+        "path": ".workflow/active/WFS-fix-six-critical-risks/planning-notes.md",
+        "priority": "highest",
+        "usage": "约束与风险主轴来源",
+        "contains": "六项风险与最小改动策略"
+      },
+      {
+        "type": "synthesis_specification",
+        "source": "context_package",
+        "path": ".workflow/active/WFS-fix-six-critical-risks/.process/context-package.json",
+        "priority": "highest",
+        "usage": "任务映射与文件优先级",
+        "contains": "focus_mapping 与 prioritized_context"
+      },
+      {
+        "type": "individual_role_analysis",
+        "source": "conflict_resolution",
+        "path": ".workflow/active/WFS-fix-six-critical-risks/.process/conflict-resolution.json",
+        "priority": "high",
+        "usage": "冲突策略复用",
+        "contains": "CF-001/002/003 adopted 约束"
+      }
+    ]
+  },
+  "flow_control": {
+    "pre_analysis": [
+      {
+        "step": "load_context_package",
+        "action": "Load context package for artifact paths and smart context",
+        "commands": ["Read(.workflow/active/WFS-fix-six-critical-risks/.process/context-package.json)"],
+        "output_to": "context_package",
+        "on_error": "fail"
+      },
+      {
+        "step": "load_role_analysis_artifacts",
+        "action": "Load role analyses from context-package.json (progressive loading by priority)",
+        "commands": [
+          "Read(.workflow/active/WFS-fix-six-critical-risks/.process/context-package.json)",
+          "Extract(brainstorm_artifacts.role_analyses[].files[].path)",
+          "Read(extracted paths progressively)"
+        ],
+        "output_to": "role_analysis_artifacts",
+        "on_error": "skip_optional"
+      },
+      {
+        "step": "load_conflict_resolution",
+        "action": "Load resolved conflict constraints for planning baseline",
+        "commands": ["Read(.workflow/active/WFS-fix-six-critical-risks/.process/conflict-resolution.json)"],
+        "output_to": "conflict_constraints",
+        "on_error": "skip_optional"
+      }
+    ],
+    "implementation_approach": [
+      {
+        "step": 1,
+        "title": "固化风险与文件映射",
+        "description": "将 6 项风险映射到 6 组主文件并设定优先级",
+        "modification_points": [
+          "映射 6 项风险到 12 个主文件: [workflow_engine.py, session_manager.py, types.py, gateway.py, client.ts, ChatArea.tsx, EvaluationPanel.tsx, test_workflow_integration.py, test_workflow_engine.py, test_levels_types.py, client.test.ts, EvaluationPanel.test.tsx]"
+        ],
+        "logic_flow": [
+          "读取 context-package 的 focus_mapping",
+          "对齐 conflict-resolution 的 adopted 策略",
+          "产出任务边界与测试入口"
+        ],
+        "depends_on": [],
+        "output": "risk_baseline"
+      },
+      {
+        "step": 2,
+        "title": "建立软门禁验证矩阵",
+        "description": "以不阻断方式建立 pytest + vitest 的四组命令矩阵",
+        "modification_points": [
+          "定义 4 组命令: [pytest baseline, workflow unit, gateway contract, desktop vitest]"
+        ],
+        "logic_flow": [
+          "复用 integration-tests.yml 命令",
+          "保留 soft fail 语义",
+          "输出执行序列供后续任务继承"
+        ],
+        "depends_on": [1],
+        "output": "soft_gate_matrix"
+      }
+    ],
+    "acceptance_commands": [
+      "pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml",
+      "pytest tests/unit/workflow/test_workflow_engine.py -q",
+      "pytest tests/unit/mcp/test_gateway_stream.py -k \"contract\" -q",
+      "npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx",
+      "npm --prefix desktop run test:ci"
+    ],
+    "target_files": [
+      ".workflow/active/WFS-fix-six-critical-risks/IMPL_PLAN.md",
+      ".workflow/active/WFS-fix-six-critical-risks/TODO_LIST.md",
+      ".workflow/active/WFS-fix-six-critical-risks/.task/IMPL-001.json"
+    ]
+  }
+}
