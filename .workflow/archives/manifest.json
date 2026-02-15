@@ -1,0 +1,75 @@
+[
+  {
+    "session_id": "WFS-test-test-generation-for-nikostudio-",
+    "description": "Test generation for: 测试 nikostudio 的所有代码能否正常工作，测试自动执行，无需人工干预，测试完成后自动验证",
+    "title": "Implementation Plan: nikostudio 自动化测试规划",
+    "summary": "本次规划目标是为 nikostudio 构建可自动执行、无需人工干预的测试体系，并在测试完成后自动验证结果。当前 CI 已存在集成测试入口与覆盖率门槛，但单元测试覆盖不足、pytest 配置缺失及覆盖率标准不一致，导致自动化质量门槛存在偏差。",
+    "archived_at": "2026-02-14T21:14:48.554019+00:00",
+    "archive_path": ".workflow/archives/WFS-test-test-generation-for-nikostudio-",
+    "metrics": {
+      "duration_hours": 117.25,
+      "tasks_completed": 3,
+      "summaries_generated": 0,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "test-automation",
+      "pytest",
+      "coverage",
+      "ci",
+      "nikostudio"
+    ],
+    "lessons": {
+      "successes": [
+        "自动化测试达到高通过率",
+        "测试执行结果可复现"
+      ],
+      "challenges": [
+        "workflow skill 回调链路不稳定"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 task 状态同步"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-cross-project-workflow-closure-p0-p1-p2",
+    "description": "cross-project workflow closure (P0/P1/P2)",
+    "title": "IMPL Plan - WFS-cross-project-workflow-closure-p0-p1-p2",
+    "summary": "cross-project workflow closure (P0/P1/P2)",
+    "archived_at": "2026-02-15T12:13:29.771684+00:00",
+    "archive_path": ".workflow/archives/WFS-cross-project-workflow-closure-p0-p1-p2",
+    "metrics": {
+      "duration_hours": 6.7,
+      "tasks_completed": 10,
+      "summaries_generated": 3,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "workflow",
+      "ci",
+      "gate",
+      "desktop",
+      "checkpoint"
+    ],
+    "lessons": {
+      "successes": [
+        "完成 P0/P1/P2 分层任务并形成闭环",
+        "关键回归链路通过并满足覆盖率门槛"
+      ],
+      "challenges": [
+        "跨端测试命令在 Windows 与 Linux 语���差异需要兼容处理"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态一致",
+        "持续监控 stream/checkpoint/gate 三条关键链路"
+      ]
+    }
+  }
+]

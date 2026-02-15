@@ -1,0 +1,237 @@
+{
+  "relevant_files": [
+    {
+      "path": "src/mcp/gateway.py",
+      "relevance": 0.98,
+      "rationale": "Gateway is the orchestration entrypoint for route/plan/execute, checkpoint APIs, and desktop streaming endpoints."
+    },
+    {
+      "path": "src/workflow/workflow_engine.py",
+      "relevance": 0.96,
+      "rationale": "Core plan-act engine with level templates, risk gate decisions, and checkpoint lifecycle."
+    },
+    {
+      "path": "src/workflow/session/session_manager.py",
+      "relevance": 0.94,
+      "rationale": "Session lifecycle persistence for active/archived states, content routing, and snapshot indexing."
+    },
+    {
+      "path": "src/workflow/levels/types.py",
+      "relevance": 0.92,
+      "rationale": "Canonical L1-L5 semantics, level configs, and routing rules used across APIs and UI payloads."
+    },
+    {
+      "path": "desktop/src/api/client.ts",
+      "relevance": 0.9,
+      "rationale": "Desktop SSE client contract for /chat/stream, including terminal/decision/diagnostics handling."
+    },
+    {
+      "path": "desktop/src/components/ChatArea.tsx",
+      "relevance": 0.88,
+      "rationale": "Frontend orchestration state machine for streaming phases, fallback, and checkpoint recovery hints."
+    },
+    {
+      "path": "desktop/src/components/EvaluationPanel.tsx",
+      "relevance": 0.81,
+      "rationale": "UI integration for quality decision display and checkpoint create/restore interactions."
+    },
+    {
+      "path": "src/container.py",
+      "relevance": 0.79,
+      "rationale": "Dependency container wires workflow/agent engines and startup prewarm behavior used by gateway."
+    },
+    {
+      "path": "src/workflow/base_state.py",
+      "relevance": 0.75,
+      "rationale": "Cross-domain workflow state contract for session metadata, decision fields, and loop controls."
+    },
+    {
+      "path": "src/workflow/session/resume_strategy.py",
+      "relevance": 0.73,
+      "rationale": "Alternative checkpoint persistence/resume strategies relevant to long-running closure loops."
+    },
+    {
+      "path": ".workflow/active/WFS-cross-project-workflow-closure-p0-p1-p2/planning-notes.md",
+      "relevance": 0.69,
+      "rationale": "Session-level constraints define P0/P1/P2 closure scope and backward-compatible rollout requirements."
+    }
+  ],
+  "patterns": [
+    {
+      "name": "Gateway-centered orchestration",
+      "description": "Gateway exposes both MCP tool mounts and REST endpoints, acting as the single integration hub for workflow, agents, and desktop app traffic."
+    },
+    {
+      "name": "Level semantics normalization",
+      "description": "WorkflowLevel label/slug conversion normalizes L1-L5 across backend route/plan/stream payloads and frontend consumers."
+    },
+    {
+      "name": "Soft-gate first decision model",
+      "description": "Workflow gate decisions and stream terminal payloads currently prioritize go/soft_go/no_go signaling before hard-blocking behavior."
+    },
+    {
+      "name": "Session filesystem as source of truth",
+      "description": "SessionManager persists active/archived session state and route-based artifacts, enabling recoverability and auditability."
+    },
+    {
+      "name": "Dual checkpoint mechanisms",
+      "description": "WorkflowEngine uses in-memory plus optional Git commit checkpoints, while resume_strategy persists checkpoint snapshots on disk; these need alignment for closure orchestration consistency."
+    },
+    {
+      "name": "Desktop stream-first UX with fallback",
+      "description": "Desktop handles SSE content/progress/evaluation events and falls back to non-stream chat path when stream terminal is error/aborted."
+    },
+    {
+      "name": "Container-based lazy engine wiring",
+      "description": "ServiceContainer provides lazy initialization and startup prewarm, reducing gateway cold-start and centralizing dependency composition."
+    }
+  ],
+  "integration_points": [
+    {
+      "location": "src/mcp/gateway.py:541",
+      "detail": "workflow_route tool delegates to WorkflowEngine.route for level routing."
+    },
+    {
+      "location": "src/mcp/gateway.py:563",
+      "detail": "workflow_plan tool delegates to WorkflowEngine.plan for plan generation and template metadata."
+    },
+    {
+      "location": "src/mcp/gateway.py:582",
+      "detail": "workflow_execute tool delegates to WorkflowEngine.execute for step execution and gate response."
+    },
+    {
+      "location": "src/mcp/gateway.py:602",
+      "detail": "checkpoint_create endpoint bridges API calls to WorkflowEngine.create_checkpoint."
+    },
+    {
+      "location": "src/mcp/gateway.py:1082",
+      "detail": "chat endpoint validates workflowLevel and routes requests through Commander + Writer orchestration path."
+    },
+    {
+      "location": "src/mcp/gateway.py:1368",
+      "detail": "chat_stream endpoint provides desktop streaming contract with event types start/routing/progress/content/evaluation/done/error."
+    },
+    {
+      "location": "src/mcp/gateway.py:1565",
+      "detail": "SSE terminal decision emits go/soft_go based on fallback diagnostics; error path emits no_go."
+    },
+    {
+      "location": "src/mcp/gateway.py:1934",
+      "detail": "Gateway lifespan starts MCP services in parallel and prewarms container engines."
+    },
+    {
+      "location": "src/workflow/workflow_engine.py:227",
+      "detail": "plan() auto-routes level, resolves template metadata, and materializes step dependencies."
+    },
+    {
+      "location": "src/workflow/workflow_engine.py:286",
+      "detail": "execute() enforces dependency ordering, applies risk gate, and updates plan progress state."
+    },
+    {
+      "location": "src/workflow/workflow_engine.py:517",
+      "detail": "create_checkpoint() supports optional git-based snapshot for rollback points."
+    },
+    {
+      "location": "src/workflow/session/session_manager.py:89",
+      "detail": "init() creates session directories and session.json lifecycle metadata."
+    },
+    {
+      "location": "src/workflow/session/session_manager.py:199",
+      "detail": "write() updates artifact files and appends snapshot index for traceability."
+    },
+    {
+      "location": "src/workflow/session/session_manager.py:254",
+      "detail": "restore() moves archived session back to active and flips status."
+    },
+    {
+      "location": "src/workflow/levels/types.py:12",
+      "detail": "WorkflowDecision defines machine-readable go/soft_go/no_go values used in gate contracts."
+    },
+    {
+      "location": "src/workflow/levels/types.py:428",
+      "detail": "LevelRouter provides rule-based level routing used by engine/gateway decisions."
+    },
+    {
+      "location": "desktop/src/api/client.ts:587",
+      "detail": "chatStream() consumes /chat/stream and parses SSE protocol into UI callbacks."
+    },
+    {
+      "location": "desktop/src/api/client.ts:731",
+      "detail": "done event parser maps backend decision and terminal into StreamDonePayload."
+    },
+    {
+      "location": "desktop/src/components/ChatArea.tsx:83",
+      "detail": "runNormalChat() coordinates stream lifecycle, fallback to chat(), and checkpoint recovery messaging."
+    },
+    {
+      "location": "desktop/src/components/EvaluationPanel.tsx:94",
+      "detail": "Evaluation panel invokes checkpoint create/restore endpoints for operator-controlled rollback."
+    },
+    {
+      "location": "src/container.py:169",
+      "detail": "workflow property lazily instantiates WorkflowEngine used by gateway tools and endpoints."
+    }
+  ],
+  "constraints": [
+    "P0/P1/P2 closure must reuse existing gateway/workflow_engine/session_manager/desktop flow with minimal changes and backward compatibility.",
+    "Current gating is soft-first (decision signaling) and not a strict hard gate; hard enforcement should be introduced incrementally.",
+    "Checkpoint behavior is split between workflow_engine (in-memory + git optional) and resume_strategy (disk checkpoints), creating consistency risk for cross-session recovery.",
+    "Workflow route logic exists in multiple places (LevelRouter rules, WorkflowEngine keyword scoring, Commander route path), which can drift unless unified.",
+    "Streaming reliability depends on allowLlmFallback; when disabled and LLM unavailable, gateway returns hard error (503) before stream starts.",
+    "SessionManager defaults to .writing/sessions while workflow artifacts in current initiative are under .workflow/active; this implies path/model bridging requirements.",
+    "Desktop contract currently expects decision and diagnostics in done/error events; any gateway payload changes must preserve this shape.",
+    "Gateway startup relies on parallel MCP session startup + engine prewarm, so new orchestration modules must avoid blocking lifespan initialization."
+  ],
+  "clarification_needs": [
+    {
+      "question": "P0 closure should prioritize which source of truth for session persistence?",
+      "context": "Session state currently spans .writing/sessions (SessionManager) and .workflow/active (project workflow artifacts).",
+      "options": [
+        "Keep dual storage and add mapping layer",
+        "Converge all workflow closure artifacts into .workflow",
+        "Converge all closure artifacts into .writing/sessions"
+      ],
+      "recommended": 1
+    },
+    {
+      "question": "When should hard gate be enabled for P1/P2?",
+      "context": "Existing design emits soft_go/no_go signals but does not block execution by default.",
+      "options": [
+        "P1 keep soft gate only, P2 enable hard gate for selected high-risk routes",
+        "Enable hard gate immediately for all L3+ routes",
+        "Keep soft gate through P2 and defer hard gate to later release"
+      ],
+      "recommended": 1
+    },
+    {
+      "question": "Which checkpoint mechanism should be canonical for rollback APIs?",
+      "context": "workflow_engine and resume_strategy maintain separate checkpoint stores and semantics.",
+      "options": [
+        "Use workflow_engine as API canonical source and sync to resume_strategy",
+        "Use resume_strategy as canonical source and adapt gateway endpoints",
+        "Expose both explicitly via separate API namespaces"
+      ],
+      "recommended": 1
+    },
+    {
+      "question": "How should workflow level routing be unified across gateway, engine, and commander?",
+      "context": "There are at least three routing paths that can diverge under edge prompts.",
+      "options": [
+        "Centralize on LevelRouter and treat others as adapters",
+        "Centralize on Commander route and deprecate engine-level heuristics",
+        "Keep current multi-router setup with periodic contract tests"
+      ],
+      "recommended": 1
+    },
+    {
+      "question": "Desktop streaming contract versioning needed for P2 semantics unification?",
+      "context": "Client consumes contract_version, terminal, decision, and diagnostics; schema evolution impacts backward compatibility.",
+      "options": [
+        "Freeze current event schema and add additive fields only",
+        "Introduce explicit v2 stream endpoint",
+        "Allow in-place breaking contract update with desktop lockstep"
+      ],
+      "recommended": 1
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "relevant_files": [
+    {
+      "path": "D:/工作目录/niko-studio/pytest.ini",
+      "role": "Python pytest 全局配置（默认排除 e2e、覆盖率门槛 80）",
+      "evidence": "pytest.ini:1"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml",
+      "role": "CI 主入口（Python baseline + desktop test:ci）",
+      "evidence": "integration-tests.yml:9"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/.github/workflows/external-release-gate.yml",
+      "role": "外部门禁入口（e2e smoke）",
+      "evidence": "external-release-gate.yml:26"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/desktop/package.json",
+      "role": "desktop 测试命令定义（vitest/test:ci）",
+      "evidence": "desktop/package.json:5"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/tests/unit/mcp/test_gateway_stream.py",
+      "role": "后端 streaming SSE 合约与事件序列测试",
+      "evidence": "test_gateway_stream.py:54"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/desktop/src/api/client.test.ts",
+      "role": "desktop 端 chatStream SSE 解析与错误映射测试",
+      "evidence": "client.test.ts:22"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/tests/unit/workflow/test_workflow_engine.py",
+      "role": "WorkflowEngine 单元测试（route/plan/execute/gate/checkpoint）",
+      "evidence": "test_workflow_engine.py:83"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/tests/integration/test_workflow_integration.py",
+      "role": "WorkflowEngine 集成测试（L1-L5、Plan-Act、checkpoint）",
+      "evidence": "test_workflow_integration.py:1"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/tests/integration/test_e2e_workflow.py",
+      "role": "e2e 标记测试（外部门禁 smoke 目标）",
+      "evidence": "test_e2e_workflow.py:16"
+    }
+  ],
+  "test_entrypoints": {
+    "python": {
+      "default_config": {
+        "pytest_ini": "D:/工作目录/niko-studio/pytest.ini",
+        "key_addopts": [
+          "-m \"not e2e\"",
+          "--cov=src",
+          "--cov-fail-under=80"
+        ]
+      },
+      "commands": [
+        {
+          "name": "local/default",
+          "command": "pytest",
+          "source": "pytest.ini addopts 生效"
+        },
+        {
+          "name": "ci/baseline",
+          "command": "pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml",
+          "source": "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml:38"
+        },
+        {
+          "name": "ci/e2e-smoke",
+          "command": "pytest -o addopts=\"\" -m \"e2e\" tests/integration/test_e2e_workflow.py -q --tb=short --junitxml=pytest-e2e.xml",
+          "source": "D:/工作目录/niko-studio/.github/workflows/external-release-gate.yml:52"
+        }
+      ]
+    },
+    "desktop": {
+      "package_scripts": {
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:ci": "mkdir -p test-results && vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/vitest.junit.xml"
+      },
+      "ci_command": {
+        "command": "npm run test:ci",
+        "working_directory": "desktop",
+        "source": "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml:81"
+      }
+    }
+  },
+  "patterns": [
+    {
+      "name": "Python streaming SSE contract",
+      "description": "后端通过 TestClient 调 /chat/stream，解析 SSE 文本并断言 start/routing/progress/content/done/error 事件及字段。",
+      "evidence": [
+        "D:/工作目录/niko-studio/tests/unit/mcp/test_gateway_stream.py:26",
+        "D:/工作目录/niko-studio/tests/unit/mcp/test_gateway_stream.py:84",
+        "D:/工作目录/niko-studio/tests/unit/mcp/test_gateway_stream.py:164",
+        "D:/工作目录/niko-studio/tests/unit/mcp/test_gateway_stream.py:289"
+      ]
+    },
+    {
+      "name": "Desktop streaming parser",
+      "description": "前端用 ReadableStream 构造 SSE 响应，验证 chatStream 对 content/done/error 的回调映射、AbortSignal 透传。",
+      "evidence": [
+        "D:/工作目录/niko-studio/desktop/src/api/client.test.ts:3",
+        "D:/工作目录/niko-studio/desktop/src/api/client.test.ts:38",
+        "D:/工作目录/niko-studio/desktop/src/api/client.test.ts:66",
+        "D:/工作目录/niko-studio/desktop/src/api/client.test.ts:80"
+      ]
+    },
+    {
+      "name": "Workflow engine unit-first + integration",
+      "description": "先用单元测试覆盖 route/plan/execute/gate/checkpoint，再用 integration 覆盖 L1-L5 路由与 Plan-Act 端到端流程。",
+      "evidence": [
+        "D:/工作目录/niko-studio/tests/unit/workflow/test_workflow_engine.py:89",
+        "D:/工作目录/niko-studio/tests/unit/workflow/test_workflow_engine.py:159",
+        "D:/工作目录/niko-studio/tests/unit/workflow/test_workflow_engine.py:252",
+        "D:/工作目录/niko-studio/tests/integration/test_workflow_integration.py:24",
+        "D:/工作目录/niko-studio/tests/integration/test_workflow_integration.py:71",
+        "D:/工作目录/niko-studio/tests/integration/test_workflow_integration.py:111"
+      ]
+    },
+    {
+      "name": "e2e separated by marker",
+      "description": "pytest 默认排除 e2e，外部门禁工作流单独执行 e2e marker（避免主 baseline 变慢）。",
+      "evidence": [
+        "D:/工作目录/niko-studio/pytest.ini:15",
+        "D:/工作目录/niko-studio/tests/integration/test_e2e_workflow.py:16",
+        "D:/工作目录/niko-studio/.github/workflows/external-release-gate.yml:52"
+      ]
+    }
+  ],
+  "constraints": [
+    {
+      "constraint": "Python baseline CI 与 pytest.ini 都以 not e2e 为默认策略，e2e 需单独入口。",
+      "impact": "变更 workflow/streaming 时，若涉及 e2e 行为，不能只跑默认 pytest。",
+      "evidence": [
+        "D:/工作目录/niko-studio/pytest.ini:15",
+        "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml:38"
+      ]
+    },
+    {
+      "constraint": "覆盖率门槛固定为 80。",
+      "impact": "新增分支（尤其 stream error/fallback、workflow gate 分支）需要同步补测试以防 CI 失败。",
+      "evidence": [
+        "D:/工作目录/niko-studio/pytest.ini:18",
+        "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml:40"
+      ]
+    },
+    {
+      "constraint": "desktop CI 仅认 test:ci 产生的 JUnit 文件路径。",
+      "impact": "若调整 Vitest 配置或脚本，必须保持 test-results/vitest.junit.xml 产物兼容。",
+      "evidence": [
+        "D:/工作目录/niko-studio/desktop/package.json:11",
+        "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml:85"
+      ]
+    },
+    {
+      "constraint": "workflow engine 相关测试以 asyncio + tmp_path fixture 为主，且对 step 名称/依赖顺序有硬断言。",
+      "impact": "重命名 step 或调整模板顺序会触发大面积断言失败。",
+      "evidence": [
+        "D:/工作目录/niko-studio/tests/unit/workflow/test_workflow_engine.py:150",
+        "D:/工作目录/niko-studio/tests/integration/test_workflow_integration.py:92"
+      ]
+    }
+  ],
+  "affected_tests": [
+    {
+      "planned_change": "调整 /chat/stream 事件结构、终态字段或路由语义",
+      "run_first": [
+        "pytest tests/unit/mcp/test_gateway_stream.py -v",
+        "npm --prefix desktop run test:ci -- src/api/client.test.ts"
+      ],
+      "likely_affected_files": [
+        "D:/工作目录/niko-studio/tests/unit/mcp/test_gateway_stream.py",
+        "D:/工作目录/niko-studio/desktop/src/api/client.test.ts"
+      ],
+      "why": "两端都对 SSE event 名称、字段（terminal/decision/diagnostics）和解析流程做了强断言。"
+    },
+    {
+      "planned_change": "调整 WorkflowEngine 路由规则、模板步骤或 gate 决策",
+      "run_first": [
+        "pytest tests/unit/workflow/test_workflow_engine.py -v",
+        "pytest tests/integration/test_workflow_integration.py -v"
+      ],
+      "likely_affected_files": [
+        "D:/工作目录/niko-studio/tests/unit/workflow/test_workflow_engine.py",
+        "D:/工作目录/niko-studio/tests/integration/test_workflow_integration.py",
+        "D:/工作目录/niko-studio/tests/integration/test_e2e_workflow.py"
+      ],
+      "why": "单测覆盖 step 级别细节，集成与 e2e 覆盖 L1-L5 和 checkpoint 语义。"
+    },
+    {
+      "planned_change": "变更 CI 测试命令、覆盖率门槛或 e2e 触发策略",
+      "run_first": [
+        "pytest tests/unit tests/integration -m \"not e2e\" --cov=src --cov-report=xml --cov-fail-under=80",
+        "pytest -o addopts=\"\" -m \"e2e\" tests/integration/test_e2e_workflow.py -q --tb=short",
+        "npm --prefix desktop run test:ci"
+      ],
+      "likely_affected_files": [
+        "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml",
+        "D:/工作目录/niko-studio/.github/workflows/external-release-gate.yml",
+        "D:/工作目录/niko-studio/pytest.ini",
+        "D:/工作目录/niko-studio/desktop/package.json"
+      ],
+      "why": "这些文件是 Python 与 desktop 测试入口的事实来源。"
+    }
+  ],
+  "_meta": {
+    "session": "WFS-cross-project-workflow-closure-p0-p1-p2",
+    "angle": "testing",
+    "generated_at": "2026-02-15",
+    "discovery_sources": [
+      "ace-search-context",
+      "read",
+      "grep"
+    ],
+    "notes": "仅做测试模式与入口梳理，未修改业务代码。"
+  }
+}

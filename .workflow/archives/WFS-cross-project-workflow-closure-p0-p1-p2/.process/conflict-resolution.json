@@ -1,0 +1,125 @@
+{
+  "session_id": "WFS-cross-project-workflow-closure-p0-p1-p2",
+  "generated_at": "2026-02-15T13:46:09+08:00",
+  "mode": "auto_yes",
+  "status": "resolved",
+  "summary": {
+    "resolved_conflicts_count": 2,
+    "custom_conflicts_count": 1,
+    "recommended_strategy_applied": true
+  },
+  "conflicts": [
+    {
+      "conflict_id": "CF-001-module-overlap-gateway-engine-chat",
+      "type": "ModuleOverlap",
+      "severity": "high",
+      "title": "gateway、workflow_engine 与 ChatArea 在终态与恢复语义上的模块重叠",
+      "description": "同一业务语义同时在后端编排层、SSE 输出层和前端展示层表达，存在职责边界重叠与行为漂移风险。",
+      "affected_modules": [
+        "src/mcp/gateway.py",
+        "src/workflow/workflow_engine.py",
+        "desktop/src/api/client.ts",
+        "desktop/src/components/ChatArea.tsx"
+      ],
+      "overlap_analysis": {
+        "shared_responsibilities": [
+          "terminal decision 字段解释",
+          "checkpoint 恢复状态映射",
+          "执行阶段状态展示"
+        ],
+        "boundary_risk": "当任一层引入新字段或变更语义时，其他层可能继续沿用旧假设，导致恢复行为与 UI 展示不一致。",
+        "recommended_boundary": "后端定义 canonical contract，前端仅做展示和容错；恢复流程以 workflow_engine 语义为准。"
+      },
+      "strategies": [
+        {
+          "strategy_id": "S1",
+          "name": "Canonical Contract First",
+          "description": "以 gateway 输出为唯一契约源，workflow_engine 提供稳定语义映射，ChatArea 仅消费规范字段。",
+          "tradeoff": "前期需要补齐契约说明与回归测试。",
+          "recommended": true,
+          "selected": true
+        },
+        {
+          "strategy_id": "S2",
+          "name": "UI-side Compatibility Patch",
+          "description": "仅在前端增加兼容解析逻辑，短期兜底多版本字段。",
+          "tradeoff": "可快速落地，但长期会累积前端语义债务。",
+          "recommended": false,
+          "selected": false
+        }
+      ],
+      "resolution": {
+        "decision": "采用 S1：Canonical Contract First",
+        "reason": "符合最小改动与向后兼容目标，且能降低跨层重复语义定义造成的长期风险。",
+        "actions": [
+          "保持现有字段不删减，仅新增兼容字段",
+          "将 terminal/checkpoint 解释责任收敛到后端语义层",
+          "通过现有 contract tests 验证链路一致性"
+        ]
+      }
+    },
+    {
+      "conflict_id": "CF-002-contract-drift-terminal-checkpoint",
+      "type": "ContractDrift",
+      "severity": "high",
+      "title": "SSE terminal 字段与 checkpoint 恢复机制存在语义漂移风险",
+      "description": "done/error terminal、decision 与 checkpoint 双机制在不同阶段可能出现口径不一致，影响恢复可预测性。",
+      "affected_modules": [
+        "src/mcp/gateway.py",
+        "src/workflow/workflow_engine.py",
+        "src/workflow/session/session_manager.py",
+        "desktop/src/api/client.ts"
+      ],
+      "strategies": [
+        {
+          "strategy_id": "S1",
+          "name": "Soft-gate Staged Convergence",
+          "description": "P0 保持 soft gate 与增量字段；P1 加入 apply/undo/maintenance lane；P2 再启用选择性 hard gate 并统一语义。",
+          "tradeoff": "收益稳健，但完整收敛周期更长。",
+          "recommended": true,
+          "selected": true
+        },
+        {
+          "strategy_id": "S2",
+          "name": "Immediate Hard-gate Unification",
+          "description": "直接切换到统一 hard gate 语义并淘汰旧字段。",
+          "tradeoff": "实现速度快，但对现有客户端和测试破坏风险高。",
+          "recommended": false,
+          "selected": false
+        }
+      ],
+      "resolution": {
+        "decision": "采用 S1：Soft-gate Staged Convergence",
+        "reason": "与会话既定约束“先 soft gate 后 hard gate”一致，可控制回归风险并维持兼容。",
+        "actions": [
+          "在 P0 阶段仅引入兼容字段与观测，不变更既有终态字段��义",
+          "保留双机制但明确事实源优先级，降低恢复分歧",
+          "将 hard gate 仅限定于 P2 的高风险场景"
+        ]
+      }
+    }
+  ],
+  "custom_conflicts": [
+    {
+      "conflict_id": "CF-CUSTOM-001-missing-brainstorm-artifacts",
+      "type": "MissingArtifact",
+      "severity": "medium",
+      "title": "目标 brainstorm 目录不存在",
+      "description": "未检测到 .brainstorm 目录，按自动模式不报错，改为沉淀约束到 planning_constraints。",
+      "status": "resolved_by_constraints"
+    }
+  ],
+  "planning_constraints": [
+    {
+      "constraint": "brainstorm 工件缺失时不阻断流程，改为在冲突结果中固化约束并继续 Phase 3→Phase 4。",
+      "source": "auto-fallback",
+      "applies_to": "WFS-cross-project-workflow-closure-p0-p1-p2"
+    },
+    {
+      "constraint": "保持最小改动、向后兼容、先 soft gate 后 hard gate。",
+      "source": "context-package.aggregated_insights.constraints",
+      "applies_to": "跨模块闭环变更"
+    }
+  ],
+  "failed_modifications": []
+}

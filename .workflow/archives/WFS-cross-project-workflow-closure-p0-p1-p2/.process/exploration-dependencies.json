@@ -1,0 +1,388 @@
+{
+  "dependency_graph_summary": {
+    "scope": [
+      "D:/工作目录/niko-studio/src/mcp/gateway.py",
+      "D:/工作目录/niko-studio/src/workflow/workflow_engine.py",
+      "D:/工作目录/niko-studio/src/workflow/session/session_manager.py",
+      "D:/工作目录/niko-studio/src/workflow/levels/types.py",
+      "D:/工作目录/niko-studio/desktop/src/api/client.ts",
+      "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx",
+      "D:/工作目录/niko-studio/desktop/src/components/EvaluationPanel.tsx"
+    ],
+    "nodes": [
+      {
+        "id": "workflow_levels_types",
+        "path": "D:/工作目录/niko-studio/src/workflow/levels/types.py",
+        "responsibility": "定义 WorkflowLevel/WorkflowDecision、层级配置、路由规则与 label/slug 转换"
+      },
+      {
+        "id": "workflow_engine",
+        "path": "D:/工作目录/niko-studio/src/workflow/workflow_engine.py",
+        "responsibility": "Plan-Act 工作流执行、步骤依赖校验、风险 gate 与 checkpoint 生命周期"
+      },
+      {
+        "id": "session_manager",
+        "path": "D:/工作目录/niko-studio/src/workflow/session/session_manager.py",
+        "responsibility": "会话目录结构、内容读写、快照索引、归档与恢复"
+      },
+      {
+        "id": "gateway",
+        "path": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+        "responsibility": "统一 HTTP/MCP 网关，暴露 /chat、/chat/stream、/workflow/*、/critic/*、/agent/* 等入口"
+      },
+      {
+        "id": "desktop_api_client",
+        "path": "D:/工作目录/niko-studio/desktop/src/api/client.ts",
+        "responsibility": "前端 API 抽象、SSE 解析、类型契约"
+      },
+      {
+        "id": "desktop_chat_area",
+        "path": "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx",
+        "responsibility": "聊天主流程、流式消费、checkpoint 前后保护、agent 模式分支"
+      },
+      {
+        "id": "desktop_evaluation_panel",
+        "path": "D:/工作目录/niko-studio/desktop/src/components/EvaluationPanel.tsx",
+        "responsibility": "内容评估展示、checkpoint 管理 UI"
+      }
+    ],
+    "edges": [
+      {
+        "from": "workflow_engine",
+        "to": "workflow_levels_types",
+        "type": "import",
+        "details": "WorkflowEngine 依赖 WorkflowLevel/WorkflowDecision/LevelRouter 与 label/slug 工具函数",
+        "evidence": [
+          {
+            "file": "D:/工作目录/niko-studio/src/workflow/workflow_engine.py",
+            "line": 21,
+            "source": "bash-read"
+          }
+        ]
+      },
+      {
+        "from": "gateway",
+        "to": "workflow_engine",
+        "type": "service delegation",
+        "details": "gateway 通过 get_workflow_engine() 暴露 workflow_route/workflow_plan/workflow_execute/checkpoint_* 端点",
+        "evidence": [
+          {
+            "file": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+            "line": 186,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+            "line": 541,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+            "line": 582,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+            "line": 601,
+            "source": "bash-read"
+          }
+        ]
+      },
+      {
+        "from": "gateway",
+        "to": "workflow_levels_types",
+        "type": "runtime conversion",
+        "details": "chat/chat_stream 中校验 workflowLevel 入参并做 from_label + to_workflow_label/to_workflow_slug 转换",
+        "evidence": [
+          {
+            "file": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+            "line": 1097,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+            "line": 1133,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+            "line": 1423,
+            "source": "bash-read"
+          }
+        ]
+      },
+      {
+        "from": "desktop_api_client",
+        "to": "gateway",
+        "type": "HTTP contract",
+        "details": "client.ts 映射 /chat、/chat/stream、/workflow/*、/critic/*、/agent/*、/workflow/checkpoint/*",
+        "evidence": [
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/api/client.ts",
+            "line": 337,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/api/client.ts",
+            "line": 343,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/api/client.ts",
+            "line": 491,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/api/client.ts",
+            "line": 517,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/api/client.ts",
+            "line": 587,
+            "source": "bash-read"
+          }
+        ]
+      },
+      {
+        "from": "desktop_chat_area",
+        "to": "desktop_api_client",
+        "type": "UI orchestration",
+        "details": "ChatArea 通过 chatStream/chat 与 agentRoute/agentWrite/agentRevise/agentGetContext、checkpoint API 组织主流程",
+        "evidence": [
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx",
+            "line": 5,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx",
+            "line": 130,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx",
+            "line": 296,
+            "source": "bash-read"
+          }
+        ]
+      },
+      {
+        "from": "desktop_evaluation_panel",
+        "to": "desktop_api_client",
+        "type": "evaluation + checkpoint UI",
+        "details": "EvaluationPanel 调用 evaluateContent 并使用 checkpoint create/list/restore",
+        "evidence": [
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/components/EvaluationPanel.tsx",
+            "line": 3,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/components/EvaluationPanel.tsx",
+            "line": 57,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/desktop/src/components/EvaluationPanel.tsx",
+            "line": 94,
+            "source": "bash-read"
+          }
+        ]
+      },
+      {
+        "from": "session_manager",
+        "to": "filesystem",
+        "type": "state persistence",
+        "details": "SessionManager 把 state/plan/todo/summary/chapter 等内容持久化到 .writing/sessions，并维护 snapshot-index",
+        "evidence": [
+          {
+            "file": "D:/工作目录/niko-studio/src/workflow/session/session_manager.py",
+            "line": 36,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/src/workflow/session/session_manager.py",
+            "line": 199,
+            "source": "bash-read"
+          },
+          {
+            "file": "D:/工作目录/niko-studio/src/workflow/session/session_manager.py",
+            "line": 426,
+            "source": "bash-read"
+          }
+        ]
+      }
+    ],
+    "ci_and_test_harness": {
+      "ci_workflows": [
+        {
+          "path": "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml",
+          "coverage": [
+            "Python tests/unit + tests/integration (exclude e2e in baseline)",
+            "Desktop npm run test:ci + typecheck/build",
+            "Delegates to external-release-gate for PR precheck and main external gates"
+          ],
+          "evidence_lines": [39, 61, 82, 112, 121]
+        },
+        {
+          "path": "D:/工作目录/niko-studio/.github/workflows/external-release-gate.yml",
+          "coverage": [
+            "Production runtime guards for gateway reload/CORS/metrics",
+            "e2e smoke: tests/integration/test_e2e_workflow.py",
+            "Codecov strict-mode resolution gated by CODECOV_TOKEN"
+          ],
+          "evidence_lines": [44, 53, 71, 86]
+        }
+      ],
+      "test_harnesses": [
+        {
+          "path": "D:/工作目录/niko-studio/pytest.ini",
+          "details": "pytest 默认 -m \"not e2e\"，并启用 --cov=src 与 --cov-fail-under=80"
+        },
+        {
+          "path": "D:/工作目录/niko-studio/tests/unit/workflow/test_workflow_engine.py",
+          "details": "覆盖 workflow_engine 的 route/plan/execute/gate/checkpoint/restore/status 关键语义"
+        },
+        {
+          "path": "D:/工作目录/niko-studio/tests/unit/test_ci_gate_workflows.py",
+          "details": "对 CI YAML 内容做回归断言（i18n-check、external gate、codecov strict mode）"
+        },
+        {
+          "path": "D:/工作目录/niko-studio/tests/integration/test_e2e_workflow.py",
+          "details": "e2e 标记测试覆盖端到端工作流与上下文/记忆/checkpoint 场景"
+        },
+        {
+          "path": "D:/工作目录/niko-studio/desktop/src/api/client.test.ts",
+          "details": "Vitest 覆盖 SSE 解析、AbortSignal 传递、terminal 映射"
+        },
+        {
+          "path": "D:/工作目录/niko-studio/desktop/src/components/ChatArea.test.tsx",
+          "details": "验证流式成功/取消/失败恢复、checkpoint 恢复按钮、inline action 交互"
+        }
+      ]
+    }
+  },
+  "relevant_files": [
+    {
+      "path": "D:/工作目录/niko-studio/src/mcp/gateway.py",
+      "reason": "后端统一入口，连接 workflow/critic/agent 与 desktop REST/SSE 契约"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/src/workflow/workflow_engine.py",
+      "reason": "Plan-Act 核心执行图、gate 决策与 checkpoint 管理"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/src/workflow/session/session_manager.py",
+      "reason": "会话持久化与 snapshot index 的底座"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/src/workflow/levels/types.py",
+      "reason": "L1-L5 语义与 label/slug 统一转换点"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/desktop/src/api/client.ts",
+      "reason": "前后端契约与 stream payload 解析唯一层"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx",
+      "reason": "用户主交互流程、agent 分支、失败恢复与 checkpoint 保护"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/desktop/src/components/EvaluationPanel.tsx",
+      "reason": "评估展示与 checkpoint 操作面板"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml",
+      "reason": "主 CI 编排与 external gate 调用入口"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/.github/workflows/external-release-gate.yml",
+      "reason": "外部发布门禁与 e2e smoke/metrics/codecov 条件化执行"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/tests/unit/workflow/test_workflow_engine.py",
+      "reason": "workflow_engine 单测基线"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/tests/unit/test_ci_gate_workflows.py",
+      "reason": "CI 配置回归测试"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/tests/integration/test_e2e_workflow.py",
+      "reason": "e2e 写作工作流验证"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/desktop/src/api/client.test.ts",
+      "reason": "SSE 客户端测试"
+    },
+    {
+      "path": "D:/工作目录/niko-studio/desktop/src/components/ChatArea.test.tsx",
+      "reason": "桌面聊天流程测试"
+    }
+  ],
+  "integration_points": [
+    {
+      "name": "Workflow level contract (L1-L5)",
+      "description": "desktop `WorkflowLevel` 联合类型与 gateway `WorkflowLevel.is_valid_label/from_label` 保持契约一致；返回时用 `to_workflow_label` + `to_workflow_slug` 对齐展示与内部语义。",
+      "producers": [
+        "D:/工作目录/niko-studio/desktop/src/api/client.ts:309",
+        "D:/工作目录/niko-studio/src/mcp/gateway.py:1099",
+        "D:/工作目录/niko-studio/src/workflow/levels/types.py:129"
+      ]
+    },
+    {
+      "name": "Chat + SSE runtime contract",
+      "description": "gateway `/chat/stream` 发送 start/routing/progress/content/evaluation/done/error；desktop `chatStream` 解析并由 ChatArea 驱动 UI phase。",
+      "producers": [
+        "D:/工作目录/niko-studio/src/mcp/gateway.py:1419",
+        "D:/工作目录/niko-studio/desktop/src/api/client.ts:541",
+        "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx:130"
+      ]
+    },
+    {
+      "name": "Evaluation score mapping",
+      "description": "backend 评估返回 `total_score/lock_score/style_score/logic_score/actionable_feedback`；EvaluationPanel 将其缩放到 10 分制和维度条。",
+      "producers": [
+        "D:/工作目录/niko-studio/src/mcp/gateway.py:655",
+        "D:/工作目录/niko-studio/desktop/src/api/client.ts:481",
+        "D:/工作目录/niko-studio/desktop/src/components/EvaluationPanel.tsx:28"
+      ]
+    },
+    {
+      "name": "Checkpoint lifecycle",
+      "description": "workflow_engine 提供 create/restore/list，gateway 暴露 `/workflow/checkpoint/*`，ChatArea 与 EvaluationPanel 双入口消费。",
+      "producers": [
+        "D:/工作目录/niko-studio/src/workflow/workflow_engine.py:517",
+        "D:/工作目录/niko-studio/src/mcp/gateway.py:1840",
+        "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx:296",
+        "D:/工作目录/niko-studio/desktop/src/components/EvaluationPanel.tsx:94"
+      ]
+    },
+    {
+      "name": "Risk gate semantics",
+      "description": "workflow_engine 在关键步骤返回 `go/soft_go/no_go` 语义；SSE done 事件携带 decision，ChatArea 根据 decision 显示软门禁或拒绝提示。",
+      "producers": [
+        "D:/工作目录/niko-studio/src/workflow/workflow_engine.py:110",
+        "D:/工作目录/niko-studio/src/mcp/gateway.py:1565",
+        "D:/工作目录/niko-studio/desktop/src/components/ChatArea.tsx:115"
+      ]
+    },
+    {
+      "name": "CI-to-quality gates",
+      "description": "integration-tests 负责主线 test+desktop 校验，再调用 external-release-gate 运行生产 guard/e2e/codecov，形成 P0/P1 门禁闭环。",
+      "producers": [
+        "D:/工作目录/niko-studio/.github/workflows/integration-tests.yml:112",
+        "D:/工作目录/niko-studio/.github/workflows/external-release-gate.yml:44"
+      ]
+    }
+  ],
+  "constraints": [
+    "兼容性约束：`WorkflowLevel` 同时支持 label/slug/int 输入，desktop 与 gateway 必须保持 L1-L5 契约不破坏旧调用。",
+    "最小变更约束：已有 `/chat`、`/chat/stream`、`/workflow/*`、`/critic/*`、`/agent/*` 端点已被 desktop client 直接绑定，重构需保持路径与字段兼容。",
+    "门禁演进约束：workflow_engine 当前 soft gate 不阻塞（blocking=false）；ChatArea 已消费 `soft_go/no_go`，适合先 soft gate 后 hard gate 的渐进策略。",
+    "状态一致性约束：checkpoint 同时存在 workflow_engine 内存索引与 SessionManager 文件快照索引（.writing/sessions/.data/snapshot-index.json）两条链路，需防漂移。",
+    "测试基线约束：pytest 默认排除 e2e（pytest.ini），e2e 仅在 external gate 触发；CI 调整需同步 unit CI-yaml 测试（test_ci_gate_workflows.py）。",
+    "桌面端测试约束：SSE terminal/abort/recover 行为已由 client.test.ts 和 ChatArea.test.tsx 固化，修改流式协议需同步更新测试夹具。"
+  ]
+}

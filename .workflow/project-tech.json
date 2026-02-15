@@ -105,6 +105,44 @@
         "session_id": "WFS-niko-full-impl-20260209",
         "archive_path": ".workflow/archives/WFS-niko-full-impl-20260209"
       }
+    },
+    {
+      "id": "test-automation-nikostudio",
+      "title": "Implementation Plan: nikostudio 自动化测试规划",
+      "status": "completed",
+      "tags": [
+        "test-automation",
+        "pytest",
+        "coverage",
+        "ci",
+        "nikostudio"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-14"
+      },
+      "traceability": {
+        "session_id": "WFS-test-test-generation-for-nikostudio-",
+        "archive_path": ".workflow/archives/WFS-test-test-generation-for-nikostudio-"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-cross-project-workflow-closure-p0-p1-p2",
+      "title": "IMPL Plan - WFS-cross-project-workflow-closure-p0-p1-p2",
+      "status": "completed",
+      "tags": [
+        "workflow",
+        "ci",
+        "gate",
+        "desktop",
+        "checkpoint"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-15"
+      },
+      "traceability": {
+        "session_id": "WFS-cross-project-workflow-closure-p0-p1-p2",
+        "archive_path": ".workflow/archives/WFS-cross-project-workflow-closure-p0-p1-p2"
+      }
     }
   ],
   "development_index": {
@@ -115,9 +153,9 @@
     "docs": []
   },
   "statistics": {
-    "total_features": 1,
+    "total_features": 3,
     "total_sessions": 2,
-    "last_updated": "2026-02-09T15:35:19.527496+08:00"
+    "last_updated": "2026-02-15T12:13:29.771684+00:00"
   },
   "_metadata": {
     "initialized_by": "workflow:init-fallback",
