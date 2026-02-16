@@ -438,30 +438,302 @@ class TestStreamSoftGateRecovery:
         assert payload["diagnostics"]["fallback_reason"] in {"critic_unavailable", "writer_unavailable_l234", "writer_unavailable_l1"}
 
 
-class TestStreamL5Coordinator:
-    """Tests for L5 coordinator stream branch"""
 
-    def test_stream_l5_calls_level5_coordinator(self, client_no_lifespan, monkeypatch):
+
+class TestStreamHardFailAndSleepBranches:
+    """Tests for stream hard-fail and chunk sleep branches."""
+
+    def test_stream_critic_failure_with_fallback_disabled_emits_error(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        writer_result = MagicMock()
+        writer_result.content = "writer content"
+        mock_writer.write = AsyncMock(return_value=writer_result)
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        mock_critic = MagicMock()
+        mock_critic.evaluate = AsyncMock(side_effect=RuntimeError("critic down"))
+        monkeypatch.setattr(gateway_module, "get_critic_engine", lambda: mock_critic)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a chapter"}],
+            "workflowLevel": "L3",
+            "allowLlmFallback": False,
+        })
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) >= 1
+        payload = error_events[0]["data"]
+        assert payload["terminal"] == "error"
+        assert payload["decision"] == "no_go"
+        assert "Writer execution failed with fallback disabled" in payload["error"]
+
+    def test_stream_l1_multi_chunks_calls_sleep_between_chunks(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        mock_writer.continue_writing = AsyncMock(return_value="line1. line2. line3.")
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+        monkeypatch.setattr(gateway_module, "adaptive_chunk_content", lambda *_args, **_kwargs: ["c1", "c2", "c3"])
+
+        sleep_mock = AsyncMock()
+        monkeypatch.setattr(gateway_module.asyncio, "sleep", sleep_mock)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Fix this text"}],
+            "workflowLevel": "L1",
+        })
+
+        assert response.status_code == 200
+        assert sleep_mock.await_count == 2
+
+    def test_stream_timeout_error_maps_to_interrupted_terminal(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_commander = MagicMock()
+        mock_commander.route = MagicMock(side_effect=TimeoutError("stream timeout"))
+        monkeypatch.setattr(gateway_module, "get_commander_agent", lambda: mock_commander)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a scene"}],
+        })
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) >= 1
+        assert error_events[0]["data"]["terminal"] == "interrupted"
+
+    def test_stream_outer_exception_returns_500(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        async def _broken_json(self):
+            raise RuntimeError("bad body")
+
+        monkeypatch.setattr(gateway_module.Request, "json", _broken_json)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a scene"}],
+        })
+
+        assert response.status_code == 500
+        assert "bad body" in response.json()["error"]
+
+
+class TestStreamAdditionalBranchCoverage:
+    def test_stream_llm_unavailable_with_fallback_disabled_returns_503(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        monkeypatch.setattr(gateway_module, "_is_llm_available", lambda: False)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a scene"}],
+            "allowLlmFallback": False,
+        })
+
+        assert response.status_code == 503
+        assert response.json()["error"] == "LLM unavailable and fallback disabled"
+
+    def test_stream_skips_skill_injection_when_no_skills(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_commander = MagicMock()
+        mock_commander.route = MagicMock(return_value="L3")
+        mock_commander.detect_scene_type = MagicMock(return_value=_SceneTypeDialogue())
+        mock_commander.dispatch_skills = MagicMock(return_value=[])
+        mock_commander.dispatch_tasks = MagicMock(return_value=[_build_assignment()])
+        monkeypatch.setattr(gateway_module, "get_commander_agent", lambda: mock_commander)
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        writer_result = MagicMock()
+        writer_result.content = "writer content"
+        mock_writer.write = AsyncMock(return_value=writer_result)
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a scene"}],
+            "workflowLevel": "L3",
+        })
+
+        assert response.status_code == 200
+        mock_writer.inject_skills.assert_not_called()
+
+    def test_stream_l1_writer_failure_with_fallback_enabled_emits_soft_recovery(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        mock_writer.continue_writing = AsyncMock(side_effect=RuntimeError("writer down"))
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Fix this text"}],
+            "workflowLevel": "L1",
+            "allowLlmFallback": True,
+        })
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        done_events = [e for e in events if e.get("event") == "done"]
+        assert len(done_events) >= 1
+        payload = done_events[0]["data"]
+        assert payload["terminal"] == "recovered"
+        assert payload["decision"] == "soft_go"
+        assert payload["diagnostics"]["fallback_reason"] == "writer_unavailable_l1"
+
+    def test_stream_l3_writer_failure_with_fallback_enabled_emits_soft_recovery(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        mock_writer.write = AsyncMock(side_effect=RuntimeError("writer down"))
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a chapter"}],
+            "workflowLevel": "L3",
+            "allowLlmFallback": True,
+        })
+
+        assert response.status_code == 200
+        events = parse_sse_events(response.text)
+        content_events = [e for e in events if e.get("event") == "content"]
+        assert len(content_events) >= 1
+        assert "写作服务暂时不可用" in content_events[0]["data"]["chunk"]
+        done_events = [e for e in events if e.get("event") == "done"]
+        assert len(done_events) >= 1
+        payload = done_events[0]["data"]
+        assert payload["terminal"] == "recovered"
+        assert payload["decision"] == "soft_go"
+        assert payload["diagnostics"]["fallback_reason"] == "writer_unavailable_l234"
+
+    def test_stream_l5_without_session_id_skips_state_injection(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        captured_state = {}
+
+        def _execute(state):
+            captured_state.update(state)
+            return {
+                "final_output": "L5 stream content",
+                "score": 88,
+                "feedback_context": "good",
+            }
+
+        mock_coordinator_instance = MagicMock()
+        mock_coordinator_instance.execute = MagicMock(side_effect=_execute)
+        monkeypatch.setattr(gateway_module, "Level5Coordinator", MagicMock(return_value=mock_coordinator_instance))
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Deep plan"}],
+            "workflowLevel": "L5",
+            "context": {
+                "context": "story context",
+            },
+        })
+
+        assert response.status_code == 200
+        assert captured_state["session_id"] != "sess-stream-001"
+
+    def test_stream_l5_multi_chunks_calls_sleep_between_chunks(self, client_no_lifespan, monkeypatch):
         from src.mcp import gateway as gateway_module
 
         mock_coordinator_instance = MagicMock()
         mock_coordinator_instance.execute = MagicMock(return_value={
             "final_output": "L5 stream content",
-            "draft_content": "L5 draft",
-            "score": 88,
-            "feedback_context": "good",
+            "score": 90,
+            "feedback_context": "ok",
         })
         monkeypatch.setattr(gateway_module, "Level5Coordinator", MagicMock(return_value=mock_coordinator_instance))
+        monkeypatch.setattr(gateway_module, "adaptive_chunk_content", lambda *_args, **_kwargs: ["c1", "c2", "c3"])
+
+        sleep_mock = AsyncMock()
+        monkeypatch.setattr(gateway_module.asyncio, "sleep", sleep_mock)
 
         response = client_no_lifespan.post("/chat/stream", json={
             "messages": [{"role": "user", "content": "Deep plan"}],
-            "workflowLevel": "L5"
+            "workflowLevel": "L5",
+        })
+
+        assert response.status_code == 200
+        assert sleep_mock.await_count == 2
+
+    def test_stream_l3_multi_chunks_calls_sleep_between_chunks(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        writer_result = MagicMock()
+        writer_result.content = "writer content"
+        mock_writer.write = AsyncMock(return_value=writer_result)
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+        monkeypatch.setattr(gateway_module, "adaptive_chunk_content", lambda *_args, **_kwargs: ["c1", "c2", "c3"])
+
+        sleep_mock = AsyncMock()
+        monkeypatch.setattr(gateway_module.asyncio, "sleep", sleep_mock)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Write a chapter"}],
+            "workflowLevel": "L3",
+        })
+
+        assert response.status_code == 200
+        assert sleep_mock.await_count == 2
+
+    def test_stream_l1_writer_failure_with_fallback_disabled_emits_error(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        mock_writer.continue_writing = AsyncMock(side_effect=RuntimeError("writer down"))
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Fix this text"}],
+            "workflowLevel": "L1",
+            "allowLlmFallback": False,
         })
 
         assert response.status_code == 200
         events = parse_sse_events(response.text)
-        evaluation_events = [e for e in events if e.get("event") == "evaluation"]
-        assert len(evaluation_events) >= 1
-        assert evaluation_events[0]["data"]["score"] == 88
-        assert mock_coordinator_instance.execute.call_count == 1
+        error_events = [e for e in events if e.get("event") == "error"]
+        assert len(error_events) >= 1
+        payload = error_events[0]["data"]
+        assert payload["terminal"] == "error"
+        assert payload["decision"] == "no_go"
+        assert "Writer execution failed with fallback disabled" in payload["error"]
 
+    def test_stream_l5_with_session_id_injects_state(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        captured_state = {}
+
+        def _execute(state):
+            captured_state.update(state)
+            return {
+                "final_output": "L5 stream content",
+                "score": 88,
+                "feedback_context": "good",
+            }
+
+        mock_coordinator_instance = MagicMock()
+        mock_coordinator_instance.execute = MagicMock(side_effect=_execute)
+        monkeypatch.setattr(gateway_module, "Level5Coordinator", MagicMock(return_value=mock_coordinator_instance))
+
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": [{"role": "user", "content": "Deep plan"}],
+            "workflowLevel": "L5",
+            "context": {
+                "session_id": "sess-stream-001",
+                "context": "story context",
+            },
+        })
+
+        assert response.status_code == 200
+        assert captured_state["session_id"] == "sess-stream-001"

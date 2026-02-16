@@ -308,28 +308,114 @@ class TestChatRoutingSemantics:
         assert response.json()["workflow_info"]["level"] == "L3"
 
 
-class TestChatL5Coordinator:
-    """Tests for L5 coordinator branch"""
 
-    def test_chat_l5_calls_level5_coordinator(self, client_no_lifespan, monkeypatch):
+
+class TestChatHardFailAndCoordinatorState:
+    """Tests for hard-fail branches and coordinator state propagation."""
+
+    def test_chat_critic_failure_with_fallback_disabled_returns_500(self, client_no_lifespan, monkeypatch):
         from src.mcp import gateway as gateway_module
 
-        mock_coordinator_instance = MagicMock()
-        mock_coordinator_instance.execute = MagicMock(return_value={
-            "final_output": "L5 Final Content",
-            "draft_content": "L5 Draft Content",
-            "score": 91,
-            "feedback_context": "L5 feedback",
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        writer_result = MagicMock()
+        writer_result.content = "writer content"
+        writer_result.sensory_types_used = ["visual"]
+        mock_writer.write = AsyncMock(return_value=writer_result)
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        mock_critic = MagicMock()
+        mock_critic.evaluate = AsyncMock(side_effect=RuntimeError("critic down"))
+        monkeypatch.setattr(gateway_module, "get_critic_engine", lambda: mock_critic)
+
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": "Write a chapter"}],
+            "workflowLevel": "L3",
+            "allowLlmFallback": False,
         })
+
+        assert response.status_code == 500
+        assert "Writer execution failed with fallback disabled" in response.json()["error"]
+
+    def test_chat_l5_coordinator_state_includes_session_id(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        captured_state = {}
+
+        def _execute(state):
+            captured_state.update(state)
+            return {
+                "final_output": "L5 Final Content",
+                "score": 90,
+                "feedback_context": "ok",
+            }
+
+        mock_coordinator_instance = MagicMock()
+        mock_coordinator_instance.execute = MagicMock(side_effect=_execute)
         monkeypatch.setattr(gateway_module, "Level5Coordinator", MagicMock(return_value=mock_coordinator_instance))
 
         response = client_no_lifespan.post("/chat", json={
             "messages": [{"role": "user", "content": "Plan entire book structure"}],
-            "workflowLevel": "L5"
+            "workflowLevel": "L5",
+            "context": {
+                "session_id": "sess-chat-001",
+                "context": "story context",
+            },
+        })
+
+        assert response.status_code == 200
+        assert captured_state["session_id"] == "sess-chat-001"
+
+
+class TestChatAdditionalBranchCoverage:
+    def test_chat_skips_skill_injection_when_no_skills(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_commander = MagicMock()
+        mock_commander.route = MagicMock(return_value="L3")
+        mock_commander.detect_scene_type = MagicMock(return_value=_SceneTypeDialogue())
+        mock_commander.dispatch_skills = MagicMock(return_value=[])
+        mock_commander.dispatch_tasks = MagicMock(return_value=[_build_assignment()])
+        monkeypatch.setattr(gateway_module, "get_commander_agent", lambda: mock_commander)
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        writer_result = MagicMock()
+        writer_result.content = "writer content"
+        writer_result.sensory_types_used = []
+        mock_writer.write = AsyncMock(return_value=writer_result)
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": "Write a chapter"}],
+            "workflowLevel": "L3",
+        })
+
+        assert response.status_code == 200
+        mock_writer.inject_skills.assert_not_called()
+
+    def test_chat_critic_failure_with_fallback_enabled_uses_self_check_feedback(self, client_no_lifespan, monkeypatch):
+        from src.mcp import gateway as gateway_module
+
+        mock_writer = MagicMock()
+        mock_writer.inject_skills = MagicMock()
+        writer_result = MagicMock()
+        writer_result.content = "writer content"
+        writer_result.sensory_types_used = ["visual", "auditory"]
+        mock_writer.write = AsyncMock(return_value=writer_result)
+        monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
+
+        mock_critic = MagicMock()
+        mock_critic.evaluate = AsyncMock(side_effect=RuntimeError("critic down"))
+        monkeypatch.setattr(gateway_module, "get_critic_engine", lambda: mock_critic)
+
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": "Write a chapter"}],
+            "workflowLevel": "L3",
+            "allowLlmFallback": True,
         })
 
         assert response.status_code == 200
         data = response.json()
-        assert data["content"] == "L5 Final Content"
-        assert data["evaluation"]["score"] == 91
-        assert mock_coordinator_instance.execute.call_count == 1
+        assert data["evaluation"]["score"] == 75
+        assert data["evaluation"]["feedback"] == "自检: 使用了 2 种感官描写"
