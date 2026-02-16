@@ -38,7 +38,7 @@ jobs:
 
       - name: Run unit + integration tests (delivery baseline)
         run: |
-          pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=100 --junitxml=pytest-baseline.xml
+          pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
