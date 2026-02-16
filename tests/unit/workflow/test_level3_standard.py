@@ -337,19 +337,64 @@ class TestExecuteWorkflow:
 # Lazy agent getters
 # ============================================================
 
-class TestLazyAgentGetters:
 
-    def test_get_architect_injected(self):
-        a = MagicMock()
-        l3 = Level3Standard(architect=a)
-        assert l3._get_architect() is a
+    def test_get_architect_from_container_attr(self):
+        l3 = Level3Standard()
+        fake_architect = MagicMock()
+        fake_container = MagicMock()
+        fake_container.architect = fake_architect
 
-    def test_get_writer_injected(self):
-        w = MagicMock()
-        l3 = Level3Standard(writer=w)
-        assert l3._get_writer() is w
+        l3._get_container = MagicMock(return_value=fake_container)
+        assert l3._get_architect() is fake_architect
 
-    def test_get_critic_injected(self):
-        c = MagicMock()
-        l3 = Level3Standard(critic=c)
-        assert l3._get_critic() is c
+    @patch("src.agents.architect.ArchitectAgent")
+    def test_get_architect_fallback_create(self, mock_architect_cls):
+        l3 = Level3Standard()
+        fake_container = MagicMock(spec=[])
+        created_architect = MagicMock()
+        mock_architect_cls.return_value = created_architect
+
+        l3._get_container = MagicMock(return_value=fake_container)
+        assert l3._get_architect() is created_architect
+        mock_architect_cls.assert_called_once_with(name="standard_architect")
+
+    def test_get_critic_from_container_attr(self):
+        l3 = Level3Standard()
+        fake_critic = MagicMock()
+        fake_container = MagicMock()
+        fake_container.critic_agent = fake_critic
+
+        l3._get_container = MagicMock(return_value=fake_container)
+        assert l3._get_critic() is fake_critic
+
+    @patch("src.agents.critic.CriticAgent")
+    def test_get_critic_fallback_create(self, mock_critic_cls):
+        l3 = Level3Standard()
+        fake_container = MagicMock(spec=[])
+        created_critic = MagicMock()
+        mock_critic_cls.return_value = created_critic
+
+        l3._get_container = MagicMock(return_value=fake_container)
+        assert l3._get_critic() is created_critic
+        mock_critic_cls.assert_called_once_with(name="standard_critic")
+
+
+class TestLazyAgentGettersExtra:
+
+    @patch("src.container.get_container")
+    def test_get_container_delegates_to_global(self, mock_get_container):
+        l3 = Level3Standard()
+        fake_container = MagicMock()
+        mock_get_container.return_value = fake_container
+
+        result = l3._get_container()
+        assert result is fake_container
+
+    def test_get_writer_from_container(self):
+        l3 = Level3Standard()
+        fake_writer = MagicMock()
+        fake_container = MagicMock()
+        fake_container.writer = fake_writer
+
+        l3._get_container = MagicMock(return_value=fake_container)
+        assert l3._get_writer() is fake_writer

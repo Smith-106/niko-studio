@@ -849,15 +849,271 @@ class TestRiskGateAudit:
         assert "confirm_token" not in latest_confirm["payload"]
         assert latest_confirm["payload"].get("confirm_token_provided") is True
 
+
+
+class TestWorkflowEngineBranchCoverage:
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    def test_resolve_adaptive_level_and_gate_profile_maintenance_branches(self, engine):
+        high_risk = {"risk_score": 0.92, "pass_rate": 92.0, "recovery_latency": 100.0}
+        low_pass = {"risk_score": 0.50, "pass_rate": 79.0, "recovery_latency": 100.0}
+        normal = {"risk_score": 0.40, "pass_rate": 95.0, "recovery_latency": 100.0}
+
+        assert engine._resolve_adaptive_level(WorkflowLevel.L2_LITE, "maintenance", high_risk) == WorkflowLevel.L5_COORDINATOR
+        assert engine._resolve_adaptive_level(WorkflowLevel.L2_LITE, "maintenance", low_pass) == WorkflowLevel.L5_COORDINATOR
+        assert engine._resolve_adaptive_level(WorkflowLevel.L2_LITE, "maintenance", normal) == WorkflowLevel.L2_LITE
+
+        assert engine._resolve_gate_profile(WorkflowLevel.L2_LITE, "maintenance", high_risk) == "maintenance-hard"
+        assert engine._resolve_gate_profile(WorkflowLevel.L2_LITE, "maintenance", {"risk_score": 0.80, "recovery_latency": 100.0}) == "maintenance-selective-hard"
+        assert engine._resolve_gate_profile(WorkflowLevel.L2_LITE, "maintenance", {"risk_score": 0.40, "recovery_latency": 100.0}) == "maintenance-soft"
+
+    def test_is_destructive_step_with_action_and_title_tokens(self, engine):
+        step = WorkflowStep(id="s", name="generate", description="d")
+        assert engine._is_destructive_step(step, [{"action": "remove obsolete blocks"}]) is True
+        assert engine._is_destructive_step(step, [{"title": "删除旧版本"}]) is True
+
+    def test_canonicalize_recommendations_text_and_empty_action(self, engine):
+        result = engine._canonicalize_recommendations([
+            {"title": "", "action": "", "reason": "r"},
+            "  补充伏笔  ",
+        ])
+        assert result[0]["action"] == "recommendation-1"
+        assert result[1]["title"] == "补充伏笔"
+
+    def test_get_workflow_template_accepts_string_level(self, engine):
+        template = engine._get_workflow_template("L2")
+        assert isinstance(template, list)
+        assert template[0]["name"] == "analyze"
+
     @pytest.mark.asyncio
-    async def test_execute_rejects_non_pending_step(self, engine):
-        plan_result = await engine.plan("回答一个简单问题", level="L1")
+    async def test_lifecycle_plan_not_found_branch(self, engine):
+        result = await engine.lifecycle("missing-plan", "start")
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_quick_rollback_plan_not_found_branch(self, engine):
+        result = await engine.quick_rollback("missing-plan", "cp1", "x")
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_apply_replay_payload_missing_plan_id_and_missing_plan(self, engine):
+        no_plan = Checkpoint(id="cp-no-plan", description="d", replay_payload={"recommendations": [{"title": "x"}]})
+        engine.checkpoints[no_plan.id] = no_plan
+        result = await engine.restore_checkpoint(no_plan.id, confirm_token="ok")
+        assert result["replay"]["reason"] == "no_plan_id"
+
+        missing_plan = Checkpoint(
+            id="cp-missing-plan",
+            description="d",
+            replay_payload={"plan_id": "plan-not-exist", "recommendations": [{"title": "x"}]},
+        )
+        engine.checkpoints[missing_plan.id] = missing_plan
+        result2 = await engine.restore_checkpoint(missing_plan.id, confirm_token="ok")
+        assert result2["replay"]["reason"].startswith("plan_not_found")
+
+    @pytest.mark.asyncio
+    async def test_evaluate_plan_structure_match_skills_branch_lines(self, engine):
+        plan_dialog = WorkflowPlan(id="p-dialog", task="人物对话冲突", level="L2")
+        skills = engine._run_match_skills(plan_dialog)
+        assert "dialogue-system" in skills["skills"]
+        assert "character-forge" in skills["skills"]
+        assert "suspense-builder" in skills["skills"]
+
+        plan_outline = WorkflowPlan(id="p-outline", task="小说大纲", level="L2")
+        structure = engine._run_plan_structure(plan_outline)
+        assert structure["structure"][0] == "核心设定"
+
+        gen_step = WorkflowStep(id="p-g-0", name="generate", description="g")
+        gen_step.output = {"content": "generated content"}
+        plan_eval = WorkflowPlan(id="p-eval", task="普通任务", level="L2", steps=[gen_step])
+        evaluate = engine._run_evaluate(plan_eval)
+        assert evaluate["length"] == len("generated content")
+
+    @pytest.mark.asyncio
+    async def test_execute_with_recommendations_and_empty_plan_hash(self, engine):
+        planned = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = planned["plan_id"]
+        engine.plans[plan_id].plan_hash = ""
+
+        result = await engine.execute(plan_id, recommendations=[{"title": "新增建议", "action": "polish draft"}])
+        assert result["status"] == "completed"
+        assert engine.plans[plan_id].recommendations_frozen is True
+        assert engine.plans[plan_id].plan_hash
+
+    @pytest.mark.asyncio
+    async def test_execute_step_checkpoint_branch(self, engine):
+        plan = WorkflowPlan(id="p-check", task="task", level="L3")
+        step = WorkflowStep(id="p-check-0", name="checkpoint", description="cp")
+
+        async def fake_create_checkpoint(**kwargs):
+            return {
+                "checkpoint_id": "cp-1",
+                "created_at": "2026-01-01T00:00:00",
+                "replay_payload": kwargs.get("replay_payload", {}),
+            }
+
+        with patch.object(engine, "create_checkpoint", side_effect=fake_create_checkpoint):
+            result = await engine._execute_step(plan, step)
+
+        assert result["checkpoint_id"] == "cp-1"
+        assert "replay_payload" in result
+
+    @pytest.mark.asyncio
+    async def test_create_checkpoint_auto_commit_success_and_calledprocesserror(self, engine):
+        import subprocess
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = [
+                MagicMock(returncode=0),
+                MagicMock(returncode=0),
+                MagicMock(stdout="abc123\n", returncode=0),
+            ]
+            result = await engine.create_checkpoint("auto", auto_commit=True)
+            assert result["commit_hash"] == "abc123"
+
+        with patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "git")):
+            result2 = await engine.create_checkpoint("auto-fail", auto_commit=True)
+            assert result2["commit_hash"] is None
+
+    def test_resolve_adaptive_level_pass_rate_branch_returns_l3(self, engine):
+        metrics = {"risk_score": 0.5, "pass_rate": 87.0, "recovery_latency": 100.0}
+        assert engine._resolve_adaptive_level(WorkflowLevel.L2_LITE, "maintenance", metrics) == WorkflowLevel.L3_STANDARD
+
+    def test_evaluate_risk_gate_soft_review_branch(self, engine):
+        step = WorkflowStep(id="s-check", name="checkpoint", description="cp")
+
+        with patch.object(engine, "_is_destructive_step", return_value=False):
+            gate = engine._evaluate_risk_gate(WorkflowLevel.L4_BRAINSTORM, step)
+
+        assert gate["decision"] == WorkflowDecision.SOFT_GO.value
+        assert gate["blocking"] is False
+        assert gate["confirm_required"] is False
+        assert gate["confirmed"] is True
+
+    @pytest.mark.asyncio
+    async def test_execute_recomputes_plan_hash_when_missing_without_recommendations(self, engine):
+        planned = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = planned["plan_id"]
+        engine.plans[plan_id].plan_hash = ""
+
+        result = await engine.execute(plan_id)
+        assert result["status"] == "completed"
+        assert engine.plans[plan_id].plan_hash
+
+    @pytest.mark.asyncio
+    async def test_execute_specific_step_not_pending_branch(self, engine):
+        planned = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = planned["plan_id"]
+        step_id = engine.plans[plan_id].steps[0].id
+        engine.plans[plan_id].steps[0].status = "completed"
+
+        result = await engine.execute(plan_id, step_id=step_id)
+        assert "error" in result
+        assert "is not pending" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_execute_marks_created_plan_running_when_runner_already_running(self, engine):
+        planned = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = planned["plan_id"]
+        engine.plans[plan_id].runner_state = "running"
+        engine.plans[plan_id].status = "created"
+
+        result = await engine.execute(plan_id)
+        assert result["status"] == "completed"
+        assert engine.plans[plan_id].status == "completed"
+
+    def test_run_plan_structure_dialogue_branch(self, engine):
+        plan = WorkflowPlan(id="p-dialog-2", task="写一段人物对话", level="L2")
+        structure = engine._run_plan_structure(plan)
+        assert structure["structure"] == ["开场", "人物出场", "对话推进", "冲突显化", "收束"]
+
+    def test_run_evaluate_without_outputs_uses_empty_text(self, engine):
+        plan = WorkflowPlan(id="p-empty-eval", task="普通任务", level="L2", steps=[])
+        result = engine._run_evaluate(plan)
+        assert result["length"] == 0
+        assert result["score"] == 60.0
+
+    def test_canonicalize_recommendations_skips_blank_text_item(self, engine):
+        result = engine._canonicalize_recommendations(["   "])
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_create_checkpoint_auto_commit_nonzero_commit_keeps_hash_none(self, engine):
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = [
+                MagicMock(returncode=0),
+                MagicMock(returncode=1),
+            ]
+            result = await engine.create_checkpoint("auto-nonzero", auto_commit=True)
+
+        assert result["commit_hash"] is None
+
+    @pytest.mark.asyncio
+    async def test_restore_checkpoint_waiting_confirmation_without_plan(self, engine):
+        cp = Checkpoint(
+            id="cp-no-plan-wait",
+            description="no plan waiting",
+            commit_hash=None,
+            replay_payload={"recommendations": [{"title": "x"}]},
+        )
+        engine.checkpoints[cp.id] = cp
+
+        pending = await engine.restore_checkpoint(cp.id)
+        assert pending["status"] == "waiting_confirmation"
+        assert pending["replay"]["reason"] == "waiting_confirmation"
+
+    @pytest.mark.asyncio
+    async def test_apply_replay_payload_without_plan_hash_branch(self, engine):
+        plan_result = await engine.plan("写一章小说", level="L1", recommendations=[{"title": "原建议"}])
         plan_id = plan_result["plan_id"]
-        first = await engine.execute(plan_id)
-        step_id = first["step_id"]
-        assert first["status"] == "completed"
 
-        replay = await engine.execute(plan_id, step_id=step_id)
-        assert "error" in replay
-        assert "is not pending" in replay["error"]
+        cp = Checkpoint(
+            id="cp-no-hash",
+            description="no hash replay",
+            commit_hash=None,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "recommendations": [{"title": "新建议"}],
+                "recommendations_frozen": True,
+            },
+        )
+        engine.checkpoints[cp.id] = cp
 
+        result = await engine.restore_checkpoint(cp.id, confirm_token="ok")
+        assert "error" in result
+        assert result["replay"]["applied"] is True
+        assert result["replay"]["plan_id"] == plan_id
+        assert engine.plans[plan_id].recommendations[0]["title"] == "新建议"
+
+    @pytest.mark.asyncio
+    async def test_restore_checkpoint_with_hash_and_plan_appends_confirm_trace(self, engine):
+        plan_result = await engine.plan("写一章小说", level="L1")
+        plan_id = plan_result["plan_id"]
+
+        cp = Checkpoint(
+            id="cp-hash-plan",
+            description="restore with hash and plan",
+            commit_hash="abc123",
+            plan_id=plan_id,
+        )
+        engine.checkpoints[cp.id] = cp
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            result = await engine.restore_checkpoint(cp.id)
+
+        assert result["status"] == "restored"
+        assert result["commit_hash"] == "abc123"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        assert lines
+        latest = json.loads(lines[-1])
+        assert latest["event_type"] == "confirm_trace"
+        assert latest["payload"]["operation"] == "restore_checkpoint"
+        assert latest["payload"]["checkpoint_id"] == "cp-hash-plan"

@@ -7,6 +7,7 @@ usage recording/querying, and factory functions.
 
 import os
 import tempfile
+from unittest.mock import MagicMock, patch
 import pytest
 from src.services.token_service import (
     MODEL_PRICING,
@@ -91,6 +92,81 @@ class TestBudgetStatus:
         )
         assert status.remaining == 9.0
         assert status.usage_percent == 10.0
+
+
+class TestTokenServiceInitializationExtra:
+
+    def test_init_uses_default_db_path_when_none(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        svc = TokenService(db_path=None)
+        try:
+            assert svc.db_path.as_posix().endswith(".writing/token_usage.db")
+        finally:
+            svc.close()
+
+    def test_init_uses_config_default_budget(self, tmp_path):
+        cfg = MagicMock()
+        cfg.agent.max_cost_per_session = 88.0
+        svc = TokenService(db_path=str(tmp_path / "cfg_budget.db"), config=cfg)
+        try:
+            assert svc._default_budget == 88.0
+        finally:
+            svc.close()
+
+
+class TestTokenServiceEncoderFallbackExtra:
+
+    def test_get_encoder_import_error_returns_none(self, tmp_path):
+        svc = TokenService(db_path=str(tmp_path / "encoder_import_err.db"))
+        try:
+            with patch("builtins.__import__", side_effect=ImportError("no tiktoken")):
+                assert svc._get_encoder("gpt-4o") is None
+        finally:
+            svc.close()
+
+    def test_estimate_tokens_encode_exception_fallback(self, tmp_path):
+        svc = TokenService(db_path=str(tmp_path / "encode_exc.db"))
+        try:
+            broken_encoder = MagicMock()
+            broken_encoder.encode.side_effect = RuntimeError("encode fail")
+            with patch.object(svc, "_get_encoder", return_value=broken_encoder):
+                text = "Hello 你好"
+                tokens = svc.estimate_tokens(text, model="gpt-4o")
+            assert tokens == int(2 / 1.5 + (len(text) - 2) / 4)
+        finally:
+            svc.close()
+
+
+    def test_get_encoder_generic_exception_returns_none(self, tmp_path):
+        svc = TokenService(db_path=str(tmp_path / "encoder_generic_err.db"))
+        try:
+            fake_tiktoken = MagicMock()
+            fake_tiktoken.get_encoding.side_effect = RuntimeError("boom")
+
+            import builtins
+            original_import = builtins.__import__
+
+            def _fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+                if name == "tiktoken":
+                    return fake_tiktoken
+                return original_import(name, globals, locals, fromlist, level)
+
+            with patch("builtins.__import__", side_effect=_fake_import):
+                assert svc._get_encoder("gpt-4o") is None
+        finally:
+            svc.close()
+
+
+    def test_get_usage_summary_group_by_day(self, tmp_path):
+        svc = TokenService(db_path=str(tmp_path / "summary_day.db"))
+        try:
+            svc.record_usage(0, 1.0, "gpt-4o", session_id="s1", input_tokens=100, output_tokens=50)
+            summary = svc.get_usage_summary(session_id="s1", group_by="day")
+            assert len(summary) == 1
+            assert "day" in summary[0]
+            assert summary[0]["total_cost"] == pytest.approx(1.0)
+        finally:
+            svc.close()
 
 
 # ============================================================

@@ -15,6 +15,9 @@ from src.context.providers import (
     BaseContextProvider,
     MemoryContextProvider,
     SkillContextProvider,
+    ProjectContextProvider,
+    ContextAggregator,
+    get_default_aggregator,
 )
 
 
@@ -389,3 +392,167 @@ class TestSkillContextProvider:
             skill_ids=["s1"], include_summary=False
         )
         assert items == []
+
+
+# ============================================================
+# ProjectContextProvider / ContextAggregator
+# ============================================================
+
+class TestProjectContextProvider:
+
+    async def test_get_context_without_niko_dir(self, tmp_path):
+        provider = ProjectContextProvider(project_root=str(tmp_path))
+        items = await provider.get_context()
+        assert items == []
+
+    async def test_get_context_with_partial_files(self, tmp_path):
+        niko = tmp_path / ".niko"
+        niko.mkdir()
+        (niko / "config.json").write_text('{"name":"demo"}', encoding="utf-8")
+        (niko / "world.json").write_text('{"era":"future"}', encoding="utf-8")
+
+        provider = ProjectContextProvider(project_root=str(tmp_path))
+        items = await provider.get_context(include_characters=False, include_outline=False)
+
+        keys = {i.key for i in items}
+        assert "project_config" in keys
+        assert "world" in keys
+        assert "characters" not in keys
+        assert "outline" not in keys
+
+    async def test_get_context_handles_bad_character_json(self, tmp_path):
+        niko = tmp_path / ".niko"
+        chars = niko / "characters"
+        chars.mkdir(parents=True)
+        (chars / "a.json").write_text('{"name":"A"}', encoding="utf-8")
+        (chars / "broken.json").write_text('not-json', encoding="utf-8")
+
+        provider = ProjectContextProvider(project_root=str(tmp_path))
+        items = await provider.get_context(include_world=False, include_outline=False)
+
+        char_item = [i for i in items if i.key == "characters"][0]
+        assert char_item.metadata["count"] == 1
+
+    async def test_get_context_handles_top_level_exception(self, tmp_path, monkeypatch):
+        niko = tmp_path / ".niko"
+        niko.mkdir()
+        (niko / "config.json").write_text('{"k":"v"}', encoding="utf-8")
+
+        provider = ProjectContextProvider(project_root=str(tmp_path))
+
+        original_loads = __import__("json").loads
+
+        def _boom(data):
+            if '"k":"v"' in data:
+                raise RuntimeError("boom")
+            return original_loads(data)
+
+        monkeypatch.setattr("src.context.providers.json.loads", _boom)
+
+        items = await provider.get_context()
+        assert items == []
+
+
+class TestContextAggregator:
+
+    class _DummyProvider(BaseContextProvider):
+        def __init__(self, name, priority, items=None, exc=None):
+            super().__init__(name, priority)
+            self._items = items or []
+            self._exc = exc
+
+        async def get_context(self, query=None, **kwargs):
+            if self._exc:
+                raise self._exc
+            return self._items
+
+    async def test_add_remove_and_list_providers(self):
+        ag = ContextAggregator()
+        p1 = self._DummyProvider("b", ContextPriority.NORMAL)
+        p2 = self._DummyProvider("a", ContextPriority.HIGH)
+        ag.add_provider(p1)
+        ag.add_provider(p2)
+
+        assert ag.list_providers() == ["a", "b"]
+        assert ag.remove_provider("a") is True
+        assert ag.remove_provider("missing") is False
+        assert ag.list_providers() == ["b"]
+
+    async def test_get_context_merges_and_sorts(self):
+        ag = ContextAggregator()
+        low = ContextItem(key="l", value="v", source="x", priority=ContextPriority.LOW, token_estimate=5)
+        high = ContextItem(key="h", value="v", source="x", priority=ContextPriority.HIGH, token_estimate=5)
+        ag.add_provider(self._DummyProvider("p1", ContextPriority.NORMAL, [low]))
+        ag.add_provider(self._DummyProvider("p2", ContextPriority.HIGH, [high]))
+
+        items = await ag.get_context(query="q")
+        assert [i.key for i in items] == ["h", "l"]
+
+    async def test_get_context_provider_kwargs(self):
+        class _KwProvider(BaseContextProvider):
+            def __init__(self):
+                super().__init__("kw", ContextPriority.NORMAL)
+                self.received = None
+
+            async def get_context(self, query=None, **kwargs):
+                self.received = kwargs
+                return []
+
+        p = _KwProvider()
+        ag = ContextAggregator()
+        ag.add_provider(p)
+
+        await ag.get_context(query="qq", provider_kwargs={"kw": {"a": 1}}, shared=2)
+        assert p.received["a"] == 1
+        assert p.received["shared"] == 2
+
+    async def test_get_context_ignores_provider_exception(self):
+        ag = ContextAggregator()
+        ok = ContextItem(key="ok", value="v", source="x", token_estimate=1)
+        ag.add_provider(self._DummyProvider("bad", ContextPriority.NORMAL, exc=RuntimeError("x")))
+        ag.add_provider(self._DummyProvider("good", ContextPriority.NORMAL, [ok]))
+
+        items = await ag.get_context()
+        assert [i.key for i in items] == ["ok"]
+
+    async def test_apply_token_budget_keeps_high_priority_over_limit(self):
+        ag = ContextAggregator()
+        items = [
+            ContextItem("a", "v", "s", ContextPriority.NORMAL, token_estimate=10),
+            ContextItem("b", "v", "s", ContextPriority.HIGH, token_estimate=10),
+            ContextItem("c", "v", "s", ContextPriority.LOW, token_estimate=1),
+        ]
+        result = ag._apply_token_budget(items, max_tokens=10)
+        assert [i.key for i in result] == ["a", "b"]
+
+    async def test_get_context_with_max_tokens(self):
+        ag = ContextAggregator()
+        ag.add_provider(self._DummyProvider("p", ContextPriority.NORMAL, [
+            ContextItem("k1", "v", "s", ContextPriority.NORMAL, token_estimate=8),
+            ContextItem("k2", "v", "s", ContextPriority.LOW, token_estimate=8),
+        ]))
+        items = await ag.get_context(max_tokens=10)
+        assert [i.key for i in items] == ["k1"]
+
+    def test_to_prompt_and_empty(self):
+        ag = ContextAggregator()
+        assert ag.to_prompt([]) == ""
+        text = ag.to_prompt([
+            ContextItem("a", "1", "s"),
+            ContextItem("b", ["x", "y"], "s"),
+        ])
+        assert "[a]" in text and "[/b]" in text
+
+
+def test_get_default_aggregator_with_optional_sources(monkeypatch):
+    class _DummyMemory:
+        pass
+
+    class _DummySkill:
+        pass
+
+    ag = get_default_aggregator(memory_engine=_DummyMemory(), skill_loader=_DummySkill(), project_root=".")
+    names = ag.list_providers()
+    assert "memory" in names
+    assert "skill" in names
+    assert "project" in names

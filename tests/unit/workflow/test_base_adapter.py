@@ -161,6 +161,19 @@ class TestBaseDomainAdapter:
         assert merged["new_key"] == "val"
 
 
+class TestBaseDomainAdapterAbstractPassLines:
+
+    def test_abstract_pass_lines_are_executable(self):
+        # 直接调用基类抽象方法，覆盖 pass 分支
+        dummy = object()
+
+        assert BaseDomainAdapter.get_domain_type(dummy) is None
+        assert BaseDomainAdapter.get_state_class(dummy) is None
+        assert BaseDomainAdapter.create_initial_state(dummy, "req") is None
+        assert BaseDomainAdapter.evaluate(dummy, {}) is None
+        assert BaseDomainAdapter.create_graph(dummy) is None
+
+
 # ============================================================
 # AdapterRegistry
 # ============================================================

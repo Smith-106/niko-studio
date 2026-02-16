@@ -2,9 +2,18 @@
 """Web app extra tests - websocket origin check, _serialize_state edge cases, ConnectionManager."""
 
 import json
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+import builtins
+import importlib.util
+import sys
+import types
+from pathlib import Path
 
+import pytest
+from unittest.mock import AsyncMock
+
+from fastapi import WebSocketDisconnect
+
+from src.web import app as web_app
 from src.web.app import _serialize_state, ConnectionManager
 
 
@@ -88,45 +97,210 @@ class TestWebSocketOriginCheck:
 
     async def test_untrusted_origin_rejected(self):
         """Simulate untrusted origin → close(1008)."""
-        from src.web.app import origins
-
         ws = AsyncMock()
         ws.headers = {"origin": "http://evil.com"}
         ws.close = AsyncMock()
 
-        # Replicate the origin check logic from websocket_endpoint
-        if "origin" in ws.headers:
-            origin = ws.headers["origin"]
-            if origin not in origins:
-                await ws.close(code=1008)
+        await web_app.websocket_endpoint(ws, "c1")
 
         ws.close.assert_awaited_once_with(code=1008)
 
-    async def test_trusted_origin_accepted(self):
-        """Trusted origin should not trigger close."""
-        from src.web.app import origins
+    async def test_trusted_origin_accepted(self, monkeypatch):
+        """Trusted origin should process start_workflow and complete."""
+
+        class _WorkflowApp:
+            async def astream(self, _state):
+                yield {
+                    "writer": {
+                        "draft_content": "draft",
+                        "lock_analysis": {"score": 1},
+                        "scene_cards": [{"id": "S1"}],
+                        "other": object(),
+                    }
+                }
+
+        mgr = ConnectionManager()
+        monkeypatch.setattr(web_app, "manager", mgr)
 
         ws = AsyncMock()
         ws.headers = {"origin": "http://localhost:8000"}
-        ws.close = AsyncMock()
+        ws.receive_text = AsyncMock(
+            side_effect=[
+                json.dumps({"type": "start_workflow", "content": "idea", "mode": "L3"}),
+                WebSocketDisconnect(),
+            ]
+        )
 
-        rejected = False
-        if "origin" in ws.headers:
-            origin = ws.headers["origin"]
-            if origin not in origins:
-                await ws.close(code=1008)
-                rejected = True
+        monkeypatch.setattr(web_app, "create_initial_state", lambda **kwargs: {"seed": kwargs["user_idea"]})
+        monkeypatch.setattr(web_app, "compile_graph", lambda *_args, **_kwargs: _WorkflowApp())
 
-        assert not rejected
-        ws.close.assert_not_awaited()
+        await web_app.websocket_endpoint(ws, "c2")
 
-    async def test_no_origin_header(self):
-        """No origin header → not rejected."""
+        ws.accept.assert_awaited_once()
+        sent_types = [call.args[0]["type"] for call in ws.send_json.await_args_list]
+        assert "status" in sent_types
+        assert "node_update" in sent_types
+        assert "draft_update" in sent_types
+        assert "lock_update" in sent_types
+        assert "scenes_update" in sent_types
+        assert ws not in mgr.active_connections
+
+    async def test_workflow_exception_sends_error(self, monkeypatch):
+        mgr = ConnectionManager()
+        monkeypatch.setattr(web_app, "manager", mgr)
+
+        ws = AsyncMock()
+        ws.headers = {"origin": "http://localhost:8000"}
+        ws.receive_text = AsyncMock(
+            side_effect=[
+                json.dumps({"type": "start_workflow", "content": "idea", "mode": "L3"}),
+                WebSocketDisconnect(),
+            ]
+        )
+
+        def _boom(*_args, **_kwargs):
+            raise RuntimeError("compile failed")
+
+        monkeypatch.setattr(web_app, "compile_graph", _boom)
+        monkeypatch.setattr(web_app, "create_initial_state", lambda **_kwargs: {"seed": "x"})
+
+        await web_app.websocket_endpoint(ws, "c3")
+
+        sent_payloads = [call.args[0] for call in ws.send_json.await_args_list]
+        assert any(payload.get("type") == "error" for payload in sent_payloads)
+        assert ws not in mgr.active_connections
+
+    async def test_generic_exception_disconnects(self, monkeypatch):
+        mgr = ConnectionManager()
+        monkeypatch.setattr(web_app, "manager", mgr)
+
+        ws = AsyncMock()
+        ws.headers = {"origin": "http://localhost:8000"}
+        ws.receive_text = AsyncMock(side_effect=ValueError("bad socket"))
+
+        await web_app.websocket_endpoint(ws, "c4")
+
+        assert ws not in mgr.active_connections
+
+    async def test_no_origin_header(self, monkeypatch):
+        """No origin header should continue path and then disconnect on close."""
+        mgr = ConnectionManager()
+        monkeypatch.setattr(web_app, "manager", mgr)
+
         ws = AsyncMock()
         ws.headers = {}
-        ws.close = AsyncMock()
+        ws.receive_text = AsyncMock(side_effect=WebSocketDisconnect())
 
-        if "origin" in ws.headers:
-            await ws.close(code=1008)
+        await web_app.websocket_endpoint(ws, "c5")
 
-        ws.close.assert_not_awaited()
+        ws.close.assert_not_called()
+        assert ws not in mgr.active_connections
+
+
+@pytest.mark.asyncio
+async def test_websocket_ignores_non_start_workflow_message(monkeypatch):
+    mgr = ConnectionManager()
+    monkeypatch.setattr(web_app, "manager", mgr)
+
+    ws = AsyncMock()
+    ws.headers = {"origin": "http://localhost:8000"}
+    ws.receive_text = AsyncMock(
+        side_effect=[
+            json.dumps({"type": "ping", "content": "noop"}),
+            WebSocketDisconnect(),
+        ]
+    )
+
+    await web_app.websocket_endpoint(ws, "c6")
+
+    ws.accept.assert_awaited_once()
+    assert ws.send_json.await_count == 0
+    assert ws not in mgr.active_connections
+
+
+@pytest.mark.asyncio
+async def test_workflow_without_optional_updates_sends_only_node_update(monkeypatch):
+    class _WorkflowApp:
+        async def astream(self, _state):
+            yield {
+                "writer": {"other": "x"},
+                "critic": {"score": 90},
+            }
+
+    mgr = ConnectionManager()
+    monkeypatch.setattr(web_app, "manager", mgr)
+
+    ws = AsyncMock()
+    ws.headers = {"origin": "http://localhost:8000"}
+    ws.receive_text = AsyncMock(
+        side_effect=[
+            json.dumps({"type": "start_workflow", "content": "idea", "mode": "L3"}),
+            WebSocketDisconnect(),
+        ]
+    )
+
+    monkeypatch.setattr(web_app, "create_initial_state", lambda **kwargs: {"seed": kwargs["user_idea"]})
+    monkeypatch.setattr(web_app, "compile_graph", lambda *_args, **_kwargs: _WorkflowApp())
+
+    await web_app.websocket_endpoint(ws, "c7")
+
+    sent_types = [call.args[0]["type"] for call in ws.send_json.await_args_list]
+    assert "node_update" in sent_types
+    assert "draft_update" not in sent_types
+    assert "lock_update" not in sent_types
+    assert "scenes_update" not in sent_types
+
+
+@pytest.mark.asyncio
+async def test_root_default_deprecated_response(monkeypatch):
+    monkeypatch.delenv("WEB_UI_FORWARD_URL", raising=False)
+
+    response = await web_app.get(None)
+
+    assert response.status_code == 410
+    assert "deprecated" in response.body.decode("utf-8")
+
+
+def test_web_app_importerror_fallback_branch(monkeypatch):
+    module_path = Path(__file__).resolve().parents[3] / "src" / "web" / "app.py"
+    module_name = "src.web.app_import_fallback_test"
+
+    fake_graph_mod = types.ModuleType("src.workflow.graph")
+    fake_graph_mod.run_writing_session = lambda *_args, **_kwargs: None
+    fake_graph_mod.compile_graph = lambda *_args, **_kwargs: None
+
+    fake_state_mod = types.ModuleType("src.workflow.state")
+    fake_state_mod.create_initial_state = lambda **_kwargs: {}
+    fake_state_mod.DEFAULT_CONFIG = {}
+
+    monkeypatch.setitem(sys.modules, "src.workflow.graph", fake_graph_mod)
+    monkeypatch.setitem(sys.modules, "src.workflow.state", fake_state_mod)
+
+    original_import = builtins.__import__
+    state = {"raised": False}
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if (
+            name == "src.workflow.graph"
+            and fromlist
+            and "run_writing_session" in fromlist
+            and not state["raised"]
+        ):
+            state["raised"] = True
+            raise ImportError("simulated import error for fallback")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    sys.modules.pop(module_name, None)
+    try:
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        assert spec is not None and spec.loader is not None
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = mod
+        spec.loader.exec_module(mod)
+
+        assert state["raised"] is True
+        assert hasattr(mod, "app")
+    finally:
+        sys.modules.pop(module_name, None)

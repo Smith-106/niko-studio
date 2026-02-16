@@ -259,6 +259,18 @@ class TestRevisionLoop:
         # At max_revisions, REVISE escalates to HUMAN_REVIEW
         assert loop.state.decision == RevisionDecision.HUMAN_REVIEW
 
+    def test_stagnant_branch_human_review_before_max(self):
+        cfg = RevisionConfig(max_revisions=10, score_improvement_threshold=5.0)
+        loop = RevisionLoop(cfg)
+
+        loop.update_from_critic({"total_score": 60, "decision": "REVISE"})
+        loop.update_from_critic({"total_score": 61, "decision": "REVISE"})
+        loop.update_from_critic({"total_score": 62, "decision": "REVISE"})
+
+        assert loop.state.revision_count == 3
+        assert loop.state.stagnant_count >= 2
+        assert loop.state.decision == RevisionDecision.HUMAN_REVIEW
+
 
 # ============================================================
 # run_revision_loop Tests
@@ -357,3 +369,40 @@ class TestRunRevisionLoop:
             verbose=False,
         )
         assert result["final_decision"] == "APPROVED"
+
+    @pytest.mark.asyncio
+    async def test_verbose_branches_and_writer_called(self, capsys):
+        call_count = {"n": 0}
+
+        async def mock_critic(draft, scene_card):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                return {
+                    "total_score": 60,
+                    "decision": "REVISE",
+                    "actionable_feedback": "补充细节",
+                }
+            return {
+                "total_score": 90,
+                "decision": "APPROVED",
+                "lock_analysis": {"C": {"score": 8}},
+            }
+
+        async def mock_writer(draft, feedback):
+            assert "feedback" in feedback
+            return draft + "\nrevised"
+
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={"scene": "x"},
+            writer_fn=mock_writer,
+            critic_fn=mock_critic,
+            verbose=True,
+        )
+
+        out = capsys.readouterr().out
+        assert "第 1 次评估" in out
+        assert "第 1 次修订" in out
+        assert "修订循环完成" in out
+        assert "最终决策: APPROVED" in out
+        assert result["total_revisions"] == 2

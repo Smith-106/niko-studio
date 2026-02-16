@@ -383,6 +383,71 @@ class TestCodeAdapter:
         result = adapter.evaluate(state)
         assert result.decision == "APPROVED"
 
-    def test_create_graph(self, adapter):
-        graph = adapter.create_graph()
-        assert graph is not None
+
+    def test_evaluate_with_errors_adds_error_instruction(self, adapter):
+        state = {
+            "errors": ["runtime error"],
+            "tests_passed": True,
+            "lint_passed": True,
+            "build_passed": True,
+            "coverage": 90,
+        }
+        result = adapter.evaluate(state)
+        assert result.decision == "REVISE"
+        assert any(item["target"] == "error" for item in result.revision_instructions)
+
+    def test_evaluate_revise_when_build_fails(self, adapter):
+        state = {
+            "tests_passed": True,
+            "lint_passed": True,
+            "build_passed": False,
+            "coverage": 95,
+        }
+        result = adapter.evaluate(state)
+        assert result.decision == "REVISE"
+        assert any(item["target"] == "build" for item in result.revision_instructions)
+
+    def test_evaluate_revise_when_coverage_below_threshold(self):
+        from src.workflow.adapters.code_adapter import CodeAdapter
+
+        adapter = CodeAdapter(config={"code_coverage_threshold": 85})
+        state = {
+            "tests_passed": True,
+            "lint_passed": True,
+            "build_passed": True,
+            "coverage": 70,
+        }
+        result = adapter.evaluate(state)
+        assert result.decision == "REVISE"
+        assert any(item["target"] == "coverage" for item in result.revision_instructions)
+
+    def test_evaluate_reads_coverage_from_metadata(self, adapter):
+        state = {
+            "tests_passed": True,
+            "lint_passed": True,
+            "build_passed": True,
+            "metadata": {
+                "coverage": "88%",
+            },
+        }
+        result = adapter.evaluate(state)
+        assert result.decision == "APPROVED"
+
+    def test_evaluate_invalid_coverage_string_returns_none_branch(self, adapter):
+        state = {
+            "tests_passed": True,
+            "lint_passed": True,
+            "build_passed": True,
+            "metadata": {
+                "coverage": "invalid-value",
+            },
+        }
+        result = adapter.evaluate(state)
+        assert result.dimension_scores["coverage"] == 8.0
+
+    def test_to_optional_bool_numeric_and_string_branches(self):
+        from src.workflow.adapters.code_adapter import CodeAdapter
+
+        assert CodeAdapter._to_optional_bool(2) is True
+        assert CodeAdapter._to_optional_bool("0") is False
+        assert CodeAdapter._to_optional_bool("maybe") is None

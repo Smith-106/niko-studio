@@ -7,6 +7,7 @@ and core file operations.
 
 import json
 import pytest
+from unittest.mock import patch
 from pathlib import Path
 from src.store.openkl_contract import (
     OpenKLPaths,
@@ -322,3 +323,110 @@ class TestOpenKLContract:
         # Create new contract pointing to same base
         c2 = OpenKLContract(base_path=base)
         assert "persist-1" in c2._mappings
+
+    def test_load_mappings_missing_file_returns(self, tmp_path):
+        contract = OpenKLContract(base_path=tmp_path / ".writing")
+        contract.paths.mapping_file.unlink()
+
+        contract._mappings.clear()
+        contract._load_mappings()
+
+        assert contract._mappings == {}
+
+    def test_load_mappings_skips_blank_and_invalid_json(self, tmp_path):
+        base = tmp_path / ".writing"
+        contract = OpenKLContract(base_path=base)
+        valid = DocumentMapping(
+            doc_id="valid-1",
+            path="store/sources/valid-1.md",
+            sha256="x" * 64,
+            source_type="general",
+            created_at="2025-01-01T00:00:00",
+            updated_at="2025-01-01T00:00:00",
+            metadata={},
+        )
+        contract.paths.mapping_file.write_text(
+            "\n"
+            "{bad-json}\n"
+            + json.dumps(valid.to_dict(), ensure_ascii=False)
+            + "\n",
+            encoding="utf-8",
+        )
+
+        contract._mappings.clear()
+        contract._load_mappings()
+
+        assert "valid-1" in contract._mappings
+
+    def test_load_mappings_open_error_logs(self, tmp_path):
+        contract = OpenKLContract(base_path=tmp_path / ".writing")
+        with patch("src.store.openkl_contract.open", side_effect=OSError("boom")):
+            contract._load_mappings()
+        assert isinstance(contract._mappings, dict)
+
+    def test_save_mappings_writes_jsonl_rows(self, tmp_path):
+        contract = OpenKLContract(base_path=tmp_path / ".writing")
+        contract._mappings["doc-1"] = DocumentMapping(
+            doc_id="doc-1",
+            path="store/sources/doc-1.md",
+            sha256="z" * 64,
+            source_type="general",
+            created_at="2025-01-01T00:00:00",
+            updated_at="2025-01-01T00:00:00",
+            metadata={"k": "v"},
+        )
+
+        contract._save_mappings()
+
+        rows = [
+            json.loads(line)
+            for line in contract.paths.mapping_file.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        assert len(rows) == 1
+        assert rows[0]["doc_id"] == "doc-1"
+
+    def test_save_mappings_open_error_logs(self, tmp_path):
+        contract = OpenKLContract(base_path=tmp_path / ".writing")
+        with patch("src.store.openkl_contract.open", side_effect=OSError("save failed")):
+            contract._save_mappings()
+        assert isinstance(contract._mappings, dict)
+
+    def test_append_mapping_open_error_logs(self, tmp_path):
+        contract = OpenKLContract(base_path=tmp_path / ".writing")
+        mapping = DocumentMapping(
+            doc_id="append-1",
+            path="store/sources/append-1.md",
+            sha256="y" * 64,
+            source_type="general",
+            created_at="2025-01-01T00:00:00",
+            updated_at="2025-01-01T00:00:00",
+            metadata={},
+        )
+        with patch("src.store.openkl_contract.open", side_effect=OSError("append failed")):
+            contract._append_mapping(mapping)
+        assert isinstance(contract._mappings, dict)
+
+    def test_get_document_missing_file_returns_none(self, contract):
+        contract.ingest_content("content", doc_id="missing-doc")
+        mapping = contract._mappings["missing-doc"]
+        doc_path = contract.paths.base_path / mapping.path
+        doc_path.unlink()
+
+        assert contract.get_document("missing-doc") is None
+
+    def test_create_memory_symlink_oserror_swallowed(self, contract):
+        with patch("pathlib.Path.symlink_to", side_effect=OSError("no symlink")):
+            path = contract.create_memory("mem-link", "hello", topics=["topic-a"])
+
+        assert path.exists()
+        assert path.read_text(encoding="utf-8").endswith("hello")
+
+    def test_verify_integrity_orphaned_files(self, contract):
+        orphan = contract.paths.sources / "orphan.md"
+        orphan.write_text("orphan content", encoding="utf-8")
+
+        result = contract.verify_integrity()
+        rel_path = str(orphan.relative_to(contract.paths.base_path))
+
+        assert rel_path in result["orphaned_files"]

@@ -10,6 +10,10 @@ import pytest
 from unittest.mock import MagicMock, patch, call
 import json
 import os
+import sys
+import runpy
+import types
+from pathlib import Path
 
 
 # ============================================================
@@ -457,7 +461,62 @@ class TestRenderParallelizationAnalysis:
 # scene_dashboard - render_scene_dashboard
 # ============================================================
 
-class TestRenderSceneDashboard:
+
+class TestMainBlocksCoverage:
+
+    def test_lock_radar_main_block(self, monkeypatch):
+        module_path = Path(__file__).resolve().parents[3] / "src" / "ui" / "components" / "lock_radar.py"
+
+        fake_st = types.SimpleNamespace(
+            set_page_config=lambda **_kwargs: None,
+            title=lambda *_args, **_kwargs: None,
+            columns=lambda n, **_kwargs: [MagicMock() for _ in range(n)],
+            metric=lambda *_args, **_kwargs: None,
+            progress=lambda *_args, **_kwargs: None,
+            expander=lambda *_args, **_kwargs: _mock_st.expander.return_value,
+            caption=lambda *_args, **_kwargs: None,
+            markdown=lambda *_args, **_kwargs: None,
+            info=lambda *_args, **_kwargs: None,
+            plotly_chart=lambda *_args, **_kwargs: None,
+            subheader=lambda *_args, **_kwargs: None,
+        )
+
+        monkeypatch.setitem(sys.modules, "streamlit", fake_st)
+
+        runpy.run_path(str(module_path), run_name="__main__")
+
+    def test_trajectory_viewer_main_block(self, monkeypatch):
+        module_path = Path(__file__).resolve().parents[3] / "src" / "ui" / "components" / "trajectory_viewer.py"
+
+        class _Ctx:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        fake_st = types.SimpleNamespace(
+            session_state={"language": "中文"},
+            set_page_config=lambda **_kwargs: None,
+            title=lambda *_args, **_kwargs: None,
+            subheader=lambda *_args, **_kwargs: None,
+            info=lambda *_args, **_kwargs: None,
+            expander=lambda *_args, **_kwargs: _Ctx(),
+            caption=lambda *_args, **_kwargs: None,
+            markdown=lambda *_args, **_kwargs: None,
+            container=lambda **_kwargs: _Ctx(),
+            columns=lambda n, **_kwargs: [MagicMock() for _ in range(n)],
+            metric=lambda *_args, **_kwargs: None,
+            json=lambda *_args, **_kwargs: None,
+            code=lambda *_args, **_kwargs: None,
+            progress=lambda *_args, **_kwargs: None,
+            success=lambda *_args, **_kwargs: None,
+            divider=lambda *_args, **_kwargs: None,
+        )
+
+        monkeypatch.setitem(sys.modules, "streamlit", fake_st)
+
+        runpy.run_path(str(module_path), run_name="__main__")
 
     def test_no_scenes(self):
         from src.ui.components.scene_dashboard import render_scene_dashboard
@@ -524,3 +583,160 @@ class TestRenderSceneDashboard:
              patch("src.ui.components.scene_dashboard.render_parallelization_analysis"), \
              patch("src.ui.components.scene_dashboard.render_lock_metrics"):
             render_scene_dashboard()
+
+
+class TestSceneDashboardExtraCoverage:
+
+    def test_render_dependency_graph_graphviz_fallback_when_missing(self):
+        from src.ui.components.scene_dashboard import render_dependency_graph_graphviz
+
+        scenes = [{"id": "S1", "title": "A", "status": "DONE", "dependencies": []}]
+        with patch("src.ui.components.scene_dashboard.HAS_GRAPHVIZ", False), \
+             patch("src.ui.components.scene_dashboard.render_dependency_graph_builtin") as mock_builtin:
+            render_dependency_graph_graphviz(scenes)
+            _mock_st.warning.assert_called()
+            mock_builtin.assert_called_once_with(scenes)
+
+    def test_render_dependency_graph_graphviz_full_path(self):
+        from src.ui.components.scene_dashboard import render_dependency_graph_graphviz
+
+        scenes = [
+            {
+                "id": "S1",
+                "title": "First Scene Title",
+                "status": "DONE",
+                "lock_scores": {"L": 7, "O": 8, "C": 6, "K": 7},
+                "dependencies": [],
+            },
+            {
+                "id": "S2",
+                "title": "Second",
+                "status": "WRITING",
+                "lock_scores": {},
+                "dependencies": ["S1", "X-MISSING"],
+            },
+        ]
+
+        fake_graph = MagicMock()
+        fake_graph.attr = MagicMock()
+        fake_graph.node = MagicMock()
+        fake_graph.edge = MagicMock()
+
+        fake_graphviz = types.SimpleNamespace(Digraph=MagicMock(return_value=fake_graph))
+        with patch("src.ui.components.scene_dashboard.HAS_GRAPHVIZ", True), \
+             patch("src.ui.components.scene_dashboard.graphviz", fake_graphviz):
+            render_dependency_graph_graphviz(scenes)
+
+        _mock_st.graphviz_chart.assert_called_once_with(fake_graph)
+        _mock_st.caption.assert_called()
+        fake_graph.node.assert_any_call(
+            "S1",
+            label="S1\\nFirst Scene Tit\\n[DONE]\\n(LOCK: 28)",
+            fillcolor="palegreen",
+            tooltip="Title: First Scene Title\nStatus: DONE\nLOCK Score: 28/40",
+        )
+        fake_graph.edge.assert_called_once_with("S1", "S2")
+
+    def test_render_scene_dashboard_buttons_and_graphviz_tab_true(self):
+        from src.ui.components.scene_dashboard import render_scene_dashboard
+
+        scenes = [
+            {
+                "id": "S1",
+                "title": "First",
+                "status": "PENDING",
+                "lock_scores": {"L": 1},
+                "dependencies": [],
+            }
+        ]
+
+        _mock_st.container.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        _mock_st.container.return_value.__exit__ = MagicMock(return_value=False)
+        _mock_st.expander.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        _mock_st.expander.return_value.__exit__ = MagicMock(return_value=False)
+
+        tab_mocks = [MagicMock(), MagicMock(), MagicMock()]
+        for tm in tab_mocks:
+            tm.__enter__ = MagicMock(return_value=tm)
+            tm.__exit__ = MagicMock(return_value=False)
+        _mock_st.tabs.return_value = tab_mocks
+
+        _mock_st.button.side_effect = [True, True]
+        _mock_st.session_state = {}
+
+        with patch("src.ui.components.scene_dashboard.load_scenes", return_value=scenes), \
+             patch("src.ui.components.scene_dashboard.HAS_GRAPHVIZ", True), \
+             patch("src.ui.components.scene_dashboard.render_dependency_graph_graphviz") as mock_graphviz, \
+             patch("src.ui.components.scene_dashboard.render_parallelization_analysis"), \
+             patch("src.ui.components.scene_dashboard.render_lock_metrics"):
+            render_scene_dashboard()
+
+        assert _mock_st.session_state["editing_scene"] == "S1"
+        _mock_st.info.assert_called()
+        mock_graphviz.assert_called_once_with(scenes)
+
+    def test_scene_dashboard_module_importerror_sets_has_graphviz_false(self, monkeypatch):
+        import builtins
+        import importlib.util
+
+        module_path = Path(__file__).resolve().parents[3] / "src" / "ui" / "components" / "scene_dashboard.py"
+        module_name = "src.ui.components.scene_dashboard_import_fallback_test"
+
+        original_import = builtins.__import__
+        state = {"raised": False}
+
+        def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "graphviz" and not state["raised"]:
+                state["raised"] = True
+                raise ImportError("simulated graphviz missing")
+            return original_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+
+        sys.modules.pop(module_name, None)
+        try:
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
+            assert spec is not None and spec.loader is not None
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+
+            assert state["raised"] is True
+            assert module.HAS_GRAPHVIZ is False
+        finally:
+            sys.modules.pop(module_name, None)
+
+    def test_scene_dashboard_main_block(self, monkeypatch):
+        module_path = Path(__file__).resolve().parents[3] / "src" / "ui" / "components" / "scene_dashboard.py"
+
+        class _Ctx:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        fake_st = types.SimpleNamespace(
+            session_state={},
+            set_page_config=lambda **_kwargs: None,
+            title=lambda *_args, **_kwargs: None,
+            markdown=lambda *_args, **_kwargs: None,
+            warning=lambda *_args, **_kwargs: None,
+            info=lambda *_args, **_kwargs: None,
+            divider=lambda *_args, **_kwargs: None,
+            caption=lambda *_args, **_kwargs: None,
+            subheader=lambda *_args, **_kwargs: None,
+            metric=lambda *_args, **_kwargs: None,
+            progress=lambda *_args, **_kwargs: None,
+            graphviz_chart=lambda *_args, **_kwargs: None,
+            json=lambda *_args, **_kwargs: None,
+            expander=lambda *_args, **_kwargs: _Ctx(),
+            container=lambda **_kwargs: _Ctx(),
+            columns=lambda n, **_kwargs: [MagicMock() for _ in range(n if isinstance(n, int) else len(n))],
+            tabs=lambda labels: tuple(_Ctx() for _ in labels),
+            button=lambda *_args, **_kwargs: False,
+        )
+
+        monkeypatch.setitem(sys.modules, "streamlit", fake_st)
+        runpy.run_path(str(module_path), run_name="__main__")
+

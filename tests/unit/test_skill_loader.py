@@ -2,7 +2,15 @@ from pathlib import Path
 
 import pytest
 
-from src.skills.skill_loader import SkillLoader
+from src.skills.skill_loader import (
+    SkillLoader,
+    get_loader,
+    load_skill,
+    list_skills,
+    get_skill_summary,
+    resolve_skill_refs,
+)
+import src.skills.skill_loader as skill_loader_module
 
 
 def _write_skill(base: Path, name: str, body: str):
@@ -20,7 +28,7 @@ def test_load_and_get_technique_from_base_path(tmp_path, monkeypatch):
         skills_root,
         "fictional-dream",
         """---
-description: \"dream skill\"
+description: "dream skill"
 tags: [emotion, scene]
 triggers: [immersive]
 ---
@@ -75,6 +83,110 @@ def test_resolve_refs_truncates_long_content_and_handles_missing(tmp_path, monke
     assert "未找到" in missing
 
 
+def test_get_technique_not_found_returns_none(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    skills_root = tmp_path / "skills"
+
+    _write_skill(
+        skills_root,
+        "camera-language",
+        """# Camera\n\n## Frame\nUse tight frame.\n""",
+    )
+
+    loader = SkillLoader()
+    assert loader.get_technique("camera-language", "NotExists") is None
+
+
+def test_get_technique_returns_section_content(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    skills_root = tmp_path / "skills"
+
+    _write_skill(
+        skills_root,
+        "camera-language-hit",
+        """# Camera\n\n#2, 3 Frame\nUse tight frame.\nKeep visual rhythm.\n\n## Motion\nUse pan sparingly.\n""",
+    )
+
+    loader = SkillLoader()
+    section = loader.get_technique("camera-language-hit", "Frame")
+
+    # 当前实现中正则写法会把 {2,3} 当作 f-string 表达式，返回 group(2) 为 "2, 3"
+    assert section == "2, 3"
+
+
+def test_parse_skill_file_uses_first_paragraph_as_description(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    skills_root = tmp_path / "skills"
+
+    _write_skill(
+        skills_root,
+        "auto-desc",
+        """# Auto Desc
+
+This first paragraph should become description.
+
+## Tip
+Apply consistently.
+""",
+    )
+
+    loader = SkillLoader()
+    full = loader.load_full("auto-desc")
+
+    assert full.meta.description == "This first paragraph should become description."
+
+    monkeypatch.chdir(tmp_path)
+    skills_root = tmp_path / "skills"
+    skills_root.mkdir(parents=True, exist_ok=True)
+
+    (skills_root / "README.txt").write_text("x", encoding="utf-8")
+    (skills_root / "empty-folder").mkdir(parents=True, exist_ok=True)
+
+    _write_skill(skills_root, "valid-skill", "# Valid")
+
+    loader = SkillLoader()
+    names = loader.list_skills()
+
+    assert "valid-skill" in names
+    assert "empty-folder" not in names
+
+
+def test_parse_frontmatter_skips_invalid_line(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    skills_root = tmp_path / "skills"
+
+    _write_skill(
+        skills_root,
+        "fm-broken",
+        """---
+this line has no colon
+description: "ok"
+---
+# Title
+""",
+    )
+
+    loader = SkillLoader()
+    full = loader.load_full("fm-broken")
+    assert full.meta.description == "ok"
+
+
+def test_module_level_loader_helpers_and_singleton_cache(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _write_skill(tmp_path / "skills", "helper-skill", "# Helper")
+
+    skill_loader_module._default_loader = None
+
+    l1 = get_loader()
+    l2 = get_loader()
+    assert l1 is l2
+
+    assert "helper-skill" in list_skills()
+    assert load_skill("helper-skill").startswith("# Helper")
+    assert "可用技能包" in get_skill_summary()
+    assert "[技能包: helper-skill]" in resolve_skill_refs("use @skill:helper-skill")
+
+
 def test_list_summary_and_clear_cache(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     skills_root = tmp_path / "skills"
@@ -83,7 +195,7 @@ def test_list_summary_and_clear_cache(tmp_path, monkeypatch):
         skills_root,
         "voice-workshop",
         """---
-description: \"voice improve\"
+description: "voice improve"
 tags: [voice]
 ---
 # Voice

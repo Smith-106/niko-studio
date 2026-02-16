@@ -3,10 +3,13 @@
 
 import pytest
 import json
+import builtins
+import importlib
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
-from src.store.store_manager import StoreManager, Document, DocumentFormat
+from src.store.store_manager import StoreManager, Document, DocumentFormat, DocumentFilter
 
 
 @pytest.fixture()
@@ -160,6 +163,22 @@ class TestLoadPdfContent:
             with pytest.raises(ImportError, match="pypdf"):
                 store._load_pdf_content(f)
 
+    def test_pdf_extract_empty_pages_returns_empty_string(self, store, tmp_path):
+        f = tmp_path / "test.pdf"
+        f.write_bytes(b"fake")
+
+        page1 = MagicMock()
+        page1.extract_text.return_value = None
+        page2 = MagicMock()
+        page2.extract_text.return_value = ""
+        fake_reader = MagicMock()
+        fake_reader.pages = [page1, page2]
+        fake_pypdf = MagicMock()
+        fake_pypdf.PdfReader.return_value = fake_reader
+
+        with patch.dict("sys.modules", {"pypdf": fake_pypdf}):
+            assert store._load_pdf_content(f) == ""
+
 
 class TestLoadDocxContent:
     def test_no_docx(self, store, tmp_path):
@@ -168,3 +187,340 @@ class TestLoadDocxContent:
         with patch.dict("sys.modules", {"docx": None}):
             with pytest.raises(ImportError, match="python-docx"):
                 store._load_docx_content(f)
+
+    def test_docx_filters_blank_paragraphs(self, store, tmp_path):
+        f = tmp_path / "test.docx"
+        f.write_bytes(b"fake")
+
+        p1 = MagicMock(text="line 1")
+        p2 = MagicMock(text="   ")
+        p3 = MagicMock(text="line 2")
+        fake_doc = MagicMock(paragraphs=[p1, p2, p3])
+        fake_docx = MagicMock()
+        fake_docx.Document.return_value = fake_doc
+
+        with patch.dict("sys.modules", {"docx": fake_docx}):
+            assert store._load_docx_content(f) == "line 1\n\nline 2"
+
+
+
+class TestDocumentFromDictBranches:
+    def test_from_dict_defaults_created_updated_and_format_passthrough(self):
+        fmt = DocumentFormat.MARKDOWN
+        doc = Document.from_dict(
+            {
+                "id": "d-1",
+                "content": "abc",
+                "format": fmt,
+                "metadata": {},
+                "chunks": [],
+                "created_at": None,
+                "updated_at": None,
+            }
+        )
+
+        assert doc.format == fmt
+        assert doc.created_at is not None
+        assert doc.updated_at is not None
+
+    def test_from_dict_format_non_string_passthrough_branch(self):
+        doc = Document.from_dict(
+            {
+                "id": "d-1b",
+                "content": "abc",
+                "format": 123,
+                "metadata": {},
+                "chunks": [],
+                "created_at": None,
+                "updated_at": None,
+            }
+        )
+
+        assert doc.format == 123
+
+class TestStoreManagerIndexErrorBranches:
+    def test_load_index_logs_document_parse_error(self, tmp_path):
+        base = tmp_path / "store"
+        sm = StoreManager(base_path=str(base))
+        sm.index_path.write_text(
+            json.dumps(
+                {
+                    "documents": [
+                        {"id": "bad-1", "content": "x", "format": "unknown-format"}
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        sm._documents.clear()
+        sm._load_index()
+
+        assert sm.document_count == 0
+
+    def test_load_index_logs_outer_error(self, store):
+        with patch("src.store.store_manager.open", side_effect=OSError("read fail")):
+            store._load_index()
+        assert isinstance(store._documents, dict)
+
+    def test_save_index_logs_error(self, store):
+        with patch("src.store.store_manager.open", side_effect=OSError("write fail")):
+            store._save_index()
+        assert isinstance(store._documents, dict)
+
+
+class TestStoreManagerMissBranches:
+    def test_get_chunks_missing_returns_empty(self, store):
+        assert store.get_chunks("missing") == []
+
+    def test_get_normalized_content_missing_returns_none(self, store):
+        assert store.get_normalized_content("missing") is None
+
+    def test_import_file_not_found_raises(self, store, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            store.import_file(tmp_path / "not-found.md")
+
+    def test_search_by_content_respects_limit_break(self, store):
+        for i in range(5):
+            store.add_document(path=f"k-{i}.md", content="keyword")
+
+        results = store.search_by_content("keyword", limit=2)
+        assert len(results) == 2
+
+
+class TestBatchBranches:
+    def test_import_directory_binary_branch(self, store, tmp_path):
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        pdf = docs / "a.pdf"
+        pdf.write_bytes(b"fake")
+
+        with patch.object(store, "import_binary_file", return_value="doc-pdf") as binary_mock:
+            result = store.import_directory(docs, recursive=False, extensions=[".pdf"])
+
+        assert result["imported"] == 1
+        binary_mock.assert_called_once_with(pdf)
+
+    def test_import_directory_accumulates_binary_errors(self, store, tmp_path):
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        pdf = docs / "a.pdf"
+        pdf.write_bytes(b"fake")
+
+        with patch.object(store, "import_binary_file", side_effect=RuntimeError("binary fail")):
+            result = store.import_directory(docs, recursive=False, extensions=[".pdf"])
+
+        assert result["imported"] == 0
+        assert result["total_files"] == 1
+        assert len(result["errors"]) == 1
+        assert result["errors"][0]["file"].endswith("a.pdf")
+
+    def test_export_all_filter_skip(self, store, tmp_path):
+        d1 = store.add_document(path="a.md", content="a", metadata={"kind": "x"})
+        _d2 = store.add_document(path="b.md", content="b", metadata={"kind": "y"})
+
+        filter_x = MagicMock()
+        filter_x.matches.side_effect = lambda doc: doc.metadata.get("kind") == "x"
+
+        with patch.object(store, "export_document", wraps=store.export_document) as export_mock:
+            count = store.export_all(tmp_path / "out", filter=filter_x)
+
+        assert count == 1
+        called_doc_ids = [call.args[0] for call in export_mock.call_args_list]
+        assert d1 in called_doc_ids
+
+    def test_export_all_skips_failed_export(self, store, tmp_path):
+        d1 = store.add_document(path="a.md", content="a")
+        d2 = store.add_document(path="b.md", content="b")
+
+        def _fake_export(doc_id, output_path, normalized=False):
+            return doc_id == d1
+
+        with patch.object(store, "export_document", side_effect=_fake_export):
+            count = store.export_all(tmp_path / "out")
+
+
+
+class TestStoreManagerAdditionalCoverage:
+    def test_document_from_dict_parses_string_timestamps(self):
+        now = datetime.now().replace(microsecond=0)
+        data = {
+            "id": "d-2",
+            "content": "abc",
+            "format": "markdown",
+            "metadata": {},
+            "chunks": [],
+            "created_at": now.isoformat(),
+            "updated_at": now.isoformat(),
+        }
+
+        doc = Document.from_dict(data)
+        assert doc.created_at == now
+        assert doc.updated_at == now
+
+    def test_document_word_and_char_count(self):
+        doc = Document.create(content="hello world")
+        assert doc.word_count == 2
+        assert doc.char_count == len("hello world")
+
+    def test_document_filter_matches_all_branches(self):
+        now = datetime.now()
+        doc = Document.create(
+            content="x",
+            format=DocumentFormat.MARKDOWN,
+            metadata={"tags": ["a"], "k": "v"},
+        )
+        doc.created_at = now
+
+        assert DocumentFilter(format=DocumentFormat.JSON).matches(doc) is False
+        assert DocumentFilter(tags=["b"]).matches(doc) is False
+        assert DocumentFilter(created_after=now.replace(year=now.year + 1)).matches(doc) is False
+        assert DocumentFilter(created_before=now.replace(year=now.year - 1)).matches(doc) is False
+        assert DocumentFilter(metadata_match={"k": "no"}).matches(doc) is False
+        assert DocumentFilter(
+            format=DocumentFormat.MARKDOWN,
+            tags=["a"],
+            created_after=now.replace(second=max(now.second - 1, 0)),
+            created_before=now.replace(second=min(now.second + 1, 59)),
+            metadata_match={"k": "v"},
+        ).matches(doc) is True
+
+    def test_load_index_success_branch_loads_document(self, tmp_path):
+        base = tmp_path / "store"
+        sm = StoreManager(base_path=str(base))
+        sm.index_path.write_text(
+            json.dumps(
+                {
+                    "documents": [
+                        {
+                            "id": "ok-1",
+                            "content": "ok",
+                            "format": "markdown",
+                            "metadata": {},
+                            "chunks": [],
+                            "created_at": datetime.now().isoformat(),
+                            "updated_at": datetime.now().isoformat(),
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        sm._documents.clear()
+        sm._load_index()
+        assert "ok-1" in sm._documents
+
+    def test_load_index_open_error_when_file_exists(self, store):
+        store.index_path.write_text("{}", encoding="utf-8")
+        with patch("src.store.store_manager.open", side_effect=OSError("read fail")):
+            store._load_index()
+        assert isinstance(store._documents, dict)
+
+    def test_chunk_document_returns_empty_when_auto_chunk_disabled(self, tmp_path):
+        sm = StoreManager(base_path=str(tmp_path / "store"), auto_chunk=False)
+        doc = Document.create(content="abc")
+        assert sm._chunk_document(doc) == []
+
+    def test_update_document_merges_metadata(self, store):
+        doc_id = store.add_document(path="meta.md", content="x", metadata={"a": 1})
+        ok = store.update_document(doc_id, "y", metadata={"b": 2})
+        assert ok is True
+        assert store.get_document(doc_id).metadata["b"] == 2
+
+    def test_list_documents_filter_continue_branch(self, store):
+        store.add_document(path="a.md", content="x", metadata={"kind": "x"})
+        docs = store.list_documents(filter=DocumentFilter(metadata_match={"kind": "y"}))
+        assert docs == []
+
+    def test_get_chunks_existing(self, store):
+        doc_id = store.add_document(path="a.md", content="abc")
+        assert isinstance(store.get_chunks(doc_id), list)
+
+    def test_export_document_normalized_fallback_when_missing(self, store, tmp_path):
+        doc_id = store.add_document(path="a.md", content="abc", normalize=False)
+        out = tmp_path / "n.md"
+        ok = store.export_document(doc_id, out, normalized=True)
+        assert ok is True
+        assert "doc_id:" in out.read_text(encoding="utf-8")
+
+    def test_load_pdf_content_appends_non_empty_page(self, store, tmp_path):
+        f = tmp_path / "test.pdf"
+        f.write_bytes(b"fake")
+
+        page = MagicMock()
+        page.extract_text.return_value = "hello"
+        fake_reader = MagicMock()
+        fake_reader.pages = [page]
+        fake_pypdf = MagicMock()
+        fake_pypdf.PdfReader.return_value = fake_reader
+
+        with patch.dict("sys.modules", {"pypdf": fake_pypdf}):
+            assert store._load_pdf_content(f) == "hello"
+
+    def test_get_all_chunks_filter_continue_branch(self, store):
+        store.add_document(path="a.md", content="x", metadata={"kind": "x"})
+        chunks = store.get_all_chunks(filter=DocumentFilter(metadata_match={"kind": "y"}))
+        assert chunks == []
+
+    def test_import_directory_uses_default_extensions(self, store, tmp_path):
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        (docs / "a.md").write_text("aaa", encoding="utf-8")
+
+        result = store.import_directory(docs, recursive=False, extensions=None)
+        assert result["total_files"] >= 1
+        assert result["imported"] >= 1
+
+    def test_clear_all_requires_confirm_and_then_clears(self, store):
+        store.add_document(path="a.md", content="a")
+        store.add_document(path="b.md", content="b")
+
+        with pytest.raises(ValueError):
+            store.clear_all(confirm=False)
+
+        deleted = store.clear_all(confirm=True)
+        assert deleted == 2
+        assert store.document_count == 0
+
+
+class TestStoreManagerImportFallback:
+    def test_fallback_import_branch_on_reload(self):
+        import src.store.store_manager as sm
+
+        original_import = builtins.__import__
+
+        first_memory_import = {"raised": False}
+
+        def _fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "memory.memory_chunk" and not first_memory_import["raised"]:
+                first_memory_import["raised"] = True
+                raise ImportError("force fallback")
+            if name == "memory.memory_chunk":
+                class _DummyChunk:
+                    @staticmethod
+                    def from_dict(_):
+                        return MagicMock()
+
+                    def to_dict(self):
+                        return {}
+
+                class _DummyChunker:
+                    def __init__(self, chunk_size=512, chunk_overlap=50):
+                        self.chunk_size = chunk_size
+                        self.chunk_overlap = chunk_overlap
+
+                    def chunk_text(self, text, source_id, metadata):
+                        return []
+
+                module = type("M", (), {})
+                module.MemoryChunk = _DummyChunk
+                module.TextChunker = _DummyChunker
+                return module
+            return original_import(name, globals, locals, fromlist, level)
+
+        with patch("builtins.__import__", side_effect=_fake_import):
+            reloaded = importlib.reload(sm)
+            assert hasattr(reloaded, "StoreManager")
+
+        importlib.reload(sm)

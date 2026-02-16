@@ -186,6 +186,18 @@ class TestBaseDomainAdapterRoot:
         assert cfg["extra"] is True
 
 
+class TestBaseDomainAdapterRootAbstractPassLines:
+
+    def test_abstract_pass_lines_are_executable(self):
+        dummy = object()
+
+        assert BaseDomainAdapter.get_domain_type(dummy) is None
+        assert BaseDomainAdapter.get_state_class(dummy) is None
+        assert BaseDomainAdapter.create_initial_state(dummy, "req") is None
+        assert BaseDomainAdapter.evaluate(dummy, {}) is None
+        assert BaseDomainAdapter.create_graph(dummy) is None
+
+
 # ============================================================
 # AdapterRegistry
 # ============================================================
@@ -252,3 +264,12 @@ class TestBaseWorkflow:
     def test_get_state(self):
         w = _TestWorkflow()
         assert w.get_state() == {}
+
+
+class TestBaseWorkflowAbstractPassLines:
+
+    def test_abstract_pass_lines_are_executable(self):
+        dummy = object()
+
+        assert BaseWorkflow.run(dummy, "input") is None
+        assert BaseWorkflow.get_state(dummy) is None

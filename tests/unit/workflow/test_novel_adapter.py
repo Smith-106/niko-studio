@@ -441,23 +441,235 @@ class TestCriticNode:
             assert "errors" in result
 
 
-class TestDistillationNodeAdapter:
+
+
+class TestGetLlmFallbackExceptions:
+
+    @patch("src.workflow.adapters.novel_adapter.get_config")
+    def test_google_import_exception_branch(self, mock_config):
+        mock_cfg = MagicMock()
+        mock_cfg.agent.google_api_key = "google-key"
+        mock_cfg.agent.openai_api_key = None
+        mock_config.return_value = mock_cfg
+
+        adapter = NovelAdapter()
+        with patch.dict("os.environ", {}, clear=True), \
+             patch("langchain_google_genai.ChatGoogleGenerativeAI", side_effect=Exception("google init failed")):
+            with pytest.raises(RuntimeError, match="无法初始化 LLM"):
+                adapter._get_llm()
+
+    @patch("src.workflow.adapters.novel_adapter.get_config")
+    def test_openai_import_exception_branch(self, mock_config):
+        mock_cfg = MagicMock()
+        mock_cfg.agent.google_api_key = None
+        mock_cfg.agent.openai_api_key = "openai-key"
+        mock_config.return_value = mock_cfg
+
+        adapter = NovelAdapter()
+        with patch.dict("os.environ", {}, clear=True), \
+             patch("langchain_openai.ChatOpenAI", side_effect=Exception("openai init failed")):
+            with pytest.raises(RuntimeError, match="无法初始化 LLM"):
+                adapter._get_llm()
+
+
+class TestNodeSuccessPaths:
 
     @pytest.mark.asyncio
-    async def test_distillation_error(self):
+    async def test_commander_success(self):
         adapter = NovelAdapter()
-        mock_node_instance = MagicMock()
-        mock_node_instance.process.side_effect = RuntimeError("fail")
+        mock_llm = MagicMock()
 
-        with patch("src.workflow.graph.DistillationNode", return_value=mock_node_instance):
-            state = {"draft_content": "text", "errors": []}
-            result = await adapter.distillation_node(state)
-            assert "errors" in result
+        level = MagicMock()
+        level.value = "standard"
+        scene_type = MagicMock()
+        scene_type.value = "chapter"
 
+        assignment = MagicMock()
+        assignment.model_dump.return_value = {"agent": "writer", "task": "draft"}
 
-# ============================================================
-# create_graph
-# ============================================================
+        mock_agent = MagicMock()
+        mock_agent.route.return_value = level
+        mock_agent.detect_scene_type.return_value = scene_type
+        mock_agent.dispatch_skills.return_value = ["outline", "foreshadow"]
+        mock_agent.dispatch_tasks.return_value = [assignment]
+
+        with patch.object(adapter, "_get_llm", return_value=mock_llm), \
+             patch("src.agents.commander.CommanderAgent", return_value=mock_agent):
+            result = await adapter.commander_node({"user_idea": "idea"})
+
+        assert result["workflow_level"] == "standard"
+        assert result["scene_type"] == "chapter"
+        assert result["dispatched_skills"] == ["outline", "foreshadow"]
+        assert result["task_assignments"] == [{"agent": "writer", "task": "draft"}]
+
+    @pytest.mark.asyncio
+    async def test_architect_success(self):
+        adapter = NovelAdapter()
+        mock_llm = MagicMock()
+
+        scene_card = MagicMock()
+        scene_card.model_dump.return_value = {"id": "SCENE-001", "title": "opening"}
+
+        lock_analysis = MagicMock()
+        lock_analysis.total_score = 30
+        lock_analysis.model_dump.return_value = {"total_score": 30}
+
+        blueprint = MagicMock()
+        blueprint.scene_cards = [scene_card]
+        blueprint.lock_analysis = lock_analysis
+        blueprint.model_dump.return_value = {"blueprint": True}
+
+        mock_agent = MagicMock()
+        mock_agent.plan = AsyncMock(return_value=blueprint)
+
+        with patch.object(adapter, "_get_llm", return_value=mock_llm), \
+             patch("src.agents.architect.ArchitectAgent", return_value=mock_agent):
+            result = await adapter.architect_node({"user_idea": "idea"})
+
+        assert result["story_blueprint"] == {"blueprint": True}
+        assert result["lock_analysis"] == {"total_score": 30}
+        assert result["scene_cards"][0]["id"] == "SCENE-001"
+        assert result["current_scene"]["id"] == "SCENE-001"
+
+    @pytest.mark.asyncio
+    async def test_writer_success_with_feedback_context(self):
+        adapter = NovelAdapter()
+        mock_llm = MagicMock()
+
+        class _WriterInput:
+            def __init__(self, **kwargs):
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+
+        writer_result = MagicMock()
+        writer_result.content = "new draft"
+        writer_result.wordcount = 1234
+        writer_result.sensory_types_used = ["视觉", "听觉"]
+        writer_result.forbidden_words_found = ["禁用词"]
+        writer_result.sections_needing_review = ["段落 2"]
+
+        captured = {}
+
+        async def _write(inp):
+            captured["input"] = inp
+            return writer_result
+
+        mock_agent = MagicMock()
+        mock_agent.write = _write
+
+        with patch.object(adapter, "_get_llm", return_value=mock_llm), \
+             patch("src.agents.writer.WriterAgent", return_value=mock_agent), \
+             patch("src.agents.writer.WriterInput", _WriterInput):
+            state = {
+                "revision_count": 1,
+                "draft_version": 1,
+                "feedback_context": "请增强冲突",
+                "current_scene": {
+                    "scene_id": "CH01-SC01",
+                    "chapter_num": 1,
+                    "pov_character": "A",
+                    "objective": "obj",
+                    "conflict": "conf",
+                    "outcome": "+",
+                    "plot_beat": "beat",
+                    "emotional_arc": "平静→激烈",
+                    "sensory_guidance": {},
+                    "foreshadows_to_plant": [],
+                    "foreshadows_to_harvest": [],
+                },
+                "character_profiles": [],
+                "world_settings": {},
+                "errors": [],
+            }
+            result = await adapter.writer_node(state)
+
+        assert result["draft_content"] == "new draft"
+        assert result["draft_version"] == 2
+        assert result["draft_wordcount"] == 1234
+        assert result["writer_self_check"]["forbidden_words"] == ["禁用词"]
+        assert "请根据以上反馈重写内容" in captured["input"].previous_content
+
+    @pytest.mark.asyncio
+    async def test_distillation_success(self):
+        adapter = NovelAdapter(config={"distillation_template": "full"})
+
+        updated_state = {
+            "distillation_result": {
+                "entities_count": 3,
+                "relations_count": 2,
+                "events_count": 1,
+                "template": "full",
+            },
+            "distillation_state": {"ok": True},
+        }
+
+        mock_node = MagicMock()
+        mock_node.process.return_value = updated_state
+
+        with patch("src.workflow.graph.DistillationNode", return_value=mock_node), \
+             patch("src.workflow.graph.DistillationTemplate.from_string", return_value=MagicMock()):
+            result = await adapter.distillation_node({"draft_content": "text"})
+
+        assert result["distillation_result"]["entities_count"] == 3
+        assert result["distillation_state"]["ok"] is True
+
+    @pytest.mark.asyncio
+    async def test_distillation_exception_warning(self):
+        adapter = NovelAdapter(config={"distillation_template": "full"})
+
+        mock_node = MagicMock()
+        mock_node.process.side_effect = RuntimeError("distill fail")
+
+        with patch("src.workflow.graph.DistillationNode", return_value=mock_node), \
+             patch("src.workflow.graph.DistillationTemplate.from_string", return_value=MagicMock()):
+            result = await adapter.distillation_node({"draft_content": "text", "errors": []})
+
+        assert "errors" in result
+        assert any("Distillation warning" in err for err in result["errors"])
+
+    @pytest.mark.asyncio
+    async def test_critic_success(self):
+        adapter = NovelAdapter()
+        mock_llm = MagicMock()
+
+        instruction = MagicMock()
+        instruction.model_dump.return_value = {"target": "writer", "hint": "加强冲突"}
+
+        review_result = MagicMock()
+        review_result.total_score = 86
+        review_result.lock_score = 32
+        review_result.style_score = 30
+        review_result.logic_score = 24
+        review_result.decision = "REVISE"
+        review_result.actionable_feedback = "加强冲突"
+        review_result.revision_instructions = [instruction]
+        review_result.model_dump.return_value = {
+            "total_score": 86,
+            "decision": "REVISE",
+            "actionable_feedback": "加强冲突",
+        }
+
+        mock_agent = MagicMock()
+        mock_agent.review = AsyncMock(return_value=review_result)
+
+        with patch.object(adapter, "_get_llm", return_value=mock_llm), \
+             patch("src.agents.critic.CriticAgent", return_value=mock_agent):
+            state = {
+                "draft_content": "draft",
+                "current_scene": {"id": "S1"},
+                "character_profiles": [],
+                "world_settings": {},
+                "draft_version": 2,
+                "revision_count": 1,
+                "revision_history": [],
+            }
+            result = await adapter.critic_node(state)
+
+        assert result["critique_result"]["total_score"] == 86
+        assert result["revision_count"] == 2
+        assert result["feedback_context"] == "加强冲突"
+        assert result["revision_history"][0]["score"] == 86
+        assert result["revision_instructions"] == [{"target": "writer", "hint": "加强冲突"}]
 
 class TestCreateGraph:
 

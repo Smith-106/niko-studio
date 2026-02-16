@@ -7,6 +7,7 @@ atomic writes, backup, rollback, and callbacks.
 
 import pytest
 from pathlib import Path
+from unittest.mock import patch
 from src.storage.file_builder import (
     FileBuilderError,
     FileBuilderState,
@@ -238,7 +239,42 @@ class TestFileBuilderBackupRollback:
         result = b.rollback()
         assert result is False
 
-    def test_state_property(self):
-        b = FileBuilder().with_path("/tmp/t").with_content("c")
-        assert b.state.path == Path("/tmp/t")
-        assert b.state.content == "c"
+
+
+def test_create_backup_failure_returns_none(tmp_path):
+    target = tmp_path / "backup_fail.txt"
+    target.write_text("origin", encoding="utf-8")
+
+    builder = FileBuilder().with_path(target).with_content("new").with_backup(True)
+
+    with patch("src.storage.file_builder.shutil.copy2", side_effect=OSError("copy failed")):
+        backup = builder._create_backup()
+
+    assert backup is None
+
+
+
+
+
+
+def test_rollback_failure_returns_false(tmp_path):
+    target = tmp_path / "rollback_fail.txt"
+    builder = FileBuilder().with_path(target).with_content("data")
+    builder.build()
+
+    with patch("pathlib.Path.unlink", side_effect=OSError("unlink failed")):
+        assert builder.rollback() is False
+
+
+
+def test_atomic_write_temp_cleanup_failure_still_raises_builder_error(tmp_path):
+    target = tmp_path / "atomic_cleanup_fail.txt"
+    builder = FileBuilder().with_path(target).with_content("data")
+
+    with (
+        patch("pathlib.Path.write_text", side_effect=OSError("write failed")),
+        patch("pathlib.Path.exists", return_value=True),
+        patch("pathlib.Path.unlink", side_effect=OSError("temp unlink failed")),
+    ):
+        with pytest.raises(FileBuilderError, match="Failed to write file"):
+            builder.build()

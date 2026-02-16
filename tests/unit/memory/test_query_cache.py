@@ -148,12 +148,16 @@ class TestClear:
 
 class TestCleanupExpired:
 
-    def test_cleanup_removes_expired(self):
+    def test_cleanup_removes_expired(self, monkeypatch):
         cache = QueryEmbeddingCache(ttl_seconds=0.001)
+
+        timeline = iter([1.0, 1.0195, 1.02, 1.02])
+        monkeypatch.setattr("src.memory.query_cache.time.time", lambda: next(timeline))
+
         cache.put("old", [1.0])
-        time.sleep(0.01)
-        cache.put("new", [2.0])  # This one is fresh
+        cache.put("new", [2.0])
         removed = cache.cleanup_expired()
+
         assert removed == 1
         assert cache.get("new") == [2.0]
 
