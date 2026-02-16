@@ -162,7 +162,7 @@ jobs:
 
       - name: Run gateway stream contract (high-risk soft fail)
         run: |
-          pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q
+          pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q --no-cov
 
       - name: Run desktop parser + evaluation apply/undo contracts (high-risk soft fail)
         run: |
@@ -198,7 +198,7 @@ jobs:
 
       - name: Run P2 selected hard gate contracts
         run: |
-          pytest tests/unit/workflow/test_workflow_engine.py -k "decision" -q
-          pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q
+          pytest tests/unit/workflow/test_workflow_engine.py -k "decision" -q --no-cov
+          pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q --no-cov
           npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx
 
