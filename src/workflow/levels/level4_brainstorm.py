@@ -710,6 +710,9 @@ class Level4Brainstorm(BaseLevel):
                 current_section = "recommendations"
             elif "关注" in line or "风险" in line or "问题" in line:
                 current_section = "concerns"
+            elif line.endswith(":") or line.endswith("："):
+                # 避免未知章节沿用上一章节，导致列表项误归类
+                current_section = "unknown"
             elif line.startswith("-") or line.startswith("*") or line.startswith("1"):
                 # 提取列表项
                 item = line.lstrip("-*0123456789. ")

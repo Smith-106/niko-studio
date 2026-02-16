@@ -576,6 +576,48 @@ class TestParseAnalysisResult:
         result = l4._parse_analysis_result(BrainstormRole.PRODUCT_MANAGER, content)
         assert len(result.key_points) <= 5
 
+    def test_parses_list_items_with_dash_star_and_number(self):
+        l4 = Level4Brainstorm()
+
+        consts = [c for c in l4._parse_analysis_result.__code__.co_consts if isinstance(c, str)]
+        key_marker = consts[consts.index("key_points") - 1]
+        rec_marker = consts[consts.index("recommendations") - 1]
+        concern_marker = consts[consts.index("concerns") - 1]
+
+        content = (
+            f"{key_marker}:\n"
+            "- itemA\n"
+            "* itemB\n"
+            f"{rec_marker}:\n"
+            "1. recA\n"
+            "- recB\n"
+            f"{concern_marker}:\n"
+            "* riskA\n"
+            "1. riskB\n"
+        )
+        result = l4._parse_analysis_result(BrainstormRole.PRODUCT_MANAGER, content)
+        assert result.key_points == ["itemA", "itemB"]
+        assert result.recommendations == ["recA", "recB"]
+        assert result.concerns == ["riskA", "riskB"]
+
+    def test_unknown_section_does_not_classify_list_item(self):
+        l4 = Level4Brainstorm()
+        content = "未知章节:\n- should_not_be_collected\n"
+
+        result = l4._parse_analysis_result(BrainstormRole.PRODUCT_MANAGER, content)
+        assert result.key_points == []
+        assert result.recommendations == []
+        assert result.concerns == []
+
+    def test_orphan_list_item_without_section_is_ignored(self):
+        l4 = Level4Brainstorm()
+        content = "- orphan_item\n"
+
+        result = l4._parse_analysis_result(BrainstormRole.PRODUCT_MANAGER, content)
+        assert result.key_points == []
+        assert result.recommendations == []
+        assert result.concerns == []
+
 
 # ============================================================
 # _generate_placeholder_analysis
@@ -680,3 +722,80 @@ class TestExecuteWorkflow:
         result = l4.execute(state)
         assert result["decision"] == "FAILED"
         assert "errors" in result
+
+
+# ============================================================
+# _analyze_as_role / async branches
+# ============================================================
+
+class TestAnalyzeAsRoleBranches:
+
+    @patch("src.agents.writer.WriterAgent")
+    def test_analyze_as_role_success(self, mock_writer_cls):
+        l4 = Level4Brainstorm()
+        mock_writer = MagicMock()
+        mock_writer.run.return_value = {
+            "content": (
+                "\u5173\u952e\u8981\u70b9:\n"
+                "- \u8981\u70b9\u4e00\n"
+                "\u5efa\u8bae:\n"
+                "- \u5efa\u8bae\u4e00\n"
+                "\u5173\u6ce8\u70b9:\n"
+                "- \u98ce\u9669\u4e00"
+            )
+        }
+        mock_writer_cls.return_value = mock_writer
+
+        result = l4._analyze_as_role(BrainstormRole.PRODUCT_MANAGER, "topic", "ctx")
+        assert result.score == 80.0
+        assert isinstance(result.key_points, list)
+        assert isinstance(result.recommendations, list)
+        assert isinstance(result.concerns, list)
+
+    @patch("src.agents.writer.WriterAgent")
+    def test_analyze_as_role_exception(self, mock_writer_cls):
+        l4 = Level4Brainstorm()
+        mock_writer = MagicMock()
+        mock_writer.run.side_effect = RuntimeError("boom")
+        mock_writer_cls.return_value = mock_writer
+
+        result = l4._analyze_as_role(BrainstormRole.PRODUCT_MANAGER, "topic", "ctx")
+        assert result.score == 0.0
+        assert "分析过程中出错" in result.analysis_content
+
+    @patch("src.agents.writer.WriterAgent", side_effect=ImportError("mocked missing writer"))
+    def test_analyze_as_role_import_error_placeholder(self, _mock_writer_cls):
+        l4 = Level4Brainstorm()
+        result = l4._analyze_as_role(BrainstormRole.PRODUCT_MANAGER, "topic", "ctx")
+
+        assert result.score == 50.0
+        assert "待生成" in result.analysis_content
+
+    @pytest.mark.asyncio
+    async def test_generate_artifacts_async_exception_item(self):
+        l4 = Level4Brainstorm()
+        roles = [BrainstormRole.PRODUCT_MANAGER, BrainstormRole.REALIST]
+
+        good = RoleAnalysis(role=BrainstormRole.PRODUCT_MANAGER, analysis_content="ok", score=80.0)
+
+        async def _side_effect(role, topic, context):
+            if role == BrainstormRole.PRODUCT_MANAGER:
+                return good
+            raise RuntimeError("async fail")
+
+        with patch.object(l4, "_analyze_as_role_async", side_effect=_side_effect):
+            analyses = await l4.generate_artifacts_async("topic", roles, "ctx")
+
+        assert len(analyses) == 2
+        assert any(a.score == 80.0 for a in analyses)
+        assert any(a.score == 0.0 and "分析失败" in a.analysis_content for a in analyses)
+
+    @pytest.mark.asyncio
+    async def test_analyze_as_role_async_uses_executor(self):
+        l4 = Level4Brainstorm()
+        expected = RoleAnalysis(role=BrainstormRole.PRODUCT_MANAGER, analysis_content="ok", score=77.0)
+
+        with patch.object(l4, "_analyze_as_role", return_value=expected):
+            result = await l4._analyze_as_role_async(BrainstormRole.PRODUCT_MANAGER, "topic", "ctx")
+
+        assert result is expected

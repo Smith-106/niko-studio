@@ -92,12 +92,12 @@ SYMPATHY_EVALUATION_PROMPT = """
 
 请输出JSON格式:
 ```json
-{
+{{
     "score": 0-10,
     "evidence": ["找到的同情触发点..."],
     "issues": ["缺失的同情元素..."],
     "suggestions": ["如何增强同情感..."]
-}
+}}
 ```
 """
 
@@ -123,12 +123,12 @@ IDENTIFICATION_EVALUATION_PROMPT = """
 
 请输出JSON格式:
 ```json
-{
+{{
     "score": 0-10,
     "evidence": ["目标认同点..."],
     "issues": ["目标不清晰或不值得支持的地方..."],
     "suggestions": ["如何增强目标认同..."]
-}
+}}
 ```
 """
 
@@ -151,19 +151,19 @@ EMPATHY_EVALUATION_PROMPT = """
 
 请输出JSON格式:
 ```json
-{
+{{
     "score": 0-10,
-    "sensory_breakdown": {
+    "sensory_breakdown": {{
         "visual": "视觉描写分析...",
         "auditory": "听觉描写分析...",
         "tactile": "触觉描写分析...",
         "olfactory": "嗅觉描写分析...",
         "gustatory": "味觉描写分析..."
-    },
+    }},
     "evidence": ["成功的移情细节..."],
     "issues": ["感官描写缺失或薄弱处..."],
     "suggestions": ["如何增强感官沉浸..."]
-}
+}}
 ```
 """
 
@@ -186,7 +186,7 @@ IMMERSION_EVALUATION_PROMPT = """
 
 请输出JSON格式:
 ```json
-{
+{{
     "score": 0-10,
     "internal_conflicts": ["发现的内心冲突..."],
     "conflict_intensity": "冲突强度评估...",
@@ -194,7 +194,7 @@ IMMERSION_EVALUATION_PROMPT = """
     "evidence": ["成功的沉浸元素..."],
     "issues": ["内心冲突缺失或薄弱处..."],
     "suggestions": ["如何增强内心冲突..."]
-}
+}}
 ```
 """
 

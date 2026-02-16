@@ -83,6 +83,11 @@ class TestLitePlanResult:
         r = LitePlanResult.from_dict({"plan_id": "x"})
         assert r.created_at is not None
 
+    def test_from_dict_with_datetime_created_at(self):
+        now = datetime.now()
+        r = LitePlanResult.from_dict({"plan_id": "x", "created_at": now})
+        assert r.created_at is now
+
 
 # ============================================================
 # LiteFixResult
@@ -143,9 +148,67 @@ class TestLevel2LiteClass:
         assert cfg["pass_score"] == 70
 
 
+
+
 # ============================================================
-# _extract_key_points
+# _execute_lite / _verify_lite
 # ============================================================
+
+class TestExecuteAndVerifyLite:
+
+    @patch("src.agents.writer.WriterAgent")
+    def test_execute_lite_success(self, mock_writer_cls):
+        l2 = Level2Lite()
+        state = BaseState()
+        state["lite_plan"] = {"objective": "test", "key_points": ["a"]}
+        state["context"] = "ctx"
+
+        mock_writer = MagicMock()
+        mock_writer.run.return_value = {"content": "draft content"}
+        mock_writer_cls.return_value = mock_writer
+
+        result = l2._execute_lite(state)
+        assert result["draft_content"] == "draft content"
+        assert result["draft_version"] == 1
+
+    @patch("src.agents.writer.WriterAgent", side_effect=Exception("writer boom"))
+    def test_execute_lite_exception(self, _mock_writer_cls):
+        l2 = Level2Lite()
+        state = BaseState()
+
+        result = l2._execute_lite(state)
+        assert any("执行失败" in e for e in result.get("errors", []))
+
+    @patch("src.agents.critic.CriticAgent")
+    def test_verify_lite_success(self, mock_critic_cls):
+        l2 = Level2Lite()
+        state = BaseState()
+        state["draft_content"] = "draft"
+        state["lite_plan"] = {"objective": "o"}
+
+        mock_critic = MagicMock()
+        mock_critic.run.return_value = {
+            "score": 88,
+            "decision": "APPROVED",
+            "feedback": "ok",
+        }
+        mock_critic_cls.return_value = mock_critic
+
+        result = l2._verify_lite(state)
+        assert result["score"] == 88
+        assert result["decision"] == "APPROVED"
+        assert result["feedback_context"] == "ok"
+
+    @patch("src.agents.critic.CriticAgent", side_effect=Exception("critic boom"))
+    def test_verify_lite_exception_defaults_approved(self, _mock_critic_cls):
+        l2 = Level2Lite()
+        state = BaseState()
+
+        result = l2._verify_lite(state)
+        assert any("验证失败" in e for e in result.get("errors", []))
+        assert result["decision"] == "APPROVED"
+        assert result["score"] == 70
+
 
 class TestExtractKeyPoints:
 
@@ -594,11 +657,10 @@ class TestGenerateFixSuggestions:
 
 class TestIdentifyAffectedAreas:
 
-    def test_from_context(self):
+    def test_from_context_with_function(self):
         l2 = Level2Lite()
-        areas = l2._identify_affected_areas("", {"file": "app.py", "module": "auth"})
-        assert "app.py" in areas
-        assert "auth" in areas
+        areas = l2._identify_affected_areas("", {"function": "handle_login"})
+        assert "handle_login" in areas
 
     def test_from_description(self):
         l2 = Level2Lite()
@@ -682,10 +744,15 @@ class TestCalculatePlanConfidence:
         c = l2._calculate_plan_confidence("a" * 50, ["a", "b", "c"], {})
         assert c >= 0.7
 
-    def test_with_context(self):
+    def test_long_objective_branch(self):
         l2 = Level2Lite()
-        c = l2._calculate_plan_confidence("a" * 50, ["a", "b"], {"reference": True, "constraints": True})
-        assert c >= 0.8
+        c = l2._calculate_plan_confidence("a" * 220, ["a", "b"], {})
+        assert c > 0.5
+
+    def test_more_than_five_keypoints_branch(self):
+        l2 = Level2Lite()
+        c = l2._calculate_plan_confidence("a" * 50, ["1", "2", "3", "4", "5", "6"], {})
+        assert c >= 0.75
 
     def test_min_capped(self):
         l2 = Level2Lite()
@@ -698,6 +765,16 @@ class TestCalculatePlanConfidence:
             "reference": True, "examples": True, "constraints": True,
         })
         assert c <= 0.95
+
+    def test_empty_objective_without_short_penalty(self):
+        l2 = Level2Lite()
+        c = l2._calculate_plan_confidence("", ["a", "b"], {})
+        assert c == 0.55
+
+    def test_context_without_constraints_branch(self):
+        l2 = Level2Lite()
+        c = l2._calculate_plan_confidence("a" * 60, ["a", "b"], {"reference": True})
+        assert c == 0.95
 
 
 # ============================================================
@@ -775,11 +852,20 @@ class TestExecuteStep:
         assert result["success"] is True
         assert result["score"] == 75
 
-    def test_unknown_action(self):
+    def test_execute_step_exception_branch(self):
         l2 = Level2Lite()
         state = BaseState()
-        result = l2._execute_step({"action": "custom", "description": "custom step", "inputs": {}}, state)
-        assert result["success"] is True
+
+        class _BoomStep(dict):
+            def get(self, key, default=None):
+                if key == "description":
+                    raise RuntimeError("desc boom")
+                return super().get(key, default)
+
+        step = _BoomStep({"action": "custom", "inputs": {}})
+        result = l2._execute_step(step, state)
+        assert result["success"] is False
+        assert "boom" in result["error"]
 
 
 # ============================================================

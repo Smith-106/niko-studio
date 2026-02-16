@@ -182,7 +182,7 @@ def _export_text(data: dict, is_session: bool) -> str:
 
 def _export_html(data: dict, template: str, include_meta: bool, is_session: bool) -> str:
     """Export to HTML format."""
-    content = data.get("content", str(data))
+    content = data.get("content", str(data)) if isinstance(data, dict) else str(data)
 
     # Basic HTML template
     html = f"""<!DOCTYPE html>
@@ -240,7 +240,7 @@ def _export_docx(data: dict, template: str, output_path: Path, is_session: bool)
     # Add title
     doc.add_heading("Niko Studio Export", 0)
 
-    content = data.get("content", str(data))
+    content = data.get("content", str(data)) if isinstance(data, dict) else str(data)
 
     if is_session and isinstance(data, list):
         for msg in data:

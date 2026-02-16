@@ -9,6 +9,7 @@ Global state is reset after each test.
 
 import pytest
 from unittest.mock import patch
+import types
 
 from src.agents.sequential_thinking import (
     SequentialThinking,
@@ -341,3 +342,163 @@ class TestEngineReset:
         thought = engine.think("after reset")
         assert thought.depth == 0
         assert thought.parent_id is None
+
+
+class _FakeMCPServer:
+    def __init__(self, name):
+        self.name = name
+        self._tools = {}
+        self.settings = types.SimpleNamespace(streamable_http_path=None)
+        self._ran = False
+
+    def tool(self):
+        def _decorator(func):
+            self._tools[func.__name__] = func
+            return func
+        return _decorator
+
+    def streamable_http_app(self):
+        return "fake-http-app"
+
+    def run(self):
+        self._ran = True
+
+
+class TestMcpToolWrappers:
+    def _create_fake_server_with_tools(self):
+        with patch.object(st_module, "FastMCP", side_effect=lambda name: _FakeMCPServer(name)):
+            return create_server("WrapperTest")
+
+    @pytest.mark.asyncio
+    async def test_all_tool_wrappers_basic_paths(self):
+        server = self._create_fake_server_with_tools()
+        tools = server._tools
+
+        # think (invalid thought_type -> fallback branch)
+        t = await tools["think"]("hello", thought_type="invalid", confidence=0.7, metadata={"k": "v"})
+        assert t["content"] == "hello"
+        assert t["thought_type"] == "analysis"
+
+        # branch/switch/revise/backtrack/conclude
+        b = await tools["branch"]("alt", "desc", priority=3)
+        await tools["switch_branch"](b["id"])
+        t2 = await tools["think"]("alt thought")
+        r = await tools["revise"](t2["id"], "alt revised", "fix")
+        assert r["thought_type"] == "revision"
+
+        bt = await tools["backtrack"](t["id"])
+        assert bt["status"] == "backtracked"
+
+        c = await tools["conclude"]("final", confidence=0.9)
+        assert c["thought_type"] == "conclusion"
+
+        # query tools
+        chain = await tools["get_chain"]()
+        assert isinstance(chain, list)
+
+        state = await tools["get_state"]()
+        assert "summary" in state
+        assert "total_thoughts" in state["summary"]
+
+        conclusions = await tools["get_conclusions"]()
+        assert isinstance(conclusions, list)
+
+        best = await tools["get_best_branch"]()
+        assert "id" in best and "name" in best
+
+        md = await tools["export_markdown"]()
+        assert "Sequential Thinking Chain" in md
+
+        rst = await tools["reset"]()
+        assert rst["status"] == "reset"
+
+    @pytest.mark.asyncio
+    async def test_list_sessions_and_delete_session(self):
+        server = self._create_fake_server_with_tools()
+        tools = server._tools
+
+        # default + one named session
+        await tools["think"]("default-thought")
+        await tools["think"]("session-thought", session_id="sess-x")
+
+        sessions = await tools["list_sessions"]()
+        ids = {s["id"] for s in sessions}
+        assert "default" in ids
+        assert "sess-x" in ids
+
+        deleted = await tools["delete_session"]("sess-x")
+        assert deleted["status"] == "deleted"
+
+        missing = await tools["delete_session"]("sess-x")
+        assert missing["status"] == "not_found"
+
+
+class _FakeArgumentParser:
+    def __init__(self, parsed_args):
+        self._parsed_args = parsed_args
+
+    def add_argument(self, *args, **kwargs):
+        return None
+
+    def parse_args(self):
+        return self._parsed_args
+
+
+class TestMainEntrypoint:
+    def test_main_stdio_mode(self):
+        fake_parser = _FakeArgumentParser(
+            types.SimpleNamespace(sse=False, port=8001, host="0.0.0.0")
+        )
+        fake_app = types.SimpleNamespace(run=lambda: None)
+
+        run_called = {"value": False}
+
+        def _run():
+            run_called["value"] = True
+
+        fake_app.run = _run
+
+        with patch("argparse.ArgumentParser", return_value=fake_parser):
+            with patch.object(st_module, "app", fake_app):
+                st_module.main()
+
+        assert run_called["value"] is True
+
+    def test_main_sse_mode(self):
+        fake_parser = _FakeArgumentParser(
+            types.SimpleNamespace(sse=True, port=9001, host="127.0.0.1")
+        )
+
+        fake_app = _FakeMCPServer("app")
+
+        uvicorn_calls = {"called": False, "host": None, "port": None}
+
+        def _uvicorn_run(app_obj, host=None, port=None):
+            uvicorn_calls["called"] = True
+            uvicorn_calls["host"] = host
+            uvicorn_calls["port"] = port
+
+        class _FakeStarlette:
+            def __init__(self, routes):
+                self.routes = routes
+
+        fake_uvicorn = types.SimpleNamespace(run=_uvicorn_run)
+        fake_starlette_apps = types.SimpleNamespace(Starlette=_FakeStarlette)
+        fake_starlette_routing = types.SimpleNamespace(Mount=lambda path, app: (path, app))
+
+        with patch("argparse.ArgumentParser", return_value=fake_parser):
+            with patch.object(st_module, "app", fake_app):
+                with patch.dict(
+                    "sys.modules",
+                    {
+                        "uvicorn": fake_uvicorn,
+                        "starlette.applications": fake_starlette_apps,
+                        "starlette.routing": fake_starlette_routing,
+                    },
+                ):
+                    st_module.main()
+
+        assert fake_app.settings.streamable_http_path == "/"
+        assert uvicorn_calls["called"] is True
+        assert uvicorn_calls["host"] == "127.0.0.1"
+        assert uvicorn_calls["port"] == 9001

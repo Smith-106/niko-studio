@@ -554,7 +554,7 @@ class Level2Lite(BaseLevel):
             confidence += 0.15
         elif obj_len > 200:
             confidence += 0.1
-        elif obj_len < 20:
+        else:
             confidence -= 0.1
 
         # 关键点数量 (2-5 个最佳)
