@@ -202,9 +202,14 @@ def _install_stubs(monkeypatch, setup_fake=None, setup_modules=None):
     indexing_mod.IndexingService = _DummyIndexingService
     monkeypatch.setitem(sys.modules, "src.services.indexing_service", indexing_mod)
 
-    fu_mod = types.ModuleType("src.ui.file_utils")
-    fu_mod.process_uploaded_file = lambda *_args, **_kwargs: None
-    monkeypatch.setitem(sys.modules, "src.ui.file_utils", fu_mod)
+    pandas_mod = types.ModuleType("pandas")
+
+    class _DataFrame(dict):
+        def set_index(self, _name):
+            return self
+
+    pandas_mod.DataFrame = lambda data: _DataFrame(data)
+    monkeypatch.setitem(sys.modules, "pandas", pandas_mod)
 
     if setup_modules:
         setup_modules(monkeypatch)
