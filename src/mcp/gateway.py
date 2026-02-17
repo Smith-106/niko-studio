@@ -166,7 +166,7 @@ class GatewayMetricsMiddleware(BaseHTTPMiddleware):
 from src.container import get_container, reset_container
 from src.workflow.base_state import create_base_state
 from src.workflow.levels.level5_coordinator import Level5Coordinator
-from src.workflow.levels.types import ensure_contract_payload
+from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION, ensure_contract_payload
 from src.workflow.novel_quality import evaluate_novel_quality
 
 
@@ -197,6 +197,102 @@ def _with_terminal_contract(payload: Dict[str, Any]) -> Dict[str, Any]:
     normalized["legacy_contract_fields"] = legacy_fields
     normalized.setdefault("terminal_state", legacy_terminal)
     return normalized
+
+
+def _quality_default_payload() -> Dict[str, Any]:
+    return {
+        "analysis_schema_version": ANALYSIS_SCHEMA_VERSION,
+        "quality_score": 0.0,
+        "issues": [],
+        "metrics": {
+            "dialogue_ratio": 0.0,
+            "conflict_points": 0,
+            "visual_details": 0,
+            "template_sentence_ratio": 0.0,
+            "dimension_scores": {
+                "repetition": 0.0,
+                "tone": 0.0,
+                "clarity": 0.0,
+                "causality": 0.0,
+                "detail": 0.0,
+                "factuality": 0.0,
+            },
+        },
+        "publish_recommendation": "revise",
+    }
+
+
+def _normalize_quality_payload(payload: Any) -> Dict[str, Any]:
+    fallback = _quality_default_payload()
+    if not isinstance(payload, dict):
+        payload = {}
+
+    raw_metrics = payload.get("metrics")
+    if not isinstance(raw_metrics, dict):
+        raw_metrics = {}
+
+    raw_dim_scores = raw_metrics.get("dimension_scores")
+    if not isinstance(raw_dim_scores, dict):
+        raw_dim_scores = {}
+
+    fallback_metrics = fallback["metrics"]
+    fallback_dim_scores = fallback_metrics["dimension_scores"]
+
+    normalized_dim_scores = {
+        key: _safe_float(raw_dim_scores.get(key), default)
+        for key, default in fallback_dim_scores.items()
+    }
+
+    normalized_metrics = {
+        "dialogue_ratio": _safe_float(raw_metrics.get("dialogue_ratio"), fallback_metrics["dialogue_ratio"]),
+        "conflict_points": _safe_int(raw_metrics.get("conflict_points"), fallback_metrics["conflict_points"]),
+        "visual_details": _safe_int(raw_metrics.get("visual_details"), fallback_metrics["visual_details"]),
+        "template_sentence_ratio": _safe_float(
+            raw_metrics.get("template_sentence_ratio"),
+            fallback_metrics["template_sentence_ratio"],
+        ),
+        "dimension_scores": normalized_dim_scores,
+    }
+
+    raw_issues = payload.get("issues")
+    if not isinstance(raw_issues, list):
+        raw_issues = []
+    normalized_issues = [_normalize_issue_item(item) for item in raw_issues if isinstance(item, dict)]
+
+    recommendation = payload.get("publish_recommendation")
+    if recommendation not in {"pass", "revise", "block"}:
+        recommendation = fallback["publish_recommendation"]
+
+    return {
+        "analysis_schema_version": payload.get("analysis_schema_version", ANALYSIS_SCHEMA_VERSION),
+        "quality_score": _safe_float(payload.get("quality_score"), fallback["quality_score"]),
+        "issues": normalized_issues,
+        "metrics": normalized_metrics,
+        "publish_recommendation": recommendation,
+    }
+
+
+def _normalize_issue_item(issue: Dict[str, Any]) -> Dict[str, str]:
+    return {
+        "severity": str(issue.get("severity", "medium")),
+        "type": str(issue.get("type", "unknown")),
+        "evidence": str(issue.get("evidence", "")),
+        "suggestion": str(issue.get("suggestion", "")),
+    }
+
+
+def _safe_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _safe_int(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
 
 
 def get_memory_engine():
@@ -1912,7 +2008,7 @@ async def novel_quality_check_endpoint(request: Request):
     if not isinstance(content, str) or not content.strip():
         return JSONResponse({"error": "content is required"}, status_code=400)
     result = evaluate_novel_quality(content)
-    return JSONResponse(result)
+    return JSONResponse(_normalize_quality_payload(result))
 
 
 async def workflow_route_endpoint(request: Request):

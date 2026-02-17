@@ -706,9 +706,10 @@ async def test_rest_memory_graph_and_critic_endpoints_forward_payload(monkeypatc
 @pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_forwards_to_evaluator(monkeypatch):
     from src.mcp import gateway as gateway_module
+    from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION
 
     mock_eval = MagicMock(return_value={
-        "analysis_schema_version": "2026-02",
+        "analysis_schema_version": ANALYSIS_SCHEMA_VERSION,
         "quality_score": 88.0,
         "issues": [],
         "metrics": {
@@ -734,6 +735,55 @@ async def test_novel_quality_check_endpoint_forwards_to_evaluator(monkeypatch):
 
     assert res.status_code == 200
     mock_eval.assert_called_once_with("valid body")
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_normalizes_missing_contract_fields(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={"quality_score": "72.5", "metrics": {"dialogue_ratio": "0.25"}}),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+
+    assert set(data.keys()) == {
+        "analysis_schema_version",
+        "quality_score",
+        "issues",
+        "metrics",
+        "publish_recommendation",
+    }
+    assert isinstance(data["quality_score"], float)
+    assert data["publish_recommendation"] in {"pass", "revise", "block"}
+
+    metrics = data["metrics"]
+    assert set(metrics.keys()) == {
+        "dialogue_ratio",
+        "conflict_points",
+        "visual_details",
+        "template_sentence_ratio",
+        "dimension_scores",
+    }
+    assert isinstance(metrics["conflict_points"], int)
+    assert isinstance(metrics["visual_details"], int)
+    assert isinstance(metrics["template_sentence_ratio"], float)
+
+    dim_scores = metrics["dimension_scores"]
+    assert set(dim_scores.keys()) == {
+        "repetition",
+        "tone",
+        "clarity",
+        "causality",
+        "detail",
+        "factuality",
+    }
 
 
 @pytest.mark.asyncio

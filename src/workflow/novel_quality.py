@@ -9,6 +9,34 @@ from typing import Any, Dict, List
 from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION, LEGACY_DECISION_MAP
 
 
+REPETITION_WEIGHT = 0.20
+TONE_WEIGHT = 0.13
+CLARITY_WEIGHT = 0.17
+CAUSALITY_WEIGHT = 0.20
+DETAIL_WEIGHT = 0.20
+FACTUALITY_WEIGHT = 0.10
+
+PASS_THRESHOLD = 74.0
+BLOCK_THRESHOLD = 50.0
+BLOCK_TEMPLATE_RATIO = 0.80
+
+REPETITION_ISSUE_THRESHOLD = 0.45
+REPETITION_ISSUE_HIGH_THRESHOLD = 0.70
+MIN_CONFLICT_POINTS = 2
+MIN_VISUAL_DETAILS = 3
+MIN_DIALOGUE_RATIO = 0.03
+MIN_SENTENCES_FOR_TONE_ISSUE = 4
+LOW_QUALITY_THRESHOLD = 55.0
+LOW_CLARITY_THRESHOLD = 45.0
+
+QUALITY_CONTRACT_KEYS = {
+    "analysis_schema_version",
+    "quality_score",
+    "issues",
+    "metrics",
+    "publish_recommendation",
+}
+
 _CONFLICT_KEYWORDS = {
     "conflict",
     "struggle",
@@ -121,12 +149,12 @@ def evaluate_novel_quality(content: str) -> Dict[str, Any]:
     quality_score = _clamp(
         round(
             (
-                dimension_scores["repetition"] * 0.20
-                + dimension_scores["tone"] * 0.13
-                + dimension_scores["clarity"] * 0.17
-                + dimension_scores["causality"] * 0.20
-                + dimension_scores["detail"] * 0.20
-                + dimension_scores["factuality"] * 0.10
+                dimension_scores["repetition"] * REPETITION_WEIGHT
+                + dimension_scores["tone"] * TONE_WEIGHT
+                + dimension_scores["clarity"] * CLARITY_WEIGHT
+                + dimension_scores["causality"] * CAUSALITY_WEIGHT
+                + dimension_scores["detail"] * DETAIL_WEIGHT
+                + dimension_scores["factuality"] * FACTUALITY_WEIGHT
             ),
             1,
         ),
@@ -137,10 +165,9 @@ def evaluate_novel_quality(content: str) -> Dict[str, Any]:
     issues = _build_issues(text, metrics, dimension_scores, quality_score)
     publish_recommendation = _recommendation(metrics, quality_score, issues)
 
-    # Keep semantic mapping ready for future contract expansion.
     _ = LEGACY_DECISION_MAP.get(publish_recommendation, "no_go" if publish_recommendation == "block" else "go")
 
-    return {
+    result = {
         "analysis_schema_version": ANALYSIS_SCHEMA_VERSION,
         "quality_score": quality_score,
         "issues": issues,
@@ -153,10 +180,11 @@ def evaluate_novel_quality(content: str) -> Dict[str, Any]:
         },
         "publish_recommendation": publish_recommendation,
     }
+    return result
 
 
-def _empty_result() -> Dict[str, Any]:
-    zero_dimensions = {
+def _build_default_dimension_scores() -> Dict[str, float]:
+    return {
         "repetition": 0.0,
         "tone": 0.0,
         "clarity": 0.0,
@@ -164,6 +192,19 @@ def _empty_result() -> Dict[str, Any]:
         "detail": 0.0,
         "factuality": 0.0,
     }
+
+
+def _build_default_metrics(*, template_sentence_ratio: float = 0.0) -> Dict[str, Any]:
+    return {
+        "dialogue_ratio": 0.0,
+        "conflict_points": 0,
+        "visual_details": 0,
+        "template_sentence_ratio": template_sentence_ratio,
+        "dimension_scores": _build_default_dimension_scores(),
+    }
+
+
+def _empty_result() -> Dict[str, Any]:
     return {
         "analysis_schema_version": ANALYSIS_SCHEMA_VERSION,
         "quality_score": 0.0,
@@ -175,13 +216,7 @@ def _empty_result() -> Dict[str, Any]:
                 "suggestion": "Provide non-empty novel content before quality check.",
             }
         ],
-        "metrics": {
-            "dialogue_ratio": 0.0,
-            "conflict_points": 0,
-            "visual_details": 0,
-            "template_sentence_ratio": 1.0,
-            "dimension_scores": zero_dimensions,
-        },
+        "metrics": _build_default_metrics(template_sentence_ratio=1.0),
         "publish_recommendation": "block",
     }
 
@@ -205,8 +240,8 @@ def _compute_metrics(text: str) -> Dict[str, Any]:
 
     template_hits = 0
     for sentence in sentences:
-        s = sentence.strip().lower()
-        if s.startswith(_TEMPLATE_PREFIXES):
+        sentence_lower = sentence.strip().lower()
+        if sentence_lower.startswith(_TEMPLATE_PREFIXES):
             template_hits += 1
     template_sentence_ratio = _clamp(
         round((template_hits / len(sentences)) * 0.6 + duplicate_ratio * 0.4, 4),
@@ -232,7 +267,6 @@ def _compute_dimension_scores(text: str, metrics: Dict[str, Any]) -> Dict[str, f
     avg_sentence_length = metrics["word_count"] / max(len(sentences), 1)
 
     repetition = _clamp(100.0 - metrics["template_sentence_ratio"] * 110.0, 0.0, 100.0)
-
     tone = _clamp(45.0 + metrics["dialogue_ratio"] * 70.0 + min(metrics["conflict_points"], 4) * 5.0, 0.0, 100.0)
 
     clarity_penalty = abs(avg_sentence_length - 16.0) * 2.2
@@ -257,24 +291,24 @@ def _compute_dimension_scores(text: str, metrics: Dict[str, Any]) -> Dict[str, f
 
 
 def _build_issues(
-    text: str,
+    _text: str,
     metrics: Dict[str, Any],
     dimension_scores: Dict[str, float],
     quality_score: float,
 ) -> List[Dict[str, str]]:
     issues: List[Dict[str, str]] = []
 
-    if metrics["template_sentence_ratio"] >= 0.45:
+    if metrics["template_sentence_ratio"] >= REPETITION_ISSUE_THRESHOLD:
         issues.append(
             {
-                "severity": "high" if metrics["template_sentence_ratio"] >= 0.7 else "medium",
+                "severity": "high" if metrics["template_sentence_ratio"] >= REPETITION_ISSUE_HIGH_THRESHOLD else "medium",
                 "type": "repetition",
                 "evidence": f"template_sentence_ratio={metrics['template_sentence_ratio']}",
                 "suggestion": "Vary sentence openings and rewrite repeated lines with fresh actions.",
             }
         )
 
-    if metrics["conflict_points"] < 2:
+    if metrics["conflict_points"] < MIN_CONFLICT_POINTS:
         issues.append(
             {
                 "severity": "medium",
@@ -284,7 +318,7 @@ def _build_issues(
             }
         )
 
-    if metrics["visual_details"] < 3:
+    if metrics["visual_details"] < MIN_VISUAL_DETAILS:
         issues.append(
             {
                 "severity": "medium",
@@ -294,7 +328,7 @@ def _build_issues(
             }
         )
 
-    if metrics["dialogue_ratio"] < 0.03 and len(metrics["sentences"]) >= 4:
+    if metrics["dialogue_ratio"] < MIN_DIALOGUE_RATIO and len(metrics["sentences"]) >= MIN_SENTENCES_FOR_TONE_ISSUE:
         issues.append(
             {
                 "severity": "low",
@@ -304,7 +338,7 @@ def _build_issues(
             }
         )
 
-    if quality_score < 55 or dimension_scores["clarity"] < 45:
+    if quality_score < LOW_QUALITY_THRESHOLD or dimension_scores["clarity"] < LOW_CLARITY_THRESHOLD:
         issues.append(
             {
                 "severity": "high",
@@ -320,11 +354,11 @@ def _build_issues(
 def _recommendation(metrics: Dict[str, Any], quality_score: float, issues: List[Dict[str, str]]) -> str:
     high_issues = sum(1 for issue in issues if issue["severity"] == "high")
 
-    if metrics["template_sentence_ratio"] >= 0.8:
+    if metrics["template_sentence_ratio"] >= BLOCK_TEMPLATE_RATIO:
         return "block"
-    if quality_score >= 74 and high_issues == 0:
+    if quality_score >= PASS_THRESHOLD and high_issues == 0:
         return "pass"
-    if quality_score < 50 or high_issues >= 2:
+    if quality_score < BLOCK_THRESHOLD or high_issues >= 2:
         return "block"
     return "revise"
 
