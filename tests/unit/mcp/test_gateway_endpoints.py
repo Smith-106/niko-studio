@@ -774,6 +774,8 @@ async def test_novel_quality_check_endpoint_handles_normalization_exception(monk
     assert data["quality_score"] == 0.0
     assert data["publish_recommendation"] == "revise"
     assert data["analysis_schema_version"]
+    assert data["issues"] == []
+    assert data["metrics"]["dimension_scores"]["repetition"] == 0.0
     mock_log_exception.assert_called_once_with("novel_quality_check_endpoint normalization failed")
 
 
@@ -819,6 +821,9 @@ async def test_novel_quality_check_endpoint_handles_evaluator_exception(monkeypa
     data = json.loads(res.body.decode("utf-8"))
     assert data["quality_score"] == 0.0
     assert data["publish_recommendation"] == "revise"
+    assert data["analysis_schema_version"]
+    assert data["issues"] == []
+    assert data["metrics"]["dimension_scores"]["repetition"] == 0.0
     mock_log_exception.assert_called_once_with("novel_quality_check_endpoint evaluator failed")
 
 

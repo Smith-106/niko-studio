@@ -2101,7 +2101,7 @@ async def novel_quality_check_endpoint(request: Request):
             result = await result
     except Exception:
         logger.exception("novel_quality_check_endpoint evaluator failed")
-        result = {}
+        result = _quality_default_payload()
 
     try:
         normalized_result = _normalize_quality_payload(result)
