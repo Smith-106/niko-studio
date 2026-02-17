@@ -166,7 +166,7 @@ class GatewayMetricsMiddleware(BaseHTTPMiddleware):
 from src.container import get_container, reset_container
 from src.workflow.base_state import create_base_state
 from src.workflow.levels.level5_coordinator import Level5Coordinator
-from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION, ensure_contract_payload
+from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION, LEGACY_DECISION_MAP, ensure_contract_payload
 from src.workflow.novel_quality import evaluate_novel_quality
 
 
@@ -259,17 +259,43 @@ def _normalize_quality_payload(payload: Any) -> Dict[str, Any]:
         raw_issues = []
     normalized_issues = [_normalize_issue_item(item) for item in raw_issues if isinstance(item, dict)]
 
-    recommendation = payload.get("publish_recommendation")
-    if recommendation not in {"pass", "revise", "block"}:
-        recommendation = fallback["publish_recommendation"]
+    contract_payload = ensure_contract_payload(payload)
+    schema_version = payload.get("analysis_schema_version") or payload.get("contract_version")
+    if not schema_version:
+        schema_version = contract_payload.get("analysis_schema_version", ANALYSIS_SCHEMA_VERSION)
 
     return {
-        "analysis_schema_version": payload.get("analysis_schema_version", ANALYSIS_SCHEMA_VERSION),
+        "analysis_schema_version": str(schema_version),
         "quality_score": _safe_float(payload.get("quality_score"), fallback["quality_score"]),
         "issues": normalized_issues,
         "metrics": normalized_metrics,
-        "publish_recommendation": recommendation,
+        "publish_recommendation": _normalize_publish_recommendation(payload, fallback["publish_recommendation"]),
     }
+
+
+def _normalize_publish_recommendation(payload: Dict[str, Any], fallback: str) -> str:
+    decision_to_publish = {
+        "go": "pass",
+        "soft_go": "revise",
+        "no_go": "block",
+    }
+
+    candidates = [
+        payload.get("publish_recommendation"),
+        payload.get("decision"),
+        payload.get("decision_result"),
+    ]
+    for candidate in candidates:
+        if not isinstance(candidate, str):
+            continue
+        normalized = candidate.strip().lower()
+        if normalized in {"pass", "revise", "block"}:
+            return normalized
+        mapped_decision = LEGACY_DECISION_MAP.get(normalized)
+        if mapped_decision in decision_to_publish:
+            return decision_to_publish[mapped_decision]
+
+    return fallback
 
 
 def _normalize_issue_item(issue: Dict[str, Any]) -> Dict[str, str]:

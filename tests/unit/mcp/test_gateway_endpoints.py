@@ -787,6 +787,42 @@ async def test_novel_quality_check_endpoint_normalizes_missing_contract_fields(m
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_maps_legacy_decision_fields(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={"decision_result": "no_go", "metrics": {}, "issues": []}),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["publish_recommendation"] == "block"
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_accepts_contract_version_alias(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={"contract_version": "legacy-v1", "metrics": {}, "issues": []}),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["analysis_schema_version"] == "legacy-v1"
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_rejects_empty_content():
     from src.mcp import gateway as gateway_module
 
