@@ -2102,7 +2102,13 @@ async def novel_quality_check_endpoint(request: Request):
     except Exception:
         logger.exception("novel_quality_check_endpoint evaluator failed")
         result = {}
-    return JSONResponse(_normalize_quality_payload(result))
+
+    try:
+        normalized_result = _normalize_quality_payload(result)
+    except Exception:
+        logger.exception("novel_quality_check_endpoint normalization failed")
+        normalized_result = _quality_default_payload()
+    return JSONResponse(normalized_result)
 
 
 async def workflow_route_endpoint(request: Request):
