@@ -823,6 +823,33 @@ async def test_novel_quality_check_endpoint_accepts_contract_version_alias(monke
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_maps_more_legacy_decision_aliases(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    scenarios = [
+        ({"decision_result": "approved", "metrics": {}, "issues": []}, "pass"),
+        ({"decision": "rewrite", "metrics": {}, "issues": []}, "block"),
+        ({"decision": "human_review", "metrics": {}, "issues": []}, "block"),
+        ({"decision_result": "soft_go", "metrics": {}, "issues": []}, "revise"),
+        ({"decision_result": "unknown", "metrics": {}, "issues": []}, "revise"),
+    ]
+
+    for payload, expected in scenarios:
+        monkeypatch.setattr(
+            gateway_module,
+            "evaluate_novel_quality",
+            MagicMock(return_value=payload),
+        )
+
+        req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+        res = await gateway_module.novel_quality_check_endpoint(req)
+
+        assert res.status_code == 200
+        data = json.loads(res.body.decode("utf-8"))
+        assert data["publish_recommendation"] == expected
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_rejects_empty_content():
     from src.mcp import gateway as gateway_module
 
