@@ -24,7 +24,7 @@ import re
 import logging
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger("niko-skills")
 
@@ -98,15 +98,49 @@ class SkillLoader:
     def load_full(self, skill_name: str) -> Skill:
         """
         加载完整技能对象
-        
+
         Args:
             skill_name: 技能名称
-            
+
         Returns:
             Skill 对象
         """
         return self._get_skill(skill_name)
-    
+
+    def load_skill(self, skill_name: str) -> Dict[str, Any]:
+        """兼容接口：以字典形式返回技能包。"""
+        skill = self._get_skill(skill_name)
+        return {
+            "name": skill.name,
+            "content": skill.content,
+            "metadata": {
+                "description": skill.meta.description,
+                "tags": skill.meta.tags,
+                "triggers": skill.meta.triggers,
+                "path": str(skill.path),
+                "techniques": skill.techniques,
+            },
+            "techniques": skill.techniques,
+        }
+
+    def load_technique(self, skill_name: str, technique: str) -> str:
+        """加载 techniques 目录下的技巧文件内容。"""
+        technique_name = technique if technique.endswith(".md") else f"{technique}.md"
+        for base_path in self.skill_paths:
+            technique_path = base_path / skill_name / "techniques" / technique_name
+            if technique_path.exists():
+                return technique_path.read_text(encoding="utf-8")
+        raise FileNotFoundError(f"Technique '{technique}' not found for skill '{skill_name}'")
+
+    def load_template(self, skill_name: str, template: str) -> str:
+        """加载 templates 目录下的模板文件内容。"""
+        template_name = template if template.endswith(".md") else f"{template}.md"
+        for base_path in self.skill_paths:
+            template_path = base_path / skill_name / "templates" / template_name
+            if template_path.exists():
+                return template_path.read_text(encoding="utf-8")
+        raise FileNotFoundError(f"Template '{template}' not found for skill '{skill_name}'")
+
     def get_technique(self, skill_name: str, technique: str) -> Optional[str]:
         """
         提取特定技巧段落

@@ -75,12 +75,12 @@ class VoiceEvaluator:
 ```
 
 **文件清单**:
-- [ ] `src/narrative/evaluators/__init__.py`
-- [ ] `src/narrative/evaluators/dream_evaluator.py`
-- [ ] `src/narrative/evaluators/suspense_evaluator.py`
-- [ ] `src/narrative/evaluators/character_evaluator.py`
-- [ ] `src/narrative/evaluators/premise_evaluator.py`
-- [ ] `src/narrative/evaluators/voice_evaluator.py`
+- [x] `src/narrative/evaluators/__init__.py`
+- [x] `src/narrative/evaluators/dream_evaluator.py`
+- [x] `src/narrative/evaluators/suspense_evaluator.py`
+- [x] `src/narrative/evaluators/character_evaluator.py`
+- [x] `src/narrative/evaluators/premise_evaluator.py`
+- [x] `src/narrative/evaluators/voice_evaluator.py`
 
 ### Task 15.2: 分析器引擎 (Analyzers)
 
@@ -107,11 +107,11 @@ class TensionCurveAnalyzer:
 ```
 
 **文件清单**:
-- [ ] `src/narrative/analyzers/__init__.py`
-- [ ] `src/narrative/analyzers/sensory_analyzer.py`
-- [ ] `src/narrative/analyzers/conflict_analyzer.py`
-- [ ] `src/narrative/analyzers/character_state_analyzer.py`
-- [ ] `src/narrative/analyzers/tension_curve_analyzer.py`
+- [x] `src/narrative/analyzers/__init__.py`
+- [x] `src/narrative/analyzers/sensory_analyzer.py`
+- [x] `src/narrative/analyzers/conflict_analyzer.py`
+- [x] `src/narrative/analyzers/character_state_analyzer.py`
+- [x] `src/narrative/analyzers/tension_curve_analyzer.py`
 
 ### Task 15.3: 综合评估器
 
@@ -553,21 +553,21 @@ niko-studio/
 ## ✅ 执行检查清单
 
 ### Phase 15: 核心引擎层
-- [ ] 15.1 评估器引擎
-- [ ] 15.2 分析器引擎
-- [ ] 15.3 综合评估器
+- [x] 15.1 评估器引擎
+- [x] 15.2 分析器引擎
+- [x] 15.3 综合评估器
 
 ### Phase 16: 技能包体系
-- [ ] 16.1 虚构梦境技能包
-- [ ] 16.2 悬念构建技能包
-- [ ] 16.3 人物塑造技能包
-- [ ] 16.4 预设魔杖技能包
-- [ ] 16.5 叙事语气技能包
+- [x] 16.1 虚构梦境技能包
+- [x] 16.2 悬念构建技能包
+- [x] 16.3 人物塑造技能包
+- [x] 16.4 预设魔杖技能包
+- [x] 16.5 叙事语气技能包
 
 ### Phase 17: Agent 重构
-- [ ] 17.1 Critic Agent 重构
-- [ ] 17.2 Writer Agent 重构
-- [ ] 17.3 SkillLoader 实现
+- [x] 17.1 Critic Agent 重构
+- [x] 17.2 Writer Agent 重构
+- [x] 17.3 SkillLoader 实现
 
 ### Phase 18: 高级技能包
 - [ ] 18.1 章节创作技能包增强

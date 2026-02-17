@@ -5,6 +5,7 @@
 分析器负责从文本中提取和分析特定元素：
 - 感官细节 (SensoryAnalyzer)
 - 冲突元素 (ConflictAnalyzer)
+- 角色状态 (CharacterStateAnalyzer)
 - 张力曲线 (TensionCurveAnalyzer)
 
 设计原则：
@@ -31,6 +32,11 @@ from .conflict_analyzer import (
     ConflictType,
 )
 
+from .character_state_analyzer import (
+    CharacterStateAnalyzer,
+    CharacterState,
+)
+
 from .tension_curve_analyzer import (
     TensionCurveAnalyzer,
     TensionCurve,
@@ -52,6 +58,10 @@ __all__ = [
     'ConflictAnalyzer',
     'Conflict',
     'ConflictType',
+
+    # 角色状态分析
+    'CharacterStateAnalyzer',
+    'CharacterState',
 
     # 张力曲线
     'TensionCurveAnalyzer',
