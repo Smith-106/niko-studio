@@ -132,7 +132,7 @@ python dev_run.py
 ```
 niko-studio/
 ├── docs/
-│   ├── SDD_V8_FINAL.md     # System Design Document (V8)
+│   ├── sdd/             # System design specs (modular)
 │   └── TASKS_V10_OPTIMIZED.md # Development Task List (V10)
 ├── src/
 │   ├── agents/             # Core Agents (Commander, Architect, Writer, Critic)
@@ -192,7 +192,7 @@ This project is designed for **Jules** automated development. See:
 
 ## 📚 Documentation
 
-- [System Design (SDD V2.1)](docs/SDD_V2.md) - Architecture & API specifications
+- [System Design](docs/sdd/01_System_Architecture.md) - Architecture & API specifications
 - [Task List (V10 Optimized)](docs/TASKS_V10_OPTIMIZED.md) - Development roadmap
 - [OpenKL Design](openkl/rfcs/0000-openkl-design.md) - Memory layer design
 

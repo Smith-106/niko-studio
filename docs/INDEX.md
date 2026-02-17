@@ -1,6 +1,6 @@
 # 文档索引
 
-Niko-Studio V8 文档目录
+Niko-Studio 文档目录
 
 ---
 
@@ -11,7 +11,7 @@ Niko-Studio V8 文档目录
 | [README.md](../README.md) | 项目概览、快速开始 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 架构设计、组件概览 |
 | [API_REFERENCE.md](API_REFERENCE.md) | API 参考、代码示例 |
-| [SDD_V8_FINAL.md](SDD_V8_FINAL.md) | 系统设计规格 V8 |
+| [sdd/](sdd/) | 系统设计规格（模块化） |
 | [TASKS_V10_OPTIMIZED.md](TASKS_V10_OPTIMIZED.md) | 开发任务清单 |
 
 ## 开发指南
