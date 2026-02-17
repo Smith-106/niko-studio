@@ -352,6 +352,8 @@ def _clamp_float(value: float, low: float, high: float) -> float:
 
 
 def _safe_float(value: Any, default: float) -> float:
+    if isinstance(value, bool):
+        return float(default)
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -359,6 +361,8 @@ def _safe_float(value: Any, default: float) -> float:
 
 
 def _safe_int(value: Any, default: int) -> int:
+    if isinstance(value, bool):
+        return int(default)
     try:
         return int(value)
     except (TypeError, ValueError):

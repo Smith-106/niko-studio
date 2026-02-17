@@ -991,6 +991,57 @@ async def test_novel_quality_check_endpoint_clamps_numeric_ranges(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_rejects_boolean_numeric_fields(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(
+            return_value={
+                "quality_score": True,
+                "issues": [],
+                "metrics": {
+                    "dialogue_ratio": False,
+                    "conflict_points": True,
+                    "visual_details": False,
+                    "template_sentence_ratio": True,
+                    "dimension_scores": {
+                        "repetition": True,
+                        "tone": False,
+                        "clarity": True,
+                        "causality": False,
+                        "detail": True,
+                        "factuality": False,
+                    },
+                },
+            }
+        ),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["quality_score"] == 0.0
+
+    metrics = data["metrics"]
+    assert metrics["dialogue_ratio"] == 0.0
+    assert metrics["conflict_points"] == 0
+    assert metrics["visual_details"] == 0
+    assert metrics["template_sentence_ratio"] == 0.0
+
+    dim_scores = metrics["dimension_scores"]
+    assert dim_scores["repetition"] == 0.0
+    assert dim_scores["tone"] == 0.0
+    assert dim_scores["clarity"] == 0.0
+    assert dim_scores["causality"] == 0.0
+    assert dim_scores["detail"] == 0.0
+    assert dim_scores["factuality"] == 0.0
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_normalizes_recommendation_casing_and_priority(monkeypatch):
     from src.mcp import gateway as gateway_module
 
