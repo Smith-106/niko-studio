@@ -631,6 +631,26 @@ async def _json_request(path: str, payload: dict | None = None, query_string: st
     return Request(scope, receive)
 
 
+async def _raw_request(path: str, body: bytes, content_type: bytes = b"application/json") -> Request:
+    sent = False
+
+    async def receive():
+        nonlocal sent
+        if sent:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        sent = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": path,
+        "query_string": b"",
+        "headers": [(b"content-type", content_type)],
+    }
+    return Request(scope, receive)
+
+
 def _get_raw_mcp_tool_function(mcp_obj, func_name: str):
     decorator = mcp_obj.tool.return_value
     for call in decorator.call_args_list:
@@ -972,6 +992,28 @@ async def test_novel_quality_check_endpoint_normalizes_recommendation_casing_and
     assert res.status_code == 200
     data = json.loads(res.body.decode("utf-8"))
     assert data["publish_recommendation"] == "pass"
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_rejects_invalid_json_body():
+    from src.mcp import gateway as gateway_module
+
+    req = await _raw_request("/api/novel/quality-check", b"{not-json")
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 400
+    assert b"content is required" in res.body
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_rejects_non_object_json_body():
+    from src.mcp import gateway as gateway_module
+
+    req = await _raw_request("/api/novel/quality-check", b"[1,2,3]")
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 400
+    assert b"content is required" in res.body
 
 
 @pytest.mark.asyncio

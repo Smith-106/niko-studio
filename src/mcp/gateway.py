@@ -2045,7 +2045,14 @@ async def critic_suggestions_endpoint(request: Request):
 
 
 async def novel_quality_check_endpoint(request: Request):
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    if not isinstance(body, dict):
+        body = {}
+
     content = body.get("content", "")
     if not isinstance(content, str) or not content.strip():
         return JSONResponse({"error": "content is required"}, status_code=400)
