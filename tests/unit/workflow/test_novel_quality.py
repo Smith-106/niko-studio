@@ -90,6 +90,29 @@ def test_evaluate_novel_quality_recommendation_revise():
 
 
 
+
+
+def test_evaluate_novel_quality_empty_content_returns_block_contract():
+    result = evaluate_novel_quality("   ")
+
+    assert result["quality_score"] == 0.0
+    assert result["publish_recommendation"] == "block"
+    assert set(result.keys()) == {
+        "analysis_schema_version",
+        "quality_score",
+        "issues",
+        "metrics",
+        "publish_recommendation",
+    }
+
+    assert isinstance(result["issues"], list)
+    assert result["issues"]
+    issue = result["issues"][0]
+    assert set(issue.keys()) == {"severity", "type", "evidence", "suggestion"}
+
+
+
+
 def test_evaluate_novel_quality_repetition_degrades_to_block_in_extreme_case():
     content = " ".join(["Then he walked forward."] * 24)
 
