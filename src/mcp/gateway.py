@@ -167,6 +167,7 @@ from src.container import get_container, reset_container
 from src.workflow.base_state import create_base_state
 from src.workflow.levels.level5_coordinator import Level5Coordinator
 from src.workflow.levels.types import ensure_contract_payload
+from src.workflow.novel_quality import evaluate_novel_quality
 
 
 def _with_contract(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -1905,6 +1906,15 @@ async def critic_suggestions_endpoint(request: Request):
     return JSONResponse(result)
 
 
+async def novel_quality_check_endpoint(request: Request):
+    body = await request.json()
+    content = body.get("content", "")
+    if not isinstance(content, str) or not content.strip():
+        return JSONResponse({"error": "content is required"}, status_code=400)
+    result = evaluate_novel_quality(content)
+    return JSONResponse(result)
+
+
 async def workflow_route_endpoint(request: Request):
     body = await request.json()
     result = await workflow_route(task=body.get("task", ""))
@@ -2096,6 +2106,7 @@ def create_gateway() -> Starlette:
             Route("/graph/foreshadows", graph_foreshadows_endpoint, methods=["POST"]),
             Route("/critic/evaluate", critic_evaluate_endpoint, methods=["POST"]),
             Route("/critic/suggestions", critic_suggestions_endpoint, methods=["POST"]),
+            Route("/api/novel/quality-check", novel_quality_check_endpoint, methods=["POST"]),
             Route("/workflow/route", workflow_route_endpoint, methods=["POST"]),
             Route("/workflow/plan", workflow_plan_endpoint, methods=["POST"]),
             Route("/workflow/execute", workflow_execute_endpoint, methods=["POST"]),

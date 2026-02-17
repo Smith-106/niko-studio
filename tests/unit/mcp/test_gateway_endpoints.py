@@ -704,6 +704,58 @@ async def test_rest_memory_graph_and_critic_endpoints_forward_payload(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_forwards_to_evaluator(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    mock_eval = MagicMock(return_value={
+        "analysis_schema_version": "2026-02",
+        "quality_score": 88.0,
+        "issues": [],
+        "metrics": {
+            "dialogue_ratio": 0.2,
+            "conflict_points": 3,
+            "visual_details": 5,
+            "template_sentence_ratio": 0.1,
+            "dimension_scores": {
+                "repetition": 90.0,
+                "tone": 85.0,
+                "clarity": 88.0,
+                "causality": 84.0,
+                "detail": 82.0,
+                "factuality": 90.0,
+            },
+        },
+        "publish_recommendation": "pass",
+    })
+    monkeypatch.setattr(gateway_module, "evaluate_novel_quality", mock_eval)
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    mock_eval.assert_called_once_with("valid body")
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_rejects_empty_content():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request("/api/novel/quality-check", {"content": "   "})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 400
+    assert b"content is required" in res.body
+
+
+def test_novel_quality_check_route_smoke():
+    from src.mcp import gateway as gateway_module
+
+    app = gateway_module.create_gateway()
+    routes = {getattr(route, "path", None) for route in app.app.routes}
+    assert "/api/novel/quality-check" in routes
+
+
+@pytest.mark.asyncio
 async def test_rest_workflow_agent_and_skills_endpoints_forward_payload(monkeypatch):
     from src.mcp import gateway as gateway_module
 
