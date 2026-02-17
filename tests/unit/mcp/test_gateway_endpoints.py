@@ -899,6 +899,82 @@ async def test_novel_quality_check_endpoint_normalizes_issue_item_fields(monkeyp
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_clamps_numeric_ranges(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(
+            return_value={
+                "quality_score": 133,
+                "issues": [],
+                "metrics": {
+                    "dialogue_ratio": 3,
+                    "conflict_points": -4,
+                    "visual_details": -2,
+                    "template_sentence_ratio": -0.4,
+                    "dimension_scores": {
+                        "repetition": 120,
+                        "tone": -1,
+                        "clarity": 40,
+                        "causality": 101,
+                        "detail": -7,
+                        "factuality": 0,
+                    },
+                },
+            }
+        ),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["quality_score"] == 100.0
+
+    metrics = data["metrics"]
+    assert metrics["dialogue_ratio"] == 1.0
+    assert metrics["template_sentence_ratio"] == 0.0
+    assert metrics["conflict_points"] == 0
+    assert metrics["visual_details"] == 0
+
+    dim_scores = metrics["dimension_scores"]
+    assert dim_scores["repetition"] == 100.0
+    assert dim_scores["tone"] == 0.0
+    assert dim_scores["clarity"] == 40.0
+    assert dim_scores["causality"] == 100.0
+    assert dim_scores["detail"] == 0.0
+    assert dim_scores["factuality"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_normalizes_recommendation_casing_and_priority(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(
+            return_value={
+                "publish_recommendation": "  PASS  ",
+                "decision": "no_go",
+                "metrics": {},
+                "issues": [],
+            }
+        ),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["publish_recommendation"] == "pass"
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_rejects_empty_content():
     from src.mcp import gateway as gateway_module
 

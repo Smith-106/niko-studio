@@ -239,15 +239,15 @@ def _normalize_quality_payload(payload: Any) -> Dict[str, Any]:
     fallback_dim_scores = fallback_metrics["dimension_scores"]
 
     normalized_dim_scores = {
-        key: _safe_float(raw_dim_scores.get(key), default)
+        key: _normalize_quality_score(raw_dim_scores.get(key), default)
         for key, default in fallback_dim_scores.items()
     }
 
     normalized_metrics = {
-        "dialogue_ratio": _safe_float(raw_metrics.get("dialogue_ratio"), fallback_metrics["dialogue_ratio"]),
-        "conflict_points": _safe_int(raw_metrics.get("conflict_points"), fallback_metrics["conflict_points"]),
-        "visual_details": _safe_int(raw_metrics.get("visual_details"), fallback_metrics["visual_details"]),
-        "template_sentence_ratio": _safe_float(
+        "dialogue_ratio": _normalize_ratio(raw_metrics.get("dialogue_ratio"), fallback_metrics["dialogue_ratio"]),
+        "conflict_points": _normalize_count(raw_metrics.get("conflict_points"), fallback_metrics["conflict_points"]),
+        "visual_details": _normalize_count(raw_metrics.get("visual_details"), fallback_metrics["visual_details"]),
+        "template_sentence_ratio": _normalize_ratio(
             raw_metrics.get("template_sentence_ratio"),
             fallback_metrics["template_sentence_ratio"],
         ),
@@ -266,7 +266,7 @@ def _normalize_quality_payload(payload: Any) -> Dict[str, Any]:
 
     return {
         "analysis_schema_version": str(schema_version),
-        "quality_score": _safe_float(payload.get("quality_score"), fallback["quality_score"]),
+        "quality_score": _normalize_quality_score(payload.get("quality_score"), fallback["quality_score"]),
         "issues": normalized_issues,
         "metrics": normalized_metrics,
         "publish_recommendation": _normalize_publish_recommendation(payload, fallback["publish_recommendation"]),
@@ -305,6 +305,22 @@ def _normalize_issue_item(issue: Dict[str, Any]) -> Dict[str, str]:
         "evidence": str(issue.get("evidence", "")),
         "suggestion": str(issue.get("suggestion", "")),
     }
+
+
+def _normalize_quality_score(value: Any, default: float) -> float:
+    return _clamp_float(_safe_float(value, default), 0.0, 100.0)
+
+
+def _normalize_ratio(value: Any, default: float) -> float:
+    return _clamp_float(_safe_float(value, default), 0.0, 1.0)
+
+
+def _normalize_count(value: Any, default: int) -> int:
+    return max(0, _safe_int(value, default))
+
+
+def _clamp_float(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
 
 
 def _safe_float(value: Any, default: float) -> float:
