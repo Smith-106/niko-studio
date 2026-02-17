@@ -891,6 +891,23 @@ async def test_novel_quality_check_endpoint_normalizes_missing_contract_fields(m
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_handles_non_dict_contract_payload(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(gateway_module, "evaluate_novel_quality", MagicMock(return_value={"metrics": {}, "issues": []}))
+    monkeypatch.setattr(gateway_module, "ensure_contract_payload", MagicMock(return_value="invalid-contract"))
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["analysis_schema_version"]
+    assert data["quality_score"] == 0.0
+    assert data["publish_recommendation"] == "revise"
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_maps_legacy_decision_fields(monkeypatch):
     from src.mcp import gateway as gateway_module
 

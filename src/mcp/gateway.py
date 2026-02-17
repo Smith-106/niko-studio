@@ -262,6 +262,8 @@ def _normalize_quality_payload(payload: Any) -> Dict[str, Any]:
     normalized_issues = [_normalize_issue_item(item) for item in raw_issues if isinstance(item, dict)]
 
     contract_payload = ensure_contract_payload(payload)
+    if not isinstance(contract_payload, dict):
+        contract_payload = {}
     schema_version = _normalize_schema_version(payload, contract_payload)
 
     return {
