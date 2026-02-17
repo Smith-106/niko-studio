@@ -239,7 +239,176 @@ async def test_style_matcher_generate_style_guide_paths():
     llm_matcher.learn("x", ["文本"])
     assert await llm_matcher.generate_style_guide("x") == "LLM guide"
 
-    fallback_matcher = StyleMatcher(analyzer=StyleAnalyzer(), llm=_GuideFailLLM())
-    fallback_matcher.learn("y", ["文本"])
-    fallback = await fallback_matcher.generate_style_guide("y")
-    assert "# y 风格指南" in fallback
+@pytest.mark.asyncio
+async def test_style_analyzer_analyze_with_llm_none_returns_base_vector():
+    analyzer = StyleAnalyzer()
+    vec = await analyzer.analyze_with_llm("简单文本")
+    assert isinstance(vec, StyleVector)
+
+
+def test_style_analyzer_private_branches_tokenize_and_empty_defaults():
+    analyzer = StyleAnalyzer()
+
+    tokens = analyzer._tokenize("abc 中 文 def")
+    assert tokens == ["abc", "中", "文", "def"]
+
+    assert analyzer._analyze_lexical("", []) == {
+        "vocabulary_richness": 0.5,
+        "avg_word_length": 0.5,
+        "rare_word_ratio": 0.3,
+        "technical_density": 0.2,
+        "colloquial_ratio": 0.3,
+    }
+    assert analyzer._analyze_syntactic("", []) == {
+        "avg_sentence_length": 0.5,
+        "sentence_complexity": 0.5,
+        "clause_ratio": 0.3,
+        "passive_ratio": 0.2,
+        "interrogative_ratio": 0.1,
+    }
+    assert analyzer._analyze_rhetorical("", []) == {
+        "metaphor_density": 0.3,
+        "parallelism_freq": 0.2,
+        "rhetorical_question": 0.1,
+        "hyperbole_level": 0.2,
+        "personification": 0.2,
+    }
+    assert analyzer._analyze_rhythmic("", [], []) == {
+        "avg_paragraph_length": 0.5,
+        "punctuation_rhythm": 0.5,
+        "pause_pattern": 0.5,
+        "sentence_variation": 0.5,
+        "dialogue_pacing": 0.5,
+    }
+    assert analyzer._analyze_tone("", []) == {
+        "formality_level": 0.5,
+        "emotional_valence": 0.5,
+        "subjectivity": 0.5,
+        "certainty_level": 0.5,
+        "intimacy_level": 0.5,
+    }
+    assert analyzer._analyze_narrative("", []) == {
+        "pov_consistency": 0.8,
+        "tense_distribution": 0.5,
+        "dialogue_ratio": 0.3,
+        "description_density": 0.5,
+        "showing_vs_telling": 0.5,
+    }
+
+
+def test_style_analyzer_parallel_short_circuit_len_lt_three():
+    analyzer = StyleAnalyzer()
+    assert analyzer._is_parallel(["一句", "二句"]) is False
+
+
+class _ModerateAnalyzer:
+    def __init__(self):
+        self.i = 0
+        self.vectors = [
+            StyleVector(vocabulary_richness=0.10),
+            StyleVector(vocabulary_richness=0.22),
+            StyleVector(vocabulary_richness=0.22),
+            StyleVector(vocabulary_richness=0.22),
+        ]
+
+    def analyze(self, _text):
+        idx = min(self.i, len(self.vectors) - 1)
+        self.i += 1
+        return self.vectors[idx]
+
+
+def test_style_drift_detector_moderate_severity_paths():
+    detector = StyleDriftDetector(window_size=10, stride=10, threshold=0.05, analyzer=_ModerateAnalyzer())
+
+    events = detector.detect("a" * 60)
+    assert any(e.severity == "moderate" for e in events)
+
+    reference_events = detector.detect_against_reference(
+        "b" * 80,
+        StyleVector(vocabulary_richness=0.10),
+    )
+    assert any(e.severity == "moderate" for e in reference_events)
+
+
+def test_style_drift_detector_stability_score_default_weight_and_zero_max_events():
+    detector = StyleDriftDetector(window_size=10, stride=10, threshold=0.05, analyzer=StyleAnalyzer())
+
+    detector.detect = lambda _text: [
+        DriftEvent(
+            position=0,
+            segment_index=0,
+            drift_magnitude=0.2,
+            drifted_dimensions=["vocabulary_richness"],
+            before_vector=StyleVector(),
+            after_vector=StyleVector(vocabulary_richness=1.0),
+            severity="unknown",
+        )
+    ]
+
+    score = detector.get_stability_score("")
+    assert 0.0 <= score <= 1.0
+
+
+def test_style_matcher_average_vectors_empty_list_returns_default_vector():
+    matcher = StyleMatcher(analyzer=StyleAnalyzer())
+    vec = matcher._average_vectors([])
+    assert isinstance(vec, StyleVector)
+    assert vec.vocabulary_richness == pytest.approx(0.5)
+
+
+def test_style_analyzer_tokenize_flushes_english_before_cjk():
+    analyzer = StyleAnalyzer()
+    tokens = analyzer._tokenize("abc中")
+    assert tokens == ["abc", "中"]
+
+
+def test_style_analyzer_rhetorical_parallelism_increment_branch():
+    analyzer = StyleAnalyzer()
+    analyzer._is_parallel = lambda _s: True
+    result = analyzer._analyze_rhetorical("风像刀，夜像海。", ["春风吹", "夏雨落", "秋叶舞"])
+    assert result["parallelism_freq"] > 0.0
+
+
+def test_style_analyzer_tone_and_narrative_non_default_branches():
+    analyzer = StyleAnalyzer()
+
+    tone = analyzer._analyze_tone("他一定会来，绝对不会错。", ["他一定会来"])
+    assert tone["certainty_level"] > 0.5
+
+    narrative = analyzer._analyze_narrative("了正在「你好」", ["了正在「你好」"])
+    assert narrative["tense_distribution"] > 0.0
+    assert narrative["dialogue_ratio"] > 0.0
+
+
+class _SingleWindowAnalyzer:
+    def analyze(self, _text):
+        return StyleVector(vocabulary_richness=0.2)
+
+
+class _MinorReferenceAnalyzer:
+    def analyze(self, _text):
+        return StyleVector(vocabulary_richness=0.16)
+
+
+def test_style_drift_detector_detect_len_vectors_lt_two_branch():
+    detector = StyleDriftDetector(window_size=30, stride=30, threshold=0.05, analyzer=_SingleWindowAnalyzer())
+    assert detector.detect("x" * 60) == []
+
+
+def test_style_drift_detector_reference_minor_severity_branch():
+    detector = StyleDriftDetector(window_size=10, stride=10, threshold=0.05, analyzer=_MinorReferenceAnalyzer())
+    events = detector.detect_against_reference("x" * 40, StyleVector(vocabulary_richness=0.1))
+    assert events
+    assert all(e.severity == "minor" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_style_matcher_generate_style_guide_llm_exception_fallback():
+    class _GuideFailLLM:
+        async def ainvoke(self, _prompt):
+            raise RuntimeError("x")
+
+    matcher = StyleMatcher(analyzer=StyleAnalyzer(), llm=_GuideFailLLM())
+    matcher.learn("fallback", ["文本"], description="desc")
+    guide = await matcher.generate_style_guide("fallback")
+    assert "# fallback 风格指南" in guide
