@@ -33,6 +33,7 @@ import asyncio
 import time
 import os
 import math
+import inspect
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Iterable
 from pathlib import Path
@@ -2096,6 +2097,8 @@ async def novel_quality_check_endpoint(request: Request):
     normalized_content = content.strip()
     try:
         result = evaluate_novel_quality(normalized_content)
+        if inspect.isawaitable(result):
+            result = await result
     except Exception:
         logger.exception("novel_quality_check_endpoint evaluator failed")
         result = {}

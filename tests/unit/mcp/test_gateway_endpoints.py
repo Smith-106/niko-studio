@@ -758,6 +758,29 @@ async def test_novel_quality_check_endpoint_forwards_to_evaluator(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_accepts_async_evaluator(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    async def _async_eval(content: str):
+        return {
+            "quality_score": 77.0,
+            "publish_recommendation": "pass",
+            "metrics": {"dialogue_ratio": 0.1, "conflict_points": 2, "visual_details": 3, "template_sentence_ratio": 0.2},
+            "issues": [],
+        }
+
+    monkeypatch.setattr(gateway_module, "evaluate_novel_quality", _async_eval)
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["quality_score"] == 77.0
+    assert data["publish_recommendation"] == "pass"
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_handles_evaluator_exception(monkeypatch):
     from src.mcp import gateway as gateway_module
 
