@@ -896,6 +896,7 @@ async def test_novel_quality_check_endpoint_normalizes_issue_item_fields(monkeyp
                 "quality_score": 66,
                 "issues": [
                     {"severity": 1, "type": None, "evidence": 404, "suggestion": False},
+                    {"severity": "  CRITICAL  ", "type": "  ", "evidence": "  note  ", "suggestion": "   "},
                     "skip-me",
                 ],
                 "metrics": {},
@@ -910,11 +911,17 @@ async def test_novel_quality_check_endpoint_normalizes_issue_item_fields(monkeyp
     data = json.loads(res.body.decode("utf-8"))
     assert data["issues"] == [
         {
-            "severity": "1",
-            "type": "None",
+            "severity": "medium",
+            "type": "unknown",
             "evidence": "404",
             "suggestion": "False",
-        }
+        },
+        {
+            "severity": "medium",
+            "type": "unknown",
+            "evidence": "note",
+            "suggestion": "",
+        },
     ]
 
 

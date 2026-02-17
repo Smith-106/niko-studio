@@ -300,11 +300,25 @@ def _normalize_publish_recommendation(payload: Dict[str, Any], fallback: str) ->
 
 def _normalize_issue_item(issue: Dict[str, Any]) -> Dict[str, str]:
     return {
-        "severity": str(issue.get("severity", "medium")),
-        "type": str(issue.get("type", "unknown")),
-        "evidence": str(issue.get("evidence", "")),
-        "suggestion": str(issue.get("suggestion", "")),
+        "severity": _normalize_issue_severity(issue.get("severity")),
+        "type": _normalize_issue_text(issue.get("type"), "unknown"),
+        "evidence": _normalize_issue_text(issue.get("evidence"), ""),
+        "suggestion": _normalize_issue_text(issue.get("suggestion"), ""),
     }
+
+
+def _normalize_issue_severity(value: Any) -> str:
+    normalized = _normalize_issue_text(value, "medium").lower()
+    if normalized in {"low", "medium", "high"}:
+        return normalized
+    return "medium"
+
+
+def _normalize_issue_text(value: Any, default: str) -> str:
+    if value is None:
+        return default
+    normalized = str(value).strip()
+    return normalized if normalized else default
 
 
 def _normalize_quality_score(value: Any, default: float) -> float:
