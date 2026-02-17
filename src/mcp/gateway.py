@@ -2089,7 +2089,10 @@ async def novel_quality_check_endpoint(request: Request):
     if not isinstance(content, str) or not content.strip():
         return JSONResponse({"error": "content is required"}, status_code=400)
     normalized_content = content.strip()
-    result = evaluate_novel_quality(normalized_content)
+    try:
+        result = evaluate_novel_quality(normalized_content)
+    except Exception:
+        result = {}
     return JSONResponse(_normalize_quality_payload(result))
 
 
