@@ -761,6 +761,8 @@ async def test_novel_quality_check_endpoint_forwards_to_evaluator(monkeypatch):
 async def test_novel_quality_check_endpoint_handles_evaluator_exception(monkeypatch):
     from src.mcp import gateway as gateway_module
 
+    mock_log_exception = MagicMock()
+    monkeypatch.setattr(gateway_module.logger, "exception", mock_log_exception)
     monkeypatch.setattr(
         gateway_module,
         "evaluate_novel_quality",
@@ -774,6 +776,7 @@ async def test_novel_quality_check_endpoint_handles_evaluator_exception(monkeypa
     data = json.loads(res.body.decode("utf-8"))
     assert data["quality_score"] == 0.0
     assert data["publish_recommendation"] == "revise"
+    mock_log_exception.assert_called_once_with("novel_quality_check_endpoint evaluator failed")
 
 
 @pytest.mark.asyncio

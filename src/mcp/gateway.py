@@ -2092,6 +2092,7 @@ async def novel_quality_check_endpoint(request: Request):
     try:
         result = evaluate_novel_quality(normalized_content)
     except Exception:
+        logger.exception("novel_quality_check_endpoint evaluator failed")
         result = {}
     return JSONResponse(_normalize_quality_payload(result))
 
