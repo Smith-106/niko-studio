@@ -758,6 +758,20 @@ async def test_novel_quality_check_endpoint_forwards_to_evaluator(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_forwards_trimmed_content_to_evaluator(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    mock_eval = MagicMock(return_value={"metrics": {}, "issues": []})
+    monkeypatch.setattr(gateway_module, "evaluate_novel_quality", mock_eval)
+
+    req = await _json_request("/api/novel/quality-check", {"content": "  valid body  "})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    mock_eval.assert_called_once_with("valid body")
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_normalizes_missing_contract_fields(monkeypatch):
     from src.mcp import gateway as gateway_module
 
