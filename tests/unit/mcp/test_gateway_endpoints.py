@@ -1002,6 +1002,50 @@ async def test_novel_quality_check_endpoint_normalizes_recommendation_casing_and
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_falls_back_to_legacy_decision_when_publish_empty(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(
+            return_value={
+                "publish_recommendation": "   ",
+                "decision_result": "no_go",
+                "metrics": {},
+                "issues": [],
+            }
+        ),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["publish_recommendation"] == "block"
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_normalizes_blank_schema_version(monkeypatch):
+    from src.mcp import gateway as gateway_module
+    from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={"analysis_schema_version": "   ", "metrics": {}, "issues": []}),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["analysis_schema_version"] == ANALYSIS_SCHEMA_VERSION
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_rejects_invalid_json_body():
     from src.mcp import gateway as gateway_module
 

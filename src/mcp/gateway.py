@@ -260,17 +260,31 @@ def _normalize_quality_payload(payload: Any) -> Dict[str, Any]:
     normalized_issues = [_normalize_issue_item(item) for item in raw_issues if isinstance(item, dict)]
 
     contract_payload = ensure_contract_payload(payload)
-    schema_version = payload.get("analysis_schema_version") or payload.get("contract_version")
-    if not schema_version:
-        schema_version = contract_payload.get("analysis_schema_version", ANALYSIS_SCHEMA_VERSION)
+    schema_version = _normalize_schema_version(payload, contract_payload)
 
     return {
-        "analysis_schema_version": str(schema_version),
+        "analysis_schema_version": schema_version,
         "quality_score": _normalize_quality_score(payload.get("quality_score"), fallback["quality_score"]),
         "issues": normalized_issues,
         "metrics": normalized_metrics,
         "publish_recommendation": _normalize_publish_recommendation(payload, fallback["publish_recommendation"]),
     }
+
+
+def _normalize_schema_version(payload: Dict[str, Any], contract_payload: Dict[str, Any]) -> str:
+    candidates = [
+        payload.get("analysis_schema_version"),
+        payload.get("contract_version"),
+        contract_payload.get("analysis_schema_version"),
+        ANALYSIS_SCHEMA_VERSION,
+    ]
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        normalized = str(candidate).strip()
+        if normalized:
+            return normalized
+    return ANALYSIS_SCHEMA_VERSION
 
 
 def _normalize_publish_recommendation(payload: Dict[str, Any], fallback: str) -> str:
