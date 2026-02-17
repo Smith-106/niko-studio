@@ -32,6 +32,7 @@ import logging
 import asyncio
 import time
 import os
+import math
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Iterable
 from pathlib import Path
@@ -355,18 +356,22 @@ def _safe_float(value: Any, default: float) -> float:
     if isinstance(value, bool):
         return float(default)
     try:
-        return float(value)
+        parsed = float(value)
     except (TypeError, ValueError):
         return float(default)
+    if not math.isfinite(parsed):
+        return float(default)
+    return parsed
 
 
 def _safe_int(value: Any, default: int) -> int:
     if isinstance(value, bool):
         return int(default)
     try:
-        return int(value)
+        parsed = int(value)
     except (TypeError, ValueError):
         return int(default)
+    return parsed
 
 
 def get_memory_engine():
