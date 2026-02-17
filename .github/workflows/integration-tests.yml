@@ -110,6 +110,40 @@ jobs:
         run: |
           python scripts/check_i18n_keys.py
 
+  tasks-completion-soft-warn:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    needs: [tests]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run tasks completion check (soft warn)
+        run: |
+          python scripts/check_tasks_completion.py
+
+  tasks-completion-hard-fail:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    needs: [tests, tasks-completion-soft-warn]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run tasks completion check (strict)
+        run: |
+          python scripts/check_tasks_completion.py --strict
+
   p2-baseline-soft-warn:
     runs-on: ubuntu-latest
     continue-on-error: true

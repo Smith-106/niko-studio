@@ -186,14 +186,14 @@ niko-studio/
 
 This project is designed for **Jules** automated development. See:
 
-- [TASKS.md](docs/TASKS.md) - Complete task checklist
+- [TASKS_V10_OPTIMIZED.md](docs/TASKS_V10_OPTIMIZED.md) - Complete task checklist
 - [JULES.md](.github/JULES.md) - Development guidelines for Jules
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
 
 ## 📚 Documentation
 
 - [System Design (SDD V2.1)](docs/SDD_V2.md) - Architecture & API specifications
-- [Task List (V8.0.0)](docs/TASKS.md) - Development roadmap
+- [Task List (V10 Optimized)](docs/TASKS_V10_OPTIMIZED.md) - Development roadmap
 - [OpenKL Design](openkl/rfcs/0000-openkl-design.md) - Memory layer design
 
 ## 📄 License

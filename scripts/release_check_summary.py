@@ -43,6 +43,21 @@ def parse_pytest_counts(output: str) -> tuple[str, str]:
     return "unknown", "0"
 
 
+def parse_first_json_object(output: str) -> tuple[dict[str, object] | None, str | None]:
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(output):
+        if char != "{":
+            continue
+        try:
+            payload, _ = decoder.raw_decode(output[index:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload, None
+        return None, "json payload is not an object"
+    return None, "json payload not found in output"
+
+
 def build_check_result(
     check_id: str,
     priority: str,
@@ -144,6 +159,30 @@ def main() -> int:
         "NIKO_GATEWAY_METRICS_ENABLED": "true",
     })
 
+    tasks_code, tasks_output = run_cmd([sys.executable, "scripts/check_tasks_completion.py"])
+    tasks_payload, tasks_parse_error = parse_first_json_object(tasks_output)
+
+    tasks_checked = tasks_payload.get("total_checked") if tasks_payload else None
+    tasks_unchecked = tasks_payload.get("total_unchecked") if tasks_payload else None
+    tasks_ratio = tasks_payload.get("completion_ratio") if tasks_payload else None
+
+    if tasks_code != 0:
+        tasks_status = "FAIL"
+        tasks_detail = f"checker_exit={tasks_code}, json_parse_error={tasks_parse_error or 'none'}"
+    elif not tasks_payload:
+        tasks_status = "WARN"
+        tasks_detail = f"checker_exit=0, json_parse_error={tasks_parse_error or 'unknown'}"
+    elif isinstance(tasks_unchecked, int) and tasks_unchecked == 0:
+        tasks_status = "PASS"
+        tasks_detail = (
+            f"checked={tasks_checked}, unchecked={tasks_unchecked}, completion_ratio={tasks_ratio}%"
+        )
+    else:
+        tasks_status = "WARN"
+        tasks_detail = (
+            f"checked={tasks_checked}, unchecked={tasks_unchecked}, completion_ratio={tasks_ratio}%"
+        )
+
     coverage_xml = PROJECT_ROOT / "coverage.xml"
     coverage_exists = coverage_xml.exists()
     codecov_token_present = bool(os.environ.get("CODECOV_TOKEN", "").strip())
@@ -192,6 +231,14 @@ def main() -> int:
             codecov_exit,
             f"strict_mode={str(codecov_strict_mode).lower()}, token_present={str(codecov_token_present).lower()}, {codecov_detail}",
             status_override=codecov_status,
+        ),
+        build_check_result(
+            "tasks_completion_signal",
+            "P1",
+            False,
+            tasks_code,
+            tasks_detail,
+            status_override=tasks_status,
         ),
     ]
 
@@ -291,7 +338,16 @@ def main() -> int:
 - token_present: {'true' if codecov_token_present else 'false'}
 - coverage.xml exists: {'yes' if coverage_exists else 'no'}
 
-### 9) CI Integration Tests latest
+### 9) tasks_completion_signal
+
+- checker_exit: {tasks_code}
+- status: {tasks_status}
+- checked: {tasks_checked if tasks_checked is not None else 'n/a'}
+- unchecked: {tasks_unchecked if tasks_unchecked is not None else 'n/a'}
+- completion_ratio: {str(tasks_ratio) + '%' if tasks_ratio is not None else 'n/a'}
+- json_parse_error: {tasks_parse_error if tasks_parse_error else 'none'}
+
+### 10) CI Integration Tests latest
 
 - policy: do not write back dynamic run_id / run_url to repository files.
 - source_of_truth: GitHub Actions `Integration Tests` latest result.
