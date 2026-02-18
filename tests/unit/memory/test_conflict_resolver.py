@@ -389,8 +389,88 @@ class TestCheck:
 # Singleton Tests
 # ============================================================
 
-class TestSingleton:
 
-    def test_reset(self):
-        reset_conflict_resolver()
-        # Should not raise
+
+class TestConflictResolverExtra:
+
+    @pytest.mark.asyncio
+    async def test_check_db_exception_returns_empty(self):
+        resolver = ConflictResolver()
+
+        class BadDB:
+            def execute(self, *_args, **_kwargs):
+                raise RuntimeError("db error")
+
+        resolver.set_db_connection(BadDB())
+        out = await resolver.check("x", entity_id="e1")
+        assert out == []
+
+    @pytest.mark.asyncio
+    async def test_check_detects_update_conflict_type(self):
+        resolver = ConflictResolver(similarity_threshold=0.9)
+
+        class Cursor:
+            def fetchall(self):
+                return [("m1", "Alice visited garden on Monday", None, None, 0.4)]
+
+        class DB:
+            def execute(self, *_args, **_kwargs):
+                return Cursor()
+
+        resolver.set_db_connection(DB())
+        out = await resolver.check("Alice visited garden on Tuesday", entity_id="alice")
+        assert len(out) == 1
+        assert out[0].conflict_type == ConflictType.UPDATE
+
+    @pytest.mark.asyncio
+    async def test_resolve_unknown_strategy_falls_back_auto(self):
+        resolver = ConflictResolver()
+        conflicts = [ConflictInfo(id="c1", content="old", conflict_type=ConflictType.CONTRADICTION)]
+        out = await resolver.resolve("new", conflicts, strategy="unknown")
+        assert out.action == "update"
+        assert "c1" in out.obsolete_ids
+
+    def test_get_conflict_resolver_updates_db_when_singleton_db_none(self):
+        from src.memory import conflict_resolver as mod
+
+        mod.reset_conflict_resolver()
+        first = mod.get_conflict_resolver(db_connection=None)
+        assert first.db is None
+
+        db_obj = object()
+        second = mod.get_conflict_resolver(db_connection=db_obj)
+        assert second is first
+        assert second.db is db_obj
+
+    def test_calculate_similarity_with_embedder_success(self):
+        resolver = ConflictResolver()
+
+        class Embedder:
+            def embed(self, text):
+                if text == "a":
+                    return [1.0, 0.0]
+                return [0.0, 1.0]
+
+            def similarity(self, a, b):
+                return 0.42 if a != b else 1.0
+
+        resolver.set_embedder(Embedder())
+        sim = resolver._calculate_similarity("a", "b")
+        assert sim == 0.42
+
+    @pytest.mark.asyncio
+    async def test_resolve_auto_update_conflict_obsoletes(self):
+        resolver = ConflictResolver()
+        conflicts = [ConflictInfo(id="c1", content="old", conflict_type=ConflictType.UPDATE)]
+        out = await resolver.resolve("new", conflicts, strategy=ConflictResolutionStrategy.AUTO)
+        assert out.action == "update"
+        assert out.obsolete_ids == ["c1"]
+
+    def test_detect_all_conflicts_uses_empty_content_defaults(self):
+        resolver = ConflictResolver()
+        conflicts = resolver.detect_all_conflicts([
+            {"id": "m1"},
+            {"id": "m2", "content": "The king is alive"},
+        ])
+        assert isinstance(conflicts, list)
+

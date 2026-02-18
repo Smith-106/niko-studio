@@ -2,6 +2,8 @@
 """Workflow graph extra tests - DistillationNode, compile_graph, run_writing_session."""
 
 import pytest
+import importlib.util
+from pathlib import Path
 from unittest.mock import MagicMock, patch, AsyncMock
 
 from src.workflow.graph import (
@@ -102,6 +104,20 @@ class TestAddDistillationNode:
         graph.add_edge.assert_called_once_with("writer", "distillation")
         assert result is graph
 
+    def test_route_to_distill_goes_to_distillation(self):
+        graph = MagicMock()
+        add_distillation_node(graph, after_node="writer", conditional=True)
+
+        route_fn = graph.add_conditional_edges.call_args.args[1]
+        assert route_fn({"draft_content": "text"}) == "distillation"
+
+    def test_route_to_distill_goes_to_critic(self):
+        graph = MagicMock()
+        add_distillation_node(graph, after_node="writer", conditional=True)
+
+        route_fn = graph.add_conditional_edges.call_args.args[1]
+        assert route_fn({"draft_content": "", "distillation_result": {}}) == "critic"
+
 
 class TestCreateDistillationNode:
     def test_default(self):
@@ -137,6 +153,26 @@ class TestCompileGraph:
         from src.workflow.graph import compile_graph
         result = compile_graph(use_memory=False)
         mock_graph.compile.assert_called_once_with()
+
+
+class TestCreateWritingGraph:
+    @patch("src.workflow.adapters.AdapterRegistry.create_adapter", return_value=None)
+    def test_raises_when_adapter_is_none(self, _):
+        with pytest.raises(ValueError, match="Failed to create NovelAdapter"):
+            from src.workflow.graph import create_writing_graph
+            create_writing_graph()
+
+
+class TestImportFallback:
+    def test_default_app_fallback_to_none_when_compile_fails(self):
+        module_path = Path(__file__).resolve().parents[3] / "src" / "workflow" / "graph.py"
+        spec = importlib.util.spec_from_file_location("graph_import_fail_case", module_path)
+        module = importlib.util.module_from_spec(spec)
+
+        with patch("src.workflow.adapters.AdapterRegistry.create_adapter", return_value=None):
+            spec.loader.exec_module(module)
+
+        assert module.app is None
 
 
 class TestRunWritingSession:

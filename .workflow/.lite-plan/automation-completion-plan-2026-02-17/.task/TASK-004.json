@@ -1,0 +1,24 @@
+{
+  "id": "TASK-004",
+  "title": "Align README task reference",
+  "description": "Fix README task list reference from docs/TASKS.md to docs/TASKS_V10_OPTIMIZED.md and keep completion narrative consistent.",
+  "depends_on": [],
+  "convergence": {
+    "criteria": [
+      "README task link points to existing file.",
+      "Task naming in README matches actual roadmap source.",
+      "No broken markdown links remain for task documentation entry."
+    ]
+  },
+  "files": [
+    {
+      "path": "README.md",
+      "change": "Update task list link target and wording to current optimized roadmap document."
+    }
+  ],
+  "implementation": [
+    "Replace stale docs/TASKS.md references with docs/TASKS_V10_OPTIMIZED.md.",
+    "Keep surrounding README structure unchanged."
+  ],
+  "test": "Search README for docs/TASKS.md and confirm no stale references remain."
+}

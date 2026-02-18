@@ -110,10 +110,22 @@ class TestContextItem:
 class TestBaseContextProviderEstimateTokens:
     """Test _estimate_tokens via a concrete subclass."""
 
+    class _SuperPassProvider(BaseContextProvider):
+        def __init__(self):
+            super().__init__("super-pass", ContextPriority.NORMAL)
+
+        async def get_context(self, query=None, **kwargs):
+            return await super().get_context(query=query, **kwargs)
+
     def _make_provider(self):
         """Create a minimal concrete subclass for testing."""
         provider = MemoryContextProvider()
         return provider
+
+    @pytest.mark.asyncio
+    async def test_base_get_context_super_pass_branch(self):
+        provider = self._SuperPassProvider()
+        assert await provider.get_context(query="q") is None
 
     def test_english_only(self):
         provider = self._make_provider()
@@ -382,6 +394,29 @@ class TestSkillContextProvider:
         # s1 loaded via skill_ids, not duplicated from refs
         assert len(items) == 1
 
+    async def test_extract_refs_truncates_content(self):
+        long_content = "x" * 5000
+        loader = MagicMock()
+        loader.extract_refs = MagicMock(return_value=["ref-long"])
+        loader.load = MagicMock(return_value=long_content)
+
+        provider = SkillContextProvider(skill_loader=loader, max_skill_length=100)
+        items = await provider.get_context(query="@ref-long", include_summary=False)
+
+        assert len(items) == 1
+        assert items[0].key == "skill_ref-long"
+        assert "... (" in items[0].value
+
+    async def test_extract_refs_file_not_found_ignored(self):
+        loader = MagicMock()
+        loader.extract_refs = MagicMock(return_value=["missing-ref"])
+        loader.load = MagicMock(side_effect=FileNotFoundError)
+
+        provider = SkillContextProvider(skill_loader=loader)
+        items = await provider.get_context(query="@missing-ref", include_summary=False)
+
+        assert items == []
+
     async def test_loader_exception_handled(self):
         loader = MagicMock()
         loader.load = MagicMock(side_effect=RuntimeError("broken"))
@@ -432,6 +467,45 @@ class TestProjectContextProvider:
 
         char_item = [i for i in items if i.key == "characters"][0]
         assert char_item.metadata["count"] == 1
+
+    async def test_get_context_with_outline_file(self, tmp_path):
+        niko = tmp_path / ".niko"
+        niko.mkdir()
+        (niko / "outline.json").write_text('{"chapters": 12}', encoding="utf-8")
+
+        provider = ProjectContextProvider(project_root=str(tmp_path))
+        items = await provider.get_context(include_characters=False, include_world=False, include_outline=True)
+
+        outline_item = [i for i in items if i.key == "outline"][0]
+        assert outline_item.value["chapters"] == 12
+
+    async def test_get_context_without_outline_file(self, tmp_path):
+        niko = tmp_path / ".niko"
+        niko.mkdir()
+
+        provider = ProjectContextProvider(project_root=str(tmp_path))
+        items = await provider.get_context(include_characters=False, include_world=False, include_outline=True)
+
+        assert all(i.key != "outline" for i in items)
+
+    async def test_get_context_world_json_error_handled(self, tmp_path, monkeypatch):
+        niko = tmp_path / ".niko"
+        niko.mkdir()
+        (niko / "world.json").write_text('{"era":"future"}', encoding="utf-8")
+
+        provider = ProjectContextProvider(project_root=str(tmp_path))
+
+        original_loads = __import__("json").loads
+
+        def _boom_world(data):
+            if '"era":"future"' in data:
+                raise RuntimeError("world boom")
+            return original_loads(data)
+
+        monkeypatch.setattr("src.context.providers.json.loads", _boom_world)
+
+        items = await provider.get_context(include_characters=False, include_world=True, include_outline=False)
+        assert items == []
 
     async def test_get_context_handles_top_level_exception(self, tmp_path, monkeypatch):
         niko = tmp_path / ".niko"

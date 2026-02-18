@@ -187,32 +187,53 @@ def test_module_level_loader_helpers_and_singleton_cache(tmp_path, monkeypatch):
     assert "[技能包: helper-skill]" in resolve_skill_refs("use @skill:helper-skill")
 
 
-def test_list_summary_and_clear_cache(tmp_path, monkeypatch):
+def test_load_skill_dict_contains_metadata_and_techniques(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    skills_root = tmp_path / "skills"
-
     _write_skill(
-        skills_root,
-        "voice-workshop",
+        tmp_path / "skills",
+        "dict-skill",
         """---
-description: "voice improve"
-tags: [voice]
+description: "desc"
+tags: [tag1]
+triggers: [t1]
 ---
-# Voice
+# Dict Skill
 
-## Tip
-Keep tone consistent.
+## Technique A
+body
 """,
     )
 
     loader = SkillLoader()
+    skill_dict = loader.load_skill("dict-skill")
 
-    names = loader.list_skills()
-    assert "voice-workshop" in names
+    assert skill_dict["name"] == "dict-skill"
+    assert skill_dict["metadata"]["description"] == "desc"
+    assert "Technique A" in skill_dict["techniques"]
 
-    summary = loader.get_summary()
-    assert "可用技能包" in summary
-    assert "@skill:技能名称" in summary
+
+def test_load_technique_and_template_files(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    base = tmp_path / "skills" / "modular-skill"
+    (base / "techniques").mkdir(parents=True, exist_ok=True)
+    (base / "templates").mkdir(parents=True, exist_ok=True)
+    (base / "SKILL.md").write_text("# Modular", encoding="utf-8")
+    (base / "techniques" / "spark.md").write_text("spark-technique", encoding="utf-8")
+    (base / "templates" / "scene.md").write_text("scene-template", encoding="utf-8")
+
+    loader = SkillLoader()
+
+    assert loader.load_technique("modular-skill", "spark") == "spark-technique"
+    assert loader.load_template("modular-skill", "scene") == "scene-template"
+
+    with pytest.raises(FileNotFoundError, match="Technique 'missing'"):
+        loader.load_technique("modular-skill", "missing")
+
+def test_summary_dict_extract_refs_and_clear_cache(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    _write_skill(tmp_path / "skills", "voice-workshop", "# Voice")
+
+    loader = SkillLoader()
 
     summary_dict = loader.get_summary_dict()
     assert any(item["name"] == "voice-workshop" for item in summary_dict)
@@ -222,3 +243,10 @@ Keep tone consistent.
 
     loader.clear_cache()
     assert loader._all_skills is None
+
+def test_load_template_missing_skill_raises(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    loader = SkillLoader()
+
+    with pytest.raises(FileNotFoundError, match="Template 'absent'"):
+        loader.load_template("no-such-skill", "absent")

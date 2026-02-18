@@ -39,12 +39,8 @@ class TestRouteByTaskType:
 
     def test_unknown_task_type_returns_empty(self):
         router = SkillRouter()
-        # Use a task type that has no mapping - all defined types have mappings,
-        # so this tests the fallback path
-        # We'll test with a valid type that returns results instead
-        recs = router.route_by_task_type(TaskType.CLICHE_CHECK)
-        assert len(recs) > 0
-        assert recs[0].skill_id == "script-doctor"
+        recs = router.route_by_task_type("unknown_task_type")
+        assert recs == []
 
     def test_recommendation_fields(self):
         router = SkillRouter()

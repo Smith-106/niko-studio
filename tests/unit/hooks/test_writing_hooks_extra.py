@@ -168,22 +168,27 @@ class TestHookRegistry:
         assert names.index("high") < names.index("low")
 
     @pytest.mark.asyncio
-    async def test_execute_chain(self):
+    async def test_execute_skips_disabled_hook_branch(self):
         reg = HookRegistry()
 
-        def add_a(ctx):
-            return HookResult.ok(ctx.content + "A")
+        called = {"enabled": False, "disabled": False}
 
-        def add_b(ctx):
-            return HookResult.ok(ctx.content + "B")
+        def enabled_hook(ctx):
+            called["enabled"] = True
+            return HookResult.ok(ctx.content + "E")
 
-        reg.add_hook(Hook(name="a", hook_type=HookType.PRE_WRITE, func=add_a, priority=HookPriority.HIGH))
-        reg.add_hook(Hook(name="b", hook_type=HookType.PRE_WRITE, func=add_b, priority=HookPriority.LOW))
+        def disabled_hook(ctx):
+            called["disabled"] = True
+            return HookResult.ok(ctx.content + "D")
 
-        ctx = HookContext(content="X")
-        result = await reg.execute(HookType.PRE_WRITE, ctx)
+        reg.add_hook(Hook(name="enabled", hook_type=HookType.PRE_WRITE, func=enabled_hook, priority=HookPriority.HIGH))
+        reg.add_hook(Hook(name="disabled", hook_type=HookType.PRE_WRITE, func=disabled_hook, enabled=False, priority=HookPriority.LOW))
+
+        result = await reg.execute(HookType.PRE_WRITE, HookContext(content="X"))
         assert result.success is True
-        assert result.modified_content == "XAB"
+        assert result.modified_content == "XE"
+        assert called["enabled"] is True
+        assert called["disabled"] is False
 
     @pytest.mark.asyncio
     async def test_execute_stops_on_failure(self):
@@ -312,11 +317,26 @@ class TestPresetHooks:
         assert result.success is True
 
     @pytest.mark.asyncio
-    async def test_error_logging(self):
+    async def test_encoding_unicode_encode_error_branch(self, monkeypatch):
+        h = _create_encoding_hook()
+
+        class BadContent:
+            def encode(self, *_args, **_kwargs):
+                raise UnicodeEncodeError("utf-8", "x", 0, 1, "bad")
+
+        ctx = HookContext(content=BadContent())
+        result = await h.execute(ctx)
+        assert result.success is False
+
+    @pytest.mark.asyncio
+    async def test_error_logging_executes_error_branch(self, monkeypatch):
         h = _create_error_logging_hook()
-        ctx = HookContext(content="", error=RuntimeError("test error"))
+        logger_mock = MagicMock()
+        monkeypatch.setattr("src.hooks.writing_hooks.logger", logger_mock)
+        ctx = HookContext(content="", error=RuntimeError("test error"), skill_id="s", agent_id="a")
         result = await h.execute(ctx)
         assert result.success is True
+        logger_mock.error.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_error_logging_no_error(self):

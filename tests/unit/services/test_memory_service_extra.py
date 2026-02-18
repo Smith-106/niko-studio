@@ -4,10 +4,13 @@
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 from pathlib import Path
+from datetime import datetime
 
 from src.services.memory_service import (
     MemoryService, Message, AddOptions, SearchOptions, SearchResult, Memory,
+    get_memory_service, reset_memory_service,
 )
+import src.services.memory_service as memory_service_module
 
 
 class TestDataClasses:
@@ -117,3 +120,145 @@ class TestMemoryService:
                 with patch("builtins.__import__", side_effect=ImportError):
                     emb = svc.embedder
                     assert emb is not None
+
+
+class TestMemoryServiceExtraBranches:
+    @pytest.fixture()
+    def svc(self, tmp_path):
+        return MemoryService(db_path=str(tmp_path / "mem-extra.db"))
+
+
+    @pytest.mark.asyncio
+    async def test_embed_text_async_embed_method(self, svc):
+        embedder = MagicMock()
+        embedder.embed = AsyncMock(return_value=[0.55, 0.66])
+        svc._embedder = embedder
+
+        result = await svc._embed_text("async")
+        assert result == [0.55, 0.66]
+
+    @pytest.mark.asyncio
+    async def test_embed_text_embed_batch_branch(self, svc):
+        embedder = MagicMock(spec=[])
+        embedder.embed_batch = AsyncMock(return_value=[[0.33, 0.44]])
+        svc._embedder = embedder
+
+        result = await svc._embed_text("abc")
+        assert result == [0.33, 0.44]
+
+    @pytest.mark.asyncio
+    async def test_embed_text_invalid_method_raises(self, svc):
+        svc._embedder = MagicMock(spec=[])
+        with pytest.raises(RuntimeError, match="No valid embedding method"):
+            await svc._embed_text("abc")
+
+    @pytest.mark.asyncio
+    async def test_search_with_time_range_datetimes(self, svc):
+        svc._embedder = MagicMock()
+        svc._embedder.embed.return_value = [1.0, 0.0]
+
+        await svc.add(
+            [Message(role="user", content="hello", metadata={"source": "unit"})],
+            AddOptions(namespace="time-range"),
+        )
+
+        now = datetime.now()
+        results = await svc.search(
+            "hello",
+            SearchOptions(
+                namespace="time-range",
+                threshold=0.0,
+                time_range=(now.replace(year=2000), now.replace(year=2100)),
+            ),
+        )
+        assert len(results) == 1
+
+    @pytest.mark.asyncio
+    async def test_hybrid_search_default_options_and_empty_keywords(self, svc):
+        svc._embedder = MagicMock()
+        svc._embedder.embed.return_value = [1.0, 0.0]
+
+        await svc.add([Message(role="user", content="hello world")], AddOptions())
+        results = await svc.hybrid_search("a")
+        assert isinstance(results, list)
+
+    @pytest.mark.asyncio
+    async def test_get_history_with_before_filter(self, svc):
+        await svc.add_history(
+            "s1",
+            [
+                Message(role="user", content="old", timestamp=datetime(2024, 1, 1, 10, 0, 0)),
+                Message(role="assistant", content="new", timestamp=datetime(2025, 1, 1, 10, 0, 0)),
+            ],
+        )
+
+        results = await svc.get_history("s1", before=datetime(2024, 6, 1, 0, 0, 0))
+        assert len(results) == 1
+        assert results[0].content == "old"
+
+    @pytest.mark.asyncio
+    async def test_update_content_reembeds(self, svc):
+        svc._embedder = MagicMock()
+        svc._embedder.embed.return_value = [0.1, 0.2]
+
+        memory_id = await svc.add([Message(role="user", content="old")], AddOptions())
+
+        svc._embedder.embed.return_value = [0.9, 0.8]
+        updated = await svc.update(memory_id, content="new content")
+        assert updated is True
+
+        mem = await svc.get(memory_id)
+        assert mem.content == "new content"
+        assert mem.embedding == [0.9, 0.8]
+
+
+
+
+
+
+
+
+class TestMemoryServiceInitBranches:
+    def test_init_uses_default_db_path_without_config(self):
+        svc = MemoryService(db_path=None, config=None)
+        assert svc.db_path.as_posix().endswith(".writing/memory_service.db")
+        svc.close()
+
+    def test_init_uses_config_vector_db_path(self, tmp_path):
+        class Cfg:
+            class memory:
+                vector_db_path = str(tmp_path / "cfg-memory.db")
+
+        svc = MemoryService(db_path=None, config=Cfg())
+        assert svc.db_path == tmp_path / "cfg-memory.db"
+        svc.close()
+
+
+class TestMemoryServiceFactoryBranches:
+    def test_get_memory_service_singleton_branch(self):
+        memory_service_module._memory_service = None
+
+        class DummyMemoryService:
+            def __init__(self, db_path=None, config=None):
+                self.db_path = db_path
+                self.config = config
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        with patch("src.services.memory_service.MemoryService", DummyMemoryService):
+            first = get_memory_service(db_path="/tmp/a.db")
+            second = get_memory_service(db_path="/tmp/b.db")
+
+        assert first is second
+        assert first.db_path == "/tmp/a.db"
+
+    def test_reset_memory_service_closes_existing_singleton(self):
+        existing = MagicMock()
+        memory_service_module._memory_service = existing
+
+        reset_memory_service()
+
+        existing.close.assert_called_once()
+        assert memory_service_module._memory_service is None

@@ -7,11 +7,13 @@ and TemporalMemoryTracker (in-memory operations without DB).
 
 import pytest
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock
 from src.memory.temporal_memory import (
     ValidityWindow,
     TemporalFact,
     SupersessionChain,
     TemporalMemoryTracker,
+    get_temporal_tracker,
     reset_temporal_tracker,
 )
 
@@ -394,11 +396,152 @@ class TestTemporalMemoryTracker:
         assert stats["entities_tracked"] == 0
 
     @pytest.mark.asyncio
-    async def test_stats_with_data(self):
+    async def test_get_facts_at_skips_superseded_successor_already_valid(self):
         tracker = TemporalMemoryTracker()
-        await tracker.add_fact("f1", "e1", fact_id="f1")
-        await tracker.add_fact("f2", "e2", fact_id="f2")
-        stats = tracker.stats()
-        assert stats["total_facts"] == 2
-        assert stats["entities_tracked"] == 2
-        assert stats["current_facts"] == 2
+        now = datetime.now()
+        await tracker.add_fact("old", "e1", fact_id="f1", valid_from=now - timedelta(days=2))
+        successor = await tracker.supersede("f1", "new", valid_from=now - timedelta(days=1))
+
+        # Force old fact to still be valid so superseded-branch logic executes.
+        tracker._facts["f1"].validity.valid_until = None
+
+        facts = await tracker.get_facts_at("e1", successor.validity.valid_from)
+        assert len(facts) == 1
+        assert facts[0].content == "new"
+
+    @pytest.mark.asyncio
+    async def test_expire_fact_with_db_calls_update_validity(self):
+        db = MagicMock()
+        tracker = TemporalMemoryTracker(db_connection=db)
+        await tracker.add_fact("x", "e1", fact_id="f1")
+        tracker._update_validity = AsyncMock()
+
+        result = await tracker.expire_fact("f1")
+
+        assert result is True
+        tracker._update_validity.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_delete_fact_with_db_calls_delete_from_db(self):
+        db = MagicMock()
+        tracker = TemporalMemoryTracker(db_connection=db)
+        await tracker.add_fact("x", "e1", fact_id="f1")
+        tracker._delete_from_db = AsyncMock()
+
+        result = await tracker.delete_fact("f1")
+
+        assert result is True
+        tracker._delete_from_db.assert_awaited_once_with("f1")
+
+    @pytest.mark.asyncio
+    async def test_query_temporal_filters_valid_at(self):
+        tracker = TemporalMemoryTracker()
+        now = datetime.now()
+        await tracker.add_fact("old", "e1", fact_id="f1", valid_from=now - timedelta(days=3), valid_until=now - timedelta(days=2))
+        await tracker.add_fact("current", "e1", fact_id="f2", valid_from=now - timedelta(days=1))
+
+        results = await tracker.query_temporal(entity_id="e1", valid_at=now)
+
+        assert len(results) == 1
+        assert results[0].id == "f2"
+
+    @pytest.mark.asyncio
+    async def test_persist_fact_no_db_branch(self):
+        tracker = TemporalMemoryTracker()
+        fact = await tracker.add_fact("x", "e1", fact_id="f1")
+        await tracker._persist_fact(fact)
+
+    @pytest.mark.asyncio
+    async def test_persist_fact_exception_branch(self):
+        db = MagicMock()
+        db.execute.side_effect = RuntimeError("db-fail")
+        tracker = TemporalMemoryTracker(db_connection=db)
+        fact = TemporalFact(
+            id="f1",
+            content="x",
+            entity_id="e1",
+            validity=ValidityWindow(valid_from=datetime.now()),
+        )
+
+        await tracker._persist_fact(fact)
+
+    @pytest.mark.asyncio
+    async def test_update_validity_no_db_branch(self):
+        tracker = TemporalMemoryTracker()
+        await tracker._update_validity("f1", ValidityWindow(valid_from=datetime.now()))
+
+    @pytest.mark.asyncio
+    async def test_update_validity_success_branch(self):
+        db = MagicMock()
+        tracker = TemporalMemoryTracker(db_connection=db)
+
+        await tracker._update_validity("f1", ValidityWindow(valid_from=datetime.now(), valid_until=datetime.now()))
+
+        db.execute.assert_called_once()
+        db.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_validity_exception_branch(self):
+        class BadDB:
+            def execute(self, *args, **kwargs):
+                raise RuntimeError("db-fail")
+
+            def commit(self):
+                return None
+
+        tracker = TemporalMemoryTracker(db_connection=BadDB())
+
+        await tracker._update_validity("f1", ValidityWindow(valid_from=datetime.now(), valid_until=datetime.now()))
+
+    @pytest.mark.asyncio
+    async def test_delete_from_db_no_db_branch(self):
+        tracker = TemporalMemoryTracker()
+        await tracker._delete_from_db("f1")
+
+    @pytest.mark.asyncio
+    async def test_delete_from_db_success_branch(self):
+        db = MagicMock()
+        tracker = TemporalMemoryTracker(db_connection=db)
+
+        await tracker._delete_from_db("f1")
+
+        db.execute.assert_called_once_with("DELETE FROM memories WHERE id = ?", ("f1",))
+        db.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_delete_from_db_exception_branch(self):
+        class BadDB:
+            def execute(self, *args, **kwargs):
+                raise RuntimeError("db-fail")
+
+            def commit(self):
+                return None
+
+        tracker = TemporalMemoryTracker(db_connection=BadDB())
+
+        await tracker._delete_from_db("f1")
+
+
+def test_get_temporal_tracker_singleton_and_db_attachment():
+    reset_temporal_tracker()
+
+    first = get_temporal_tracker()
+    assert first.db is None
+
+    db = MagicMock()
+    second = get_temporal_tracker(db)
+    assert second is first
+    assert second.db is db
+
+
+def test_get_temporal_tracker_keeps_existing_db():
+    reset_temporal_tracker()
+
+    db1 = MagicMock()
+    db2 = MagicMock()
+
+    first = get_temporal_tracker(db1)
+    second = get_temporal_tracker(db2)
+
+    assert second is first
+    assert second.db is db1

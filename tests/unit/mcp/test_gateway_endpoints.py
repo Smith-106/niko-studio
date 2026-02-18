@@ -568,6 +568,25 @@ def test_adaptive_chunk_content_hits_sentence_boundary_and_no_tail(monkeypatch):
     assert chunks == ["abc!"]
 
 
+def test_normalize_schema_version_fallback_branch(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(gateway_module, "ANALYSIS_SCHEMA_VERSION", "")
+
+    result = gateway_module._normalize_schema_version(
+        {"analysis_schema_version": " ", "contract_version": None},
+        {},
+    )
+
+    assert result == ""
+
+
+def test_normalize_issue_severity_known_value_branch():
+    from src.mcp import gateway as gateway_module
+
+    assert gateway_module._normalize_issue_severity("HIGH") == "high"
+
+
 def test_chat_endpoint_rejects_invalid_workflow_level(client_no_lifespan):
     response = client_no_lifespan.post("/chat", json={
         "workflowLevel": "L9",

@@ -334,6 +334,12 @@ class TestQueries:
         best = st.get_best_branch()
         assert best.id == "main"
 
+    def test_get_best_branch_when_all_abandoned_returns_main(self):
+        st = SequentialThinking()
+        st._branches["main"].status = ThoughtStatus.ABANDONED
+        best = st.get_best_branch()
+        assert best.id == "main"
+
     def test_get_best_branch_by_priority_and_confidence(self):
         st = SequentialThinking(max_branches=10)
         st.think("root", confidence=0.5)
@@ -405,6 +411,12 @@ class TestSerialization:
         st._branches[b.id].status = ThoughtStatus.ABANDONED
         md = st.to_markdown()
         assert "doomed" not in md
+
+    def test_to_markdown_skips_missing_thought_reference(self):
+        st = SequentialThinking()
+        st._branches["main"].thoughts.append("missing-thought-id")
+        md = st.to_markdown()
+        assert "missing-thought-id" not in md
 
     def test_to_markdown_confidence_display(self):
         st = SequentialThinking()

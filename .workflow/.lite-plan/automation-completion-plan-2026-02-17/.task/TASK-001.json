@@ -1,0 +1,25 @@
+{
+  "id": "TASK-001",
+  "title": "Implement tasks completion checker script",
+  "description": "Create scripts/check_tasks_completion.py to parse docs/TASKS_V10_OPTIMIZED.md checkboxes and output machine-readable completion metrics with optional strict exit mode.",
+  "depends_on": [],
+  "convergence": {
+    "criteria": [
+      "Script returns total_checked, total_unchecked, completion_ratio and top pending items.",
+      "Script supports soft mode (always exit 0) and strict mode (exit non-zero when unchecked > 0).",
+      "Output format is stable for CI consumption (JSON + concise text summary)."
+    ]
+  },
+  "files": [
+    {
+      "path": "scripts/check_tasks_completion.py",
+      "change": "Add new checker script with markdown checkbox parsing and CLI flags for strictness and target file."
+    }
+  ],
+  "implementation": [
+    "Read target markdown file (default docs/TASKS_V10_OPTIMIZED.md).",
+    "Count '- [x]' and '- [ ]' tasks; capture first N unchecked lines as preview.",
+    "Emit JSON payload + one-line summary; support --strict and --output-json options."
+  ],
+  "test": "Run script locally in soft mode and strict mode against docs/TASKS_V10_OPTIMIZED.md; verify counts and exit codes."
+}

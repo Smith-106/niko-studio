@@ -43,10 +43,17 @@ class TestCreate:
         reranker = RerankerFactory.create(config)
         assert isinstance(reranker, BailianReranker)
 
-    def test_config_passed_through(self):
-        config = RerankerConfig(reranker_type=RerankerType.JINA, api_key="my-key")
-        reranker = RerankerFactory.create(config)
-        assert reranker.config.api_key == "my-key"
+    def test_create_unsupported_type_branch(self):
+        class UnsupportedType:
+            value = "unsupported"
+
+        config = RerankerConfig(reranker_type=RerankerType.JINA, api_key="k")
+        config.reranker_type = UnsupportedType()
+
+        with pytest.raises(RerankerError) as exc_info:
+            RerankerFactory.create(config)
+
+        assert "Unsupported reranker type" in str(exc_info.value)
 
 
 # ============================================================

@@ -9,7 +9,7 @@ import pytest
 import json
 import sqlite3
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from src.memory.unified_memory import (
     MemoryLayer,
     MemoryDimension,
@@ -257,11 +257,25 @@ class TestUnifiedConflictResolver:
         assert "old content" in result["merged_content"]
 
 
-# ============================================================
-# UnifiedMemoryEngine Tests
-# ============================================================
 
-class TestUnifiedMemoryEngine:
+
+class TestUnifiedConflictResolverExtra:
+
+    @pytest.mark.asyncio
+    async def test_resolve_unknown_strategy_defaults_update(self, tmp_path):
+        db = sqlite3.connect(str(tmp_path / "resolver.db"))
+        resolver = ConflictResolver(db)
+        out = await resolver.resolve("new", [{"id": "x", "content": "old"}], strategy="unknown")
+        assert out == {"action": "update", "obsolete_ids": []}
+
+
+class TestEmbeddingEngineExtra:
+
+    def test_model_import_error_falls_back_dummy(self):
+        engine = EmbeddingEngine()
+        with patch("builtins.__import__", side_effect=ImportError("no fastembed")):
+            assert engine.model == "dummy"
+
 
     @pytest.fixture
     def engine(self, tmp_path):
@@ -352,10 +366,18 @@ class TestUnifiedMemoryEngine:
         assert result["kept"] == r2["id"]
 
     @pytest.mark.asyncio
-    async def test_health_check(self, engine):
-        result = await engine.health_check()
-        assert result["engine"] == "primary"
-        assert result["db_ok"] is True
+    async def test_health_check_db_error(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-db-error.db"))
+
+        class BadDB:
+            def execute(self, *_args, **_kwargs):
+                raise RuntimeError("db down")
+
+        eng.db = BadDB()
+        out = await eng.health_check()
+        assert out["db_ok"] is False
+        assert "db down" in out["error"]
 
     def test_close(self, engine):
         engine.close()
@@ -398,13 +420,197 @@ class TestUnifiedMemoryEngine:
         for r in results:
             assert r["dimension"] == "character"
 
-    @pytest.mark.asyncio
-    async def test_plugin_registration(self, tmp_path):
-        mock_plugin = MagicMock()
-        mock_plugin.name = "test_plugin"
-        mock_plugin.load = MagicMock(return_value=None)
 
-        db_path = str(tmp_path / "plugin_test.db")
+class TestUnifiedMemoryEngineExtra:
+
+    @pytest.mark.asyncio
+    async def test_initialize_plugin_error_records_health(self, tmp_path):
+        class BadPlugin:
+            name = "bad"
+
+            async def load(self, engine):
+                raise RuntimeError("load failed")
+
+            async def health_check(self):
+                return {"status": "ok"}
+
+            async def on_memory_added(self, memory):
+                return None
+
         with patch("src.memory.unified_memory.get_config_value", return_value=None):
-            eng = UnifiedMemoryEngine(db_path=db_path, plugins=[mock_plugin])
-        assert mock_plugin in eng.plugins
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u1.db"), plugins=[BadPlugin()])
+
+        await eng.initialize()
+        assert eng._plugin_health["bad"]["status"] == "error"
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_health_check_plugin_error(self, tmp_path):
+        class BadHealthPlugin:
+            name = "p"
+
+            async def load(self, engine):
+                return None
+
+            async def health_check(self):
+                raise RuntimeError("boom")
+
+            async def on_memory_added(self, memory):
+                return None
+
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u2.db"), plugins=[BadHealthPlugin()])
+
+        out = await eng.health_check()
+        assert out["plugins"]["p"]["status"] == "error"
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_add_rejected_by_conflict_resolution(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u3.db"))
+
+        eng.conflict_resolver.check = AsyncMock(return_value=[{"id": "old", "content": "x"}])
+        eng.conflict_resolver.resolve = AsyncMock(return_value={"action": "reject", "reason": "keep old"})
+
+        result = await eng.add(content="new", entity_id="e1")
+        assert result == {"status": "rejected", "reason": "keep old"}
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_add_merge_and_plugin_callback_error(self, tmp_path):
+        class Plugin:
+            name = "bad_callback"
+
+            async def load(self, engine):
+                return None
+
+            async def health_check(self):
+                return {"status": "ok"}
+
+            async def on_memory_added(self, memory):
+                raise RuntimeError("callback failed")
+
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u4.db"), plugins=[Plugin()])
+
+        eng.conflict_resolver.check = AsyncMock(return_value=[{"id": "old", "content": "old text"}])
+        eng.conflict_resolver.resolve = AsyncMock(
+            return_value={"action": "merge", "merged_content": "merged", "obsolete_ids": ["old"]}
+        )
+
+        result = await eng.add(content="new", entity_id="e1")
+        assert result["status"] == "created"
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_search_with_all_filters_and_at_time(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u5.db"))
+
+        eng.embedder._model = "dummy"
+        await eng.add(content="hero memory", layer="project", dimension="character", entity_id="hero", valid_from="2020-01-01T00:00:00")
+        await eng.add(content="villain memory", layer="project", dimension="worldview", entity_id="villain")
+
+        out = await eng.search(
+            query="hero",
+            layer="project",
+            dimensions=["character"],
+            entity_id="hero",
+            at_time="2030-01-01T00:00:00",
+            limit=5,
+        )
+        assert len(out) <= 1
+        if out:
+            assert out[0]["entity_id"] == "hero"
+            assert out[0]["dimension"] == "character"
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_search_filters_by_similarity_threshold(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u6.db"))
+
+        await eng.add(content="A", layer="session")
+        await eng.add(content="B", layer="session")
+
+        scores = iter([0.2, 0.9])
+        eng.embedder.embed_cached = MagicMock(return_value=[1.0])
+        eng.embedder.similarity = MagicMock(side_effect=lambda *_: next(scores))
+
+        out = await eng.search("q")
+        assert len(out) == 1
+        assert out[0]["score"] == 0.9
+        eng.close()
+
+    def test_register_plugins_deduplicates(self, tmp_path):
+        plugin = MagicMock()
+        plugin.name = "p"
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u7.db"))
+        eng._register_plugins([plugin, plugin])
+        assert len(eng.plugins) == 1
+        eng.close()
+
+    def test_constructor_prefers_data_dir_when_db_path_missing(self, tmp_path):
+        def fake_get(key, default=None):
+            if key == "memory.db_path":
+                return None
+            if key == "data_dir":
+                return str(tmp_path / "data")
+            return default
+
+        with patch("src.memory.unified_memory.get_config_value", side_effect=fake_get):
+            eng = UnifiedMemoryEngine(db_path=None)
+        try:
+            assert str(eng.db_path).endswith("memory.db")
+            assert "data" in str(eng.db_path)
+        finally:
+            eng.close()
+
+    def test_constructor_falls_back_to_home(self, tmp_path):
+        with (
+            patch("src.memory.unified_memory.get_config_value", return_value=None),
+            patch("src.memory.unified_memory.Path.home", return_value=tmp_path / "home")
+        ):
+            eng = UnifiedMemoryEngine(db_path=None)
+        try:
+            assert str(eng.db_path).endswith("memory.db")
+        finally:
+            eng.close()
+
+    def test_from_config_prefers_data_dir(self, tmp_path):
+        def fake_get(key, default=None):
+            if key == "memory.db_path":
+                return None
+            if key == "data_dir":
+                return str(tmp_path / "d")
+            if key == "memory.vector_db_path":
+                return None
+            return default
+
+        with patch("src.memory.unified_memory.get_config_value", side_effect=fake_get):
+            eng = UnifiedMemoryEngine.from_config()
+        try:
+            assert str(eng.db_path).endswith("memory.db")
+            assert "d" in str(eng.db_path)
+        finally:
+            eng.close()
+
+    def test_from_config_prefers_vector_db_path(self, tmp_path):
+        def fake_get(key, default=None):
+            if key == "memory.db_path":
+                return None
+            if key == "data_dir":
+                return None
+            if key == "memory.vector_db_path":
+                return str(tmp_path / "vector-memory.db")
+            return default
+
+        with patch("src.memory.unified_memory.get_config_value", side_effect=fake_get):
+            eng = UnifiedMemoryEngine.from_config()
+        try:
+            assert str(eng.db_path).endswith("vector-memory.db")
+        finally:
+            eng.close()
+

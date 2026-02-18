@@ -1,0 +1,29 @@
+{
+  "id": "TASK-003",
+  "title": "Generate workflow task queue artifacts",
+  "description": "Create queue generation step that converts unchecked roadmap entries into structured .workflow task artifacts for follow-up execution.",
+  "depends_on": ["TASK-001"],
+  "convergence": {
+    "criteria": [
+      "Unchecked roadmap entries can be exported into deterministic queue JSON format.",
+      "Queue artifact includes priority, dependency hints, and source trace to markdown lines.",
+      "Artifact path and schema are documented for lite-execute or issue workflows."
+    ]
+  },
+  "files": [
+    {
+      "path": "scripts/check_tasks_completion.py",
+      "change": "Extend checker with queue export mode (e.g., --export-queue .workflow/.lite-plan/.../pending-queue.json)."
+    },
+    {
+      "path": ".workflow/.lite-plan/automation-completion-plan-2026-02-17",
+      "change": "Store generated queue artifact and execution notes under current lite-plan session."
+    }
+  ],
+  "implementation": [
+    "Map each unchecked line to queue item with id/title/source_line/phase_guess.",
+    "Emit stable JSON array sorted by phase and line number.",
+    "Document expected consumer command for subsequent execution workflow."
+  ],
+  "test": "Run queue export and verify JSON integrity + source line traceability against docs/TASKS_V10_OPTIMIZED.md."
+}

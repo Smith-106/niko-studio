@@ -289,6 +289,12 @@ class TestBaseMemoryLayer:
         assert await layer.retrieve("e3") is not None
 
     @pytest.mark.asyncio
+    async def test_evict_oldest_on_empty_layer(self):
+        layer = BaseMemoryLayer(LAYER_CONFIGS[LayerType.EPHEMERAL])
+        await layer._evict_oldest()
+        assert await layer.retrieve("missing") is None
+
+    @pytest.mark.asyncio
     async def test_layer_type_property(self):
         layer = BaseMemoryLayer(LAYER_CONFIGS[LayerType.USER])
         assert layer.layer_type == LayerType.USER

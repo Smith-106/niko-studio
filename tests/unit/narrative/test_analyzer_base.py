@@ -156,3 +156,11 @@ class TestBaseAnalyzer:
         assert result.analyzer_name == "concrete_analyzer"
         assert result.analysis_type == AnalysisType.SENSORY
         assert result.is_empty is True
+
+    @pytest.mark.asyncio
+    async def test_base_abstract_stubs_executable(self):
+        a = _ConcreteAnalyzer()
+        assert BaseAnalyzer.name.fget(a) is None
+        assert BaseAnalyzer.analysis_type.fget(a) is None
+        assert BaseAnalyzer.description.fget(a) is None
+        assert await BaseAnalyzer.analyze(a, "content") is None

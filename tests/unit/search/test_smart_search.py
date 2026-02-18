@@ -9,6 +9,7 @@ fuzzy/semantic/hybrid search, RRF merge, async).
 import pytest
 import sqlite3
 import json
+import subprocess
 import numpy as np
 from unittest.mock import MagicMock, patch, PropertyMock
 from pathlib import Path
@@ -446,3 +447,109 @@ class TestRipgrepSearch:
         with patch("subprocess.run", side_effect=Exception("timeout")):
             results = ss._ripgrep_search("test")
             assert results == []
+
+
+class TestFtsAndLikeFallbacks:
+    def test_fts5_empty_tokens_returns_empty(self):
+        ss = SmartSearch()
+
+        class DummyConn:
+            def cursor(self):
+                return MagicMock()
+
+            def close(self):
+                return None
+
+        with patch.object(ss, "_get_connection", return_value=DummyConn()):
+            assert ss._fts5_search("", top_k=3) == []
+
+    def test_fts5_operational_error_then_like_exception_returns_empty(self):
+        ss = SmartSearch()
+
+        class ErrorCursor:
+            def execute(self, *args, **kwargs):
+                raise sqlite3.OperationalError("fts missing")
+
+            def __iter__(self):
+                return iter([])
+
+        class DummyConn:
+            def cursor(self):
+                return ErrorCursor()
+
+            def close(self):
+                return None
+
+        with patch.object(ss, "_get_connection", return_value=DummyConn()):
+            with patch.object(ss, "_like_search", side_effect=RuntimeError("like fail")):
+                assert ss._fts5_search("abc", top_k=3) == []
+
+    def test_like_search_with_type_filter_not_memory_returns_empty(self):
+        ss = SmartSearch()
+        cursor = MagicMock()
+        cursor.execute.side_effect = sqlite3.OperationalError("missing")
+        results = ss._like_search(cursor, "term", top_k=5, type_filter="chunk")
+        assert results == []
+
+
+class TestRipgrepAdditionalBranches:
+    @patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="rg", timeout=10))
+    def test_ripgrep_timeout_branch(self, _):
+        ss = SmartSearch(ripgrep_paths=["."])
+        ss._ripgrep_available = True
+        assert ss._ripgrep_search("q", top_k=2) == []
+
+    @patch("subprocess.run")
+    def test_ripgrep_nonzero_return_code_skips(self, mock_run, tmp_path):
+        search_dir = tmp_path / "src"
+        search_dir.mkdir()
+        mock_run.return_value = MagicMock(returncode=2, stdout="")
+
+        ss = SmartSearch(ripgrep_paths=[str(search_dir)])
+        ss._ripgrep_available = True
+        assert ss._ripgrep_search("q", top_k=2) == []
+
+
+class TestSemanticFallbacks:
+    def test_semantic_search_vector_search_exception_returns_empty(self):
+        mock_vs = MagicMock()
+        mock_vs.search.side_effect = RuntimeError("down")
+        ss = SmartSearch(vector_search=mock_vs)
+        ss._vector_index = None
+        ss._db_path = None
+        assert ss.semantic_search("q") == []
+
+
+@pytest.mark.asyncio
+class TestSearchAsyncAdditionalBranches:
+    async def test_search_async_with_string_mode(self):
+        ss = SmartSearch()
+        with patch.object(ss, "search", return_value=[]) as mock_search:
+            result = await ss.search_async("q", mode="fuzzy", top_k=2)
+        assert result == []
+        mock_search.assert_called_once()
+
+    async def test_search_async_hybrid_handles_exceptions(self):
+        ss = SmartSearch()
+
+        def raise_fuzzy(*args, **kwargs):
+            raise RuntimeError("fuzzy error")
+
+        def ok_semantic(*args, **kwargs):
+            return [SmartSearchResult(id="s1", content="c", score=0.9)]
+
+        with patch.object(ss, "fuzzy_search", side_effect=raise_fuzzy):
+            with patch.object(ss, "semantic_search", side_effect=ok_semantic):
+                results = await ss.search_async("q", mode=SearchMode.HYBRID, top_k=3, min_score=0.0)
+
+        assert len(results) == 1
+        assert results[0].id == "s1"
+
+
+class TestLegacyKeywordCompatibility:
+    def test_keyword_search_legacy_to_dict(self):
+        ss = SmartSearch()
+        with patch.object(ss, "fuzzy_search", return_value=[SmartSearchResult(id="1", content="x", score=0.5)]):
+            out = ss._keyword_search("q")
+        assert isinstance(out, list)
+        assert out[0]["id"] == "1"

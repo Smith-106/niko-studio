@@ -21,6 +21,9 @@ class TestCharacterEvaluator:
     def test_related_skill(self, evaluator):
         assert evaluator.related_skill == "character-forge"
 
+    def test_description(self, evaluator):
+        assert evaluator.description == "评估人物塑造深度，检测能力/古怪/对比/主导情感/双重人格等维度"
+
     @pytest.mark.asyncio
     async def test_low_scores_all_issues(self, evaluator):
         content = "一个普通人走在路上。"

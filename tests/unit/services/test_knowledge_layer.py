@@ -7,9 +7,11 @@ add_document, sync_file, sync_directory.
 """
 
 import json
+import importlib
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+import src.services.knowledge_layer as knowledge_layer_module
 from src.services.knowledge_layer import AgentKnowledgeLayer
 
 
@@ -18,6 +20,21 @@ from src.services.knowledge_layer import AgentKnowledgeLayer
 # ============================================================
 
 class TestKnowledgeLayerInit:
+
+    def test_module_watchdog_importerror_branch(self):
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name.startswith("watchdog"):
+                raise ImportError("no watchdog")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            module = importlib.reload(knowledge_layer_module)
+
+        assert module.WATCHDOG_AVAILABLE is False
 
     def test_init_creates_db(self, tmp_path):
         db = str(tmp_path / "kl.db")
@@ -265,3 +282,146 @@ class TestQueryHybrid:
         entity_ids = [e["id"] for e in results["entities"]]
         assert "e1" in entity_ids
         assert "e2" in entity_ids
+
+
+class TestKnowledgeLayerExtraBranches:
+
+    def test_init_backfills_fts_when_entities_exist(self, tmp_path):
+        import sqlite3
+
+        db = str(tmp_path / "kl-backfill.db")
+        AgentKnowledgeLayer(db_path=db)
+
+        conn = sqlite3.connect(db)
+        conn.execute(
+            """
+            INSERT INTO entities (id, name, type, description, properties, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            ("e1", "Alice", "Character", "", "{}", 0.0),
+        )
+        conn.execute("DELETE FROM entities_fts")
+        conn.commit()
+        conn.close()
+
+        AgentKnowledgeLayer(db_path=db)
+
+        conn = sqlite3.connect(db)
+        row = conn.execute(
+            "SELECT entity_id, name FROM entities_fts WHERE entity_id = ?",
+            ("e1",),
+        ).fetchone()
+        conn.close()
+
+        assert row is not None
+        assert row[1] == "Alice"
+
+    def test_init_backfill_exception_logs_warning(self, tmp_path):
+        import sqlite3
+
+        class FakeCursor:
+            def execute(self, sql, params=()):
+                if "SELECT count(*) FROM entities" in sql:
+                    raise RuntimeError("count failed")
+                return self
+
+            def fetchone(self):
+                return (0,)
+
+        fake_conn = MagicMock()
+        fake_conn.cursor.return_value = FakeCursor()
+
+        with patch("src.services.knowledge_layer.sqlite3.connect", return_value=fake_conn):
+            with patch("src.services.knowledge_layer.IndexingService", return_value=MagicMock()):
+                with patch("src.services.knowledge_layer.logger.warning") as warning:
+                    AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+
+        warning.assert_any_call("Failed to populate FTS (schema might be initializing): count failed")
+
+    def test_query_hybrid_fts_operational_error_fallback(self, tmp_path):
+        kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        kl.vector_store.search = MagicMock(return_value=[])
+
+        import sqlite3
+
+        class FakeCursor:
+            def __init__(self):
+                self._last_sql = ""
+
+            def execute(self, sql, params=()):
+                self._last_sql = sql
+                if "MATCH" in sql:
+                    raise sqlite3.OperationalError("bad fts")
+                return self
+
+            def fetchall(self):
+                if "instr(lower(?), lower(name))" in self._last_sql:
+                    return [{"id": "e1", "name": "Alice", "type": "Character"}]
+                return []
+
+        fake_conn = MagicMock()
+        fake_conn.row_factory = sqlite3.Row
+        fake_conn.cursor.return_value = FakeCursor()
+
+        with patch("src.services.knowledge_layer.sqlite3.connect", return_value=fake_conn):
+            results = kl.query_hybrid("Alice")
+
+        assert any(e["id"] == "e1" for e in results["entities"])
+
+    def test_query_hybrid_empty_tokens_branch(self, tmp_path):
+        kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        kl.vector_store.search = MagicMock(return_value=[])
+        kl.add_entity("e1", "Alice", "Character")
+
+        results = kl.query_hybrid("!!!")
+        assert "entities" in results
+
+    def test_sync_file_exception_branch(self, tmp_path):
+        kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        f = tmp_path / "doc.md"
+        f.write_text("content", encoding="utf-8")
+
+        with patch("builtins.open", side_effect=RuntimeError("boom")):
+            result = kl.sync_file(str(f))
+
+        assert result["success"] is False
+        assert result["action"] == "error"
+
+    def test_create_file_watcher_import_error_when_watchdog_missing(self, tmp_path):
+        kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+
+        with patch("src.services.knowledge_layer.WATCHDOG_AVAILABLE", False):
+            with pytest.raises(ImportError, match="watchdog not installed"):
+                kl.create_file_watcher()
+
+    def test_create_file_watcher_callback_skips_deleted_events(self, tmp_path):
+        kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        fake_watcher = MagicMock()
+
+        class Event:
+            def __init__(self, event_type, path):
+                self.event_type = event_type
+                self.path = path
+
+        with patch("src.services.knowledge_layer.WATCHDOG_AVAILABLE", True):
+            with patch("src.services.file_sync.FileWatcher", return_value=fake_watcher):
+                with patch.object(kl, "sync_file") as sync_file:
+                    kl.create_file_watcher()
+
+                    callback = fake_watcher.on_change.call_args[0][0]
+                    callback(Event("deleted", "/tmp/deleted.md"))
+                    sync_file.assert_not_called()
+
+                    callback(Event("modified", "/tmp/changed.md"))
+                    sync_file.assert_called_once_with("/tmp/changed.md")
+
+    def test_create_file_watcher_with_watch_dirs(self, tmp_path):
+        kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        fake_watcher = MagicMock()
+
+        with patch("src.services.knowledge_layer.WATCHDOG_AVAILABLE", True):
+            with patch("src.services.file_sync.FileWatcher", return_value=fake_watcher):
+                watcher = kl.create_file_watcher(watch_dirs=["d1", "d2"])
+
+        assert watcher is fake_watcher
+        assert fake_watcher.watch.call_count == 2

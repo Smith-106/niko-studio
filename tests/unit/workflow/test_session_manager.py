@@ -10,6 +10,7 @@ create_session, list_sessions, stats).
 import json
 import pytest
 from pathlib import Path
+from unittest.mock import patch
 from src.workflow.session.session_manager import (
     SessionStatus,
     ContentType,
@@ -183,10 +184,38 @@ class TestSessionManagerReadWrite:
         assert snapshot_index[-1]["content_type"] == ContentType.TODO.value
         assert "TODO_LIST.md" in snapshot_index[-1]["path"]
 
+    def test_write_with_invalid_snapshot_index_restarts_list(self, sm):
+        index_path = sm._resolve_path("sess-rw", ContentType.SNAPSHOT_INDEX)
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        index_path.write_text("{bad", encoding="utf-8")
 
-# ============================================================
-# SessionManager.archive / restore
-# ============================================================
+        sm.write("sess-rw", ContentType.PLAN, "plan")
+
+        snapshot_index = json.loads(sm.read("sess-rw", ContentType.SNAPSHOT_INDEX))
+        assert isinstance(snapshot_index, list)
+        assert len(snapshot_index) == 1
+
+    def test_write_with_non_list_snapshot_index_restarts_list(self, sm):
+        index_path = sm._resolve_path("sess-rw", ContentType.SNAPSHOT_INDEX)
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        index_path.write_text(json.dumps({"bad": True}), encoding="utf-8")
+
+        sm.write("sess-rw", ContentType.PLAN, "plan")
+
+        snapshot_index = json.loads(sm.read("sess-rw", ContentType.SNAPSHOT_INDEX))
+        assert isinstance(snapshot_index, list)
+        assert len(snapshot_index) == 1
+    def test_append_audit_writes_jsonl(self, sm):
+        event = {"kind": "sync", "status": "ok"}
+
+        assert sm.append_audit("sess-rw", event) is True
+
+        audit_content = sm.read("sess-rw", ContentType.AUDIT)
+        lines = [line for line in audit_content.splitlines() if line]
+        assert len(lines) == 1
+        parsed = json.loads(lines[0])
+        assert parsed["kind"] == "sync"
+
 
 class TestSessionManagerArchiveRestore:
 
@@ -306,10 +335,95 @@ class TestSessionManagerList:
         assert len(sessions) >= 2
         assert sessions[0].updated_at >= sessions[1].updated_at
 
+    def test_list_skips_missing_base_path(self, sm):
+        with patch.object(sm, "active_path") as active:
+            active.exists.return_value = False
+            sessions = sm.list(location="active")
 
-# ============================================================
-# SessionManager.create_session (legacy)
-# ============================================================
+        assert sessions == []
+
+    def test_list_skips_non_dirs_and_none_info(self, sm):
+        marker = sm.active_path / "note.txt"
+        marker.write_text("x", encoding="utf-8")
+
+        with patch.object(sm, "_load_session_info", return_value=None):
+            sessions = sm.list(location="all")
+
+        assert sessions == []
+
+
+class TestSessionManagerSyncLifecycle:
+
+    @pytest.fixture
+    def sm(self, tmp_path):
+        sm = SessionManager(base_path=str(tmp_path / "sessions"))
+        sm.init("sess-life")
+        return sm
+
+    def test_sync_running_updates_active_state(self, sm):
+        result = sm.sync_lifecycle("sess-life", runner_state="running", checkpoint_id="cp-1")
+
+        assert result["status"] == "active"
+        assert result["runner_state"] == "running"
+        assert result["last_checkpoint_id"] == "cp-1"
+
+    def test_sync_archived_moves_session(self, sm):
+        result = sm.sync_lifecycle("sess-life", runner_state="stopped")
+
+        assert result["status"] == "archived"
+        assert (sm.archived_path / "sess-life").exists()
+
+    def test_sync_checkpointed_restores_archived_session(self, sm):
+        sm.archive("sess-life")
+
+        result = sm.sync_lifecycle("sess-life", runner_state="paused")
+
+        assert result["status"] == "checkpointed"
+        assert (sm.active_path / "sess-life").exists()
+
+    def test_sync_archived_initializes_when_missing(self, sm):
+        sm.delete("sess-life", force=True)
+
+        result = sm.sync_lifecycle("sess-life", runner_state="stopped")
+
+        assert result["status"] == "archived"
+        assert (sm.archived_path / "sess-life").exists()
+
+    def test_sync_running_restores_archived_session(self, sm):
+        sm.archive("sess-life")
+
+        result = sm.sync_lifecycle("sess-life", runner_state="running")
+
+        assert result["status"] == "active"
+        assert (sm.active_path / "sess-life").exists()
+
+    def test_sync_unknown_runner_state_defaults_to_active_and_init(self, sm):
+        sm.delete("sess-life", force=True)
+
+        result = sm.sync_lifecycle("sess-life", runner_state="mystery")
+
+        assert result["status"] == "active"
+        assert (sm.active_path / "sess-life").exists()
+
+    def test_sync_with_custom_status_map(self, sm):
+        result = sm.sync_lifecycle("sess-life", runner_state="idle", status_map={"idle": "archived"})
+
+        assert result["status"] == "archived"
+        assert (sm.archived_path / "sess-life").exists()
+
+    def test_sync_checkpointed_initializes_when_missing(self, sm):
+        sm.delete("sess-life", force=True)
+
+        result = sm.sync_lifecycle("sess-life", runner_state="paused")
+
+        assert result["status"] == "checkpointed"
+        assert (sm.active_path / "sess-life").exists()
+
+    def test_sync_returns_minimal_when_info_missing(self, sm):
+        with patch.object(sm, "_load_session_info", return_value=None):
+            result = sm.sync_lifecycle("sess-life", runner_state="running")
+
+        assert result == {"session_id": "sess-life", "status": "active"}
 
 class TestCreateSession:
 

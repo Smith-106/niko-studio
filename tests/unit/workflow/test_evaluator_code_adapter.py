@@ -284,6 +284,64 @@ class TestCreateImprovementPlan:
         plan = evaluator._create_improvement_plan(result)
         assert len(plan[0]["actions"]) <= 2
 
+class TestDreamEvaluatorAsyncModes:
+
+    @pytest.fixture
+    def evaluator(self):
+        return DreamEvaluator(llm_client=None)
+
+    @pytest.mark.asyncio
+    async def test_quick_scan_produces_report_with_limits(self, evaluator):
+        evaluator.engine.quick_evaluate = AsyncMock(return_value={
+            "sympathy": 30,
+            "identification": 65,
+            "empathy": 35,
+            "immersion": 20,
+        })
+
+        report = await evaluator.quick_scan("content")
+
+        assert report.strength == DreamStrength.BROKEN
+        assert report.weakest_layer == "immersion"
+        assert len(report.top_3_issues) <= 3
+        assert len(report.quick_wins) <= 3
+        assert len(report.top_3_issues) == 3
+        assert len(report.quick_wins) == 3
+
+    @pytest.mark.asyncio
+    async def test_standard_evaluate_passthrough(self, evaluator):
+        expected = MagicMock()
+        evaluator.engine.evaluate = AsyncMock(return_value=expected)
+
+        result = await evaluator.standard_evaluate("story", {"hero": "A"})
+
+        assert result is expected
+        evaluator.engine.evaluate.assert_awaited_once_with("story", {"hero": "A"})
+
+    @pytest.mark.asyncio
+    async def test_deep_diagnosis_structure(self, evaluator):
+        mock_result = MagicMock()
+        mock_result.dream_strength = DreamStrength.STRONG
+
+        mock_result.sympathy = MagicMock()
+        mock_result.sympathy.overall_score = 70
+        mock_result.empathy = MagicMock()
+        mock_result.empathy.overall_score = 70
+        mock_result.immersion = MagicMock()
+        mock_result.immersion.overall_score = 70
+
+        mock_result.layer_scores = []
+        evaluator.engine.evaluate = AsyncMock(return_value=mock_result)
+
+        diagnosis = await evaluator.deep_diagnosis("story")
+
+        assert diagnosis["result"] is mock_result
+        assert "diagnosis" in diagnosis
+        assert "overall_health" in diagnosis["diagnosis"]
+        assert "layer_diagnosis" in diagnosis["diagnosis"]
+        assert "master_comparisons" in diagnosis["diagnosis"]
+        assert "improvement_plan" in diagnosis["diagnosis"]
+
 
 # ============================================================
 # CodeAdapter

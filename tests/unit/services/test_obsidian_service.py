@@ -548,3 +548,213 @@ class TestSingleton:
         reset_obsidian_service()
         svc3 = get_obsidian_service()
         assert svc3 is not svc1
+
+
+class TestObsidianServiceExtraBranches:
+
+    @patch("src.services.obsidian_service.Path.home")
+    @patch("src.services.obsidian_service.sys")
+    def test_discover_from_common_paths_scans_subdirs(self, mock_sys, mock_home, tmp_path):
+        mock_sys.platform = "linux"
+
+        root = tmp_path / "home"
+        target_parent = root / "Documents" / "Obsidian"
+        target_parent.mkdir(parents=True)
+
+        vault_sub = target_parent / "vault-sub"
+        vault_sub.mkdir()
+        (vault_sub / ".obsidian").mkdir()
+        (vault_sub / "note.md").write_text("x", encoding="utf-8")
+
+        mock_home.return_value = root
+
+        svc = ObsidianService()
+        vaults = svc._discover_from_common_paths()
+
+        assert any(v.name == "vault-sub" for v in vaults)
+
+    @patch("src.services.obsidian_service.Path.home")
+    @patch("src.services.obsidian_service.sys")
+    def test_discover_from_common_paths_direct_vault_branch(self, mock_sys, mock_home, tmp_path):
+        mock_sys.platform = "linux"
+
+        root = tmp_path / "home"
+        direct = root / "Documents" / "Obsidian"
+        direct.mkdir(parents=True)
+        (direct / ".obsidian").mkdir()
+        (direct / "note.md").write_text("x", encoding="utf-8")
+
+        mock_home.return_value = root
+
+        svc = ObsidianService()
+        vaults = svc._discover_from_common_paths()
+
+        assert any(v.path == str(direct) for v in vaults)
+
+    @patch.object(ObsidianService, "_discover_from_common_paths")
+    @patch.object(ObsidianService, "_discover_from_config")
+    def test_discover_vaults_deduplicates_paths(self, mock_config, mock_common):
+        now = datetime.now()
+        shared = VaultInfo(name="v1", path="/same", last_modified=now, file_count=1)
+        mock_config.return_value = [shared]
+        mock_common.return_value = [VaultInfo(name="v2", path="/same", last_modified=now, file_count=2)]
+
+        svc = ObsidianService()
+        vaults = svc.discover_vaults(refresh=True)
+
+        assert len(vaults) == 1
+        assert vaults[0].path == "/same"
+
+    @patch.object(ObsidianService, "_discover_from_common_paths")
+    @patch.object(ObsidianService, "_discover_from_config")
+    def test_discover_vaults_appends_unique_common_path(self, mock_config, mock_common):
+        now = datetime.now()
+        mock_config.return_value = [VaultInfo(name="base", path="/base", last_modified=now, file_count=1)]
+        mock_common.return_value = [VaultInfo(name="new", path="/new", last_modified=now, file_count=1)]
+
+        svc = ObsidianService()
+        vaults = svc.discover_vaults(refresh=True)
+
+        assert len(vaults) == 2
+        assert any(v.path == "/new" for v in vaults)
+
+    def test_discover_from_config_missing_path_returns_empty(self):
+        svc = ObsidianService()
+        svc._config_path = None
+        assert svc._discover_from_config() == []
+
+    @patch("src.services.obsidian_service.open", side_effect=RuntimeError("read error"))
+    def test_discover_from_config_handles_json_open_error(self, _mock_open, tmp_path):
+        cfg = tmp_path / "obsidian"
+        cfg.mkdir()
+        (cfg / "obsidian.json").write_text("{}", encoding="utf-8")
+
+        svc = ObsidianService()
+        svc._config_path = cfg
+
+        assert svc._discover_from_config() == []
+
+    def test_get_vault_info_handles_rglob_error(self, tmp_path):
+        vault = tmp_path / "vault"
+        vault.mkdir()
+
+        svc = ObsidianService()
+        with patch.object(Path, "rglob", side_effect=RuntimeError("scan fail")):
+            info = svc._get_vault_info(str(vault))
+
+        assert info is None
+
+    def test_get_vault_by_name_case_insensitive(self):
+        svc = ObsidianService()
+        with patch.object(svc, "discover_vaults", return_value=[
+            VaultInfo(name="MyVault", path="/v", last_modified=datetime.now(), file_count=1)
+        ]):
+            hit = svc.get_vault_by_name("myvault")
+
+        assert hit is not None
+        assert hit.path == "/v"
+
+    def test_get_vault_by_name_not_found(self):
+        svc = ObsidianService()
+        with patch.object(svc, "discover_vaults", return_value=[]):
+            hit = svc.get_vault_by_name("none")
+        assert hit is None
+
+    def test_get_vault_by_path_not_found(self):
+        svc = ObsidianService()
+        with patch.object(svc, "_get_vault_info", return_value=None):
+            hit = svc.get_vault_by_path("/missing")
+        assert hit is None
+
+    def test_get_notes_skips_bad_file(self, tmp_path):
+        class BadNote:
+            stem = "bad"
+
+            def stat(self):
+                raise RuntimeError("stat fail")
+
+            def relative_to(self, _):
+                return Path("bad.md")
+
+            def read_text(self, encoding="utf-8"):
+                return "x"
+
+            def __str__(self):
+                return "bad.md"
+
+        vault = tmp_path / "vault"
+        vault.mkdir()
+
+        svc = ObsidianService()
+        with patch.object(svc, "get_files", return_value=[BadNote()]):
+            notes = svc.get_notes(str(vault))
+
+        assert notes == []
+
+    def test_get_notes_extract_parse_error_is_swallowed(self, tmp_path):
+        class GoodNote:
+            stem = "good"
+
+            def __init__(self, p):
+                self._path = p
+
+            def stat(self):
+                return self._path.stat()
+
+            def relative_to(self, base):
+                return self._path.relative_to(base)
+
+            def read_text(self, encoding="utf-8"):
+                raise RuntimeError("parse fail")
+
+            def __str__(self):
+                return str(self._path)
+
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        real = vault / "good.md"
+        real.write_text("ok", encoding="utf-8")
+
+        svc = ObsidianService()
+        with patch.object(svc, "get_files", return_value=[GoodNote(real)]):
+            notes = svc.get_notes(str(vault))
+
+        assert len(notes) == 1
+
+    def test_search_notes_handles_file_read_error(self, tmp_path):
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        bad = vault / "bad.md"
+        bad.write_text("x", encoding="utf-8")
+
+        svc = ObsidianService()
+        with patch.object(svc, "get_files", return_value=[bad]):
+            with patch.object(Path, "read_text", side_effect=RuntimeError("read fail")):
+                results = svc.search_notes(str(vault), "x")
+
+        assert results == []
+
+    def test_search_notes_name_match_without_content_search(self, tmp_path):
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        (vault / "alpha.md").write_text("zzz", encoding="utf-8")
+
+        svc = ObsidianService()
+        results = svc.search_notes(str(vault), "alpha", search_content=False)
+
+        assert len(results) == 1
+        assert results[0].name == "alpha"
+
+    def test_sync_to_knowledge_layer_catches_add_document_exception(self, tmp_path):
+        vault = tmp_path / "vault"
+        vault.mkdir()
+        (vault / "note.md").write_text("content", encoding="utf-8")
+
+        mock_kl = MagicMock(spec=[])
+        mock_kl.add_document = MagicMock(side_effect=RuntimeError("add failed"))
+
+        svc = ObsidianService()
+        result = svc.sync_to_knowledge_layer(str(vault), mock_kl)
+
+        assert result["success"] is False
+        assert result["failed_count"] == 1

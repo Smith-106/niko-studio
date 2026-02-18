@@ -1,0 +1,47 @@
+{
+  "summary": "Implement an automated completion-governance layer that distinguishes release readiness from roadmap completion, then wires it into CI and workflow task queues.",
+  "approach": "Deliver in five incremental tasks: build checkbox completion checker, integrate staged CI gates (soft→hard), export unchecked roadmap items as execution queue artifacts, align README task source, and optionally surface completion signal in release summary.",
+  "task_ids": [
+    "TASK-001",
+    "TASK-002",
+    "TASK-003",
+    "TASK-004",
+    "TASK-005"
+  ],
+  "task_count": 5,
+  "complexity": "Medium",
+  "estimated_time": "2-4 hours",
+  "recommended_execution": "Agent",
+  "design_decisions": [
+    {
+      "decision": "Use docs/TASKS_V10_OPTIMIZED.md as the completion source of truth",
+      "rationale": "It is the only existing file with explicit unchecked roadmap items",
+      "tradeoff": "Requires README link alignment to avoid source drift",
+      "alternatives": [
+        "Infer from historical .workflow archives",
+        "Use release-check-summary only"
+      ]
+    },
+    {
+      "decision": "Adopt staged CI governance (soft warn first, hard fail conditionally)",
+      "rationale": "Avoid immediate disruption while introducing measurable completion guardrails",
+      "tradeoff": "Temporary period where incomplete roadmap does not block all builds",
+      "alternatives": [
+        "Immediate hard-fail globally",
+        "No CI integration"
+      ]
+    }
+  ],
+  "_metadata": {
+    "timestamp": "2026-02-17T10:40:00+08:00",
+    "source": "direct-planning",
+    "planning_mode": "direct",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "exploration_angles": [
+      "integration-points",
+      "dependencies",
+      "testing"
+    ]
+  }
+}

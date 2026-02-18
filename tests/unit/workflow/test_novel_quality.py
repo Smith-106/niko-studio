@@ -1,6 +1,6 @@
 """Tests for novel quality heuristic evaluator."""
 
-from src.workflow.novel_quality import evaluate_novel_quality
+from src.workflow.novel_quality import evaluate_novel_quality, _compute_metrics, _recommendation
 
 
 def test_evaluate_novel_quality_returns_complete_contract():
@@ -111,6 +111,20 @@ def test_evaluate_novel_quality_empty_content_returns_block_contract():
     assert set(issue.keys()) == {"severity", "type", "evidence", "suggestion"}
 
 
+
+
+def test_compute_metrics_fallback_when_no_sentences_after_split():
+    metrics = _compute_metrics("...")
+    assert metrics["sentences"] == ["..."]
+
+
+def test_recommendation_block_by_quality_or_high_issues_branch():
+    metrics = {
+        "template_sentence_ratio": 0.1,
+    }
+    issues = [{"severity": "high"}, {"severity": "high"}]
+    assert _recommendation(metrics, 90.0, issues) == "block"
+    assert _recommendation(metrics, 49.0, []) == "block"
 
 
 def test_evaluate_novel_quality_repetition_degrades_to_block_in_extreme_case():

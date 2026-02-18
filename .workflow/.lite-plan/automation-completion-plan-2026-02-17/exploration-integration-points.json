@@ -1,0 +1,80 @@
+{
+  "project_structure": {
+    "modules": [
+      "scripts",
+      ".github/workflows",
+      ".workflow/.analysis",
+      ".workflow/.lite-plan",
+      "docs",
+      "README.md"
+    ]
+  },
+  "relevant_files": [
+    {
+      "path": "scripts/release_check_summary.py",
+      "relevance": 0.92,
+      "rationale": "已有发布判定聚合脚本，可复用同类模式实现 tasks completion 自动检查。",
+      "role": "pattern_reference",
+      "discovery_source": "ace-search",
+      "key_symbols": ["run_cmd", "main", "build_check_result"]
+    },
+    {
+      "path": ".github/workflows/integration-tests.yml",
+      "relevance": 0.97,
+      "rationale": "CI 门禁入口文件，新增 tasks-completion-check job 的唯一主挂载点。",
+      "role": "modify_target",
+      "discovery_source": "ace-search",
+      "key_symbols": ["jobs", "tests", "p2-selected-hard-fail"]
+    },
+    {
+      "path": "README.md",
+      "relevance": 0.86,
+      "rationale": "任务入口与完成度口径对外暴露位置，需要修复 TASKS 文档链接一致性。",
+      "role": "modify_target",
+      "discovery_source": "ace-search",
+      "key_symbols": ["Development Phases", "TASKS.md"]
+    },
+    {
+      "path": "docs/TASKS_V10_OPTIMIZED.md",
+      "relevance": 0.95,
+      "rationale": "未完成项来源文件，check_tasks_completion.py 需要解析该文件中的 checkbox 状态。",
+      "role": "dependency",
+      "discovery_source": "ace-search",
+      "key_symbols": ["- [ ]", "Task 15", "Task 16"]
+    }
+  ],
+  "patterns": [
+    "脚本产出 markdown/json 摘要并在仓库根写入固定文件",
+    "CI workflow 通过新增 job + needs 串联门禁阶段",
+    "先 soft-warn 再 hard-fail 的渐进式治理策略"
+  ],
+  "dependencies": [
+    "pytest / npm checks 已在 integration-tests.yml 固化",
+    "release-check-summary.py 提供���定输出模板",
+    "docs/TASKS_V10_OPTIMIZED.md 作为完成度数据源"
+  ],
+  "integration_points": [
+    {
+      "location": ".github/workflows/integration-tests.yml:112",
+      "purpose": "插入 soft-warn completion check"
+    },
+    {
+      "location": ".github/workflows/integration-tests.yml:171",
+      "purpose": "串联 hard-fail completion check（release 模式）"
+    },
+    {
+      "location": "scripts/release_check_summary.py:64",
+      "purpose": "可选并入 completion 指标汇总"
+    }
+  ],
+  "constraints": [
+    "保持现有 release gate 兼容，不直接改变 P0 blocking 语义",
+    "默认 soft 模式不能阻断当前主线 CI",
+    "任务清单解析需容错中文内容，仅依赖 markdown checkbox 结构"
+  ],
+  "clarification_needs": [],
+  "_metadata": {
+    "exploration_angle": "integration-points",
+    "exploration_index": 1
+  }
+}

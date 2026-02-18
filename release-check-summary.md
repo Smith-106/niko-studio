@@ -16,7 +16,7 @@
 | production_guard | P1 | false | PASS |
 | metrics_guard | P1 | false | PASS |
 | codecov_signal | P1 | false | PASS |
-| tasks_completion_signal | P1 | false | WARN |
+| tasks_completion_signal | P1 | false | PASS |
 
 ## Machine-Readable Decision
 
@@ -24,7 +24,7 @@
 {
   "decision": "GO",
   "go_no_go_reasons": [],
-  "generated_at": "2026-02-17T14:14:14.922033+00:00",
+  "generated_at": "2026-02-17T16:13:39.799856+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -94,9 +94,9 @@
       "check_id": "tasks_completion_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "checked=0, unchecked=29, completion_ratio=0.0%"
+      "detail": "checked=29, unchecked=0, completion_ratio=100.0%"
     }
   ]
 }
@@ -221,8 +221,8 @@ tests/unit/mcp/test_gateway_endpoints.py::test_gateway_main_invokes_uvicorn_with
 ---------- coverage: platform win32, python 3.12.10-final-0 ----------
 Coverage XML written to file coverage.xml
 
-Required test coverage of 80% reached. Total coverage: 91.88%
-5193 passed, 2 skipped, 16 deselected, 3 warnings in 401.32s (0:06:41)
+Required test coverage of 80% reached. Total coverage: 91.74%
+5193 passed, 2 skipped, 16 deselected, 3 warnings in 490.63s (0:08:10)
 ```
 
 ### 4) desktop_check
@@ -254,7 +254,7 @@ computing gzip size...
 [2mdist/[22m[32mindex.html                 [39m[1m[2m  0.47 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
 [2mdist/[22m[35massets/index-CQnRsHfr.css  [39m[1m[2m 21.30 kB[22m[1m[22m[2m │ gzip:   4.88 kB[22m
 [2mdist/[22m[36massets/index-5Dv2pNxK.js   [39m[1m[2m362.87 kB[22m[1m[22m[2m │ gzip: 111.26 kB[22m
-[32m✓ built in 7.23s[39m
+[32m✓ built in 9.05s[39m
 ```
 
 ### 5) external_e2e_smoke
@@ -264,7 +264,7 @@ computing gzip size...
 
 ```text
 ................                                                         [100%]
-16 passed in 7.45s
+16 passed in 7.64s
 ```
 
 ### 6) production_guard
@@ -291,10 +291,10 @@ metrics guard ok
 ### 9) tasks_completion_signal
 
 - checker_exit: 0
-- status: WARN
-- checked: 0
-- unchecked: 29
-- completion_ratio: 0.0%
+- status: PASS
+- checked: 29
+- unchecked: 0
+- completion_ratio: 100.0%
 - json_parse_error: none
 
 ### 10) CI Integration Tests latest

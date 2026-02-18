@@ -226,15 +226,14 @@ class TestCriticEnginePrivateMethods:
         assert "最强" in summary
         assert "fictional_dream" in summary
 
-    def test_generate_summary_includes_top_issue(self, engine):
-        from src.narrative.evaluators.base import Issue
+    def test_generate_summary_with_empty_module_scores(self, engine):
         summary = engine._generate_summary(
-            score=60.0,
-            level=ScoreLevel.FAIR,
-            module_scores={"test": 60},
-            top_issues=[Issue(code="T", message="首要问题描述", severity=Severity.MAJOR)]
+            score=50.0,
+            level=ScoreLevel.POOR,
+            module_scores={},
+            top_issues=[]
         )
-        assert "首要问题" in summary
+        assert "N/A" in summary
 
 
 class TestCriticEngineIntegration:

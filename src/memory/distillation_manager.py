@@ -48,11 +48,7 @@ class DistillationTemplate(Enum):
 
 # Ensure enum identity consistency across `src.memory.*` and `memory.*` imports.
 _alias_name = "memory.distillation_manager"
-if _alias_name in sys.modules:
-    _alias_module = sys.modules[_alias_name]
-    setattr(_alias_module, "DistillationTemplate", DistillationTemplate)
-else:
-    sys.modules[_alias_name] = sys.modules[__name__]
+sys.modules[_alias_name] = sys.modules[__name__]
 
 
 @dataclass
@@ -368,22 +364,6 @@ class DistillationManager:
             template = DistillationTemplate(getattr(template, "value", template))
 
         return DISTILLATION_PROMPTS.get(template, DISTILLATION_PROMPTS[DistillationTemplate.SUMMARY])
-
-    def get_distillation_prompt(self, prompt_type: str) -> str:
-        """
-        Get distillation prompt by type string (IDistillationService compatibility).
-
-        Args:
-            prompt_type: Template type as string.
-
-        Returns:
-            Prompt template string.
-        """
-        try:
-            template = DistillationTemplate(prompt_type)
-        except ValueError:
-            template = DistillationTemplate.SUMMARY
-        return self.get_prompt(template)
 
     def distill(
         self,

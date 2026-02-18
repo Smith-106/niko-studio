@@ -182,6 +182,26 @@ class TestDreamEvaluatorPrivateMethods:
         score = evaluator._evaluate_immersion("")
         assert score == 0
 
+    def test_evaluate_empathy_density_medium_high_branch(self, evaluator):
+        content = ("看到" * 6) + ("x" * 988)
+        score = evaluator._evaluate_empathy(content)
+        assert score == 80
+
+    def test_evaluate_empathy_density_medium_branch(self, evaluator):
+        content = ("看到" * 3) + ("x" * 994)
+        score = evaluator._evaluate_empathy(content)
+        assert score == 60
+
+    def test_evaluate_immersion_density_medium_high_branch(self, evaluator):
+        content = ("但是" * 5) + ("x" * 990)
+        score = evaluator._evaluate_immersion(content)
+        assert score == 80
+
+    def test_evaluate_immersion_density_medium_branch(self, evaluator):
+        content = ("但是" * 3) + ("x" * 994)
+        score = evaluator._evaluate_immersion(content)
+        assert score == 60
+
     def test_evaluate_identification_with_goals(self, evaluator):
         """Test identification with goal-related words."""
         content = "他的目标很明确，他要保护家人，追求正义，完成使命。"

@@ -383,6 +383,51 @@ class TestPlanActMode:
         result = await mode.execute("s1", "task", context={"genre": "mystery"})
         assert result.success is True
 
+    @pytest.mark.asyncio
+    async def test_execute_breaks_when_executor_missing(self):
+        mode = PlanActMode()
+        mode._executors.pop(WorkflowPhase.PLAN)
+
+        result = await mode.execute("missing-executor", "task")
+
+        assert result.success is True
+        assert result.phase == WorkflowPhase.COMPLETE
+        assert result.metadata["phase_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_execute_returns_phase_failure(self):
+        mode = PlanActMode()
+        failing = MagicMock()
+        failing.execute = AsyncMock(
+            return_value=PhaseResult.fail(WorkflowPhase.PLAN, RuntimeError("boom"))
+        )
+        mode._executors[WorkflowPhase.PLAN] = failing
+
+        result = await mode.execute("phase-fail", "task")
+
+        assert result.success is False
+        assert isinstance(result.error, RuntimeError)
+        assert str(result.error) == "boom"
+
+    @pytest.mark.asyncio
+    async def test_execute_breaks_when_next_phase_missing(self):
+        mode = PlanActMode()
+        one_step = MagicMock()
+        one_step.execute = AsyncMock(
+            return_value=PhaseResult.ok(
+                phase=WorkflowPhase.PLAN,
+                output={"ok": True},
+                next_phase=None,
+            )
+        )
+        mode._executors[WorkflowPhase.PLAN] = one_step
+
+        result = await mode.execute("no-next-phase", "task")
+
+        assert result.success is True
+        assert result.phase == WorkflowPhase.COMPLETE
+        assert result.metadata["phase_count"] == 1
+
 
 # ============================================================
 # get_default_plan_act_mode

@@ -21,6 +21,9 @@ class TestPremiseEvaluator:
     def test_related_skill(self, evaluator):
         assert evaluator.related_skill == "premise-magic"
 
+    def test_description(self, evaluator):
+        assert evaluator.description == "评估故事预设的清晰度、因果关系和戏剧性"
+
     def test_evaluate_causality_baseline(self, evaluator):
         assert evaluator._evaluate_causality("普通文本") == 40
 
@@ -97,6 +100,9 @@ class TestFourSelvesEvaluator:
     def test_related_skill(self, evaluator):
         assert evaluator.related_skill == "four-selves"
 
+    def test_description(self, evaluator):
+        assert evaluator.description == "评估角色四个自我层次的揭示：社会/个人/私密/隐藏自我"
+
     def test_evaluate_layer_baseline(self, evaluator):
         assert evaluator._evaluate_layer("普通文本", evaluator.SOCIAL_SELF_MARKERS) == 20
 
@@ -166,6 +172,9 @@ class TestSubtextEvaluator:
     def test_related_skill(self, evaluator):
         assert evaluator.related_skill == "subtext-dialogue"
 
+    def test_description(self, evaluator):
+        assert evaluator.description == "评估对话的潜台词浓度，检测直白对白(On-The-Nose)问题"
+
     def test_extract_dialogues_chinese(self, evaluator):
         content = '他说「你好」，她说「再见」。'
         dialogues = evaluator._extract_dialogues(content)
@@ -205,11 +214,17 @@ class TestSubtextEvaluator:
     def test_evaluate_subtext_density_no_dialogues(self, evaluator):
         assert evaluator._evaluate_subtext_density("content", []) == 50
 
-    def test_evaluate_subtext_density_with_markers(self, evaluator):
-        content = "他看着她，停顿了一下，沉默了。"
-        dialogues = ["你好", "再见", "嗯"]
-        score = evaluator._evaluate_subtext_density(content, dialogues)
-        assert score > 50
+    def test_evaluate_subtext_density_ideal_ratio_zero_branch(self, evaluator):
+        class ZeroLenTruthyList(list):
+            def __bool__(self):
+                return True
+
+            def __len__(self):
+                return 0
+
+        dialogues = ZeroLenTruthyList(["dummy"])
+        score = evaluator._evaluate_subtext_density("有停顿了一下", dialogues)
+        assert score == 50
 
     def test_evaluate_dialogue_length_empty(self, evaluator):
         assert evaluator._evaluate_dialogue_length([]) == 100
@@ -254,3 +269,10 @@ class TestSubtextEvaluator:
         assert "on_the_nose_score" in result.metrics
         assert "subtext_density" in result.metrics
         assert "dialogue_length_score" in result.metrics
+
+    @pytest.mark.asyncio
+    async def test_evaluate_long_dialogue_triggers_length_issue(self, evaluator):
+        content = f'他说「{"A" * 140}」，她说「{"B" * 140}」。'
+        result = await evaluator.evaluate(content)
+        codes = [i.code for i in result.issues]
+        assert "DIALOGUE_TOO_LONG" in codes

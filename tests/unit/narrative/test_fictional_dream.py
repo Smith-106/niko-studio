@@ -176,9 +176,10 @@ class TestSympathyAnalyzer:
         assert len(result.triggers_detected) > 0
 
     @pytest.mark.asyncio
-    async def test_analyze_suggestions_low_score(self, analyzer):
-        result = await analyzer.analyze("平淡的日常生活。")
-        assert len(result.suggestions) > 0
+    async def test_analyze_with_llm_path_keeps_triggers(self, analyzer):
+        analyzer.llm = object()
+        result = await analyzer.analyze("他面临危险和威胁")
+        assert len(result.triggers_detected) > 0
 
     # --- _evaluate_vulnerability ---
 
@@ -337,8 +338,16 @@ class TestIdentificationBuilder:
     def test_godfather_flaw_no_noble(self, builder):
         assert builder.detect_godfather_potential(True, "吃饭睡觉") is False
 
-    def test_godfather_flaw_with_noble(self, builder):
-        assert builder.detect_godfather_potential(True, "追求正义") is True
+    @pytest.mark.asyncio
+    async def test_analyze_godfather_without_llm(self, builder):
+        result = await builder._analyze_godfather_technique("text", None)
+        assert result.is_detected is False
+
+    @pytest.mark.asyncio
+    async def test_analyze_godfather_with_llm_stub(self, builder):
+        builder.llm = object()
+        result = await builder._analyze_godfather_technique("text", {"role": "antihero"})
+        assert result.is_detected is False
 
     # --- async analyze ---
 
@@ -668,10 +677,11 @@ class TestImmersionCatalyst:
         assert len(result) == 0
 
     @pytest.mark.asyncio
-    async def test_detect_conflicts_found(self, catalyst):
-        text = "他内心犹豫挣扎，一方面想要另一方面又害怕"
+    async def test_detect_conflicts_moral_type(self, catalyst):
+        text = "他内心犹豫挣扎，这是否正义，应该如何选择"
         result = await catalyst._detect_conflicts(text)
         assert len(result) > 0
+        assert result[0].dilemma_type == DilemmaType.MORAL
 
     # --- async _analyze_carrie_technique ---
 

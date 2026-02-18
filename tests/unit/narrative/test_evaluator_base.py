@@ -224,6 +224,13 @@ class TestBaseEvaluator:
         assert result.evaluator_name == "concrete"
         assert result.score == 0
 
+    @pytest.mark.asyncio
+    async def test_base_abstract_stubs_executable(self):
+        e = _ConcreteEvaluator()
+        assert BaseEvaluator.name.fget(e) is None
+        assert BaseEvaluator.description.fget(e) is None
+        assert await BaseEvaluator.evaluate(e, "content") is None
+
     def test_llm_client_stored(self):
         mock = object()
         e = _ConcreteEvaluator(llm_client=mock)

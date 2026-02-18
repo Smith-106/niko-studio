@@ -13,13 +13,16 @@ from src.knowledge.services.embedding_service import EmbeddingServiceImpl
 from src.knowledge.services.models import (
     ProviderType,
     ModelTier,
+    LLMRequest,
     LLMResponse,
     EmbeddingResponse,
     TokenUsage,
+    StreamChunk,
     RateLimitError,
     ProviderUnavailableError,
     LLMError,
     EmbeddingError,
+    TokenLimitError,
 )
 
 
@@ -140,10 +143,57 @@ class TestLLMService:
 
         with pytest.raises(LLMError, match="Failed to parse JSON"):
             await llm_service.generate_json("Generate JSON")
+    @pytest.mark.asyncio
+    async def test_generate_with_metadata_uses_request_provider(self, llm_service, mock_provider):
+        """测试 generate_with_metadata 调用重试路径��返回响应。"""
+        request = LLMRequest(prompt="Hello")
+
+        response = await llm_service.generate_with_metadata(request)
+
+        assert response.content == "Test response"
+        call_args = mock_provider.complete.call_args
+        assert call_args.kwargs["model"] == "gpt-4"
+
+    @pytest.mark.asyncio
+    async def test_stream_yields_provider_chunks(self, llm_service, mock_provider):
+        """测试 stream 透传 Provider 的流式输出。"""
+        chunks = [
+            StreamChunk(content="A", is_final=False),
+            StreamChunk(content="B", is_final=True),
+        ]
+
+        async def fake_stream_complete(**kwargs):
+            for chunk in chunks:
+                yield chunk
+
+        mock_provider.stream_complete = fake_stream_complete
+
+        received = []
+        async for chunk in llm_service.stream("Hello"):
+            received.append(chunk)
+
+        assert received == chunks
 
 
 class TestLLMRetryDecorator:
     """LLM 重试装饰器测试"""
+
+    @pytest.mark.asyncio
+    async def test_retry_uses_retry_after_delay(self):
+        """测试 retry_after 分支延迟。"""
+        call_count = 0
+
+        @with_retry(max_retries=2, base_delay=0.01)
+        async def flaky_function():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 2:
+                raise RateLimitError("Rate limited", retry_after=0.01)
+            return "success"
+
+        result = await flaky_function()
+        assert result == "success"
+        assert call_count == 2
 
     @pytest.mark.asyncio
     async def test_retry_on_rate_limit(self):
@@ -264,6 +314,27 @@ class TestEmbeddingService:
         """测试获取维度"""
         dims = embedding_service.get_dimensions()
         assert dims == 3
+
+
+class TestModelErrors:
+    """models.py error branch coverage tests"""
+
+    def test_llm_error_str_without_provider(self):
+        err = LLMError("plain")
+        assert str(err) == "plain"
+
+    def test_llm_error_str_with_provider(self):
+        err = LLMError("oops", provider=ProviderType.OPENAI)
+        assert str(err) == "[openai] oops"
+
+    def test_token_limit_error_fields(self):
+        err = TokenLimitError("too many", token_count=1200, token_limit=1000)
+        assert err.token_count == 1200
+        assert err.token_limit == 1000
+
+    def test_embedding_error_str_with_provider(self):
+        err = EmbeddingError("embed fail", provider=ProviderType.OPENAI)
+        assert str(err) == "[openai] embed fail"
 
 
 class TestEmbeddingCache:

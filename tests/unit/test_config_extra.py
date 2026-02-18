@@ -265,6 +265,102 @@ class TestConfigChangeEvent:
         assert evt.timestamp > 0
 
 
+class TestMissingBranchCoverage:
+    def test_init_returns_early_when_already_initialized(self, tmp_path):
+        cfg_file = tmp_path / "config.yaml"
+        cfg_file.write_text(yaml.dump({"app_name": "first"}), encoding="utf-8")
+
+        mgr = ConfigManager(config_path=str(cfg_file), hot_reload=False)
+        original_path = mgr._config_path
+
+        # second init on singleton should hit early return branch
+        ConfigManager(config_path=str(tmp_path / "other.yaml"), hot_reload=True)
+
+        assert mgr._config_path == original_path
+
+    def test_load_from_file_returns_when_path_missing(self, tmp_path):
+        mgr = ConfigManager(config_path=None, hot_reload=False)
+        mgr._config_path = tmp_path / "missing.yaml"
+        mgr._raw_config = {"old": True}
+
+        mgr._load_from_file()
+
+        assert mgr._raw_config == {"old": True}
+
+    def test_gateway_unknown_key_ignored(self, tmp_path):
+        cfg_file = tmp_path / "config.yaml"
+        cfg_file.write_text(
+            yaml.dump({"gateway": {"host": "127.0.0.1", "unknown_key": "x"}}),
+            encoding="utf-8",
+        )
+
+        mgr = ConfigManager(config_path=str(cfg_file), hot_reload=False)
+
+        assert mgr.config.gateway.host == "127.0.0.1"
+        assert not hasattr(mgr.config.gateway, "unknown_key")
+
+    def test_create_default_config_file_without_path_returns(self):
+        mgr = ConfigManager(config_path=None, hot_reload=False)
+        mgr._config_path = None
+
+        # should hit early return and not raise
+        mgr._create_default_config_file()
+
+    def test_start_file_watcher_without_path_returns(self):
+        mgr = ConfigManager(config_path=None, hot_reload=False)
+        mgr._config_path = None
+
+        mgr._start_file_watcher()
+
+        assert mgr._observer is None
+
+    def test_validate_environment_strict_non_dev_requires_graph_db_path(self):
+        import src.config as cfg_mod
+
+        cfg_mod._config_manager = None
+        mgr = ConfigManager(config_path=None, hot_reload=False)
+        mgr.set("env", "production")
+        mgr.set("graph.db_path", "")
+        mgr.set("agent.google_api_key", "gkey")
+        mgr.set("agent.openai_api_key", "")
+        cfg_mod._config_manager = mgr
+
+        errors = cfg_mod.validate_environment(strict=True)
+
+        assert any("graph.db_path" in e or "NIKO_GRAPH_DB_PATH" in e for e in errors)
+
+    def test_ensure_environment_warns_in_development(self):
+        import src.config as cfg_mod
+
+        cfg_mod._config_manager = None
+        mgr = ConfigManager(config_path=None, hot_reload=False)
+        mgr.set("env", "development")
+        mgr.set("agent.google_api_key", "")
+        mgr.set("agent.openai_api_key", "")
+        cfg_mod._config_manager = mgr
+
+        with patch("src.config.logger.warning") as warn_mock:
+            cfg_mod.ensure_environment(strict=False)
+
+        warn_mock.assert_called_once()
+
+    def test_init_config_uses_existing_candidate_path(self, tmp_path, monkeypatch):
+        import src.config as cfg_mod
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True)
+        cfg = config_dir / "niko-studio.yaml"
+        cfg.write_text(yaml.dump({"app_name": "candidate-app"}), encoding="utf-8")
+
+        monkeypatch.chdir(tmp_path)
+        cfg_mod._config_manager = None
+        ConfigManager.reset_instance()
+
+        mgr = cfg_mod.init_config(config_path=None, hot_reload=False)
+
+        assert mgr.config.app_name == "candidate-app"
+
+
 class TestDataclassDefaults:
     def test_backup_config_defaults(self):
         bc = BackupConfig()

@@ -112,12 +112,43 @@ class TestInternalHandler:
         handler.on_modified(self._make_event("/tmp", is_dir=True))
         # no error, just returns
 
+
+    def test_on_modified_debounced(self, tmp_path):
+        f = tmp_path / "test.md"
+        f.write_text("content", encoding="utf-8")
+        w = FileWatcher(patterns=["*.md"], debounce_seconds=0)
+        cb = MagicMock()
+        w.on_change(cb)
+        handler = _InternalHandler(w)
+        with patch.object(w, "_should_debounce", return_value=True):
+            handler.on_modified(self._make_event(str(f)))
+        cb.assert_not_called()
+
     def test_on_modified_irrelevant(self):
         w = FileWatcher(patterns=["*.md"])
         cb = MagicMock()
         w.on_change(cb)
         handler = _InternalHandler(w)
         handler.on_modified(self._make_event("/tmp/test.py"))
+        cb.assert_not_called()
+
+    def test_on_created_irrelevant(self):
+        w = FileWatcher(patterns=["*.md"])
+        cb = MagicMock()
+        w.on_change(cb)
+        handler = _InternalHandler(w)
+        handler.on_created(self._make_event("/tmp/test.py"))
+        cb.assert_not_called()
+
+    def test_on_created_debounced(self, tmp_path):
+        f = tmp_path / "new.md"
+        f.write_text("new", encoding="utf-8")
+        w = FileWatcher(patterns=["*.md"], debounce_seconds=0)
+        cb = MagicMock()
+        w.on_change(cb)
+        handler = _InternalHandler(w)
+        with patch.object(w, "_should_debounce", return_value=True):
+            handler.on_created(self._make_event(str(f)))
         cb.assert_not_called()
 
     def test_on_created_file(self, tmp_path):
@@ -178,7 +209,17 @@ class TestAutoSyncHandler:
         h.on_modified(MagicMock(is_directory=False, src_path="/tmp/test.py"))
         cb.assert_not_called()
 
-    def test_on_created(self):
+    def test_on_modified_debounced(self):
+        cb = MagicMock()
+        h = AutoSyncHandler(cb)
+        h._debounce_seconds = 100
+        e = MagicMock(is_directory=False, src_path="/tmp/test.md")
+        h.on_modified(e)
+        cb.assert_called_once_with("/tmp/test.md")
+        cb.reset_mock()
+        h.on_modified(e)
+        cb.assert_not_called()
+
         cb = MagicMock()
         h = AutoSyncHandler(cb)
         h._debounce_seconds = 0
@@ -191,15 +232,16 @@ class TestAutoSyncHandler:
         h.on_created(MagicMock(is_directory=True, src_path="/tmp"))
         cb.assert_not_called()
 
-    def test_debounce(self):
+
+    def test_on_created_debounced(self):
         cb = MagicMock()
         h = AutoSyncHandler(cb)
         h._debounce_seconds = 100
-        e = MagicMock(is_directory=False, src_path="/tmp/test.md")
-        h.on_modified(e)
-        cb.assert_called_once()
+        e = MagicMock(is_directory=False, src_path="/tmp/new.json")
+        h.on_created(e)
+        cb.assert_called_once_with("/tmp/new.json")
         cb.reset_mock()
-        h.on_modified(e)  # debounced
+        h.on_created(e)
         cb.assert_not_called()
 
 
@@ -222,23 +264,46 @@ class TestFileSyncService:
             s = FileSyncService(kl, [str(tmp_path)], writing_root=str(writing_root))
         return s
 
+
     def test_load_hash_index(self, tmp_path):
         kl = MagicMock()
         writing_root = tmp_path / ".writing"
         idx_dir = writing_root / ".ok" / "index"
         idx_dir.mkdir(parents=True)
         (idx_dir / "file_hashes.json").write_text('{"a": "hash1"}', encoding="utf-8")
+
         with patch("src.services.file_sync.Observer"):
             s = FileSyncService(kl, [str(tmp_path)], writing_root=str(writing_root))
+
         assert s._file_hashes == {"a": "hash1"}
 
-    def test_save_hash_index(self, svc, tmp_path):
+    def test_load_hash_index_logs_warning_on_invalid_json(self, tmp_path):
+        kl = MagicMock()
+        writing_root = tmp_path / ".writing"
+        idx_dir = writing_root / ".ok" / "index"
+        idx_dir.mkdir(parents=True)
+        (idx_dir / "file_hashes.json").write_text("not-json", encoding="utf-8")
+
+        with patch("src.services.file_sync.Observer"):
+            with patch("src.services.file_sync.logger.warning") as logger_warning:
+                FileSyncService(kl, [str(tmp_path)], writing_root=str(writing_root))
+
+        logger_warning.assert_called_once()
+
+    def test_save_hash_index(self, svc):
         svc._file_hashes = {"b": "hash2"}
         svc._save_hash_index()
         idx = svc.writing_root / ".ok" / "index" / "file_hashes.json"
         assert idx.exists()
         data = json.loads(idx.read_text(encoding="utf-8"))
         assert data["b"] == "hash2"
+
+    def test_save_hash_index_logs_error_on_write_failure(self, svc):
+        with patch("builtins.open", side_effect=OSError("disk full")):
+            with patch("src.services.file_sync.logger.error") as logger_error:
+                svc._save_hash_index()
+
+        logger_error.assert_called_once()
 
     def test_compute_file_hash(self, svc, tmp_path):
         f = tmp_path / "test.md"
@@ -253,6 +318,11 @@ class TestFileSyncService:
         f = tmp_path / "test.md"
         f.write_text("hello", encoding="utf-8")
         assert svc._has_file_changed(str(f)) is True
+
+
+    def test_has_file_changed_returns_false_when_hash_unavailable(self, svc):
+        with patch.object(svc, "_compute_file_hash", return_value=None):
+            assert svc._has_file_changed("/tmp/missing.md") is False
 
     def test_has_file_changed_same(self, svc, tmp_path):
         f = tmp_path / "test.md"
@@ -323,6 +393,43 @@ class TestFileSyncService:
         history = svc.get_sync_history()
         assert len(history) >= 1
 
+
     def test_get_indexed_files(self, svc):
         svc._file_hashes = {"a": "h1"}
         assert svc.get_indexed_files() == {"a": "h1"}
+        with patch.object(svc, "sync_file") as sync_file:
+            svc._on_file_change("/tmp/path.md")
+
+        sync_file.assert_called_once_with("/tmp/path.md")
+
+    def test_start_schedules_existing_and_warns_missing(self, tmp_path):
+        existing = tmp_path / "existing"
+        missing = tmp_path / "missing"
+        existing.mkdir()
+        kl = MagicMock()
+
+        with patch("src.services.file_sync.Observer") as observer_cls:
+            observer = observer_cls.return_value
+            service = FileSyncService(
+                kl,
+                [str(existing), str(missing)],
+                writing_root=str(tmp_path / ".writing"),
+            )
+
+        with patch("src.services.file_sync.logger.warning") as logger_warning:
+            with patch("src.services.file_sync.logger.info") as logger_info:
+                service.start()
+
+        observer.schedule.assert_called_once_with(service._handler, str(existing), recursive=True)
+        observer.start.assert_called_once()
+        logger_warning.assert_called_once()
+        logger_info.assert_called()
+
+    def test_stop_stops_joins_and_saves_index(self, svc):
+        with patch.object(svc, "_save_hash_index") as save_index:
+            svc.stop()
+
+        svc.observer.stop.assert_called_once()
+        svc.observer.join.assert_called_once()
+        save_index.assert_called_once()
+

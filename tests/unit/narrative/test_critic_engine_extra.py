@@ -241,6 +241,117 @@ class TestCriticEngine:
         plugin.before_evaluate = AsyncMock(side_effect=RuntimeError("hook fail"))
         plugin.after_evaluate = AsyncMock(side_effect=RuntimeError("hook fail"))
         engine = CriticEngine(plugins=[plugin])
-        # Should not raise
         result = await engine.evaluate("test")
         assert "overall_score" in result
+
+
+class TestCriticEngineSuggestionsAndCompare:
+    @pytest.fixture()
+    def engine(self):
+        return CriticEngine()
+
+    @pytest.mark.asyncio
+    async def test_suggest_improvements_maps_all_issue_categories(self, engine):
+        issues = [
+            "画面感不足",
+            "沉浸感不够",
+            "悬念偏弱",
+            "对话太平",
+            "设定不一致",
+            "风格单一",
+            "未知问题",
+        ]
+
+        suggestions = await engine.suggest_improvements("content", issues=issues, max_suggestions=10)
+
+        assert len(suggestions) == len(issues)
+        assert suggestions[0]["skill"] == "fictional-dream"
+        assert suggestions[1]["skill"] == "fictional-dream"
+        assert suggestions[2]["skill"] == "suspense-craft"
+        assert suggestions[3]["skill"] == "character-forge"
+        assert suggestions[4]["skill"] == "premise-magic"
+        assert suggestions[5]["skill"] == "expression-craft"
+        assert suggestions[6]["skill"] is None
+        assert suggestions[6]["suggestion"] == "请参考相关技能包进行改进"
+
+    @pytest.mark.asyncio
+    async def test_suggest_improvements_uses_evaluation_issues_when_none(self, engine):
+        with patch.object(engine, "evaluate", new=AsyncMock(return_value={"issues": ["心理描写不足", "逻辑欠缺"]})):
+            suggestions = await engine.suggest_improvements("content", issues=None, max_suggestions=1)
+
+        assert len(suggestions) == 1
+        assert suggestions[0]["technique"] is None
+        assert "深入角色内心" in suggestions[0]["suggestion"]
+
+    @pytest.mark.asyncio
+    async def test_compare_verdict_branches_and_dimension_intersection(self, engine):
+        with patch.object(
+            engine,
+            "evaluate",
+            new=AsyncMock(
+                side_effect=[
+                    {"overall_score": 70.0, "dimensions": {"dream": {"score": 6.0}, "voice": {"score": 5.0}}},
+                    {"overall_score": 70.5, "dimensions": {"dream": {"score": 6.2}}},
+                ]
+            ),
+        ):
+            near = await engine.compare("a", "b")
+
+        assert near["verdict"] == "两个版本质量相近"
+        assert "dream" in near["dimension_changes"]
+        assert "voice" not in near["dimension_changes"]
+
+        with patch.object(
+            engine,
+            "evaluate",
+            new=AsyncMock(
+                side_effect=[
+                    {"overall_score": 60.0, "dimensions": {"dream": {"score": 5.0}}},
+                    {"overall_score": 61.0, "dimensions": {"dream": {"score": 6.5}}},
+                ]
+            ),
+        ):
+            improve = await engine.compare("a", "b")
+
+        assert improve["verdict"] == "版本B优于版本A"
+        assert improve["dimension_changes"]["dream"]["improved"] is True
+
+        with patch.object(
+            engine,
+            "evaluate",
+            new=AsyncMock(
+                side_effect=[
+                    {"overall_score": 80.0, "dimensions": {"dream": {"score": 8.0}}},
+                    {"overall_score": 79.0, "dimensions": {"dream": {"score": 7.0}}},
+                ]
+            ),
+        ):
+            regress = await engine.compare("a", "b")
+
+        assert regress["verdict"] == "版本A优于版本B"
+        assert regress["dimension_changes"]["dream"]["improved"] is False
+
+
+class TestFeedbackBranchLines:
+    def test_suspense_feedback_mid_branch(self):
+        msg = SuspenseEvaluator()._generate_feedback(6.5)
+        assert "有一定的张力" in msg
+
+    def test_character_feedback_high_branch(self):
+        msg = CharacterEvaluator()._generate_feedback(8.2)
+        assert "角色形象立体" in msg
+
+    def test_premise_feedback_high_branch(self):
+        msg = PremiseEvaluator()._generate_feedback(8.0)
+        assert "设定清晰" in msg
+
+    def test_voice_feedback_high_branch(self):
+        msg = VoiceEvaluator()._generate_feedback(8.1)
+        assert "风格鲜明" in msg
+
+
+class TestFromConfigDisabled:
+    def test_from_config_when_disabled(self):
+        with patch("src.narrative.critic_engine.get_config_value", return_value=False):
+            engine = CriticEngine.from_config()
+        assert isinstance(engine, CriticEngine)

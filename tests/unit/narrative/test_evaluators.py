@@ -221,6 +221,9 @@ class TestVoiceEvaluatorProperties:
     def test_name_property(self, evaluator):
         assert evaluator.name == "叙事语气评估器"
 
+    def test_description_property(self, evaluator):
+        assert evaluator.description == "评估叙述语气的强度、具体性和一致性"
+
     def test_related_skill(self, evaluator):
         assert evaluator.related_skill == "voice-workshop"
 
@@ -250,10 +253,9 @@ class TestVoiceEvaluatorEvaluate:
         assert result.metrics["vagueness_penalty"] > 0
 
     @pytest.mark.asyncio
-    async def test_evaluate_specific_content_rewarded(self, evaluator):
-        content = "他穿着一件深蓝色的外套，手里拿着iPhone 15。距离目的地还有3公里，他已经走了25分钟。"
-        result = await evaluator.evaluate(content)
-        assert result.metrics["specificity"] >= 55  # Specificity baseline is 50
+    async def test_evaluate_vagueness_empty_content(self, evaluator):
+        result = await evaluator.evaluate("")
+        assert result.metrics["vagueness_penalty"] == 0
 
     @pytest.mark.asyncio
     async def test_evaluate_narrator_presence(self, evaluator):

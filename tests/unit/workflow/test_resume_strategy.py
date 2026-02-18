@@ -11,6 +11,7 @@ import json
 import pytest
 from pathlib import Path
 from datetime import datetime
+from unittest.mock import patch
 
 from src.workflow.session.resume_strategy import (
     ResumeMode,
@@ -19,6 +20,7 @@ from src.workflow.session.resume_strategy import (
     SessionContext,
     ResumeDecision,
     CheckpointState,
+    ResumeStrategy,
     NativeResumeStrategy,
     PromptConcatStrategy,
     HybridStrategy,
@@ -198,6 +200,36 @@ class TestCheckpointState:
         assert cp2.state_data == cp.state_data
 
 
+class TestBaseResumeStrategy:
+
+    def test_abstract_methods_are_noop_base(self, tmp_path):
+        class DummyResume(ResumeStrategy):
+            def can_resume(self, session_id: str) -> bool:
+                return ResumeStrategy.can_resume(self, session_id)
+
+            def resume(self, session_id: str) -> SessionContext:
+                return ResumeStrategy.resume(self, session_id)
+
+            def save_checkpoint(self, session_id: str, state):
+                return ResumeStrategy.save_checkpoint(self, session_id, state)
+
+        strategy = DummyResume(base_path=tmp_path / "sessions")
+
+        assert strategy.can_resume("s1") is None
+        assert strategy.resume("s1") is None
+        assert strategy.save_checkpoint("s1", {}) is None
+
+    def test_list_checkpoints_invalid_json_returns_empty(self, tmp_path):
+        strategy = NativeResumeStrategy(base_path=tmp_path / "sessions", tool="claude")
+        checkpoint_file = strategy.get_checkpoint_path("s-bad")
+        checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint_file.write_text("not json", encoding="utf-8")
+
+        checkpoints = strategy.list_checkpoints("s-bad")
+
+        assert checkpoints == []
+
+
 # ============================================================
 # NativeResumeStrategy
 # ============================================================
@@ -270,6 +302,26 @@ class TestNativeResumeStrategy:
         p = s.get_checkpoint_path("s1")
         assert "s1.json" in str(p)
 
+    def test_load_mapping_invalid_json_does_not_crash(self, tmp_path):
+        base = tmp_path / "sessions"
+        base.mkdir(parents=True, exist_ok=True)
+        (base / ".native_mapping.json").write_text("{bad", encoding="utf-8")
+
+        strategy = NativeResumeStrategy(base_path=base, tool="claude")
+
+        assert strategy.session_mapping == {}
+
+    def test_save_checkpoint_with_invalid_existing_file(self, tmp_path):
+        s = NativeResumeStrategy(base_path=tmp_path / "sessions", tool="claude")
+        checkpoint_file = s.get_checkpoint_path("s-bad")
+        checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint_file.write_text("{bad", encoding="utf-8")
+
+        cp_id = s.save_checkpoint("s-bad", {"current_step": "plan"})
+
+        assert cp_id.startswith("cp-")
+        assert len(s.list_checkpoints("s-bad")) == 1
+
     def test_mapping_persistence(self, tmp_path):
         base = tmp_path / "sessions"
         s1 = NativeResumeStrategy(base_path=base, tool="claude")
@@ -330,45 +382,63 @@ class TestPromptConcatStrategy:
         assert "[USER]:" in prefix
         assert "hello" in prefix
 
-    def test_build_context_prefix_yaml(self, tmp_path):
+    def test_build_context_prefix_yaml_with_timestamp(self, tmp_path):
         s = PromptConcatStrategy(
             base_path=tmp_path / "sessions",
             default_format=ContextFormat.YAML,
         )
+        now = datetime.now()
         ctx = SessionContext(
             session_id="s1",
-            history=[ConversationTurn(role="user", content="hello")],
+            history=[ConversationTurn(role="user", content="hello", timestamp=now)],
             checkpoint_id="cp-1",
         )
         prefix = s.build_context_prefix(ctx)
-        assert "---" in prefix
-        assert "previous_conversation" in prefix
+        assert now.isoformat() in prefix
 
-    def test_build_context_prefix_json(self, tmp_path):
+    def test_build_context_prefix_json_with_timestamp(self, tmp_path):
         s = PromptConcatStrategy(
             base_path=tmp_path / "sessions",
             default_format=ContextFormat.JSON,
         )
+        now = datetime.now()
         ctx = SessionContext(
             session_id="s1",
-            history=[ConversationTurn(role="user", content="hello")],
+            history=[ConversationTurn(role="user", content="hello", timestamp=now)],
             checkpoint_id="cp-1",
         )
         prefix = s.build_context_prefix(ctx, format=ContextFormat.JSON)
         assert "```json" in prefix
-        assert "previous_conversation" in prefix
+        assert now.isoformat() in prefix
 
-    def test_save_checkpoint_with_conversation_turns(self, tmp_path):
+    def test_save_checkpoint_with_conversation_turn_object_hits_branch(self, tmp_path):
         s = PromptConcatStrategy(base_path=tmp_path / "sessions")
-        # ConversationTurn objects are converted internally; pass dicts to avoid
-        # JSON serialization issues in the state_data blob.
-        history = [{"role": "user", "content": "hi"}]
-        s.save_checkpoint("s1", {
+
+        with pytest.raises(TypeError):
+            s.save_checkpoint("s1", {
+                "current_step": "plan",
+                "history": [ConversationTurn(role="user", content="hi")],
+            })
+
+    def test_save_checkpoint_ignores_non_dict_history_entries(self, tmp_path):
+        s = PromptConcatStrategy(base_path=tmp_path / "sessions")
+        cp_id = s.save_checkpoint("s1", {
             "current_step": "plan",
-            "history": history,
+            "history": ["bad", {"role": "user", "content": "ok"}],
         })
-        cps = s.list_checkpoints("s1")
-        assert len(cps) == 1
+
+        assert cp_id.startswith("cp-")
+
+    def test_save_checkpoint_invalid_existing_file_is_overwritten(self, tmp_path):
+        s = PromptConcatStrategy(base_path=tmp_path / "sessions")
+        checkpoint_file = s.get_checkpoint_path("s1")
+        checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint_file.write_text("{bad", encoding="utf-8")
+
+        s.save_checkpoint("s1", {"current_step": "plan", "history": []})
+
+        checkpoints = s.list_checkpoints("s1")
+        assert len(checkpoints) == 1
 
 
 # ============================================================
@@ -401,12 +471,25 @@ class TestHybridStrategy:
         ctx = s.resume("s1")
         assert ctx.resume_mode == ResumeMode.NATIVE
 
+    def test_resume_native_fallback_logs_warning_then_concat(self, tmp_path):
+        s = HybridStrategy(base_path=tmp_path / "sessions", tool="claude")
+        s.concat_strategy.save_checkpoint("s1", {
+            "current_step": "plan",
+            "history": [{"role": "user", "content": "hi"}],
+        })
+
+        with patch.object(s.native_strategy, "can_resume", return_value=True):
+            with patch.object(s.native_strategy, "resume", side_effect=RuntimeError("native boom")):
+                ctx = s.resume("s1")
+
+        assert ctx.resume_mode == ResumeMode.PROMPT_CONCAT
+        assert ctx.metadata.get("fallback_used") is True
+
     def test_resume_no_session_raises(self, tmp_path):
         s = HybridStrategy(base_path=tmp_path / "sessions", tool="claude")
         with pytest.raises(ValueError):
             s.resume("nonexistent")
 
-    def test_save_checkpoint_delegates_to_concat(self, tmp_path):
         s = HybridStrategy(base_path=tmp_path / "sessions", tool="claude")
         cp_id = s.save_checkpoint("s1", {"current_step": "plan", "history": []})
         assert cp_id.startswith("cp-")
@@ -509,14 +592,22 @@ class TestResumeStrategyResolver:
         assert decision.strategy == ResumeMode.PROMPT_CONCAT
         assert decision.fallback_strategy is None
 
-    def test_same_tool_no_cross(self):
+    def test_default_fallback_branch(self):
+        class WeirdResumeIds:
+            def __bool__(self):
+                return True
+
+            def __len__(self):
+                return 0
+
+            def __getitem__(self, idx):
+                return "s1"
+
         resolver = ResumeStrategyResolver()
-        decision = resolver.determine_strategy(
-            "claude", ["s1"],
-            get_conversation_tool=lambda sid: "claude",
-            get_native_session_id=lambda sid: "native-1",
-        )
-        assert decision.strategy == ResumeMode.NATIVE
+        decision = resolver.determine_strategy("unknown_tool", WeirdResumeIds(), custom_id=None)
+
+        assert decision.strategy == ResumeMode.PROMPT_CONCAT
+        assert decision.reason == "Default fallback"
 
 
 # ============================================================

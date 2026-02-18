@@ -1,0 +1,25 @@
+{
+  "id": "TASK-002",
+  "title": "Add CI tasks-completion gates",
+  "description": "Integrate completion checker into .github/workflows/integration-tests.yml with phased governance: soft warning job plus conditional hard-fail job for release-critical mode.",
+  "depends_on": ["TASK-001"],
+  "convergence": {
+    "criteria": [
+      "Workflow includes a soft-warn completion job that always reports metrics.",
+      "Workflow includes a hard-fail completion job with explicit trigger condition.",
+      "Job graph avoids circular dependencies and preserves current baseline gates."
+    ]
+  },
+  "files": [
+    {
+      "path": ".github/workflows/integration-tests.yml",
+      "change": "Add tasks-completion-soft-warn and tasks-completion-hard-fail jobs wired after baseline checks using scripts/check_tasks_completion.py."
+    }
+  ],
+  "implementation": [
+    "Add Python setup and dependency install steps matching existing workflow style.",
+    "Run checker in soft mode with continue-on-error true for observability stage.",
+    "Add hard gate variant with strict mode and explicit condition (e.g., release flag/branch policy)."
+  ],
+  "test": "Validate workflow syntax and run local simulation commands equivalent to new jobs to confirm expected exit behavior."
+}

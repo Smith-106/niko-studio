@@ -6,8 +6,11 @@ dispatch_skills(), dispatch_tasks() for all L1-L5 levels,
 integrate_results(), and route() fallback heuristics.
 """
 
+import json
 import pytest
 from unittest.mock import MagicMock
+from langchain_core.messages import AIMessage
+from langchain_core.runnables import RunnableLambda
 from src.agents.commander import (
     CommanderAgent,
     TaskAnalysis,
@@ -471,11 +474,38 @@ class TestRouteFallback:
         assert cmd.route("fix character description") == WorkflowLevel.L1_RAPID
 
 
+class TestRouteLlmPaths:
+
+    def test_route_without_llm_uses_heuristics(self):
+        cmd = CommanderAgent(llm=None)
+        assert cmd.route("write full novel project") == WorkflowLevel.L5_COORDINATOR
+
+    def test_route_with_runnable_lambda_llm(self):
+        payload = {"workflow_level": 3, "reasoning": "llm chose standard"}
+
+        def llm_ok(_):
+            return AIMessage(content=json.dumps(payload))
+
+        cmd = CommanderAgent(llm=RunnableLambda(llm_ok))
+
+        def should_not_fallback(_):
+            raise AssertionError("fallback should not be used")
+
+        cmd._route_by_heuristics = should_not_fallback
+        assert cmd.route("compose chapter") == WorkflowLevel.L3_STANDARD
+
+
 # ============================================================
 # CommanderAgent.run() Tests
 # ============================================================
 
 class TestRun:
+
+    def test_extract_task_description_from_dict_keys(self):
+        cmd = _make_commander()
+        assert cmd._extract_task_description({"user_request": "  hello  "}) == "hello"
+        assert cmd._extract_task_description({"user_idea": " idea "}) == "idea"
+        assert cmd._extract_task_description({"task": " task text "}) == "task text"
 
     def test_run_requires_task_description(self):
         cmd = _make_commander()
