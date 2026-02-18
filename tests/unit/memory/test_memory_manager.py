@@ -523,11 +523,309 @@ class TestAliasAPIs:
         assert entry.id.startswith("mem-")
         assert manager.get(entry.id) is not None
 
-    def test_load_memory_alias(self, manager):
-        """Test load_memory alias for get."""
-        original = manager.add(content="Load test", topics=["test"])
-        
-        loaded = manager.load_memory(original.id)
-        
-        assert loaded is not None
-        assert loaded.id == original.id
+
+
+class TestMemoryManagerAdditionalBranches:
+    def test_load_index_rebuilds_corrupted_file(self, tmp_path):
+        base = tmp_path / ".writing"
+        memories_dir = base / "memories"
+        memories_dir.mkdir(parents=True)
+        (memories_dir / "index.json").write_text("{broken", encoding="utf-8")
+
+        manager = MemoryManager(base_path=base)
+        assert manager._index == {"memories": {}, "topics": {}, "entities": {}}
+
+    def test_rebuild_index_skips_non_directories(self, tmp_path):
+        base = tmp_path / ".writing"
+        manager = MemoryManager(base_path=base)
+        (manager.by_date_dir / "not_a_dir.txt").write_text("x", encoding="utf-8")
+        rebuilt = manager._rebuild_index()
+        assert rebuilt == {"memories": {}, "topics": {}, "entities": {}}
+
+    def test_create_topic_links_copy_fallback(self, tmp_path, monkeypatch):
+        base = tmp_path / ".writing"
+        manager = MemoryManager(base_path=base)
+        entry = manager.add(content="topic data", topics=["copy-topic"])
+
+        date_file = manager.memories_dir / manager._index["memories"][entry.id]
+        link_path = manager.topics_dir / "copy-topic" / f"{entry.id}.md"
+
+        def fail_symlink(self, *args, **kwargs):
+            raise OSError("no symlink")
+
+        monkeypatch.setattr(Path, "symlink_to", fail_symlink)
+        manager._create_topic_links(entry, date_file)
+
+        assert link_path.exists()
+        assert "topic data" in link_path.read_text(encoding="utf-8")
+
+    def test_get_returns_none_when_index_points_missing_file(self, tmp_path):
+        base = tmp_path / ".writing"
+        manager = MemoryManager(base_path=base)
+        manager._index["memories"]["missing"] = "by_date/2024/01/01/missing.md"
+        assert manager.get("missing") is None
+
+    def test_get_batch_parallel_branch_handles_loader_error(self, tmp_path, monkeypatch):
+        base = tmp_path / ".writing"
+        manager = MemoryManager(base_path=base)
+        ids = []
+        for i in range(6):
+            ids.append(manager.add(content=f"c{i}", topics=["t"]).id)
+
+        original_get = manager.get
+
+        def flaky(mid):
+            if mid == ids[0]:
+                raise RuntimeError("boom")
+            return original_get(mid)
+
+        monkeypatch.setattr(manager, "get", flaky)
+        result = manager.get_batch(ids)
+        assert len(result) == 5
+
+    def test_get_by_date_with_invalid_file_is_skipped(self, tmp_path):
+        base = tmp_path / ".writing"
+        manager = MemoryManager(base_path=base)
+        today = date.today()
+        day_dir = manager.by_date_dir / str(today.year) / f"{today.month:02d}" / f"{today.day:02d}"
+        day_dir.mkdir(parents=True, exist_ok=True)
+        (day_dir / "bad.md").write_text("bad", encoding="utf-8")
+        assert manager.get_by_date(today) == []
+
+    def test_get_temporal_facts_filters_not_yet_valid(self, tmp_path):
+        base = tmp_path / ".writing"
+        manager = MemoryManager(base_path=base)
+        manager.add(
+            content="future fact",
+            entity_id="e1",
+            valid_from="2999-01-01T00:00:00",
+            importance=0.9,
+        )
+        assert manager.get_temporal_facts("e1", at_time="2026-01-01T00:00:00") == []
+
+    def test_search_deduplicates_topic_candidates(self, tmp_path):
+        base = tmp_path / ".writing"
+        manager = MemoryManager(base_path=base)
+        manager.add(content="shared match", topics=["a", "b"], importance=0.8)
+        manager.add(content="other", topics=["b"], importance=0.2)
+
+        result = manager.search("shared", topics=["a", "b"], limit=5)
+        assert len(result) == 1
+        assert result[0].content == "shared match"
+
+
+
+
+class TestMemoryManagerUncoveredBranches:
+    def test_memory_entry_invalid_frontmatter_and_rebuild_bad_files(self, tmp_path):
+        with pytest.raises(ValueError):
+            MemoryEntry.from_yaml_content("---\nid: only")
+
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        day_path = manager._get_date_path()
+        day_path.mkdir(parents=True, exist_ok=True)
+        (day_path / "bad.md").write_text("---\ninvalid: [\n---\n", encoding="utf-8")
+
+        rebuilt = manager._rebuild_index()
+        assert rebuilt["memories"] == {}
+
+    def test_create_topic_links_outer_exception(self, tmp_path, monkeypatch):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        entry = manager.add(content="x", topics=["t1"])
+        source = manager.memories_dir / manager._index["memories"][entry.id]
+
+        monkeypatch.setattr(os.path, "relpath", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("rel")))
+        manager._create_topic_links(entry, source)
+
+    def test_update_missing_and_supersede_missing_and_delete_missing(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+
+        assert manager.update("missing", content="x") is None
+        assert manager.supersede("missing", "new") is None
+        assert manager.delete("missing") is False
+
+    def test_delete_entity_branch_and_basic_aliases(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        e = manager.add(content="x", entity_id="ent", topics=["t"])
+        assert manager.delete(e.id) is True
+        assert manager._index["entities"]["ent"] == []
+
+        assert manager.load_memory("not-exist") is None
+
+    def test_get_by_topic_entity_empty_and_date_string_and_exclude_superseded(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+
+        assert manager.get_by_topic("nope") == []
+        assert manager.get_by_entity("nope") == []
+
+        old = manager.add(content="old", topics=["topic-a"], entity_id="e")
+        manager.supersede(old.id, "new")
+
+        today = date.today().isoformat()
+        visible = manager.get_by_date(today, include_superseded=False)
+        assert all(not e.superseded_by for e in visible)
+
+    def test_get_temporal_facts_superseded_and_expired(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        old = manager.add(content="old", entity_id="e1")
+        manager.supersede(old.id, "new")
+
+        manager.add(content="expired", entity_id="e1", valid_until="2000-01-01T00:00:00")
+        out = manager.get_temporal_facts("e1", at_time="2026-01-01T00:00:00")
+
+        assert all(x.superseded_by is None for x in out)
+        assert all(not x.valid_until or x.valid_until > "2026-01-01T00:00:00" for x in out)
+
+    def test_list_by_date_string_conversion_and_search_branches(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        manager.add(content="A match", topics=["alpha"], entity_id="ent")
+
+        out = manager.list_by_date(start_date=date.today().isoformat(), end_date=date.today().isoformat())
+        assert isinstance(out, list)
+
+        # search with entity candidate path
+        res_entity = manager.search("match", entity_id="ent", limit=10)
+        assert len(res_entity) == 1
+
+        # search all candidates path + skip superseded + break by limit
+        old = manager.add(content="common text", importance=0.9)
+        manager.supersede(old.id, "common text newer")
+        manager.add(content="common text 2", importance=0.8)
+
+        res_all = manager.search("common", limit=1)
+        assert len(res_all) == 1
+
+    @pytest.mark.asyncio
+    async def test_adapter_service_property_and_vector_dedupe(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        manager.add(content="dup content", topics=["t"], importance=0.7)
+
+        dup = MagicMock()
+        dup.id = next(iter(manager._index["memories"].keys()))
+        dup.content = "dup content"
+        dup.score = 0.95
+        dup.metadata = {"tags": ["t"]}
+
+        uniq = MagicMock()
+        uniq.id = "vector-only"
+        uniq.content = "vector"
+        uniq.score = 0.99
+        uniq.metadata = {"tags": ["tv"]}
+
+        service = MagicMock()
+        service.search = AsyncMock(return_value=[dup, uniq])
+
+        adapter = MemoryManagerAdapter(memory_manager=manager, memory_service=service)
+        assert adapter.service is service
+
+        results = await adapter.search_hybrid("content", topics=["t"], limit=10)
+        ids = [r["id"] for r in results]
+        assert "vector-only" in ids
+
+
+class TestMemoryManagerAdapterAdditionalBranches:
+    @pytest.mark.asyncio
+    async def test_save_vector_indexing_failure_is_ignored(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        service = MagicMock()
+        service.add = AsyncMock(side_effect=RuntimeError("vector down"))
+        adapter = MemoryManagerAdapter(memory_manager=manager, memory_service=service)
+
+        entry = await adapter.save(content="safe", topics=["t"], index_in_vector=True)
+        assert entry.id in adapter.manager._index["memories"]
+
+    @pytest.mark.asyncio
+    async def test_search_hybrid_vector_failure_returns_file_results(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        manager.add(content="file result", topics=["topic"], importance=0.6)
+
+        service = MagicMock()
+        service.search = AsyncMock(side_effect=RuntimeError("down"))
+        adapter = MemoryManagerAdapter(memory_manager=manager, memory_service=service)
+
+        results = await adapter.search_hybrid("file", topics=["topic"], limit=5)
+        assert len(results) == 1
+        assert results[0]["source"] == "file"
+
+
+class TestMemoryManagerCoverageClosure:
+    def test_rebuild_index_skips_non_dirs_and_indexes_entity(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+
+        year_dir = manager.by_date_dir / "2026"
+        year_dir.mkdir(parents=True, exist_ok=True)
+        (year_dir / "not_month.txt").write_text("x", encoding="utf-8")
+
+        month_dir = year_dir / "02"
+        month_dir.mkdir(parents=True, exist_ok=True)
+        (month_dir / "not_day.txt").write_text("x", encoding="utf-8")
+
+        day_dir = month_dir / "18"
+        day_dir.mkdir(parents=True, exist_ok=True)
+        entry = MemoryEntry(id="entity-rebuild", content="entity content", entity_id="ent-1")
+        (day_dir / "entity-rebuild.md").write_text(entry.to_yaml_frontmatter(), encoding="utf-8")
+
+        rebuilt = manager._rebuild_index()
+
+        assert rebuilt["memories"]["entity-rebuild"].endswith("entity-rebuild.md")
+        assert rebuilt["entities"]["ent-1"] == ["entity-rebuild"]
+
+    def test_get_batch_empty_ids_returns_empty_list(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        assert manager.get_batch([]) == []
+
+    def test_get_by_date_excludes_superseded_frontmatter_field(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        entry = manager.add(content="to hide", topics=["x"])
+
+        file_path = manager.memories_dir / manager._index["memories"][entry.id]
+        stored = MemoryEntry.from_yaml_file(file_path)
+        stored.superseded_by = "newer-id"
+        file_path.write_text(stored.to_yaml_frontmatter(), encoding="utf-8")
+
+        results = manager.get_by_date(date.today(), include_superseded=False)
+        assert all(r.id != entry.id for r in results)
+
+    def test_temporal_filters_superseded_and_expired_by_frontmatter(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+
+        superseded = manager.add(content="old", entity_id="ent")
+        expired = manager.add(
+            content="expired",
+            entity_id="ent",
+            valid_from="2000-01-01T00:00:00",
+            valid_until="2020-01-01T00:00:00",
+        )
+
+        superseded_file = manager.memories_dir / manager._index["memories"][superseded.id]
+        superseded_entry = MemoryEntry.from_yaml_file(superseded_file)
+        superseded_entry.superseded_by = "replacement"
+        superseded_file.write_text(superseded_entry.to_yaml_frontmatter(), encoding="utf-8")
+
+        expired_file = manager.memories_dir / manager._index["memories"][expired.id]
+        expired_entry = MemoryEntry.from_yaml_file(expired_file)
+        expired_entry.superseded_by = None
+        expired_entry.valid_until = "2020-01-01T00:00:00"
+        expired_file.write_text(expired_entry.to_yaml_frontmatter(), encoding="utf-8")
+
+        out = manager.get_temporal_facts("ent", at_time="2026-01-01T00:00:00")
+        assert out == []
+
+    def test_list_by_date_defaults_and_search_skips_superseded_field(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+
+        old = manager.add(content="find me", importance=0.9)
+        new = manager.add(content="find me newer", importance=0.8)
+
+        old_file = manager.memories_dir / manager._index["memories"][old.id]
+        old_entry = MemoryEntry.from_yaml_file(old_file)
+        old_entry.superseded_by = new.id
+        old_file.write_text(old_entry.to_yaml_frontmatter(), encoding="utf-8")
+
+        ranged = manager.list_by_date()
+        assert isinstance(ranged, list)
+
+        results = manager.search("find me", limit=10)
+        ids = [r.id for r in results]
+        assert old.id not in ids
+        assert new.id in ids

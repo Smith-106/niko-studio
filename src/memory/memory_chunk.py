@@ -507,6 +507,7 @@ class TextChunker:
         """按固定长度分割 (带重叠)"""
         result = []
         start = 0
+        step = max(1, self.chunk_size - self.chunk_overlap)
 
         while start < len(text):
             end = start + self.chunk_size
@@ -515,8 +516,8 @@ class TextChunker:
             if len(chunk) >= self.min_chunk_size:
                 result.append(chunk)
 
-            # 带重叠移动
-            start = end - self.chunk_overlap
+            # 带重叠移动，确保游标单调前进
+            start += step
 
         return result
 

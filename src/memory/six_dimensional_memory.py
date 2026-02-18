@@ -214,12 +214,12 @@ class TimelineProcessor(BaseDimensionProcessor):
         date_patterns = [
             r'\d{4}[-/]\d{1,2}[-/]\d{1,2}',  # YYYY-MM-DD
             r'\d{1,2}[-/]\d{1,2}[-/]\d{4}',  # DD-MM-YYYY
-            r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4}',
+            r'(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4}',
         ]
 
         for pattern in date_patterns:
             matches = re.findall(pattern, content, re.IGNORECASE)
-            entities.extend(matches if isinstance(matches[0], str) else [m[0] for m in matches] if matches else [])
+            entities.extend(matches)
 
         # Extract time references
         time_refs = re.findall(r'\b(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)\b', content, re.IGNORECASE)

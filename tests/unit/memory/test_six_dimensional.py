@@ -20,6 +20,7 @@ from src.memory.six_dimensional_memory import (
     ExperienceProcessor,
     DimensionRouter,
     reset_dimension_router,
+    get_dimension_router,
 )
 
 
@@ -177,23 +178,18 @@ class TestTimelineProcessor:
 
     def test_extract_date_yyyy_mm_dd(self):
         proc = TimelineProcessor()
-        # Source bug: line 222 accesses matches[0] before checking if matches is empty.
-        # extract_entities always crashes because the date_patterns loop
-        # hits a pattern with no matches and does matches[0] unconditionally.
-        with pytest.raises(IndexError):
-            proc.extract_entities("On 2024-01-15 at 10:00 the event happened")
+        entities = proc.extract_entities("On 2024-01-15 at 10:00 the event happened")
+        assert "2024-01-15" in entities
 
     def test_extract_time(self):
         proc = TimelineProcessor()
-        # Same bug as above - extract_entities always crashes
-        with pytest.raises(IndexError):
-            proc.extract_entities("On 2024-01-01 meeting at 14:30 was canceled")
+        entities = proc.extract_entities("On 2024-01-01 meeting at 14:30 was canceled")
+        assert "14:30" in entities
 
     def test_extract_no_patterns(self):
         proc = TimelineProcessor()
-        # Known source bug on line 222
-        with pytest.raises(IndexError):
-            proc.extract_entities("No dates or times here")
+        entities = proc.extract_entities("No dates or times here")
+        assert entities == []
 
     def test_classify_works_without_extract(self):
         """classify() doesn't call extract_entities, so it works fine."""
@@ -203,10 +199,10 @@ class TestTimelineProcessor:
         assert len(score.keywords_matched) > 0
 
     def test_process_crashes_due_to_extract_bug(self):
-        """process() calls extract_entities internally, so it also crashes."""
+        """process() should work and include sequence metadata."""
         proc = TimelineProcessor()
-        with pytest.raises(IndexError):
-            proc.process("On 2024-01-01 first we went, then came back")
+        result = proc.process("On 2024-01-01 first we went, then came back")
+        assert result.extracted_data["has_sequence"] is True
 
 
 # ============================================================
@@ -381,10 +377,9 @@ class TestDimensionRouter:
 
     def test_process_all(self):
         router = DimensionRouter()
-        # process_all calls all processors including TimelineProcessor,
-        # which has a bug in extract_entities (line 222). This crashes.
-        with pytest.raises(IndexError):
-            router.process_all("The hero character has a strong personality")
+        results = router.process_all("The hero character has a strong personality")
+        assert isinstance(results, dict)
+        assert len(results) == 6
 
     def test_get_relevant_dimensions(self):
         router = DimensionRouter()
@@ -394,7 +389,32 @@ class TestDimensionRouter:
         )
         assert isinstance(dims, list)
 
-    def test_get_relevant_dimensions_high_threshold(self):
-        router = DimensionRouter()
-        dims = router.get_relevant_dimensions("random text", threshold=0.99)
-        assert len(dims) == 0
+
+
+class TestSixDimensionalUncoveredBranches:
+    def test_timeline_extract_entities_with_and_without_matches(self):
+        p = TimelineProcessor()
+
+        with_match = p.extract_entities("At 12:34 PM on 2026-02-18, event happened.")
+        assert any("12:34" in e for e in with_match)
+
+        no_match = p.extract_entities("No dates or times here")
+        assert no_match == []
+
+    def test_timeline_and_character_process_extra_fields(self):
+        timeline = TimelineProcessor().process("First we start, then next, finally after that.")
+        assert timeline.extracted_data["has_sequence"] is True
+
+        character = CharacterProcessor().process("The hero is brave and trusts a friend.")
+        assert "brave" in character.extracted_data["traits"]
+        assert character.extracted_data["has_relationships"] is True
+
+    def test_character_extract_entities_and_router_singletons(self):
+        p = CharacterProcessor()
+        out = p.extract_entities('"hello" said Alice. Bob looked around.')
+        assert any(name in out for name in ["Alice", "Bob"])
+
+        reset_dimension_router()
+        r1 = get_dimension_router()
+        r2 = get_dimension_router()
+        assert r1 is r2

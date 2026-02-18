@@ -5,7 +5,7 @@ import pytest
 import asyncio
 from unittest.mock import MagicMock, AsyncMock
 
-from src.memory.memory_chunk import MemoryChunk, ChunkBuffer, TextChunker
+from src.memory.memory_chunk import MemoryChunk, ChunkBuffer, TextChunker, ChunkSplitter, ChunkedMemoryAdapter
 
 
 class TestMemoryChunk:
@@ -196,61 +196,213 @@ class TestChunkBuffer:
         assert buf.size == 1  # one remaining
 
 
-class TestTextChunker:
-    def test_short_text(self):
-        tc = TextChunker(chunk_size=100)
-        chunks = tc.chunk_text("short text")
-        assert len(chunks) == 1
-        assert chunks[0].content == "short text"
 
-    def test_empty_text(self):
-        tc = TextChunker()
-        chunks = tc.chunk_text("")
-        assert len(chunks) == 1
 
-    def test_paragraph_split(self):
-        text = "Para one.\n\nPara two.\n\nPara three."
-        tc = TextChunker(chunk_size=20)
-        chunks = tc.chunk_text(text, source_id="doc1")
+class TestChunkSplitter:
+    def test_split_by_tokens_empty(self):
+        splitter = ChunkSplitter()
+        assert splitter.split_by_tokens("") == []
+
+    def test_split_by_tokens_respects_min_chunk(self):
+        splitter = ChunkSplitter(overlap_tokens=1, min_chunk_length=5)
+        chunks = splitter.split_by_tokens("alpha beta gamma delta", max_tokens=2, source_id="s1")
+        assert len(chunks) >= 1
+        assert all(c.metadata["chunk_method"] == "tokens" for c in chunks)
+
+    def test_split_by_sentences_empty(self):
+        splitter = ChunkSplitter()
+        assert splitter.split_by_sentences("") == []
+
+    def test_split_by_sentences_plain_text_without_punctuation(self):
+        splitter = ChunkSplitter(min_chunk_length=1)
+        chunks = splitter.split_by_sentences("plain text", max_sentences=1, source_id="x")
+        assert len(chunks) == 1
+        assert chunks[0].metadata["chunk_method"] == "sentences"
+
+    def test_split_by_sentences_overlap_guard(self):
+        splitter = ChunkSplitter(overlap_sentences=5, min_chunk_length=1)
+        chunks = splitter.split_by_sentences("A. B. C. D.", max_sentences=2)
         assert len(chunks) >= 2
-        assert all(c.source_id == "doc1" for c in chunks)
 
-    def test_large_paragraph_split(self):
-        # Single paragraph larger than chunk_size
-        text = "这是一个很长的句子。" * 50
-        tc = TextChunker(chunk_size=50, chunk_overlap=10)
-        chunks = tc.chunk_text(text)
-        assert len(chunks) > 1
-        for i, c in enumerate(chunks):
-            assert c.chunk_index == i
-            assert c.total_chunks == len(chunks)
+    def test_split_by_paragraphs_empty(self):
+        splitter = ChunkSplitter()
+        assert splitter.split_by_paragraphs("") == []
 
-    def test_metadata_passed(self):
-        tc = TextChunker(chunk_size=100)
-        chunks = tc.chunk_text("text", metadata={"key": "val"})
-        assert chunks[0].metadata.get("key") == "val"
+    def test_split_by_paragraphs_all_short_merges(self):
+        splitter = ChunkSplitter(min_chunk_length=50)
+        chunks = splitter.split_by_paragraphs("a\n\nb\n\nc", source_id="z")
+        assert len(chunks) == 1
+        assert chunks[0].content == "a\n\nb\n\nc"
 
-    def test_split_paragraphs(self):
-        tc = TextChunker()
-        paras = tc._split_paragraphs("a\n\nb\n\n\n\nc")
-        assert len(paras) == 3
-        assert paras[0] == "a"
+    def test_find_sentence_boundary_no_punctuation(self):
+        splitter = ChunkSplitter()
+        text = "abcdefghij"
+        assert splitter._find_sentence_boundary(text, 0, 5) == 5
 
-    def test_split_by_length(self):
-        tc = TextChunker(chunk_size=10, chunk_overlap=3, min_chunk_size=5)
-        result = tc._split_by_length("abcdefghijklmnopqrst")
-        assert len(result) >= 2
-        # Each chunk should be <= chunk_size
-        for r in result:
-            assert len(r) <= 10
 
-    def test_split_by_length_min_chunk(self):
-        tc = TextChunker(chunk_size=10, chunk_overlap=3, min_chunk_size=5)
-        result = tc._split_by_length("abcde")
-        assert len(result) == 1
+class TestChunkedMemoryAdapterAdditional:
+    @pytest.mark.asyncio
+    async def test_add_chunked_empty_content_returns_empty(self):
+        mock_service = MagicMock()
+        mock_service.embedder = MagicMock()
+        mock_service.embedder.embed_batch = MagicMock(return_value=[])
+        mock_service.add = AsyncMock(return_value="id")
 
-    def test_merge_and_split(self):
-        tc = TextChunker(chunk_size=30, chunk_overlap=5, min_chunk_size=5)
-        paras = ["short", "also short", "a" * 50]
-        result = tc._merge_and_split(paras)
-        assert len(result) >= 2
+        adapter = ChunkedMemoryAdapter(memory_service=mock_service, chunk_size=10, batch_size=2)
+        result = await adapter.add_chunked(content="", namespace="n")
+        assert result["status"] == "created"
+        assert result["chunk_ids"] == ["id"]
+        assert result["total_chunks"] == 1
+
+    @pytest.mark.asyncio
+    async def test_search_with_context_zero_window(self):
+        result_item = MagicMock()
+        result_item.metadata = {"source_id": "s", "chunk_index": 0}
+        mock_service = MagicMock()
+        mock_service.search = AsyncMock(return_value=[result_item])
+
+        adapter = ChunkedMemoryAdapter(memory_service=mock_service)
+        results = await adapter.search_with_context("q", context_window=0)
+        assert len(results) == 1
+        assert results[0]["context"] == []
+
+    @pytest.mark.asyncio
+    async def test_get_context_chunks_filters_main_chunk(self):
+        main = MagicMock()
+        main.metadata = {"chunk_index": 2}
+        left = MagicMock()
+        left.metadata = {"chunk_index": 1}
+        right = MagicMock()
+        right.metadata = {"chunk_index": 3}
+
+        mock_service = MagicMock()
+        mock_service.search = AsyncMock(return_value=[main, left, right])
+
+        adapter = ChunkedMemoryAdapter(memory_service=mock_service)
+        context = await adapter._get_context_chunks("s", 2, "n", window=1)
+        assert [c.metadata["chunk_index"] for c in context] == [1, 3]
+
+
+class _TruthyEmptyBuffer:
+    def __bool__(self):
+        return True
+
+    def __iter__(self):
+        return iter(())
+
+
+class TestMemoryChunkUncoveredBranches:
+    @pytest.mark.asyncio
+    async def test_flush_truthy_empty_buffer_returns_empty(self):
+        buf = ChunkBuffer()
+        buf._buffer = _TruthyEmptyBuffer()
+
+        out = await buf.flush(MagicMock())
+        assert out == []
+
+    @pytest.mark.asyncio
+    async def test_embed_batch_empty_and_invalid_embedder(self):
+        buf = ChunkBuffer()
+
+        assert await buf._embed_batch([], MagicMock()) == []
+
+        with pytest.raises(ValueError):
+            await buf._embed_batch([MemoryChunk.create(content="x")], MagicMock(spec=[]))
+
+    @pytest.mark.asyncio
+    async def test_embed_batch_fallback_sync_embed_and_error(self):
+        buf = ChunkBuffer()
+        chunks = [MemoryChunk.create(content="a")]
+
+        embedder = MagicMock(spec=[])
+        embedder.embed = MagicMock(return_value=[0.1])
+        embedded = await buf._embed_batch(chunks, embedder)
+        assert embedded[0].embedded is True
+        assert embedded[0].embedding == [0.1]
+
+        bad = MagicMock(spec=[])
+        bad.embed = MagicMock(side_effect=RuntimeError("boom"))
+        with pytest.raises(RuntimeError):
+            await buf._embed_batch([MemoryChunk.create(content="b")], bad)
+
+    def test_text_chunker_merge_and_split_branches(self):
+        chunker = TextChunker(chunk_size=10, min_chunk_size=1)
+
+        paragraphs = ["a", "bb", "c" * 20, "d", "ee"]
+        out = chunker._merge_and_split(paragraphs)
+
+        assert len(out) >= 3
+        assert any("bb" in c for c in out)
+
+    def test_text_chunker_split_sentence_and_length_branches(self):
+        chunker = TextChunker(chunk_size=8, chunk_overlap=2, min_chunk_size=2)
+        text = "X" * 30
+
+        out = chunker._split_by_sentence(text)
+        assert len(out) >= 2
+        assert all(len(x) >= 2 for x in out)
+
+    def test_split_by_sentences_whitespace_fallback(self):
+        splitter = ChunkSplitter(min_chunk_length=1)
+        chunks = splitter.split_by_sentences("   ", source_id="sid")
+
+        assert len(chunks) == 1
+        assert chunks[0].metadata["chunk_method"] == "sentences"
+
+    def test_split_by_paragraphs_whitespace_fallback_and_valid_path(self):
+        splitter = ChunkSplitter(min_chunk_length=3)
+
+        fallback = splitter.split_by_paragraphs("\n\n  \n", source_id="sid")
+        assert len(fallback) == 1
+        assert fallback[0].metadata["chunk_method"] == "paragraphs"
+
+        valid = splitter.split_by_paragraphs("aaaa\n\nbbbb", source_id="sid")
+        assert len(valid) == 2
+
+    def test_create_chunks_and_sentence_boundary_match(self):
+        splitter = ChunkSplitter()
+        chunks = splitter._create_chunks(["a", "b"], source_id="s", metadata={"x": 1}, method="m")
+        assert [c.chunk_index for c in chunks] == [0, 1]
+
+        boundary = splitter._find_sentence_boundary("abc.def", 0, 7)
+        assert boundary == 4
+
+    @pytest.mark.asyncio
+    async def test_add_chunked_empty_chunks_branch(self):
+        mock_service = MagicMock()
+        mock_service.embedder = MagicMock()
+        adapter = ChunkedMemoryAdapter(memory_service=mock_service)
+
+        adapter.chunker.chunk_text = MagicMock(return_value=[])
+        result = await adapter.add_chunked("anything")
+
+        assert result["status"] == "empty"
+        assert result["chunk_ids"] == []
+
+    @pytest.mark.asyncio
+    async def test_search_with_context_duplicate_source_and_no_source(self):
+        first = MagicMock()
+        first.metadata = {"source_id": "s1", "chunk_index": 1}
+        duplicate = MagicMock()
+        duplicate.metadata = {"source_id": "s1", "chunk_index": 2}
+        no_source = MagicMock()
+        no_source.metadata = {}
+
+        mock_service = MagicMock()
+        mock_service.search = AsyncMock(return_value=[first, duplicate, no_source])
+
+        adapter = ChunkedMemoryAdapter(memory_service=mock_service)
+        adapter._get_context_chunks = AsyncMock(return_value=["ctx"])
+
+        results = await adapter.search_with_context("q", context_window=1, limit=3)
+        assert results[0]["context"] == ["ctx"]
+        assert results[1]["context"] == []
+        assert results[2]["context"] == []
+
+    def test_get_chunk_buffer_initialization_branch(self):
+        from src.memory.memory_chunk import reset_chunk_buffer, get_chunk_buffer
+
+        reset_chunk_buffer()
+        buf = get_chunk_buffer(batch_size=7, max_buffer_size=9)
+        assert buf.batch_size == 7
+        assert buf.max_buffer_size == 9

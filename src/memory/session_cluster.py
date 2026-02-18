@@ -440,7 +440,9 @@ class SessionClusterManager:
         for other_cluster in self._clusters.values():
             other_cluster.relations = [
                 r for r in other_cluster.relations
-                if r.from_cluster != cluster_id and r.to_cluster != cluster_id
+                if isinstance(r, ClusterRelation)
+                and r.from_cluster != cluster_id
+                and r.to_cluster != cluster_id
             ]
 
         # Delete from storage
@@ -765,8 +767,13 @@ class SessionClusterManager:
         merged_metadata["merged_from"] = cluster_ids
 
         # Create new cluster
+        merged_name = new_name.strip() if isinstance(new_name, str) else ""
+        if not merged_name:
+            cluster_names = [c.name for c in clusters if c.name]
+            merged_name = f"Merged: {' + '.join(cluster_names)}" if cluster_names else "Merged"
+
         new_cluster = self.create_cluster(
-            name=new_name,
+            name=merged_name,
             description=new_description,
             importance=importance,
             metadata=merged_metadata

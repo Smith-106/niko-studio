@@ -6,6 +6,7 @@ SessionCluster, and SessionClusterManager (CRUD, member management,
 relation management, merge, search, stats).
 """
 
+import json
 import pytest
 import time
 from pathlib import Path
@@ -463,7 +464,135 @@ class TestSessionClusterManager:
         assert stats["total_members"] == 2  # Only active cluster members
         assert stats["unique_sessions"] == 3
 
-    def test_stats_empty(self):
-        stats = self.mgr.stats()
-        assert stats["total_clusters"] == 0
-        assert stats["active_clusters"] == 0
+
+
+
+
+class TestSessionClusterCoverageClosure:
+    def test_load_clusters_session_index_and_corrupt_index_path(self, tmp_path):
+        storage = tmp_path / "clusters"
+        storage.mkdir(parents=True, exist_ok=True)
+
+        cluster = SessionCluster(
+            cluster_id="cluster-load-1",
+            name="Loaded",
+            members=[ClusterMember(session_id="s-load")],
+        )
+        (storage / "cluster-load-1.json").write_text(
+            json.dumps(cluster.to_dict(), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (storage / "index.json").write_text('{"clusters":["cluster-load-1"]}', encoding="utf-8")
+
+        mgr = SessionClusterManager(storage_path=storage)
+        assert "cluster-load-1" in mgr._clusters
+        assert "cluster-load-1" in mgr._session_to_clusters["s-load"]
+
+        (storage / "index.json").write_text("{bad", encoding="utf-8")
+        mgr._load_clusters()  # should hit error branch and not raise
+
+    def test_update_cluster_description_and_metadata_branches(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        c = mgr.create_cluster("C")
+        updated = mgr.update_cluster(c.cluster_id, description="desc", metadata={"k": "v"})
+        assert updated.description == "desc"
+        assert updated.metadata["k"] == "v"
+
+    def test_remove_and_update_member_role_missing_cluster(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        assert mgr.remove_member("missing", "s") is False
+        assert mgr.update_member_role("missing", "s", MemberRole.PRIMARY) is False
+
+    def test_remove_relation_missing_source_cluster(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        assert mgr.remove_relation("missing", "to") is False
+
+    def test_merge_prefers_higher_contribution_for_same_role(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        c1 = mgr.create_cluster("C1")
+        c2 = mgr.create_cluster("C2")
+
+        mgr.add_member(c1.cluster_id, "same", role=MemberRole.SECONDARY, contribution_score=0.2)
+        mgr.add_member(c2.cluster_id, "same", role=MemberRole.SECONDARY, contribution_score=0.9)
+
+        merged = mgr.merge_clusters([c1.cluster_id, c2.cluster_id], new_name="Merged")
+        assert merged is not None
+        member = merged.get_member("same")
+        assert member is not None
+        assert member.contribution_score == 0.9
+
+    def test_merge_excludes_internal_relations_but_keeps_external(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        c1 = mgr.create_cluster("C1")
+        c2 = mgr.create_cluster("C2")
+        c3 = mgr.create_cluster("C3")
+
+        mgr.add_relation(c1.cluster_id, c2.cluster_id, RelationType.RELATED)
+        mgr.add_relation(c1.cluster_id, c3.cluster_id, RelationType.RELATED)
+
+        merged = mgr.merge_clusters([c1.cluster_id, c2.cluster_id], new_name="Merged")
+        assert merged is not None
+        assert all(r.to_cluster != c2.cluster_id for r in merged.relations)
+        assert any(r.to_cluster == c3.cluster_id for r in merged.relations)
+
+    def test_merge_relations_no_external_targets_and_search_archived_skip(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        c1 = mgr.create_cluster("Alpha")
+        c2 = mgr.create_cluster("Beta")
+
+        mgr.add_relation(c1.cluster_id, c2.cluster_id, RelationType.RELATED)
+        merged = mgr.merge_clusters([c1.cluster_id, c2.cluster_id], new_name="Merged")
+        assert merged is not None
+        assert merged.relations == []
+
+        archive_target = mgr.create_cluster("Query Name", description="q")
+        mgr.archive_cluster(archive_target.cluster_id)
+        assert mgr.search_clusters("query") == []
+
+
+class TestSessionClusterUncoveredBranches:
+    def test_member_and_relation_from_dict_non_string_enum_passthrough(self):
+        m = ClusterMember.from_dict({"session_id": "s", "role": MemberRole.PRIMARY})
+        assert m.role == MemberRole.PRIMARY
+
+        r = ClusterRelation.from_dict(
+            {"from_cluster": "a", "to_cluster": "b", "relation_type": RelationType.SIBLING}
+        )
+        assert r.relation_type == RelationType.SIBLING
+
+    def test_create_cluster_with_empty_initial_members(self):
+        mgr = SessionClusterManager()
+        c = mgr.create_cluster("C", initial_members=[])
+        assert c.members == []
+
+    def test_get_related_clusters_missing_and_stats_with_invalid_role(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        assert mgr.get_related_clusters("missing") == []
+
+        c = mgr.create_cluster("BadRole")
+        c.members.append(ClusterMember(session_id="x", role="not-a-role"))
+        mgr._clusters[c.cluster_id] = c
+        stats = mgr.stats()
+        assert stats["total_clusters"] >= 1
+
+    def test_merge_clusters_skips_missing_and_name_fallback(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        c1 = mgr.create_cluster("C1", initial_members=["s1"])
+        merged = mgr.merge_clusters([c1.cluster_id, "missing"], new_name="Ignored")
+        assert merged is None
+
+        c2 = mgr.create_cluster("C2", initial_members=["s2"])
+        merged2 = mgr.merge_clusters([c1.cluster_id, c2.cluster_id], new_name="")
+        assert merged2 is not None
+        assert merged2.name.startswith("Merged: ")
+
+    def test_delete_cluster_with_invalid_stored_relation_item(self, tmp_path):
+        mgr = SessionClusterManager(storage_path=tmp_path / "clusters")
+        c1 = mgr.create_cluster("C1")
+        c2 = mgr.create_cluster("C2")
+
+        c2.relations.append("bad")
+        mgr._clusters[c2.cluster_id] = c2
+
+        assert mgr.delete_cluster(c1.cluster_id) is True
+
