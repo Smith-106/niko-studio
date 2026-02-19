@@ -1,0 +1,14 @@
+{
+  "session_id": "WFS-wave-1-state-machine-hardening-v6",
+  "context_version": "1.0.0",
+  "project": "niko-studio",
+  "conflict_risk": "low",
+  "critical_files": [
+    "src/workflow/workflow_engine.py",
+    "src/workflow/session/session_manager.py",
+    "src/mcp/gateway.py",
+    "tests/unit/workflow/test_workflow_engine.py",
+    "tests/integration/test_workflow_integration.py"
+  ],
+  "execution_strategy": "sequential"
+}

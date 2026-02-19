@@ -31,7 +31,7 @@ class TestWorkflowStep:
 
     def test_defaults(self):
         step = WorkflowStep(id="s1", name="analyze", description="Analyze task")
-        assert step.status == "pending"
+        assert step.status == "planned"
         assert step.dependencies == []
         assert step.output is None
         assert step.started_at is None
@@ -42,10 +42,10 @@ class TestWorkflowStep:
             id="s1",
             name="generate",
             description="Generate content",
-            status="running",
+            status="executing",
             dependencies=["s0"],
         )
-        assert step.status == "running"
+        assert step.status == "executing"
         assert step.dependencies == ["s0"]
 
 
@@ -255,12 +255,39 @@ class TestWorkflowEngine:
         assert "error" in result
 
     @pytest.mark.asyncio
-    async def test_execute_next_step(self, engine):
+    async def test_execute_returns_concurrency_payload_without_conflict(self, engine):
         plan_result = await engine.plan("task", level="L1")
+
         result = await engine.execute(plan_result["plan_id"])
+
         assert result["status"] == "completed"
-        assert result["step_name"] == "answer"
-        assert result["runner_state"] == "running"
+        assert result["concurrency"]["serialized"] is False
+        assert result["concurrency"]["conflict_modules"] == []
+        assert any(item["module"] == "workflow:answer" for item in result["concurrency"]["ownership"])
+
+    @pytest.mark.asyncio
+    async def test_execute_conflict_modules_auto_serialized(self, engine):
+        plan_result = await engine.plan(
+            "task",
+            level="L1",
+            recommendations=[{"action": "module:shared-core"}],
+        )
+        plan_id = plan_result["plan_id"]
+
+        engine._module_owners["module:shared-core"] = "external-plan"
+
+        result = await engine.execute(plan_id)
+
+        assert result["status"] == "completed"
+        assert result["concurrency"]["serialized"] is True
+        assert "module:shared-core" in result["concurrency"]["conflict_modules"]
+        assert "module:shared-core" not in engine._module_owners
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        events = [json.loads(line) for line in lines]
+        assert any(event.get("event_type") == "module_conflict_serialized" for event in events)
 
     @pytest.mark.asyncio
     async def test_execute_all_completed(self, engine):
@@ -270,6 +297,10 @@ class TestWorkflowEngine:
         result = await engine.execute(plan_result["plan_id"])
         assert result["status"] == "completed"
         assert result["message"] == "All steps completed"
+        assert result["execution_mode"] in {"Autopilot", "Team", "Pipeline/Ralph", "EcoMode"}
+        assert "observability_metrics" in result
+        assert "budget_guardrail" in result
+        assert "completion_rate" in result["observability_metrics"]
 
     @pytest.mark.asyncio
     async def test_execute_dependency_check(self, engine):
@@ -346,10 +377,45 @@ class TestWorkflowEngine:
         assert result["gate"]["decision"] == WorkflowDecision.NO_GO.value
         assert result["gate"]["blocking"] is True
         assert result["gate"]["confirm_required"] is True
+        assert result["execution_mode"] in {"Autopilot", "Team", "Pipeline/Ralph", "EcoMode"}
+        assert "observability_metrics" in result
+        assert "budget_guardrail" in result
 
-    def test_get_plan_status_not_found(self, engine):
-        result = engine.get_plan_status("nonexistent")
-        assert "error" in result
+    @pytest.mark.asyncio
+    async def test_wave_gate_blocks_progression_on_fail(self, engine):
+        plan_result = await engine.plan(
+            "回答一个问题",
+            level="L1",
+            recommendations=[{"action": "require_wave_gate"}, {"action": "force_gate_fail"}],
+        )
+        plan_id = plan_result["plan_id"]
+
+        result = await engine.execute(plan_id)
+        assert result["status"] == "gate_blocked"
+        assert result["blocked"] is True
+        assert result["gate_chain"]["required"] is True
+        assert result["gate_chain"]["passed"] is False
+        assert result["gate_chain"]["failed_gate"] == "review-session-cycle"
+        assert result["recovery"]["status"] == "awaiting_execute"
+        assert result["recovery"]["current_step"] == "execute"
+        assert engine.plans[plan_id].status == "failed"
+
+    @pytest.mark.asyncio
+    async def test_wave_gate_pass_creates_completion_checkpoint(self, engine):
+        plan_result = await engine.plan(
+            "回答一个问题",
+            level="L1",
+            recommendations=[{"action": "require_wave_gate"}],
+        )
+        plan_id = plan_result["plan_id"]
+
+        result = await engine.execute(plan_id)
+        assert result["status"] == "completed"
+        assert result["gate_chain"]["required"] is True
+        assert result["gate_chain"]["passed"] is True
+        checkpoint_id = result["wave_completion_checkpoint_id"]
+        assert checkpoint_id
+        assert checkpoint_id in engine.checkpoints
 
     @pytest.mark.asyncio
     async def test_get_plan_status(self, engine):
@@ -358,6 +424,11 @@ class TestWorkflowEngine:
         assert status["plan_id"] == plan_result["plan_id"]
         assert status["status"] == "created"
         assert "progress" in status
+        assert status["execution_mode"] in {"Autopilot", "Team", "Pipeline/Ralph", "EcoMode"}
+        assert "observability_metrics" in status
+        assert "budget_guardrail" in status
+        assert "handoff_package" in status
+        assert "completion_rate" in status["observability_metrics"]
 
     @pytest.mark.asyncio
     async def test_lifecycle_start_pause_resume_stop_status(self, engine):
@@ -384,6 +455,8 @@ class TestWorkflowEngine:
         status = await engine.lifecycle(plan_id, "status")
         assert status["runner_state"] == "stopped"
         assert status["session_status"] == "archived"
+        assert "budget_guardrail" in status
+        assert "execution_mode" in status
 
     @pytest.mark.asyncio
     async def test_lifecycle_invalid_transition_guard(self, engine):
@@ -391,6 +464,41 @@ class TestWorkflowEngine:
         result = await engine.lifecycle(plan_result["plan_id"], "pause")
         assert "error" in result
         assert "Invalid runner transition" in result["error"]
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_pause_and_stop_generate_handoff_package(self, engine):
+        plan_result = await engine.plan("task", level="L2")
+        plan_id = plan_result["plan_id"]
+
+        await engine.lifecycle(plan_id, "start")
+        paused = await engine.lifecycle(plan_id, "pause")
+        assert "handoff_package" in paused
+        assert paused["handoff_package"]["trigger"] == "pause"
+        assert paused["handoff_package"]["next_command"].startswith("workflow_execute")
+
+        stopped = await engine.lifecycle(plan_id, "stop")
+        assert "handoff_package" in stopped
+        assert stopped["handoff_package"]["trigger"] == "stop"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        handoff_path = engine.session_manager._resolve_path(session_id, ContentType.HANDOFF)
+        assert handoff_path.exists()
+
+    @pytest.mark.asyncio
+    async def test_budget_guardrail_triggers_ecomode(self, engine):
+        long_task = "超长任务" + ("细节" * 4000)
+        plan_result = await engine.plan(long_task, level="L1")
+        plan_id = plan_result["plan_id"]
+
+        assert plan_result["budget_guardrail"]["threshold_triggered"] is True
+        assert plan_result["budget_guardrail"]["degraded"] is True
+        assert plan_result["execution_mode"] == "EcoMode"
+
+        status = engine.get_plan_status(plan_id)
+        assert status["execution_mode"] == "EcoMode"
+        assert status["budget_guardrail"]["degraded"] is True
+        assert status["budget_guardrail"]["degrade_mode"] == "EcoMode"
+
 
     @pytest.mark.asyncio
     async def test_lifecycle_invalid_action(self, engine):
@@ -621,6 +729,9 @@ class TestRiskGateAudit:
         assert result["gate"]["confirm_required"] is True
         assert result["gate"]["confirmed"] is False
         assert result["gate"]["destructive"] is True
+        assert result["current_phase"] == "planned"
+        assert result["state_trace_id"]
+        assert result["can_resume_from_checkpoint"] is False
 
         session_id = engine._session_id_for_plan(plan_id)
         audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
@@ -670,12 +781,31 @@ class TestRiskGateAudit:
         assert "error" in failed
         assert failed.get("rollback") is not None
         assert failed["rollback"]["checkpoint_id"]
+        assert failed["failure"]["phase"] == "executing"
+        assert failed["failure"]["reason"] == "forced failure"
+        assert failed["recovery"]["status"] == "awaiting_execute"
+        assert failed["recovery"]["current_step"] == "execute"
 
         session_id = engine._session_id_for_plan(plan_id)
         audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
         lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-        latest = json.loads(lines[-1])
-        assert latest["event_type"] == "rollback_trace"
+        events = [json.loads(line) for line in lines]
+        assert any(event.get("event_type") == "recovery_chain_ready" for event in events)
+
+        recovery_ready_events = [
+            event for event in events if event.get("event_type") == "recovery_chain_ready"
+        ]
+        assert recovery_ready_events[-1]["payload"]["current_step"] == "execute"
+
+        recovery_step_events = [
+            event for event in events if event.get("event_type") == "recovery_chain_step"
+        ]
+        assert [event["payload"]["step"] for event in recovery_step_events] == [
+            "analyze-with-file",
+            "plan",
+            "plan-verify",
+            "execute",
+        ]
 
     @pytest.mark.asyncio
     async def test_restore_destructive_requires_confirmation_then_allows(self, engine):
@@ -712,22 +842,50 @@ class TestRiskGateAudit:
         assert confirmed["gate"]["confirmed"] is True
 
     @pytest.mark.asyncio
-    async def test_execute_whitespace_confirm_token_still_requires_confirmation(self, engine):
-        plan_result = await engine.plan("写一章完整的小说", level="L3")
+    async def test_recovery_chain_resume_reuses_existing_envelope(self, engine):
+        plan_result = await engine.plan("回答一个问题", level="L1")
         plan_id = plan_result["plan_id"]
+        plan = engine.plans[plan_id]
 
-        waiting = None
-        while True:
-            result = await engine.execute(plan_id)
-            if result.get("status") == "waiting_confirmation":
-                waiting = result
-                break
-            if result.get("status") == "completed" and result.get("message") == "All steps completed":
-                pytest.fail("destructive step was not reached")
+        existing_recovery = {
+            "recovery_id": "rcv-01",
+            "status": "awaiting_execute",
+            "current_index": 3,
+            "current_step": "execute",
+            "chain": [
+                {"name": "analyze-with-file", "status": "done", "started_at": "2026-01-01T00:00:00", "completed_at": "2026-01-01T00:00:00"},
+                {"name": "plan", "status": "done", "started_at": "2026-01-01T00:00:00", "completed_at": "2026-01-01T00:00:00"},
+                {"name": "plan-verify", "status": "done", "started_at": "2026-01-01T00:00:00", "completed_at": "2026-01-01T00:00:00"},
+                {"name": "execute", "status": "pending", "started_at": "2026-01-01T00:00:00", "completed_at": None},
+            ],
+            "failure": {
+                "phase": "executing",
+                "reason": "existing failure",
+                "step_id": plan.steps[0].id,
+                "checkpoint_id": "cp-existing",
+            },
+            "recovery_checkpoint_id": "cp-existing",
+            "resume_ready": True,
+            "updated_at": "2026-01-01T00:00:00",
+        }
+        engine._persist_plan_state(plan, current_phase="recovery", recovery_envelope=existing_recovery)
 
-        retried = await engine.execute(plan_id, step_id=waiting["step_id"], confirm_token="   ")
-        assert retried["status"] == "waiting_confirmation"
-        assert retried["gate"]["confirmed"] is False
+        resumed = await engine._trigger_recovery_chain(
+            plan=plan,
+            failure_phase="executing",
+            failure_reason="new failure",
+            failed_step_id=plan.steps[0].id,
+            checkpoint_id="cp-new",
+        )
+
+        assert resumed["recovery_id"] == "rcv-01"
+        assert resumed["failure"]["reason"] == "existing failure"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        events = [json.loads(line) for line in lines]
+        assert events[-1]["event_type"] == "recovery_chain_resume"
 
     @pytest.mark.asyncio
     async def test_restore_waiting_confirmation_does_not_apply_replay(self, engine):
@@ -889,9 +1047,24 @@ class TestWorkflowEngineBranchCoverage:
         assert template[0]["name"] == "analyze"
 
     @pytest.mark.asyncio
-    async def test_lifecycle_plan_not_found_branch(self, engine):
-        result = await engine.lifecycle("missing-plan", "start")
-        assert "error" in result
+    async def test_transition_guard_rejects_illegal_jump_and_audits(self, engine):
+        planned = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = planned["plan_id"]
+        plan = engine.plans[plan_id]
+        step = plan.steps[0]
+        step.status = "done"
+
+        with pytest.raises(ValueError, match="Invalid step transition"):
+            engine._transition_step_state(plan, step, "executing", "invalid_transition_test")
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        assert lines
+        latest = json.loads(lines[-1])
+        assert latest["event_type"] == "step_state_transition_rejected"
+        assert latest["payload"]["from"] == "done"
+        assert latest["payload"]["to"] == "executing"
 
     @pytest.mark.asyncio
     async def test_quick_rollback_plan_not_found_branch(self, engine):
@@ -982,6 +1155,57 @@ class TestWorkflowEngineBranchCoverage:
         metrics = {"risk_score": 0.5, "pass_rate": 87.0, "recovery_latency": 100.0}
         assert engine._resolve_adaptive_level(WorkflowLevel.L2_LITE, "maintenance", metrics) == WorkflowLevel.L3_STANDARD
 
+    def test_observability_mode_resolution_branches(self, engine):
+        autopilot = engine._resolve_observability_mode(
+            {
+                "completion_rate": 100.0,
+                "failure_rate": 0.0,
+                "retry_count": 0,
+                "convergence_rounds": 1,
+                "mttr": 0.0,
+            }
+        )
+        team = engine._resolve_observability_mode(
+            {
+                "completion_rate": 60.0,
+                "failure_rate": 10.0,
+                "retry_count": 1,
+                "convergence_rounds": 5,
+                "mttr": 5.0,
+            }
+        )
+        pipeline = engine._resolve_observability_mode(
+            {
+                "completion_rate": 40.0,
+                "failure_rate": 25.0,
+                "retry_count": 4,
+                "convergence_rounds": 8,
+                "mttr": 25.0,
+            }
+        )
+
+        assert autopilot["mode"] == "Autopilot"
+        assert autopilot["threshold_triggered"] is False
+        assert team["mode"] == "Team"
+        assert team["threshold_triggered"] is True
+        assert pipeline["mode"] == "Pipeline/Ralph"
+        assert pipeline["threshold_triggered"] is True
+
+    @pytest.mark.asyncio
+    async def test_plan_writes_observability_mode_trace_audit(self, engine):
+        plan_result = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = plan_result["plan_id"]
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "observability_mode_trace"]
+
+        assert events
+        payload = events[-1]["payload"]
+        assert payload["mode"] in {"Autopilot", "Team", "Pipeline/Ralph"}
+        assert "aggregate" in payload
+        assert "completion_rate" in payload["aggregate"]
+
     def test_evaluate_risk_gate_soft_review_branch(self, engine):
         step = WorkflowStep(id="s-check", name="checkpoint", description="cp")
 
@@ -1004,15 +1228,15 @@ class TestWorkflowEngineBranchCoverage:
         assert engine.plans[plan_id].plan_hash
 
     @pytest.mark.asyncio
-    async def test_execute_specific_step_not_pending_branch(self, engine):
+    async def test_execute_specific_step_not_planned_branch(self, engine):
         planned = await engine.plan("回答一个简单问题", level="L1")
         plan_id = planned["plan_id"]
         step_id = engine.plans[plan_id].steps[0].id
-        engine.plans[plan_id].steps[0].status = "completed"
+        engine.plans[plan_id].steps[0].status = "done"
 
         result = await engine.execute(plan_id, step_id=step_id)
         assert "error" in result
-        assert "is not pending" in result["error"]
+        assert "is not planned" in result["error"]
 
     @pytest.mark.asyncio
     async def test_execute_marks_created_plan_running_when_runner_already_running(self, engine):
@@ -1040,6 +1264,50 @@ class TestWorkflowEngineBranchCoverage:
         result = engine._canonicalize_recommendations(["   "])
         assert result == []
 
+    @pytest.mark.asyncio
+    async def test_plan_state_snapshot_records_phase_for_resume(self, engine):
+        planned = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = planned["plan_id"]
+        session_id = engine._session_id_for_plan(plan_id)
+
+        initial_state_raw = engine.session_manager.read(session_id, ContentType.STATE)
+        initial_state = json.loads(initial_state_raw)
+        assert initial_state["current_phase"] == "planned"
+        assert initial_state["last_checkpoint_id"] == ""
+
+        await engine.execute(plan_id)
+
+        final_state_raw = engine.session_manager.read(session_id, ContentType.STATE)
+        final_state = json.loads(final_state_raw)
+        assert final_state["current_phase"] == "done"
+        assert final_state["steps"][0]["status"] == "done"
+
+        terminal = await engine.execute(plan_id)
+        assert terminal["status"] == "completed"
+        assert terminal["current_phase"] == "done"
+        assert terminal["state_trace_id"]
+        assert terminal["can_resume_from_checkpoint"] is False
+
+    @pytest.mark.asyncio
+    async def test_checkpoint_trace_persisted_in_state_snapshot(self, engine):
+        planned = await engine.plan("回答一个简单问题", level="L1")
+        plan_id = planned["plan_id"]
+        step_id = engine.plans[plan_id].steps[0].id
+
+        checkpoint = await engine.create_checkpoint(
+            description="manual state trace",
+            auto_commit=False,
+            plan_id=plan_id,
+            step_id=step_id,
+        )
+
+        session_id = engine._session_id_for_plan(plan_id)
+        state_raw = engine.session_manager.read(session_id, ContentType.STATE)
+        state_payload = json.loads(state_raw)
+        assert state_payload["last_checkpoint_id"] == checkpoint["checkpoint_id"]
+        assert state_payload["state_trace_id"]
+        assert state_payload["checkpoint_trace"]
+        assert state_payload["checkpoint_trace"][-1]["checkpoint_id"] == checkpoint["checkpoint_id"]
     @pytest.mark.asyncio
     async def test_create_checkpoint_auto_commit_nonzero_commit_keeps_hash_none(self, engine):
         with patch("subprocess.run") as mock_run:

@@ -1,0 +1,26 @@
+{
+  "id": "IMPL-011",
+  "title": "Wave-6 预算护栏与交接包制度",
+  "status": "completed",
+  "meta": {
+    "wave": 6,
+    "type": "ops-governance",
+    "budget_guardrail": true
+  },
+  "context": {
+    "requirements": [
+      "设置 token/time 预算上限与降级策略",
+      "自动生成值班交接包（状态、阻塞、未完成、下一步命令）"
+    ],
+    "focus_paths": [
+      "src/workflow/workflow_engine.py",
+      "src/workflow/session/session_manager.py",
+      "tests/integration/test_workflow_integration.py"
+    ],
+    "acceptance": [
+      "预算超阈值触发 ecomode 降级",
+      "暂停/交接时自动生成 handoff package"
+    ]
+  },
+  "depends_on": ["IMPL-010"]
+}

@@ -108,5 +108,704 @@
         "持续保持 TODO_LIST 与 .task 状态同步"
       ]
     }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening",
+    "description": "wave-1 状态机硬化 + wave-2~6 规划",
+    "archived_at": "2026-02-19T06:43:20.136749+00:00",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening",
+    "metrics": {
+      "duration_hours": 6.72,
+      "tasks_completed": 11,
+      "summaries_generated": 0,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "Plan",
+      "WFS-wave-1-state-machine-hardening",
+      "Wave-1",
+      "Wave-6"
+    ],
+    "lessons": {
+      "successes": [
+        "主链任务按依赖顺序完成",
+        "测试覆盖维持全通过"
+      ],
+      "challenges": [
+        "跨 wave 状态回传字段需要保持一致"
+      ],
+      "watch_patterns": [
+        "继续监控 execute 与 lifecycle 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v2",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v2 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成一套可重复执行的 Wave-1 状态机硬化实现计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T07:05:05.738226+00:00",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v2",
+    "metrics": {
+      "duration_hours": 7.08,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v3",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v3 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T07:22:27.337437+00:00",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v3",
+    "metrics": {
+      "duration_hours": 7.37,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v4",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v4 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T07:31:29.449556+00:00",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v4",
+    "metrics": {
+      "duration_hours": 7.52,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v5",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v5 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T08:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v5",
+    "metrics": {
+      "duration_hours": 7.67,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v6",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v6 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T09:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v6",
+    "metrics": {
+      "duration_hours": 8.0,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v7",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v7 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T10:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v7",
+    "metrics": {
+      "duration_hours": 8.25,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v8",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v8 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T11:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v8",
+    "metrics": {
+      "duration_hours": 8.5,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v9",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v9 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T09:19:34Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v9",
+    "metrics": {
+      "duration_hours": 9.0,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v10",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v10 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T10:48:25Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v10",
+    "metrics": {
+      "duration_hours": 9.5,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v11",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v11 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T13:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v11",
+    "metrics": {
+      "duration_hours": 10.0,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v12",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v12 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T13:30:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v12",
+    "metrics": {
+      "duration_hours": 10.5,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v13",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v13 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T14:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v13",
+    "metrics": {
+      "duration_hours": 11.0,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v14",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v14 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T14:30:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v14",
+    "metrics": {
+      "duration_hours": 11.5,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v15",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v15 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T15:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v15",
+    "metrics": {
+      "duration_hours": 12.0,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v16",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v16 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T15:30:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v16",
+    "metrics": {
+      "duration_hours": 12.5,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v17",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v17 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T16:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v17",
+    "metrics": {
+      "duration_hours": 13.0,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 任务链以自动模式完成并保持依赖顺序",
+        "状态机与生命周期关键测试集稳定通过"
+      ],
+      "challenges": [
+        "自动编排技能回调未直接落地，需要会话侧兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "持续监控 lifecycle 与 execute 返回结构稳定性"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v18",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v18 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T16:30:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v18",
+    "metrics": {
+      "duration_hours": 13.0,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 链路在自动模式下完成并保持执行顺序",
+        "状态机关键回归在关键路径上稳定通过"
+      ],
+      "challenges": [
+        "自动化编排技能回调未直连落地，需会话级兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "保持 lifecycle 与 execute 返回结构稳定化"
+      ]
+    }
+  },
+  {
+    "session_id": "WFS-wave-1-state-machine-hardening-v19",
+    "description": "wave-1 状态机硬化",
+    "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v19 (Wave-1)",
+    "summary": "在不破坏现有行为的前提下，形成可重复执行的 Wave-1 状态机硬化计划，确保状态迁移、审计、恢复与对外返回契约一致。",
+    "archived_at": "2026-02-19T17:00:00Z",
+    "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v19",
+    "metrics": {
+      "duration_hours": 13.0,
+      "tasks_completed": 6,
+      "summaries_generated": 6,
+      "review_metrics": {
+        "dimensions_analyzed": 0,
+        "total_findings": 0
+      }
+    },
+    "tags": [
+      "state-machine",
+      "workflow-engine",
+      "audit",
+      "checkpoint",
+      "mcp"
+    ],
+    "lessons": {
+      "successes": [
+        "Wave-1 链路在自动模式下完成并保持执行顺序",
+        "状态机关键回归在关键路径上稳定通过"
+      ],
+      "challenges": [
+        "自动化编排技能回调未直连落地，需会话级兜底执行"
+      ],
+      "watch_patterns": [
+        "保持 TODO_LIST 与 .task 状态字段长期一致",
+        "保持 lifecycle 与 execute 返回结构稳定化"
+      ]
+    }
   }
 ]

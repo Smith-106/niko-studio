@@ -1,0 +1,31 @@
+{
+  "id": "IMPL-008",
+  "title": "Wave-3 失败恢复链自动化",
+  "status": "completed",
+  "meta": {
+    "wave": 3,
+    "type": "recovery",
+    "recovery_chain": [
+      "analyze-with-file",
+      "plan",
+      "plan-verify",
+      "execute"
+    ]
+  },
+  "context": {
+    "requirements": [
+      "统一失败恢复链路触发，不允许人工即兴重试",
+      "恢复链全程落盘并可断点续跑"
+    ],
+    "focus_paths": [
+      "src/workflow/workflow_engine.py",
+      "src/workflow/session/session_manager.py",
+      "tests/unit/workflow/test_workflow_engine.py"
+    ],
+    "acceptance": [
+      "失败可自动进入恢复链",
+      "恢复链每一步均有审计事件"
+    ]
+  },
+  "depends_on": ["IMPL-007"]
+}

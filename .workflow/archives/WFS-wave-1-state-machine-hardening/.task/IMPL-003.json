@@ -1,0 +1,19 @@
+{
+  "id": "IMPL-003",
+  "title": "改造 execute 为分阶段状态推进与失败封口",
+  "status": "completed",
+  "context": {
+    "requirements": [
+      "执行路径必须经过 planned->executing->review->test->done",
+      "任一阶段失败统一进入 failed"
+    ],
+    "focus_paths": [
+      "src/workflow/workflow_engine.py"
+    ],
+    "acceptance": [
+      "成功路径完整覆盖 5 阶段",
+      "失败路径记录 phase/reason/checkpoint"
+    ]
+  },
+  "depends_on": ["IMPL-002"]
+}

@@ -1,0 +1,30 @@
+{
+  "session_id": "WFS-wave-1-state-machine-hardening-v2",
+  "generated_at": "2026-02-19T00:00:00Z",
+  "goal": "固化 workflow step 状态机与迁移审计回放能力",
+  "scope": [
+    "src/workflow/workflow_engine.py",
+    "src/workflow/session/session_manager.py",
+    "src/mcp/gateway.py",
+    "tests/unit/workflow/test_workflow_engine.py",
+    "tests/integration/test_workflow_integration.py"
+  ],
+  "conflict_risk": "low",
+  "constraints": [
+    "保持命令入口兼容",
+    "禁止状态跳转",
+    "迁移事件必须落盘",
+    "失败保持可恢复链路"
+  ],
+  "acceptance_gates": [
+    "workflow:review-session-cycle",
+    "workflow:test-fix-gen",
+    "workflow:test-cycle-execute"
+  ],
+  "recovery_chain": [
+    "workflow:analyze-with-file",
+    "workflow:plan",
+    "workflow:plan-verify",
+    "workflow:execute"
+  ]
+}

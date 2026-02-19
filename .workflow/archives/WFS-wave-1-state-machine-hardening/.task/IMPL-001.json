@@ -1,0 +1,23 @@
+{
+  "id": "IMPL-001",
+  "title": "定义 step 状态与合法迁移表",
+  "status": "completed",
+  "context": {
+    "requirements": [
+      "新增状态: planned/executing/review/test/done/failed",
+      "定义 step 迁移白名单并集中管理"
+    ],
+    "focus_paths": [
+      "src/workflow/workflow_engine.py"
+    ],
+    "acceptance": [
+      "状态定义存在且被 execute 主流程使用",
+      "迁移表可复用于单元测试断言"
+    ]
+  },
+  "flow_control": {
+    "target_files": [
+      "src/workflow/workflow_engine.py"
+    ]
+  }
+}

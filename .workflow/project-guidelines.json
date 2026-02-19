@@ -26,12 +26,173 @@
       "insight": "集成测试需验证 API 签名兼容性，避免因 Mock 对象与实际接口参数不匹配导致测试失败。",
       "category": "testing",
       "context": "9个集成测试因 WriterInput/ArchitectAgent 等类的 API 签名变更而失败"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening",
+      "insight": "状态机演进任务应保证 execute、lifecycle、get_plan_status 三个入口返回字段一致，避免前后端契约漂移。",
+      "category": "architecture",
+      "context": "Wave-5/6 收尾中统一 execution_mode、observability_metrics、budget_guardrail、handoff_package 返回"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening",
+      "insight": "预算护栏触发降级时应通过统一 execution_mode 解析层覆盖业务模式，避免多处分支各自判定。",
+      "category": "performance",
+      "context": "引入 _resolve_execution_mode，将预算超阈值统一降级到 EcoMode"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening",
+      "insight": "会话暂停或停止必须自动生成可执行交接包（包含 pending、blocked、next command）并写入审计，保障可恢复交接。",
+      "category": "process",
+      "context": "Wave-6 引入 HANDOFF.md 与 handoff_package_generated 审计事件"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v2",
+      "insight": "状态机改造类任务执行时，先验证现有实现与测试覆盖，再推进任务状态，可减少重复改动与回归风险。",
+      "category": "process",
+      "context": "本次会话按 IMPL-001~006 顺序执行前先核对 workflow_engine 与测试现状"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v3",
+      "insight": "状态机硬化执行可采用‘先验证现状+定向回归，再批量推进任务状态与总结落盘’的闭环方式，能稳定完成自动执行链路。",
+      "category": "process",
+      "context": "先执行 state/lifecycle/budget_guardrail/handoff 定向 pytest 并通过，再完成 IMPL-001~006 状态与 summaries 同步"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v3",
+      "insight": "Wave-1 会话归档时应同步更新 manifest 与 project-tech 特征登记，保持会话资产与项目能力索引一致。",
+      "category": "process",
+      "context": "归档 WFS-wave-1-state-machine-hardening-v3 后同步追加 .workflow/archives/manifest.json 与 .workflow/project-tech.json"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v5",
+      "insight": "Wave-1 状态机任务连续执行时，先跑定向回归再批量推进任务完成态与归档，可稳定保持自动执行闭环。",
+      "category": "process",
+      "context": "v5 会话先执行 state/lifecycle/budget_guardrail/handoff 定向 pytest 并通过，再完成 IMPL-001~006 状态落盘、summary 与归档"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v6",
+      "insight": "自动执行阶段先把会话切到 active 并写入 execution_started_at，再推进任务状态与归档，可避免状态漂移。",
+      "category": "process",
+      "context": "v6 会话执行前先更新 workflow-session 为 active 并补 execution_started_at，随后完成 IMPL-001~006、summary 与归档"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v7",
+      "insight": "重复自动执行同模板会话时，保持固定回归命令与固定归档字段可提升连续批次稳定性。",
+      "category": "process",
+      "context": "v7 会话延续 state/lifecycle/budget_guardrail/handoff 回归命令，并按 manifest/project-tech/guidelines 固定字段完成归档"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v4",
+      "insight": "重复执行同类 Wave-1 任务时，复用同一任务链模板并先跑定向回归可保持自动执行稳定性。",
+      "category": "process",
+      "context": "v4 继续采用 IMPL-001~006 模板与 state/lifecycle/budget_guardrail/handoff 回归命令并通过"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v4",
+      "insight": "执行收尾阶段应在归档后立即统一修正 workflow-session 状态为 completed，避免归档目录出现 active 残留。",
+      "category": "process",
+      "context": "归档后补齐 workflow-session.json 的 completed 状态，确保列表统计一致"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v8",
+      "insight": "连续批次自动执行可通过固定 plan 模板与固定回归命令复用执行链，降低批次间漂移风险。",
+      "category": "process",
+      "context": "v8 延续 IMPL-001~006 模板并复用 state/lifecycle/budget_guardrail/handoff 回归命令后完成归档"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v9",
+      "insight": "连续批次自动执行中，先完成任务状态与 summary 落盘，再统一归档与索引更新，可避免执行完成但台账缺失。",
+      "category": "process",
+      "context": "v9 会话在回归通过后补齐 IMPL-001~006 完成态、TODO 勾选、summary 与归档索引同步。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v10",
+      "insight": "自动执行连续批次中，先以定向回归确认关键链路，再同步任务状态、summary 与归档索引，可持续保持稳定闭环。",
+      "category": "process",
+      "context": "v10 会话延续 state/lifecycle/budget_guardrail/handoff 回归命令并在通过后完成状态与索引同步。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v11",
+      "insight": "连续批次自动执行中，先完成任务状态、TODO 与 summary 全量落盘，再归档并同步索引，可稳定保持会话闭环。",
+      "category": "process",
+      "context": "v11 会话在回归通过后完成 IMPL-001~006、TODO、summaries，并同步 manifest/project-tech/guidelines。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v12",
+      "insight": "连续批次自动执行中，先完成回归验证并落盘任务状态，再统一归档与索引同步，可保持执行链路稳定。",
+      "category": "process",
+      "context": "v12 会话在定向 pytest 通过后完成 IMPL-001~006、TODO、summaries，并同步 manifest/project-tech/guidelines。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v13",
+      "insight": "连续批次自动执行中，保持固定回归命令与固定任务链模板，并在收尾阶段一次性同步归档索引，可减少执行波动。",
+      "category": "process",
+      "context": "v13 会话复用 state/lifecycle/budget_guardrail/handoff 回归命令，完成 IMPL-001~006 与索引同步后归档。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v14",
+      "insight": "连续批次自动执行中，保持固定回归命令与固定任务链模板，并在收尾阶段一次性同步归档索引，可减少执行波动。",
+      "category": "process",
+      "context": "v14 会话复用 state/lifecycle/budget_guardrail/handoff 回归命令，完成 IMPL-001~006 与索引同步后归档。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v15",
+      "insight": "连续批次自动执行中，保持固定回归命令与固定任务链模板，并在收尾阶段一次性同步归档索引，可减少执行波动。",
+      "category": "process",
+      "context": "v15 会话复用 state/lifecycle/budget_guardrail/handoff 回归命令，完成 IMPL-001~006 与索引同步后归档。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v16",
+      "insight": "连续批次自动执行中，保持固定回归命令与固定任务链模板，并在收尾阶段一次性同步归档索引，可减少执行波动。",
+      "category": "process",
+      "context": "v16 会话复用 state/lifecycle/budget_guardrail/handoff 回归命令，完成 IMPL-001~006 与索引同步后归档。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v17",
+      "insight": "连续批次自动执行中，保持固定回归命令与固定任务链模板，并在收尾阶段一次性同步归档索引，可减少执行波动。",
+      "category": "process",
+      "context": "v17 会话复用 state/lifecycle/budget_guardrail/handoff 回归命令，完成 IMPL-001~006 与索引同步后归档。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v18",
+      "insight": "在连续自动执行中，维持固定回归命令和固定落盘模板，可在收尾阶段一致完成归档与三索引同步。",
+      "category": "process",
+      "context": "v18 会话复用 state/lifecycle/budget_guardrail/handoff 回归命令，并完成 IMPL-001~006 与索引同步归档。"
+    },
+    {
+      "date": "2026-02-19",
+      "session_id": "WFS-wave-1-state-machine-hardening-v19",
+      "insight": "在连续自动执行中，维持固定回归命令和固定落盘模板，可在收尾阶段一致完成归档与三索引同步。",
+      "category": "process",
+      "context": "v19 会话复用 state/lifecycle/budget_guardrail/handoff 回归命令，并完成 IMPL-001~006 与索引同步归档。"
     }
   ],
   "_metadata": {
     "created_at": "2026-02-09T00:00:00+08:00",
-    "updated_at": "2026-02-09T00:00:00+08:00",
-    "last_solidified_by": "WFS-niko-complete-20260209",
+    "updated_at": "2026-02-19T17:00:00Z",
+    "last_solidified_by": "WFS-wave-1-state-machine-hardening-v19",
     "version": "1.0.0"
   }
 }

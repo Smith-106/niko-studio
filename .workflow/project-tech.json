@@ -162,6 +162,366 @@
         "session_id": "WFS-fix-six-critical-risks",
         "archive_path": ".workflow/archives/WFS-fix-six-critical-risks"
       }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-wave-1-wave-6",
+      "title": "IMPL Plan - WFS-wave-1-state-machine-hardening (Wave-1 ~ Wave-6)",
+      "status": "completed",
+      "tags": [
+        "Plan",
+        "WFS-wave-1-state-machine-hardening",
+        "Wave-1",
+        "Wave-6"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v2-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v2 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v2",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v2"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v3-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v3 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v3",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v3"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v4-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v4 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v4",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v4"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v5-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v5 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v5",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v5"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v6-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v6 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v6",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v6"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v7-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v7 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v7",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v7"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v8-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v8 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v8",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v8"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v9-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v9 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v9",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v9"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v10-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v10 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v10",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v10"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v11-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v11 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v11",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v11"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v12-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v12 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v12",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v12"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v13-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v13 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v13",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v13"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v14-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v14 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v14",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v14"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v15-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v15 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v15",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v15"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v16-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v16 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v16",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v16"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v17-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v17 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v17",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v17"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v18-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v18 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v18",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v18"
+      }
+    },
+    {
+      "id": "impl-plan-wfs-wave-1-state-machine-hardening-v19-wave-1",
+      "title": "# IMPL Plan - WFS-wave-1-state-machine-hardening-v19 (Wave-1)",
+      "status": "completed",
+      "tags": [
+        "state-machine",
+        "workflow-engine",
+        "audit",
+        "checkpoint",
+        "mcp"
+      ],
+      "timeline": {
+        "implemented_at": "2026-02-19"
+      },
+      "traceability": {
+        "session_id": "WFS-wave-1-state-machine-hardening-v19",
+        "archive_path": ".workflow/archives/WFS-wave-1-state-machine-hardening-v19"
+      }
     }
   ],
   "development_index": {
@@ -172,9 +532,9 @@
     "docs": []
   },
   "statistics": {
-    "total_features": 4,
-    "total_sessions": 3,
-    "last_updated": "2026-02-15T15:42:22Z"
+    "total_features": 23,
+    "total_sessions": 22,
+    "last_updated": "2026-02-19T16:00:00Z"
   },
   "_metadata": {
     "initialized_by": "workflow:init-fallback",

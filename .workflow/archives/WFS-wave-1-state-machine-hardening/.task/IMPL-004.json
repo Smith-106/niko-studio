@@ -1,0 +1,20 @@
+{
+  "id": "IMPL-004",
+  "title": "会话 state 快照补强与 checkpoint 轨迹记录",
+  "status": "completed",
+  "context": {
+    "requirements": [
+      "在 state.json 记录当前 phase 与最近 checkpoint",
+      "支持断点续跑读取"
+    ],
+    "focus_paths": [
+      "src/workflow/session/session_manager.py",
+      "src/workflow/workflow_engine.py"
+    ],
+    "acceptance": [
+      "state.json 可恢复最近确认状态",
+      "snapshot-index 包含状态迁移轨迹"
+    ]
+  },
+  "depends_on": ["IMPL-003"]
+}

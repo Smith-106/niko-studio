@@ -1,0 +1,21 @@
+{
+  "id": "IMPL-005",
+  "title": "MCP workflow_execute 返回增强（phase/trace/resume）",
+  "status": "completed",
+  "context": {
+    "requirements": [
+      "返回 current_phase",
+      "返回 state_trace_id",
+      "返回 can_resume_from_checkpoint"
+    ],
+    "focus_paths": [
+      "src/mcp/gateway.py",
+      "src/workflow/workflow_engine.py"
+    ],
+    "acceptance": [
+      "MCP 返回结构包含新字段",
+      "旧调用方字段保持兼容"
+    ]
+  },
+  "depends_on": ["IMPL-004"]
+}

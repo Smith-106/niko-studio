@@ -8,6 +8,7 @@
 import pytest
 import asyncio
 import tempfile
+import json
 from pathlib import Path
 
 import sys
@@ -18,9 +19,9 @@ from workflow.workflow_engine import (
     WorkflowLevel,
     WorkflowStep,
     WorkflowPlan,
-    Checkpoint
+    Checkpoint,
 )
-
+from src.workflow.session.session_manager import ContentType
 
 class TestWorkflowRouting:
     """工作流路由测试"""
@@ -303,6 +304,9 @@ class TestHardGateIntegration:
         assert waiting["gate"]["confirm_required"] is True
         assert waiting["gate"]["confirmed"] is False
         assert waiting["gate"]["destructive"] is True
+        assert waiting["current_phase"] == "planned"
+        assert waiting["state_trace_id"]
+        assert waiting["can_resume_from_checkpoint"] is False
 
     @pytest.mark.asyncio
     async def test_restore_risk_gate_confirm_token(self, engine):
@@ -333,6 +337,91 @@ class TestHardGateIntegration:
         confirmed = await engine.restore_checkpoint(checkpoint["checkpoint_id"], confirm_token="ok")
         assert confirmed["gate"]["confirm_required"] is True
         assert confirmed["gate"]["confirmed"] is True
+
+
+    @pytest.mark.asyncio
+    async def test_state_transition_trace_contains_all_phases(self, engine):
+        plan = await engine.plan("回答一个问题", level="L1")
+        plan_id = plan["plan_id"]
+
+        result = await engine.execute(plan_id)
+        assert result["status"] == "completed"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        transitions = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "step_state_transition"]
+        phase_targets = [event["payload"]["to"] for event in transitions]
+
+        assert "executing" in phase_targets
+        assert "review" in phase_targets
+        assert "test" in phase_targets
+        assert "done" in phase_targets
+
+    @pytest.mark.asyncio
+    async def test_resume_signal_true_after_checkpoint_created(self, engine):
+        plan = await engine.plan("回答一个问题", level="L1")
+        plan_id = plan["plan_id"]
+        step_id = plan["steps"][0]["id"]
+
+        checkpoint = await engine.create_checkpoint(
+            description="resume-signal",
+            auto_commit=False,
+            plan_id=plan_id,
+            step_id=step_id,
+        )
+
+        state_raw = engine.session_manager.read(engine._session_id_for_plan(plan_id), ContentType.STATE)
+        state_payload = json.loads(state_raw)
+
+        assert state_payload["last_checkpoint_id"] == checkpoint["checkpoint_id"]
+        assert state_payload["checkpoint_trace"][-1]["checkpoint_id"] == checkpoint["checkpoint_id"]
+
+        status = await engine.execute(plan_id)
+        assert "can_resume_from_checkpoint" in status
+        assert status["can_resume_from_checkpoint"] is True
+
+
+    @pytest.mark.asyncio
+    async def test_wave_gate_blocks_next_wave_on_failure(self, engine):
+        plan = await engine.plan(
+            "回答一个问题",
+            level="L1",
+            recommendations=[{"action": "require_wave_gate"}, {"action": "force_gate_fail"}],
+        )
+        plan_id = plan["plan_id"]
+
+        result = await engine.execute(plan_id)
+        assert result["status"] == "gate_blocked"
+        assert result["gate_chain"]["required"] is True
+        assert result["gate_chain"]["passed"] is False
+        assert result["concurrency"]["serialized"] is False
+
+        blocked = await engine.execute(plan_id)
+        assert blocked["status"] == "completed"
+        assert blocked["message"] == "All steps completed"
+        assert blocked["current_phase"] == "done"
+
+    @pytest.mark.asyncio
+    async def test_wave_gate_pass_writes_wave_completion_checkpoint(self, engine):
+        plan = await engine.plan(
+            "回答一个问题",
+            level="L1",
+            recommendations=[{"action": "require_wave_gate"}],
+        )
+        plan_id = plan["plan_id"]
+
+        result = await engine.execute(plan_id)
+        assert result["status"] == "completed"
+        assert result["gate_chain"]["required"] is True
+        assert result["gate_chain"]["passed"] is True
+        checkpoint_id = result["wave_completion_checkpoint_id"]
+        assert checkpoint_id
+
+        state_raw = engine.session_manager.read(engine._session_id_for_plan(plan_id), ContentType.STATE)
+        state_payload = json.loads(state_raw)
+        checkpoint_ids = [item["checkpoint_id"] for item in state_payload["checkpoint_trace"]]
+        assert checkpoint_id in checkpoint_ids
 
 
 class TestAdaptiveRouteIntegration:

@@ -1,0 +1,33 @@
+{
+  "id": "IMPL-006",
+  "title": "补齐状态机与恢复链测试覆盖",
+  "status": "completed",
+  "meta": {
+    "wave": 1,
+    "type": "testing"
+  },
+  "context": {
+    "requirements": [
+      "覆盖合法迁移与非法跳态",
+      "覆盖失败恢复与 checkpoint 续跑"
+    ],
+    "focus_paths": [
+      "tests/unit/workflow/test_workflow_engine.py",
+      "tests/integration/test_workflow_integration.py"
+    ],
+    "acceptance": [
+      "目标测试全部通过",
+      "关键状态机路径有断言"
+    ]
+  },
+  "status_history": [
+    {
+      "from": "in_progress",
+      "to": "completed",
+      "changed_at": "2026-02-19T15:30:00Z"
+    }
+  ],
+  "depends_on": [
+    "IMPL-005"
+  ]
+}

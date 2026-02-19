@@ -1,0 +1,33 @@
+{
+  "id": "IMPL-005",
+  "title": "MCP 返回增强：phase/trace/can_resume",
+  "status": "completed",
+  "meta": {
+    "wave": 1,
+    "type": "mcp-contract"
+  },
+  "context": {
+    "requirements": [
+      "workflow_execute 返回 current_phase/state_trace/can_resume",
+      "输出与内部状态保持一致"
+    ],
+    "focus_paths": [
+      "src/mcp/gateway.py",
+      "src/workflow/workflow_engine.py"
+    ],
+    "acceptance": [
+      "MCP 输出字段齐全",
+      "断点恢复信号准确"
+    ]
+  },
+  "status_history": [
+    {
+      "from": "in_progress",
+      "to": "completed",
+      "changed_at": "2026-02-19T15:00:00Z"
+    }
+  ],
+  "depends_on": [
+    "IMPL-004"
+  ]
+}

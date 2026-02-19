@@ -31,6 +31,7 @@ class ContentType(Enum):
     STATE = "state"
     SNAPSHOT_INDEX = "snapshot_index"
     AUDIT = "audit"
+    HANDOFF = "handoff"
 
 
 # 內容類型路由表
@@ -45,6 +46,7 @@ PATH_ROUTES = {
     ContentType.STATE: "{base}/.data/state.json",
     ContentType.SNAPSHOT_INDEX: "{base}/.data/snapshot-index.json",
     ContentType.AUDIT: "{base}/.data/audit.jsonl",
+    ContentType.HANDOFF: "{base}/HANDOFF.md",
 }
 
 
