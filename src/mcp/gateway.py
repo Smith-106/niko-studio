@@ -2140,6 +2140,15 @@ async def workflow_execute_endpoint(request: Request):
     return JSONResponse(result)
 
 
+async def workflow_lifecycle_endpoint(request: Request):
+    body = await request.json()
+    result = await workflow_lifecycle(
+        plan_id=body.get("plan_id", ""),
+        action=body.get("action", "status"),
+    )
+    return JSONResponse(result)
+
+
 async def workflow_quick_rollback_endpoint(request: Request):
     body = await request.json()
     result = await workflow_quick_rollback(
@@ -2308,6 +2317,7 @@ def create_gateway() -> Starlette:
             Route("/workflow/route", workflow_route_endpoint, methods=["POST"]),
             Route("/workflow/plan", workflow_plan_endpoint, methods=["POST"]),
             Route("/workflow/execute", workflow_execute_endpoint, methods=["POST"]),
+            Route("/workflow/lifecycle", workflow_lifecycle_endpoint, methods=["POST"]),
             Route("/workflow/quick-rollback", workflow_quick_rollback_endpoint, methods=["POST"]),
             Route("/workflow/checkpoint/create", checkpoint_create_endpoint, methods=["POST"]),
             Route("/workflow/checkpoint/restore", checkpoint_restore_endpoint, methods=["POST"]),

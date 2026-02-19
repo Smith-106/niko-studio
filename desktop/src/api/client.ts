@@ -366,6 +366,180 @@ export interface RecommendationBatchResult {
   results: RecommendationExecutionResult[]
 }
 
+export type WorkflowExecutionMode = 'Autopilot' | 'Team' | 'Pipeline/Ralph' | 'EcoMode'
+
+export type WorkflowPhase =
+  | 'planned'
+  | 'executing'
+  | 'review'
+  | 'test'
+  | 'done'
+  | 'recovery'
+  | 'wave_gate'
+
+export interface WorkflowObservabilityMetrics {
+  [key: string]: unknown
+}
+
+export interface WorkflowBudgetGuardrail {
+  threshold_triggered: boolean
+  degraded: boolean
+  degrade_mode: string
+  reason?: string
+  [key: string]: unknown
+}
+
+export interface WorkflowHandoffPackage {
+  trigger?: 'pause' | 'stop' | string
+  next_command?: string
+  [key: string]: unknown
+}
+
+export interface WorkflowStateResumeMetadata {
+  current_phase: WorkflowPhase | string
+  state_trace_id: string
+  can_resume_from_checkpoint: boolean
+  [key: string]: unknown
+}
+
+export interface WorkflowModuleOwnershipItem {
+  module: string
+  owner: string
+  previous_owner?: string | null
+  [key: string]: unknown
+}
+
+export interface WorkflowConcurrencyInfo {
+  serialized: boolean
+  conflict_modules: string[]
+  ownership: WorkflowModuleOwnershipItem[]
+  [key: string]: unknown
+}
+
+export interface WorkflowGateInfo {
+  decision?: string
+  confirm_required?: boolean
+  confirmed?: boolean
+  destructive?: boolean
+  risk?: string
+  reason?: string
+  [key: string]: unknown
+}
+
+export interface WorkflowGateChain {
+  required: boolean
+  passed: boolean
+  failed_gate?: string | null
+  trace: Array<Record<string, unknown>>
+  [key: string]: unknown
+}
+
+export interface WorkflowExecuteResponseBase extends WorkflowStateResumeMetadata {
+  step_id?: string
+  step_name?: string
+  status: 'completed' | 'waiting_confirmation' | 'gate_blocked'
+  plan_status?: string
+  runner_state?: string
+  remaining_steps?: number
+  gate?: WorkflowGateInfo
+  execution_mode: WorkflowExecutionMode | string
+  observability_metrics: WorkflowObservabilityMetrics
+  budget_guardrail: WorkflowBudgetGuardrail
+  concurrency?: WorkflowConcurrencyInfo
+  gate_chain?: WorkflowGateChain
+  wave_completion_checkpoint_id?: string
+  rollback_checkpoint_id?: string
+}
+
+export interface WorkflowExecuteCompletedResponse extends WorkflowExecuteResponseBase {
+  status: 'completed'
+  result?: unknown
+  message?: string
+}
+
+export interface WorkflowExecuteWaitingConfirmationResponse extends WorkflowExecuteResponseBase {
+  status: 'waiting_confirmation'
+  gate: WorkflowGateInfo
+}
+
+export interface WorkflowExecuteGateBlockedResponse extends WorkflowExecuteResponseBase {
+  status: 'gate_blocked'
+  blocked: true
+  recovery: Record<string, unknown>
+  result?: unknown
+}
+
+export interface WorkflowExecuteFailureResponse {
+  error: string
+  step_id?: string
+  failure?: {
+    phase?: string
+    reason?: string
+    checkpoint_id?: string | null
+    [key: string]: unknown
+  }
+  rollback?: Record<string, unknown> | null
+  recovery?: Record<string, unknown>
+  concurrency?: WorkflowConcurrencyInfo
+  execution_mode?: WorkflowExecutionMode | string
+  observability_metrics?: WorkflowObservabilityMetrics
+  budget_guardrail?: WorkflowBudgetGuardrail
+  current_phase?: WorkflowPhase | string
+  state_trace_id?: string
+  can_resume_from_checkpoint?: boolean
+  [key: string]: unknown
+}
+
+export type WorkflowExecuteResponse =
+  | WorkflowExecuteCompletedResponse
+  | WorkflowExecuteWaitingConfirmationResponse
+  | WorkflowExecuteGateBlockedResponse
+  | WorkflowExecuteFailureResponse
+
+export interface WorkflowLifecycleResponse {
+  plan_id: string
+  action: 'start' | 'pause' | 'resume' | 'stop' | 'status' | string
+  runner_state: string
+  plan_status: string
+  session_status?: string
+  checkpoint_id?: string | null
+  lane?: string
+  quality_metrics?: Record<string, unknown>
+  state_mapping?: Record<string, string>
+  execution_mode: WorkflowExecutionMode | string
+  observability_metrics: WorkflowObservabilityMetrics
+  budget_guardrail: WorkflowBudgetGuardrail
+  handoff_package: WorkflowHandoffPackage
+}
+
+export interface WorkflowPlanStepStatusItem {
+  id: string
+  name: string
+  status: string
+  output?: unknown
+}
+
+export interface WorkflowPlanStatusResponse {
+  plan_id: string
+  task: string
+  level: string
+  status: string
+  runner_state: string
+  session_status?: string
+  state_mapping?: Record<string, string>
+  template_meta?: Record<string, unknown>
+  gate_decision?: string
+  recommendations?: Array<Record<string, unknown>>
+  recommendations_frozen?: boolean
+  plan_hash?: string
+  steps: WorkflowPlanStepStatusItem[]
+  progress: string
+  execution_mode: WorkflowExecutionMode | string
+  observability_metrics: WorkflowObservabilityMetrics
+  budget_guardrail: WorkflowBudgetGuardrail
+  handoff_package: WorkflowHandoffPackage
+}
+
 function toRecommendationPayload(input: RecommendationInput, index: number, action = 'apply'): RecommendationPayload {
   if (typeof input === 'string') {
     const title = input.trim()
@@ -456,7 +630,7 @@ export async function createPlan(
   task: string,
   level?: string,
   recommendations?: RecommendationInput[]
-): Promise<ApiResponse<unknown>> {
+): Promise<ApiResponse<WorkflowPlanStatusResponse | WorkflowExecuteFailureResponse>> {
   const normalizedRecommendations = normalizeRecommendations(recommendations)
   return callApi('/workflow/plan', 'POST', {
     task,
@@ -469,13 +643,29 @@ export async function executePlan(
   planId: string,
   stepId?: string,
   recommendations?: RecommendationInput[]
-): Promise<ApiResponse<unknown>> {
+): Promise<ApiResponse<WorkflowExecuteResponse>> {
   const normalizedRecommendations = normalizeRecommendations(recommendations)
   return callApi('/workflow/execute', 'POST', {
     plan_id: planId,
     step_id: stepId,
     recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
   })
+}
+
+export async function workflowLifecycle(
+  planId: string,
+  action: 'start' | 'pause' | 'resume' | 'stop' | 'status'
+): Promise<ApiResponse<WorkflowLifecycleResponse | WorkflowExecuteFailureResponse>> {
+  return callApi('/workflow/lifecycle', 'POST', {
+    plan_id: planId,
+    action,
+  })
+}
+
+export async function getPlanStatus(
+  planId: string
+): Promise<ApiResponse<WorkflowLifecycleResponse | WorkflowExecuteFailureResponse>> {
+  return workflowLifecycle(planId, 'status')
 }
 
 export async function applyRecommendation(
