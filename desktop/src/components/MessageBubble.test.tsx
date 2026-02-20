@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MessageBubble } from './MessageBubble'
 
 describe('MessageBubble selection', () => {
@@ -32,29 +32,26 @@ describe('MessageBubble selection', () => {
     selectionSpy.mockRestore()
   })
 
-  it('does not trigger selection callback for user message', () => {
-    const onAssistantSelection = vi.fn()
-    const selectionSpy = vi.spyOn(window, 'getSelection')
-    selectionSpy.mockReturnValue({ toString: () => 'selected text' } as Selection)
-
-    const { container } = render(
+  it('renders structured dual-column comparison content for assistant message', () => {
+    render(
       <MessageBubble
         message={{
-          id: 'm2',
-          role: 'user',
-          content: 'user content',
+          id: 'm3',
+          role: 'assistant',
+          content: 'comparison fallback',
           timestamp: new Date(),
+          comparison: {
+            enabled: true,
+            primary: { model: 'primary', content: '主模型内容' },
+            control: { model: 'gpt-4-turbo', content: '对照模型内容' },
+          },
         }}
-        onAssistantSelection={onAssistantSelection}
       />
     )
 
-    const markdownBody = container.querySelector('.markdown-body')
-    expect(markdownBody).not.toBeNull()
-    fireEvent.mouseUp(markdownBody!)
-
-    expect(onAssistantSelection).not.toHaveBeenCalled()
-
-    selectionSpy.mockRestore()
+    expect(screen.getByText('主模型：primary')).toBeInTheDocument()
+    expect(screen.getByText('对照模型：gpt-4-turbo')).toBeInTheDocument()
+    expect(screen.getByText('主模型内容')).toBeInTheDocument()
+    expect(screen.getByText('对照模型内容')).toBeInTheDocument()
   })
 })

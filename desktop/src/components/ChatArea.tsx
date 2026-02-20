@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Send, Paperclip, Mic } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback } from '../stores/selectors'
 import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, uploadMemoryFile } from '../api/client'
 import type { ChatRequest, StreamDonePayload } from '../api/client'
@@ -37,6 +38,8 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')
   const [chatMode, setChatMode] = useState<'chat' | 'agent'>('chat')
   const [agentAction, setAgentAction] = useState<'write' | 'revise' | 'context'>('write')
+  const [enableModelComparison, setEnableModelComparison] = useState(false)
+  const [comparisonModel, setComparisonModel] = useState('')
   const [recoverableCheckpointId, setRecoverableCheckpointId] = useState<string | null>(null)
   const [recoverStatus, setRecoverStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
   const [selectedText, setSelectedText] = useState('')
@@ -55,6 +58,22 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const workflowLevel = useWorkflowLevel()
   const selectedSkills = useSelectedSkills()
   const allowLlmFallback = useAllowLlmFallback()
+  const { settings } = useSettingsStore()
+  const availableComparisonModels = useMemo(() => {
+    const allModels = settings.llmProviders.flatMap((provider) => {
+      const models = [...(provider.models ?? []), ...(provider.fetchedModels ?? []), ...(provider.customModels ?? [])]
+      return models.filter((model) => Boolean(model && model.trim())).map((model) => model.trim())
+    })
+    return Array.from(new Set(allModels))
+  }, [settings.llmProviders])
+
+  useEffect(() => {
+    if (availableComparisonModels.length === 0) {
+      setComparisonModel('')
+      return
+    }
+    setComparisonModel((prev) => (prev && availableComparisonModels.includes(prev) ? prev : availableComparisonModels[0]))
+  }, [availableComparisonModels])
 
   useEffect(() => {
     if (!onContextUsageChange) return
@@ -103,6 +122,34 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   }
 
   const runNormalChat = async (request: ChatRequest, checkpointId?: string | null): Promise<StreamPhase> => {
+    if (request.comparison?.enabled) {
+      setStreamPhase('streaming')
+      const response = await chat(request)
+      if (response.success && response.data) {
+        if (response.data.comparison?.enabled) {
+          const comparison = response.data.comparison
+          addMessage(
+            'assistant',
+            response.data.content || comparison.primary.content,
+            response.data.skills_used || selectedSkills,
+            comparison
+          )
+        } else {
+          addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+        }
+        setRecoverableCheckpointId(null)
+        setRecoverStatus(null)
+        setStreamPhase('done')
+        return 'done'
+      }
+      addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
+      if (checkpointId) {
+        setRecoverStatus({ type: 'error', message: t.streamRestoreHint })
+      }
+      setStreamPhase('error')
+      return 'error'
+    }
+
     let streamFailed = false
     let hasStreamContent = false
     let streamText = ''
@@ -216,7 +263,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
 
     const response = await chat(request)
     if (response.success && response.data) {
-      addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+      if (response.data.comparison?.enabled) {
+        const comparison = response.data.comparison
+        addMessage(
+          'assistant',
+          response.data.content || comparison.primary.content,
+          response.data.skills_used || selectedSkills,
+          comparison
+        )
+      } else {
+        addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+      }
       setRecoverableCheckpointId(null)
       setRecoverStatus(null)
       return finalPhase ?? 'done'
@@ -401,6 +458,13 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         workflowLevel,
         skills: selectedSkills,
         allowLlmFallback,
+      }
+
+      if (enableModelComparison && comparisonModel) {
+        request.comparison = {
+          enabled: true,
+          controlModel: comparisonModel,
+        }
       }
 
       if (chatMode === 'agent') {
@@ -626,6 +690,32 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           >
             Agent 高级
           </button>
+          {chatMode === 'chat' && (
+            <>
+              <button
+                onClick={() => setEnableModelComparison((prev) => !prev)}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  enableModelComparison
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                模型对比
+              </button>
+              {enableModelComparison && (
+                <select
+                  aria-label="对照模型"
+                  value={comparisonModel}
+                  onChange={(e) => setComparisonModel(e.target.value)}
+                  className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded"
+                >
+                  {availableComparisonModels.map((model) => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+              )}
+            </>
+          )}
           {chatMode === 'agent' && (
             <select
               value={agentAction}

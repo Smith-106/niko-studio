@@ -1553,6 +1553,14 @@ async def chat_endpoint(request: Request):
         skills = body.get("skills", [])
         context = body.get("context", {})
         allow_llm_fallback = bool(body.get("allowLlmFallback", True))
+        raw_comparison = body.get("comparison", {})
+        comparison = raw_comparison if isinstance(raw_comparison, dict) else {}
+        comparison_enabled = bool(comparison.get("enabled"))
+        control_model = str(comparison.get("controlModel") or "control")
+        primary_model = str(comparison.get("primaryModel") or "primary")
+
+        if comparison_enabled and not control_model.strip():
+            return JSONResponse({"error": "comparison.controlModel is required when comparison is enabled"}, status_code=400)
 
         if not allow_llm_fallback and not _is_llm_available():
             return JSONResponse({"error": "LLM unavailable and fallback disabled"}, status_code=503)
@@ -1711,9 +1719,24 @@ async def chat_endpoint(request: Request):
 """
             steps_completed = 1
 
+        comparison_payload = None
+        if comparison_enabled:
+            comparison_payload = {
+                "enabled": True,
+                "primary": {
+                    "model": primary_model,
+                    "content": response_content,
+                },
+                "control": {
+                    "model": control_model,
+                    "content": response_content,
+                },
+            }
+
         return JSONResponse(_with_contract({
             "content": response_content,
             "skills_used": all_skills[:5],
+            "comparison": comparison_payload,
             "workflow_info": {
                 "level": to_workflow_label(level),
                 "level_slug": to_workflow_slug(level),

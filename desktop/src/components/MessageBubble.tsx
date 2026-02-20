@@ -1,14 +1,7 @@
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-  skills?: string[]
-}
+import type { Message } from '../stores/appStore'
 
 interface MessageBubbleProps {
   message: Message
@@ -20,16 +13,25 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
   const prevMsg = prevProps.message
   const nextMsg = nextProps.message
 
-  // Compare essential properties that affect rendering
   if (prevMsg.id !== nextMsg.id) return false
   if (prevMsg.content !== nextMsg.content) return false
 
-  // Compare skills arrays
   const prevSkills = prevMsg.skills || []
   const nextSkills = nextMsg.skills || []
   if (prevSkills.length !== nextSkills.length) return false
   for (let i = 0; i < prevSkills.length; i++) {
     if (prevSkills[i] !== nextSkills[i]) return false
+  }
+
+  const prevComparison = prevMsg.comparison
+  const nextComparison = nextMsg.comparison
+  if (Boolean(prevComparison) !== Boolean(nextComparison)) return false
+  if (prevComparison && nextComparison) {
+    if (prevComparison.enabled !== nextComparison.enabled) return false
+    if (prevComparison.primary.model !== nextComparison.primary.model) return false
+    if (prevComparison.primary.content !== nextComparison.primary.content) return false
+    if (prevComparison.control.model !== nextComparison.control.model) return false
+    if (prevComparison.control.content !== nextComparison.control.content) return false
   }
 
   return true
@@ -81,13 +83,38 @@ function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubble
         )}
 
         {/* Content */}
-        <div className="markdown-body" onMouseUp={handleMouseUp}>
-          <ReactMarkdown
-            components={markdownComponents}
-          >
-            {message.content}
-          </ReactMarkdown>
-        </div>
+        {message.comparison?.enabled ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3" onMouseUp={handleMouseUp}>
+            <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-3">
+              <div className="text-xs font-semibold mb-2 text-gray-500 dark:text-dark-text-secondary">
+                主模型：{message.comparison.primary.model}
+              </div>
+              <div className="markdown-body">
+                <ReactMarkdown components={markdownComponents}>
+                  {message.comparison.primary.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-3">
+              <div className="text-xs font-semibold mb-2 text-gray-500 dark:text-dark-text-secondary">
+                对照模型：{message.comparison.control.model}
+              </div>
+              <div className="markdown-body">
+                <ReactMarkdown components={markdownComponents}>
+                  {message.comparison.control.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="markdown-body" onMouseUp={handleMouseUp}>
+            <ReactMarkdown
+              components={markdownComponents}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
+        )}
 
         {/* Timestamp */}
         <div

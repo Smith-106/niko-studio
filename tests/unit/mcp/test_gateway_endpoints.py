@@ -717,6 +717,26 @@ def test_chat_endpoint_rejects_no_user_message(client_no_lifespan):
     assert response.json()["error"] == "No user message found"
 
 
+def test_chat_endpoint_returns_model_comparison_payload_when_enabled(client_no_lifespan):
+    response = client_no_lifespan.post("/chat", json={
+        "workflowLevel": "L3",
+        "messages": [{"role": "user", "content": "请对比两个模型输出"}],
+        "comparison": {
+            "enabled": True,
+            "controlModel": "gpt-4-turbo",
+            "primaryModel": "claude-3-sonnet",
+        },
+    })
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload.get("comparison", {}).get("enabled") is True
+    assert payload["comparison"]["primary"]["model"] == "claude-3-sonnet"
+    assert payload["comparison"]["control"]["model"] == "gpt-4-turbo"
+    assert payload["comparison"]["primary"]["content"] == payload["content"]
+    assert payload["comparison"]["control"]["content"] == payload["content"]
+
+
 def test_chat_stream_endpoint_rejects_invalid_workflow_level(client_no_lifespan):
     response = client_no_lifespan.post("/chat/stream", json={
         "workflowLevel": "L99",

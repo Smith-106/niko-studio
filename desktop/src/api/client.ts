@@ -429,6 +429,12 @@ export interface ChatMessage {
 
 export type WorkflowLevel = 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
 
+export interface ChatModelComparisonRequest {
+  enabled: boolean
+  controlModel: string
+  primaryModel?: string
+}
+
 export interface ChatRequest {
   messages: ChatMessage[]
   workflowLevel: WorkflowLevel
@@ -438,11 +444,24 @@ export interface ChatRequest {
     projectId?: string
     chapterId?: string
   }
+  comparison?: ChatModelComparisonRequest
+}
+
+export interface ChatModelComparisonResultItem {
+  model: string
+  content: string
+}
+
+export interface ChatModelComparisonResult {
+  enabled: boolean
+  primary: ChatModelComparisonResultItem
+  control: ChatModelComparisonResultItem
 }
 
 export interface ChatResponse {
   content: string
   skills_used: string[]
+  comparison?: ChatModelComparisonResult
   workflow_info?: {
     level: string
     level_slug?: string

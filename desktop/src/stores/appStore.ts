@@ -2,12 +2,24 @@ import { create } from 'zustand'
 import { checkBackendHealth, listSkills } from '@/api/client'
 import { useSettingsStore } from './settingsStore'
 
+export interface MessageComparisonItem {
+  model: string
+  content: string
+}
+
+export interface MessageComparison {
+  enabled: boolean
+  primary: MessageComparisonItem
+  control: MessageComparisonItem
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
   skills?: string[]
+  comparison?: MessageComparison
 }
 
 export interface Conversation {
@@ -31,7 +43,7 @@ interface AppState {
   // Actions
   createConversation: () => void
   selectConversation: (id: string) => void
-  addMessage: (role: 'user' | 'assistant', content: string, skills?: string[]) => void
+  addMessage: (role: 'user' | 'assistant', content: string, skills?: string[], comparison?: MessageComparison) => void
   getConversationById: (id: string) => Conversation | undefined
 
   // Skills
@@ -88,7 +100,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ currentConversationId: id })
   },
 
-  addMessage: (role, content, skills) => {
+  addMessage: (role, content, skills, comparison) => {
     const { currentConversationId, conversationsById } = get()
     if (!currentConversationId) return
 
@@ -101,6 +113,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       content,
       timestamp: new Date(),
       skills,
+      comparison,
     }
 
     // Direct update to specific conversation - avoids re-rendering unrelated conversations

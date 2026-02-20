@@ -106,6 +106,48 @@ describe('ChatArea P0 flows', () => {
     expect(mockedChat).not.toHaveBeenCalled()
   })
 
+  it('sends comparison request and renders dual-model response when comparison is enabled', async () => {
+    mockedChatStream.mockResolvedValue()
+    mockedChat.mockResolvedValue({
+      success: true,
+      data: {
+        content: 'fallback',
+        skills_used: [],
+        comparison: {
+          enabled: true,
+          primary: { model: 'primary', content: '主模型结果' },
+          control: { model: 'gpt-4-turbo', content: '对照模型结果' },
+        },
+      },
+    })
+
+    render(<ChatArea />)
+
+    await userEvent.click(screen.getByRole('button', { name: '模型对比' }))
+    const modelSelect = screen.getByLabelText('对照模型')
+    await userEvent.selectOptions(modelSelect, 'gpt-4-turbo')
+
+    const input = screen.getByRole('textbox')
+    await userEvent.type(input, '比较测试{enter}')
+
+    await waitFor(() => {
+      expect(mockedChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          comparison: {
+            enabled: true,
+            controlModel: 'gpt-4-turbo',
+          },
+        })
+      )
+    })
+
+    expect(mockedChatStream).not.toHaveBeenCalled()
+    expect(screen.getByText('主模型：primary')).toBeInTheDocument()
+    expect(screen.getByText('对照模型：gpt-4-turbo')).toBeInTheDocument()
+    expect(screen.getByText('主模型结果')).toBeInTheDocument()
+    expect(screen.getByText('对照模型结果')).toBeInTheDocument()
+  })
+
   it('cancels streaming and does not trigger fallback chat', async () => {
     mockedChatStream.mockImplementation(async (_request, callbacks, options) => {
       await new Promise<void>((resolve) => {

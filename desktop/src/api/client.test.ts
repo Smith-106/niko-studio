@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   applyRecommendation,
   batchApplyRecommendations,
+  chat,
   chatStream,
   createGatewayServiceConfig,
   deriveGatewayRuntimeState,
@@ -294,6 +295,49 @@ describe('gateway service config APIs', () => {
       4,
       expect.stringContaining('/mcp/services/search2/health'),
       expect.objectContaining({ method: 'POST' })
+    )
+  })
+})
+
+describe('chat request payload', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('sends comparison payload to /chat when enabled', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: 'ok', skills_used: [] }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await chat({
+      messages: [{ role: 'user', content: 'hello' }],
+      workflowLevel: 'L3',
+      skills: [],
+      allowLlmFallback: true,
+      comparison: {
+        enabled: true,
+        controlModel: 'gpt-4-turbo',
+      },
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/chat'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'hello' }],
+          workflowLevel: 'L3',
+          skills: [],
+          allowLlmFallback: true,
+          comparison: {
+            enabled: true,
+            controlModel: 'gpt-4-turbo',
+          },
+        }),
+      })
     )
   })
 })
