@@ -16,6 +16,34 @@ export interface LLMProvider {
   lastModelSyncAt?: string
 }
 
+export type PromptTemplateCategory = 'brainstorm' | 'outline' | 'character' | 'rewrite' | 'analysis' | 'custom'
+
+export interface PromptTemplateVariable {
+  id: string
+  label: string
+  required: boolean
+  defaultValue?: string
+  description?: string
+}
+
+export interface PromptTemplate {
+  id: string
+  title: string
+  category: PromptTemplateCategory
+  content: string
+  variables: PromptTemplateVariable[]
+  isFavorite: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PromptTemplateLibrarySettings {
+  version: number
+  templates: PromptTemplate[]
+  recentTemplateIds: string[]
+  variablePresets: Record<string, Record<string, string>>
+}
+
 interface Settings {
   // API
   apiBaseUrl: string
@@ -35,6 +63,9 @@ interface Settings {
   defaultWorkflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
   targetWordsPerChapter: number
   autoSkillMatch: boolean
+
+  // Prompt templates
+  promptTemplateLibrary?: PromptTemplateLibrarySettings
 
   // UI
   theme: 'light' | 'dark' | 'system'
@@ -106,6 +137,60 @@ const defaultProviders: LLMProvider[] = [
   },
 ]
 
+const nowIso = () => new Date().toISOString()
+
+const defaultPromptTemplates = (): PromptTemplate[] => {
+  const createdAt = nowIso()
+  return [
+    {
+      id: 'tpl-brainstorm-idea',
+      title: '故事脑暴',
+      category: 'brainstorm',
+      content: '请围绕主题「{topic}」给出 {count} 个高概念创意，并补充每个创意的核心冲突。',
+      variables: [
+        { id: 'topic', label: '主题', required: true, defaultValue: '' },
+        { id: 'count', label: '数量', required: true, defaultValue: '5' },
+      ],
+      isFavorite: false,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    {
+      id: 'tpl-outline-chapter',
+      title: '章节大纲',
+      category: 'outline',
+      content: '请为小说《{title}》生成第 {chapter} 章大纲，重点是目标、冲突和转折。',
+      variables: [
+        { id: 'title', label: '作品名', required: true, defaultValue: '' },
+        { id: 'chapter', label: '章节号', required: true, defaultValue: '1' },
+      ],
+      isFavorite: false,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    {
+      id: 'tpl-rewrite-tone',
+      title: '语气改写',
+      category: 'rewrite',
+      content: '请将以下文本改写为「{tone}」风格，保留原意并提升可读性：\n\n{text}',
+      variables: [
+        { id: 'tone', label: '目标语气', required: true, defaultValue: '克制冷静' },
+        { id: 'text', label: '原文本', required: true, defaultValue: '' },
+      ],
+      isFavorite: false,
+      createdAt,
+      updatedAt: createdAt,
+    },
+  ]
+}
+
+const defaultPromptTemplateLibrary = (): PromptTemplateLibrarySettings => ({
+  version: 1,
+  templates: defaultPromptTemplates(),
+  recentTemplateIds: [],
+  variablePresets: {},
+})
+
 const defaultSettings: Settings = {
   apiBaseUrl: 'http://127.0.0.1:8000',
   apiKey: '',
@@ -118,6 +203,7 @@ const defaultSettings: Settings = {
   defaultWorkflowLevel: 'L3',
   targetWordsPerChapter: 2000,
   autoSkillMatch: true,
+  promptTemplateLibrary: defaultPromptTemplateLibrary(),
   theme: 'light',
   fontSize: 'medium',
   language: 'zh',
@@ -162,10 +248,85 @@ const normalizeProvider = (provider: LLMProvider): LLMProvider => {
   }
 }
 
-const normalizeSettings = (settings: Settings): Settings => ({
-  ...settings,
-  llmProviders: settings.llmProviders.map(normalizeProvider),
+const normalizeTemplateVariable = (variable: PromptTemplateVariable): PromptTemplateVariable => ({
+  ...variable,
+  id: variable.id.trim(),
+  label: variable.label.trim() || variable.id.trim(),
+  required: Boolean(variable.required),
+  defaultValue: variable.defaultValue,
+  description: variable.description,
 })
+
+const normalizeTemplate = (template: PromptTemplate): PromptTemplate => {
+  const createdAt = template.createdAt || nowIso()
+  const updatedAt = template.updatedAt || createdAt
+  return {
+    ...template,
+    id: template.id.trim(),
+    title: template.title.trim() || template.id.trim(),
+    content: template.content,
+    category: template.category,
+    variables: (template.variables ?? [])
+      .map(normalizeTemplateVariable)
+      .filter((variable) => Boolean(variable.id)),
+    isFavorite: Boolean(template.isFavorite),
+    createdAt,
+    updatedAt,
+  }
+}
+
+const normalizePromptTemplateLibrary = (
+  library: PromptTemplateLibrarySettings | undefined
+): PromptTemplateLibrarySettings => {
+  const fallback = defaultPromptTemplateLibrary()
+  const templates = (library?.templates ?? fallback.templates)
+    .map(normalizeTemplate)
+    .filter((template) => Boolean(template.id))
+
+  const uniqueTemplates = Array.from(new Map(templates.map((template) => [template.id, template])).values())
+  const templateIds = new Set(uniqueTemplates.map((template) => template.id))
+
+  const recentTemplateIds = (library?.recentTemplateIds ?? fallback.recentTemplateIds)
+    .filter((id) => templateIds.has(id))
+    .filter((id, index, arr) => arr.indexOf(id) === index)
+    .slice(0, 20)
+
+  const presets = library?.variablePresets ?? fallback.variablePresets
+  const variablePresets: Record<string, Record<string, string>> = {}
+
+  for (const [templateId, values] of Object.entries(presets)) {
+    if (!templateIds.has(templateId)) continue
+    if (!values || typeof values !== 'object') continue
+
+    const entries = Object.entries(values)
+      .filter(([key, value]) => Boolean(key) && typeof value === 'string')
+    if (entries.length === 0) continue
+
+    variablePresets[templateId] = Object.fromEntries(entries)
+  }
+
+  return {
+    version: library?.version ?? fallback.version,
+    templates: uniqueTemplates,
+    recentTemplateIds,
+    variablePresets,
+  }
+}
+
+const normalizeSettings = (settings: Partial<Settings>): Settings => {
+  const merged: Settings = {
+    ...defaultSettings,
+    ...settings,
+    llmProviders: settings.llmProviders ?? defaultSettings.llmProviders,
+    promptTemplateLibrary: settings.promptTemplateLibrary,
+  }
+
+  return {
+    ...merged,
+    llmProviders: merged.llmProviders.map(normalizeProvider),
+    promptTemplateLibrary: normalizePromptTemplateLibrary(merged.promptTemplateLibrary),
+  }
+}
 
 interface SettingsStore {
   settings: Settings
@@ -174,6 +335,12 @@ interface SettingsStore {
   resetSettings: () => void
   getEnabledProviders: () => LLMProvider[]
   getPrimaryProvider: () => LLMProvider | undefined
+  addTemplate: (template: PromptTemplate) => void
+  updateTemplate: (templateId: string, updates: Partial<Omit<PromptTemplate, 'id' | 'createdAt'>>) => void
+  deleteTemplate: (templateId: string) => void
+  toggleTemplateFavorite: (templateId: string) => void
+  recordTemplateUsage: (templateId: string) => void
+  setTemplateVariablePreset: (templateId: string, variableId: string, value: string) => void
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -186,12 +353,12 @@ export const useSettingsStore = create<SettingsStore>()(
         })),
       updateProvider: (providerId, updates) =>
         set((state) => ({
-          settings: {
+          settings: normalizeSettings({
             ...state.settings,
             llmProviders: state.settings.llmProviders.map((p) =>
               p.id === providerId ? normalizeProvider({ ...p, ...updates }) : normalizeProvider(p)
             ),
-          },
+          }),
         })),
       resetSettings: () => set({ settings: normalizeSettings(defaultSettings) }),
       getEnabledProviders: () => {
@@ -201,6 +368,129 @@ export const useSettingsStore = create<SettingsStore>()(
         const { llmProviders, primaryProvider } = get().settings
         return llmProviders.find((p) => p.id === primaryProvider)
       },
+      addTemplate: (template) =>
+        set((state) => {
+          const library = normalizePromptTemplateLibrary(state.settings.promptTemplateLibrary)
+          const normalizedTemplate = normalizeTemplate(template)
+          const existingIndex = library.templates.findIndex((item) => item.id === normalizedTemplate.id)
+          const templates = [...library.templates]
+
+          if (existingIndex >= 0) {
+            templates[existingIndex] = {
+              ...templates[existingIndex],
+              ...normalizedTemplate,
+              updatedAt: nowIso(),
+            }
+          } else {
+            templates.unshift(normalizedTemplate)
+          }
+
+          return {
+            settings: normalizeSettings({
+              ...state.settings,
+              promptTemplateLibrary: {
+                ...library,
+                templates,
+              },
+            }),
+          }
+        }),
+      updateTemplate: (templateId, updates) =>
+        set((state) => {
+          const library = normalizePromptTemplateLibrary(state.settings.promptTemplateLibrary)
+          const templates = library.templates.map((template) => {
+            if (template.id !== templateId) return template
+            return normalizeTemplate({
+              ...template,
+              ...updates,
+              updatedAt: nowIso(),
+            })
+          })
+
+          return {
+            settings: normalizeSettings({
+              ...state.settings,
+              promptTemplateLibrary: {
+                ...library,
+                templates,
+              },
+            }),
+          }
+        }),
+      deleteTemplate: (templateId) =>
+        set((state) => {
+          const library = normalizePromptTemplateLibrary(state.settings.promptTemplateLibrary)
+          const templates = library.templates.filter((template) => template.id !== templateId)
+          const recentTemplateIds = library.recentTemplateIds.filter((id) => id !== templateId)
+          const { [templateId]: _removed, ...variablePresets } = library.variablePresets
+
+          return {
+            settings: normalizeSettings({
+              ...state.settings,
+              promptTemplateLibrary: {
+                ...library,
+                templates,
+                recentTemplateIds,
+                variablePresets,
+              },
+            }),
+          }
+        }),
+      toggleTemplateFavorite: (templateId) =>
+        set((state) => {
+          const library = normalizePromptTemplateLibrary(state.settings.promptTemplateLibrary)
+          const templates = library.templates.map((template) =>
+            template.id === templateId
+              ? { ...template, isFavorite: !template.isFavorite, updatedAt: nowIso() }
+              : template
+          )
+
+          return {
+            settings: normalizeSettings({
+              ...state.settings,
+              promptTemplateLibrary: {
+                ...library,
+                templates,
+              },
+            }),
+          }
+        }),
+      recordTemplateUsage: (templateId) =>
+        set((state) => {
+          const library = normalizePromptTemplateLibrary(state.settings.promptTemplateLibrary)
+          const recentTemplateIds = [templateId, ...library.recentTemplateIds.filter((id) => id !== templateId)].slice(0, 20)
+
+          return {
+            settings: normalizeSettings({
+              ...state.settings,
+              promptTemplateLibrary: {
+                ...library,
+                recentTemplateIds,
+              },
+            }),
+          }
+        }),
+      setTemplateVariablePreset: (templateId, variableId, value) =>
+        set((state) => {
+          const library = normalizePromptTemplateLibrary(state.settings.promptTemplateLibrary)
+          const currentPreset = library.variablePresets[templateId] ?? {}
+
+          return {
+            settings: normalizeSettings({
+              ...state.settings,
+              promptTemplateLibrary: {
+                ...library,
+                variablePresets: {
+                  ...library.variablePresets,
+                  [templateId]: {
+                    ...currentPreset,
+                    [variableId]: value,
+                  },
+                },
+              },
+            }),
+          }
+        }),
     }),
     {
       name: 'niko-settings',

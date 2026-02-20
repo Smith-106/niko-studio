@@ -6,6 +6,7 @@ import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSki
 import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, uploadMemoryFile } from '../api/client'
 import type { ChatRequest, StreamDonePayload } from '../api/client'
 import { MessageBubble } from './MessageBubble'
+import { PromptTemplatePanel, type ApplyTemplatePayload } from './PromptTemplatePanel'
 import { useI18n } from '../i18n'
 
 interface ChatAreaProps {
@@ -46,6 +47,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const [selectionMeta, setSelectionMeta] = useState<SelectionMeta | null>(null)
   const [inlineAction, setInlineAction] = useState<InlineAction>(null)
   const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -59,6 +61,12 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const selectedSkills = useSelectedSkills()
   const allowLlmFallback = useAllowLlmFallback()
   const { settings } = useSettingsStore()
+  const {
+    toggleTemplateFavorite,
+    recordTemplateUsage,
+    setTemplateVariablePreset,
+  } = useSettingsStore()
+  const promptTemplateLibrary = settings.promptTemplateLibrary
   const availableComparisonModels = useMemo(() => {
     const allModels = settings.llmProviders.flatMap((provider) => {
       const models = [...(provider.models ?? []), ...(provider.fetchedModels ?? []), ...(provider.customModels ?? [])]
@@ -554,6 +562,20 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
   }
 
+  const handleApplyTemplate = ({ text, mode, templateId, variableValues }: ApplyTemplatePayload) => {
+    if (mode === 'replace') {
+      setInput(text)
+    } else {
+      setInput((prev) => (prev ? `${prev}\n\n${text}` : text))
+    }
+
+    recordTemplateUsage(templateId)
+    for (const [variableId, value] of Object.entries(variableValues)) {
+      setTemplateVariablePreset(templateId, variableId, value)
+    }
+    setIsTemplatePanelOpen(false)
+  }
+
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-dark-surface">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -702,6 +724,12 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               >
                 模型对比
               </button>
+              <button
+                onClick={() => setIsTemplatePanelOpen(true)}
+                className="px-3 py-1 text-xs rounded-full transition-colors bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                {t.templateLibraryEntry}
+              </button>
               {enableModelComparison && (
                 <select
                   aria-label="对照模型"
@@ -805,6 +833,15 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           )}
         </div>
       </div>
+      {isTemplatePanelOpen && promptTemplateLibrary && (
+        <PromptTemplatePanel
+          templates={promptTemplateLibrary.templates}
+          variablePresets={promptTemplateLibrary.variablePresets}
+          onToggleFavorite={toggleTemplateFavorite}
+          onApplyTemplate={handleApplyTemplate}
+          onClose={() => setIsTemplatePanelOpen(false)}
+        />
+      )}
     </div>
   )
 }

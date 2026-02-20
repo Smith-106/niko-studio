@@ -56,6 +56,27 @@ export interface Translations {
   inlineGenerateContextFallback: string
   streamGateSoftGo: string
   streamGateNoGo: string
+  templateLibraryEntry: string
+  templateLibraryTitle: string
+  templateClosePanel: string
+  templateCategoryAll: string
+  templateCategoryBrainstorm: string
+  templateCategoryOutline: string
+  templateCategoryCharacter: string
+  templateCategoryRewrite: string
+  templateCategoryAnalysis: string
+  templateCategoryCustom: string
+  templateFavorite: string
+  templateUnfavorite: string
+  templateFavoriteOnlyOn: string
+  templateFavoriteOnlyOff: string
+  templateSearchPlaceholder: string
+  templateRequiredHint: string
+  templateApplyAction: string
+  templateApplyReplace: string
+  templateApplyAppend: string
+  templateEmptyList: string
+  templateNoMatch: string
 
   // Settings
   settingsTitle: string
@@ -160,6 +181,27 @@ export const translations: Record<Language, Translations> = {
     inlineGenerateContextFallback: '根据当前对话上下文生成。',
     streamGateSoftGo: '已降级执行（Soft Go）：结果可用，建议继续关注。',
     streamGateNoGo: '当前结果未通过质量门（No-Go），请调整后重试。',
+    templateLibraryEntry: '模板库',
+    templateLibraryTitle: '模板库',
+    templateClosePanel: '关闭模板库',
+    templateCategoryAll: '全部',
+    templateCategoryBrainstorm: '脑暴',
+    templateCategoryOutline: '大纲',
+    templateCategoryCharacter: '角色',
+    templateCategoryRewrite: '改写',
+    templateCategoryAnalysis: '分析',
+    templateCategoryCustom: '自定义',
+    templateFavorite: '收藏模板',
+    templateUnfavorite: '取消收藏',
+    templateFavoriteOnlyOn: '仅看收藏',
+    templateFavoriteOnlyOff: '全部模板',
+    templateSearchPlaceholder: '搜索模板标题或内容',
+    templateRequiredHint: '该变量为必填项',
+    templateApplyAction: '一键填充',
+    templateApplyReplace: '替换输入框',
+    templateApplyAppend: '追加到输入框',
+    templateEmptyList: '暂无模板',
+    templateNoMatch: '无匹配模板',
 
     // Settings
     settingsTitle: '设置',
@@ -262,6 +304,27 @@ export const translations: Record<Language, Translations> = {
     inlineGenerateContextFallback: 'Generate based on the current conversation context.',
     streamGateSoftGo: 'Executed with fallback (Soft Go): output is available, please keep monitoring.',
     streamGateNoGo: 'The current output did not pass the quality gate (No-Go). Please adjust and retry.',
+    templateLibraryEntry: 'Template Library',
+    templateLibraryTitle: 'Template Library',
+    templateClosePanel: 'Close template library',
+    templateCategoryAll: 'All',
+    templateCategoryBrainstorm: 'Brainstorm',
+    templateCategoryOutline: 'Outline',
+    templateCategoryCharacter: 'Character',
+    templateCategoryRewrite: 'Rewrite',
+    templateCategoryAnalysis: 'Analysis',
+    templateCategoryCustom: 'Custom',
+    templateFavorite: 'Favorite template',
+    templateUnfavorite: 'Unfavorite template',
+    templateFavoriteOnlyOn: 'Favorites only',
+    templateFavoriteOnlyOff: 'All templates',
+    templateSearchPlaceholder: 'Search template title or content',
+    templateRequiredHint: 'This variable is required',
+    templateApplyAction: 'Apply Template',
+    templateApplyReplace: 'Replace Input',
+    templateApplyAppend: 'Append Input',
+    templateEmptyList: 'No templates yet',
+    templateNoMatch: 'No matching templates',
 
     // Settings
     settingsTitle: 'Settings',

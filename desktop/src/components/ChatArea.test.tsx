@@ -33,6 +33,7 @@ const mockedUploadMemoryFile = vi.mocked(uploadMemoryFile)
 
 function resetStores(): void {
   localStorage.clear()
+  useSettingsStore.getState().resetSettings()
   useSettingsStore.setState((state) => ({
     ...state,
     settings: {
@@ -314,18 +315,50 @@ describe('ChatArea P0 flows', () => {
     })
   })
 
-  it('rejects unsupported upload extension before API call', async () => {
+  it('opens template library panel and applies template in replace mode', async () => {
+    mockedChatStream.mockResolvedValue()
+
     render(<ChatArea />)
 
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-    expect(fileInput).not.toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: '模板库' }))
+    expect(await screen.findByRole('dialog', { name: '模板库' })).toBeInTheDocument()
 
-    const file = new File(['csv body'], 'context.csv', { type: 'text/csv' })
-    await userEvent.upload(fileInput, file, { applyAccept: false })
+    await userEvent.type(screen.getByLabelText('主题 *'), '冒险')
+    await userEvent.click(screen.getByRole('button', { name: '一键填充' }))
+
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement
+    expect(input.value).toContain('主题「冒险」')
+
+    await userEvent.type(input, '{enter}')
 
     await waitFor(() => {
-      expect(screen.getByText('仅支持 TXT/MD/PDF/DOCX 文件。')).toBeInTheDocument()
+      expect(mockedChatStream).toHaveBeenCalled()
+      expect(mockedChatStream.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          messages: [
+            expect.objectContaining({
+              content: expect.stringContaining('主题「冒险」'),
+            }),
+          ],
+        })
+      )
     })
-    expect(mockedUploadMemoryFile).not.toHaveBeenCalled()
+  })
+
+  it('applies template in append mode with existing input', async () => {
+    render(<ChatArea />)
+
+    const input = screen.getByRole('textbox') as HTMLTextAreaElement
+    await userEvent.type(input, '已有内容')
+
+    await userEvent.click(screen.getByRole('button', { name: '模板库' }))
+    await userEvent.type(screen.getByLabelText('主题 *'), '科幻')
+    await userEvent.click(screen.getByRole('button', { name: '追加到输入框' }))
+    await userEvent.click(screen.getByRole('button', { name: '一键填充' }))
+
+    expect(input.value).toContain('已有内容')
+    expect(input.value).toContain('主题「科幻」')
+    expect(input.value).toContain('\n\n')
   })
 })
+
