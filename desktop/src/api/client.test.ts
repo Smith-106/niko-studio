@@ -3,8 +3,13 @@ import {
   applyRecommendation,
   batchApplyRecommendations,
   chatStream,
+  createGatewayServiceConfig,
   deriveGatewayRuntimeState,
+  listGatewayServiceConfigs,
   mergeRecommendationBatchResults,
+  probeGatewayServiceHealth,
+  setGatewayServiceEnabled,
+  updateGatewayServiceConfig,
   type ChatRequest,
   type GatewayHealth,
 } from './client'
@@ -212,6 +217,84 @@ describe('gateway runtime mapping', () => {
     expect(result.sessionId).toBe('gw-20260220-xyz')
     expect(result.reconnectAttempts).toBe(2)
     expect(result.lastError).toBe('search:error')
+  })
+})
+
+describe('gateway service config APIs', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('sends PUT payload when updating gateway service config', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ service: { id: 'search', name: 'Search v2', enabled: true } }),
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await updateGatewayServiceConfig('search', { name: 'Search v2', enabled: true })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/mcp/services/search'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ name: 'Search v2', enabled: true }),
+      })
+    )
+  })
+
+  it('calls list/create/toggle/probe gateway service endpoints', async () => {
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ services: [] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ service: { id: 'search2', enabled: true } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ service: { id: 'search2', enabled: false } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ service: { id: 'search2', status: 'disabled', enabled: false, checked_at: '2026-02-20T10:00:00Z' } }),
+      })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await listGatewayServiceConfigs()
+    await createGatewayServiceConfig({ id: 'search2', name: 'Search 2', path: '/search2', enabled: true })
+    await setGatewayServiceEnabled('search2', false)
+    await probeGatewayServiceHealth('search2')
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/mcp/services'),
+      expect.objectContaining({ method: 'GET' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/mcp/services'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ id: 'search2', name: 'Search 2', path: '/search2', enabled: true }),
+      })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('/mcp/services/search2/enabled'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ enabled: false }),
+      })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('/mcp/services/search2/health'),
+      expect.objectContaining({ method: 'POST' })
+    )
   })
 })
 

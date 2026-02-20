@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Send, Paperclip, Mic } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback } from '../stores/selectors'
-import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint } from '../api/client'
+import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, uploadMemoryFile } from '../api/client'
 import type { ChatRequest, StreamDonePayload } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { useI18n } from '../i18n'
@@ -42,6 +42,8 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const [selectedText, setSelectedText] = useState('')
   const [selectionMeta, setSelectionMeta] = useState<SelectionMeta | null>(null)
   const [inlineAction, setInlineAction] = useState<InlineAction>(null)
+  const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamRequestIdRef = useRef(0)
@@ -293,6 +295,64 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
   }
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) {
+      return
+    }
+
+    let uploadSessionId = currentConversationId
+    if (!uploadSessionId) {
+      createConversation()
+      uploadSessionId = useAppStore.getState().currentConversationId
+    }
+
+    if (!uploadSessionId) {
+      setUploadStatus({ type: 'error', message: '无法创建会话，请重试。' })
+      return
+    }
+
+    const allowedExtensions = ['txt', 'md', 'pdf', 'docx']
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    if (!extension || !allowedExtensions.includes(extension)) {
+      setUploadStatus({ type: 'error', message: '仅支持 TXT/MD/PDF/DOCX 文件。' })
+      return
+    }
+
+    setIsLoading(true)
+    setUploadStatus(null)
+
+    try {
+      const buffer = await file.arrayBuffer()
+      const bytes = new Uint8Array(buffer)
+      let binary = ''
+      for (let index = 0; index < bytes.length; index += 1) {
+        binary += String.fromCharCode(bytes[index])
+      }
+      const fileContentBase64 = btoa(binary)
+
+      const response = await uploadMemoryFile({
+        file_name: file.name,
+        file_content_base64: fileContentBase64,
+        session_id: uploadSessionId,
+      })
+
+      if (!response.success || !response.data) {
+        setUploadStatus({ type: 'error', message: response.error || '文件注入失败，请重试。' })
+        return
+      }
+
+      setUploadStatus({ type: 'success', message: `文件已注入上下文：${file.name}（${response.data.chunks} 段）` })
+      addMessage('assistant', `已完成文件上下文注入：${file.name}（${response.data.chunks} 段）`)
+    } catch {
+      setUploadStatus({ type: 'error', message: '文件注入失败，请重试。' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleRestoreToCheckpoint = async () => {
     if (!recoverableCheckpointId || isLoading) return
 
@@ -489,6 +549,18 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         </div>
       )}
 
+      {uploadStatus && (
+        <div
+          className={`px-4 py-2 text-xs ${
+            uploadStatus.type === 'success'
+              ? 'text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
+              : 'text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400'
+          }`}
+        >
+          {uploadStatus.message}
+        </div>
+      )}
+
       <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg">
         {selectionMeta && (
           <div className="mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-2">
@@ -607,7 +679,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               style={{ minHeight: '48px', maxHeight: '200px' }}
             />
             <div className="absolute right-2 bottom-2 flex items-center gap-1">
-              <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.pdf,.docx"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors"
+              >
                 <Paperclip size={18} />
               </button>
               <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors">

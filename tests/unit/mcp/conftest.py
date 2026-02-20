@@ -227,7 +227,19 @@ def client_no_lifespan(
     from starlette.testclient import TestClient
     from starlette.applications import Starlette
     from starlette.routing import Route
-    from src.mcp.gateway import health_check, metrics_endpoint, list_tools, list_models, chat_endpoint, chat_stream_endpoint
+    from src.mcp.gateway import (
+        health_check,
+        metrics_endpoint,
+        list_tools,
+        list_models,
+        chat_endpoint,
+        chat_stream_endpoint,
+        list_mcp_services,
+        create_mcp_service,
+        update_mcp_service,
+        set_mcp_service_enabled,
+        probe_mcp_service_health,
+    )
 
     # Create minimal app without MCP lifespan
     app = Starlette(
@@ -236,6 +248,11 @@ def client_no_lifespan(
             Route("/metrics", metrics_endpoint, methods=["GET"]),
             Route("/tools", list_tools, methods=["GET"]),
             Route("/models", list_models, methods=["GET"]),
+            Route("/mcp/services", list_mcp_services, methods=["GET"]),
+            Route("/mcp/services", create_mcp_service, methods=["POST"]),
+            Route("/mcp/services/{service_id}", update_mcp_service, methods=["PUT"]),
+            Route("/mcp/services/{service_id}/enabled", set_mcp_service_enabled, methods=["POST"]),
+            Route("/mcp/services/{service_id}/health", probe_mcp_service_health, methods=["POST"]),
             Route("/chat", chat_endpoint, methods=["POST"]),
             Route("/chat/stream", chat_stream_endpoint, methods=["POST"]),
         ]

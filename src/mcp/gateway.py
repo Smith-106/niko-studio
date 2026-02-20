@@ -34,6 +34,8 @@ import time
 import os
 import math
 import inspect
+import io
+import base64
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Iterable
@@ -72,6 +74,30 @@ _METRICS = {
 }
 
 _RUNTIME_SERVER_ORDER = ["memory", "graph", "search", "workflow", "critic", "agent", "skills"]
+
+
+@dataclass
+class McpServiceConfig:
+    service_id: str
+    name: str
+    path: str
+    enabled: bool = True
+    builtin: bool = False
+    health_url: Optional[str] = None
+    transport: str = "streamable-http"
+
+
+_MCP_SERVICE_CONFIGS: Dict[str, McpServiceConfig] = {
+    "memory": McpServiceConfig(service_id="memory", name="Memory", path="/memory", enabled=True, builtin=True),
+    "graph": McpServiceConfig(service_id="graph", name="Graph", path="/graph", enabled=True, builtin=True),
+    "search": McpServiceConfig(service_id="search", name="Search", path="/search", enabled=True, builtin=True),
+    "workflow": McpServiceConfig(service_id="workflow", name="Workflow", path="/workflow", enabled=True, builtin=True),
+    "critic": McpServiceConfig(service_id="critic", name="Critic", path="/critic", enabled=True, builtin=True),
+    "agent": McpServiceConfig(service_id="agent", name="Agent", path="/agent", enabled=True, builtin=True),
+    "skills": McpServiceConfig(service_id="skills", name="Skills", path="/skills", enabled=True, builtin=True),
+}
+
+_MCP_SERVICE_HEALTH_CACHE: Dict[str, str] = {service_id: "unknown" for service_id in _MCP_SERVICE_CONFIGS}
 
 _RUNTIME_SESSION_ID = f"gw-{int(time.time() * 1000)}"
 _RUNTIME_LAST_PROBE_AT: Optional[str] = None
@@ -139,15 +165,133 @@ def _build_runtime_servers(services: Dict[str, str], connection_state: str, last
         name: {
             "state": _to_server_runtime_state(services.get(name, "unknown"), connection_state),
             "loading": False,
-            "last_error": last_error if services.get(name, "ok") != "ok" else None,
+            "last_error": last_error if _service_runtime_status(name, services) not in {"ok", "disabled"} else None,
+            "enabled": _MCP_SERVICE_CONFIGS.get(name).enabled if name in _MCP_SERVICE_CONFIGS else True,
         }
         for name in _RUNTIME_SERVER_ORDER
     }
 
 
+def _service_is_ready(service_id: str, services: Dict[str, str]) -> bool:
+    config = _MCP_SERVICE_CONFIGS.get(service_id)
+    if config and not config.enabled:
+        return False
+    return services.get(service_id, "unknown") == "ok"
+
+
+def _service_runtime_status(service_id: str, services: Dict[str, str]) -> str:
+    config = _MCP_SERVICE_CONFIGS.get(service_id)
+    if config and not config.enabled:
+        return "disabled"
+    return services.get(service_id, "unknown")
+
+
+def _serialize_service_config(config: McpServiceConfig, services: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    runtime_status = "unknown"
+    if services is not None:
+        runtime_status = _service_runtime_status(config.service_id, services)
+    elif config.service_id in _MCP_SERVICE_HEALTH_CACHE:
+        runtime_status = _MCP_SERVICE_HEALTH_CACHE[config.service_id]
+
+    return {
+        "id": config.service_id,
+        "name": config.name,
+        "path": config.path,
+        "enabled": config.enabled,
+        "builtin": config.builtin,
+        "transport": config.transport,
+        "health_url": config.health_url,
+        "status": runtime_status,
+    }
+
+
+def _normalize_service_config_payload(service_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = {
+        "service_id": service_id.strip().lower(),
+        "name": str(body.get("name") or service_id).strip(),
+        "path": str(body.get("path") or f"/{service_id}").strip(),
+        "enabled": bool(body.get("enabled", True)),
+        "builtin": bool(body.get("builtin", False)),
+        "health_url": body.get("health_url"),
+        "transport": str(body.get("transport") or "streamable-http").strip() or "streamable-http",
+    }
+
+    if not normalized["service_id"]:
+        raise ValueError("service_id is required")
+
+    if not normalized["path"]:
+        raise ValueError("path is required")
+
+    if not normalized["path"].startswith("/"):
+        normalized["path"] = f"/{normalized['path']}"
+
+    if normalized["health_url"] is not None:
+        normalized["health_url"] = str(normalized["health_url"]).strip() or None
+
+    return normalized
+
+
+def _update_service_config(service_id: str, body: Dict[str, Any], *, create_if_missing: bool = False) -> McpServiceConfig:
+    current = _MCP_SERVICE_CONFIGS.get(service_id)
+    if current is None and not create_if_missing:
+        raise KeyError(service_id)
+
+    if current is not None:
+        if current.builtin and body.get("path") is not None:
+            raise ValueError("builtin service path is immutable")
+        if current.builtin and body.get("builtin") is False:
+            raise ValueError("builtin service cannot be downgraded")
+
+    payload = _normalize_service_config_payload(service_id, body)
+
+    if current is None:
+        updated = McpServiceConfig(**payload)
+    else:
+        updated = McpServiceConfig(
+            service_id=current.service_id,
+            name=payload["name"],
+            path=current.path if current.builtin else payload["path"],
+            enabled=payload["enabled"],
+            builtin=current.builtin,
+            health_url=payload["health_url"],
+            transport=payload["transport"],
+        )
+
+    _MCP_SERVICE_CONFIGS[updated.service_id] = updated
+    _MCP_SERVICE_HEALTH_CACHE.setdefault(updated.service_id, "unknown")
+    return updated
+
+
+def _set_service_enabled(service_id: str, enabled: bool) -> McpServiceConfig:
+    config = _MCP_SERVICE_CONFIGS.get(service_id)
+    if config is None:
+        raise KeyError(service_id)
+
+    if config.builtin and not enabled:
+        raise ValueError("builtin service cannot be disabled")
+
+    updated = McpServiceConfig(
+        service_id=config.service_id,
+        name=config.name,
+        path=config.path,
+        enabled=enabled,
+        builtin=config.builtin,
+        health_url=config.health_url,
+        transport=config.transport,
+    )
+    _MCP_SERVICE_CONFIGS[service_id] = updated
+    return updated
+
+
+def _refresh_service_health_cache(services: Dict[str, str]) -> None:
+    for service_id in _MCP_SERVICE_CONFIGS:
+        _MCP_SERVICE_HEALTH_CACHE[service_id] = _service_runtime_status(service_id, services)
+
+
 def _is_production_env() -> bool:
     env = str(os.getenv("NIKO_ENV") or get_config_value("env", "development")).lower()
     return env in {"prod", "production"}
+
 
 
 def _resolve_reload_enabled() -> bool:
@@ -221,6 +365,7 @@ from src.workflow.base_state import create_base_state
 from src.workflow.levels.level5_coordinator import Level5Coordinator
 from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION, LEGACY_DECISION_MAP, ensure_contract_payload
 from src.workflow.novel_quality import evaluate_novel_quality
+from src.services.document_loader import DocumentLoader
 
 
 def _with_contract(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -1959,11 +2104,17 @@ async def health_check(request):
         "skills": "ok",
     }
 
+    for service_id, config in _MCP_SERVICE_CONFIGS.items():
+        if not config.enabled:
+            services[service_id] = "disabled"
+
+    _refresh_service_health_cache(services)
+
     _RUNTIME_LAST_PROBE_AT = _utc_now_iso()
     failing_services = [
-        f"{name}:{services.get(name, 'unknown')}"
+        f"{name}:{_service_runtime_status(name, services)}"
         for name in _RUNTIME_SERVER_ORDER
-        if services.get(name, "ok") != "ok"
+        if _service_runtime_status(name, services) not in {"ok", "disabled"}
     ]
     if failing_services:
         _RUNTIME_LAST_ERROR = "; ".join(failing_services)
@@ -1990,6 +2141,10 @@ async def health_check(request):
             "reconnect_attempts": _RUNTIME_RECONNECT_ATTEMPTS,
             "last_error": _RUNTIME_LAST_ERROR,
             "servers": _build_runtime_servers(services, connection_state, _RUNTIME_LAST_ERROR),
+            "service_configs": [
+                _serialize_service_config(config, services)
+                for config in _MCP_SERVICE_CONFIGS.values()
+            ],
         },
     })
     return response
@@ -2036,6 +2191,96 @@ async def list_tools(request):
         ]
     }
     return JSONResponse(tools)
+
+
+async def list_mcp_services(request):
+    """列出 MCP 服务配置与运行状态"""
+    services = request.query_params.get("services")
+    runtime_services: Optional[Dict[str, str]] = None
+    if services:
+        runtime_services = {k: v for k, v in [item.split(":", 1) for item in services.split(",") if ":" in item]}
+
+    payload = [
+        _serialize_service_config(config, runtime_services)
+        for config in _MCP_SERVICE_CONFIGS.values()
+    ]
+    return JSONResponse({"services": payload})
+
+
+async def create_mcp_service(request):
+    """新增 MCP 服务配置（不挂载运行时路由）"""
+    body = await request.json()
+    raw_service_id = str(body.get("id") or body.get("service_id") or "").strip().lower()
+    if not raw_service_id:
+        return JSONResponse({"error": "id is required"}, status_code=400)
+    if raw_service_id in _MCP_SERVICE_CONFIGS:
+        return JSONResponse({"error": f"service '{raw_service_id}' already exists"}, status_code=409)
+
+    try:
+        config = _update_service_config(raw_service_id, body, create_if_missing=True)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    return JSONResponse({"service": _serialize_service_config(config)}, status_code=201)
+
+
+async def update_mcp_service(request):
+    """更新 MCP 服务配置"""
+    service_id = request.path_params.get("service_id", "").strip().lower()
+    if not service_id:
+        return JSONResponse({"error": "service_id is required"}, status_code=400)
+
+    body = await request.json()
+    body.setdefault("service_id", service_id)
+
+    try:
+        config = _update_service_config(service_id, body, create_if_missing=False)
+    except KeyError:
+        return JSONResponse({"error": f"service '{service_id}' not found"}, status_code=404)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    return JSONResponse({"service": _serialize_service_config(config)})
+
+
+async def set_mcp_service_enabled(request):
+    """启用/禁用 MCP 服务"""
+    service_id = request.path_params.get("service_id", "").strip().lower()
+    if not service_id:
+        return JSONResponse({"error": "service_id is required"}, status_code=400)
+
+    body = await request.json()
+    enabled = body.get("enabled")
+    if not isinstance(enabled, bool):
+        return JSONResponse({"error": "enabled must be boolean"}, status_code=400)
+
+    try:
+        config = _set_service_enabled(service_id, enabled)
+    except KeyError:
+        return JSONResponse({"error": f"service '{service_id}' not found"}, status_code=404)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    return JSONResponse({"service": _serialize_service_config(config)})
+
+
+async def probe_mcp_service_health(request):
+    """探测 MCP 服务健康态（模拟探测，不触发真实网络调用）"""
+    service_id = request.path_params.get("service_id", "").strip().lower()
+    config = _MCP_SERVICE_CONFIGS.get(service_id)
+    if config is None:
+        return JSONResponse({"error": f"service '{service_id}' not found"}, status_code=404)
+
+    status = "ok" if config.enabled else "disabled"
+    _MCP_SERVICE_HEALTH_CACHE[service_id] = status
+    return JSONResponse({
+        "service": {
+            "id": service_id,
+            "status": status,
+            "enabled": config.enabled,
+            "checked_at": _utc_now_iso(),
+        }
+    })
 
 
 async def list_models(request):
@@ -2106,6 +2351,100 @@ async def memory_add_endpoint(request: Request):
         tags=body.get("tags") or [],
     )
     return JSONResponse(result)
+
+
+async def memory_upload_endpoint(request: Request):
+    body = await request.json()
+
+    file_name = body.get("file_name")
+    file_content_base64 = body.get("file_content_base64")
+    session_id = body.get("session_id")
+    chunk_size = body.get("chunk_size", 1000)
+    chunk_overlap = body.get("chunk_overlap", 200)
+
+    if not isinstance(file_name, str) or not file_name.strip():
+        return JSONResponse({"error": "file_name is required"}, status_code=400)
+    if not isinstance(file_content_base64, str) or not file_content_base64.strip():
+        return JSONResponse({"error": "file_content_base64 is required"}, status_code=400)
+    if not isinstance(session_id, str) or not session_id.strip():
+        return JSONResponse({"error": "session_id is required"}, status_code=400)
+
+    try:
+        if isinstance(file_content_base64, str) and "," in file_content_base64:
+            file_content_base64 = file_content_base64.split(",", 1)[1]
+        file_bytes = base64.b64decode(file_content_base64, validate=True)
+    except Exception:
+        return JSONResponse({"error": "invalid file_content_base64"}, status_code=400)
+
+    try:
+        text = DocumentLoader.load_file(io.BytesIO(file_bytes), file_name)
+    except Exception as exc:
+        return JSONResponse({"error": f"failed to parse file: {exc}"}, status_code=400)
+
+    if not text.strip():
+        return JSONResponse({"error": "file contains no readable text"}, status_code=400)
+
+    chunk_size = int(chunk_size)
+    chunk_overlap = int(chunk_overlap)
+    if chunk_size <= 0:
+        chunk_size = 1000
+    if chunk_overlap < 0:
+        chunk_overlap = 0
+    if chunk_overlap >= chunk_size:
+        chunk_overlap = max(chunk_size // 5, 0)
+
+    try:
+        try:
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
+        except ImportError:
+            from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            length_function=len,
+        )
+        chunks = splitter.split_text(text)
+    except Exception as exc:
+        return JSONResponse({"error": f"failed to split file text: {exc}"}, status_code=500)
+
+    if not chunks:
+        return JSONResponse({"error": "file contains no indexable chunks"}, status_code=400)
+
+    safe_filename = "".join([c for c in file_name if c.isalnum() or c in (" ", ".", "_")]).replace(" ", "_")
+    if not safe_filename:
+        safe_filename = "uploaded_file"
+
+    tags = ["uploaded_material", f"filename:{safe_filename}", f"session:{session_id}"]
+    memory_ids: List[str] = []
+
+    for index, chunk in enumerate(chunks):
+        chunk_content = chunk.strip()
+        if not chunk_content:
+            continue
+        chunk_id = f"{session_id}_{safe_filename}_part_{index}"
+        result = await memory_add(
+            content=chunk_content,
+            layer="session",
+            dimension="context",
+            entity_id=session_id,
+            importance=0.6,
+            tags=[*tags, f"chunk:{index}", f"chunk_id:{chunk_id}"],
+        )
+        memory_id = result.get("id") if isinstance(result, dict) else None
+        if isinstance(memory_id, str):
+            memory_ids.append(memory_id)
+
+    if not memory_ids:
+        return JSONResponse({"error": "failed to inject any file chunks"}, status_code=500)
+
+    return JSONResponse({
+        "status": "created",
+        "file_name": file_name,
+        "session_id": session_id,
+        "chunks": len(memory_ids),
+        "memory_ids": memory_ids,
+    })
 
 
 async def memory_temporal_endpoint(request: Request):
@@ -2382,9 +2721,15 @@ def create_gateway() -> Starlette:
             Route("/health", health_check, methods=["GET"]),
             Route("/metrics", metrics_endpoint, methods=["GET"]),
             Route("/tools", list_tools, methods=["GET"]),
+            Route("/mcp/services", list_mcp_services, methods=["GET"]),
+            Route("/mcp/services", create_mcp_service, methods=["POST"]),
+            Route("/mcp/services/{service_id}", update_mcp_service, methods=["PUT"]),
+            Route("/mcp/services/{service_id}/enabled", set_mcp_service_enabled, methods=["POST"]),
+            Route("/mcp/services/{service_id}/health", probe_mcp_service_health, methods=["POST"]),
             Route("/models", list_models, methods=["GET"]),
             Route("/memory/search", memory_search_endpoint, methods=["POST"]),
             Route("/memory/add", memory_add_endpoint, methods=["POST"]),
+            Route("/memory/upload", memory_upload_endpoint, methods=["POST"]),
             Route("/memory/temporal", memory_temporal_endpoint, methods=["POST"]),
             Route("/graph/query", graph_query_endpoint, methods=["POST"]),
             Route("/graph/character", graph_character_endpoint, methods=["POST"]),

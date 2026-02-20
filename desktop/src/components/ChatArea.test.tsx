@@ -14,6 +14,7 @@ vi.mock('../api/client', () => ({
   agentGetContext: vi.fn(),
   createCheckpoint: vi.fn(),
   restoreCheckpoint: vi.fn(),
+  uploadMemoryFile: vi.fn(),
 }))
 
 import {
@@ -21,12 +22,14 @@ import {
   chatStream,
   createCheckpoint,
   restoreCheckpoint,
+  uploadMemoryFile,
 } from '../api/client'
 
 const mockedChat = vi.mocked(chat)
 const mockedChatStream = vi.mocked(chatStream)
 const mockedCreateCheckpoint = vi.mocked(createCheckpoint)
 const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
+const mockedUploadMemoryFile = vi.mocked(uploadMemoryFile)
 
 function resetStores(): void {
   localStorage.clear()
@@ -70,10 +73,21 @@ function setConversationWithAssistant(content: string): void {
 describe('ChatArea P0 flows', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('btoa', (value: string) => Buffer.from(value, 'binary').toString('base64'))
     resetStores()
     mockedCreateCheckpoint.mockResolvedValue({ success: true, data: { checkpoint_id: 'cp-1' } })
     mockedRestoreCheckpoint.mockResolvedValue({ success: true, data: { status: 'ok' } })
     mockedChat.mockResolvedValue({ success: true, data: { content: 'fallback', skills_used: [] } })
+    mockedUploadMemoryFile.mockResolvedValue({
+      success: true,
+      data: {
+        status: 'created',
+        file_name: 'a.txt',
+        session_id: 'c1',
+        chunks: 2,
+        memory_ids: ['m1', 'm2'],
+      },
+    })
   })
 
   it('streams content and commits on done without fallback chat', async () => {
@@ -237,5 +251,39 @@ describe('ChatArea P0 flows', () => {
     })
 
     selectionMock.mockRestore()
+  })
+
+  it('uploads txt file and injects chunks into memory context', async () => {
+    render(<ChatArea />)
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    expect(fileInput).not.toBeNull()
+
+    const file = new File(['hello upload'], 'context.txt', { type: 'text/plain' })
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: async () => new TextEncoder().encode('hello upload').buffer,
+    })
+    await userEvent.upload(fileInput, file)
+
+    await waitFor(() => {
+      expect(mockedUploadMemoryFile).toHaveBeenCalledTimes(1)
+      expect(screen.getByText('文件已注入上下文：context.txt（2 段）')).toBeInTheDocument()
+      expect(screen.getByText('已完成文件上下文注入：context.txt（2 段）')).toBeInTheDocument()
+    })
+  })
+
+  it('rejects unsupported upload extension before API call', async () => {
+    render(<ChatArea />)
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    expect(fileInput).not.toBeNull()
+
+    const file = new File(['csv body'], 'context.csv', { type: 'text/csv' })
+    await userEvent.upload(fileInput, file, { applyAccept: false })
+
+    await waitFor(() => {
+      expect(screen.getByText('仅支持 TXT/MD/PDF/DOCX 文件。')).toBeInTheDocument()
+    })
+    expect(mockedUploadMemoryFile).not.toHaveBeenCalled()
   })
 })

@@ -552,6 +552,72 @@ def test_health_check_runtime_degraded_mapping(client_no_lifespan, monkeypatch):
     assert runtime["servers"]["search"]["state"] == "degraded"
 
 
+def _snapshot_mcp_service_state(gateway_module):
+    return dict(gateway_module._MCP_SERVICE_CONFIGS), dict(gateway_module._MCP_SERVICE_HEALTH_CACHE)
+
+
+def _restore_mcp_service_state(gateway_module, configs, cache):
+    gateway_module._MCP_SERVICE_CONFIGS.clear()
+    gateway_module._MCP_SERVICE_CONFIGS.update(configs)
+    gateway_module._MCP_SERVICE_HEALTH_CACHE.clear()
+    gateway_module._MCP_SERVICE_HEALTH_CACHE.update(cache)
+
+
+class TestMcpServiceConfigEndpoints:
+    def test_list_mcp_services_returns_configs(self, client_no_lifespan):
+        response = client_no_lifespan.get("/mcp/services")
+        assert response.status_code == 200
+        data = response.json()
+        assert "services" in data
+        assert isinstance(data["services"], list)
+        assert any(item["id"] == "memory" for item in data["services"])
+
+    def test_create_update_toggle_and_probe_custom_service(self, client_no_lifespan):
+        from src.mcp import gateway as gateway_module
+
+        snapshot = _snapshot_mcp_service_state(gateway_module)
+        try:
+            create = client_no_lifespan.post("/mcp/services", json={
+                "id": "search2",
+                "name": "Search 2",
+                "path": "/search2",
+                "enabled": True,
+            })
+            assert create.status_code == 201
+            assert create.json()["service"]["id"] == "search2"
+
+            update = client_no_lifespan.put("/mcp/services/search2", json={
+                "name": "Search Two",
+                "path": "/search-two",
+                "enabled": True,
+            })
+            assert update.status_code == 200
+            assert update.json()["service"]["name"] == "Search Two"
+            assert update.json()["service"]["path"] == "/search-two"
+
+            toggle = client_no_lifespan.post("/mcp/services/search2/enabled", json={"enabled": False})
+            assert toggle.status_code == 200
+            assert toggle.json()["service"]["enabled"] is False
+
+            probe = client_no_lifespan.post("/mcp/services/search2/health", json={})
+            assert probe.status_code == 200
+            assert probe.json()["service"]["status"] == "disabled"
+
+            health = client_no_lifespan.get("/health")
+            assert health.status_code == 200
+            assert health.json()["services"]["search2"] == "disabled"
+            runtime_configs = health.json()["mcp_runtime"]["service_configs"]
+            assert any(item["id"] == "search2" and item["status"] == "disabled" for item in runtime_configs)
+        finally:
+            _restore_mcp_service_state(gateway_module, *snapshot)
+
+    def test_builtin_service_cannot_be_disabled(self, client_no_lifespan):
+        response = client_no_lifespan.post("/mcp/services/memory/enabled", json={"enabled": False})
+        assert response.status_code == 400
+        assert "builtin service cannot be disabled" in response.json()["error"]
+
+
+
 def test_with_terminal_contract_sets_defaults():
     from src.mcp import gateway as gateway_module
 
@@ -759,6 +825,37 @@ async def test_rest_memory_graph_and_critic_endpoints_forward_payload(monkeypatc
     assert res.status_code == 200
     mock_memory_add.assert_awaited_once_with(content="c", layer="session", dimension=None, entity_id=None, valid_from=None, valid_until=None, importance=0.5, tags=["t"])
 
+    monkeypatch.setattr(gateway_module, "DocumentLoader", MagicMock(load_file=MagicMock(return_value="chunk one\nchunk two")))
+
+    class _FakeSplitter:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def split_text(self, _text):
+            return ["chunk-1", "chunk-2"]
+
+    monkeypatch.setitem(sys.modules, "langchain_text_splitters", SimpleNamespace(RecursiveCharacterTextSplitter=_FakeSplitter))
+
+    req = await _json_request(
+        "/memory/upload",
+        {
+            "file_name": "note.txt",
+            "file_content_base64": "aGVsbG8=",
+            "session_id": "sess-1",
+        },
+    )
+    res = await gateway_module.memory_upload_endpoint(req)
+    assert res.status_code == 200
+    payload = json.loads(res.body.decode("utf-8"))
+    assert payload["status"] == "created"
+    assert payload["chunks"] == 2
+
+    assert mock_memory_add.await_count == 3
+    upload_calls = mock_memory_add.await_args_list[1:]
+    assert upload_calls[0].kwargs["entity_id"] == "sess-1"
+    assert upload_calls[0].kwargs["dimension"] == "context"
+    assert "uploaded_material" in upload_calls[0].kwargs["tags"]
+
     req = await _json_request("/memory/temporal", {"entity_id": "e1"})
     res = await gateway_module.memory_temporal_endpoint(req)
     assert res.status_code == 200
@@ -788,6 +885,27 @@ async def test_rest_memory_graph_and_critic_endpoints_forward_payload(monkeypatc
     res = await gateway_module.critic_suggestions_endpoint(req)
     assert res.status_code == 200
     mock_critic_suggest.assert_awaited_once_with(content="abc", issues=None, max_suggestions=2)
+
+
+@pytest.mark.asyncio
+async def test_memory_upload_endpoint_validation_errors(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request("/memory/upload", {"session_id": "sess-1", "file_content_base64": "aGVsbG8="})
+    res = await gateway_module.memory_upload_endpoint(req)
+    assert res.status_code == 400
+
+    req = await _json_request("/memory/upload", {"file_name": "note.txt", "session_id": "sess-1", "file_content_base64": "!!invalid!!"})
+    res = await gateway_module.memory_upload_endpoint(req)
+    assert res.status_code == 400
+
+    monkeypatch.setattr(gateway_module, "DocumentLoader", MagicMock(load_file=MagicMock(return_value="")))
+    req = await _json_request(
+        "/memory/upload",
+        {"file_name": "note.txt", "session_id": "sess-1", "file_content_base64": "aGVsbG8="},
+    )
+    res = await gateway_module.memory_upload_endpoint(req)
+    assert res.status_code == 400
 
 
 @pytest.mark.asyncio

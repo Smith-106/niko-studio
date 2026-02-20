@@ -2,13 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Activity, AlertCircle, RefreshCw, Server, Wrench } from 'lucide-react'
 import {
   checkBackendHealth,
+  createGatewayServiceConfig,
   deriveGatewayRuntimeState,
   GatewayHealth,
   GatewayMetrics,
+  GatewayServiceConfig,
   GatewayTools,
   getGatewayHealth,
   getGatewayMetrics,
+  listGatewayServiceConfigs,
   listGatewayTools,
+  probeGatewayServiceHealth,
+  setGatewayServiceEnabled,
+  updateGatewayServiceConfig,
 } from '../api/client'
 
 interface McpStatusPanelProps {
@@ -20,6 +26,7 @@ const KEY_SERVICES = ['memory', 'graph', 'search', 'workflow', 'critic', 'agent'
 const SERVICE_STATUS_LABEL: Record<string, string> = {
   ok: '正常',
   error: '异常',
+  disabled: '已禁用',
   unknown: '未知',
 }
 
@@ -54,17 +61,25 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
   const [metrics, setMetrics] = useState<GatewayMetrics | null>(null)
   const [tools, setTools] = useState<GatewayTools | null>(null)
   const [services, setServices] = useState<Record<string, string> | null>(null)
+  const [serviceConfigs, setServiceConfigs] = useState<GatewayServiceConfig[]>([])
+  const [serviceActionError, setServiceActionError] = useState<string | null>(null)
+  const [serviceActionLoading, setServiceActionLoading] = useState<string | null>(null)
+  const [newServiceId, setNewServiceId] = useState('')
+  const [newServiceName, setNewServiceName] = useState('')
+  const [newServicePath, setNewServicePath] = useState('')
+  const [serviceDraftNames, setServiceDraftNames] = useState<Record<string, string>>({})
 
   const refreshStatus = useCallback(async () => {
     setLoading(true)
     setError(null)
 
     try {
-      const [healthResult, gatewayHealthResult, metricsResult, toolsResult] = await Promise.allSettled([
+      const [healthResult, gatewayHealthResult, metricsResult, toolsResult, serviceConfigsResult] = await Promise.allSettled([
         checkBackendHealth(),
         getGatewayHealth(),
         getGatewayMetrics(),
         listGatewayTools(),
+        listGatewayServiceConfigs(),
       ])
 
       let hasError = false
@@ -96,6 +111,13 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
         setTools(toolsResult.value.data)
       } else {
         setTools(null)
+        hasError = true
+      }
+
+      if (serviceConfigsResult.status === 'fulfilled' && serviceConfigsResult.value.success && serviceConfigsResult.value.data?.services) {
+        setServiceConfigs(serviceConfigsResult.value.data.services)
+      } else {
+        setServiceConfigs([])
         hasError = true
       }
 
@@ -139,6 +161,99 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
   const connectionStateLabel = CONNECTION_STATE_LABEL[runtimeView.connectionState] ?? runtimeView.connectionState
   const reconnectStateLabel = RECONNECT_STATE_LABEL[runtimeView.reconnectState] ?? runtimeView.reconnectState
   const connectionStateColor = CONNECTION_STATE_COLOR[runtimeView.connectionState] ?? 'text-gray-600'
+
+  const handleServiceProbe = useCallback(async (serviceId: string) => {
+    setServiceActionError(null)
+    setServiceActionLoading(`probe:${serviceId}`)
+
+    const result = await probeGatewayServiceHealth(serviceId)
+    if (!result.success) {
+      setServiceActionError(result.error ?? '探测失败')
+      setServiceActionLoading(null)
+      return
+    }
+
+    await refreshStatus()
+    setServiceActionLoading(null)
+  }, [refreshStatus])
+
+  const handleServiceToggle = useCallback(async (service: GatewayServiceConfig) => {
+    setServiceActionError(null)
+    setServiceActionLoading(`toggle:${service.id}`)
+
+    const result = await setGatewayServiceEnabled(service.id, !service.enabled)
+    if (!result.success) {
+      setServiceActionError(result.error ?? '更新失败')
+      setServiceActionLoading(null)
+      return
+    }
+
+    await refreshStatus()
+    setServiceActionLoading(null)
+  }, [refreshStatus])
+
+  const handleServiceRename = useCallback(async (service: GatewayServiceConfig) => {
+    const draftName = (serviceDraftNames[service.id] ?? service.name).trim()
+    if (!draftName || draftName === service.name) {
+      return
+    }
+
+    setServiceActionError(null)
+    setServiceActionLoading(`rename:${service.id}`)
+
+    const result = await updateGatewayServiceConfig(service.id, { name: draftName, enabled: service.enabled })
+    if (!result.success) {
+      setServiceActionError(result.error ?? '更新失败')
+      setServiceActionLoading(null)
+      return
+    }
+
+    await refreshStatus()
+    setServiceDraftNames((prev) => ({ ...prev, [service.id]: draftName }))
+    setServiceActionLoading(null)
+  }, [refreshStatus, serviceDraftNames])
+
+  const handleCreateService = useCallback(async () => {
+    const serviceId = newServiceId.trim().toLowerCase()
+    const serviceName = newServiceName.trim() || serviceId
+    const servicePath = newServicePath.trim() || `/${serviceId}`
+
+    if (!serviceId) {
+      setServiceActionError('请先填写服务 ID')
+      return
+    }
+
+    setServiceActionError(null)
+    setServiceActionLoading('create')
+
+    const result = await createGatewayServiceConfig({
+      id: serviceId,
+      name: serviceName,
+      path: servicePath,
+      enabled: true,
+    })
+
+    if (!result.success) {
+      setServiceActionError(result.error ?? '创建失败')
+      setServiceActionLoading(null)
+      return
+    }
+
+    setNewServiceId('')
+    setNewServiceName('')
+    setNewServicePath('')
+    await refreshStatus()
+    setServiceActionLoading(null)
+  }, [newServiceId, newServiceName, newServicePath, refreshStatus])
+
+  const serviceConfigRows = useMemo(
+    () => serviceConfigs.map((service) => ({
+      ...service,
+      draftName: serviceDraftNames[service.id] ?? service.name,
+      statusLabel: SERVICE_STATUS_LABEL[service.status ?? 'unknown'] ?? service.status ?? 'unknown',
+    })),
+    [serviceConfigs, serviceDraftNames]
+  )
 
   const serviceStatus = useMemo(
     () =>
@@ -186,10 +301,10 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {error && (
+        {serviceActionError && (
           <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm">
             <AlertCircle size={16} />
-            <span>{error}</span>
+            <span>{serviceActionError}</span>
           </div>
         )}
 
@@ -254,6 +369,84 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
         </section>
 
         <section className="border border-gray-200 dark:border-dark-border rounded-lg p-3">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2">服务动态配置</h3>
+          <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              <input
+                value={newServiceId}
+                onChange={(event) => setNewServiceId(event.target.value)}
+                placeholder="服务 ID"
+                className="col-span-1 px-2 py-1 text-xs border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text"
+              />
+              <input
+                value={newServiceName}
+                onChange={(event) => setNewServiceName(event.target.value)}
+                placeholder="服务名（可选）"
+                className="col-span-1 px-2 py-1 text-xs border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text"
+              />
+              <input
+                value={newServicePath}
+                onChange={(event) => setNewServicePath(event.target.value)}
+                placeholder="路径（可选）"
+                className="col-span-1 px-2 py-1 text-xs border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text"
+              />
+            </div>
+            <button
+              onClick={handleCreateService}
+              disabled={serviceActionLoading === 'create'}
+              className="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
+            >
+              {serviceActionLoading === 'create' ? '创建中...' : '新增服务'}
+            </button>
+
+            <div className="space-y-2">
+              {serviceConfigRows.length > 0 ? serviceConfigRows.map((service) => (
+                <div key={service.id} className="border border-gray-200 dark:border-dark-border rounded p-2 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-mono text-gray-600 dark:text-dark-text-secondary">{service.id}</span>
+                    <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{service.statusLabel}</span>
+                  </div>
+                  <input
+                    value={service.draftName}
+                    onChange={(event) => setServiceDraftNames((prev) => ({ ...prev, [service.id]: event.target.value }))}
+                    className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text"
+                  />
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-dark-text-secondary">
+                    <span className="truncate" title={service.path}>{service.path}</span>
+                    <span>{service.enabled ? '启用中' : '已禁用'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => void handleServiceRename(service)}
+                      disabled={serviceActionLoading === `rename:${service.id}`}
+                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                    >
+                      {serviceActionLoading === `rename:${service.id}` ? '保存中...' : '保存名称'}
+                    </button>
+                    <button
+                      onClick={() => void handleServiceToggle(service)}
+                      disabled={serviceActionLoading === `toggle:${service.id}` || service.builtin}
+                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                    >
+                      {service.enabled ? '禁用' : '启用'}
+                    </button>
+                    <button
+                      onClick={() => void handleServiceProbe(service.id)}
+                      disabled={serviceActionLoading === `probe:${service.id}`}
+                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                    >
+                      {serviceActionLoading === `probe:${service.id}` ? '探测中...' : '健康检测'}
+                    </button>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-sm text-gray-400 dark:text-dark-text-secondary">暂无服务配置数据</div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="border border-gray-200 dark:border-dark-border rounded-lg p-3">
           <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2 flex items-center gap-1">
             <Wrench size={14} />
             工具统计
@@ -275,6 +468,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
             <div className="text-sm text-gray-400 dark:text-dark-text-secondary">暂无工具数据</div>
           )}
         </section>
+
       </div>
     </div>
   )
