@@ -9,6 +9,7 @@ import { useI18n } from '../i18n'
 
 interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
+  connectionState?: 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
 }
 
 type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'interrupted' | 'recovered'
@@ -29,7 +30,7 @@ interface StreamRuntimeMeta {
   }
 }
 
-export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
+export function ChatArea({ onContextUsageChange, connectionState = 'connected' }: ChatAreaProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
@@ -45,6 +46,7 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamRequestIdRef = useRef(0)
   const { t, translate } = useI18n()
+  const previousConnectionStateRef = useRef(connectionState)
 
   const currentConversationId = useCurrentConversationId()
   const messages = useMessages()
@@ -63,6 +65,24 @@ export function ChatArea({ onContextUsageChange }: ChatAreaProps) {
 
     onContextUsageChange({ usedChars, usedK, totalK, percent })
   }, [messages, streamingContent, onContextUsageChange])
+
+  useEffect(() => {
+    const previous = previousConnectionStateRef.current
+    const isSameState = connectionState === previous
+    if (isSameState && connectionState !== 'reconnecting' && connectionState !== 'disconnected') {
+      return
+    }
+
+    if (connectionState === 'reconnecting') {
+      setRecoverStatus({ type: 'error', message: t.streamReconnecting })
+    } else if (connectionState === 'connected' && previous === 'reconnecting') {
+      setRecoverStatus({ type: 'success', message: t.streamRecovered })
+    } else if (connectionState === 'disconnected') {
+      setRecoverStatus({ type: 'error', message: t.streamInterrupted })
+    }
+
+    previousConnectionStateRef.current = connectionState
+  }, [connectionState, t])
 
   const { addMessage, setWorkflowLevel, createConversation } = useAppStore()
 

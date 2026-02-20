@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Activity, AlertCircle, RefreshCw, Server, Wrench } from 'lucide-react'
-import { checkBackendHealth, getGatewayHealth, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools } from '../api/client'
+import {
+  checkBackendHealth,
+  deriveGatewayRuntimeState,
+  GatewayHealth,
+  GatewayMetrics,
+  GatewayTools,
+  getGatewayHealth,
+  getGatewayMetrics,
+  listGatewayTools,
+} from '../api/client'
 
 interface McpStatusPanelProps {
   onClose: () => void
@@ -14,10 +23,34 @@ const SERVICE_STATUS_LABEL: Record<string, string> = {
   unknown: '未知',
 }
 
+const CONNECTION_STATE_LABEL: Record<string, string> = {
+  connected: '已连接',
+  degraded: '降级',
+  disconnected: '已断开',
+  reconnecting: '重连中',
+}
+
+const RECONNECT_STATE_LABEL: Record<string, string> = {
+  idle: '空闲',
+  probing: '探测中',
+  backoff: '退避',
+  retrying: '重试中',
+  recovered: '已恢复',
+  failed: '失败',
+}
+
+const CONNECTION_STATE_COLOR: Record<string, string> = {
+  connected: 'text-green-600',
+  degraded: 'text-amber-600',
+  disconnected: 'text-red-600',
+  reconnecting: 'text-blue-600',
+}
+
 export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [backendHealthy, setBackendHealthy] = useState(false)
+  const [gatewayHealth, setGatewayHealth] = useState<GatewayHealth | null>(null)
   const [metrics, setMetrics] = useState<GatewayMetrics | null>(null)
   const [tools, setTools] = useState<GatewayTools | null>(null)
   const [services, setServices] = useState<Record<string, string> | null>(null)
@@ -44,8 +77,10 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
       }
 
       if (gatewayHealthResult.status === 'fulfilled' && gatewayHealthResult.value.success && gatewayHealthResult.value.data?.services) {
+        setGatewayHealth(gatewayHealthResult.value.data)
         setServices(gatewayHealthResult.value.data.services)
       } else {
+        setGatewayHealth(null)
         setServices(null)
         hasError = true
       }
@@ -69,6 +104,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
       }
     } catch {
       setBackendHealthy(false)
+      setGatewayHealth(null)
       setMetrics(null)
       setTools(null)
       setServices(null)
@@ -94,6 +130,15 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
     () => serviceToolCounts.reduce((sum, item) => sum + item.count, 0),
     [serviceToolCounts]
   )
+
+  const runtimeView = useMemo(
+    () => deriveGatewayRuntimeState(gatewayHealth, backendHealthy),
+    [gatewayHealth, backendHealthy]
+  )
+
+  const connectionStateLabel = CONNECTION_STATE_LABEL[runtimeView.connectionState] ?? runtimeView.connectionState
+  const reconnectStateLabel = RECONNECT_STATE_LABEL[runtimeView.reconnectState] ?? runtimeView.reconnectState
+  const connectionStateColor = CONNECTION_STATE_COLOR[runtimeView.connectionState] ?? 'text-gray-600'
 
   const serviceStatus = useMemo(
     () =>
@@ -150,11 +195,30 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
 
         <section className="border border-gray-200 dark:border-dark-border rounded-lg p-3">
           <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2">网关状态</h3>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500 dark:text-dark-text-secondary">Gateway Health</span>
-            <span className={`text-sm font-medium ${backendHealthy ? 'text-green-600' : 'text-red-600'}`}>
-              {backendHealthy ? '在线' : '离线'}
-            </span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500 dark:text-dark-text-secondary">Gateway Health</span>
+              <span className={`text-sm font-medium ${connectionStateColor}`}>
+                {connectionStateLabel}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500 dark:text-dark-text-secondary">Session ID</span>
+              <span className="text-xs font-mono text-gray-700 dark:text-dark-text truncate max-w-[220px]" title={runtimeView.sessionId ?? 'N/A'}>
+                {runtimeView.sessionId ?? 'N/A'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500 dark:text-dark-text-secondary">Reconnect</span>
+              <span className="text-sm text-gray-700 dark:text-dark-text">
+                {reconnectStateLabel} · #{runtimeView.reconnectAttempts}
+              </span>
+            </div>
+            {runtimeView.lastError && (
+              <div className="text-xs text-red-600 dark:text-red-300 break-all">
+                Last error: {runtimeView.lastError}
+              </div>
+            )}
           </div>
         </section>
 

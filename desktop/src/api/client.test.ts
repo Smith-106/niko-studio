@@ -3,8 +3,10 @@ import {
   applyRecommendation,
   batchApplyRecommendations,
   chatStream,
+  deriveGatewayRuntimeState,
   mergeRecommendationBatchResults,
   type ChatRequest,
+  type GatewayHealth,
 } from './client'
 
 function createSseResponse(chunks: string[]): Response {
@@ -163,6 +165,53 @@ describe('recommendation helpers', () => {
         },
       ],
     })
+  })
+})
+
+describe('gateway runtime mapping', () => {
+  it('falls back to backend/services when mcp_runtime is missing', () => {
+    const health: GatewayHealth = {
+      status: 'degraded',
+      version: '8.0.0',
+      services: {
+        memory: 'ok',
+        graph: 'ok',
+        search: 'error',
+      },
+    }
+
+    const result = deriveGatewayRuntimeState(health, true)
+
+    expect(result.connectionState).toBe('degraded')
+    expect(result.reconnectState).toBe('failed')
+    expect(result.sessionId).toBeNull()
+    expect(result.reconnectAttempts).toBe(0)
+  })
+
+  it('prefers mcp_runtime fields when provided', () => {
+    const health: GatewayHealth = {
+      status: 'degraded',
+      version: '8.0.0',
+      services: {
+        memory: 'ok',
+        graph: 'ok',
+      },
+      mcp_runtime: {
+        session_id: 'gw-20260220-xyz',
+        connection_state: 'reconnecting',
+        reconnect_state: 'retrying',
+        reconnect_attempts: 2,
+        last_error: 'search:error',
+      },
+    }
+
+    const result = deriveGatewayRuntimeState(health, true)
+
+    expect(result.connectionState).toBe('reconnecting')
+    expect(result.reconnectState).toBe('retrying')
+    expect(result.sessionId).toBe('gw-20260220-xyz')
+    expect(result.reconnectAttempts).toBe(2)
+    expect(result.lastError).toBe('search:error')
   })
 })
 

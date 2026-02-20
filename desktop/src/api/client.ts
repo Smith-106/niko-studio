@@ -50,6 +50,35 @@ export interface GatewayMetrics {
 
 export type GatewayTools = Record<string, string[]>
 
+export type GatewayConnectionState = 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
+export type GatewayReconnectState = 'idle' | 'probing' | 'backoff' | 'retrying' | 'recovered' | 'failed'
+
+export interface GatewayRuntimeServerState {
+  state: GatewayConnectionState
+  loading: boolean
+  last_error?: string | null
+}
+
+export interface GatewayRuntime {
+  session_id?: string
+  connection_state?: GatewayConnectionState
+  reconnect_state?: GatewayReconnectState
+  last_probe_at?: string
+  reconnect_attempts?: number
+  last_error?: string | null
+  servers?: Record<string, GatewayRuntimeServerState>
+}
+
+export interface GatewayRuntimeView {
+  connectionState: GatewayConnectionState
+  reconnectState: GatewayReconnectState
+  sessionId: string | null
+  reconnectAttempts: number
+  lastError: string | null
+  lastProbeAt: string | null
+  servers: Record<string, GatewayRuntimeServerState>
+}
+
 export interface GatewayHealth {
   status: string
   version: string
@@ -57,6 +86,37 @@ export interface GatewayHealth {
   engine_health?: Record<string, { status: string; error?: string }>
   agents?: string[]
   skills_count?: number
+  mcp_runtime?: GatewayRuntime
+}
+
+function fallbackConnectionState(backendHealthy: boolean, services?: Record<string, string>): GatewayConnectionState {
+  if (!backendHealthy) {
+    return 'disconnected'
+  }
+
+  const serviceValues = Object.values(services || {})
+  if (serviceValues.length === 0) {
+    return 'connected'
+  }
+  return serviceValues.every((value) => value === 'ok') ? 'connected' : 'degraded'
+}
+
+export function deriveGatewayRuntimeState(
+  health: GatewayHealth | null | undefined,
+  backendHealthy: boolean
+): GatewayRuntimeView {
+  const fallbackState = fallbackConnectionState(backendHealthy, health?.services)
+  const runtime = health?.mcp_runtime
+
+  return {
+    connectionState: runtime?.connection_state ?? fallbackState,
+    reconnectState: runtime?.reconnect_state ?? (fallbackState === 'connected' ? 'idle' : 'failed'),
+    sessionId: runtime?.session_id ?? null,
+    reconnectAttempts: runtime?.reconnect_attempts ?? 0,
+    lastError: runtime?.last_error ?? null,
+    lastProbeAt: runtime?.last_probe_at ?? null,
+    servers: runtime?.servers ?? {},
+  }
 }
 
 export interface ModelFetchResult {

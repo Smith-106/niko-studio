@@ -504,6 +504,54 @@ def test_health_check_engine_without_health_check_treated_as_ok(client_no_lifesp
     assert data["engine_health"]["graph"]["status"] == "ok"
 
 
+def test_health_check_runtime_fields_exist_and_compatible(client_no_lifespan):
+    response = client_no_lifespan.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+
+    # 旧字段保持兼容
+    assert "status" in data
+    assert "services" in data
+    assert "engine_health" in data
+
+    # 新字段可选增强层
+    runtime = data.get("mcp_runtime")
+    assert isinstance(runtime, dict)
+    assert isinstance(runtime.get("session_id"), str) and runtime["session_id"]
+    assert runtime.get("connection_state") in {"connected", "degraded", "disconnected", "reconnecting"}
+    assert runtime.get("reconnect_state") in {"idle", "probing", "backoff", "retrying", "recovered", "failed"}
+    assert "last_probe_at" in runtime
+    assert isinstance(runtime.get("reconnect_attempts"), int)
+    assert runtime.get("last_error") in {None} or isinstance(runtime.get("last_error"), str)
+
+    servers = runtime.get("servers")
+    assert isinstance(servers, dict)
+    for name in ["memory", "graph", "search", "workflow", "critic", "agent", "skills"]:
+        assert name in servers
+        assert servers[name]["state"] in {"connected", "degraded", "disconnected", "reconnecting"}
+        assert isinstance(servers[name]["loading"], bool)
+        assert servers[name]["last_error"] in {None} or isinstance(servers[name]["last_error"], str)
+
+
+def test_health_check_runtime_degraded_mapping(client_no_lifespan, monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    mock_engine = MagicMock()
+    mock_engine.health_check = AsyncMock(return_value={"status": "error", "reason": "search down"})
+    monkeypatch.setattr(gateway_module, "get_search_engine", lambda: mock_engine)
+
+    response = client_no_lifespan.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["status"] == "degraded"
+    runtime = data["mcp_runtime"]
+    assert runtime["connection_state"] == "degraded"
+    assert runtime["reconnect_state"] == "probing"
+    assert runtime["reconnect_attempts"] >= 1
+    assert runtime["servers"]["search"]["state"] == "degraded"
+
+
 def test_with_terminal_contract_sets_defaults():
     from src.mcp import gateway as gateway_module
 

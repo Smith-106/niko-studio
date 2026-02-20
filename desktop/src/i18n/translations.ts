@@ -38,6 +38,7 @@ export interface Translations {
   streamCanceled: string
   streamInterrupted: string
   streamRecovered: string
+  streamReconnecting: string
   streamRestoreHint: string
   streamRestoreToBeforeSend: string
   streamRestoreBeforeSendSuccess: string
@@ -141,6 +142,7 @@ export const translations: Record<Language, Translations> = {
     streamCanceled: '已取消本次生成。',
     streamInterrupted: '流式生成已中断。',
     streamRecovered: '已从流式降级恢复，结果可继续使用。',
+    streamReconnecting: '连接恢复中，请稍候...',
     streamRestoreHint: '发送失败，可恢复到发送前状态。',
     streamRestoreToBeforeSend: '恢复到发送前',
     streamRestoreBeforeSendSuccess: '已恢复到发送前状态。',
@@ -242,6 +244,7 @@ export const translations: Record<Language, Translations> = {
     streamCanceled: 'Generation canceled.',
     streamInterrupted: 'Streaming generation was interrupted.',
     streamRecovered: 'Recovered from stream fallback; the result remains usable.',
+    streamReconnecting: 'Connection recovering. Please wait...',
     streamRestoreHint: 'Send failed. You can restore to the state before sending.',
     streamRestoreToBeforeSend: 'Restore to before send',
     streamRestoreBeforeSendSuccess: 'Restored to the state before sending.',

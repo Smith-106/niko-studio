@@ -5,7 +5,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { KnowledgeModal } from './components/KnowledgeModal'
 import { EvaluationPanel } from './components/EvaluationPanel'
 import { McpStatusPanel } from './components/McpStatusPanel'
-import { listCheckpoints, restoreCheckpoint } from './api/client'
+import { deriveGatewayRuntimeState, GatewayRuntimeView, getGatewayHealth, listCheckpoints, restoreCheckpoint } from './api/client'
 import { useAppStore } from './stores/appStore'
 import { useMessages } from './stores/selectors'
 import { useTheme } from './hooks/useTheme'
@@ -24,6 +24,20 @@ interface ContextUsage {
   percent: number
 }
 
+const APP_CONNECTION_LABEL: Record<string, string> = {
+  connected: '服务运行中',
+  degraded: '服务降级',
+  reconnecting: '连接恢复中',
+  disconnected: '服务未启动',
+}
+
+const APP_CONNECTION_DOT: Record<string, string> = {
+  connected: 'bg-green-500',
+  degraded: 'bg-amber-500',
+  reconnecting: 'bg-blue-500',
+  disconnected: 'bg-red-500',
+}
+
 function App() {
   const { backendStatus, checkBackend } = useAppStore()
   const messages = useMessages()
@@ -37,6 +51,7 @@ function App() {
   const [checkpoints, setCheckpoints] = useState<CheckpointItem[]>([])
   const [restoreStatus, setRestoreStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [contextUsage, setContextUsage] = useState<ContextUsage>({ usedChars: 0, usedK: 0, totalK: 128, percent: 0 })
+  const [runtimeView, setRuntimeView] = useState<GatewayRuntimeView | null>(null)
   const { t } = useI18n()
 
   // 应用主题
@@ -46,8 +61,26 @@ function App() {
     // Check backend status on mount
     checkBackend()
 
+    const fetchGatewayRuntime = async () => {
+      try {
+        const response = await getGatewayHealth()
+        if (response.success && response.data) {
+          setRuntimeView(deriveGatewayRuntimeState(response.data, backendStatus))
+          return
+        }
+      } catch {
+        // ignore runtime fetch error
+      }
+      setRuntimeView(deriveGatewayRuntimeState(null, backendStatus))
+    }
+
+    void fetchGatewayRuntime()
+
     // Health check interval - 30 seconds instead of 5 seconds
-    let interval: ReturnType<typeof setInterval> | null = setInterval(checkBackend, 30000)
+    let interval: ReturnType<typeof setInterval> | null = setInterval(() => {
+      void checkBackend()
+      void fetchGatewayRuntime()
+    }, 30000)
 
     // Pause polling when tab is hidden, resume when visible
     const handleVisibilityChange = () => {
@@ -59,9 +92,13 @@ function App() {
         }
       } else {
         // Tab is visible - check immediately and restart interval
-        checkBackend()
+        void checkBackend()
+        void fetchGatewayRuntime()
         if (!interval) {
-          interval = setInterval(checkBackend, 30000)
+          interval = setInterval(() => {
+            void checkBackend()
+            void fetchGatewayRuntime()
+          }, 30000)
         }
       }
     }
@@ -74,7 +111,7 @@ function App() {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [checkBackend])
+  }, [backendStatus, checkBackend])
 
   useEffect(() => {
     if (!restoreStatus) return
@@ -123,6 +160,10 @@ function App() {
     }
   }
 
+  const headerConnectionState = runtimeView?.connectionState ?? (backendStatus ? 'connected' : 'disconnected')
+  const headerDotClass = APP_CONNECTION_DOT[headerConnectionState] ?? APP_CONNECTION_DOT.disconnected
+  const headerConnectionText = APP_CONNECTION_LABEL[headerConnectionState] ?? (backendStatus ? t.serviceRunning : t.serviceOffline)
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-dark-bg">
       {/* Sidebar */}
@@ -143,9 +184,9 @@ function App() {
             <span className="text-lg font-semibold text-gray-800 dark:text-dark-text">📖 {t.appTitle}</span>
           </div>
           <div className="flex items-center gap-3 relative">
-            <div className={`w-2 h-2 rounded-full ${backendStatus ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className={`w-2 h-2 rounded-full ${headerDotClass}`} />
             <span className="text-sm text-gray-500 dark:text-dark-text-secondary">
-              {backendStatus ? t.serviceRunning : t.serviceOffline}
+              {headerConnectionText}
             </span>
             <span className="text-xs text-gray-500 dark:text-dark-text-secondary">
               {t.contextUsage} ~{contextUsage.usedK.toFixed(1)}k/{contextUsage.totalK}k ({contextUsage.percent.toFixed(1)}%)
@@ -199,7 +240,7 @@ function App() {
         )}
 
         {/* Chat Area */}
-        <ChatArea onContextUsageChange={setContextUsage} />
+        <ChatArea onContextUsageChange={setContextUsage} connectionState={headerConnectionState} />
 
         <div className="px-4 py-1 text-[11px] text-gray-400 dark:text-dark-text-secondary border-t border-gray-100 dark:border-dark-border">
           {t.contextEstimated}

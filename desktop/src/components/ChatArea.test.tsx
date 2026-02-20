@@ -151,6 +151,36 @@ describe('ChatArea P0 flows', () => {
     })
   })
 
+  it('shows reconnecting hint when connection enters reconnecting state', async () => {
+    render(<ChatArea connectionState="reconnecting" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('连接恢复中，请稍候...')).toBeInTheDocument()
+    })
+  })
+
+  it('shows recovered hint when connection returns from reconnecting to connected', async () => {
+    const { rerender } = render(<ChatArea connectionState="reconnecting" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('连接恢复中，请稍候...')).toBeInTheDocument()
+    })
+
+    rerender(<ChatArea connectionState="connected" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('已从流式降级恢复，结果可继续使用。')).toBeInTheDocument()
+    })
+  })
+
+  it('shows interrupted hint when connection becomes disconnected', async () => {
+    render(<ChatArea connectionState="disconnected" />)
+
+    await waitFor(() => {
+      expect(screen.getByText('流式生成已中断。')).toBeInTheDocument()
+    })
+  })
+
   it('shows restore entry when stream fails and fallback chat also fails', async () => {
     mockedChatStream.mockImplementation(async (_request, callbacks) => {
       callbacks.onError?.('stream failed')

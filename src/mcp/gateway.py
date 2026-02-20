@@ -34,6 +34,7 @@ import time
 import os
 import math
 import inspect
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Iterable
 from pathlib import Path
@@ -70,6 +71,13 @@ _METRICS = {
     "latency_ms_max": 0.0,
 }
 
+_RUNTIME_SERVER_ORDER = ["memory", "graph", "search", "workflow", "critic", "agent", "skills"]
+
+_RUNTIME_SESSION_ID = f"gw-{int(time.time() * 1000)}"
+_RUNTIME_LAST_PROBE_AT: Optional[str] = None
+_RUNTIME_RECONNECT_ATTEMPTS = 0
+_RUNTIME_LAST_ERROR: Optional[str] = None
+
 
 def _record_request_metrics(status_code: int, latency_ms: float) -> None:
     _METRICS["requests_total"] += 1
@@ -91,6 +99,49 @@ def _get_metrics_snapshot() -> dict:
         "requests_success_total": requests_total - requests_failed,
         "latency_ms_avg": round(avg_latency, 2),
         "latency_ms_max": round(_METRICS["latency_ms_max"], 2),
+    }
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _to_runtime_connection_state(status: str, services: Dict[str, str]) -> str:
+    if status == "healthy":
+        return "connected"
+    core_services = ["memory", "graph", "search", "workflow", "critic"]
+    core_statuses = [services.get(name, "unknown") for name in core_services]
+    if any(value == "ok" for value in core_statuses):
+        return "degraded"
+    return "disconnected"
+
+
+def _to_runtime_reconnect_state(connection_state: str) -> str:
+    if connection_state == "connected":
+        return "idle"
+    if connection_state == "degraded":
+        return "probing"
+    return "failed"
+
+
+def _to_server_runtime_state(service_status: str, connection_state: str) -> str:
+    if service_status == "ok":
+        return "connected"
+    if connection_state == "degraded":
+        return "degraded"
+    if connection_state == "disconnected":
+        return "disconnected"
+    return "reconnecting"
+
+
+def _build_runtime_servers(services: Dict[str, str], connection_state: str, last_error: Optional[str]) -> Dict[str, Dict[str, Any]]:
+    return {
+        name: {
+            "state": _to_server_runtime_state(services.get(name, "unknown"), connection_state),
+            "loading": False,
+            "last_error": last_error if services.get(name, "ok") != "ok" else None,
+        }
+        for name in _RUNTIME_SERVER_ORDER
     }
 
 
@@ -1862,6 +1913,8 @@ async def chat_stream_endpoint(request: Request):
 
 async def health_check(request):
     """健康检查"""
+    global _RUNTIME_LAST_PROBE_AT, _RUNTIME_RECONNECT_ATTEMPTS, _RUNTIME_LAST_ERROR
+
     engine_health = {}
     dependency_getters = (
         ("memory", get_memory_engine),
@@ -1906,6 +1959,22 @@ async def health_check(request):
         "skills": "ok",
     }
 
+    _RUNTIME_LAST_PROBE_AT = _utc_now_iso()
+    failing_services = [
+        f"{name}:{services.get(name, 'unknown')}"
+        for name in _RUNTIME_SERVER_ORDER
+        if services.get(name, "ok") != "ok"
+    ]
+    if failing_services:
+        _RUNTIME_LAST_ERROR = "; ".join(failing_services)
+        _RUNTIME_RECONNECT_ATTEMPTS += 1
+    else:
+        _RUNTIME_LAST_ERROR = None
+        _RUNTIME_RECONNECT_ATTEMPTS = 0
+
+    connection_state = _to_runtime_connection_state(status, services)
+    reconnect_state = _to_runtime_reconnect_state(connection_state)
+
     response = JSONResponse({
         "status": status,
         "version": __version__,
@@ -1913,6 +1982,15 @@ async def health_check(request):
         "engine_health": engine_health,
         "agents": ["commander", "architect", "writer", "critic", "worldbuilding", "character", "plot"],
         "skills_count": 40,
+        "mcp_runtime": {
+            "session_id": _RUNTIME_SESSION_ID,
+            "connection_state": connection_state,
+            "reconnect_state": reconnect_state,
+            "last_probe_at": _RUNTIME_LAST_PROBE_AT,
+            "reconnect_attempts": _RUNTIME_RECONNECT_ATTEMPTS,
+            "last_error": _RUNTIME_LAST_ERROR,
+            "servers": _build_runtime_servers(services, connection_state, _RUNTIME_LAST_ERROR),
+        },
     })
     return response
 
