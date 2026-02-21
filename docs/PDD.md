@@ -146,6 +146,13 @@ Niko Studio 是一个 **local-first、可扩展的 AI Agent 平台**，面向多
 - 边界规则：若当周计划任务数为 0，则任务完成率记为 `N/A`，该周不计入“连续 2 周”达标统计。
 - 边界规则：跨周任务以周初冻结范围为准，仅在完成并满足 DoD 的当周计入“已完成任务数”。
 
+### 11.4 KPI 统计与判定细则（v1.6.2）
+- 统计窗口：按自然周统计（建议周一 00:00 至周日 23:59，本地时区）。
+- 质量达标率分母：仅统计进入正式评估流程并有留档证据的产出；草稿与废弃样本不计入。
+- 连续 2 周达标：需两周均为有效周（非 `N/A`），且两周分别满足阈值；不可用跨周平均替代。
+- 证据一致性：KPI 结论必须可回溯到对应周报、质量样本与任务清单，不可仅口头判定。
+- 例外处理：若因系统故障导致评估中断，需在周报记录中标注故障窗口，并附重跑或人工复核结论。
+
 ## 12. MVP 定义与范围（v1.4）
 
 ### 12.1 什么是 MVP
@@ -224,9 +231,12 @@ MVP（Minimum Viable Product）指“最小可用产品”：
 - [ ] 发布门禁与回滚路径可执行（internal/external 口径一致）
 - [ ] 关键文档（PDD/任务清单/架构文档）保持一致更新
 
-## 16. 验收证据映射（v1.6.1）
+## 16. 验收证据映射（v1.6.2）
 
 - 证据文件最小字段：`date`、`owner`、`input`、`output`、`result`、`evidence_links`。
+- 文件命名规则：统一使用 `YYYY-MM-DD` 或 `YYYY-Www` 前缀，避免同类证据命名漂移。
+- 留档时效：周度证据需在当周复盘完成后 24 小时内补齐并落盘。
+- 链接要求：`evidence_links` 至少包含 1 个可回溯路径（日志、截图、输出文件或评估记录）。
 
 ### 16.1 端到端工作流证据
 - 对应 15.1-1：运行记录（命令、输入、输出）与流程截图/日志
@@ -239,6 +249,8 @@ MVP（Minimum Viable Product）指“最小可用产品”：
 ### 16.2 生成质量证据
 - 对应 15.2-1：质量判定规则文档（评分维度、阈值、判定方式）
   - 证据路径（标准）：`docs/quality/QUALITY_CRITERIA.md`、`docs/quality/NOVEL_QUALITY_CHECKLIST.md`、`docs/quality/CHAPTER_SELF_CHECKLIST.md`
+- 对应 15.2-2：连续 2 周质量达标率统计与趋势
+  - 证据路径（标准）：`.workflow/evidence/weekly/YYYY-Www-review.md`、`.workflow/evidence/weekly/YYYY-Www-trend.md`
 - 对应 15.2-3：不达标样本的修订前后对比与复评结果
   - 证据路径（标准）：`.workflow/evidence/quality/YYYY-MM-DD-revision-case.md`
   - 补充要求：若不达标归因于情节原型偏航，需附 `docs/quality/NOVEL_QUALITY_CHECKLIST.md` 第8.2 模板修订前后勾选差异。
