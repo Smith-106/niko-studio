@@ -7,6 +7,7 @@ _build_knowledge_context, inject_skills, retrieve_context (no LLM).
 
 import pytest
 from unittest.mock import MagicMock, AsyncMock
+from langchain_core.runnables import RunnableLambda
 from src.agents.writer import (
     WriterAgent,
     WriterInput,
@@ -85,6 +86,7 @@ class TestWriterOutput:
         assert wo.wordcount == 100
         assert wo.characters_appeared == []
         assert wo.forbidden_words_found == []
+        assert wo.metadata is None
 
     def test_all_fields(self):
         wo = WriterOutput(
@@ -267,6 +269,77 @@ class TestInjectSkills:
         agent = WriterAgent(llm=None, skill_loader=None)
         result = agent._build_enhanced_prompt("base prompt", ["skill-1"])
         assert result == "base prompt"
+
+
+class TestWriteRuntimeLogic:
+
+    def test_is_chapter_end_explicit_true(self):
+        agent = WriterAgent(llm=None)
+        input_data = WriterInput(scene_id="CH01-SC09", world_settings={"is_chapter_end": True})
+        assert agent._is_chapter_end(input_data) is True
+
+    def test_is_chapter_end_explicit_false(self):
+        agent = WriterAgent(llm=None)
+        input_data = WriterInput(scene_id="CH01-SC01", world_settings={"is_chapter_end": False})
+        assert agent._is_chapter_end(input_data) is False
+
+    def test_is_chapter_end_scene_rule(self):
+        agent = WriterAgent(llm=None)
+        assert agent._is_chapter_end(WriterInput(scene_id="CH02-SC01")) is True
+        assert agent._is_chapter_end(WriterInput(scene_id="CH02-SC02")) is False
+
+    def test_collect_effective_skill_ids_dedup(self):
+        agent = WriterAgent(llm=None)
+        wi = WriterInput(world_settings={"recommended_skills": ["a", "a", "b", "", None, "b"]})
+        assert agent._collect_effective_skill_ids(wi) == ["a", "b"]
+
+    @pytest.mark.asyncio
+    async def test_run_chain_records_openai_proxy_warning(self):
+        llm = RunnableLambda(lambda _: "ok")
+
+        agent = WriterAgent(llm=llm)
+        agent._get_openai_proxy_config = MagicMock(return_value={"enabled": True})
+        agent._call_openai_proxy = AsyncMock(side_effect=RuntimeError("proxy fail"))
+
+        warnings = []
+        result = await agent._run_chain("{value}", {"value": "x"}, warnings=warnings)
+
+        assert result == "ok"
+        assert any("openai_proxy_fallback_failed" in item for item in warnings)
+
+    @pytest.mark.asyncio
+    async def test_write_skills_scoped_and_deduped(self):
+        llm = RunnableLambda(lambda _: "chunk")
+        loader = MagicMock()
+        loader.load_skill.return_value = {"name": "Skill", "content": "guidance"}
+        agent = WriterAgent(llm=llm, skill_loader=loader)
+
+        input_data = WriterInput(
+            scene_id="CH01-SC02",
+            world_settings={"recommended_skills": ["skill-a", "skill-a", "skill-b"]},
+            sensory_guidance={},
+            emotional_arc="平静→变化",
+        )
+
+        output = await agent.write(input_data)
+        assert output.content
+        assert loader.load_skill.call_count == 2
+        assert agent._injected_skills == []
+
+    @pytest.mark.asyncio
+    async def test_write_with_knowledge_merges_warning_and_summary(self):
+        llm = RunnableLambda(lambda _: "chunk")
+
+        kl = MagicMock()
+        kl.search_entities = AsyncMock(side_effect=RuntimeError("lookup fail"))
+
+        agent = WriterAgent(llm=llm, knowledge_layer=kl)
+        input_data = WriterInput(scene_id="CH01-SC02", sensory_guidance={})
+
+        output = await agent.write_with_knowledge(input_data)
+        assert output.metadata is not None
+        assert "knowledge_retrieved" in output.metadata
+        assert any("knowledge_retrieval_failed" in w for w in output.metadata.get("warnings", []))
 
 
 class TestBuildKnowledgeContext:

@@ -245,6 +245,9 @@ class TestDispatchTasks:
         assert len(tasks) == 1
         assert tasks[0].agent_type == "writer"
         assert tasks[0].context["level"] == "L1"
+        assert "scene_detection_confidence" in tasks[0].context
+        assert "fallback_used" in tasks[0].context
+        assert "matched_keywords" in tasks[0].context
         assert len(tasks[0].skills) <= 2
         assert tasks[0].depends_on == []
 
@@ -255,6 +258,7 @@ class TestDispatchTasks:
         assert tasks[0].agent_type == "writer"
         assert tasks[0].context["level"] == "L2"
         assert tasks[0].context["target_words"] == 800
+        assert "scene_detection_confidence" in tasks[0].context
 
     def test_l3_standard_three_agents(self):
         cmd = _make_commander()
@@ -332,6 +336,30 @@ class TestDispatchTasks:
         tasks = cmd.dispatch_tasks("write chapter", WorkflowLevel.L3_STANDARD)
         ids = [t.task_id for t in tasks]
         assert ids == ["task-001", "task-002", "task-003"]
+
+
+class TestDispatchDiagnostics:
+
+    def test_scene_detection_fallback_visible(self):
+        cmd = _make_commander()
+        tasks = cmd.dispatch_tasks("completely unmatched phrase", WorkflowLevel.L1_RAPID)
+        ctx = tasks[0].context
+        assert ctx["fallback_used"] is True
+        assert ctx["scene_detection_confidence"] == 0.0
+        assert ctx["matched_keywords"]["scene"] == []
+
+    def test_route_fallback_keywords_visible(self):
+        mock_llm = MagicMock()
+        mock_llm.__or__ = MagicMock(side_effect=RuntimeError("LLM unavailable"))
+        cmd = CommanderAgent(llm=mock_llm)
+
+        level = cmd.route("fix grammar issues")
+        assert level == WorkflowLevel.L1_RAPID
+
+        tasks = cmd.dispatch_tasks("fix grammar issues", level)
+        ctx = tasks[0].context
+        assert ctx["fallback_used"] is True
+        assert "fix" in ctx["matched_keywords"]["route"]
 
 
 # ============================================================

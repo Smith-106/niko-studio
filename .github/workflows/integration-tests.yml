@@ -2,6 +2,8 @@ name: Integration Tests
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
   push:
     branches: [main, develop]
   pull_request:
@@ -13,6 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -37,9 +41,131 @@ jobs:
           pytest --version
           python -c "import pytest_asyncio; print(f'pytest-asyncio {pytest_asyncio.__version__}')"
 
-      - name: Run unit + integration tests (delivery baseline)
+      - name: Select diff coverage base
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml
+          echo "DIFF_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+
+      - name: Fetch PR base commit
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git fetch --no-tags --prune --depth=1 origin "${{ github.event.pull_request.base.sha }}" \
+            || git fetch --no-tags --prune --depth=1 origin "refs/heads/${{ github.base_ref }}"
+
+      - name: Build changed python file list
+        id: changed_files
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import subprocess
+
+          def norm_path(p: str) -> str:
+              p = (p or "").strip().replace("\\", "/")
+              while p.startswith("./"):
+                  p = p[2:]
+              return p
+
+          base = os.environ.get("DIFF_BASE", "")
+          changed = subprocess.check_output([
+              "git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...HEAD"
+          ], text=True).splitlines()
+
+          py_files = []
+          for raw in changed:
+              p = norm_path(raw)
+              if p.endswith(".py") and p.startswith("src/"):
+                  py_files.append(p)
+
+          out = pathlib.Path(".github") / "changed_python_files.txt"
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text("\n".join(py_files), encoding="utf-8")
+          print(f"changed_python_files={len(py_files)}")
+          for p in py_files:
+              print(p)
+
+          output_path = os.environ.get("GITHUB_OUTPUT")
+          if output_path:
+              with open(output_path, "a", encoding="utf-8") as f:
+                  f.write(f"has_src_changes={'true' if py_files else 'false'}\\n")
+          PY
+
+      - name: Skip PR diff coverage gate (no changed src/*.py)
+        if: ${{ github.event_name == 'pull_request' && steps.changed_files.outputs.has_src_changes == 'false' }}
+        run: |
+          echo "No changed src/*.py files in PR, skip diff coverage gate"
+
+      - name: Run PR diff coverage gate (changed src/*.py)
+        if: ${{ github.event_name == 'pull_request' && steps.changed_files.outputs.has_src_changes == 'true' }}
+        run: |
+          mapfile -t CHANGED_FILES < .github/changed_python_files.txt
+          PYTEST_TARGETS=(tests/unit tests/integration)
+
+          pytest "${PYTEST_TARGETS[@]}" -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml
+
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          threshold = 80.0
+          changed_file = Path('.github/changed_python_files.txt')
+          cov_xml = Path('coverage.xml')
+
+          changed = [line.strip() for line in changed_file.read_text(encoding='utf-8').splitlines() if line.strip()]
+          if not changed:
+              print('No changed python files, skip diff coverage check')
+              sys.exit(0)
+
+          tree = ET.parse(cov_xml)
+          root = tree.getroot()
+
+          by_file = {}
+          for cls in root.findall('.//class'):
+              filename = cls.get('filename')
+              if not filename:
+                  continue
+              lines = cls.find('lines')
+              if lines is None:
+                  continue
+              total = 0
+              covered = 0
+              for ln in lines.findall('line'):
+                  hits = int(ln.get('hits', '0'))
+                  total += 1
+                  if hits > 0:
+                      covered += 1
+              by_file[filename] = (covered, total)
+
+          normalized = {p.replace('\\\\', '/'): p for p in by_file.keys()}
+
+          failures = []
+          for target in changed:
+              key = target.replace('\\\\', '/')
+              if key not in normalized:
+                  failures.append((target, 0.0, 'missing-in-coverage.xml'))
+                  continue
+              src_key = normalized[key]
+              covered, total = by_file[src_key]
+              pct = (covered / total * 100.0) if total else 0.0
+              print(f'{target}: {pct:.2f}% ({covered}/{total})')
+              if pct < threshold:
+                  failures.append((target, pct, f'{covered}/{total}'))
+
+          if failures:
+              print('\nDiff coverage gate failed:')
+              for f, pct, detail in failures:
+                  print(f' - {f}: {pct:.2f}% ({detail}) < {threshold:.0f}%')
+              sys.exit(1)
+
+          print(f'\nDiff coverage gate passed (threshold {threshold:.0f}%)')
+          PY
+
+      - name: Run main/develop + schedule strict gate
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=100 --junitxml=pytest-baseline.xml
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4

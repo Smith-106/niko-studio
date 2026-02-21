@@ -458,10 +458,21 @@ export interface ChatModelComparisonResult {
   control: ChatModelComparisonResultItem
 }
 
+export interface WriterMetadata {
+  warnings?: string[]
+  knowledge_retrieved?: {
+    entities_count: number
+    relations_count: number
+    memories_count: number
+  }
+  [key: string]: unknown
+}
+
 export interface ChatResponse {
   content: string
   skills_used: string[]
   comparison?: ChatModelComparisonResult
+  writer_metadata?: WriterMetadata
   workflow_info?: {
     level: string
     level_slug?: string

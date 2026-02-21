@@ -485,6 +485,11 @@ class TestNodeSuccessPaths:
         scene_type.value = "chapter"
 
         assignment = MagicMock()
+        assignment.context = {
+            "scene_detection_confidence": 0.66,
+            "fallback_used": False,
+            "matched_keywords": {"scene": ["chapter"], "route": []},
+        }
         assignment.model_dump.return_value = {"agent": "writer", "task": "draft"}
 
         mock_agent = MagicMock()
@@ -499,6 +504,9 @@ class TestNodeSuccessPaths:
 
         assert result["workflow_level"] == "standard"
         assert result["scene_type"] == "chapter"
+        assert result["scene_detection_confidence"] == 0.66
+        assert result["fallback_used"] is False
+        assert result["matched_keywords"]["scene"] == ["chapter"]
         assert result["dispatched_skills"] == ["outline", "foreshadow"]
         assert result["task_assignments"] == [{"agent": "writer", "task": "draft"}]
 
@@ -547,6 +555,7 @@ class TestNodeSuccessPaths:
         writer_result.sensory_types_used = ["视觉", "听觉"]
         writer_result.forbidden_words_found = ["禁用词"]
         writer_result.sections_needing_review = ["段落 2"]
+        writer_result.metadata = {"warnings": ["demo-warning"]}
 
         captured = {}
 
@@ -586,6 +595,7 @@ class TestNodeSuccessPaths:
         assert result["draft_content"] == "new draft"
         assert result["draft_version"] == 2
         assert result["draft_wordcount"] == 1234
+        assert result["writer_metadata"] == {"warnings": ["demo-warning"]}
         assert result["writer_self_check"]["forbidden_words"] == ["禁用词"]
         assert "请根据以上反馈重写内容" in captured["input"].previous_content
 

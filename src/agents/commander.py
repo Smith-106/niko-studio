@@ -86,27 +86,57 @@ class CommanderAgent(BaseAgent):
         super().__init__(name, config)
         self.llm = llm
         self.skill_router = SkillRouter()
+        self._last_route_diagnostics: Dict[str, Any] = {
+            "fallback_used": False,
+            "matched_keywords": [],
+            "routing_method": "unknown",
+        }
 
     def _route_by_heuristics(self, task_description: str) -> WorkflowLevel:
         """LLM 不可用或失败时的启发式路由。"""
         task_lower = task_description.lower()
 
-        if any(kw in task_lower for kw in ["typo", "fix", "polish", "correct", "grammar", "修复", "错别字", "纠正", "语法"]):
-            self.log_activity("Fallback: routing to L1_RAPID based on keywords.", level="INFO")
-            return WorkflowLevel.L1_RAPID
+        keyword_groups = [
+            (
+                WorkflowLevel.L1_RAPID,
+                ["typo", "fix", "polish", "correct", "grammar", "修复", "错别字", "纠正", "语法"],
+            ),
+            (
+                WorkflowLevel.L2_LITE,
+                ["paragraph", "short", "snippet", "段落", "片段", "短文"],
+            ),
+            (
+                WorkflowLevel.L5_BRAINSTORM,
+                [
+                    "brainstorm", "idea", "concept", "world", "character", "setting", "story", "plot", "outline", "arc",
+                    "头脑风暴", "构思", "世界观", "设定", "角色", "性格", "设计", "体系", "大纲", "剧情", "情节", "规划", "计划",
+                ],
+            ),
+            (
+                WorkflowLevel.L5_COORDINATOR,
+                ["project", "roadmap", "full", "novel", "全书", "项目"],
+            ),
+        ]
 
-        if any(kw in task_lower for kw in ["paragraph", "short", "snippet", "段落", "片段", "短文"]):
-            self.log_activity("Fallback: routing to L2_LITE based on keywords.", level="INFO")
-            return WorkflowLevel.L2_LITE
+        for level, keywords in keyword_groups:
+            matched = [kw for kw in keywords if kw in task_lower]
+            if matched:
+                self._last_route_diagnostics = {
+                    "fallback_used": True,
+                    "matched_keywords": matched,
+                    "routing_method": "heuristics",
+                }
+                self.log_activity(
+                    f"Fallback: routing to {level.value} based on keywords: {matched}",
+                    level="INFO",
+                )
+                return level
 
-        if any(kw in task_lower for kw in ["brainstorm", "idea", "concept", "world", "character", "setting", "story", "plot", "outline", "arc", "头脑风暴", "构思", "世界观", "设定", "角色", "性格", "设计", "体系", "大纲", "剧情", "情节", "规划", "计划"]):
-            self.log_activity("Fallback: routing to L5_BRAINSTORM based on keywords.", level="INFO")
-            return WorkflowLevel.L5_BRAINSTORM
-
-        if any(kw in task_lower for kw in ["project", "roadmap", "full", "novel", "全书", "项目"]):
-            self.log_activity("Fallback: routing to L5_COORDINATOR based on keywords.", level="INFO")
-            return WorkflowLevel.L5_COORDINATOR
-
+        self._last_route_diagnostics = {
+            "fallback_used": True,
+            "matched_keywords": [],
+            "routing_method": "heuristics_default",
+        }
         self.log_activity("Fallback: default routing to L3_STANDARD.", level="INFO")
         return WorkflowLevel.L3_STANDARD
 
@@ -166,6 +196,12 @@ class CommanderAgent(BaseAgent):
                 "format_instructions": parser.get_format_instructions()
             })
 
+            self._last_route_diagnostics = {
+                "fallback_used": False,
+                "matched_keywords": [],
+                "routing_method": "llm",
+                "reasoning": result.reasoning,
+            }
             self.log_activity(f"Routing '{task_description}' to {result.workflow_level} (Reason: {result.reasoning})")
             return result.workflow_level
 
@@ -199,16 +235,7 @@ class CommanderAgent(BaseAgent):
 
         return task_description
 
-    def detect_scene_type(self, task_description: str) -> SceneType:
-        """
-        Detect the scene type from task description using keyword matching.
-
-        Args:
-            task_description: The user's request.
-
-        Returns:
-            SceneType: The detected scene type.
-        """
+    def _detect_scene_with_diagnostics(self, task_description: str) -> Dict[str, Any]:
         task_lower = task_description.lower()
 
         scene_keywords = {
@@ -223,12 +250,46 @@ class CommanderAgent(BaseAgent):
             SceneType.SUSPENSE: ["悬念", "悬疑", "伏笔", "暗示", "suspense", "mystery"],
         }
 
-        for scene_type, keywords in scene_keywords.items():
-            if any(kw in task_lower for kw in keywords):
-                return scene_type
+        best_type = SceneType.DIALOGUE
+        best_keywords: List[str] = []
+        best_score = 0.0
 
-        # Default to dialogue as most common
-        return SceneType.DIALOGUE
+        for scene_type, keywords in scene_keywords.items():
+            matched = [kw for kw in keywords if kw in task_lower]
+            if not matched:
+                continue
+            score = len(matched) / float(len(keywords))
+            if score > best_score:
+                best_score = score
+                best_type = scene_type
+                best_keywords = matched
+
+        if best_score == 0.0:
+            return {
+                "scene_type": SceneType.DIALOGUE,
+                "matched_keywords": [],
+                "confidence": 0.0,
+                "fallback_used": True,
+            }
+
+        return {
+            "scene_type": best_type,
+            "matched_keywords": best_keywords,
+            "confidence": round(min(best_score, 1.0), 3),
+            "fallback_used": False,
+        }
+
+    def detect_scene_type(self, task_description: str) -> SceneType:
+        """
+        Detect the scene type from task description using keyword matching.
+
+        Args:
+            task_description: The user's request.
+
+        Returns:
+            SceneType: The detected scene type.
+        """
+        return self._detect_scene_with_diagnostics(task_description)["scene_type"]
 
     def dispatch_skills(self, scene_type: SceneType) -> List[str]:
         """
@@ -259,8 +320,27 @@ class CommanderAgent(BaseAgent):
         Returns:
             List of task assignments for agents.
         """
-        scene_type = self.detect_scene_type(task_description)
+        scene_detection = self._detect_scene_with_diagnostics(task_description)
+        scene_type = scene_detection["scene_type"]
         skills = self.dispatch_skills(scene_type)
+
+        route_diag = self._last_route_diagnostics or {}
+        route_fallback_used = bool(route_diag.get("fallback_used", False))
+        route_keywords = route_diag.get("matched_keywords", [])
+
+        diagnostics_context = {
+            "scene_detection_confidence": scene_detection.get("confidence", 0.0),
+            "fallback_used": bool(scene_detection.get("fallback_used", False) or route_fallback_used),
+            "matched_keywords": {
+                "scene": scene_detection.get("matched_keywords", []),
+                "route": route_keywords,
+            },
+        }
+
+        def with_diagnostics(base: Dict[str, Any]) -> Dict[str, Any]:
+            merged = dict(base)
+            merged.update(diagnostics_context)
+            return merged
 
         assignments = []
 
@@ -272,7 +352,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Quick polish: {task_description}",
                 skills=skills[:2],  # Use top 2 skills
-                context={"level": "L1", "max_tokens": 500},
+                context=with_diagnostics({"level": "L1", "max_tokens": 500}),
                 depends_on=[],
             ))
 
@@ -284,7 +364,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Lightweight draft: {task_description}",
                 skills=skills,
-                context={"level": "L2", "target_words": 800},
+                context=with_diagnostics({"level": "L2", "target_words": 800}),
                 depends_on=[],
             ))
 
@@ -296,7 +376,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Design scene structure with LOCK validation: {task_description}",
                 skills=["22-steps-outline", "pyramid-structure"],
-                context={"level": "L3"},
+                context=with_diagnostics({"level": "L3"}),
                 depends_on=[],
             ))
             assignments.append(TaskAssignment(
@@ -305,7 +385,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Write scene following architect's structure: {task_description}",
                 skills=skills,
-                context={"level": "L3", "target_words": 2000},
+                context=with_diagnostics({"level": "L3", "target_words": 2000}),
                 depends_on=["task-001"],
             ))
             assignments.append(TaskAssignment(
@@ -314,7 +394,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction="Evaluate the written content using 8-dimension LOCK matrix",
                 skills=["script-doctor", "self-knowledge-eval"],
-                context={"level": "L3"},
+                context=with_diagnostics({"level": "L3"}),
                 depends_on=["task-002"],
             ))
 
@@ -329,7 +409,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=SceneType.WORLDBUILDING,
                 instruction=f"Brainstorm world context: {task_description}",
                 skills=["worldview-craft", "setting-craft"],
-                context={"level": level_label},
+                context=with_diagnostics({"level": level_label}),
                 depends_on=[],
             ))
             assignments.append(TaskAssignment(
@@ -338,7 +418,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=SceneType.CHARACTER_FOCUS,
                 instruction=f"Brainstorm character context: {task_description}",
                 skills=["character-forge", "four-selves"],
-                context={"level": level_label},
+                context=with_diagnostics({"level": level_label}),
                 depends_on=[],
             ))
             assignments.append(TaskAssignment(
@@ -347,7 +427,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Synthesize multi-angle ideas: {task_description}",
                 skills=["22-steps-outline", "pyramid-structure"],
-                context={"level": level_label},
+                context=with_diagnostics({"level": level_label}),
                 depends_on=["task-001", "task-002"],
             ))
             assignments.append(TaskAssignment(
@@ -356,7 +436,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Write based on brainstorm synthesis: {task_description}",
                 skills=skills,
-                context={"level": level_label, "target_words": 2500},
+                context=with_diagnostics({"level": level_label, "target_words": 2500}),
                 depends_on=["task-003"],
             ))
             assignments.append(TaskAssignment(
@@ -365,7 +445,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction="Evaluate brainstorm output with 8-dimension LOCK matrix",
                 skills=["script-doctor", "self-knowledge-eval"],
-                context={"level": level_label},
+                context=with_diagnostics({"level": level_label}),
                 depends_on=["task-004"],
             ))
 
@@ -377,7 +457,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=SceneType.WORLDBUILDING,
                 instruction=f"Gather world context: {task_description}",
                 skills=["worldview-craft", "setting-craft"],
-                context={"level": "L5"},
+                context=with_diagnostics({"level": "L5"}),
                 depends_on=[],
             ))
             assignments.append(TaskAssignment(
@@ -386,7 +466,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=SceneType.CHARACTER_FOCUS,
                 instruction=f"Gather character context: {task_description}",
                 skills=["character-forge", "four-selves"],
-                context={"level": "L5"},
+                context=with_diagnostics({"level": "L5"}),
                 depends_on=[],
             ))
             assignments.append(TaskAssignment(
@@ -395,7 +475,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Design structure with full context: {task_description}",
                 skills=["22-steps-outline", "pyramid-structure"],
-                context={"level": "L5"},
+                context=with_diagnostics({"level": "L5"}),
                 depends_on=["task-001", "task-002"],
             ))
             assignments.append(TaskAssignment(
@@ -404,7 +484,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction=f"Write with coordinator depth: {task_description}",
                 skills=skills,
-                context={"level": "L5", "target_words": 3000},
+                context=with_diagnostics({"level": "L5", "target_words": 3000}),
                 depends_on=["task-003"],
             ))
             assignments.append(TaskAssignment(
@@ -413,7 +493,7 @@ class CommanderAgent(BaseAgent):
                 scene_type=scene_type,
                 instruction="Full 8-dimension evaluation with LOCK analysis",
                 skills=["script-doctor", "self-knowledge-eval", "deus-ex-machina"],
-                context={"level": "L5"},
+                context=with_diagnostics({"level": "L5"}),
                 depends_on=["task-004"],
             ))
 

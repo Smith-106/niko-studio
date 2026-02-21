@@ -1597,6 +1597,7 @@ async def chat_endpoint(request: Request):
         # 根据工作流级别执行不同逻辑
         response_content = ""
         evaluation_result = {"score": 0, "feedback": ""}
+        writer_metadata: Optional[Dict[str, Any]] = None
         steps_completed = 0
 
         try:
@@ -1668,6 +1669,7 @@ async def chat_endpoint(request: Request):
                 # 执行写作
                 result = await writer.write(writer_input, allow_llm_fallback=allow_llm_fallback)
                 response_content = result.content
+                writer_metadata = result.metadata if isinstance(result.metadata, dict) else None
                 steps_completed = 4  # 4-chain prompt
 
                 # 调用 Critic 评估 (如果可用)
@@ -1737,6 +1739,7 @@ async def chat_endpoint(request: Request):
             "content": response_content,
             "skills_used": all_skills[:5],
             "comparison": comparison_payload,
+            "writer_metadata": writer_metadata,
             "workflow_info": {
                 "level": to_workflow_label(level),
                 "level_slug": to_workflow_slug(level),

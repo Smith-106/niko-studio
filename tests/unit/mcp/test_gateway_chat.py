@@ -320,6 +320,7 @@ class TestChatHardFailAndCoordinatorState:
         mock_writer.inject_skills = MagicMock()
         writer_result = MagicMock()
         writer_result.content = "writer content"
+        writer_result.metadata = {"warnings": ["trace"]}
         writer_result.sensory_types_used = ["visual"]
         mock_writer.write = AsyncMock(return_value=writer_result)
         monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
@@ -382,6 +383,7 @@ class TestChatAdditionalBranchCoverage:
         mock_writer.inject_skills = MagicMock()
         writer_result = MagicMock()
         writer_result.content = "writer content"
+        writer_result.metadata = {"warnings": ["trace"]}
         writer_result.sensory_types_used = []
         mock_writer.write = AsyncMock(return_value=writer_result)
         monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
@@ -401,6 +403,7 @@ class TestChatAdditionalBranchCoverage:
         mock_writer.inject_skills = MagicMock()
         writer_result = MagicMock()
         writer_result.content = "writer content"
+        writer_result.metadata = {"warnings": ["trace"]}
         writer_result.sensory_types_used = ["visual", "auditory"]
         mock_writer.write = AsyncMock(return_value=writer_result)
         monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: mock_writer)
@@ -419,3 +422,4 @@ class TestChatAdditionalBranchCoverage:
         data = response.json()
         assert data["evaluation"]["score"] == 75
         assert data["evaluation"]["feedback"] == "自检: 使用了 2 种感官描写"
+        assert data["writer_metadata"] == {"warnings": ["trace"]}

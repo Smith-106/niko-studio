@@ -120,6 +120,11 @@ NIKO_CORS_PROD_ORIGINS="https://app.example.com,https://gray.example.com" python
 - `GET /tools`
 - `POST /chat`
 
+`POST /chat` 响应字段补充（兼容性说明）：
+- `writer_metadata`（optional）
+  - `warnings?: string[]`（当前包含 Writer 的非阻断告警代码前缀，如 `knowledge_retrieval_failed`、`openai_proxy_fallback_failed`）
+  - `knowledge_retrieved?: { entities_count: number, relations_count: number, memories_count: number }`
+
 ### Run Development Server
 
 ```bash

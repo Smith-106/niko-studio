@@ -7,16 +7,26 @@ Writer Agent - 写作执行者
 """
 
 from typing import List, Optional, Dict, Any
+from enum import Enum
 from pydantic import BaseModel, Field, model_validator
 import asyncio
 import json
 import os
+import re
 import requests
 
 
 # ============================================================
 # Interface Layer (接口层) - Pydantic 数据模型
 # ============================================================
+
+class WriterWarningCode(str, Enum):
+    KNOWLEDGE_RETRIEVAL_FAILED = "knowledge_retrieval_failed"
+    KNOWLEDGE_SYNC_FAILED = "knowledge_sync_failed"
+    OPENAI_PROXY_FALLBACK_FAILED = "openai_proxy_fallback_failed"
+    SKILL_LOAD_FAILED = "skill_load_failed"
+    SKILL_INJECTION_FAILED = "skill_injection_failed"
+
 
 class WriterInput(BaseModel):
     """Writer Agent 输入"""
@@ -78,13 +88,14 @@ class WriterInput(BaseModel):
 
 class WriterOutput(BaseModel):
     """Writer Agent 输出"""
-    
+
     content: str = Field(..., description="生成的正文内容")
-    
+
     # 元数据
     wordcount: int
     characters_appeared: List[str] = Field(default_factory=list)
     locations: List[str] = Field(default_factory=list)
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="可选诊断元数据")
     
     # 伏笔追踪
     foreshadows_planted: List[str] = Field(default_factory=list)
@@ -330,6 +341,7 @@ class WriterAgent:
         self.knowledge_layer = knowledge_layer
         self.enable_knowledge_retrieval = enable_knowledge_retrieval
         self._injected_skills: List[str] = []
+        self._injected_skill_guidance: str = ""
 
     def _get_openai_proxy_config(self) -> Optional[Dict[str, str]]:
         api_key = os.getenv("OPENAI_API_KEY")
@@ -404,7 +416,8 @@ class WriterAgent:
         self,
         query: str,
         context_types: Optional[List[str]] = None,
-        limit: int = 10
+        limit: int = 10,
+        warnings: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         从知识层检索相关上下文
@@ -413,6 +426,7 @@ class WriterAgent:
             query: 查询文本
             context_types: 上下文类型过滤 ['character', 'location', 'event', 'foreshadow']
             limit: 返回结果数量限制
+            warnings: 非阻断告警收集器
 
         Returns:
             Dict: 检索到的上下文信息
@@ -455,8 +469,10 @@ class WriterAgent:
                 context["memories"] = memories
 
         except Exception as e:
-            # 静默失败，不影响主流程
-            pass
+            self._append_warning(
+                warnings,
+                self._warning_message(WriterWarningCode.KNOWLEDGE_RETRIEVAL_FAILED, str(e)),
+            )
 
         return context
 
@@ -531,6 +547,8 @@ class WriterAgent:
         Returns:
             WriterOutput: 写作输出
         """
+        warnings: List[str] = []
+
         # 构建查询
         query_parts = [
             input_data.pov_character,
@@ -543,7 +561,8 @@ class WriterAgent:
         retrieved = await self.retrieve_context(
             query,
             context_types=["character", "location", "event"],
-            limit=10
+            limit=10,
+            warnings=warnings,
         )
 
         # 构建知识上下文
@@ -554,7 +573,6 @@ class WriterAgent:
             enhanced_profiles = list(input_data.character_profiles)
             for ent in retrieved["entities"]:
                 if ent.get("type") == "character":
-                    # 检查是否已存在
                     exists = any(
                         p.get("name") == ent.get("name")
                         for p in enhanced_profiles
@@ -570,24 +588,32 @@ class WriterAgent:
         # 调用原始 write 方法
         output = await self.write(input_data, allow_llm_fallback=allow_llm_fallback)
 
-        # 记录使用的知识到输出元数据
-        if hasattr(output, 'metadata'):
-            output.metadata = output.metadata or {}
-            output.metadata["knowledge_retrieved"] = {
-                "entities_count": len(retrieved.get("entities", [])),
-                "relations_count": len(retrieved.get("relations", [])),
-                "memories_count": len(retrieved.get("memories", []))
-            }
+        prior_warnings = []
+        if output.metadata and isinstance(output.metadata.get("warnings"), list):
+            prior_warnings = [str(item) for item in output.metadata.get("warnings", [])]
+
+        merged_warnings = prior_warnings + warnings
+        self._attach_metadata(
+            output,
+            merged_warnings,
+            knowledge_summary=self._build_knowledge_summary(retrieved),
+        )
 
         return output
 
-    async def sync_to_knowledge_layer(self, output: 'WriterOutput', scene_id: str) -> None:
+    async def sync_to_knowledge_layer(
+        self,
+        output: 'WriterOutput',
+        scene_id: str,
+        warnings: Optional[List[str]] = None,
+    ) -> None:
         """
         将写作输出同步到知识层
 
         Args:
             output: WriterOutput 写作输出
             scene_id: 场景 ID
+            warnings: 非阻断告警收集器
         """
         if not self.knowledge_layer:
             return
@@ -627,10 +653,111 @@ class WriterAgent:
                     )
 
         except Exception as e:
-            # 静默失败
-            pass
+            self._append_warning(
+                warnings,
+                self._warning_message(WriterWarningCode.KNOWLEDGE_SYNC_FAILED, str(e)),
+            )
 
-    def inject_skills(self, skill_ids: List[str]) -> str:
+    def _append_warning(self, warnings: Optional[List[str]], message: str) -> None:
+        if warnings is not None:
+            warnings.append(message)
+
+    def _warning_message(self, code: WriterWarningCode, detail: str) -> str:
+        return f"{code.value}: {detail}"
+
+    def _collect_effective_skill_ids(self, input_data: WriterInput) -> List[str]:
+        skill_ids: List[str] = []
+        if isinstance(input_data.world_settings, dict):
+            candidate_skills = input_data.world_settings.get("recommended_skills") or input_data.world_settings.get("skill_ids")
+            if isinstance(candidate_skills, list):
+                skill_ids = [s for s in candidate_skills if isinstance(s, str) and s]
+
+        seen = set()
+        deduped: List[str] = []
+        for skill_id in skill_ids:
+            if skill_id not in seen:
+                seen.add(skill_id)
+                deduped.append(skill_id)
+        return deduped
+
+    def _enter_skill_scope(self, skill_ids: List[str], warnings: Optional[List[str]] = None) -> Dict[str, Any]:
+        previous = {
+            "skills": list(self._injected_skills),
+            "guidance": self._injected_skill_guidance,
+        }
+        self._injected_skills = []
+        self._injected_skill_guidance = ""
+
+        if skill_ids:
+            try:
+                self.inject_skills(skill_ids)
+            except Exception as e:
+                self._append_warning(
+                    warnings,
+                    self._warning_message(WriterWarningCode.SKILL_INJECTION_FAILED, str(e)),
+                )
+                self._injected_skills = []
+                self._injected_skill_guidance = ""
+        return previous
+
+    def _exit_skill_scope(self, previous: Dict[str, Any]) -> None:
+        self._injected_skills = list(previous.get("skills", []))
+        self._injected_skill_guidance = previous.get("guidance", "") or ""
+
+    def _safe_exit_skill_scope(self, previous: Dict[str, Any], warnings: Optional[List[str]] = None) -> None:
+        try:
+            self._exit_skill_scope(previous)
+        except Exception as exc:
+            self._append_warning(
+                warnings,
+                self._warning_message(WriterWarningCode.SKILL_INJECTION_FAILED, f"scope_exit: {exc}"),
+            )
+            self._injected_skills = []
+            self._injected_skill_guidance = ""
+
+    def _is_chapter_end(self, input_data: WriterInput) -> bool:
+        if isinstance(input_data.world_settings, dict):
+            explicit = input_data.world_settings.get("is_chapter_end")
+            if isinstance(explicit, bool):
+                return explicit
+
+        scene_id = (input_data.scene_id or "").strip().upper()
+        if not scene_id:
+            return False
+
+        match = re.search(r"SC(\d+)$", scene_id)
+        if not match:
+            return False
+
+        try:
+            scene_num = int(match.group(1))
+        except ValueError:
+            return False
+        return scene_num == 1
+
+    def _build_knowledge_summary(self, retrieved: Dict[str, Any]) -> Dict[str, int]:
+        return {
+            "entities_count": len(retrieved.get("entities", [])),
+            "relations_count": len(retrieved.get("relations", [])),
+            "memories_count": len(retrieved.get("memories", [])),
+        }
+
+    def _attach_metadata(
+        self,
+        output: 'WriterOutput',
+        warnings: List[str],
+        knowledge_summary: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        metadata: Dict[str, Any] = {}
+        if output.metadata:
+            metadata.update(output.metadata)
+        if warnings:
+            metadata["warnings"] = warnings
+        if knowledge_summary is not None:
+            metadata["knowledge_retrieved"] = knowledge_summary
+        output.metadata = metadata or None
+
+    def inject_skills(self, skill_ids: List[str], warnings: Optional[List[str]] = None) -> str:
         """
         注入技能包内容到风格指南
 
@@ -641,20 +768,26 @@ class WriterAgent:
             合并后的技能指导文本
         """
         if not self.skill_loader:
+            self._injected_skills = []
+            self._injected_skill_guidance = ""
             return ""
 
-        self._injected_skills = skill_ids
+        self._injected_skills = list(skill_ids)
         skill_contents = []
 
-        for skill_id in skill_ids:
+        for skill_id in self._injected_skills:
             try:
                 skill = self.skill_loader.load_skill(skill_id)
                 if skill:
                     skill_contents.append(f"### {skill.get('name', skill_id)}\n{skill.get('content', '')}")
             except Exception as e:
-                print(f"Warning: Failed to load skill {skill_id}: {e}")
+                self._append_warning(
+                    warnings,
+                    self._warning_message(WriterWarningCode.SKILL_LOAD_FAILED, f"{skill_id}: {e}"),
+                )
 
-        return "\n\n".join(skill_contents)
+        self._injected_skill_guidance = "\n\n".join(skill_contents)
+        return self._injected_skill_guidance
 
     def _build_enhanced_prompt(self, base_prompt: str, skill_ids: List[str]) -> str:
         """构建带技能注入的增强 Prompt"""
@@ -685,101 +818,105 @@ class WriterAgent:
         3. Conflict Development (冲突展开)
         4. Resolution (场景结尾)
         """
-        from langchain_core.prompts import ChatPromptTemplate
-        from langchain_core.output_parsers import StrOutputParser
+        warnings: List[str] = []
+        skill_ids = self._collect_effective_skill_ids(input_data)
+        previous_skill_state = self._enter_skill_scope(skill_ids, warnings=warnings)
 
-        parser = StrOutputParser()
+        try:
+            # 解析情绪弧线
+            emotional_parts = input_data.emotional_arc.split("→")
+            emotional_start = emotional_parts[0].strip() if len(emotional_parts) > 0 else "平静"
+            emotional_end = emotional_parts[1].strip() if len(emotional_parts) > 1 else "变化"
 
-        # 从上下文自动注入技能（可选）
-        skill_ids = []
-        if isinstance(input_data.world_settings, dict):
-            candidate_skills = input_data.world_settings.get("recommended_skills") or input_data.world_settings.get("skill_ids")
-            if isinstance(candidate_skills, list):
-                skill_ids = [s for s in candidate_skills if isinstance(s, str) and s]
-        if skill_ids:
-            self.inject_skills(skill_ids)
+            # 准备上下文
+            location = input_data.sensory_guidance.get("location", "未知地点")
+            time = input_data.sensory_guidance.get("time", "某个时刻")
+            atmosphere = input_data.sensory_guidance.get("atmosphere", emotional_start)
 
-        # 解析情绪弧线
-        emotional_parts = input_data.emotional_arc.split("→")
-        emotional_start = emotional_parts[0].strip() if len(emotional_parts) > 0 else "平静"
-        emotional_end = emotional_parts[1].strip() if len(emotional_parts) > 1 else "变化"
-        
-        # 准备上下文
-        location = input_data.sensory_guidance.get("location", "未知地点")
-        time = input_data.sensory_guidance.get("time", "某个时刻")
-        atmosphere = input_data.sensory_guidance.get("atmosphere", emotional_start)
-        
-        # Chain 1: 场景开头
-        scene_setup = await self._run_chain(
-            CHAIN_SCENE_SETUP,
-            {
-                "location": location,
-                "time": time,
-                "atmosphere": atmosphere,
-                "sensory_guidance": json.dumps(input_data.sensory_guidance, ensure_ascii=False),
-                "emotional_start": emotional_start
-            },
-            allow_llm_fallback=allow_llm_fallback
-        )
+            # Chain 1: 场景开头
+            scene_setup = await self._run_chain(
+                CHAIN_SCENE_SETUP,
+                {
+                    "location": location,
+                    "time": time,
+                    "atmosphere": atmosphere,
+                    "sensory_guidance": json.dumps(input_data.sensory_guidance, ensure_ascii=False),
+                    "emotional_start": emotional_start
+                },
+                allow_llm_fallback=allow_llm_fallback,
+                warnings=warnings,
+            )
 
-        # Chain 2: 角色登场
-        character_entry = await self._run_chain(
-            CHAIN_CHARACTER_ENTRY,
-            {
-                "previous_content": scene_setup,
-                "character_profiles": json.dumps(input_data.character_profiles, ensure_ascii=False),
-                "pov_character": input_data.pov_character,
-                "objective": input_data.objective
-            },
-            allow_llm_fallback=allow_llm_fallback
-        )
+            # Chain 2: 角色登场
+            character_entry = await self._run_chain(
+                CHAIN_CHARACTER_ENTRY,
+                {
+                    "previous_content": scene_setup,
+                    "character_profiles": json.dumps(input_data.character_profiles, ensure_ascii=False),
+                    "pov_character": input_data.pov_character,
+                    "objective": input_data.objective
+                },
+                allow_llm_fallback=allow_llm_fallback,
+                warnings=warnings,
+            )
 
-        # Chain 3: 冲突展开
-        conflict_dev = await self._run_chain(
-            CHAIN_CONFLICT_DEVELOPMENT,
-            {
-                "previous_content": scene_setup + "\n\n" + character_entry,
-                "conflict": input_data.conflict,
-                "emotional_start": emotional_start,
-                "emotional_end": emotional_end
-            },
-            allow_llm_fallback=allow_llm_fallback
-        )
+            # Chain 3: 冲突展开
+            conflict_dev = await self._run_chain(
+                CHAIN_CONFLICT_DEVELOPMENT,
+                {
+                    "previous_content": scene_setup + "\n\n" + character_entry,
+                    "conflict": input_data.conflict,
+                    "emotional_start": emotional_start,
+                    "emotional_end": emotional_end
+                },
+                allow_llm_fallback=allow_llm_fallback,
+                warnings=warnings,
+            )
 
-        # Chain 4: 场景结尾
-        is_chapter_end = input_data.scene_id.endswith("-SC01") or True  # 简化判断
-        hook_requirement = "必须有强烈的钩子(Cliffhanger)" if is_chapter_end else "完成情绪转变即可"
+            # Chain 4: 场景结尾
+            is_chapter_end = self._is_chapter_end(input_data)
+            hook_requirement = "必须有强烈的钩子(Cliffhanger)" if is_chapter_end else "完成情绪转变即可"
 
-        resolution = await self._run_chain(
-            CHAIN_RESOLUTION,
-            {
-                "previous_content": scene_setup + "\n\n" + character_entry + "\n\n" + conflict_dev,
-                "outcome": input_data.outcome,
-                "hook_requirement": hook_requirement,
-                "foreshadows_to_plant": ", ".join(input_data.foreshadows_to_plant) or "无",
-                "foreshadows_to_harvest": ", ".join(input_data.foreshadows_to_harvest) or "无"
-            },
-            allow_llm_fallback=allow_llm_fallback
-        )
-        
-        # 合并完整内容
-        full_content = f"{scene_setup}\n\n{character_entry}\n\n{conflict_dev}\n\n{resolution}"
-        
-        # 后处理和自检
-        output = self._post_process(full_content, input_data)
-        
-        return output
+            resolution = await self._run_chain(
+                CHAIN_RESOLUTION,
+                {
+                    "previous_content": scene_setup + "\n\n" + character_entry + "\n\n" + conflict_dev,
+                    "outcome": input_data.outcome,
+                    "hook_requirement": hook_requirement,
+                    "foreshadows_to_plant": ", ".join(input_data.foreshadows_to_plant) or "无",
+                    "foreshadows_to_harvest": ", ".join(input_data.foreshadows_to_harvest) or "无"
+                },
+                allow_llm_fallback=allow_llm_fallback,
+                warnings=warnings,
+            )
+
+            # 合并完整内容
+            full_content = f"{scene_setup}\n\n{character_entry}\n\n{conflict_dev}\n\n{resolution}"
+
+            # 后处理和自检
+            output = self._post_process(full_content, input_data)
+            self._attach_metadata(output, warnings)
+            return output
+        finally:
+            self._safe_exit_skill_scope(previous_skill_state, warnings=warnings)
     
-    async def _run_chain(self, prompt_template: str, variables: dict, allow_llm_fallback: bool = True) -> str:
+    async def _run_chain(
+        self,
+        prompt_template: str,
+        variables: dict,
+        allow_llm_fallback: bool = True,
+        warnings: Optional[List[str]] = None,
+    ) -> str:
         """运行单个Chain阶段"""
         from langchain_core.prompts import ChatPromptTemplate
         from langchain_core.output_parsers import StrOutputParser
 
         system_prompt = WRITER_SYSTEM_PROMPT
-        if self._injected_skills and self.skill_loader:
-            skill_guidance = self.inject_skills(self._injected_skills)
-            if skill_guidance:
-                system_prompt = f"{WRITER_SYSTEM_PROMPT}\n\n## 技能包指导\n\n{skill_guidance}\n\n请在创作中融入以上技能要点。"
+        if self._injected_skill_guidance:
+            system_prompt = (
+                f"{WRITER_SYSTEM_PROMPT}\n\n## 技能包指导\n\n"
+                f"{self._injected_skill_guidance}\n\n请在创作中融入以上技能要点。"
+            )
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
@@ -790,8 +927,11 @@ class WriterAgent:
             messages = prompt.format_messages(**variables)
             try:
                 return await self._call_openai_proxy(messages)
-            except Exception:
-                pass
+            except Exception as exc:
+                self._append_warning(
+                    warnings,
+                    self._warning_message(WriterWarningCode.OPENAI_PROXY_FALLBACK_FAILED, str(exc)),
+                )
 
         if self.llm:
             chain = prompt | self.llm | StrOutputParser()

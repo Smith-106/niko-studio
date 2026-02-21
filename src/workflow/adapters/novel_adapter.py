@@ -181,6 +181,9 @@ class NovelAdapter(BaseDomainAdapter):
             return {
                 "workflow_level": level.value,
                 "scene_type": scene_type.value,
+                "scene_detection_confidence": assignments[0].context.get("scene_detection_confidence", 0.0) if assignments else 0.0,
+                "fallback_used": assignments[0].context.get("fallback_used", False) if assignments else False,
+                "matched_keywords": assignments[0].context.get("matched_keywords", {"scene": [], "route": []}) if assignments else {"scene": [], "route": []},
                 "dispatched_skills": skills,
                 "task_assignments": [a.model_dump() for a in assignments],
             }
@@ -318,6 +321,7 @@ class NovelAdapter(BaseDomainAdapter):
                 "draft_content": result.content,
                 "draft_version": version,
                 "draft_wordcount": result.wordcount,
+                "writer_metadata": result.metadata,
                 "writer_self_check": {
                     "sensory_types": result.sensory_types_used,
                     "forbidden_words": result.forbidden_words_found,
