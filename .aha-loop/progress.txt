@@ -1,0 +1,16 @@
+# Aha Loop Progress Log
+Started: 2026年02月24日 14:34:01
+---
+
+## [2026-02-24 21:11:12] - US-001 - Implement
+
+### Implementation
+- Files changed: src/workflow/workflow_engine.py, tests/unit/workflow/test_workflow_engine.py, .aha-loop/prd.json
+- Approach: Added a typed canonical workflow state snapshot contract (WorkflowStateSnapshot + metadata/artifacts/step record TypedDicts), normalized persisted phase values, and centralized persistence through `_build_state_snapshot` for a single state schema source of truth.
+
+### Learnings for Future Iterations
+- Persisted workflow state should be assembled from one constructor path to avoid schema drift.
+- Include artifact path references in state payload to support deterministic resume/recovery tooling.
+- Keep phase normalization explicit (`created/running/completed/stopped` aliases) before persistence.
+
+---

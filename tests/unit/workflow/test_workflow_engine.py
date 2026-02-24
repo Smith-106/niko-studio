@@ -13,6 +13,7 @@ from src.workflow.workflow_engine import (
     WorkflowPlan,
     Checkpoint,
     WorkflowEngine,
+    WORKFLOW_STATE_SCHEMA_VERSION,
 )
 from src.workflow.session.session_manager import ContentType
 from src.workflow.levels.types import (
@@ -1272,6 +1273,10 @@ class TestWorkflowEngineBranchCoverage:
 
         initial_state_raw = engine.session_manager.read(session_id, ContentType.STATE)
         initial_state = json.loads(initial_state_raw)
+        assert initial_state["schema_version"] == WORKFLOW_STATE_SCHEMA_VERSION
+        assert initial_state["metadata"]["lane"] == engine.plans[plan_id].lane
+        assert initial_state["metadata"]["execution_mode"] in {"Autopilot", "Team", "Pipeline/Ralph", "EcoMode"}
+        assert initial_state["artifacts"]["state"].replace("\\", "/").endswith(".data/state.json")
         assert initial_state["current_phase"] == "planned"
         assert initial_state["last_checkpoint_id"] == ""
 
@@ -1279,6 +1284,9 @@ class TestWorkflowEngineBranchCoverage:
 
         final_state_raw = engine.session_manager.read(session_id, ContentType.STATE)
         final_state = json.loads(final_state_raw)
+        assert final_state["schema_version"] == WORKFLOW_STATE_SCHEMA_VERSION
+        assert final_state["metadata"]["plan_hash"] == engine.plans[plan_id].plan_hash
+        assert final_state["metadata"]["recommendations_frozen"] is True
         assert final_state["current_phase"] == "done"
         assert final_state["steps"][0]["status"] == "done"
 

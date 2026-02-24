@@ -19,7 +19,7 @@ import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, TypedDict
 
 from src.workflow.levels.types import (
     WorkflowLevel,
@@ -111,6 +111,68 @@ WAVE6_BUDGET_GUARDRAIL = {
     "token_budget": 2400,
     "time_budget_minutes": 20.0,
 }
+
+WORKFLOW_STATE_SCHEMA_VERSION = "2026-02"
+WORKFLOW_STATE_PHASE_ALIASES = {
+    "created": "planned",
+    "running": "executing",
+    "completed": "done",
+    "stopped": "failed",
+}
+WORKFLOW_STATE_ALLOWED_PHASES = {
+    "planned",
+    "executing",
+    "review",
+    "test",
+    "done",
+    "failed",
+    "recovery",
+}
+
+
+class WorkflowStateStepRecord(TypedDict):
+    id: str
+    name: str
+    status: str
+    started_at: Optional[str]
+    completed_at: Optional[str]
+
+
+class WorkflowStateMetadata(TypedDict, total=False):
+    lane: str
+    execution_mode: str
+    quality_metrics: Dict[str, float]
+    template_meta: Dict[str, Any]
+    recommendations_frozen: bool
+    plan_hash: str
+
+
+class WorkflowStateArtifacts(TypedDict):
+    state: str
+    handoff: str
+    audit: str
+    snapshot_index: str
+
+
+class WorkflowStateSnapshot(TypedDict, total=False):
+    schema_version: str
+    plan_id: str
+    task: str
+    level: str
+    plan_status: str
+    runner_state: str
+    current_phase: str
+    last_checkpoint_id: str
+    state_trace_id: str
+    updated_at: str
+    metadata: WorkflowStateMetadata
+    artifacts: WorkflowStateArtifacts
+    observability: Dict[str, Any]
+    budget_guardrail: Dict[str, Any]
+    handoff_package: Dict[str, Any]
+    steps: List[WorkflowStateStepRecord]
+    checkpoint_trace: List[Dict[str, Any]]
+    recovery: Dict[str, Any]
 
 
 @dataclass
@@ -628,35 +690,35 @@ class WorkflowEngine:
             )
         return trace
 
-    def _persist_plan_state(
+    def _normalize_state_phase(self, phase: Optional[str], fallback: str) -> str:
+        candidate = (phase or fallback or "planned").strip().lower()
+        candidate = WORKFLOW_STATE_PHASE_ALIASES.get(candidate, candidate)
+        if candidate not in WORKFLOW_STATE_ALLOWED_PHASES:
+            return fallback if fallback in WORKFLOW_STATE_ALLOWED_PHASES else "planned"
+        return candidate
+
+    def _resolve_state_artifacts(self, session_id: str) -> WorkflowStateArtifacts:
+        return {
+            "state": str(self.session_manager._resolve_path(session_id, ContentType.STATE)),
+            "handoff": str(self.session_manager._resolve_path(session_id, ContentType.HANDOFF)),
+            "audit": str(self.session_manager._resolve_path(session_id, ContentType.AUDIT)),
+            "snapshot_index": str(self.session_manager._resolve_path(session_id, ContentType.SNAPSHOT_INDEX)),
+        }
+
+    def _build_state_snapshot(
         self,
         plan: WorkflowPlan,
-        current_phase: Optional[str] = None,
-        checkpoint_id: Optional[str] = None,
-        recovery_envelope: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        session_id = self._session_id_for_plan(plan.id)
-        existing_phase = None
-        existing_checkpoint_id = ""
-        existing_recovery = None
-        existing_payload = self.session_manager.read(session_id=session_id, content_type=ContentType.STATE)
-        if existing_payload:
-            try:
-                existing_state = json.loads(existing_payload)
-                existing_phase = existing_state.get("current_phase")
-                existing_checkpoint_id = existing_state.get("last_checkpoint_id", "")
-                recovery_candidate = existing_state.get("recovery")
-                if isinstance(recovery_candidate, dict):
-                    existing_recovery = recovery_candidate
-            except json.JSONDecodeError:
-                existing_phase = None
-                existing_checkpoint_id = ""
-                existing_recovery = None
-
-        phase = current_phase or existing_phase or plan.status
-        last_checkpoint_id = checkpoint_id if checkpoint_id is not None else existing_checkpoint_id
-        updated_at = datetime.now().isoformat()
-        state_payload = {
+        session_id: str,
+        phase: str,
+        last_checkpoint_id: str,
+        updated_at: str,
+    ) -> WorkflowStateSnapshot:
+        execution_mode = self._resolve_execution_mode(
+            plan,
+            (plan.observability or {}).get("mode", OBSERVABILITY_MODES[0]),
+        )
+        return {
+            "schema_version": WORKFLOW_STATE_SCHEMA_VERSION,
             "plan_id": plan.id,
             "task": plan.task,
             "level": plan.level,
@@ -666,6 +728,15 @@ class WorkflowEngine:
             "last_checkpoint_id": last_checkpoint_id,
             "state_trace_id": f"{plan.id}:{updated_at}",
             "updated_at": updated_at,
+            "metadata": {
+                "lane": plan.lane,
+                "execution_mode": execution_mode,
+                "quality_metrics": dict(plan.quality_metrics or {}),
+                "template_meta": dict(plan.template_meta or {}),
+                "recommendations_frozen": plan.recommendations_frozen,
+                "plan_hash": plan.plan_hash,
+            },
+            "artifacts": self._resolve_state_artifacts(session_id),
             "observability": plan.observability,
             "budget_guardrail": plan.budget_guardrail,
             "handoff_package": plan.handoff_package,
@@ -681,9 +752,51 @@ class WorkflowEngine:
             ],
             "checkpoint_trace": self._checkpoint_trace_for_plan(plan),
         }
+
+    def _persist_plan_state(
+        self,
+        plan: WorkflowPlan,
+        current_phase: Optional[str] = None,
+        checkpoint_id: Optional[str] = None,
+        recovery_envelope: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        session_id = self._session_id_for_plan(plan.id)
+        existing_phase = "planned"
+        existing_checkpoint_id = ""
+        existing_recovery = None
+        existing_payload = self.session_manager.read(session_id=session_id, content_type=ContentType.STATE)
+        if existing_payload:
+            try:
+                existing_state = json.loads(existing_payload)
+                existing_phase = self._normalize_state_phase(
+                    existing_state.get("current_phase"),
+                    existing_phase,
+                )
+                existing_checkpoint_id = existing_state.get("last_checkpoint_id", "")
+                recovery_candidate = existing_state.get("recovery")
+                if isinstance(recovery_candidate, dict):
+                    existing_recovery = recovery_candidate
+            except json.JSONDecodeError:
+                existing_phase = "planned"
+                existing_checkpoint_id = ""
+                existing_recovery = None
+
+        phase = self._normalize_state_phase(current_phase, existing_phase)
+        last_checkpoint_id = checkpoint_id if checkpoint_id is not None else existing_checkpoint_id
+        updated_at = datetime.now().isoformat()
+
+        state_payload = self._build_state_snapshot(
+            plan=plan,
+            session_id=session_id,
+            phase=phase,
+            last_checkpoint_id=last_checkpoint_id,
+            updated_at=updated_at,
+        )
+
         next_recovery = recovery_envelope if recovery_envelope is not None else existing_recovery
         if isinstance(next_recovery, dict):
             state_payload["recovery"] = next_recovery
+
         self.session_manager.write(
             session_id=session_id,
             content_type=ContentType.STATE,

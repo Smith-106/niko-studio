@@ -1,0 +1,154 @@
+{
+  "version": 2,
+  "prdId": "PRD-001",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/workflow-state-schema-baseline",
+  "description": "Workflow State and Schema Baseline - Define and freeze typed workflow state contracts with migration-safe versioning.",
+  "changeLog": [
+    "2026-02-24: US-001 completed - introduced typed WorkflowStateSnapshot contract (stage/status/metadata/artifacts), centralized state snapshot construction, and added invariant tests for persisted state schema fields."
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Define canonical workflow state schema",
+      "description": "As a developer, I need a canonical workflow state schema so that all stages share one deterministic contract.",
+      "acceptanceCriteria": [
+        "Define typed core workflow state schema for stage, status, metadata, and artifact references",
+        "Publish schema in code artifacts as the single source of truth for persisted workflow state",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "researchTopics": [],
+      "researchCompleted": false,
+      "learnings": "Added WorkflowStateSnapshot typed contract in src/workflow/workflow_engine.py with explicit phase normalization, metadata/artifacts sections, and schema version constant; persisted state now builds from single snapshot constructor and tests assert schema + metadata/artifacts invariants.",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add schema version field and freeze policy",
+      "description": "As a developer, I want explicit schema versioning so that state evolution is controlled and backward-safe.",
+      "acceptanceCriteria": [
+        "Add explicit schema version field to persisted workflow state",
+        "Define frozen schema policy for non-breaking changes and version increments",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "researchTopics": [],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Define state migration contract",
+      "description": "As a maintainer, I need a migration contract so that older persisted states can be safely upgraded.",
+      "acceptanceCriteria": [
+        "Define migration entrypoint from prior schema versions to current version",
+        "Specify deterministic migration order and required invariants after migration",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "researchTopics": [
+        "Existing migration patterns for workflow state in this codebase",
+        "Best practices for versioned JSON state migration with deterministic transforms"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Implement load-time schema validation boundary",
+      "description": "As a developer, I want workflow state validated at load time so that invalid persisted data is rejected early.",
+      "acceptanceCriteria": [
+        "State load path validates incoming persisted state against the frozen schema",
+        "Invalid or unsupported versions fail with structured validation errors",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "researchTopics": [],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Implement save-time schema validation boundary",
+      "description": "As a developer, I want workflow state validated at save time so that only compliant state is persisted.",
+      "acceptanceCriteria": [
+        "State save path validates state payload against the frozen schema before writing",
+        "Persist operation blocks writes when validation fails",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "researchTopics": [],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Enforce deterministic stage transition guards",
+      "description": "As a workflow operator, I need transition guards so that stage changes remain deterministic under the frozen schema.",
+      "acceptanceCriteria": [
+        "Define allowed stage transition matrix tied to schema state fields",
+        "Reject invalid transitions with explicit machine-readable reason",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "researchTopics": [],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Add compatibility tests for migration and validation",
+      "description": "As a maintainer, I need compatibility tests so that schema evolution and migration behavior stay regression-safe.",
+      "acceptanceCriteria": [
+        "Add tests covering legacy-version state migration to current schema",
+        "Add tests for load/save rejection on invalid schema payloads",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "researchTopics": [
+        "Existing test harness patterns for workflow state and adapter compatibility"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Document migration-safe compatibility rules in code artifacts",
+      "description": "As a team member, I need compatibility rules documented in code artifacts so that future changes preserve backward safety.",
+      "acceptanceCriteria": [
+        "Document compatibility guarantees and version bump rules in maintained code artifacts",
+        "Document required validation boundaries for state load and state save paths",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "researchTopics": [],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    }
+  ]
+}
