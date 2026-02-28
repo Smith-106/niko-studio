@@ -92,10 +92,11 @@ class UnifiedMemory:
     def to_dict(self) -> dict:
         """转换为字典"""
         data = asdict(self)
+        raw_embedding = data.get("embedding") or []
+        if not data.get("embedding_blob") and raw_embedding:
+            data["embedding_blob"] = _pack_embedding(raw_embedding)
         data["tags"] = json.dumps(data["tags"])
-        data["embedding"] = json.dumps(data["embedding"])
-        if not data.get("embedding_blob") and data.get("embedding"):
-            data["embedding_blob"] = _pack_embedding(data["embedding"])
+        data["embedding"] = json.dumps(raw_embedding)
         return data
 
     @classmethod

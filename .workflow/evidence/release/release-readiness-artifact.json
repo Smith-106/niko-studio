@@ -1,11 +1,9 @@
 {
   "artifact_type": "release_readiness",
   "schema_version": "evidence.v1",
-  "decision": "NO_GO",
-  "go_no_go_reasons": [
-    "gate_score_or_critical_blocker_signal"
-  ],
-  "generated_at": "2026-02-28T13:22:50.191915+00:00",
+  "decision": "GO",
+  "go_no_go_reasons": [],
+  "generated_at": "2026-02-28T16:18:46.686506+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -29,7 +27,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=1"
+      "detail": "status=passed,passed_count=6101"
     },
     {
       "check_id": "desktop_check",
@@ -45,7 +43,7 @@
       "blocking": false,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=1"
+      "detail": "status=passed,passed_count=16"
     },
     {
       "check_id": "production_guard",
@@ -83,9 +81,9 @@
       "check_id": "gate_score_or_critical_blocker_signal",
       "priority": "P0",
       "blocking": true,
-      "status": "FAIL",
-      "exit_code": 1,
-      "detail": "chapter_gate_status=WARN,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=no_go"
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=go"
     },
     {
       "check_id": "runtime_policy_conformance_signal",
@@ -163,9 +161,9 @@
       "check_id": "chapter_gate_scoring_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "quality_score=missing,threshold=99.0,publish_recommendation=missing,critical_issue_count=missing,decision=no_go"
+      "detail": "quality_score=99.0,threshold=99.0,publish_recommendation=pass,critical_issue_count=0,decision=go"
     },
     {
       "check_id": "cycle_time_kpi_measurement_signal",
@@ -181,7 +179,7 @@
       "blocking": false,
       "status": "WARN",
       "exit_code": 0,
-      "detail": "rubric_version=v1,quality_score=missing,threshold=99.0,critical_issue_count=missing,publish_recommendation=missing,quality_level_match=no,degrade_trace_complete=yes,decision=not_comparable"
+      "detail": "rubric_version=v1,quality_score=99.0,threshold=99.0,critical_issue_count=0,publish_recommendation=pass,quality_level_match=no,degrade_trace_complete=yes,decision=not_comparable"
     },
     {
       "check_id": "weekly_kpi_dashboard_schema_signal",
@@ -221,7 +219,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "state_files_scanned=258,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=258,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
+      "detail": "state_files_scanned=263,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=263,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
@@ -275,13 +273,13 @@
       "check_id": "tasks_completion_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "checker_exit=0,json_parse_error=json payload not found in output"
+      "detail": "checked=29,unchecked=0,completion_ratio=100.0%,json_parse_error=none"
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-02-28T13:22:50.191915+00:00",
+    "trace_id": "release-readiness-2026-02-28T16:18:46.686506+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",
