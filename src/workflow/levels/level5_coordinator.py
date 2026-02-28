@@ -491,6 +491,7 @@ class Level5Coordinator(BaseLevel):
         return ["coordinator", "architect", "writer", "critic"]
 
     def get_default_config(self) -> Dict:
+        """获取默认配置（L5 协调执行阈值；非 novel 发布门槛）"""
         return {
             "max_revisions": 10,
             "pass_score": 90,
@@ -499,6 +500,7 @@ class Level5Coordinator(BaseLevel):
             "checkpoint_enabled": True,
             "parallel_execution": True,
             "max_parallel_tasks": 8,
+            "retrieval_profile": "coordinator_quality",
         }
 
     # ========================================

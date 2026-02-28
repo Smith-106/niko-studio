@@ -41,12 +41,12 @@ class TestLevel3StandardClass:
         assert Level3Standard.name == "standard"
         assert len(Level3Standard.PLAN_PHASES) == 5
 
-    def test_get_required_agents(self):
+    def test_get_default_config(self):
         l3 = Level3Standard()
-        agents = l3.get_required_agents()
-        assert "architect" in agents
-        assert "writer" in agents
-        assert "critic" in agents
+        cfg = l3.get_default_config()
+        assert cfg["max_revisions"] == 3
+        assert cfg["pass_score"] == 80
+        assert cfg["retrieval_profile"] == "standard_balanced"
 
 
 # ============================================================

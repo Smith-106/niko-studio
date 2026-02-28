@@ -4,30 +4,69 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION, LEGACY_DECISION_MAP
+from src.workflow.state import NOVEL_QUALITY_WEIGHTS, NOVEL_QUALITY_THRESHOLDS
+
+QualityMode = Literal["auto", "manual"]
+QualityLevel = Literal["ultra", "high", "medium", "fluent"]
+
+LEVEL_DIMENSION_MULTIPLIER: Dict[QualityLevel, Dict[str, float]] = {
+    "ultra": {
+        "repetition": 1.08,
+        "tone": 1.0,
+        "clarity": 1.0,
+        "causality": 1.05,
+        "detail": 1.08,
+        "factuality": 1.0,
+    },
+    "high": {
+        "repetition": 1.0,
+        "tone": 1.0,
+        "clarity": 1.0,
+        "causality": 1.0,
+        "detail": 1.0,
+        "factuality": 1.0,
+    },
+    "medium": {
+        "repetition": 0.95,
+        "tone": 0.95,
+        "clarity": 0.95,
+        "causality": 0.95,
+        "detail": 0.9,
+        "factuality": 1.0,
+    },
+    "fluent": {
+        "repetition": 0.88,
+        "tone": 0.9,
+        "clarity": 0.9,
+        "causality": 0.88,
+        "detail": 0.8,
+        "factuality": 1.0,
+    },
+}
 
 
-REPETITION_WEIGHT = 0.20
-TONE_WEIGHT = 0.13
-CLARITY_WEIGHT = 0.17
-CAUSALITY_WEIGHT = 0.20
-DETAIL_WEIGHT = 0.20
-FACTUALITY_WEIGHT = 0.10
+REPETITION_WEIGHT = float(NOVEL_QUALITY_WEIGHTS["repetition"])
+TONE_WEIGHT = float(NOVEL_QUALITY_WEIGHTS["tone"])
+CLARITY_WEIGHT = float(NOVEL_QUALITY_WEIGHTS["clarity"])
+CAUSALITY_WEIGHT = float(NOVEL_QUALITY_WEIGHTS["causality"])
+DETAIL_WEIGHT = float(NOVEL_QUALITY_WEIGHTS["detail"])
+FACTUALITY_WEIGHT = float(NOVEL_QUALITY_WEIGHTS["factuality"])
 
-PASS_THRESHOLD = 74.0
-BLOCK_THRESHOLD = 50.0
-BLOCK_TEMPLATE_RATIO = 0.80
+PASS_THRESHOLD = float(NOVEL_QUALITY_THRESHOLDS["pass"])
+BLOCK_THRESHOLD = float(NOVEL_QUALITY_THRESHOLDS["block"])
+BLOCK_TEMPLATE_RATIO = float(NOVEL_QUALITY_THRESHOLDS["block_template_ratio"])
 
-REPETITION_ISSUE_THRESHOLD = 0.45
-REPETITION_ISSUE_HIGH_THRESHOLD = 0.70
-MIN_CONFLICT_POINTS = 2
-MIN_VISUAL_DETAILS = 3
-MIN_DIALOGUE_RATIO = 0.03
-MIN_SENTENCES_FOR_TONE_ISSUE = 4
-LOW_QUALITY_THRESHOLD = 55.0
-LOW_CLARITY_THRESHOLD = 45.0
+REPETITION_ISSUE_THRESHOLD = float(NOVEL_QUALITY_THRESHOLDS["repetition_issue"])
+REPETITION_ISSUE_HIGH_THRESHOLD = float(NOVEL_QUALITY_THRESHOLDS["repetition_issue_high"])
+MIN_CONFLICT_POINTS = int(NOVEL_QUALITY_THRESHOLDS["min_conflict_points"])
+MIN_VISUAL_DETAILS = int(NOVEL_QUALITY_THRESHOLDS["min_visual_details"])
+MIN_DIALOGUE_RATIO = float(NOVEL_QUALITY_THRESHOLDS["min_dialogue_ratio"])
+MIN_SENTENCES_FOR_TONE_ISSUE = int(NOVEL_QUALITY_THRESHOLDS["min_sentences_for_tone_issue"])
+LOW_QUALITY_THRESHOLD = float(NOVEL_QUALITY_THRESHOLDS["low_quality"])
+LOW_CLARITY_THRESHOLD = float(NOVEL_QUALITY_THRESHOLDS["low_clarity"])
 
 QUALITY_CONTRACT_KEYS = {
     "analysis_schema_version",
@@ -138,23 +177,37 @@ _QUOTE_RE = re.compile(r"[\"“”‘’「」『』]")
 _WORD_RE = re.compile(r"[A-Za-z]+|[\u4e00-\u9fff]")
 
 
-def evaluate_novel_quality(content: str) -> Dict[str, Any]:
+def evaluate_novel_quality(
+    content: str,
+    *,
+    quality_level: str = "high",
+    quality_mode: str = "auto",
+    critical_gate_always_on: bool = True,
+    degrade_reason: str = "",
+) -> Dict[str, Any]:
     text = (content or "").strip()
+    resolved_level = _normalize_quality_level(quality_level)
+    resolved_mode = _normalize_quality_mode(quality_mode)
     if not text:
-        return _empty_result()
+        return _empty_result(
+            quality_level=resolved_level,
+            quality_mode=resolved_mode,
+            degrade_reason=degrade_reason,
+        )
 
     metrics = _compute_metrics(text)
     dimension_scores = _compute_dimension_scores(text, metrics)
+    adjusted_dimension_scores = _apply_quality_level_to_scores(dimension_scores, resolved_level)
 
     quality_score = _clamp(
         round(
             (
-                dimension_scores["repetition"] * REPETITION_WEIGHT
-                + dimension_scores["tone"] * TONE_WEIGHT
-                + dimension_scores["clarity"] * CLARITY_WEIGHT
-                + dimension_scores["causality"] * CAUSALITY_WEIGHT
-                + dimension_scores["detail"] * DETAIL_WEIGHT
-                + dimension_scores["factuality"] * FACTUALITY_WEIGHT
+                adjusted_dimension_scores["repetition"] * REPETITION_WEIGHT
+                + adjusted_dimension_scores["tone"] * TONE_WEIGHT
+                + adjusted_dimension_scores["clarity"] * CLARITY_WEIGHT
+                + adjusted_dimension_scores["causality"] * CAUSALITY_WEIGHT
+                + adjusted_dimension_scores["detail"] * DETAIL_WEIGHT
+                + adjusted_dimension_scores["factuality"] * FACTUALITY_WEIGHT
             ),
             1,
         ),
@@ -162,11 +215,19 @@ def evaluate_novel_quality(content: str) -> Dict[str, Any]:
         100.0,
     )
 
-    issues = _build_issues(text, metrics, dimension_scores, quality_score)
-    publish_recommendation = _recommendation(metrics, quality_score, issues)
+    issues = _build_issues(text, metrics, adjusted_dimension_scores, quality_score)
+    critical_issues = _extract_critical_issues(issues)
+    publish_recommendation = _recommendation(
+        metrics,
+        quality_score,
+        issues,
+        critical_issues=critical_issues,
+        critical_gate_always_on=critical_gate_always_on,
+    )
 
     _ = LEGACY_DECISION_MAP.get(publish_recommendation, "no_go" if publish_recommendation == "block" else "go")
 
+    degraded = bool(degrade_reason)
     result = {
         "analysis_schema_version": ANALYSIS_SCHEMA_VERSION,
         "quality_score": quality_score,
@@ -176,7 +237,13 @@ def evaluate_novel_quality(content: str) -> Dict[str, Any]:
             "conflict_points": metrics["conflict_points"],
             "visual_details": metrics["visual_details"],
             "template_sentence_ratio": metrics["template_sentence_ratio"],
-            "dimension_scores": dimension_scores,
+            "dimension_scores": adjusted_dimension_scores,
+            "quality_level_used": resolved_level,
+            "quality_mode_used": resolved_mode,
+            "critical_gate_applied": bool(critical_gate_always_on),
+            "critical_issue_count": len(critical_issues),
+            "degraded": degraded,
+            "degrade_reason": degrade_reason,
         },
         "publish_recommendation": publish_recommendation,
     }
@@ -204,7 +271,14 @@ def _build_default_metrics(*, template_sentence_ratio: float = 0.0) -> Dict[str,
     }
 
 
-def _empty_result() -> Dict[str, Any]:
+def _empty_result(
+    *,
+    quality_level: str = "high",
+    quality_mode: str = "auto",
+    degrade_reason: str = "",
+) -> Dict[str, Any]:
+    resolved_level = _normalize_quality_level(quality_level)
+    resolved_mode = _normalize_quality_mode(quality_mode)
     return {
         "analysis_schema_version": ANALYSIS_SCHEMA_VERSION,
         "quality_score": 0.0,
@@ -216,7 +290,15 @@ def _empty_result() -> Dict[str, Any]:
                 "suggestion": "Provide non-empty novel content before quality check.",
             }
         ],
-        "metrics": _build_default_metrics(template_sentence_ratio=1.0),
+        "metrics": {
+            **_build_default_metrics(template_sentence_ratio=1.0),
+            "quality_level_used": resolved_level,
+            "quality_mode_used": resolved_mode,
+            "critical_gate_applied": True,
+            "critical_issue_count": 0,
+            "degraded": bool(degrade_reason),
+            "degrade_reason": degrade_reason,
+        },
         "publish_recommendation": "block",
     }
 
@@ -299,9 +381,12 @@ def _build_issues(
     issues: List[Dict[str, str]] = []
 
     if metrics["template_sentence_ratio"] >= REPETITION_ISSUE_THRESHOLD:
+        severity = "high" if metrics["template_sentence_ratio"] >= REPETITION_ISSUE_HIGH_THRESHOLD else "medium"
+        if metrics["template_sentence_ratio"] >= 0.9:
+            severity = "critical"
         issues.append(
             {
-                "severity": "high" if metrics["template_sentence_ratio"] >= REPETITION_ISSUE_HIGH_THRESHOLD else "medium",
+                "severity": severity,
                 "type": "repetition",
                 "evidence": f"template_sentence_ratio={metrics['template_sentence_ratio']}",
                 "suggestion": "Vary sentence openings and rewrite repeated lines with fresh actions.",
@@ -351,7 +436,18 @@ def _build_issues(
     return issues
 
 
-def _recommendation(metrics: Dict[str, Any], quality_score: float, issues: List[Dict[str, str]]) -> str:
+def _recommendation(
+    metrics: Dict[str, Any],
+    quality_score: float,
+    issues: List[Dict[str, str]],
+    *,
+    critical_issues: List[Dict[str, str]] | None = None,
+    critical_gate_always_on: bool = True,
+) -> str:
+    critical_issues = critical_issues or []
+    if critical_gate_always_on and critical_issues:
+        return "block"
+
     high_issues = sum(1 for issue in issues if issue["severity"] == "high")
 
     if metrics["template_sentence_ratio"] >= BLOCK_TEMPLATE_RATIO:
@@ -361,6 +457,37 @@ def _recommendation(metrics: Dict[str, Any], quality_score: float, issues: List[
     if quality_score < BLOCK_THRESHOLD or high_issues >= 2:
         return "block"
     return "revise"
+
+
+def _normalize_quality_level(level: str) -> QualityLevel:
+    level_lower = (level or "").strip().lower()
+    if level_lower in LEVEL_DIMENSION_MULTIPLIER:
+        return level_lower  # type: ignore[return-value]
+    return "high"
+
+
+def _normalize_quality_mode(mode: str) -> QualityMode:
+    mode_lower = (mode or "").strip().lower()
+    if mode_lower in {"auto", "manual"}:
+        return mode_lower  # type: ignore[return-value]
+    return "auto"
+
+
+def _apply_quality_level_to_scores(scores: Dict[str, float], quality_level: QualityLevel) -> Dict[str, float]:
+    multipliers = LEVEL_DIMENSION_MULTIPLIER[quality_level]
+    adjusted: Dict[str, float] = {}
+    for key, value in scores.items():
+        factor = multipliers.get(key, 1.0)
+        adjusted[key] = round(_clamp(value * factor, 0.0, 100.0), 1)
+    return adjusted
+
+
+def _extract_critical_issues(issues: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    return [
+        issue
+        for issue in issues
+        if str(issue.get("severity", "")).lower() == "critical"
+    ]
 
 
 def _normalize_sentence(sentence: str) -> str:

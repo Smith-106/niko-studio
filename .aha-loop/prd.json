@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "prdId": "PRD-047",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/roadmap-lifecycle-regression-evidence-guard",
+  "description": "Roadmap Lifecycle Regression Evidence Export Guard - Export deterministic lifecycle regression evidence with machine-verifiable changelog/artifact parity.",
+  "changeLog": [
+    "2026-02-29: Implemented PRD-047 US-002 changelog-artifact parity drift guards with passing targeted tests.",
+    "2026-02-29: Completed research for PRD-047 US-002 on changelog-artifact divergence scenarios and deterministic parity drift detection.",
+    "2026-02-29: Implemented PRD-047 US-001 deterministic lifecycle evidence export parity guards with passing targeted tests.",
+    "2026-02-29: Completed research for PRD-047 US-001 on deterministic lifecycle evidence export contracts and repeated-run parity strategy.",
+    "2026-02-29: Activated PRD-047 after PRD-046 completion in M13 roadmap timestamp consistency closure.",
+    "2026-02-29: Completed PRD-046 with deterministic updatedAt freshness and completion timestamp monotonicity guards."
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Lifecycle regression evidence exports remain deterministic",
+      "description": "As a maintainer, I want lifecycle regression evidence exports to be deterministic so repeated runs remain auditable and stable.",
+      "acceptanceCriteria": [
+        "Exported lifecycle evidence keeps deterministic ordering and identity linkage",
+        "Repeated export generation preserves machine-parsable parity semantics",
+        "No regression in existing lifecycle integrity semantics",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "researchTopics": [
+        "Deterministic export contracts between lifecycle transition windows and release readiness artifact checks",
+        "Repeated-run assertion strategy for lifecycle evidence export parity across report and artifact surfaces"
+      ],
+      "researchCompleted": true,
+      "learnings": "Deterministic lifecycle evidence export is strongest when it reuses ID-keyed parity contracts already used in release summary checks and constrains extraction to local transition windows. Repeated-run invariance should compare check_id keyed tuples and reason lists across report/artifact surfaces rather than relying on changelog index positions.",
+      "implementationNotes": "Added deterministic export guard test in tests/unit/scripts/test_release_check_summary.py to assert repeated-run transition-window tuple identity and stable lifecycle parity rows/reason semantics across runs.",
+      "notes": "Research report: .aha-loop/research/PRD-047-US-001-research.md; validation: 3 targeted tests passed including lifecycle export repeated-run parity guard."
+    },
+    {
+      "id": "US-002",
+      "title": "Changelog/artifact parity drift is detected early",
+      "description": "As a reviewer, I want changelog-to-artifact parity drift to be detected early so lifecycle regressions cannot silently pass release evidence checks.",
+      "acceptanceCriteria": [
+        "Parity drift between changelog lifecycle transitions and release artifact checks is deterministically detected",
+        "Missing or contradictory lifecycle evidence rows are surfaced by machine-verifiable guards",
+        "No regression in blocking decision reduction semantics",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "researchTopics": [
+        "Failure scenarios where changelog lifecycle transitions and release artifact mappings diverge",
+        "Deterministic guard patterns for missing, mismatched, or contradictory parity rows"
+      ],
+      "researchCompleted": true,
+      "learnings": "Early parity-drift detection is strongest when payload/artifact lifecycle evidence is compared by check_id with exact field equality, while reason-list parity is validated as an independent invariant.",
+      "implementationNotes": "Added deterministic parity-drift test in tests/unit/scripts/test_release_check_summary.py that flags lifecycle drift when artifact-side lifecycle parity detail diverges from payload under otherwise stable rows.",
+      "notes": "Research report: .aha-loop/research/PRD-047-US-002-research.md; validation: 3 targeted tests passed including lifecycle export parity drift detection guard."
+    }
+  ]
+}

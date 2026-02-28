@@ -19,7 +19,6 @@ describe('settingsStore prompt template library', () => {
       ...state,
       settings: {
         ...state.settings,
-        // @ts-expect-error test old persisted schema
         promptTemplateLibrary: undefined,
       },
     }))

@@ -152,7 +152,7 @@ class Level2Lite(BaseLevel):
         config.update(self.config or {})
 
         max_revisions = config.get("max_revisions", 1)
-        pass_score = config.get("pass_score", 70)
+        pass_score = config.get("pass_score", 70)  # L2 执行策略 fallback，非 novel 发布门槛
 
         # Phase 1: 轻量计划
         state = self._plan_lite(state)
@@ -187,11 +187,13 @@ class Level2Lite(BaseLevel):
         return ["writer", "critic"]
 
     def get_default_config(self) -> Dict:
+        """获取默认配置（L2 执行策略阈值；非 novel 发布门槛）"""
         return {
             "max_revisions": 1,
             "pass_score": 70,
             "verbose": True,
             "word_count_target": 1000,
+            "retrieval_profile": "lite_low_cost",
         }
 
     def plan_lite(self, state: BaseState) -> LitePlan:

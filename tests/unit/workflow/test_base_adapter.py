@@ -180,13 +180,29 @@ class TestBaseDomainAdapterAbstractPassLines:
 
 class TestAdapterRegistry:
 
-    def test_register_and_get(self):
-        @AdapterRegistry.register("test_domain")
+    def test_register_and_get_with_capabilities(self):
+        @AdapterRegistry.register("test_domain_caps", capabilities=("memory-aware", "cli-exposed"))
         class TestAdapter(ConcreteDomainAdapter):
             def get_domain_type(self):
-                return "test_domain"
+                return "test_domain_caps"
 
-        assert AdapterRegistry.get("test_domain") is TestAdapter
+        assert AdapterRegistry.get("test_domain_caps") is TestAdapter
+        assert AdapterRegistry.get_capabilities("test_domain_caps") == ["cli-exposed", "memory-aware"]
+
+    def test_list_domains_by_capability(self):
+        @AdapterRegistry.register("test_domain_filter_a", capabilities=("strict-governance", "cli-exposed"))
+        class TestAdapterA(ConcreteDomainAdapter):
+            def get_domain_type(self):
+                return "test_domain_filter_a"
+
+        @AdapterRegistry.register("test_domain_filter_b", capabilities=("memory-aware",))
+        class TestAdapterB(ConcreteDomainAdapter):
+            def get_domain_type(self):
+                return "test_domain_filter_b"
+
+        domains = AdapterRegistry.list_domains_by_capability("strict-governance")
+        assert "test_domain_filter_a" in domains
+        assert "test_domain_filter_b" not in domains
 
     def test_get_nonexistent(self):
         assert AdapterRegistry.get("nonexistent_xyz") is None

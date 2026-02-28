@@ -8,6 +8,8 @@ Architect -> Writer -> Critic -> Finalize
 from typing import Dict, Any, Type, Literal, Optional
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
+from pathlib import Path
+import json
 import os
 
 from .base_adapter import (
@@ -18,13 +20,18 @@ from .base_adapter import (
 )
 from src.workflow.state import (
     WritingState,
-    create_initial_state
+    create_initial_state,
+    DEFAULT_CONFIG,
 )
+from src.workflow.revision_loop import RevisionLoop
 from src.workflow.base_state import BaseState
 from src.config import get_config
 
 
-@AdapterRegistry.register(DomainType.NOVEL.value)
+@AdapterRegistry.register(
+    DomainType.NOVEL.value,
+    capabilities=("memory-aware", "strict-governance", "cli-exposed"),
+)
 class NovelAdapter(BaseDomainAdapter):
 
     def get_domain_type(self) -> str:
@@ -308,6 +315,8 @@ class NovelAdapter(BaseDomainAdapter):
 
 ## 请根据以上反馈重写内容
 """
+
+        self._inject_playbook_into_writer_input(writer_input, state)
         
         try:
             result = await agent.write(writer_input)
@@ -410,19 +419,291 @@ class NovelAdapter(BaseDomainAdapter):
             }
             revision_history = state.get("revision_history", []) + [history_entry]
 
-            return {
-                "critique_result": result.model_dump(),
+            critique_payload = result.model_dump()
+            round_identifier = f"round-{revision_count + 1}"
+            checkpoint_id = f"revision-{round_identifier}"
+            checkpoint_entry = {
+                "checkpoint_id": checkpoint_id,
+                "round_identifier": round_identifier,
+                "step_id": round_identifier,
+                "stage": "critic",
+            }
+
+            checkpoint_trace = state.get("checkpoint_trace", []) + [checkpoint_entry]
+
+            feedback_artifacts = RevisionLoop()._build_feedback_artifacts(
+                round_identifier,
+                critique_payload,
+            )
+
+            response: Dict[str, Any] = {
+                "critique_result": critique_payload,
                 "revision_count": revision_count + 1,
                 "revision_history": revision_history,
                 "feedback_context": result.actionable_feedback,
-                "revision_instructions": [inst.model_dump() for inst in result.revision_instructions]
+                "revision_instructions": [inst.model_dump() for inst in result.revision_instructions],
+                "feedback_artifacts": feedback_artifacts,
+                "checkpoint_trace": checkpoint_trace,
+                "last_checkpoint_id": checkpoint_id,
             }
+
+            session_id = state.get("session_id", "")
+            if isinstance(session_id, str) and session_id:
+                from src.workflow.session.session_manager import SessionManager, ContentType
+
+                checkpoint_payload = {
+                    "checkpoint_id": checkpoint_id,
+                    "session_id": session_id,
+                    "revision_count": revision_count + 1,
+                    "round_identifier": round_identifier,
+                    "step_id": round_identifier,
+                    "stage": "critic",
+                    "decision": critique_payload.get("decision", "REVISE"),
+                    "score": critique_payload.get("total_score", 0),
+                    "trace": {
+                        "revision_checkpoint_id": checkpoint_id,
+                        "state_trace_id": f"{session_id}:{round_identifier}",
+                    },
+                }
+                session_manager = SessionManager()
+                session_manager.write(
+                    session_id=session_id,
+                    content_type=ContentType.REVISION_CHECKPOINT,
+                    content=json.dumps(checkpoint_payload, ensure_ascii=False, indent=2),
+                    id=checkpoint_id,
+                )
+
+            if self._is_self_learning_enabled():
+                try:
+                    self_learning_state = self._get_self_learning_state(state)
+                    reflection = self._build_reflection_from_critic(
+                        critique_result=critique_payload,
+                        revision_count=revision_count + 1,
+                        revision_history=revision_history,
+                    )
+                    self_learning_state["reflector"] = reflection
+
+                    if self._should_curate_playbook(state, critique_payload):
+                        curated = self._curate_playbook_candidates(
+                            state={**state, "self_learning": self_learning_state},
+                            critique_result=critique_payload,
+                            reflection=reflection,
+                        )
+                        if isinstance(curated, dict):
+                            curator_payload = curated.get("curator")
+                            if isinstance(curator_payload, dict):
+                                self_learning_state["curator"] = curator_payload
+                            playbook_payload = curated.get("playbook")
+                            if isinstance(playbook_payload, dict):
+                                self_learning_state["playbook"] = playbook_payload
+                    response["self_learning"] = self_learning_state
+                except Exception as exc:
+                    print(f"⚠️ Self-learning skipped (non-blocking): {exc}")
+
+            return response
 
         except Exception as e:
             print(f"❌ Critic 执行失败: {e}")
             return {
                 "errors": state.get("errors", []) + [f"Critic Error: {str(e)}"]
             }
+
+    def _is_self_learning_enabled(self) -> bool:
+        return bool(
+            self.config.get(
+                "enable_self_learning_loop",
+                DEFAULT_CONFIG["enable_self_learning_loop"],
+            )
+        )
+
+    def _get_self_learning_state(self, state: WritingState) -> Dict[str, Any]:
+        existing = state.get("self_learning")
+        if isinstance(existing, dict):
+            normalized = dict(existing)
+        else:
+            normalized = {}
+
+        reflector = normalized.get("reflector")
+        curator = normalized.get("curator")
+        playbook = normalized.get("playbook")
+
+        if not isinstance(reflector, dict):
+            reflector = {}
+        if not isinstance(curator, dict):
+            curator = {}
+        if not isinstance(playbook, dict):
+            playbook = {}
+
+        rules = playbook.get("rules")
+        if not isinstance(rules, list):
+            rules = []
+
+        playbook = {**playbook, "rules": rules}
+        return {
+            "reflector": reflector,
+            "curator": curator,
+            "playbook": playbook,
+        }
+
+    def _build_reflection_from_critic(
+        self,
+        critique_result: Dict[str, Any],
+        revision_count: int,
+        revision_history: Any,
+    ) -> Dict[str, Any]:
+        decision = critique_result.get("decision", "REVISE")
+        total_score = critique_result.get("total_score", 0)
+        actionable_feedback = critique_result.get("actionable_feedback", "")
+
+        lock_analysis = critique_result.get("lock_analysis")
+        c_score = 0
+        if isinstance(lock_analysis, dict):
+            c_node = lock_analysis.get("C")
+            if isinstance(c_node, dict):
+                c_score = c_node.get("score", 0)
+
+        failed_dimensions = []
+        if isinstance(lock_analysis, dict):
+            for dim in ("L", "O", "C", "K"):
+                dim_payload = lock_analysis.get(dim)
+                if isinstance(dim_payload, dict):
+                    score = dim_payload.get("score")
+                    if isinstance(score, (int, float)) and score < 7:
+                        failed_dimensions.append(dim)
+
+        failure_type = "approved"
+        if decision in {"REWRITE", "HUMAN_REVIEW"}:
+            failure_type = decision.lower()
+        elif decision == "REVISE":
+            failure_type = "revision_required"
+
+        root_causes = []
+        if failure_type != "approved":
+            if failed_dimensions:
+                root_causes.append(f"low_lock_dimensions={','.join(failed_dimensions)}")
+            if isinstance(actionable_feedback, str) and actionable_feedback.strip():
+                root_causes.append(actionable_feedback.strip()[:200])
+
+        avoid_next_round = []
+        if failed_dimensions:
+            avoid_next_round.append(f"Do not miss LOCK dimensions: {', '.join(failed_dimensions)}")
+        if c_score < self.config.get("min_c_score", DEFAULT_CONFIG["min_c_score"]):
+            avoid_next_round.append("Do not weaken confrontation (C) in key beats")
+
+        history_size = len(revision_history) if isinstance(revision_history, list) else 0
+
+        return {
+            "triggered": True,
+            "revision_count": revision_count,
+            "failure_type": failure_type,
+            "root_causes": root_causes,
+            "avoid_next_round": avoid_next_round,
+            "decision": decision,
+            "total_score": total_score,
+            "history_size": history_size,
+        }
+
+    def _should_curate_playbook(self, state: WritingState, critique_result: Dict[str, Any]) -> bool:
+        revisions = state.get("revision_count", 0)
+        every_n = int(
+            self.config.get(
+                "self_learning_curate_every_n_revisions",
+                DEFAULT_CONFIG["self_learning_curate_every_n_revisions"],
+            )
+        )
+        every_n = max(1, every_n)
+        decision = critique_result.get("decision", "REVISE")
+
+        return (revisions > 0 and revisions % every_n == 0) or decision in {
+            "REVISE",
+            "REWRITE",
+            "HUMAN_REVIEW",
+        }
+
+    def _curate_playbook_candidates(
+        self,
+        state: WritingState,
+        critique_result: Dict[str, Any],
+        reflection: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        self_learning = self._get_self_learning_state(state)
+        playbook = dict(self_learning.get("playbook", {}))
+        existing_rules = playbook.get("rules")
+        if not isinstance(existing_rules, list):
+            existing_rules = []
+
+        candidates = []
+        for item in reflection.get("avoid_next_round", []):
+            if isinstance(item, str) and item.strip():
+                candidates.append(item.strip())
+
+        feedback = critique_result.get("actionable_feedback")
+        if isinstance(feedback, str) and feedback.strip():
+            candidates.append(f"Apply feedback focus: {feedback.strip()[:160]}")
+
+        if not candidates:
+            return {
+                "curator": {
+                    "applied": False,
+                    "reason": "no_candidates",
+                },
+                "playbook": playbook,
+            }
+
+        max_rules = int(self.config.get("self_learning_max_rules", DEFAULT_CONFIG["self_learning_max_rules"]))
+        max_rules = max(1, max_rules)
+
+        normalized_existing = []
+        for rule in existing_rules:
+            if isinstance(rule, str) and rule.strip():
+                normalized_existing.append(rule.strip())
+
+        merged_rules = normalized_existing[:]
+        for candidate in candidates:
+            if candidate not in merged_rules:
+                merged_rules.append(candidate)
+
+        if len(merged_rules) > max_rules:
+            merged_rules = merged_rules[-max_rules:]
+
+        updated_playbook = {
+            **playbook,
+            "rules": merged_rules,
+        }
+
+        return {
+            "curator": {
+                "applied": True,
+                "rule_count": len(merged_rules),
+                "added": max(0, len(merged_rules) - len(normalized_existing)),
+            },
+            "playbook": updated_playbook,
+        }
+
+    def _inject_playbook_into_writer_input(self, writer_input: Any, state: WritingState) -> None:
+        if not self._is_self_learning_enabled():
+            return
+
+        self_learning = self._get_self_learning_state(state)
+        playbook = self_learning.get("playbook", {})
+        rules = playbook.get("rules")
+        if not isinstance(rules, list) or not rules:
+            return
+
+        capped_rules = []
+        for rule in rules[-3:]:
+            if isinstance(rule, str) and rule.strip():
+                capped_rules.append(rule.strip()[:140])
+
+        if not capped_rules:
+            return
+
+        summary = "\n".join(f"- {rule}" for rule in capped_rules)
+        addition = f"\n\n## Playbook 策略\n{summary}\n"
+
+        current = getattr(writer_input, "previous_content", "") or ""
+        setattr(writer_input, "previous_content", f"{current}{addition}")
+
 
     def human_review_node(self, state: WritingState) -> Dict[str, Any]:
         print("\n" + "="*50)
@@ -457,6 +738,44 @@ class NovelAdapter(BaseDomainAdapter):
             "final_score": critique.get("total_score", 0)
         }
 
+    def _context_governance_passed(self, state: WritingState) -> bool:
+        if not self.config.get("enable_context_governance", DEFAULT_CONFIG["enable_context_governance"]):
+            return True
+
+        governance = state.get("context_governance") or {}
+        if not governance:
+            return True
+
+        if "passed" in governance:
+            return bool(governance.get("passed"))
+
+        min_retrieval_hit_rate = self.config.get(
+            "min_retrieval_hit_rate",
+            DEFAULT_CONFIG["min_retrieval_hit_rate"],
+        )
+        min_context_budget_utilization = self.config.get(
+            "min_context_budget_utilization",
+            DEFAULT_CONFIG["min_context_budget_utilization"],
+        )
+
+        retrieval_passed = governance.get("retrieval_passed")
+        if retrieval_passed is None:
+            retrieval_hit_rate = governance.get("retrieval_hit_rate")
+            retrieval_passed = (
+                True if retrieval_hit_rate is None else retrieval_hit_rate >= min_retrieval_hit_rate
+            )
+
+        budget_passed = governance.get("budget_passed")
+        if budget_passed is None:
+            context_budget_utilization = governance.get("context_budget_utilization")
+            budget_passed = (
+                True
+                if context_budget_utilization is None
+                else context_budget_utilization >= min_context_budget_utilization
+            )
+
+        return bool(retrieval_passed and budget_passed)
+
     def route_after_critic(self, state: WritingState) -> str:
         critique = state.get("critique_result", {})
         revision_count = state.get("revision_count", 0)
@@ -467,12 +786,19 @@ class NovelAdapter(BaseDomainAdapter):
         lock_analysis = critique.get("lock_analysis", {})
         c_score = lock_analysis.get("C", {}).get("score", 0) if lock_analysis else 0
         
-        pass_score = self.config.get("pass_score", 80)
-        min_c_score = self.config.get("min_c_score", 7)
-        max_revisions = self.config.get("max_revisions", 3)
-        human_review_score = self.config.get("human_review_score", 70)
+        pass_score = self.config.get("pass_score", DEFAULT_CONFIG["pass_score"])
+        min_c_score = self.config.get("min_c_score", DEFAULT_CONFIG["min_c_score"])
+        max_revisions = self.config.get("max_revisions", DEFAULT_CONFIG["max_revisions"])
+        human_review_score = self.config.get("human_review_score", DEFAULT_CONFIG["human_review_score"])
 
         if decision == "APPROVED" or (total_score >= pass_score and c_score >= min_c_score):
+            if not self._context_governance_passed(state):
+                if revision_count >= max_revisions:
+                    print("⚠️ 质量通过但上下文治理未达标，且达到修订上限，转人工审阅")
+                    return "human_reviewer"
+                print("🔄 质量通过但上下文治理未达标，退回 Writer 继续修订")
+                return "writer"
+
             print(f"✅ 审核通过! (总分: {total_score}, C分: {c_score})")
             return "finalize"
         

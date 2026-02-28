@@ -1,8 +1,34 @@
+---
+name: environment-craft
+description: 环境描写大师技能，强调环境与人物心理、情节推进和主题表达的一体化
+version: "1.0"
+author: niko-studio
+tags: [writing, environment, setting, atmosphere, narrative]
+triggers:
+  - 需要增强环境叙事
+  - 场景描写偏空泛或静态
+  - 需要环境推动人物与剧情
+requires:
+  - scene_or_excerpt: 场景或片段文本
+  - pov_character: 视角角色
+  - narrative_purpose: 该段叙事功能
+outputs:
+  - 环境描写优化稿
+  - 问题诊断与改写方向
+  - 环境叙事线索建议
+---
+
 # 🌍 环境描写大师 (Environment Craft)
 
 > **核心理念**：环境不是背景板，而是故事的有机组成部分——它塑造人物、推动情节、确立基调、传递主题。
 
 ---
+
+## 适用边界
+
+- 适用：环境与人物心理/情节功能联动的中等粒度优化（段落到场景）。
+- 不适用：纯微观文句润色（优先 `setting-craft`）。
+- 不适用：世界观制度与历史底层规则设计（优先 `worldbuilding` / `worldview-craft`）。
 
 ## 📖 理论基础
 

@@ -147,8 +147,10 @@ class BaseDomainAdapter(ABC):
             return "continue"
     
     def get_default_config(self) -> BaseWorkflowConfig:
-        """獲取默認配置"""
+        """獲取默認配置（基礎層 fallback；具體領域應覆蓋）"""
         return {
+            # 僅適用於 base/custom 通用場景
+            # novel 請以 src/workflow/state.py 的 domain 常量為準
             "pass_score": 80,
             "human_review_score": 70,
             "max_revisions": 3,

@@ -1,0 +1,185 @@
+# Aha Loop Progress Log
+Started: 2026年02月24日 22:37:17
+---
+
+## 2026-02-24 22:51:20 - US-001 - Research
+
+### Research
+- Topics investigated: existing repository evidence artifact patterns; deterministic and diffable JSON conventions for release consumption.
+- Key findings: canonical schema should reuse `.workflow/evidence/*` taxonomy, PDD section 16 minimum fields, and deterministic detail serialization pattern in `scripts/release_check_summary.py`.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- No story reordering or acceptance criteria change required at research stage.
+- No exploration topic added; current evidence contract direction is convergent with existing implementation and tests.
+
+### Learnings for Future Iterations
+- Pattern discovered: release checks rely on stable `key=value` detail ordering for deterministic parsing and diffability.
+- Gotcha encountered: template files (`TEMPLATE-*`) must be excluded from readiness evidence counts.
+- Useful context: PDD section 16 already defines minimum evidence fields (`date`, `owner`, `input`, `output`, `result`, `evidence_links`) and standard evidence paths.
+
+---
+
+## 2026-02-24 23:08:00 - US-001 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: N/A in this phase (used completed report from `.aha-loop/research/US-001-research.md`).
+- Key findings: existing evidence taxonomy and deterministic release detail formatting remain the baseline contract.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Recorded plan-review decision in `prd.json` changeLog.
+- Added implementation note clarifying plan-review outcome: no AC/story ordering changes; proceed with shared metadata envelope + artifact-specific body.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`
+- Approach: validated research/exploration status, confirmed no exploration outputs for US-001, then applied minimal plan-review metadata updates.
+
+### Learnings for Future Iterations
+- When research is convergent and exploration is empty, plan review should still leave an explicit trace in changeLog.
+- Keep plan-review updates minimal and limited to unlocked stories.
+
+---
+
+## 2026-02-24 23:33:00 - US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused prior findings on evidence taxonomy and deterministic release detail serialization.
+- Key findings: canonical contract should add shared metadata envelope while preserving existing `.workflow/evidence/*` path conventions.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- No acceptance criteria or story ordering changes during implementation.
+
+### Implementation
+- Files changed: `.workflow/evidence/README.md`, `.workflow/evidence/e2e/TEMPLATE-run-log.md`, `.workflow/evidence/quality/TEMPLATE-revision-case.md`, `.workflow/evidence/release/TEMPLATE-release-path-check.md`, `docs/PDD.md`, `.aha-loop/prd.json`
+- Approach: introduced canonical envelope fields (`artifact_type`, `schema_version`, `trace` + minimum metadata fields) and kept artifact-specific body sections for e2e/quality/release templates; aligned PDD section 16 with this contract.
+
+### Learnings for Future Iterations
+- Canonical schema can be introduced via template+PDD contract without changing release parser logic when deterministic detail formatting already exists.
+- Preserve separation between metadata envelope and artifact-specific body to keep markdown templates readable and machine companions stable.
+- Typecheck command currently fails in unrelated desktop files; track separately from this story scope.
+
+---
+
+## 2026-02-24 23:58:00 - US-002 - Research
+
+### Research
+- Topics investigated: release and quality tracking metadata currently consumed by the pipeline.
+- Key findings: required evidence metadata is enforced by canonical envelope fields in `.workflow/evidence/README.md` and `docs/PDD.md` section 16, while release gate auditability relies on deterministic machine payload/detail conventions in `scripts/release_check_summary.py` and its unit tests.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- No story reordering or acceptance criteria change required at research stage.
+- No new exploration topic added; metadata contract direction is convergent with current evidence schema and release-check consumers.
+
+### Learnings for Future Iterations
+- Keep `trace` identifiers artifact-specific (`session_id` + `run_id`/`revision_id`/`check_id`) to preserve cross-artifact run correlation.
+- Preserve `TEMPLATE-*` exclusion when evaluating evidence completeness signals.
+- Keep release detail strings deterministic (`key=value` in stable order) to avoid parser/test drift.
+
+---
+
+## 2026-02-24 23:48:41 - US-002 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: N/A in this phase (used completed report from `.aha-loop/research/US-002-research.md`).
+- Key findings: required metadata envelope and traceability contract are already convergent with existing release-check consumer expectations.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Recorded plan-review decision in `.aha-loop/prd.json` `changeLog`.
+- Added US-002 `implementationNotes` clarifying required envelope fields, artifact-specific trace IDs, deterministic release detail ordering, and TEMPLATE exclusion behavior.
+- No acceptance-criteria, story-splitting, or story-ordering changes required.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`
+- Approach: validated completed research and absence of exploration outputs for US-002, then applied minimal plan-review metadata updates limited to the unlocked story.
+
+### Learnings for Future Iterations
+- Plan review should translate research findings into concrete implementation notes even when no structural PRD changes are needed.
+- Keep traceability requirements explicit per artifact type to avoid ambiguous downstream evidence correlation.
+
+---
+
+## 2026-02-25 00:20:00 - US-002 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused prior findings on pipeline-consumed release/quality metadata and deterministic evidence signal behavior.
+- Key findings: required metadata must stay in a shared envelope while trace correlation IDs remain explicit and artifact-specific.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- No acceptance criteria, story ordering, or story split changes during implementation.
+
+### Implementation
+- Files changed: `.workflow/evidence/README.md`, `docs/PDD.md`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`
+- Approach: tightened canonical metadata contract wording to explicitly require artifact-specific `trace` identifiers and aligned PDD section 16 mapping with that contract.
+
+### Learnings for Future Iterations
+- Keep trace requirements explicit by artifact type to avoid ambiguous run correlation during evidence audits.
+- Contract clarifications can satisfy metadata traceability criteria without changing release parser logic when deterministic check payload format is already stable.
+- Local desktop typecheck currently fails due to pre-existing unrelated issues (`desktop/src/components/ChatArea.test.tsx`, `desktop/src/components/McpStatusPanel.tsx`, `desktop/src/stores/settingsStore.test.ts`).
+
+---
+
+## 2026-02-25 00:45:00 - US-003 - Research
+
+### Research
+- Topics investigated: current release-check parser expectations for evidence inputs.
+- Key findings: deterministic release-check consumption depends on stable machine payload shape, ordered `detail` serialization (`key=value` pairs), non-template evidence corpus scanning, and explicit evidence-link traceability signals.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- No story reordering or acceptance criteria change required at research stage.
+- No exploration topic added; deterministic-consumption direction is convergent with existing script/test contract.
+
+### Learnings for Future Iterations
+- Preserve ordered `detail` construction via `_format_detail_pairs`; free-form detail text causes contract drift.
+- Keep template exclusion (`TEMPLATE-*`) in evidence scans to avoid false readiness signals.
+- Keep canonical envelope vocabulary aligned across `.workflow/evidence/README.md`, `docs/PDD.md` section 16, and release-check signal checks.
+
+---
+
+## 2026-02-25 01:10:00 - US-003 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: N/A in this phase (used completed report from `.aha-loop/research/US-003-research.md`).
+- Key findings: deterministic release-check consumption contract is already convergent with existing parser/test implementation and evidence contract docs.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Recorded plan-review decision in `.aha-loop/prd.json` `changeLog`.
+- Added US-003 `implementationNotes` to lock deterministic release-check contract boundaries (stable payload/check shape, ordered detail pairs, TEMPLATE exclusion, vocabulary alignment).
+- No acceptance-criteria, story-splitting, or story-ordering changes required.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`
+- Approach: validated completed US-003 research and absence of exploration outputs, then applied minimal plan-review metadata updates scoped to the unlocked story.
+
+### Learnings for Future Iterations
+- Plan review should codify parser/test contract constraints as implementation notes even when no PRD restructuring is needed.
+- Deterministic consumption depends as much on docs/template vocabulary alignment as on parser logic stability.
+
+---
+
+## 2026-02-25 02:05:00 - US-003 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused prior findings on deterministic release-check parser expectations and evidence contract alignment.
+- Key findings: deterministic consumption depends on stable machine payload/check shape, ordered `detail` serialization, and `TEMPLATE-*` exclusion in evidence scans.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- No acceptance criteria, story ordering, or story split changes during implementation.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.workflow/evidence/README.md`, `docs/PDD.md`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`
+- Approach: kept release-check output contract deterministic via ordered `key=value` detail formatting and stable machine payload/check structure, retained non-template evidence scanning semantics, and finalized US-003 completion metadata in PRD.
+
+### Learnings for Future Iterations
+- Deterministic detail serialization should be centralized (`_format_detail_pairs`) to prevent drift across checks.
+- Keep deterministic checks and docs synchronized; test assertions on exact detail strings are effective contract guards.
+- For targeted validation under strict global coverage settings, run focused tests with `-o addopts=` to avoid unrelated coverage gates.
+
+---

@@ -6,12 +6,18 @@ Executes writing workflows with configurable levels (L1-L5).
 """
 
 import asyncio
+import re
+from typing import Any, Dict, List, Optional
+
 import click
-from pathlib import Path
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
+from src.cli.commands.genre_profile import (
+    GENRE_CHOICES,
+    genre_to_generation_recommendation,
+)
 
 
 @click.command()
@@ -35,8 +41,74 @@ from rich.table import Table
     is_flag=True,
     help="Show plan without executing"
 )
+@click.option(
+    "--quality-mode",
+    type=click.Choice(["auto", "manual"]),
+    default="auto",
+    show_default=True,
+    help="Quality execution mode",
+)
+@click.option(
+    "--quality-level",
+    type=click.Choice(["ultra", "high", "medium", "fluent"]),
+    default="high",
+    show_default=True,
+    help="Requested quality level",
+)
+@click.option(
+    "--degrade-on-timeout/--no-degrade-on-timeout",
+    default=True,
+    show_default=True,
+    help="Allow auto quality downgrade on timeout",
+)
+@click.option(
+    "--degrade-on-error/--no-degrade-on-error",
+    default=True,
+    show_default=True,
+    help="Allow auto quality downgrade on error",
+)
+@click.option(
+    "--critical-gate-always-on/--no-critical-gate-always-on",
+    default=True,
+    show_default=True,
+    help="Always enforce critical quality gate",
+)
+@click.option(
+    "--quality-phase-timeout-seconds",
+    type=int,
+    default=30,
+    show_default=True,
+    help="Quality phase timeout threshold in seconds",
+)
+@click.option(
+    "--genre",
+    type=click.Choice(GENRE_CHOICES, case_sensitive=False),
+    default="none",
+    show_default=True,
+    help="Optional genre profile for generation logic",
+)
+@click.option(
+    "--namespace",
+    default="",
+    show_default=False,
+    help="Optional session namespace for isolation",
+)
 @click.pass_context
-def run(ctx: click.Context, task: str, level: str, session: str, dry_run: bool) -> None:
+def run(
+    ctx: click.Context,
+    task: str,
+    level: str,
+    session: str,
+    dry_run: bool,
+    quality_mode: str,
+    quality_level: str,
+    degrade_on_timeout: bool,
+    degrade_on_error: bool,
+    critical_gate_always_on: bool,
+    quality_phase_timeout_seconds: int,
+    genre: str,
+    namespace: str,
+) -> None:
     """Execute a writing workflow.
 
     Workflow levels:
@@ -51,8 +123,28 @@ def run(ctx: click.Context, task: str, level: str, session: str, dry_run: bool) 
     console.print(f"\n[bold blue]Niko Studio - Workflow Execution[/]")
     console.print(f"[dim]Task:[/] {task[:100]}{'...' if len(task) > 100 else ''}")
 
-    # Run async workflow
-    asyncio.run(_run_workflow(console, task, level, session, dry_run))
+    asyncio.run(
+        _run_workflow(
+            console,
+            task,
+            level,
+            session,
+            dry_run,
+            genre=genre,
+            namespace=namespace,
+            quality_mode=quality_mode,
+            quality_level=quality_level,
+            degrade_on_timeout=degrade_on_timeout,
+            degrade_on_error=degrade_on_error,
+            critical_gate_always_on=critical_gate_always_on,
+            quality_phase_timeout_seconds=quality_phase_timeout_seconds,
+        )
+    )
+
+
+def _normalize_namespace(namespace: str) -> str:
+    normalized = re.sub(r"[^a-z0-9_-]+", "-", (namespace or "").strip().lower()).strip("-")
+    return normalized
 
 
 async def _run_workflow(
@@ -60,7 +152,16 @@ async def _run_workflow(
     task: str,
     level: str,
     session: str,
-    dry_run: bool
+    dry_run: bool,
+    *,
+    genre: str = "none",
+    namespace: str = "",
+    quality_mode: str = "auto",
+    quality_level: str = "high",
+    degrade_on_timeout: bool = True,
+    degrade_on_error: bool = True,
+    critical_gate_always_on: bool = True,
+    quality_phase_timeout_seconds: int = 30,
 ) -> None:
     """Execute workflow asynchronously."""
 
@@ -70,7 +171,15 @@ async def _run_workflow(
         console.print("[red]Error:[/] WorkflowEngine not available")
         return
 
-    engine = WorkflowEngine()
+    try:
+        engine = WorkflowEngine(session_namespace=namespace)
+    except TypeError:
+        engine = WorkflowEngine()
+
+    normalized_namespace = _normalize_namespace(namespace)
+    if session and normalized_namespace and not session.startswith(f"{normalized_namespace}--"):
+        console.print("[red]Error:[/] session does not match namespace isolation boundary")
+        return
 
     # Route task to appropriate level
     with Progress(
@@ -106,7 +215,29 @@ async def _run_workflow(
         console=console,
     ) as progress:
         progress.add_task("Generating execution plan...", total=None)
-        plan = await engine.plan(task, level=routing["level"])
+        recommendations: List[Dict[str, Any]] = [
+            {
+                "action": "set_quality_controls",
+                "params": {
+                    "quality_mode": quality_mode,
+                    "quality_level": quality_level,
+                    "degrade_on_timeout": degrade_on_timeout,
+                    "degrade_on_error": degrade_on_error,
+                    "critical_gate_always_on": critical_gate_always_on,
+                    "quality_phase_timeout_seconds": quality_phase_timeout_seconds,
+                },
+            }
+        ]
+        genre_recommendation = genre_to_generation_recommendation(genre)
+        if genre_recommendation is not None:
+            recommendations.append(genre_recommendation)
+        try:
+            plan = await engine.plan(task, level=routing["level"], recommendations=recommendations)
+        except TypeError:
+            plan = await engine.plan(task, level=routing["level"])
+
+    if session:
+        engine.plan_sessions[plan["plan_id"]] = session
 
     # Display plan
     table = Table(title=f"Execution Plan: {plan['plan_id']}")

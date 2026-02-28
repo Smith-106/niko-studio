@@ -16,15 +16,22 @@ MemoryService - 向量记忆服务
 import asyncio
 import json
 import logging
+import math
 import re
 import sqlite3
 import uuid
+import hashlib
+import struct
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+
+DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
+DEFAULT_MIN_SCORE = 0.3
 
 
 # ============================================================
@@ -68,6 +75,21 @@ class SearchResult:
     metadata: Dict[str, Any]
     source: str  # 来源标识
     chunk_index: Optional[int] = None
+
+
+def _pack_embedding(values: Optional[List[float]]) -> Optional[bytes]:
+    if not values:
+        return None
+    return struct.pack(f"<{len(values)}f", *values)
+
+
+def _unpack_embedding(blob: Optional[bytes]) -> List[float]:
+    if not blob:
+        return []
+    count = len(blob) // 4
+    if count <= 0:
+        return []
+    return list(struct.unpack(f"<{count}f", blob[: count * 4]))
 
 
 @dataclass
@@ -179,7 +201,43 @@ class MemoryService:
             CREATE INDEX IF NOT EXISTS idx_session_history_session ON session_history(session_id);
             CREATE INDEX IF NOT EXISTS idx_session_history_timestamp ON session_history(timestamp);
         """)
+
+        self._ensure_column("memories", "embedding_blob", "BLOB")
+        self._ensure_column("memories", "embedding_model", "TEXT")
+        self._ensure_column("memories", "embedding_dim", "INTEGER")
+        self._ensure_column("memories", "content_hash", "TEXT")
+        self._ensure_column("memories", "last_accessed_at", "TEXT")
+
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS retrieval_profiles (
+                profile_name TEXT PRIMARY KEY,
+                source_weights_json TEXT NOT NULL,
+                thresholds_json TEXT NOT NULL,
+                budget_json TEXT NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS retrieval_cache (
+                cache_key TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                hit_count INTEGER DEFAULT 0
+            )
+        """)
+        db.execute("CREATE INDEX IF NOT EXISTS idx_retrieval_cache_expires ON retrieval_cache(expires_at)")
         db.commit()
+
+    def _ensure_column(self, table_name: str, column_name: str, column_type: str) -> None:
+        db = self._get_db()
+        cursor = db.execute(f"PRAGMA table_info({table_name})")
+        columns = {row[1] for row in cursor.fetchall()}
+        if column_name in columns:
+            return
+        db.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
 
     @property
     def embedder(self):
@@ -225,6 +283,95 @@ class MemoryService:
             return 0.0
 
         return dot_product / (norm_a * norm_b)
+
+    @staticmethod
+    def _clamp_01(value: float) -> float:
+        return max(0.0, min(1.0, value))
+
+    @staticmethod
+    def _parse_datetime(raw: Any) -> Optional[datetime]:
+        if not isinstance(raw, str) or not raw:
+            return None
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _safe_float(raw: Any, default: float = 0.0) -> float:
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return default
+
+    def _compute_observability_metrics(
+        self,
+        fused_results: List[SearchResult],
+        limit: int,
+    ) -> Dict[str, float]:
+        """计算检索可观测指标（C_effective / S_final / R_memory）"""
+        if not fused_results:
+            return {
+                "c_effective": 0.0,
+                "s_final": 0.0,
+                "r_memory": 0.0,
+            }
+
+        effective_count = len(fused_results)
+        safe_limit = max(limit, 1)
+        c_effective = self._clamp_01(effective_count / safe_limit)
+
+        max_score = max(result.score for result in fused_results)
+        if max_score <= 0:
+            s_final = 0.0
+        else:
+            normalized_scores = [self._clamp_01(result.score / max_score) for result in fused_results]
+            s_final = self._clamp_01(sum(normalized_scores) / len(normalized_scores))
+
+        now = datetime.now()
+        decay_reinforcement_scores: List[float] = []
+        for result in fused_results:
+            metadata = result.metadata if isinstance(result.metadata, dict) else {}
+
+            created_at = self._parse_datetime(metadata.get("created_at"))
+            last_accessed = self._parse_datetime(metadata.get("last_accessed"))
+            expires_at = self._parse_datetime(metadata.get("expires_at"))
+
+            importance = self._clamp_01(self._safe_float(metadata.get("importance"), 0.5))
+            access_count = max(0.0, self._safe_float(metadata.get("access_count"), 0.0))
+
+            freshness = 0.5
+            if created_at:
+                age_days = max((now - created_at).total_seconds(), 0.0) / 86400
+                freshness = math.exp(-age_days / 30.0)
+
+            access_reinforcement = self._clamp_01(math.log1p(access_count) / math.log1p(20.0))
+
+            access_recency = 0.0
+            if last_accessed:
+                access_age_days = max((now - last_accessed).total_seconds(), 0.0) / 86400
+                access_recency = math.exp(-access_age_days / 14.0)
+
+            expiry_factor = 1.0
+            if expires_at and expires_at <= now:
+                expiry_factor = 0.0
+
+            combined = (
+                0.35 * self._clamp_01(freshness)
+                + 0.25 * access_reinforcement
+                + 0.20 * self._clamp_01(access_recency)
+                + 0.20 * importance
+            ) * expiry_factor
+
+            decay_reinforcement_scores.append(self._clamp_01(combined))
+
+        r_memory = self._clamp_01(sum(decay_reinforcement_scores) / len(decay_reinforcement_scores))
+
+        return {
+            "c_effective": round(c_effective, 4),
+            "s_final": round(s_final, 4),
+            "r_memory": round(r_memory, 4),
+        }
 
     # ============================================================
     # IMemoryService 接口实现
@@ -279,8 +426,9 @@ class MemoryService:
         db.execute("""
             INSERT INTO memories (
                 id, content, embedding, namespace, importance, tags,
-                ttl, expires_at, metadata, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ttl, expires_at, metadata, created_at, updated_at,
+                embedding_blob, embedding_model, embedding_dim, content_hash, last_accessed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             memory_id,
             content,
@@ -292,7 +440,12 @@ class MemoryService:
             expires_at,
             json.dumps(metadata),
             now.isoformat(),
-            now.isoformat()
+            now.isoformat(),
+            _pack_embedding(embedding),
+            DEFAULT_EMBEDDING_MODEL,
+            len(embedding),
+            hashlib.sha256(content.encode("utf-8")).hexdigest(),
+            now.isoformat(),
         ))
         db.commit()
 
@@ -318,7 +471,7 @@ class MemoryService:
 
         # 构建 SQL 查询
         sql = """
-            SELECT id, content, embedding, namespace, importance, tags, metadata, created_at
+            SELECT id, content, embedding, embedding_blob, namespace, importance, tags, metadata, created_at, expires_at, last_accessed_at
             FROM memories
             WHERE namespace = ?
             AND (expires_at IS NULL OR expires_at > ?)
@@ -340,15 +493,30 @@ class MemoryService:
 
         # 计算相似度并过滤
         results = []
+        threshold = options.threshold if options.threshold is not None else DEFAULT_MIN_SCORE
+        now_iso = datetime.now().isoformat()
         for row in rows:
-            embedding = json.loads(row['embedding']) if row['embedding'] else []
+            embedding = []
+            if row["embedding_blob"]:
+                embedding = _unpack_embedding(row["embedding_blob"])
+            elif row["embedding"]:
+                embedding = json.loads(row["embedding"])
+
             score = self._compute_similarity(query_embedding, embedding)
 
-            if score >= options.threshold:
+            if score >= threshold:
                 metadata = json.loads(row['metadata']) if row['metadata'] else {}
+                metadata.setdefault('created_at', row['created_at'])
+                metadata.setdefault('expires_at', row['expires_at'])
+                metadata.setdefault('last_accessed_at', row['last_accessed_at'])
                 if options.include_metadata:
                     metadata['importance'] = row['importance']
                     metadata['tags'] = json.loads(row['tags']) if row['tags'] else []
+
+                db.execute(
+                    "UPDATE memories SET last_accessed_at = ?, updated_at = ? WHERE id = ?",
+                    (now_iso, now_iso, row['id']),
+                )
 
                 results.append(SearchResult(
                     id=row['id'],
@@ -359,6 +527,7 @@ class MemoryService:
                     chunk_index=None
                 ))
 
+        db.commit()
         # 按分数降序排序
         results.sort(key=lambda x: x.score, reverse=True)
 
@@ -396,16 +565,27 @@ class MemoryService:
             k=60  # RRF 常数
         )
 
-        return fused_results[:options.limit]
+        limited_results = fused_results[:options.limit]
+        metrics = self._compute_observability_metrics(
+            fused_results=limited_results,
+            limit=options.limit,
+        )
+        for result in limited_results:
+            result.metadata = {
+                **result.metadata,
+                "c_effective": metrics["c_effective"],
+                "s_final": metrics["s_final"],
+                "r_memory": metrics["r_memory"],
+            }
+
+        return limited_results
 
     async def _keyword_search(self, query: str, options: SearchOptions) -> List[SearchResult]:
         """关键词搜索"""
-        # 提取关键词（简单分词）
         keywords = self._extract_keywords(query)
         if not keywords:
             return []
 
-        # 构建 LIKE 查询
         conditions = []
         params: List[Any] = [options.namespace, datetime.now().isoformat()]
 
@@ -414,7 +594,7 @@ class MemoryService:
             params.append(f"%{kw}%")
 
         sql = f"""
-            SELECT id, content, embedding, namespace, importance, tags, metadata, created_at
+            SELECT id, content, embedding, embedding_blob, namespace, importance, tags, metadata, created_at, expires_at, last_accessed_at
             FROM memories
             WHERE namespace = ?
             AND (expires_at IS NULL OR expires_at > ?)
@@ -426,18 +606,26 @@ class MemoryService:
         rows = cursor.fetchall()
 
         results = []
+        now_iso = datetime.now().isoformat()
         for row in rows:
-            # 计算关键词匹配得分
             content_lower = row['content'].lower()
             match_count = sum(1 for kw in keywords if kw.lower() in content_lower)
             score = match_count / len(keywords)
 
             if score > 0:
                 metadata = json.loads(row['metadata']) if row['metadata'] else {}
+                metadata.setdefault('created_at', row['created_at'])
+                metadata.setdefault('expires_at', row['expires_at'])
+                metadata.setdefault('last_accessed_at', row['last_accessed_at'])
                 if options.include_metadata:
                     metadata['importance'] = row['importance']
                     metadata['tags'] = json.loads(row['tags']) if row['tags'] else []
                     metadata['keyword_matches'] = match_count
+
+                db.execute(
+                    "UPDATE memories SET last_accessed_at = ?, updated_at = ? WHERE id = ?",
+                    (now_iso, now_iso, row['id']),
+                )
 
                 results.append(SearchResult(
                     id=row['id'],
@@ -448,6 +636,7 @@ class MemoryService:
                     chunk_index=None
                 ))
 
+        db.commit()
         results.sort(key=lambda x: x.score, reverse=True)
         return results[:options.limit * 2]
 
@@ -510,6 +699,118 @@ class MemoryService:
             ))
 
         return fused_results
+
+    def get_retrieval_profile(self, profile_name: str) -> Optional[Dict[str, Any]]:
+        db = self._get_db()
+        cursor = db.execute(
+            """
+            SELECT profile_name, source_weights_json, thresholds_json, budget_json, enabled, updated_at
+            FROM retrieval_profiles
+            WHERE profile_name = ?
+            """,
+            (profile_name,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "profile_name": row["profile_name"],
+            "source_weights_json": json.loads(row["source_weights_json"]) if row["source_weights_json"] else {},
+            "thresholds_json": json.loads(row["thresholds_json"]) if row["thresholds_json"] else {},
+            "budget_json": json.loads(row["budget_json"]) if row["budget_json"] else {},
+            "enabled": bool(row["enabled"]),
+            "updated_at": row["updated_at"],
+        }
+
+    def upsert_retrieval_profile(
+        self,
+        profile_name: str,
+        source_weights: Dict[str, Any],
+        thresholds: Dict[str, Any],
+        budget: Dict[str, Any],
+        enabled: bool = True,
+    ) -> None:
+        db = self._get_db()
+        now = datetime.now().isoformat()
+        db.execute(
+            """
+            INSERT INTO retrieval_profiles(profile_name, source_weights_json, thresholds_json, budget_json, enabled, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?)
+            ON CONFLICT(profile_name) DO UPDATE SET
+                source_weights_json=excluded.source_weights_json,
+                thresholds_json=excluded.thresholds_json,
+                budget_json=excluded.budget_json,
+                enabled=excluded.enabled,
+                updated_at=excluded.updated_at
+            """,
+            (
+                profile_name,
+                json.dumps(source_weights or {}),
+                json.dumps(thresholds or {}),
+                json.dumps(budget or {}),
+                1 if enabled else 0,
+                now,
+            ),
+        )
+        db.commit()
+
+    def cache_pack(self, cache_key: str, payload: Dict[str, Any], ttl_seconds: int = 300, status: str = "ready") -> None:
+        db = self._get_db()
+        now = datetime.now()
+        expires_at = datetime.fromtimestamp(now.timestamp() + max(ttl_seconds, 1)).isoformat()
+        db.execute(
+            """
+            INSERT INTO retrieval_cache(cache_key, payload_json, status, created_at, expires_at, hit_count)
+            VALUES(?, ?, ?, ?, ?, 0)
+            ON CONFLICT(cache_key) DO UPDATE SET
+                payload_json=excluded.payload_json,
+                status=excluded.status,
+                created_at=excluded.created_at,
+                expires_at=excluded.expires_at
+            """,
+            (cache_key, json.dumps(payload), status, now.isoformat(), expires_at),
+        )
+        db.commit()
+
+    def cache_read(self, cache_key: str) -> Optional[Dict[str, Any]]:
+        db = self._get_db()
+        cursor = db.execute(
+            "SELECT payload_json, status, expires_at, hit_count FROM retrieval_cache WHERE cache_key = ?",
+            (cache_key,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        if row["expires_at"] and row["expires_at"] <= datetime.now().isoformat():
+            self.cache_release(cache_key)
+            return None
+
+        db.execute("UPDATE retrieval_cache SET hit_count = hit_count + 1 WHERE cache_key = ?", (cache_key,))
+        db.commit()
+        return {
+            "payload": json.loads(row["payload_json"]) if row["payload_json"] else {},
+            "status": row["status"],
+            "expires_at": row["expires_at"],
+            "hit_count": int(row["hit_count"]) + 1,
+        }
+
+    def cache_status(self, cache_key: str) -> Optional[str]:
+        db = self._get_db()
+        cursor = db.execute("SELECT status FROM retrieval_cache WHERE cache_key = ?", (cache_key,))
+        row = cursor.fetchone()
+        return row["status"] if row else None
+
+    def cache_release(self, cache_key: str) -> None:
+        db = self._get_db()
+        db.execute("DELETE FROM retrieval_cache WHERE cache_key = ?", (cache_key,))
+        db.commit()
+
+    def cache_cleanup(self) -> int:
+        db = self._get_db()
+        cursor = db.execute("DELETE FROM retrieval_cache WHERE expires_at <= ?", (datetime.now().isoformat(),))
+        db.commit()
+        return int(cursor.rowcount)
 
     async def add_history(self, session_id: str, messages: List[Message]) -> None:
         """
@@ -588,7 +889,7 @@ class MemoryService:
         """
         db = self._get_db()
         cursor = db.execute("""
-            SELECT id, content, embedding, metadata, created_at, updated_at
+            SELECT id, content, embedding, embedding_blob, metadata, created_at, updated_at
             FROM memories
             WHERE id = ?
         """, (memory_id,))
@@ -597,10 +898,16 @@ class MemoryService:
         if not row:
             return None
 
+        embedding = []
+        if row['embedding_blob']:
+            embedding = _unpack_embedding(row['embedding_blob'])
+        elif row['embedding']:
+            embedding = json.loads(row['embedding'])
+
         return Memory(
             id=row['id'],
             content=row['content'],
-            embedding=json.loads(row['embedding']) if row['embedding'] else None,
+            embedding=embedding or None,
             metadata=json.loads(row['metadata']) if row['metadata'] else None,
             created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
             updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None
@@ -656,6 +963,14 @@ class MemoryService:
             embedding = await self._embed_text(content)
             updates.append("embedding = ?")
             params.append(json.dumps(embedding))
+            updates.append("embedding_blob = ?")
+            params.append(_pack_embedding(embedding))
+            updates.append("embedding_model = ?")
+            params.append(DEFAULT_EMBEDDING_MODEL)
+            updates.append("embedding_dim = ?")
+            params.append(len(embedding))
+            updates.append("content_hash = ?")
+            params.append(hashlib.sha256(content.encode("utf-8")).hexdigest())
 
         if metadata is not None:
             updates.append("metadata = ?")
@@ -757,6 +1072,33 @@ class SimpleEmbedder:
 # ============================================================
 
 _memory_service: Optional[MemoryService] = None
+_memory_engine_provider: Optional[Callable[[], Any]] = None
+
+
+def configure_memory_engine_provider(provider: Optional[Callable[[], Any]]) -> None:
+    """配置统一记忆引擎提供者（用于边界收敛和测试注入）"""
+    global _memory_engine_provider
+    _memory_engine_provider = provider
+
+
+def _resolve_memory_engine() -> Optional[Any]:
+    """解析统一记忆引擎实例，失败时返回 None"""
+    if _memory_engine_provider is not None:
+        try:
+            return _memory_engine_provider()
+        except Exception as exc:
+            logger.warning("Memory engine provider resolution failed: %s", exc)
+            return None
+
+    try:
+        from src.memory.unified_memory import UnifiedMemoryEngine
+
+        db_path = str(Path.home() / ".niko" / "memory.db")
+        engine = UnifiedMemoryEngine(db_path=db_path)
+        return engine
+    except Exception as exc:
+        logger.warning("UnifiedMemoryEngine unavailable, fallback to MemoryService-only mode: %s", exc)
+        return None
 
 
 def get_memory_service(
@@ -775,13 +1117,19 @@ def get_memory_service(
     """
     global _memory_service
     if _memory_service is None:
-        _memory_service = MemoryService(db_path=db_path, config=config)
+        memory_engine = _resolve_memory_engine()
+        _memory_service = MemoryService(
+            db_path=db_path,
+            config=config,
+            embedding_service=getattr(memory_engine, "embedder", None),
+        )
     return _memory_service
 
 
 def reset_memory_service():
     """重置 MemoryService 单例（仅用于测试）"""
-    global _memory_service
+    global _memory_service, _memory_engine_provider
     if _memory_service:
         _memory_service.close()
     _memory_service = None
+    _memory_engine_provider = None

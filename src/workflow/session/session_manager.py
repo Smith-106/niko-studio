@@ -10,7 +10,9 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 import json
+import re
 import shutil
+import uuid
 
 
 class SessionStatus(Enum):
@@ -32,6 +34,8 @@ class ContentType(Enum):
     SNAPSHOT_INDEX = "snapshot_index"
     AUDIT = "audit"
     HANDOFF = "handoff"
+    REVISION_CHECKPOINT = "revision_checkpoint"
+    GENERATION_SNAPSHOT = "generation_snapshot"
 
 
 # 內容類型路由表
@@ -47,7 +51,11 @@ PATH_ROUTES = {
     ContentType.SNAPSHOT_INDEX: "{base}/.data/snapshot-index.json",
     ContentType.AUDIT: "{base}/.data/audit.jsonl",
     ContentType.HANDOFF: "{base}/HANDOFF.md",
+    ContentType.REVISION_CHECKPOINT: "{base}/.data/revision-checkpoints/{id}.json",
+    ContentType.GENERATION_SNAPSHOT: "{base}/.data/generation-snapshots/{id}.json",
 }
+
+_SESSION_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 
 
 @dataclass
@@ -93,9 +101,18 @@ class SessionManager:
         self.active_path.mkdir(parents=True, exist_ok=True)
         self.archived_path.mkdir(parents=True, exist_ok=True)
     
+    def _sanitize_segment(self, value: str, fallback: str = "session") -> str:
+        sanitized = re.sub(r"[^A-Za-z0-9_-]+", "-", (value or "").strip())
+        sanitized = sanitized.strip("-")
+        return sanitized or fallback
+
+    def _assert_valid_session_id(self, session_id: str):
+        if not _SESSION_ID_PATTERN.fullmatch(session_id or ""):
+            raise ValueError(f"invalid session_id: {session_id}")
+
     def init(
-        self, 
-        session_id: str, 
+        self,
+        session_id: str,
         session_type: str = "standard",
         project_name: str = "",
         domain: str = "novel"
@@ -112,6 +129,7 @@ class SessionManager:
         Returns:
             SessionInfo 對象
         """
+        self._assert_valid_session_id(session_id)
         session_path = self.active_path / session_id
         session_path.mkdir(parents=True, exist_ok=True)
         
@@ -378,11 +396,17 @@ class SessionManager:
         project_id: str,
         goal: str = "",
         session_type: str = "standard",
-        domain: str = "novel"
+        domain: str = "novel",
+        namespace: str = "",
     ) -> dict:
         """兼容旧接口：创建会话并返回字典结果。"""
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        session_id = f"{project_id}-{timestamp}"
+        safe_project_id = self._sanitize_segment(project_id, fallback="project")
+        safe_namespace = self._sanitize_segment(namespace, fallback="") if namespace else ""
+        unique_suffix = uuid.uuid4().hex[:8]
+        if safe_namespace:
+            session_id = f"{safe_namespace}--{safe_project_id}-{unique_suffix}"
+        else:
+            session_id = f"{safe_project_id}-{unique_suffix}"
         info = self.init(
             session_id=session_id,
             session_type=session_type,
@@ -395,6 +419,7 @@ class SessionManager:
             "goal": goal,
             "status": info.status,
             "created_at": info.created_at,
+            "namespace": safe_namespace,
         }
 
     def list_sessions(self, location: str = "active") -> List[dict]:
@@ -444,16 +469,22 @@ class SessionManager:
     # ========================================
     
     def _resolve_path(
-        self, 
-        session_id: str, 
+        self,
+        session_id: str,
         content_type: ContentType,
         **kwargs
     ) -> Path:
         """解析內容類型到文件路徑"""
+        self._assert_valid_session_id(session_id)
         template = PATH_ROUTES.get(content_type, "{base}/{id}")
         base = self._get_session_path(session_id)
         path_str = template.format(base=str(base), **kwargs)
-        return Path(path_str)
+        resolved = Path(path_str)
+        base_resolved = base.resolve()
+        resolved_parent = resolved.parent.resolve() if resolved.suffix else resolved.resolve()
+        if base_resolved not in resolved_parent.parents and resolved_parent != base_resolved:
+            raise ValueError(f"resolved path escapes session boundary: {resolved}")
+        return resolved
     
     def _get_session_path(self, session_id: str) -> Path:
         """獲取會話目錄路徑"""

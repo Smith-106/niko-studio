@@ -191,6 +191,31 @@ class DistillationNode:
             distill_state.result = result
             distill_state.is_completed = True
 
+            canonical_entities = self._normalize_canonical_entities(
+                entities=result.get("entities", []),
+                scene_id=distill_state.scene_id,
+                chapter_num=distill_state.chapter_num,
+            )
+            canonical_relations = self._normalize_canonical_relations(
+                relations=result.get("relations", []),
+                scene_id=distill_state.scene_id,
+                chapter_num=distill_state.chapter_num,
+            )
+
+            trace_session_id = str(state.get("session_id") or "")
+            trace_run_id = f"run-{distill_state.chapter_num}"
+            trace_revision_id = f"distill-{distill_state.chapter_num}-{distill_state.scene_id or 'scene'}"
+
+            canonical_conflicts = self._detect_canonical_conflicts(
+                canonical_entities=canonical_entities,
+                canonical_relations=canonical_relations,
+                canonical_trace={
+                    "session_id": trace_session_id,
+                    "run_id": trace_run_id,
+                    "revision_id": trace_revision_id,
+                },
+            )
+
             # 更新工作流状态
             state["distillation_result"] = {
                 "entities_count": len(result.get("entities", [])),
@@ -199,6 +224,15 @@ class DistillationNode:
                 "entities": result.get("entities", []),
                 "relations": result.get("relations", []),
                 "events": result.get("events", []),
+                "canonical_entities": canonical_entities,
+                "canonical_relations": canonical_relations,
+                "canonical_conflicts": canonical_conflicts,
+                "canonical_schema_version": "narrative_entity.v1",
+                "canonical_trace": {
+                    "session_id": trace_session_id,
+                    "run_id": trace_run_id,
+                    "revision_id": trace_revision_id,
+                },
                 "template": self.template.value,
                 "scene_id": distill_state.scene_id,
             }
@@ -267,6 +301,159 @@ class DistillationNode:
             result["events"] = data.get("events", [])
 
         return result
+
+    def _normalize_canonical_entities(
+        self,
+        entities: List[Dict[str, Any]],
+        scene_id: str,
+        chapter_num: int,
+    ) -> List[Dict[str, Any]]:
+        """将抽取实体规范化为 narrative_entity.v1"""
+        normalized: List[Dict[str, Any]] = []
+
+        for index, entity in enumerate(entities, start=1):
+            entity_type = str(entity.get("type") or entity.get("entity_type") or "unknown").strip() or "unknown"
+            lower_type = entity_type.lower()
+
+            if lower_type in {"character", "person", "人物", "角色"}:
+                scope = "character"
+            elif lower_type in {"event", "timeline", "时间", "时间线"}:
+                scope = "timeline"
+            else:
+                scope = "world"
+
+            entity_id = str(entity.get("id") or entity.get("entity_id") or "").strip()
+            if not entity_id:
+                entity_id = f"entity-{chapter_num}-{scene_id or 'scene'}-{index}"
+
+            normalized.append(
+                {
+                    "entity_id": entity_id,
+                    "entity_type": entity_type,
+                    "scope": scope,
+                    "name": str(entity.get("name") or entity.get("label") or entity_id),
+                    "attributes": dict(entity),
+                    "source_trace": {
+                        "scene_id": scene_id,
+                        "chapter_num": str(chapter_num),
+                    },
+                }
+            )
+
+        return normalized
+
+    def _normalize_canonical_relations(
+        self,
+        relations: List[Dict[str, Any]],
+        scene_id: str,
+        chapter_num: int,
+    ) -> List[Dict[str, Any]]:
+        """将抽取关系规范化为 narrative_entity.v1"""
+        normalized: List[Dict[str, Any]] = []
+
+        for index, relation in enumerate(relations, start=1):
+            source_id = str(relation.get("source") or relation.get("source_entity_id") or "").strip()
+            target_id = str(relation.get("target") or relation.get("target_entity_id") or "").strip()
+            relation_type = str(relation.get("type") or relation.get("relation_type") or "related_to").strip() or "related_to"
+
+            relation_id = str(relation.get("id") or relation.get("relation_id") or "").strip()
+            if not relation_id:
+                source_part = source_id or "unknown-source"
+                target_part = target_id or "unknown-target"
+                relation_id = f"{source_part}-{relation_type}-{target_part}"
+
+            normalized.append(
+                {
+                    "relation_id": relation_id,
+                    "source_entity_id": source_id,
+                    "target_entity_id": target_id,
+                    "relation_type": relation_type,
+                    "attributes": dict(relation),
+                    "source_trace": {
+                        "scene_id": scene_id,
+                        "chapter_num": str(chapter_num),
+                        "relation_index": str(index),
+                    },
+                }
+            )
+
+        return normalized
+
+    def _detect_canonical_conflicts(
+        self,
+        canonical_entities: List[Dict[str, Any]],
+        canonical_relations: List[Dict[str, Any]],
+        canonical_trace: Dict[str, str],
+    ) -> List[Dict[str, Any]]:
+        """基于规范化实体/关系进行确定性冲突检测（PRD-009 US-001/US-002）"""
+        from src.narrative.scene_coherence import ContradictionType, Severity
+
+        severity_rules: Dict[str, str] = {
+            ContradictionType.CAUSALITY.value: Severity.CRITICAL.value,
+            ContradictionType.CHARACTER_STATE.value: Severity.MAJOR.value,
+            ContradictionType.TIMELINE.value: Severity.MAJOR.value,
+            ContradictionType.LOCATION.value: Severity.MAJOR.value,
+        }
+
+        conflicts: List[Dict[str, Any]] = []
+
+        normalized_names: Dict[str, str] = {}
+        for entity in canonical_entities:
+            entity_id = str(entity.get("entity_id") or "").strip()
+            name = str(entity.get("name") or "").strip().lower()
+            if not entity_id or not name:
+                continue
+
+            prev_entity_id = normalized_names.get(name)
+            if prev_entity_id and prev_entity_id != entity_id:
+                conflict_type = ContradictionType.CHARACTER_STATE.value
+                conflict_index = len(conflicts) + 1
+                conflicts.append(
+                    {
+                        "conflict_id": f"CTD-{conflict_index:04d}",
+                        "conflict_type": conflict_type,
+                        "severity": severity_rules[conflict_type],
+                        "description": "Duplicate entity name mapped to different entity ids",
+                        "critical_condition": "none",
+                        "source_refs": {
+                            "entity_name": name,
+                            "entity_id_a": prev_entity_id,
+                            "entity_id_b": entity_id,
+                            "session_id": str(canonical_trace.get("session_id") or ""),
+                            "run_id": str(canonical_trace.get("run_id") or ""),
+                            "revision_id": str(canonical_trace.get("revision_id") or ""),
+                        },
+                    }
+                )
+            else:
+                normalized_names[name] = entity_id
+
+        for relation in canonical_relations:
+            source_id = str(relation.get("source_entity_id") or "").strip()
+            target_id = str(relation.get("target_entity_id") or "").strip()
+            relation_type = str(relation.get("relation_type") or "").strip().lower()
+            if source_id and target_id and source_id == target_id and relation_type not in {"self", "identity", "same_as"}:
+                conflict_type = ContradictionType.CAUSALITY.value
+                conflict_index = len(conflicts) + 1
+                conflicts.append(
+                    {
+                        "conflict_id": f"CTD-{conflict_index:04d}",
+                        "conflict_type": conflict_type,
+                        "severity": severity_rules[conflict_type],
+                        "description": "Self-referential relation without allowed identity semantics",
+                        "critical_condition": "self_referential_non_identity_relation",
+                        "source_refs": {
+                            "relation_id": str(relation.get("relation_id") or ""),
+                            "entity_id": source_id,
+                            "relation_type": relation_type,
+                            "session_id": str(canonical_trace.get("session_id") or ""),
+                            "run_id": str(canonical_trace.get("run_id") or ""),
+                            "revision_id": str(canonical_trace.get("revision_id") or ""),
+                        },
+                    }
+                )
+
+        return conflicts
 
     def __call__(self, state: WritingState) -> WritingState:
         """使节点可作为函数调用"""

@@ -6,6 +6,8 @@ RevisionLoop (should_continue, update_from_critic, _determine_decision,
 get_feedback_for_writer, get_summary, reset), and run_revision_loop.
 """
 
+import json
+import asyncio
 import pytest
 from src.workflow.revision_loop import (
     RevisionDecision,
@@ -13,6 +15,12 @@ from src.workflow.revision_loop import (
     RevisionState,
     RevisionLoop,
     run_revision_loop,
+)
+from src.workflow.state import (
+    NOVEL_PASS_SCORE,
+    NOVEL_MIN_C_SCORE,
+    NOVEL_HUMAN_REVIEW_SCORE,
+    NOVEL_SCORE_IMPROVEMENT_THRESHOLD,
 )
 
 
@@ -37,10 +45,15 @@ class TestRevisionConfig:
     def test_defaults(self):
         cfg = RevisionConfig()
         assert cfg.max_revisions == 3
-        assert cfg.pass_score == 80.0
-        assert cfg.min_c_score == 7.0
-        assert cfg.human_review_score == 70.0
-        assert cfg.score_improvement_threshold == 5.0
+        assert cfg.pass_score == float(NOVEL_PASS_SCORE)
+        assert cfg.min_c_score == float(NOVEL_MIN_C_SCORE)
+        assert cfg.human_review_score == float(NOVEL_HUMAN_REVIEW_SCORE)
+        assert cfg.score_improvement_threshold == float(NOVEL_SCORE_IMPROVEMENT_THRESHOLD)
+        assert cfg.quality_mode == "auto"
+        assert cfg.quality_level == "high"
+        assert cfg.degrade_on_timeout is True
+        assert cfg.degrade_on_error is True
+        assert cfg.quality_phase_timeout_seconds == 30
 
     def test_custom(self):
         cfg = RevisionConfig(max_revisions=5, pass_score=90.0)
@@ -59,6 +72,11 @@ class TestRevisionState:
         assert state.feedback == ""
         assert state.history == []
         assert state.stagnant_count == 0
+        assert state.quality_mode == "auto"
+        assert state.requested_quality_level == "high"
+        assert state.effective_quality_level == "high"
+        assert state.degrade_reason == ""
+        assert state.degrade_steps == []
 
 
 # ============================================================
@@ -104,14 +122,14 @@ class TestRevisionLoop:
     def test_update_from_critic_approved(self):
         loop = RevisionLoop()
         result = {
-            "total_score": 85,
+            "total_score": 99,
             "decision": "APPROVED",
             "actionable_feedback": "Good work",
             "lock_analysis": {"C": {"score": 8}},
         }
         decision = loop.update_from_critic(result)
         assert decision == RevisionDecision.APPROVED
-        assert loop.state.current_score == 85
+        assert loop.state.current_score == 99
         assert loop.state.revision_count == 1
 
     def test_update_from_critic_approved_low_score(self):
@@ -189,6 +207,26 @@ class TestRevisionLoop:
         # Stagnant count >= 2 triggers HUMAN_REVIEW
         assert loop.state.decision == RevisionDecision.HUMAN_REVIEW
 
+    def test_runtime_timeout_auto_degrades_level(self):
+        loop = RevisionLoop(RevisionConfig(quality_mode="auto", quality_level="ultra"))
+
+        changed = loop.handle_runtime_event("timeout", "critic")
+
+        assert changed is True
+        assert loop.state.effective_quality_level == "high"
+        assert loop.state.degrade_reason.startswith("timeout:critic")
+        assert loop.state.degrade_steps[-1]["from_level"] == "ultra"
+        assert loop.state.degrade_steps[-1]["to_level"] == "high"
+
+    def test_runtime_error_manual_does_not_degrade(self):
+        loop = RevisionLoop(RevisionConfig(quality_mode="manual", quality_level="high"))
+
+        changed = loop.handle_runtime_event("error", "writer", detail="RuntimeError")
+
+        assert changed is False
+        assert loop.state.effective_quality_level == "high"
+        assert loop.state.degrade_steps == []
+
     def test_stagnation_reset_on_improvement(self):
         loop = RevisionLoop()
         loop.update_from_critic({"total_score": 60, "decision": "REVISE"})
@@ -221,17 +259,34 @@ class TestRevisionLoop:
         assert feedback["feedback"] == "Add more conflict"
         assert feedback["revision_count"] == 1
         assert feedback["current_score"] == 60
+        assert feedback["feedback_artifacts"][0]["severity"] == "medium"
+        assert feedback["feedback_artifacts"][0]["scope"] == "chapter"
 
     def test_get_summary(self):
         loop = RevisionLoop()
         loop.update_from_critic({"total_score": 60, "decision": "REVISE"})
-        loop.update_from_critic({"total_score": 85, "decision": "APPROVED",
+        loop.update_from_critic({"total_score": 99, "decision": "APPROVED",
                                   "lock_analysis": {"C": {"score": 8}}})
         summary = loop.get_summary()
         assert summary["total_revisions"] == 2
-        assert summary["final_score"] == 85
+        assert summary["final_score"] == 99
         assert summary["final_decision"] == "APPROVED"
-        assert summary["score_trend"] == [60, 85]
+        assert summary["score_trend"] == [60, 99]
+        assert summary["last_checkpoint_id"] == "revision-round-2"
+        assert summary["checkpoint_trace"][-1]["round_identifier"] == "round-2"
+
+    def test_checkpoint_artifact_persisted_in_store(self):
+        loop = RevisionLoop(checkpoint_store={})
+        loop.update_from_critic({
+            "total_score": 66,
+            "decision": "REVISE",
+            "actionable_feedback": "refine",
+            "session_id": "sess-1",
+        })
+
+        assert loop.state.last_checkpoint_id == "revision-round-1"
+        assert loop.state.checkpoint_trace[-1]["checkpoint_id"] == "revision-round-1"
+        assert "revision-round-1" in loop.checkpoint_store
 
     def test_reset(self):
         loop = RevisionLoop()
@@ -244,7 +299,7 @@ class TestRevisionLoop:
     def test_determine_decision_no_lock_analysis(self):
         loop = RevisionLoop()
         result = {
-            "total_score": 90,
+            "total_score": 99,
             "decision": "APPROVED",
         }
         decision = loop.update_from_critic(result)
@@ -282,7 +337,7 @@ class TestRunRevisionLoop:
     async def test_immediate_approval(self):
         async def mock_critic(draft, scene_card):
             return {
-                "total_score": 90,
+                "total_score": 99,
                 "decision": "APPROVED",
                 "actionable_feedback": "",
                 "lock_analysis": {"C": {"score": 9}},
@@ -312,7 +367,7 @@ class TestRunRevisionLoop:
             if call_count == 1:
                 return {"total_score": 60, "decision": "REVISE",
                         "actionable_feedback": "Fix it"}
-            return {"total_score": 90, "decision": "APPROVED",
+            return {"total_score": 99, "decision": "APPROVED",
                     "lock_analysis": {"C": {"score": 9}}}
 
         async def mock_writer(draft, feedback):
@@ -328,6 +383,66 @@ class TestRunRevisionLoop:
         assert result["final_decision"] == "APPROVED"
         assert result["total_revisions"] == 2
         assert result["final_draft"] == "revised draft"
+
+    @pytest.mark.asyncio
+    async def test_run_revision_loop_persists_checkpoint_files(self, tmp_path):
+        async def mock_critic(draft, scene_card):
+            return {
+                "total_score": 99,
+                "decision": "APPROVED",
+                "actionable_feedback": "",
+                "lock_analysis": {"C": {"score": 9}},
+            }
+
+        async def mock_writer(draft, feedback):
+            return draft
+
+        checkpoint_store = {}
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=mock_writer,
+            critic_fn=mock_critic,
+            verbose=False,
+            checkpoint_store=checkpoint_store,
+            checkpoint_base_path=str(tmp_path),
+            session_id="sess-loop",
+        )
+
+        checkpoint_id = result["last_checkpoint_id"]
+        checkpoint_path = tmp_path / "revision-checkpoints" / f"{checkpoint_id}.json"
+        assert checkpoint_path.exists()
+        payload = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        assert payload["round_identifier"] == "round-1"
+        assert payload["session_id"] == "sess-loop"
+
+        session_checkpoint_path = (
+            tmp_path
+            / "active"
+            / "sess-loop"
+            / ".data"
+            / "revision-checkpoints"
+            / f"{checkpoint_id}.json"
+        )
+        assert session_checkpoint_path.exists()
+        session_checkpoint_payload = json.loads(session_checkpoint_path.read_text(encoding="utf-8"))
+        assert session_checkpoint_payload["checkpoint_id"] == checkpoint_id
+
+        feedback_snapshot_path = (
+            tmp_path
+            / "active"
+            / "sess-loop"
+            / ".data"
+            / "generation-snapshots"
+            / f"{checkpoint_id}-feedback.json"
+        )
+        assert feedback_snapshot_path.exists()
+        feedback_snapshot = json.loads(feedback_snapshot_path.read_text(encoding="utf-8"))
+        assert feedback_snapshot["artifact_type"] == "quality_feedback"
+        assert feedback_snapshot["schema_version"] == "evidence.v1"
+        assert feedback_snapshot["trace"]["session_id"] == "sess-loop"
+        assert feedback_snapshot["trace"]["revision_id"] == checkpoint_id
+        assert isinstance(feedback_snapshot["output"]["feedback_artifacts"], list)
 
     @pytest.mark.asyncio
     async def test_max_revisions_reached(self):
@@ -351,7 +466,72 @@ class TestRunRevisionLoop:
         assert result["total_revisions"] <= 3
 
     @pytest.mark.asyncio
-    async def test_custom_config(self):
+    async def test_timeout_triggers_human_review_when_degrade_disabled(self):
+        async def slow_critic(draft, scene_card):
+            await asyncio.sleep(0.02)
+            return {"total_score": 80, "decision": "REVISE"}
+
+        async def mock_writer(draft, feedback):
+            return draft
+
+        cfg = RevisionConfig(
+            quality_mode="auto",
+            quality_level="high",
+            degrade_on_timeout=False,
+            quality_phase_timeout_seconds=0,
+        )
+        cfg.quality_phase_timeout_seconds = 0.001
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=mock_writer,
+            critic_fn=slow_critic,
+            config=cfg,
+            verbose=False,
+        )
+
+        assert result["final_decision"] == "HUMAN_REVIEW"
+        assert result["degrade_reason"] == "timeout:critic"
+
+    @pytest.mark.asyncio
+    async def test_timeout_auto_mode_records_degrade_step(self):
+        call_count = {"n": 0}
+
+        async def flaky_critic(draft, scene_card):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                await asyncio.sleep(0.02)
+            return {
+                "total_score": 99,
+                "decision": "APPROVED",
+                "lock_analysis": {"C": {"score": 9}},
+            }
+
+        async def mock_writer(draft, feedback):
+            return draft
+
+        cfg = RevisionConfig(
+            quality_mode="auto",
+            quality_level="ultra",
+            quality_phase_timeout_seconds=0,
+        )
+        cfg.quality_phase_timeout_seconds = 0.001
+
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=mock_writer,
+            critic_fn=flaky_critic,
+            config=cfg,
+            verbose=False,
+        )
+
+        assert result["final_decision"] == "APPROVED"
+        assert result["effective_quality_level"] == "high"
+        assert result["degrade_steps"]
+        assert result["degrade_steps"][0]["from_level"] == "ultra"
+        assert result["degrade_steps"][0]["to_level"] == "high"
+
         async def mock_critic(draft, scene_card):
             return {"total_score": 95, "decision": "APPROVED",
                     "lock_analysis": {"C": {"score": 10}}}
@@ -383,7 +563,7 @@ class TestRunRevisionLoop:
                     "actionable_feedback": "补充细节",
                 }
             return {
-                "total_score": 90,
+                "total_score": 99,
                 "decision": "APPROVED",
                 "lock_analysis": {"C": {"score": 8}},
             }

@@ -46,7 +46,7 @@ class BaseLevel(ABC):
         return self.level >= 2
     
     def get_default_config(self) -> Dict:
-        """獲取默認配置"""
+        """獲取默認配置（通用層 fallback；具體領域/層級可覆蓋）"""
         return {
             "max_revisions": 3,
             "pass_score": 80,

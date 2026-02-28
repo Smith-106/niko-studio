@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "prdId": "PRD-034",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/kpi-and-evidence-governance-baseline",
+  "description": "KPI and Evidence Governance Baseline - Operationalize continuous KPI and evidence governance so cycle-time, quality, and release-readiness artifacts remain fresh, comparable, and auditable.",
+  "changeLog": [],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Define recurring KPI/evidence governance cadence and ownership",
+      "description": "As a release owner, I want up-to-date evidence so release decisions are based on current data.",
+      "acceptanceCriteria": [
+        "Governance cadence and ownership for KPI/evidence refresh are defined",
+        "Recurring routine keeps weekly trend, quality evidence, and release-readiness artifacts synchronized",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "researchTopics": [
+        "Current ownership boundaries for KPI/evidence refresh across roadmap and release workflows",
+        "Existing scheduling/automation points for recurring governance checks"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Derived from PRD-034 goals and acceptance criteria. Depends on PRD-033 governance alignment."
+    },
+    {
+      "id": "US-002",
+      "title": "Preserve KPI comparability constraints across governance updates",
+      "description": "As a quality reviewer, I want comparable KPI snapshots across periods.",
+      "acceptanceCriteria": [
+        "KPI comparability assumptions/constraints are explicitly defined and enforced in governance routines",
+        "Artifact freshness checks cover weekly quality, release, and KPI outputs",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "researchTopics": [
+        "Comparability assumptions currently used by KPI measurement and dashboard artifacts",
+        "Failure modes that break period-to-period KPI comparability"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Depends on PRD-015 KPI/dashboard artifact semantics and PRD-029 release gate contract consistency."
+    },
+    {
+      "id": "US-003",
+      "title": "Surface stale or missing evidence with deterministic remediation guidance",
+      "description": "As an operator, I want missing/stale evidence to be detectable early.",
+      "acceptanceCriteria": [
+        "Stale or missing evidence is surfaced with explicit remediation guidance",
+        "Governance output provides deterministic GO/NO_GO decision support signals",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "researchTopics": [
+        "Best signal format for deterministic GO/NO_GO readiness decisions",
+        "How to map evidence freshness failures to actionable remediation guidance"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Aligns governance outputs with release-owner and operator decision workflows."
+    }
+  ]
+}

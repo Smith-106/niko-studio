@@ -11,6 +11,39 @@ from datetime import datetime
 from src.workflow.base_state import BaseState, BaseWorkflowConfig
 
 
+QualityMode = Literal["auto", "manual"]
+QualityLevel = Literal["ultra", "high", "medium", "fluent"]
+
+
+NOVEL_PASS_SCORE = 99
+NOVEL_MIN_C_SCORE = 7
+NOVEL_HUMAN_REVIEW_SCORE = 95
+NOVEL_SCORE_IMPROVEMENT_THRESHOLD = 5.0
+
+NOVEL_QUALITY_WEIGHTS = {
+    "repetition": 0.20,
+    "tone": 0.13,
+    "clarity": 0.17,
+    "causality": 0.20,
+    "detail": 0.20,
+    "factuality": 0.10,
+}
+
+NOVEL_QUALITY_THRESHOLDS = {
+    "pass": float(NOVEL_PASS_SCORE),
+    "block": 50.0,
+    "block_template_ratio": 0.80,
+    "repetition_issue": 0.45,
+    "repetition_issue_high": 0.70,
+    "min_conflict_points": 2,
+    "min_visual_details": 3,
+    "min_dialogue_ratio": 0.03,
+    "min_sentences_for_tone_issue": 4,
+    "low_quality": 55.0,
+    "low_clarity": 45.0,
+}
+
+
 class LOCKScores(TypedDict):
     """LOCK评分"""
     L: int  # Lead (主角)
@@ -51,6 +84,36 @@ class CritiqueResult(TypedDict, total=False):
     revision_instructions: List[Dict[str, str]]
 
 
+class CanonicalEntity(TypedDict, total=False):
+    """规范化叙事实体（PRD-008）"""
+    entity_id: str
+    entity_type: str
+    scope: Literal["character", "world", "timeline"]
+    name: str
+    attributes: Dict[str, Any]
+    source_trace: Dict[str, str]
+
+
+class CanonicalRelation(TypedDict, total=False):
+    """规范化叙事关系（PRD-008）"""
+    relation_id: str
+    source_entity_id: str
+    target_entity_id: str
+    relation_type: str
+    attributes: Dict[str, Any]
+    source_trace: Dict[str, str]
+
+
+class CanonicalConflict(TypedDict, total=False):
+    """规范化叙事冲突（PRD-009）"""
+    conflict_id: str
+    conflict_type: str
+    severity: Literal["critical", "major", "minor", "info"]
+    description: str
+    critical_condition: str
+    source_refs: Dict[str, str]
+
+
 class DistillationResult(TypedDict, total=False):
     """知识蒸馏结果"""
     entities_count: int                    # 实体数量
@@ -59,11 +122,62 @@ class DistillationResult(TypedDict, total=False):
     entities: List[Dict[str, Any]]         # 提取的实体列表
     relations: List[Dict[str, Any]]        # 提取的关系列表
     events: List[Dict[str, Any]]           # 提取的事件列表
+    canonical_entities: List[CanonicalEntity]    # 规范化叙事实体列表
+    canonical_relations: List[CanonicalRelation]  # 规范化叙事关系列表
+    canonical_conflicts: List[CanonicalConflict]  # 规范化叙事冲突列表
+    canonical_schema_version: str          # 规范化 schema 版本
+    canonical_trace: Dict[str, str]        # 规范化实体工件 trace
     template: str                          # 使用的蒸馏模板
     scene_id: str                          # 关联的场景ID
     summary: Optional[str]                 # 摘要 (如果使用 summary 模板)
     character_arcs: List[Dict[str, Any]]   # 角色弧线 (如果使用 character_arc 模板)
     plot_points: List[Dict[str, Any]]      # 情节点 (如果使用 plot_structure 模板)
+
+
+class RetrievalMetadata(TypedDict, total=False):
+    """两阶段检索观测数据"""
+    stage1_candidates: int
+    stage2_selected: int
+    cited_count: int
+    effective_hit_rate: float
+    c_effective: float
+    s_final: float
+    r_memory: float
+    retrieval_profile: str
+    budget_tokens: int
+    cache_hit: bool
+
+
+class ContextBudget(TypedDict, total=False):
+    """上下文预算观测数据"""
+    token_total: int
+    token_effective: int
+    utilization: float
+
+
+class ContextGovernance(TypedDict, total=False):
+    """上下文治理判定输入"""
+    retrieval_hit_rate: float
+    context_budget_utilization: float
+    retrieval_passed: bool
+    budget_passed: bool
+    passed: bool
+
+
+class SelfLearningState(TypedDict, total=False):
+    """自学习循环状态"""
+    reflector: Dict[str, Any]
+    curator: Dict[str, Any]
+    playbook: Dict[str, Any]
+
+
+class QualityDegradeStep(TypedDict, total=False):
+    """质量降级轨迹"""
+    from_level: str
+    to_level: str
+    reason: str
+    phase: str
+    timestamp: str
 
 
 class WritingState(BaseState, total=False):
@@ -124,18 +238,34 @@ class WritingState(BaseState, total=False):
     critique_result: CritiqueResult         # Critic评估结果
     revision_count: int                     # 修改次数 (防止死循环)
     revision_history: List[Dict[str, Any]]  # 修改历史记录
+    checkpoint_trace: List[Dict[str, Any]]  # 修订轮次检查点轨迹
+    last_checkpoint_id: str                 # 最近一次修订检查点标识
+    quality_mode: QualityMode               # 质量执行模式 (auto/manual)
+    requested_quality_level: QualityLevel   # 请求的质量等级
+    effective_quality_level: QualityLevel   # 实际生效质量等级
+    degrade_reason: str                     # 最新降级原因
+    degrade_steps: List[QualityDegradeStep] # 降级轨迹
 
     # ========================================
     # Distillation 产物 (知识蒸馏)
     # ========================================
     distillation_result: DistillationResult  # 蒸馏结果
     distillation_state: Dict[str, Any]       # 蒸馏状态详情
-    
+
+    # ========================================
+    # 检索与上下文治理观测
+    # ========================================
+    retrieval_metadata: RetrievalMetadata     # 两阶段检索观测数据
+    context_budget: ContextBudget             # 上下文预算观测数据
+    context_governance: ContextGovernance     # 上下文治理判定
+
     # ========================================
     # 反馈上下文 (Writer重写时使用)
     # ========================================
     feedback_context: str                   # Critic的可执行反馈
     revision_instructions: List[Dict[str, str]]  # 具体修改指令
+    feedback_artifacts: List[Dict[str, Any]]  # 结构化反馈工件
+    self_learning: SelfLearningState        # 自学习循环状态
     
     # ========================================
     # 最终输出
@@ -152,18 +282,39 @@ class WritingState(BaseState, total=False):
 
 class WorkflowConfig(BaseWorkflowConfig):
     """工作流配置"""
-    
+
+    # 质量控制
+    quality_mode: QualityMode               # 质量执行模式 (auto/manual)
+    quality_level: QualityLevel             # 质量等级 (ultra/high/medium/fluent)
+    degrade_on_timeout: bool                # 超时是否自动降级
+    degrade_on_error: bool                  # 错误是否自动降级
+    critical_gate_always_on: bool           # 是否总是启用 Critical 门禁
+    quality_phase_timeout_seconds: int      # 质量阶段超时阈值（秒）
+
     # 质量阈值
     # pass_score: int                         # (Base) 通过分数阈值 (默认80)
     min_c_score: int                        # C(冲突)维度最低分 (默认7)
-    
+
     # 循环控制
     # max_revisions: int                      # (Base) 最大修改次数 (默认3)
-    
+
+    # 检索策略
+    retrieval_profile: str                   # workflow 对应检索 profile
+
+    # 自学习循环
+    enable_self_learning_loop: bool         # 是否启用自学习闭环
+    self_learning_max_rules: int            # playbook 最多保留策略条数
+    self_learning_curate_every_n_revisions: int  # 每 N 次修订触发一次策展
+
+    # 上下文治理
+    enable_context_governance: bool         # 是否启用上下文治理覆盖层
+    min_retrieval_hit_rate: float           # 检索命中率最低阈值
+    min_context_budget_utilization: float   # 上下文预算利用率最低阈值
+
     # 人工介入
     # human_review_score: int                 # (Base) 触发人工审阅的分数 (默认70)
     # auto_approve_timeout: int               # (Base) 自动通过超时时间(秒)
-    
+
     # 调试
     # verbose: bool                           # (Base) 是否输出详细日志
     # save_intermediate: bool                 # (Base) 是否保存中间产物
@@ -171,11 +322,24 @@ class WorkflowConfig(BaseWorkflowConfig):
 
 # 默认配置
 DEFAULT_CONFIG: WorkflowConfig = {
-    "pass_score": 80,
-    "min_c_score": 7,
+    "quality_mode": "auto",
+    "quality_level": "high",
+    "degrade_on_timeout": True,
+    "degrade_on_error": True,
+    "critical_gate_always_on": True,
+    "quality_phase_timeout_seconds": 30,
+    "pass_score": NOVEL_PASS_SCORE,
+    "min_c_score": NOVEL_MIN_C_SCORE,
     "max_revisions": 3,
-    "human_review_score": 70,
+    "human_review_score": NOVEL_HUMAN_REVIEW_SCORE,
     "auto_approve_timeout": 300,
+    "retrieval_profile": "standard_balanced",
+    "enable_self_learning_loop": False,
+    "self_learning_max_rules": 20,
+    "self_learning_curate_every_n_revisions": 2,
+    "enable_context_governance": False,
+    "min_retrieval_hit_rate": 0.70,
+    "min_context_budget_utilization": 0.60,
     "verbose": True,
     "save_intermediate": True
 }
@@ -219,8 +383,26 @@ def create_initial_state(
         critique_result={},
         revision_count=0,
         revision_history=[],
+        checkpoint_trace=[],
+        last_checkpoint_id="",
+        quality_mode="auto",
+        requested_quality_level="high",
+        effective_quality_level="high",
+        degrade_reason="",
+        degrade_steps=[],
+        distillation_result={},
+        distillation_state={},
+        retrieval_metadata={},
+        context_budget={},
+        context_governance={},
         feedback_context="",
         revision_instructions=[],
+        feedback_artifacts=[],
+        self_learning={
+            "reflector": {},
+            "curator": {},
+            "playbook": {"rules": []},
+        },
         final_content="",
         final_score=0.0,
         errors=[],

@@ -28,6 +28,7 @@ from src.cli.commands.export import (
 )
 from src.cli.commands.init import init as init_cmd
 from src.cli.commands.run import _run_workflow, run as run_cmd
+from src.cli.commands.guided_draft import _run_guided_draft, guided_draft
 
 
 class TestExportHelpers:
@@ -626,6 +627,193 @@ class TestInitCommand:
         assert "Error:" in console.export_text()
 
     @pytest.mark.asyncio
+    async def test_run_workflow_passes_namespace_to_engine(self):
+        class FakeWorkflowEngine:
+            captured_namespace = None
+
+            def __init__(self, session_namespace=""):
+                self.__class__.captured_namespace = session_namespace
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "description": "d", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-ns",
+                    "steps": [{"id": "step-1", "name": "n", "description": "d", "status": "pending"}],
+                }
+
+            async def execute(self, plan_id):
+                return {"plan_status": "completed", "status": "completed"}
+
+            def get_plan_status(self, plan_id):
+                return {"plan_id": plan_id, "status": "completed", "progress": "1/1"}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_workflow(console, "task", "auto", None, False, namespace="novel-a")
+
+        assert FakeWorkflowEngine.captured_namespace == "novel-a"
+
+    @pytest.mark.asyncio
+    async def test_run_workflow_rejects_session_namespace_mismatch(self):
+        class FakeWorkflowEngine:
+            def __init__(self, session_namespace=""):
+                self.plan_sessions = {}
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "description": "d", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-mismatch",
+                    "steps": [{"id": "step-1", "name": "n", "description": "d", "status": "pending"}],
+                }
+
+            async def execute(self, plan_id):
+                return {"plan_status": "completed", "status": "completed"}
+
+            def get_plan_status(self, plan_id):
+                return {"plan_id": plan_id, "status": "completed", "progress": "1/1"}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_workflow(
+                console,
+                "task",
+                "auto",
+                "novel-b--workflow-existing",
+                False,
+                namespace="novel-a",
+            )
+
+        assert "session does not match namespace isolation boundary" in console.export_text()
+
+    @pytest.mark.asyncio
+    async def test_run_workflow_binds_explicit_session_to_plan(self):
+        class FakeWorkflowEngine:
+            instance = None
+
+            def __init__(self, session_namespace=""):
+                self.plan_sessions = {}
+                self.__class__.instance = self
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "description": "d", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-bind",
+                    "steps": [{"id": "step-1", "name": "n", "description": "d", "status": "pending"}],
+                }
+
+            async def execute(self, plan_id):
+                return {"plan_status": "completed", "status": "completed"}
+
+            def get_plan_status(self, plan_id):
+                return {"plan_id": plan_id, "status": "completed", "progress": "1/1"}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_workflow(
+                console,
+                "task",
+                "auto",
+                "novel-a--workflow-existing",
+                False,
+                namespace="novel-a",
+            )
+
+        assert FakeWorkflowEngine.instance.plan_sessions["p-bind"] == "novel-a--workflow-existing"
+
+    @pytest.mark.asyncio
+    async def test_run_workflow_passes_genre_recommendation(self):
+        class FakeWorkflowEngine:
+            captured_recommendations = None
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "description": "d", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                self.__class__.captured_recommendations = recommendations
+                return {
+                    "plan_id": "p-genre",
+                    "steps": [{"id": "step-1", "name": "n", "description": "d", "status": "pending"}],
+                }
+
+            async def execute(self, plan_id):
+                return {"plan_status": "completed", "status": "completed"}
+
+            def get_plan_status(self, plan_id):
+                return {"plan_id": plan_id, "status": "completed", "progress": "1/1"}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_workflow(console, "task", "auto", None, False, genre="mystery")
+
+        recommendations = FakeWorkflowEngine.captured_recommendations
+        assert isinstance(recommendations, list)
+        assert recommendations[0]["action"] == "set_quality_controls"
+        assert recommendations[1]["action"] == "set_generation_controls"
+        assert recommendations[1]["params"]["style"] == "cinematic"
+        assert recommendations[1]["params"]["length"] == "medium"
+        assert recommendations[1]["params"]["constraints"][0] == "Maintain clue consistency across all scenes"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "genre,expected_style,expected_length",
+        [
+            ("sci-fi", "neutral", "medium"),
+            ("科幻", "neutral", "medium"),
+            ("none", None, None),
+        ],
+    )
+    async def test_run_workflow_genre_alias_matrix(self, genre, expected_style, expected_length):
+        class FakeWorkflowEngine:
+            captured_recommendations = None
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "description": "d", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                self.__class__.captured_recommendations = recommendations
+                return {
+                    "plan_id": "p-genre-matrix",
+                    "steps": [{"id": "step-1", "name": "n", "description": "d", "status": "pending"}],
+                }
+
+            async def execute(self, plan_id):
+                return {"plan_status": "completed", "status": "completed"}
+
+            def get_plan_status(self, plan_id):
+                return {"plan_id": plan_id, "status": "completed", "progress": "1/1"}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_workflow(console, "task", "auto", None, False, genre=genre)
+
+        recommendations = FakeWorkflowEngine.captured_recommendations
+        assert isinstance(recommendations, list)
+        assert recommendations[0]["action"] == "set_quality_controls"
+        if expected_style is None:
+            assert len(recommendations) == 1
+        else:
+            assert recommendations[1]["action"] == "set_generation_controls"
+            assert recommendations[1]["params"]["style"] == expected_style
+            assert recommendations[1]["params"]["length"] == expected_length
+
+
+    @pytest.mark.asyncio
     async def test_run_workflow_progress_update_branch(self):
         class FakeWorkflowEngine:
             def __init__(self):
@@ -675,6 +863,403 @@ class TestInitCommand:
                 ["--task", "demo task"],
                 obj={"console": Console(record=True)},
             )
+
+        assert result.exit_code == 0
+        assert calls["count"] == 1
+
+
+class TestGuidedDraftCommand:
+    @pytest.mark.asyncio
+    async def test_guided_draft_importerror(self):
+        original_import = __import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "src.workflow.workflow_engine":
+                raise ImportError("missing")
+            return original_import(name, *args, **kwargs)
+
+        console = Console(record=True)
+        with patch("builtins.__import__", side_effect=fake_import):
+            await _run_guided_draft(console, "idea", max_steps=5, json_output=False)
+
+        assert "WorkflowEngine not available" in console.export_text()
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_prints_draft_text(self):
+        class FakeWorkflowEngine:
+            def __init__(self):
+                self.execute_calls = 0
+
+            async def route(self, task):
+                return {"level": "L2-Lite", "level_slug": "l2-lite", "reason": "r"}
+
+            async def plan(self, task, level=None):
+                return {
+                    "plan_id": "p-guided",
+                    "level": level or "L3-Standard",
+                    "steps": [
+                        {"id": "p-guided-0", "name": "analyze", "description": "d", "status": "planned"},
+                        {"id": "p-guided-1", "name": "generate_draft", "description": "d", "status": "planned"},
+                    ],
+                }
+
+            async def execute(self, plan_id):
+                self.execute_calls += 1
+                if self.execute_calls == 1:
+                    return {"status": "completed", "step_name": "analyze", "plan_status": "running", "result": {}}
+                return {
+                    "status": "completed",
+                    "step_name": "generate_draft",
+                    "plan_status": "running",
+                    "result": {"draft": "1. 开场", "section_count": 1},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {
+                    "steps": [
+                        {"name": "generate_draft", "output": {"draft": "1. 开场", "section_count": 1}},
+                    ]
+                }
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(console, "idea", max_steps=5, json_output=False)
+
+        output = console.export_text()
+        assert "Guided Session Complete" in output
+        assert "First Draft" in output
+        assert "1. 开场" in output
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_json_output(self):
+        class FakeWorkflowEngine:
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None):
+                return {
+                    "plan_id": "p-guided-json",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-json-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "generate_draft",
+                    "plan_status": "running",
+                    "result": {"draft": "1. 结构", "section_count": 1},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {"steps": []}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(console, "idea", max_steps=3, json_output=True)
+
+        output = console.export_text()
+        assert '"plan_id": "p-guided-json"' in output
+        assert '"controls": {' in output
+        assert '"style": "neutral"' in output
+        assert '"length": "medium"' in output
+        assert '"draft": "1. 结构"' in output
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_passes_namespace_to_engine(self):
+        class FakeWorkflowEngine:
+            captured_namespace = None
+
+            def __init__(self, session_namespace=""):
+                self.__class__.captured_namespace = session_namespace
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-guided-ns",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-ns-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "generate_draft",
+                    "plan_status": "running",
+                    "result": {"draft": "1. 命名空间", "section_count": 1},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {"steps": []}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(console, "idea", namespace="novel-b", max_steps=3, json_output=True)
+
+        assert FakeWorkflowEngine.captured_namespace == "novel-b"
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_rejects_session_namespace_mismatch(self):
+        class FakeWorkflowEngine:
+            def __init__(self, session_namespace=""):
+                self.plan_sessions = {}
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-guided-mismatch",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-mismatch-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "generate_draft",
+                    "plan_status": "running",
+                    "result": {"draft": "1. mismatch", "section_count": 1},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {"steps": []}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(
+                console,
+                "idea",
+                session="novel-b--workflow-existing",
+                namespace="novel-a",
+                max_steps=3,
+                json_output=True,
+            )
+
+        assert "session does not match namespace isolation boundary" in console.export_text()
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_binds_explicit_session_to_plan(self):
+        class FakeWorkflowEngine:
+            instance = None
+
+            def __init__(self, session_namespace=""):
+                self.plan_sessions = {}
+                self.__class__.instance = self
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-guided-bind",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-bind-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "generate_draft",
+                    "plan_status": "running",
+                    "result": {"draft": "1. bind", "section_count": 1},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {"steps": []}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(
+                console,
+                "idea",
+                session="novel-a--workflow-existing",
+                namespace="novel-a",
+                max_steps=3,
+                json_output=True,
+            )
+
+        assert FakeWorkflowEngine.instance.plan_sessions["p-guided-bind"] == "novel-a--workflow-existing"
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_passes_controls_to_plan_recommendations(self):
+        class FakeWorkflowEngine:
+            captured_recommendations = None
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                self.__class__.captured_recommendations = recommendations
+                return {
+                    "plan_id": "p-guided-controls",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-controls-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "generate_draft",
+                    "plan_status": "running",
+                    "result": {"draft": "1. 控制", "section_count": 1},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {"steps": []}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(
+                console,
+                "idea",
+                controls={"style": "cinematic", "length": "long", "constraints": ["avoid passive voice"]},
+                max_steps=3,
+                json_output=True,
+            )
+
+        recommendations = FakeWorkflowEngine.captured_recommendations
+        assert isinstance(recommendations, list)
+        assert recommendations[0]["action"] == "set_generation_controls"
+        assert recommendations[0]["params"]["style"] == "cinematic"
+        assert recommendations[0]["params"]["length"] == "long"
+        assert recommendations[0]["params"]["constraints"] == ["avoid passive voice"]
+
+    def test_guided_draft_genre_profile_merges_into_controls(self):
+        class FakeWorkflowEngine:
+            captured_recommendations = None
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                self.__class__.captured_recommendations = recommendations
+                return {
+                    "plan_id": "p-guided-genre",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-genre-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "generate_draft",
+                    "plan_status": "running",
+                    "result": {"draft": "1. 题材", "section_count": 1},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {"steps": []}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        runner = CliRunner()
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            result = runner.invoke(
+                guided_draft,
+                ["--idea", "demo", "--genre", "xuanhuan"],
+                obj={"console": Console(record=True)},
+            )
+
+        assert result.exit_code == 0
+        recommendations = FakeWorkflowEngine.captured_recommendations
+        assert isinstance(recommendations, list)
+        assert recommendations[0]["action"] == "set_generation_controls"
+        assert recommendations[0]["params"]["style"] == "lyrical"
+        assert recommendations[0]["params"]["length"] == "long"
+        assert "Keep realm progression and power boundaries consistent" in recommendations[0]["params"]["constraints"]
+
+    @pytest.mark.parametrize(
+        "genre,expected_style,expected_length",
+        [
+            ("xuanhuan", "lyrical", "long"),
+            ("东方玄幻", "lyrical", "long"),
+            ("悬疑", "cinematic", "medium"),
+        ],
+    )
+    def test_guided_draft_genre_alias_matrix(self, genre, expected_style, expected_length):
+        class FakeWorkflowEngine:
+            captured_recommendations = None
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                self.__class__.captured_recommendations = recommendations
+                return {
+                    "plan_id": "p-guided-genre-matrix",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-genre-matrix-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "generate_draft",
+                    "plan_status": "running",
+                    "result": {"draft": "1. matrix", "section_count": 1},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {"steps": []}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        runner = CliRunner()
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            result = runner.invoke(
+                guided_draft,
+                ["--idea", "demo", "--genre", genre],
+                obj={"console": Console(record=True)},
+            )
+
+        assert result.exit_code == 0
+        recommendations = FakeWorkflowEngine.captured_recommendations
+        assert recommendations[0]["action"] == "set_generation_controls"
+        assert recommendations[0]["params"]["style"] == expected_style
+        assert recommendations[0]["params"]["length"] == expected_length
+
+
+    def test_guided_draft_command_validates_input(self):
+        runner = CliRunner()
+        result = runner.invoke(guided_draft, ["--idea", "   "], obj={"console": Console(record=True)})
+        assert result.exit_code != 0
+        assert "cannot be empty" in result.output
+
+    def test_guided_draft_command_rejects_empty_constraint(self):
+        runner = CliRunner()
+        result = runner.invoke(
+            guided_draft,
+            ["--idea", "demo", "--constraint", "   "],
+            obj={"console": Console(record=True)},
+        )
+        assert result.exit_code != 0
+        assert "constraint cannot be empty" in result.output
+
+    def test_guided_draft_command_invokes_asyncio(self):
+        runner = CliRunner()
+        calls = {"count": 0}
+
+        def _consume(coro):
+            calls["count"] += 1
+            coro.close()
+
+        with patch("src.cli.commands.guided_draft.asyncio.run", side_effect=_consume):
+            result = runner.invoke(guided_draft, ["--idea", "demo"], obj={"console": Console(record=True)})
 
         assert result.exit_code == 0
         assert calls["count"] == 1

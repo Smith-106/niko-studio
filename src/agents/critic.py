@@ -12,6 +12,10 @@ import re
 from collections import Counter
 
 from src.narrative.evaluators.critic_engine import CriticEngine as NarrativeCriticEngine
+from src.workflow.state import (
+    NOVEL_PASS_SCORE,
+    NOVEL_HUMAN_REVIEW_SCORE,
+)
 
 
 # ============================================================
@@ -232,9 +236,9 @@ CRITIC_SYSTEM_PROMPT = """
 
 ## 决策规则
 
-- **APPROVED**: 总分 >= 85，质量优秀
-- **HUMAN_REVIEW**: 70 <= 总分 < 85，建议人工审阅
-- **REVISE**: 50 <= 总分 < 70，需要修改
+- **APPROVED**: 总分 >= 99，质量优秀
+- **HUMAN_REVIEW**: 95 <= 总分 < 99，建议人工审阅
+- **REVISE**: 50 <= 总分 < 95，需要修改
 - **REWRITE**: 总分 < 50，需要重写
 
 ## 输出要求
@@ -487,10 +491,10 @@ class CriticAgent:
             c_sufficient = True  # 无LOCK分析时跳过此检查
         
         # 决策逻辑
-        if score >= 80 and c_sufficient:
+        if score >= NOVEL_PASS_SCORE and c_sufficient:
             return "APPROVED"
-        elif score >= 70:
-            return "HUMAN_REVIEW"  # 包括: 总分>=80但C<7的情况
+        elif score >= NOVEL_HUMAN_REVIEW_SCORE:
+            return "HUMAN_REVIEW"  # 包括: 总分>=99但C<7的情况
         elif score >= 50:
             return "REVISE"
         else:

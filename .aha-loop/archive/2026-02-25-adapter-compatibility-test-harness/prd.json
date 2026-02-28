@@ -1,0 +1,76 @@
+{
+  "version": 2,
+  "prdId": "PRD-004",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/guided-idea-to-draft-cli-session",
+  "description": "Guided Idea-to-Draft CLI Session - Implement a command-first guided session that produces first-draft artifacts from idea input in one run.",
+  "changeLog": [],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Start guided idea-to-draft session from CLI",
+      "description": "As a user, I want to start a guided idea-to-draft session from CLI so that I can run a deterministic path from prompt to draft output.",
+      "acceptanceCriteria": [
+        "CLI exposes a command that starts a guided idea-to-draft session",
+        "Session flow executes deterministic stages from idea input to draft generation",
+        "Command usage and required inputs are validated within the session flow",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "researchTopics": [
+        "Existing CLI command patterns for guided workflows in this repository",
+        "Deterministic session-state transition patterns in current workflow engine"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Persist draft output and run metadata",
+      "description": "As an operator, I want draft output and execution metadata persisted for each run so that sessions are auditable and recoverable.",
+      "acceptanceCriteria": [
+        "Draft artifact is persisted to configured local-first storage for each successful session run",
+        "Execution metadata includes run identifier, start/end timestamps, and session status",
+        "Persistence format is compatible with existing project evidence/logging conventions",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "researchTopics": [
+        "Current artifact and metadata persistence conventions under .aha-loop",
+        "Local-first constraints and failure handling for write operations"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Depends on PRD-002 evidence contract expectations."
+    },
+    {
+      "id": "US-003",
+      "title": "Generate E2E evidence artifact per session run",
+      "description": "As a release and QA stakeholder, I want an E2E evidence artifact generated for each guided session run so that compliance evidence is consistent and reviewable.",
+      "acceptanceCriteria": [
+        "Each guided session run produces an E2E evidence artifact",
+        "Evidence artifact includes references to input prompt, produced draft, and run metadata",
+        "Evidence artifact follows the evidence contract defined for session records",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "researchTopics": [
+        "PRD-002 evidence contract schema and required fields for E2E session records",
+        "Existing tooling path for generating and validating release/quality evidence artifacts"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Depends on PRD-002 evidence contract for e2e session records."
+    }
+  ]
+}

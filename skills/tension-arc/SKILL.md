@@ -1,9 +1,30 @@
 ---
 name: tension-arc
 description: 全书张力架构 - 规划整部作品的张力节奏蓝图，确定主要高潮点的位置和强度
+version: "1.0"
+author: niko-studio
+tags: [writing, tension, arc, structure, planning]
+triggers:
+  - 新书开始前规划整体节奏
+  - 大纲完成后验证张力分布
+  - 作品后半段乏力
+requires:
+  - outline_or_summary: 全书大纲或长摘要
+  - genre: 题材类型
+  - target_length: 目标篇幅/章节数
+outputs:
+  - 全书张力架构图
+  - 关键节点定位与偏差诊断
+  - 结构级调整建议
 ---
 
 # 全书张力架构 (Tension Arc)
+
+## 适用边界
+
+- 适用：全书级张力蓝图与关键节点（激励事件/中点/高潮）规划。
+- 不适用：单章节场景排序与章内起伏（应转 `tension-chapter`）。
+- 不适用：单场景文本张力重写（应转 `tension-scene`）。
 
 ## 概述
 

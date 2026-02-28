@@ -1,0 +1,1440 @@
+# Aha Loop Progress Log
+Started: 2026年02月25日  2:43:50
+---
+
+## Codebase Patterns
+- Revision Round Checkpoint Persistence: Persist per-round revision checkpoints by reusing workflow state snapshot structure (`state.json` + `snapshot-index.json`) and include deterministic round identifiers plus trace fields for audit/recovery.
+- CLI Validation Boundary Pattern: Validate generation/user controls at Click command boundary (`Choice` + `BadParameter` guards), then pass normalized values to workflow/adapters; keep runtime dependency failures on explicit abort/exception channels.
+
+## 2026-02-26 04:30 - PRD-016 / US-003 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-016-US-003-research.md` trace-envelope and stable-path persistence contract.
+- Key findings: release-readiness output can be persisted additively as canonical evidence artifact with deterministic trace fields and no existing contract break.
+- Report: `.aha-loop/research/PRD-016-US-003-research.md`
+
+### Plan Changes (if any)
+- Marked `US-003.passes=true` in `.aha-loop/prd.json`.
+- Added PRD-016 US-003 implementation progress entry in `.aha-loop/project.roadmap.json`.
+- Updated `.aha-loop/tasks/prd-016-release-readiness-automation.md` acceptance checklist to completed.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/tasks/prd-016-release-readiness-automation.md`, `.aha-loop/progress.txt`.
+- Approach: added deterministic release-readiness artifact builder/writer, persisted artifact under `.workflow/evidence/release/release-readiness-artifact.json`, and linked canonical trace metadata (`trace_id`, `session_id`, `run_id`, path references).
+- Validation: `python -m pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `69 passed`.
+
+### Learnings for Future Iterations
+- Keep trace path serialization robust for both repo-relative and temporary test paths.
+- Reuse canonical evidence schema/version and additive persistence to keep downstream tooling compatibility stable.
+
+---
+
+## 2026-02-26 04:05 - PRD-016 / US-002 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-016-US-002-research.md` deterministic blocker composition policy.
+- Key findings: additive P0 blocker composition preserves canonical gate-scoring semantics while enabling authoritative publish no-go signaling.
+- Report: `.aha-loop/research/PRD-016-US-002-research.md`
+
+### Plan Changes (if any)
+- Marked `US-002.passes=true` in `.aha-loop/prd.json`.
+- Added PRD-016 US-002 implementation progress entry in `.aha-loop/project.roadmap.json`.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: added deterministic `gate_score_or_critical_blocker_signal` as blocking P0 check and wired it as canonical release publish gate blocker for gate-score/critical-issue failures.
+- Validation: `python -m pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `67 passed`.
+
+### Learnings for Future Iterations
+- Compose new blockers from canonical decision sources instead of creating parallel policy branches.
+- Keep blocker detail fields deterministic and machine-readable to maintain release decision auditability.
+
+---
+
+## 2026-02-26 04:15 - PRD-016 / US-003 - Research
+
+### Research
+- Topics investigated: existing evidence artifact trace envelope conventions; release summary output persistence patterns and path stability.
+- Key findings: release-readiness output persistence should remain additive and use canonical trace envelope fields on stable artifact paths for audit replay compatibility.
+- Report: `.aha-loop/research/PRD-016-US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-003` learnings and implementation notes for deterministic trace metadata persistence.
+
+### Implementation
+- Files changed: `.aha-loop/research/PRD-016-US-003-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate and fixed traceability requirements for additive release-readiness artifact persistence.
+
+### Learnings for Future Iterations
+- Preserve stable artifact naming/path anchors to keep evidence discovery tooling contract-safe.
+- Reuse existing evidence envelope fields (`trace_id`/session/run linkage) rather than introducing alternate metadata dialects.
+
+---
+
+### Research
+- Topics investigated: existing checkpoint/state snapshot patterns in workflow + revision loop modules; artifact naming/storage conventions for evidence/logs.
+- Key findings: workflow engine already provides deterministic checkpoint + state persistence + recovery envelope patterns; revision loop currently tracks in-memory history only; evidence contracts require deterministic traceable identifiers.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- No PRD structure changes required.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-001-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: complete research-first phase and mark `US-001.researchCompleted=true` to unlock next phase.
+
+### Learnings for Future Iterations
+- Reuse `WorkflowEngine` checkpoint/state primitives before adding new revision-specific persistence logic.
+- Keep artifact naming deterministic with round identifiers to satisfy reproducibility assertions.
+- Align checkpoint trace fields with `.workflow/evidence/README.md` contract (`trace` and stable metadata envelope).
+
+---
+
+## 2026-02-25 03:34 - US-001 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-001-research.md`.
+- Key findings: no exploration branch required; existing workflow snapshot/index primitives are sufficient for checkpoint artifact implementation.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Added implementation guidance to `US-001.implementationNotes` in `.aha-loop/prd.json` to lock deterministic round artifact naming (`round-<n>`) and trace linkage fields.
+- No story reorder/split needed.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: complete Plan Review gate and prepare US-001 for implementation phase with explicit persistence contract.
+
+### Learnings for Future Iterations
+- Encode plan-review decisions in `implementationNotes` so implementation iteration remains deterministic.
+- Keep checkpoint schema aligned with existing evidence consumer fields to avoid follow-up migration work.
+
+---
+
+## 2026-02-25 04:18 - US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-001-research.md` findings for deterministic checkpoint persistence.
+- Key findings: SessionManager snapshot index append and workflow state trace envelope were sufficient for per-round revision checkpoint artifacts.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- No additional plan changes during implementation.
+
+### Implementation
+- Files changed: `src/workflow/revision_loop.py`, `src/workflow/session/session_manager.py`, `src/workflow/adapters/novel_adapter.py`, `src/workflow/state.py`, `tests/unit/workflow/test_revision_loop.py`, `tests/unit/workflow/test_session_manager.py`, `tests/unit/workflow/test_novel_adapter.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: added deterministic `round-<n>` checkpoint artifacts per revision round, persisted revision checkpoint files via local-first SessionManager path routing, and propagated checkpoint trace fields through revision summary and adapter outputs.
+
+### Learnings for Future Iterations
+- Deterministic checkpoint IDs (`revision-round-<n>`) are enough to assert reproducibility when revision inputs are stable.
+- Extending SessionManager `ContentType` keeps artifact persistence aligned with existing snapshot-index infrastructure.
+- Keep revision loop summary fields (`last_checkpoint_id`, `checkpoint_trace`) in sync with adapter state updates to reduce resume/evidence drift.
+
+---
+
+## 2026-02-25 03:58 - US-001 - Research
+
+### Research
+- Topics investigated: CLI command parameter declaration patterns for workflow/generation commands; validation boundary conventions across CLI and workflow adapters.
+- Key findings: Click-based CLI already standardizes boundary validation via `click.Choice` and `click.BadParameter`; runtime failures are surfaced separately via abort/exception channels; adapters primarily consume normalized values and apply execution-quality decisions.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- No PRD structure changes required.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-001-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed US-001 research for PRD-006 scope, documented CLI validation + parameter exposure conventions, and marked `US-001.researchCompleted=true`.
+
+### Learnings for Future Iterations
+- Keep generation-control validation at CLI boundary first (option constraints + explicit guard errors).
+- Preserve split between input validation errors (BadParameter) and runtime dependency errors (Abort/ClickException/RuntimeError).
+- Reuse `CliRunner` + patched dependency tests to lock invalid-value rejection behavior.
+
+---
+
+## 2026-02-25 04:02 - US-001 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-001-research.md`.
+- Key findings: Click boundary validation pattern is sufficient; no exploration branch needed; controls should flow as normalized values into workflow/adapters.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Added `US-001.implementationNotes` in `.aha-loop/prd.json` with concrete validation/propagation/testing guidance.
+- Added plan-review entry to `.aha-loop/prd.json` `changeLog`.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and prepared US-001 for implementation with explicit CLI validation boundary and test expectations.
+
+### Learnings for Future Iterations
+- Keep control schema normalization single-path before adapter consumption.
+- Preserve deterministic validation behavior through explicit rejection-path tests.
+
+---
+
+## 2026-02-25 04:19 - US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-001-research.md` findings for CLI-boundary control validation and normalized propagation.
+- Key findings: Click option constraints + explicit BadParameter guards are sufficient; workflow plan recommendations are a compatible channel for passing normalized generation controls.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- No additional plan changes during implementation.
+
+### Implementation
+- Files changed: `src/cli/commands/guided_draft.py`, `tests/unit/test_cli_commands.py`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: added guided-draft controls (`--style`, `--length`, repeatable `--constraint`) with boundary validation, normalized controls into deterministic recommendation payload (`set_generation_controls`), and added CliRunner/unit coverage for acceptance and rejection paths.
+
+### Learnings for Future Iterations
+- Recommendation payloads are a low-friction path to propagate new CLI control surfaces into workflow execution without widening adapter signatures.
+- Keep semantic validation for repeatable list options explicit (`strip` + BadParameter) to avoid silent malformed constraints.
+- Backward compatibility for evolving engine signatures can be preserved with narrow TypeError fallback around `plan(...)` optional arguments.
+
+---
+
+## 2026-02-25 04:46 - US-002 - Research
+
+### Research
+- Topics investigated: evidence artifact contract + file layout under `.workflow/evidence`; existing artifact persistence points in workflow engine and adapters.
+- Key findings: evidence artifacts require canonical envelope fields and artifact-specific trace IDs; session-scoped `SessionManager` routing already provides adjacent deterministic artifact persistence paths (`state`, `handoff`, `revision_checkpoint`) that can host generation-parameter snapshots without new storage model.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- No PRD structure changes required.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed US-002 research phase, documented contract/persistence anchors, marked `US-002.researchCompleted=true`, and captured reusable artifact-adjacency pattern.
+
+### Learnings for Future Iterations
+- Treat parameter snapshots as session-scoped artifacts first, then link them into quality evidence via canonical envelope metadata.
+- Reusing `SessionManager` content routing avoids ad-hoc paths and keeps traceability aligned with existing snapshot-index behavior.
+- Keep snapshot trace IDs deterministic and artifact-type compatible to preserve release/quality audit consumption.
+
+---
+
+## 2026-02-25 04:55 - US-002 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-002-research.md`.
+- Key findings: existing `SessionManager` content routing and evidence envelope contract are sufficient for direct implementation; no exploration branch required.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Added `US-002.implementationNotes` in `.aha-loop/prd.json` with concrete guidance for session-scoped snapshot persistence, deterministic payload/trace linkage, and coverage expectations.
+- Added plan-review entry to `.aha-loop/prd.json` `changeLog`.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and prepared US-002 for implementation with explicit artifact routing and evidence-linkage constraints.
+
+### Learnings for Future Iterations
+- Reusing `SessionManager` content routes is the safest path to keep snapshot artifacts adjacent, deterministic, and consistent with existing state/checkpoint persistence.
+- Keep snapshot schema/evidence linkage additive and trace-first (`session_id` + run/revision correlation id) to avoid downstream audit/report contract drift.
+
+---
+
+## 2026-02-25 05:34 - US-003 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-003-research.md`.
+- Key findings: existing canonical recommendation normalization + `plan_hash` replay guard + session `generation_snapshot` artifacts provide a sufficient deterministic reproduction path; no exploration branch required.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Added `US-003.implementationNotes` in `.aha-loop/prd.json` with deterministic read/verify guidance for snapshot + replay payload reconstruction and hash-mismatch rejection expectations.
+- Added plan-review entry to `.aha-loop/prd.json` `changeLog`.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and prepared US-003 for implementation with explicit reproducibility verification constraints.
+
+### Learnings for Future Iterations
+- Keep reproducibility anchored to existing canonical artifacts (`generation_snapshot`, normalized recommendations, `plan_hash`) instead of introducing alternate replay channels.
+- Preserve strict hash-verification rejection behavior to prevent non-deterministic replay drift.
+
+---
+
+## 2026-02-25 13:40 - US-001 - Research
+
+### Research
+- Topics investigated: critic/revision feedback field availability; deterministic evidence contract and release detail formatting patterns.
+- Key findings: existing critic + revision models already provide issue/suggestion/action primitives; additive schema layer is sufficient. Deterministic envelope + stable detail formatting patterns already exist and should be reused.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- Activated PRD-007 and initialized user stories/research topics in `.aha-loop/prd.json`.
+- Marked `US-001.researchCompleted=true` and added implementation notes/learnings for additive feedback schema design.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/research/US-001-research.md`, `.aha-loop/progress.txt`.
+- Approach: completed research phase first for PRD-007 US-001, grounded schema design on existing critic/revision/evidence contracts.
+
+### Learnings for Future Iterations
+- Prefer additive feedback artifact mapping over changing critic core output model.
+- Reusing deterministic evidence envelope + stable `key=value` detail formatting avoids downstream release/report drift.
+
+---
+
+## 2026-02-25 13:52 - US-001 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-001-research.md` for PRD-007 schema direction.
+- Key findings: no exploration branch required; existing critic/revision outputs and evidence contracts are sufficient for direct additive implementation.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Added PRD-level changelog entry in `.aha-loop/prd.json` to record US-001 plan-review completion and chosen additive path.
+- Locked implementation direction on deterministic feedback artifact fields and envelope/detail formatting reuse.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate for PRD-007 US-001 and confirmed direct implementation path without exploration.
+
+### Learnings for Future Iterations
+- For feedback pipelines, prefer mapping layers over rewiring critic core outputs.
+- Keep release evidence compatibility by reusing existing envelope and ordered detail-string conventions.
+
+---
+
+## 2026-02-25 14:40 - US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-001-research.md` findings for additive feedback schema mapping and deterministic artifact conventions.
+- Key findings: revision loop already has deterministic round/checkpoint context, so structured feedback artifacts can be added as an additive mapping layer without altering critic output contracts.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry in `.aha-loop/prd.json` to record US-001 implementation completion.
+- Updated `US-001` status in `.aha-loop/prd.json` (`passes=true`) and captured implementation learnings.
+
+### Implementation
+- Files changed: `src/workflow/revision_loop.py`, `tests/unit/workflow/test_revision_loop.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: generated deterministic `feedback_artifacts` per revision round from critic instructions/actionable feedback, propagated artifacts through writer feedback and revision summary payloads, and validated via targeted revision-loop unit tests.
+
+### Learnings for Future Iterations
+- Keep feedback schema additive in revision loop state/output to preserve backward compatibility for critic consumers.
+- Reuse existing round identifier (`round-<n>`) as stable linkage for per-round feedback artifacts.
+- Prefer default fallback artifact generation when structured instructions are absent to keep downstream writer contract deterministic.
+
+---
+
+## 2026-02-25 14:49 - US-002 - Research
+
+### Research
+- Topics investigated: revision-loop critic→writer integration boundaries for structured feedback propagation; quality-stage metadata surfaces for additive extension.
+- Key findings: deterministic integration points already exist in `RevisionLoop.update_from_critic/get_feedback_for_writer` and adapter `critic_node`; quality evaluator already emits additive level/mode/critical/degrade metadata without changing go/no-go contracts.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` and captured learnings/implementation notes in `.aha-loop/prd.json`.
+- Added PRD changelog entry documenting US-002 research completion.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed research phase first, mapped exact code-level integration boundaries, and recorded reusable additive integration patterns.
+
+### Learnings for Future Iterations
+- Centralize feedback artifact generation at one critic→revision boundary to avoid schema drift.
+- Preserve legacy critic payload keys and extend with additive metadata only.
+- Keep quality-gate semantics and feedback artifact mapping decoupled for maintainability.
+
+---
+
+## 2026-02-25 15:34 - US-002 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-002-research.md`.
+- Key findings: existing revision-loop + adapter critic boundaries are sufficient for deterministic additive integration; no exploration split is required.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry in `.aha-loop/prd.json` to mark US-002 plan-review completion.
+- Refined `US-002.implementationNotes` with deterministic boundary-first implementation order and explicit compatibility test scope.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate for US-002 and locked additive, non-breaking implementation strategy before coding.
+
+### Learnings for Future Iterations
+- Keep plan-review outputs concrete by naming exact propagation boundaries and compatibility tests.
+- Treat adapter-level parity as targeted extension, not a broad refactor.
+- Preserve deterministic identifiers (`round-<n>`) as the canonical linkage primitive across phases.
+
+---
+
+## 2026-02-25 16:06 - US-003 - Research
+
+### Research
+- Topics investigated: SessionManager content routing and deterministic artifact path conventions for feedback persistence; release evidence contract and release-check signal/detail formatting conventions.
+- Key findings: existing `SessionManager` routes already support deterministic session-scoped artifact persistence (`generation_snapshot` + sibling content types) without new storage primitives; release evidence checks already enforce deterministic machine-friendly detail formatting (`key=value` ordered pairs) and include check-detail summary assembly from machine payload.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-003` implementation guidance on deterministic persistence/linkage and release signal compatibility.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-007 US-003 by validating persistence and release evidence contracts against current code paths and locking additive implementation notes.
+
+### Learnings for Future Iterations
+- Reuse `SessionManager` content routing before introducing new artifact persistence paths.
+- Keep release evidence outputs deterministic via `_format_detail_pairs` and machine-payload-derived summary sections to avoid regression drift.
+- Preserve existing release check contract keys and extend additively only.
+
+---
+
+## 2026-02-25 16:07 - US-003 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-003-research.md`.
+- Key findings: existing deterministic snapshot routing and release-check detail/signal contracts are sufficient for direct implementation; no exploration branch required.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry in `.aha-loop/prd.json` to mark US-003 plan-review completion.
+- Refined `US-003.implementationNotes` with explicit plan-review decision: additive-only implementation preserving release machine payload contract keys and deterministic detail ordering.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate for US-003 and locked direct additive implementation path for feedback persistence and release evidence linkage.
+
+### Learnings for Future Iterations
+- Keep plan-review decisions explicit in story implementation notes to reduce implementation drift.
+- Anchor evidence linkage work to existing machine payload contracts before adding new fields.
+- Prefer deterministic additive extensions over path/schema forks.
+
+---
+
+## 2026-02-25 16:45 - US-001 - Research
+
+### Research
+- Topics investigated: existing entity extraction/state payload structures in workflow state + distillation graph; entity/relation persistence and session artifact routing contracts.
+- Key findings: canonical `entities`/`relations`/`events` extraction payloads and count fields already exist in workflow state/graph; knowledge layer already provides deterministic entity/relation persistence contracts; canonical PRD-008 schema can be introduced additively with explicit versioning and deterministic IDs/scopes.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- Activated PRD-008 and initialized user stories/research topics in `.aha-loop/prd.json`.
+- Marked `US-001.researchCompleted=true` and recorded schema-direction learnings for additive compatibility.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/research/US-001-research.md`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-008 US-001 by mapping existing schema/persistence contracts and locking additive canonical schema direction.
+
+### Learnings for Future Iterations
+- Build canonical entity schema as additive normalization over existing distillation payload roots (`entities`, `relations`, `events`) instead of replacing them.
+- Keep deterministic scope/id semantics (`character|world|timeline` + stable `entity_id`) explicit at schema boundary.
+- Reuse session/evidence trace lineage conventions to keep downstream consistency/release checks auditable.
+
+---
+
+## 2026-02-25 17:28 - US-002 - Research
+
+### Research
+- Topics investigated: relation extraction payload shape and graph relation persistence constraints; deterministic detail-format conventions used by release evidence checks.
+- Key findings: relation primitives already expose explicit `source/target/type` semantics across distillation and knowledge persistence layers; canonical relation schema can be added additively with deterministic `relation_id` fallback while preserving legacy `relations` payload compatibility.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` and captured relation-schema implementation direction in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-008 US-002 by mapping relation contracts and deterministic schema boundary constraints.
+
+### Learnings for Future Iterations
+- Reuse existing `source/target/type` relation semantics from distillation and graph persistence as canonical relation contract anchors.
+- Keep machine-checkable relation schemas additive and deterministic to avoid downstream compatibility regressions.
+
+---
+
+## 2026-02-25 17:36 - US-002 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-002-research.md` for relation-schema implementation boundary.
+- Key findings: current relation extraction and persistence contracts support direct additive canonical relation mapping without exploration branch.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry in `.aha-loop/prd.json` for US-002 plan-review completion.
+- Filled `US-002.implementationNotes` with deterministic canonical relation mapping plan and compatibility constraints.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate for PRD-008 US-002 with additive deterministic relation schema path.
+
+### Learnings for Future Iterations
+- Lock explicit relation identity/source-target semantics during plan review to reduce implementation drift.
+- Keep deterministic id fallback policy aligned with existing persistence conventions.
+
+---
+
+## 2026-02-25 17:44 - US-002 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-002-research.md` findings on relation mapping constraints and deterministic identity conventions.
+- Key findings: additive canonical relation mapping can be implemented directly inside distillation output assembly and covered by existing graph/state unit tests.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry in `.aha-loop/prd.json` for US-002 implementation completion.
+- Marked `US-002.passes=true` and updated implementation learnings in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `src/workflow/state.py`, `src/workflow/graph.py`, `tests/unit/workflow/test_state.py`, `tests/unit/workflow/test_graph.py`, `tests/unit/workflow/test_graph_distillation.py`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: added additive canonical relation schema fields (`canonical_relations`) in distillation contract, implemented deterministic relation normalization with explicit source/target/type semantics and stable fallback relation ids, and extended targeted graph/state tests to validate compatibility and deterministic output.
+
+### Learnings for Future Iterations
+- Keep canonical relation output deterministic by reusing persistence-layer id convention (`source-type-target`) for fallback generation.
+- Preserve legacy `relations` payload unchanged while adding canonical relation views for new consistency consumers.
+
+---
+
+## 2026-02-25 18:05 - US-003 - Research
+
+### Research
+- Topics investigated: workflow/evidence trace envelope requirements; adapter/workflow boundaries for consistency-consumer ingest paths.
+- Key findings: canonical distillation artifacts already expose additive deterministic trace tuple (`session_id`, `run_id`, `revision_id`); current `SceneCoherenceDetector` consumes scene/state objects and is not directly coupled to workflow distillation state, so compatibility should be enforced via canonical artifact contract hardening.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` and updated learnings/implementation notes in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-003-research.md`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-008 US-003 by mapping consumer boundaries and deterministic trace contracts.
+
+### Learnings for Future Iterations
+- Keep consistency-consumer compatibility contract additive at workflow state/graph boundary before any detector runtime integration.
+- Preserve deterministic trace tuple in canonical artifacts as the audit/replay anchor.
+
+---
+
+## 2026-02-25 18:18 - US-003 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-003-research.md`.
+- Key findings: no exploration split needed; additive compatibility hardening and deterministic trace assertions are sufficient for this story.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entries for US-003 plan review and implementation completion path.
+- Refined `US-003.implementationNotes` to lock deterministic trace tuple and no direct `scene_coherence` coupling changes.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and fixed direct implementation path.
+
+### Learnings for Future Iterations
+- Keep plan-review decisions explicit when preserving additive compatibility contracts.
+
+---
+
+## 2026-02-25 18:29 - US-003 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-003-research.md` findings for deterministic canonical trace coverage.
+- Key findings: strengthening regression assertions on `canonical_trace.session_id` hardens consumability guarantees without changing runtime detector coupling.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Marked `US-003.passes=true` and updated `US-003.learnings` in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `tests/unit/workflow/test_state.py`, `tests/unit/workflow/test_graph.py`, `tests/unit/workflow/test_graph_distillation.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: added deterministic `canonical_trace.session_id` assertions across state/graph distillation tests and validated targeted workflow regression suite.
+
+### Learnings for Future Iterations
+- Treat trace-linkage assertions as first-class regression guards for downstream consistency/evidence consumers.
+- Prefer additive contract hardening over cross-module coupling refactors.
+
+---
+
+## 2026-02-25 19:05 - US-001 - Research
+
+### Research
+- Topics investigated: canonical distillation artifact fields available for contradiction detection; existing contradiction/severity primitives and deterministic ID generation in scene coherence detector.
+- Key findings: `canonical_entities`/`canonical_relations`/`canonical_trace` already provide stable machine-readable conflict inputs; `SceneCoherenceDetector` already exposes reusable contradiction model (`ContradictionType`, `Severity`, deterministic `CTD-*` ids) suitable for additive PRD-009 conflict outputs.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- Activated PRD-009 and initialized US-001/US-002/US-003 stories in `.aha-loop/prd.json`.
+- Marked `US-001.researchCompleted=true` and recorded implementation guidance/learnings in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/research/US-001-research.md`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-009 US-001 by mapping canonical artifact contract and contradiction detector reuse path, with additive compatibility constraints for downstream release evidence integration.
+
+### Learnings for Future Iterations
+- Reuse existing contradiction primitives before introducing new detector schemas to keep severity semantics and IDs deterministic.
+- Build conflict outputs additively on canonical artifact views and preserve legacy distillation roots for compatibility.
+
+---
+
+## 2026-02-25 19:18 - US-001 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-001-research.md`.
+- Key findings: no exploration split required; existing canonical distillation artifacts plus `SceneCoherenceDetector` contradiction primitives are sufficient for direct additive implementation.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry in `.aha-loop/prd.json` for PRD-009 US-001 plan-review completion.
+- Locked implementation direction in `US-001.implementationNotes`: additive conflict mapping over canonical artifacts, deterministic conflict identity fields, no replacement of legacy distillation roots.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and confirmed direct implementation path for PRD-009 US-001.
+
+### Learnings for Future Iterations
+- Keep plan-review decisions explicit in `implementationNotes` to avoid drift during implementation.
+- Prioritize deterministic conflict IDs and source references as first-class contract fields for downstream evidence checks.
+
+---
+
+## 2026-02-25 20:02 - US-002 - Implement
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-002-research.md`.
+- Key findings: deterministic severity model should be rule-based on structured contradiction attributes; critical conditions must be machine-checkable and additive.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Marked `US-002.passes=true` and updated `US-002.learnings` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-009 US-002 implementation completion.
+
+### Implementation
+- Files changed: `src/workflow/graph.py`, `src/workflow/state.py`, `tests/unit/workflow/test_graph.py`, `tests/unit/workflow/test_graph_distillation.py`, `tests/unit/workflow/test_state.py`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: added deterministic contradiction-type severity rule mapping and additive `critical_condition` contract field in canonical conflict artifacts while preserving legacy distillation compatibility and canonical trace linkage.
+- Validation: `pytest tests/unit/workflow/test_state.py tests/unit/workflow/test_graph.py tests/unit/workflow/test_graph_distillation.py --no-cov -q` → `91 passed`.
+
+### Learnings for Future Iterations
+- Keep severity rule tables local and explicit to avoid implicit enum fallback behavior.
+- Add machine-checkable `critical_condition` markers for critical conflicts to support downstream release gate predicates.
+- Preserve additive schema evolution when extending canonical conflict contracts.
+
+---
+
+## 2026-02-25 19:31 - US-002 - Research
+
+### Research
+- Topics investigated: deterministic severity model input boundaries and reusable release signal/detail conventions.
+- Key findings: contradiction/severity primitives already provide stable structured inputs for rule-based mapping; release summary uses deterministic `key=value` detail formatting and additive check helpers suitable for conflict severity evidence without schema churn.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added PRD changelog entry documenting US-002 research completion.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-009 US-002 and locked deterministic rule-based severity direction with additive release-check compatibility constraints.
+
+### Learnings for Future Iterations
+- Base severity decisions on structured contradiction attributes rather than model-generated text.
+- Reuse existing deterministic detail-format helpers to keep release evidence diff-friendly and machine-parseable.
+
+---
+
+## 2026-02-25 19:45 - US-002 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-002-research.md`.
+- Key findings: deterministic rule-table severity mapping and additive release-signal integration can proceed directly; no exploration split required.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry for PRD-009 US-002 plan-review completion.
+- Updated `US-002.implementationNotes` in `.aha-loop/prd.json` with explicit deterministic severity mapping constraints and targeted regression scope.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and fixed direct implementation path for deterministic severity + critical-condition contract extension.
+
+### Learnings for Future Iterations
+- Keep plan-review outputs explicit about rule precedence and additive schema boundaries.
+- Preserve release payload compatibility by extending checks additively only.
+
+---
+
+## 2026-02-25 20:20 - US-003 - Research
+
+### Research
+- Topics investigated: release evidence envelope requirements and session snapshot linkage boundaries for canonical conflict artifacts.
+- Key findings: generation snapshot artifacts already expose required trace/evidence fields; additive release signal can validate linked conflict artifacts and critical linkage coverage using stable ordered detail keys.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added PRD changelog entry documenting US-003 research completion.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-003-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-009 US-003 by anchoring release integration to existing evidence envelope and snapshot trace conventions.
+
+### Learnings for Future Iterations
+- Treat trace tuple and evidence links as required linkage primitives for release-gate artifact checks.
+- Keep release-check extensions additive and deterministic from day one.
+
+---
+
+## 2026-02-25 20:26 - US-003 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-003-research.md`.
+- Key findings: existing release check helper patterns and snapshot persistence layout are sufficient for direct additive signal implementation; no exploration branch required.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry for PRD-009 US-003 plan-review completion.
+- Updated `US-003.implementationNotes` in `.aha-loop/prd.json` with deterministic linkage validation and detail-format ordering requirements.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and locked additive `conflict_artifact_linkage_signal` implementation plan.
+
+### Learnings for Future Iterations
+- Explicitly list deterministic detail keys during plan review to prevent reporting drift.
+- Validate release-linkage checks on persisted snapshot artifacts, not transient runtime state.
+
+---
+
+## 2026-02-25 20:34 - US-003 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-003-research.md` findings on release evidence contract and session snapshot linkage.
+- Key findings: additive release signal over generation snapshots can validate canonical conflict trace/evidence linkage and critical coverage while preserving existing machine payload contract.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Marked `US-003.passes=true` and updated `US-003.learnings` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-009 US-003 implementation completion.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: added additive `conflict_artifact_linkage_signal` release check, validated trace/evidence linkage for persisted `canonical_conflicts`, and registered deterministic detail keys for pass/warn outcomes.
+- Validation: `pytest tests/unit/workflow/test_state.py tests/unit/workflow/test_graph.py tests/unit/workflow/test_graph_distillation.py tests/unit/scripts/test_release_check_summary.py --no-cov -q` -> `133 passed`.
+
+### Learnings for Future Iterations
+- Keep release checks deterministic by emitting stable ordered detail keys and additive `checks[]` entries only.
+- Verify critical conflict linkage separately from overall artifact linkage to keep gate predicates explicit.
+
+---
+
+## 2026-02-25 20:44 - US-001 - Research
+
+### Research
+- Topics investigated: deterministic quality score/recommendation outputs used for chapter gate scoring; release summary check/detail contract for additive signal integration.
+- Key findings: chapter quality evaluator already exposes deterministic gate-ready inputs (`quality_score`, `critical_issue_count`, `publish_recommendation`) and release summary already supports additive machine-checkable checks with ordered `key=value` detail strings.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- Activated PRD-010 in `.aha-loop/prd.json` after PRD-009 completion.
+- Initialized PRD-010 US-001/US-002/US-003 story set and marked `US-001.researchCompleted=true` with implementation notes.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/tasks/prd-009-consistency-conflict-detector.md`, `.aha-loop/tasks/prd-010-chapter-release-gate-scoring.md`, `.aha-loop/research/US-001-research.md`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: closed PRD-009 bookkeeping, advanced roadmap current PRD to PRD-010, then completed PRD-010 US-001 research-first gate with deterministic scoring/evidence integration direction.
+
+### Learnings for Future Iterations
+- Reuse existing evaluator outputs as gate inputs to prevent dual-scoring drift.
+- Extend release checks additively with stable detail formatting to preserve machine contract compatibility.
+
+---
+
+## 2026-02-25 20:50 - US-001 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-001-research.md`.
+- Key findings: existing quality evaluator outputs and release check helper patterns are sufficient for direct additive implementation; no exploration split required.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry for PRD-010 US-001 plan-review completion.
+- Refined `US-001.implementationNotes` in `.aha-loop/prd.json` with explicit scoring input fields, threshold (`99.0`), and deterministic detail formatting constraints.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and locked additive release-signal implementation path for deterministic chapter gate scoring.
+
+### Learnings for Future Iterations
+- Keep plan-review outputs explicit on threshold constants and decision fields to avoid gate drift.
+- Preserve machine payload compatibility by adding checks, never mutating existing check schema.
+
+---
+
+## 2026-02-25 20:58 - US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-001-research.md` findings for deterministic chapter scoring signal integration.
+- Key findings: release summary can derive deterministic chapter gate decision from existing quality evidence keys (`quality_score`, `publish_recommendation`, `critical_issue_count`) with additive check registration.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Marked `US-001.passes=true` and updated `US-001.learnings` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-010 US-001 implementation completion.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: added additive `chapter_gate_scoring_signal` with fixed threshold and deterministic go/no-go output, registered the check in release summary `checks[]`, and added regression coverage for pass/warn/missing-field scenarios.
+- Validation: `pytest tests/unit/scripts/test_release_check_summary.py --no-cov -q` -> `45 passed`.
+
+### Learnings for Future Iterations
+- Encode gate decision as explicit deterministic fields (`quality_score`, threshold, recommendation, critical count, decision) to keep release reasoning machine-checkable.
+- Keep new signal behavior additive with stable ordered detail keys for regression-safe output.
+
+---
+
+## 2026-02-25 21:06 - US-002 - Research
+
+### Research
+- Topics investigated: canonical conflict critical-condition payload contract and release decision blocking semantics.
+- Key findings: existing conflict linkage signal already exposes deterministic critical-count information and release decision contract already supports hard no-go through `blocking=true` checks.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added PRD changelog entry documenting US-002 research completion.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-010 US-002 and locked additive blocker-check integration path.
+
+### Learnings for Future Iterations
+- Reuse canonical conflict linkage outputs as blocker inputs rather than introducing duplicate conflict scans.
+- Keep blocker semantics explicit and machine-checkable in one deterministic signal.
+
+---
+
+## 2026-02-25 21:09 - US-002 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-002-research.md`.
+- Key findings: existing check envelope and decision path support direct additive blocker signal integration; no exploration split required.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entry for PRD-010 US-002 plan-review completion.
+- Refined `US-002.implementationNotes` in `.aha-loop/prd.json` with explicit blocker signal contract (`blocking=true`, P0).
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: completed Plan Review gate and fixed direct implementation plan for hard blocker enforcement.
+
+### Learnings for Future Iterations
+- Attach blocker checks to existing decision reducer instead of creating alternate go/no-go branch logic.
+- Preserve deterministic detail key ordering for blocker diagnostics.
+
+---
+
+## 2026-02-25 21:16 - US-002 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-002-research.md` findings on blocker predicates and decision contract boundaries.
+- Key findings: release summary can enforce hard blocker via additive P0 blocking check using existing canonical conflict linkage scan results.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Marked `US-002.passes=true` and updated `US-002.learnings` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-010 US-002 implementation completion.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: extracted shared conflict linkage scan helper, added additive `critical_conflict_blocker_signal` (P0 + `blocking=true`) with deterministic `go`/`no_go` detail field, and registered check in existing release decision flow.
+- Validation: `pytest tests/unit/scripts/test_release_check_summary.py --no-cov -q` -> `47 passed`.
+
+### Learnings for Future Iterations
+- Keep hard-gate behavior concentrated in one blocking check to avoid split-brain no-go logic.
+- Reuse shared artifact scan helpers to keep linkage and blocker checks behaviorally consistent.
+
+---
+
+## 2026-02-25 21:16 - US-003 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-003-research.md` findings on release evidence envelope requirements and snapshot linkage verification paths.
+- Key findings: persisted `release_gate_run` snapshots can deterministically prove chapter-gate linkage by validating canonical trace tuple + `evidence_links` and explicit chapter gate check references.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Marked `US-003.passes=true` and updated `US-003.learnings` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-010 US-003 implementation completion.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: added additive `chapter_gate_evidence_linkage_signal` that scans persisted `release_gate_run` snapshots, validates canonical trace/evidence linkage constraints, and confirms chapter-gate linkage fields using deterministic ordered detail keys.
+- Validation: `pytest tests/unit/scripts/test_release_check_summary.py --no-cov -q` -> `51 passed`.
+
+### Learnings for Future Iterations
+- For evidence-linkage checks, model release-trace requirements directly as machine predicates (`session_id`, `run_id`, `check_id`) instead of prose-only diagnostics.
+- Keep linkage checks additive and non-blocking unless policy explicitly promotes them to P0.
+
+---
+
+## 2026-02-25 21:16 - PRD-011 - Research (US-001)
+
+### Research
+- Topics investigated: existing module ownership lock semantics and persisted state/handoff metadata boundaries for role-aware ownership.
+- Key findings: ownership evidence already exists via `_module_owners` + lock audit events; role-aware owner attribution should be additive metadata over existing state snapshot/handoff/audit envelopes.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- Activated new PRD in `.aha-loop/prd.json` as `PRD-011` with branch `aha-loop/role-aware-stage-handoff`.
+- Initialized PRD-011 user stories (US-001..US-003) and marked `US-001.researchCompleted=true` with implementation notes.
+- Updated roadmap/task status to advance from PRD-010 completion to PRD-011 in-progress.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/tasks/prd-010-chapter-release-gate-scoring.md`, `.aha-loop/tasks/prd-011-role-aware-stage-handoff.md`, `.aha-loop/research/US-001-research.md`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: executed research-first gate for PRD-011 US-001 and documented additive ownership metadata propagation pattern for upcoming implementation.
+
+### Learnings for Future Iterations
+- Keep role ownership derivation anchored to existing deterministic owner source (`plan.id`) to avoid divergent identity semantics.
+- Extend persisted envelopes additively (state/handoff/audit) to preserve resume and evidence contract compatibility.
+
+---
+
+## 2026-02-25 21:24 - US-001 - Plan Review + Implement
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-001-research.md` on ownership lock semantics and state/handoff persistence boundaries.
+- Key findings: existing workflow engine state/handoff contracts are sufficient for additive role ownership metadata; no exploration split required.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entries for PRD-011 US-001 plan-review completion and implementation completion.
+- Marked `US-001.passes=true` and updated `US-001.learnings` in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `src/workflow/workflow_engine.py`, `tests/unit/workflow/test_workflow_engine.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: propagated deterministic ownership metadata (`stage_owner`, `ownership_model`, `phase_owners`) through handoff package and state snapshot metadata using existing plan owner source (`plan.id`), and extended handoff audit payload with owner fields.
+- Validation: `pytest tests/unit/workflow/test_workflow_engine.py --no-cov -q` -> `98 passed`.
+
+### Learnings for Future Iterations
+- Ownership fields are safest when derived from existing canonical owner (`plan.id`) instead of introducing new identity sources.
+- Additive metadata in existing envelopes preserves backward compatibility while enabling role-aware traceability.
+
+---
+
+## 2026-02-25 21:40 - US-002 - Research
+
+### Research
+- Topics investigated: current runner transition guards and lifecycle state machine constraints; existing handoff package generation and blocked/pending transition semantics.
+- Key findings: transition policy is already centralized via runner/step allowlists plus guard functions, and handoff blocked/pending semantics are deterministically derived from canonical step states in one assembly path.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-011 US-002 research completion.
+- Filled `US-002.implementationNotes` and `US-002.learnings` with additive single-guard-path implementation direction.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate by mapping transition/handoff guard boundaries and locking additive machine-checkable rejection metadata direction.
+
+### Learnings for Future Iterations
+- Keep transition validation on one canonical guard path to avoid policy drift.
+- Preserve deterministic rejection semantics with stable machine-checkable fields (`from`, `to`, `reason`) instead of prose-only diagnostics.
+- Derive handoff blocked/pending status from canonical step states in one assembly boundary.
+
+---
+
+## 2026-02-25 21:52 - US-002 - Plan Review + Implement
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-002-research.md` on transition allowlists, canonical guard paths, and handoff blocked derivation.
+- Key findings: no exploration branch required; lifecycle transition enforcement can be implemented additively by extending the existing invalid-transition boundary and tests.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entries for PRD-011 US-002 plan-review completion and implementation completion.
+- Marked `US-002.passes=true` and updated `US-002.learnings` in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `src/workflow/workflow_engine.py`, `tests/unit/workflow/test_workflow_engine.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: extended `_set_runner_state(...)` to emit deterministic `runner_state_transition_rejected` audit events and added lifecycle `transition_rejection` machine payload on invalid transitions while preserving existing error string contract.
+- Validation: `pytest tests/unit/workflow/test_workflow_engine.py --no-cov -q` -> `98 passed`.
+
+### Learnings for Future Iterations
+- Additive machine payload extensions are safe when existing error string contracts are preserved.
+- Audit + response parity (`reason_code`, from/to states) improves deterministic handoff diagnostics without introducing parallel validation logic.
+
+---
+
+## 2026-02-25 22:05 - US-003 - Research
+
+### Research
+- Topics investigated: existing risk gate decision payload and confirmation token flow; audit log/event append path for deterministic gate decision evidence.
+- Key findings: gate decisions already flow through one canonical evaluator and centralized audit append path, so approval trail persistence can be added additively at existing gate boundaries with deterministic machine-checkable fields.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-011 US-003 research completion.
+- Added implementation direction in `US-003.implementationNotes` and `US-003.learnings` for additive approval trail persistence.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-003-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate by mapping gate decision/audit boundaries and locking deterministic approval-evidence implementation direction.
+
+### Learnings for Future Iterations
+- Gate approval evidence should reuse existing gate decision + audit append boundaries instead of introducing parallel storage.
+- Keep approval/rejection payloads machine-checkable with stable reason codes to support deterministic traceability.
+- Preserve token redaction and existing contracts while extending payloads additively.
+
+---
+
+## 2026-02-25 22:18 - US-003 - Plan Review + Implement
+
+### Research (if applicable)
+- Topics investigated: applied findings from `.aha-loop/research/US-003-research.md` on risk gate payload boundaries and centralized audit append path.
+- Key findings: no exploration branch required; approval trail persistence can be implemented additively by extending existing gate/rejection audit boundaries.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Added PRD changelog entries for PRD-011 US-003 plan-review completion and implementation completion.
+- Marked `US-003.passes=true` and updated `US-003.learnings` in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `src/workflow/workflow_engine.py`, `tests/unit/workflow/test_workflow_engine.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: added additive `gate_approval_trace` event helper with deterministic trace refs, wired it into risk-gate confirmation/rejection, runner transition rejection, step transition rejection, and wave-gate outcomes while preserving existing `confirm_trace` and transition error contracts.
+- Validation: `pytest tests/unit/workflow/test_workflow_engine.py --no-cov -q` -> `100 passed`.
+
+### Learnings for Future Iterations
+- Approval trail persistence works best when response and audit semantics share the same reason-code vocabulary.
+- Additive gate trace events can improve auditability without changing existing gate decision envelopes.
+
+---
+
+## 2026-02-25 22:39 - US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-001-research.md` findings on canonical transition guard reuse and machine-checkable rejection semantics.
+- Key findings: existing lifecycle guard/audit paths are sufficient for additive triage lifecycle implementation without parallel validators.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Marked `US-001.passes=true` and updated `US-001.learnings` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-012 US-001 implementation completion.
+
+### Implementation
+- Files changed: `src/workflow/workflow_engine.py`, `tests/unit/workflow/test_workflow_engine.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: added additive triage lifecycle state machine (`open`/`in_progress`/`escalated`/`resolved`/`rejected`) with centralized allowlist guard, wired lifecycle API support for triage transitions, persisted `triage_state` in status/state metadata, and extended audits with deterministic rejection + gate-trace evidence.
+- Validation: `pytest tests/unit/workflow/test_workflow_engine.py --no-cov -q` -> `102 passed`.
+
+### Learnings for Future Iterations
+- Triage lifecycle remains deterministic when policy is centralized in one transition guard and reused from lifecycle boundaries.
+- Reusing existing `transition_rejection` + `gate_approval_trace` vocabulary keeps runtime and audit contracts aligned.
+
+---
+
+## 2026-02-26 00:30 - US-002 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-002-research.md` findings on triage transition/audit persistence boundaries.
+- Key findings: current `_set_triage_state` path already persists deterministic `fix_status`/`fix_owner` and escalation actor/reason metadata through canonical audit + gate-trace channels.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Marked `US-002.researchCompleted=true` and `US-002.passes=true` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-012 US-002 completion validation.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: validated existing implementation against acceptance criteria and locked additive persistence guidance in story learnings/notes.
+- Validation: `pytest tests/unit/workflow/test_workflow_engine.py --no-cov -q -k "triage or lifecycle_escalation"` -> `3 passed`.
+
+### Learnings for Future Iterations
+- Keep triage/fix ownership semantics centralized in one transition guard path.
+- Preserve escalation evidence via additive audit fields and gate approval trace linkage.
+
+---
+
+## 2026-02-26 00:36 - US-003 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/US-003-research.md` findings on release-check registration and deterministic detail serialization.
+- Key findings: release summary supports additive P0 blocking checks; unresolved triage can be derived deterministically from persisted session state metadata.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Marked `US-003.researchCompleted=true` and `US-003.passes=true` in `.aha-loop/prd.json`.
+- Added PRD changelog entry for PRD-012 US-003 completion implementation.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: added additive `unresolved_triage_blocker_signal` (P0 blocking) and registered it in `checks[]` with deterministic machine payload detail keys.
+- Validation: `pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `53 passed`.
+
+### Learnings for Future Iterations
+- Keep release blocker semantics explicit and machine-checkable (`triage_state∉{resolved,rejected}` => NO_GO).
+- Extend release checks additively and preserve stable `key=value` detail ordering.
+
+---
+
+## 2026-02-26 01:50 - PRD-013 / US-003 - Research
+
+### Research
+- Topics investigated: artifact envelope parity invariants and gateway payload fields needed for machine-checkable workflow/UI bridge equivalence assertions.
+- Key findings: deterministic parity should be asserted as decoded JSON envelope equality between corresponding `/workflow/*` and `/ui/workflow/*` handlers under identical mocked payloads.
+- Report: `.aha-loop/research/PRD-013-US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added PRD/roadmap progress entries for US-003 research completion.
+
+### Implementation
+- Files changed: `.aha-loop/research/PRD-013-US-003-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate and fixed machine-checkable contract parity assertion strategy for implementation.
+
+### Learnings for Future Iterations
+- Endpoint parity should be validated at payload-contract level, not only endpoint availability or HTTP status.
+- Keep parity assertions bound to deterministic fields and envelopes.
+
+---
+
+## 2026-02-26 02:05 - PRD-013 / US-003 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-013-US-003-research.md` findings on contract equivalence assertions.
+- Key findings: bridge forwarding contract remains deterministic when canonical workflow payloads are relayed unchanged and parity tests compare decoded JSON envelopes directly.
+- Report: `.aha-loop/research/PRD-013-US-003-research.md`
+
+### Plan Changes (if any)
+- Marked `US-003.passes=true` and updated story learnings in `.aha-loop/prd.json`.
+- Marked `PRD-013` completed and advanced roadmap focus to `PRD-014` in `.aha-loop/project.roadmap.json`.
+
+### Implementation
+- Files changed: `tests/unit/mcp/test_gateway_endpoints.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: added machine-checkable parity test `test_ui_bridge_workflow_contract_parity_against_workflow_endpoints` to compare workflow-vs-bridge response envelopes for route/plan/execute/lifecycle under identical mocked backend payloads.
+- Validation: `pytest --no-cov -q tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_workflow_contract_parity_against_workflow_endpoints tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_workflow_endpoints_respect_enable_toggle tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_execute_preserves_waiting_confirmation_semantics tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_lifecycle_preserves_transition_rejection_semantics` -> `4 passed`.
+
+### Learnings for Future Iterations
+- Contract parity tests are stronger when they assert full envelope equivalence for paired endpoints.
+- Keep bridge logic forwarding-only to preserve deterministic artifact contract behavior.
+
+---
+
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-013-US-002-research.md` findings on canonical transition semantics and runtime boundary reuse.
+- Key findings: forwarding bridge endpoints preserve deterministic stage-control semantics when response envelopes are passed through unchanged.
+- Report: `.aha-loop/research/PRD-013-US-002-research.md`
+
+### Plan Changes (if any)
+- Marked `US-002.passes=true` in `.aha-loop/prd.json` and updated story learnings.
+- Added PRD/roadmap changelog entries for US-002 implementation completion.
+
+### Implementation
+- Files changed: `tests/unit/mcp/test_gateway_endpoints.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: added UI bridge parity tests asserting `waiting_confirmation` and `transition_rejection` response envelopes are preserved through `/ui/workflow/execute` and `/ui/workflow/lifecycle` forwarding endpoints.
+- Validation: `pytest --no-cov -q tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_workflow_endpoints_respect_enable_toggle tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_execute_preserves_waiting_confirmation_semantics tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_lifecycle_preserves_transition_rejection_semantics tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_routes_are_registered` -> `4 passed`.
+
+### Learnings for Future Iterations
+- Parity checks should assert canonical response envelopes, not only HTTP status.
+- Bridge-layer determinism is best validated by semantic pass-through tests on critical state-control fields.
+
+---
+
+
+### Research
+- Topics investigated: workflow lifecycle/stage transition boundaries and runtime transport error boundary patterns used by CLI and gateway.
+- Key findings: workflow transition semantics (`waiting_confirmation`, `transition_rejection`) are centralized and deterministic; runtime transport already uses consistent request/abort boundaries.
+- Report: `.aha-loop/research/PRD-013-US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added PRD changelog and roadmap progress entries for US-002 research completion.
+
+### Implementation
+- Files changed: `.aha-loop/research/PRD-013-US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate and locked one-to-one stage-control forwarding direction for bridge implementation.
+
+### Learnings for Future Iterations
+- Preserve canonical transition behavior by forwarding UI actions to existing workflow handlers only.
+- Keep bridge transport semantics aligned with existing CLI runtime request/error boundaries.
+
+---
+
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-013-US-001-research.md` findings on deterministic CLI/runtime orchestration boundary reuse.
+- Key findings: existing workflow REST handlers already provide stable deterministic semantics; UI bridge should only forward to these handlers.
+- Report: `.aha-loop/research/PRD-013-US-001-research.md`
+
+### Plan Changes (if any)
+- Marked `US-001.passes=true` and updated `US-001.learnings` in `.aha-loop/prd.json`.
+- Appended PRD/roadmap changelog entries for US-001 implementation completion.
+
+### Implementation
+- Files changed: `src/config.py`, `src/mcp/gateway.py`, `tests/unit/mcp/test_gateway_endpoints.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: added default-off `ui_bridge_enabled` config and `/ui/workflow/*` bridge endpoints that gate on toggle and directly forward to existing workflow handlers (`workflow_route/plan/execute/lifecycle`) without introducing parallel workflow logic.
+- Validation: `pytest --no-cov -q tests/unit/mcp/test_gateway_endpoints.py::test_resolve_ui_bridge_enabled_paths tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_workflow_endpoints_respect_enable_toggle tests/unit/mcp/test_gateway_endpoints.py::test_ui_bridge_routes_are_registered tests/unit/test_cli_runtime_commands.py` -> `9 passed`.
+
+### Learnings for Future Iterations
+- Keep bridge behavior additive and disabled-by-default to protect core CLI deterministic flow.
+- Handler-level forwarding preserves contract parity better than duplicating workflow orchestration.
+
+---
+
+
+## 2026-02-26 02:47 - PRD-014 / US-003 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-014-US-003-research.md` aggregation input/eligibility/output constraints.
+- Key findings: chapter-gate KPI aggregation should count only trace-complete `release_gate_run` artifacts and emit deterministic aggregation-window/result details.
+- Report: `.aha-loop/research/PRD-014-US-003-research.md`
+
+### Plan Changes (if any)
+- Marked `US-003.researchCompleted=true` and `US-003.passes=true` in `.aha-loop/prd.json`.
+- Marked `PRD-014` completed and advanced active context to `PRD-015` in roadmap/task files.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/research/PRD-014-US-003-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/tasks/prd-014-kpi-measurement-specification.md`, `.aha-loop/tasks/prd-015-cycle-time-reduction-dashboard-artifacts.md`, `.aha-loop/progress.txt`.
+- Approach: refined chapter-gate aggregation signal detail contract to deterministic fields (`eligible_release_gate_runs`, `aggregation_window`, `result`) and aligned tests to machine-checkable pass/warn semantics.
+- Validation: `python -m pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `57 passed`.
+
+### Learnings for Future Iterations
+- Aggregation semantics stay stable when eligibility and aggregation-window fields are explicit in detail payload.
+- Keep release-gate aggregation additive and trace-contract-bound to avoid manual interpretation drift.
+
+---
+
+## 2026-02-26 02:42 - PRD-014 / US-002 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-014-US-002-research.md` rubric constraints against existing release/quality evidence signal fields.
+- Key findings: rubric can be additive and deterministic by combining threshold, recommendation, critical-count, quality-level match, and degrade-trace completeness.
+- Report: `.aha-loop/research/PRD-014-US-002-research.md`
+
+### Plan Changes (if any)
+- Marked `US-002.researchCompleted=true` and `US-002.passes=true` in `.aha-loop/prd.json`.
+- Added roadmap progress entry for PRD-014 US-002 implementation completion.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/research/PRD-014-US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: added `comparable_quality_rubric_signal` and integrated it into release checks with stable machine-detail output (`rubric_version`, threshold, recommendation, quality-level/degrade completeness, decision).
+- Validation: `python -m pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `57 passed`.
+
+### Learnings for Future Iterations
+- Comparable-quality should be explicitly decoupled from cycle-time speedups through deterministic rubric gates.
+- Stable detail key ordering keeps rubric outputs diffable and audit-friendly.
+- Keep rubric non-blocking P1 unless product policy upgrades it to hard release gate.
+
+---
+
+## 2026-02-26 02:36 - PRD-014 / US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-014-US-001-research.md` deterministic baseline window and sample eligibility/exclusion rules.
+- Key findings: release-summary signal checks can enforce machine-checkable KPI measurement policy without changing existing evidence contract schemas.
+- Report: `.aha-loop/research/PRD-014-US-001-research.md`
+
+### Plan Changes (if any)
+- Marked `US-001.passes=true` in `.aha-loop/prd.json` and updated learnings with implementation outcome.
+- Added roadmap progress entry for PRD-014 US-001 implementation completion.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: added `cycle_time_kpi_measurement_signal` with deterministic full-7-day window policy checks, baseline state/readiness fields, required cycle-time median/sample metrics, and exclusion reason-code presence validation in machine-readable detail format.
+- Validation: `python -m pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `55 passed`.
+
+### Learnings for Future Iterations
+- KPI policy checks are safer as additive release-check signals that validate evidence readiness rather than rewriting evidence schema.
+- Deterministic `detail` field ordering keeps weekly/release auditing machine-stable.
+- Explicit missing-rule lists and reason-code checks reduce manual interpretation drift.
+
+---
+
+## 2026-02-26 03:50 - PRD-016 / US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-016-US-001-research.md` deterministic evidence completeness blocking contract.
+- Key findings: authoritative publish blocking should be explicit P0 check with deterministic missing evidence class output.
+- Report: `.aha-loop/research/PRD-016-US-001-research.md`
+
+### Plan Changes (if any)
+- Marked `US-001.passes=true` in `.aha-loop/prd.json` and updated implementation learnings.
+- Added roadmap progress entry for PRD-016 US-001 implementation completion.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: added `evidence_completeness_blocker_signal` as blocking P0 release gate with deterministic missing class and decision semantics.
+- Validation: `python -m pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `65 passed`.
+
+### Learnings for Future Iterations
+- Keep blocker semantics explicit and machine-readable (`missing_evidence_classes`, `decision`) to reduce release decision ambiguity.
+- Preserve additive compatibility by retaining non-blocking evidence coverage/freshness signals alongside hard blocker.
+
+---
+
+## 2026-02-26 03:50 - PRD-016 / US-002 - Research
+
+### Research
+- Topics investigated: existing P0 blocker signals reusable for gate-score/critical-issue enforcement; deterministic reason-code conventions in release decision payload.
+- Key findings: gate-score and critical-issue blocking should compose from canonical existing blockers and scoring decision semantics, with additive P0 blocker composition for stable backward compatibility.
+- Report: `.aha-loop/research/PRD-016-US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-002` implementation notes for deterministic blocker composition.
+
+### Implementation
+- Files changed: `.aha-loop/research/PRD-016-US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate and fixed deterministic gate-score/critical-issue blocker composition policy for US-002 implementation.
+
+### Learnings for Future Iterations
+- Prefer additive gate-score blocker composition over direct mutation of legacy scoring check semantics.
+- Maintain stable reason-code exposure via canonical blocking check IDs in machine payload.
+
+---
+
+
+### Research
+- Topics investigated: current release-check blocking patterns and evidence coverage signals; deterministic missing-evidence detail formatting in machine payloads.
+- Key findings: publish blocking should be driven by an explicit P0 evidence-completeness gate with deterministic missing-class reporting and no manual override branch.
+- Report: `.aha-loop/research/PRD-016-US-001-research.md`
+
+### Plan Changes
+- Activated `PRD-016` context in `.aha-loop/prd.json` and initialized US-001/US-002/US-003 story set.
+- Marked `US-001.researchCompleted=true` with implementation notes for blocking evidence contract.
+
+### Implementation
+- Files changed: `.aha-loop/research/PRD-016-US-001-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate and fixed deterministic evidence-completeness blocker policy for US-001 implementation.
+
+### Learnings for Future Iterations
+- Keep evidence completeness as authoritative blocking gate rather than inferred from non-blocking coverage/freshness signals.
+- Use explicit `missing_evidence_classes` outputs to minimize manual interpretation in release decisions.
+
+---
+
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-015-US-003-research.md` additive comparability+trend visibility contract.
+- Key findings: combined visibility can be safely added via deterministic linkage fields without changing existing rubric or rollup signal semantics.
+- Report: `.aha-loop/research/PRD-015-US-003-research.md`
+
+### Plan Changes (if any)
+- Marked `US-003.passes=true` in `.aha-loop/prd.json` and updated implementation learnings.
+- Marked `PRD-015` completed and advanced active context to `PRD-016` in roadmap/task files.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/tasks/prd-015-cycle-time-reduction-dashboard-artifacts.md`, `.aha-loop/tasks/prd-016-release-readiness-automation.md`, `.aha-loop/progress.txt`.
+- Approach: added `weekly_kpi_comparability_visibility_signal` as non-blocking P1 additive check and wired it into release check machine payload with deterministic detail fields.
+- Validation: `python -m pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `63 passed`.
+
+### Learnings for Future Iterations
+- Combined KPI visibility is most stable when it reuses canonical comparability decision and cycle-time readiness anchors.
+- Keep linkage failures explicit (`missing_fields`) to prevent overconfident dashboard interpretation on partial evidence.
+
+---
+
+
+### Research (if applicable)
+- Topics investigated: reused `.aha-loop/research/PRD-015-US-002-research.md` canonical field anchors and deterministic readiness constraints.
+- Key findings: additive rollup-readiness check can be implemented via existing corpus pattern matching and ordered detail formatting.
+- Report: `.aha-loop/research/PRD-015-US-002-research.md`
+
+### Plan Changes (if any)
+- Marked `US-002.passes=true` in `.aha-loop/prd.json` and updated implementation learnings.
+- Added roadmap progress entry for US-002 implementation completion.
+
+### Implementation
+- Files changed: `scripts/release_check_summary.py`, `tests/unit/scripts/test_release_check_summary.py`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: added `weekly_kpi_rollup_readiness_signal` as non-blocking P1 additive check and wired it into machine payload checks with deterministic detail output.
+- Validation: `python -m pytest tests/unit/scripts/test_release_check_summary.py -q --no-cov` -> `61 passed`.
+
+### Learnings for Future Iterations
+- Canonical rollup readiness checks remain stable when constrained to explicit required markers and deterministic missing-field reporting.
+- Preserve additive non-blocking behavior for dashboard visibility checks unless release policy explicitly upgrades blockers.
+
+---
+
+## 2026-02-26 03:22 - PRD-015 / US-003 - Research
+
+### Research
+- Topics investigated: comparable-quality rubric outputs reusable for dashboard joins; existing release-summary conventions for combined KPI signal exposure.
+- Key findings: comparability visibility can be exposed additively by joining existing rubric decision fields with cycle-time trend/readiness markers using deterministic ordered detail output and explicit missing-linkage semantics.
+- Report: `.aha-loop/research/PRD-015-US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-003` implementation notes for additive combined visibility signal scope.
+
+### Implementation
+- Files changed: `.aha-loop/research/PRD-015-US-003-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate and fixed deterministic comparability+trend linkage policy for upcoming US-003 implementation.
+
+### Learnings for Future Iterations
+- Prefer reusing `comparable_quality_rubric_signal` decision semantics over introducing parallel comparability logic.
+- Guard against partial joins by explicit missing-linkage fields in combined signal details.
+
+---
+
+
+### Research
+- Topics investigated: canonical evidence availability for baseline/current/trend rollups; deterministic readiness/trend signaling patterns in release checks.
+- Key findings: rollups should anchor to explicit canonical markers (`window_label`, `baseline_state`, `cycle_time_baseline_median`, `cycle_time_current_median`, `cycle_time_trend`) with deterministic missing-field WARN semantics and no manual override path.
+- Report: `.aha-loop/research/PRD-015-US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-002` learnings/implementationNotes for additive deterministic rollup-readiness implementation.
+
+### Implementation
+- Files changed: `.aha-loop/research/PRD-015-US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate and locked canonical evidence + deterministic readiness signaling boundaries for US-002 implementation.
+
+### Learnings for Future Iterations
+- Keep trend/readiness validation bounded to canonical evidence fields; avoid heuristic fallback values.
+- Treat partial baseline/current/trend payloads as non-ready via explicit missing-field outputs.
+- Preserve stable key ordering for machine-diffable release evidence behavior.
+
+---
+
+
+### Research
+- Topics investigated: existing evidence timestamp fields and release/quality signal anchors for deterministic cycle-time baseline and weekly sample selection.
+- Key findings: KPI computation can be deterministic when baseline and rolling windows are defined as full 7-day evidence-complete windows with explicit sample eligibility and exclusion reason codes.
+- Report: `.aha-loop/research/PRD-014-US-001-research.md`
+
+### Plan Changes
+- Activated `PRD-014` context in `.aha-loop/prd.json` with US-001/US-002/US-003 story set.
+- Marked `US-001.researchCompleted=true` and recorded implementation notes for deterministic KPI formulas/readiness states.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/research/PRD-014-US-001-research.md`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research-first gate for PRD-014 US-001 and fixed baseline-window/sampling rule specification as machine-consumable, audit-friendly constraints.
+
+### Learnings for Future Iterations
+- Explicit exclusion reason codes prevent manual interpretation drift in KPI aggregation.
+- Baseline readiness must be an explicit state (`ready`/`insufficient_sample`/`not_ready`) instead of implicit fallback heuristics.
+- Keep KPI layer additive over canonical evidence contracts to preserve compatibility.
+
+---
+
+
+### Research
+- Topics investigated: CLI command orchestration reuse and gateway runtime payload parity for optional UI bridge.
+- Key findings: existing `run` + `runtime` command boundaries and gateway endpoint envelopes are deterministic and reusable for a thin bridge adapter.
+- Report: `.aha-loop/research/PRD-013-US-001-research.md`
+
+### Plan Changes
+- Activated PRD context in `.aha-loop/prd.json` (`prdId=PRD-013`, new branch and story set).
+- Marked `US-001.researchCompleted=true` with implementation notes focused on additive adapter wiring.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/research/PRD-013-US-001-research.md`, `.aha-loop/project.roadmap.json`, `.aha-loop/progress.txt`.
+- Approach: completed research gate and prepared deterministic implementation baseline for PRD-013 US-001.
+
+### Learnings for Future Iterations
+- Keep UI bridge as optional forwarding layer; never duplicate workflow state machine logic.
+- Preserve CLI/Gateway contracts as canonical behavior source for parity validation.
+
+---
+

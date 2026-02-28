@@ -167,27 +167,27 @@ class TestMakeDecision:
 
     def test_approved_high_score_no_lock(self):
         agent = CriticAgent(llm=MagicMock())
-        result = _make_critic_output(total_score=85.0)
+        result = _make_critic_output(total_score=99.0)
         decision = agent._make_decision(result)
         assert decision == "APPROVED"
 
     def test_approved_high_score_with_good_lock(self):
         agent = CriticAgent(llm=MagicMock())
         lock = _make_lock_analysis(c=8)
-        result = _make_critic_output(total_score=85.0, lock_analysis=lock)
+        result = _make_critic_output(total_score=99.0, lock_analysis=lock)
         decision = agent._make_decision(result)
         assert decision == "APPROVED"
 
     def test_human_review_high_score_low_c(self):
         agent = CriticAgent(llm=MagicMock())
         lock = _make_lock_analysis(c=5)
-        result = _make_critic_output(total_score=85.0, lock_analysis=lock)
+        result = _make_critic_output(total_score=99.0, lock_analysis=lock)
         decision = agent._make_decision(result)
         assert decision == "HUMAN_REVIEW"
 
     def test_human_review_medium_score(self):
         agent = CriticAgent(llm=MagicMock())
-        result = _make_critic_output(total_score=75.0)
+        result = _make_critic_output(total_score=95.0)
         decision = agent._make_decision(result)
         assert decision == "HUMAN_REVIEW"
 
@@ -210,14 +210,14 @@ class TestMakeDecision:
         decision = agent._make_decision(result)
         assert decision == "REWRITE"
 
-    def test_boundary_80(self):
+    def test_boundary_99(self):
         agent = CriticAgent(llm=MagicMock())
-        result = _make_critic_output(total_score=80.0)
+        result = _make_critic_output(total_score=99.0)
         assert agent._make_decision(result) == "APPROVED"
 
-    def test_boundary_70(self):
+    def test_boundary_95(self):
         agent = CriticAgent(llm=MagicMock())
-        result = _make_critic_output(total_score=70.0)
+        result = _make_critic_output(total_score=95.0)
         assert agent._make_decision(result) == "HUMAN_REVIEW"
 
     def test_boundary_50(self):

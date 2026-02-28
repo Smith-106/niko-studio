@@ -1,3 +1,23 @@
+---
+name: script-doctor
+description: 剧本医生技能，面向故事诊断、问题分级与处方级修订建议
+version: "1.0"
+author: niko-studio
+tags: [writing, diagnosis, revision, script, story-quality]
+triggers:
+  - 用户请求剧本诊断
+  - 故事质量不稳定或反馈“老套/无聊”
+  - 需要系统化修改建议
+requires:
+  - draft_text: 待诊断文本（章节/分场/大纲）
+  - genre: 题材类型
+  - goal: 本轮优化目标（如提升张力/去陈词滥调）
+outputs:
+  - 多维诊断评分
+  - 问题分级与定位清单
+  - 优先级处方与修订建议
+---
+
 # 🩺 剧本医生技能包 (Script Doctor)
 
 > **核心理念**：像医生诊断病人一样诊断故事。识别陈词滥调，评估张力曲线，开出精准的修改处方。

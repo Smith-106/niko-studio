@@ -74,7 +74,7 @@ function setConversationWithAssistant(content: string): void {
 describe('ChatArea P0 flows', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal('btoa', (value: string) => Buffer.from(value, 'binary').toString('base64'))
+    vi.stubGlobal('btoa', (value: string) => value)
     resetStores()
     mockedCreateCheckpoint.mockResolvedValue({ success: true, data: { checkpoint_id: 'cp-1' } })
     mockedRestoreCheckpoint.mockResolvedValue({ success: true, data: { status: 'ok' } })

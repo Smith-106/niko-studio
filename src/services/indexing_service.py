@@ -32,7 +32,7 @@ class IndexingService:
     Uses FastEmbed for embeddings and SQLite for vector storage (as BLOBs).
     """
 
-    def __init__(self, db_path: str, model_name: str = "BAAI/bge-small-en-v1.5"):
+    def __init__(self, db_path: str, model_name: str = "BAAI/bge-small-zh-v1.5"):
         self.db_path = Path(db_path)
         self.model_name = model_name
         self._embedder = None

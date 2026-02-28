@@ -8,7 +8,7 @@ from datetime import datetime
 
 from src.services.memory_service import (
     MemoryService, Message, AddOptions, SearchOptions, SearchResult, Memory,
-    get_memory_service, reset_memory_service,
+    get_memory_service, reset_memory_service, configure_memory_engine_provider,
 )
 import src.services.memory_service as memory_service_module
 
@@ -209,7 +209,7 @@ class TestMemoryServiceExtraBranches:
 
         mem = await svc.get(memory_id)
         assert mem.content == "new content"
-        assert mem.embedding == [0.9, 0.8]
+        assert mem.embedding == pytest.approx([0.9, 0.8], rel=1e-6, abs=1e-6)
 
 
 
@@ -239,9 +239,10 @@ class TestMemoryServiceFactoryBranches:
         memory_service_module._memory_service = None
 
         class DummyMemoryService:
-            def __init__(self, db_path=None, config=None):
+            def __init__(self, db_path=None, config=None, embedding_service=None):
                 self.db_path = db_path
                 self.config = config
+                self.embedding_service = embedding_service
                 self.closed = False
 
             def close(self):
@@ -254,6 +255,69 @@ class TestMemoryServiceFactoryBranches:
         assert first is second
         assert first.db_path == "/tmp/a.db"
 
+    def test_get_memory_service_uses_configured_memory_engine_provider(self):
+        memory_service_module._memory_service = None
+        configure_memory_engine_provider(lambda: MagicMock(embedder="E"))
+
+        class DummyMemoryService:
+            def __init__(self, db_path=None, config=None, embedding_service=None):
+                self.embedding_service = embedding_service
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        with patch("src.services.memory_service.MemoryService", DummyMemoryService):
+            service = get_memory_service(db_path="/tmp/provider.db")
+
+        assert service.embedding_service == "E"
+
+    def test_get_memory_service_handles_provider_resolution_error(self):
+        memory_service_module._memory_service = None
+
+        def _broken_provider():
+            raise RuntimeError("provider failed")
+
+        configure_memory_engine_provider(_broken_provider)
+
+        class DummyMemoryService:
+            def __init__(self, db_path=None, config=None, embedding_service=None):
+                self.embedding_service = embedding_service
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        with patch("src.services.memory_service.MemoryService", DummyMemoryService):
+            service = get_memory_service(db_path="/tmp/provider-error.db")
+
+        assert service.embedding_service is None
+
+    def test_get_memory_service_fallback_when_unified_engine_import_fails(self):
+        memory_service_module._memory_service = None
+        configure_memory_engine_provider(None)
+
+        class DummyMemoryService:
+            def __init__(self, db_path=None, config=None, embedding_service=None):
+                self.embedding_service = embedding_service
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        original_import = __import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "src.memory.unified_memory":
+                raise ImportError("missing module")
+            return original_import(name, *args, **kwargs)
+
+        with patch("src.services.memory_service.MemoryService", DummyMemoryService):
+            with patch("builtins.__import__", side_effect=fake_import):
+                service = get_memory_service(db_path="/tmp/no-engine.db")
+
+        assert service.embedding_service is None
+
     def test_reset_memory_service_closes_existing_singleton(self):
         existing = MagicMock()
         memory_service_module._memory_service = existing
@@ -262,3 +326,5 @@ class TestMemoryServiceFactoryBranches:
 
         existing.close.assert_called_once()
         assert memory_service_module._memory_service is None
+        assert memory_service_module._memory_engine_provider is None
+

@@ -1,0 +1,23 @@
+{
+  "summary": "收敛‘优秀小说系统’的质量治理闭环：先把PDD门禁条目工程化映射，再统一阈值权威源，并将证据链纳入CI硬门禁，最后修正文档与代码层级术语漂移。",
+  "approach": "采用P0优先、最小改动策略：先建立MVP门禁映射矩阵作为统一基线，再对齐运行时阈值语义并补强测试，随后把证据链最小契约落到CI校验，最后完成workflow术语对齐，确保产品定义、运行逻辑与验收证据三者一致。",
+  "task_ids": [
+    "TASK-001",
+    "TASK-002",
+    "TASK-003",
+    "TASK-004"
+  ],
+  "task_count": 4,
+  "complexity": "High",
+  "estimated_time": "M",
+  "recommended_execution": "Auto",
+  "_metadata": {
+    "timestamp": "2026-02-22T00:00:00+08:00",
+    "source": "workflow-lite-plan",
+    "planning_mode": "direct",
+    "plan_type": "feature",
+    "exploration_angles": [
+      "quality-governance"
+    ]
+  }
+}

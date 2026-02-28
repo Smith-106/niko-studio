@@ -1,9 +1,30 @@
 ---
 name: tension-scene
 description: 场景级张力设计 - 分析和优化单个场景内的情绪起伏，确保每个场景都有明确的张力曲线
+version: "1.0"
+author: niko-studio
+tags: [writing, tension, scene, pacing, revision]
+triggers:
+  - 单个场景写作前张力规划
+  - 场景初稿平淡无味
+  - 需要强化场景高潮与钩子
+requires:
+  - scene_text: 场景文本
+  - scene_goal: 场景目标
+  - desired_intensity: 目标张力等级
+outputs:
+  - 场景张力图谱
+  - 问题诊断与重写建议
+  - 峰值与出口优化方案
 ---
 
 # 场景张力设计 (Tension Scene)
+
+## 适用边界
+
+- 适用：单个场景内的张力入口/触发点/峰值/出口优化。
+- 不适用：章节内多场景编排（应转 `tension-chapter`）。
+- 不适用：全书关键节点与宏观节奏（应转 `tension-arc`）。
 
 ## 概述
 

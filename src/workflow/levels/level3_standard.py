@@ -118,7 +118,7 @@ class Level3Standard(BaseLevel):
         config.update(self.config or {})
 
         max_revisions = config.get("max_revisions", 3)
-        pass_score = config.get("pass_score", 80)
+        pass_score = config.get("pass_score", 80)  # L3 执行策略 fallback，非 novel 发布门槛
 
         # Phase 1: 計劃
         state = self._plan_phase(state)
@@ -170,6 +170,15 @@ class Level3Standard(BaseLevel):
             "valid": self._verify_plan(state),
             "missing": [],
             "warnings": [],
+        }
+
+    def get_default_config(self) -> Dict:
+        """获取默认配置（L3 执行策略阈值；非 novel 发布门槛）"""
+        return {
+            "max_revisions": 3,
+            "pass_score": 80,
+            "verbose": True,
+            "retrieval_profile": "standard_balanced",
         }
 
     def _plan_phase(self, state: BaseState) -> BaseState:

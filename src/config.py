@@ -133,6 +133,14 @@ class WorkflowConfig:
     # 断点续传
     resume_strategy: str = "from_last_checkpoint"
 
+    # 质量控制
+    quality_mode: str = "auto"  # auto | manual
+    quality_level: str = "high"  # ultra | high | medium | fluent
+    degrade_on_timeout: bool = True
+    degrade_on_error: bool = True
+    critical_gate_always_on: bool = True
+    quality_phase_timeout_seconds: int = 30
+
 
 @dataclass
 class GraphConfig:
@@ -175,6 +183,7 @@ class GatewayConfig:
     cors_dev_origins: List[str] = field(default_factory=lambda: ["*"])
     cors_prod_origins: List[str] = field(default_factory=lambda: ["https://app.example.com", "https://gray.example.com"])
     metrics_enabled: bool = True
+    ui_bridge_enabled: bool = False
 
 
 @dataclass
@@ -351,6 +360,22 @@ class ConfigManager:
         if os.getenv('NIKO_GRAPH_DB_PATH'):
             self._config.graph.db_path = os.getenv('NIKO_GRAPH_DB_PATH')
 
+        # Workflow 配置
+        if os.getenv('NIKO_WORKFLOW_QUALITY_MODE'):
+            self._config.workflow.quality_mode = os.getenv('NIKO_WORKFLOW_QUALITY_MODE', self._config.workflow.quality_mode)
+        if os.getenv('NIKO_WORKFLOW_QUALITY_LEVEL'):
+            self._config.workflow.quality_level = os.getenv('NIKO_WORKFLOW_QUALITY_LEVEL', self._config.workflow.quality_level)
+        if os.getenv('NIKO_WORKFLOW_DEGRADE_ON_TIMEOUT'):
+            self._config.workflow.degrade_on_timeout = _parse_bool(os.getenv('NIKO_WORKFLOW_DEGRADE_ON_TIMEOUT', ''))
+        if os.getenv('NIKO_WORKFLOW_DEGRADE_ON_ERROR'):
+            self._config.workflow.degrade_on_error = _parse_bool(os.getenv('NIKO_WORKFLOW_DEGRADE_ON_ERROR', ''))
+        if os.getenv('NIKO_WORKFLOW_CRITICAL_GATE_ALWAYS_ON'):
+            self._config.workflow.critical_gate_always_on = _parse_bool(os.getenv('NIKO_WORKFLOW_CRITICAL_GATE_ALWAYS_ON', ''))
+        if os.getenv('NIKO_WORKFLOW_QUALITY_PHASE_TIMEOUT_SECONDS'):
+            self._config.workflow.quality_phase_timeout_seconds = int(
+                os.getenv('NIKO_WORKFLOW_QUALITY_PHASE_TIMEOUT_SECONDS', self._config.workflow.quality_phase_timeout_seconds)
+            )
+
         # Gateway 配置
         if os.getenv('NIKO_GATEWAY_HOST'):
             self._config.gateway.host = os.getenv('NIKO_GATEWAY_HOST', self._config.gateway.host)
@@ -364,6 +389,8 @@ class ConfigManager:
             self._config.gateway.cors_prod_origins = _parse_csv(os.getenv('NIKO_CORS_PROD_ORIGINS', ''))
         if os.getenv('NIKO_GATEWAY_METRICS_ENABLED'):
             self._config.gateway.metrics_enabled = _parse_bool(os.getenv('NIKO_GATEWAY_METRICS_ENABLED', ''))
+        if os.getenv('NIKO_UI_BRIDGE_ENABLED'):
+            self._config.gateway.ui_bridge_enabled = _parse_bool(os.getenv('NIKO_UI_BRIDGE_ENABLED', ''))
 
     def _load_from_file(self) -> None:
         """从 YAML 文件加载配置"""
@@ -482,6 +509,12 @@ workflow:
   checkpoint_enabled: true
   checkpoint_interval: 300
   resume_strategy: from_last_checkpoint
+  quality_mode: auto
+  quality_level: high
+  degrade_on_timeout: true
+  degrade_on_error: true
+  critical_gate_always_on: true
+  quality_phase_timeout_seconds: 30
 
 graph:
   db_path: .writing/graph_db
@@ -509,6 +542,7 @@ gateway:
     - https://app.example.com
     - https://gray.example.com
   metrics_enabled: true
+  ui_bridge_enabled: false
 """
         with open(self._config_path, 'w', encoding='utf-8') as f:
             f.write(default_config)

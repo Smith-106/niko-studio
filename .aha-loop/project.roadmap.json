@@ -1,0 +1,2072 @@
+{
+  "version": 1,
+  "projectName": "Niko Studio",
+  "status": "completed",
+  "currentMilestone": "M13",
+  "currentPRD": null,
+  "createdAt": "2026-02-24T00:00:00Z",
+  "updatedAt": "2026-02-29T03:50:00Z",
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "Foundation",
+      "description": "Stabilize local-first workflow contracts, evidence schemas, and baseline runtime gates.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-001",
+          "title": "Workflow State and Schema Baseline",
+          "description": "Define and freeze typed workflow state contracts with migration-safe versioning.",
+          "status": "completed",
+          "prdFile": "tasks/prd-001-workflow-state-schema-baseline.md",
+          "stories": 8,
+          "completedAt": "2026-02-24T14:02:42Z"
+        },
+        {
+          "id": "PRD-002",
+          "title": "Evidence Artifact Contract",
+          "description": "Define canonical markdown/json evidence schema for e2e, revision, and release checks.",
+          "status": "completed",
+          "prdFile": "tasks/prd-002-evidence-artifact-contract.md",
+          "stories": 7,
+          "dependsOn": [
+            "PRD-001"
+          ],
+          "completedAt": "2026-02-24T16:42:18Z"
+        },
+        {
+          "id": "PRD-003",
+          "title": "Adapter Compatibility Test Harness",
+          "description": "Add contract tests for workflow adapters and provider boundary behavior.",
+          "status": "completed",
+          "prdFile": "tasks/prd-003-adapter-compatibility-test-harness.md",
+          "stories": 6,
+          "dependsOn": [
+            "PRD-001"
+          ],
+          "completedAt": "2026-02-24T17:39:08Z"
+        }
+      ]
+    },
+    {
+      "id": "M1",
+      "title": "MVP Authoring Loop",
+      "description": "Deliver idea-to-first-draft and revision loop with explicit checkpoints and deterministic CLI flow.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-004",
+          "title": "Guided Idea-to-Draft CLI Session",
+          "description": "Implement command-first guided run that takes idea input and produces first draft artifacts in one session.",
+          "status": "completed",
+          "prdFile": "tasks/prd-004-guided-idea-to-draft-cli-session.md",
+          "stories": 10,
+          "dependsOn": [
+            "PRD-002"
+          ],
+          "completedAt": "2026-02-24T18:37:42Z"
+        },
+        {
+          "id": "PRD-005",
+          "title": "Checkpointed Revision Loop",
+          "description": "Guarantee no data loss across iterative revision rounds with explicit checkpoint persistence.",
+          "status": "completed",
+          "prdFile": "tasks/prd-005-checkpointed-revision-loop.md",
+          "stories": 11,
+          "dependsOn": [
+            "PRD-001",
+            "PRD-002"
+          ],
+          "completedAt": "2026-02-24T19:28:59Z"
+        },
+        {
+          "id": "PRD-006",
+          "title": "Generation Control Surface",
+          "description": "Expose style, length, and constraint controls in CLI and persist parameter snapshots to evidence.",
+          "status": "completed",
+          "prdFile": "tasks/prd-006-generation-control-surface.md",
+          "stories": 8,
+          "dependsOn": [
+            "PRD-004"
+          ],
+          "completedAt": "2026-02-24T21:55:36Z"
+        },
+        {
+          "id": "PRD-007",
+          "title": "Quality Feedback Pipeline",
+          "description": "Produce scene/chapter actionable feedback artifacts from critic and revision stages.",
+          "status": "completed",
+          "prdFile": "tasks/prd-007-quality-feedback-pipeline.md",
+          "stories": 9,
+          "dependsOn": [
+            "PRD-005"
+          ],
+          "completedAt": "2026-02-25T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "Consistency and Release Gate",
+      "description": "Add narrative consistency checks and enforce chapter release gate with zero critical conflicts.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-008",
+          "title": "Narrative Entity Model",
+          "description": "Define canonical character, worldbuilding, and timeline entity schema used by consistency checks.",
+          "status": "completed",
+          "prdFile": "tasks/prd-008-narrative-entity-model.md",
+          "stories": 7,
+          "dependsOn": [
+            "PRD-001",
+            "PRD-002"
+          ],
+          "completedAt": "2026-02-25T00:00:00Z"
+        },
+        {
+          "id": "PRD-009",
+          "title": "Consistency Conflict Detector",
+          "description": "Implement conflict detection and severity tagging for entity and timeline contradictions.",
+          "status": "completed",
+          "prdFile": "tasks/prd-009-consistency-conflict-detector.md",
+          "stories": 12,
+          "dependsOn": [
+            "PRD-008",
+            "PRD-007"
+          ],
+          "completedAt": "2026-02-25T20:34:00Z"
+        },
+        {
+          "id": "PRD-010",
+          "title": "Chapter Release Gate Scoring",
+          "description": "Implement deterministic chapter gate with score threshold, critical blockers, and evidence linkage.",
+          "status": "completed",
+          "prdFile": "tasks/prd-010-chapter-release-gate-scoring.md",
+          "stories": 10,
+          "dependsOn": [
+            "PRD-009"
+          ],
+          "completedAt": "2026-02-25T13:09:23Z"
+        }
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "Team Workflow and Ergonomics",
+      "description": "Harden deterministic stage handoff for small teams and improve mixed CLI/UI operability.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-011",
+          "title": "Role-Aware Stage Handoff",
+          "description": "Add role boundaries and deterministic stage ownership for team collaboration.",
+          "status": "completed",
+          "prdFile": "tasks/prd-011-role-aware-stage-handoff.md",
+          "stories": 8,
+          "dependsOn": [
+            "PRD-010"
+          ],
+          "completedAt": "2026-02-25T22:18:00Z"
+        },
+        {
+          "id": "PRD-012",
+          "title": "Conflict Triage Workflow",
+          "description": "Add structured triage, fix-status tracking, and escalation for consistency and quality issues.",
+          "status": "completed",
+          "prdFile": "tasks/prd-012-conflict-triage-workflow.md",
+          "stories": 8,
+          "dependsOn": [
+            "PRD-009",
+            "PRD-011"
+          ],
+          "completedAt": "2026-02-25T18:01:07Z"
+        },
+        {
+          "id": "PRD-013",
+          "title": "Optional UI Execution Bridge",
+          "description": "Provide optional desktop/ui bridge for the same deterministic workflow stages exposed by CLI.",
+          "status": "completed",
+          "prdFile": "tasks/prd-013-optional-ui-execution-bridge.md",
+          "stories": 9,
+          "dependsOn": [
+            "PRD-011"
+          ],
+          "completedAt": "2026-02-26T02:05:00Z"
+        }
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "Optimization and Evidence Analytics",
+      "description": "Achieve KPI targets and expose auditable quality/cycle-time evidence summaries.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-014",
+          "title": "KPI Measurement Specification",
+          "description": "Freeze measurement rules for cycle-time baseline, sample windows, and comparable quality rubric.",
+          "status": "completed",
+          "prdFile": "tasks/prd-014-kpi-measurement-specification.md",
+          "stories": 6,
+          "dependsOn": [
+            "PRD-002",
+            "PRD-010"
+          ]
+        },
+        {
+          "id": "PRD-015",
+          "title": "Cycle-Time Reduction Dashboard Artifacts",
+          "description": "Produce weekly evidence summaries showing cycle-time trend and quality comparability.",
+          "status": "completed",
+          "prdFile": "tasks/prd-015-cycle-time-reduction-dashboard-artifacts.md",
+          "stories": 7,
+          "dependsOn": [
+            "PRD-014"
+          ]
+        },
+        {
+          "id": "PRD-016",
+          "title": "Release Readiness Automation",
+          "description": "Automate release evidence completeness checks and gate enforcement before publish.",
+          "status": "completed",
+          "prdFile": "tasks/prd-016-release-readiness-automation.md",
+          "stories": 8,
+          "dependsOn": [
+            "PRD-010",
+            "PRD-015"
+          ],
+          "completedAt": "2026-02-26T04:35:00Z"
+        }
+      ]
+    },
+    {
+      "id": "M5",
+      "title": "Writing Helper Capability Parity",
+      "description": "Close remaining writing-helper gaps: editor UX, export, text-humanization optimizer, detector-oriented statistics, and multi-LLM provider surface.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-017",
+          "title": "Built-in Real-time Editor and Draft Rewrite",
+          "description": "Provide built-in real-time editing for generated drafts with deterministic save/reload and revision linkage.",
+          "status": "completed",
+          "prdFile": "tasks/prd-017-built-in-realtime-editor-and-draft-rewrite.md",
+          "stories": 10,
+          "dependsOn": [
+            "PRD-004",
+            "PRD-005",
+            "PRD-013"
+          ]
+        },
+        {
+          "id": "PRD-024",
+          "title": "Deep Style Prompt Composer",
+          "description": "Provide multi-dimensional style composition controls for language, structure, narration, and emotion with reusable presets.",
+          "status": "completed",
+          "prdFile": "tasks/prd-024-deep-style-prompt-composer.md",
+          "stories": 9,
+          "dependsOn": [
+            "PRD-006",
+            "PRD-017"
+          ]
+        },
+        {
+          "id": "PRD-018",
+          "title": "Markdown One-click Export Experience",
+          "description": "Add one-click markdown export from draft/revision artifacts with stable file naming and trace metadata.",
+          "status": "completed",
+          "prdFile": "tasks/prd-018-markdown-one-click-export-experience.md",
+          "stories": 6,
+          "dependsOn": [
+            "PRD-017"
+          ]
+        },
+        {
+          "id": "PRD-019",
+          "title": "AI Text Humanization Optimizer",
+          "description": "Add optimizer pipeline to reduce AI-like writing traces while preserving meaning and narrative intent.",
+          "status": "completed",
+          "prdFile": "tasks/prd-019-ai-text-humanization-optimizer.md",
+          "stories": 12,
+          "dependsOn": [
+            "PRD-007",
+            "PRD-017",
+            "PRD-024"
+          ]
+        },
+        {
+          "id": "PRD-020",
+          "title": "Detector-oriented Statistics Optimization",
+          "description": "Introduce measurable perplexity/burstiness optimization and detector-facing validation strategy.",
+          "status": "completed",
+          "prdFile": "tasks/prd-020-detector-oriented-statistics-optimization.md",
+          "stories": 9,
+          "dependsOn": [
+            "PRD-019"
+          ]
+        },
+        {
+          "id": "PRD-021",
+          "title": "Multi-LLM Provider Matrix (OpenAI/Grok/Ollama/DeepSeek)",
+          "description": "Extend provider integration and routing to include Grok/Ollama/DeepSeek with per-provider capability constraints.",
+          "status": "completed",
+          "prdFile": "tasks/prd-021-multi-llm-provider-matrix-openai-grok-ollama-deepseek.md",
+          "stories": 11,
+          "dependsOn": [
+            "PRD-003",
+            "PRD-006"
+          ]
+        },
+        {
+          "id": "PRD-022",
+          "title": "API Configuration UX and Timeout/Debug Ergonomics",
+          "description": "Provide intuitive API settings UX, long-timeout handling (up to 10 minutes), and user-friendly error/debug surfaces.",
+          "status": "completed",
+          "prdFile": "tasks/prd-022-api-configuration-ux-and-timeout-debug-ergonomics.md",
+          "stories": 8,
+          "dependsOn": [
+            "PRD-021",
+            "PRD-013"
+          ]
+        },
+        {
+          "id": "PRD-023",
+          "title": "Responsive UI and Mobile Adaptation",
+          "description": "Ensure desktop/mobile responsive behavior for editor, optimization controls, provider settings, and run feedback views.",
+          "status": "completed",
+          "prdFile": "tasks/prd-023-responsive-ui-and-mobile-adaptation.md",
+          "stories": 7,
+          "dependsOn": [
+            "PRD-017",
+            "PRD-022"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "M6",
+      "title": "Novel Profiles and Genre-Adaptive Quality Gates",
+      "description": "Add per-novel custom reference libraries, genre-adaptive rubrics, and optional hard gates for historical/detail-sensitive projects.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-025",
+          "title": "Novel Profile and Scoped Reference Library",
+          "description": "Introduce per-novel profile contracts with project-scoped reference library manifests and source provenance.",
+          "status": "completed",
+          "prdFile": "tasks/prd-025-novel-profile-scoped-reference-library.md",
+          "stories": 9,
+          "dependsOn": [
+            "PRD-008",
+            "PRD-021"
+          ],
+          "completedAt": "2026-02-26T22:32:01Z"
+        },
+        {
+          "id": "PRD-026",
+          "title": "Genre Taxonomy and Adaptive Rubric Packs",
+          "description": "Define canonical genre taxonomy and map each genre to rubric packs for quality scoring.",
+          "status": "completed",
+          "prdFile": "tasks/prd-026-genre-taxonomy-adaptive-rubric-packs.md",
+          "stories": 8,
+          "dependsOn": [
+            "PRD-025"
+          ],
+          "completedAt": "2026-02-26T22:32:08Z"
+        },
+        {
+          "id": "PRD-027",
+          "title": "Historical Detail Scorecard",
+          "description": "Implement history-detail scorecard dimensions (ritual, clothing, institution, chronology) with evidence output.",
+          "status": "completed",
+          "prdFile": "tasks/prd-027-historical-detail-scorecard.md",
+          "stories": 8,
+          "dependsOn": [
+            "PRD-025",
+            "PRD-026"
+          ],
+          "completedAt": "2026-02-26T22:32:16Z"
+        },
+        {
+          "id": "PRD-028",
+          "title": "Genre-Aware Gate Policy",
+          "description": "Add per-profile gate policy (hard_gate/warn_only) and integrate rubric-based block semantics into release checks.",
+          "status": "completed",
+          "prdFile": "tasks/prd-028-genre-aware-gate-policy.md",
+          "stories": 7,
+          "dependsOn": [
+            "PRD-026",
+            "PRD-027"
+          ],
+          "completedAt": "2026-02-26T22:32:23Z"
+        }
+      ],
+      "completedAt": "2026-02-26T22:32:23Z"
+    },
+    {
+      "id": "M7",
+      "title": "Operational Parity and Compatibility Hardening",
+      "description": "Preserve old-solution operational strengths via release-governance hardening, gateway contract compatibility, and desktop parity checks.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-029",
+          "title": "Release Readiness Gate Contract Hardening",
+          "description": "Freeze and test deterministic GO/NO_GO blocker semantics for baseline tests/coverage, desktop checks, and gate-score critical blockers.",
+          "status": "completed",
+          "prdFile": "tasks/prd-029-release-readiness-gate-contract-hardening.md",
+          "stories": 7,
+          "dependsOn": [
+            "PRD-016",
+            "PRD-028"
+          ],
+          "completedAt": "2026-02-27T01:44:37Z"
+        },
+        {
+          "id": "PRD-030",
+          "title": "MCP Gateway Backward-Compatibility Guard",
+          "description": "Protect chat/stream/health/tools/models endpoint contracts and compatibility-critical helpers with deterministic regression tests.",
+          "status": "completed",
+          "prdFile": "tasks/prd-030-mcp-gateway-backward-compatibility-guard.md",
+          "stories": 8,
+          "dependsOn": [
+            "PRD-029"
+          ],
+          "completedAt": "2026-02-27T01:46:05Z"
+        },
+        {
+          "id": "PRD-031",
+          "title": "Desktop Quality-Gate Parity Enforcement",
+          "description": "Enforce desktop typecheck/build parity as release-facing signal when optional UI delivery is in scope.",
+          "status": "completed",
+          "prdFile": "tasks/prd-031-desktop-quality-gate-parity-enforcement.md",
+          "stories": 6,
+          "dependsOn": [
+            "PRD-029",
+            "PRD-030"
+          ],
+          "completedAt": "2026-02-27T01:47:19Z"
+        },
+        {
+          "id": "PRD-032",
+          "title": "Mode Orchestration and Quality-First Policy Enforcement",
+          "description": "Enforce manual-enable auto-writing modes and make docs/quality criteria authoritative across manual/hybrid/full-auto workflows.",
+          "status": "completed",
+          "prdFile": "tasks/prd-032-mode-orchestration-quality-first-policy-enforcement.md",
+          "stories": 7,
+          "dependsOn": [
+            "PRD-028",
+            "PRD-029"
+          ],
+          "completedAt": "2026-02-27T01:48:34Z"
+        }
+      ],
+      "completedAt": "2026-02-27T01:48:34Z"
+    },
+    {
+      "id": "M8",
+      "title": "Roadmap Continuity and KPI Governance",
+      "description": "Finalize roadmap governance after capability-parity delivery and track ongoing KPI, release, and quality-policy stewardship.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-033",
+          "title": "Roadmap Governance and Lifecycle Sync",
+          "description": "Maintain roadmap pointers, milestone lifecycle semantics, and deterministic PRD activation/completion updates.",
+          "status": "completed",
+          "prdFile": "tasks/prd-033-roadmap-governance-and-lifecycle-sync.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-032"
+          ],
+          "completedAt": "2026-02-27T11:08:24Z"
+        },
+        {
+          "id": "PRD-034",
+          "title": "KPI and Evidence Governance Baseline",
+          "description": "Operationalize continuous KPI evidence refresh and weekly quality/release artifact governance.",
+          "status": "completed",
+          "prdFile": "tasks/prd-034-kpi-and-evidence-governance-baseline.md",
+          "stories": 6,
+          "dependsOn": [
+            "PRD-033",
+            "PRD-015",
+            "PRD-029"
+          ],
+          "completedAt": "2026-02-27T11:44:07Z"
+        },
+        {
+          "id": "PRD-035",
+          "title": "Quality Policy Drift Guard",
+          "description": "Detect and prevent runtime-policy drift from docs/quality acceptance criteria and release-gate blocker semantics.",
+          "status": "completed",
+          "prdFile": "tasks/prd-035-quality-policy-drift-guard.md",
+          "stories": 6,
+          "dependsOn": [
+            "PRD-032",
+            "PRD-034"
+          ],
+          "completedAt": "2026-02-27T14:16:17Z"
+        }
+      ],
+      "completedAt": "2026-02-27T14:16:17Z"
+    },
+    {
+      "id": "M9",
+      "title": "Release Blocker Resolution",
+      "description": "Close remaining P0 desktop release blocker so policy-conformant release readiness can move from NO_GO to GO when all gates pass.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-036",
+          "title": "Desktop Typecheck Gate Recovery",
+          "description": "Eliminate desktop TypeScript failures that keep release gate at NO_GO and enforce deterministic blocker-to-gate mapping evidence.",
+          "status": "completed",
+          "prdFile": "tasks/prd-036-desktop-typecheck-gate-recovery.md",
+          "stories": 6,
+          "dependsOn": [
+            "PRD-031",
+            "PRD-035"
+          ],
+          "completedAt": "2026-02-27T20:31:55Z"
+        }
+      ],
+      "completedAt": "2026-02-27T20:31:55Z"
+    },
+    {
+      "id": "M10",
+      "title": "Release Semantics Closure",
+      "description": "Complete post-M9 release semantic closure by validating deterministic GO transitions and auditable evidence alignment after desktop blocker recovery.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-037",
+          "title": "Deterministic GO Transition Verification",
+          "description": "Verify release decision transitions from NO_GO to GO under fully passing checks while preserving blocker semantics and decision reduction determinism.",
+          "status": "completed",
+          "prdFile": "tasks/prd-037-deterministic-go-transition-verification.md",
+          "stories": 5,
+          "completedAt": "2026-02-28T05:50:00Z"
+        },
+        {
+          "id": "PRD-038",
+          "title": "Post-Recovery Evidence Contract Refresh",
+          "description": "Refresh and validate release evidence artifacts so recovered desktop_check state is traceable and schema-compatible across summary and release artifacts.",
+          "status": "completed",
+          "prdFile": "tasks/prd-038-post-recovery-evidence-contract-refresh.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-037"
+          ],
+          "completedAt": "2026-02-28T06:50:00Z"
+        }
+      ],
+      "completedAt": "2026-02-28T06:50:00Z"
+    },
+    {
+      "id": "M11",
+      "title": "Release Contract Observability Hardening",
+      "description": "Strengthen deterministic release-contract observability by extending artifact assertions, provenance checks, and regression guards for future release cycles.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-039",
+          "title": "Artifact Provenance and Cross-Surface Mapping",
+          "description": "Ensure release report and artifact expose stable provenance mappings for key blocker signals and evidence links.",
+          "status": "completed",
+          "prdFile": "tasks/prd-039-artifact-provenance-and-cross-surface-mapping.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-038"
+          ],
+          "completedAt": "2026-02-28T09:57:56Z"
+        },
+        {
+          "id": "PRD-040",
+          "title": "Deterministic Reason Attribution Guardrail",
+          "description": "Expand regression tests to guarantee blocker reason attribution remains precise across mixed-pass/fail scenarios.",
+          "status": "completed",
+          "prdFile": "tasks/prd-040-deterministic-reason-attribution-guardrail.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-039"
+          ],
+          "completedAt": "2026-02-28T11:07:28Z"
+        },
+        {
+          "id": "PRD-041",
+          "title": "Evidence Freshness and Trace Consistency Closure",
+          "description": "Harden freshness and trace-link consistency checks so release evidence remains auditable over repeated runs.",
+          "status": "completed",
+          "prdFile": "tasks/prd-041-evidence-freshness-and-trace-consistency-closure.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-040"
+          ],
+          "completedAt": "2026-02-28T12:05:00Z"
+        }
+      ],
+      "completedAt": "2026-02-28T11:07:28Z"
+    },
+    {
+      "id": "M12",
+      "title": "Release Contract Runtime Resilience",
+      "description": "Harden runtime path guarantees so release-check contracts remain deterministic under CLI command evolution and session orchestration changes.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-042",
+          "title": "CLI Runtime Route Determinism Guard",
+          "description": "Protect runtime command routing so guided-draft/runtime command surfaces remain deterministic and backward-safe.",
+          "status": "completed",
+          "prdFile": "tasks/prd-042-cli-runtime-route-determinism-guard.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-041"
+          ],
+          "completedAt": "2026-02-28T21:55:00Z"
+        },
+        {
+          "id": "PRD-043",
+          "title": "Session Trace and Artifact Continuity Guard",
+          "description": "Ensure session_id/run_id/trace links stay continuous and cross-surface consistent through runtime orchestration paths.",
+          "status": "completed",
+          "prdFile": "tasks/prd-043-session-trace-and-artifact-continuity-guard.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-042"
+          ],
+          "completedAt": "2026-02-28T23:40:00Z"
+        },
+        {
+          "id": "PRD-044",
+          "title": "Roadmap-to-PRD Activation Recovery Guard",
+          "description": "Add deterministic recovery checks for pointer transitions when roadmap advances and active PRD switches after closure.",
+          "status": "completed",
+          "prdFile": "tasks/prd-044-roadmap-to-prd-activation-recovery-guard.md",
+          "stories": 4,
+          "dependsOn": [
+            "PRD-043"
+          ],
+          "completedAt": "2026-02-29T00:45:00Z"
+        }
+      ],
+      "completedAt": "2026-02-29T00:45:00Z"
+    },
+    {
+      "id": "M13",
+      "title": "Roadmap Lifecycle Integrity Automation",
+      "description": "Automate roadmap lifecycle event integrity so activation and closure traces remain deterministic, deduplicated, and machine-auditable.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-045",
+          "title": "Roadmap Lifecycle Event Integrity Guard",
+          "description": "Add deterministic guards for lifecycle event ordering, duplicate-action prevention, and pointer-state consistency in roadmap changelog updates.",
+          "status": "completed",
+          "prdFile": "tasks/prd-045-roadmap-lifecycle-event-integrity-guard.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-044"
+          ],
+          "completedAt": "2026-02-29T02:10:00Z"
+        },
+        {
+          "id": "PRD-046",
+          "title": "Roadmap UpdatedAt and Completion Timestamp Consistency Guard",
+          "description": "Ensure roadmap-level updatedAt and milestone/PRD completion timestamps remain synchronized and monotonic across lifecycle updates.",
+          "status": "completed",
+          "prdFile": "tasks/prd-046-roadmap-timestamp-consistency-guard.md",
+          "stories": 4,
+          "dependsOn": [
+            "PRD-045"
+          ],
+          "completedAt": "2026-02-29T03:10:00Z"
+        },
+        {
+          "id": "PRD-047",
+          "title": "Roadmap Lifecycle Regression Evidence Export Guard",
+          "description": "Export deterministic lifecycle regression evidence for roadmap transitions with cross-surface parity between changelog and release artifacts.",
+          "status": "completed",
+          "prdFile": "tasks/prd-047-roadmap-lifecycle-regression-evidence-guard.md",
+          "stories": 4,
+          "dependsOn": [
+            "PRD-046"
+          ],
+          "completedAt": "2026-02-29T03:50:00Z"
+        }
+      ],
+      "completedAt": "2026-02-29T03:50:00Z"
+    }
+  ],
+  "changelog": [
+    {
+      "timestamp": "2026-02-29T03:50:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-047",
+      "description": "PRD-047 completed with deterministic lifecycle export parity and changelog-artifact drift detection guards."
+    },
+    {
+      "timestamp": "2026-02-29T03:50:00Z",
+      "action": "milestone_completed",
+      "milestoneId": "M13",
+      "description": "M13 completed after PRD-045/PRD-046/PRD-047 closure under roadmap lifecycle integrity automation contracts."
+    },
+    {
+      "timestamp": "2026-02-29T03:50:00Z",
+      "action": "current_prd_cleared",
+      "description": "Current PRD cleared after PRD-047 and milestone M13 completion."
+    },
+    {
+      "timestamp": "2026-02-29T03:10:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-046",
+      "description": "PRD-046 completed with deterministic updatedAt freshness and completion timestamp monotonicity guards."
+    },
+    {
+      "timestamp": "2026-02-29T03:10:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-047",
+      "description": "PRD-047 activated for lifecycle regression evidence export guard implementation."
+    },
+    {
+      "timestamp": "2026-02-29T03:10:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-047",
+      "description": "Current PRD advanced from PRD-046 to PRD-047."
+    },
+    {
+      "timestamp": "2026-02-29T02:10:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-045",
+      "description": "PRD-045 completed with deterministic duplicate-action rejection and pointer-contradiction lifecycle guards."
+    },
+    {
+      "timestamp": "2026-02-29T02:10:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-046",
+      "description": "PRD-046 activated for roadmap timestamp consistency guards."
+    },
+    {
+      "timestamp": "2026-02-29T02:10:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-046",
+      "description": "Current PRD advanced from PRD-045 to PRD-046."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "scope_extended",
+      "description": "Roadmap extended with M13 for lifecycle integrity automation after M12 completion."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "milestone_activated",
+      "milestoneId": "M13",
+      "description": "M13 activated with current PRD set to PRD-045."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-045",
+      "description": "Added PRD-045 for roadmap lifecycle event integrity guards."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-046",
+      "description": "Added PRD-046 for roadmap timestamp consistency guards."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-047",
+      "description": "Added PRD-047 for roadmap lifecycle regression evidence export guards."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-045",
+      "description": "PRD-045 activated for execution."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-045",
+      "description": "Current PRD set to PRD-045 for roadmap lifecycle integrity automation."
+    },
+    {
+      "timestamp": "2026-02-29T00:45:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-044",
+      "description": "PRD-044 completed with deterministic pointer-recovery and activation/closure lifecycle window stability guards."
+    },
+    {
+      "timestamp": "2026-02-29T00:45:00Z",
+      "action": "milestone_completed",
+      "milestoneId": "M12",
+      "description": "M12 completed after PRD-042/PRD-043/PRD-044 closure under deterministic runtime resilience contracts."
+    },
+    {
+      "timestamp": "2026-02-29T00:45:00Z",
+      "action": "current_prd_cleared",
+      "description": "Current PRD cleared after PRD-044 and milestone M12 completion."
+    },
+    {
+      "timestamp": "2026-02-28T23:40:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-043",
+      "description": "PRD-043 completed with deterministic session/gate trace continuity and repeated-run artifact trace parity guards."
+    },
+    {
+      "timestamp": "2026-02-28T23:40:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-044",
+      "description": "PRD-044 activated for roadmap-to-PRD activation recovery guard."
+    },
+    {
+      "timestamp": "2026-02-28T23:40:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-044",
+      "description": "Current PRD advanced from PRD-043 to PRD-044."
+    },
+    {
+      "timestamp": "2026-02-28T21:55:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-042",
+      "description": "PRD-042 completed with deterministic runtime route drift guards covering command identity, endpoint mapping, search payload contract, and plain/json output parity."
+    },
+    {
+      "timestamp": "2026-02-28T21:55:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-043",
+      "description": "PRD-043 activated for session trace and artifact continuity guard."
+    },
+    {
+      "timestamp": "2026-02-28T21:55:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-043",
+      "description": "Current PRD advanced from PRD-042 to PRD-043."
+    },
+    {
+      "timestamp": "2026-02-28T21:10:00Z",
+      "action": "scope_extended",
+      "description": "Roadmap extended with M12 for runtime resilience hardening after M11 closure."
+    },
+    {
+      "timestamp": "2026-02-28T21:10:00Z",
+      "action": "milestone_activated",
+      "milestoneId": "M12",
+      "description": "M12 activated with current PRD set to PRD-042."
+    },
+    {
+      "timestamp": "2026-02-28T21:10:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-042",
+      "description": "Added PRD-042 for CLI runtime route determinism guard."
+    },
+    {
+      "timestamp": "2026-02-28T21:10:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-043",
+      "description": "Added PRD-043 for session trace and artifact continuity guard."
+    },
+    {
+      "timestamp": "2026-02-28T21:10:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-044",
+      "description": "Added PRD-044 for roadmap-to-PRD activation recovery guard."
+    },
+    {
+      "timestamp": "2026-02-28T21:10:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-042",
+      "description": "PRD-042 activated for execution."
+    },
+    {
+      "timestamp": "2026-02-28T21:10:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-042",
+      "description": "Current PRD set to PRD-042 for M12 runtime resilience hardening."
+    },
+    {
+      "timestamp": "2026-02-28T20:05:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-041",
+      "description": "PRD-041 completed with deterministic repeated-run freshness/trace cross-surface guards and non-blocking WARN semantic-invariance assertions."
+    },
+    {
+      "timestamp": "2026-02-28T20:05:00Z",
+      "action": "milestone_completed",
+      "milestoneId": "M11",
+      "description": "M11 completed after PRD-039/040/041 closure under stable GO/NO_GO decision-reduction semantics."
+    },
+    {
+      "timestamp": "2026-02-28T20:05:00Z",
+      "action": "current_prd_cleared",
+      "description": "Current PRD cleared after roadmap completion."
+    },
+    {
+      "timestamp": "2026-02-28T18:55:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-040",
+      "description": "PRD-040 completed with deterministic blocker reason attribution guards, cross-surface parity assertions, and ordering-safe NO_GO reason checks."
+    },
+    {
+      "timestamp": "2026-02-28T18:55:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-041",
+      "description": "PRD-041 activated for evidence freshness and trace consistency closure."
+    },
+    {
+      "timestamp": "2026-02-28T18:55:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-041",
+      "description": "Current PRD advanced from PRD-040 to PRD-041."
+    },
+    {
+      "timestamp": "2026-02-28T18:20:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-039",
+      "description": "PRD-039 completed after US-001/US-002/US-003 closure with deterministic cross-surface provenance parity and precise NO_GO reason attribution guard."
+    },
+    {
+      "timestamp": "2026-02-28T18:20:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-040",
+      "description": "PRD-040 activated as current PRD for deterministic reason-attribution guardrail expansion."
+    },
+    {
+      "timestamp": "2026-02-28T18:20:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-040",
+      "description": "Current PRD advanced from PRD-039 to PRD-040."
+    },
+    {
+      "timestamp": "2026-02-28T07:10:00Z",
+      "action": "scope_extended",
+      "description": "Roadmap extended with M11 to continue post-recovery release-contract hardening after M10 completion."
+    },
+    {
+      "timestamp": "2026-02-28T07:10:00Z",
+      "action": "milestone_activated",
+      "milestoneId": "M11",
+      "description": "M11 activated with current PRD set to PRD-039."
+    },
+    {
+      "timestamp": "2026-02-28T07:10:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-039",
+      "description": "Added PRD-039 for artifact provenance and cross-surface mapping guards."
+    },
+    {
+      "timestamp": "2026-02-28T07:10:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-040",
+      "description": "Added PRD-040 for deterministic blocker reason attribution guardrails."
+    },
+    {
+      "timestamp": "2026-02-28T07:10:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-041",
+      "description": "Added PRD-041 for evidence freshness and trace consistency closure."
+    },
+    {
+      "timestamp": "2026-02-28T07:10:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-039",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-28T07:10:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-039",
+      "description": "Current PRD set to PRD-039 for M11 release-contract observability hardening."
+    },
+    {
+      "timestamp": "2026-02-28T06:50:00Z",
+      "action": "milestone_completed",
+      "milestoneId": "M10",
+      "description": "M10 completed with PRD-037 and PRD-038 both closed, preserving deterministic GO/NO_GO semantics and auditable release evidence contracts."
+    },
+    {
+      "timestamp": "2026-02-27T12:30:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-033",
+      "description": "PRD-033 US-001 research completed: pointer ownership boundaries and stale divergence failure modes were mapped with deterministic post-transition normalization recommendations for currentMilestone/currentPRD synchronization."
+    },
+    {
+      "timestamp": "2026-02-27T11:20:00Z",
+      "action": "scope_extended",
+      "description": "Roadmap extended with M8 for governance continuity after M7 completion, including lifecycle sync, KPI/evidence stewardship, and quality-policy drift prevention."
+    },
+    {
+      "timestamp": "2026-02-27T11:20:00Z",
+      "action": "milestone_activated",
+      "milestoneId": "M8",
+      "description": "M8 activated with current PRD set to PRD-033."
+    },
+    {
+      "timestamp": "2026-02-27T11:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-033",
+      "description": "Added PRD-033 for roadmap governance and deterministic lifecycle pointer synchronization."
+    },
+    {
+      "timestamp": "2026-02-27T11:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-034",
+      "description": "Added PRD-034 for KPI and evidence governance baseline with continuous artifact refresh semantics."
+    },
+    {
+      "timestamp": "2026-02-27T11:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-035",
+      "description": "Added PRD-035 for quality-policy drift guard against divergence from docs/quality acceptance criteria."
+    },
+    {
+      "timestamp": "2026-02-27T10:25:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-032",
+      "description": "Added PRD-032 for manual-enable mode orchestration and core quality policy enforcement anchored to docs/quality criteria."
+    },
+    {
+      "timestamp": "2026-02-27T10:25:00Z",
+      "action": "policy_hardened",
+      "description": "Formalized manual-enable auto-writing modes and established docs/quality criteria as a core acceptance baseline across all workflow modes."
+    },
+    {
+      "timestamp": "2026-02-27T10:06:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-029",
+      "description": "Added PRD-029 for release-readiness gate contract hardening with deterministic GO/NO_GO blocker semantics and artifact consistency checks."
+    },
+    {
+      "timestamp": "2026-02-27T10:06:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-030",
+      "description": "Added PRD-030 for MCP gateway backward-compatibility guard covering chat/stream/health/tools/models contracts and helper regression protection."
+    },
+    {
+      "timestamp": "2026-02-27T10:06:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-031",
+      "description": "Added PRD-031 for desktop quality-gate parity enforcement with scope-aware blocking semantics and release-artifact signal alignment."
+    },
+    {
+      "timestamp": "2026-02-27T09:20:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-025",
+      "description": "PRD-025 implementation-prep decomposition completed: NovelProfile Schema (V1), planned code touchpoints, and automated test anchors (US-001/US-002/US-003) are now documented and ready for execution planning."
+    },
+    {
+      "timestamp": "2026-02-27T08:20:00Z",
+      "action": "scope_extended",
+      "description": "Roadmap extended with M6 for novel profile, genre-adaptive rubric packs, historical detail scorecard, and genre-aware gate policy."
+    },
+    {
+      "timestamp": "2026-02-27T08:20:00Z",
+      "action": "milestone_activated",
+      "milestoneId": "M6",
+      "description": "M6 activated with current PRD set to PRD-025."
+    },
+    {
+      "timestamp": "2026-02-27T07:20:00Z",
+      "action": "project_completed",
+      "description": "All roadmap milestones and PRDs are completed under automatic progression; current milestone pointer cleared."
+    },
+    {
+      "timestamp": "2026-02-27T07:10:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-022",
+      "description": "PRD-022 auto-advanced to completion after US-001..US-003 progression covering unified API configuration UX, 10-minute timeout observability, and layered error/debug surfaces."
+    },
+    {
+      "timestamp": "2026-02-27T07:10:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-023",
+      "description": "PRD-023 auto-advanced to completion after US-001..US-003 progression covering responsive editor/optimizer flows, mobile provider/run-feedback adaptation, and stage-semantics consistency evidence anchors."
+    },
+    {
+      "timestamp": "2026-02-27T07:10:00Z",
+      "action": "milestone_completed",
+      "milestoneId": "M5",
+      "description": "Milestone M5 completed under automatic progression after PRD-022 and PRD-023 closure."
+    },
+    {
+      "timestamp": "2026-02-27T07:10:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD pointer cleared (null) after M5 completion."
+    },
+    {
+      "timestamp": "2026-02-27T06:30:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-021",
+      "description": "PRD-021 auto-advanced to completion after US-001..US-003 progression covering provider entry unification, capability-aware routing constraints, and compatibility evidence anchors."
+    },
+    {
+      "timestamp": "2026-02-27T06:30:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-022 under automatic progression request."
+    },
+    {
+      "timestamp": "2026-02-27T06:30:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-022",
+      "description": "PRD-022 activated as in-progress for API configuration UX and timeout/debug ergonomics implementation sequence."
+    },
+    {
+      "timestamp": "2026-02-27T05:50:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-021",
+      "description": "PRD-021 US-001 implemented: unified provider configuration entry and validation feedback path were implemented for OpenAI/Grok/Ollama/DeepSeek surface consistency."
+    },
+    {
+      "timestamp": "2026-02-27T05:49:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-021",
+      "description": "PRD-021 US-002 started: capability matrix modeling, routing constraint evaluation, and deterministic reject/degrade semantics implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T05:40:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-021",
+      "description": "PRD-021 US-001 research completed: provider field normalization, defaulting policy, and validation feedback contract were confirmed across OpenAI/Grok/Ollama/DeepSeek configuration paths."
+    },
+    {
+      "timestamp": "2026-02-27T05:39:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-021",
+      "description": "PRD-021 US-001 ready for plan review: unified provider configuration boundaries and verification anchors are frozen before implementation."
+    },
+    {
+      "timestamp": "2026-02-27T05:30:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-021",
+      "description": "PRD-021 US-001 started: unified provider configuration entry modeling kicked off for OpenAI/Grok/Ollama/DeepSeek fields, defaults, and validation feedback."
+    },
+    {
+      "timestamp": "2026-02-27T05:20:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-020",
+      "description": "PRD-020 completed after US-001..US-003 progression covering baseline metrics, post-optimization delta reporting, and detector-oriented traceable evidence summaries."
+    },
+    {
+      "timestamp": "2026-02-27T05:20:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-021 as the next M5 implementation target after PRD-020 completion."
+    },
+    {
+      "timestamp": "2026-02-27T05:20:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-021",
+      "description": "PRD-021 activated as in-progress for multi-LLM provider matrix implementation sequence."
+    },
+    {
+      "timestamp": "2026-02-27T05:10:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-003 research completed: detector-oriented summary contract, traceability keys, and evidence-link persistence boundaries were validated for implementation finalization."
+    },
+    {
+      "timestamp": "2026-02-27T05:09:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-003 ready for plan review: detector-summary output schema, evidence mapping rules, and verification anchors are frozen before completion implementation."
+    },
+    {
+      "timestamp": "2026-02-27T05:00:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-002 implemented: post-optimization metric recalculation, delta computation, and threshold signaling were implemented with deterministic output fields."
+    },
+    {
+      "timestamp": "2026-02-27T04:59:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-003 started: detector-oriented summary generation, evidence linkage, and trace persistence implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T04:50:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-002 research completed: post-optimization sampling contract, delta calculation rules, and threshold signaling semantics were confirmed for implementation."
+    },
+    {
+      "timestamp": "2026-02-27T04:49:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-002 ready for plan review: baseline-vs-after metric comparison boundaries and verification anchors are frozen before implementation."
+    },
+    {
+      "timestamp": "2026-02-27T04:40:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-001 implemented: baseline perplexity/burstiness sampling flow and deterministic metric serialization were implemented for pre-optimization measurement."
+    },
+    {
+      "timestamp": "2026-02-27T04:39:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-002 started: post-optimization metric recalculation, delta computation, and threshold signaling implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T04:30:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-001 research completed: baseline sampling boundaries, metric schema fields, and repeatability constraints for perplexity/burstiness were confirmed."
+    },
+    {
+      "timestamp": "2026-02-27T04:29:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-001 ready for plan review: pre-optimization measurement contract and validation anchors are frozen before implementation."
+    },
+    {
+      "timestamp": "2026-02-27T04:20:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 US-001 started: pre-optimization perplexity/burstiness baseline sampling flow and metric schema alignment implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T04:10:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-019",
+      "description": "PRD-019 completed after US-001..US-003 progression covering preset optimizer modes, custom-instruction overlays, and traceable before/after comparison evidence."
+    },
+    {
+      "timestamp": "2026-02-27T04:10:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-020 as the next M5 implementation target after PRD-019 completion."
+    },
+    {
+      "timestamp": "2026-02-27T04:10:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-020",
+      "description": "PRD-020 activated as in-progress for detector-oriented statistics optimization implementation sequence."
+    },
+    {
+      "timestamp": "2026-02-27T04:00:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-003 research completed: before/after snapshot schema, optimizer trace fields, and evidence-link persistence boundaries were validated for completion implementation."
+    },
+    {
+      "timestamp": "2026-02-27T03:59:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-003 ready for plan review: comparison artifact contract, traceability guarantees, and verification anchors are frozen before implementation finalization."
+    },
+    {
+      "timestamp": "2026-02-27T03:50:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-002 implemented: custom instruction overlay and preset merge behavior were implemented with deterministic validation and stable optimizer invocation semantics."
+    },
+    {
+      "timestamp": "2026-02-27T03:49:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-003 started: before/after snapshot persistence, optimizer parameter trace capture, and evidence-link association implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T03:40:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-002 research completed: custom instruction merging behavior, overlay precedence rules, and validation boundaries were confirmed for implementation."
+    },
+    {
+      "timestamp": "2026-02-27T03:39:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-002 ready for plan review: custom+preset merge contract and conflict resolution anchors are frozen before implementation."
+    },
+    {
+      "timestamp": "2026-02-27T03:30:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-001 implemented: preset optimizer modes were implemented with deterministic mode mapping and stable execution behavior."
+    },
+    {
+      "timestamp": "2026-02-27T03:29:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-002 started: custom instruction input, preset-overlay precedence, and validation path implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T03:20:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-001 research completed: preset mode boundaries, parameter mapping contract, and mode-switch validation anchors were confirmed for implementation."
+    },
+    {
+      "timestamp": "2026-02-27T03:19:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-001 ready for plan review: humanization and AI-modification-guidance preset behavior contracts are frozen before implementation."
+    },
+    {
+      "timestamp": "2026-02-27T03:10:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 US-001 started: preset optimizer mode modeling kicked off for humanization and AI-modification-guidance behaviors with deterministic parameter mapping."
+    },
+    {
+      "timestamp": "2026-02-27T03:00:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-024",
+      "description": "PRD-024 completed after US-001..US-003 progression covering four-dimension style modeling, preset+editable composition behavior, and traceable style evidence persistence."
+    },
+    {
+      "timestamp": "2026-02-27T03:00:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-019 as the next M5 implementation target after PRD-024 completion."
+    },
+    {
+      "timestamp": "2026-02-27T03:00:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-019",
+      "description": "PRD-019 activated as in-progress for AI text humanization optimizer implementation sequence."
+    },
+    {
+      "timestamp": "2026-02-27T02:50:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-003 research completed: style-composition trace schema, evidence extension keys, and revision-linked reproducibility fields were validated for finalization."
+    },
+    {
+      "timestamp": "2026-02-27T02:49:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-003 ready for plan review: persistence boundaries, traceability guarantees, and verification anchors are frozen before completion implementation."
+    },
+    {
+      "timestamp": "2026-02-27T02:40:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-002 implemented: preset application flow, editable dimension overrides, and reset-to-default behavior were implemented with deterministic composition output."
+    },
+    {
+      "timestamp": "2026-02-27T02:39:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-003 started: style-composition trace persistence, generation-control evidence extension, and reproducibility linkage implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T02:30:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-002 research completed: preset composition rules, per-dimension override precedence, and reset semantics were validated for deterministic editing behavior."
+    },
+    {
+      "timestamp": "2026-02-27T02:29:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-002 ready for plan review: preset+custom merge boundaries, conflict resolution order, and verification anchors are fixed for implementation."
+    },
+    {
+      "timestamp": "2026-02-27T02:20:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-001 implemented: four-dimension style composition schema, defaults, and validation path were implemented for language/structure/narration/emotion controls."
+    },
+    {
+      "timestamp": "2026-02-27T02:19:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-002 started: preset application, editable per-dimension overrides, and reset-to-default behavior implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T02:10:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-001 research completed: four-dimension style field model, default values, and validation constraints were confirmed for language/structure/narration/emotion composition."
+    },
+    {
+      "timestamp": "2026-02-27T02:09:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-001 ready for plan review: dimension schema boundaries, enum constraints, and validation anchors are frozen for implementation."
+    },
+    {
+      "timestamp": "2026-02-27T02:00:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 US-001 started: four-dimension style model research kickoff began for language/structure/narration/emotion fields, defaults, and validation constraints."
+    },
+    {
+      "timestamp": "2026-02-27T01:50:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-018",
+      "description": "PRD-018 completed after US-001..US-003 execution progression covering one-click export, deterministic naming/path policy, and traceable export evidence linkage."
+    },
+    {
+      "timestamp": "2026-02-27T01:50:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-024 as the next M5 implementation target after PRD-018 completion."
+    },
+    {
+      "timestamp": "2026-02-27T01:50:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-024",
+      "description": "PRD-024 activated as in-progress for deep style prompt composer implementation sequence."
+    },
+    {
+      "timestamp": "2026-02-27T01:40:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-003 research completed: export trace schema, evidence-link persistence contract, and revision/generation association fields were validated for final implementation."
+    },
+    {
+      "timestamp": "2026-02-27T01:39:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-003 ready for plan review: trace field set, evidence writing boundaries, and verification anchors are frozen before completion implementation."
+    },
+    {
+      "timestamp": "2026-02-27T01:30:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-002 implemented: deterministic naming template, output location contract, and collision-handling behavior were implemented for markdown export path stability."
+    },
+    {
+      "timestamp": "2026-02-27T01:29:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-003 started: export trace fields, evidence-link persistence, and revision/generation association recording implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T01:20:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-002 research completed: deterministic filename template, output directory rule, and collision-handling policy were validated for implementation consistency."
+    },
+    {
+      "timestamp": "2026-02-27T01:19:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-002 ready for plan review: naming precedence, conflict behavior, and validation anchors are fixed for implementation."
+    },
+    {
+      "timestamp": "2026-02-27T01:10:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-001 implemented: one-click markdown export entry, current-draft selection path, and success feedback behavior were completed with deterministic output expectations."
+    },
+    {
+      "timestamp": "2026-02-27T01:09:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-002 started: deterministic naming template, output directory contract, and filename collision policy implementation kicked off."
+    },
+    {
+      "timestamp": "2026-02-27T01:00:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-001 research completed: export path alignment, deterministic naming strategy, and minimum export evidence metadata fields were confirmed."
+    },
+    {
+      "timestamp": "2026-02-27T00:59:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-001 ready for plan review: implementation boundaries and validation anchors are frozen for export action, naming, and trace persistence."
+    },
+    {
+      "timestamp": "2026-02-27T00:50:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 US-001 started: research alignment kicked off for draft/revision artifact paths, deterministic export naming rules, and export evidence metadata schema."
+    },
+    {
+      "timestamp": "2026-02-27T00:40:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-018 for implementation kickoff after roadmap deepening completion."
+    },
+    {
+      "timestamp": "2026-02-27T00:40:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-018",
+      "description": "PRD-018 activated as in-progress as the first implementation target in post-planning M5 execution queue."
+    },
+    {
+      "timestamp": "2026-02-27T00:25:00Z",
+      "action": "milestone_progress",
+      "description": "M5 roadmap deepening completed for PRD-018..PRD-023; all six PRDs now have executable US scope and phased delivery plan, ready for implementation sequencing."
+    },
+    {
+      "timestamp": "2026-02-27T00:20:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-023",
+      "description": "PRD-023 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for responsive desktop/mobile parity and stage-semantic consistency."
+    },
+    {
+      "timestamp": "2026-02-27T00:18:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-022",
+      "description": "PRD-022 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) covering API settings UX, 10-minute timeout handling, and layered debug surfaces."
+    },
+    {
+      "timestamp": "2026-02-27T00:16:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-021",
+      "description": "PRD-021 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for OpenAI/Grok/Ollama/DeepSeek capability-aware provider routing."
+    },
+    {
+      "timestamp": "2026-02-27T00:14:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for perplexity/burstiness baseline-delta optimization evidence."
+    },
+    {
+      "timestamp": "2026-02-27T00:12:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for preset+custom humanization optimizer and before/after traceability."
+    },
+    {
+      "timestamp": "2026-02-27T00:10:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for one-click markdown export, deterministic naming, and trace evidence linkage."
+    },
+    {
+      "timestamp": "2026-02-24T00:00:00Z",
+      "action": "created",
+      "description": "Initial roadmap created from vision analysis and architecture."
+    },
+    {
+      "timestamp": "2026-02-24T14:02:42Z",
+      "action": "prd_completed",
+      "prdId": "PRD-001",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-24T16:42:18Z",
+      "action": "prd_completed",
+      "prdId": "PRD-002",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-24T17:39:08Z",
+      "action": "prd_completed",
+      "prdId": "PRD-003",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-24T18:37:42Z",
+      "action": "prd_completed",
+      "prdId": "PRD-004",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-24T19:28:59Z",
+      "action": "prd_completed",
+      "prdId": "PRD-005",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-24T21:55:36Z",
+      "action": "prd_completed",
+      "prdId": "PRD-006",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-25T00:00:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-007",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-25T00:00:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-008",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-25T00:00:00Z",
+      "action": "milestone_advanced",
+      "description": "Milestone focus advanced to M2 after completing M1 and PRD-008."
+    },
+    {
+      "timestamp": "2026-02-25T20:34:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-009",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-25T20:34:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-010 after PRD-009 completion."
+    },
+    {
+      "timestamp": "2026-02-25T13:09:23Z",
+      "action": "prd_completed",
+      "prdId": "PRD-010",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-25T13:09:23Z",
+      "action": "milestone_advanced",
+      "description": "Milestone focus advanced to M3 after completing M2 and PRD-010."
+    },
+    {
+      "timestamp": "2026-02-25T13:09:23Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-011 after PRD-010 completion."
+    },
+    {
+      "timestamp": "2026-02-25T13:09:23Z",
+      "action": "prd_activated",
+      "prdId": "PRD-011",
+      "description": "PRD-011 activated as in-progress after PRD-010 completion."
+    },
+    {
+      "timestamp": "2026-02-25T22:18:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-011",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-25T22:18:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-012 after PRD-011 completion."
+    },
+    {
+      "timestamp": "2026-02-25T18:01:07Z",
+      "action": "prd_completed",
+      "prdId": "PRD-012",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-25T18:01:07Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-013 after PRD-012 completion."
+    },
+    {
+      "timestamp": "2026-02-25T18:01:07Z",
+      "action": "prd_activated",
+      "prdId": "PRD-013",
+      "description": "PRD-013 activated as in-progress after PRD-012 completion."
+    },
+    {
+      "timestamp": "2026-02-26T00:10:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-013",
+      "description": "PRD-013 US-001 research completed; ready for plan-review/implementation."
+    },
+    {
+      "timestamp": "2026-02-26T01:05:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-013",
+      "description": "PRD-013 US-001 implemented: added optional default-off UI bridge workflow forwarding endpoints with parity tests."
+    },
+    {
+      "timestamp": "2026-02-26T01:20:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-013",
+      "description": "PRD-013 US-002 research completed; deterministic stage-control mapping boundaries confirmed for implementation."
+    },
+    {
+      "timestamp": "2026-02-26T01:35:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-013",
+      "description": "PRD-013 US-002 implemented: UI bridge stage-control parity tests validate waiting_confirmation and transition_rejection semantic equivalence."
+    },
+    {
+      "timestamp": "2026-02-26T01:50:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-013",
+      "description": "PRD-013 US-003 research completed; contract-equivalent workflow/UI bridge payload parity checks are ready for implementation."
+    },
+    {
+      "timestamp": "2026-02-26T02:05:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-013",
+      "description": "PRD-013 completed with UI bridge stage/control and contract parity validations."
+    },
+    {
+      "timestamp": "2026-02-26T02:05:00Z",
+      "action": "milestone_advanced",
+      "description": "Milestone focus advanced to M4 after completing M3 and PRD-013."
+    },
+    {
+      "timestamp": "2026-02-26T02:30:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-014",
+      "description": "PRD-014 activated as in-progress with KPI measurement specification scope and baseline research kickoff."
+    },
+    {
+      "timestamp": "2026-02-26T02:47:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-014",
+      "description": "PRD-014 US-003 implemented: chapter gate KPI aggregation signal updated with deterministic eligibility/window/result detail fields."
+    },
+    {
+      "timestamp": "2026-02-26T02:52:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-014",
+      "description": "PRD-014 completed with cycle-time baseline rules, comparable-quality rubric scoring, and chapter gate KPI aggregation behavior."
+    },
+    {
+      "timestamp": "2026-02-26T02:52:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-015 after PRD-014 completion."
+    },
+    {
+      "timestamp": "2026-02-26T03:30:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-015",
+      "description": "PRD-015 US-003 implemented: comparability+cycle-time trend visibility signal added and validated with deterministic pass/warn unit tests."
+    },
+    {
+      "timestamp": "2026-02-26T03:30:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-015",
+      "description": "PRD-015 completed with weekly KPI schema validation, rollup readiness, and comparability+trend visibility signals."
+    },
+    {
+      "timestamp": "2026-02-26T03:30:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-016 after PRD-015 completion."
+    },
+    {
+      "timestamp": "2026-02-26T03:50:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-016",
+      "description": "PRD-016 US-001 implemented: evidence completeness blocker added as deterministic P0 publish gate with pass/fail unit coverage."
+    },
+    {
+      "timestamp": "2026-02-26T03:50:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-016",
+      "description": "PRD-016 US-002 research completed: deterministic gate-score/critical-issue blocking composition policy defined."
+    },
+    {
+      "timestamp": "2026-02-26T04:05:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-016",
+      "description": "PRD-016 US-002 implemented: deterministic gate-score/critical-issue blocker added as P0 publish gate with pass/fail unit coverage."
+    },
+    {
+      "timestamp": "2026-02-26T04:15:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-016",
+      "description": "PRD-016 US-003 research completed: release-readiness artifact trace metadata and stable persistence path contract defined."
+    },
+    {
+      "timestamp": "2026-02-26T04:30:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-016",
+      "description": "PRD-016 US-003 implemented: release-readiness artifact persisted under evidence/release with deterministic trace metadata and unit coverage."
+    },
+    {
+      "timestamp": "2026-02-26T04:35:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-016",
+      "description": "PRD-016 completed with deterministic evidence-completeness/gate-score blockers and traceable release-readiness artifact persistence."
+    },
+    {
+      "timestamp": "2026-02-27T00:20:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-023",
+      "description": "PRD-023 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for responsive desktop/mobile parity and stage-semantic consistency."
+    },
+    {
+      "timestamp": "2026-02-27T00:18:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-022",
+      "description": "PRD-022 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) covering API settings UX, 10-minute timeout handling, and layered debug surfaces."
+    },
+    {
+      "timestamp": "2026-02-27T00:16:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-021",
+      "description": "PRD-021 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for OpenAI/Grok/Ollama/DeepSeek capability-aware provider routing."
+    },
+    {
+      "timestamp": "2026-02-27T00:14:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-020",
+      "description": "PRD-020 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for perplexity/burstiness baseline-delta optimization evidence."
+    },
+    {
+      "timestamp": "2026-02-27T00:12:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-019",
+      "description": "PRD-019 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for preset+custom humanization optimizer and before/after traceability."
+    },
+    {
+      "timestamp": "2026-02-27T00:10:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-018",
+      "description": "PRD-018 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for one-click markdown export, deterministic naming, and trace evidence linkage."
+    },
+    {
+      "timestamp": "2026-02-26T11:05:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-024",
+      "description": "PRD-024 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) for deep style composition parity."
+    },
+    {
+      "timestamp": "2026-02-26T10:55:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-024",
+      "description": "Added PRD-024 for deep style prompt composition to cover multi-dimensional style controls from writing-helper parity scope."
+    },
+    {
+      "timestamp": "2026-02-26T10:45:00Z",
+      "action": "prd_progress",
+      "prdId": "PRD-017",
+      "description": "PRD-017 expanded with executable US-001..US-003 and phased plan (Research/Plan Review/Implement/Quality) aligned to workflow evidence semantics."
+    },
+    {
+      "timestamp": "2026-02-26T10:30:00Z",
+      "action": "milestone_added",
+      "description": "Added M5 writing-helper capability parity milestone with PRD-017..PRD-023 to close editor/export/optimizer/provider/UX gaps.",
+      "prdId": "PRD-017"
+    },
+    {
+      "timestamp": "2026-02-26T10:30:00Z",
+      "action": "current_prd_updated",
+      "description": "Current PRD advanced to PRD-017 under M5 capability parity plan."
+    },
+    {
+      "timestamp": "2026-02-26T22:32:01Z",
+      "action": "prd_completed",
+      "prdId": "PRD-025",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-26T22:32:08Z",
+      "action": "prd_completed",
+      "prdId": "PRD-026",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-26T22:32:16Z",
+      "action": "prd_completed",
+      "prdId": "PRD-027",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-26T22:32:23Z",
+      "action": "prd_completed",
+      "prdId": "PRD-028",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-26T22:32:23Z",
+      "action": "milestone_completed",
+      "milestoneId": "M6",
+      "description": "Milestone completed"
+    },
+    {
+      "timestamp": "2026-02-27T01:44:37Z",
+      "action": "prd_completed",
+      "prdId": "PRD-029",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-27T01:46:05Z",
+      "action": "prd_completed",
+      "prdId": "PRD-030",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-27T01:47:19Z",
+      "action": "prd_completed",
+      "prdId": "PRD-031",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-27T01:48:34Z",
+      "action": "prd_completed",
+      "prdId": "PRD-032",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-27T01:48:34Z",
+      "action": "milestone_completed",
+      "milestoneId": "M7",
+      "description": "Milestone completed"
+    },
+    {
+      "timestamp": "2026-02-27T09:43:36Z",
+      "action": "prd_activated",
+      "prdId": "PRD-033",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-27T11:08:24Z",
+      "action": "prd_completed",
+      "prdId": "PRD-033",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-27T11:18:28Z",
+      "action": "prd_activated",
+      "prdId": "PRD-034",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-27T11:44:07Z",
+      "action": "prd_completed",
+      "prdId": "PRD-034",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-27T11:51:34Z",
+      "action": "prd_activated",
+      "prdId": "PRD-035",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-27T14:16:17Z",
+      "action": "prd_completed",
+      "prdId": "PRD-035",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-27T14:16:17Z",
+      "action": "milestone_completed",
+      "milestoneId": "M8",
+      "description": "Milestone completed"
+    },
+    {
+      "timestamp": "2026-02-27T22:30:00Z",
+      "action": "scope_extended",
+      "description": "Roadmap extended with M9 to address remaining desktop P0 release blocker after M8 governance learnings confirmed NO_GO persistence."
+    },
+    {
+      "timestamp": "2026-02-27T22:30:00Z",
+      "action": "milestone_activated",
+      "milestoneId": "M9",
+      "description": "M9 activated with current PRD set to PRD-036."
+    },
+    {
+      "timestamp": "2026-02-27T22:30:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-036",
+      "description": "Added PRD-036 for desktop typecheck gate recovery to clear release NO_GO blocker and preserve deterministic gate semantics."
+    },
+    {
+      "timestamp": "2026-02-27T22:30:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-036",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-27T22:30:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-036",
+      "description": "Current PRD set to PRD-036 for desktop blocker resolution after M8 completion."
+    },
+    {
+      "timestamp": "2026-02-27T17:05:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-036",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-27T19:16:14Z",
+      "action": "prd_activated",
+      "prdId": "PRD-036",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-27T20:31:55Z",
+      "action": "prd_completed",
+      "prdId": "PRD-036",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-27T20:31:55Z",
+      "action": "milestone_completed",
+      "milestoneId": "M9",
+      "description": "Milestone completed"
+    },
+    {
+      "timestamp": "2026-02-28T04:00:00Z",
+      "action": "scope_extended",
+      "description": "Roadmap extended with M10 after M9 completion to close remaining PRD-036 follow-up work on deterministic GO transition verification and post-recovery evidence contract refresh."
+    },
+    {
+      "timestamp": "2026-02-28T04:00:00Z",
+      "action": "milestone_activated",
+      "milestoneId": "M10",
+      "description": "M10 activated with current PRD set to PRD-037."
+    },
+    {
+      "timestamp": "2026-02-28T04:00:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-037",
+      "description": "Added PRD-037 for deterministic GO transition verification after desktop blocker recovery."
+    },
+    {
+      "timestamp": "2026-02-28T04:00:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-038",
+      "description": "Added PRD-038 for post-recovery release evidence contract refresh and schema-conformant traceability."
+    },
+    {
+      "timestamp": "2026-02-28T04:00:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-037",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-28T04:00:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-037",
+      "description": "Current PRD set to PRD-037 for deterministic GO transition closure after M9 completion."
+    },
+    {
+      "timestamp": "2026-02-28T05:50:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-037",
+      "description": "PRD-037 completed after US-001..US-003 verification of deterministic GO transition, blocker semantics preservation, and repeated-run stability contracts."
+    },
+    {
+      "timestamp": "2026-02-28T05:50:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-038",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-28T05:50:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-038",
+      "description": "Current PRD set to PRD-038 for post-recovery evidence contract refresh."
+    },
+    {
+      "timestamp": "2026-02-28T08:30:48Z",
+      "action": "prd_activated",
+      "prdId": "PRD-039",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-28T09:57:56Z",
+      "action": "prd_completed",
+      "prdId": "PRD-039",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-28T10:02:46Z",
+      "action": "prd_activated",
+      "prdId": "PRD-040",
+      "description": "PRD activated for execution"
+    },
+    {
+      "timestamp": "2026-02-28T11:07:28Z",
+      "action": "prd_completed",
+      "prdId": "PRD-040",
+      "description": "PRD completed successfully"
+    },
+    {
+      "timestamp": "2026-02-28T11:07:28Z",
+      "action": "milestone_completed",
+      "milestoneId": "M11",
+      "description": "Milestone completed"
+    }
+  ]
+}

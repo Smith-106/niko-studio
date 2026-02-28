@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "prdId": "PRD-035",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/quality-policy-drift-guard",
+  "description": "Quality Policy Drift Guard - Detect and prevent drift between runtime gate behavior and authoritative quality policy in docs/quality/*.",
+  "changeLog": [],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Define repeatable runtime-policy conformance checks",
+      "description": "As a reviewer, I want assurance that runtime gates still obey documented quality criteria.",
+      "acceptanceCriteria": [
+        "Runtime-vs-policy conformance checks are defined and repeatable",
+        "Conformance checks validate runtime quality-gate behavior against docs/quality/* contracts",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "researchTopics": [
+        "Current runtime gate evaluation entry points across workflow modes",
+        "Authoritative policy contract surfaces under docs/quality/*"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Derived from PRD-035 goals and acceptance criteria. Depends on PRD-032 and PRD-034."
+    },
+    {
+      "id": "US-002",
+      "title": "Detect threshold and blocker-semantic drift across modes",
+      "description": "As a maintainer, I want drift alerts before they affect release decisions.",
+      "acceptanceCriteria": [
+        "Drift in thresholds or blocker semantics is detected with actionable output",
+        "Manual, hybrid, and full-auto paths are all covered by drift checks",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "researchTopics": [
+        "Threshold and blocker-semantics mapping used by current gate logic",
+        "Failure modes where heuristic shortcuts or partial overrides cause drift"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Prioritizes early detection to protect release-decision consistency."
+    },
+    {
+      "id": "US-003",
+      "title": "Persist conformance evidence with explicit policy-runtime diffs",
+      "description": "As an auditor, I want evidence of policy conformance checks.",
+      "acceptanceCriteria": [
+        "Conformance results are persisted as auditable evidence artifacts",
+        "Conformance output provides explicit policy-vs-runtime diffs for mismatches",
+        "Release acceptance semantics remain deterministic across workflow modes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "researchTopics": [
+        "Evidence artifact schema and storage locations for conformance outputs",
+        "Deterministic GO/NO_GO signal mapping for policy drift outcomes"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Aligns with auditability and deterministic release semantics goals from PRD-035."
+    }
+  ]
+}

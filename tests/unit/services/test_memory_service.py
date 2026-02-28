@@ -232,6 +232,49 @@ class TestRRFFusion:
         assert fused[0].metadata["fusion"] == "rrf"
 
 
+class TestObservabilityMetrics:
+
+    @pytest.fixture
+    def service(self, tmp_path):
+        db = str(tmp_path / "test_observability.db")
+        return MemoryService(db_path=db)
+
+    def test_compute_observability_metrics_empty_results(self, service):
+        metrics = service._compute_observability_metrics([], limit=5)
+        assert metrics == {
+            "c_effective": 0.0,
+            "s_final": 0.0,
+            "r_memory": 0.0,
+        }
+
+    def test_compute_observability_metrics_single_result(self, service):
+        result = SearchResult(
+            id="a",
+            content="content_a",
+            score=0.9,
+            metadata={"importance": 0.8},
+            source="test",
+        )
+
+        metrics = service._compute_observability_metrics([result], limit=4)
+
+        assert metrics["c_effective"] == 0.25
+        assert metrics["s_final"] == 1.0
+        assert 0.0 <= metrics["r_memory"] <= 1.0
+
+    def test_compute_observability_metrics_missing_metadata_fields(self, service):
+        results = [
+            SearchResult(id="a", content="a", score=0.02, metadata={}, source="test"),
+            SearchResult(id="b", content="b", score=0.01, metadata={}, source="test"),
+        ]
+
+        metrics = service._compute_observability_metrics(results, limit=2)
+
+        assert metrics["c_effective"] == 1.0
+        assert 0.0 <= metrics["s_final"] <= 1.0
+        assert 0.0 <= metrics["r_memory"] <= 1.0
+
+
 # ============================================================
 # MemoryService CRUD (with SimpleEmbedder fallback)
 # ============================================================
@@ -253,6 +296,17 @@ class TestMemoryServiceCRUD:
             service.add(msgs, opts)
         )
         assert memory_id is not None
+
+        db = service._get_db()
+        row = db.execute(
+            "SELECT embedding_blob, embedding_model, embedding_dim, content_hash, last_accessed_at FROM memories WHERE id = ?",
+            (memory_id,),
+        ).fetchone()
+        assert row["embedding_blob"] is not None
+        assert row["embedding_model"] == "BAAI/bge-small-zh-v1.5"
+        assert row["embedding_dim"] > 0
+        assert row["content_hash"]
+        assert row["last_accessed_at"]
 
         mem = asyncio.get_event_loop().run_until_complete(
             service.get(memory_id)
@@ -435,7 +489,28 @@ class TestMemoryServiceSearch:
 # MemoryService Session History
 # ============================================================
 
-class TestSessionHistory:
+    def test_search_updates_last_accessed_at(self, populated_service):
+        db = populated_service._get_db()
+        row = db.execute(
+            "SELECT id, last_accessed_at FROM memories WHERE namespace = ? LIMIT 1",
+            ("writing",),
+        ).fetchone()
+        assert row is not None
+        before = row["last_accessed_at"]
+
+        asyncio.get_event_loop().run_until_complete(
+            populated_service.search(
+                "李明",
+                SearchOptions(namespace="writing", threshold=0.0),
+            )
+        )
+
+        after_row = db.execute("SELECT last_accessed_at FROM memories WHERE id = ?", (row["id"],)).fetchone()
+        assert after_row is not None
+        assert after_row["last_accessed_at"] is not None
+        if before is not None:
+            assert after_row["last_accessed_at"] >= before
+
 
     @pytest.fixture
     def service(self, tmp_path):
@@ -485,6 +560,59 @@ class TestSessionHistory:
 
         history = loop.run_until_complete(service.get_history(session_id))
         assert history[0].timestamp == ts
+
+
+class TestRetrievalProfileAndCache:
+
+    @pytest.fixture
+    def service(self, tmp_path):
+        db = str(tmp_path / "test_profile_cache.db")
+        return MemoryService(db_path=db)
+
+    def test_retrieval_profile_upsert_and_get(self, service):
+        service.upsert_retrieval_profile(
+            profile_name="standard_balanced",
+            source_weights={"memory": 1.0, "graph": 0.9, "file": 0.8},
+            thresholds={"min_score": 0.25},
+            budget={"budget_tokens": 1200},
+            enabled=True,
+        )
+
+        profile = service.get_retrieval_profile("standard_balanced")
+        assert profile is not None
+        assert profile["enabled"] is True
+        assert profile["source_weights_json"]["memory"] == 1.0
+        assert profile["thresholds_json"]["min_score"] == 0.25
+        assert profile["budget_json"]["budget_tokens"] == 1200
+
+    def test_retrieval_cache_pack_read_and_cleanup(self, service):
+        cache_key = "session:abc:query:hello"
+        payload = {"results": [{"id": "m1"}]}
+
+        service.cache_pack(cache_key, payload, ttl_seconds=60, status="ready")
+        first = service.cache_read(cache_key)
+        second = service.cache_read(cache_key)
+
+        assert first is not None
+        assert first["status"] == "ready"
+        assert first["payload"]["results"][0]["id"] == "m1"
+        assert second is not None
+        assert second["hit_count"] >= 2
+        assert service.cache_status(cache_key) == "ready"
+
+        service.cache_release(cache_key)
+        assert service.cache_read(cache_key) is None
+
+        service.cache_pack("expired", {"x": 1}, ttl_seconds=1)
+        db = service._get_db()
+        db.execute(
+            "UPDATE retrieval_cache SET expires_at = ? WHERE cache_key = ?",
+            ("2000-01-01T00:00:00", "expired"),
+        )
+        db.commit()
+
+        cleaned = service.cache_cleanup()
+        assert cleaned >= 1
 
 
 # ============================================================

@@ -349,13 +349,14 @@ class Level4Brainstorm(BaseLevel):
         return ["architect", "writer", "critic"]
 
     def get_default_config(self) -> Dict:
-        """获取默认配置"""
+        """获取默认配置（L4 执行策略阈值；非 novel 发布门槛）"""
         return {
             "max_revisions": 5,
             "pass_score": 85,
             "verbose": True,
             "max_parallel": self.DEFAULT_MAX_PARALLEL,
             "timeout_per_role": 60,
+            "retrieval_profile": "brainstorm_quality",
         }
 
     # ========================================

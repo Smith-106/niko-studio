@@ -1,0 +1,298 @@
+# Aha Loop Progress Log
+Started: 2026年02月27日 14:00:39
+---
+
+## 2026-02-27 20:30 - US-001 - Research
+
+### Research
+- Topics investigated: current roadmap pointer update logic/ownership boundaries; stale `currentMilestone`/`currentPRD` divergence failure modes.
+- Key findings:
+  - Execute lifecycle flow deterministically updates `currentPRD` on activation/completion, but `currentMilestone` normalization is less coupled in the same transition path.
+  - Divergence risk appears when status/changelog updates are not followed by one canonical pointer normalization step.
+  - Recommended rule: derive both pointers from canonical milestone/PRD status after each lifecycle transition, then persist changelog in stable action taxonomy.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- Marked `US-001.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-001` learnings and implementation notes in `.aha-loop/prd.json` for deterministic pointer normalization implementation.
+- Appended PRD changelog note for US-001 research completion in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-001-research.md`, `.aha-loop/prd.json`, `.aha-loop/project.roadmap.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: Completed research-first gate, mapped orchestrator lifecycle ownership boundaries, and fixed deterministic sync direction for upcoming implementation.
+
+### Learnings for Future Iterations
+- Treat roadmap pointers as derived state from canonical status, not ad-hoc event side effects.
+- Couple pointer normalization with lifecycle status writes to avoid stale milestone/PRD combinations.
+- Keep lifecycle changelog actions stable and machine-consumable while adding progress detail entries.
+
+---
+
+## 2026-02-27 20:55 - US-001 - Plan Review
+
+### Research
+- Topics reviewed: US-001 pointer ownership boundaries and stale divergence failure modes from `.aha-loop/research/US-001-research.md`.
+- Key findings applied:
+  - Lifecycle transitions should be followed by one canonical pointer normalization step.
+  - `currentPRD` and `currentMilestone` should be derived from canonical status, not event-local side effects.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- No story split/reorder or acceptance criteria changes required for US-001.
+- Added PRD changelog entry confirming US-001 plan review decision and implementation direction.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: Locked implementation direction to deterministic post-transition pointer synchronization in existing lifecycle flow.
+
+### Learnings for Future Iterations
+- Plan-review gate can remain lightweight when research already resolves architectural ambiguity.
+- Keep lifecycle transition writes and pointer normalization in one deterministic transaction-like sequence.
+
+---
+
+## 2026-02-27 21:20 - US-001 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused prior US-001 research on pointer ownership boundaries and stale divergence failure modes.
+- Key findings: pointer normalization must run in the same lifecycle execution path that selects/advances PRDs.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- No acceptance criteria or story ordering changes.
+- Locked implementation to deterministic pointer normalization before PRD selection in execute loop.
+
+### Implementation
+- Files changed: `参考/Aha-Loop/scripts/aha-loop/orchestrator.sh`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: Added a pre-selection normalization step in `run_execute_phase` so roadmap pointers are canonicalized from statuses before each iteration reads `currentPRD`.
+
+### Learnings for Future Iterations
+- Normalize derived roadmap pointers before any pointer-based branch/PRD selection, not only after transitions.
+- Combining pre-selection and post-transition normalization makes pointer-state drift self-healing in long-running automation loops.
+- Run focused tests with `--no-cov` for functional validation when repository-wide coverage gates are intentionally strict.
+
+---
+
+## 2026-02-27 16:58 - US-002 - Research
+
+### Research
+- Topics investigated: canonical lifecycle transition sequence/guard conditions; milestone closure interactions with PRD activation/completion and pointer normalization.
+- Key findings:
+  - Execute flow has deterministic completion ordering and guard checks, with pre-selection + post-transition pointer normalization already in place.
+  - `prd_completed` and conditional `milestone_completed` are emitted in sequence, but execute-path activation currently sets status to `in_progress` without explicit `prd_activated` append in the same transition path.
+  - Recommended sequence for implementation phase: `prd_activated` on pending->in_progress, then `prd_completed`, then conditional `milestone_completed`, with pointer normalization after each lifecycle write.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-002` learnings + implementation notes in `.aha-loop/prd.json`.
+- Appended PRD changelog note for US-002 research completion in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: Research-first lifecycle trace across execute transition path, guard conditions, and changelog semantics to lock deterministic sequencing contract before implementation.
+
+### Learnings for Future Iterations
+- Lifecycle action completeness matters as much as pointer normalization for replayable governance semantics.
+- Keep transition guards (`pending_in_milestone`, incomplete milestone checks) as the sole authority for completion events.
+- Avoid splitting status writes and lifecycle event writes across separate uncontrolled branches.
+
+---
+
+## 2026-02-27 17:00 - US-002 - Plan Review
+
+### Research
+- Topics reviewed: canonical lifecycle transition sequencing/guard conditions and activation-completion-milestone interaction normalization from `.aha-loop/research/US-002-research.md`.
+- Key findings applied:
+  - Execute path should emit complete lifecycle actions in deterministic order, including activation.
+  - Keep `prd_completed` before conditional `milestone_completed`, with shared pointer normalization after lifecycle writes.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- No story split/reorder or acceptance criteria changes required for US-002.
+- Added PRD changelog entry confirming US-002 plan review decision and deterministic lifecycle event ordering direction.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: Locked implementation direction to explicit execute-path lifecycle event sequencing (`prd_activated` → `prd_completed` → conditional `milestone_completed`) while preserving existing guard semantics.
+
+### Learnings for Future Iterations
+- Determinism requires both state transition order and complete lifecycle event emission.
+- Keep transition events coupled to the same branch that performs status updates.
+- Preserve milestone/project completion guards as the sole authority for closure transitions.
+
+---
+
+
+## 2026-02-27 21:55 - US-002 - Implement
+
+### Research (if applicable)
+- Topics investigated: reused US-002 research on lifecycle sequencing, guard conditions, and activation/completion event coupling.
+- Key findings: execute flow needed explicit `prd_activated` emission in the same transition branch that sets PRD status to `in_progress`.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- No acceptance criteria or story ordering changes.
+- Applied deterministic execute-path event sequence contract directly in orchestrator implementation.
+
+### Implementation
+- Files changed: `参考/Aha-Loop/scripts/aha-loop/orchestrator.sh`, `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: Added execute-path activation event append (`prd_activated`) on pending→in_progress transition, then preserved existing `prd_completed` and conditional `milestone_completed` ordering with shared pointer normalization after lifecycle writes.
+
+### Learnings for Future Iterations
+- Lifecycle event completeness must be enforced in the same branch as status transitions for replayable governance traces.
+- Keeping `normalize_roadmap_pointers` after each lifecycle write preserves deterministic pointer-state alignment.
+- Deterministic sequence is now explicit: `prd_activated` → `prd_completed` → conditional `milestone_completed`.
+
+---
+
+## 2026-02-27 17:25 - US-003 - Research
+
+### Research
+- Topics investigated: roadmap changelog action taxonomy/payload field consistency; deterministic formatting rules for lifecycle auditability and replay.
+- Key findings:
+  - Execute lifecycle appends already follow a stable envelope for `prd_activated`, `prd_completed`, and `milestone_completed` in one deterministic control path.
+  - Roadmap changelog includes mixed action families (`prd_*`, `milestone_*`, pointer/scope/policy events); lifecycle events should keep explicit identifier keys (`prdId` / `milestoneId`) and not rely on free-form description text for machine-critical semantics.
+  - Identified roadmap JSON integrity risk in current data near `.aha-loop/project.roadmap.json:519` (malformed changelog object boundary), which impacts replay/audit reliability.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-003` learnings and implementation notes in `.aha-loop/prd.json` for lifecycle changelog schema stability hardening.
+- Appended PRD changelog note for US-003 research completion in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-003-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: Completed research-first changelog governance analysis against execute lifecycle append path and roadmap data, then codified deterministic schema stability guidance for implementation phase.
+
+### Learnings for Future Iterations
+- Lifecycle changelog semantics should be treated as a contract: stable action taxonomy + explicit payload keys + append-only ordering.
+- Deterministic machine consumption requires separating human narrative (`description`) from machine-critical linkage fields (`prdId`/`milestoneId`).
+- Validate roadmap JSON structural integrity before any replay/automation consumer reads changelog events.
+
+---
+
+## 2026-02-27 22:15 - US-003 - Plan Review
+
+### Research
+- Topics reviewed: changelog action taxonomy/payload consistency and deterministic lifecycle audit/replay formatting rules from `.aha-loop/research/US-003-research.md`.
+- Key findings applied:
+  - Keep lifecycle action taxonomy stable (`prd_activated`, `prd_completed`, `milestone_completed`) with explicit linkage fields (`prdId` / `milestoneId`).
+  - Treat `description` as human-readable only, and preserve machine-critical semantics in structured keys.
+  - Validate roadmap JSON changelog integrity as part of lifecycle governance hardening.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes
+- No story split/reorder or acceptance criteria changes required for US-003.
+- Added PRD changelog entry confirming US-003 plan review decision and implementation direction.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: Locked implementation direction to lifecycle changelog contract hardening in existing execute-path append semantics.
+
+### Learnings for Future Iterations
+- Stable governance logs require both deterministic action ordering and deterministic payload key contracts.
+- Keep lifecycle machine contracts append-only and avoid hidden semantics in free-form text.
+- Detect and correct roadmap changelog JSON structural drift early to protect replay consumers.
+
+---
+
+## 2026-02-27 22:40 - US-001 - Research
+
+### Research
+- Topics investigated: ownership boundaries for `currentMilestone`/`currentPRD` updates; stale pointer divergence during activation/completion lifecycle transitions.
+- Key findings:
+  - Execute lifecycle path in `参考/Aha-Loop/scripts/aha-loop/orchestrator.sh` already centralizes status transitions and changelog appends, and includes canonical pointer normalization hooks.
+  - Deterministic pointer consistency requires deriving both pointers from canonical milestone/PRD statuses rather than event-local side effects.
+  - No additional architecture exploration is required; implementation remains in existing execute-path orchestration flow.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- Marked `US-001.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added US-001 `learnings` and `implementationNotes` to lock deterministic pointer normalization direction.
+- Appended PRD changelog entry for US-001 research completion in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: Completed research-phase gate and codified deterministic pointer synchronization guidance for the execute lifecycle path.
+
+### Learnings for Future Iterations
+- Treat `currentPRD`/`currentMilestone` as derived state from canonical statuses.
+- Keep status updates, lifecycle events, and pointer normalization in one deterministic control path.
+- Preserve stable lifecycle action taxonomy for machine-consumable replay.
+
+---
+
+## 2026-02-27 18:11 - US-002 - Research
+
+### Research
+- Topics investigated: canonical transition ordering/guard conditions for `prd_activated -> prd_completed -> milestone_completed`; integration boundaries between milestone closure and active PRD selection.
+- Key findings:
+  - Execute lifecycle flow already contains deterministic guard-controlled completion ordering and canonical pointer normalization before selection and after lifecycle writes.
+  - The pending→in_progress transition must append `prd_activated` in the same branch as status write to keep lifecycle trace complete and replayable.
+  - Recommended deterministic sequence per PRD cycle remains explicit: `prd_activated` → `prd_completed` → conditional `milestone_completed`, with pointer normalization after each lifecycle write.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes
+- Marked `US-002.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added US-002 `learnings` and `implementationNotes` in `.aha-loop/prd.json` to lock deterministic execute-path sequencing and guard semantics.
+- Appended PRD changelog note for US-002 research completion in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/research/US-002-research.md`, `.aha-loop/prd.json`, `.aha-loop/knowledge/project/patterns.md`, `.aha-loop/progress.txt`.
+- Approach: Completed research-phase gate by tracing execute-path lifecycle transitions and codifying deterministic event ordering plus guard boundaries for upcoming implementation.
+
+### Learnings for Future Iterations
+- Lifecycle event completeness must be coupled with status transitions in the same control branch.
+- Determinism requires both explicit event ordering and canonical pointer normalization hooks.
+- Milestone/project closure guards should remain the sole authority for terminal lifecycle transitions.
+
+---
+
+## 2026-02-27 18:38 - US-002 - Quality Review
+
+### Research (if applicable)
+- Topics investigated: reused US-002 lifecycle sequencing and guard-condition findings from `.aha-loop/research/US-002-research.md`.
+- Key findings: execute path keeps status transitions and lifecycle changelog actions coupled in deterministic order (`prd_activated` → `prd_completed` → conditional `milestone_completed`).
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- No acceptance-criteria, ordering, or scope changes.
+- Confirmed implementation remains in `run_execute_phase` with canonical pointer normalization after lifecycle writes.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: Validated execute-path lifecycle semantics and data-integrity gates (`bash -n` for orchestrator script; `jq empty` for roadmap JSON), then marked US-002 pass state in PRD tracking.
+
+### Learnings for Future Iterations
+- Deterministic lifecycle governance requires both event ordering and explicit linkage keys in changelog payloads.
+- Guard checks for milestone/project completion should remain authoritative and isolated from selection heuristics.
+- Keep pointer normalization as a canonical post-transition step to prevent contradictory active/completed states.
+
+---
+
+## 2026-02-27 23:10 - US-003 - Research
+
+### Research
+- Topics investigated: lifecycle changelog action taxonomy/payload consistency; deterministic formatting requirements for replayable lifecycle audits.
+- Key findings:
+  - Execute-path lifecycle append semantics in `参考/Aha-Loop/scripts/aha-loop/orchestrator.sh` already use deterministic action taxonomy and explicit identifier fields for `prd_activated`, `prd_completed`, and `milestone_completed`.
+  - Stable machine-consumable contract should remain append-only with fixed envelope keys (`timestamp`, `action`, `description`) plus explicit linkage (`prdId`/`milestoneId`) instead of relying on free-form descriptions.
+  - Roadmap data integrity check (`jq empty .aha-loop/project.roadmap.json`) is required to protect downstream replay/audit consumers.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes
+- Marked `US-003.researchCompleted=true` in `.aha-loop/prd.json`.
+- Added `US-003` learnings + implementation notes in `.aha-loop/prd.json` to lock lifecycle changelog schema hardening direction.
+- Appended PRD changelog note for US-003 research completion in `.aha-loop/prd.json`.
+
+### Implementation
+- Files changed: `.aha-loop/prd.json`, `.aha-loop/progress.txt`.
+- Approach: Reconciled PRD research gate with existing completed research artifact and codified deterministic changelog contract expectations for the implementation phase.
+
+### Learnings for Future Iterations
+- Keep lifecycle changelog semantics as a strict contract: stable action taxonomy, explicit identifier keys, append-only ordering.
+- Keep machine-critical linkage fields outside descriptive prose to prevent parser ambiguity.
+- Validate roadmap JSON structural integrity before any automation replay/audit pipeline consumes changelog data.
+
+---

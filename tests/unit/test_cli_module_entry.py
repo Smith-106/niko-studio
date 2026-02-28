@@ -63,3 +63,56 @@ def test_cli_main_runs_main_under_name_main(monkeypatch):
         monkeypatch.setattr(click.core.Command, "__call__", original_call)
 
     assert called["count"] >= 1
+
+
+def test_cli_registers_guided_draft_command():
+    import src.cli.main as cli_main
+
+    assert "guided-draft" in cli_main.cli.commands
+
+
+def test_cli_registers_runtime_route_commands():
+    import src.cli.main as cli_main
+
+    commands = cli_main.cli.commands
+    for name in ("status", "stats", "search", "serve"):
+        assert name in commands
+
+
+def test_cli_command_registration_order_is_deterministic():
+    import src.cli.main as cli_main
+
+    command_names = list(cli_main.cli.commands.keys())
+    expected = [
+        "init",
+        "run",
+        "chat",
+        "evaluate",
+        "export",
+        "status",
+        "stats",
+        "search",
+        "serve",
+        "guided-draft",
+    ]
+    assert command_names[: len(expected)] == expected
+
+
+def test_cli_runtime_routes_bind_expected_command_objects():
+    import src.cli.main as cli_main
+    from src.cli.commands.runtime import status_cmd, stats_cmd, search_cmd, serve_cmd
+    from src.cli.commands.guided_draft import guided_draft
+
+    commands = cli_main.cli.commands
+    assert commands["status"] is status_cmd
+    assert commands["stats"] is stats_cmd
+    assert commands["search"] is search_cmd
+    assert commands["serve"] is serve_cmd
+    assert commands["guided-draft"] is guided_draft
+
+
+def test_cli_commands_package_exports_runtime_and_guided_routes():
+    import src.cli.commands as commands_pkg
+
+    for symbol in ("status_cmd", "stats_cmd", "search_cmd", "serve_cmd", "guided_draft"):
+        assert symbol in commands_pkg.__all__

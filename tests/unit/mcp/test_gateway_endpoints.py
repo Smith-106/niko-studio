@@ -27,6 +27,11 @@ class TestMetricsEndpoint:
         assert "requests_success_total" in metrics
         assert "latency_ms_avg" in metrics
         assert "latency_ms_max" in metrics
+        runtime = data["runtime"]
+        assert isinstance(runtime.get("session_id"), str)
+        assert "reconnect_attempts" in runtime
+        assert "last_probe_at" in runtime
+        assert "last_error" in runtime
 
     def test_metrics_returns_404_when_disabled(self, client_no_lifespan, monkeypatch):
         from src.mcp import gateway as gateway_module
@@ -348,6 +353,24 @@ def test_resolve_reload_enabled_paths(monkeypatch):
     assert gateway_module._resolve_reload_enabled() is False
 
 
+def test_resolve_ui_bridge_enabled_paths(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setenv("NIKO_UI_BRIDGE_ENABLED", "1")
+    assert gateway_module._resolve_ui_bridge_enabled() is True
+
+    monkeypatch.setenv("NIKO_UI_BRIDGE_ENABLED", "off")
+    assert gateway_module._resolve_ui_bridge_enabled() is False
+
+    monkeypatch.delenv("NIKO_UI_BRIDGE_ENABLED", raising=False)
+    monkeypatch.setattr(
+        gateway_module,
+        "get_config_value",
+        lambda key, default=None: True if key == "gateway.ui_bridge_enabled" else default,
+    )
+    assert gateway_module._resolve_ui_bridge_enabled() is True
+
+
 def test_resolve_gateway_host_port_env_and_config(monkeypatch):
     from src.mcp import gateway as gateway_module
 
@@ -550,6 +573,25 @@ def test_health_check_runtime_degraded_mapping(client_no_lifespan, monkeypatch):
     assert runtime["reconnect_state"] == "probing"
     assert runtime["reconnect_attempts"] >= 1
     assert runtime["servers"]["search"]["state"] == "degraded"
+
+
+
+def test_health_check_includes_observability_layers(client_no_lifespan):
+    response = client_no_lifespan.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+
+    observability = data.get("observability")
+    assert isinstance(observability, dict)
+    runtime = observability.get("runtime")
+    layers = observability.get("layers")
+    assert isinstance(runtime, dict)
+    assert isinstance(layers, dict)
+    assert "ready" in runtime
+    assert "total" in runtime
+    assert "health_ratio" in runtime
+    assert set(layers.get("status", {}).keys()) == {"memory", "retrieval", "workflow"}
+    assert set(layers.get("health", {}).keys()) == {"memory", "retrieval", "workflow"}
 
 
 def _snapshot_mcp_service_state(gateway_module):
@@ -963,6 +1005,35 @@ async def test_novel_quality_check_endpoint_forwards_to_evaluator(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_forwards_quality_kwargs_when_present(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    mock_eval = MagicMock(return_value={"metrics": {}, "issues": []})
+    monkeypatch.setattr(gateway_module, "evaluate_novel_quality", mock_eval)
+
+    req = await _json_request(
+        "/api/novel/quality-check",
+        {
+            "content": "valid body",
+            "quality_level": "medium",
+            "quality_mode": "manual",
+            "critical_gate_always_on": False,
+            "degrade_reason": "timeout:critic",
+        },
+    )
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    mock_eval.assert_called_once_with(
+        "valid body",
+        quality_level="medium",
+        quality_mode="manual",
+        critical_gate_always_on=False,
+        degrade_reason="timeout:critic",
+    )
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_handles_normalization_exception(monkeypatch):
     from src.mcp import gateway as gateway_module
 
@@ -1047,6 +1118,210 @@ async def test_novel_quality_check_endpoint_forwards_trimmed_content_to_evaluato
 
 
 @pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_merges_retrieval_and_context_budget_sidecar(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={"quality_score": 88.0, "metrics": {}, "issues": []}),
+    )
+
+    req = await _json_request(
+        "/api/novel/quality-check",
+        {
+            "content": "valid body",
+            "retrieval_metadata": {
+                "stage1_candidates": 20,
+                "stage2_selected": 8,
+                "cited_count": 6,
+                "effective_hit_rate": 0.75,
+            },
+            "context_budget": {
+                "token_total": 4000,
+                "token_effective": 2800,
+                "utilization": 0.7,
+            },
+        },
+    )
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["metrics"]["retrieval"] == {
+        "stage1_candidates": 20,
+        "stage2_selected": 8,
+        "cited_count": 6,
+        "effective_hit_rate": 0.75,
+    }
+    assert data["metrics"]["context_budget"] == {
+        "token_total": 4000,
+        "token_effective": 2800,
+        "utilization": 0.7,
+    }
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_sidecar_non_dict_is_ignored(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={"quality_score": 88.0, "metrics": {}, "issues": []}),
+    )
+
+    req = await _json_request(
+        "/api/novel/quality-check",
+        {
+            "content": "valid body",
+            "retrieval_metadata": "bad",
+            "context_budget": [1, 2, 3],
+        },
+    )
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["metrics"]["retrieval"] == {
+        "stage1_candidates": 0,
+        "stage2_selected": 0,
+        "cited_count": 0,
+        "effective_hit_rate": 0.0,
+    }
+    assert data["metrics"]["context_budget"] == {
+        "token_total": 0,
+        "token_effective": 0,
+        "utilization": 0.0,
+    }
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_normalizes_retrieval_and_context_budget_values(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={
+            "quality_score": 50,
+            "issues": [],
+            "metrics": {
+                "retrieval": {
+                    "stage1_candidates": "5",
+                    "stage2_selected": "3",
+                    "cited_count": "2",
+                    "effective_hit_rate": "1.5",
+                },
+                "context_budget": {
+                    "token_total": "1024",
+                    "token_effective": "700",
+                    "utilization": "-0.2",
+                },
+            },
+        }),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["metrics"]["retrieval"]["stage1_candidates"] == 5
+    assert data["metrics"]["retrieval"]["effective_hit_rate"] == 1.0
+    assert data["metrics"]["context_budget"]["token_total"] == 1024
+    assert data["metrics"]["context_budget"]["utilization"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_preserves_existing_metrics_when_sidecar_absent(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={
+            "quality_score": 80,
+            "issues": [],
+            "metrics": {
+                "retrieval": {
+                    "stage1_candidates": 10,
+                    "stage2_selected": 5,
+                    "cited_count": 4,
+                    "effective_hit_rate": 0.8,
+                },
+                "context_budget": {
+                    "token_total": 2000,
+                    "token_effective": 1200,
+                    "utilization": 0.6,
+                },
+            },
+        }),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["metrics"]["retrieval"]["stage2_selected"] == 5
+    assert data["metrics"]["context_budget"]["utilization"] == 0.6
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_merges_self_learning_sidecar(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={"quality_score": 88.0, "metrics": {}, "issues": []}),
+    )
+
+    req = await _json_request(
+        "/api/novel/quality-check",
+        {
+            "content": "valid body",
+            "self_learning": {
+                "strategy_adoption_rate": 0.6,
+                "reflector_triggered": True,
+                "curator_applied": True,
+            },
+        },
+    )
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["metrics"]["self_learning"] == {
+        "strategy_adoption_rate": 0.6,
+        "reflector_triggered": True,
+        "curator_applied": True,
+    }
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_self_learning_defaults_when_absent(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "evaluate_novel_quality",
+        MagicMock(return_value={"quality_score": 80, "issues": [], "metrics": {}}),
+    )
+
+    req = await _json_request("/api/novel/quality-check", {"content": "valid body"})
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["metrics"]["self_learning"] == {
+        "strategy_adoption_rate": 0.0,
+        "reflector_triggered": False,
+        "curator_applied": False,
+    }
+
+
+@pytest.mark.asyncio
 async def test_novel_quality_check_endpoint_normalizes_missing_contract_fields(monkeypatch):
     from src.mcp import gateway as gateway_module
 
@@ -1079,6 +1354,9 @@ async def test_novel_quality_check_endpoint_normalizes_missing_contract_fields(m
         "visual_details",
         "template_sentence_ratio",
         "dimension_scores",
+        "retrieval",
+        "context_budget",
+        "self_learning",
     }
     assert isinstance(metrics["conflict_points"], int)
     assert isinstance(metrics["visual_details"], int)
@@ -1534,9 +1812,9 @@ async def test_rest_workflow_agent_and_skills_endpoints_forward_payload(monkeypa
     assert (await gateway_module.workflow_route_endpoint(req)).status_code == 200
     mock_workflow_route.assert_awaited_once_with(task="write")
 
-    req = await _json_request("/workflow/plan", {"task": "write", "level": "L3", "recommendations": ["r"]})
+    req = await _json_request("/workflow/plan", {"task": "write", "level": "L3", "recommendations": ["r"], "genre": "悬疑"})
     assert (await gateway_module.workflow_plan_endpoint(req)).status_code == 200
-    mock_workflow_plan.assert_awaited_once_with(task="write", level="L3", recommendations=["r"])
+    mock_workflow_plan.assert_awaited_once_with(task="write", level="L3", recommendations=["r"], genre="悬疑")
 
     req = await _json_request("/workflow/execute", {"plan_id": "p1", "step_id": "s1", "confirm_token": "t"})
     assert (await gateway_module.workflow_execute_endpoint(req)).status_code == 200
@@ -1589,6 +1867,190 @@ async def test_rest_workflow_agent_and_skills_endpoints_forward_payload(monkeypa
     req = await _json_request("/skills/chain", {"task_type": "dialogue"})
     assert (await gateway_module.skills_chain_endpoint(req)).status_code == 200
     mock_skills_chain.assert_awaited_once_with(task_type="dialogue")
+
+
+@pytest.mark.asyncio
+async def test_ui_bridge_workflow_endpoints_respect_enable_toggle(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    mock_route = AsyncMock(return_value={"level": "L3"})
+    mock_plan = AsyncMock(return_value={"plan_id": "p1"})
+    mock_execute = AsyncMock(return_value={"status": "ok"})
+    mock_lifecycle = AsyncMock(return_value={"status": "running"})
+
+    monkeypatch.setattr(gateway_module, "workflow_route", mock_route)
+    monkeypatch.setattr(gateway_module, "workflow_plan", mock_plan)
+    monkeypatch.setattr(gateway_module, "workflow_execute", mock_execute)
+    monkeypatch.setattr(gateway_module, "workflow_lifecycle", mock_lifecycle)
+
+    monkeypatch.setattr(gateway_module, "_resolve_ui_bridge_enabled", lambda: False)
+
+    req = await _json_request("/ui/workflow/route", {"task": "write"})
+    res = await gateway_module.ui_bridge_workflow_route_endpoint(req)
+    assert res.status_code == 404
+    payload = json.loads(res.body.decode("utf-8"))
+    assert payload["status"] == "disabled"
+    assert payload["reason"] == "ui_bridge_disabled"
+    assert mock_route.await_count == 0
+
+    monkeypatch.setattr(gateway_module, "_resolve_ui_bridge_enabled", lambda: True)
+
+    req = await _json_request("/ui/workflow/route", {"task": "write"})
+    assert (await gateway_module.ui_bridge_workflow_route_endpoint(req)).status_code == 200
+    mock_route.assert_awaited_once_with(task="write")
+
+    req = await _json_request("/ui/workflow/plan", {"task": "write", "level": "L3", "recommendations": ["r"]})
+    assert (await gateway_module.ui_bridge_workflow_plan_endpoint(req)).status_code == 200
+    mock_plan.assert_awaited_once_with(task="write", level="L3", recommendations=["r"])
+
+    req = await _json_request("/ui/workflow/execute", {"plan_id": "p1", "step_id": "s1"})
+    assert (await gateway_module.ui_bridge_workflow_execute_endpoint(req)).status_code == 200
+    mock_execute.assert_awaited_once_with(plan_id="p1", step_id="s1", recommendations=None, confirm_token=None)
+
+    req = await _json_request("/ui/workflow/lifecycle", {"plan_id": "p1", "action": "status"})
+    assert (await gateway_module.ui_bridge_workflow_lifecycle_endpoint(req)).status_code == 200
+    mock_lifecycle.assert_awaited_once_with(plan_id="p1", action="status")
+
+
+def test_ui_bridge_routes_are_registered():
+    from src.mcp import gateway as gateway_module
+
+    app = gateway_module.create_gateway()
+    routes = {getattr(route, "path", None) for route in app.app.routes}
+    assert "/ui/workflow/route" in routes
+    assert "/ui/workflow/plan" in routes
+    assert "/ui/workflow/execute" in routes
+    assert "/ui/workflow/lifecycle" in routes
+
+
+@pytest.mark.asyncio
+async def test_ui_bridge_execute_preserves_waiting_confirmation_semantics(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    payload = {
+        "status": "waiting_confirmation",
+        "step_id": "step-1",
+        "gate": {
+            "decision": "NO_GO",
+            "confirm_required": True,
+            "confirmed": False,
+            "reason": "secondary_confirmation_required",
+        },
+        "transition_rejection": {
+            "from": "planned",
+            "to": "executing",
+            "reason_code": "secondary_confirmation_required",
+        },
+    }
+
+    mock_execute = AsyncMock(return_value=payload)
+    monkeypatch.setattr(gateway_module, "workflow_execute", mock_execute)
+    monkeypatch.setattr(gateway_module, "_resolve_ui_bridge_enabled", lambda: True)
+
+    req = await _json_request("/ui/workflow/execute", {"plan_id": "p1", "step_id": "s1"})
+    response = await gateway_module.ui_bridge_workflow_execute_endpoint(req)
+
+    assert response.status_code == 200
+    data = json.loads(response.body.decode("utf-8"))
+    assert data["status"] == "waiting_confirmation"
+    assert data["gate"]["confirm_required"] is True
+    assert data["transition_rejection"]["reason_code"] == "secondary_confirmation_required"
+
+
+@pytest.mark.asyncio
+async def test_ui_bridge_lifecycle_preserves_transition_rejection_semantics(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    payload = {
+        "error": "Invalid runner state transition: pending -> paused",
+        "transition_rejection": {
+            "from": "pending",
+            "to": "paused",
+            "action": "pause",
+            "reason_code": "invalid_runner_transition",
+        },
+    }
+
+    mock_lifecycle = AsyncMock(return_value=payload)
+    monkeypatch.setattr(gateway_module, "workflow_lifecycle", mock_lifecycle)
+    monkeypatch.setattr(gateway_module, "_resolve_ui_bridge_enabled", lambda: True)
+
+    req = await _json_request("/ui/workflow/lifecycle", {"plan_id": "p1", "action": "pause"})
+    response = await gateway_module.ui_bridge_workflow_lifecycle_endpoint(req)
+
+    assert response.status_code == 200
+    data = json.loads(response.body.decode("utf-8"))
+    assert data["transition_rejection"]["from"] == "pending"
+    assert data["transition_rejection"]["to"] == "paused"
+    assert data["transition_rejection"]["reason_code"] == "invalid_runner_transition"
+
+
+@pytest.mark.asyncio
+async def test_ui_bridge_workflow_contract_parity_against_workflow_endpoints(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    route_payload = {
+        "level": "L3",
+        "level_slug": "l3-standard",
+        "description": "deterministic route",
+        "reason": "keyword-score=2",
+    }
+    plan_payload = {
+        "plan_id": "plan-123",
+        "level": "L3",
+        "steps": [{"id": "s1", "name": "analyze", "status": "planned"}],
+        "recommendations": [{"id": "rec-01", "action": "set_generation_controls"}],
+    }
+    execute_payload = {
+        "status": "waiting_confirmation",
+        "step_id": "s1",
+        "gate": {"decision": "NO_GO", "confirm_required": True, "confirmed": False},
+        "transition_rejection": {
+            "from": "planned",
+            "to": "executing",
+            "reason_code": "secondary_confirmation_required",
+        },
+    }
+    lifecycle_payload = {
+        "error": "Invalid runner state transition: pending -> paused",
+        "transition_rejection": {
+            "from": "pending",
+            "to": "paused",
+            "action": "pause",
+            "reason_code": "invalid_runner_transition",
+        },
+    }
+
+    monkeypatch.setattr(gateway_module, "workflow_route", AsyncMock(return_value=route_payload))
+    monkeypatch.setattr(gateway_module, "workflow_plan", AsyncMock(return_value=plan_payload))
+    monkeypatch.setattr(gateway_module, "workflow_execute", AsyncMock(return_value=execute_payload))
+    monkeypatch.setattr(gateway_module, "workflow_lifecycle", AsyncMock(return_value=lifecycle_payload))
+    monkeypatch.setattr(gateway_module, "_resolve_ui_bridge_enabled", lambda: True)
+
+    req_workflow_route = await _json_request("/workflow/route", {"task": "write"})
+    req_ui_route = await _json_request("/ui/workflow/route", {"task": "write"})
+    workflow_route_res = await gateway_module.workflow_route_endpoint(req_workflow_route)
+    ui_route_res = await gateway_module.ui_bridge_workflow_route_endpoint(req_ui_route)
+
+    req_workflow_plan = await _json_request("/workflow/plan", {"task": "write", "level": "L3", "recommendations": ["r"]})
+    req_ui_plan = await _json_request("/ui/workflow/plan", {"task": "write", "level": "L3", "recommendations": ["r"]})
+    workflow_plan_res = await gateway_module.workflow_plan_endpoint(req_workflow_plan)
+    ui_plan_res = await gateway_module.ui_bridge_workflow_plan_endpoint(req_ui_plan)
+
+    req_workflow_execute = await _json_request("/workflow/execute", {"plan_id": "p1", "step_id": "s1"})
+    req_ui_execute = await _json_request("/ui/workflow/execute", {"plan_id": "p1", "step_id": "s1"})
+    workflow_execute_res = await gateway_module.workflow_execute_endpoint(req_workflow_execute)
+    ui_execute_res = await gateway_module.ui_bridge_workflow_execute_endpoint(req_ui_execute)
+
+    req_workflow_lifecycle = await _json_request("/workflow/lifecycle", {"plan_id": "p1", "action": "pause"})
+    req_ui_lifecycle = await _json_request("/ui/workflow/lifecycle", {"plan_id": "p1", "action": "pause"})
+    workflow_lifecycle_res = await gateway_module.workflow_lifecycle_endpoint(req_workflow_lifecycle)
+    ui_lifecycle_res = await gateway_module.ui_bridge_workflow_lifecycle_endpoint(req_ui_lifecycle)
+
+    assert json.loads(workflow_route_res.body.decode("utf-8")) == json.loads(ui_route_res.body.decode("utf-8"))
+    assert json.loads(workflow_plan_res.body.decode("utf-8")) == json.loads(ui_plan_res.body.decode("utf-8"))
+    assert json.loads(workflow_execute_res.body.decode("utf-8")) == json.loads(ui_execute_res.body.decode("utf-8"))
+    assert json.loads(workflow_lifecycle_res.body.decode("utf-8")) == json.loads(ui_lifecycle_res.body.decode("utf-8"))
 
 
 @pytest.mark.asyncio
@@ -1693,7 +2155,7 @@ async def test_evaluate_content_legacy_and_transformed_paths(monkeypatch):
     monkeypatch.setattr(gateway_module, "get_critic_engine", lambda: transformed_engine)
 
     transformed = await raw_evaluate_content("text")
-    assert transformed["decision"] == "APPROVED"
+    assert transformed["decision"] == "REWRITE"
     assert transformed["total_score"] == 83.0
     assert transformed["lock_score"] == 8.0
     assert transformed["style_score"] == 10.5
@@ -1971,12 +2433,53 @@ async def test_internal_raw_mcp_wrappers_cover_engine_delegation(monkeypatch):
     await raw_graph_add_entity("Character", "Niko")
     await raw_graph_add_relation("A", "B", "KNOWS")
 
-    await raw_search_hybrid("query")
-    await raw_search_iterative("query")
+    await raw_search_hybrid(
+        "query",
+        profile="standard_balanced",
+        min_score=0.33,
+        budget_tokens=512,
+        rerank=True,
+    )
+    await raw_search_iterative(
+        "query",
+        profile="standard_balanced",
+        min_score=0.33,
+        budget_tokens=512,
+        rerank=True,
+    )
     await raw_search_context("@character:Niko")
 
+    search_engine.hybrid_search.assert_awaited_once_with(
+        query="query",
+        scope="all",
+        limit=10,
+        profile="standard_balanced",
+        min_score=0.33,
+        budget_tokens=512,
+        rerank=True,
+    )
+    search_engine.iterative_retrieve.assert_awaited_once_with(
+        query="query",
+        max_iterations=3,
+        confidence_threshold=0.8,
+        profile="standard_balanced",
+        min_score=0.33,
+        budget_tokens=512,
+        rerank=True,
+    )
+
     await raw_workflow_route("task")
-    await raw_workflow_plan("task", level="L2", recommendations=["r1"])
+    await raw_workflow_plan("task", level="L2", recommendations=["r1"], genre="东方玄幻")
+    workflow_engine.plan.assert_awaited_once()
+    workflow_plan_call = workflow_engine.plan.await_args
+    assert workflow_plan_call.args[0] == "task"
+    assert workflow_plan_call.args[1] == "L2"
+    merged_recommendations = workflow_plan_call.kwargs["recommendations"]
+    assert isinstance(merged_recommendations, list)
+    assert merged_recommendations[0] == "r1"
+    assert merged_recommendations[1]["action"] == "set_generation_controls"
+    assert merged_recommendations[1]["params"]["style"] == "lyrical"
+    assert merged_recommendations[1]["params"]["length"] == "long"
     await raw_workflow_execute("p1", step_id="s1", recommendations=["r2"], confirm_token="token")
     await raw_workflow_quick_rollback("p1", "cp1", reason="rollback")
     await raw_workflow_lifecycle("p1", action="status")

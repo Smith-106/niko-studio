@@ -18,8 +18,8 @@ class WorkflowFactory:
     工作流圖工廠
     
     用法:
-        # 創建小說工作流
-        graph = WorkflowFactory.create("novel", config={"pass_score": 85})
+        # 創建小說工作流（novel 建議使用 src/workflow/state.py 中的統一常量閾值）
+        graph = WorkflowFactory.create("novel", config={"pass_score": 99, "human_review_score": 95})
         
         # 創建代碼工作流
         graph = WorkflowFactory.create("code", level=WorkflowLevel.L3_STANDARD)
@@ -86,13 +86,27 @@ class WorkflowFactory:
         return AdapterRegistry.list_domains()
     
     @staticmethod
-    def register_adapter(domain: str, adapter_class: type):
+    def register_adapter(
+        domain: str,
+        adapter_class: type,
+        capabilities: Optional[list[str] | tuple[str, ...] | str] = None,
+    ):
         """
         手動註冊適配器
-        
+
         用於動態加載自定義領域
         """
-        AdapterRegistry._adapters[domain] = adapter_class
+        AdapterRegistry.register_adapter(domain, adapter_class, capabilities=capabilities)
+
+    @staticmethod
+    def list_domains_by_capability(capability: str) -> list[str]:
+        """按 capability 列出可用領域"""
+        return AdapterRegistry.list_domains_by_capability(capability)
+
+    @staticmethod
+    def get_adapter_capabilities(domain: str) -> list[str]:
+        """獲取領域 capability 列表"""
+        return AdapterRegistry.get_capabilities(domain)
     
     @staticmethod
     def get_level_description(level: WorkflowLevel) -> Dict[str, str]:

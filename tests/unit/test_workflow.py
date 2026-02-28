@@ -57,7 +57,7 @@ class TestWorkflowConfig:
     
     def test_default_config_values(self):
         """测试默认配置值"""
-        assert DEFAULT_CONFIG["pass_score"] == 80
+        assert DEFAULT_CONFIG["pass_score"] == 99
         assert DEFAULT_CONFIG["min_c_score"] == 7
         assert DEFAULT_CONFIG["max_revisions"] == 3
 
@@ -73,7 +73,7 @@ class TestShouldContinue:
         state = {
             "critique_result": {
                 "decision": "APPROVED",
-                "total_score": 85,
+                "total_score": 99,
                 "lock_analysis": {"C": {"score": 8}}
             },
             "revision_count": 1
@@ -129,7 +129,7 @@ class TestShouldContinue:
         state = {
             "critique_result": {
                 "decision": "HUMAN_REVIEW",
-                "total_score": 82,
+                "total_score": 95,
                 "lock_analysis": {"C": {"score": 5}}  # C分不足7
             },
             "revision_count": 1

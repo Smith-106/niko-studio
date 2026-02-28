@@ -237,7 +237,7 @@ class LevelConfig:
     required_agents: List[str] = field(default_factory=list)
     optional_agents: List[str] = field(default_factory=list)
 
-    # 执行配置
+    # 执行配置（层级执行策略阈值；非 novel domain 发布门禁）
     max_revisions: int = 3
     pass_score: int = 80
     timeout_seconds: int = 300
@@ -251,7 +251,7 @@ class LevelConfig:
     parallel_execution: bool = False
     max_parallel_tasks: int = 1
 
-    # 人工介入
+    # 人工介入（层级执行阈值；非 novel domain 的 HUMAN_REVIEW 统一门槛）
     human_review_threshold: int = 70
     auto_approve: bool = False
 
@@ -261,6 +261,7 @@ class LevelConfig:
 
 
 # 预定义层级配置
+# 注意：此处阈值用于 L1-L5 执行策略，不等同于 novel domain 的发布决策阈值。
 LEVEL_CONFIGS: Dict[WorkflowLevel, LevelConfig] = {
     WorkflowLevel.L1_RAPID: LevelConfig(
         level=WorkflowLevel.L1_RAPID,

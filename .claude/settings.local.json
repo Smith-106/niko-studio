@@ -1,6 +1,14 @@
 {
   "permissions": {
     "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Edit(*)",
+      "Write(*)",
+      "Grep(*)",
+      "Glob(*)",
+      "Task(*)",
+      "Skill(*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 接入 resume 元数据与基础单测\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: 更新 API 与 SDD 文档\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: 同步搜索与相关测试调整\nEOF\n\\)\")",
@@ -41,7 +49,49 @@
       "Bash(gemini:*)",
       "Skill(ccw-coordinator)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: 修复离线搜索降级与会话兼容接口，恢复全量测试通过\n\n在向量模型不可用时为核心记忆与智能搜索增加 SQLite 降级路径，并补齐 session/agent 兼容 API 及并发写保护，确保集成测试与全量测试稳定通过。\nEOF\n\\)\")",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor: 优化批量查询与层级依赖注入，提升稳定性\n\n为图谱与记忆管理增加批量读取以减少 N+1 查询，并调整 L1/L3 层级的依赖注入与构造兼容，修复并发与配置传递场景下的稳定性问题。\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nrefactor: 优化批量查询与层级依赖注入，提升稳定性\n\n为图谱与记忆管理增加批量读取以减少 N+1 查询，并调整 L1/L3 层级的依赖注入与构造兼容，修复并发与配置传递场景下的稳定性问题。\nEOF\n\\)\")",
+      "Bash(git -C \"D:/工作目录/niko-studio\" checkout:*)",
+      "Bash(git -C \"D:/工作目录/niko-studio\" pull)",
+      "Bash(git -C \"D:/工作目录/niko-studio\" ls-files:*)",
+      "mcp__ccw-tools__read_file",
+      "Bash(git -C \"D:/工作目录/niko-studio\" diff:*)",
+      "Bash(git -C \"D:/工作目录/niko-studio\" log:*)",
+      "Bash(git -C \"D:/工作目录/niko-studio\" add:*)",
+      "Bash(git -C:*)",
+      "Bash(git commit:*)",
+      "Bash(powershell:*)",
+      "Bash(dism.exe:*)",
+      "mcp__ccw-tools__smart_search",
+      "Bash(PYTHONPATH=\"/d/工作目录/niko-studio/src\" pytest:*)",
+      "Skill(workflow-lite-plan)",
+      "Skill(ccw)",
+      "Bash(ccw view:*)",
+      "WebFetch(domain:docs.knox.chat)",
+      "WebFetch(domain:github.com)",
+      "mcp__ccw-tools__edit_file"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const cp=require('child_process');const payload=JSON.stringify({type:'SESSION_CREATED',timestamp:Date.now(),project:process.env.CLAUDE_PROJECT_DIR||process.cwd()});cp.spawnSync('curl',['-s','-X','POST','-H','Content-Type: application/json','-d',payload,'http://localhost:3456/api/hook'],{stdio:'inherit',shell:true})\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p=JSON.parse(process.env.HOOK_INPUT||'{}');const file=(p.tool_input&&p.tool_input.file_path)||'';if(/workflow-session\\.json$|session-metadata\\.json$/.test(file)){const fs=require('fs');try{const content=fs.readFileSync(file,'utf8');const data=JSON.parse(content);const cp=require('child_process');const payload=JSON.stringify({type:'SESSION_STATE_CHANGED',file:file,sessionId:data.session_id||'',status:data.status||'unknown',project:process.env.CLAUDE_PROJECT_DIR||process.cwd(),timestamp:Date.now()});cp.spawnSync('curl',['-s','-X','POST','-H','Content-Type: application/json','-d',payload,'http://localhost:3456/api/hook'],{stdio:'inherit',shell:true})}catch(e){}}\""
+          }
+        ]
+      }
     ]
   }
 }

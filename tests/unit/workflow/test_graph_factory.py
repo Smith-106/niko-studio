@@ -104,11 +104,18 @@ class TestWorkflowFactoryRegister:
             def evaluate(self, state): return None
             def create_graph(self): return MagicMock()
 
-        WorkflowFactory.register_adapter("fake_test", FakeAdapter)
+        WorkflowFactory.register_adapter(
+            "fake_test",
+            FakeAdapter,
+            capabilities=("strict-governance", "cli-exposed"),
+        )
         assert "fake_test" in WorkflowFactory.list_domains()
+        assert WorkflowFactory.get_adapter_capabilities("fake_test") == ["cli-exposed", "strict-governance"]
+        assert "fake_test" in WorkflowFactory.list_domains_by_capability("strict-governance")
 
         # Cleanup
         AdapterRegistry._adapters.pop("fake_test", None)
+        AdapterRegistry._adapter_capabilities.pop("fake_test", None)
 
 
 # ============================================================
