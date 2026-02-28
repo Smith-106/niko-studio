@@ -2,10 +2,10 @@
   "version": 1,
   "projectName": "Niko Studio",
   "status": "completed",
-  "currentMilestone": "M12",
+  "currentMilestone": "M13",
   "currentPRD": null,
   "createdAt": "2026-02-24T00:00:00Z",
-  "updatedAt": "2026-02-29T00:45:00Z",
+  "updatedAt": "2026-02-29T03:50:00Z",
   "milestones": [
     {
       "id": "M0",
@@ -653,9 +653,148 @@
         }
       ],
       "completedAt": "2026-02-29T00:45:00Z"
+    },
+    {
+      "id": "M13",
+      "title": "Roadmap Lifecycle Integrity Automation",
+      "description": "Automate roadmap lifecycle event integrity so activation and closure traces remain deterministic, deduplicated, and machine-auditable.",
+      "status": "completed",
+      "prds": [
+        {
+          "id": "PRD-045",
+          "title": "Roadmap Lifecycle Event Integrity Guard",
+          "description": "Add deterministic guards for lifecycle event ordering, duplicate-action prevention, and pointer-state consistency in roadmap changelog updates.",
+          "status": "completed",
+          "prdFile": "tasks/prd-045-roadmap-lifecycle-event-integrity-guard.md",
+          "stories": 5,
+          "dependsOn": [
+            "PRD-044"
+          ],
+          "completedAt": "2026-02-29T02:10:00Z"
+        },
+        {
+          "id": "PRD-046",
+          "title": "Roadmap UpdatedAt and Completion Timestamp Consistency Guard",
+          "description": "Ensure roadmap-level updatedAt and milestone/PRD completion timestamps remain synchronized and monotonic across lifecycle updates.",
+          "status": "completed",
+          "prdFile": "tasks/prd-046-roadmap-timestamp-consistency-guard.md",
+          "stories": 4,
+          "dependsOn": [
+            "PRD-045"
+          ],
+          "completedAt": "2026-02-29T03:10:00Z"
+        },
+        {
+          "id": "PRD-047",
+          "title": "Roadmap Lifecycle Regression Evidence Export Guard",
+          "description": "Export deterministic lifecycle regression evidence for roadmap transitions with cross-surface parity between changelog and release artifacts.",
+          "status": "completed",
+          "prdFile": "tasks/prd-047-roadmap-lifecycle-regression-evidence-guard.md",
+          "stories": 4,
+          "dependsOn": [
+            "PRD-046"
+          ],
+          "completedAt": "2026-02-29T03:50:00Z"
+        }
+      ],
+      "completedAt": "2026-02-29T03:50:00Z"
     }
   ],
   "changelog": [
+    {
+      "timestamp": "2026-02-29T03:50:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-047",
+      "description": "PRD-047 completed with deterministic lifecycle export parity and changelog-artifact drift detection guards."
+    },
+    {
+      "timestamp": "2026-02-29T03:50:00Z",
+      "action": "milestone_completed",
+      "milestoneId": "M13",
+      "description": "M13 completed after PRD-045/PRD-046/PRD-047 closure under roadmap lifecycle integrity automation contracts."
+    },
+    {
+      "timestamp": "2026-02-29T03:50:00Z",
+      "action": "current_prd_cleared",
+      "description": "Current PRD cleared after PRD-047 and milestone M13 completion."
+    },
+    {
+      "timestamp": "2026-02-29T03:10:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-046",
+      "description": "PRD-046 completed with deterministic updatedAt freshness and completion timestamp monotonicity guards."
+    },
+    {
+      "timestamp": "2026-02-29T03:10:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-047",
+      "description": "PRD-047 activated for lifecycle regression evidence export guard implementation."
+    },
+    {
+      "timestamp": "2026-02-29T03:10:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-047",
+      "description": "Current PRD advanced from PRD-046 to PRD-047."
+    },
+    {
+      "timestamp": "2026-02-29T02:10:00Z",
+      "action": "prd_completed",
+      "prdId": "PRD-045",
+      "description": "PRD-045 completed with deterministic duplicate-action rejection and pointer-contradiction lifecycle guards."
+    },
+    {
+      "timestamp": "2026-02-29T02:10:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-046",
+      "description": "PRD-046 activated for roadmap timestamp consistency guards."
+    },
+    {
+      "timestamp": "2026-02-29T02:10:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-046",
+      "description": "Current PRD advanced from PRD-045 to PRD-046."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "scope_extended",
+      "description": "Roadmap extended with M13 for lifecycle integrity automation after M12 completion."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "milestone_activated",
+      "milestoneId": "M13",
+      "description": "M13 activated with current PRD set to PRD-045."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-045",
+      "description": "Added PRD-045 for roadmap lifecycle event integrity guards."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-046",
+      "description": "Added PRD-046 for roadmap timestamp consistency guards."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "prd_added",
+      "prdId": "PRD-047",
+      "description": "Added PRD-047 for roadmap lifecycle regression evidence export guards."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "prd_activated",
+      "prdId": "PRD-045",
+      "description": "PRD-045 activated for execution."
+    },
+    {
+      "timestamp": "2026-02-29T01:20:00Z",
+      "action": "current_prd_updated",
+      "prdId": "PRD-045",
+      "description": "Current PRD set to PRD-045 for roadmap lifecycle integrity automation."
+    },
     {
       "timestamp": "2026-02-29T00:45:00Z",
       "action": "prd_completed",

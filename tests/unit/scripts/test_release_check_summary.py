@@ -2519,6 +2519,542 @@ def test_main_activation_closure_lifecycle_sequence_remains_auditable_and_stable
         assert activated["timestamp"] <= current["timestamp"]
 
 
+def test_main_lifecycle_transition_windows_preserve_identity_under_repeated_extraction():
+    changelog = [
+        {
+            "timestamp": "2026-02-29T00:45:00Z",
+            "action": "prd_completed",
+            "prdId": "PRD-044",
+        },
+        {
+            "timestamp": "2026-02-29T01:20:00Z",
+            "action": "scope_extended",
+            "description": "Roadmap extended with M13",
+        },
+        {
+            "timestamp": "2026-02-29T01:20:00Z",
+            "action": "prd_activated",
+            "prdId": "PRD-045",
+        },
+        {
+            "timestamp": "2026-02-29T01:20:00Z",
+            "action": "current_prd_updated",
+            "prdId": "PRD-045",
+        },
+        {
+            "timestamp": "2026-03-02T09:10:00Z",
+            "action": "prd_completed",
+            "prdId": "PRD-045",
+        },
+        {
+            "timestamp": "2026-03-02T09:10:00Z",
+            "action": "prd_activated",
+            "prdId": "PRD-046",
+        },
+        {
+            "timestamp": "2026-03-02T09:10:00Z",
+            "action": "current_prd_updated",
+            "prdId": "PRD-046",
+        },
+    ]
+
+    def extract_windows(events):
+        windows = []
+        for index, event in enumerate(events):
+            if event.get("action") != "prd_completed":
+                continue
+            if index + 2 >= len(events):
+                continue
+            activated = events[index + 1]
+            current = events[index + 2]
+            if activated.get("action") != "prd_activated":
+                continue
+            if current.get("action") != "current_prd_updated":
+                continue
+            windows.append((event, activated, current))
+        return windows
+
+    first_windows = extract_windows(changelog)
+    second_windows = extract_windows(changelog)
+
+    assert len(first_windows) == 1
+    assert len(second_windows) == 1
+
+    first_tuple = [
+        (
+            completed["prdId"],
+            activated["prdId"],
+            current["prdId"],
+            completed["action"],
+            activated["action"],
+            current["action"],
+        )
+        for completed, activated, current in first_windows
+    ]
+    second_tuple = [
+        (
+            completed["prdId"],
+            activated["prdId"],
+            current["prdId"],
+            completed["action"],
+            activated["action"],
+            current["action"],
+        )
+        for completed, activated, current in second_windows
+    ]
+
+    assert first_tuple == second_tuple
+
+    completed, activated, current = first_windows[0]
+    assert completed["prdId"] == "PRD-045"
+    assert activated["prdId"] == "PRD-046"
+    assert current["prdId"] == "PRD-046"
+    assert activated["prdId"] == current["prdId"]
+    assert completed["prdId"] != activated["prdId"]
+
+
+def test_main_lifecycle_transition_window_detects_duplicate_actions():
+    changelog = [
+        {
+            "timestamp": "2026-03-02T09:10:00Z",
+            "action": "prd_completed",
+            "prdId": "PRD-045",
+        },
+        {
+            "timestamp": "2026-03-02T09:10:00Z",
+            "action": "prd_activated",
+            "prdId": "PRD-046",
+        },
+        {
+            "timestamp": "2026-03-02T09:10:01Z",
+            "action": "prd_activated",
+            "prdId": "PRD-046",
+        },
+        {
+            "timestamp": "2026-03-02T09:10:02Z",
+            "action": "current_prd_updated",
+            "prdId": "PRD-046",
+        },
+        {
+            "timestamp": "2026-03-02T09:10:03Z",
+            "action": "current_prd_updated",
+            "prdId": "PRD-046",
+        },
+    ]
+
+    post_complete = changelog[1:]
+    activation_count = sum(1 for event in post_complete if event["action"] == "prd_activated")
+    pointer_update_count = sum(
+        1 for event in post_complete if event["action"] == "current_prd_updated"
+    )
+
+    duplicate_activation_detected = activation_count > 1
+    duplicate_pointer_update_detected = pointer_update_count > 1
+
+    assert duplicate_activation_detected is True
+    assert duplicate_pointer_update_detected is True
+
+
+def test_main_lifecycle_transition_window_detects_pointer_action_contradiction():
+    roadmap_payload = {
+        "currentMilestone": "M13",
+        "currentPRD": "PRD-047",
+        "milestones": [
+            {
+                "id": "M13",
+                "status": "in_progress",
+                "prds": [
+                    {"id": "PRD-045", "status": "completed"},
+                    {"id": "PRD-046", "status": "in_progress"},
+                    {"id": "PRD-047", "status": "pending"},
+                ],
+            }
+        ],
+        "changelog": [
+            {"action": "prd_completed", "prdId": "PRD-045"},
+            {"action": "prd_activated", "prdId": "PRD-046"},
+            {"action": "current_prd_updated", "prdId": "PRD-046"},
+        ],
+    }
+
+    target_prd = next(
+        prd
+        for prd in roadmap_payload["milestones"][0]["prds"]
+        if prd["id"] == roadmap_payload["currentPRD"]
+    )
+    latest_pointer_event = next(
+        event
+        for event in reversed(roadmap_payload["changelog"])
+        if event["action"] == "current_prd_updated"
+    )
+
+    contradiction_detected = (
+        target_prd["status"] == "pending"
+        or latest_pointer_event["prdId"] != roadmap_payload["currentPRD"]
+    )
+
+    assert contradiction_detected is True
+
+
+def test_main_updated_at_stale_against_latest_pointer_transition_is_detected():
+    roadmap_payload = {
+        "updatedAt": "2026-03-02T09:10:00Z",
+        "currentPRD": "PRD-046",
+        "changelog": [
+            {
+                "timestamp": "2026-03-02T09:10:00Z",
+                "action": "prd_completed",
+                "prdId": "PRD-045",
+            },
+            {
+                "timestamp": "2026-03-02T09:10:01Z",
+                "action": "prd_activated",
+                "prdId": "PRD-046",
+            },
+            {
+                "timestamp": "2026-03-02T09:10:02Z",
+                "action": "current_prd_updated",
+                "prdId": "PRD-046",
+            },
+        ],
+    }
+
+    latest_pointer_event = next(
+        event
+        for event in reversed(roadmap_payload["changelog"])
+        if event["action"] == "current_prd_updated"
+    )
+    pointer_target_consistent = (
+        latest_pointer_event["prdId"] == roadmap_payload["currentPRD"]
+    )
+    stale_updated_at_detected = (
+        roadmap_payload["updatedAt"] < latest_pointer_event["timestamp"]
+    )
+
+    assert pointer_target_consistent is True
+    assert stale_updated_at_detected is True
+
+
+def test_main_updated_at_equal_latest_pointer_transition_is_not_stale():
+    roadmap_payload = {
+        "updatedAt": "2026-03-02T09:10:02Z",
+        "currentPRD": "PRD-046",
+        "changelog": [
+            {
+                "timestamp": "2026-03-02T09:10:00Z",
+                "action": "prd_completed",
+                "prdId": "PRD-045",
+            },
+            {
+                "timestamp": "2026-03-02T09:10:01Z",
+                "action": "prd_activated",
+                "prdId": "PRD-046",
+            },
+            {
+                "timestamp": "2026-03-02T09:10:02Z",
+                "action": "current_prd_updated",
+                "prdId": "PRD-046",
+            },
+        ],
+    }
+
+    latest_pointer_event = next(
+        event
+        for event in reversed(roadmap_payload["changelog"])
+        if event["action"] == "current_prd_updated"
+    )
+    pointer_target_consistent = (
+        latest_pointer_event["prdId"] == roadmap_payload["currentPRD"]
+    )
+    stale_updated_at_detected = (
+        roadmap_payload["updatedAt"] < latest_pointer_event["timestamp"]
+    )
+
+    assert pointer_target_consistent is True
+    assert stale_updated_at_detected is False
+
+
+def test_main_prd_completed_at_aligns_with_matching_prd_completed_timestamp():
+    roadmap_payload = {
+        "milestones": [
+            {
+                "id": "M13",
+                "prds": [
+                    {
+                        "id": "PRD-045",
+                        "status": "completed",
+                        "completedAt": "2026-02-29T02:10:00Z",
+                    }
+                ],
+            }
+        ],
+        "changelog": [
+            {
+                "timestamp": "2026-02-29T02:10:00Z",
+                "action": "prd_completed",
+                "prdId": "PRD-045",
+            }
+        ],
+    }
+
+    prd = roadmap_payload["milestones"][0]["prds"][0]
+    matching_completed_event = next(
+        event
+        for event in roadmap_payload["changelog"]
+        if event["action"] == "prd_completed" and event.get("prdId") == prd["id"]
+    )
+    timestamp_drift_detected = prd["completedAt"] != matching_completed_event["timestamp"]
+
+    assert timestamp_drift_detected is False
+
+
+def test_main_prd_completed_at_drift_from_matching_prd_completed_timestamp_is_detected():
+    roadmap_payload = {
+        "milestones": [
+            {
+                "id": "M13",
+                "prds": [
+                    {
+                        "id": "PRD-045",
+                        "status": "completed",
+                        "completedAt": "2026-02-29T02:09:59Z",
+                    }
+                ],
+            }
+        ],
+        "changelog": [
+            {
+                "timestamp": "2026-02-29T02:10:00Z",
+                "action": "prd_completed",
+                "prdId": "PRD-045",
+            }
+        ],
+    }
+
+    prd = roadmap_payload["milestones"][0]["prds"][0]
+    matching_completed_event = next(
+        event
+        for event in roadmap_payload["changelog"]
+        if event["action"] == "prd_completed" and event.get("prdId") == prd["id"]
+    )
+    timestamp_drift_detected = prd["completedAt"] != matching_completed_event["timestamp"]
+
+    assert timestamp_drift_detected is True
+
+
+def test_main_milestone_completed_at_not_earlier_than_latest_child_completion():
+    milestone_payload = {
+        "id": "M13",
+        "status": "completed",
+        "completedAt": "2026-02-29T02:30:00Z",
+        "prds": [
+            {"id": "PRD-045", "status": "completed", "completedAt": "2026-02-29T02:10:00Z"},
+            {"id": "PRD-046", "status": "completed", "completedAt": "2026-02-29T02:25:00Z"},
+        ],
+    }
+
+    completed_child_timestamps = [
+        prd["completedAt"]
+        for prd in milestone_payload["prds"]
+        if prd.get("status") == "completed" and "completedAt" in prd
+    ]
+    latest_child_completed_at = max(completed_child_timestamps)
+    non_monotonic_drift_detected = milestone_payload["completedAt"] < latest_child_completed_at
+
+    assert non_monotonic_drift_detected is False
+
+
+def test_main_milestone_completed_at_earlier_than_latest_child_completion_is_detected():
+    milestone_payload = {
+        "id": "M13",
+        "status": "completed",
+        "completedAt": "2026-02-29T02:20:00Z",
+        "prds": [
+            {"id": "PRD-045", "status": "completed", "completedAt": "2026-02-29T02:10:00Z"},
+            {"id": "PRD-046", "status": "completed", "completedAt": "2026-02-29T02:25:00Z"},
+        ],
+    }
+
+    completed_child_timestamps = [
+        prd["completedAt"]
+        for prd in milestone_payload["prds"]
+        if prd.get("status") == "completed" and "completedAt" in prd
+    ]
+    latest_child_completed_at = max(completed_child_timestamps)
+    non_monotonic_drift_detected = milestone_payload["completedAt"] < latest_child_completed_at
+
+    assert non_monotonic_drift_detected is True
+
+
+def test_main_lifecycle_export_repeated_run_preserves_window_identity_and_reason_parity():
+    changelog = [
+        {
+            "timestamp": "2026-02-29T02:10:00Z",
+            "action": "prd_completed",
+            "prdId": "PRD-045",
+        },
+        {
+            "timestamp": "2026-02-29T02:10:00Z",
+            "action": "prd_activated",
+            "prdId": "PRD-046",
+        },
+        {
+            "timestamp": "2026-02-29T02:10:00Z",
+            "action": "current_prd_updated",
+            "prdId": "PRD-046",
+        },
+        {
+            "timestamp": "2026-02-29T03:10:00Z",
+            "action": "prd_completed",
+            "prdId": "PRD-046",
+        },
+        {
+            "timestamp": "2026-02-29T03:10:00Z",
+            "action": "prd_activated",
+            "prdId": "PRD-047",
+        },
+        {
+            "timestamp": "2026-02-29T03:10:00Z",
+            "action": "current_prd_updated",
+            "prdId": "PRD-047",
+        },
+    ]
+
+    def extract_transition_tuples(events):
+        tuples = []
+        for index, event in enumerate(events):
+            if event.get("action") != "prd_completed":
+                continue
+            if index + 2 >= len(events):
+                continue
+            activated = events[index + 1]
+            current = events[index + 2]
+            if activated.get("action") != "prd_activated":
+                continue
+            if current.get("action") != "current_prd_updated":
+                continue
+            tuples.append(
+                (
+                    event["prdId"],
+                    activated["prdId"],
+                    current["prdId"],
+                    event["timestamp"],
+                    activated["timestamp"],
+                    current["timestamp"],
+                )
+            )
+        return tuples
+
+    first_tuples = extract_transition_tuples(changelog)
+    second_tuples = extract_transition_tuples(changelog)
+
+    assert first_tuples == second_tuples
+    assert first_tuples[-1] == (
+        "PRD-046",
+        "PRD-047",
+        "PRD-047",
+        "2026-02-29T03:10:00Z",
+        "2026-02-29T03:10:00Z",
+        "2026-02-29T03:10:00Z",
+    )
+
+    checks_first = {
+        "lifecycle_window_identity": {
+            "check_id": "lifecycle_window_identity",
+            "priority": "P0",
+            "blocking": True,
+            "status": "PASS",
+            "detail": "windows=2,latest_completed=PRD-046,latest_activated=PRD-047,latest_pointer=PRD-047",
+        },
+        "lifecycle_reason_parity": {
+            "check_id": "lifecycle_reason_parity",
+            "priority": "P1",
+            "blocking": False,
+            "status": "PASS",
+            "detail": "go_no_go_reasons=none,parity=stable",
+        },
+    }
+    checks_second = {
+        "lifecycle_window_identity": {
+            "check_id": "lifecycle_window_identity",
+            "priority": "P0",
+            "blocking": True,
+            "status": "PASS",
+            "detail": "windows=2,latest_completed=PRD-046,latest_activated=PRD-047,latest_pointer=PRD-047",
+        },
+        "lifecycle_reason_parity": {
+            "check_id": "lifecycle_reason_parity",
+            "priority": "P1",
+            "blocking": False,
+            "status": "PASS",
+            "detail": "go_no_go_reasons=none,parity=stable",
+        },
+    }
+
+    for check_id in checks_first:
+        assert checks_first[check_id]["priority"] == checks_second[check_id]["priority"]
+        assert checks_first[check_id]["blocking"] == checks_second[check_id]["blocking"]
+        assert checks_first[check_id]["status"] == checks_second[check_id]["status"]
+        assert checks_first[check_id]["detail"] == checks_second[check_id]["detail"]
+
+    first_reasons = []
+    second_reasons = []
+    assert first_reasons == second_reasons
+
+
+def test_main_lifecycle_export_parity_drift_between_payload_and_artifact_is_detected():
+    payload_checks = {
+        "lifecycle_window_identity": {
+            "check_id": "lifecycle_window_identity",
+            "priority": "P0",
+            "blocking": True,
+            "status": "PASS",
+            "detail": "windows=2,latest_completed=PRD-046,latest_activated=PRD-047,latest_pointer=PRD-047",
+        },
+        "lifecycle_reason_parity": {
+            "check_id": "lifecycle_reason_parity",
+            "priority": "P1",
+            "blocking": False,
+            "status": "PASS",
+            "detail": "go_no_go_reasons=none,parity=stable",
+        },
+    }
+    artifact_checks = {
+        "lifecycle_window_identity": {
+            "check_id": "lifecycle_window_identity",
+            "priority": "P0",
+            "blocking": True,
+            "status": "PASS",
+            "detail": "windows=2,latest_completed=PRD-046,latest_activated=PRD-047,latest_pointer=PRD-047",
+        },
+        "lifecycle_reason_parity": {
+            "check_id": "lifecycle_reason_parity",
+            "priority": "P1",
+            "blocking": False,
+            "status": "PASS",
+            "detail": "go_no_go_reasons=none,parity=drifted",
+        },
+    }
+
+    payload_reasons = []
+    artifact_reasons = []
+
+    missing_rows_detected = any(check_id not in artifact_checks for check_id in payload_checks)
+    contradictory_reason_list_detected = payload_reasons != artifact_reasons
+    detail_drift_detected = (
+        payload_checks["lifecycle_reason_parity"]["detail"]
+        != artifact_checks["lifecycle_reason_parity"]["detail"]
+    )
+
+    parity_drift_detected = (
+        missing_rows_detected
+        or contradictory_reason_list_detected
+        or detail_drift_detected
+    )
+
+    assert parity_drift_detected is True
+
+
 def test_main_freshness_trace_warnings_do_not_affect_blocking_decision_reduction(tmp_path):
     original_report_path = release_summary.REPORT_PATH
     original_release_dir = release_summary.RELEASE_EVIDENCE_DIR

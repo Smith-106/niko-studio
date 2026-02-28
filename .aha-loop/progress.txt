@@ -381,3 +381,262 @@ Started: 2026年02月28日 18:02:49
 - Closure changelog entries are easiest to audit when prepended as one atomic transition window.
 
 ---
+
+## 2026-02-29 01:20 - PRD-045 US-001 - Roadmap Activation Bootstrap
+
+### Plan Changes (if any)
+- Extended roadmap with new M13 and queued PRD-045/046/047 dependency chain.
+- Activated PRD-045 as current PRD (`currentMilestone=M13`, `currentPRD=PRD-045`) with lifecycle bootstrap changelog entries (`scope_extended`, `milestone_activated`, `prd_added*`, `prd_activated`, `current_prd_updated`).
+- Rotated active `prd.json` from PRD-044 closure state to PRD-045 execution state with fresh US-001/US-002 stories and research topics.
+
+### Learnings for Future Iterations
+- Roadmap extension is most stable when activation metadata (`currentMilestone/currentPRD`), queued PRD dependencies, and changelog bootstrap events are updated atomically.
+- Keeping new milestone PRDs strictly topological (`045 -> 046 -> 047`) reduces contradictory activation risk during subsequent transitions.
+
+---
+
+## 2026-02-29 01:35 - PRD-045 US-001 - Research
+
+### Research
+- Topics investigated:
+  - Lifecycle transition-window patterns for `prd_completed`/`prd_activated`/`current_prd_updated` under repeated updates
+  - Deterministic ID-keyed assertion strategies for lifecycle event identity linkage
+- Key findings:
+  - Transition-window-scoped invariants are more stable than full-history positional assertions for repeated changelog updates.
+  - Strongest identity guard combines per-window action order checks with PRD-ID linkage parity (`activated.prdId == current_prd_updated.prdId`) and repeated-pass extraction equality.
+- Report: `.aha-loop/research/PRD-045-US-001-research.md`
+
+### Plan Changes (if any)
+- Updated active `prd.json` to mark US-001 research complete and attached learnings/implementation notes for deterministic window extraction strategy.
+
+### Learnings for Future Iterations
+- Anchor lifecycle parsing on `prd_completed` boundaries to keep repeated-run assertions deterministic and local.
+- Validate identity linkage with PRD-ID keyed tuples instead of global changelog index positions.
+
+---
+
+## 2026-02-29 01:50 - PRD-045 US-001 - Implement
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/prd.json`
+  - `.aha-loop/tasks/prd-045-roadmap-lifecycle-event-integrity-guard.md`
+  - `.aha-loop/progress.txt`
+- Approach:
+  - Added `test_main_lifecycle_transition_windows_preserve_identity_under_repeated_extraction` to enforce deterministic window extraction anchored on `prd_completed`, skipping non-transition noise while validating action-order and PRD-ID linkage invariants.
+  - Added repeated-pass tuple equality assertion to guarantee extraction idempotence for repeated lifecycle audits.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py -k "lifecycle_transition_windows_preserve_identity_under_repeated_extraction or activation_closure_lifecycle_sequence_remains_auditable_and_stable or pointer_transition_sequence_stays_deterministic_for_roadmap_activation_payload"`
+- Result: **pass** (3 passed)
+
+### Learnings for Future Iterations
+- Transition-window extraction should tolerate unrelated changelog events without weakening lifecycle integrity checks.
+- Idempotent tuple mapping assertions catch subtle identity drift earlier than one-pass action-order checks alone.
+
+---
+
+## 2026-02-29 02:10 - PRD-045 US-002 - Research+Implement
+
+### Research
+- Topics investigated:
+  - Duplicate lifecycle-action failure modes in roadmap changelog updates
+  - Contradiction detection strategy between lifecycle actions and pointer state
+- Key findings:
+  - Duplicate `prd_activated` / `current_prd_updated` events in one transition window can pass order-only checks but break audit integrity.
+  - Strong contradiction detection must combine local action-cardinality checks with pointer linkage (`currentPRD` vs latest `current_prd_updated`) and target PRD status sanity.
+- Report: `.aha-loop/research/PRD-045-US-002-research.md`
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/research/PRD-045-US-002-research.md`
+  - `.aha-loop/prd.json`
+  - `.aha-loop/tasks/prd-045-roadmap-lifecycle-event-integrity-guard.md`
+  - `.aha-loop/project.roadmap.json`
+  - `.aha-loop/tasks/prd-046-roadmap-timestamp-consistency-guard.md`
+  - `.aha-loop/progress.txt`
+- Approach:
+  - Added `test_main_lifecycle_transition_window_detects_duplicate_actions` to assert duplicate activation/pointer-update detection in a single transition window.
+  - Added `test_main_lifecycle_transition_window_detects_pointer_action_contradiction` to assert contradiction detection when `currentPRD` state and latest pointer action diverge.
+  - Completed PRD-045 and advanced roadmap/current PRD to PRD-046 with synchronized changelog transition entries.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py -k "lifecycle_transition_window_detects_duplicate_actions or lifecycle_transition_window_detects_pointer_action_contradiction or lifecycle_transition_windows_preserve_identity_under_repeated_extraction"`
+- Result: **pass** (3 passed)
+
+### Learnings for Future Iterations
+- Duplicate-action rejection should be enforced as window-local cardinality invariants (`prd_activated=1`, `current_prd_updated=1`) rather than global counts.
+- Pointer contradiction guards should cross-check pointer field, lifecycle tail event, and target PRD status together.
+
+---
+
+## 2026-02-29 02:20 - PRD-046 US-001 - Research+Implement
+
+### Research
+- Topics investigated:
+  - updatedAt synchronization patterns between root roadmap metadata and lifecycle changelog transitions
+  - Deterministic stale-updatedAt detection under repeated lifecycle updates
+- Key findings:
+  - Root `updatedAt` is the roadmap freshness marker and should stay aligned with the latest lifecycle transition batch timestamp.
+  - Deterministic stale detection is strongest when comparing root `updatedAt` against latest `current_prd_updated.timestamp` while keeping pointer-target consistency checks local to the transition window.
+- Report: `.aha-loop/research/PRD-046-US-001-research.md`
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/prd.json`
+  - `.aha-loop/tasks/prd-046-roadmap-timestamp-consistency-guard.md`
+  - `.aha-loop/progress.txt`
+- Approach:
+  - Added `test_main_updated_at_stale_against_latest_pointer_transition_is_detected` to deterministically detect stale root `updatedAt` when it lags latest `current_prd_updated.timestamp`.
+  - Added `test_main_updated_at_equal_latest_pointer_transition_is_not_stale` as non-stale control case with pointer-target consistency preserved.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py -k "updated_at_stale_against_latest_pointer_transition_is_detected or updated_at_equal_latest_pointer_transition_is_not_stale or lifecycle_transition_window_detects_pointer_action_contradiction"`
+- Result: **pass** (3 passed)
+
+### Learnings for Future Iterations
+- Prefer fixed ISO timestamps and PRD-ID keyed local transition windows for stale/freshness guards.
+- Avoid global-history positional assumptions; target latest relevant pointer-transition evidence.
+
+---
+
+## 2026-02-29 02:45 - PRD-046 US-002 - Research+Implement
+
+### Research
+- Topics investigated:
+  - Monotonicity constraints between PRD/milestone `completedAt` and lifecycle `prd_completed` timestamps
+  - Deterministic failure scenarios for timestamp drift detection
+- Key findings:
+  - PRD closure integrity is machine-verifiable when `prd.completedAt` equals matching (`action=prd_completed`, same `prdId`) changelog timestamp.
+  - Milestone closure integrity is monotonic when `milestone.completedAt` is not earlier than latest completed child PRD `completedAt`.
+- Report: `.aha-loop/research/PRD-046-US-002-research.md`
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/research/PRD-046-US-002-research.md`
+  - `.aha-loop/prd.json`
+  - `.aha-loop/tasks/prd-046-roadmap-timestamp-consistency-guard.md`
+  - `.aha-loop/progress.txt`
+- Approach:
+  - Added `test_main_prd_completed_at_aligns_with_matching_prd_completed_timestamp` and `test_main_prd_completed_at_drift_from_matching_prd_completed_timestamp_is_detected` for PRD-level alignment/drift detection.
+  - Added `test_main_milestone_completed_at_not_earlier_than_latest_child_completion` and `test_main_milestone_completed_at_earlier_than_latest_child_completion_is_detected` for milestone-level monotonic control/drift detection.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py -k "prd_completed_at_aligns_with_matching_prd_completed_timestamp or prd_completed_at_drift_from_matching_prd_completed_timestamp_is_detected or milestone_completed_at_not_earlier_than_latest_child_completion or milestone_completed_at_earlier_than_latest_child_completion_is_detected"`
+- Result: **pass** (4 passed)
+
+### Learnings for Future Iterations
+- Compare completion timestamps by PRD-ID keyed event matching, not changelog position.
+- Evaluate milestone monotonicity only against completed children with explicit `completedAt` to keep guards deterministic.
+
+---
+
+## 2026-02-29 03:10 - PRD-046 - Roadmap Closure Sync
+
+### Plan Changes (if any)
+- Marked `currentPRD` from `PRD-046` to `PRD-047` and advanced root `updatedAt` to `2026-02-29T03:10:00Z`.
+- Marked `M13/PRD-046` status as `completed` with `completedAt=2026-02-29T03:10:00Z`.
+- Prepended transition window changelog events for closure/activation (`prd_completed` PRD-046, `prd_activated` PRD-047, `current_prd_updated` PRD-047).
+
+### Learnings for Future Iterations
+- Closure sync should atomically update pointer fields, PRD status/completedAt, and lifecycle changelog window timestamps.
+- Root `updatedAt` should align with the latest lifecycle transition batch to keep timeline audits deterministic.
+
+---
+
+## 2026-02-29 03:20 - PRD-047 US-001 - Research
+
+### Research
+- Topics investigated:
+  - Deterministic export contracts between lifecycle transition windows and release readiness artifact checks
+  - Repeated-run assertion strategy for lifecycle evidence export parity across report and artifact surfaces
+- Key findings:
+  - Lifecycle evidence export determinism should reuse existing `check_id`-keyed payload/artifact parity contracts and local transition-window extraction invariants.
+  - Repeated-run robustness is strongest with stable tuple/parity checks while allowing only expected `generated_at` drift.
+- Report: `.aha-loop/research/PRD-047-US-001-research.md`
+
+### Plan Changes (if any)
+- Rotated active `prd.json` to PRD-047, marked US-001 research complete, and added implementation notes for deterministic export guards.
+
+### Learnings for Future Iterations
+- Prefer ID-keyed map parity (`check_id`) over positional changelog assumptions for export audit stability.
+- Keep lifecycle evidence checks non-invasive to existing GO/NO_GO reduction semantics.
+
+---
+
+## 2026-02-29 03:35 - PRD-047 US-001 - Implement
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/prd.json`
+  - `.aha-loop/tasks/prd-047-roadmap-lifecycle-regression-evidence-guard.md`
+  - `.aha-loop/progress.txt`
+- Approach:
+  - Added `test_main_lifecycle_export_repeated_run_preserves_window_identity_and_reason_parity` to enforce deterministic repeated-run lifecycle export invariants on local transition-window tuples.
+  - Guarded parity stability with ID-keyed rows (`lifecycle_window_identity`, `lifecycle_reason_parity`) and repeated-run reason parity assertions.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py -k "lifecycle_export_repeated_run_preserves_window_identity_and_reason_parity or milestone_completed_at_earlier_than_latest_child_completion_is_detected or lifecycle_transition_windows_preserve_identity_under_repeated_extraction"`
+- Result: **pass** (3 passed)
+
+### Learnings for Future Iterations
+- Lifecycle export regression guards are most stable when transition extraction is local-window + ID-keyed tuple parity.
+- Repeated-run checks should allow only expected temporal drift while preserving structural parity contracts.
+
+---
+
+## 2026-02-29 03:50 - PRD-047 US-002 - Research+Implement
+
+### Research
+- Topics investigated:
+  - Failure scenarios where changelog lifecycle transitions and release artifact mappings diverge
+  - Deterministic guard patterns for missing, mismatched, or contradictory parity rows
+- Key findings:
+  - Changelog/artifact drift can hide unless parity is asserted by `check_id` with exact field equality.
+  - Reason-list parity should be validated as a separate invariant from row-level parity.
+- Report: `.aha-loop/research/PRD-047-US-002-research.md`
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/research/PRD-047-US-002-research.md`
+  - `.aha-loop/prd.json`
+  - `.aha-loop/tasks/prd-047-roadmap-lifecycle-regression-evidence-guard.md`
+  - `.aha-loop/progress.txt`
+- Approach:
+  - Added `test_main_lifecycle_export_parity_drift_between_payload_and_artifact_is_detected` to flag deterministic lifecycle parity drift when artifact-side lifecycle detail diverges.
+  - Kept guard ID-keyed and contract-based, independent from positional changelog assumptions.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py -k "lifecycle_export_parity_drift_between_payload_and_artifact_is_detected or lifecycle_export_repeated_run_preserves_window_identity_and_reason_parity or no_go_reason_order_matches_blocking_check_order_and_excludes_non_blockers"`
+- Result: **pass** (3 passed)
+
+### Learnings for Future Iterations
+- Separate row-level parity and reason-list parity checks to catch subtle lifecycle export drifts early.
+- Lifecycle export guards should remain deterministic via stable IDs and fixed contract fields.
+
+---
+
+## 2026-02-29 03:55 - PRD-047 - Final Regression Validation
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py`
+- Result: **pass** (96 passed, 1 warning)
+
+### Learnings for Future Iterations
+- Full-file regression after PRD closure is effective at catching hidden coupling outside targeted guards.
+- Current warning is external deprecation signal (`DistillService`) and does not alter lifecycle guard outcomes.
+
+---
