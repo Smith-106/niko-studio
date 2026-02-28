@@ -74,3 +74,5 @@ Thumbs.db
 *.key
 .ace-tool/
 .worktrees/
+.claude/worktrees/
+NUL
