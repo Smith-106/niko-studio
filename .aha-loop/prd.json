@@ -1,153 +1,60 @@
 {
   "version": 2,
-  "prdId": "PRD-001",
+  "prdId": "PRD-044",
   "project": "Niko Studio",
-  "branchName": "aha-loop/workflow-state-schema-baseline",
-  "description": "Workflow State and Schema Baseline - Define and freeze typed workflow state contracts with migration-safe versioning.",
+  "branchName": "aha-loop/roadmap-to-prd-activation-recovery-guard",
+  "description": "Roadmap-to-PRD Activation Recovery Guard - Add deterministic recovery checks for roadmap pointer transitions and activation/closure sequencing.",
   "changeLog": [
-    "2026-02-24: US-001 completed - introduced typed WorkflowStateSnapshot contract (stage/status/metadata/artifacts), centralized state snapshot construction, and added invariant tests for persisted state schema fields."
+    "2026-02-29: Implemented PRD-044 US-002 deterministic activation/closure lifecycle window stability guard; validated targeted release summary subset (4 passed).",
+    "2026-02-29: Completed PRD-044 US-002 research on changelog lifecycle ordering patterns and ID-keyed transition-window invariants.",
+    "2026-02-29: Implemented PRD-044 US-001 deterministic pointer-transition guards and contradictory pending-target detection tests; validated release summary test subset (3 passed).",
+    "2026-02-28: Completed PRD-044 US-001 research on roadmap pointer-transition determinism and contradictory-state guard scenarios.",
+    "2026-02-28: Activated PRD-044 from roadmap M12 after PRD-043 completion.",
+    "2026-02-28: Completed PRD-043 with session trace continuity and repeated-run artifact parity guards."
   ],
   "userStories": [
     {
       "id": "US-001",
-      "title": "Define canonical workflow state schema",
-      "description": "As a developer, I need a canonical workflow state schema so that all stages share one deterministic contract.",
+      "title": "Pointer transitions recover deterministically after roadmap advance",
+      "description": "As a maintainer, I want roadmap pointer transitions to recover deterministically so active milestone/PRD state never becomes contradictory after updates.",
       "acceptanceCriteria": [
-        "Define typed core workflow state schema for stage, status, metadata, and artifact references",
-        "Publish schema in code artifacts as the single source of truth for persisted workflow state",
-        "Typecheck passes"
+        "Pointer transition recovery checks cover key lifecycle edge paths",
+        "No contradictory roadmap state remains after transition updates",
+        "No regression in current milestone/current PRD semantics",
+        "Typecheck passes",
+        "Tests pass"
       ],
       "priority": 1,
       "passes": true,
-      "researchTopics": [],
-      "researchCompleted": false,
-      "learnings": "Added WorkflowStateSnapshot typed contract in src/workflow/workflow_engine.py with explicit phase normalization, metadata/artifacts sections, and schema version constant; persisted state now builds from single snapshot constructor and tests assert schema + metadata/artifacts invariants.",
-      "implementationNotes": "",
+      "researchTopics": [
+        "Roadmap pointer transition paths for currentMilestone/currentPRD updates during PRD completion and activation",
+        "Existing tests/assertions for deterministic roadmap state and contradictory-state prevention"
+      ],
+      "researchCompleted": true,
+      "learnings": "Pointer determinism must be guarded across three synchronized surfaces: current pointer fields, PRD status/completedAt, and lifecycle changelog sequence.",
+      "implementationNotes": "Add deterministic tests that reject contradictory pointer/state combinations and validate lifecycle sequence contracts by PRD IDs.",
       "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Add schema version field and freeze policy",
-      "description": "As a developer, I want explicit schema versioning so that state evolution is controlled and backward-safe.",
+      "title": "Activation/closure lifecycle sequence remains auditable and stable",
+      "description": "As a reviewer, I want activation/closure changelog sequencing to remain deterministic and auditable so lifecycle events are machine-consumable without ambiguity.",
       "acceptanceCriteria": [
-        "Add explicit schema version field to persisted workflow state",
-        "Define frozen schema policy for non-breaking changes and version increments",
-        "Typecheck passes"
-      ],
-      "priority": 2,
-      "passes": false,
-      "researchTopics": [],
-      "researchCompleted": false,
-      "learnings": "",
-      "implementationNotes": "",
-      "notes": ""
-    },
-    {
-      "id": "US-003",
-      "title": "Define state migration contract",
-      "description": "As a maintainer, I need a migration contract so that older persisted states can be safely upgraded.",
-      "acceptanceCriteria": [
-        "Define migration entrypoint from prior schema versions to current version",
-        "Specify deterministic migration order and required invariants after migration",
-        "Typecheck passes"
-      ],
-      "priority": 3,
-      "passes": false,
-      "researchTopics": [
-        "Existing migration patterns for workflow state in this codebase",
-        "Best practices for versioned JSON state migration with deterministic transforms"
-      ],
-      "researchCompleted": false,
-      "learnings": "",
-      "implementationNotes": "",
-      "notes": ""
-    },
-    {
-      "id": "US-004",
-      "title": "Implement load-time schema validation boundary",
-      "description": "As a developer, I want workflow state validated at load time so that invalid persisted data is rejected early.",
-      "acceptanceCriteria": [
-        "State load path validates incoming persisted state against the frozen schema",
-        "Invalid or unsupported versions fail with structured validation errors",
-        "Typecheck passes"
-      ],
-      "priority": 4,
-      "passes": false,
-      "researchTopics": [],
-      "researchCompleted": false,
-      "learnings": "",
-      "implementationNotes": "",
-      "notes": ""
-    },
-    {
-      "id": "US-005",
-      "title": "Implement save-time schema validation boundary",
-      "description": "As a developer, I want workflow state validated at save time so that only compliant state is persisted.",
-      "acceptanceCriteria": [
-        "State save path validates state payload against the frozen schema before writing",
-        "Persist operation blocks writes when validation fails",
-        "Typecheck passes"
-      ],
-      "priority": 5,
-      "passes": false,
-      "researchTopics": [],
-      "researchCompleted": false,
-      "learnings": "",
-      "implementationNotes": "",
-      "notes": ""
-    },
-    {
-      "id": "US-006",
-      "title": "Enforce deterministic stage transition guards",
-      "description": "As a workflow operator, I need transition guards so that stage changes remain deterministic under the frozen schema.",
-      "acceptanceCriteria": [
-        "Define allowed stage transition matrix tied to schema state fields",
-        "Reject invalid transitions with explicit machine-readable reason",
-        "Typecheck passes"
-      ],
-      "priority": 6,
-      "passes": false,
-      "researchTopics": [],
-      "researchCompleted": false,
-      "learnings": "",
-      "implementationNotes": "",
-      "notes": ""
-    },
-    {
-      "id": "US-007",
-      "title": "Add compatibility tests for migration and validation",
-      "description": "As a maintainer, I need compatibility tests so that schema evolution and migration behavior stay regression-safe.",
-      "acceptanceCriteria": [
-        "Add tests covering legacy-version state migration to current schema",
-        "Add tests for load/save rejection on invalid schema payloads",
+        "Changelog lifecycle sequence remains deterministic",
+        "Activation/closure ordering is auditable and stable under repeated updates",
+        "No regression in roadmap lifecycle semantics",
         "Typecheck passes",
         "Tests pass"
       ],
-      "priority": 7,
-      "passes": false,
+      "priority": 2,
+      "passes": true,
       "researchTopics": [
-        "Existing test harness patterns for workflow state and adapter compatibility"
+        "Lifecycle changelog event ordering patterns for prd_completed/prd_activated/current_prd_updated",
+        "Deterministic assertion strategy for activation/closure sequence stability"
       ],
-      "researchCompleted": false,
-      "learnings": "",
-      "implementationNotes": "",
-      "notes": ""
-    },
-    {
-      "id": "US-008",
-      "title": "Document migration-safe compatibility rules in code artifacts",
-      "description": "As a team member, I need compatibility rules documented in code artifacts so that future changes preserve backward safety.",
-      "acceptanceCriteria": [
-        "Document compatibility guarantees and version bump rules in maintained code artifacts",
-        "Document required validation boundaries for state load and state save paths",
-        "Typecheck passes"
-      ],
-      "priority": 8,
-      "passes": false,
-      "researchTopics": [],
-      "researchCompleted": false,
-      "learnings": "",
-      "implementationNotes": "",
+      "researchCompleted": true,
+      "learnings": "Lifecycle guards are most stable when validated as ID-keyed transition windows (`prd_completed` -> `prd_activated` -> `current_prd_updated`) instead of global-history positional assertions.",
+      "implementationNotes": "Add deterministic multi-window lifecycle tests that assert action order, PRD-ID linkage (`activated == current_prd_updated`), and monotonic per-window timestamps while preserving non-blocking decision semantics.",
       "notes": ""
     }
   ]
