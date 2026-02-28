@@ -20,6 +20,11 @@
 - Keep release blockers isolated and tracked under release evidence path.
 - Continue weekly trend updates with stable denominator policy.
 
+## Chapter Gate Snapshot
+- quality_score: 99
+- publish_recommendation: pass
+- critical_issue_count: 0
+
 ## Gate Explanation Sample
 - Trigger item: `desktop_check` (P0 blocking)
 - Trigger threshold/rule: any P0 FAIL => NO_GO

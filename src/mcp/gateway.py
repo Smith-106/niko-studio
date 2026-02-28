@@ -347,6 +347,40 @@ def _resolve_reload_enabled() -> bool:
     return bool(get_config_value("gateway.reload", True))
 
 
+def _resolve_gateway_host_port() -> tuple[str, int]:
+    raw_host = os.getenv("NIKO_GATEWAY_HOST")
+    if raw_host is None:
+        raw_host = get_config_value("gateway.host", "0.0.0.0")
+    host = str(raw_host).strip() or "0.0.0.0"
+
+    raw_port = os.getenv("NIKO_GATEWAY_PORT")
+    if raw_port is None:
+        raw_port = get_config_value("gateway.port", 8000)
+
+    try:
+        port = int(str(raw_port).strip())
+    except (TypeError, ValueError):
+        port = 8000
+
+    return host, port
+
+
+def _is_llm_available() -> bool:
+    try:
+        services = get_services()
+        health_checker = getattr(services, "is_healthy", None)
+        if callable(health_checker):
+            result = health_checker()
+            if isinstance(result, bool):
+                return result
+            if isinstance(result, dict):
+                status = str(result.get("status", "")).strip().lower()
+                return status in {"ok", "healthy", "pass"}
+        return True
+    except Exception:
+        return False
+
+
 def _resolve_ui_bridge_enabled() -> bool:
     raw = os.getenv("NIKO_UI_BRIDGE_ENABLED")
     if raw is not None:
@@ -2778,12 +2812,14 @@ async def workflow_route_endpoint(request: Request):
 
 async def workflow_plan_endpoint(request: Request):
     body = await request.json()
-    result = await workflow_plan(
-        task=body.get("task", ""),
-        level=body.get("level"),
-        recommendations=body.get("recommendations"),
-        genre=body.get("genre"),
-    )
+    kwargs = {
+        "task": body.get("task", ""),
+        "level": body.get("level"),
+        "recommendations": body.get("recommendations"),
+    }
+    if "genre" in body:
+        kwargs["genre"] = body.get("genre")
+    result = await workflow_plan(**kwargs)
     return JSONResponse(result)
 
 
