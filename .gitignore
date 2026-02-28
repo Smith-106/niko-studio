@@ -58,6 +58,7 @@ coverage.xml
 pytest-*.xml
 
 # Reference projects (submodules or downloaded)
+参考/
 cherry-studio/
 Claude-Code-Workflow/
 openkl/
