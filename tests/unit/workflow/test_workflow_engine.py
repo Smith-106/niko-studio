@@ -6,6 +6,7 @@ and WorkflowEngine (route, plan, execute, checkpoint, restore, status).
 """
 
 import json
+from pathlib import Path
 import pytest
 from unittest.mock import patch, MagicMock
 from src.workflow.workflow_engine import (
@@ -95,6 +96,31 @@ class TestWorkflowEngine:
     @pytest.fixture
     def engine(self, tmp_path):
         return WorkflowEngine(workspace=str(tmp_path))
+
+    def test_session_id_for_plan_uses_workspace_namespace(self, tmp_path):
+        workspace = tmp_path / "novel_alpha_workspace"
+        workspace.mkdir(parents=True, exist_ok=True)
+        engine = WorkflowEngine(workspace=str(workspace))
+
+        session_id = engine._session_id_for_plan("abc12345")
+
+        assert session_id.startswith("novel_alpha_workspace--workflow-")
+        assert session_id.endswith("abc12345")
+
+    def test_session_id_for_plan_uses_explicit_namespace(self, tmp_path):
+        workspace = tmp_path / "default_workspace"
+        workspace.mkdir(parents=True, exist_ok=True)
+        engine = WorkflowEngine(workspace=str(workspace), session_namespace="Novel A")
+
+        session_id = engine._session_id_for_plan("abc12345")
+
+        assert session_id.startswith("novel-a--workflow-")
+        assert session_id.endswith("abc12345")
+
+    def test_session_id_for_plan_is_stable_per_plan(self, engine):
+        first = engine._session_id_for_plan("plan-001")
+        second = engine._session_id_for_plan("plan-001")
+        assert first == second
 
     @pytest.mark.asyncio
     async def test_route_default(self, engine):
@@ -188,6 +214,8 @@ class TestWorkflowEngine:
 
         assert [item["id"] for item in first["recommendations"]] == ["rec-01", "rec-02"]
         assert [item["id"] for item in second["recommendations"]] == ["rec-01", "rec-02"]
+        assert first["recommendations"][0]["target"] == ""
+        assert first["recommendations"][0]["params"] == {}
         assert first["plan_hash"]
         assert second["plan_hash"]
 
@@ -204,6 +232,189 @@ class TestWorkflowEngine:
 
         assert result["status"] == "completed"
         assert engine.plans[plan_id].recommendations_frozen is True
+
+    @pytest.mark.asyncio
+    async def test_execute_generate_draft_persists_generation_snapshot(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L3",
+            recommendations=[
+                {
+                    "action": "set_generation_controls",
+                    "params": {
+                        "style": "cinematic",
+                        "length": "long",
+                        "constraints": ["avoid passive voice"],
+                    },
+                }
+            ],
+        )
+        plan_id = plan_result["plan_id"]
+
+        generate_result = None
+        for _ in range(6):
+            result = await engine.execute(plan_id)
+            if result.get("step_name") == "generate_draft":
+                generate_result = result
+                break
+
+        assert generate_result is not None
+        snapshot_meta = generate_result.get("generation_snapshot")
+        assert isinstance(snapshot_meta, dict)
+        snapshot_path = Path(snapshot_meta["snapshot_path"])
+        assert snapshot_path.exists()
+
+        payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        assert payload["artifact_type"] == "quality_revision"
+        assert payload["schema_version"] == "evidence.v1"
+        assert payload["input"]["controls"]["style"] == "cinematic"
+        assert payload["input"]["controls"]["length"] == "long"
+        assert payload["input"]["controls"]["constraints"] == ["avoid passive voice"]
+        assert payload["trace"]["session_id"] == engine._session_id_for_plan(plan_id)
+        assert payload["trace"]["run_id"] == f"run-{plan_id}"
+
+    @pytest.mark.asyncio
+    async def test_execute_generate_draft_repeated_run_trace_and_artifact_links_align(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L3",
+            recommendations=[
+                {
+                    "action": "set_generation_controls",
+                    "params": {
+                        "style": "cinematic",
+                        "length": "long",
+                        "constraints": ["avoid passive voice"],
+                    },
+                }
+            ],
+        )
+        plan_id = plan_result["plan_id"]
+        session_id = engine._session_id_for_plan(plan_id)
+
+        first_generate = None
+        for _ in range(6):
+            result = await engine.execute(plan_id)
+            if result.get("step_name") == "generate_draft":
+                first_generate = result
+                break
+        assert first_generate is not None
+
+        first_meta = first_generate.get("generation_snapshot")
+        assert isinstance(first_meta, dict)
+        first_snapshot_path = Path(first_meta["snapshot_path"])
+        assert first_snapshot_path.exists()
+
+        first_payload = json.loads(first_snapshot_path.read_text(encoding="utf-8"))
+        assert first_meta["trace"]["session_id"] == session_id
+        assert first_meta["trace"]["run_id"] == f"run-{plan_id}"
+        assert first_payload["trace"]["session_id"] == session_id
+        assert first_payload["trace"]["run_id"] == f"run-{plan_id}"
+
+        first_state_raw = engine.session_manager.read(session_id, ContentType.STATE)
+        first_state = json.loads(first_state_raw)
+        assert first_state["artifacts"]["state"] == str(
+            engine.session_manager._resolve_path(session_id, ContentType.STATE)
+        )
+        assert first_payload["evidence_links"][1] == first_state["artifacts"]["state"]
+        assert first_payload["evidence_links"][1].replace("\\", "/").endswith("/.data/state.json")
+
+        follow_up = await engine.execute(plan_id)
+        assert follow_up["status"] == "completed"
+
+        second_payload = json.loads(first_snapshot_path.read_text(encoding="utf-8"))
+        assert second_payload["trace"]["session_id"] == session_id
+        assert second_payload["trace"]["run_id"] == f"run-{plan_id}"
+        assert second_payload["trace"]["revision_id"] == first_payload["trace"]["revision_id"]
+
+        second_state_raw = engine.session_manager.read(session_id, ContentType.STATE)
+        second_state = json.loads(second_state_raw)
+        assert second_state["artifacts"]["state"] == first_state["artifacts"]["state"]
+        assert second_payload["evidence_links"][1] == second_state["artifacts"]["state"]
+        assert second_payload["evidence_links"][1].replace("\\", "/").endswith("/.data/state.json")
+
+        assert first_state["state_trace_id"] != second_state["state_trace_id"]
+
+    @pytest.mark.asyncio
+    async def test_execute_generate_draft_snapshot_includes_quality_controls(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L3",
+            recommendations=[
+                {
+                    "action": "set_generation_controls",
+                    "params": {
+                        "style": "cinematic",
+                        "length": "long",
+                        "constraints": ["avoid passive voice"],
+                    },
+                },
+                {
+                    "action": "set_quality_controls",
+                    "params": {
+                        "quality_mode": "auto",
+                        "quality_level": "medium",
+                        "degrade_on_timeout": False,
+                        "degrade_on_error": True,
+                        "critical_gate_always_on": True,
+                        "quality_phase_timeout_seconds": 12,
+                    },
+                },
+            ],
+        )
+        plan_id = plan_result["plan_id"]
+
+        generate_result = None
+        for _ in range(6):
+            result = await engine.execute(plan_id)
+            if result.get("step_name") == "generate_draft":
+                generate_result = result
+                break
+
+        assert generate_result is not None
+        snapshot_meta = generate_result.get("generation_snapshot")
+        assert isinstance(snapshot_meta, dict)
+        payload = json.loads(Path(snapshot_meta["snapshot_path"]).read_text(encoding="utf-8"))
+        assert payload["input"]["quality_controls"] == {
+            "quality_mode": "auto",
+            "quality_level": "medium",
+            "degrade_on_timeout": False,
+            "degrade_on_error": True,
+            "critical_gate_always_on": True,
+            "quality_phase_timeout_seconds": 12,
+        }
+
+    @pytest.mark.asyncio
+    async def test_execute_generate_draft_rejects_invalid_quality_controls(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L3",
+            recommendations=[
+                {
+                    "action": "set_generation_controls",
+                    "params": {
+                        "style": "cinematic",
+                        "length": "long",
+                        "constraints": ["avoid passive voice"],
+                    },
+                },
+                {
+                    "action": "set_quality_controls",
+                    "params": {
+                        "quality_mode": "invalid",
+                        "quality_level": "high",
+                    },
+                },
+            ],
+        )
+        plan_id = plan_result["plan_id"]
+
+        for _ in range(4):
+            await engine.execute(plan_id)
+
+        failure = await engine.execute(plan_id)
+        assert "error" in failure
+        assert "set_quality_controls.quality_mode must be auto or manual" in failure["error"]
 
     @pytest.mark.asyncio
     async def test_plan_maintenance_lane_metrics_and_gate_profile(self, engine):
@@ -429,6 +640,8 @@ class TestWorkflowEngine:
         assert "observability_metrics" in status
         assert "budget_guardrail" in status
         assert "handoff_package" in status
+        assert status["fix_status"] == "unfixed"
+        assert status["fix_owner"] == ""
         assert "completion_rate" in status["observability_metrics"]
 
     @pytest.mark.asyncio
@@ -438,33 +651,157 @@ class TestWorkflowEngine:
 
         started = await engine.lifecycle(plan_id, "start")
         assert started["runner_state"] == "running"
+        assert started["triage_state"] == "open"
         assert started["session_status"] == "active"
 
         paused = await engine.lifecycle(plan_id, "pause")
         assert paused["runner_state"] == "paused"
+        assert paused["triage_state"] == "open"
         assert paused["session_status"] == "checkpointed"
         assert paused["checkpoint_id"]
 
         resumed = await engine.lifecycle(plan_id, "resume")
         assert resumed["runner_state"] == "running"
+        assert resumed["triage_state"] == "open"
         assert resumed["session_status"] == "active"
 
         stopped = await engine.lifecycle(plan_id, "stop")
         assert stopped["runner_state"] == "stopped"
+        assert stopped["triage_state"] == "open"
         assert stopped["session_status"] == "archived"
 
         status = await engine.lifecycle(plan_id, "status")
         assert status["runner_state"] == "stopped"
+        assert status["triage_state"] == "open"
         assert status["session_status"] == "archived"
         assert "budget_guardrail" in status
         assert "execution_mode" in status
 
     @pytest.mark.asyncio
+    async def test_lifecycle_valid_triage_transition_persists_state_and_audit(self, engine):
+        plan_result = await engine.plan("task", level="L2")
+        plan_id = plan_result["plan_id"]
+
+        result = await engine.lifecycle(plan_id, "start", triage_state="in_progress")
+        assert result["runner_state"] == "running"
+        assert result["triage_state"] == "in_progress"
+        assert result["fix_status"] == "in_progress"
+        assert result["fix_owner"] == plan_id
+
+        status = await engine.lifecycle(plan_id, "status")
+        assert status["triage_state"] == "in_progress"
+        assert status["fix_status"] == "in_progress"
+        assert status["fix_owner"] == plan_id
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        triage_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "triage_state_transition"]
+        assert triage_events
+        latest = triage_events[-1]
+        assert latest["payload"]["from"] == "open"
+        assert latest["payload"]["to"] == "in_progress"
+        assert latest["payload"]["reason"] == "lifecycle:start"
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_invalid_triage_transition_guard(self, engine):
+        plan_result = await engine.plan("task", level="L2")
+        plan_id = plan_result["plan_id"]
+
+        result = await engine.lifecycle(plan_id, "start", triage_state="resolved")
+        assert "error" in result
+        assert "Invalid triage transition" in result["error"]
+        assert result["transition_rejection"]["from"] == "open"
+        assert result["transition_rejection"]["to"] == "resolved"
+        assert result["transition_rejection"]["action"] == "start"
+        assert result["transition_rejection"]["reason_code"] == "invalid_triage_transition"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        rejected_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "triage_state_transition_rejected"]
+        assert rejected_events
+        latest = rejected_events[-1]
+        assert latest["event_type"] == "triage_state_transition_rejected"
+        assert latest["payload"]["from"] == "open"
+        assert latest["payload"]["to"] == "resolved"
+        assert latest["payload"]["reason_code"] == "invalid_triage_transition"
+
+        gate_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "gate_approval_trace"]
+        assert gate_events
+        triage_gate_events = [event for event in gate_events if event.get("payload", {}).get("gate_name") == "triage_transition_guard"]
+        assert triage_gate_events
+        latest_gate = triage_gate_events[-1]
+        assert latest_gate["payload"]["decision"] == "reject"
+        assert latest_gate["payload"]["reason_code"] == "invalid_triage_transition"
+        assert latest_gate["payload"]["trace"]["session_id"] == session_id
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_escalation_persists_actor_reason_metadata(self, engine):
+        plan_result = await engine.plan("task", level="L2")
+        plan_id = plan_result["plan_id"]
+
+        await engine.lifecycle(plan_id, "start", triage_state="in_progress")
+        escalated = await engine.lifecycle(plan_id, "resume", triage_state="escalated")
+        assert escalated["triage_state"] == "escalated"
+        assert escalated["fix_status"] == "in_progress"
+        assert escalated["fix_owner"] == plan_id
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+        escalation_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "triage_escalation"]
+        assert escalation_events
+        latest = escalation_events[-1]
+        assert latest["payload"]["actor"] == "workflow_engine"
+        assert latest["payload"]["reason"] == "lifecycle:resume"
+        assert latest["payload"]["reason_code"] == "triage_escalated"
+        assert latest["payload"]["fix_status"] == "in_progress"
+        assert latest["payload"]["fix_owner"] == plan_id
+
+        gate_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "gate_approval_trace"]
+        escalation_gate_events = [
+            event for event in gate_events
+            if event.get("payload", {}).get("gate_name") == "triage_escalation"
+        ]
+        assert escalation_gate_events
+        latest_gate = escalation_gate_events[-1]
+        assert latest_gate["payload"]["decision"] == "escalate"
+        assert latest_gate["payload"]["reason_code"] == "triage_escalated"
+        assert latest_gate["payload"]["actor"] == "workflow_engine"
+
+    @pytest.mark.asyncio
     async def test_lifecycle_invalid_transition_guard(self, engine):
         plan_result = await engine.plan("task", level="L2")
-        result = await engine.lifecycle(plan_result["plan_id"], "pause")
+        plan_id = plan_result["plan_id"]
+        result = await engine.lifecycle(plan_id, "pause")
         assert "error" in result
         assert "Invalid runner transition" in result["error"]
+        assert result["transition_rejection"]["from"] == "pending"
+        assert result["transition_rejection"]["to"] == "paused"
+        assert result["transition_rejection"]["action"] == "pause"
+        assert result["transition_rejection"]["reason_code"] == "invalid_runner_transition"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        assert lines
+        rejected_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "runner_state_transition_rejected"]
+        assert rejected_events
+        latest = rejected_events[-1]
+        assert latest["event_type"] == "runner_state_transition_rejected"
+        assert latest["payload"]["from"] == "pending"
+        assert latest["payload"]["to"] == "paused"
+        assert latest["payload"]["reason_code"] == "invalid_runner_transition"
+
+        gate_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "gate_approval_trace"]
+        assert gate_events
+        latest_gate = gate_events[-1]
+        assert latest_gate["payload"]["gate_name"] == "runner_transition_guard"
+        assert latest_gate["payload"]["decision"] == "reject"
+        assert latest_gate["payload"]["reason_code"] == "invalid_runner_transition"
+        assert latest_gate["payload"]["trace"]["session_id"] == session_id
 
     @pytest.mark.asyncio
     async def test_lifecycle_pause_and_stop_generate_handoff_package(self, engine):
@@ -476,10 +813,20 @@ class TestWorkflowEngine:
         assert "handoff_package" in paused
         assert paused["handoff_package"]["trigger"] == "pause"
         assert paused["handoff_package"]["next_command"].startswith("workflow_execute")
+        assert paused["handoff_package"]["stage_owner"] == plan_id
+        assert paused["handoff_package"]["ownership_model"] == "plan_owner"
+        assert paused["handoff_package"]["phase_owners"]["executing"] == plan_id
+        assert paused["handoff_package"]["triage_state"] == "open"
+        assert paused["handoff_package"]["fix_status"] == "unfixed"
+        assert paused["handoff_package"]["fix_owner"] == ""
 
+        await engine.lifecycle(plan_id, "resume", triage_state="escalated")
         stopped = await engine.lifecycle(plan_id, "stop")
         assert "handoff_package" in stopped
         assert stopped["handoff_package"]["trigger"] == "stop"
+        assert stopped["handoff_package"]["triage_state"] == "escalated"
+        assert stopped["handoff_package"]["fix_status"] == "in_progress"
+        assert stopped["handoff_package"]["fix_owner"] == plan_id
 
         session_id = engine._session_id_for_plan(plan_id)
         handoff_path = engine.session_manager._resolve_path(session_id, ContentType.HANDOFF)
@@ -660,6 +1007,165 @@ class TestCheckpoints:
         assert result["replay"]["reason"] == "plan_hash_mismatch"
 
     @pytest.mark.asyncio
+    async def test_restore_checkpoint_replay_reports_snapshot_controls(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L3",
+            recommendations=[
+                {
+                    "action": "set_generation_controls",
+                    "params": {
+                        "style": "cinematic",
+                        "length": "long",
+                        "constraints": ["avoid passive voice"],
+                    },
+                }
+            ],
+        )
+        plan_id = plan_result["plan_id"]
+
+        for _ in range(6):
+            step_result = await engine.execute(plan_id)
+            if step_result.get("step_name") == "generate_draft":
+                break
+
+        checkpoint = Checkpoint(
+            id="cp-replay-controls",
+            description="replay-controls",
+            commit_hash=None,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "plan_hash": engine.plans[plan_id].plan_hash,
+                "recommendations": engine.plans[plan_id].recommendations,
+                "recommendations_frozen": True,
+            },
+        )
+        engine.checkpoints[checkpoint.id] = checkpoint
+
+        pending = await engine.restore_checkpoint("cp-replay-controls")
+        assert pending["status"] == "waiting_confirmation"
+
+        result = await engine.restore_checkpoint("cp-replay-controls", confirm_token="ok")
+
+        assert "error" in result
+        replay = result["replay"]
+        assert replay["applied"] is True
+        assert replay["generation_controls_source"] == "snapshot"
+        assert replay["generation_controls"] == {
+            "style": "cinematic",
+            "length": "long",
+            "constraints": ["avoid passive voice"],
+        }
+        assert replay["snapshot_generation_controls"] == replay["generation_controls"]
+        assert replay["snapshot_path"].replace("\\", "/").endswith(f".data/generation-snapshots/{plan_id}-generate_draft.json")
+        assert replay["snapshot_trace_id"] == f"run-{plan_id}"
+
+    @pytest.mark.asyncio
+    async def test_restore_checkpoint_rejects_generation_controls_mismatch(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L3",
+            recommendations=[
+                {
+                    "action": "set_generation_controls",
+                    "params": {
+                        "style": "cinematic",
+                        "length": "long",
+                        "constraints": ["avoid passive voice"],
+                    },
+                }
+            ],
+        )
+        plan_id = plan_result["plan_id"]
+
+        for _ in range(6):
+            step_result = await engine.execute(plan_id)
+            if step_result.get("step_name") == "generate_draft":
+                break
+
+        checkpoint = Checkpoint(
+            id="cp-controls-mismatch",
+            description="controls-mismatch",
+            commit_hash=None,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "recommendations": [
+                    {
+                        "action": "set_generation_controls",
+                        "params": {
+                            "style": "minimal",
+                            "length": "short",
+                            "constraints": ["dialogue only"],
+                        },
+                    }
+                ],
+                "recommendations_frozen": True,
+            },
+        )
+        engine.checkpoints[checkpoint.id] = checkpoint
+
+        pending = await engine.restore_checkpoint("cp-controls-mismatch")
+        assert pending["status"] == "waiting_confirmation"
+
+        result = await engine.restore_checkpoint("cp-controls-mismatch", confirm_token="ok")
+
+        assert "error" in result
+        assert result["replay"]["applied"] is False
+        assert result["replay"]["reason"] == "generation_controls_mismatch"
+
+    @pytest.mark.asyncio
+    async def test_restore_checkpoint_rejects_invalid_generation_snapshot_json(self, engine):
+        plan_result = await engine.plan(
+            "写一章小说",
+            level="L1",
+            recommendations=[
+                {
+                    "action": "set_generation_controls",
+                    "params": {
+                        "style": "cinematic",
+                        "length": "long",
+                        "constraints": ["avoid passive voice"],
+                    },
+                }
+            ],
+        )
+        plan_id = plan_result["plan_id"]
+
+        session_id = engine._session_id_for_plan(plan_id)
+        snapshot_path = engine.session_manager._resolve_path(
+            session_id,
+            ContentType.GENERATION_SNAPSHOT,
+            id=f"{plan_id}-generate_draft",
+        )
+        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_path.write_text("{bad", encoding="utf-8")
+
+        checkpoint = Checkpoint(
+            id="cp-invalid-snapshot",
+            description="invalid-snapshot",
+            commit_hash=None,
+            plan_id=plan_id,
+            replay_payload={
+                "plan_id": plan_id,
+                "recommendations": engine.plans[plan_id].recommendations,
+                "recommendations_frozen": True,
+            },
+        )
+        engine.checkpoints[checkpoint.id] = checkpoint
+
+        pending = await engine.restore_checkpoint("cp-invalid-snapshot")
+        assert pending["status"] == "waiting_confirmation"
+
+        result = await engine.restore_checkpoint("cp-invalid-snapshot", confirm_token="ok")
+
+        assert "error" in result
+        assert result["replay"]["applied"] is False
+        assert result["replay"]["reason"] == "generation_snapshot_invalid_json"
+
+
+    @pytest.mark.asyncio
     async def test_restore_checkpoint_with_hash(self, engine):
         # Manually add checkpoint with hash
         cp = Checkpoint(id="cp1", description="test", commit_hash="abc123")
@@ -738,7 +1244,9 @@ class TestRiskGateAudit:
         audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
         lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
         assert lines
-        latest = json.loads(lines[-1])
+        confirm_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "confirm_trace"]
+        assert confirm_events
+        latest = confirm_events[-1]
         assert latest["event_type"] == "confirm_trace"
         assert latest["payload"]["confirmed"] is False
 
@@ -1048,6 +1556,80 @@ class TestWorkflowEngineBranchCoverage:
         assert template[0]["name"] == "analyze"
 
     @pytest.mark.asyncio
+    async def test_waiting_confirmation_persists_gate_approval_trace(self, engine):
+        plan_result = await engine.plan("删除旧文件并重写", level="L2")
+        plan_id = plan_result["plan_id"]
+
+        pending = await engine.execute(
+            plan_id,
+            recommendations=[{"action": "remove obsolete blocks"}],
+        )
+        assert pending["status"] == "waiting_confirmation"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        gate_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "gate_approval_trace"]
+        assert gate_events
+        latest = gate_events[-1]
+        assert latest["payload"]["gate_name"] == "risk_gate"
+        assert latest["payload"]["decision"] == WorkflowDecision.NO_GO.value
+        assert latest["payload"]["reason_code"] == "secondary_confirmation_required"
+        assert latest["payload"]["confirmed"] is False
+        assert latest["payload"]["trace"]["session_id"] == session_id
+
+    @pytest.mark.asyncio
+    async def test_waiting_confirmation_trace_continuity_aligns_with_state_snapshot(self, engine):
+        plan_result = await engine.plan("删除旧文件并重写", level="L2")
+        plan_id = plan_result["plan_id"]
+
+        pending = await engine.execute(
+            plan_id,
+            recommendations=[{"action": "remove obsolete blocks"}],
+        )
+        assert pending["status"] == "waiting_confirmation"
+        assert pending["state_trace_id"]
+
+        session_id = engine._session_id_for_plan(plan_id)
+        state_raw = engine.session_manager.read(session_id, ContentType.STATE)
+        state_payload = json.loads(state_raw)
+
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        gate_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "gate_approval_trace"]
+        assert gate_events
+        latest_gate = gate_events[-1]
+
+        trace = latest_gate["payload"]["trace"]
+        assert trace["session_id"] == session_id
+        assert trace["run_id"] == f"run-{plan_id}"
+        assert trace["state_trace_id"] == state_payload["state_trace_id"]
+        assert trace["state_trace_id"] == pending["state_trace_id"]
+
+    @pytest.mark.asyncio
+    async def test_wave_gate_failure_persists_gate_approval_trace(self, engine):
+        plan_result = await engine.plan(
+            "回答一个问题",
+            level="L1",
+            recommendations=[{"action": "require_wave_gate"}, {"action": "force_gate_fail"}],
+        )
+        plan_id = plan_result["plan_id"]
+
+        result = await engine.execute(plan_id)
+        assert result["status"] == "gate_blocked"
+
+        session_id = engine._session_id_for_plan(plan_id)
+        audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
+        lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        gate_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "gate_approval_trace"]
+        assert gate_events
+        latest = gate_events[-1]
+        assert latest["payload"]["gate_name"] == "wave_gate_chain"
+        assert latest["payload"]["decision"] == "NO_GO"
+        assert latest["payload"]["reason_code"] == "wave_gate_chain_failed"
+        assert latest["payload"]["failed_gate"] == "review-session-cycle"
+
+    @pytest.mark.asyncio
     async def test_transition_guard_rejects_illegal_jump_and_audits(self, engine):
         planned = await engine.plan("回答一个简单问题", level="L1")
         plan_id = planned["plan_id"]
@@ -1062,7 +1644,9 @@ class TestWorkflowEngineBranchCoverage:
         audit_path = engine.session_manager._resolve_path(session_id, ContentType.AUDIT)
         lines = [line for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
         assert lines
-        latest = json.loads(lines[-1])
+        rejected_events = [json.loads(line) for line in lines if json.loads(line).get("event_type") == "step_state_transition_rejected"]
+        assert rejected_events
+        latest = rejected_events[-1]
         assert latest["event_type"] == "step_state_transition_rejected"
         assert latest["payload"]["from"] == "done"
         assert latest["payload"]["to"] == "executing"
@@ -1274,8 +1858,17 @@ class TestWorkflowEngineBranchCoverage:
         initial_state_raw = engine.session_manager.read(session_id, ContentType.STATE)
         initial_state = json.loads(initial_state_raw)
         assert initial_state["schema_version"] == WORKFLOW_STATE_SCHEMA_VERSION
+        assert initial_state["schema_policy"] == {
+            "policy": "frozen",
+            "version_format": "YYYY-MM",
+            "non_breaking_change": "additive_only",
+            "breaking_change": "version_bump_required",
+        }
         assert initial_state["metadata"]["lane"] == engine.plans[plan_id].lane
         assert initial_state["metadata"]["execution_mode"] in {"Autopilot", "Team", "Pipeline/Ralph", "EcoMode"}
+        assert initial_state["metadata"]["stage_owner"] == plan_id
+        assert initial_state["metadata"]["ownership_model"] == "plan_owner"
+        assert initial_state["metadata"]["phase_owners"]["planned"] == plan_id
         assert initial_state["artifacts"]["state"].replace("\\", "/").endswith(".data/state.json")
         assert initial_state["current_phase"] == "planned"
         assert initial_state["last_checkpoint_id"] == ""
@@ -1285,6 +1878,12 @@ class TestWorkflowEngineBranchCoverage:
         final_state_raw = engine.session_manager.read(session_id, ContentType.STATE)
         final_state = json.loads(final_state_raw)
         assert final_state["schema_version"] == WORKFLOW_STATE_SCHEMA_VERSION
+        assert final_state["schema_policy"] == {
+            "policy": "frozen",
+            "version_format": "YYYY-MM",
+            "non_breaking_change": "additive_only",
+            "breaking_change": "version_bump_required",
+        }
         assert final_state["metadata"]["plan_hash"] == engine.plans[plan_id].plan_hash
         assert final_state["metadata"]["recommendations_frozen"] is True
         assert final_state["current_phase"] == "done"

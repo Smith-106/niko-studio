@@ -146,6 +146,7 @@ class TestLevel2LiteClass:
         cfg = l2.get_default_config()
         assert cfg["max_revisions"] == 1
         assert cfg["pass_score"] == 70
+        assert cfg["retrieval_profile"] == "lite_low_cost"
 
 
 

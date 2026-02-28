@@ -51,6 +51,8 @@ class TestContentType:
         assert ContentType.SUMMARY.value == "summary"
         assert ContentType.STATE.value == "state"
         assert ContentType.SNAPSHOT_INDEX.value == "snapshot_index"
+        assert ContentType.REVISION_CHECKPOINT.value == "revision_checkpoint"
+        assert ContentType.GENERATION_SNAPSHOT.value == "generation_snapshot"
 
     def test_all_in_path_routes(self):
         for ct in ContentType:
@@ -76,6 +78,16 @@ class TestPathRoutes:
     def test_state_path(self):
         t = PATH_ROUTES[ContentType.STATE]
         assert "state.json" in t
+
+    def test_revision_checkpoint_path(self):
+        t = PATH_ROUTES[ContentType.REVISION_CHECKPOINT]
+        assert "revision-checkpoints" in t
+        assert "{id}" in t
+
+    def test_generation_snapshot_path(self):
+        t = PATH_ROUTES[ContentType.GENERATION_SNAPSHOT]
+        assert "generation-snapshots" in t
+        assert "{id}" in t
 
 
 # ============================================================
@@ -215,6 +227,20 @@ class TestSessionManagerReadWrite:
         assert len(lines) == 1
         parsed = json.loads(lines[0])
         assert parsed["kind"] == "sync"
+
+    def test_write_revision_checkpoint_creates_json_artifact(self, sm):
+        payload = '{"checkpoint_id":"revision-round-1"}'
+        assert sm.write("sess-rw", ContentType.REVISION_CHECKPOINT, payload, id="revision-round-1") is True
+
+        checkpoint_content = sm.read("sess-rw", ContentType.REVISION_CHECKPOINT, id="revision-round-1")
+        assert "revision-round-1" in checkpoint_content
+
+    def test_write_generation_snapshot_creates_json_artifact(self, sm):
+        payload = '{"artifact_type":"quality_revision"}'
+        assert sm.write("sess-rw", ContentType.GENERATION_SNAPSHOT, payload, id="plan-generate_draft") is True
+
+        snapshot_content = sm.read("sess-rw", ContentType.GENERATION_SNAPSHOT, id="plan-generate_draft")
+        assert "quality_revision" in snapshot_content
 
 
 class TestSessionManagerArchiveRestore:
@@ -440,6 +466,18 @@ class TestCreateSession:
         result = sm.create_session("proj")
         assert result["session_id"].startswith("proj-")
 
+    def test_create_session_generates_unique_ids(self, tmp_path):
+        sm = SessionManager(base_path=str(tmp_path / "sessions"))
+        first = sm.create_session("proj")
+        second = sm.create_session("proj")
+        assert first["session_id"] != second["session_id"]
+
+    def test_create_session_with_namespace_prefix(self, tmp_path):
+        sm = SessionManager(base_path=str(tmp_path / "sessions"))
+        result = sm.create_session("proj", namespace="novel-a")
+        assert result["session_id"].startswith("novel-a--proj-")
+        assert result["namespace"] == "novel-a"
+
 
 # ============================================================
 # SessionManager.list_sessions (legacy)
@@ -510,3 +548,16 @@ class TestGetSessionPath:
         sm = SessionManager(base_path=str(tmp_path / "sessions"))
         path = sm._get_session_path("nonexistent")
         assert "active" in str(path)
+
+
+class TestSessionIdValidation:
+
+    def test_init_rejects_invalid_session_id(self, tmp_path):
+        sm = SessionManager(base_path=str(tmp_path / "sessions"))
+        with pytest.raises(ValueError):
+            sm.init("../escape")
+
+    def test_resolve_path_rejects_invalid_session_id(self, tmp_path):
+        sm = SessionManager(base_path=str(tmp_path / "sessions"))
+        with pytest.raises(ValueError):
+            sm._resolve_path("../escape", ContentType.OUTLINE)

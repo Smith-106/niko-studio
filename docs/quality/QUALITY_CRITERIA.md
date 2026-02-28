@@ -27,6 +27,19 @@ This document defines quality evaluation rules for PDD KPI measurement.
   - reviewer (if manual)
   - timestamp
 
-## 6. Re-evaluation Rule
-- Failed samples must go through at least one revision cycle.
-- Re-evaluation result must be recorded in `.workflow/evidence/quality/`.
+## 7. Runtime Decision Alignment
+- Runtime publish gate for novel finalization should use strict threshold aligned with PDD acceptance (target >= 99%).
+- Heuristic endpoint (`src/workflow/novel_quality.py`) is precheck only and must not override final acceptance decision.
+
+## 8. Definition of Done (Excellent Long Novel)
+- Chapter DoD:
+  - Score >= 99%
+  - No Critical issue
+  - LOCK conflict dimension (`C`) is sufficient
+- Volume DoD:
+  - No cross-chapter critical consistency conflicts
+  - Foreshadowing progression/recovery traceable
+- Book DoD:
+  - Main plot closed-loop
+  - Key foreshadowing recovery rate >= 95%
+  - Evidence trace available for quality review and revision loop

@@ -45,13 +45,28 @@ from src import __version__
 from src.config import get_config_value
 from src.knowledge.services import get_services
 from src.knowledge.services.config import load_config as load_services_config
+from src.workflow.state import (
+    NOVEL_PASS_SCORE,
+    NOVEL_HUMAN_REVIEW_SCORE,
+)
+from src.cli.commands.genre_profile import genre_to_generation_recommendation
 
 
-def _is_llm_available() -> bool:
-    try:
-        return get_services().is_healthy()
-    except Exception:
-        return False
+def _merge_recommendations_with_genre(
+    recommendations: Optional[List[Dict[str, Any]]],
+    genre: Optional[str],
+) -> Optional[List[Dict[str, Any]]]:
+    merged: List[Dict[str, Any]] = []
+    if isinstance(recommendations, list):
+        merged = list(recommendations)
+
+    genre_recommendation = genre_to_generation_recommendation(str(genre or "none"))
+    if genre_recommendation is None:
+        return merged if merged else recommendations
+
+    merged.append(genre_recommendation)
+    return merged
+
 
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
@@ -186,6 +201,35 @@ def _service_runtime_status(service_id: str, services: Dict[str, str]) -> str:
     return services.get(service_id, "unknown")
 
 
+def _get_observability_snapshot(services: Dict[str, str], engine_health: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    runtime_ready = sum(1 for name in _RUNTIME_SERVER_ORDER if _service_is_ready(name, services))
+    runtime_total = len(_RUNTIME_SERVER_ORDER)
+
+    layer_status = {
+        "memory": services.get("memory", "unknown"),
+        "retrieval": services.get("search", "unknown"),
+        "workflow": services.get("workflow", "unknown"),
+    }
+
+    layer_health = {
+        "memory": engine_health.get("memory", {}),
+        "retrieval": engine_health.get("search", {}),
+        "workflow": engine_health.get("workflow", {}),
+    }
+
+    return {
+        "runtime": {
+            "ready": runtime_ready,
+            "total": runtime_total,
+            "health_ratio": round(runtime_ready / runtime_total, 4) if runtime_total else 0.0,
+        },
+        "layers": {
+            "status": layer_status,
+            "health": layer_health,
+        },
+    }
+
+
 def _serialize_service_config(config: McpServiceConfig, services: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     runtime_status = "unknown"
     if services is not None:
@@ -303,10 +347,22 @@ def _resolve_reload_enabled() -> bool:
     return bool(get_config_value("gateway.reload", True))
 
 
-def _resolve_gateway_host_port() -> tuple[str, int]:
-    host = str(os.getenv("NIKO_GATEWAY_HOST") or get_config_value("gateway.host", "0.0.0.0"))
-    port = int(os.getenv("NIKO_GATEWAY_PORT") or get_config_value("gateway.port", 8000))
-    return host, port
+def _resolve_ui_bridge_enabled() -> bool:
+    raw = os.getenv("NIKO_UI_BRIDGE_ENABLED")
+    if raw is not None:
+        return str(raw).strip().lower() in {"true", "1", "yes", "on"}
+    return bool(get_config_value("gateway.ui_bridge_enabled", False))
+
+
+def _ui_bridge_disabled_response() -> JSONResponse:
+    return JSONResponse(
+        {
+            "status": "disabled",
+            "reason": "ui_bridge_disabled",
+            "hint": "Set NIKO_UI_BRIDGE_ENABLED=1 or gateway.ui_bridge_enabled=true",
+        },
+        status_code=404,
+    )
 
 
 def _parse_origins(raw: Any) -> list[str]:
@@ -415,8 +471,37 @@ def _quality_default_payload() -> Dict[str, Any]:
                 "detail": 0.0,
                 "factuality": 0.0,
             },
+            "retrieval": {
+                "stage1_candidates": 0,
+                "stage2_selected": 0,
+                "cited_count": 0,
+                "effective_hit_rate": 0.0,
+            },
+            "context_budget": {
+                "token_total": 0,
+                "token_effective": 0,
+                "utilization": 0.0,
+            },
+            "self_learning": {
+                "strategy_adoption_rate": 0.0,
+                "reflector_triggered": False,
+                "curator_applied": False,
+            },
         },
         "publish_recommendation": "revise",
+    }
+
+
+def _normalize_self_learning_metrics(value: Any, fallback: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        value = {}
+    return {
+        "strategy_adoption_rate": _normalize_ratio(
+            value.get("strategy_adoption_rate"),
+            fallback.get("strategy_adoption_rate", 0.0),
+        ),
+        "reflector_triggered": bool(value.get("reflector_triggered", fallback.get("reflector_triggered", False))),
+        "curator_applied": bool(value.get("curator_applied", fallback.get("curator_applied", False))),
     }
 
 
@@ -450,6 +535,15 @@ def _normalize_quality_payload(payload: Any) -> Dict[str, Any]:
             fallback_metrics["template_sentence_ratio"],
         ),
         "dimension_scores": normalized_dim_scores,
+        "retrieval": _normalize_retrieval_metrics(raw_metrics.get("retrieval"), fallback_metrics["retrieval"]),
+        "context_budget": _normalize_context_budget_metrics(
+            raw_metrics.get("context_budget"),
+            fallback_metrics["context_budget"],
+        ),
+        "self_learning": _normalize_self_learning_metrics(
+            raw_metrics.get("self_learning"),
+            fallback_metrics["self_learning"],
+        ),
     }
 
     raw_issues = payload.get("issues")
@@ -510,6 +604,52 @@ def _normalize_publish_recommendation(payload: Dict[str, Any], fallback: str) ->
             return decision_to_publish[mapped_decision]
 
     return fallback
+
+
+def _normalize_retrieval_metrics(value: Any, fallback: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        value = {}
+    return {
+        "stage1_candidates": _normalize_count(value.get("stage1_candidates"), fallback.get("stage1_candidates", 0)),
+        "stage2_selected": _normalize_count(value.get("stage2_selected"), fallback.get("stage2_selected", 0)),
+        "cited_count": _normalize_count(value.get("cited_count"), fallback.get("cited_count", 0)),
+        "effective_hit_rate": _normalize_ratio(value.get("effective_hit_rate"), fallback.get("effective_hit_rate", 0.0)),
+    }
+
+
+def _normalize_context_budget_metrics(value: Any, fallback: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        value = {}
+    return {
+        "token_total": _normalize_count(value.get("token_total"), fallback.get("token_total", 0)),
+        "token_effective": _normalize_count(value.get("token_effective"), fallback.get("token_effective", 0)),
+        "utilization": _normalize_ratio(value.get("utilization"), fallback.get("utilization", 0.0)),
+    }
+
+
+def _merge_quality_sidecar(
+    result: Any,
+    retrieval_metadata: Any,
+    context_budget: Any,
+    self_learning: Any = None,
+) -> Dict[str, Any]:
+    payload = result if isinstance(result, dict) else {}
+    merged = dict(payload)
+
+    metrics = merged.get("metrics")
+    if not isinstance(metrics, dict):
+        metrics = {}
+    metrics = dict(metrics)
+
+    if isinstance(retrieval_metadata, dict):
+        metrics["retrieval"] = retrieval_metadata
+    if isinstance(context_budget, dict):
+        metrics["context_budget"] = context_budget
+    if isinstance(self_learning, dict):
+        metrics["self_learning"] = self_learning
+
+    merged["metrics"] = metrics
+    return merged
 
 
 def _normalize_issue_item(issue: Dict[str, Any]) -> Dict[str, str]:
@@ -875,42 +1015,74 @@ search_mcp = FastMCP("NikoSearch", stateless_http=True)
 async def search_hybrid(
     query: str,
     scope: str = "all",
-    limit: int = 10
+    limit: int = 10,
+    profile: str | None = None,
+    min_score: float | None = None,
+    budget_tokens: int | None = None,
+    rerank: bool = False,
 ) -> list:
     """
     混合搜索 (向量 + 关键词 + 图谱)
-    
+
     Args:
         query: 搜索查询
         scope: 搜索范围 (all/memory/graph/files)
         limit: 返回数量
-    
+        profile: 检索 profile 名称（可选）
+        min_score: 最小分数阈值（可选）
+        budget_tokens: 上下文预算 token（可选）
+        rerank: 是否启用重排（可选）
+
     Returns:
         搜索结果列表
     """
     engine = get_search_engine()
-    return await engine.hybrid_search(query, scope, limit)
+    return await engine.hybrid_search(
+        query=query,
+        scope=scope,
+        limit=limit,
+        profile=profile,
+        min_score=min_score,
+        budget_tokens=budget_tokens,
+        rerank=rerank,
+    )
 
 
 @search_mcp.tool()
 async def search_iterative(
     query: str,
     max_iterations: int = 3,
-    confidence_threshold: float = 0.8
+    confidence_threshold: float = 0.8,
+    profile: str | None = None,
+    min_score: float | None = None,
+    budget_tokens: int | None = None,
+    rerank: bool = False,
 ) -> dict:
     """
     迭代检索 (GAM 模式)
-    
+
     Args:
         query: 初始查询
         max_iterations: 最大迭代次数
         confidence_threshold: 置信度阈值
-    
+        profile: 检索 profile 名称（可选）
+        min_score: 最小分数阈值（可选）
+        budget_tokens: 上下文预算 token（可选）
+        rerank: 是否启用重排（可选）
+
     Returns:
         {"answer": "...", "sources": [...], "iterations": 2}
     """
     engine = get_search_engine()
-    return await engine.iterative_retrieve(query, max_iterations, confidence_threshold)
+    return await engine.iterative_retrieve(
+        query=query,
+        max_iterations=max_iterations,
+        confidence_threshold=confidence_threshold,
+        profile=profile,
+        min_score=min_score,
+        budget_tokens=budget_tokens,
+        rerank=rerank,
+    )
 
 
 @search_mcp.tool()
@@ -970,6 +1142,7 @@ async def workflow_plan(
     task: str,
     level: str = None,
     recommendations: list = None,
+    genre: Optional[str] = None,
 ) -> dict:
     """
     生成执行计划 (Plan 模式)
@@ -982,7 +1155,8 @@ async def workflow_plan(
         {"plan_id": "...", "steps": [...], "dependencies": [...]}
     """
     engine = get_workflow_engine()
-    return await engine.plan(task, level, recommendations=recommendations)
+    merged_recommendations = _merge_recommendations_with_genre(recommendations, genre)
+    return await engine.plan(task, level, recommendations=merged_recommendations)
 
 
 @workflow_mcp.tool()
@@ -1157,7 +1331,13 @@ async def evaluate_content(
 
     suggestions = raw.get("recommended_skills", []) if isinstance(raw, dict) else []
 
-    decision = "APPROVED" if total_score >= 80 else "REVISE" if total_score >= 60 else "REWRITE"
+    decision = (
+        "APPROVED"
+        if total_score >= NOVEL_PASS_SCORE
+        else "REVISE"
+        if total_score >= NOVEL_HUMAN_REVIEW_SCORE
+        else "REWRITE"
+    )
 
     return {
         "decision": decision,
@@ -2157,6 +2337,7 @@ async def health_check(request):
         "version": __version__,
         "services": services,
         "engine_health": engine_health,
+        "observability": _get_observability_snapshot(services, engine_health),
         "agents": ["commander", "architect", "writer", "critic", "worldbuilding", "character", "plot"],
         "skills_count": 40,
         "mcp_runtime": {
@@ -2185,6 +2366,12 @@ async def metrics_endpoint(request):
     return JSONResponse({
         "status": "ok",
         "metrics": _get_metrics_snapshot(),
+        "runtime": {
+            "session_id": _RUNTIME_SESSION_ID,
+            "reconnect_attempts": _RUNTIME_RECONNECT_ATTEMPTS,
+            "last_probe_at": _RUNTIME_LAST_PROBE_AT,
+            "last_error": _RUNTIME_LAST_ERROR,
+        },
     })
 
 
@@ -2540,13 +2727,40 @@ async def novel_quality_check_endpoint(request: Request):
     if not isinstance(content, str) or not content.strip():
         return JSONResponse({"error": "content is required"}, status_code=400)
     normalized_content = content.strip()
+    retrieval_metadata = body.get("retrieval_metadata")
+    context_budget = body.get("context_budget")
+    self_learning = body.get("self_learning")
+
+    quality_kwargs: Dict[str, Any] = {}
+    if "quality_level" in body:
+        quality_kwargs["quality_level"] = str(body.get("quality_level", "high"))
+    if "quality_mode" in body:
+        quality_kwargs["quality_mode"] = str(body.get("quality_mode", "auto"))
+    if "critical_gate_always_on" in body:
+        quality_kwargs["critical_gate_always_on"] = bool(body.get("critical_gate_always_on", True))
+    if "degrade_reason" in body:
+        quality_kwargs["degrade_reason"] = str(body.get("degrade_reason", ""))
+
     try:
-        result = evaluate_novel_quality(normalized_content)
+        try:
+            result = evaluate_novel_quality(normalized_content, **quality_kwargs)
+        except TypeError as exc:
+            if quality_kwargs and "unexpected keyword argument" in str(exc):
+                result = evaluate_novel_quality(normalized_content)
+            else:
+                raise
         if inspect.isawaitable(result):
             result = await result
     except Exception:
         logger.exception("novel_quality_check_endpoint evaluator failed")
         result = _quality_default_payload()
+
+    result = _merge_quality_sidecar(
+        result,
+        retrieval_metadata,
+        context_budget,
+        self_learning,
+    )
 
     try:
         normalized_result = _normalize_quality_payload(result)
@@ -2568,6 +2782,7 @@ async def workflow_plan_endpoint(request: Request):
         task=body.get("task", ""),
         level=body.get("level"),
         recommendations=body.get("recommendations"),
+        genre=body.get("genre"),
     )
     return JSONResponse(result)
 
@@ -2600,6 +2815,30 @@ async def workflow_quick_rollback_endpoint(request: Request):
         reason=body.get("reason", ""),
     )
     return JSONResponse(result)
+
+
+async def ui_bridge_workflow_route_endpoint(request: Request):
+    if not _resolve_ui_bridge_enabled():
+        return _ui_bridge_disabled_response()
+    return await workflow_route_endpoint(request)
+
+
+async def ui_bridge_workflow_plan_endpoint(request: Request):
+    if not _resolve_ui_bridge_enabled():
+        return _ui_bridge_disabled_response()
+    return await workflow_plan_endpoint(request)
+
+
+async def ui_bridge_workflow_execute_endpoint(request: Request):
+    if not _resolve_ui_bridge_enabled():
+        return _ui_bridge_disabled_response()
+    return await workflow_execute_endpoint(request)
+
+
+async def ui_bridge_workflow_lifecycle_endpoint(request: Request):
+    if not _resolve_ui_bridge_enabled():
+        return _ui_bridge_disabled_response()
+    return await workflow_lifecycle_endpoint(request)
 
 
 async def checkpoint_create_endpoint(request: Request):
@@ -2767,6 +3006,10 @@ def create_gateway() -> Starlette:
             Route("/workflow/plan", workflow_plan_endpoint, methods=["POST"]),
             Route("/workflow/execute", workflow_execute_endpoint, methods=["POST"]),
             Route("/workflow/lifecycle", workflow_lifecycle_endpoint, methods=["POST"]),
+            Route("/ui/workflow/route", ui_bridge_workflow_route_endpoint, methods=["POST"]),
+            Route("/ui/workflow/plan", ui_bridge_workflow_plan_endpoint, methods=["POST"]),
+            Route("/ui/workflow/execute", ui_bridge_workflow_execute_endpoint, methods=["POST"]),
+            Route("/ui/workflow/lifecycle", ui_bridge_workflow_lifecycle_endpoint, methods=["POST"]),
             Route("/workflow/quick-rollback", workflow_quick_rollback_endpoint, methods=["POST"]),
             Route("/workflow/checkpoint/create", checkpoint_create_endpoint, methods=["POST"]),
             Route("/workflow/checkpoint/restore", checkpoint_restore_endpoint, methods=["POST"]),

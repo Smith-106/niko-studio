@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "observation": {
+    "watchPaths": ["src", "lib", "tests"],
+    "alertPatterns": ["error", "failed", "panic", "exception"]
+  },
+  "awakening": {
+    "randomInterval": 3600,
+    "commitHook": true
+  }
+}

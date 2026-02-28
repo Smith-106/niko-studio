@@ -80,6 +80,14 @@ RUNNER_TO_SESSION_STATUS = {
     "stopped": "archived",
 }
 
+TRIAGE_ALLOWED_TRANSITIONS = {
+    "open": {"in_progress", "rejected", "escalated"},
+    "in_progress": {"resolved", "rejected", "escalated"},
+    "escalated": {"in_progress", "resolved", "rejected"},
+    "resolved": set(),
+    "rejected": set(),
+}
+
 STEP_ALLOWED_TRANSITIONS = {
     "planned": {"executing", "failed"},
     "executing": {"review", "failed"},
@@ -113,6 +121,12 @@ WAVE6_BUDGET_GUARDRAIL = {
 }
 
 WORKFLOW_STATE_SCHEMA_VERSION = "2026-02"
+WORKFLOW_STATE_SCHEMA_POLICY = {
+    "policy": "frozen",
+    "version_format": "YYYY-MM",
+    "non_breaking_change": "additive_only",
+    "breaking_change": "version_bump_required",
+}
 WORKFLOW_STATE_PHASE_ALIASES = {
     "created": "planned",
     "running": "executing",
@@ -145,6 +159,12 @@ class WorkflowStateMetadata(TypedDict, total=False):
     template_meta: Dict[str, Any]
     recommendations_frozen: bool
     plan_hash: str
+    stage_owner: str
+    ownership_model: str
+    phase_owners: Dict[str, str]
+    triage_state: str
+    fix_status: str
+    fix_owner: str
 
 
 class WorkflowStateArtifacts(TypedDict):
@@ -156,6 +176,7 @@ class WorkflowStateArtifacts(TypedDict):
 
 class WorkflowStateSnapshot(TypedDict, total=False):
     schema_version: str
+    schema_policy: Dict[str, str]
     plan_id: str
     task: str
     level: str
@@ -197,6 +218,9 @@ class WorkflowPlan:
     steps: List[WorkflowStep] = field(default_factory=list)
     status: str = "created"  # created/running/completed/failed
     runner_state: str = "pending"  # pending/running/paused/stopped
+    triage_state: str = "open"  # open/in_progress/escalated/resolved/rejected
+    fix_status: str = "unfixed"  # unfixed/in_progress/fixed/wont_fix
+    fix_owner: str = ""
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     completed_at: str = None
     template_meta: Dict[str, Any] = field(default_factory=dict)
@@ -447,13 +471,28 @@ class WorkflowEngine:
             if step.get("status") == "failed"
         ]
         next_command = f"workflow_execute(plan_id='{plan.id}')"
+        stage_owner = plan.id
+        phase_owners = {
+            "planned": stage_owner,
+            "executing": stage_owner,
+            "review": stage_owner,
+            "test": stage_owner,
+            "done": stage_owner,
+            "failed": stage_owner,
+        }
         handoff = {
             "generated_at": datetime.now().isoformat(),
             "trigger": trigger,
             "plan_id": plan.id,
             "status": plan.status,
             "runner_state": plan.runner_state,
+            "triage_state": plan.triage_state,
+            "fix_status": plan.fix_status,
+            "fix_owner": plan.fix_owner,
             "execution_mode": plan.template_meta.get("execution_mode", OBSERVABILITY_MODES[0]),
+            "stage_owner": stage_owner,
+            "ownership_model": "plan_owner",
+            "phase_owners": phase_owners,
             "pending_steps": pending_steps,
             "blocked_by": blocked_by,
             "next_command": next_command,
@@ -470,10 +509,24 @@ class WorkflowEngine:
             f"- status: {handoff['status']}",
             f"- runner_state: {handoff['runner_state']}",
             f"- execution_mode: {handoff['execution_mode']}",
+            f"- triage_state: {handoff['triage_state']}",
+            f"- fix_status: {handoff['fix_status']}",
+            f"- fix_owner: {handoff['fix_owner'] or '(none)'}",
+            f"- stage_owner: {handoff['stage_owner']}",
+            f"- ownership_model: {handoff['ownership_model']}",
             f"- generated_at: {handoff['generated_at']}",
             "",
-            "## Pending Steps",
+            "## Phase Owners",
         ]
+        if handoff["phase_owners"]:
+            lines.extend([f"- {phase}: {owner}" for phase, owner in handoff["phase_owners"].items()])
+        else:
+            lines.append("- (none)")
+
+        lines.extend([
+            "",
+            "## Pending Steps",
+        ])
         if handoff["pending_steps"]:
             lines.extend(
                 [f"- {step['id']} | {step['name']} | {step['status']}" for step in handoff["pending_steps"]]
@@ -510,6 +563,11 @@ class WorkflowEngine:
                 "pending_count": len(handoff["pending_steps"]),
                 "blocked_count": len(handoff["blocked_by"]),
                 "next_command": handoff["next_command"],
+                "stage_owner": handoff["stage_owner"],
+                "ownership_model": handoff["ownership_model"],
+                "triage_state": handoff["triage_state"],
+                "fix_status": handoff["fix_status"],
+                "fix_owner": handoff["fix_owner"],
             },
         )
         return handoff
@@ -635,21 +693,30 @@ class WorkflowEngine:
             WorkflowLevel.L5_COORDINATOR: ["规划全书", "大纲", "整体设计", "完整故事"],
         }
 
-    def __init__(self, workspace: str = None):
+    def __init__(self, workspace: str = None, session_namespace: str = ""):
         self.workspace = Path(workspace) if workspace else Path.cwd()
         self.plans: Dict[str, WorkflowPlan] = {}
         self.checkpoints: Dict[str, Checkpoint] = {}
         self.plan_sessions: Dict[str, str] = {}
         self.router = LevelRouter()
         self.session_manager = SessionManager(base_path=str(self.workspace / ".writing" / "sessions"))
+        self._session_namespace = self._derive_session_namespace(session_namespace)
         self._module_locks: Dict[str, asyncio.Lock] = {}
         self._module_lock_guard = asyncio.Lock()
         self._module_owners: Dict[str, str] = {}
 
         logger.info(f"Workflow engine initialized: {self.workspace}")
 
+    def _derive_session_namespace(self, explicit_namespace: str = "") -> str:
+        if explicit_namespace:
+            namespace_candidate = explicit_namespace.strip().lower()
+        else:
+            namespace_candidate = (self.workspace.name or "workflow").strip().lower()
+        sanitized = re.sub(r"[^a-z0-9_-]+", "-", namespace_candidate).strip("-")
+        return sanitized or "workflow"
+
     def _session_id_for_plan(self, plan_id: str) -> str:
-        return self.plan_sessions.setdefault(plan_id, f"workflow-{plan_id}")
+        return self.plan_sessions.setdefault(plan_id, f"{self._session_namespace}--workflow-{plan_id}")
 
     def _sync_session_lifecycle(self, plan: WorkflowPlan, checkpoint_id: str = None) -> Dict[str, Any]:
         session_id = self._session_id_for_plan(plan.id)
@@ -673,6 +740,38 @@ class WorkflowEngine:
             "payload": payload,
         }
         self.session_manager.append_audit(session_id=session_id, event=event)
+
+    def _approval_trace_ref(self, plan: WorkflowPlan) -> Dict[str, str]:
+        resume_meta = self._state_resume_metadata(plan)
+        return {
+            "session_id": self._session_id_for_plan(plan.id),
+            "plan_id": plan.id,
+            "run_id": f"run-{plan.id}",
+            "state_trace_id": str(resume_meta.get("state_trace_id") or ""),
+        }
+
+    def _append_gate_approval_trace(
+        self,
+        plan: WorkflowPlan,
+        *,
+        gate_name: str,
+        stage: str,
+        decision: str,
+        reason_code: str,
+        actor: str,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        payload = {
+            "gate_name": gate_name,
+            "stage": stage,
+            "decision": decision,
+            "reason_code": reason_code,
+            "actor": actor,
+            "trace": self._approval_trace_ref(plan),
+        }
+        if details:
+            payload.update(details)
+        self._append_audit_event(plan, "gate_approval_trace", payload)
 
     def _checkpoint_trace_for_plan(self, plan: WorkflowPlan) -> List[Dict[str, Any]]:
         trace: List[Dict[str, Any]] = []
@@ -717,8 +816,18 @@ class WorkflowEngine:
             plan,
             (plan.observability or {}).get("mode", OBSERVABILITY_MODES[0]),
         )
+        stage_owner = plan.id
+        phase_owners = {
+            "planned": stage_owner,
+            "executing": stage_owner,
+            "review": stage_owner,
+            "test": stage_owner,
+            "done": stage_owner,
+            "failed": stage_owner,
+        }
         return {
             "schema_version": WORKFLOW_STATE_SCHEMA_VERSION,
+            "schema_policy": dict(WORKFLOW_STATE_SCHEMA_POLICY),
             "plan_id": plan.id,
             "task": plan.task,
             "level": plan.level,
@@ -735,6 +844,12 @@ class WorkflowEngine:
                 "template_meta": dict(plan.template_meta or {}),
                 "recommendations_frozen": plan.recommendations_frozen,
                 "plan_hash": plan.plan_hash,
+                "stage_owner": stage_owner,
+                "ownership_model": "plan_owner",
+                "phase_owners": phase_owners,
+                "triage_state": plan.triage_state,
+                "fix_status": plan.fix_status,
+                "fix_owner": plan.fix_owner,
             },
             "artifacts": self._resolve_state_artifacts(session_id),
             "observability": plan.observability,
@@ -861,6 +976,21 @@ class WorkflowEngine:
                 plan,
                 "step_state_transition_rejected",
                 {
+                    "step_id": step.id,
+                    "step_name": step.name,
+                    "from": current,
+                    "to": target,
+                    "reason": reason,
+                },
+            )
+            self._append_gate_approval_trace(
+                plan,
+                gate_name="step_transition_guard",
+                stage="step_state_transition",
+                decision="reject",
+                reason_code="invalid_step_transition",
+                actor="workflow_engine",
+                details={
                     "step_id": step.id,
                     "step_name": step.name,
                     "from": current,
@@ -1204,10 +1334,39 @@ class WorkflowEngine:
             "restore": restore_result,
         }
 
-    def _set_runner_state(self, plan: WorkflowPlan, target_state: str, checkpoint_id: Optional[str] = None) -> Dict[str, Any]:
+    def _set_runner_state(
+        self,
+        plan: WorkflowPlan,
+        target_state: str,
+        checkpoint_id: Optional[str] = None,
+        transition_reason: str = "",
+    ) -> Dict[str, Any]:
         current_state = plan.runner_state
         allowed = RUNNER_ALLOWED_TRANSITIONS.get(current_state, set())
         if target_state != current_state and target_state not in allowed:
+            self._append_audit_event(
+                plan,
+                "runner_state_transition_rejected",
+                {
+                    "from": current_state,
+                    "to": target_state,
+                    "reason": transition_reason,
+                    "reason_code": "invalid_runner_transition",
+                },
+            )
+            self._append_gate_approval_trace(
+                plan,
+                gate_name="runner_transition_guard",
+                stage="lifecycle_transition",
+                decision="reject",
+                reason_code="invalid_runner_transition",
+                actor="workflow_engine",
+                details={
+                    "from": current_state,
+                    "to": target_state,
+                    "reason": transition_reason,
+                },
+            )
             raise ValueError(f"Invalid runner transition: {current_state} -> {target_state}")
 
         plan.runner_state = target_state
@@ -1220,6 +1379,102 @@ class WorkflowEngine:
 
         return session_state
 
+    def _set_triage_state(
+        self,
+        plan: WorkflowPlan,
+        target_state: str,
+        transition_reason: str = "",
+        actor: str = "workflow_engine",
+    ) -> None:
+        current_state = plan.triage_state
+        allowed = TRIAGE_ALLOWED_TRANSITIONS.get(current_state, set())
+        if target_state != current_state and target_state not in allowed:
+            self._append_audit_event(
+                plan,
+                "triage_state_transition_rejected",
+                {
+                    "from": current_state,
+                    "to": target_state,
+                    "reason": transition_reason,
+                    "reason_code": "invalid_triage_transition",
+                },
+            )
+            self._append_gate_approval_trace(
+                plan,
+                gate_name="triage_transition_guard",
+                stage="triage_transition",
+                decision="reject",
+                reason_code="invalid_triage_transition",
+                actor=actor,
+                details={
+                    "from": current_state,
+                    "to": target_state,
+                    "reason": transition_reason,
+                },
+            )
+            raise ValueError(f"Invalid triage transition: {current_state} -> {target_state}")
+
+        if target_state == current_state:
+            return
+
+        plan.triage_state = target_state
+        if target_state in {"in_progress", "escalated"}:
+            plan.fix_status = "in_progress"
+            if not plan.fix_owner:
+                plan.fix_owner = plan.id
+        elif target_state == "resolved":
+            plan.fix_status = "fixed"
+            if not plan.fix_owner:
+                plan.fix_owner = plan.id
+        elif target_state == "rejected":
+            plan.fix_status = "wont_fix"
+            if not plan.fix_owner:
+                plan.fix_owner = plan.id
+
+        self._append_audit_event(
+            plan,
+            "triage_state_transition",
+            {
+                "from": current_state,
+                "to": target_state,
+                "reason": transition_reason,
+                "actor": actor,
+                "fix_status": plan.fix_status,
+                "fix_owner": plan.fix_owner,
+            },
+        )
+
+        if target_state == "escalated":
+            escalation_reason_code = "triage_escalated"
+            self._append_audit_event(
+                plan,
+                "triage_escalation",
+                {
+                    "actor": actor,
+                    "reason": transition_reason,
+                    "reason_code": escalation_reason_code,
+                    "from": current_state,
+                    "to": target_state,
+                    "fix_status": plan.fix_status,
+                    "fix_owner": plan.fix_owner,
+                },
+            )
+            self._append_gate_approval_trace(
+                plan,
+                gate_name="triage_escalation",
+                stage="triage_transition",
+                decision="escalate",
+                reason_code=escalation_reason_code,
+                actor=actor,
+                details={
+                    "from": current_state,
+                    "to": target_state,
+                    "reason": transition_reason,
+                    "fix_status": plan.fix_status,
+                    "fix_owner": plan.fix_owner,
+                },
+            )
+
     def _canonicalize_recommendations(self, recommendations: Optional[List[Any]]) -> List[Dict[str, Any]]:
         normalized: List[Dict[str, Any]] = []
         for index, raw in enumerate(recommendations or []):
@@ -1229,6 +1484,8 @@ class WorkflowEngine:
                 action = str(raw.get("action") or raw.get("suggestion") or title or "").strip()
                 if not action:
                     action = f"recommendation-{index + 1}"
+                target = str(raw.get("target") or "").strip()
+                params = copy.deepcopy(raw.get("params"))
             else:
                 text = str(raw).strip()
                 if not text:
@@ -1236,16 +1493,161 @@ class WorkflowEngine:
                 title = text
                 reason = ""
                 action = text
+                target = ""
+                params = {}
 
             normalized.append({
                 "id": f"rec-{index + 1:02d}",
                 "title": title,
                 "reason": reason,
                 "action": action,
+                "target": target,
+                "params": params if isinstance(params, dict) else {},
                 "index": index,
             })
 
         return normalized
+
+    def _normalize_generation_controls(self, params: Any, action_name: str = "set_generation_controls") -> Dict[str, Any]:
+        if not isinstance(params, dict):
+            raise ValueError(f"{action_name} requires params object")
+
+        style = str(params.get("style") or "").strip()
+        length = str(params.get("length") or "").strip()
+        constraints = params.get("constraints", [])
+
+        if not style:
+            raise ValueError(f"{action_name}.style cannot be empty")
+        if not length:
+            raise ValueError(f"{action_name}.length cannot be empty")
+        if not isinstance(constraints, list):
+            raise ValueError(f"{action_name}.constraints must be a list")
+
+        normalized_constraints: List[str] = []
+        for raw_constraint in constraints:
+            text = str(raw_constraint).strip()
+            if not text:
+                raise ValueError(f"{action_name}.constraints cannot contain empty item")
+            normalized_constraints.append(text)
+
+        return {
+            "style": style,
+            "length": length,
+            "constraints": normalized_constraints,
+        }
+
+    def _extract_generation_controls_from_recommendations(
+        self,
+        recommendations: Optional[List[Dict[str, Any]]],
+        *,
+        source: str = "set_generation_controls",
+    ) -> Optional[Dict[str, Any]]:
+        for item in recommendations or []:
+            action = str(item.get("action") or "").strip().lower()
+            if action != "set_generation_controls":
+                continue
+            return self._normalize_generation_controls(item.get("params"), source)
+        return None
+
+    def _extract_generation_controls(self, plan: WorkflowPlan) -> Optional[Dict[str, Any]]:
+        return self._extract_generation_controls_from_recommendations(
+            plan.recommendations,
+            source="set_generation_controls",
+        )
+
+    def _extract_quality_controls(self, plan: WorkflowPlan) -> Optional[Dict[str, Any]]:
+        for item in plan.recommendations or []:
+            action = str(item.get("action") or "").strip().lower()
+            if action != "set_quality_controls":
+                continue
+
+            params = item.get("params")
+            if not isinstance(params, dict):
+                raise ValueError("set_quality_controls requires params object")
+
+            quality_mode = str(params.get("quality_mode") or "").strip().lower()
+            quality_level = str(params.get("quality_level") or "").strip().lower()
+            if quality_mode not in {"auto", "manual"}:
+                raise ValueError("set_quality_controls.quality_mode must be auto or manual")
+            if quality_level not in {"ultra", "high", "medium", "fluent"}:
+                raise ValueError("set_quality_controls.quality_level must be ultra/high/medium/fluent")
+
+            return {
+                "quality_mode": quality_mode,
+                "quality_level": quality_level,
+                "degrade_on_timeout": bool(params.get("degrade_on_timeout", True)),
+                "degrade_on_error": bool(params.get("degrade_on_error", True)),
+                "critical_gate_always_on": bool(params.get("critical_gate_always_on", True)),
+                "quality_phase_timeout_seconds": int(params.get("quality_phase_timeout_seconds", 30)),
+            }
+
+        return None
+
+    def _persist_generation_snapshot(
+        self,
+        plan: WorkflowPlan,
+        step: WorkflowStep,
+        result: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        if step.name != "generate_draft":
+            return None
+
+        controls = self._extract_generation_controls(plan)
+        if controls is None:
+            return None
+
+        session_id = self._session_id_for_plan(plan.id)
+        snapshot_id = f"{plan.id}-{step.name}"
+        snapshot_path = self.session_manager._resolve_path(
+            session_id=session_id,
+            content_type=ContentType.GENERATION_SNAPSHOT,
+            id=snapshot_id,
+        )
+        run_id = f"run-{plan.id}"
+        revision_id = f"revision-{step.id}"
+        date = datetime.now().date().isoformat()
+        quality_controls = self._extract_quality_controls(plan)
+
+        snapshot_payload = {
+            "artifact_type": "quality_revision",
+            "schema_version": "evidence.v1",
+            "date": date,
+            "owner": "workflow_engine",
+            "input": {
+                "task": plan.task,
+                "controls": controls,
+            },
+            "output": {
+                "step": step.name,
+                "status": "completed",
+                "section_count": result.get("section_count", 0),
+            },
+            "result": "PASS",
+            "evidence_links": [
+                str(snapshot_path),
+                str(self.session_manager._resolve_path(session_id, ContentType.STATE)),
+            ],
+            "trace": {
+                "session_id": session_id,
+                "run_id": run_id,
+                "revision_id": revision_id,
+            },
+        }
+
+        if quality_controls:
+            snapshot_payload["input"]["quality_controls"] = quality_controls
+
+        self.session_manager.write(
+            session_id=session_id,
+            content_type=ContentType.GENERATION_SNAPSHOT,
+            content=json.dumps(snapshot_payload, ensure_ascii=False, indent=2, sort_keys=True),
+            id=snapshot_id,
+        )
+        return {
+            "snapshot_id": snapshot_id,
+            "snapshot_path": str(snapshot_path),
+            "trace": dict(snapshot_payload["trace"]),
+        }
 
     def _compute_plan_hash(self, plan: WorkflowPlan) -> str:
         payload = {
@@ -1266,6 +1668,8 @@ class WorkflowEngine:
                     "title": item.get("title", ""),
                     "reason": item.get("reason", ""),
                     "action": item.get("action", ""),
+                    "target": item.get("target", ""),
+                    "params": copy.deepcopy(item.get("params", {})),
                     "index": item.get("index"),
                 }
                 for item in plan.recommendations
@@ -1305,6 +1709,74 @@ class WorkflowEngine:
                 }
 
         replay_recommendations = self._canonicalize_recommendations(payload.get("recommendations"))
+        replay_controls: Optional[Dict[str, Any]] = None
+        replay_controls_source = "none"
+        if replay_recommendations:
+            replay_controls = self._extract_generation_controls_from_recommendations(
+                replay_recommendations,
+                source="set_generation_controls",
+            )
+            if replay_controls:
+                replay_controls_source = "recommendations"
+
+        generation_snapshot_content = self.session_manager.read(
+            session_id=self._session_id_for_plan(plan.id),
+            content_type=ContentType.GENERATION_SNAPSHOT,
+            id=f"{plan.id}-generate_draft",
+        )
+        generation_snapshot = None
+        if generation_snapshot_content:
+            try:
+                generation_snapshot = json.loads(generation_snapshot_content)
+            except json.JSONDecodeError as exc:
+                return {
+                    "applied": False,
+                    "reason": "generation_snapshot_invalid_json",
+                    "error": str(exc),
+                }
+
+        snapshot_controls = None
+        snapshot_trace_id = ""
+        snapshot_path = ""
+        if isinstance(generation_snapshot, dict):
+            snapshot_input = generation_snapshot.get("input")
+            if isinstance(snapshot_input, dict) and "controls" in snapshot_input:
+                snapshot_controls = self._normalize_generation_controls(
+                    snapshot_input.get("controls"),
+                    "generation_snapshot.input.controls",
+                )
+            trace = generation_snapshot.get("trace")
+            if isinstance(trace, dict):
+                snapshot_trace_id = str(trace.get("run_id") or "")
+            snapshot_path = str(
+                self.session_manager._resolve_path(
+                    self._session_id_for_plan(plan.id),
+                    ContentType.GENERATION_SNAPSHOT,
+                    id=f"{plan.id}-generate_draft",
+                )
+            )
+
+        if snapshot_controls and replay_controls and snapshot_controls != replay_controls:
+            return {
+                "applied": False,
+                "reason": "generation_controls_mismatch",
+                "plan_id": plan_id,
+                "plan_hash": expected_hash or self._compute_plan_hash(plan),
+                "generation_controls": replay_controls,
+                "generation_controls_source": replay_controls_source,
+                "snapshot_generation_controls": snapshot_controls,
+                "snapshot_path": snapshot_path,
+                "snapshot_trace_id": snapshot_trace_id,
+            }
+
+        final_controls = snapshot_controls or replay_controls
+        if snapshot_controls:
+            controls_source = "snapshot"
+        elif replay_controls:
+            controls_source = replay_controls_source
+        else:
+            controls_source = "none"
+
         plan.recommendations = replay_recommendations
         plan.recommendations_frozen = bool(payload.get("recommendations_frozen", True))
         plan.plan_hash = expected_hash or self._compute_plan_hash(plan)
@@ -1314,6 +1786,11 @@ class WorkflowEngine:
             "plan_id": plan_id,
             "plan_hash": plan.plan_hash,
             "recommendation_count": len(plan.recommendations),
+            "generation_controls": final_controls,
+            "generation_controls_source": controls_source,
+            "snapshot_generation_controls": snapshot_controls,
+            "snapshot_path": snapshot_path,
+            "snapshot_trace_id": snapshot_trace_id,
         }
 
     async def route(self, task: str) -> dict:
@@ -1496,13 +1973,14 @@ class WorkflowEngine:
             "total_steps": len(steps)
         })
     
-    async def lifecycle(self, plan_id: str, action: str) -> dict:
+    async def lifecycle(self, plan_id: str, action: str, triage_state: Optional[str] = None) -> dict:
         """loop-runner 生命周期控制入口"""
         if plan_id not in self.plans:
             return {"error": f"Plan '{plan_id}' not found"}
 
         plan = self.plans[plan_id]
         normalized_action = (action or "").strip().lower()
+        normalized_triage_state = str(triage_state or "").strip().lower()
         if normalized_action == "status":
             session_state = self._sync_session_lifecycle(plan)
             observability = self._refresh_observability(plan)
@@ -1513,6 +1991,9 @@ class WorkflowEngine:
                 "plan_id": plan.id,
                 "action": "status",
                 "runner_state": plan.runner_state,
+                "triage_state": plan.triage_state,
+                "fix_status": plan.fix_status,
+                "fix_owner": plan.fix_owner,
                 "plan_status": plan.status,
                 "session_status": session_state.get("status"),
                 "lane": plan.lane,
@@ -1554,9 +2035,39 @@ class WorkflowEngine:
                 plan,
                 target_by_action[normalized_action],
                 checkpoint_id=checkpoint_id,
+                transition_reason=f"lifecycle:{normalized_action}",
             )
+            if normalized_triage_state:
+                self._set_triage_state(
+                    plan,
+                    normalized_triage_state,
+                    transition_reason=f"lifecycle:{normalized_action}",
+                )
         except ValueError as exc:
-            return {"error": str(exc)}
+            error_text = str(exc)
+            if "runner transition" in error_text:
+                return {
+                    "error": error_text,
+                    "transition_rejection": {
+                        "from": plan.runner_state,
+                        "to": target_by_action[normalized_action],
+                        "action": normalized_action,
+                        "reason_code": "invalid_runner_transition",
+                        "reason": f"lifecycle:{normalized_action}",
+                    },
+                }
+            if "triage transition" in error_text:
+                return {
+                    "error": error_text,
+                    "transition_rejection": {
+                        "from": plan.triage_state,
+                        "to": normalized_triage_state,
+                        "action": normalized_action,
+                        "reason_code": "invalid_triage_transition",
+                        "reason": f"lifecycle:{normalized_action}",
+                    },
+                }
+            return {"error": error_text}
 
         if normalized_action in {"pause", "stop"}:
             self._persist_handoff_package(plan, trigger=normalized_action)
@@ -1570,6 +2081,9 @@ class WorkflowEngine:
             "plan_id": plan.id,
             "action": normalized_action,
             "runner_state": plan.runner_state,
+            "triage_state": plan.triage_state,
+            "fix_status": plan.fix_status,
+            "fix_owner": plan.fix_owner,
             "plan_status": plan.status,
             "session_status": session_state.get("status"),
             "checkpoint_id": checkpoint_id,
@@ -1681,6 +2195,21 @@ class WorkflowEngine:
                     "reason": gate.get("reason"),
                 },
             )
+            self._append_gate_approval_trace(
+                plan,
+                gate_name="risk_gate",
+                stage="pre_execution",
+                decision=str(gate.get("decision") or "NO_GO"),
+                reason_code="secondary_confirmation_required",
+                actor="operator",
+                details={
+                    "step_id": step.id,
+                    "step_name": step.name,
+                    "confirmed": False,
+                    "confirm_required": True,
+                    "risk": gate.get("risk"),
+                },
+            )
             return self._with_contract({
                 "step_id": step.id,
                 "step_name": step.name,
@@ -1734,6 +2263,24 @@ class WorkflowEngine:
                     "rollback_checkpoint_id": precheck_checkpoint_id,
                 },
             )
+            self._append_gate_approval_trace(
+                plan,
+                gate_name="risk_gate",
+                stage="pre_execution",
+                decision=str(gate.get("decision") or "GO"),
+                reason_code="secondary_confirmation_provided",
+                actor="operator",
+                details={
+                    "step_id": step.id,
+                    "step_name": step.name,
+                    "confirmed": True,
+                    "confirm_required": True,
+                    "risk": gate.get("risk"),
+                    "rollback_checkpoint_id": precheck_checkpoint_id,
+                },
+            )
+
+        generation_snapshot = None
 
         # 执行步骤
         self._transition_step_state(plan, step, "executing", "execution_started")
@@ -1750,6 +2297,7 @@ class WorkflowEngine:
             current_phase = "done"
             self._transition_step_state(plan, step, "done", "test_passed")
             step.output = result
+            generation_snapshot = self._persist_generation_snapshot(plan, step, result)
 
             if all(self._canonical_step_status(s.status) == "done" for s in plan.steps):
                 gate_chain = await self._run_wave_gate_orchestration(plan)
@@ -1762,6 +2310,23 @@ class WorkflowEngine:
                             "passed": gate_chain.get("passed", False),
                             "failed_gate": gate_chain.get("failed_gate"),
                             "trace": gate_chain.get("trace", []),
+                        },
+                    )
+                    self._append_gate_approval_trace(
+                        plan,
+                        gate_name="wave_gate_chain",
+                        stage="post_execution",
+                        decision="GO" if gate_chain.get("passed") else "NO_GO",
+                        reason_code=(
+                            "wave_gate_chain_passed"
+                            if gate_chain.get("passed")
+                            else "wave_gate_chain_failed"
+                        ),
+                        actor="workflow_engine",
+                        details={
+                            "required": True,
+                            "passed": bool(gate_chain.get("passed")),
+                            "failed_gate": gate_chain.get("failed_gate"),
                         },
                     )
                     if not gate_chain.get("passed"):
@@ -1833,6 +2398,7 @@ class WorkflowEngine:
                 "gate_chain": gate_chain,
                 "wave_completion_checkpoint_id": plan.template_meta.get("wave_completion_checkpoint_id", ""),
                 "rollback_checkpoint_id": precheck_checkpoint_id,
+                "generation_snapshot": generation_snapshot,
                 "plan_status": plan.status,
                 "runner_state": plan.runner_state,
                 "remaining_steps": self._remaining_steps(plan),
@@ -1850,7 +2416,9 @@ class WorkflowEngine:
         except Exception as e:
             failure_phase = locals().get("current_phase", "executing")
             failure_reason = str(e)
-            self._transition_step_state(plan, step, "failed", "execution_error")
+            step_status = self._canonical_step_status(step.status)
+            if step_status not in {"done", "failed"}:
+                self._transition_step_state(plan, step, "failed", "execution_error")
             plan.status = "failed"
             logger.error(f"Step execution failed: {e}")
 
@@ -2300,6 +2868,9 @@ class WorkflowEngine:
             "level": plan.level,
             "status": plan.status,
             "runner_state": plan.runner_state,
+            "triage_state": plan.triage_state,
+            "fix_status": plan.fix_status,
+            "fix_owner": plan.fix_owner,
             "session_status": session_state.get("status"),
             "state_mapping": RUNNER_TO_SESSION_STATUS,
             "template_meta": plan.template_meta,

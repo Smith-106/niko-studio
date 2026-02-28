@@ -87,6 +87,27 @@ python scripts/release_check_summary.py
 - CI（Integration Tests / `desktop-build`）入口：`npm run check`
 - 依赖审计：`npm audit --audit-level=high`
 
+## 阶段 4：执行（自主运行）
+
+规划完成后，可运行 Aha Loop 的 PRD 自主执行循环：
+
+```bash
+# 推荐：在独立终端执行（非 Claude Code 会话）
+./scripts/aha-loop/orchestrator.sh
+
+# 若在当前会话内触发嵌套保护，请先清理变量
+unset CLAUDECODE && ./scripts/aha-loop/orchestrator.sh
+```
+
+系统会按 Story 自动进入五阶段工作流（按需执行）：
+- 研究：拉取依赖实现/资料并生成研究结论
+- 并行探索：对重大决策自动创建 worktree 并并行评估方案
+- 计划审查：根据研究/探索结果调整实现计划
+- 实现：按验收标准落地代码改动
+- 质量检查：执行质量门禁并验证验收条件
+
+说明：AI 会自主判断阶段是否需要执行，但最终发布准入仍以项目质量基线与门禁结果为准。
+
 ## 安全意图可见化（摘要）
 
 - 运行时守卫、构建门禁、fallback/rollback 与发布前清单集中见：

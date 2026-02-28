@@ -1,9 +1,30 @@
 ---
 name: tension-chapter
 description: 章节级张力曲线 - 编排章节内多个场景的张力节奏，确保章节整体形成有效的情绪曲线
+version: "1.0"
+author: niko-studio
+tags: [writing, tension, chapter, pacing, structure]
+triggers:
+  - 章节大纲场景编排
+  - 章节节奏诊断
+  - 章节结尾缺乏钩子
+requires:
+  - chapter_outline: 章节大纲或场景列表
+  - chapter_role: 本章在全书中的功能
+  - target_hook: 章尾目标钩子
+outputs:
+  - 章节张力曲线
+  - 场景编排诊断
+  - 章节级优化建议
 ---
 
 # 章节张力曲线 (Tension Chapter)
+
+## 适用边界
+
+- 适用：章节内多个场景的节奏编排与章尾钩子优化。
+- 不适用：单场景局部张力打磨（应转 `tension-scene`）。
+- 不适用：全书节点布局与高潮位置（应转 `tension-arc`）。
 
 ## 概述
 

@@ -73,7 +73,7 @@ async def test_evaluate_narrative_report_exception_returns_none():
 
 def test_make_decision_respects_lock_conflict_threshold():
     agent = CriticAgent(MagicMock())
-    output = _build_basic_output(total_score=85.0)
+    output = _build_basic_output(total_score=99.0)
     output.lock_analysis = LOCKAnalysisResult(
         L=LOCKDimensionResult(score=8, reasoning="", improvement=None),
         O=LOCKDimensionResult(score=8, reasoning="", improvement=None),

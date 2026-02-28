@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "prdId": "PRD-036",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/desktop-typecheck-gate-recovery",
+  "description": "Desktop Typecheck Gate Recovery - Eliminate desktop TypeScript failures that keep release gate at NO_GO and restore deterministic blocker-to-gate evidence mapping.",
+  "changeLog": [],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Resolve desktop typecheck failures blocking release",
+      "description": "As a maintainer, I want desktop typecheck failures fixed so release availability is not blocked by known P0 issues.",
+      "acceptanceCriteria": [
+        "Desktop typecheck/build checks pass in the release path",
+        "desktop_check no longer emits P0 FAIL under normal release verification",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "researchTopics": [
+        "Current desktop package TypeScript/typecheck failure points behind desktop_check",
+        "Release-path verification steps that surface desktop_check as a P0 blocker"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Derived from PRD-036 goals and acceptance criteria. Depends on PRD-031 and PRD-035."
+    },
+    {
+      "id": "US-002",
+      "title": "Keep release-gate semantics deterministic after blocker recovery",
+      "description": "As a release reviewer, I want release gate output to move from NO_GO to policy-aligned status once blockers are truly resolved.",
+      "acceptanceCriteria": [
+        "Release gate semantics remain deterministic (P0 FAIL => NO_GO) while the recovered desktop_check no longer triggers P0 FAIL",
+        "Release summary and release evidence artifacts stay schema-compatible and deterministic",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "researchTopics": [
+        "Current gate-decision mapping from blocker severity to GO/NO_GO in release checks",
+        "Schema contracts for release summary and release evidence artifacts"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Focuses on deterministic gate behavior while removing the desktop blocker. Depends on PRD-035."
+    },
+    {
+      "id": "US-003",
+      "title": "Provide auditable evidence of desktop blocker resolution",
+      "description": "As an auditor, I want updated evidence showing blocker resolution with deterministic traceability.",
+      "acceptanceCriteria": [
+        "Updated release evidence reflects recovered desktop_check state without contract drift",
+        "Policy-runtime conformance checks remain passing after desktop fixes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "researchTopics": [
+        "Evidence fields and artifacts that must reflect desktop_check recovery deterministically",
+        "Post-fix conformance checks needed to ensure policy-runtime consistency"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Aligns release evidence updates with auditability and deterministic traceability requirements from PRD-036."
+    }
+  ]
+}

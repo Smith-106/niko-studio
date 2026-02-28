@@ -107,10 +107,10 @@ class BaseState(TypedDict, total=False):
 
 class BaseWorkflowConfig(TypedDict, total=False):
     """工作流配置基類"""
-    
-    # 質量閾值
-    pass_score: int                         # 通過分數閾值 (默認 80)
-    human_review_score: int                 # 觸發人工審閱的分數 (默認 70)
+
+    # 質量閾值（基礎層通用 fallback；具體領域應在各自 state/config 中覆蓋）
+    pass_score: int                         # 通過分數閾值（base/custom 默認 80）
+    human_review_score: int                 # 觸發人工審閱分數（base/custom 默認 70）
     
     # 循環控制
     max_revisions: int                      # 最大修改次數 (默認 3)
@@ -130,6 +130,8 @@ class BaseWorkflowConfig(TypedDict, total=False):
 # ============================================================
 
 DEFAULT_BASE_CONFIG: BaseWorkflowConfig = {
+    # 基礎層默認值：僅作 custom/general domain fallback
+    # 注意：novel domain 以 src/workflow/state.py 的常量配置為準
     "pass_score": 80,
     "human_review_score": 70,
     "max_revisions": 3,

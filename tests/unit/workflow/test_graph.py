@@ -195,7 +195,9 @@ class TestDistillationNode:
         ds = MagicMock()
         ds.distill_chapter.return_value = {
             "entities": [{"name": "Alice"}],
-            "relations": [{"type": "knows"}],
+            "relations": [
+                {"source": "char-1", "target": "char-1", "type": "KNOWS"}
+            ],
             "events": [{"event": "meeting"}],
         }
         ds.apply_to_graph = MagicMock()
@@ -217,6 +219,19 @@ class TestDistillationNode:
         assert result["distillation_result"]["relations_count"] == 1
         assert result["distillation_result"]["events_count"] == 1
         assert result["distillation_result"]["template"] == "full"
+        assert result["distillation_result"]["canonical_schema_version"] == "narrative_entity.v1"
+        assert len(result["distillation_result"]["canonical_entities"]) == 1
+        assert len(result["distillation_result"]["canonical_relations"]) == 1
+        assert result["distillation_result"]["canonical_relations"][0]["relation_type"] == "KNOWS"
+        assert "canonical_conflicts" in result["distillation_result"]
+        assert len(result["distillation_result"]["canonical_conflicts"]) == 1
+        assert result["distillation_result"]["canonical_conflicts"][0]["conflict_id"] == "CTD-0001"
+        assert result["distillation_result"]["canonical_conflicts"][0]["severity"] == "critical"
+        assert result["distillation_result"]["canonical_conflicts"][0]["critical_condition"] == "self_referential_non_identity_relation"
+        assert "canonical_trace" in result["distillation_result"]
+        assert "run_id" in result["distillation_result"]["canonical_trace"]
+        assert "session_id" in result["distillation_result"]["canonical_trace"]
+        assert result["distillation_result"]["canonical_trace"]["session_id"] == ""
         assert result["distillation_state"]["is_completed"] is True
         ds.apply_to_graph.assert_called_once()
 

@@ -1,0 +1,58 @@
+# Aha Loop Progress Log
+Started: 2026年02月24日 14:34:01
+---
+
+## [2026-02-24 21:11:12] - US-001 - Implement
+
+### Implementation
+- Files changed: src/workflow/workflow_engine.py, tests/unit/workflow/test_workflow_engine.py, .aha-loop/prd.json
+- Approach: Added a typed canonical workflow state snapshot contract (WorkflowStateSnapshot + metadata/artifacts/step record TypedDicts), normalized persisted phase values, and centralized persistence through `_build_state_snapshot` for a single state schema source of truth.
+
+### Learnings for Future Iterations
+- Persisted workflow state should be assembled from one constructor path to avoid schema drift.
+- Include artifact path references in state payload to support deterministic resume/recovery tooling.
+---
+
+## [2026-02-24 21:35:51] - US-002 - Implement
+
+### Implementation
+- Files changed: src/workflow/workflow_engine.py, tests/unit/workflow/test_workflow_engine.py, .aha-loop/prd.json, .aha-loop/progress.txt
+- Approach: Kept existing schema version contract and added explicit frozen schema policy payload in persisted WorkflowStateSnapshot so version and compatibility policy are both machine-readable at load/resume boundaries.
+
+### Learnings for Future Iterations
+- Persist schema policy next to schema version to make compatibility rules auditable without external docs.
+- Keep policy payload deterministic (fixed keys/values) so snapshot invariants remain stable across retries and checkpoints.
+
+---
+
+## [2026-02-24 21:52:14] - US-003 - Research
+
+### Research
+- Topics investigated: Existing migration patterns for workflow state; best practices for versioned JSON state migration with deterministic transforms.
+- Key findings: Existing codebase already uses deterministic compatibility normalization patterns (workflow_engine phase normalization, levels.types contract defaults, gateway schema-version fallback, core_memory_store additive DB migration defaults). Recommended migration contract is a single entrypoint with explicit ordered transforms, post-migration canonicalization, and invariant validation.
+- Report: .aha-loop/research/US-003-research.md
+
+### Plan Changes (if any)
+- Added implementation notes to US-003 in .aha-loop/prd.json to enforce deterministic migration chain and post-migration invariants.
+
+### Learnings for Future Iterations
+- Keep migration logic separate from validation boundaries: migrate first, then validate and reject unsupported versions.
+- Prefer additive evolution with explicit version bump only for breaking shape changes.
+
+---
+
+## [2026-02-24 22:05:30] - US-003 - Plan Review
+
+### Research (if applicable)
+- Topics investigated: Existing migration patterns for workflow state; deterministic versioned JSON migration best practices.
+- Key findings: Existing code already uses deterministic normalization and compatibility fallback patterns; US-003 can implement a single ordered migration entrypoint plus post-migration invariant validation without adding dependencies.
+- Report: .aha-loop/research/US-003-research.md
+
+### Plan Changes (if any)
+- No story splits/reordering required. Added a changelog entry in .aha-loop/prd.json confirming implementation should proceed with deterministic ordered transforms and explicit post-migration invariants.
+
+### Learnings for Future Iterations
+- Keep migration sequencing deterministic and isolated from validation boundaries.
+- Reuse existing contract-default and schema-fallback patterns to reduce migration drift risk.
+
+---

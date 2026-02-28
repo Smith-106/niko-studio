@@ -11,9 +11,13 @@ from src.workflow.state import (
     SceneCard,
     CritiqueResult,
     DistillationResult,
+    RetrievalMetadata,
     WritingState,
     WorkflowConfig,
     DEFAULT_CONFIG,
+    NOVEL_PASS_SCORE,
+    NOVEL_HUMAN_REVIEW_SCORE,
+    NOVEL_MIN_C_SCORE,
     create_initial_state,
 )
 
@@ -68,8 +72,62 @@ class TestDistillationResultTyped:
             entities_count=5,
             relations_count=3,
             template="summary",
+            canonical_schema_version="narrative_entity.v1",
+            canonical_trace={
+                "session_id": "session-1",
+                "run_id": "run-1",
+                "revision_id": "distill-1-s1",
+            },
+            canonical_entities=[
+                {
+                    "entity_id": "char-1",
+                    "entity_type": "Character",
+                    "scope": "character",
+                    "name": "Alice",
+                }
+            ],
+            canonical_relations=[
+                {
+                    "relation_id": "char-1-KNOWS-char-2",
+                    "source_entity_id": "char-1",
+                    "target_entity_id": "char-2",
+                    "relation_type": "KNOWS",
+                }
+            ],
+            canonical_conflicts=[
+                {
+                    "conflict_id": "CTD-0001",
+                    "conflict_type": "causality",
+                    "severity": "critical",
+                    "description": "Self-referential relation without allowed identity semantics",
+                    "critical_condition": "self_referential_non_identity_relation",
+                }
+            ],
         )
         assert result["entities_count"] == 5
+        assert result["canonical_schema_version"] == "narrative_entity.v1"
+        assert result["canonical_trace"]["session_id"] == "session-1"
+        assert result["canonical_trace"]["run_id"] == "run-1"
+        assert result["canonical_relations"][0]["relation_type"] == "KNOWS"
+
+
+class TestRetrievalMetadata:
+
+    def test_memory_observability_fields_optional(self):
+        metadata = RetrievalMetadata(c_effective=0.8, s_final=0.7, r_memory=0.6)
+        assert metadata["c_effective"] == 0.8
+        assert metadata["s_final"] == 0.7
+        assert metadata["r_memory"] == 0.6
+
+    def test_extended_retrieval_metadata_fields(self):
+        metadata = RetrievalMetadata(
+            retrieval_profile="standard_balanced",
+            budget_tokens=1200,
+            cache_hit=True,
+        )
+        assert metadata["retrieval_profile"] == "standard_balanced"
+        assert metadata["budget_tokens"] == 1200
+        assert metadata["cache_hit"] is True
 
 
 # ============================================================
@@ -79,19 +137,27 @@ class TestDistillationResultTyped:
 class TestDefaultConfig:
 
     def test_pass_score(self):
-        assert DEFAULT_CONFIG["pass_score"] == 80
+        assert DEFAULT_CONFIG["pass_score"] == NOVEL_PASS_SCORE
 
     def test_min_c_score(self):
-        assert DEFAULT_CONFIG["min_c_score"] == 7
+        assert DEFAULT_CONFIG["min_c_score"] == NOVEL_MIN_C_SCORE
 
     def test_max_revisions(self):
         assert DEFAULT_CONFIG["max_revisions"] == 3
 
     def test_human_review_score(self):
-        assert DEFAULT_CONFIG["human_review_score"] == 70
+        assert DEFAULT_CONFIG["human_review_score"] == NOVEL_HUMAN_REVIEW_SCORE
 
-    def test_verbose(self):
-        assert DEFAULT_CONFIG["verbose"] is True
+    def test_context_governance_defaults(self):
+        assert DEFAULT_CONFIG["enable_context_governance"] is False
+        assert DEFAULT_CONFIG["min_retrieval_hit_rate"] == 0.70
+        assert DEFAULT_CONFIG["min_context_budget_utilization"] == 0.60
+        assert DEFAULT_CONFIG["retrieval_profile"] == "standard_balanced"
+
+    def test_self_learning_defaults(self):
+        assert DEFAULT_CONFIG["enable_self_learning_loop"] is False
+        assert DEFAULT_CONFIG["self_learning_max_rules"] == 20
+        assert DEFAULT_CONFIG["self_learning_curate_every_n_revisions"] == 2
 
 
 # ============================================================
@@ -141,6 +207,16 @@ class TestCreateInitialState:
         assert state["draft_version"] == 0
         assert state["revision_count"] == 0
         assert state["revision_history"] == []
+        assert state["distillation_result"] == {}
+        assert state["distillation_state"] == {}
+        assert state["retrieval_metadata"] == {}
+        assert state["context_budget"] == {}
+        assert state["context_governance"] == {}
+        assert state["self_learning"] == {
+            "reflector": {},
+            "curator": {},
+            "playbook": {"rules": []},
+        }
         assert state["errors"] == []
 
     def test_initial_flags(self):

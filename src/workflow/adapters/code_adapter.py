@@ -17,7 +17,10 @@ from .base_adapter import (
 from src.workflow.base_state import BaseState, create_base_state
 
 
-@AdapterRegistry.register(DomainType.CODE.value)
+@AdapterRegistry.register(
+    DomainType.CODE.value,
+    capabilities=("strict-governance", "cli-exposed"),
+)
 class CodeAdapter(BaseDomainAdapter):
 
     def get_domain_type(self) -> str:

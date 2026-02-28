@@ -312,6 +312,7 @@ class TestLevel5CoordinatorClass:
         cfg = l5.get_default_config()
         assert cfg["max_revisions"] == 10
         assert cfg["pass_score"] == 90
+        assert cfg["retrieval_profile"] == "coordinator_quality"
 
 
 # ============================================================

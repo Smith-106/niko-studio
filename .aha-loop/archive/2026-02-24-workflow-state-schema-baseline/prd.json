@@ -1,0 +1,69 @@
+{
+  "version": 2,
+  "prdId": "PRD-002",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/evidence-artifact-contract",
+  "description": "Evidence Artifact Contract - Define canonical markdown/json evidence schema for e2e sessions, revision quality, and chapter release checks.",
+  "changeLog": [],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Define canonical evidence artifact schemas",
+      "description": "As a maintainer, I need canonical markdown/json evidence schemas so that e2e, quality, and release-gate artifacts are generated in a consistent structure.",
+      "acceptanceCriteria": [
+        "Define canonical evidence file schema for e2e session artifacts",
+        "Define canonical evidence file schema for revision quality artifacts",
+        "Define canonical evidence file schema for release-gate run artifacts",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "researchTopics": [
+        "Existing evidence artifact patterns in this repository",
+        "Schema conventions that keep JSON artifacts deterministic and diffable"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Depends on PRD-001 workflow state contract freeze."
+    },
+    {
+      "id": "US-002",
+      "title": "Define required evidence metadata fields",
+      "description": "As an operator, I need required metadata fields in evidence artifacts so that traceability and KPI auditability are reliable.",
+      "acceptanceCriteria": [
+        "Required metadata fields are defined for traceability across all evidence artifact types",
+        "Metadata includes identifiers needed to correlate artifact records to workflow runs",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "researchTopics": [
+        "Release and quality tracking metadata currently consumed by the pipeline"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Guarantee deterministic release-check consumption",
+      "description": "As a release engineer, I need evidence schemas that support deterministic release-check consumption so that gate decisions are reproducible.",
+      "acceptanceCriteria": [
+        "Evidence schema explicitly supports deterministic release-check consumption",
+        "Artifact format remains repository-friendly and diffable for review",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "researchTopics": [
+        "Current release-check parser expectations for evidence inputs"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    }
+  ]
+}

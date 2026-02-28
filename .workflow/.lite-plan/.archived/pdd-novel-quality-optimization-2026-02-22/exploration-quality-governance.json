@@ -1,0 +1,71 @@
+{
+  "_metadata": {
+    "exploration_angle": "quality-governance",
+    "exploration_index": 1,
+    "generated_at": "2026-02-22T00:00:00+08:00"
+  },
+  "project_structure": "Novel workflow and quality gates span docs, workflow adapters, critic logic, MCP gateway, and unit tests.",
+  "relevant_files": [
+    {
+      "path": "docs/PDD.md",
+      "relevance": 0.95,
+      "rationale": "Defines acceptance criteria and novel quality objectives that must map to executable runtime checks.",
+      "role": "pattern_reference",
+      "discovery_source": "analysis-artifact",
+      "key_symbols": []
+    },
+    {
+      "path": "docs/quality/QUALITY_CRITERIA.md",
+      "relevance": 0.93,
+      "rationale": "Defines threshold policy and runtime/acceptance alignment rules that need single-source convergence.",
+      "role": "pattern_reference",
+      "discovery_source": "analysis-artifact",
+      "key_symbols": []
+    },
+    {
+      "path": "src/workflow/adapters/novel_adapter.py",
+      "relevance": 0.92,
+      "rationale": "Contains route_after_critic and practical publish routing behavior tied to quality thresholds.",
+      "role": "modify_target",
+      "discovery_source": "analysis-artifact",
+      "key_symbols": ["route_after_critic", "build_workflow"]
+    },
+    {
+      "path": "src/workflow/state.py",
+      "relevance": 0.88,
+      "rationale": "Holds default novel gate constants, candidate authority source for threshold governance.",
+      "role": "config",
+      "discovery_source": "analysis-artifact",
+      "key_symbols": ["NOVEL_PASS_SCORE", "NOVEL_HUMAN_REVIEW_SCORE", "NOVEL_MIN_C_SCORE"]
+    },
+    {
+      "path": "src/workflow/levels/types.py",
+      "relevance": 0.83,
+      "rationale": "Defines canonical workflow levels and naming, needed to align PDD wording with runtime taxonomy.",
+      "role": "type_definition",
+      "discovery_source": "analysis-artifact",
+      "key_symbols": ["WorkflowLevel", "LEVEL_CONFIGS"]
+    }
+  ],
+  "patterns": [
+    "PDD条目需映射到运行时检查点与测试断言",
+    "阈值规则应集中在单一配置源并由文档引用",
+    "证据链要求应转化为CI可执行断言"
+  ],
+  "dependencies": [
+    "docs/PDD.md <-> docs/quality/QUALITY_CRITERIA.md",
+    "src/workflow/state.py <-> src/workflow/adapters/novel_adapter.py",
+    "tests/unit/workflow/test_state.py <-> tests/unit/workflow/test_novel_adapter.py"
+  ],
+  "integration_points": [
+    "src/workflow/adapters/novel_adapter.py:route_after_critic",
+    "src/mcp/gateway.py:_normalize_quality_payload",
+    "tests/unit/workflow/test_state.py:default_config threshold assertions"
+  ],
+  "constraints": [
+    "不引入破坏性阈值变更",
+    "保持现有测试框架pytest与现有目录组织",
+    "优先最小改动实现可验证门禁"
+  ],
+  "clarification_needs": []
+}

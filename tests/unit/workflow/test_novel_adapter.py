@@ -195,8 +195,8 @@ class TestRouteAfterCritic:
 
     def test_approved(self):
         adapter = NovelAdapter(config={
-            "pass_score": 80, "min_c_score": 7,
-            "max_revisions": 3, "human_review_score": 70
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
         })
         state = {
             "critique_result": {
@@ -210,13 +210,13 @@ class TestRouteAfterCritic:
 
     def test_high_score_pass(self):
         adapter = NovelAdapter(config={
-            "pass_score": 80, "min_c_score": 7,
-            "max_revisions": 3, "human_review_score": 70
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
         })
         state = {
             "critique_result": {
                 "decision": "REVISE",
-                "total_score": 85,
+                "total_score": 99,
                 "lock_analysis": {"C": {"score": 8}}
             },
             "revision_count": 0
@@ -225,8 +225,8 @@ class TestRouteAfterCritic:
 
     def test_max_revisions(self):
         adapter = NovelAdapter(config={
-            "pass_score": 80, "min_c_score": 7,
-            "max_revisions": 3, "human_review_score": 70
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
         })
         state = {
             "critique_result": {"decision": "REVISE", "total_score": 50, "lock_analysis": {}},
@@ -236,8 +236,8 @@ class TestRouteAfterCritic:
 
     def test_rewrite_decision(self):
         adapter = NovelAdapter(config={
-            "pass_score": 80, "min_c_score": 7,
-            "max_revisions": 3, "human_review_score": 70
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
         })
         state = {
             "critique_result": {"decision": "REWRITE", "total_score": 30, "lock_analysis": {}},
@@ -247,8 +247,8 @@ class TestRouteAfterCritic:
 
     def test_revise_low_score(self):
         adapter = NovelAdapter(config={
-            "pass_score": 80, "min_c_score": 7,
-            "max_revisions": 3, "human_review_score": 70
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
         })
         state = {
             "critique_result": {"decision": "REVISE", "total_score": 50, "lock_analysis": {}},
@@ -258,14 +258,86 @@ class TestRouteAfterCritic:
 
     def test_human_review_decision(self):
         adapter = NovelAdapter(config={
-            "pass_score": 80, "min_c_score": 7,
-            "max_revisions": 3, "human_review_score": 70
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
         })
         state = {
             "critique_result": {"decision": "HUMAN_REVIEW", "total_score": 72, "lock_analysis": {}},
             "revision_count": 1
         }
         assert adapter.route_after_critic(state) == "human_reviewer"
+    def test_context_governance_disabled_keeps_finalize(self):
+        adapter = NovelAdapter(config={
+            "enable_context_governance": False,
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
+        })
+        state = {
+            "critique_result": {
+                "decision": "REVISE",
+                "total_score": 99,
+                "lock_analysis": {"C": {"score": 8}}
+            },
+            "context_governance": {"passed": False},
+            "revision_count": 0
+        }
+        assert adapter.route_after_critic(state) == "finalize"
+
+    def test_context_governance_enabled_failed_routes_to_writer(self):
+        adapter = NovelAdapter(config={
+            "enable_context_governance": True,
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
+        })
+        state = {
+            "critique_result": {
+                "decision": "REVISE",
+                "total_score": 99,
+                "lock_analysis": {"C": {"score": 8}}
+            },
+            "context_governance": {"passed": False},
+            "revision_count": 1
+        }
+        assert adapter.route_after_critic(state) == "writer"
+
+    def test_context_governance_enabled_failed_at_limit_routes_to_human(self):
+        adapter = NovelAdapter(config={
+            "enable_context_governance": True,
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95
+        })
+        state = {
+            "critique_result": {
+                "decision": "APPROVED",
+                "total_score": 99,
+                "lock_analysis": {"C": {"score": 8}}
+            },
+            "context_governance": {"passed": False},
+            "revision_count": 3
+        }
+        assert adapter.route_after_critic(state) == "human_reviewer"
+
+    def test_context_governance_threshold_eval(self):
+        adapter = NovelAdapter(config={
+            "enable_context_governance": True,
+            "pass_score": 99, "min_c_score": 7,
+            "max_revisions": 3, "human_review_score": 95,
+            "min_retrieval_hit_rate": 0.70,
+            "min_context_budget_utilization": 0.60,
+        })
+        state = {
+            "critique_result": {
+                "decision": "REVISE",
+                "total_score": 99,
+                "lock_analysis": {"C": {"score": 8}}
+            },
+            "context_governance": {
+                "retrieval_hit_rate": 0.72,
+                "context_budget_utilization": 0.40,
+            },
+            "revision_count": 1
+        }
+        assert adapter.route_after_critic(state) == "writer"
 
 
 # ============================================================
@@ -600,7 +672,55 @@ class TestNodeSuccessPaths:
         assert "请根据以上反馈重写内容" in captured["input"].previous_content
 
     @pytest.mark.asyncio
-    async def test_distillation_success(self):
+    async def test_writer_injects_playbook_when_enabled(self):
+        adapter = NovelAdapter(config={"enable_self_learning_loop": True})
+        mock_llm = MagicMock()
+
+        class _WriterInput:
+            def __init__(self, **kwargs):
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+
+        writer_result = MagicMock()
+        writer_result.content = "new draft"
+        writer_result.wordcount = 1000
+        writer_result.sensory_types_used = []
+        writer_result.forbidden_words_found = []
+        writer_result.sections_needing_review = []
+        writer_result.metadata = {}
+
+        captured = {}
+
+        async def _write(inp):
+            captured["input"] = inp
+            return writer_result
+
+        mock_agent = MagicMock()
+        mock_agent.write = _write
+
+        with patch.object(adapter, "_get_llm", return_value=mock_llm), \
+             patch("src.agents.writer.WriterAgent", return_value=mock_agent), \
+             patch("src.agents.writer.WriterInput", _WriterInput):
+            state = {
+                "revision_count": 0,
+                "draft_version": 0,
+                "current_scene": {},
+                "character_profiles": [],
+                "world_settings": {},
+                "self_learning": {
+                    "reflector": {},
+                    "curator": {},
+                    "playbook": {
+                        "rules": ["Keep conflict visible", "Avoid weak causality"],
+                    },
+                },
+            }
+            await adapter.writer_node(state)
+
+        assert "Playbook 策略" in captured["input"].previous_content
+        assert "Keep conflict visible" in captured["input"].previous_content
+
+
         adapter = NovelAdapter(config={"distillation_template": "full"})
 
         updated_state = {
@@ -638,7 +758,143 @@ class TestNodeSuccessPaths:
         assert any("Distillation warning" in err for err in result["errors"])
 
     @pytest.mark.asyncio
-    async def test_critic_success(self):
+    async def test_critic_self_learning_disabled_keeps_output_shape(self):
+        adapter = NovelAdapter(config={"enable_self_learning_loop": False})
+        mock_llm = MagicMock()
+
+        instruction = MagicMock()
+        instruction.model_dump.return_value = {"target": "writer", "hint": "加强冲突"}
+
+        review_result = MagicMock()
+        review_result.total_score = 86
+        review_result.lock_score = 32
+        review_result.style_score = 30
+        review_result.logic_score = 24
+        review_result.decision = "REVISE"
+        review_result.actionable_feedback = "加强冲突"
+        review_result.revision_instructions = [instruction]
+        review_result.model_dump.return_value = {
+            "total_score": 86,
+            "decision": "REVISE",
+            "actionable_feedback": "加强冲突",
+        }
+
+        mock_agent = MagicMock()
+        mock_agent.review = AsyncMock(return_value=review_result)
+
+        with patch.object(adapter, "_get_llm", return_value=mock_llm), \
+             patch("src.agents.critic.CriticAgent", return_value=mock_agent):
+            state = {
+                "draft_content": "draft",
+                "current_scene": {"id": "S1"},
+                "character_profiles": [],
+                "world_settings": {},
+                "draft_version": 2,
+                "revision_count": 1,
+                "revision_history": [],
+                "session_id": "sess-novel-test",
+            }
+            result = await adapter.critic_node(state)
+
+        assert "self_learning" not in result
+        assert result["revision_count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_critic_self_learning_enabled_writes_reflector_and_playbook(self):
+        adapter = NovelAdapter(config={
+            "enable_self_learning_loop": True,
+            "self_learning_curate_every_n_revisions": 2,
+            "self_learning_max_rules": 5,
+        })
+        mock_llm = MagicMock()
+
+        instruction = MagicMock()
+        instruction.model_dump.return_value = {"target": "writer", "hint": "加强冲突"}
+
+        review_result = MagicMock()
+        review_result.total_score = 70
+        review_result.lock_score = 24
+        review_result.style_score = 24
+        review_result.logic_score = 22
+        review_result.decision = "REVISE"
+        review_result.actionable_feedback = "加强冲突，减少解释性语句"
+        review_result.revision_instructions = [instruction]
+        review_result.model_dump.return_value = {
+            "total_score": 70,
+            "decision": "REVISE",
+            "actionable_feedback": "加强冲突，减少解释性语句",
+            "lock_analysis": {
+                "C": {"score": 5},
+            },
+        }
+
+        mock_agent = MagicMock()
+        mock_agent.review = AsyncMock(return_value=review_result)
+
+        with patch.object(adapter, "_get_llm", return_value=mock_llm), \
+             patch("src.agents.critic.CriticAgent", return_value=mock_agent):
+            state = {
+                "draft_content": "draft",
+                "current_scene": {"id": "S1"},
+                "character_profiles": [],
+                "world_settings": {},
+                "draft_version": 2,
+                "revision_count": 1,
+                "revision_history": [],
+                "self_learning": {
+                    "reflector": {},
+                    "curator": {},
+                    "playbook": {"rules": ["Preserve scene causality"]},
+                },
+            }
+            result = await adapter.critic_node(state)
+
+        assert "self_learning" in result
+        assert result["self_learning"]["reflector"]["triggered"] is True
+        assert result["self_learning"]["curator"]["applied"] is True
+        assert len(result["self_learning"]["playbook"]["rules"]) >= 1
+
+    @pytest.mark.asyncio
+    async def test_critic_self_learning_curator_failure_is_noop(self):
+        adapter = NovelAdapter(config={"enable_self_learning_loop": True})
+        mock_llm = MagicMock()
+
+        review_result = MagicMock()
+        review_result.total_score = 70
+        review_result.lock_score = 24
+        review_result.style_score = 24
+        review_result.logic_score = 22
+        review_result.decision = "REVISE"
+        review_result.actionable_feedback = "加强冲突"
+        review_result.revision_instructions = []
+        review_result.model_dump.return_value = {
+            "total_score": 70,
+            "decision": "REVISE",
+            "actionable_feedback": "加强冲突",
+            "lock_analysis": {"C": {"score": 5}},
+        }
+
+        mock_agent = MagicMock()
+        mock_agent.review = AsyncMock(return_value=review_result)
+
+        with patch.object(adapter, "_get_llm", return_value=mock_llm), \
+             patch("src.agents.critic.CriticAgent", return_value=mock_agent), \
+             patch.object(adapter, "_curate_playbook_candidates", side_effect=RuntimeError("curate fail")):
+            state = {
+                "draft_content": "draft",
+                "current_scene": {"id": "S1"},
+                "character_profiles": [],
+                "world_settings": {},
+                "draft_version": 2,
+                "revision_count": 1,
+                "revision_history": [],
+                "session_id": "sess-novel-test",
+            }
+            result = await adapter.critic_node(state)
+
+        assert result["revision_count"] == 2
+        assert result["feedback_context"] == "加强冲突"
+
         adapter = NovelAdapter()
         mock_llm = MagicMock()
 
@@ -672,6 +928,7 @@ class TestNodeSuccessPaths:
                 "draft_version": 2,
                 "revision_count": 1,
                 "revision_history": [],
+                "session_id": "sess-novel-test",
             }
             result = await adapter.critic_node(state)
 
@@ -680,6 +937,11 @@ class TestNodeSuccessPaths:
         assert result["feedback_context"] == "加强冲突"
         assert result["revision_history"][0]["score"] == 86
         assert result["revision_instructions"] == [{"target": "writer", "hint": "加强冲突"}]
+        assert result["feedback_artifacts"]
+        assert result["feedback_artifacts"][0]["round_id"] == "round-2"
+        assert result["feedback_artifacts"][0]["source"] == "critic"
+        assert result["last_checkpoint_id"] == "revision-round-2"
+        assert result["checkpoint_trace"][-1]["round_identifier"] == "round-2"
 
 class TestCreateGraph:
 

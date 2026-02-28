@@ -1,3 +1,23 @@
+---
+name: worldview-craft
+description: 世界观构建大师技能，聚焦“世界即人物延伸”的叙事化世界设计
+version: "1.0"
+author: niko-studio
+tags: [writing, worldbuilding, worldview, narrative-design]
+triggers:
+  - 用户请求构建世界观
+  - 需要将人物弧光外化到环境与制度
+  - 世界设定与剧情冲突需要重构
+requires:
+  - genre: 题材与子类型
+  - protagonist_core: 主角核心弱点/欲望
+  - core_conflict: 核心冲突
+outputs:
+  - 世界观四要素设计稿
+  - 规则边界与一致性约束
+  - 可落地的章节/场景应用建议
+---
+
 # 🌐 世界观构建大师 (Worldview Craft)
 
 > **核心理念**：世界观不是强加于故事之上的装饰，而是故事的有机组成部分——它是主角内心和成长过程的物理呈现。

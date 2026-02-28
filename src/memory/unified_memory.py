@@ -14,6 +14,8 @@ import uuid
 import sqlite3
 import json
 import logging
+import hashlib
+import struct
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Tuple, Iterable, Protocol
@@ -25,6 +27,10 @@ from src.config import get_config_value
 from .query_cache import get_query_cache
 
 logger = logging.getLogger("niko-memory")
+
+
+DEFAULT_EMBEDDING_MODEL = str(get_config_value("memory.embedding_model", "BAAI/bge-small-zh-v1.5"))
+DEFAULT_MIN_SCORE = float(get_config_value("memory.min_score", 0.3))
 
 
 class MemoryLayer(Enum):
@@ -50,49 +56,73 @@ class UnifiedMemory:
     """统一记忆结构"""
     id: str
     content: str
-    
+
     # 垂直维度: 生命周期
     layer: str = "session"
-    
+
     # 水平维度: 内容类型
     dimension: Optional[str] = None
-    
+
     # 时序追踪 (Zep Graphiti)
     entity_id: Optional[str] = None
     valid_from: Optional[str] = None
     valid_until: Optional[str] = None
     supersedes: Optional[str] = None
     superseded_by: Optional[str] = None
-    
+
     # 作用域隔离
     user_id: Optional[str] = None
     project_id: Optional[str] = None
     session_id: Optional[str] = None
-    
+
     # 元数据
     embedding: List[float] = field(default_factory=list)
+    embedding_blob: Optional[bytes] = None
+    embedding_model: Optional[str] = None
+    embedding_dim: Optional[int] = None
+    content_hash: Optional[str] = None
+    last_accessed_at: Optional[str] = None
     importance: float = 0.5
     confidence: float = 1.0
     source: str = "user"
     tags: List[str] = field(default_factory=list)
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    
+
     def to_dict(self) -> dict:
         """转换为字典"""
         data = asdict(self)
-        data['tags'] = json.dumps(data['tags'])
-        data['embedding'] = json.dumps(data['embedding'])
+        data["tags"] = json.dumps(data["tags"])
+        data["embedding"] = json.dumps(data["embedding"])
+        if not data.get("embedding_blob") and data.get("embedding"):
+            data["embedding_blob"] = _pack_embedding(data["embedding"])
         return data
-    
+
     @classmethod
-    def from_dict(cls, data: dict) -> 'UnifiedMemory':
+    def from_dict(cls, data: dict) -> "UnifiedMemory":
         """从字典创建"""
-        if isinstance(data.get('tags'), str):
-            data['tags'] = json.loads(data['tags'])
-        if isinstance(data.get('embedding'), str):
-            data['embedding'] = json.loads(data['embedding'])
+        if isinstance(data.get("tags"), str):
+            data["tags"] = json.loads(data["tags"])
+        if isinstance(data.get("embedding"), str):
+            data["embedding"] = json.loads(data["embedding"])
+        if not data.get("embedding") and data.get("embedding_blob"):
+            data["embedding"] = _unpack_embedding(data["embedding_blob"])
         return cls(**data)
+
+
+def _pack_embedding(values: List[float]) -> bytes:
+    if not values:
+        return b""
+    return struct.pack(f"<{len(values)}f", *values)
+
+
+def _unpack_embedding(blob: bytes) -> List[float]:
+    if not blob:
+        return []
+    count = len(blob) // 4
+    if count <= 0:
+        return []
+    return list(struct.unpack(f"<{count}f", blob[: count * 4]))
 
 
 class ConflictResolver:
@@ -175,8 +205,9 @@ class ConflictResolver:
 class EmbeddingEngine:
     """嵌入向量引擎 (使用 FastEmbed + 查询缓存)"""
 
-    def __init__(self):
+    def __init__(self, model_name: Optional[str] = None):
         self._model = None
+        self._model_name = model_name or DEFAULT_EMBEDDING_MODEL
         self._cache = get_query_cache(max_size=1000, ttl_seconds=3600)
 
     @property
@@ -184,9 +215,17 @@ class EmbeddingEngine:
         if self._model is None:
             try:
                 from fastembed import TextEmbedding
-                self._model = TextEmbedding(model_name="BAAI/bge-small-zh-v1.5")
+
+                self._model = TextEmbedding(model_name=self._model_name)
             except ImportError:
                 logger.warning("FastEmbed not installed, using dummy embeddings")
+                self._model = "dummy"
+            except Exception as exc:
+                logger.warning(
+                    "FastEmbed model '%s' unavailable (%s), using dummy embeddings",
+                    self._model_name,
+                    exc,
+                )
                 self._model = "dummy"
         return self._model
 
@@ -356,8 +395,40 @@ class UnifiedMemoryEngine:
             CREATE INDEX IF NOT EXISTS idx_memories_entity ON memories(entity_id);
             CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id);
             CREATE INDEX IF NOT EXISTS idx_memories_valid ON memories(valid_from, valid_until);
+
+            CREATE TABLE IF NOT EXISTS retrieval_profiles (
+                profile_name TEXT PRIMARY KEY,
+                source_weights_json TEXT NOT NULL,
+                thresholds_json TEXT NOT NULL,
+                budget_json TEXT NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS retrieval_cache (
+                cache_key TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                hit_count INTEGER DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_retrieval_cache_expires ON retrieval_cache(expires_at);
         """)
+
+        self._ensure_column("memories", "embedding_blob", "BLOB")
+        self._ensure_column("memories", "embedding_model", "TEXT")
+        self._ensure_column("memories", "embedding_dim", "INTEGER")
+        self._ensure_column("memories", "content_hash", "TEXT")
+        self._ensure_column("memories", "last_accessed_at", "TEXT")
         self.db.commit()
+
+    def _ensure_column(self, table_name: str, column_name: str, column_type: str) -> None:
+        cursor = self.db.execute(f"PRAGMA table_info({table_name})")
+        columns = {row[1] for row in cursor.fetchall()}
+        if column_name in columns:
+            return
+        self.db.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
 
     async def add(
         self,
@@ -390,15 +461,21 @@ class UnifiedMemoryEngine:
         embedding = self.embedder.embed(content)
 
         # 3. 创建记忆
+        now = datetime.now().isoformat()
         memory = UnifiedMemory(
             id=str(uuid.uuid4()),
             content=content,
             layer=layer,
             dimension=dimension,
             entity_id=entity_id,
-            valid_from=valid_from or datetime.now().isoformat(),
+            valid_from=valid_from or now,
             valid_until=valid_until,
             embedding=embedding,
+            embedding_blob=_pack_embedding(embedding),
+            embedding_model=DEFAULT_EMBEDDING_MODEL,
+            embedding_dim=len(embedding),
+            content_hash=hashlib.sha256(content.encode("utf-8")).hexdigest(),
+            last_accessed_at=now,
             importance=importance,
             tags=tags or [],
             **kwargs
@@ -445,62 +522,74 @@ class UnifiedMemoryEngine:
         dimensions: List[str] = None,
         entity_id: str = None,
         at_time: str = None,
-        limit: int = 10
+        limit: int = 10,
+        min_score: Optional[float] = None,
     ) -> list:
         """搜索记忆 - 支持多维度 + 时序"""
 
-        # 使用缓存的查询嵌入
         query_embedding = self.embedder.embed_cached(query)
-        
-        # 构建 SQL 查询
+
         sql = "SELECT * FROM memories WHERE superseded_by IS NULL"
         params = []
-        
+
         if layer:
             sql += " AND layer = ?"
             params.append(layer)
-        
+
         if dimensions:
-            placeholders = ','.join(['?' for _ in dimensions])
+            placeholders = ",".join(["?" for _ in dimensions])
             sql += f" AND dimension IN ({placeholders})"
             params.extend(dimensions)
-        
+
         if entity_id:
             sql += " AND entity_id = ?"
             params.append(entity_id)
-        
+
         if at_time:
             sql += """
                 AND (valid_from IS NULL OR valid_from <= ?)
                 AND (valid_until IS NULL OR valid_until > ?)
             """
             params.extend([at_time, at_time])
-        
+
         cursor = self.db.execute(sql, params)
         rows = cursor.fetchall()
-        
-        # 计算相似度并排序
+
+        threshold = DEFAULT_MIN_SCORE if min_score is None else min_score
+
         results = []
         columns = [desc[0] for desc in cursor.description]
-        
+
         for row in rows:
             data = dict(zip(columns, row))
             memory = UnifiedMemory.from_dict(data)
+
+            if not memory.embedding and data.get("embedding_blob"):
+                memory.embedding = _unpack_embedding(data.get("embedding_blob"))
+
             score = self.embedder.similarity(query_embedding, memory.embedding)
-            
-            if score > 0.3:  # 阈值
-                results.append({
-                    "id": memory.id,
-                    "content": memory.content,
-                    "layer": memory.layer,
-                    "dimension": memory.dimension,
-                    "entity_id": memory.entity_id,
-                    "score": round(score, 4),
-                    "importance": memory.importance,
-                    "created_at": memory.created_at
-                })
-        
-        # 按分数排序
+
+            if score > threshold:
+                now = datetime.now().isoformat()
+                self.db.execute(
+                    "UPDATE memories SET last_accessed_at = ?, updated_at = ? WHERE id = ?",
+                    (now, now, memory.id),
+                )
+                results.append(
+                    {
+                        "id": memory.id,
+                        "content": memory.content,
+                        "layer": memory.layer,
+                        "dimension": memory.dimension,
+                        "entity_id": memory.entity_id,
+                        "score": round(score, 4),
+                        "importance": memory.importance,
+                        "created_at": memory.created_at,
+                        "last_accessed_at": now,
+                    }
+                )
+
+        self.db.commit()
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[:limit]
     
@@ -586,6 +675,125 @@ class UnifiedMemoryEngine:
             await self._mark_superseded(older_id, newer_id)
             return {"status": "resolved", "kept": newer_id, "removed": older_id}
     
+    def get_retrieval_profile(self, profile_name: str) -> Optional[Dict[str, Any]]:
+        cursor = self.db.execute(
+            """
+            SELECT profile_name, source_weights_json, thresholds_json, budget_json, enabled, updated_at
+            FROM retrieval_profiles
+            WHERE profile_name = ?
+            """,
+            (profile_name,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "profile_name": row[0],
+            "source_weights_json": json.loads(row[1]) if row[1] else {},
+            "thresholds_json": json.loads(row[2]) if row[2] else {},
+            "budget_json": json.loads(row[3]) if row[3] else {},
+            "enabled": bool(row[4]),
+            "updated_at": row[5],
+        }
+
+    def upsert_retrieval_profile(
+        self,
+        profile_name: str,
+        source_weights: Dict[str, Any],
+        thresholds: Dict[str, Any],
+        budget: Dict[str, Any],
+        enabled: bool = True,
+    ) -> None:
+        now = datetime.now().isoformat()
+        self.db.execute(
+            """
+            INSERT INTO retrieval_profiles(profile_name, source_weights_json, thresholds_json, budget_json, enabled, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?)
+            ON CONFLICT(profile_name) DO UPDATE SET
+                source_weights_json=excluded.source_weights_json,
+                thresholds_json=excluded.thresholds_json,
+                budget_json=excluded.budget_json,
+                enabled=excluded.enabled,
+                updated_at=excluded.updated_at
+            """,
+            (
+                profile_name,
+                json.dumps(source_weights or {}),
+                json.dumps(thresholds or {}),
+                json.dumps(budget or {}),
+                1 if enabled else 0,
+                now,
+            ),
+        )
+        self.db.commit()
+
+    def cache_pack(self, cache_key: str, payload: Dict[str, Any], ttl_seconds: int = 300, status: str = "ready") -> None:
+        now = datetime.now()
+        expires_at = datetime.fromtimestamp(now.timestamp() + max(ttl_seconds, 1)).isoformat()
+        self.db.execute(
+            """
+            INSERT INTO retrieval_cache(cache_key, payload_json, status, created_at, expires_at, hit_count)
+            VALUES(?, ?, ?, ?, ?, 0)
+            ON CONFLICT(cache_key) DO UPDATE SET
+                payload_json=excluded.payload_json,
+                status=excluded.status,
+                created_at=excluded.created_at,
+                expires_at=excluded.expires_at
+            """,
+            (cache_key, json.dumps(payload), status, now.isoformat(), expires_at),
+        )
+        self.db.commit()
+
+    def cache_read(self, cache_key: str) -> Optional[Dict[str, Any]]:
+        cursor = self.db.execute(
+            """
+            SELECT payload_json, status, expires_at, hit_count
+            FROM retrieval_cache
+            WHERE cache_key = ?
+            """,
+            (cache_key,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        expires_at = row[2]
+        if expires_at and expires_at <= datetime.now().isoformat():
+            self.cache_release(cache_key)
+            return None
+
+        self.db.execute(
+            "UPDATE retrieval_cache SET hit_count = hit_count + 1 WHERE cache_key = ?",
+            (cache_key,),
+        )
+        self.db.commit()
+        return {
+            "payload": json.loads(row[0]) if row[0] else {},
+            "status": row[1],
+            "expires_at": row[2],
+            "hit_count": int(row[3]) + 1,
+        }
+
+    def cache_status(self, cache_key: str) -> Optional[str]:
+        cursor = self.db.execute(
+            "SELECT status FROM retrieval_cache WHERE cache_key = ?",
+            (cache_key,),
+        )
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+    def cache_release(self, cache_key: str) -> None:
+        self.db.execute("DELETE FROM retrieval_cache WHERE cache_key = ?", (cache_key,))
+        self.db.commit()
+
+    def cache_cleanup(self) -> int:
+        cursor = self.db.execute(
+            "DELETE FROM retrieval_cache WHERE expires_at <= ?",
+            (datetime.now().isoformat(),),
+        )
+        self.db.commit()
+        return int(cursor.rowcount)
+
     def close(self):
         """关闭数据库连接"""
         self.db.close()

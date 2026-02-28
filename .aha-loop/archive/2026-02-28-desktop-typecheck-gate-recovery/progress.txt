@@ -1,0 +1,406 @@
+# Aha Loop Progress Log
+Started: 2026年02月28日  1:05:05
+---
+
+## 2026-02-28  - US-001 - Research
+
+### Research
+- Topics investigated:
+  - Current desktop package TypeScript/typecheck failure points behind desktop_check
+  - Release-path verification steps that surface desktop_check as a P0 blocker
+- Key findings:
+  - `desktop_check` is executed by `scripts/release_check_summary.py` via `npm --prefix desktop run check`, and registered as `P0` + blocking.
+  - Release decision reduction is deterministic: any blocking non-PASS check enters `go_no_go_reasons`, producing `NO_GO`.
+  - Current desktop failure signatures are TS2591 (`Buffer`), TS6133 (unused local), and TS2578 (unused `@ts-expect-error`).
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Added US-001 implementation notes in `.aha-loop/prd.json` to constrain implementation scope to desktop typecheck root-cause fixes without changing gate semantics.
+
+### Learnings for Future Iterations
+- `desktop_check` is a strict P0 blocker in release mapping; do not relax gate semantics while fixing desktop failures.
+- Desktop tsconfig strictness (`noUnusedLocals`/`noUnusedParameters`) means small hygiene regressions can block release.
+- Prefer code-level fixes over compiler rule downgrades for release blocker recovery.
+
+---
+
+## 2026-02-28  - US-001 - Research Completion
+
+### Research
+- Topics investigated:
+  - Current desktop package TypeScript/typecheck failure points behind desktop_check
+  - Existing desktop package patterns for resolving typecheck failures without changing release semantics
+- Key findings:
+  - `desktop_check` remains a deterministic P0 blocking signal in release mapping.
+  - Desktop failures are code-level TypeScript issues (`TS2591`, `TS6133`, `TS2578`) and should be fixed in source/tests.
+  - Release gate semantics must remain unchanged; recovery should come from blocker removal, not policy relaxation.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Updated `.aha-loop/prd.json` for US-001:
+  - `researchCompleted` set to `true`
+  - Added `learnings` summary
+  - Added implementation guardrails in `implementationNotes`
+
+### Learnings for Future Iterations
+- Keep desktop strict typecheck settings and fix hygiene regressions at code level.
+- Treat release mapping contract (`blocking + non-PASS => NO_GO`) as immutable during blocker recovery work.
+
+---
+
+## 2026-02-28  - US-001 - Plan Review
+
+### Research
+- Topics reviewed:
+  - Current desktop package TypeScript/typecheck failure points behind desktop_check
+  - Existing desktop package patterns for resolving typecheck failures without changing release semantics
+- Key review conclusions:
+  - No additional exploration topics are required for US-001; failure classes are concrete and code-local (TS2591/TS6133/TS2578).
+  - Release decision contract (`blocking + non-PASS => NO_GO`) remains stable and must not be altered in US-001 implementation.
+  - Implementation scope is narrowed to known desktop files plus `npm --prefix desktop run check` verification.
+- Inputs:
+  - `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Updated `.aha-loop/prd.json` for US-001:
+  - Added `plan-review` entry in `changeLog`
+  - Refined `implementationNotes` with explicit target files and validation command
+
+### Learnings for Future Iterations
+- For deterministic gate recovery tasks, plan-review should lock scope to known blocker signatures and avoid policy-surface edits.
+- Explicit target-file notes in PRD reduce drift during implementation handoff.
+
+---
+
+## 2026-02-28  - US-001 - Implement
+
+### Implementation
+- Files changed:
+  - `desktop/src/components/McpStatusPanel.tsx`
+  - `.aha-loop/prd.json`
+- Approach:
+  - Exposed existing `error` state in MCP status panel UI as warning banner to remove strict TypeScript unused-local failure (`TS6133`) without changing release gating semantics.
+  - Verified desktop release-path check via `npm --prefix desktop run check` (typecheck + build pass).
+
+### Learnings for Future Iterations
+- In strict desktop TS config, state fields introduced for partial-fetch warnings must be rendered or removed to avoid release-blocking `TS6133`.
+- UI-level surfacing of already-collected error state can resolve type hygiene blockers while preserving behavior contracts.
+
+---
+
+## 2026-02-28  - PRD-037 - Bootstrap Sync
+
+### Plan Changes (if any)
+- Synchronized active workspace PRD file to `PRD-037` so execution state matches roadmap pointer (`currentPRD=PRD-037`, `currentMilestone=M10`).
+- Initialized PRD-037 stories (`US-001..US-003`) with research topics aligned to deterministic GO transition validation goals.
+
+### Learnings for Future Iterations
+- Keep `.aha-loop/prd.json` synchronized with roadmap activation to avoid stale-story execution after milestone rollover.
+- PRD rollover should preserve policy semantics while resetting story-level phase state for the new PRD.
+
+---
+
+## 2026-02-28  - US-001 - Research (PRD-037)
+
+### Research
+- Topics investigated:
+  - Current decision reduction logic for GO/NO_GO in `scripts/release_check_summary.py`
+  - Expected all-pass release summary shape for deterministic GO transition verification
+- Key findings:
+  - Decision is deterministic: `GO` only when blocking non-PASS set is empty (`scripts/release_check_summary.py:1622-1624`).
+  - Contract invariant remains `any P0 FAIL => NO_GO` and must be preserved (`scripts/release_check_summary.py:1649`).
+  - All-pass target shape for transition verification includes `decision=GO`, empty `go_no_go_reasons`, and `desktop_check | P0 | true | PASS`.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Updated `.aha-loop/prd.json` US-001 for PRD-037:
+  - `researchCompleted` set to `true`
+  - Added deterministic decision-contract learnings
+  - Added implementation notes constraining verification scope to contract assertions (no policy semantic edits)
+
+### Learnings for Future Iterations
+- For release-transition verification stories, assert contract fields (`decision`, `go_no_go_reasons`, blocking check rows) instead of non-deterministic logs.
+- Keep blocker semantics immutable while proving GO transition under recovered all-pass state.
+
+---
+
+## 2026-02-28  - US-001 - Implement (PRD-037)
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/prd.json`
+- Approach:
+  - Added two main-path deterministic transition tests for `release_check_summary.main()`:
+    - all blocking checks PASS => `Decision: GO`, `go_no_go_reasons=[]`, `desktop_check | P0 | true | PASS`
+    - `desktop_check` FAIL => `Decision: NO_GO`, `go_no_go_reasons` includes `desktop_check`, table row FAIL
+  - Used local stubs for `run_cmd` and selected blocker signals to keep assertions focused on decision-reduction invariants without changing runtime policy semantics.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py`
+- Result: **pass** (72 passed)
+
+### Learnings for Future Iterations
+- Main-path gate transition tests should assert both human-readable report lines and machine artifact JSON fields to prevent regression drift.
+- Use deterministic command stubs in unit tests to isolate decision-reduction contract from environment-specific command output noise.
+
+---
+
+## 2026-02-28  - US-002 - Research (PRD-037)
+
+### Research
+- Topics investigated:
+  - Current blocking flag and severity mapping in release checks
+  - Known failure modes that could regress deterministic blocker semantics
+- Key findings:
+  - Blocker semantics are reduction-based: any `blocking=true` and `status!=PASS` contributes to `go_no_go_reasons`, making decision `NO_GO`.
+  - Current risk is under-coverage of non-desktop blocking failures; desktop-focused checks alone can miss semantic regressions.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Plan Changes (if any)
+- Updated `.aha-loop/prd.json` US-002:
+  - `researchCompleted` set to `true`
+  - Added blocker-semantics preservation learnings
+  - Added implementation note for non-desktop blocking failure verification
+
+### Learnings for Future Iterations
+- Semantic-preservation stories should include at least one non-primary-check regression path to avoid blind spots.
+- Verify both inclusion and exclusion in `go_no_go_reasons` to prevent false-positive blocker attribution.
+
+---
+
+## 2026-02-28  - US-002 - Implement (PRD-037)
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/prd.json`
+- Approach:
+  - Added `test_main_no_go_when_non_desktop_blocking_check_fails` to force `runtime_policy_conformance_signal=FAIL` while keeping `desktop_check` PASS.
+  - Asserted invariants:
+    - `Decision: NO_GO`
+    - `go_no_go_reasons` includes `runtime_policy_conformance_signal`
+    - `desktop_check` remains PASS and is not included in blocker reasons
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py`
+- Result: **pass** (72 passed)
+
+### Learnings for Future Iterations
+- Preserve blocker semantics by asserting failure provenance (`which check caused NO_GO`) rather than only final decision.
+- Ensure recovered primary blockers (e.g., desktop_check) remain non-attributed when unrelated blocking checks fail.
+
+---
+
+## 2026-02-28  - US-003 - Research (PRD-037)
+
+### Research
+- Topics investigated:
+  - Release summary fields required for downstream PRD-038 evidence refresh
+  - Current schema compatibility expectations for decision and checks output
+- Key findings:
+  - Stability should be measured on machine payload contract fields and check schema tuples, not volatile timestamps.
+  - Repeated-run verification must keep `decision=GO` and `go_no_go_reasons=[]` stable under identical deterministic inputs.
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Plan Changes (if any)
+- Updated `.aha-loop/prd.json` US-003:
+  - `researchCompleted` set to `true`
+  - Added repeated-run stability learnings
+  - Added implementation notes for two-run deterministic contract verification
+
+### Learnings for Future Iterations
+- Repeated-run stability tests should compare structural contract invariants (`decision`, `reasons`, check tuples, schema keys), not full-text outputs.
+- Keep explicit allowance for volatile fields (`generated_at`, `trace_id`) when asserting schema compatibility.
+
+---
+
+## 2026-02-28  - US-001 - Research (PRD-038)
+
+### Research
+- Topics investigated:
+  - Current release summary and release-readiness artifact fields that encode desktop_check recovery
+  - Existing tests and fixtures validating artifact schema compatibility and trace metadata
+- Key findings:
+  - Recovered desktop state must be represented consistently via `desktop_check` row (`P0`, `blocking=true`, `status=PASS`) in both report payload and release-readiness artifact `checks[]`.
+  - Existing schema-compat tests cover artifact shape; US-001 needed explicit recovery-presence assertion coverage.
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes (if any)
+- Updated `.aha-loop/prd.json` US-001:
+  - `researchCompleted` set to `true`
+  - Added recovery-field mapping learnings
+  - Added implementation notes for dual-surface evidence assertions
+
+### Learnings for Future Iterations
+- Evidence-refresh stories should assert domain-significant rows (like `desktop_check`) across all output surfaces, not just decision-level fields.
+- Keep schema assertions structural and deterministic; avoid timestamp-coupled expectations.
+
+---
+
+## 2026-02-28  - US-001 - Implement (PRD-038)
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/prd.json`
+- Approach:
+  - Added `test_main_desktop_check_recovery_reflected_in_report_and_artifact`.
+  - Verified recovered `desktop_check` appears in both report machine payload and release-readiness artifact with invariant contract values:
+    - `priority=P0`
+    - `blocking=true`
+    - `status=PASS`
+  - Kept decision-reduction semantics unchanged.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py`
+- Result: **pass** (74 passed)
+
+### Learnings for Future Iterations
+- Contract refresh requires cross-surface assertions (report + artifact) to prevent partial evidence drift.
+- Reusing deterministic stubs keeps evidence-contract tests stable and fast.
+
+---
+
+## 2026-02-28  - US-003 - Implement (PRD-037)
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/prd.json`
+- Approach:
+  - Added `test_main_repeated_run_stability_for_go_and_schema_contract`:
+    - runs `release_summary.main()` twice under deterministic all-pass stubs
+    - asserts both runs remain `GO` with empty `go_no_go_reasons`
+    - asserts stable `(check_id, priority, blocking, status)` tuples across runs
+    - asserts artifact schema compatibility (`schema_version=evidence.v1`, stable trace key set)
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py`
+- Result: **pass** (73 passed)
+
+### Learnings for Future Iterations
+- Dual-run contract assertions provide robust guardrails for post-recovery evidence refresh prerequisites.
+- Parsing machine JSON blocks from generated reports is a reliable way to validate semantic stability without coupling to formatting noise.
+
+---
+
+## 2026-02-28  - US-002 - Implement (PRD-038)
+
+### Research
+- Topics investigated:
+  - Schema invariants required by downstream consumers for release-check-summary and release-readiness artifact
+  - Failure modes where evidence refresh introduces contract drift
+- Key findings:
+  - Structural compatibility depends on stable key sets across machine payload/artifact surfaces, not full-text report equality.
+  - Required invariants include payload keys (`decision`, `go_no_go_reasons`, `generated_at`, `checks`), artifact keys (`artifact_type`, `schema_version`, `generated_at`, `decision`, `go_no_go_reasons`, `checks`, `trace`), trace key set, and checks[] entry keys.
+- Report: `.aha-loop/research/US-002-research.md`
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/research/US-002-research.md`
+  - `.aha-loop/prd.json`
+- Approach:
+  - Added `test_main_schema_keyset_compatibility_for_report_payload_and_artifact`.
+  - Runs `release_summary.main()` twice under deterministic all-pass stubs and asserts:
+    - report machine payload top-level key-set stability,
+    - artifact top-level key-set stability,
+    - `trace` key-set stability,
+    - `checks[]` entry key-set stability on both surfaces,
+    - preserved `GO` + empty `go_no_go_reasons` semantics.
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py`
+- Result: **pass** (75 passed)
+
+### Learnings for Future Iterations
+- For evidence-refresh compatibility, key-set invariants are stronger and less brittle than snapshot assertions.
+- Validate schema stability and policy semantics together to catch contract drift without changing GO/NO_GO behavior.
+
+---
+
+## 2026-02-28  - US-003 - Implement (PRD-038)
+
+### Research
+- Topics investigated:
+  - Current policy-runtime conformance signal dependencies on evidence outputs
+  - Regression checks needed to prove release semantics are unchanged after refresh
+- Key findings:
+  - `runtime_policy_conformance_signal` remains a P0 blocking check in release reduction and must stay PASS in recovered evidence-refresh paths.
+  - Semantic-preservation verification should assert both runtime-policy row contract (`P0`, `blocking=true`, `status=PASS`) and final reduction invariants (`decision=GO`, empty blocker reasons).
+- Report: `.aha-loop/research/US-003-research.md`
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/research/US-003-research.md`
+  - `.aha-loop/prd.json`
+- Approach:
+  - Added `test_main_policy_runtime_conformance_pass_and_reduction_stable`.
+  - Under deterministic all-pass stubs, asserts on both report payload and artifact outputs:
+    - `runtime_policy_conformance_signal` row is `P0`, `blocking=true`, `status=PASS`
+    - final decision remains `GO`
+    - `go_no_go_reasons` remains empty and excludes runtime-policy signal
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py`
+- Result: **pass** (76 passed)
+
+### Learnings for Future Iterations
+- Treat policy-runtime conformance as an explicit contract row assertion, not only a transitive part of final decision checks.
+- Cross-surface checks (report payload + artifact) reduce false confidence from single-output validation.
+
+---
+
+## 2026-02-28  - PRD-039 - Bootstrap Sync
+
+### Plan Changes (if any)
+- Extended `.aha-loop/project.roadmap.json` with M11 (`Release Contract Observability Hardening`) and PRD queue (`PRD-039..PRD-041`).
+- Activated PRD-039 as new execution target (`currentMilestone=M11`, `currentPRD=PRD-039`) and updated roadmap status back to `in_progress`.
+- Synchronized active `.aha-loop/prd.json` to PRD-039 with initialized stories (`US-001..US-003`) for provenance and cross-surface observability hardening.
+
+### Learnings for Future Iterations
+- After milestone closure, next-cycle continuation must explicitly extend roadmap before claiming next PRD execution.
+- Keep active PRD state and roadmap pointers synchronized in the same change set to avoid stale-loop execution.
+
+---
+
+## 2026-02-28  - US-001 - Implement (PRD-039)
+
+### Research
+- Topics investigated:
+  - Current blocker provenance fields in report machine payload and release-readiness artifact checks
+  - Existing tests that already assert cross-surface check-row consistency and where provenance gaps remain
+- Key findings:
+  - Critical blocker provenance rows (`desktop_check`, `runtime_policy_conformance_signal`, `gate_score_or_critical_blocker_signal`, `evidence_completeness_blocker_signal`) should be asserted as cross-surface parity tuples (`priority`, `blocking`, `status`, `detail`).
+  - Trace path values can be absolute when report/artifact paths are outside `PROJECT_ROOT`; assertions should use deterministic shape constraints instead of fixed relative literals.
+
+### Implementation
+- Files changed:
+  - `tests/unit/scripts/test_release_check_summary.py`
+  - `.aha-loop/prd.json`
+- Approach:
+  - Added `test_main_blocker_provenance_mapping_consistent_across_report_and_artifact`.
+  - Under deterministic all-pass stubs, asserts:
+    - critical blocker check-id presence on both report payload and artifact surfaces,
+    - parity of `priority/blocking/status/detail` across surfaces,
+    - stable trace metadata semantics (`session_id`, `run_id`, path suffix invariants, trace-id prefix).
+
+### Validation run
+- Executed:
+  - `python -m pytest -q -o addopts='' -p no:cov tests/unit/scripts/test_release_check_summary.py`
+- Result: **pass** (77 passed)
+
+### Learnings for Future Iterations
+- Provenance assertions should be field-parity oriented and include both semantics (`status`) and provenance payload (`detail`).
+- Path-related trace checks should be normalization-aware (`endswith`) to stay deterministic across temp/worktree environments.
+
+---
+

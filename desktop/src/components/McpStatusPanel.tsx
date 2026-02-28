@@ -301,6 +301,13 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {error && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
         {serviceActionError && (
           <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm">
             <AlertCircle size={16} />

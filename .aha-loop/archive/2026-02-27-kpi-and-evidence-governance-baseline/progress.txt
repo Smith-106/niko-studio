@@ -1,0 +1,19 @@
+# Aha Loop Progress Log
+Started: 2026年02月27日 19:18:33
+---
+
+## 2026-02-27 20:05 - US-001 - Research
+
+### Research
+- Topics investigated: ownership boundaries for KPI/evidence refresh; recurring governance check automation points
+- Key findings: `core-workflow` is the established evidence owner boundary; deterministic governance checks are enforced via `scripts/release_check_summary.py` over weekly/quality/release evidence contracts
+- Report: `.aha-loop/research/US-001-research.md`
+
+### Plan Changes
+- No exploration topics added; existing deterministic release-summary signal architecture remains canonical
+
+### Learnings for Future Iterations
+- Reuse weekly evidence owner metadata + release summary signals as one governance system instead of introducing parallel scheduling logic
+- Keep freshness/completeness governance executable (machine checks) to avoid prose-policy drift
+
+---

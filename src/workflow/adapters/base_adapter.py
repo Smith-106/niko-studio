@@ -147,8 +147,10 @@ class BaseDomainAdapter(ABC):
             return "continue"
     
     def get_default_config(self) -> BaseWorkflowConfig:
-        """獲取默認配置"""
+        """獲取默認配置（基礎層 fallback；具體領域應覆蓋）"""
         return {
+            # 僅適用於 base/custom 通用場景
+            # novel 請以 src/workflow/state.py 的 domain 常量為準
             "pass_score": 80,
             "human_review_score": 70,
             "max_revisions": 3,
@@ -178,30 +180,76 @@ class BaseDomainAdapter(ABC):
 class AdapterRegistry:
     """
     適配器註冊表
-    
+
     用於動態註冊和查找領域適配器
     """
-    
+
     _adapters: Dict[str, Type[BaseDomainAdapter]] = {}
-    
+    _adapter_capabilities: Dict[str, set[str]] = {}
+
+    @staticmethod
+    def _normalize_capabilities(capabilities: Optional[Any]) -> set[str]:
+        if capabilities is None:
+            return set()
+        if isinstance(capabilities, str):
+            values = [capabilities]
+        else:
+            values = list(capabilities)
+        return {str(value).strip() for value in values if str(value).strip()}
+
     @classmethod
-    def register(cls, domain: str):
+    def register(
+        cls,
+        domain: str,
+        capabilities: Optional[Any] = None,
+    ):
         """裝飾器: 註冊適配器"""
+
         def decorator(adapter_class: Type[BaseDomainAdapter]):
-            cls._adapters[domain] = adapter_class
+            cls.register_adapter(domain, adapter_class, capabilities=capabilities)
             return adapter_class
+
         return decorator
-    
+
+    @classmethod
+    def register_adapter(
+        cls,
+        domain: str,
+        adapter_class: Type[BaseDomainAdapter],
+        capabilities: Optional[Any] = None,
+    ) -> None:
+        """註冊適配器類（支持 capability 元數據）"""
+        cls._adapters[domain] = adapter_class
+        cls._adapter_capabilities[domain] = cls._normalize_capabilities(capabilities)
+
     @classmethod
     def get(cls, domain: str) -> Optional[Type[BaseDomainAdapter]]:
         """獲取適配器類"""
         return cls._adapters.get(domain)
-    
+
+    @classmethod
+    def get_capabilities(cls, domain: str) -> List[str]:
+        """獲取領域能力標籤"""
+        capabilities = cls._adapter_capabilities.get(domain, set())
+        return sorted(capabilities)
+
     @classmethod
     def list_domains(cls) -> List[str]:
         """列出所有已註冊領域"""
         return list(cls._adapters.keys())
-    
+
+    @classmethod
+    def list_domains_by_capability(cls, capability: str) -> List[str]:
+        """按能力標籤列出領域"""
+        needle = (capability or "").strip()
+        if not needle:
+            return []
+        return [
+            domain
+            for domain in cls.list_domains()
+            if needle in cls._adapter_capabilities.get(domain, set())
+        ]
+
     @classmethod
     def create_adapter(cls, domain: str, config: Optional[Dict] = None) -> Optional[BaseDomainAdapter]:
         """創建適配器實例"""

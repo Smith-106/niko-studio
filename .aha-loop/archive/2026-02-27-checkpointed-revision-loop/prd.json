@@ -1,0 +1,82 @@
+{
+  "version": 2,
+  "prdId": "PRD-016",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/release-readiness-automation",
+  "description": "Release Readiness Automation - Enforce deterministic evidence completeness and release gate blockers before publish.",
+  "changeLog": [
+    "2026-02-26: Activated PRD-016 from roadmap after PRD-015 completion.",
+    "2026-02-26: Initialized PRD-016 user stories and research topics for release readiness automation.",
+    "2026-02-26: Completed PRD-016 US-001 research for deterministic evidence completeness blocking contract.",
+    "2026-02-26: Completed PRD-016 US-001 implementation with P0 evidence completeness blocker and deterministic pass/fail test coverage.",
+    "2026-02-26: Completed PRD-016 US-002 implementation with deterministic gate-score/critical-issue P0 blocker composition and passing tests.",
+    "2026-02-26: Completed PRD-016 US-003 research for deterministic release-readiness artifact trace metadata persistence.",
+    "2026-02-26: Completed PRD-016 US-003 implementation with deterministic release-readiness artifact persistence and trace metadata coverage.",
+    "2026-02-26: Completed PRD-016 all stories (US-001~US-003) with deterministic release readiness gates and traceable artifact persistence."
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Block publish when required evidence is missing",
+      "description": "As a release owner, I want publish to be blocked deterministically when required evidence artifacts are missing.",
+      "acceptanceCriteria": [
+        "Missing required evidence classes trigger blocking decision",
+        "Blocking signal is deterministic and machine-consumable",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "researchTopics": [
+        "Current release-check blocking patterns and evidence coverage signals",
+        "Deterministic machine-detail formatting for missing evidence contracts"
+      ],
+      "researchCompleted": true,
+      "passes": true,
+      "learnings": "Implemented a blocking P0 evidence completeness gate with deterministic missing evidence class output and authoritative no_go/go decision semantics.",
+      "implementationNotes": "evidence_completeness_blocker_signal wired into checks as blocking P0; evaluates quality/weekly evidence presence and machine payload availability with deterministic detail ordering.",
+      "notes": "Preserve existing checks; add blocker as authoritative publish gate."
+    },
+    {
+      "id": "US-002",
+      "title": "Block publish on failed gate score or critical issues",
+      "description": "As a release owner, I want deterministic blocking when chapter gate score fails or critical issues remain unresolved.",
+      "acceptanceCriteria": [
+        "Gate-score/critical-issue blocker is deterministic",
+        "Blocking reason is machine-readable",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "researchTopics": [
+        "Existing P0 blocker signals reusable for gate-score/critical-issue enforcement",
+        "Deterministic reason-code conventions in release decision payload"
+      ],
+      "researchCompleted": true,
+      "passes": true,
+      "learnings": "Gate-score and critical-issue publish blocking should compose from canonical deterministic blockers/reason codes, with no parallel interpretation path.",
+      "implementationNotes": "Additive P0 gate-score blocker should reuse chapter_gate_scoring decision semantics and existing conflict/triage blockers to emit machine-readable no_go reasons.",
+      "notes": "Avoid parallel blocker semantics; compose from canonical gate outputs."
+    },
+    {
+      "id": "US-003",
+      "title": "Persist release-readiness output as traceable artifact",
+      "description": "As an auditor, I want release-readiness outputs persisted with deterministic trace metadata for audit replay.",
+      "acceptanceCriteria": [
+        "Release readiness artifact includes deterministic trace metadata",
+        "Artifact is discoverable by existing evidence tooling",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "researchTopics": [
+        "Existing evidence artifact trace envelope conventions",
+        "Release summary output persistence patterns and path stability"
+      ],
+      "researchCompleted": true,
+      "passes": true,
+      "learnings": "Release-readiness output is now persisted as a deterministic evidence artifact with canonical trace metadata and stable path contract for audit replay.",
+      "implementationNotes": "Persist release-readiness output as additive artifact with stable path contract, canonical trace envelope (`trace_id`, `session_id`, `run_id`, timestamp), and discoverability parity with existing evidence tooling.",
+      "notes": "Keep persistence additive and path-contract safe."
+    }
+  ]
+}

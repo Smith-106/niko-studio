@@ -184,6 +184,7 @@ class TestLevel4BrainstormClass:
         cfg = l4.get_default_config()
         assert cfg["max_parallel"] == 4
         assert cfg["pass_score"] == 85
+        assert cfg["retrieval_profile"] == "brainstorm_quality"
 
     def test_init_with_config(self):
         l4 = Level4Brainstorm(config={"max_parallel": 2})

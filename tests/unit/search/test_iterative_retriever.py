@@ -363,7 +363,7 @@ class TestIterativeRetrieve:
         ir = IterativeRetriever()
         call_count = 0
 
-        async def mock_search(query, scope, limit):
+        async def mock_search(query, scope, limit, **kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:

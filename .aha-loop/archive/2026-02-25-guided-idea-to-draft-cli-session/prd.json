@@ -1,0 +1,76 @@
+{
+  "version": 2,
+  "prdId": "PRD-005",
+  "project": "Niko Studio",
+  "branchName": "aha-loop/checkpointed-revision-loop",
+  "description": "Checkpointed Revision Loop - Guarantee iterative revision loops with explicit checkpoints and no silent data loss between rounds.",
+  "changeLog": [],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create explicit checkpoint artifacts per revision round",
+      "description": "As an operator, I want each revision round to emit explicit checkpoint artifacts so that loop progress is deterministic and auditable.",
+      "acceptanceCriteria": [
+        "Each revision round writes a checkpoint artifact with round identifier and stage metadata",
+        "Checkpoint artifacts are persisted in the configured local-first project path",
+        "Checkpoint creation is deterministic across repeated runs for the same inputs",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "researchTopics": [
+        "Existing checkpoint/state snapshot patterns in workflow and revision loop modules",
+        "Artifact naming and storage conventions used by .aha-loop evidence and logs"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Resume revision loop from latest valid checkpoint",
+      "description": "As an operator, I want recovery/resume to restore from the latest valid checkpoint so that interrupted revision loops can continue without corruption.",
+      "acceptanceCriteria": [
+        "Recovery path locates the latest valid checkpoint for a revision loop",
+        "Resume restores loop state from checkpoint without state corruption",
+        "Invalid or partial checkpoints are rejected with explicit failure handling",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "researchTopics": [
+        "Validation strategy for checkpoint integrity before resume",
+        "Failure-mode handling patterns for partial writes in current workflow engine"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Depends on PRD-001 stable workflow state schema."
+    },
+    {
+      "id": "US-003",
+      "title": "Capture revision evidence through loop transitions",
+      "description": "As a QA/release stakeholder, I want before/after and pass/fail revision evidence captured at loop transitions so that revision reliability can be verified.",
+      "acceptanceCriteria": [
+        "Revision evidence records before and after artifacts for each transition",
+        "Evidence includes per-round pass/fail outcomes linked to checkpoint identifiers",
+        "Evidence output follows project evidence artifact contract",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "researchTopics": [
+        "PRD-002 evidence artifact contract fields required for revision outcomes",
+        "Current evidence generation hooks in revision and quality pipeline"
+      ],
+      "researchCompleted": false,
+      "learnings": "",
+      "implementationNotes": "",
+      "notes": "Depends on PRD-002 evidence artifacts for revision outcomes."
+    }
+  ]
+}

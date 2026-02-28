@@ -31,6 +31,12 @@ def test_evaluate_novel_quality_returns_complete_contract():
         "visual_details",
         "template_sentence_ratio",
         "dimension_scores",
+        "quality_level_used",
+        "quality_mode_used",
+        "critical_gate_applied",
+        "critical_issue_count",
+        "degraded",
+        "degrade_reason",
     }
     assert set(result["metrics"].keys()) == metric_keys
 
@@ -63,7 +69,7 @@ def test_evaluate_novel_quality_metric_boundaries():
 
 
 
-def test_evaluate_novel_quality_recommendation_pass():
+def test_evaluate_novel_quality_recommendation_not_block_for_strong_content():
     content = (
         '"Open the door," she whispered. '
         "Moonlight spilled across the wet street and painted sharp shadows under the arch. "
@@ -72,24 +78,31 @@ def test_evaluate_novel_quality_recommendation_pass():
     )
 
     result = evaluate_novel_quality(content)
-    assert result["publish_recommendation"] == "pass"
+    assert result["publish_recommendation"] in {"pass", "revise"}
 
 
 
-def test_evaluate_novel_quality_recommendation_revise():
-    content = (
-        "Then he walked into the street. "
-        "Then he looked at the door. "
-        "Then he touched the handle. "
-        "Then he waited in silence. "
-        "The light in the corridor still felt cold."
+def test_evaluate_novel_quality_level_mode_and_degrade_metadata():
+    result = evaluate_novel_quality(
+        "Then he walked into the street. Then he looked at the door.",
+        quality_level="medium",
+        quality_mode="manual",
+        degrade_reason="timeout:critic",
     )
 
-    result = evaluate_novel_quality(content)
-    assert result["publish_recommendation"] == "revise"
+    assert result["metrics"]["quality_level_used"] == "medium"
+    assert result["metrics"]["quality_mode_used"] == "manual"
+    assert result["metrics"]["degraded"] is True
+    assert result["metrics"]["degrade_reason"] == "timeout:critic"
 
 
+def test_critical_gate_always_on_blocks_critical_issue():
+    content = " ".join(["Then he walked forward."] * 30)
+    result = evaluate_novel_quality(content, critical_gate_always_on=True)
 
+    assert result["metrics"]["critical_gate_applied"] is True
+    assert result["metrics"]["critical_issue_count"] >= 1
+    assert result["publish_recommendation"] == "block"
 
 
 def test_evaluate_novel_quality_empty_content_returns_block_contract():

@@ -1,18 +1,31 @@
-# 环境描写大师 (Setting Craft)
-
 ---
-skill_id: setting-craft
+name: setting-craft
+description: 环境描写大师技能，聚焦场景级环境描写与感官化叙事表达
+version: "1.0"
+author: niko-studio
+tags: [writing, setting, scene, atmosphere, sensory]
 triggers:
   - 环境描写
   - 场景描写
-  - 世界构建
   - 氛围营造
-  - 空间设计
-  - 背景描写
-  - 感官细节
-version: 1.0
-author: niko-studio
+  - 感官细节优化
+requires:
+  - scene_goal: 场景目标
+  - pov_character: 视角角色
+  - emotion_tone: 目标情绪基调
+outputs:
+  - 场景环境描写稿
+  - 感官细节补强建议
+  - 环境与人物互动改写建议
 ---
+
+# 环境描写大师 (Setting Craft)
+
+## 适用边界
+
+- 适用：单个场景或段落的环境描写优化（重点是表达层与感官层）。
+- 不适用：全书世界规则设计（应转 `worldbuilding` / `worldview-craft`）。
+- 不适用：章节/全书张力编排（应转 `tension-chapter` / `tension-arc`）。
 
 ## 核心定义
 
