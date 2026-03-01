@@ -1,0 +1,1 @@
+{"messages":[{"role":"user","content":"Revise this text for readability and coherence."}],"workflowLevel":"L3","skills":[],"allowLlmFallback":true,"qualityGoals":{"naturalness":true,"readability":true,"styleConsistency":true,"coherence":true,"editingGuidance":true,"preset":"balanced"}}

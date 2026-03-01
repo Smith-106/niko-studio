@@ -1946,9 +1946,8 @@ async def chat_endpoint(request: Request):
                 try:
                     critic_engine = get_critic_engine()
                     eval_result = await critic_engine.evaluate(
-                        content=result.content,
-                        scene_card=None,
-                        dimensions=None
+                        result.content,
+                        None,
                     )
                     evaluation_result = {
                         "score": eval_result.get("total_score", 0),
@@ -2289,9 +2288,8 @@ async def chat_stream_endpoint(request: Request):
                         try:
                             critic_engine = get_critic_engine()
                             eval_result = await critic_engine.evaluate(
-                                content=content,
-                                scene_card=None,
-                                dimensions=None
+                                content,
+                                None,
                             )
                             yield f"event: evaluation\ndata: {json.dumps({'score': eval_result.get('total_score', 0), 'feedback': eval_result.get('actionable_feedback', '')})}\n\n"
                         except Exception as e:
