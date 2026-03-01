@@ -13,6 +13,8 @@ vi.mock('../api/client', () => ({
   batchApplyRecommendations: vi.fn(),
 }))
 
+import { useSettingsStore } from '../stores/settingsStore'
+
 vi.mock('../stores/appStore', () => ({
   useAppStore: () => ({
     addMessage: vi.fn(),
@@ -40,6 +42,12 @@ const mockedBatchApplyRecommendations = vi.mocked(batchApplyRecommendations)
 describe('EvaluationPanel actions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useSettingsStore.getState().updateSettings({
+      writingQuality: {
+        enabled: true,
+        preset: 'balanced',
+      },
+    })
 
     mockedEvaluateContent.mockResolvedValue({
       success: true,
@@ -65,9 +73,30 @@ describe('EvaluationPanel actions', () => {
   it('renders evaluation panel core sections with score and dimensions', async () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
+    await waitFor(() => {
+      expect(mockedEvaluateContent).toHaveBeenCalledWith(
+        '测试内容',
+        undefined,
+        undefined,
+        {
+          qualityGoals: expect.objectContaining({
+            preset: 'balanced',
+            naturalness: true,
+            readability: true,
+            styleConsistency: true,
+            coherence: true,
+            editingGuidance: true,
+          }),
+        }
+      )
+    })
+
     expect(await screen.findByText('质量评估')).toBeInTheDocument()
     expect(screen.getByText('综合评分')).toBeInTheDocument()
-    expect(screen.getByText('维度分析')).toBeInTheDocument()
+    expect(screen.getByText('质量增强预设：balanced')).toBeInTheDocument()
+    expect(screen.getByText('Readability')).toBeInTheDocument()
+    expect(screen.getByText('Style Consistency')).toBeInTheDocument()
+    expect(screen.getByText('Logic & Coherence')).toBeInTheDocument()
     expect(screen.getByText('改进建议')).toBeInTheDocument()
     expect(screen.getByText('Checkpoint')).toBeInTheDocument()
   })

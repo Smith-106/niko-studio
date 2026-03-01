@@ -11,6 +11,7 @@ import {
   type RecommendationPayload,
   type RecommendationExecutionResult,
 } from '../api/client'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 
 interface EvaluationPanelProps {
@@ -55,9 +56,9 @@ const buildDimensions = (data: {
   actionable_feedback: string
 }) => {
   return [
-    { name: 'LOCK', score: Number((data.lock_score / 4).toFixed(1)), feedback: data.actionable_feedback || '无' },
-    { name: 'Style', score: Number((data.style_score / 4).toFixed(1)), feedback: data.actionable_feedback || '无' },
-    { name: 'Logic', score: Number((data.logic_score / 4).toFixed(1)), feedback: data.actionable_feedback || '无' },
+    { name: 'Readability', score: Number((data.lock_score / 4).toFixed(1)), feedback: data.actionable_feedback || 'N/A' },
+    { name: 'Style Consistency', score: Number((data.style_score / 4).toFixed(1)), feedback: data.actionable_feedback || 'N/A' },
+    { name: 'Logic & Coherence', score: Number((data.logic_score / 4).toFixed(1)), feedback: data.actionable_feedback || 'N/A' },
   ]
 }
 
@@ -117,6 +118,21 @@ const defaultBatchState = (): BatchActionState => ({
   lastAppliedIds: [],
 })
 
+const buildQualityGoals = (enabled: boolean, preset: 'balanced' | 'strict' | 'creative') => {
+  if (!enabled) {
+    return undefined
+  }
+
+  return {
+    naturalness: true,
+    readability: true,
+    styleConsistency: true,
+    coherence: true,
+    editingGuidance: true,
+    preset,
+  }
+}
+
 const PANEL_CARD_CLASS = 'p-3 bg-slate-50 dark:bg-dark-bg rounded-lg border border-slate-200 dark:border-dark-border'
 
 const formatSuggestionMessage = (result: RecommendationExecutionResult, fallbackAction: 'apply' | 'undo'): string => {
@@ -142,6 +158,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const [suggestionStates, setSuggestionStates] = useState<Record<string, SuggestionActionState>>({})
   const [batchState, setBatchState] = useState<BatchActionState>(defaultBatchState())
   const { addMessage } = useAppStore()
+  const writingQuality = useSettingsStore((state) => state.settings.writingQuality)
 
   useEffect(() => {
     runEvaluation()
@@ -169,7 +186,9 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const runEvaluation = async () => {
     setLoading(true)
     try {
-      const response = await evaluateContent(content)
+      const response = await evaluateContent(content, undefined, undefined, {
+        qualityGoals: buildQualityGoals(writingQuality.enabled, writingQuality.preset),
+      })
       if (response.success && response.data) {
         const data = response.data
         const suggestions = normalizeSuggestionPayloads(data.suggestions)
@@ -433,6 +452,9 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       </div>
 
       <div className="p-4 border-b border-slate-200 dark:border-dark-border">
+        <div className="text-xs text-slate-500 dark:text-dark-text-secondary mb-2">
+          质量增强预设：{writingQuality.enabled ? writingQuality.preset : 'off'}
+        </div>
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-slate-500 dark:text-dark-text-secondary">综合评分</span>
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(result.score)}`}>

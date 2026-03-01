@@ -129,6 +129,11 @@ export interface Translations {
   temperature: string
   temperatureDesc: string
   writingSettings: string
+  writingQualityEnabled: string
+  writingQualityPreset: string
+  writingQualityPresetBalanced: string
+  writingQualityPresetStrict: string
+  writingQualityPresetCreative: string
   defaultWorkflow: string
   workflowL1: string
   workflowL2: string
@@ -288,6 +293,11 @@ export const translations: Record<Language, Translations> = {
     temperature: 'Temperature (创造性)',
     temperatureDesc: '较低值 (0-0.3): 更确定性，适合事实性写作 | 较高值 (0.7-1): 更创造性，适合创意写作',
     writingSettings: '写作设置',
+    writingQualityEnabled: '启用质量增强',
+    writingQualityPreset: '质量增强预设',
+    writingQualityPresetBalanced: '平衡',
+    writingQualityPresetStrict: '严格',
+    writingQualityPresetCreative: '创意',
     defaultWorkflow: '默认工作流',
     workflowL1: 'L1 - 快速 (润色/问答)',
     workflowL2: 'L2 - 轻量 (短文/扩写)',
@@ -445,6 +455,11 @@ export const translations: Record<Language, Translations> = {
     temperature: 'Temperature (Creativity)',
     temperatureDesc: 'Lower (0-0.3): More deterministic, for factual writing | Higher (0.7-1): More creative, for creative writing',
     writingSettings: 'Writing Settings',
+    writingQualityEnabled: 'Enable Quality Boost',
+    writingQualityPreset: 'Quality Preset',
+    writingQualityPresetBalanced: 'Balanced',
+    writingQualityPresetStrict: 'Strict',
+    writingQualityPresetCreative: 'Creative',
     defaultWorkflow: 'Default Workflow',
     workflowL1: 'L1 - Quick (Polish/Q&A)',
     workflowL2: 'L2 - Lite (Short Drafts)',

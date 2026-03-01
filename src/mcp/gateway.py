@@ -487,6 +487,59 @@ def _with_terminal_contract(payload: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
+_PROHIBITED_DETECTION_KEYS = {
+    "anti_detection",
+    "bypass_detector",
+    "pass_gptzero",
+    "perplexity",
+    "burstiness",
+    "detector_bypass",
+    "humanize_for_detector",
+}
+
+_PROHIBITED_DETECTION_TERMS = (
+    "ai detection",
+    "bypass detector",
+    "pass gptzero",
+    "检测对抗",
+    "反检测",
+    "规避检测",
+)
+
+
+def _contains_detection_evasion_intent(value: Any) -> bool:
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            key_str = str(key).lower()
+            if key_str in _PROHIBITED_DETECTION_KEYS:
+                return True
+            if _contains_detection_evasion_intent(nested):
+                return True
+        return False
+
+    if isinstance(value, list):
+        return any(_contains_detection_evasion_intent(item) for item in value)
+
+    if isinstance(value, str):
+        lowered = value.lower()
+        return any(term in lowered for term in _PROHIBITED_DETECTION_TERMS)
+
+    return False
+
+
+def _guard_detection_evasion_payload(payload: Dict[str, Any]) -> Optional[JSONResponse]:
+    if _contains_detection_evasion_intent(payload):
+        return JSONResponse(
+            {
+                "error": "DETECTION_EVASION_BLOCKED",
+                "code": "COMPLIANCE_DETECTION_EVASION_BLOCKED",
+                "message": "检测规避相关请求已被拦截。请改用质量增强目标（自然表达、可读性、风格一致性、逻辑连贯与可执行编辑建议）。",
+            },
+            status_code=400,
+        )
+    return None
+
+
 def _quality_default_payload() -> Dict[str, Any]:
     return {
         "analysis_schema_version": ANALYSIS_SCHEMA_VERSION,
@@ -1751,6 +1804,9 @@ async def chat_endpoint(request: Request):
     """
     try:
         body = await request.json()
+        blocked = _guard_detection_evasion_payload(body if isinstance(body, dict) else {})
+        if blocked is not None:
+            return blocked
         messages = body.get("messages", [])
         from src.workflow.levels.types import WorkflowLevel, to_workflow_label, to_workflow_slug
         has_explicit_workflow_level = "workflowLevel" in body
@@ -2062,6 +2118,9 @@ async def chat_stream_endpoint(request: Request):
     """
     try:
         body = await request.json()
+        blocked = _guard_detection_evasion_payload(body if isinstance(body, dict) else {})
+        if blocked is not None:
+            return blocked
         messages = body.get("messages", [])
         from src.workflow.levels.types import WorkflowLevel, to_workflow_label, to_workflow_slug
         has_explicit_workflow_level = "workflowLevel" in body
@@ -2909,6 +2968,9 @@ async def agent_route_endpoint(request: Request):
 
 async def agent_write_endpoint(request: Request):
     body = await request.json()
+    blocked = _guard_detection_evasion_payload(body if isinstance(body, dict) else {})
+    if blocked is not None:
+        return blocked
     result = await agent_write(
         scene_card=body.get("scene_card") or {},
         skills=body.get("skills"),
@@ -2920,6 +2982,9 @@ async def agent_write_endpoint(request: Request):
 
 async def agent_revise_endpoint(request: Request):
     body = await request.json()
+    blocked = _guard_detection_evasion_payload(body if isinstance(body, dict) else {})
+    if blocked is not None:
+        return blocked
     result = await agent_revise(
         draft=body.get("draft", ""),
         feedback=body.get("feedback") or {},

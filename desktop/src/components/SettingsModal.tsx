@@ -667,14 +667,38 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="autoSkillMatch"
-                  checked={localSettings.autoSkillMatch}
-                  onChange={(e) => setLocalSettings({ ...localSettings, autoSkillMatch: e.target.checked })}
+                  id="writingQualityEnabled"
+                  checked={localSettings.writingQuality.enabled}
+                  onChange={(e) => setLocalSettings({
+                    ...localSettings,
+                    writingQuality: {
+                      ...localSettings.writingQuality,
+                      enabled: e.target.checked,
+                    },
+                  })}
                   className="rounded"
                 />
-                <label htmlFor="autoSkillMatch" className="text-sm text-slate-600 dark:text-dark-text-secondary">
-                  自动匹配技能包
+                <label htmlFor="writingQualityEnabled" className="text-sm text-slate-600 dark:text-dark-text-secondary">
+                  {t.writingQualityEnabled}
                 </label>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">{t.writingQualityPreset}</label>
+                <select
+                  value={localSettings.writingQuality.preset}
+                  onChange={(e) => setLocalSettings({
+                    ...localSettings,
+                    writingQuality: {
+                      ...localSettings.writingQuality,
+                      preset: e.target.value as 'balanced' | 'strict' | 'creative',
+                    },
+                  })}
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                >
+                  <option value="balanced">{t.writingQualityPresetBalanced}</option>
+                  <option value="strict">{t.writingQualityPresetStrict}</option>
+                  <option value="creative">{t.writingQualityPresetCreative}</option>
+                </select>
               </div>
             </div>
           </section>

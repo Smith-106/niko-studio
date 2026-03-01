@@ -43,10 +43,18 @@ export interface MessageKnowledgeMeta {
   memoriesCount?: number
 }
 
+export interface MessageQualityMeta {
+  goals?: {
+    preset?: 'balanced' | 'strict' | 'creative'
+    enabled?: boolean
+  }
+}
+
 export interface MessageMetadata {
   runtime?: MessageRuntimeMeta
   workflow?: MessageWorkflowMeta
   knowledge?: MessageKnowledgeMeta
+  quality?: MessageQualityMeta
   writerWarnings?: string[]
   evaluationScore?: number
   evaluationFeedback?: string
@@ -121,6 +129,14 @@ const mergeMessageMetadata = (prev: MessageMetadata | undefined, patch: MessageM
     knowledge: {
       ...prev?.knowledge,
       ...patch.knowledge,
+    },
+    quality: {
+      ...prev?.quality,
+      ...patch.quality,
+      goals: {
+        ...prev?.quality?.goals,
+        ...patch.quality?.goals,
+      },
     },
   }
 }

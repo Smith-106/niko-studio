@@ -440,6 +440,7 @@ export interface ChatRequest {
   workflowLevel: WorkflowLevel
   skills: string[]
   allowLlmFallback: boolean
+  qualityGoals?: QualityGoals
   context?: {
     projectId?: string
     chapterId?: string
@@ -999,23 +1000,53 @@ export async function agentRoute(task: string): Promise<ApiResponse<AgentRouteRe
   return callApi('/agent/route', 'POST', { task })
 }
 
+export type QualityGoalPreset = 'balanced' | 'strict' | 'creative'
+
+export interface QualityGoals {
+  naturalness?: boolean
+  readability?: boolean
+  styleConsistency?: boolean
+  coherence?: boolean
+  editingGuidance?: boolean
+  preset?: QualityGoalPreset
+}
+
+export interface AgentWriteOptions {
+  qualityGoals?: QualityGoals
+}
+
+export interface AgentReviseOptions {
+  qualityGoals?: QualityGoals
+}
+
+export interface EvaluationOptions {
+  qualityGoals?: QualityGoals
+}
+
 export async function agentWrite(
   sceneCard: Record<string, unknown>,
   skills?: string[],
-  wordTarget?: number
+  wordTarget?: number,
+  options?: AgentWriteOptions
 ): Promise<ApiResponse<{ content: string; wordcount: number }>> {
   return callApi('/agent/write', 'POST', {
     scene_card: sceneCard,
     skills,
     word_target: wordTarget,
+    quality_goals: options?.qualityGoals,
   })
 }
 
 export async function agentRevise(
   draft: string,
-  feedback: Record<string, unknown>
+  feedback: Record<string, unknown>,
+  options?: AgentReviseOptions
 ): Promise<ApiResponse<{ content: string }>> {
-  return callApi('/agent/revise', 'POST', { draft, feedback })
+  return callApi('/agent/revise', 'POST', {
+    draft,
+    feedback,
+    quality_goals: options?.qualityGoals,
+  })
 }
 
 export async function agentGetContext(
@@ -1139,12 +1170,14 @@ export interface EvaluationResult {
 export async function evaluateContent(
   content: string,
   sceneCard?: Record<string, unknown>,
-  dimensions?: string[]
+  dimensions?: string[],
+  options?: EvaluationOptions
 ): Promise<ApiResponse<EvaluationResult>> {
   return callApi('/critic/evaluate', 'POST', {
     content,
     scene_card: sceneCard,
     dimensions,
+    quality_goals: options?.qualityGoals,
   })
 }
 

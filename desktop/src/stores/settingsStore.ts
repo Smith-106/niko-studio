@@ -44,6 +44,13 @@ export interface PromptTemplateLibrarySettings {
   variablePresets: Record<string, Record<string, string>>
 }
 
+export type QualityPreset = 'balanced' | 'strict' | 'creative'
+
+export interface WritingQualitySettings {
+  enabled: boolean
+  preset: QualityPreset
+}
+
 interface Settings {
   // API
   apiBaseUrl: string
@@ -63,6 +70,7 @@ interface Settings {
   defaultWorkflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
   targetWordsPerChapter: number
   autoSkillMatch: boolean
+  writingQuality: WritingQualitySettings
 
   // Prompt templates
   promptTemplateLibrary?: PromptTemplateLibrarySettings
@@ -203,6 +211,10 @@ const defaultSettings: Settings = {
   defaultWorkflowLevel: 'L3',
   targetWordsPerChapter: 2000,
   autoSkillMatch: true,
+  writingQuality: {
+    enabled: false,
+    preset: 'balanced',
+  },
   promptTemplateLibrary: defaultPromptTemplateLibrary(),
   theme: 'light',
   fontSize: 'medium',
@@ -313,6 +325,12 @@ const normalizePromptTemplateLibrary = (
   }
 }
 
+const normalizeWritingQuality = (value: WritingQualitySettings | undefined): WritingQualitySettings => {
+  const enabled = Boolean(value?.enabled)
+  const preset = value?.preset === 'strict' || value?.preset === 'creative' ? value.preset : 'balanced'
+  return { enabled, preset }
+}
+
 const normalizeSettings = (settings: Partial<Settings>): Settings => {
   const merged: Settings = {
     ...defaultSettings,
@@ -324,6 +342,7 @@ const normalizeSettings = (settings: Partial<Settings>): Settings => {
   return {
     ...merged,
     llmProviders: merged.llmProviders.map(normalizeProvider),
+    writingQuality: normalizeWritingQuality(merged.writingQuality),
     promptTemplateLibrary: normalizePromptTemplateLibrary(merged.promptTemplateLibrary),
   }
 }

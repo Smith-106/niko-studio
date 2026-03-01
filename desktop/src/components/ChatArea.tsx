@@ -4,7 +4,7 @@ import { useAppStore, extractMessageMetadata, type MessageMetadata } from '../st
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback } from '../stores/selectors'
 import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, uploadMemoryFile } from '../api/client'
-import type { ChatRequest, StreamDonePayload } from '../api/client'
+import type { ChatRequest, StreamDonePayload, QualityGoals } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { PromptTemplatePanel, type ApplyTemplatePayload } from './PromptTemplatePanel'
 import { useI18n } from '../i18n'
@@ -191,14 +191,39 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         ...base?.knowledge,
         ...extra?.knowledge,
       },
+      quality: {
+        ...base?.quality,
+        ...extra?.quality,
+        goals: {
+          ...base?.quality?.goals,
+          ...extra?.quality?.goals,
+        },
+      },
       writerWarnings: extra?.writerWarnings ?? base?.writerWarnings,
       evaluationScore: extra?.evaluationScore ?? base?.evaluationScore,
       evaluationFeedback: extra?.evaluationFeedback ?? base?.evaluationFeedback,
     }
   }
 
+  const buildQualityGoals = (): QualityGoals | undefined => {
+    const writingQuality = settings.writingQuality
+    if (!writingQuality?.enabled) {
+      return undefined
+    }
+
+    return {
+      naturalness: true,
+      readability: true,
+      styleConsistency: true,
+      coherence: true,
+      editingGuidance: true,
+      preset: writingQuality.preset,
+    }
+  }
+
   const runNormalChat = async (request: ChatRequest, checkpointId?: string | null): Promise<StreamPhase> => {
     const startedAt = Date.now()
+    const qualityGoals = buildQualityGoals()
     if (request.comparison?.enabled) {
       setStreamPhase('streaming')
       const response = await chat(request)
@@ -211,7 +236,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             controlModel: request.comparison?.controlModel,
           },
         }
-        const mergedMetadata = mergeMetadata(responseMetadata, runtimeMetadata)
+        const runtimeWithQuality = qualityGoals
+          ? mergeMetadata(runtimeMetadata, {
+              quality: {
+                goals: {
+                  enabled: true,
+                  preset: qualityGoals.preset,
+                },
+              },
+            })
+          : runtimeMetadata
+        const mergedMetadata = mergeMetadata(responseMetadata, runtimeWithQuality)
 
         if (response.data.comparison?.enabled) {
           const comparison = response.data.comparison
@@ -337,7 +372,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       const runtimeMetadata = buildRuntimeMetadata(streamMeta, Date.now() - startedAt, {
         controlModel: request.comparison?.controlModel,
       })
-      addMessage('assistant', streamText || '处理完成', selectedSkills, undefined, runtimeMetadata)
+      const messageMetadata = qualityGoals
+        ? mergeMetadata(runtimeMetadata, {
+            quality: {
+              goals: {
+                enabled: true,
+                preset: qualityGoals.preset,
+              },
+            },
+          })
+        : runtimeMetadata
+      addMessage('assistant', streamText || '处理完成', selectedSkills, undefined, messageMetadata)
       setRecoverableCheckpointId(null)
       if (finalPhase === 'recovered') {
         setRecoverStatus({ type: 'success', message: t.streamRecovered })
@@ -358,7 +403,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       const runtimeMetadata = buildRuntimeMetadata(streamMeta, Date.now() - startedAt, {
         controlModel: request.comparison?.controlModel,
       })
-      const mergedMetadata = mergeMetadata(responseMetadata, runtimeMetadata)
+      const metadataWithQuality = qualityGoals
+        ? mergeMetadata(runtimeMetadata, {
+            quality: {
+              goals: {
+                enabled: true,
+                preset: qualityGoals.preset,
+              },
+            },
+          })
+        : runtimeMetadata
+      const mergedMetadata = mergeMetadata(responseMetadata, metadataWithQuality)
 
       if (response.data.comparison?.enabled) {
         const comparison = response.data.comparison
@@ -402,14 +457,32 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           setRecoverStatus({ type: 'error', message: t.inlineNeedSelection })
           return
         }
+        const qualityGoals = buildQualityGoals()
         const reviseResult = await agentRevise(selectedText, {
           instruction: promptText || t.inlineReviseDefaultInstruction,
           workflow_level: workflowLevel,
           skills: selectedSkills,
+        }, {
+          qualityGoals,
         })
         if (reviseResult.success && reviseResult.data?.content) {
           setStreamingContent(reviseResult.data.content)
-          addMessage('assistant', reviseResult.data.content, selectedSkills)
+          addMessage(
+            'assistant',
+            reviseResult.data.content,
+            selectedSkills,
+            undefined,
+            qualityGoals
+              ? {
+                  quality: {
+                    goals: {
+                      enabled: true,
+                      preset: qualityGoals.preset,
+                    },
+                  },
+                }
+              : undefined
+          )
           setStreamPhase('done')
           resetInlineState()
           return
@@ -419,6 +492,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           ? (promptText || `${t.inlineContinuePromptPrefix}\n${selectedText}`)
           : (promptText || `${t.inlineGeneratePromptPrefix}\n${selectedText || t.inlineGenerateContextFallback}`)
 
+        const qualityGoals = buildQualityGoals()
         const writeResult = await agentWrite(
           {
             task,
@@ -427,12 +501,31 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             selected_text: selectedText,
             selection_meta: selectionMeta,
           },
-          selectedSkills
+          selectedSkills,
+          undefined,
+          {
+            qualityGoals,
+          }
         )
 
         if (writeResult.success && writeResult.data?.content) {
           setStreamingContent(writeResult.data.content)
-          addMessage('assistant', writeResult.data.content, selectedSkills)
+          addMessage(
+            'assistant',
+            writeResult.data.content,
+            selectedSkills,
+            undefined,
+            qualityGoals
+              ? {
+                  quality: {
+                    goals: {
+                      enabled: true,
+                      preset: qualityGoals.preset,
+                    },
+                  },
+                }
+              : undefined
+          )
           setStreamPhase('done')
           resetInlineState()
           return
@@ -551,11 +644,13 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       setStreamingContent('')
       setStreamPhase('idle')
 
+      const qualityGoals = buildQualityGoals()
       const request: ChatRequest = {
         messages: [{ role: 'user', content: userMessage }],
         workflowLevel,
         skills: selectedSkills,
         allowLlmFallback,
+        qualityGoals,
       }
 
       if (enableModelComparison && comparisonModel) {
@@ -571,6 +666,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         if (agentAction === 'write') {
           const routeResult = await agentRoute(userMessage)
           if (routeResult.success && routeResult.data) {
+            const qualityGoals = buildQualityGoals()
             const writeResult = await agentWrite(
               {
                 task: userMessage,
@@ -578,10 +674,29 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
                 workflow_level: routeResult.data.workflow_level,
                 task_assignments: routeResult.data.task_assignments,
               },
-              selectedSkills
+              selectedSkills,
+              undefined,
+              {
+                qualityGoals,
+              }
             )
             if (writeResult.success && writeResult.data?.content) {
-              addMessage('assistant', writeResult.data.content, selectedSkills)
+              addMessage(
+                'assistant',
+                writeResult.data.content,
+                selectedSkills,
+                undefined,
+                qualityGoals
+                  ? {
+                      quality: {
+                        goals: {
+                          enabled: true,
+                          preset: qualityGoals.preset,
+                        },
+                      },
+                    }
+                  : undefined
+              )
               setRecoverableCheckpointId(null)
               handled = true
             }
@@ -590,16 +705,35 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
 
         if (agentAction === 'revise') {
           const lastAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')
+          const qualityGoals = buildQualityGoals()
           const reviseResult = await agentRevise(
             lastAssistantMessage?.content || userMessage,
             {
               instruction: userMessage,
               workflow_level: workflowLevel,
               skills: selectedSkills,
+            },
+            {
+              qualityGoals,
             }
           )
           if (reviseResult.success && reviseResult.data?.content) {
-            addMessage('assistant', reviseResult.data.content, selectedSkills)
+            addMessage(
+              'assistant',
+              reviseResult.data.content,
+              selectedSkills,
+              undefined,
+              qualityGoals
+                ? {
+                    quality: {
+                      goals: {
+                        enabled: true,
+                        preset: qualityGoals.preset,
+                      },
+                    },
+                  }
+                : undefined
+            )
             setRecoverableCheckpointId(null)
             handled = true
           }

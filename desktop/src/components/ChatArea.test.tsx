@@ -149,6 +149,40 @@ describe('ChatArea P0 flows', () => {
     expect(screen.getByText('对照模型结果')).toBeInTheDocument()
   })
 
+  it('injects quality goals into chat request when writing quality is enabled', async () => {
+    mockedChatStream.mockResolvedValue()
+    mockedChat.mockResolvedValue({
+      success: true,
+      data: {
+        content: 'quality response',
+        skills_used: [],
+      },
+    })
+
+    useSettingsStore.getState().updateSettings({
+      writingQuality: {
+        enabled: true,
+        preset: 'strict',
+      },
+    })
+
+    render(<ChatArea />)
+
+    await userEvent.click(screen.getByRole('button', { name: '模型对比' }))
+    const input = screen.getByRole('textbox')
+    await userEvent.type(input, '质量目标请求{enter}')
+
+    await waitFor(() => {
+      const state = useAppStore.getState()
+      const conversation = state.currentConversationId ? state.conversationsById[state.currentConversationId] : undefined
+      const assistant = conversation?.messages.find((message) => message.role === 'assistant')
+      expect(assistant?.metadata?.quality?.goals).toMatchObject({
+        enabled: true,
+        preset: 'strict',
+      })
+    })
+  })
+
   it('cancels streaming and does not trigger fallback chat', async () => {
     mockedChatStream.mockImplementation(async (_request, callbacks, options) => {
       await new Promise<void>((resolve) => {
