@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { BookOpenText } from 'lucide-react'
 import { Sidebar } from './components/Sidebar'
 import { ChatArea } from './components/ChatArea'
 import { SettingsModal } from './components/SettingsModal'
@@ -7,7 +8,7 @@ import { EvaluationPanel } from './components/EvaluationPanel'
 import { McpStatusPanel } from './components/McpStatusPanel'
 import { deriveGatewayRuntimeState, GatewayRuntimeView, getGatewayHealth, listCheckpoints, restoreCheckpoint } from './api/client'
 import { useAppStore } from './stores/appStore'
-import { useMessages } from './stores/selectors'
+import { useMessages, useCurrentConversationSummary } from './stores/selectors'
 import { useTheme } from './hooks/useTheme'
 import { useI18n } from './i18n'
 
@@ -24,23 +25,17 @@ interface ContextUsage {
   percent: number
 }
 
-const APP_CONNECTION_LABEL: Record<string, string> = {
-  connected: '服务运行中',
-  degraded: '服务降级',
-  reconnecting: '连接恢复中',
-  disconnected: '服务未启动',
-}
-
 const APP_CONNECTION_DOT: Record<string, string> = {
   connected: 'bg-green-500',
   degraded: 'bg-amber-500',
-  reconnecting: 'bg-blue-500',
+  reconnecting: 'bg-teal-500',
   disconnected: 'bg-red-500',
 }
 
 function App() {
   const { backendStatus, checkBackend } = useAppStore()
   const messages = useMessages()
+  const conversationSummary = useCurrentConversationSummary()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [knowledgeOpen, setKnowledgeOpen] = useState(false)
@@ -162,10 +157,26 @@ function App() {
 
   const headerConnectionState = runtimeView?.connectionState ?? (backendStatus ? 'connected' : 'disconnected')
   const headerDotClass = APP_CONNECTION_DOT[headerConnectionState] ?? APP_CONNECTION_DOT.disconnected
-  const headerConnectionText = APP_CONNECTION_LABEL[headerConnectionState] ?? (backendStatus ? t.serviceRunning : t.serviceOffline)
+  const headerConnectionText =
+    headerConnectionState === 'connected'
+      ? t.serviceRunning
+      : headerConnectionState === 'degraded'
+        ? t.serviceDegraded
+        : headerConnectionState === 'reconnecting'
+          ? t.serviceReconnecting
+          : t.serviceDisconnected
+
+  const sessionHealthText =
+    conversationSummary.health.state === 'healthy'
+      ? t.sidebarHealthHealthy
+      : conversationSummary.health.state === 'degraded'
+        ? t.sidebarHealthDegraded
+        : conversationSummary.health.state === 'error'
+          ? t.sidebarHealthError
+          : t.sidebarHealthIdle
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-dark-bg">
+    <div className="flex h-screen bg-slate-50 dark:bg-dark-bg">
       {/* Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -179,42 +190,51 @@ function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-12 border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface flex items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-gray-800 dark:text-dark-text">📖 {t.appTitle}</span>
+        <header className="h-14 border-b border-slate-200 dark:border-dark-border bg-white/95 dark:bg-dark-surface backdrop-blur-sm flex items-center justify-between px-3 md:px-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <BookOpenText size={18} className="text-teal-600 dark:text-teal-400 shrink-0" />
+            <span className="text-base font-semibold text-slate-800 dark:text-dark-text truncate">{t.appTitle}</span>
           </div>
-          <div className="flex items-center gap-3 relative">
-            <div className={`w-2 h-2 rounded-full ${headerDotClass}`} />
-            <span className="text-sm text-gray-500 dark:text-dark-text-secondary">
-              {headerConnectionText}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-dark-text-secondary">
-              {t.contextUsage} ~{contextUsage.usedK.toFixed(1)}k/{contextUsage.totalK}k ({contextUsage.percent.toFixed(1)}%)
-            </span>
+          <div className="flex items-center gap-2 md:gap-3 relative shrink-0">
+            <div className="flex items-center gap-2" aria-live="polite">
+              <div className={`w-2 h-2 rounded-full ${headerDotClass}`} />
+              <span className="hidden sm:inline text-sm text-slate-600 dark:text-dark-text-secondary">
+                {headerConnectionText}
+              </span>
+            </div>
+            <div className="hidden lg:flex items-center gap-2 rounded-full bg-slate-100 dark:bg-dark-border px-2 py-1 text-xs text-slate-600 dark:text-dark-text-secondary" aria-live="polite">
+              <span>{t.contextUsage} ~{contextUsage.usedK.toFixed(1)}k/{contextUsage.totalK}k ({contextUsage.percent.toFixed(1)}%)</span>
+              {runtimeView && <span>· {t.headerReconnectAttempts}: {runtimeView.reconnectAttempts}</span>}
+              <span>· {t.headerSessionHealth}: {sessionHealthText}</span>
+              {typeof conversationSummary.performance.lastLatencyMs === 'number' && (
+                <span>· {t.headerLatencySummary}: {conversationSummary.performance.lastLatencyMs}ms</span>
+              )}
+              {conversationSummary.health.decision && <span>· {t.headerLastDecision}: {conversationSummary.health.decision}</span>}
+            </div>
             <button
               onClick={handleToggleCheckpointMenu}
-              className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="cursor-pointer rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-border"
             >
               {t.checkpoint}
             </button>
 
             {checkpointMenuOpen && (
-              <div className="absolute right-0 top-10 w-72 p-2 rounded border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-lg z-20">
+              <div className="absolute right-0 top-10 w-72 max-w-[88vw] rounded-xl border border-slate-200 bg-white p-2 shadow-lg z-20 dark:border-dark-border dark:bg-dark-surface">
                 {checkpointsLoading ? (
-                  <div className="text-xs text-gray-500 dark:text-dark-text-secondary p-2">{t.loadingCheckpoints}</div>
+                  <div className="text-xs text-slate-500 dark:text-dark-text-secondary p-2">{t.loadingCheckpoints}</div>
                 ) : checkpoints.length === 0 ? (
-                  <div className="text-xs text-gray-500 dark:text-dark-text-secondary p-2">{t.noCheckpoints}</div>
+                  <div className="text-xs text-slate-500 dark:text-dark-text-secondary p-2">{t.noCheckpoints}</div>
                 ) : (
-                  <div className="space-y-2 max-h-56 overflow-y-auto">
+                  <div className="space-y-2 max-h-56 overflow-y-auto ui-scroll">
                     {checkpoints.map((checkpoint) => (
-                      <div key={checkpoint.id} className="p-2 border border-gray-200 dark:border-dark-border rounded">
-                        <div className="text-xs text-gray-700 dark:text-dark-text truncate" title={checkpoint.description || checkpoint.id}>
+                      <div key={checkpoint.id} className="p-2 border border-slate-200 dark:border-dark-border rounded-lg">
+                        <div className="text-xs text-slate-700 dark:text-dark-text truncate" title={checkpoint.description || checkpoint.id}>
                           {checkpoint.description || checkpoint.id}
                         </div>
-                        <div className="text-[11px] text-gray-500 dark:text-dark-text-secondary">{checkpoint.created_at}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-dark-text-secondary">{checkpoint.created_at}</div>
                         <button
                           onClick={() => handleRestoreCheckpoint(checkpoint.id)}
-                          className="mt-1 px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                          className="mt-1 cursor-pointer rounded-md bg-teal-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
                         >
                           {t.restore}
                         </button>
@@ -242,7 +262,7 @@ function App() {
         {/* Chat Area */}
         <ChatArea onContextUsageChange={setContextUsage} connectionState={headerConnectionState} />
 
-        <div className="px-4 py-1 text-[11px] text-gray-400 dark:text-dark-text-secondary border-t border-gray-100 dark:border-dark-border">
+        <div className="border-t border-slate-200 px-4 py-1 text-[11px] text-slate-500 dark:border-dark-border dark:text-dark-text-secondary">
           {t.contextEstimated}
         </div>
       </main>

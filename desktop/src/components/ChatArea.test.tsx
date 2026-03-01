@@ -208,6 +208,39 @@ describe('ChatArea P0 flows', () => {
     })
   })
 
+  it('persists stream terminal diagnostics metadata into assistant message', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('元数据流式结果', 0)
+      callbacks.onDone?.({
+        status: 'completed',
+        terminal: 'done',
+        decision: 'soft_go',
+        diagnostics: { fallback_reason: 'critic_unavailable' },
+      })
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByRole('textbox')
+    await userEvent.type(input, '触发元数据写入{enter}')
+
+    await waitFor(() => {
+      const state = useAppStore.getState()
+      const conversationId = state.currentConversationId
+      expect(conversationId).toBeTruthy()
+      const conversation = conversationId ? state.conversationsById[conversationId] : undefined
+      const assistantMessages = conversation?.messages.filter((message) => message.role === 'assistant') ?? []
+      const assistant = assistantMessages[assistantMessages.length - 1]
+      expect(assistant?.content).toContain('元数据流式结果')
+      expect(assistant?.metadata?.runtime).toMatchObject({
+        terminal: 'done',
+        decision: 'soft_go',
+        diagnostics: { fallback_reason: 'critic_unavailable' },
+        degraded: true,
+      })
+      expect(typeof assistant?.metadata?.runtime?.latencyMs).toBe('number')
+    })
+  })
+
   it('shows reconnecting hint when connection enters reconnecting state', async () => {
     render(<ChatArea connectionState="reconnecting" />)
 

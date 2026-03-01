@@ -62,6 +62,16 @@ describe('EvaluationPanel actions', () => {
     mockedRestoreCheckpoint.mockResolvedValue({ success: true, data: { status: 'ok' } })
   })
 
+  it('renders evaluation panel core sections with score and dimensions', async () => {
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    expect(await screen.findByText('质量评估')).toBeInTheDocument()
+    expect(screen.getByText('综合评分')).toBeInTheDocument()
+    expect(screen.getByText('维度分析')).toBeInTheDocument()
+    expect(screen.getByText('改进建议')).toBeInTheDocument()
+    expect(screen.getByText('Checkpoint')).toBeInTheDocument()
+  })
+
   it('supports apply and undo flow for a single suggestion', async () => {
     mockedApplyRecommendation.mockResolvedValue({
       success: true,

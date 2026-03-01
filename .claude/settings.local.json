@@ -68,7 +68,19 @@
       "Bash(ccw view:*)",
       "WebFetch(domain:docs.knox.chat)",
       "WebFetch(domain:github.com)",
-      "mcp__ccw-tools__edit_file"
+      "mcp__ccw-tools__edit_file",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__select_page",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__type_text",
+      "mcp__chrome-devtools__press_key",
+      "mcp__chrome-devtools__evaluate_script",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__wait_for"
     ]
   },
   "hooks": {

@@ -1,7 +1,17 @@
 import { useEffect } from 'react'
-import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server } from 'lucide-react'
+import {
+  MessageSquare,
+  MessageSquarePlus,
+  BookOpen,
+  Settings,
+  Sparkles,
+  BarChart3,
+  Server,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
-import { useConversationList, useCurrentConversationId } from '../stores/selectors'
+import { useConversationListItems, useCurrentConversationId } from '../stores/selectors'
 import { useI18n } from '../i18n'
 
 interface SidebarProps {
@@ -15,7 +25,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, onOpenEvaluation, onOpenMcpStatus }: SidebarProps) {
   // Use selective selectors for better performance
-  const conversations = useConversationList()
+  const conversationItems = useConversationListItems()
   const currentConversationId = useCurrentConversationId()
 
   // Get actions directly from store (these don't cause re-renders)
@@ -35,28 +45,29 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
 
   return (
     <aside
-      className={`bg-gray-900 text-gray-100 flex flex-col transition-all duration-300 ${
-        collapsed ? 'w-16' : 'w-64'
+      className={`bg-slate-900 text-slate-100 flex flex-col transition-all duration-300 ${
+        collapsed ? 'w-16' : 'w-72'
       }`}
     >
       {/* Header */}
-      <div className="h-12 flex items-center justify-between px-3 border-b border-gray-700">
+      <div className={`h-14 flex items-center border-b border-slate-800 ${collapsed ? 'justify-center px-2' : 'justify-between px-3'}`}>
         {!collapsed && (
-          <span className="font-semibold text-white">🖊️ {t.nikoStudio}</span>
+          <span className="font-semibold text-white">{t.nikoStudio}</span>
         )}
         <button
           onClick={onToggle}
-          className="p-1.5 hover:bg-gray-700 rounded-md"
+          className="cursor-pointer rounded-md p-2 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         </button>
       </div>
 
       {/* New Chat Button */}
-      <div className="p-2">
+      <div className={`p-2.5 ${collapsed ? 'px-2' : ''}`}>
         <button
           onClick={createConversation}
-          className="w-full flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          className={`w-full cursor-pointer flex items-center rounded-lg bg-teal-600 text-white transition-colors hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 ${collapsed ? 'justify-center px-2 py-2.5' : 'gap-2 px-3 py-2'}`}
         >
           <MessageSquarePlus size={18} />
           {!collapsed && <span>{t.newChat}</span>}
@@ -64,24 +75,51 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
       </div>
 
       {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto px-2">
+      <div className={`flex-1 overflow-y-auto ui-scroll pb-2 ${collapsed ? 'px-2' : 'px-2'}`}>
         {!collapsed && (
-          <div className="text-xs text-gray-400 px-2 py-2">{t.chatList}</div>
+          <div className="px-2 py-2 text-xs uppercase tracking-wide text-slate-400">{t.chatList}</div>
         )}
-        {conversations.map((conv) => (
+        {conversationItems.map(({ conversation, summary }) => (
           <button
-            key={conv.id}
-            onClick={() => selectConversation(conv.id)}
-            className={`w-full text-left px-3 py-2 rounded-lg mb-1 transition-colors ${
-              currentConversationId === conv.id
-                ? 'bg-gray-700 text-white'
-                : 'hover:bg-gray-800 text-gray-300'
+            key={conversation.id}
+            onClick={() => selectConversation(conversation.id)}
+            className={`w-full rounded-lg mb-1 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+              collapsed ? 'flex justify-center px-2 py-2.5' : 'text-left px-3 py-2'
+            } ${
+              currentConversationId === conversation.id
+                ? 'bg-slate-700 text-white'
+                : 'hover:bg-slate-800 text-slate-300'
             }`}
+            aria-label={conversation.title}
           >
             {collapsed ? (
-              <MessageSquarePlus size={18} />
+              <MessageSquare size={18} />
             ) : (
-              <span className="text-sm truncate block">{conv.title}</span>
+              <div className="space-y-1">
+                <span className="text-sm truncate block">{conversation.title}</span>
+                <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                  <span>{t.sidebarMessagesCount.replace('{count}', String(conversation.messages.length))}</span>
+                  <span>·</span>
+                  <span>
+                    {summary.health.state === 'healthy'
+                      ? t.sidebarHealthHealthy
+                      : summary.health.state === 'degraded'
+                        ? t.sidebarHealthDegraded
+                        : summary.health.state === 'error'
+                          ? t.sidebarHealthError
+                          : t.sidebarHealthIdle}
+                  </span>
+                  {summary.health.warningCount > 0 && (
+                    <>
+                      <span>·</span>
+                      <span>{t.sidebarWarningCount.replace('{count}', String(summary.health.warningCount))}</span>
+                    </>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {t.sidebarLatestActivity}: {new Date(conversation.updatedAt).toLocaleTimeString()}
+                </div>
+              </div>
             )}
           </button>
         ))}
@@ -89,20 +127,20 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
 
       {/* Skills Section */}
       {!collapsed && (
-        <div className="border-t border-gray-700 p-2">
-          <div className="text-xs text-gray-400 px-2 py-2 flex items-center gap-1">
+        <div className="border-t border-slate-800 p-2.5">
+          <div className="px-2 py-2 flex items-center gap-1 text-xs uppercase tracking-wide text-slate-400">
             <Sparkles size={12} />
             {t.skillPacks}
           </div>
-          <div className="space-y-1 max-h-40 overflow-y-auto">
+          <div className="space-y-1 max-h-40 overflow-y-auto ui-scroll">
             {availableSkills.map((skill) => (
               <button
                 key={skill}
                 onClick={() => toggleSkill(skill)}
-                className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${
+                className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                   selectedSkills.includes(skill)
-                    ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-800 text-gray-400'
+                    ? 'bg-teal-600 text-white'
+                    : 'hover:bg-slate-800 text-slate-400'
                 }`}
               >
                 {skill}
@@ -113,31 +151,33 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
       )}
 
       {/* Footer */}
-      <div className="border-t border-gray-700 p-2">
+      <div className={`border-t border-slate-800 p-2.5 ${collapsed ? 'px-2' : ''}`}>
         <button
           onClick={onOpenMcpStatus}
-          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          aria-label={t.mcpStatus}
+          className={`w-full rounded-lg text-slate-300 transition-colors hover:bg-slate-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 ${collapsed ? 'flex justify-center px-2 py-2.5' : 'flex items-center gap-2 px-3 py-2'}`}
         >
           <Server size={18} />
-          {!collapsed && <span className="text-sm">MCP 状态</span>}
+          {!collapsed && <span className="text-sm">{t.mcpStatus}</span>}
         </button>
         <button
           onClick={onOpenEvaluation}
-          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          aria-label={t.evaluationPanel}
+          className={`w-full rounded-lg text-slate-300 transition-colors hover:bg-slate-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 ${collapsed ? 'flex justify-center px-2 py-2.5' : 'flex items-center gap-2 px-3 py-2'}`}
         >
           <BarChart3 size={18} />
-          {!collapsed && <span className="text-sm">评估面板</span>}
+          {!collapsed && <span className="text-sm">{t.evaluationPanel}</span>}
         </button>
         <button
           onClick={onOpenKnowledge}
-          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          className={`w-full rounded-lg text-slate-300 transition-colors hover:bg-slate-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 ${collapsed ? 'flex justify-center px-2 py-2.5' : 'flex items-center gap-2 px-3 py-2'}`}
         >
           <BookOpen size={18} />
           {!collapsed && <span className="text-sm">{t.knowledgeBase}</span>}
         </button>
         <button
           onClick={onOpenSettings}
-          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          className={`w-full rounded-lg text-slate-300 transition-colors hover:bg-slate-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 ${collapsed ? 'flex justify-center px-2 py-2.5' : 'flex items-center gap-2 px-3 py-2'}`}
         >
           <Settings size={18} />
           {!collapsed && <span className="text-sm">{t.settings}</span>}

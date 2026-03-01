@@ -333,7 +333,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <h2 className="text-lg font-semibold dark:text-dark-text">设置</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-lg transition-colors dark:text-dark-text"
+            aria-label="关闭设置"
+            className="cursor-pointer p-2 hover:bg-slate-100 dark:hover:bg-dark-border rounded-lg transition-colors dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
             <X size={20} />
           </button>
@@ -343,15 +344,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="p-6 overflow-y-auto max-h-[65vh] space-y-6">
           {/* 后端设置 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">后端服务</h3>
+            <h3 className="text-sm font-medium text-slate-700 dark:text-dark-text mb-3">后端服务</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Niko-Studio 后端地址</label>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">Niko-Studio 后端地址</label>
                 <input
                   type="text"
                   value={localSettings.apiBaseUrl}
                   onChange={(e) => setLocalSettings({ ...localSettings, apiBaseUrl: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -360,11 +361,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* 系统诊断 */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">系统诊断</h3>
+              <h3 className="text-sm font-medium text-slate-700 dark:text-dark-text">系统诊断</h3>
               <button
                 onClick={refreshDiagnostics}
                 disabled={diagnosticsLoading}
-                className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                className="cursor-pointer text-xs px-3 py-1.5 bg-slate-100 dark:bg-dark-border hover:bg-slate-200 dark:hover:bg-slate-700 rounded disabled:opacity-50 dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 {diagnosticsLoading ? '刷新中...' : '刷新诊断'}
               </button>
@@ -376,34 +377,34 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
             <div className="space-y-3">
               <div className="border dark:border-dark-border rounded-lg p-3">
-                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">网关指标</div>
+                <div className="text-xs text-slate-500 dark:text-dark-text-secondary mb-2">网关指标</div>
                 {gatewayMetrics ? (
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-dark-text">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-700 dark:text-dark-text">
                     <div>请求总数：{gatewayMetrics.requests_total}</div>
                     <div>失败请求：{gatewayMetrics.requests_failed_total}</div>
                     <div>平均延迟：{gatewayMetrics.latency_ms_avg} ms</div>
                     <div>最大延迟：{gatewayMetrics.latency_ms_max} ms</div>
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">暂无指标数据</div>
+                  <div className="text-xs text-slate-400 dark:text-dark-text-secondary">暂无指标数据</div>
                 )}
               </div>
 
               <div className="border dark:border-dark-border rounded-lg p-3">
-                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">工具清单</div>
+                <div className="text-xs text-slate-500 dark:text-dark-text-secondary mb-2">工具清单</div>
                 {gatewayTools && Object.keys(gatewayTools).length > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {Object.entries(gatewayTools).map(([service, tools]) => (
                       <div key={service}>
-                        <div className="text-xs font-medium text-gray-700 dark:text-dark-text">{service}</div>
-                        <div className="text-xs text-gray-500 dark:text-dark-text-secondary break-all">
+                        <div className="text-xs font-medium text-slate-700 dark:text-dark-text">{service}</div>
+                        <div className="text-xs text-slate-500 dark:text-dark-text-secondary break-all">
                           {tools.join('，')}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">暂无工具数据</div>
+                  <div className="text-xs text-slate-400 dark:text-dark-text-secondary">暂无工具数据</div>
                 )}
               </div>
             </div>
@@ -412,7 +413,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* LLM 提供商配置 */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">LLM 模型配置</h3>
+              <h3 className="text-sm font-medium text-slate-700 dark:text-dark-text">LLM 模型配置</h3>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -421,7 +422,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings({ ...localSettings, allowLlmFallback: e.target.checked })}
                     className="rounded"
                   />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">允许降级</span>
+                  <span className="text-slate-600 dark:text-dark-text-secondary">允许降级</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -430,20 +431,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings({ ...localSettings, useMultiModel: e.target.checked })}
                     className="rounded"
                   />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">多模型并行</span>
+                  <span className="text-slate-600 dark:text-dark-text-secondary">多模型并行</span>
                 </label>
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">检索 Provider / 模型</label>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">检索 Provider / 模型</label>
                 <input
                   type="text"
                   value={providerSearch}
                   onChange={(e) => setProviderSearch(e.target.value)}
                   placeholder="输入 provider 名称或模型关键字"
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                 />
               </div>
 
@@ -452,7 +453,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <div
                   key={provider.id}
                   className={`border rounded-lg p-4 transition-colors ${
-                    provider.enabled ? 'border-blue-300 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-dark-border'
+                    provider.enabled ? 'border-teal-300 bg-teal-50/50 dark:bg-teal-900/20' : 'border-slate-200 dark:border-dark-border'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-3">
@@ -463,9 +464,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         onChange={(e) => updateLocalProvider(provider.id, { enabled: e.target.checked })}
                         className="rounded"
                       />
-                      <span className="font-medium text-gray-800 dark:text-dark-text">{provider.name}</span>
+                      <span className="font-medium text-slate-800 dark:text-dark-text">{provider.name}</span>
                       {provider.id === localSettings.primaryProvider && provider.enabled && (
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">主要</span>
+                        <span className="text-xs bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300 px-2 py-0.5 rounded">主要</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -478,7 +479,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       <button
                         onClick={() => testConnection(provider)}
                         disabled={!provider.apiKey || testingProvider === provider.id}
-                        className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                        className="cursor-pointer text-xs px-2 py-1 bg-slate-100 dark:bg-dark-border hover:bg-slate-200 dark:hover:bg-slate-700 rounded disabled:opacity-50 dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500"
                       >
                         {testingProvider === provider.id ? '测试中...' : '测试连接'}
                       </button>
@@ -488,19 +489,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   {provider.enabled && (
                     <div className="space-y-3 ml-6">
                       <div>
-                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">API Key</label>
+                        <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">API Key</label>
                         <div className="relative">
                           <input
                             type={showApiKeys[provider.id] ? 'text' : 'password'}
                             value={provider.apiKey}
                             onChange={(e) => updateLocalProvider(provider.id, { apiKey: e.target.value })}
-                            className="w-full px-3 py-2 pr-10 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 pr-10 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                             placeholder="sk-..."
                           />
                           <button
                             type="button"
                             onClick={() => toggleShowApiKey(provider.id)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text"
+                            aria-label={showApiKeys[provider.id] ? '隐藏 API Key' : '显示 API Key'}
+                            className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500"
                           >
                             {showApiKeys[provider.id] ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
@@ -509,20 +511,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Base URL</label>
+                          <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">Base URL</label>
                           <input
                             type="text"
                             value={provider.baseUrl}
                             onChange={(e) => updateLocalProvider(provider.id, { baseUrl: e.target.value })}
-                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">默认模型</label>
+                          <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">默认模型</label>
                           <select
                             value={provider.defaultModel}
                             onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value, modelSelectionMode: 'list' })}
-                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                           >
                             {getModelGroups(provider).map((group) => (
                               <optgroup key={group.label} label={group.label}>
@@ -537,20 +539,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">模型来源</label>
+                          <label className="block text-xs text-slate-500 dark:text-dark-text-secondary">模型来源</label>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => validateProviderDefaultModel(provider)}
                               disabled={modelValidateLoading[provider.id]}
-                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                              className="cursor-pointer text-xs px-2 py-1 bg-slate-100 dark:bg-dark-border hover:bg-slate-200 dark:hover:bg-slate-700 rounded disabled:opacity-50 dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500"
                             >
                               {modelValidateLoading[provider.id] ? '校验中...' : '校验默认模型'}
                             </button>
                             <button
                               onClick={() => refreshProviderModels(provider)}
                               disabled={modelSyncLoading[provider.id]}
-                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                              className="cursor-pointer text-xs px-2 py-1 bg-slate-100 dark:bg-dark-border hover:bg-slate-200 dark:hover:bg-slate-700 rounded disabled:opacity-50 dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500"
                             >
                               {modelSyncLoading[provider.id] ? '刷新中...' : '刷新模型'}
                             </button>
@@ -565,26 +567,26 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           <p className="text-xs text-red-500">{modelSyncError[provider.id]}</p>
                         )}
                         {provider.lastModelSyncAt && !modelSyncError[provider.id] && (
-                          <p className="text-xs text-gray-400 dark:text-dark-text-secondary">
+                          <p className="text-xs text-slate-400 dark:text-dark-text-secondary">
                             最近同步：{new Date(provider.lastModelSyncAt).toLocaleString()}
                           </p>
                         )}
                       </div>
 
                       <div className="space-y-2">
-                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">自定义模型</label>
+                        <label className="block text-xs text-slate-500 dark:text-dark-text-secondary">自定义模型</label>
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={customModelInputs[provider.id] ?? ''}
                             onChange={(e) => setCustomModelInputs((prev) => ({ ...prev, [provider.id]: e.target.value }))}
                             placeholder="例如：gpt-4.1-mini"
-                            className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                           />
                           <button
                             type="button"
                             onClick={() => applyCustomModel(provider)}
-                            className="text-xs px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            className="cursor-pointer text-xs px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
                           >
                             使用该模型
                           </button>
@@ -598,9 +600,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             name="primaryProvider"
                             checked={localSettings.primaryProvider === provider.id}
                             onChange={() => setLocalSettings({ ...localSettings, primaryProvider: provider.id })}
-                            className="text-blue-600"
+                            className="text-teal-600"
                           />
-                          <label className="text-xs text-gray-600 dark:text-dark-text-secondary">设为主要提供商</label>
+                          <label className="text-xs text-slate-600 dark:text-dark-text-secondary">设为主要提供商</label>
                         </div>
                       )}
                     </div>
@@ -612,10 +614,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* 模型参数 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">模型参数</h3>
+            <h3 className="text-sm font-medium text-slate-700 dark:text-dark-text mb-3">模型参数</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Temperature (创造性)</label>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">Temperature (创造性)</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="range"
@@ -626,9 +628,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings({ ...localSettings, temperature: parseFloat(e.target.value) })}
                     className="flex-1"
                   />
-                  <span className="text-sm text-gray-600 dark:text-dark-text w-10">{localSettings.temperature}</span>
+                  <span className="text-sm text-slate-600 dark:text-dark-text w-10">{localSettings.temperature}</span>
                 </div>
-                <p className="text-xs text-gray-400 dark:text-dark-text-secondary mt-1">
+                <p className="text-xs text-slate-400 dark:text-dark-text-secondary mt-1">
                   较低值 (0-0.3): 更确定性，适合事实性写作 | 较高值 (0.7-1): 更创造性，适合创意写作
                 </p>
               </div>
@@ -637,14 +639,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* 写作设置 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">写作设置</h3>
+            <h3 className="text-sm font-medium text-slate-700 dark:text-dark-text mb-3">写作设置</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">默认工作流</label>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">默认工作流</label>
                 <select
                   value={localSettings.defaultWorkflowLevel}
                   onChange={(e) => setLocalSettings({ ...localSettings, defaultWorkflowLevel: e.target.value as 'L1' | 'L2' | 'L3' | 'L4' | 'L5' })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
                   <option value="L1">{t.workflowL1}</option>
                   <option value="L2">{t.workflowL2}</option>
@@ -654,12 +656,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">每章目标字数</label>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">每章目标字数</label>
                 <input
                   type="number"
                   value={localSettings.targetWordsPerChapter}
                   onChange={(e) => setLocalSettings({ ...localSettings, targetWordsPerChapter: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -670,7 +672,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   onChange={(e) => setLocalSettings({ ...localSettings, autoSkillMatch: e.target.checked })}
                   className="rounded"
                 />
-                <label htmlFor="autoSkillMatch" className="text-sm text-gray-600 dark:text-dark-text-secondary">
+                <label htmlFor="autoSkillMatch" className="text-sm text-slate-600 dark:text-dark-text-secondary">
                   自动匹配技能包
                 </label>
               </div>
@@ -679,14 +681,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* 界面设置 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.uiSettings}</h3>
+            <h3 className="text-sm font-medium text-slate-700 dark:text-dark-text mb-3">{t.uiSettings}</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.theme}</label>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">{t.theme}</label>
                 <select
                   value={localSettings.theme}
                   onChange={(e) => setLocalSettings({ ...localSettings, theme: e.target.value as 'light' | 'dark' | 'system' })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
                   <option value="light">{t.themeLight}</option>
                   <option value="dark">{t.themeDark}</option>
@@ -694,11 +696,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.fontSize}</label>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">{t.fontSize}</label>
                 <select
                   value={localSettings.fontSize}
                   onChange={(e) => setLocalSettings({ ...localSettings, fontSize: e.target.value as 'small' | 'medium' | 'large' })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
                   <option value="small">{t.fontSmall}</option>
                   <option value="medium">{t.fontMedium}</option>
@@ -706,11 +708,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.language}</label>
+                <label className="block text-xs text-slate-500 dark:text-dark-text-secondary mb-1">{t.language}</label>
                 <select
                   value={localSettings.language}
                   onChange={(e) => setLocalSettings({ ...localSettings, language: e.target.value as 'zh' | 'en' })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
                   <option value="zh">{t.langChinese}</option>
                   <option value="en">{t.langEnglish}</option>
@@ -721,25 +723,27 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t dark:border-dark-border bg-gray-50 dark:bg-dark-bg">
+        <div className="flex items-center justify-between px-6 py-4 border-t dark:border-dark-border bg-slate-50 dark:bg-dark-bg">
           <div className="flex items-center gap-2">
             <button
               onClick={handleReset}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-border rounded-lg transition-colors"
+              className="cursor-pointer flex items-center gap-2 px-4 py-2 text-slate-600 dark:text-dark-text hover:bg-slate-200 dark:hover:bg-dark-border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
               <RotateCcw size={16} />
               重置默认
             </button>
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-border rounded-lg transition-colors"
+              aria-label="导出设置"
+              className="cursor-pointer flex items-center gap-2 px-3 py-2 text-slate-600 dark:text-dark-text hover:bg-slate-200 dark:hover:bg-dark-border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
               title="导出设置"
             >
               <Download size={16} />
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-border rounded-lg transition-colors"
+              aria-label="导入设置"
+              className="cursor-pointer flex items-center gap-2 px-3 py-2 text-slate-600 dark:text-dark-text hover:bg-slate-200 dark:hover:bg-dark-border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
               title="导入设置"
             >
               <Upload size={16} />
@@ -760,13 +764,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-border rounded-lg transition-colors"
+              className="cursor-pointer px-4 py-2 text-slate-600 dark:text-dark-text hover:bg-slate-200 dark:hover:bg-dark-border rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
               取消
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
               <Save size={16} />
               保存

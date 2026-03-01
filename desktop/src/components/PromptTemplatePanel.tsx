@@ -122,23 +122,23 @@ export function PromptTemplatePanel({
 
   return (
     <div
-      className="fixed right-0 top-12 bottom-0 w-96 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg flex flex-col"
+      className="fixed right-0 top-12 bottom-0 w-96 bg-white dark:bg-dark-surface border-l border-slate-200 dark:border-dark-border shadow-lg flex flex-col"
       role="dialog"
       aria-modal="true"
       aria-label={t.templateLibraryTitle}
     >
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-dark-border">
-        <div className="font-semibold text-gray-900 dark:text-dark-text">{t.templateLibraryTitle}</div>
+      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-dark-border">
+        <div className="font-semibold text-slate-900 dark:text-dark-text">{t.templateLibraryTitle}</div>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+          className="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500 rounded"
           aria-label={t.templateClosePanel}
         >
           <X size={18} />
         </button>
       </div>
 
-      <div className="p-4 border-b border-gray-200 dark:border-dark-border space-y-3">
+      <div className="p-4 border-b border-slate-200 dark:border-dark-border space-y-3">
         <div className="flex flex-wrap gap-2">
           {categoryOrder.map((category) => {
             const labelMap: Record<typeof categoryOrder[number], string> = {
@@ -155,10 +155,10 @@ export function PromptTemplatePanel({
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                className={`cursor-pointer px-2 py-1 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                   selectedCategory === category
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-slate-200 dark:bg-dark-border text-slate-700 dark:text-dark-text'
                 }`}
               >
                 {label}
@@ -170,10 +170,10 @@ export function PromptTemplatePanel({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setFavoriteOnly((prev) => !prev)}
-            className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+            className={`cursor-pointer px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
               favoriteOnly
                 ? 'bg-amber-500 text-white'
-                : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'
+                : 'bg-slate-200 dark:bg-dark-border text-slate-700 dark:text-dark-text'
             }`}
           >
             <Star size={14} />
@@ -182,20 +182,20 @@ export function PromptTemplatePanel({
         </div>
 
         <div className="relative">
-          <Search size={14} className="absolute left-2 top-2.5 text-gray-400" />
+          <Search size={14} className="absolute left-2 top-2.5 text-slate-400" />
           <input
             value={searchKeyword}
             onChange={(event) => setSearchKeyword(event.target.value)}
             placeholder={t.templateSearchPlaceholder}
-            className="w-full pl-7 pr-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+            className="w-full pl-7 pr-3 py-2 text-sm border border-slate-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
           />
         </div>
       </div>
 
       <div className="flex-1 overflow-hidden grid grid-cols-2">
-        <div className="border-r border-gray-200 dark:border-dark-border overflow-y-auto">
+        <div className="border-r border-slate-200 dark:border-dark-border overflow-y-auto">
           {filteredTemplates.length === 0 ? (
-            <div className="p-3 text-sm text-gray-500 dark:text-dark-text-secondary">{t.templateNoMatch}</div>
+            <div className="p-3 text-sm text-slate-500 dark:text-dark-text-secondary">{t.templateNoMatch}</div>
           ) : (
             <ul className="p-2 space-y-2">
               {filteredTemplates.map((template) => {
@@ -218,12 +218,12 @@ export function PromptTemplatePanel({
                       }}
                       className={`w-full text-left p-2 rounded border transition-colors cursor-pointer ${
                         selected
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg'
+                          ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                          : 'border-slate-200 dark:border-dark-border hover:bg-slate-50 dark:hover:bg-dark-bg'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium text-gray-800 dark:text-dark-text truncate">{template.title}</span>
+                        <span className="text-sm font-medium text-slate-800 dark:text-dark-text truncate">{template.title}</span>
                         <button
                           type="button"
                           aria-label={template.isFavorite ? t.templateUnfavorite : t.templateFavorite}
@@ -231,12 +231,12 @@ export function PromptTemplatePanel({
                             event.stopPropagation()
                             onToggleFavorite(template.id)
                           }}
-                          className={`cursor-pointer ${template.isFavorite ? 'text-amber-500' : 'text-gray-400'}`}
+                          className={`cursor-pointer ${template.isFavorite ? 'text-amber-500' : 'text-slate-400'} focus:outline-none focus:ring-2 focus:ring-teal-500 rounded`}
                         >
                           <Star size={14} fill={template.isFavorite ? 'currentColor' : 'none'} />
                         </button>
                       </div>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-dark-text-secondary line-clamp-2">
+                      <p className="mt-1 text-xs text-slate-500 dark:text-dark-text-secondary line-clamp-2">
                         {template.content}
                       </p>
                     </div>
@@ -249,17 +249,17 @@ export function PromptTemplatePanel({
 
         <div className="p-3 overflow-y-auto">
           {!selectedTemplate ? (
-            <div className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.templateEmptyList}</div>
+            <div className="text-sm text-slate-500 dark:text-dark-text-secondary">{t.templateEmptyList}</div>
           ) : (
             <div className="space-y-3">
-              <h3 className="text-sm font-medium text-gray-800 dark:text-dark-text">{selectedTemplate.title}</h3>
+              <h3 className="text-sm font-medium text-slate-800 dark:text-dark-text">{selectedTemplate.title}</h3>
 
               <div className="space-y-2">
                 {selectedTemplate.variables.map((variable) => {
                   const value = resolveVariableValue(selectedTemplate, variable.id)
                   return (
                     <div key={variable.id}>
-                      <label htmlFor={`template-var-${variable.id}`} className="block text-xs text-gray-600 dark:text-dark-text-secondary mb-1">
+                      <label htmlFor={`template-var-${variable.id}`} className="block text-xs text-slate-600 dark:text-dark-text-secondary mb-1">
                         {variable.label}
                         {variable.required ? ' *' : ''}
                       </label>
@@ -274,7 +274,7 @@ export function PromptTemplatePanel({
                           })
                         }}
                         placeholder={variable.description || variable.defaultValue || ''}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+                        className="w-full px-2 py-1.5 text-sm border border-slate-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
                       />
                       {validationErrors[variable.id] && (
                         <p className="mt-1 text-xs text-red-500">{validationErrors[variable.id]}</p>
@@ -287,20 +287,20 @@ export function PromptTemplatePanel({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setApplyMode('replace')}
-                  className={`px-2 py-1 text-xs rounded ${
+                  className={`cursor-pointer px-2 py-1 text-xs rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                     applyMode === 'replace'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-slate-200 dark:bg-dark-border text-slate-700 dark:text-dark-text'
                   }`}
                 >
                   {t.templateApplyReplace}
                 </button>
                 <button
                   onClick={() => setApplyMode('append')}
-                  className={`px-2 py-1 text-xs rounded ${
+                  className={`cursor-pointer px-2 py-1 text-xs rounded focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                     applyMode === 'append'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-slate-200 dark:bg-dark-border text-slate-700 dark:text-dark-text'
                   }`}
                 >
                   {t.templateApplyAppend}
@@ -309,7 +309,7 @@ export function PromptTemplatePanel({
 
               <button
                 onClick={handleApply}
-                className="w-full px-3 py-2 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                className="cursor-pointer w-full px-3 py-2 text-sm rounded bg-teal-600 text-white hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 {t.templateApplyAction}
               </button>

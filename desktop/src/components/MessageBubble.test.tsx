@@ -32,6 +32,38 @@ describe('MessageBubble selection', () => {
     selectionSpy.mockRestore()
   })
 
+  it('renders collapsible metadata details for assistant message', async () => {
+    render(
+      <MessageBubble
+        message={{
+          id: 'm4',
+          role: 'assistant',
+          content: '带详情的消息',
+          timestamp: new Date(),
+          metadata: {
+            runtime: {
+              terminal: 'done',
+              decision: 'soft_go',
+              latencyMs: 123,
+              diagnostics: {
+                fallback_reason: 'critic_unavailable',
+              },
+            },
+            writerWarnings: ['quality-check-warning'],
+          },
+        }}
+      />
+    )
+
+    const toggleButton = screen.getByRole('button')
+    fireEvent.click(toggleButton)
+
+    expect(screen.getByText('soft_go')).toBeInTheDocument()
+    expect(screen.getByText('123ms')).toBeInTheDocument()
+    expect(screen.getByText('critic_unavailable')).toBeInTheDocument()
+    expect(screen.getByText(/quality-check-warning/)).toBeInTheDocument()
+  })
+
   it('renders structured dual-column comparison content for assistant message', () => {
     render(
       <MessageBubble

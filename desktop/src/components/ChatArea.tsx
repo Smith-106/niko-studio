@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Paperclip, Mic } from 'lucide-react'
-import { useAppStore } from '../stores/appStore'
+import { Send, Paperclip, Mic, Sparkles } from 'lucide-react'
+import { useAppStore, extractMessageMetadata, type MessageMetadata } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback } from '../stores/selectors'
 import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, uploadMemoryFile } from '../api/client'
@@ -54,6 +54,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const streamRequestIdRef = useRef(0)
   const { t, translate } = useI18n()
   const previousConnectionStateRef = useRef(connectionState)
+  const previousContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
 
   const currentConversationId = useCurrentConversationId()
   const messages = useMessages()
@@ -92,7 +93,20 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     const usedK = Number((usedChars / 1000).toFixed(1))
     const percent = Number(Math.min((usedChars / (totalK * 1000)) * 100, 999).toFixed(1))
 
-    onContextUsageChange({ usedChars, usedK, totalK, percent })
+    const nextUsage = { usedChars, usedK, totalK, percent }
+    const previousUsage = previousContextUsageRef.current
+    if (
+      previousUsage &&
+      previousUsage.usedChars === nextUsage.usedChars &&
+      previousUsage.usedK === nextUsage.usedK &&
+      previousUsage.totalK === nextUsage.totalK &&
+      previousUsage.percent === nextUsage.percent
+    ) {
+      return
+    }
+
+    previousContextUsageRef.current = nextUsage
+    onContextUsageChange(nextUsage)
   }, [messages, streamingContent, onContextUsageChange])
 
   useEffect(() => {
@@ -102,12 +116,23 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       return
     }
 
+    let nextRecoverStatus: { type: 'error' | 'success'; message: string } | null = null
+
     if (connectionState === 'reconnecting') {
-      setRecoverStatus({ type: 'error', message: t.streamReconnecting })
+      nextRecoverStatus = { type: 'error', message: t.streamReconnecting }
     } else if (connectionState === 'connected' && previous === 'reconnecting') {
-      setRecoverStatus({ type: 'success', message: t.streamRecovered })
+      nextRecoverStatus = { type: 'success', message: t.streamRecovered }
     } else if (connectionState === 'disconnected') {
-      setRecoverStatus({ type: 'error', message: t.streamInterrupted })
+      nextRecoverStatus = { type: 'error', message: t.streamInterrupted }
+    }
+
+    if (nextRecoverStatus) {
+      setRecoverStatus((current) => {
+        if (current?.type === nextRecoverStatus?.type && current?.message === nextRecoverStatus?.message) {
+          return current
+        }
+        return nextRecoverStatus
+      })
     }
 
     previousConnectionStateRef.current = connectionState
@@ -129,21 +154,76 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     setSelectedText('')
   }
 
+  const buildRuntimeMetadata = (
+    meta: StreamRuntimeMeta | null,
+    latencyMs: number,
+    fallbackInfo?: { routeModel?: string; controlModel?: string }
+  ): MessageMetadata => ({
+    runtime: {
+      terminal: meta?.terminal,
+      decision: meta?.decision,
+      diagnostics: meta?.diagnostics,
+      latencyMs,
+      routeModel: fallbackInfo?.routeModel,
+      controlModel: fallbackInfo?.controlModel,
+      degraded: meta?.decision === 'soft_go' || meta?.decision === 'no_go' || Boolean(meta?.diagnostics?.fallback_reason),
+    },
+  })
+
+  const mergeMetadata = (base?: MessageMetadata, extra?: MessageMetadata): MessageMetadata | undefined => {
+    if (!base && !extra) return undefined
+    return {
+      ...base,
+      ...extra,
+      runtime: {
+        ...base?.runtime,
+        ...extra?.runtime,
+        diagnostics: {
+          ...base?.runtime?.diagnostics,
+          ...extra?.runtime?.diagnostics,
+        },
+      },
+      workflow: {
+        ...base?.workflow,
+        ...extra?.workflow,
+      },
+      knowledge: {
+        ...base?.knowledge,
+        ...extra?.knowledge,
+      },
+      writerWarnings: extra?.writerWarnings ?? base?.writerWarnings,
+      evaluationScore: extra?.evaluationScore ?? base?.evaluationScore,
+      evaluationFeedback: extra?.evaluationFeedback ?? base?.evaluationFeedback,
+    }
+  }
+
   const runNormalChat = async (request: ChatRequest, checkpointId?: string | null): Promise<StreamPhase> => {
+    const startedAt = Date.now()
     if (request.comparison?.enabled) {
       setStreamPhase('streaming')
       const response = await chat(request)
       if (response.success && response.data) {
+        const responseMetadata = extractMessageMetadata(response.data)
+        const runtimeMetadata: MessageMetadata = {
+          runtime: {
+            terminal: 'done',
+            latencyMs: Date.now() - startedAt,
+            controlModel: request.comparison?.controlModel,
+          },
+        }
+        const mergedMetadata = mergeMetadata(responseMetadata, runtimeMetadata)
+
         if (response.data.comparison?.enabled) {
           const comparison = response.data.comparison
           addMessage(
             'assistant',
             response.data.content || comparison.primary.content,
             response.data.skills_used || selectedSkills,
-            comparison
+            comparison,
+            mergedMetadata
           )
         } else {
-          addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+          addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills, undefined, mergedMetadata)
         }
         setRecoverableCheckpointId(null)
         setRecoverStatus(null)
@@ -254,7 +334,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
 
     if ((finalPhase === 'done' || finalPhase === 'recovered') && hasStreamContent) {
-      addMessage('assistant', streamText || '处理完成', selectedSkills)
+      const runtimeMetadata = buildRuntimeMetadata(streamMeta, Date.now() - startedAt, {
+        controlModel: request.comparison?.controlModel,
+      })
+      addMessage('assistant', streamText || '处理完成', selectedSkills, undefined, runtimeMetadata)
       setRecoverableCheckpointId(null)
       if (finalPhase === 'recovered') {
         setRecoverStatus({ type: 'success', message: t.streamRecovered })
@@ -265,22 +348,29 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
 
     if (finalPhase === 'interrupted') {
-      addMessage('assistant', t.streamInterrupted)
+      addMessage('assistant', t.streamInterrupted, undefined, undefined, buildRuntimeMetadata(streamMeta, Date.now() - startedAt))
       return 'interrupted'
     }
 
     const response = await chat(request)
     if (response.success && response.data) {
+      const responseMetadata = extractMessageMetadata(response.data)
+      const runtimeMetadata = buildRuntimeMetadata(streamMeta, Date.now() - startedAt, {
+        controlModel: request.comparison?.controlModel,
+      })
+      const mergedMetadata = mergeMetadata(responseMetadata, runtimeMetadata)
+
       if (response.data.comparison?.enabled) {
         const comparison = response.data.comparison
         addMessage(
           'assistant',
           response.data.content || comparison.primary.content,
           response.data.skills_used || selectedSkills,
-          comparison
+          comparison,
+          mergedMetadata
         )
       } else {
-        addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+        addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills, undefined, mergedMetadata)
       }
       setRecoverableCheckpointId(null)
       setRecoverStatus(null)
@@ -578,12 +668,14 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-dark-surface">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto ui-scroll p-3 md:p-4 space-y-3 md:space-y-4">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
-            <div className="text-6xl mb-4">...</div>
-            <h2 className="text-xl font-semibold text-gray-600 dark:text-dark-text mb-2">{t.startWriting}</h2>
-            <p className="text-sm text-gray-400 dark:text-dark-text-secondary max-w-md text-center">
+          <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-dark-text-secondary">
+            <div className="mb-4 rounded-full bg-teal-100 p-4 text-teal-600 dark:bg-teal-900/30 dark:text-teal-300">
+              <Sparkles size={32} />
+            </div>
+            <h2 className="text-xl font-semibold text-slate-700 dark:text-dark-text mb-2">{t.startWriting}</h2>
+            <p className="text-sm text-slate-500 dark:text-dark-text-secondary max-w-md text-center">
               {t.startWritingDesc}
             </p>
           </div>
@@ -604,7 +696,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           />
         )}
         {isLoading && (
-          <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-secondary">
+          <div className="flex items-center gap-2 text-slate-400 dark:text-dark-text-secondary" aria-live="polite">
             <div className="animate-pulse">
               {streamPhase === 'streaming' ? t.thinking : streamPhase === 'interrupted' ? t.streamInterrupted : t.thinking}
             </div>
@@ -615,6 +707,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
 
       {recoverStatus && (
         <div
+          aria-live="polite"
           className={`px-4 py-2 text-xs ${
             recoverStatus.type === 'success'
               ? 'text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
@@ -626,7 +719,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             {recoverableCheckpointId && recoverStatus.type === 'error' && (
               <button
                 onClick={handleRestoreToCheckpoint}
-                className="px-2 py-1 rounded bg-white/80 dark:bg-dark-border dark:text-dark-text"
+                className="cursor-pointer px-2 py-1 rounded bg-white/80 dark:bg-dark-border dark:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 {t.streamRestoreToBeforeSend}
               </button>
@@ -637,6 +730,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
 
       {uploadStatus && (
         <div
+          aria-live="polite"
           className={`px-4 py-2 text-xs ${
             uploadStatus.type === 'success'
               ? 'text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
@@ -647,42 +741,42 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         </div>
       )}
 
-      <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg">
+      <div className="border-t border-slate-200 p-3 md:p-4 bg-slate-50 dark:border-dark-border dark:bg-dark-bg">
         {selectionMeta && (
-          <div className="mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-2">
-            <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">
+          <div className="mb-3 rounded-lg border border-slate-200 dark:border-dark-border bg-white dark:bg-dark-surface p-2">
+            <div className="text-xs text-slate-500 dark:text-dark-text-secondary mb-2">
               {translate('inlineSelectedTextInfo', { count: Math.min(selectedText.length, 80) })}
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setInlineAction('continue')}
-                className={`px-2 py-1 text-xs rounded ${inlineAction === 'continue' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'}`}
+                className={`cursor-pointer px-2 py-1 text-xs rounded transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${inlineAction === 'continue' ? 'bg-teal-600 text-white' : 'bg-slate-200 dark:bg-dark-border text-slate-700 dark:text-dark-text hover:bg-slate-300 dark:hover:bg-slate-700'}`}
               >
                 {t.inlineContinue}
               </button>
               <button
                 onClick={() => setInlineAction('revise')}
                 disabled={!selectedText}
-                className={`px-2 py-1 text-xs rounded ${inlineAction === 'revise' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'} disabled:opacity-50`}
+                className={`cursor-pointer px-2 py-1 text-xs rounded transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${inlineAction === 'revise' ? 'bg-teal-600 text-white' : 'bg-slate-200 dark:bg-dark-border text-slate-700 dark:text-dark-text hover:bg-slate-300 dark:hover:bg-slate-700'} disabled:opacity-50`}
               >
                 {t.inlineRevise}
               </button>
               <button
                 onClick={() => setInlineAction('generate')}
-                className={`px-2 py-1 text-xs rounded ${inlineAction === 'generate' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'}`}
+                className={`cursor-pointer px-2 py-1 text-xs rounded transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${inlineAction === 'generate' ? 'bg-teal-600 text-white' : 'bg-slate-200 dark:bg-dark-border text-slate-700 dark:text-dark-text hover:bg-slate-300 dark:hover:bg-slate-700'}`}
               >
                 {t.inlineGenerate}
               </button>
               <button
                 onClick={runInlineAction}
                 disabled={!inlineAction || isLoading}
-                className="px-2 py-1 text-xs rounded bg-emerald-600 text-white disabled:opacity-50"
+                className="cursor-pointer px-2 py-1 text-xs rounded bg-teal-600 text-white transition-colors hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 {t.inlineRun}
               </button>
               <button
                 onClick={resetInlineState}
-                className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text"
+                className="cursor-pointer px-2 py-1 text-xs rounded bg-slate-200 dark:bg-dark-border text-slate-700 dark:text-dark-text transition-colors hover:bg-slate-300 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 {t.inlineClearSelection}
               </button>
@@ -691,23 +785,23 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         )}
 
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs text-gray-500 dark:text-dark-text-secondary">模式：</span>
+          <span className="text-xs text-slate-500 dark:text-dark-text-secondary">模式：</span>
           <button
             onClick={() => setChatMode('chat')}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+            className={`cursor-pointer px-3 py-1 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${
               chatMode === 'chat'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+                ? 'bg-teal-600 text-white'
+                : 'bg-slate-200 dark:bg-dark-border text-slate-600 dark:text-dark-text hover:bg-slate-300 dark:hover:bg-slate-700'
             }`}
           >
             普通聊天
           </button>
           <button
             onClick={() => setChatMode('agent')}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+            className={`cursor-pointer px-3 py-1 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${
               chatMode === 'agent'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+                ? 'bg-teal-600 text-white'
+                : 'bg-slate-200 dark:bg-dark-border text-slate-600 dark:text-dark-text hover:bg-slate-300 dark:hover:bg-slate-700'
             }`}
           >
             Agent 高级
@@ -716,17 +810,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             <>
               <button
                 onClick={() => setEnableModelComparison((prev) => !prev)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                className={`cursor-pointer px-3 py-1 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                   enableModelComparison
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-slate-200 dark:bg-dark-border text-slate-600 dark:text-dark-text hover:bg-slate-300 dark:hover:bg-slate-700'
                 }`}
               >
                 模型对比
               </button>
               <button
                 onClick={() => setIsTemplatePanelOpen(true)}
-                className="px-3 py-1 text-xs rounded-full transition-colors bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600"
+                className="cursor-pointer px-3 py-1 text-xs rounded-full transition-colors bg-slate-200 dark:bg-dark-border text-slate-600 dark:text-dark-text hover:bg-slate-300 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 {t.templateLibraryEntry}
               </button>
@@ -735,7 +829,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
                   aria-label="对照模型"
                   value={comparisonModel}
                   onChange={(e) => setComparisonModel(e.target.value)}
-                  className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded"
+                  className="cursor-pointer px-2 py-1 text-xs border border-slate-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   {availableComparisonModels.map((model) => (
                     <option key={model} value={model}>{model}</option>
@@ -746,9 +840,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           )}
           {chatMode === 'agent' && (
             <select
+              aria-label="Agent 动作"
               value={agentAction}
               onChange={(e) => setAgentAction(e.target.value as 'write' | 'revise' | 'context')}
-              className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded"
+              className="cursor-pointer px-2 py-1 text-xs border border-slate-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
               <option value="write">写作</option>
               <option value="revise">润色/重写</option>
@@ -758,7 +853,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         </div>
 
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.workflow}:</span>
+          <span className="text-xs text-slate-500 dark:text-dark-text-secondary">{t.workflow}:</span>
           {([
             { level: 'L1', label: t.quick },
             { level: 'L2', label: t.lite },
@@ -769,17 +864,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             <button
               key={level}
               onClick={() => setWorkflowLevel(level)}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              className={`cursor-pointer px-3 py-1 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                 workflowLevel === level
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+                  ? 'bg-teal-600 text-white'
+                  : 'bg-slate-200 dark:bg-dark-border text-slate-600 dark:text-dark-text hover:bg-slate-300 dark:hover:bg-slate-700'
               }`}
             >
               {label}
             </button>
           ))}
           {selectedSkills.length > 0 && (
-            <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">
+            <span className="text-xs text-teal-600 dark:text-teal-400 ml-2">
               {translate('selectedSkills', { count: selectedSkills.length })}
             </span>
           )}
@@ -792,7 +887,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t.inputPlaceholder}
-              className="w-full px-4 py-3 pr-20 border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 pr-20 border border-slate-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               rows={1}
               style={{ minHeight: '48px', maxHeight: '200px' }}
             />
@@ -806,11 +901,12 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors"
+                aria-label="上传附件"
+                className="cursor-pointer p-2 text-slate-400 transition-colors hover:text-teal-600 dark:hover:text-teal-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 <Paperclip size={18} />
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors">
+              <button aria-label="语音输入" className="cursor-pointer p-2 text-slate-400 transition-colors hover:text-teal-600 dark:hover:text-teal-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
                 <Mic size={18} />
               </button>
             </div>
@@ -818,15 +914,16 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           {isLoading ? (
             <button
               onClick={handleCancelStream}
-              className="px-4 py-3 bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-colors"
+              className="cursor-pointer px-4 py-3 bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
               {t.cancel}
             </button>
           ) : (
             <button
               onClick={handleSend}
+              aria-label="发送消息"
               disabled={!input.trim()}
-              className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="cursor-pointer px-4 py-3 bg-teal-600 text-white rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
               <Send size={20} />
             </button>

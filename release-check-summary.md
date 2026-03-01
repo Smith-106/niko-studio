@@ -20,27 +20,27 @@
 | gate_score_or_critical_blocker_signal | P0 | true | PASS |
 | runtime_policy_conformance_signal | P0 | true | PASS |
 | evidence_coverage_signal | P1 | false | PASS |
-| slo_baseline_signal | P1 | false | WARN |
+| slo_baseline_signal | P1 | false | PASS |
 | evidence_links_signal | P1 | false | PASS |
-| self_learning_signal | P1 | false | WARN |
-| memory_observability_signal | P1 | false | WARN |
-| quality_level_trace_signal | P1 | false | WARN |
-| degrade_trace_signal | P1 | false | WARN |
-| critical_gate_enforcement_signal | P1 | false | WARN |
+| self_learning_signal | P1 | false | PASS |
+| memory_observability_signal | P1 | false | PASS |
+| quality_level_trace_signal | P1 | false | PASS |
+| degrade_trace_signal | P1 | false | PASS |
+| critical_gate_enforcement_signal | P1 | false | PASS |
 | chapter_gate_scoring_signal | P1 | false | PASS |
-| cycle_time_kpi_measurement_signal | P1 | false | WARN |
-| comparable_quality_rubric_signal | P1 | false | WARN |
-| weekly_kpi_dashboard_schema_signal | P1 | false | WARN |
-| weekly_kpi_rollup_readiness_signal | P1 | false | WARN |
-| weekly_kpi_comparability_visibility_signal | P1 | false | WARN |
+| cycle_time_kpi_measurement_signal | P1 | false | PASS |
+| comparable_quality_rubric_signal | P1 | false | PASS |
+| weekly_kpi_dashboard_schema_signal | P1 | false | PASS |
+| weekly_kpi_rollup_readiness_signal | P1 | false | PASS |
+| weekly_kpi_comparability_visibility_signal | P1 | false | PASS |
 | critical_conflict_blocker_signal | P0 | true | PASS |
 | unresolved_triage_blocker_signal | P0 | true | PASS |
-| feedback_artifact_linkage_signal | P1 | false | WARN |
-| conflict_artifact_linkage_signal | P1 | false | WARN |
-| chapter_gate_evidence_linkage_signal | P1 | false | WARN |
+| feedback_artifact_linkage_signal | P1 | false | PASS |
+| conflict_artifact_linkage_signal | P1 | false | PASS |
+| chapter_gate_evidence_linkage_signal | P1 | false | PASS |
 | evidence_freshness_signal | P1 | false | PASS |
-| migration_rollback_evidence_signal | P1 | false | WARN |
-| compliance_keywords_signal | P1 | false | WARN |
+| migration_rollback_evidence_signal | P1 | false | PASS |
+| compliance_keywords_signal | P1 | false | PASS |
 | tasks_completion_signal | P1 | false | PASS |
 
 ## Machine-Readable Decision
@@ -49,7 +49,7 @@
 {
   "decision": "GO",
   "go_no_go_reasons": [],
-  "generated_at": "2026-02-28T16:18:46.686506+00:00",
+  "generated_at": "2026-02-28T18:52:12.623906+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -151,9 +151,9 @@
       "check_id": "slo_baseline_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "missing_keywords=ttft,effective_hit_rate,context_budget_utilization,gate consistency"
+      "detail": "keywords_present=ttft,e2e,effective_hit_rate,context_budget_utilization,gate consistency"
     },
     {
       "check_id": "evidence_links_signal",
@@ -167,41 +167,41 @@
       "check_id": "self_learning_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "missing_fields=reflector,curator,playbook"
+      "detail": "fields_present=reflector,curator,playbook"
     },
     {
       "check_id": "memory_observability_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "missing_metrics=c_effective,s_final,r_memory,invalid_metrics="
+      "detail": "metrics_present=c_effective,s_final,r_memory"
     },
     {
       "check_id": "quality_level_trace_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "effective_quality_level=missing,quality_level_used=missing"
+      "detail": "effective_quality_level=high,quality_level_used=high"
     },
     {
       "check_id": "degrade_trace_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "degrade_reason=missing,degrade_steps=missing"
+      "detail": "degrade_reason=present,degrade_steps=present"
     },
     {
       "check_id": "critical_gate_enforcement_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "critical_gate=missing"
+      "detail": "critical_gate=enforced"
     },
     {
       "check_id": "chapter_gate_scoring_signal",
@@ -215,41 +215,41 @@
       "check_id": "cycle_time_kpi_measurement_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "window_policy=full_7_day_only,manual_override=forbidden,missing_rules=baseline_window_days,measurement_window_days,baseline_state,cycle_time_baseline_median,cycle_time_current_median,eligible_samples,present_exclusion_reason_codes="
+      "detail": "window_policy=full_7_day_only,manual_override=forbidden,missing_rules=,present_exclusion_reason_codes=missing_timestamps"
     },
     {
       "check_id": "comparable_quality_rubric_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "rubric_version=v1,quality_score=99.0,threshold=99.0,critical_issue_count=0,publish_recommendation=pass,quality_level_match=no,degrade_trace_complete=yes,decision=not_comparable"
+      "detail": "rubric_version=v1,quality_score=99.0,threshold=99.0,critical_issue_count=0,publish_recommendation=pass,quality_level_match=yes,degrade_trace_complete=yes,decision=comparable"
     },
     {
       "check_id": "weekly_kpi_dashboard_schema_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "schema_name=weekly_kpi_dashboard,schema_version=v1,manual_override=forbidden,missing_fields=schema_version,window_label,baseline_state,cycle_time_baseline_median,cycle_time_current_median,cycle_time_trend,comparability_decision,chapter_gate_aggregation_result"
+      "detail": "schema_name=weekly_kpi_dashboard,schema_version=v1,manual_override=forbidden,missing_fields="
     },
     {
       "check_id": "weekly_kpi_rollup_readiness_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "rollup_source=canonical_evidence,manual_override=forbidden,baseline_state=missing,cycle_time_trend=missing,missing_fields=window_label,baseline_state,cycle_time_baseline_median,cycle_time_current_median,cycle_time_trend"
+      "detail": "rollup_source=canonical_evidence,manual_override=forbidden,baseline_state=ready,cycle_time_trend=down,missing_fields="
     },
     {
       "check_id": "weekly_kpi_comparability_visibility_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "visibility_source=comparable_quality_plus_cycle_time,manual_override=forbidden,comparability_decision=missing,cycle_time_trend=missing,baseline_state=missing,missing_fields=comparability_decision,cycle_time_trend,baseline_state"
+      "detail": "visibility_source=comparable_quality_plus_cycle_time,manual_override=forbidden,comparability_decision=comparable,cycle_time_trend=down,baseline_state=ready,missing_fields="
     },
     {
       "check_id": "critical_conflict_blocker_signal",
@@ -257,7 +257,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0,decision=go"
+      "detail": "snapshots_scanned=3,linked_conflict_artifacts=1,critical_conflicts_linked=0,invalid_snapshots=0,decision=go"
     },
     {
       "check_id": "unresolved_triage_blocker_signal",
@@ -265,31 +265,31 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "state_files_scanned=263,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=263,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
+      "detail": "state_files_scanned=267,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=267,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=0,linked_feedback_artifacts=0,invalid_snapshots=0"
+      "detail": "snapshots_scanned=1,linked_feedback_artifacts=1,invalid_snapshots=0"
     },
     {
       "check_id": "conflict_artifact_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0"
+      "detail": "snapshots_scanned=3,linked_conflict_artifacts=1,critical_conflicts_linked=0,invalid_snapshots=0"
     },
     {
       "check_id": "chapter_gate_evidence_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=0,eligible_release_gate_runs=0,chapter_gate_checks_linked=0,aggregation_window=active_sessions,result=insufficient_data,invalid_snapshots=0"
+      "detail": "snapshots_scanned=3,eligible_release_gate_runs=1,chapter_gate_checks_linked=1,aggregation_window=active_sessions,result=aggregated,invalid_snapshots=0"
     },
     {
       "check_id": "evidence_freshness_signal",
@@ -303,17 +303,17 @@
       "check_id": "migration_rollback_evidence_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "migration=missing,rollback=missing,traceable_link=present"
+      "detail": "migration=present,rollback=present,traceable_link=present"
     },
     {
       "check_id": "compliance_keywords_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "missing_keywords=rbac,audit,rollback"
+      "detail": "keywords_present=rbac,audit,rollback"
     },
     {
       "check_id": "tasks_completion_signal",
@@ -343,27 +343,27 @@
 - gate_score_or_critical_blocker_signal: status=PASS, detail=chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=go
 - runtime_policy_conformance_signal: status=PASS, detail=policy_pass=99.0,runtime_pass=99.0,policy_human_review=95.0,runtime_human_review=95.0,policy_revise_lower=50.0,runtime_revise_lower=50.0,policy_rewrite_below=50.0,runtime_rewrite_below=50.0,publish_from_go=pass,publish_from_soft_go=revise,publish_from_no_go=block,terminal_default_decision=go,terminal_no_go_preserved=yes,quality_mode_consistent=yes,mismatches=,decision=go
 - evidence_coverage_signal: status=PASS, detail=quality_non_template=1,weekly_non_template=5
-- slo_baseline_signal: status=WARN, detail=missing_keywords=ttft,effective_hit_rate,context_budget_utilization,gate consistency
+- slo_baseline_signal: status=PASS, detail=keywords_present=ttft,e2e,effective_hit_rate,context_budget_utilization,gate consistency
 - evidence_links_signal: status=PASS, detail=evidence_links_key=present,traceable_link=present
-- self_learning_signal: status=WARN, detail=missing_fields=reflector,curator,playbook
-- memory_observability_signal: status=WARN, detail=missing_metrics=c_effective,s_final,r_memory,invalid_metrics=
-- quality_level_trace_signal: status=WARN, detail=effective_quality_level=missing,quality_level_used=missing
-- degrade_trace_signal: status=WARN, detail=degrade_reason=missing,degrade_steps=missing
-- critical_gate_enforcement_signal: status=WARN, detail=critical_gate=missing
+- self_learning_signal: status=PASS, detail=fields_present=reflector,curator,playbook
+- memory_observability_signal: status=PASS, detail=metrics_present=c_effective,s_final,r_memory
+- quality_level_trace_signal: status=PASS, detail=effective_quality_level=high,quality_level_used=high
+- degrade_trace_signal: status=PASS, detail=degrade_reason=present,degrade_steps=present
+- critical_gate_enforcement_signal: status=PASS, detail=critical_gate=enforced
 - chapter_gate_scoring_signal: status=PASS, detail=quality_score=99.0,threshold=99.0,publish_recommendation=pass,critical_issue_count=0,decision=go
-- cycle_time_kpi_measurement_signal: status=WARN, detail=window_policy=full_7_day_only,manual_override=forbidden,missing_rules=baseline_window_days,measurement_window_days,baseline_state,cycle_time_baseline_median,cycle_time_current_median,eligible_samples,present_exclusion_reason_codes=
-- comparable_quality_rubric_signal: status=WARN, detail=rubric_version=v1,quality_score=99.0,threshold=99.0,critical_issue_count=0,publish_recommendation=pass,quality_level_match=no,degrade_trace_complete=yes,decision=not_comparable
-- weekly_kpi_dashboard_schema_signal: status=WARN, detail=schema_name=weekly_kpi_dashboard,schema_version=v1,manual_override=forbidden,missing_fields=schema_version,window_label,baseline_state,cycle_time_baseline_median,cycle_time_current_median,cycle_time_trend,comparability_decision,chapter_gate_aggregation_result
-- weekly_kpi_rollup_readiness_signal: status=WARN, detail=rollup_source=canonical_evidence,manual_override=forbidden,baseline_state=missing,cycle_time_trend=missing,missing_fields=window_label,baseline_state,cycle_time_baseline_median,cycle_time_current_median,cycle_time_trend
-- weekly_kpi_comparability_visibility_signal: status=WARN, detail=visibility_source=comparable_quality_plus_cycle_time,manual_override=forbidden,comparability_decision=missing,cycle_time_trend=missing,baseline_state=missing,missing_fields=comparability_decision,cycle_time_trend,baseline_state
-- critical_conflict_blocker_signal: status=PASS, detail=snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0,decision=go
-- unresolved_triage_blocker_signal: status=PASS, detail=state_files_scanned=263,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=263,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go
-- feedback_artifact_linkage_signal: status=WARN, detail=snapshots_scanned=0,linked_feedback_artifacts=0,invalid_snapshots=0
-- conflict_artifact_linkage_signal: status=WARN, detail=snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0
-- chapter_gate_evidence_linkage_signal: status=WARN, detail=snapshots_scanned=0,eligible_release_gate_runs=0,chapter_gate_checks_linked=0,aggregation_window=active_sessions,result=insufficient_data,invalid_snapshots=0
+- cycle_time_kpi_measurement_signal: status=PASS, detail=window_policy=full_7_day_only,manual_override=forbidden,missing_rules=,present_exclusion_reason_codes=missing_timestamps
+- comparable_quality_rubric_signal: status=PASS, detail=rubric_version=v1,quality_score=99.0,threshold=99.0,critical_issue_count=0,publish_recommendation=pass,quality_level_match=yes,degrade_trace_complete=yes,decision=comparable
+- weekly_kpi_dashboard_schema_signal: status=PASS, detail=schema_name=weekly_kpi_dashboard,schema_version=v1,manual_override=forbidden,missing_fields=
+- weekly_kpi_rollup_readiness_signal: status=PASS, detail=rollup_source=canonical_evidence,manual_override=forbidden,baseline_state=ready,cycle_time_trend=down,missing_fields=
+- weekly_kpi_comparability_visibility_signal: status=PASS, detail=visibility_source=comparable_quality_plus_cycle_time,manual_override=forbidden,comparability_decision=comparable,cycle_time_trend=down,baseline_state=ready,missing_fields=
+- critical_conflict_blocker_signal: status=PASS, detail=snapshots_scanned=3,linked_conflict_artifacts=1,critical_conflicts_linked=0,invalid_snapshots=0,decision=go
+- unresolved_triage_blocker_signal: status=PASS, detail=state_files_scanned=267,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=267,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go
+- feedback_artifact_linkage_signal: status=PASS, detail=snapshots_scanned=1,linked_feedback_artifacts=1,invalid_snapshots=0
+- conflict_artifact_linkage_signal: status=PASS, detail=snapshots_scanned=3,linked_conflict_artifacts=1,critical_conflicts_linked=0,invalid_snapshots=0
+- chapter_gate_evidence_linkage_signal: status=PASS, detail=snapshots_scanned=3,eligible_release_gate_runs=1,chapter_gate_checks_linked=1,aggregation_window=active_sessions,result=aggregated,invalid_snapshots=0
 - evidence_freshness_signal: status=PASS, detail=fresh_files=6,stale_files=0,window_days=14
-- migration_rollback_evidence_signal: status=WARN, detail=migration=missing,rollback=missing,traceable_link=present
-- compliance_keywords_signal: status=WARN, detail=missing_keywords=rbac,audit,rollback
+- migration_rollback_evidence_signal: status=PASS, detail=migration=present,rollback=present,traceable_link=present
+- compliance_keywords_signal: status=PASS, detail=keywords_present=rbac,audit,rollback
 - tasks_completion_signal: status=PASS, detail=checked=29,unchecked=0,completion_ratio=100.0%,json_parse_error=none
 
 ### Command Outputs
@@ -498,7 +498,7 @@ tests/unit/test_cli_module_entry.py::test_cli_main_runs_main_under_name_main
 Coverage XML written to file coverage.xml
 
 Required test coverage of 80% reached. Total coverage: 98.73%
-6101 passed, 2 skipped, 16 deselected, 4 warnings in 832.41s (0:13:52)
+6101 passed, 2 skipped, 16 deselected, 4 warnings in 661.87s (0:11:01)
 ```
 
 #### desktop_check output
@@ -530,14 +530,14 @@ computing gzip size...
 [2mdist/[22m[32mindex.html                 [39m[1m[2m  0.47 kB[22m[1m[22m[2m │ gzip:   0.31 kB[22m
 [2mdist/[22m[35massets/index-kgjylEJi.css  [39m[1m[2m 23.04 kB[22m[1m[22m[2m │ gzip:   5.10 kB[22m
 [2mdist/[22m[36massets/index-DgIcTx5l.js   [39m[1m[2m387.60 kB[22m[1m[22m[2m │ gzip: 117.70 kB[22m
-[32m✓ built in 7.47s[39m
+[32m✓ built in 7.82s[39m
 ```
 
 #### external_e2e_smoke output
 
 ```text
 ................                                                         [100%]
-16 passed in 5.67s
+16 passed in 4.54s
 ```
 
 #### production_guard output

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { checkBackendHealth, listSkills } from '@/api/client'
+import type { ChatResponse, StreamDonePayload, StreamTerminal } from '@/api/client'
 import { useSettingsStore } from './settingsStore'
 
 export interface MessageComparisonItem {
@@ -13,6 +14,44 @@ export interface MessageComparison {
   control: MessageComparisonItem
 }
 
+export interface MessageDiagnostics {
+  fallback_reason?: string | null
+  failure_reason?: string | null
+  error_type?: string | null
+}
+
+export interface MessageRuntimeMeta {
+  terminal?: StreamTerminal
+  decision?: StreamDonePayload['decision']
+  diagnostics?: MessageDiagnostics
+  latencyMs?: number
+  routeModel?: string
+  controlModel?: string
+  degraded?: boolean
+}
+
+export interface MessageWorkflowMeta {
+  level?: string
+  levelSlug?: string
+  stepsCompleted?: number
+  totalSteps?: number
+}
+
+export interface MessageKnowledgeMeta {
+  entitiesCount?: number
+  relationsCount?: number
+  memoriesCount?: number
+}
+
+export interface MessageMetadata {
+  runtime?: MessageRuntimeMeta
+  workflow?: MessageWorkflowMeta
+  knowledge?: MessageKnowledgeMeta
+  writerWarnings?: string[]
+  evaluationScore?: number
+  evaluationFeedback?: string
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant'
@@ -20,6 +59,7 @@ export interface Message {
   timestamp: Date
   skills?: string[]
   comparison?: MessageComparison
+  metadata?: MessageMetadata
 }
 
 export interface Conversation {
@@ -43,7 +83,8 @@ interface AppState {
   // Actions
   createConversation: () => void
   selectConversation: (id: string) => void
-  addMessage: (role: 'user' | 'assistant', content: string, skills?: string[], comparison?: MessageComparison) => void
+  addMessage: (role: 'user' | 'assistant', content: string, skills?: string[], comparison?: MessageComparison, metadata?: MessageMetadata) => void
+  patchMessageMetadata: (messageId: string, metadataPatch: MessageMetadata) => void
   getConversationById: (id: string) => Conversation | undefined
 
   // Skills
@@ -59,6 +100,83 @@ interface AppState {
   // LLM fallback
   allowLlmFallback: boolean
   setAllowLlmFallback: (allow: boolean) => void
+}
+
+const mergeMessageMetadata = (prev: MessageMetadata | undefined, patch: MessageMetadata): MessageMetadata => {
+  return {
+    ...prev,
+    ...patch,
+    runtime: {
+      ...prev?.runtime,
+      ...patch.runtime,
+      diagnostics: {
+        ...prev?.runtime?.diagnostics,
+        ...patch.runtime?.diagnostics,
+      },
+    },
+    workflow: {
+      ...prev?.workflow,
+      ...patch.workflow,
+    },
+    knowledge: {
+      ...prev?.knowledge,
+      ...patch.knowledge,
+    },
+  }
+}
+
+export const extractMessageMetadata = (payload?: Partial<ChatResponse> | null): MessageMetadata | undefined => {
+  if (!payload) return undefined
+
+  const writerMetadata = payload.writer_metadata
+  const knowledgeRetrieved = writerMetadata?.knowledge_retrieved as
+    | { entities_count?: number; relations_count?: number; memories_count?: number }
+    | undefined
+
+  const metadata: MessageMetadata = {
+    writerWarnings: Array.isArray(writerMetadata?.warnings)
+      ? writerMetadata?.warnings.filter((warning): warning is string => typeof warning === 'string' && warning.trim().length > 0)
+      : undefined,
+    workflow: payload.workflow_info
+      ? {
+          level: payload.workflow_info.level,
+          levelSlug: payload.workflow_info.level_slug,
+          stepsCompleted: payload.workflow_info.steps_completed,
+          totalSteps: payload.workflow_info.total_steps,
+        }
+      : undefined,
+    evaluationScore: payload.evaluation?.score,
+    evaluationFeedback: payload.evaluation?.feedback,
+    knowledge: knowledgeRetrieved
+      ? {
+          entitiesCount: knowledgeRetrieved.entities_count,
+          relationsCount: knowledgeRetrieved.relations_count,
+          memoriesCount: knowledgeRetrieved.memories_count,
+        }
+      : undefined,
+  }
+
+  if (!metadata.writerWarnings?.length) {
+    delete metadata.writerWarnings
+  }
+
+  if (!metadata.workflow || Object.values(metadata.workflow).every((value) => value == null)) {
+    delete metadata.workflow
+  }
+
+  if (!metadata.knowledge || Object.values(metadata.knowledge).every((value) => value == null)) {
+    delete metadata.knowledge
+  }
+
+  if (metadata.evaluationScore == null) {
+    delete metadata.evaluationScore
+  }
+
+  if (!metadata.evaluationFeedback) {
+    delete metadata.evaluationFeedback
+  }
+
+  return Object.keys(metadata).length > 0 ? metadata : undefined
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -100,7 +218,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ currentConversationId: id })
   },
 
-  addMessage: (role, content, skills, comparison) => {
+  addMessage: (role, content, skills, comparison, metadata) => {
     const { currentConversationId, conversationsById } = get()
     if (!currentConversationId) return
 
@@ -114,6 +232,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       timestamp: new Date(),
       skills,
       comparison,
+      metadata,
     }
 
     // Direct update to specific conversation - avoids re-rendering unrelated conversations
@@ -127,6 +246,35 @@ export const useAppStore = create<AppState>((set, get) => ({
           title: conversation.messages.length === 0 && role === 'user'
             ? content.slice(0, 20) + '...'
             : conversation.title,
+        },
+      },
+    })
+  },
+
+  patchMessageMetadata: (messageId, metadataPatch) => {
+    const { currentConversationId, conversationsById } = get()
+    if (!currentConversationId) return
+
+    const conversation = conversationsById[currentConversationId]
+    if (!conversation) return
+
+    const messageIndex = conversation.messages.findIndex((message) => message.id === messageId)
+    if (messageIndex < 0) return
+
+    const targetMessage = conversation.messages[messageIndex]
+    const nextMessages = [...conversation.messages]
+    nextMessages[messageIndex] = {
+      ...targetMessage,
+      metadata: mergeMessageMetadata(targetMessage.metadata, metadataPatch),
+    }
+
+    set({
+      conversationsById: {
+        ...conversationsById,
+        [currentConversationId]: {
+          ...conversation,
+          messages: nextMessages,
+          updatedAt: new Date(),
         },
       },
     })
@@ -193,3 +341,4 @@ export const useAppStore = create<AppState>((set, get) => ({
     useSettingsStore.getState().updateSettings({ allowLlmFallback: allow })
   },
 }))
+

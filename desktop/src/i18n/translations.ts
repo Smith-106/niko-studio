@@ -5,7 +5,14 @@ export interface Translations {
   appTitle: string
   serviceRunning: string
   serviceOffline: string
+  serviceDisconnected: string
+  serviceDegraded: string
+  serviceReconnecting: string
   contextUsage: string
+  headerReconnectAttempts: string
+  headerSessionHealth: string
+  headerLatencySummary: string
+  headerLastDecision: string
   checkpoint: string
   restore: string
   restoreSuccess: string
@@ -21,6 +28,15 @@ export interface Translations {
   skillPacks: string
   knowledgeBase: string
   settings: string
+  mcpStatus: string
+  evaluationPanel: string
+  sidebarLatestActivity: string
+  sidebarMessagesCount: string
+  sidebarWarningCount: string
+  sidebarHealthIdle: string
+  sidebarHealthHealthy: string
+  sidebarHealthDegraded: string
+  sidebarHealthError: string
 
   // Chat
   startWriting: string
@@ -77,6 +93,24 @@ export interface Translations {
   templateApplyAppend: string
   templateEmptyList: string
   templateNoMatch: string
+  messageDetailsTitle: string
+  messageDetailsToggleAria: string
+  messageDetailTerminal: string
+  messageDetailDecision: string
+  messageDetailRouteModel: string
+  messageDetailControlModel: string
+  messageDetailLatency: string
+  messageDetailFallbackReason: string
+  messageDetailFailureReason: string
+  messageDetailErrorType: string
+  messageDetailWorkflowLevel: string
+  messageDetailWorkflowSteps: string
+  messageDetailKnowledgeEntities: string
+  messageDetailKnowledgeRelations: string
+  messageDetailKnowledgeMemories: string
+  messageDetailEvaluationScore: string
+  messageDetailEvaluationFeedback: string
+  messageDetailWarnings: string
 
   // Settings
   settingsTitle: string
@@ -130,7 +164,14 @@ export const translations: Record<Language, Translations> = {
     appTitle: '小说创作助手',
     serviceRunning: '服务运行中',
     serviceOffline: '服务未启动',
+    serviceDisconnected: '服务已断开',
+    serviceDegraded: '服务降级',
+    serviceReconnecting: '连接恢复中',
     contextUsage: '上下文',
+    headerReconnectAttempts: '重连次数',
+    headerSessionHealth: '会话健康',
+    headerLatencySummary: '延迟',
+    headerLastDecision: '最近决策',
     checkpoint: '还原点',
     restore: '恢复',
     restoreSuccess: '恢复成功',
@@ -146,6 +187,15 @@ export const translations: Record<Language, Translations> = {
     skillPacks: '技能包',
     knowledgeBase: '知识库',
     settings: '设置',
+    mcpStatus: 'MCP 状态',
+    evaluationPanel: '评估面板',
+    sidebarLatestActivity: '最近活动',
+    sidebarMessagesCount: '{count} 条消息',
+    sidebarWarningCount: '{count} 条警告',
+    sidebarHealthIdle: '空闲',
+    sidebarHealthHealthy: '健康',
+    sidebarHealthDegraded: '降级',
+    sidebarHealthError: '异常',
 
     // Chat
     startWriting: '开始创作你的故事',
@@ -202,6 +252,24 @@ export const translations: Record<Language, Translations> = {
     templateApplyAppend: '追加到输入框',
     templateEmptyList: '暂无模板',
     templateNoMatch: '无匹配模板',
+    messageDetailsTitle: '详情',
+    messageDetailsToggleAria: '切换消息详情',
+    messageDetailTerminal: '终态',
+    messageDetailDecision: '质量门',
+    messageDetailRouteModel: '路由模型',
+    messageDetailControlModel: '对照模型',
+    messageDetailLatency: '延迟',
+    messageDetailFallbackReason: '降级原因',
+    messageDetailFailureReason: '失败原因',
+    messageDetailErrorType: '错误类型',
+    messageDetailWorkflowLevel: '工作流级别',
+    messageDetailWorkflowSteps: '执行步骤',
+    messageDetailKnowledgeEntities: '实体数',
+    messageDetailKnowledgeRelations: '关系数',
+    messageDetailKnowledgeMemories: '记忆数',
+    messageDetailEvaluationScore: '评估分',
+    messageDetailEvaluationFeedback: '评估反馈',
+    messageDetailWarnings: '警告',
 
     // Settings
     settingsTitle: '设置',
@@ -253,7 +321,14 @@ export const translations: Record<Language, Translations> = {
     appTitle: 'Novel Writing Assistant',
     serviceRunning: 'Service Running',
     serviceOffline: 'Service Offline',
+    serviceDisconnected: 'Service Disconnected',
+    serviceDegraded: 'Service Degraded',
+    serviceReconnecting: 'Reconnecting',
     contextUsage: 'Context',
+    headerReconnectAttempts: 'Reconnect Attempts',
+    headerSessionHealth: 'Session Health',
+    headerLatencySummary: 'Latency',
+    headerLastDecision: 'Last Decision',
     checkpoint: 'Checkpoint',
     restore: 'Restore',
     restoreSuccess: 'Restore successful',
@@ -269,6 +344,15 @@ export const translations: Record<Language, Translations> = {
     skillPacks: 'Skills',
     knowledgeBase: 'Knowledge Base',
     settings: 'Settings',
+    mcpStatus: 'MCP Status',
+    evaluationPanel: 'Evaluation Panel',
+    sidebarLatestActivity: 'Latest Activity',
+    sidebarMessagesCount: '{count} messages',
+    sidebarWarningCount: '{count} warnings',
+    sidebarHealthIdle: 'Idle',
+    sidebarHealthHealthy: 'Healthy',
+    sidebarHealthDegraded: 'Degraded',
+    sidebarHealthError: 'Error',
 
     // Chat
     startWriting: 'Start Writing Your Story',
@@ -325,6 +409,24 @@ export const translations: Record<Language, Translations> = {
     templateApplyAppend: 'Append Input',
     templateEmptyList: 'No templates yet',
     templateNoMatch: 'No matching templates',
+    messageDetailsTitle: 'Details',
+    messageDetailsToggleAria: 'Toggle message details',
+    messageDetailTerminal: 'Terminal',
+    messageDetailDecision: 'Quality Gate',
+    messageDetailRouteModel: 'Route Model',
+    messageDetailControlModel: 'Control Model',
+    messageDetailLatency: 'Latency',
+    messageDetailFallbackReason: 'Fallback Reason',
+    messageDetailFailureReason: 'Failure Reason',
+    messageDetailErrorType: 'Error Type',
+    messageDetailWorkflowLevel: 'Workflow Level',
+    messageDetailWorkflowSteps: 'Workflow Steps',
+    messageDetailKnowledgeEntities: 'Entities',
+    messageDetailKnowledgeRelations: 'Relations',
+    messageDetailKnowledgeMemories: 'Memories',
+    messageDetailEvaluationScore: 'Evaluation Score',
+    messageDetailEvaluationFeedback: 'Evaluation Feedback',
+    messageDetailWarnings: 'Warnings',
 
     // Settings
     settingsTitle: 'Settings',

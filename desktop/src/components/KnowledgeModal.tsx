@@ -147,26 +147,26 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="知识库">
       <div className="bg-white dark:bg-dark-surface rounded-2xl w-[800px] h-[600px] overflow-hidden shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text">📚 知识库</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-dark-border">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-dark-text">知识库</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+            className="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-teal-500 rounded"
             aria-label="关闭知识库"
           >
             ✕
           </button>
         </div>
 
-        <div className="flex border-b border-gray-200 dark:border-dark-border">
+        <div className="flex border-b border-slate-200 dark:border-dark-border">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`cursor-pointer flex items-center gap-2 px-6 py-3 border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                 activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text'
+                  ? 'border-teal-600 text-teal-600 dark:text-teal-400'
+                  : 'border-transparent text-slate-500 dark:text-dark-text-secondary hover:text-slate-700 dark:hover:text-dark-text'
               }`}
             >
               <tab.icon size={18} />
@@ -175,41 +175,41 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
           ))}
         </div>
 
-        <div className="p-4 border-b border-gray-200 dark:border-dark-border">
+        <div className="p-4 border-b border-slate-200 dark:border-dark-border">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
           </div>
           {activeTab === 'skills' && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 onClick={runSkillMatch}
-                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                className="cursor-pointer px-3 py-1.5 text-xs bg-slate-100 dark:bg-dark-border dark:text-dark-text rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 任务匹配
               </button>
               <button
                 onClick={loadSkillDetails}
                 disabled={!selectedSkillId}
-                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+                className="cursor-pointer px-3 py-1.5 text-xs bg-slate-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 技能详情
               </button>
               <button
                 onClick={loadSkillChain}
                 disabled={!selectedSkillId}
-                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+                className="cursor-pointer px-3 py-1.5 text-xs bg-slate-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 推荐链路
               </button>
               {selectedSkillId && (
-                <span className="text-xs text-blue-600 dark:text-blue-400">当前技能：{selectedSkillId}</span>
+                <span className="text-xs text-teal-600 dark:text-teal-400">当前技能：{selectedSkillId}</span>
               )}
             </div>
           )}
@@ -219,23 +219,23 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
           {activeTab === 'skills' && (
             <div className="mb-4 space-y-2">
               {skillDetails && (
-                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">技能详情</div>
-                  <pre className="text-xs text-gray-600 dark:text-dark-text-secondary whitespace-pre-wrap break-all">{skillDetails}</pre>
+                <div className="p-3 border border-slate-200 dark:border-dark-border rounded bg-slate-50 dark:bg-dark-bg">
+                  <div className="text-xs font-medium text-slate-700 dark:text-dark-text mb-1">技能详情</div>
+                  <pre className="text-xs text-slate-600 dark:text-dark-text-secondary whitespace-pre-wrap break-all">{skillDetails}</pre>
                 </div>
               )}
               {skillMatches.length > 0 && (
-                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">任务匹配</div>
-                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                <div className="p-3 border border-slate-200 dark:border-dark-border rounded bg-slate-50 dark:bg-dark-bg">
+                  <div className="text-xs font-medium text-slate-700 dark:text-dark-text mb-1">任务匹配</div>
+                  <div className="text-xs text-slate-600 dark:text-dark-text-secondary">
                     {skillMatches.map((item) => `${item.skill_id} (${item.relevance})`).join('，')}
                   </div>
                 </div>
               )}
               {skillChain.length > 0 && (
-                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">推荐链路</div>
-                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                <div className="p-3 border border-slate-200 dark:border-dark-border rounded bg-slate-50 dark:bg-dark-bg">
+                  <div className="text-xs font-medium text-slate-700 dark:text-dark-text mb-1">推荐链路</div>
+                  <div className="text-xs text-slate-600 dark:text-dark-text-secondary">
                     {skillChain
                       .slice()
                       .sort((a, b) => a.step - b.step)
@@ -247,12 +247,12 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             </div>
           )}
           {loading ? (
-            <div className="flex items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">加载中...</div>
+            <div className="flex items-center justify-center h-full text-slate-400 dark:text-dark-text-secondary">加载中...</div>
           ) : filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-dark-text-secondary">
               <Folder size={48} className="mb-2" />
               <p>暂无数据</p>
-              <button className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <button className="cursor-pointer mt-4 flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500">
                 <Plus size={16} />
                 添加{tabs.find((t) => t.id === activeTab)?.label}
               </button>
@@ -262,25 +262,35 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
               {filteredItems.map((item, index) => (
                 <div
                   key={index}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     if (activeTab === 'skills') {
                       setSelectedSkillId((item.id as string) || (item.name as string) || '')
                     }
                   }}
-                  className="p-4 border border-gray-200 dark:border-dark-border rounded-lg hover:border-blue-500 hover:shadow-md cursor-pointer transition-all"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      if (activeTab === 'skills') {
+                        setSelectedSkillId((item.id as string) || (item.name as string) || '')
+                      }
+                    }
+                  }}
+                  className="p-4 border border-slate-200 dark:border-dark-border rounded-lg hover:border-teal-500 hover:shadow-md cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                      {activeTab === 'characters' && <User size={20} className="text-blue-600 dark:text-blue-400" />}
-                      {activeTab === 'locations' && <MapPin size={20} className="text-blue-600 dark:text-blue-400" />}
-                      {activeTab === 'plots' && <FileText size={20} className="text-blue-600 dark:text-blue-400" />}
-                      {activeTab === 'skills' && <Sparkles size={20} className="text-blue-600 dark:text-blue-400" />}
+                    <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+                      {activeTab === 'characters' && <User size={20} className="text-teal-600 dark:text-teal-400" />}
+                      {activeTab === 'locations' && <MapPin size={20} className="text-teal-600 dark:text-teal-400" />}
+                      {activeTab === 'plots' && <FileText size={20} className="text-teal-600 dark:text-teal-400" />}
+                      {activeTab === 'skills' && <Sparkles size={20} className="text-teal-600 dark:text-teal-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-800 dark:text-dark-text truncate">
+                      <h3 className="font-medium text-slate-800 dark:text-dark-text truncate">
                         {(item.name as string) || (item.title as string) || (item.id as string) || `Item ${index + 1}`}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-dark-text-secondary mt-1 line-clamp-2">
+                      <p className="text-sm text-slate-500 dark:text-dark-text-secondary mt-1 line-clamp-2">
                         {(item.description as string) || (item.content as string) || '暂无描述'}
                       </p>
                     </div>

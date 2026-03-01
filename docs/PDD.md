@@ -399,7 +399,7 @@ MVP（Minimum Viable Product）指“最小可用产品”：
 | 15.1 端到端工作流 | READY | `.workflow/evidence/e2e/2026-02-26-run-log.md` + `.workflow/evidence/e2e/2026-02-26-artifacts.md` + `.workflow/evidence/e2e/2026-02-26-failures.md` | 工作流一次完整跑通并留档 |
 | 15.2 生成质量 | READY | `docs/quality/QUALITY_CRITERIA.md` + `.workflow/evidence/quality/2026-02-26-revision-case.md` | Critic/人工复核口径一致性检查 |
 | 15.3 任务完成率 | READY | `.workflow/evidence/weekly/2026-W08-plan.md` + `.workflow/evidence/weekly/2026-W08-review.md` + `.workflow/evidence/weekly/2026-W09-plan.md` + `.workflow/evidence/weekly/2026-W09-review.md` + `.workflow/evidence/weekly/2026-W08-W09-trend.md` | 周度统计与连续达标判定 |
-| 15.4 发布可用性 | BLOCKED | `release-check-summary.md` + `.workflow/evidence/release/release-readiness-artifact.json` + `.workflow/evidence/release/2026-02-26-release-path-check.md` | `scripts/release_check_summary.py` 汇总结论 |
+| 15.4 发布可用性 | READY | `release-check-summary.md` + `.workflow/evidence/release/release-readiness-artifact.json` + `.workflow/evidence/release/2026-02-26-release-path-check.md` | `scripts/release_check_summary.py` 汇总结论 |
 | 15.5 门禁可解释性 | READY | `docs/PDD.md`（代码/测试/证据锚点）+ `release-check-summary.md` + `.workflow/evidence/weekly/2026-W09-review.md` | 触发条目与阈值可追溯性检查 |
 
 执行顺序（最小闭环）：
@@ -408,13 +408,21 @@ MVP（Minimum Viable Product）指“最小可用产品”：
 3. 运行发布汇总，生成或更新 `release-check-summary.md`。
 4. 按 15.1-15.5 逐项勾选，任一项 `BLOCKED` 则整体 MVP 判定不得通过。
 
-当前执行结论（2026-02-26）：
+历史快照（2026-02-26）：
 - 15.1: READY（已满足）
 - 15.2: READY（已满足）
 - 15.3: READY（已满足）
 - 15.4: BLOCKED（`desktop_check` 为 P0 FAIL，发布结论 `NO_GO`）
 - 15.5: READY（已满足）
 - MVP 总结论：未通过（受 15.4 阻断）。
+
+当前实时结论（以最新门禁工件为准）：
+- 15.1: READY（已满足）
+- 15.2: READY（已满足）
+- 15.3: READY（已满足）
+- 15.4: READY（`release-check-summary.md` 当前 `Decision: GO`，P0 阻断项均 PASS）
+- 15.5: READY（已满足）
+- MVP 总结论：通过（当前发布就绪度为 GO）。
 
 
 ## 16. 验收证据映射（v1.6.2）
