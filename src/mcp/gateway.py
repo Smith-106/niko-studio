@@ -499,7 +499,11 @@ _PROHIBITED_DETECTION_KEYS = {
 
 _PROHIBITED_DETECTION_TERMS = (
     "ai detection",
+    "ai detector",
     "bypass detector",
+    "bypass ai detector",
+    "evade detector",
+    "avoid detection",
     "pass gptzero",
     "检测对抗",
     "反检测",
@@ -1532,7 +1536,8 @@ async def agent_write(
     scene_card: dict,
     skills: list = None,
     word_target: int = 2000,
-    allow_llm_fallback: bool = True
+    allow_llm_fallback: bool = True,
+    quality_goals: Optional[dict] = None,
 ) -> dict:
     """
     使用 Writer Agent 生成内容
@@ -1586,7 +1591,8 @@ async def agent_write(
 async def agent_revise(
     draft: str,
     feedback: dict,
-    allow_llm_fallback: bool = True
+    allow_llm_fallback: bool = True,
+    quality_goals: Optional[dict] = None,
 ) -> dict:
     """
     使用 Writer Agent 修订内容
@@ -2974,21 +2980,52 @@ async def agent_write_endpoint(request: Request):
         skills=body.get("skills"),
         word_target=body.get("word_target", 2000),
         allow_llm_fallback=body.get("allow_llm_fallback", True),
+        quality_goals=body.get("quality_goals") or body.get("qualityGoals"),
     )
     return JSONResponse(result)
 
 
 async def agent_revise_endpoint(request: Request):
-    body = await request.json()
-    blocked = _guard_detection_evasion_payload(body if isinstance(body, dict) else {})
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+
+    if not isinstance(body, dict):
+        return JSONResponse({"error": "Request body must be an object"}, status_code=400)
+
+    blocked = _guard_detection_evasion_payload(body)
     if blocked is not None:
         return blocked
-    result = await agent_revise(
-        draft=body.get("draft", ""),
-        feedback=body.get("feedback") or {},
-        allow_llm_fallback=body.get("allow_llm_fallback", True),
-    )
-    return JSONResponse(result)
+
+    feedback_value = body.get("feedback")
+    if feedback_value is None:
+        feedback_value = {}
+    elif not isinstance(feedback_value, dict):
+        return JSONResponse({"error": "feedback must be an object"}, status_code=400)
+
+    allow_llm_fallback = bool(body.get("allow_llm_fallback", body.get("allowLlmFallback", True)))
+
+    if not allow_llm_fallback and not _is_llm_available():
+        return JSONResponse({"error": "LLM unavailable and fallback disabled"}, status_code=503)
+
+    try:
+        result = await agent_revise(
+            draft=body.get("draft", ""),
+            feedback=feedback_value,
+            allow_llm_fallback=allow_llm_fallback,
+            quality_goals=body.get("quality_goals") or body.get("qualityGoals"),
+        )
+        return JSONResponse(result)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    except RuntimeError as exc:
+        message = str(exc)
+        status_code = 503 if "LLM" in message else 500
+        return JSONResponse({"error": message}, status_code=status_code)
+    except Exception as exc:
+        logger.error(f"Agent revise endpoint error: {exc}")
+        return JSONResponse({"error": str(exc), "status": "error", "endpoint": "/agent/revise"}, status_code=500)
 
 
 async def agent_context_endpoint(request: Request):

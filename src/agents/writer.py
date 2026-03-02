@@ -1111,7 +1111,26 @@ class WriterAgent:
         from langchain_core.output_parsers import StrOutputParser
 
         if not self.llm:
-            raise RuntimeError("LLM not configured for WriterAgent")
+            if not allow_llm_fallback:
+                raise RuntimeError("LLM not configured for WriterAgent")
+
+            fallback_content = draft
+            forbidden_found = [
+                word for word in self.FORBIDDEN_WORDS
+                if word in fallback_content
+            ]
+            return WriterOutput(
+                content=fallback_content,
+                wordcount=len(fallback_content),
+                characters_appeared=[],
+                locations=[],
+                foreshadows_planted=[],
+                foreshadows_harvested=[],
+                sensory_types_used=[],
+                forbidden_words_found=forbidden_found,
+                sections_needing_review=[],
+                metadata={"fallback_reason": "llm_unavailable"},
+            )
 
         # 解析反馈
         issues = feedback.get("issues", [])
@@ -1171,7 +1190,27 @@ class WriterAgent:
         except Exception as exc:
             if not allow_llm_fallback:
                 raise RuntimeError("LLM execution failed with fallback disabled") from exc
-            raise
+
+            fallback_content = draft
+            forbidden_found = [
+                word for word in self.FORBIDDEN_WORDS
+                if word in fallback_content
+            ]
+            return WriterOutput(
+                content=fallback_content,
+                wordcount=len(fallback_content),
+                characters_appeared=[],
+                locations=[],
+                foreshadows_planted=[],
+                foreshadows_harvested=[],
+                sensory_types_used=[],
+                forbidden_words_found=forbidden_found,
+                sections_needing_review=[],
+                metadata={
+                    "fallback_reason": "llm_revise_failed",
+                    "fallback_error": str(exc),
+                },
+            )
 
         # 构建输出
         wordcount = len(revised_content)
