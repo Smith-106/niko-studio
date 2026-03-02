@@ -44,6 +44,13 @@ export interface PromptTemplateLibrarySettings {
   variablePresets: Record<string, Record<string, string>>
 }
 
+export interface QualityGoalsSettings {
+  naturalness: number
+  readability: number
+  coherence: number
+  styleConsistency: number
+}
+
 interface Settings {
   // API
   apiBaseUrl: string
@@ -63,6 +70,7 @@ interface Settings {
   defaultWorkflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
   targetWordsPerChapter: number
   autoSkillMatch: boolean
+  qualityGoals: QualityGoalsSettings
 
   // Prompt templates
   promptTemplateLibrary?: PromptTemplateLibrarySettings
@@ -191,6 +199,13 @@ const defaultPromptTemplateLibrary = (): PromptTemplateLibrarySettings => ({
   variablePresets: {},
 })
 
+const defaultQualityGoals = (): QualityGoalsSettings => ({
+  naturalness: 80,
+  readability: 80,
+  coherence: 80,
+  styleConsistency: 80,
+})
+
 const defaultSettings: Settings = {
   apiBaseUrl: 'http://127.0.0.1:8000',
   apiKey: '',
@@ -203,6 +218,7 @@ const defaultSettings: Settings = {
   defaultWorkflowLevel: 'L3',
   targetWordsPerChapter: 2000,
   autoSkillMatch: true,
+  qualityGoals: defaultQualityGoals(),
   promptTemplateLibrary: defaultPromptTemplateLibrary(),
   theme: 'light',
   fontSize: 'medium',
@@ -319,6 +335,10 @@ const normalizeSettings = (settings: Partial<Settings>): Settings => {
     ...settings,
     llmProviders: settings.llmProviders ?? defaultSettings.llmProviders,
     promptTemplateLibrary: settings.promptTemplateLibrary,
+    qualityGoals: {
+      ...defaultQualityGoals(),
+      ...(settings.qualityGoals ?? {}),
+    },
   }
 
   return {

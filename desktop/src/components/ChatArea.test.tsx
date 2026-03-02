@@ -49,6 +49,12 @@ function resetStores(): void {
     selectedSkills: [],
     workflowLevel: 'L3',
     allowLlmFallback: true,
+    qualityGoals: {
+      naturalness: 80,
+      readability: 80,
+      coherence: 80,
+      styleConsistency: 80,
+    },
   })
 }
 
@@ -107,6 +113,45 @@ describe('ChatArea P0 flows', () => {
     expect(mockedChat).not.toHaveBeenCalled()
   })
 
+  it('uses updated quality goals in chat request payload', async () => {
+    mockedChatStream.mockResolvedValue()
+    mockedChat.mockResolvedValue({
+      success: true,
+      data: {
+        content: 'ok',
+        skills_used: [],
+      },
+    })
+
+    useAppStore.setState({
+      qualityGoals: {
+        naturalness: 92,
+        readability: 74,
+        coherence: 88,
+        styleConsistency: 67,
+      },
+    })
+
+    render(<ChatArea />)
+
+    await userEvent.click(screen.getByRole('button', { name: '模型对比' }))
+    const input = screen.getByRole('textbox')
+    await userEvent.type(input, '质量目标回归{enter}')
+
+    await waitFor(() => {
+      expect(mockedChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          qualityGoals: {
+            naturalness: 92,
+            readability: 74,
+            coherence: 88,
+            style_consistency: 67,
+          },
+        })
+      )
+    })
+  })
+
   it('sends comparison request and renders dual-model response when comparison is enabled', async () => {
     mockedChatStream.mockResolvedValue()
     mockedChat.mockResolvedValue({
@@ -138,6 +183,12 @@ describe('ChatArea P0 flows', () => {
             enabled: true,
             controlModel: 'gpt-4-turbo',
           },
+          qualityGoals: expect.objectContaining({
+            naturalness: 80,
+            readability: 80,
+            coherence: 80,
+            style_consistency: 80,
+          }),
         })
       )
     })
@@ -340,6 +391,12 @@ describe('ChatArea P0 flows', () => {
               content: expect.stringContaining('主题「冒险」'),
             }),
           ],
+          qualityGoals: expect.objectContaining({
+            naturalness: 80,
+            readability: 80,
+            coherence: 80,
+            style_consistency: 80,
+          }),
         })
       )
     })

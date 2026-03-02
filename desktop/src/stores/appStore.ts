@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { checkBackendHealth, listSkills } from '@/api/client'
-import { useSettingsStore } from './settingsStore'
+import { useSettingsStore, type QualityGoalsSettings } from './settingsStore'
 
 export interface MessageComparisonItem {
   model: string
@@ -59,6 +59,10 @@ interface AppState {
   // LLM fallback
   allowLlmFallback: boolean
   setAllowLlmFallback: (allow: boolean) => void
+
+  // Quality goals
+  qualityGoals: QualityGoalsSettings
+  setQualityGoals: (qualityGoals: QualityGoalsSettings) => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -191,5 +195,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAllowLlmFallback: (allow) => {
     set({ allowLlmFallback: allow })
     useSettingsStore.getState().updateSettings({ allowLlmFallback: allow })
+  },
+
+  // Quality goals
+  qualityGoals: useSettingsStore.getState().settings.qualityGoals,
+  setQualityGoals: (qualityGoals) => {
+    set({ qualityGoals })
+    useSettingsStore.getState().updateSettings({ qualityGoals })
   },
 }))

@@ -103,6 +103,11 @@ export interface Translations {
   workflowL5: string
   targetWords: string
   autoSkillMatch: string
+  qualityGoalsTitle: string
+  qualityGoalNaturalness: string
+  qualityGoalReadability: string
+  qualityGoalCoherence: string
+  qualityGoalStyleConsistency: string
   uiSettings: string
   theme: string
   themeLight: string
@@ -228,6 +233,11 @@ export const translations: Record<Language, Translations> = {
     workflowL5: 'L5 - 编排 (全书设计)',
     targetWords: '每章目标字数',
     autoSkillMatch: '自动匹配技能包',
+    qualityGoalsTitle: '质量增强目标',
+    qualityGoalNaturalness: '自然度',
+    qualityGoalReadability: '可读性',
+    qualityGoalCoherence: '连贯性',
+    qualityGoalStyleConsistency: '风格一致性',
     uiSettings: '界面设置',
     theme: '主题',
     themeLight: '浅色',
@@ -351,6 +361,11 @@ export const translations: Record<Language, Translations> = {
     workflowL5: 'L5 - Coordinator (Book Design)',
     targetWords: 'Target Words per Chapter',
     autoSkillMatch: 'Auto Match Skills',
+    qualityGoalsTitle: 'Quality Enhancement Goals',
+    qualityGoalNaturalness: 'Naturalness',
+    qualityGoalReadability: 'Readability',
+    qualityGoalCoherence: 'Coherence',
+    qualityGoalStyleConsistency: 'Style Consistency',
     uiSettings: 'UI Settings',
     theme: 'Theme',
     themeLight: 'Light',
