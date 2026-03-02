@@ -5,6 +5,8 @@ import { SettingsModal } from './components/SettingsModal'
 import { KnowledgeModal } from './components/KnowledgeModal'
 import { EvaluationPanel } from './components/EvaluationPanel'
 import { McpStatusPanel } from './components/McpStatusPanel'
+import { WritingHelperPanel } from './components/WritingHelperPanel'
+import { type WritingHelperMode } from './api/client'
 import { deriveGatewayRuntimeState, GatewayRuntimeView, getGatewayHealth, listCheckpoints, restoreCheckpoint } from './api/client'
 import { useAppStore } from './stores/appStore'
 import { useMessages } from './stores/selectors'
@@ -22,6 +24,61 @@ interface ContextUsage {
   usedK: number
   totalK: number
   percent: number
+}
+
+interface WritingHelperDraftState {
+  content: string
+  mode: WritingHelperMode
+  maxSentences: number
+  maxItems: number
+}
+
+const WRITING_HELPER_DRAFT_STORAGE_KEY = 'niko.writing-helper-draft-v1'
+
+const DEFAULT_WRITING_HELPER_DRAFT: WritingHelperDraftState = {
+  content: '',
+  mode: 'polish',
+  maxSentences: 3,
+  maxItems: 6,
+}
+
+const toPositiveInteger = (value: unknown, fallback: number): number => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  const normalized = Math.floor(parsed)
+  return normalized > 0 ? normalized : fallback
+}
+
+const toWritingHelperMode = (value: unknown, fallback: WritingHelperMode): WritingHelperMode => {
+  if (value === 'polish' || value === 'summarize' || value === 'outline') {
+    return value
+  }
+  return fallback
+}
+
+const loadWritingHelperDraft = (): WritingHelperDraftState => {
+  try {
+    const raw = localStorage.getItem(WRITING_HELPER_DRAFT_STORAGE_KEY)
+    if (!raw) return DEFAULT_WRITING_HELPER_DRAFT
+
+    const parsed = JSON.parse(raw) as Partial<WritingHelperDraftState>
+    return {
+      content: typeof parsed.content === 'string' ? parsed.content : DEFAULT_WRITING_HELPER_DRAFT.content,
+      mode: toWritingHelperMode(parsed.mode, DEFAULT_WRITING_HELPER_DRAFT.mode),
+      maxSentences: toPositiveInteger(parsed.maxSentences, DEFAULT_WRITING_HELPER_DRAFT.maxSentences),
+      maxItems: toPositiveInteger(parsed.maxItems, DEFAULT_WRITING_HELPER_DRAFT.maxItems),
+    }
+  } catch {
+    return DEFAULT_WRITING_HELPER_DRAFT
+  }
+}
+
+const clearWritingHelperDraftStorage = (): void => {
+  try {
+    localStorage.removeItem(WRITING_HELPER_DRAFT_STORAGE_KEY)
+  } catch {
+    // ignore localStorage clear failures
+  }
 }
 
 const APP_CONNECTION_LABEL: Record<string, string> = {
@@ -46,6 +103,9 @@ function App() {
   const [knowledgeOpen, setKnowledgeOpen] = useState(false)
   const [evaluationOpen, setEvaluationOpen] = useState(false)
   const [mcpStatusOpen, setMcpStatusOpen] = useState(false)
+  const [writingHelperOpen, setWritingHelperOpen] = useState(false)
+  const [writingHelperDraft, setWritingHelperDraft] = useState<WritingHelperDraftState>(() => loadWritingHelperDraft())
+  const [resumeWritingHelperAfterSettings, setResumeWritingHelperAfterSettings] = useState(false)
   const [checkpointMenuOpen, setCheckpointMenuOpen] = useState(false)
   const [checkpointsLoading, setCheckpointsLoading] = useState(false)
   const [checkpoints, setCheckpoints] = useState<CheckpointItem[]>([])
@@ -120,6 +180,14 @@ function App() {
     return () => clearTimeout(timer)
   }, [restoreStatus])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(WRITING_HELPER_DRAFT_STORAGE_KEY, JSON.stringify(writingHelperDraft))
+    } catch {
+      // ignore localStorage write failures
+    }
+  }, [writingHelperDraft])
+
   const refreshCheckpoints = async () => {
     setCheckpointsLoading(true)
     try {
@@ -160,6 +228,11 @@ function App() {
     }
   }
 
+  const handleClearWritingHelperDraft = () => {
+    clearWritingHelperDraftStorage()
+    setWritingHelperDraft(DEFAULT_WRITING_HELPER_DRAFT)
+  }
+
   const headerConnectionState = runtimeView?.connectionState ?? (backendStatus ? 'connected' : 'disconnected')
   const headerDotClass = APP_CONNECTION_DOT[headerConnectionState] ?? APP_CONNECTION_DOT.disconnected
   const headerConnectionText = APP_CONNECTION_LABEL[headerConnectionState] ?? (backendStatus ? t.serviceRunning : t.serviceOffline)
@@ -174,6 +247,7 @@ function App() {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenEvaluation={() => setEvaluationOpen(true)}
         onOpenMcpStatus={() => setMcpStatusOpen(true)}
+        onOpenWritingHelper={() => setWritingHelperOpen(true)}
       />
 
       {/* Main Content */}
@@ -247,7 +321,16 @@ function App() {
         </div>
       </main>
 
-      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => {
+          setSettingsOpen(false)
+          if (resumeWritingHelperAfterSettings) {
+            setWritingHelperOpen(true)
+            setResumeWritingHelperAfterSettings(false)
+          }
+        }}
+      />
       <KnowledgeModal isOpen={knowledgeOpen} onClose={() => setKnowledgeOpen(false)} />
       {evaluationOpen && (
         <EvaluationPanel
@@ -256,6 +339,19 @@ function App() {
         />
       )}
       {mcpStatusOpen && <McpStatusPanel onClose={() => setMcpStatusOpen(false)} />}
+      {writingHelperOpen && (
+        <WritingHelperPanel
+          onClose={() => setWritingHelperOpen(false)}
+          onOpenSettings={() => {
+            setResumeWritingHelperAfterSettings(true)
+            setWritingHelperOpen(false)
+            setSettingsOpen(true)
+          }}
+          draftState={writingHelperDraft}
+          onDraftStateChange={setWritingHelperDraft}
+          onClearDraft={handleClearWritingHelperDraft}
+        />
+      )}
     </div>
   )
 }

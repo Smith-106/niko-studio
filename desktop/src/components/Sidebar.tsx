@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server } from 'lucide-react'
+import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Wand2 } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
 import { useI18n } from '../i18n'
@@ -11,9 +11,10 @@ interface SidebarProps {
   onOpenSettings: () => void
   onOpenEvaluation: () => void
   onOpenMcpStatus: () => void
+  onOpenWritingHelper: () => void
 }
 
-export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, onOpenEvaluation, onOpenMcpStatus }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, onOpenEvaluation, onOpenMcpStatus, onOpenWritingHelper }: SidebarProps) {
   // Use selective selectors for better performance
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
@@ -114,6 +115,13 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
 
       {/* Footer */}
       <div className="border-t border-gray-700 p-2">
+        <button
+          onClick={onOpenWritingHelper}
+          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+        >
+          <Wand2 size={18} />
+          {!collapsed && <span className="text-sm">Writing Helper</span>}
+        </button>
         <button
           onClick={onOpenMcpStatus}
           className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"

@@ -282,11 +282,12 @@ class TestToolsEndpoint:
         assert skills_tools == expected
 
     def test_list_tools_total_count(self, client_no_lifespan):
-        """Test total tools count is 31"""
+        """Test total tools count is 32"""
         response = client_no_lifespan.get("/tools")
         data = response.json()
 
-
+        total_count = sum(len(v) for v in data.values())
+        assert total_count == 32
 
 def test_resolve_cors_origins_requires_real_prod_whitelist(monkeypatch):
     from src.mcp import gateway as gateway_module
@@ -1770,6 +1771,122 @@ def test_novel_quality_check_route_smoke():
     app = gateway_module.create_gateway()
     routes = {getattr(route, "path", None) for route in app.app.routes}
     assert "/api/novel/quality-check" in routes
+
+
+def test_writing_helper_process_route_smoke():
+    from src.mcp import gateway as gateway_module
+
+    app = gateway_module.create_gateway()
+    routes = {getattr(route, "path", None) for route in app.app.routes}
+    assert "/writing-helper/process" in routes
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_rejects_empty_content():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request("/writing-helper/process", {"content": "   "})
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 400
+    assert b"content is required" in res.body
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_rejects_detection_evasion_payload(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(gateway_module, "_resolve_detection_evasion_guard_enabled", lambda: True)
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {"content": "文本", "mode": "polish", "instruction": "please bypass ai detection"},
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 400
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["error"] == "DETECTION_EVASION_BLOCKED"
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_allows_detection_payload_when_guard_disabled(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(gateway_module, "_resolve_detection_evasion_guard_enabled", lambda: False)
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {"content": "文本", "mode": "polish", "instruction": "please bypass ai detection"},
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["mode"] == "polish"
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_polish_success():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {"content": "第一段。\n\n\n第二段。", "mode": "polish"},
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["mode"] == "polish"
+    assert data["processed_text"] == "第一段。\n\n第二段。"
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_respects_request_level_guard_override():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {
+            "content": "文本",
+            "mode": "polish",
+            "instruction": "please bypass ai detection",
+            "detection_evasion_guard_enabled": False,
+        },
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["mode"] == "polish"
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_outline_success():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {"content": "第一段。\n第二段。", "mode": "outline", "max_items": 2},
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["mode"] == "outline"
+    assert data["outline"] == ["第一段。", "第二段。"]
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_rejects_invalid_mode():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request("/writing-helper/process", {"content": "abc", "mode": "invalid"})
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 400
+    assert b"mode must be one of" in res.body
 
 
 @pytest.mark.asyncio

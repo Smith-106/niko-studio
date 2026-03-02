@@ -48,6 +48,24 @@ export interface GatewayMetrics {
   latency_ms_max: number
 }
 
+export type WritingHelperMode = 'polish' | 'summarize' | 'outline'
+
+export interface WritingHelperRequest {
+  content: string
+  mode?: WritingHelperMode
+  max_sentences?: number
+  max_items?: number
+  instruction?: string
+  detection_evasion_guard_enabled?: boolean
+}
+
+export interface WritingHelperResponse {
+  mode: WritingHelperMode
+  processed_text?: string
+  outline?: string[]
+  stats?: Record<string, number>
+}
+
 export type GatewayTools = Record<string, string[]>
 
 export type GatewayConnectionState = 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
@@ -388,6 +406,12 @@ export async function getGatewayMetrics(): Promise<ApiResponse<{ status: string;
 
 export async function listGatewayTools(): Promise<ApiResponse<GatewayTools>> {
   return callApi('/tools', 'GET')
+}
+
+export async function processWritingHelper(
+  payload: WritingHelperRequest
+): Promise<ApiResponse<WritingHelperResponse>> {
+  return callApi('/writing-helper/process', 'POST', payload as Record<string, unknown>)
 }
 
 export async function listGatewayServiceConfigs(): Promise<ApiResponse<{ services: GatewayServiceConfig[] }>> {

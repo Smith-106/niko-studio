@@ -458,6 +458,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   />
                   <span className="text-gray-600 dark:text-dark-text-secondary">多模型并行</span>
                 </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={localSettings.detectionEvasionGuardEnabled}
+                    onChange={(e) => setLocalSettings({ ...localSettings, detectionEvasionGuardEnabled: e.target.checked })}
+                    className="rounded"
+                  />
+                  <span className="text-gray-600 dark:text-dark-text-secondary">检测规避拦截</span>
+                </label>
               </div>
             </div>
 

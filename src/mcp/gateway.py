@@ -456,6 +456,7 @@ from src.workflow.levels.level5_coordinator import Level5Coordinator
 from src.workflow.levels.types import ANALYSIS_SCHEMA_VERSION, LEGACY_DECISION_MAP, ensure_contract_payload
 from src.workflow.novel_quality import evaluate_novel_quality
 from src.services.document_loader import DocumentLoader
+from src.services.writing_helper import process_writing_helper
 
 
 def _with_contract(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -529,7 +530,20 @@ def _contains_detection_evasion_intent(value: Any) -> bool:
     return False
 
 
-def _guard_detection_evasion_payload(payload: Dict[str, Any]) -> Optional[JSONResponse]:
+def _resolve_detection_evasion_guard_enabled() -> bool:
+    raw = os.getenv("NIKO_DETECTION_EVASION_GUARD")
+    if raw is not None:
+        return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+    return bool(get_config_value("gateway.detection_evasion_guard", True))
+
+
+def _guard_detection_evasion_payload(
+    payload: Dict[str, Any],
+    enabled_override: Optional[bool] = None,
+) -> Optional[JSONResponse]:
+    guard_enabled = _resolve_detection_evasion_guard_enabled() if enabled_override is None else bool(enabled_override)
+    if not guard_enabled:
+        return None
     if _contains_detection_evasion_intent(payload):
         return JSONResponse(
             {
@@ -2496,6 +2510,9 @@ async def list_tools(request):
         ],
         "skills": [
             "skills_list", "skills_match", "skills_load", "skills_get_chain"
+        ],
+        "writing_helper": [
+            "process_writing_helper"
         ]
     }
     return JSONResponse(tools)
@@ -2865,6 +2882,44 @@ async def novel_quality_check_endpoint(request: Request):
     return JSONResponse(normalized_result)
 
 
+async def writing_helper_process_endpoint(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    if not isinstance(body, dict):
+        body = {}
+
+    content = body.get("content", "")
+    if not isinstance(content, str) or not content.strip():
+        return JSONResponse({"error": "content is required"}, status_code=400)
+
+    guard_enabled_override = body.get("detection_evasion_guard_enabled")
+    if not isinstance(guard_enabled_override, bool):
+        guard_enabled_override = None
+
+    guard_response = _guard_detection_evasion_payload(body, enabled_override=guard_enabled_override)
+    if guard_response is not None:
+        return guard_response
+
+    mode = body.get("mode", "polish")
+    max_sentences = body.get("max_sentences", 3)
+    max_items = body.get("max_items", 6)
+
+    try:
+        result = process_writing_helper(
+            content=content,
+            mode=mode,
+            max_sentences=int(max_sentences),
+            max_items=int(max_items),
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    return JSONResponse(result)
+
+
 async def workflow_route_endpoint(request: Request):
     body = await request.json()
     result = await workflow_route(task=body.get("task", ""))
@@ -3133,6 +3188,7 @@ def create_gateway() -> Starlette:
             Route("/critic/evaluate", critic_evaluate_endpoint, methods=["POST"]),
             Route("/critic/suggestions", critic_suggestions_endpoint, methods=["POST"]),
             Route("/api/novel/quality-check", novel_quality_check_endpoint, methods=["POST"]),
+            Route("/writing-helper/process", writing_helper_process_endpoint, methods=["POST"]),
             Route("/workflow/route", workflow_route_endpoint, methods=["POST"]),
             Route("/workflow/plan", workflow_plan_endpoint, methods=["POST"]),
             Route("/workflow/execute", workflow_execute_endpoint, methods=["POST"]),

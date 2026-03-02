@@ -28,6 +28,7 @@ from src.services.knowledge_layer import AgentKnowledgeLayer
 from src.services.indexing_service import IndexingService
 from src.services.distill_service import DistillService
 from src.services.document_loader import DocumentLoader
+from src.services.writing_helper import process_writing_helper
 
 # File sync 依赖 watchdog，保持可选导出，避免导入阶段硬失败
 try:
@@ -85,6 +86,7 @@ __all__ = [
     "IndexingService",
     "DistillService",
     "DocumentLoader",
+    "process_writing_helper",
     # File sync
     "FileChangeEvent",
     "FileWatcher",

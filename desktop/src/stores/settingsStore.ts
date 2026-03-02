@@ -113,6 +113,7 @@ interface Settings {
   defaultWorkflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
   targetWordsPerChapter: number
   autoSkillMatch: boolean
+  detectionEvasionGuardEnabled: boolean
   qualityGoals: QualityGoalsSettings
 
   // Prompt templates
@@ -268,6 +269,7 @@ const defaultSettings: Settings = {
   defaultWorkflowLevel: 'L3',
   targetWordsPerChapter: 2000,
   autoSkillMatch: true,
+  detectionEvasionGuardEnabled: true,
   qualityGoals: defaultQualityGoals(),
   promptTemplateLibrary: defaultPromptTemplateLibrary(),
   theme: 'light',

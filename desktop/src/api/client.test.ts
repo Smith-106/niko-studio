@@ -9,6 +9,7 @@ import {
   listGatewayServiceConfigs,
   mergeRecommendationBatchResults,
   probeGatewayServiceHealth,
+  processWritingHelper,
   setGatewayServiceEnabled,
   updateGatewayServiceConfig,
   type ChatRequest,
@@ -296,6 +297,37 @@ describe('gateway service config APIs', () => {
       expect.stringContaining('/mcp/services/search2/health'),
       expect.objectContaining({ method: 'POST' })
     )
+  })
+})
+
+describe('writing helper API', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('posts payload to writing-helper endpoint', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ mode: 'outline', outline: ['第一段。'] }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await processWritingHelper({
+      content: '第一段。',
+      mode: 'outline',
+      max_items: 1,
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/writing-helper/process'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ content: '第一段。', mode: 'outline', max_items: 1 }),
+      })
+    )
+    expect(response.success).toBe(true)
+    expect(response.data).toEqual({ mode: 'outline', outline: ['第一段。'] })
   })
 })
 
