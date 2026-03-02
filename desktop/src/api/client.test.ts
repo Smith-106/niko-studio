@@ -317,6 +317,12 @@ describe('chat request payload', () => {
       workflowLevel: 'L3',
       skills: [],
       allowLlmFallback: true,
+      qualityGoals: {
+        naturalness: 91,
+        readability: 82,
+        coherence: 78,
+        style_consistency: 84,
+      },
       comparison: {
         enabled: true,
         controlModel: 'gpt-4-turbo',
@@ -332,6 +338,12 @@ describe('chat request payload', () => {
           workflowLevel: 'L3',
           skills: [],
           allowLlmFallback: true,
+          qualityGoals: {
+            naturalness: 91,
+            readability: 82,
+            coherence: 78,
+            style_consistency: 84,
+          },
           comparison: {
             enabled: true,
             controlModel: 'gpt-4-turbo',
