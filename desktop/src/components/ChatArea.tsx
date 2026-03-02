@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { Send, Paperclip, Mic } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
-import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback } from '../stores/selectors'
+import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
 import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, uploadMemoryFile } from '../api/client'
 import type { ChatRequest, StreamDonePayload } from '../api/client'
 import { MessageBubble } from './MessageBubble'
@@ -60,6 +60,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const workflowLevel = useWorkflowLevel()
   const selectedSkills = useSelectedSkills()
   const allowLlmFallback = useAllowLlmFallback()
+  const qualityGoals = useQualityGoals()
   const { settings } = useSettingsStore()
   const {
     toggleTemplateFavorite,
@@ -316,6 +317,11 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           instruction: promptText || t.inlineReviseDefaultInstruction,
           workflow_level: workflowLevel,
           skills: selectedSkills,
+        }, {
+          naturalness: qualityGoals.naturalness,
+          readability: qualityGoals.readability,
+          coherence: qualityGoals.coherence,
+          style_consistency: qualityGoals.styleConsistency,
         })
         if (reviseResult.success && reviseResult.data?.content) {
           setStreamingContent(reviseResult.data.content)
@@ -337,7 +343,14 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             selected_text: selectedText,
             selection_meta: selectionMeta,
           },
-          selectedSkills
+          selectedSkills,
+          undefined,
+          {
+            naturalness: qualityGoals.naturalness,
+            readability: qualityGoals.readability,
+            coherence: qualityGoals.coherence,
+            style_consistency: qualityGoals.styleConsistency,
+          }
         )
 
         if (writeResult.success && writeResult.data?.content) {
@@ -466,6 +479,12 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         workflowLevel,
         skills: selectedSkills,
         allowLlmFallback,
+        qualityGoals: {
+          naturalness: qualityGoals.naturalness,
+          readability: qualityGoals.readability,
+          coherence: qualityGoals.coherence,
+          style_consistency: qualityGoals.styleConsistency,
+        },
       }
 
       if (enableModelComparison && comparisonModel) {
@@ -488,7 +507,14 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
                 workflow_level: routeResult.data.workflow_level,
                 task_assignments: routeResult.data.task_assignments,
               },
-              selectedSkills
+              selectedSkills,
+              undefined,
+              {
+                naturalness: qualityGoals.naturalness,
+                readability: qualityGoals.readability,
+                coherence: qualityGoals.coherence,
+                style_consistency: qualityGoals.styleConsistency,
+              }
             )
             if (writeResult.success && writeResult.data?.content) {
               addMessage('assistant', writeResult.data.content, selectedSkills)
@@ -506,6 +532,12 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               instruction: userMessage,
               workflow_level: workflowLevel,
               skills: selectedSkills,
+            },
+            {
+              naturalness: qualityGoals.naturalness,
+              readability: qualityGoals.readability,
+              coherence: qualityGoals.coherence,
+              style_consistency: qualityGoals.styleConsistency,
             }
           )
           if (reviseResult.success && reviseResult.data?.content) {

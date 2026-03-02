@@ -12,7 +12,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings, updateProvider, resetSettings } = useSettingsStore()
-  const { setAllowLlmFallback, checkBackend } = useAppStore()
+  const { setAllowLlmFallback, setQualityGoals, checkBackend } = useAppStore()
   const [localSettings, setLocalSettings] = useState(settings)
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({})
   const [testingProvider, setTestingProvider] = useState<string | null>(null)
@@ -36,6 +36,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleSave = async () => {
     updateSettings(localSettings)
     setAllowLlmFallback(localSettings.allowLlmFallback)
+    setQualityGoals(localSettings.qualityGoals)
     // 同步更新各个 provider
     localSettings.llmProviders.forEach((provider) => {
       updateProvider(provider.id, provider)
@@ -49,6 +50,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const nextSettings = useSettingsStore.getState().settings
     setLocalSettings(nextSettings)
     setAllowLlmFallback(nextSettings.allowLlmFallback)
+    setQualityGoals(nextSettings.qualityGoals)
   }
 
   const toggleShowApiKey = (providerId: string) => {
@@ -612,10 +614,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* 模型参数 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">模型参数</h3>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.modelParams}</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Temperature (创造性)</label>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.temperature}</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="range"
@@ -654,13 +656,90 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">每章目标字数</label>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.targetWords}</label>
                 <input
                   type="number"
                   value={localSettings.targetWordsPerChapter}
                   onChange={(e) => setLocalSettings({ ...localSettings, targetWordsPerChapter: parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.qualityGoalsTitle}</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalNaturalness}</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={localSettings.qualityGoals.naturalness}
+                      onChange={(e) => setLocalSettings({
+                        ...localSettings,
+                        qualityGoals: {
+                          ...localSettings.qualityGoals,
+                          naturalness: parseInt(e.target.value),
+                        },
+                      })}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalReadability}</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={localSettings.qualityGoals.readability}
+                      onChange={(e) => setLocalSettings({
+                        ...localSettings,
+                        qualityGoals: {
+                          ...localSettings.qualityGoals,
+                          readability: parseInt(e.target.value),
+                        },
+                      })}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalCoherence}</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={localSettings.qualityGoals.coherence}
+                      onChange={(e) => setLocalSettings({
+                        ...localSettings,
+                        qualityGoals: {
+                          ...localSettings.qualityGoals,
+                          coherence: parseInt(e.target.value),
+                        },
+                      })}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalStyleConsistency}</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={localSettings.qualityGoals.styleConsistency}
+                      onChange={(e) => setLocalSettings({
+                        ...localSettings,
+                        qualityGoals: {
+                          ...localSettings.qualityGoals,
+                          styleConsistency: parseInt(e.target.value),
+                        },
+                      })}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -671,7 +750,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   className="rounded"
                 />
                 <label htmlFor="autoSkillMatch" className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                  自动匹配技能包
+                  {t.autoSkillMatch}
                 </label>
               </div>
             </div>

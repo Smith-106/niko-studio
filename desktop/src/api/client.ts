@@ -435,11 +435,19 @@ export interface ChatModelComparisonRequest {
   primaryModel?: string
 }
 
+export interface QualityGoalsPayload {
+  naturalness?: number
+  readability?: number
+  coherence?: number
+  style_consistency?: number
+}
+
 export interface ChatRequest {
   messages: ChatMessage[]
   workflowLevel: WorkflowLevel
   skills: string[]
   allowLlmFallback: boolean
+  qualityGoals?: QualityGoalsPayload
   context?: {
     projectId?: string
     chapterId?: string
@@ -1002,20 +1010,23 @@ export async function agentRoute(task: string): Promise<ApiResponse<AgentRouteRe
 export async function agentWrite(
   sceneCard: Record<string, unknown>,
   skills?: string[],
-  wordTarget?: number
+  wordTarget?: number,
+  qualityGoals?: QualityGoalsPayload
 ): Promise<ApiResponse<{ content: string; wordcount: number }>> {
   return callApi('/agent/write', 'POST', {
     scene_card: sceneCard,
     skills,
     word_target: wordTarget,
+    quality_goals: qualityGoals,
   })
 }
 
 export async function agentRevise(
   draft: string,
-  feedback: Record<string, unknown>
+  feedback: Record<string, unknown>,
+  qualityGoals?: QualityGoalsPayload
 ): Promise<ApiResponse<{ content: string }>> {
-  return callApi('/agent/revise', 'POST', { draft, feedback })
+  return callApi('/agent/revise', 'POST', { draft, feedback, quality_goals: qualityGoals })
 }
 
 export async function agentGetContext(
@@ -1139,12 +1150,14 @@ export interface EvaluationResult {
 export async function evaluateContent(
   content: string,
   sceneCard?: Record<string, unknown>,
-  dimensions?: string[]
+  dimensions?: string[],
+  qualityGoals?: QualityGoalsPayload
 ): Promise<ApiResponse<EvaluationResult>> {
   return callApi('/critic/evaluate', 'POST', {
     content,
     scene_card: sceneCard,
     dimensions,
+    quality_goals: qualityGoals,
   })
 }
 

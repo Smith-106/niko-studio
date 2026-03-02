@@ -12,6 +12,7 @@ import {
   type RecommendationExecutionResult,
 } from '../api/client'
 import { useAppStore } from '../stores/appStore'
+import { useSettingsStore } from '../stores/settingsStore'
 
 interface EvaluationPanelProps {
   content: string
@@ -140,6 +141,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const [suggestionStates, setSuggestionStates] = useState<Record<string, SuggestionActionState>>({})
   const [batchState, setBatchState] = useState<BatchActionState>(defaultBatchState())
   const { addMessage } = useAppStore()
+  const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
 
   useEffect(() => {
     runEvaluation()
@@ -167,7 +169,12 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const runEvaluation = async () => {
     setLoading(true)
     try {
-      const response = await evaluateContent(content)
+      const response = await evaluateContent(content, undefined, undefined, {
+        naturalness: qualityGoals.naturalness,
+        readability: qualityGoals.readability,
+        coherence: qualityGoals.coherence,
+        style_consistency: qualityGoals.styleConsistency,
+      })
       if (response.success && response.data) {
         const data = response.data
         const suggestions = normalizeSuggestionPayloads(data.suggestions)

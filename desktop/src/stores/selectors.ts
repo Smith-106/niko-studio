@@ -59,6 +59,13 @@ export function useAllowLlmFallback(): boolean {
 }
 
 /**
+ * Selector for quality goals
+ */
+export function useQualityGoals() {
+  return useAppStore((state) => state.qualityGoals)
+}
+
+/**
  * Selector for selected skills
  * Uses shallow comparison for array
  */

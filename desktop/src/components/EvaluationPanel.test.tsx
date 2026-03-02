@@ -84,6 +84,17 @@ describe('EvaluationPanel actions', () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText('改进建议')
+    expect(mockedEvaluateContent).toHaveBeenCalledWith(
+      '测试内容',
+      undefined,
+      undefined,
+      expect.objectContaining({
+        naturalness: 80,
+        readability: 80,
+        coherence: 80,
+        style_consistency: 80,
+      })
+    )
 
     const applyButtons = await screen.findAllByRole('button', { name: 'apply' })
     await userEvent.click(applyButtons[0])
