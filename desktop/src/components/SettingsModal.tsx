@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
 import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools } from '../api/client'
-import { useSettingsStore, LLMProvider } from '../stores/settingsStore'
+import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
 
@@ -32,6 +32,30 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { t } = useI18n()
 
   if (!isOpen) return null
+
+  const applyQualityPreset = (presetId: QualityPresetId) => {
+    const presetTemplate = QUALITY_PRESET_TEMPLATES.find((preset) => preset.id === presetId)
+    setLocalSettings((prev) => {
+      const nextQualityGoals: QualityGoalsSettings = {
+        ...prev.qualityGoals,
+        humanizationPreset: presetId,
+      }
+
+      if (presetTemplate) {
+        nextQualityGoals.naturalness = presetTemplate.goals.naturalness
+        nextQualityGoals.readability = presetTemplate.goals.readability
+        nextQualityGoals.coherence = presetTemplate.goals.coherence
+        nextQualityGoals.styleConsistency = presetTemplate.goals.styleConsistency
+        nextQualityGoals.sentenceEntropyTarget = presetTemplate.sentenceEntropyTarget
+        nextQualityGoals.rhythmVariabilityTarget = presetTemplate.rhythmVariabilityTarget
+      }
+
+      return {
+        ...prev,
+        qualityGoals: nextQualityGoals,
+      }
+    })
+  }
 
   const handleSave = async () => {
     updateSettings(localSettings)
@@ -668,75 +692,95 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.qualityGoalsTitle}</label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalNaturalness}</label>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalPreset}</label>
+                    <select
+                      value={localSettings.qualityGoals.humanizationPreset}
+                      onChange={(e) => applyQualityPreset(e.target.value as QualityPresetId)}
+                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {QUALITY_PRESET_TEMPLATES.map((preset) => (
+                        <option key={preset.id} value={preset.id}>{t[preset.labelKey]}</option>
+                      ))}
+                      <option value="custom">{t.qualityPresetCustom}</option>
+                    </select>
+                  </div>
+                  {QUALITY_GOAL_METRIC_FIELDS.map((field) => (
+                    <div key={field.key}>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t[field.labelKey]}</label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={localSettings.qualityGoals[field.key]}
+                        onChange={(e) => {
+                          const nextValue = parseInt(e.target.value)
+                          setLocalSettings((prev) => ({
+                            ...prev,
+                            qualityGoals: {
+                              ...prev.qualityGoals,
+                              [field.key]: nextValue,
+                              humanizationPreset: 'custom',
+                            },
+                          }))
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalSentenceEntropy}</label>
                     <input
                       type="range"
                       min="0"
                       max="100"
                       step="1"
-                      value={localSettings.qualityGoals.naturalness}
-                      onChange={(e) => setLocalSettings({
-                        ...localSettings,
+                      value={localSettings.qualityGoals.sentenceEntropyTarget}
+                      onChange={(e) => setLocalSettings((prev) => ({
+                        ...prev,
                         qualityGoals: {
-                          ...localSettings.qualityGoals,
-                          naturalness: parseInt(e.target.value),
+                          ...prev.qualityGoals,
+                          sentenceEntropyTarget: parseInt(e.target.value),
+                          humanizationPreset: 'custom',
                         },
-                      })}
+                      }))}
                       className="w-full"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalReadability}</label>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalRhythmVariability}</label>
                     <input
                       type="range"
                       min="0"
                       max="100"
                       step="1"
-                      value={localSettings.qualityGoals.readability}
-                      onChange={(e) => setLocalSettings({
-                        ...localSettings,
+                      value={localSettings.qualityGoals.rhythmVariabilityTarget}
+                      onChange={(e) => setLocalSettings((prev) => ({
+                        ...prev,
                         qualityGoals: {
-                          ...localSettings.qualityGoals,
-                          readability: parseInt(e.target.value),
+                          ...prev.qualityGoals,
+                          rhythmVariabilityTarget: parseInt(e.target.value),
+                          humanizationPreset: 'custom',
                         },
-                      })}
+                      }))}
                       className="w-full"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalCoherence}</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={localSettings.qualityGoals.coherence}
-                      onChange={(e) => setLocalSettings({
-                        ...localSettings,
+                  <div className="col-span-2">
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalCustomInstruction}</label>
+                    <textarea
+                      rows={2}
+                      value={localSettings.qualityGoals.customHumanizationInstruction}
+                      onChange={(e) => setLocalSettings((prev) => ({
+                        ...prev,
                         qualityGoals: {
-                          ...localSettings.qualityGoals,
-                          coherence: parseInt(e.target.value),
+                          ...prev.qualityGoals,
+                          customHumanizationInstruction: e.target.value,
+                          humanizationPreset: 'custom',
                         },
-                      })}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalStyleConsistency}</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={localSettings.qualityGoals.styleConsistency}
-                      onChange={(e) => setLocalSettings({
-                        ...localSettings,
-                        qualityGoals: {
-                          ...localSettings.qualityGoals,
-                          styleConsistency: parseInt(e.target.value),
-                        },
-                      })}
-                      className="w-full"
+                      }))}
+                      placeholder={t.qualityGoalCustomInstructionPlaceholder}
+                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>

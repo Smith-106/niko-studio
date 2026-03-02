@@ -44,12 +44,55 @@ export interface PromptTemplateLibrarySettings {
   variablePresets: Record<string, Record<string, string>>
 }
 
+export type QualityPresetId = 'human_writing' | 'ai_edit_guidance' | 'custom'
+
 export interface QualityGoalsSettings {
   naturalness: number
   readability: number
   coherence: number
   styleConsistency: number
+  humanizationPreset: QualityPresetId
+  customHumanizationInstruction: string
+  sentenceEntropyTarget: number
+  rhythmVariabilityTarget: number
 }
+
+export interface QualityPresetTemplate {
+  id: Exclude<QualityPresetId, 'custom'>
+  labelKey: 'qualityPresetHumanWriting' | 'qualityPresetAiEditGuidance'
+  goals: Pick<QualityGoalsSettings, 'naturalness' | 'readability' | 'coherence' | 'styleConsistency'>
+  sentenceEntropyTarget: number
+  rhythmVariabilityTarget: number
+}
+
+export interface QualityGoalMetricField {
+  key: keyof Pick<QualityGoalsSettings, 'naturalness' | 'readability' | 'coherence' | 'styleConsistency'>
+  labelKey: 'qualityGoalNaturalness' | 'qualityGoalReadability' | 'qualityGoalCoherence' | 'qualityGoalStyleConsistency'
+}
+
+export const QUALITY_GOAL_METRIC_FIELDS: QualityGoalMetricField[] = [
+  { key: 'naturalness', labelKey: 'qualityGoalNaturalness' },
+  { key: 'readability', labelKey: 'qualityGoalReadability' },
+  { key: 'coherence', labelKey: 'qualityGoalCoherence' },
+  { key: 'styleConsistency', labelKey: 'qualityGoalStyleConsistency' },
+]
+
+export const QUALITY_PRESET_TEMPLATES: QualityPresetTemplate[] = [
+  {
+    id: 'human_writing',
+    labelKey: 'qualityPresetHumanWriting',
+    goals: { naturalness: 85, readability: 80, coherence: 80, styleConsistency: 78 },
+    sentenceEntropyTarget: 60,
+    rhythmVariabilityTarget: 60,
+  },
+  {
+    id: 'ai_edit_guidance',
+    labelKey: 'qualityPresetAiEditGuidance',
+    goals: { naturalness: 80, readability: 88, coherence: 86, styleConsistency: 84 },
+    sentenceEntropyTarget: 52,
+    rhythmVariabilityTarget: 50,
+  },
+]
 
 interface Settings {
   // API
@@ -199,12 +242,19 @@ const defaultPromptTemplateLibrary = (): PromptTemplateLibrarySettings => ({
   variablePresets: {},
 })
 
-const defaultQualityGoals = (): QualityGoalsSettings => ({
-  naturalness: 80,
-  readability: 80,
-  coherence: 80,
-  styleConsistency: 80,
-})
+const defaultQualityGoals = (): QualityGoalsSettings => {
+  const presetTemplate = QUALITY_PRESET_TEMPLATES.find((preset) => preset.id === 'human_writing')
+  return {
+    naturalness: presetTemplate?.goals.naturalness ?? 80,
+    readability: presetTemplate?.goals.readability ?? 80,
+    coherence: presetTemplate?.goals.coherence ?? 80,
+    styleConsistency: presetTemplate?.goals.styleConsistency ?? 80,
+    humanizationPreset: 'human_writing',
+    customHumanizationInstruction: '',
+    sentenceEntropyTarget: presetTemplate?.sentenceEntropyTarget ?? 55,
+    rhythmVariabilityTarget: presetTemplate?.rhythmVariabilityTarget ?? 55,
+  }
+}
 
 const defaultSettings: Settings = {
   apiBaseUrl: 'http://127.0.0.1:8000',

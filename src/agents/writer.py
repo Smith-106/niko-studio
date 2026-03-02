@@ -1095,7 +1095,13 @@ class WriterAgent:
             "type_guidance": type_guidance.get(rewrite_type, type_guidance["general"])
         })
 
-    async def revise(self, draft: str, feedback: Dict[str, Any], allow_llm_fallback: bool = True) -> WriterOutput:
+    async def revise(
+        self,
+        draft: str,
+        feedback: Dict[str, Any],
+        allow_llm_fallback: bool = True,
+        quality_goals: Optional[Dict[str, Any]] = None,
+    ) -> WriterOutput:
         """
         根据 Critic 反馈修订稿件
 
@@ -1137,6 +1143,32 @@ class WriterAgent:
         suggestions = feedback.get("suggestions", [])
         dimension_scores = feedback.get("dimension_scores", {})
 
+        quality_goals = quality_goals if isinstance(quality_goals, dict) else {}
+        preset = str(quality_goals.get("humanization_preset", "") or "").strip().lower()
+        custom_instruction = str(quality_goals.get("custom_humanization_instruction", "") or "").strip()
+
+        sentence_entropy_target = quality_goals.get("sentence_entropy_target")
+        rhythm_variability_target = quality_goals.get("rhythm_variability_target")
+
+        style_guidance: List[str] = []
+        if preset == "human_writing":
+            style_guidance.append("增强真人写作质感：避免机械重复句式，允许自然的长短句混合与语气转折。")
+            style_guidance.append("优先通过具体细节与上下文承接提升可信度，不要堆砌空泛形容词。")
+        elif preset == "ai_edit_guidance":
+            style_guidance.append("以编辑修订视角优化文本：先保留原意，再做结构与表达层面的精修。")
+            style_guidance.append("在段落衔接处补足因果与指代，减少模板化过渡语。")
+        elif preset == "custom" and custom_instruction:
+            style_guidance.append(f"遵循用户自定义修订指令: {custom_instruction}")
+
+        if isinstance(sentence_entropy_target, (int, float)):
+            style_guidance.append(
+                f"句式熵目标（0-100）：{int(sentence_entropy_target)}。通过变化句式结构、控制信息密度来实现。"
+            )
+        if isinstance(rhythm_variability_target, (int, float)):
+            style_guidance.append(
+                f"节奏变化目标（0-100）：{int(rhythm_variability_target)}。通过长短句交替与段落节拍变化提升阅读节奏。"
+            )
+
         # 构建修订指令
         revision_instructions = []
 
@@ -1158,6 +1190,11 @@ class WriterAgent:
             revision_instructions.append("采纳以下建议:")
             for suggestion in suggestions[:3]:
                 revision_instructions.append(f"  - {suggestion}")
+
+        if style_guidance:
+            revision_instructions.append("风格与表达优化目标:")
+            for guidance in style_guidance:
+                revision_instructions.append(f"  - {guidance}")
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", WRITER_SYSTEM_PROMPT),

@@ -322,6 +322,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           readability: qualityGoals.readability,
           coherence: qualityGoals.coherence,
           style_consistency: qualityGoals.styleConsistency,
+          humanization_preset: qualityGoals.humanizationPreset,
+          custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
+          sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
+          rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
         })
         if (reviseResult.success && reviseResult.data?.content) {
           setStreamingContent(reviseResult.data.content)
@@ -350,6 +354,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             readability: qualityGoals.readability,
             coherence: qualityGoals.coherence,
             style_consistency: qualityGoals.styleConsistency,
+            humanization_preset: qualityGoals.humanizationPreset,
+            custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
+            sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
+            rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
           }
         )
 
@@ -484,6 +492,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           readability: qualityGoals.readability,
           coherence: qualityGoals.coherence,
           style_consistency: qualityGoals.styleConsistency,
+          humanization_preset: qualityGoals.humanizationPreset,
+          custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
+          sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
+          rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
         },
       }
 
@@ -538,6 +550,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               readability: qualityGoals.readability,
               coherence: qualityGoals.coherence,
               style_consistency: qualityGoals.styleConsistency,
+              humanization_preset: qualityGoals.humanizationPreset,
+              custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
+              sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
+              rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
             }
           )
           if (reviseResult.success && reviseResult.data?.content) {

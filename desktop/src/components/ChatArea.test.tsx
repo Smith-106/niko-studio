@@ -54,6 +54,10 @@ function resetStores(): void {
       readability: 80,
       coherence: 80,
       styleConsistency: 80,
+      humanizationPreset: 'human_writing',
+      customHumanizationInstruction: '',
+      sentenceEntropyTarget: 55,
+      rhythmVariabilityTarget: 55,
     },
   })
 }
@@ -129,6 +133,10 @@ describe('ChatArea P0 flows', () => {
         readability: 74,
         coherence: 88,
         styleConsistency: 67,
+        humanizationPreset: 'ai_edit_guidance',
+        customHumanizationInstruction: '减少模板化表达',
+        sentenceEntropyTarget: 62,
+        rhythmVariabilityTarget: 58,
       },
     })
 
@@ -146,6 +154,10 @@ describe('ChatArea P0 flows', () => {
             readability: 74,
             coherence: 88,
             style_consistency: 67,
+            humanization_preset: 'ai_edit_guidance',
+            custom_humanization_instruction: '减少模板化表达',
+            sentence_entropy_target: 62,
+            rhythm_variability_target: 58,
           },
         })
       )
@@ -188,6 +200,9 @@ describe('ChatArea P0 flows', () => {
             readability: 80,
             coherence: 80,
             style_consistency: 80,
+            humanization_preset: 'human_writing',
+            sentence_entropy_target: 55,
+            rhythm_variability_target: 55,
           }),
         })
       )
@@ -396,6 +411,9 @@ describe('ChatArea P0 flows', () => {
             readability: 80,
             coherence: 80,
             style_consistency: 80,
+            humanization_preset: 'human_writing',
+            sentence_entropy_target: 55,
+            rhythm_variability_target: 55,
           }),
         })
       )

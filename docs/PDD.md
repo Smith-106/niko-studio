@@ -149,7 +149,6 @@ Niko Studio 是一个 **local-first、可扩展的 AI Agent 平台**，面向多
   - AI 文本优化器（去 AI 痕迹）：未见明确实现。
     - 说明：当前命令集中无独立 optimizer/polisher 命令。
     - 锚点：`src/cli/commands/__init__.py:5`。
-  - GPTZero 过检/对抗检测：未见实现（无明确规则、指标或流程锚点）。
   - 统计特征优化（perplexity/burstiness）：未见实现（无明确特征计算与优化链路锚点）。
   - 多 LLM：部分具备。
     - 说明：已见 Google/OpenAI 适配与 UI 模型选择；未见与 writing-helper 对齐的 Grok/Ollama 代理实现锚点。
@@ -305,10 +304,10 @@ MVP（Minimum Viable Product）指“最小可用产品”：
      - 入口：`src/cli/commands/__init__.py` 同层新增命令注册。
      - 工作流落点：`src/workflow/workflow_engine.py` 的 generation controls 附近扩展。
      - 首批能力：语气改写、冗余压缩、句式去模板化。
-  2. 检测对抗与特征优化（P1，先做可观测）
+  2. 文本统计特征优化（P1，先做可观测）
      - 在 `evaluate` 链增加代理统计输出：`perplexity proxy / burstiness proxy / repetition ratio`。
      - 落点：`src/cli/commands/evaluate.py` 与现有 quality 输出结构。
-     - 约束：不承诺“绕过检测器”，仅提供优化前后对比数据。
+     - 约束：不承诺第三方检测结果，仅提供优化前后对比数据。
   3. 多 LLM 对齐（P1）
      - 在 provider 选择层补 Grok/Ollama。
      - 落点：`src/workflow/adapters/novel_adapter.py`。

@@ -491,8 +491,6 @@ _PROHIBITED_DETECTION_KEYS = {
     "anti_detection",
     "bypass_detector",
     "pass_gptzero",
-    "perplexity",
-    "burstiness",
     "detector_bypass",
     "humanize_for_detector",
 }
@@ -1605,7 +1603,12 @@ async def agent_revise(
         修订后的内容
     """
     agent = get_writer_agent()
-    result = await agent.revise(draft, feedback, allow_llm_fallback=allow_llm_fallback)
+    result = await agent.revise(
+        draft,
+        feedback,
+        allow_llm_fallback=allow_llm_fallback,
+        quality_goals=quality_goals,
+    )
 
     return {
         "content": result.content,

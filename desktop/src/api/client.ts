@@ -440,6 +440,10 @@ export interface QualityGoalsPayload {
   readability?: number
   coherence?: number
   style_consistency?: number
+  humanization_preset?: 'human_writing' | 'ai_edit_guidance' | 'custom'
+  custom_humanization_instruction?: string
+  sentence_entropy_target?: number
+  rhythm_variability_target?: number
 }
 
 export interface ChatRequest {

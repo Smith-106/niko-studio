@@ -322,6 +322,10 @@ describe('chat request payload', () => {
         readability: 82,
         coherence: 78,
         style_consistency: 84,
+        humanization_preset: 'human_writing',
+        custom_humanization_instruction: '',
+        sentence_entropy_target: 55,
+        rhythm_variability_target: 55,
       },
       comparison: {
         enabled: true,
@@ -343,6 +347,10 @@ describe('chat request payload', () => {
             readability: 82,
             coherence: 78,
             style_consistency: 84,
+            humanization_preset: 'human_writing',
+            custom_humanization_instruction: '',
+            sentence_entropy_target: 55,
+            rhythm_variability_target: 55,
           },
           comparison: {
             enabled: true,

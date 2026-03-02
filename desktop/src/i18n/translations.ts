@@ -104,10 +104,14 @@ export interface Translations {
   targetWords: string
   autoSkillMatch: string
   qualityGoalsTitle: string
-  qualityGoalNaturalness: string
-  qualityGoalReadability: string
-  qualityGoalCoherence: string
-  qualityGoalStyleConsistency: string
+  qualityGoalPreset: string
+  qualityPresetHumanWriting: string
+  qualityPresetAiEditGuidance: string
+  qualityPresetCustom: string
+  qualityGoalSentenceEntropy: string
+  qualityGoalRhythmVariability: string
+  qualityGoalCustomInstruction: string
+  qualityGoalCustomInstructionPlaceholder: string
   uiSettings: string
   theme: string
   themeLight: string
@@ -238,6 +242,14 @@ export const translations: Record<Language, Translations> = {
     qualityGoalReadability: '可读性',
     qualityGoalCoherence: '连贯性',
     qualityGoalStyleConsistency: '风格一致性',
+    qualityGoalPreset: '优化预设',
+    qualityPresetHumanWriting: '人类写作特征优化',
+    qualityPresetAiEditGuidance: 'AI 修改指导',
+    qualityPresetCustom: '自定义',
+    qualityGoalSentenceEntropy: '句式熵目标',
+    qualityGoalRhythmVariability: '节奏变化目标',
+    qualityGoalCustomInstruction: '自定义优化指令',
+    qualityGoalCustomInstructionPlaceholder: '输入你的个性化洗稿/润色要求',
     uiSettings: '界面设置',
     theme: '主题',
     themeLight: '浅色',
@@ -366,6 +378,14 @@ export const translations: Record<Language, Translations> = {
     qualityGoalReadability: 'Readability',
     qualityGoalCoherence: 'Coherence',
     qualityGoalStyleConsistency: 'Style Consistency',
+    qualityGoalPreset: 'Optimization Preset',
+    qualityPresetHumanWriting: 'Human Writing Traits',
+    qualityPresetAiEditGuidance: 'AI Editing Guidance',
+    qualityPresetCustom: 'Custom',
+    qualityGoalSentenceEntropy: 'Sentence Entropy Target',
+    qualityGoalRhythmVariability: 'Rhythm Variability Target',
+    qualityGoalCustomInstruction: 'Custom Optimization Instruction',
+    qualityGoalCustomInstructionPlaceholder: 'Enter your personalized rewrite/polish instruction',
     uiSettings: 'UI Settings',
     theme: 'Theme',
     themeLight: 'Light',
