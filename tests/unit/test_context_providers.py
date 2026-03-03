@@ -310,6 +310,29 @@ class TestSkillContextProvider:
         assert items[0].value == "skill content here"
         assert items[0].metadata["skill_id"] == "my-skill"
 
+    async def test_skill_loader_calls_are_offloaded(self, monkeypatch):
+        loader = MagicMock()
+        loader.load = MagicMock(return_value="skill content")
+        loader.extract_refs = MagicMock(return_value=["ref-skill"])
+        loader.get_summary = MagicMock(return_value="summary")
+
+        offloaded = []
+
+        async def fake_to_thread(func, *args, **kwargs):
+            offloaded.append((func, args, kwargs))
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr("src.context.providers.asyncio.to_thread", fake_to_thread)
+
+        provider = SkillContextProvider(skill_loader=loader)
+        items = await provider.get_context(query="@ref-skill", include_summary=True)
+
+        assert len(items) == 2
+        assert len(offloaded) == 3
+        loader.extract_refs.assert_called_once_with("@ref-skill")
+        loader.load.assert_called_once_with("ref-skill")
+        loader.get_summary.assert_called_once()
+
     async def test_skill_not_found(self):
         loader = MagicMock()
         loader.load = MagicMock(side_effect=FileNotFoundError)
@@ -455,6 +478,30 @@ class TestProjectContextProvider:
         assert "characters" not in keys
         assert "outline" not in keys
 
+    async def test_project_provider_file_reads_are_offloaded(self, tmp_path, monkeypatch):
+        niko = tmp_path / ".niko"
+        chars = niko / "characters"
+        chars.mkdir(parents=True)
+        (niko / "config.json").write_text('{"name":"demo"}', encoding="utf-8")
+        (niko / "world.json").write_text('{"era":"future"}', encoding="utf-8")
+        (niko / "outline.json").write_text('{"chapters":12}', encoding="utf-8")
+        (chars / "a.json").write_text('{"name":"A"}', encoding="utf-8")
+
+        offload_count = 0
+
+        async def fake_to_thread(func, *args, **kwargs):
+            nonlocal offload_count
+            offload_count += 1
+            return func(*args, **kwargs)
+
+        monkeypatch.setattr("src.context.providers.asyncio.to_thread", fake_to_thread)
+
+        provider = ProjectContextProvider(project_root=str(tmp_path))
+        items = await provider.get_context()
+
+        assert offload_count >= 4
+        assert {item.key for item in items} >= {"project_config", "world", "outline", "characters"}
+
     async def test_get_context_handles_bad_character_json(self, tmp_path):
         niko = tmp_path / ".niko"
         chars = niko / "characters"
@@ -588,6 +635,26 @@ class TestContextAggregator:
 
         items = await ag.get_context()
         assert [i.key for i in items] == ["ok"]
+
+    async def test_get_context_concurrent_collection_order_preserved(self):
+        ag = ContextAggregator()
+
+        class _SlowProvider(BaseContextProvider):
+            def __init__(self, name, delay, item_key):
+                super().__init__(name, ContextPriority.NORMAL)
+                self.delay = delay
+                self.item_key = item_key
+
+            async def get_context(self, query=None, **kwargs):
+                import asyncio
+                await asyncio.sleep(self.delay)
+                return [ContextItem(self.item_key, "v", self.name, ContextPriority.NORMAL, token_estimate=1)]
+
+        ag.add_provider(_SlowProvider("a", 0.05, "first"))
+        ag.add_provider(_SlowProvider("b", 0.01, "second"))
+
+        items = await ag.get_context()
+        assert [i.key for i in items] == ["first", "second"]
 
     async def test_apply_token_budget_keeps_high_priority_over_limit(self):
         ag = ContextAggregator()

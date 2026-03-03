@@ -154,6 +154,16 @@ class TestComputeSimilarity:
     def test_zero_vector(self, service):
         assert service._compute_similarity([0, 0], [1, 1]) == 0.0
 
+    def test_similarity_with_precomputed_norms_matches(self, service):
+        vec_a = [1.0, 2.0, 3.0]
+        vec_b = [3.0, 2.0, 1.0]
+        norm_a = (sum(v * v for v in vec_a)) ** 0.5
+        norm_b = (sum(v * v for v in vec_b)) ** 0.5
+
+        baseline = service._compute_similarity(vec_a, vec_b)
+        optimized = service._compute_similarity_with_norms(vec_a, vec_b, norm_a=norm_a, norm_b=norm_b)
+        assert optimized == pytest.approx(baseline)
+
 
 # ============================================================
 # MemoryService._extract_keywords

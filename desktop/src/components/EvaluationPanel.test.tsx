@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EvaluationPanel } from './EvaluationPanel'
+import { useSettingsStore } from '../stores/settingsStore'
 
 vi.mock('../api/client', () => ({
   evaluateContent: vi.fn(),
@@ -39,6 +40,8 @@ const mockedBatchApplyRecommendations = vi.mocked(batchApplyRecommendations)
 
 describe('EvaluationPanel actions', () => {
   beforeEach(() => {
+    localStorage.clear()
+    useSettingsStore.getState().resetSettings()
     vi.clearAllMocks()
 
     mockedEvaluateContent.mockResolvedValue({
@@ -89,10 +92,10 @@ describe('EvaluationPanel actions', () => {
       undefined,
       undefined,
       expect.objectContaining({
-        naturalness: 80,
+        naturalness: 85,
         readability: 80,
         coherence: 80,
-        style_consistency: 80,
+        style_consistency: 78,
       })
     )
 

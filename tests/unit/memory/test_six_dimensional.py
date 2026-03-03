@@ -198,11 +198,14 @@ class TestTimelineProcessor:
         assert score.score > 0
         assert len(score.keywords_matched) > 0
 
-    def test_process_crashes_due_to_extract_bug(self):
-        """process() should work and include sequence metadata."""
+    def test_timeline_process_marks_sequence_and_preserves_time_refs(self):
+        """Timeline processor should execute and expose stable regression behavior."""
         proc = TimelineProcessor()
-        result = proc.process("On 2024-01-01 first we went, then came back")
+        result = proc.process("On 2024-01-01 first we went, then came back at 14:30")
         assert result.extracted_data["has_sequence"] is True
+
+        entities = proc.extract_entities("On 2024-01-01 first we went, then came back at 14:30")
+        assert any("2024-01-01" in entity for entity in entities)
 
 
 # ============================================================
@@ -350,13 +353,10 @@ class TestDimensionRouter:
 
     def test_classify_multi_dimensional(self):
         router = DimensionRouter()
-        # Avoid timeline entity extraction (has bug on line 222).
-        # Use content that touches character + worldview + preference dimensions.
         result = router.classify(
             "The hero character in this magic world prefers a dark style "
             "and the protagonist has a strong personality with clear motivation"
         )
-        # Should detect content touches multiple dimensions
         assert isinstance(result.multi_dimensional, bool)
 
     def test_classify_empty_content(self):

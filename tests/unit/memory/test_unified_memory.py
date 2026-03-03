@@ -193,6 +193,10 @@ class TestEmbeddingEngine:
         engine = EmbeddingEngine()
         assert engine.similarity([0.0, 0.0], [0.0, 0.0]) == 0.0
 
+    def test_similarity_mismatched_lengths_returns_zero(self):
+        engine = EmbeddingEngine()
+        assert engine.similarity([1.0, 2.0], [1.0]) == 0.0
+
     def test_cache_stats(self):
         engine = EmbeddingEngine()
         engine._model = "dummy"
@@ -330,19 +334,45 @@ class TestEmbeddingEngineExtra:
         assert facts == []
 
     @pytest.mark.asyncio
-    async def test_detect_conflicts(self, engine):
-        # Insert two contradictory facts directly into DB to bypass auto-resolution
+    async def test_detect_conflicts_skips_non_candidate_pairs(self, engine):
         engine.db.execute(
             "INSERT INTO memories (id, content, entity_id, layer, superseded_by) VALUES (?, ?, ?, ?, ?)",
-            ("m1", "He is alive", "king", "project", None),
+            ("m1", "Sunny day in city", "city", "project", None),
         )
         engine.db.execute(
             "INSERT INTO memories (id, content, entity_id, layer, superseded_by) VALUES (?, ?, ?, ?, ?)",
-            ("m2", "He is dead", "king", "project", None),
+            ("m2", "Cloudy afternoon in park", "city", "project", None),
         )
         engine.db.commit()
-        conflicts = await engine.detect_conflicts("king")
-        assert len(conflicts) >= 1
+
+        spy = MagicMock(return_value=False)
+        engine.conflict_resolver._is_contradictory = spy
+
+        conflicts = await engine.detect_conflicts("city")
+        assert conflicts == []
+        spy.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_detect_conflicts_keeps_contradictory_semantics(self, engine):
+        engine.db.execute(
+            "INSERT INTO memories (id, content, entity_id, layer, superseded_by) VALUES (?, ?, ?, ?, ?)",
+            ("m1", "He is alive", "judge", "project", None),
+        )
+        engine.db.execute(
+            "INSERT INTO memories (id, content, entity_id, layer, superseded_by) VALUES (?, ?, ?, ?, ?)",
+            ("m2", "He is dead", "judge", "project", None),
+        )
+        engine.db.execute(
+            "INSERT INTO memories (id, content, entity_id, layer, superseded_by) VALUES (?, ?, ?, ?, ?)",
+            ("m3", "He likes books", "judge", "project", None),
+        )
+        engine.db.commit()
+
+        conflicts = await engine.detect_conflicts("judge")
+        assert any(
+            {c["memory_a"]["id"], c["memory_b"]["id"]} == {"m1", "m2"}
+            for c in conflicts
+        )
 
     @pytest.mark.asyncio
     async def test_resolve_conflict(self, engine):
