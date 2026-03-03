@@ -411,7 +411,7 @@ export async function listGatewayTools(): Promise<ApiResponse<GatewayTools>> {
 export async function processWritingHelper(
   payload: WritingHelperRequest
 ): Promise<ApiResponse<WritingHelperResponse>> {
-  return callApi('/writing-helper/process', 'POST', payload as Record<string, unknown>)
+  return callApi('/writing-helper/process', 'POST', payload as unknown as Record<string, unknown>)
 }
 
 export async function listGatewayServiceConfigs(): Promise<ApiResponse<{ services: GatewayServiceConfig[] }>> {

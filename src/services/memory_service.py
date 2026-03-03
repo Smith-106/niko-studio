@@ -275,14 +275,32 @@ class MemoryService:
         if not vec_a or not vec_b or len(vec_a) != len(vec_b):
             return 0.0
 
-        dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
-        norm_a = sum(a * a for a in vec_a) ** 0.5
-        norm_b = sum(b * b for b in vec_b) ** 0.5
-
-        if norm_a == 0 or norm_b == 0:
+        norm_a_sq = sum(a * a for a in vec_a)
+        norm_b_sq = sum(b * b for b in vec_b)
+        if norm_a_sq == 0 or norm_b_sq == 0:
             return 0.0
 
-        return dot_product / (norm_a * norm_b)
+        dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
+        return dot_product / ((norm_a_sq ** 0.5) * (norm_b_sq ** 0.5))
+
+    def _compute_similarity_with_norms(
+        self,
+        vec_a: List[float],
+        vec_b: List[float],
+        norm_a: Optional[float] = None,
+        norm_b: Optional[float] = None,
+    ) -> float:
+        """计算余弦相似度（支持复用预计算范数）"""
+        if not vec_a or not vec_b or len(vec_a) != len(vec_b):
+            return 0.0
+
+        effective_norm_a = norm_a if norm_a is not None else math.sqrt(sum(a * a for a in vec_a))
+        effective_norm_b = norm_b if norm_b is not None else math.sqrt(sum(b * b for b in vec_b))
+        if effective_norm_a == 0 or effective_norm_b == 0:
+            return 0.0
+
+        dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
+        return dot_product / (effective_norm_a * effective_norm_b)
 
     @staticmethod
     def _clamp_01(value: float) -> float:
@@ -495,6 +513,7 @@ class MemoryService:
         results = []
         threshold = options.threshold if options.threshold is not None else DEFAULT_MIN_SCORE
         now_iso = datetime.now().isoformat()
+        query_norm = math.sqrt(sum(value * value for value in query_embedding)) if query_embedding else 0.0
         for row in rows:
             embedding = []
             if row["embedding_blob"]:
@@ -502,7 +521,13 @@ class MemoryService:
             elif row["embedding"]:
                 embedding = json.loads(row["embedding"])
 
-            score = self._compute_similarity(query_embedding, embedding)
+            embedding_norm = math.sqrt(sum(value * value for value in embedding)) if embedding else 0.0
+            score = self._compute_similarity_with_norms(
+                query_embedding,
+                embedding,
+                norm_a=query_norm,
+                norm_b=embedding_norm,
+            )
 
             if score >= threshold:
                 metadata = json.loads(row['metadata']) if row['metadata'] else {}

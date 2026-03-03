@@ -12,7 +12,9 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Protocol, runtime_checkable
+import asyncio
 import json
+import re
 
 logger = logging.getLogger("niko-context")
 
@@ -83,6 +85,8 @@ class IContextProvider(Protocol):
 class BaseContextProvider(ABC):
     """上下文提供者基类"""
 
+    _CHINESE_CHAR_RE = re.compile(r"[\u4e00-\u9fff]")
+
     def __init__(self, name: str, priority: ContextPriority = ContextPriority.NORMAL):
         self._name = name
         self._priority = priority
@@ -106,8 +110,9 @@ class BaseContextProvider(ABC):
 
     def _estimate_tokens(self, text: str) -> int:
         """估算令牌数（简化实现）"""
-        # 粗略估计：英文约 4 字符/token，中文约 1.5 字符/token
-        chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+        if not text:
+            return 0
+        chinese_chars = len(self._CHINESE_CHAR_RE.findall(text))
         other_chars = len(text) - chinese_chars
         return int(chinese_chars / 1.5 + other_chars / 4)
 
@@ -219,6 +224,20 @@ class SkillContextProvider(BaseContextProvider):
         self._skill_loader = skill_loader
         self._max_skill_length = max_skill_length
 
+    async def _load_skill_content(self, skill_id: str) -> str:
+        return await asyncio.to_thread(self._skill_loader.load, skill_id)
+
+    async def _extract_refs(self, query: str) -> List[str]:
+        return await asyncio.to_thread(self._skill_loader.extract_refs, query)
+
+    async def _get_summary(self) -> str:
+        return await asyncio.to_thread(self._skill_loader.get_summary)
+
+    def _clip_content(self, content: str) -> str:
+        if len(content) <= self._max_skill_length:
+            return content
+        return content[:self._max_skill_length] + "\n... (内容截断)"
+
     async def get_context(
         self,
         query: Optional[str] = None,
@@ -241,51 +260,47 @@ class SkillContextProvider(BaseContextProvider):
         items: List[ContextItem] = []
 
         try:
-            # 加载指定技能
-            if skill_ids:
-                for skill_id in skill_ids:
-                    try:
-                        content = self._skill_loader.load(skill_id)
-                        # 截断过长内容
-                        if len(content) > self._max_skill_length:
-                            content = content[:self._max_skill_length] + "\n... (内容截断)"
+            unique_skill_ids: List[str] = []
+            seen_ids = set()
+            ref_ids = set()
 
-                        items.append(ContextItem(
-                            key=f"skill_{skill_id}",
-                            value=content,
-                            source=self.name,
-                            priority=self.priority,
-                            metadata={"skill_id": skill_id},
-                            token_estimate=self._estimate_tokens(content)
-                        ))
-                    except FileNotFoundError:
-                        logger.warning(f"Skill not found: {skill_id}")
+            for skill_id in skill_ids or []:
+                if skill_id in seen_ids:
+                    continue
+                seen_ids.add(skill_id)
+                unique_skill_ids.append(skill_id)
 
-            # 从查询解析 @skill 引用
             if query and hasattr(self._skill_loader, 'extract_refs'):
-                refs = self._skill_loader.extract_refs(query)
+                refs = await self._extract_refs(query)
                 for skill_id in refs:
-                    if skill_ids and skill_id in skill_ids:
-                        continue  # 已加载
-                    try:
-                        content = self._skill_loader.load(skill_id)
-                        if len(content) > self._max_skill_length:
-                            content = content[:self._max_skill_length] + "\n... (内容截断)"
+                    ref_ids.add(skill_id)
+                    if skill_id in seen_ids:
+                        continue
+                    seen_ids.add(skill_id)
+                    unique_skill_ids.append(skill_id)
 
-                        items.append(ContextItem(
-                            key=f"skill_{skill_id}",
-                            value=content,
-                            source=self.name,
-                            priority=self.priority,
-                            metadata={"skill_id": skill_id, "from_ref": True},
-                            token_estimate=self._estimate_tokens(content)
-                        ))
-                    except FileNotFoundError:
-                        pass
+            for skill_id in unique_skill_ids:
+                try:
+                    content = await self._load_skill_content(skill_id)
+                    content = self._clip_content(content)
 
-            # 包含技能摘要
+                    metadata = {"skill_id": skill_id}
+                    if skill_id in ref_ids:
+                        metadata["from_ref"] = True
+
+                    items.append(ContextItem(
+                        key=f"skill_{skill_id}",
+                        value=content,
+                        source=self.name,
+                        priority=self.priority,
+                        metadata=metadata,
+                        token_estimate=self._estimate_tokens(content)
+                    ))
+                except FileNotFoundError:
+                    logger.warning(f"Skill not found: {skill_id}")
+
             if include_summary and hasattr(self._skill_loader, 'get_summary'):
-                summary = self._skill_loader.get_summary()
+                summary = await self._get_summary()
                 items.append(ContextItem(
                     key="available_skills",
                     value=summary,
@@ -319,6 +334,12 @@ class ProjectContextProvider(BaseContextProvider):
         self._project_root = Path(project_root) if project_root else Path.cwd()
         self._niko_dir = self._project_root / ".niko"
 
+    def _read_json_file(self, file_path: Path) -> Any:
+        return json.loads(file_path.read_text(encoding="utf-8"))
+
+    async def _read_json_file_async(self, file_path: Path) -> Any:
+        return await asyncio.to_thread(self._read_json_file, file_path)
+
     async def get_context(
         self,
         query: Optional[str] = None,
@@ -343,10 +364,9 @@ class ProjectContextProvider(BaseContextProvider):
             return items
 
         try:
-            # 读取项目配置
             config_file = self._niko_dir / "config.json"
             if config_file.exists():
-                config = json.loads(config_file.read_text(encoding="utf-8"))
+                config = await self._read_json_file_async(config_file)
                 items.append(ContextItem(
                     key="project_config",
                     value=config,
@@ -355,14 +375,13 @@ class ProjectContextProvider(BaseContextProvider):
                     token_estimate=self._estimate_tokens(str(config))
                 ))
 
-            # 读取角色信息
             if include_characters:
                 chars_dir = self._niko_dir / "characters"
                 if chars_dir.exists():
                     characters = []
                     for char_file in chars_dir.glob("*.json"):
                         try:
-                            char_data = json.loads(char_file.read_text(encoding="utf-8"))
+                            char_data = await self._read_json_file_async(char_file)
                             characters.append(char_data)
                         except json.JSONDecodeError:
                             pass
@@ -377,11 +396,10 @@ class ProjectContextProvider(BaseContextProvider):
                             token_estimate=self._estimate_tokens(str(characters))
                         ))
 
-            # 读取世界观
             if include_world:
                 world_file = self._niko_dir / "world.json"
                 if world_file.exists():
-                    world = json.loads(world_file.read_text(encoding="utf-8"))
+                    world = await self._read_json_file_async(world_file)
                     items.append(ContextItem(
                         key="world",
                         value=world,
@@ -390,11 +408,10 @@ class ProjectContextProvider(BaseContextProvider):
                         token_estimate=self._estimate_tokens(str(world))
                     ))
 
-            # 读取大纲
             if include_outline:
                 outline_file = self._niko_dir / "outline.json"
                 if outline_file.exists():
-                    outline = json.loads(outline_file.read_text(encoding="utf-8"))
+                    outline = await self._read_json_file_async(outline_file)
                     items.append(ContextItem(
                         key="outline",
                         value=outline,
@@ -472,14 +489,18 @@ class ContextAggregator:
         all_items: List[ContextItem] = []
         provider_kwargs = provider_kwargs or {}
 
-        # 从各提供者收集上下文
-        for provider in self._providers:
-            try:
-                extra_kwargs = provider_kwargs.get(provider.name, {})
-                items = await provider.get_context(query=query, **kwargs, **extra_kwargs)
-                all_items.extend(items)
-            except Exception as e:
-                logger.error(f"Provider {provider.name} failed: {e}")
+        async def _collect_from_provider(provider: IContextProvider) -> List[ContextItem]:
+            extra_kwargs = provider_kwargs.get(provider.name, {})
+            return await provider.get_context(query=query, **kwargs, **extra_kwargs)
+
+        tasks = [_collect_from_provider(provider) for provider in self._providers]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for provider, result in zip(self._providers, results):
+            if isinstance(result, Exception):
+                logger.error(f"Provider {provider.name} failed: {result}")
+                continue
+            all_items.extend(result)
 
         # 按优先级排序
         all_items.sort(key=lambda x: x.priority)

@@ -270,14 +270,16 @@ class EmbeddingEngine:
         """计算余弦相似度"""
         if not vec_a or not vec_b:
             return 0.0
-        
+        if len(vec_a) != len(vec_b):
+            return 0.0
+
         dot_product = sum(a * b for a, b in zip(vec_a, vec_b))
         norm_a = sum(a * a for a in vec_a) ** 0.5
         norm_b = sum(b * b for b in vec_b) ** 0.5
-        
+
         if norm_a == 0 or norm_b == 0:
             return 0.0
-        
+
         return dot_product / (norm_a * norm_b)
 
 
@@ -298,6 +300,8 @@ class EnginePlugin(Protocol):
 
 class UnifiedMemoryEngine:
     """统一记忆引擎 (主系统)"""
+
+    _CONTRADICTION_HINTS = ("不是", "没有", "不能", "不会", "dead", "false")
 
     def __init__(self, db_path: str = None, plugins: Optional[Iterable[EnginePlugin]] = None):
         self.is_primary_engine = True
@@ -634,20 +638,37 @@ class UnifiedMemoryEngine:
             AND superseded_by IS NULL
             ORDER BY valid_from DESC
         """, (entity_id,))
-        
+
         memories = cursor.fetchall()
         conflicts = []
-        
-        # 两两比较检测冲突
-        for i, mem_a in enumerate(memories):
-            for mem_b in memories[i+1:]:
+
+        def _is_candidate(content: str) -> bool:
+            lowered = content.lower()
+            return any(hint in content for hint in self._CONTRADICTION_HINTS) or any(
+                hint in lowered for hint in self._CONTRADICTION_HINTS if hint.isascii()
+            )
+
+        candidate_indices = [index for index, row in enumerate(memories) if _is_candidate(row[1] or "")]
+
+        compared_pairs = set()
+        for idx in candidate_indices:
+            mem_a = memories[idx]
+            for jdx, mem_b in enumerate(memories):
+                if jdx == idx:
+                    continue
+
+                pair_key = tuple(sorted((idx, jdx)))
+                if pair_key in compared_pairs:
+                    continue
+                compared_pairs.add(pair_key)
+
                 if self.conflict_resolver._is_contradictory(mem_a[1], mem_b[1]):
                     conflicts.append({
                         "memory_a": {"id": mem_a[0], "content": mem_a[1]},
                         "memory_b": {"id": mem_b[0], "content": mem_b[1]},
                         "conflict_type": "contradiction"
                     })
-        
+
         return conflicts
     
     async def resolve_conflict(
