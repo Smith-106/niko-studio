@@ -504,7 +504,8 @@ class KnowledgeGraphStore:
             cursor = self.db.execute("SELECT * FROM entities LIMIT ?", (limit,))
 
         results = []
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             results.append({
                 "id": row[0],
                 "name": row[1],

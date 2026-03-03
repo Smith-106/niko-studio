@@ -225,7 +225,8 @@ class GraphEngine:
                 )
             
             results = []
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            for row in rows:
                 results.append({
                     "id": row[0],
                     "type": row[1],

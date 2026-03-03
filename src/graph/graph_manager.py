@@ -392,7 +392,8 @@ class GraphManager:
                 sql += f" LIMIT {limit}"
 
             cursor = self._conn.execute(sql, params)
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            for row in rows:
                 entity = self._row_to_entity(row)
                 results.append({
                     node["alias"] or "n": self._entity_to_dict(entity)
@@ -635,7 +636,8 @@ class GraphManager:
             cursor = self._conn.execute(sql, params)
 
             next_frontier: List[str] = []
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            for row in rows:
                 neighbor_id = row["neighbor_id"] if isinstance(row, sqlite3.Row) else row[0]
                 if neighbor_id in visited:
                     continue

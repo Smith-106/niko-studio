@@ -77,9 +77,11 @@ class AsyncConnectionPool:
                 )
 
                 # Enable WAL mode for better concurrent read performance
-                await conn.execute("PRAGMA journal_mode=WAL")
-                await conn.execute("PRAGMA synchronous=NORMAL")
-                await conn.execute("PRAGMA cache_size=-64000")  # 64MB cache
+                await conn.executescript("""
+                    PRAGMA journal_mode=WAL;
+                    PRAGMA synchronous=NORMAL;
+                    PRAGMA cache_size=-64000;
+                """)
 
                 # Enable row factory for dict-like access
                 conn.row_factory = aiosqlite.Row
