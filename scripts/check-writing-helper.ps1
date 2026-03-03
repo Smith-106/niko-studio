@@ -1,9 +1,10 @@
 param(
   [switch]$Strict,
-  [int]$Port = 8000
+  [int]$Port = 8000,
+  [string]$Host = "127.0.0.1"
 )
 
-$uri = "http://127.0.0.1:$Port/writing-helper/process"
+$uri = "http://$Host:$Port/writing-helper/process"
 $failedFile = Join-Path (Get-Location) "failed-writing-helper-cases.json"
 
 function Test-StrictPolish {
