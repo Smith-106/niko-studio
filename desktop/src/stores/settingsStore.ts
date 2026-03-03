@@ -114,6 +114,7 @@ interface Settings {
   targetWordsPerChapter: number
   autoSkillMatch: boolean
   detectionEvasionGuardEnabled: boolean
+  writingHelperUseLegacyPolish: boolean
   qualityGoals: QualityGoalsSettings
 
   // Prompt templates
@@ -270,6 +271,7 @@ const defaultSettings: Settings = {
   targetWordsPerChapter: 2000,
   autoSkillMatch: true,
   detectionEvasionGuardEnabled: true,
+  writingHelperUseLegacyPolish: false,
   qualityGoals: defaultQualityGoals(),
   promptTemplateLibrary: defaultPromptTemplateLibrary(),
   theme: 'light',

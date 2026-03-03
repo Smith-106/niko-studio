@@ -53,4 +53,19 @@ describe('SettingsModal quality presets', () => {
     expect(getRangeByLabel('句式熵目标').value).toBe('52')
     expect(getRangeByLabel('节奏变化目标').value).toBe('50')
   })
+
+  it('persists writing helper legacy polish toggle after save', async () => {
+    const onClose = vi.fn()
+    render(<SettingsModal isOpen onClose={onClose} />)
+
+    const user = userEvent.setup()
+    const toggle = screen.getByLabelText('Writing Helper 润色走 legacy 接口') as HTMLInputElement
+
+    expect(toggle.checked).toBe(false)
+    await user.click(toggle)
+    await user.click(screen.getByRole('button', { name: '保存' }))
+
+    expect(useSettingsStore.getState().settings.writingHelperUseLegacyPolish).toBe(true)
+    expect(onClose).toHaveBeenCalled()
+  })
 })

@@ -2,14 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WritingHelperPanel } from './WritingHelperPanel'
-import { processWritingHelper } from '../api/client'
+import { processWritingHelper, polishContent } from '../api/client'
 import { useSettingsStore } from '../stores/settingsStore'
 
 vi.mock('../api/client', () => ({
   processWritingHelper: vi.fn(),
+  polishContent: vi.fn(),
 }))
 
 const mockProcessWritingHelper = vi.mocked(processWritingHelper)
+const mockPolishContent = vi.mocked(polishContent)
 
 describe('WritingHelperPanel clear draft', () => {
   beforeEach(() => {
@@ -74,30 +76,30 @@ describe('WritingHelperPanel mode options and payload', () => {
     expect(optionValues).toContain('expand')
   })
 
-  it('sends selected mode in request payload', async () => {
-    mockProcessWritingHelper.mockResolvedValue({
-      success: true,
-      data: {
-        mode: 'rewrite',
-        processed_text: '重写结果。',
-      },
+  it('uses legacy polish alias when toggle is enabled in polish mode', async () => {
+    mockPolishContent.mockResolvedValue({
+      originalText: '原始内容。',
+      polishedText: '兼容润色结果。',
+      diffMarkup: '',
     })
 
     render(<WritingHelperPanel onClose={() => {}} onOpenSettings={() => {}} />)
 
     const user = userEvent.setup()
-    const modeSelect = screen.getByLabelText('模式') as HTMLSelectElement
     const contentInput = screen.getByLabelText('输入文本') as HTMLTextAreaElement
+    const legacyToggle = screen.getByLabelText('Writing Helper 润色走 legacy 接口') as HTMLInputElement
 
-    await user.selectOptions(modeSelect, 'rewrite')
-    await user.type(contentInput, '第一句。第一句。')
+    await user.type(contentInput, '原始内容。')
+    await user.click(legacyToggle)
     await user.click(screen.getByRole('button', { name: '执行' }))
 
-    expect(mockProcessWritingHelper).toHaveBeenCalledWith(
+    expect(mockPolishContent).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: '第一句。第一句。',
-        mode: 'rewrite',
+        originalText: '原始内容。',
+        polishType: 'standard',
       })
     )
+    expect(mockProcessWritingHelper).not.toHaveBeenCalled()
+    expect(screen.getByText('兼容润色结果。')).toBeInTheDocument()
   })
 })

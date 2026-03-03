@@ -467,6 +467,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   />
                   <span className="text-gray-600 dark:text-dark-text-secondary">检测规避拦截</span>
                 </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={localSettings.writingHelperUseLegacyPolish}
+                    onChange={(e) => setLocalSettings({ ...localSettings, writingHelperUseLegacyPolish: e.target.checked })}
+                    className="rounded"
+                  />
+                  <span className="text-gray-600 dark:text-dark-text-secondary">{t.writingHelperLegacyPolish}</span>
+                </label>
               </div>
             </div>
 

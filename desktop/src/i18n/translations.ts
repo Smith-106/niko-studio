@@ -116,6 +116,18 @@ export interface Translations {
   qualityGoalRhythmVariability: string
   qualityGoalCustomInstruction: string
   qualityGoalCustomInstructionPlaceholder: string
+  writingHelperLegacyPolish: string
+  writingHelperClose: string
+  writingHelperGuardStatus: string
+  writingHelperGuardOn: string
+  writingHelperGuardOff: string
+  writingHelperHint: string
+  writingHelperOpenSettings: string
+  writingHelperModePrefix: string
+  writingHelperRun: string
+  writingHelperRunning: string
+  writingHelperClearDraft: string
+  writingHelperFailed: string
   uiSettings: string
   theme: string
   themeLight: string
@@ -254,6 +266,18 @@ export const translations: Record<Language, Translations> = {
     qualityGoalRhythmVariability: '节奏变化目标',
     qualityGoalCustomInstruction: '自定义优化指令',
     qualityGoalCustomInstructionPlaceholder: '输入你的个性化洗稿/润色要求',
+    writingHelperLegacyPolish: 'Writing Helper 润色走 legacy 接口',
+    writingHelperClose: '关闭',
+    writingHelperGuardStatus: '检测规避拦截：{status}',
+    writingHelperGuardOn: '开启',
+    writingHelperGuardOff: '关闭',
+    writingHelperHint: '可在“设置 → LLM 模型配置”中修改“检测规避拦截”开关。',
+    writingHelperOpenSettings: '打开设置',
+    writingHelperModePrefix: '模式：{mode}',
+    writingHelperRun: '执行',
+    writingHelperRunning: '处理中...',
+    writingHelperClearDraft: '清空草稿',
+    writingHelperFailed: '处理失败',
     uiSettings: '界面设置',
     theme: '主题',
     themeLight: '浅色',
@@ -390,6 +414,18 @@ export const translations: Record<Language, Translations> = {
     qualityGoalRhythmVariability: 'Rhythm Variability Target',
     qualityGoalCustomInstruction: 'Custom Optimization Instruction',
     qualityGoalCustomInstructionPlaceholder: 'Enter your personalized rewrite/polish instruction',
+    writingHelperLegacyPolish: 'Use legacy interface for Writing Helper polish',
+    writingHelperClose: 'Close',
+    writingHelperGuardStatus: 'Detection evasion guard: {status}',
+    writingHelperGuardOn: 'On',
+    writingHelperGuardOff: 'Off',
+    writingHelperHint: 'You can change the detection evasion guard in Settings → LLM Configuration.',
+    writingHelperOpenSettings: 'Open Settings',
+    writingHelperModePrefix: 'Mode: {mode}',
+    writingHelperRun: 'Run',
+    writingHelperRunning: 'Processing...',
+    writingHelperClearDraft: 'Clear Draft',
+    writingHelperFailed: 'Processing failed',
     uiSettings: 'UI Settings',
     theme: 'Theme',
     themeLight: 'Light',

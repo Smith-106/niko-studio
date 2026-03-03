@@ -10,6 +10,8 @@ import {
   mergeRecommendationBatchResults,
   probeGatewayServiceHealth,
   processWritingHelper,
+  polishContent,
+  polishContentCompat,
   setGatewayServiceEnabled,
   updateGatewayServiceConfig,
   type ChatRequest,
@@ -353,6 +355,89 @@ describe('writing helper API', () => {
     )
     expect(response.success).toBe(true)
     expect(response.data).toEqual({ mode: 'rewrite', processed_text: '改写后文本。' })
+  })
+
+  it('maps legacy polish request to writing-helper endpoint', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ mode: 'polish', processed_text: '润色后文本。' }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await polishContentCompat({
+      originalText: '原始文本。',
+      polishType: 'academic',
+      llmApiUrl: 'https://example.com/v1/chat/completions',
+      llmApiKey: 'dummy',
+      model: 'gpt-4o',
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/writing-helper/process'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          content: '原始文本。',
+          mode: 'polish',
+          instruction: '使用更正式、学术的书面表达',
+          detection_evasion_guard_enabled: true,
+        }),
+      })
+    )
+
+    expect(response).toEqual({
+      originalText: '原始文本。',
+      polishedText: '润色后文本。',
+      diffMarkup: '<del class="diff-del">原始文本。</del>\n<ins class="diff-add">润色后文本。</ins>',
+    })
+  })
+
+  it('exposes polishContent alias with same behavior', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ mode: 'polish', processed_text: '别名润色结果。' }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await polishContent({
+      originalText: '原始文本。',
+      polishType: 'business',
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/writing-helper/process'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          content: '原始文本。',
+          mode: 'polish',
+          instruction: '使用更专业、商务化表达',
+          detection_evasion_guard_enabled: true,
+        }),
+      })
+    )
+
+    expect(response).toEqual({
+      originalText: '原始文本。',
+      polishedText: '别名润色结果。',
+      diffMarkup: '<del class="diff-del">原始文本。</del>\n<ins class="diff-add">别名润色结果。</ins>',
+    })
+  })
+
+  it('returns validation error when originalText is empty', async () => {
+    const response = await polishContentCompat({
+      originalText: '   ',
+      polishType: 'standard',
+    })
+
+    expect(response).toEqual({
+      originalText: '   ',
+      polishedText: '',
+      diffMarkup: '',
+      error: 'originalText is required',
+    })
   })
 })
 

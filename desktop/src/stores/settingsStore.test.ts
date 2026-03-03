@@ -47,4 +47,15 @@ describe('settingsStore prompt template library', () => {
     expect(library.recentTemplateIds[0]).toBe('tpl-test-1')
     expect(library.variablePresets['tpl-test-1']).toEqual({ name: 'Niko' })
   })
+
+  it('supports writing helper legacy polish toggle setting', () => {
+    localStorage.clear()
+    const store = useSettingsStore.getState()
+
+    expect(store.settings.writingHelperUseLegacyPolish).toBe(false)
+
+    store.updateSettings({ writingHelperUseLegacyPolish: true })
+
+    expect(useSettingsStore.getState().settings.writingHelperUseLegacyPolish).toBe(true)
+  })
 })

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { processWritingHelper, type WritingHelperMode } from '../api/client'
+import { processWritingHelper, polishContent, type WritingHelperMode } from '../api/client'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useI18n } from '../i18n'
 
 interface WritingHelperPanelDraftState {
   content: string
@@ -27,6 +28,9 @@ const MODE_OPTIONS: Array<{ value: WritingHelperMode; label: string }> = [
 
 export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraftStateChange, onClearDraft }: WritingHelperPanelProps) {
   const detectionEvasionGuardEnabled = useSettingsStore((state) => state.settings.detectionEvasionGuardEnabled)
+  const useLegacyPolish = useSettingsStore((state) => state.settings.writingHelperUseLegacyPolish)
+  const updateSettings = useSettingsStore((state) => state.updateSettings)
+  const { t, translate } = useI18n()
   const [content, setContent] = useState(draftState?.content ?? '')
   const [mode, setMode] = useState<WritingHelperMode>(draftState?.mode ?? 'polish')
   const [maxSentences, setMaxSentences] = useState(draftState?.maxSentences ?? 3)
@@ -47,6 +51,24 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
     setResult(null)
 
     try {
+      if (mode === 'polish' && useLegacyPolish) {
+        const legacyResponse = await polishContent({
+          originalText: content,
+          polishType: 'standard',
+        })
+
+        if (legacyResponse.error) {
+          setError(legacyResponse.error)
+          return
+        }
+
+        setResult({
+          mode: 'polish',
+          processedText: legacyResponse.polishedText,
+        })
+        return
+      }
+
       const response = await processWritingHelper({
         content,
         mode,
@@ -56,7 +78,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
       })
 
       if (!response.success || !response.data) {
-        setError(response.error || '处理失败')
+        setError(response.error || t.writingHelperFailed)
         return
       }
 
@@ -95,28 +117,40 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
                   : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
               }`}
             >
-              检测规避拦截：{detectionEvasionGuardEnabled ? '开启' : '关闭'}
+              {translate('writingHelperGuardStatus', {
+                status: detectionEvasionGuardEnabled ? t.writingHelperGuardOn : t.writingHelperGuardOff,
+              })}
             </span>
           </div>
           <button
             onClick={onClose}
             className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-dark-border dark:text-dark-text"
           >
-            关闭
+            {t.writingHelperClose}
           </button>
         </div>
 
         <div className="p-4 pb-0">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[11px] text-gray-500 dark:text-dark-text-secondary">
-              可在“设置 → LLM 模型配置”中修改“检测规避拦截”开关。
+              {t.writingHelperHint}
             </div>
-            <button
-              onClick={onOpenSettings}
-              className="px-2 py-1 text-[11px] rounded bg-gray-100 hover:bg-gray-200 dark:bg-dark-border dark:hover:bg-gray-600 dark:text-dark-text"
-            >
-              打开设置
-            </button>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1 text-[11px] text-gray-600 dark:text-dark-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={useLegacyPolish}
+                  onChange={(event) => updateSettings({ writingHelperUseLegacyPolish: event.target.checked })}
+                />
+                {t.writingHelperLegacyPolish}
+              </label>
+              <button
+                onClick={onOpenSettings}
+                className="px-2 py-1 text-[11px] rounded bg-gray-100 hover:bg-gray-200 dark:bg-dark-border dark:hover:bg-gray-600 dark:text-dark-text"
+              >
+                {t.writingHelperOpenSettings}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -177,21 +211,21 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
               disabled={buttonDisabled}
               className="px-3 py-2 text-sm rounded bg-blue-600 text-white disabled:bg-blue-300"
             >
-              {loading ? '处理中...' : '执行'}
+              {loading ? t.writingHelperRunning : t.writingHelperRun}
             </button>
             <button
               onClick={handleClearDraft}
               disabled={loading}
               className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:text-gray-400 dark:bg-dark-border dark:hover:bg-gray-600 dark:text-dark-text"
             >
-              清空草稿
+              {t.writingHelperClearDraft}
             </button>
             {error && <span className="text-xs text-red-600">{error}</span>}
           </div>
 
           {result && (
             <div className="rounded border border-gray-200 dark:border-dark-border p-3 bg-gray-50 dark:bg-dark-bg">
-              <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">模式：{result.mode}</div>
+              <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{translate('writingHelperModePrefix', { mode: result.mode ?? '' })}</div>
               {result.processedText && (
                 <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-dark-text">{result.processedText}</pre>
               )}
