@@ -612,38 +612,53 @@ class GraphManager:
         Returns:
             相关实体列表
         """
-        visited = set()
-        queue = deque([(entity_id, 0)])
-        results = []
+        if max_depth <= 0 or limit <= 0:
+            return []
 
-        while queue and len(results) < limit:
-            current_id, depth = queue.popleft()
+        visited = {entity_id}
+        frontier = [entity_id]
+        candidate_ids: List[str] = []
 
-            if current_id in visited:
-                continue
-            visited.add(current_id)
+        for _depth in range(1, max_depth + 1):
+            if not frontier or len(candidate_ids) >= limit:
+                break
 
-            if depth > 0:  # 不包含起始节点
-                entity = self.get_entity(current_id)
-                if entity:
-                    results.append(entity)
+            placeholders = ",".join("?" for _ in frontier)
+            sql = f"""
+                SELECT target_id AS neighbor_id FROM relationships
+                WHERE source_id IN ({placeholders})
+                UNION
+                SELECT source_id AS neighbor_id FROM relationships
+                WHERE target_id IN ({placeholders})
+            """
+            params = tuple(frontier) + tuple(frontier)
+            cursor = self._conn.execute(sql, params)
 
-            if depth < max_depth:
-                # 获取邻居节点
-                cursor = self._conn.execute(
-                    """
-                    SELECT target_id FROM relationships WHERE source_id = ?
-                    UNION
-                    SELECT source_id FROM relationships WHERE target_id = ?
-                    """,
-                    (current_id, current_id),
-                )
-                for row in cursor.fetchall():
-                    neighbor_id = row[0]
-                    if neighbor_id not in visited:
-                        queue.append((neighbor_id, depth + 1))
+            next_frontier: List[str] = []
+            for row in cursor.fetchall():
+                neighbor_id = row["neighbor_id"] if isinstance(row, sqlite3.Row) else row[0]
+                if neighbor_id in visited:
+                    continue
+                visited.add(neighbor_id)
+                next_frontier.append(neighbor_id)
+                candidate_ids.append(neighbor_id)
+                if len(candidate_ids) >= limit:
+                    break
 
-        return results
+            frontier = next_frontier
+
+        if not candidate_ids:
+            return []
+
+        ids_for_query = candidate_ids[:limit]
+        placeholders = ",".join("?" for _ in ids_for_query)
+        cursor = self._conn.execute(
+            f"SELECT * FROM entities WHERE id IN ({placeholders})",
+            tuple(ids_for_query),
+        )
+        entity_map = {row["id"]: self._row_to_entity(row) for row in cursor.fetchall()}
+        return [entity_map[eid] for eid in ids_for_query if eid in entity_map]
+
 
     # ============================================================
     # 实体 CRUD
