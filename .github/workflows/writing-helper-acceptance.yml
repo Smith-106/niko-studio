@@ -1,5 +1,9 @@
 name: Writing Helper Acceptance
 
+concurrency:
+  group: writing-helper-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
 
