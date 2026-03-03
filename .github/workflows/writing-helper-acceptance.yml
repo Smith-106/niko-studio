@@ -21,6 +21,11 @@ on:
           - warning
           - info
           - debug
+      port:
+        description: Gateway port
+        required: false
+        default: "18080"
+        type: string
 
 jobs:
   acceptance:
@@ -43,7 +48,7 @@ jobs:
       - name: Start gateway in background
         shell: pwsh
         run: |
-          $proc = Start-Process -FilePath python -ArgumentList "scripts/start_gateway.py --host 127.0.0.1 --port 8000 --log-level ${{ inputs.log_level }}" -PassThru -RedirectStandardOutput gateway.log -RedirectStandardError gateway.err
+          $proc = Start-Process -FilePath python -ArgumentList "scripts/start_gateway.py --host 127.0.0.1 --port ${{ inputs.port }} --log-level ${{ inputs.log_level }}" -PassThru -RedirectStandardOutput gateway.log -RedirectStandardError gateway.err
           "GATEWAY_PID=$($proc.Id)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Wait for gateway health
@@ -52,7 +57,7 @@ jobs:
           $ok = $false
           for ($i = 0; $i -lt 60; $i++) {
             try {
-              $resp = Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/health"
+              $resp = Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:${{ inputs.port }}/health"
               if ($null -ne $resp) {
                 $ok = $true
                 break
@@ -70,9 +75,9 @@ jobs:
         shell: pwsh
         run: |
           if ('${{ inputs.strict }}' -eq 'true') {
-            ./scripts/check-writing-helper.ps1 -Strict
+            ./scripts/check-writing-helper.ps1 -Strict -Port ${{ inputs.port }}
           } else {
-            ./scripts/check-writing-helper.ps1
+            ./scripts/check-writing-helper.ps1 -Port ${{ inputs.port }}
           }
 
       - name: Upload failed cases artifact
