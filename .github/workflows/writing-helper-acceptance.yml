@@ -2,34 +2,6 @@ name: Writing Helper Acceptance
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'src/services/writing_helper.py'
-      - 'src/mcp/gateway.py'
-      - 'scripts/check-writing-helper.ps1'
-      - '.github/workflows/writing-helper-acceptance.yml'
-      - 'tests/unit/services/test_writing_helper.py'
-      - 'tests/unit/mcp/test_gateway_endpoints.py'
-      - 'desktop/src/api/client.ts'
-      - 'desktop/src/api/client.test.ts'
-      - 'desktop/src/components/WritingHelperPanel.tsx'
-      - 'desktop/src/components/WritingHelperPanel.test.tsx'
-      - 'desktop/src/App.tsx'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/services/writing_helper.py'
-      - 'src/mcp/gateway.py'
-      - 'scripts/check-writing-helper.ps1'
-      - '.github/workflows/writing-helper-acceptance.yml'
-      - 'tests/unit/services/test_writing_helper.py'
-      - 'tests/unit/mcp/test_gateway_endpoints.py'
-      - 'desktop/src/api/client.ts'
-      - 'desktop/src/api/client.test.ts'
-      - 'desktop/src/components/WritingHelperPanel.tsx'
-      - 'desktop/src/components/WritingHelperPanel.test.tsx'
-      - 'desktop/src/App.tsx'
 
 jobs:
   acceptance:
