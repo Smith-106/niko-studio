@@ -1879,6 +1879,69 @@ async def test_writing_helper_process_endpoint_outline_success():
 
 
 @pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_rewrite_success():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {"content": "第一句。 第一句。", "mode": "rewrite"},
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["mode"] == "rewrite"
+    assert data["processed_text"] == "第一句。"
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_expand_success():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {"content": "第一句。", "mode": "expand"},
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["mode"] == "expand"
+    assert "进一步展开：第一句。" in data["processed_text"]
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_accepts_action_alias():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {"content": "第一句。", "action": "rewrite"},
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["mode"] == "rewrite"
+
+
+@pytest.mark.asyncio
+async def test_writing_helper_process_endpoint_mode_takes_priority_over_action():
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request(
+        "/writing-helper/process",
+        {"content": "第一句。", "mode": "expand", "action": "rewrite"},
+    )
+    res = await gateway_module.writing_helper_process_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["mode"] == "expand"
+    assert "进一步展开：第一句。" in data["processed_text"]
+
+
+@pytest.mark.asyncio
 async def test_writing_helper_process_endpoint_rejects_invalid_mode():
     from src.mcp import gateway as gateway_module
 

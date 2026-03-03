@@ -329,6 +329,31 @@ describe('writing helper API', () => {
     expect(response.success).toBe(true)
     expect(response.data).toEqual({ mode: 'outline', outline: ['第一段。'] })
   })
+
+  it('posts rewrite mode payload to writing-helper endpoint', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ mode: 'rewrite', processed_text: '改写后文本。' }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await processWritingHelper({
+      content: '原始文本。',
+      mode: 'rewrite',
+      instruction: '更简洁',
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/writing-helper/process'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ content: '原始文本。', mode: 'rewrite', instruction: '更简洁' }),
+      })
+    )
+    expect(response.success).toBe(true)
+    expect(response.data).toEqual({ mode: 'rewrite', processed_text: '改写后文本。' })
+  })
 })
 
 describe('chat request payload', () => {

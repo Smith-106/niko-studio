@@ -19,6 +19,8 @@ interface WritingHelperPanelProps {
 
 const MODE_OPTIONS: Array<{ value: WritingHelperMode; label: string }> = [
   { value: 'polish', label: '润色（polish）' },
+  { value: 'rewrite', label: '改写（rewrite）' },
+  { value: 'expand', label: '扩写（expand）' },
   { value: 'summarize', label: '摘要（summarize）' },
   { value: 'outline', label: '提纲（outline）' },
 ]

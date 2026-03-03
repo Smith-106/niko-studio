@@ -2903,9 +2903,11 @@ async def writing_helper_process_endpoint(request: Request):
     if guard_response is not None:
         return guard_response
 
-    mode = body.get("mode", "polish")
+    # Backward-compatible alias: mode takes precedence over action when both are present.
+    mode = body.get("mode", body.get("action", "polish"))
     max_sentences = body.get("max_sentences", 3)
     max_items = body.get("max_items", 6)
+    instruction = body.get("instruction", "")
 
     try:
         result = process_writing_helper(
@@ -2913,6 +2915,7 @@ async def writing_helper_process_endpoint(request: Request):
             mode=mode,
             max_sentences=int(max_sentences),
             max_items=int(max_items),
+            instruction=instruction if isinstance(instruction, str) else "",
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)

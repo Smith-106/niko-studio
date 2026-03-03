@@ -48,7 +48,7 @@ export interface GatewayMetrics {
   latency_ms_max: number
 }
 
-export type WritingHelperMode = 'polish' | 'summarize' | 'outline'
+export type WritingHelperMode = 'polish' | 'summarize' | 'outline' | 'rewrite' | 'expand'
 
 export interface WritingHelperRequest {
   content: string

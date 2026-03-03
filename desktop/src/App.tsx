@@ -50,7 +50,7 @@ const toPositiveInteger = (value: unknown, fallback: number): number => {
 }
 
 const toWritingHelperMode = (value: unknown, fallback: WritingHelperMode): WritingHelperMode => {
-  if (value === 'polish' || value === 'summarize' || value === 'outline') {
+  if (value === 'polish' || value === 'summarize' || value === 'outline' || value === 'rewrite' || value === 'expand') {
     return value
   }
   return fallback
