@@ -6,6 +6,12 @@ concurrency:
 
 on:
   workflow_dispatch:
+    inputs:
+      strict:
+        description: Run strict assertions
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   acceptance:
@@ -51,10 +57,14 @@ jobs:
             throw "Gateway did not become healthy within timeout"
           }
 
-      - name: Run writing-helper strict acceptance
+      - name: Run writing-helper acceptance
         shell: pwsh
         run: |
-          ./scripts/check-writing-helper.ps1 -Strict
+          if ('${{ inputs.strict }}' -eq 'true') {
+            ./scripts/check-writing-helper.ps1 -Strict
+          } else {
+            ./scripts/check-writing-helper.ps1
+          }
 
       - name: Upload failed cases artifact
         if: failure() && hashFiles('failed-writing-helper-cases.json') != ''
