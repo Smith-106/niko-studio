@@ -104,6 +104,10 @@ export interface Translations {
   targetWords: string
   autoSkillMatch: string
   qualityGoalsTitle: string
+  qualityGoalNaturalness: string
+  qualityGoalReadability: string
+  qualityGoalCoherence: string
+  qualityGoalStyleConsistency: string
   qualityGoalPreset: string
   qualityPresetHumanWriting: string
   qualityPresetAiEditGuidance: string
