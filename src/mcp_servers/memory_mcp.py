@@ -396,7 +396,8 @@ class KnowledgeGraphStore:
         cursor = self.db.execute(sql, params)
 
         relations = []
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             relations.append({
                 "id": row[0],
                 "from": row[1],
@@ -450,7 +451,8 @@ class KnowledgeGraphStore:
                     LIMIT ?
                 """, (query, limit))
 
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            for row in rows:
                 results.append({
                     "id": row[0],
                     "name": row[1],
@@ -480,7 +482,8 @@ class KnowledgeGraphStore:
                     LIMIT ?
                 """, (like_query, like_query, limit))
 
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            for row in rows:
                 results.append({
                     "id": row[0],
                     "name": row[1],
@@ -526,12 +529,14 @@ class KnowledgeGraphStore:
         # 按类型统计
         entity_by_type = {}
         cursor = self.db.execute("SELECT entity_type, COUNT(*) FROM entities GROUP BY entity_type")
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             entity_by_type[row[0]] = row[1]
 
         relation_by_type = {}
         cursor = self.db.execute("SELECT relation_type, COUNT(*) FROM relations GROUP BY relation_type")
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             relation_by_type[row[0]] = row[1]
 
         return {

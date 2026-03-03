@@ -396,7 +396,8 @@ class BackupManager:
         """, (limit,))
 
         backups = []
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             backups.append({
                 "id": row['id'],
                 "name": row['name'],

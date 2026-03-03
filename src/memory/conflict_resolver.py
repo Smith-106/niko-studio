@@ -177,7 +177,8 @@ class ConflictResolver:
             """, (entity_id,))
 
             conflicts = []
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            for row in rows:
                 existing_content = row[1]
                 conflict_type, similarity = self._analyze_conflict(content, existing_content)
 

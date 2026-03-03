@@ -146,7 +146,8 @@ class ConflictResolver:
         """, (entity_id,))
         
         conflicts = []
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             # 简单的语义冲突检测 (实际应用中使用嵌入向量)
             if self._is_contradictory(content, row[1]):
                 conflicts.append({

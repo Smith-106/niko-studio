@@ -526,7 +526,8 @@ class TokenService:
             """, (limit,))
 
         records = []
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             records.append(TokenUsage(
                 session_id=row['session_id'],
                 model=row['model'],
@@ -581,7 +582,8 @@ class TokenService:
         cursor = db.execute(sql, params)
 
         results = []
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             results.append({
                 group_by: row['group_key'],
                 "input_tokens": row['total_input'],

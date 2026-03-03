@@ -306,7 +306,8 @@ class GraphEngine:
         cursor = self.db.execute(sql, params)
         
         relations = []
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             relations.append({
                 "id": row[0],
                 "type": row[1],

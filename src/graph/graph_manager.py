@@ -308,7 +308,8 @@ class GraphManager:
         )
 
         result = {}
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             entity = self._row_to_entity(row)
             result[entity.id] = entity
 
@@ -451,7 +452,8 @@ class GraphManager:
             sql += f" LIMIT {limit}"
 
         cursor = self._conn.execute(sql, params)
-        for row in cursor.fetchall():
+        rows = cursor.fetchall()
+        for row in rows:
             results.append({
                 "source": {
                     "id": row["source_id"],
@@ -921,7 +923,8 @@ class GraphManager:
                 (current_id, current_id, current_id),
             )
 
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            for row in rows:
                 neighbor_id = row["neighbor_id"]
 
                 if neighbor_id in visited:
@@ -989,7 +992,8 @@ class GraphManager:
                     (current_id, current_id),
                 )
 
-                for row in cursor.fetchall():
+                rows = cursor.fetchall()
+                for row in rows:
                     relationship_ids.add(row["id"])
                     neighbor_id = (
                         row["target_id"]
@@ -1011,7 +1015,8 @@ class GraphManager:
                 f"SELECT * FROM relationships WHERE id IN ({placeholders})",
                 list(relationship_ids),
             )
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            for row in rows:
                 relationships.append(self._row_to_relationship(row))
 
         return SubGraph(
