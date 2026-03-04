@@ -794,6 +794,18 @@ class WorkflowEngine:
                 "history": 2,
                 "long_text_escalation": 2,
             },
+            "thresholds": {
+                "min_structured_score": 1,
+                "long_text_escalation_min_length": 100,
+                "long_text_target_floor": WorkflowLevel.L3_STANDARD.label,
+                "default_level": WorkflowLevel.L2_LITE.label,
+            },
+            "category_explanations": {
+                "keyword": "命中层级关键词",
+                "structure": "命中结构信号",
+                "history": "命中历史反馈信号",
+                "long_text_escalation": "长文本任务自动升级",
+            },
             "levels": {
                 WorkflowLevel.L1_RAPID: {
                     "keyword": ["回答", "解释", "什么是", "告诉我", "简单"],
@@ -827,6 +839,7 @@ class WorkflowEngine:
         task_lower = (task or "").lower()
         model = self._get_routing_feature_model()
         weights = model["weights"]
+        thresholds = model.get("thresholds", {})
 
         structured_levels = [
             WorkflowLevel.L1_RAPID,
@@ -853,6 +866,7 @@ class WorkflowEngine:
                                 "category": category,
                                 "signal": pattern,
                                 "weight": weight,
+                                "explanation": model.get("category_explanations", {}).get(category, ""),
                             }
                         )
 
@@ -861,6 +875,10 @@ class WorkflowEngine:
                 continue
             legacy_scores[level] = sum(1 for pattern in indicators if re.search(pattern, task_lower))
 
+        default_level = WorkflowLevel.from_label(
+            thresholds.get("default_level", WorkflowLevel.L2_LITE.label)
+        )
+
         def _pick_level(scores: Dict[WorkflowLevel, int], fallback: WorkflowLevel) -> Tuple[WorkflowLevel, int]:
             ordered = sorted(
                 scores.items(),
@@ -868,23 +886,29 @@ class WorkflowEngine:
                 reverse=True,
             )
             top_level, top_score = ordered[0]
-            if top_score <= 0:
+            min_structured_score = int(thresholds.get("min_structured_score", 1))
+            if top_score < min_structured_score:
                 return fallback, 0
             return top_level, top_score
 
-        legacy_level, legacy_top_score = _pick_level(legacy_scores, WorkflowLevel.L2_LITE)
+        legacy_level, legacy_top_score = _pick_level(legacy_scores, default_level)
         matched_level, structured_top_score = _pick_level(structured_scores, legacy_level)
 
-        if len(task or "") > 100 and matched_level in [WorkflowLevel.L1_RAPID, WorkflowLevel.L2_LITE]:
-            matched_level = WorkflowLevel.L3_STANDARD
+        escalation_min_length = int(thresholds.get("long_text_escalation_min_length", 100))
+        escalation_floor = WorkflowLevel.from_label(
+            thresholds.get("long_text_target_floor", WorkflowLevel.L3_STANDARD.label)
+        )
+        if len(task or "") > escalation_min_length and matched_level.value < escalation_floor.value:
+            matched_level = escalation_floor
             escalation_weight = int(weights.get("long_text_escalation", 0))
             structured_scores[matched_level] += escalation_weight
             matched_features.append(
                 {
                     "level": matched_level.label,
-                    "category": "structure",
-                    "signal": "long_text_escalation",
+                    "category": "long_text_escalation",
+                    "signal": f"len>{escalation_min_length}",
                     "weight": escalation_weight,
+                    "explanation": model.get("category_explanations", {}).get("long_text_escalation", ""),
                 }
             )
             structured_top_score = max(structured_top_score, structured_scores[matched_level])
@@ -898,8 +922,15 @@ class WorkflowEngine:
             "legacy_level": legacy_level,
             "legacy_top_score": legacy_top_score,
             "feature_model": {
-                "categories": ["keyword", "structure", "history"],
+                "categories": ["keyword", "structure", "history", "long_text_escalation"],
                 "weights": weights,
+                "thresholds": {
+                    "min_structured_score": int(thresholds.get("min_structured_score", 1)),
+                    "long_text_escalation_min_length": escalation_min_length,
+                    "long_text_target_floor": escalation_floor.label,
+                    "default_level": default_level.label,
+                },
+                "category_explanations": model.get("category_explanations", {}),
             },
         }
 

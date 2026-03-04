@@ -167,6 +167,16 @@ class TestWorkflowEngine:
         assert isinstance(result["matched_features"], list)
         assert result["score"] >= 1
         assert isinstance(result["routing_diagnostics"]["level_scores"], dict)
+        assert result["routing_diagnostics"]["feature_model"]["weights"]["keyword"] == 3
+        assert result["routing_diagnostics"]["feature_model"]["thresholds"]["default_level"] == "L2"
+
+    @pytest.mark.asyncio
+    async def test_route_matched_features_have_explanations(self, engine):
+        result = await engine.route("请简述这个设定的核心冲突并回答原因？")
+
+        assert len(result["matched_features"]) > 0
+        assert all("explanation" in feature for feature in result["matched_features"])
+        assert result["routing_diagnostics"]["feature_model"]["category_explanations"]["history"] == "命中历史反馈信号"
 
     @pytest.mark.asyncio
     async def test_route_mixed_intent_prefers_highest_structured_score(self, engine):
