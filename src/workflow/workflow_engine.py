@@ -10,6 +10,7 @@
 
 import json
 import logging
+import os
 import re
 import uuid
 import hashlib
@@ -19,7 +20,7 @@ import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional, Any, TypedDict
+from typing import List, Dict, Optional, Any, TypedDict, Tuple
 
 from src.workflow.levels.types import (
     WorkflowLevel,
@@ -29,6 +30,7 @@ from src.workflow.levels.types import (
     to_workflow_slug,
     ensure_contract_payload,
 )
+from src.workflow.project_tech import check_project_tech_freshness
 from src.workflow.session.session_manager import SessionManager, ContentType
 
 logger = logging.getLogger("niko-workflow")
@@ -684,6 +686,25 @@ class WorkflowEngine:
 
         return self._resolve_template_meta(level).get("gate_profile", "default-soft")
 
+    def _project_tech_stale_policy_is_blocking(self) -> bool:
+        policy = (os.getenv("NIKO_PROJECT_TECH_STALE_POLICY", "warn") or "").strip().lower()
+        return policy in {"block", "hard", "strict", "fail"}
+
+    def _run_project_tech_freshness_preflight(self, plan: WorkflowPlan) -> Dict[str, Any]:
+        result = check_project_tech_freshness(
+            self.workspace,
+            strict=self._project_tech_stale_policy_is_blocking(),
+        )
+        self._append_audit_event(plan, "freshness_preflight", result)
+        logger.info(
+            "Project-tech freshness preflight: plan=%s status=%s blocking=%s detail=%s",
+            plan.id,
+            result.get("status", "unknown"),
+            bool(result.get("blocking", False)),
+            result.get("message", ""),
+        )
+        return result
+
     def _get_level_indicators(self) -> Dict[WorkflowLevel, List[str]]:
         return {
             WorkflowLevel.L1_RAPID: ["回答", "解释", "什么是", "告诉我", "简单"],
@@ -691,6 +712,124 @@ class WorkflowEngine:
             WorkflowLevel.L3_STANDARD: ["写一章", "创作章节", "完成场景", "第.*章"],
             WorkflowLevel.L4_BRAINSTORM: ["连续写", "多章", "接着写", "继续"],
             WorkflowLevel.L5_COORDINATOR: ["规划全书", "大纲", "整体设计", "完整故事"],
+        }
+
+    def _get_routing_feature_model(self) -> Dict[str, Any]:
+        """结构化路由特征与评分模型。"""
+        return {
+            "weights": {
+                "keyword": 3,
+                "structure": 2,
+                "history": 2,
+                "long_text_escalation": 2,
+            },
+            "levels": {
+                WorkflowLevel.L1_RAPID: {
+                    "keyword": ["回答", "解释", "什么是", "告诉我", "简单"],
+                    "structure": [r"\?|？", r"如何", r"为什么", r"一句话", r"简述", r"速答"],
+                    "history": [],
+                },
+                WorkflowLevel.L2_LITE: {
+                    "keyword": ["写一段", "描写", "生成段落", "扩写"],
+                    "structure": [r"段落", r"片段", r"短文", r"示例"],
+                    "history": [],
+                },
+                WorkflowLevel.L3_STANDARD: {
+                    "keyword": ["写一章", "创作章节", "完成场景", "第.*章"],
+                    "structure": [r"章节", r"第\s*\d+\s*章", r"场景"],
+                    "history": [r"根据反馈", r"上次", r"继续修改", r"迭代"],
+                },
+                WorkflowLevel.L4_BRAINSTORM: {
+                    "keyword": ["连续写", "多章", "接着写", "继续"],
+                    "structure": [r"同时", r"并且", r"先.*再", r"多线"],
+                    "history": [r"汇总反馈", r"多轮", r"讨论"],
+                },
+                WorkflowLevel.L5_COORDINATOR: {
+                    "keyword": ["规划全书", "大纲", "整体设计", "完整故事"],
+                    "structure": [r"全书", r"世界观", r"角色设定", r"路线图", r"里程碑"],
+                    "history": [r"跨章节", r"长期", r"版本"],
+                },
+            },
+        }
+
+    def _score_route_features(self, task: str) -> Dict[str, Any]:
+        task_lower = (task or "").lower()
+        model = self._get_routing_feature_model()
+        weights = model["weights"]
+
+        structured_levels = [
+            WorkflowLevel.L1_RAPID,
+            WorkflowLevel.L2_LITE,
+            WorkflowLevel.L3_STANDARD,
+            WorkflowLevel.L4_BRAINSTORM,
+            WorkflowLevel.L5_COORDINATOR,
+        ]
+
+        structured_scores: Dict[WorkflowLevel, int] = {level: 0 for level in structured_levels}
+        legacy_scores: Dict[WorkflowLevel, int] = {level: 0 for level in structured_levels}
+        matched_features: List[Dict[str, Any]] = []
+
+        for level in structured_levels:
+            level_features = model["levels"].get(level, {})
+            for category in ("keyword", "structure", "history"):
+                for pattern in level_features.get(category, []):
+                    if re.search(pattern, task_lower):
+                        weight = int(weights.get(category, 0))
+                        structured_scores[level] += weight
+                        matched_features.append(
+                            {
+                                "level": level.label,
+                                "category": category,
+                                "signal": pattern,
+                                "weight": weight,
+                            }
+                        )
+
+        for level, indicators in self._get_level_indicators().items():
+            if level == WorkflowLevel.L5_BRAINSTORM:
+                continue
+            legacy_scores[level] = sum(1 for pattern in indicators if re.search(pattern, task_lower))
+
+        def _pick_level(scores: Dict[WorkflowLevel, int], fallback: WorkflowLevel) -> Tuple[WorkflowLevel, int]:
+            ordered = sorted(
+                scores.items(),
+                key=lambda item: (item[1], legacy_scores.get(item[0], 0), item[0].value),
+                reverse=True,
+            )
+            top_level, top_score = ordered[0]
+            if top_score <= 0:
+                return fallback, 0
+            return top_level, top_score
+
+        legacy_level, legacy_top_score = _pick_level(legacy_scores, WorkflowLevel.L2_LITE)
+        matched_level, structured_top_score = _pick_level(structured_scores, legacy_level)
+
+        if len(task or "") > 100 and matched_level in [WorkflowLevel.L1_RAPID, WorkflowLevel.L2_LITE]:
+            matched_level = WorkflowLevel.L3_STANDARD
+            escalation_weight = int(weights.get("long_text_escalation", 0))
+            structured_scores[matched_level] += escalation_weight
+            matched_features.append(
+                {
+                    "level": matched_level.label,
+                    "category": "structure",
+                    "signal": "long_text_escalation",
+                    "weight": escalation_weight,
+                }
+            )
+            structured_top_score = max(structured_top_score, structured_scores[matched_level])
+
+        return {
+            "matched_level": matched_level,
+            "structured_scores": {level.label: score for level, score in structured_scores.items()},
+            "legacy_scores": {level.label: score for level, score in legacy_scores.items()},
+            "matched_features": matched_features,
+            "structured_top_score": structured_top_score,
+            "legacy_level": legacy_level,
+            "legacy_top_score": legacy_top_score,
+            "feature_model": {
+                "categories": ["keyword", "structure", "history"],
+                "weights": weights,
+            },
         }
 
     def __init__(self, workspace: str = None, session_namespace: str = ""):
@@ -1799,21 +1938,8 @@ class WorkflowEngine:
 
         基于任务描述自动识别复杂度
         """
-        task_lower = task.lower()
-
-        # 匹配关键词
-        matched_level = WorkflowLevel.L2_LITE  # 默认
-        max_score = 0
-
-        for level, keywords in self._get_level_indicators().items():
-            score = sum(1 for kw in keywords if re.search(kw, task_lower))
-            if score > max_score:
-                max_score = score
-                matched_level = level
-
-        # 根据任务长度调整
-        if len(task) > 100 and matched_level in [WorkflowLevel.L1_RAPID, WorkflowLevel.L2_LITE]:
-            matched_level = WorkflowLevel.L3_STANDARD
+        routing_score = self._score_route_features(task)
+        matched_level = routing_score["matched_level"]
 
         level_descriptions = {
             WorkflowLevel.L1_RAPID: "简单问答模式 - 直接回答，无需规划",
@@ -1828,7 +1954,25 @@ class WorkflowEngine:
             "level_slug": matched_level.slug,
             "description": level_descriptions[matched_level],
             "suggested_workflow": self._get_workflow_template(matched_level),
-            "reason": f"匹配关键词得分: {max_score}",
+            "reason": (
+                f"匹配关键词得分: {routing_score['legacy_top_score']} | "
+                f"结构化得分: {routing_score['structured_top_score']}"
+            ),
+            "matched_features": routing_score["matched_features"],
+            "score": routing_score["structured_top_score"],
+            "final_level": matched_level.label,
+            "routing_diagnostics": {
+                "matched_features": routing_score["matched_features"],
+                "score": routing_score["structured_top_score"],
+                "final_level": matched_level.label,
+                "level_scores": routing_score["structured_scores"],
+                "baseline": {
+                    "legacy_level": routing_score["legacy_level"].label,
+                    "legacy_score": routing_score["legacy_top_score"],
+                    "legacy_level_scores": routing_score["legacy_scores"],
+                },
+                "feature_model": routing_score["feature_model"],
+            },
         }
 
     def _get_workflow_template(self, level: WorkflowLevel) -> list:
@@ -2130,6 +2274,23 @@ class WorkflowEngine:
         preflight_budget_guardrail = self._refresh_budget_guardrail(plan)
         preflight_execution_mode = self._resolve_execution_mode(plan, preflight_observability["mode"])
         plan.template_meta["execution_mode"] = preflight_execution_mode
+        freshness_preflight = self._run_project_tech_freshness_preflight(plan)
+
+        if freshness_preflight.get("blocking"):
+            self._persist_plan_state(plan, current_phase="planned")
+            return self._with_contract({
+                "plan_id": plan.id,
+                "status": "preflight_blocked",
+                "error": "project-tech freshness preflight blocked execution",
+                "freshness_preflight": freshness_preflight,
+                "plan_status": plan.status,
+                "runner_state": plan.runner_state,
+                "remaining_steps": self._remaining_steps(plan),
+                "execution_mode": preflight_execution_mode,
+                "observability_metrics": preflight_observability["aggregate"],
+                "budget_guardrail": preflight_budget_guardrail,
+                **self._state_resume_metadata(plan),
+            })
 
         # 找到要执行的步骤
         if step_id:

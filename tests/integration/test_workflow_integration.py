@@ -26,6 +26,19 @@ from src.workflow.session.session_manager import ContentType
 class TestWorkflowRouting:
     """工作流路由测试"""
 
+    ROBUSTNESS_TASKS = [
+        "请简述这个设定并解释核心矛盾？",
+        "写一段关于旧城雨夜的描写，强调气味和光影",
+        "根据上次反馈继续修改第2章冲突场景",
+        "请先回答这个问题，再给我写一章第3章的对决",
+        "写一段对白并补充角色动作细节",
+        "规划全书路线图并定义角色设定里程碑",
+        "继续多章创作并同步世界观设定",
+        "请给一个一句话速答：什么是叙事张力？",
+        "第5章场景重写，保留前文信息并优化节奏",
+        "汇总反馈后多轮讨论剧情转折点",
+    ]
+
     @pytest.fixture
     def engine(self, tmp_path):
         return WorkflowEngine(workspace=str(tmp_path))
@@ -68,6 +81,38 @@ class TestWorkflowRouting:
         result = await engine.route(long_task)
 
         assert result["level"] in ["L3", "L4", "L5"]
+
+    @pytest.mark.asyncio
+    async def test_route_diagnostics_backward_compatible(self, engine):
+        """验证新诊断字段与旧字段兼容"""
+        result = await engine.route("回答一个问题：什么是小说？")
+
+        assert result["level"] == "L1"
+        assert "reason" in result
+        assert "matched_features" in result
+        assert "score" in result
+        assert "final_level" in result
+        assert result["final_level"] == result["level"]
+        assert "routing_diagnostics" in result
+        assert result["routing_diagnostics"]["baseline"]["legacy_level"] in ["L1", "L2", "L3", "L4", "L5"]
+
+    @pytest.mark.asyncio
+    async def test_route_robustness_baseline_comparison(self, engine):
+        """鲁棒性样本集对比：结构化评分不劣于旧基线"""
+        baseline_miss = 0
+        structured_miss = 0
+
+        for task in self.ROBUSTNESS_TASKS:
+            result = await engine.route(task)
+            baseline = result["routing_diagnostics"]["baseline"]
+
+            if baseline["legacy_score"] <= 0:
+                baseline_miss += 1
+            if result["score"] <= 0:
+                structured_miss += 1
+
+        assert len(self.ROBUSTNESS_TASKS) >= 10
+        assert structured_miss <= baseline_miss
 
 
 class TestPlanMode:

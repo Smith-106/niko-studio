@@ -129,6 +129,10 @@ class TestWorkflowEngine:
         assert "level_slug" in result
         assert "description" in result
         assert "suggested_workflow" in result
+        assert "matched_features" in result
+        assert "score" in result
+        assert "final_level" in result
+        assert "routing_diagnostics" in result
 
     @pytest.mark.asyncio
     async def test_route_l1_keywords(self, engine):
@@ -148,10 +152,29 @@ class TestWorkflowEngine:
 
     @pytest.mark.asyncio
     async def test_route_long_text_upgrade(self, engine):
-        # Short task → L2, but long text upgrades to L3
+        # Short task -> L2, but long text upgrades to L3
         long_task = "写一段" + "A" * 150
         result = await engine.route(long_task)
         assert result["level"] == "L3"
+
+    @pytest.mark.asyncio
+    async def test_route_variant_intent_with_diagnostics(self, engine):
+        result = await engine.route("请简述这个设定的核心冲突并回答原因？")
+
+        assert result["level"] == "L1"
+        assert result["final_level"] == result["level"]
+        assert isinstance(result["matched_features"], list)
+        assert result["score"] >= 1
+        assert isinstance(result["routing_diagnostics"]["level_scores"], dict)
+
+    @pytest.mark.asyncio
+    async def test_route_mixed_intent_prefers_highest_structured_score(self, engine):
+        task = "请先回答这个问题，再给我写一章第3章的冲突场景"
+        result = await engine.route(task)
+
+        assert result["level"] in ["L3", "L4"]
+        assert result["routing_diagnostics"]["final_level"] == result["level"]
+        assert result["routing_diagnostics"]["baseline"]["legacy_level"] in ["L1", "L3", "L4"]
 
     @pytest.mark.asyncio
     async def test_get_workflow_template_all_levels(self, engine):
