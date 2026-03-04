@@ -625,28 +625,28 @@ async def run_writing_session(
 ) -> WritingState:
     """
     运行完整写作会话
-    
+
     Args:
         user_idea: 用户的故事灵感
         genre: 故事类型
         target_chapters: 目标章节数
         config: 工作流配置
         verbose: 是否输出详细日志
-        
+
     Returns:
         最终状态
     """
-    
+
     # 创建初始状态
     initial_state = create_initial_state(
         user_idea=user_idea,
         genre=genre,
         target_chapters=target_chapters
     )
-    
+
     # 编译图
     app = compile_graph(config, use_memory=False)
-    
+
     # 运行
     if verbose:
         print("\n" + "="*60)
@@ -655,16 +655,38 @@ async def run_writing_session(
         print(f"💡 灵感: {user_idea[:100]}...")
         print(f"📚 类型: {genre}")
         print(f"📖 目标章节: {target_chapters}")
-    
+
     # 流式执行
     final_state = None
-    async for output in app.astream(initial_state):
-        for node_name, node_output in output.items():
-            if verbose:
-                print(f"\n[Node: {node_name}] 完成")
-            final_state = {**initial_state, **node_output} if final_state is None else {**final_state, **node_output}
-    
-    return final_state
+    stream_event_count = 0
+    max_stream_events = 64
+    try:
+        async for output in app.astream(initial_state):
+            stream_event_count += 1
+            for node_name, node_output in output.items():
+                if verbose:
+                    print(f"\n[Node: {node_name}] 完成")
+                final_state = {**initial_state, **node_output} if final_state is None else {**final_state, **node_output}
+
+            if stream_event_count >= max_stream_events:
+                safe_state = dict(final_state or initial_state)
+                errors = list(safe_state.get("errors") or [])
+                errors.append(
+                    f"workflow stream reached safety cap ({max_stream_events}) before completion"
+                )
+                safe_state["errors"] = errors
+                return safe_state
+    except Exception as exc:
+        if exc.__class__.__name__ == "GraphRecursionError":
+            safe_state = dict(final_state or initial_state)
+            errors = list(safe_state.get("errors") or [])
+            errors.append(str(exc))
+            safe_state["errors"] = errors
+            return safe_state
+        raise
+
+    return final_state or initial_state
+
 
 
 # Default compiled app for import
