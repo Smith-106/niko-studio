@@ -539,8 +539,14 @@ class TestArchitectureBoundaryIntegration:
         assert app is not None
 
     @pytest.mark.asyncio
-    async def test_boundary_graph_run_session_uses_graph_facade_only(self):
+    async def test_boundary_graph_run_session_uses_graph_facade_only(self, monkeypatch):
+        from src.workflow.adapters.novel_adapter import NovelAdapter
         from src.workflow.graph import run_writing_session
+
+        class _DummyLLM:
+            pass
+
+        monkeypatch.setattr(NovelAdapter, "_get_llm", lambda self: _DummyLLM())
 
         result = await run_writing_session(
             user_idea="写一个短故事开头",
