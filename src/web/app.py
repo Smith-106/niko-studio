@@ -55,6 +55,26 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory="src/web/templates")
 
 
+WEB_WORKFLOW_ENABLED_ENV = "WEB_WORKFLOW_ENABLED"
+WEB_WORKFLOW_DISABLED_MESSAGE = (
+    "Web workflow is disabled by default. Set WEB_WORKFLOW_ENABLED=true to enable it."
+)
+WEB_WORKFLOW_RISK_MESSAGE = (
+    "Web workflow is an experimental compatibility path with operational and security risks. "
+    "Prefer Desktop client or MCP Gateway."
+)
+
+
+def _is_web_workflow_enabled() -> bool:
+    """Read workflow gate from environment with secure default-off behavior."""
+    try:
+        value = os.getenv(WEB_WORKFLOW_ENABLED_ENV, "").strip().lower()
+    except Exception as error:
+        print(f"[audit] websocket_workflow_gate_read_error error={error}")
+        return False
+    return value in {"1", "true", "yes", "on"}
+
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -124,6 +144,27 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             if message.get("type") == "start_workflow":
                 user_idea = message.get("content", "")
                 mode = message.get("mode", "L3")
+
+                if not _is_web_workflow_enabled():
+                    print(
+                        f"[audit] websocket_workflow_rejected client_id={client_id} "
+                        "reason=disabled"
+                    )
+                    await manager.send_json({
+                        "type": "error",
+                        "code": "workflow_disabled",
+                        "message": WEB_WORKFLOW_DISABLED_MESSAGE,
+                    }, websocket)
+                    continue
+
+                print(
+                    f"[audit] websocket_workflow_enabled client_id={client_id} mode={mode}"
+                )
+                await manager.send_json({
+                    "type": "risk_prompt",
+                    "severity": "warning",
+                    "message": WEB_WORKFLOW_RISK_MESSAGE,
+                }, websocket)
 
                 await manager.send_json({
                     "type": "status",

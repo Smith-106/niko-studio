@@ -9,12 +9,17 @@ import types
 from pathlib import Path
 
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import WebSocketDisconnect
 
 from src.web import app as web_app
-from src.web.app import _serialize_state, ConnectionManager
+from src.web.app import (
+    _serialize_state,
+    ConnectionManager,
+    WEB_WORKFLOW_DISABLED_MESSAGE,
+    WEB_WORKFLOW_RISK_MESSAGE,
+)
 
 
 class TestSerializeStateExtra:
@@ -92,6 +97,37 @@ class TestConnectionManagerExtra:
 
 
 @pytest.mark.asyncio
+class TestWebSocketWorkflowGate:
+    async def test_start_workflow_rejected_by_default(self, monkeypatch):
+        mgr = ConnectionManager()
+        monkeypatch.setattr(web_app, "manager", mgr)
+        monkeypatch.delenv("WEB_WORKFLOW_ENABLED", raising=False)
+
+        ws = AsyncMock()
+        ws.headers = {"origin": "http://localhost:8000"}
+        ws.receive_text = AsyncMock(
+            side_effect=[
+                json.dumps({"type": "start_workflow", "content": "idea", "mode": "L3"}),
+                WebSocketDisconnect(),
+            ]
+        )
+
+        compile_graph_mock = MagicMock()
+        monkeypatch.setattr(web_app, "compile_graph", compile_graph_mock)
+
+        await web_app.websocket_endpoint(ws, "gate-default")
+
+        sent_payloads = [call.args[0] for call in ws.send_json.await_args_list]
+        assert any(
+            payload.get("type") == "error"
+            and payload.get("code") == "workflow_disabled"
+            and payload.get("message") == WEB_WORKFLOW_DISABLED_MESSAGE
+            for payload in sent_payloads
+        )
+        compile_graph_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
 class TestWebSocketOriginCheck:
     """Test the origin validation logic from websocket_endpoint."""
 
@@ -106,7 +142,7 @@ class TestWebSocketOriginCheck:
         ws.close.assert_awaited_once_with(code=1008)
 
     async def test_trusted_origin_accepted(self, monkeypatch):
-        """Trusted origin should process start_workflow and complete."""
+        """Trusted origin with explicit enable should process start_workflow and complete."""
 
         class _WorkflowApp:
             async def astream(self, _state):
@@ -131,6 +167,7 @@ class TestWebSocketOriginCheck:
             ]
         )
 
+        monkeypatch.setenv("WEB_WORKFLOW_ENABLED", "true")
         monkeypatch.setattr(web_app, "create_initial_state", lambda **kwargs: {"seed": kwargs["user_idea"]})
         monkeypatch.setattr(web_app, "compile_graph", lambda *_args, **_kwargs: _WorkflowApp())
 
@@ -138,16 +175,20 @@ class TestWebSocketOriginCheck:
 
         ws.accept.assert_awaited_once()
         sent_types = [call.args[0]["type"] for call in ws.send_json.await_args_list]
+        assert "risk_prompt" in sent_types
         assert "status" in sent_types
         assert "node_update" in sent_types
         assert "draft_update" in sent_types
         assert "lock_update" in sent_types
         assert "scenes_update" in sent_types
+        risk_payload = next(call.args[0] for call in ws.send_json.await_args_list if call.args[0]["type"] == "risk_prompt")
+        assert risk_payload["message"] == WEB_WORKFLOW_RISK_MESSAGE
         assert ws not in mgr.active_connections
 
     async def test_workflow_exception_sends_error(self, monkeypatch):
         mgr = ConnectionManager()
         monkeypatch.setattr(web_app, "manager", mgr)
+        monkeypatch.setenv("WEB_WORKFLOW_ENABLED", "true")
 
         ws = AsyncMock()
         ws.headers = {"origin": "http://localhost:8000"}
@@ -229,6 +270,7 @@ async def test_workflow_without_optional_updates_sends_only_node_update(monkeypa
 
     mgr = ConnectionManager()
     monkeypatch.setattr(web_app, "manager", mgr)
+    monkeypatch.setenv("WEB_WORKFLOW_ENABLED", "true")
 
     ws = AsyncMock()
     ws.headers = {"origin": "http://localhost:8000"}
