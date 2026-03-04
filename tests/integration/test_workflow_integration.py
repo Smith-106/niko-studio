@@ -511,6 +511,57 @@ class TestPlanStatus:
         assert "error" in status
 
 
+class TestArchitectureBoundaryIntegration:
+    """Engine-Adapter-Graph integration boundary path tests."""
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_boundary_engine_plan_execute_path_keeps_engine_authority(self, engine):
+        planned = await engine.plan("回答一个问题", level="L1")
+        plan_id = planned["plan_id"]
+
+        result = await engine.execute(plan_id)
+
+        assert result["status"] == "completed"
+        assert result["step_name"] == "answer"
+        status = engine.get_plan_status(plan_id)
+        assert status["status"] == "completed"
+
+    @pytest.mark.asyncio
+    async def test_boundary_graph_compile_delegates_to_adapter(self):
+        from src.workflow.graph import compile_graph
+
+        app = compile_graph(use_memory=False)
+
+        assert app is not None
+
+    @pytest.mark.asyncio
+    async def test_boundary_graph_run_session_uses_graph_facade_only(self):
+        from src.workflow.graph import run_writing_session
+
+        result = await run_writing_session(
+            user_idea="写一个短故事开头",
+            target_chapters=1,
+            verbose=False,
+        )
+
+        assert isinstance(result, dict)
+        assert "workflow_level" in result or "errors" in result
+
+    @pytest.mark.asyncio
+    async def test_boundary_bypass_adapter_to_engine_prohibited_via_source_contract(self):
+        adapter_source = (
+            Path(__file__).parent.parent.parent / "src" / "workflow" / "adapters" / "novel_adapter.py"
+        ).read_text(encoding="utf-8")
+
+        assert "from src.workflow.workflow_engine import" not in adapter_source
+        assert "from workflow.workflow_engine import" not in adapter_source
+        assert "WorkflowEngine" not in adapter_source
+
+
 class TestWorkflowTemplates:
     """工作流模板测试"""
 

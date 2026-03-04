@@ -96,6 +96,14 @@ jobs:
         run: |
           echo "No changed src/*.py files in PR, skip diff coverage gate"
 
+      - name: Run architecture boundary unit suite
+        run: |
+          pytest tests/unit/workflow/test_workflow_engine.py -k "architecture_boundary" -q
+
+      - name: Run architecture boundary integration suite
+        run: |
+          pytest tests/integration/test_workflow_integration.py -k "boundary" -q
+
       - name: Run PR diff coverage gate (changed src/*.py)
         if: ${{ github.event_name == 'pull_request' && steps.changed_files.outputs.has_src_changes == 'true' }}
         run: |

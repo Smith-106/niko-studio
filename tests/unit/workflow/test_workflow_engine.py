@@ -1992,3 +1992,150 @@ class TestWorkflowEngineBranchCoverage:
         assert latest["event_type"] == "confirm_trace"
         assert latest["payload"]["operation"] == "restore_checkpoint"
         assert latest["payload"]["checkpoint_id"] == "cp-hash-plan"
+
+
+BOUNDARY_ASSERTION_MATRIX = [
+    {
+        "id": "B-001",
+        "layer": "Engine",
+        "rule": "Engine must not import AdapterRegistry",
+        "assertion": "engine_forbidden_import_adapter_registry",
+    },
+    {
+        "id": "B-002",
+        "layer": "Engine",
+        "rule": "Engine must not import NovelAdapter directly",
+        "assertion": "engine_forbidden_import_novel_adapter",
+    },
+    {
+        "id": "B-003",
+        "layer": "Engine",
+        "rule": "Engine must not import graph facade",
+        "assertion": "engine_forbidden_import_graph_facade",
+    },
+    {
+        "id": "B-004",
+        "layer": "Engine",
+        "rule": "Engine must not instantiate workflow graph",
+        "assertion": "engine_forbidden_graph_instantiation",
+    },
+    {
+        "id": "B-005",
+        "layer": "Adapter",
+        "rule": "Adapter must not import WorkflowEngine",
+        "assertion": "adapter_forbidden_import_engine",
+    },
+    {
+        "id": "B-006",
+        "layer": "Adapter",
+        "rule": "Adapter creates graph using StateGraph",
+        "assertion": "adapter_owns_graph_construction",
+    },
+    {
+        "id": "B-007",
+        "layer": "Graph",
+        "rule": "Graph facade delegates to AdapterRegistry",
+        "assertion": "graph_delegates_to_adapter_registry",
+    },
+    {
+        "id": "B-008",
+        "layer": "Graph",
+        "rule": "Graph facade delegates graph creation to adapter",
+        "assertion": "graph_delegates_graph_build_to_adapter",
+    },
+    {
+        "id": "B-009",
+        "layer": "Graph",
+        "rule": "Graph facade must not import WorkflowEngine",
+        "assertion": "graph_forbidden_import_engine",
+    },
+    {
+        "id": "B-010",
+        "layer": "Engine",
+        "rule": "Engine contract payload remains level/types based",
+        "assertion": "engine_contract_payload_integration_boundary",
+    },
+]
+
+
+class TestArchitectureBoundaryUnit:
+    """Engine-Adapter-Graph architecture boundary unit tests."""
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @staticmethod
+    def _repo_root() -> Path:
+        return Path(__file__).resolve().parents[3]
+
+    @classmethod
+    def _read_source(cls, rel_path: str) -> str:
+        return (cls._repo_root() / rel_path).read_text(encoding="utf-8")
+
+    def test_architecture_boundary_matrix_rules_are_testable(self):
+        assert len(BOUNDARY_ASSERTION_MATRIX) >= 10
+        ids = {rule["id"] for rule in BOUNDARY_ASSERTION_MATRIX}
+        assertions = {rule["assertion"] for rule in BOUNDARY_ASSERTION_MATRIX}
+        assert len(ids) == len(BOUNDARY_ASSERTION_MATRIX)
+        assert len(assertions) == len(BOUNDARY_ASSERTION_MATRIX)
+
+    def test_architecture_boundary_engine_bypass_imports_prohibited(self):
+        engine_src = self._read_source("src/workflow/workflow_engine.py")
+
+        forbidden_tokens = [
+            "AdapterRegistry",
+            "NovelAdapter",
+            "from src.workflow.graph import",
+            "from workflow.graph import",
+            "compile_graph(",
+            "create_writing_graph(",
+            "StateGraph(",
+        ]
+
+        for token in forbidden_tokens:
+            assert token not in engine_src
+
+    def test_architecture_boundary_adapter_bypass_engine_prohibited(self):
+        adapter_src = self._read_source("src/workflow/adapters/novel_adapter.py")
+
+        forbidden_tokens = [
+            "WorkflowEngine",
+            "from src.workflow.workflow_engine import",
+            "from workflow.workflow_engine import",
+        ]
+
+        for token in forbidden_tokens:
+            assert token not in adapter_src
+
+    def test_architecture_boundary_graph_bypass_engine_prohibited(self):
+        graph_src = self._read_source("src/workflow/graph.py")
+
+        forbidden_tokens = [
+            "WorkflowEngine",
+            "from src.workflow.workflow_engine import",
+            "from workflow.workflow_engine import",
+        ]
+
+        for token in forbidden_tokens:
+            assert token not in graph_src
+
+    def test_architecture_boundary_graph_delegates_to_adapter(self):
+        graph_src = self._read_source("src/workflow/graph.py")
+
+        assert "AdapterRegistry.create_adapter" in graph_src
+        assert "adapter.create_graph()" in graph_src
+        assert "return adapter.create_graph()" in graph_src
+
+    @pytest.mark.asyncio
+    async def test_architecture_boundary_engine_runs_without_adapter_registry_dependency(self, engine):
+        with patch(
+            "src.workflow.adapters.base_adapter.AdapterRegistry.create_adapter",
+            side_effect=AssertionError("engine bypassed authority boundary"),
+        ) as create_adapter_mock:
+            plan_result = await engine.plan("回答一个问题", level="L1")
+            result = await engine.execute(plan_result["plan_id"])
+
+        assert result["status"] == "completed"
+        create_adapter_mock.assert_not_called()
+
