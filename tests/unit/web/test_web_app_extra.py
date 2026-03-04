@@ -15,6 +15,7 @@ from fastapi import WebSocketDisconnect
 
 from src.web import app as web_app
 from src.web.app import (
+    _is_web_workflow_enabled,
     _serialize_state,
     ConnectionManager,
     WEB_WORKFLOW_DISABLED_MESSAGE,
@@ -98,6 +99,15 @@ class TestConnectionManagerExtra:
 
 @pytest.mark.asyncio
 class TestWebSocketWorkflowGate:
+    async def test_gate_read_error_defaults_to_disabled(self, monkeypatch):
+        class _BadValue:
+            def strip(self):
+                raise RuntimeError("env read failed")
+
+        monkeypatch.setattr(web_app.os, "getenv", lambda *_args, **_kwargs: _BadValue())
+
+        assert _is_web_workflow_enabled() is False
+
     async def test_start_workflow_rejected_by_default(self, monkeypatch):
         mgr = ConnectionManager()
         monkeypatch.setattr(web_app, "manager", mgr)
