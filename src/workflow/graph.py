@@ -17,6 +17,8 @@ from enum import Enum
 from langgraph.graph import StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 
+from src.workflow.workflow_engine import WorkflowEngine
+
 from src.workflow.state import (
     WritingState,
     WorkflowConfig,
@@ -511,6 +513,7 @@ def add_distillation_node(
     template: DistillationTemplate = DistillationTemplate.FULL,
     conditional: bool = True,
 ) -> StateGraph:
+    _warn_legacy_entrypoint("src.workflow.graph.add_distillation_node")
     """
     向工作流图添加蒸馏节点
 
@@ -555,6 +558,7 @@ def create_distillation_node(
     template: str = "full",
     knowledge_layer: Any = None,
 ) -> DistillationNode:
+    _warn_legacy_entrypoint("src.workflow.graph.create_distillation_node")
     """
     创建蒸馏节点的工厂函数
 
@@ -576,7 +580,12 @@ def create_distillation_node(
 # 图构建 (Graph Construction)
 # ============================================================
 
+def _warn_legacy_entrypoint(source: str) -> None:
+    WorkflowEngine.warn_legacy_entrypoint(source)
+
+
 def create_writing_graph(config: WorkflowConfig = DEFAULT_CONFIG) -> StateGraph:
+    _warn_legacy_entrypoint("src.workflow.graph.create_writing_graph")
     """
     创建写作工作流图
     
@@ -593,6 +602,7 @@ def create_writing_graph(config: WorkflowConfig = DEFAULT_CONFIG) -> StateGraph:
 
 
 def compile_graph(config: WorkflowConfig = DEFAULT_CONFIG, use_memory: bool = True):
+    _warn_legacy_entrypoint("src.workflow.graph.compile_graph")
     """
     编译工作流图
     
@@ -623,6 +633,7 @@ async def run_writing_session(
     config: WorkflowConfig = DEFAULT_CONFIG,
     verbose: bool = True
 ) -> WritingState:
+    _warn_legacy_entrypoint("src.workflow.graph.run_writing_session")
     """
     运行完整写作会话
 

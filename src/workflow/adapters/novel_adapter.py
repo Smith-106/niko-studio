@@ -68,6 +68,9 @@ class NovelAdapter(BaseDomainAdapter):
         )
 
     def create_graph(self):
+        from src.workflow.workflow_engine import WorkflowEngine
+
+        WorkflowEngine.warn_legacy_entrypoint("src.workflow.adapters.novel_adapter.NovelAdapter.create_graph")
         workflow = StateGraph(WritingState)
 
         # 添加 Commander 节点

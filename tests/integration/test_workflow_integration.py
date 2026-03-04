@@ -23,6 +23,22 @@ from workflow.workflow_engine import (
 )
 from src.workflow.session.session_manager import ContentType
 
+class TestWorkflowSingleAuthorityEntry:
+    """单一权威入口测试"""
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_run_entry_executes_plan_to_completion(self, engine):
+        result = await engine.run("回答一个简短问题", level="L1")
+
+        assert result["status"] == "completed"
+        assert result["plan"]["level"] == "L1"
+        assert result["final_status"]["status"] == "completed"
+
+
 class TestWorkflowRouting:
     """工作流路由测试"""
 

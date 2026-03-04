@@ -23,6 +23,7 @@ from src.workflow.levels.types import (
     ANALYSIS_SCHEMA_VERSION,
     LEGACY_CONTRACT_FIELD_MAP,
 )
+from src.workflow import graph as workflow_graph
 
 
 # ============================================================
@@ -255,6 +256,22 @@ class TestWorkflowEngine:
 
         assert result["status"] == "completed"
         assert engine.plans[plan_id].recommendations_frozen is True
+
+    @pytest.mark.asyncio
+    async def test_run_public_entry_completes_l1_workflow(self, engine):
+        result = await engine.run("回答一个问题", level="L1")
+
+        assert result["status"] == "completed"
+        assert result["plan"]["level"] == "L1"
+        assert result["final_status"]["status"] == "completed"
+
+    def test_graph_legacy_entrypoints_emit_deprecation_warning(self):
+        with patch("src.workflow.adapters.AdapterRegistry.create_adapter") as mock_create_adapter:
+            mock_adapter = MagicMock()
+            mock_adapter.create_graph.return_value = MagicMock()
+            mock_create_adapter.return_value = mock_adapter
+            with pytest.warns(DeprecationWarning):
+                workflow_graph.create_writing_graph()
 
     @pytest.mark.asyncio
     async def test_execute_generate_draft_persists_generation_snapshot(self, engine):

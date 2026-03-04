@@ -17,6 +17,7 @@ import hashlib
 import copy
 import asyncio
 import subprocess
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -146,6 +147,12 @@ WORKFLOW_STATE_ALLOWED_PHASES = {
 }
 
 
+ENGINE_PUBLIC_ENTRY_WARNING = (
+    "Direct workflow graph/adapter entrypoints are deprecated and will be removed in a future release. "
+    "Use WorkflowEngine entry API as the single public authority."
+)
+
+
 class WorkflowStateStepRecord(TypedDict):
     id: str
     name: str
@@ -251,6 +258,70 @@ class Checkpoint:
 
 class WorkflowEngine:
     """工作流引擎"""
+
+    @classmethod
+    def warn_legacy_entrypoint(cls, source: str) -> None:
+        warnings.warn(
+            f"{ENGINE_PUBLIC_ENTRY_WARNING} source={source}",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+
+    async def run(self, task: str, level: str = None, recommendations: Optional[List[Any]] = None) -> dict:
+        """Single public entry to route-plan-execute workflow."""
+        plan = await self.plan(task, level=level, recommendations=recommendations)
+        plan_id = str(plan.get("plan_id") or "")
+        if not plan_id:
+            return {"error": "Plan creation failed"}
+
+        max_iterations = int(plan.get("total_steps", 0)) + 5
+        max_iterations = max(max_iterations, 5)
+        latest_result: Dict[str, Any] = {}
+
+        for _ in range(max_iterations):
+            latest_result = await self.execute(plan_id)
+            if "error" in latest_result:
+                return self._with_contract(
+                    {
+                        "status": "failed",
+                        "plan_id": plan_id,
+                        "plan": plan,
+                        "error": latest_result["error"],
+                    }
+                )
+            if latest_result.get("status") in {"waiting_confirmation", "preflight_blocked", "gate_blocked"}:
+                return self._with_contract(
+                    {
+                        "status": "blocked",
+                        "plan_id": plan_id,
+                        "plan": plan,
+                        "last_step": latest_result,
+                        "final_status": self.get_plan_status(plan_id),
+                    }
+                )
+            if latest_result.get("plan_status") == "completed" or latest_result.get("status") == "completed":
+                break
+        else:
+            return self._with_contract(
+                {
+                    "status": "failed",
+                    "plan_id": plan_id,
+                    "plan": plan,
+                    "error": "run iteration budget exceeded",
+                    "last_step": latest_result,
+                }
+            )
+
+        final_status = self.get_plan_status(plan_id)
+        return self._with_contract(
+            {
+                "status": "completed",
+                "plan_id": plan_id,
+                "plan": plan,
+                "last_step": latest_result,
+                "final_status": final_status,
+            }
+        )
 
     def _with_contract(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         return ensure_contract_payload(payload)
