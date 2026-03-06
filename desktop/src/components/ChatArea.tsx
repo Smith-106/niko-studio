@@ -57,6 +57,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const streamRequestIdRef = useRef(0)
   const { t, translate } = useI18n()
   const previousConnectionStateRef = useRef(connectionState)
+  const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
 
   const currentConversationId = useCurrentConversationId()
   const messages = useMessages()
@@ -95,14 +96,26 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     const totalK = 128
     const usedK = Number((usedChars / 1000).toFixed(1))
     const percent = Number(Math.min((usedChars / (totalK * 1000)) * 100, 999).toFixed(1))
+    const nextUsage = { usedChars, usedK, totalK, percent }
+    const prevUsage = lastContextUsageRef.current
 
-    onContextUsageChange({ usedChars, usedK, totalK, percent })
+    if (
+      prevUsage &&
+      prevUsage.usedChars === nextUsage.usedChars &&
+      prevUsage.usedK === nextUsage.usedK &&
+      prevUsage.totalK === nextUsage.totalK &&
+      prevUsage.percent === nextUsage.percent
+    ) {
+      return
+    }
+
+    lastContextUsageRef.current = nextUsage
+    onContextUsageChange(nextUsage)
   }, [messages, streamingContent, onContextUsageChange])
 
   useEffect(() => {
     const previous = previousConnectionStateRef.current
-    const isSameState = connectionState === previous
-    if (isSameState && connectionState !== 'reconnecting' && connectionState !== 'disconnected') {
+    if (connectionState === previous) {
       return
     }
 

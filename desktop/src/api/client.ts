@@ -11,14 +11,16 @@ const DEFAULT_API_BASE = 'http://127.0.0.1:8000'
 const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, '')
 
 const resolveApiBase = (): string => {
-  const storeBase = useSettingsStore.getState().settings.apiBaseUrl
-  if (storeBase && storeBase.trim()) {
-    return normalizeBaseUrl(storeBase.trim())
-  }
   const envBase = import.meta.env.VITE_NIKO_GATEWAY_URL as string | undefined
   if (envBase && envBase.trim()) {
     return normalizeBaseUrl(envBase.trim())
   }
+
+  const storeBase = useSettingsStore.getState().settings.apiBaseUrl
+  if (storeBase && storeBase.trim()) {
+    return normalizeBaseUrl(storeBase.trim())
+  }
+
   return DEFAULT_API_BASE
 }
 

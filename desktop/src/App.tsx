@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { ChatArea } from './components/ChatArea'
 import { SettingsModal } from './components/SettingsModal'
@@ -233,6 +233,20 @@ function App() {
     setWritingHelperDraft(DEFAULT_WRITING_HELPER_DRAFT)
   }
 
+  const handleContextUsageChange = useCallback((usage: ContextUsage) => {
+    setContextUsage((prev) => {
+      if (
+        prev.usedChars === usage.usedChars &&
+        prev.usedK === usage.usedK &&
+        prev.totalK === usage.totalK &&
+        prev.percent === usage.percent
+      ) {
+        return prev
+      }
+      return usage
+    })
+  }, [])
+
   const headerConnectionState = runtimeView?.connectionState ?? (backendStatus ? 'connected' : 'disconnected')
   const headerDotClass = APP_CONNECTION_DOT[headerConnectionState] ?? APP_CONNECTION_DOT.disconnected
   const headerConnectionText = APP_CONNECTION_LABEL[headerConnectionState] ?? (backendStatus ? t.serviceRunning : t.serviceOffline)
@@ -314,7 +328,7 @@ function App() {
         )}
 
         {/* Chat Area */}
-        <ChatArea onContextUsageChange={setContextUsage} connectionState={headerConnectionState} />
+        <ChatArea onContextUsageChange={handleContextUsageChange} connectionState={headerConnectionState} />
 
         <div className="px-4 py-1 text-[11px] text-gray-400 dark:text-dark-text-secondary border-t border-gray-100 dark:border-dark-border">
           {t.contextEstimated}
