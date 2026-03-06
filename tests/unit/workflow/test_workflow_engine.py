@@ -511,6 +511,50 @@ class TestWorkflowEngine:
         assert "error" in result
 
     @pytest.mark.asyncio
+    async def test_execute_preflight_blocked_when_project_tech_stale_and_policy_block(self, engine, tmp_path, monkeypatch):
+        plan_result = await engine.plan("task", level="L1")
+        plan_id = plan_result["plan_id"]
+
+        project_tech_path = tmp_path / ".workflow" / "project-tech.json"
+        project_tech_path.parent.mkdir(parents=True, exist_ok=True)
+        project_tech_path.write_text(
+            json.dumps(
+                {
+                    "freshness": {
+                        "generated_at": "2000-01-01T00:00:00+00:00",
+                        "source": "unit:test",
+                        "schema_version": "1.1.0",
+                        "ttl_hours": 1,
+                    },
+                    "_metadata": {
+                        "analysis_timestamp": "2000-01-01T00:00:00+00:00",
+                        "analysis_mode": "unit:test",
+                        "version": "1.0.0",
+                    },
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        monkeypatch.setenv("NIKO_PROJECT_TECH_STALE_POLICY", "block")
+
+        result = await engine.execute(plan_id)
+
+        assert result["status"] == "preflight_blocked"
+        assert result["error"] == "project-tech freshness preflight blocked execution"
+        assert result["freshness_preflight"]["status"] == "stale"
+        assert result["freshness_preflight"]["blocking"] is True
+        assert result["plan_status"] == "running"
+        assert result["runner_state"] == "running"
+        assert "observability_metrics" in result
+        assert "budget_guardrail" in result
+
+        monkeypatch.delenv("NIKO_PROJECT_TECH_STALE_POLICY", raising=False)
+
+    @pytest.mark.asyncio
     async def test_execute_step_not_found(self, engine):
         plan_result = await engine.plan("task", level="L1")
         result = await engine.execute(plan_result["plan_id"], step_id="nonexistent")
