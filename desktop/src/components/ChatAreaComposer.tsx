@@ -10,7 +10,7 @@ interface ChatAreaComposerProps {
   voiceInputLabel: string
   sendLabel: string
   cancelLabel: string
-  fileInputRef: RefObject<HTMLInputElement | null>
+  fileInputRef: RefObject<HTMLInputElement>
   onInputChange: (value: string) => void
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void
   onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void

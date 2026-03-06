@@ -9,6 +9,7 @@ export interface Translations {
   checkpoint: string
   restore: string
   restoreSuccess: string
+  restoreSuccessWithCheckpoint: string
   restoreFailed: string
   loadingCheckpoints: string
   noCheckpoints: string
@@ -171,6 +172,9 @@ export interface Translations {
 
   // Settings modal
   settingsClose: string
+
+  // Settings
+  settingsTitle: string
   backendService: string
   backendUrl: string
   llmConfig: string
@@ -250,6 +254,7 @@ export const translations: Record<Language, Translations> = {
     checkpoint: '还原点',
     restore: '恢复',
     restoreSuccess: '恢复成功',
+    restoreSuccessWithCheckpoint: '已恢复到 checkpoint {checkpointId}',
     restoreFailed: '恢复失败',
     loadingCheckpoints: '加载还原点中...',
     noCheckpoints: '暂无还原点',
@@ -492,6 +497,7 @@ export const translations: Record<Language, Translations> = {
     checkpoint: 'Checkpoint',
     restore: 'Restore',
     restoreSuccess: 'Restore successful',
+    restoreSuccessWithCheckpoint: 'Restored to checkpoint {checkpointId}',
     restoreFailed: 'Restore failed',
     loadingCheckpoints: 'Loading checkpoints...',
     noCheckpoints: 'No checkpoints',
