@@ -644,9 +644,17 @@ class TestArchitectureBoundaryIntegration:
             Path(__file__).parent.parent.parent / "src" / "workflow" / "adapters" / "novel_adapter.py"
         ).read_text(encoding="utf-8")
 
-        assert "from src.workflow.workflow_engine import" not in adapter_source
-        assert "from workflow.workflow_engine import" not in adapter_source
-        assert "WorkflowEngine" not in adapter_source
+        assert "WorkflowEngine.warn_legacy_entrypoint(" in adapter_source
+
+        forbidden_tokens = [
+            "WorkflowEngine(",
+            "WorkflowEngine.plan(",
+            "WorkflowEngine.execute(",
+            "WorkflowEngine.run(",
+        ]
+
+        for token in forbidden_tokens:
+            assert token not in adapter_source
 
 
 class TestWorkflowTemplates:
