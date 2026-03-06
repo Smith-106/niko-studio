@@ -2,6 +2,8 @@
 
 AI 辅助写作桌面应用，基于 Tauri + React + Python 构建。
 
+Desktop 客户端是当前主交付入口；Web/FastAPI 页面与 Streamlit 路径仅保留为兼容与原型验证用途。
+
 ## 技术栈
 
 - **前端**: React 18 + TypeScript + Tailwind CSS

@@ -77,9 +77,100 @@ export interface Translations {
   templateApplyAppend: string
   templateEmptyList: string
   templateNoMatch: string
+  processingCompleted: string
+  serviceUnavailableRetry: string
+  backendConnectionFailed: string
+  sessionCreateFailedRetry: string
+  uploadUnsupportedFormat: string
+  uploadInjectionFailedRetry: string
+  uploadInjectedChunks: string
+  uploadInjectedContext: string
+  chatAgentContextPrefix: string
 
-  // Settings
-  settingsTitle: string
+  // Knowledge Modal
+  knowledgeTitle: string
+  knowledgeClose: string
+  knowledgeTabCharacters: string
+  knowledgeTabLocations: string
+  knowledgeTabPlots: string
+  knowledgeTabSkills: string
+  knowledgeSearchPlaceholder: string
+  knowledgeTaskMatch: string
+  knowledgeSkillDetails: string
+  knowledgeSkillChain: string
+  knowledgeCurrentSkill: string
+  knowledgeLoading: string
+  knowledgeEmpty: string
+  knowledgeAddPrefix: string
+  knowledgeNoDescription: string
+  knowledgeItemFallback: string
+  knowledgeSkillDetailsLoadFailed: string
+
+  // Evaluation Panel
+  evaluationTitle: string
+  evaluationClose: string
+  evaluationFailed: string
+  evaluationOverallScore: string
+  evaluationDimensionAnalysis: string
+  evaluationSuggestions: string
+  evaluationBatchApply: string
+  evaluationBatchUndo: string
+  evaluationApply: string
+  evaluationUndo: string
+  evaluationApplying: string
+  evaluationUndoing: string
+  evaluationBatchApplying: string
+  evaluationBatchUndoing: string
+  evaluationBatchResult: string
+  evaluationBatchUndoResult: string
+  evaluationPassed: string
+  evaluationNeedRevise: string
+  evaluationNeedRewrite: string
+  evaluationUnknown: string
+  evaluationNoFeedback: string
+  evaluationCheckpointTitle: string
+  evaluationCheckpointPlaceholder: string
+  evaluationRefresh: string
+
+  // Chat Area Controls
+  chatModeLabel: string
+  chatModeNormal: string
+  chatModeAgent: string
+  chatModeComparison: string
+  chatComparisonModelLabel: string
+  chatAgentActionWrite: string
+  chatAgentActionRevise: string
+  chatAgentActionContext: string
+  composerUpload: string
+  composerVoiceInput: string
+  composerSend: string
+
+  // Sidebar
+  sidebarToggleExpand: string
+  sidebarToggleCollapse: string
+  sidebarWritingHelper: string
+  sidebarMcpStatus: string
+  sidebarEvaluationPanel: string
+
+  // App status
+  serviceDegraded: string
+  serviceReconnecting: string
+
+  // Writing Helper panel
+  writingHelperTitle: string
+  writingHelperMode: string
+  writingHelperModePolish: string
+  writingHelperModeRewrite: string
+  writingHelperModeExpand: string
+  writingHelperModeSummarize: string
+  writingHelperModeOutline: string
+  writingHelperMaxSentences: string
+  writingHelperMaxItems: string
+  writingHelperInputText: string
+  writingHelperInputPlaceholder: string
+
+  // Settings modal
+  settingsClose: string
   backendService: string
   backendUrl: string
   llmConfig: string
@@ -227,6 +318,100 @@ export const translations: Record<Language, Translations> = {
     templateApplyAppend: '追加到输入框',
     templateEmptyList: '暂无模板',
     templateNoMatch: '无匹配模板',
+    processingCompleted: '处理完成',
+    serviceUnavailableRetry: '服务暂不可用，请稍后重试',
+    backendConnectionFailed: '后端连接失败，请检查设置',
+    sessionCreateFailedRetry: '创建会话失败，请重试',
+    uploadUnsupportedFormat: '不支持的文件格式，请上传 txt/md/pdf/docx',
+    uploadInjectionFailedRetry: '文件注入失败，请重试',
+    uploadInjectedChunks: '已完成文件上下文注入：{fileName}（{chunks} 段）',
+    uploadInjectedContext: '文件已注入上下文：{fileName}（{chunks} 段）',
+    chatAgentContextPrefix: 'Agent 上下文结果',
+
+    // Knowledge Modal
+    knowledgeTitle: '知识库',
+    knowledgeClose: '关闭知识库',
+    knowledgeTabCharacters: '角色',
+    knowledgeTabLocations: '地点',
+    knowledgeTabPlots: '剧情',
+    knowledgeTabSkills: '技能',
+    knowledgeSearchPlaceholder: '搜索...',
+    knowledgeTaskMatch: '任务匹配',
+    knowledgeSkillDetails: '技能详情',
+    knowledgeSkillChain: '推荐链路',
+    knowledgeCurrentSkill: '当前技能：{skillId}',
+    knowledgeLoading: '加载中...',
+    knowledgeEmpty: '暂无数据',
+    knowledgeAddPrefix: '添加',
+    knowledgeNoDescription: '暂无描述',
+    knowledgeItemFallback: '条目 {index}',
+    knowledgeSkillDetailsLoadFailed: '加载技能详情失败',
+
+    // Evaluation Panel
+    evaluationTitle: '质量评估',
+    evaluationClose: '关闭评估面板',
+    evaluationFailed: '评估失败',
+    evaluationOverallScore: '综合评分',
+    evaluationDimensionAnalysis: '维度分析',
+    evaluationSuggestions: '改进建议',
+    evaluationBatchApply: '批量应用',
+    evaluationBatchUndo: '批量撤销',
+    evaluationApply: '应用',
+    evaluationUndo: '撤销',
+    evaluationApplying: '执行中...',
+    evaluationUndoing: '撤销中...',
+    evaluationBatchApplying: '批量执行中...',
+    evaluationBatchUndoing: '批量撤销中...',
+    evaluationBatchResult: '批量结果：成功 {applied}，失败 {failed}',
+    evaluationBatchUndoResult: '批量撤销结果：成功 {success}，失败 {failed}',
+    evaluationPassed: '通过',
+    evaluationNeedRevise: '需修改',
+    evaluationNeedRewrite: '需重写',
+    evaluationUnknown: '未知',
+    evaluationNoFeedback: '无',
+    evaluationCheckpointTitle: 'Checkpoint',
+    evaluationCheckpointPlaceholder: 'checkpoint 描述',
+    evaluationRefresh: '刷新',
+
+    // Chat Area Controls
+    chatModeLabel: '模式：',
+    chatModeNormal: '普通聊天',
+    chatModeAgent: 'Agent 高级',
+    chatModeComparison: '模型对比',
+    chatComparisonModelLabel: '对照模型',
+    chatAgentActionWrite: '写作',
+    chatAgentActionRevise: '润色/重写',
+    chatAgentActionContext: '取上下文',
+    composerUpload: '上传文件',
+    composerVoiceInput: '语音输入',
+    composerSend: '发送',
+
+    // Sidebar
+    sidebarToggleExpand: '展开侧边栏',
+    sidebarToggleCollapse: '折叠侧边栏',
+    sidebarWritingHelper: 'Writing Helper',
+    sidebarMcpStatus: 'MCP 状态',
+    sidebarEvaluationPanel: '评估面板',
+
+    // App status
+    serviceDegraded: '服务降级',
+    serviceReconnecting: '连接恢复中',
+
+    // Writing Helper panel
+    writingHelperTitle: 'Writing Helper',
+    writingHelperMode: '模式',
+    writingHelperModePolish: '润色（polish）',
+    writingHelperModeRewrite: '改写（rewrite）',
+    writingHelperModeExpand: '扩写（expand）',
+    writingHelperModeSummarize: '摘要（summarize）',
+    writingHelperModeOutline: '提纲（outline）',
+    writingHelperMaxSentences: '最大句数（摘要）',
+    writingHelperMaxItems: '最大条目（提纲）',
+    writingHelperInputText: '输入文本',
+    writingHelperInputPlaceholder: '请输入待处理文本',
+
+    // Settings modal
+    settingsClose: '关闭设置',
 
     // Settings
     settingsTitle: '设置',
@@ -375,6 +560,100 @@ export const translations: Record<Language, Translations> = {
     templateApplyAppend: 'Append Input',
     templateEmptyList: 'No templates yet',
     templateNoMatch: 'No matching templates',
+    processingCompleted: 'Processing completed',
+    serviceUnavailableRetry: 'Service is temporarily unavailable. Please retry later.',
+    backendConnectionFailed: 'Backend connection failed. Please check settings.',
+    sessionCreateFailedRetry: 'Failed to create session. Please retry.',
+    uploadUnsupportedFormat: 'Unsupported file format. Please upload txt/md/pdf/docx.',
+    uploadInjectionFailedRetry: 'File injection failed. Please retry.',
+    uploadInjectedChunks: 'File context injected: {fileName} ({chunks} chunks)',
+    uploadInjectedContext: 'Context injected from file: {fileName} ({chunks} chunks)',
+    chatAgentContextPrefix: 'Agent context result',
+
+    // Knowledge Modal
+    knowledgeTitle: 'Knowledge Base',
+    knowledgeClose: 'Close knowledge base',
+    knowledgeTabCharacters: 'Characters',
+    knowledgeTabLocations: 'Locations',
+    knowledgeTabPlots: 'Plots',
+    knowledgeTabSkills: 'Skills',
+    knowledgeSearchPlaceholder: 'Search...',
+    knowledgeTaskMatch: 'Task Match',
+    knowledgeSkillDetails: 'Skill Details',
+    knowledgeSkillChain: 'Recommended Chain',
+    knowledgeCurrentSkill: 'Current skill: {skillId}',
+    knowledgeLoading: 'Loading...',
+    knowledgeEmpty: 'No data',
+    knowledgeAddPrefix: 'Add',
+    knowledgeNoDescription: 'No description',
+    knowledgeItemFallback: 'Item {index}',
+    knowledgeSkillDetailsLoadFailed: 'Failed to load skill details',
+
+    // Evaluation Panel
+    evaluationTitle: 'Quality Evaluation',
+    evaluationClose: 'Close evaluation panel',
+    evaluationFailed: 'Evaluation failed',
+    evaluationOverallScore: 'Overall Score',
+    evaluationDimensionAnalysis: 'Dimension Analysis',
+    evaluationSuggestions: 'Suggestions',
+    evaluationBatchApply: 'Batch Apply',
+    evaluationBatchUndo: 'Batch Undo',
+    evaluationApply: 'Apply',
+    evaluationUndo: 'Undo',
+    evaluationApplying: 'Applying...',
+    evaluationUndoing: 'Undoing...',
+    evaluationBatchApplying: 'Batch applying...',
+    evaluationBatchUndoing: 'Batch undoing...',
+    evaluationBatchResult: 'Batch result: success {applied}, failed {failed}',
+    evaluationBatchUndoResult: 'Batch undo result: success {success}, failed {failed}',
+    evaluationPassed: 'Passed',
+    evaluationNeedRevise: 'Needs revision',
+    evaluationNeedRewrite: 'Needs rewrite',
+    evaluationUnknown: 'Unknown',
+    evaluationNoFeedback: 'None',
+    evaluationCheckpointTitle: 'Checkpoint',
+    evaluationCheckpointPlaceholder: 'Checkpoint description',
+    evaluationRefresh: 'Refresh',
+
+    // Chat Area Controls
+    chatModeLabel: 'Mode:',
+    chatModeNormal: 'Normal Chat',
+    chatModeAgent: 'Agent Advanced',
+    chatModeComparison: 'Model Comparison',
+    chatComparisonModelLabel: 'Control Model',
+    chatAgentActionWrite: 'Write',
+    chatAgentActionRevise: 'Polish/Rewrite',
+    chatAgentActionContext: 'Get Context',
+    composerUpload: 'Upload file',
+    composerVoiceInput: 'Voice input',
+    composerSend: 'Send',
+
+    // Sidebar
+    sidebarToggleExpand: 'Expand sidebar',
+    sidebarToggleCollapse: 'Collapse sidebar',
+    sidebarWritingHelper: 'Writing Helper',
+    sidebarMcpStatus: 'MCP Status',
+    sidebarEvaluationPanel: 'Evaluation Panel',
+
+    // App status
+    serviceDegraded: 'Service Degraded',
+    serviceReconnecting: 'Reconnecting',
+
+    // Writing Helper panel
+    writingHelperTitle: 'Writing Helper',
+    writingHelperMode: 'Mode',
+    writingHelperModePolish: 'Polish',
+    writingHelperModeRewrite: 'Rewrite',
+    writingHelperModeExpand: 'Expand',
+    writingHelperModeSummarize: 'Summarize',
+    writingHelperModeOutline: 'Outline',
+    writingHelperMaxSentences: 'Max Sentences (Summary)',
+    writingHelperMaxItems: 'Max Items (Outline)',
+    writingHelperInputText: 'Input Text',
+    writingHelperInputPlaceholder: 'Enter text to process',
+
+    // Settings modal
+    settingsClose: 'Close settings',
 
     // Settings
     settingsTitle: 'Settings',
