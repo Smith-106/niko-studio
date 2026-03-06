@@ -1,6 +1,7 @@
 """
 AI Writing Agent - Web UI Backend (FastAPI)
 ===========================================
+Legacy note: Desktop client + MCP Gateway is the primary delivery path; this Web UI backend is retained for compatibility forwarding only.
 """
 
 import os

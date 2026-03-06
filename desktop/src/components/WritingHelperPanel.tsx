@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { processWritingHelper, polishContent, type WritingHelperMode } from '../api/client'
 import { useSettingsStore } from '../stores/settingsStore'
-import { useI18n } from '../i18n'
+import { useI18n, type Translations } from '../i18n'
 
 interface WritingHelperPanelDraftState {
   content: string
@@ -18,15 +18,17 @@ interface WritingHelperPanelProps {
   onClearDraft?: () => void
 }
 
-const MODE_OPTIONS: Array<{ value: WritingHelperMode; label: string }> = [
-  { value: 'polish', label: '润色（polish）' },
-  { value: 'rewrite', label: '改写（rewrite）' },
-  { value: 'expand', label: '扩写（expand）' },
-  { value: 'summarize', label: '摘要（summarize）' },
-  { value: 'outline', label: '提纲（outline）' },
+const MODE_OPTIONS: Array<{ value: WritingHelperMode; labelKey: keyof Translations }> = [
+  { value: 'polish', labelKey: 'writingHelperModePolish' },
+  { value: 'rewrite', labelKey: 'writingHelperModeRewrite' },
+  { value: 'expand', labelKey: 'writingHelperModeExpand' },
+  { value: 'summarize', labelKey: 'writingHelperModeSummarize' },
+  { value: 'outline', labelKey: 'writingHelperModeOutline' },
 ]
 
 export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraftStateChange, onClearDraft }: WritingHelperPanelProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
   const detectionEvasionGuardEnabled = useSettingsStore((state) => state.settings.detectionEvasionGuardEnabled)
   const useLegacyPolish = useSettingsStore((state) => state.settings.writingHelperUseLegacyPolish)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
@@ -38,12 +40,72 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ processedText?: string; outline?: string[]; mode?: string } | null>(null)
+  const buttonDisabled = useMemo(() => loading || content.trim().length === 0, [loading, content])
 
   useEffect(() => {
     onDraftStateChange?.({ content, mode, maxSentences, maxItems })
   }, [content, mode, maxSentences, maxItems, onDraftStateChange])
 
-  const buttonDisabled = useMemo(() => loading || !content.trim(), [loading, content])
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+
+    const focusDialog = () => {
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = dialog.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      if (focusable) {
+        focusable.focus()
+      } else {
+        dialog.focus()
+      }
+    }
+
+    focusDialog()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const dialog = dialogRef.current
+      if (!dialog) return
+
+      const focusableElements = Array.from(
+        dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ).filter((element) => !element.hasAttribute('disabled') && element.tabIndex !== -1)
+
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        return
+      }
+
+      const first = focusableElements[0]
+      const last = focusableElements[focusableElements.length - 1]
+      const active = document.activeElement as HTMLElement | null
+
+      if (event.shiftKey) {
+        if (!active || active === first || !dialog.contains(active)) {
+          event.preventDefault()
+          last.focus()
+        }
+      } else if (!active || active === last || !dialog.contains(active)) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      previousFocusRef.current?.focus()
+    }
+  }, [onClose])
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -105,11 +167,15 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-xl">
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={t.writingHelperTitle}>
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="w-full max-w-3xl rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-xl"
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-dark-border">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-gray-800 dark:text-dark-text">Writing Helper</h2>
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.writingHelperTitle}</h2>
             <span
               className={`px-2 py-0.5 text-[11px] rounded-full ${
                 detectionEvasionGuardEnabled
@@ -157,7 +223,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <label className="text-xs text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
-              模式
+              {t.writingHelperMode}
               <select
                 value={mode}
                 onChange={(event) => setMode(event.target.value as WritingHelperMode)}
@@ -165,14 +231,14 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
               >
                 {MODE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t[option.labelKey]}
                   </option>
                 ))}
               </select>
             </label>
 
             <label className="text-xs text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
-              最大句数（摘要）
+              {t.writingHelperMaxSentences}
               <input
                 type="number"
                 min={1}
@@ -183,7 +249,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
             </label>
 
             <label className="text-xs text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
-              最大条目（提纲）
+              {t.writingHelperMaxItems}
               <input
                 type="number"
                 min={1}
@@ -195,12 +261,12 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
           </div>
 
           <label className="text-xs text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
-            输入文本
+            {t.writingHelperInputText}
             <textarea
               value={content}
               onChange={(event) => setContent(event.target.value)}
               rows={8}
-              placeholder="请输入待处理文本"
+              placeholder={t.writingHelperInputPlaceholder}
               className="w-full px-3 py-2 rounded border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-sm"
             />
           </label>

@@ -43,11 +43,13 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
       {/* Header */}
       <div className="h-12 flex items-center justify-between px-3 border-b border-gray-700">
         {!collapsed && (
-          <span className="font-semibold text-white">🖊️ {t.nikoStudio}</span>
+          <span className="font-semibold text-white">{t.nikoStudio}</span>
         )}
         <button
           onClick={onToggle}
           className="p-1.5 hover:bg-gray-700 rounded-md"
+          aria-label={collapsed ? t.sidebarToggleExpand : t.sidebarToggleCollapse}
+          title={collapsed ? t.sidebarToggleExpand : t.sidebarToggleCollapse}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
@@ -58,6 +60,8 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
         <button
           onClick={createConversation}
           className="w-full flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          aria-label={t.newChat}
+          title={t.newChat}
         >
           <MessageSquarePlus size={18} />
           {!collapsed && <span>{t.newChat}</span>}
@@ -118,27 +122,35 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
         <button
           onClick={onOpenWritingHelper}
           className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          aria-label={t.sidebarWritingHelper}
+          title={t.sidebarWritingHelper}
         >
           <Wand2 size={18} />
-          {!collapsed && <span className="text-sm">Writing Helper</span>}
+          {!collapsed && <span className="text-sm">{t.sidebarWritingHelper}</span>}
         </button>
         <button
           onClick={onOpenMcpStatus}
           className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          aria-label={t.sidebarMcpStatus}
+          title={t.sidebarMcpStatus}
         >
           <Server size={18} />
-          {!collapsed && <span className="text-sm">MCP 状态</span>}
+          {!collapsed && <span className="text-sm">{t.sidebarMcpStatus}</span>}
         </button>
         <button
           onClick={onOpenEvaluation}
           className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          aria-label={t.sidebarEvaluationPanel}
+          title={t.sidebarEvaluationPanel}
         >
           <BarChart3 size={18} />
-          {!collapsed && <span className="text-sm">评估面板</span>}
+          {!collapsed && <span className="text-sm">{t.sidebarEvaluationPanel}</span>}
         </button>
         <button
           onClick={onOpenKnowledge}
           className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          aria-label={t.knowledgeBase}
+          title={t.knowledgeBase}
         >
           <BookOpen size={18} />
           {!collapsed && <span className="text-sm">{t.knowledgeBase}</span>}
@@ -146,6 +158,8 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
         <button
           onClick={onOpenSettings}
           className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
+          aria-label={t.settings}
+          title={t.settings}
         >
           <Settings size={18} />
           {!collapsed && <span className="text-sm">{t.settings}</span>}

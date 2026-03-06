@@ -99,7 +99,7 @@ describe('EvaluationPanel actions', () => {
       })
     )
 
-    const applyButtons = await screen.findAllByRole('button', { name: 'apply' })
+    const applyButtons = await screen.findAllByRole('button', { name: '应用' })
     await userEvent.click(applyButtons[0])
 
     await waitFor(() => {
@@ -110,7 +110,7 @@ describe('EvaluationPanel actions', () => {
       expect(screen.getByText('recommendation applied')).toBeInTheDocument()
     })
 
-    const undoButtons = await screen.findAllByRole('button', { name: 'undo' })
+    const undoButtons = await screen.findAllByRole('button', { name: '撤销' })
     await userEvent.click(undoButtons[0])
 
     await waitFor(() => {

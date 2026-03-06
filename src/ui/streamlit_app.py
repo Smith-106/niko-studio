@@ -2,6 +2,7 @@
 AI Writing Workbench - Streamlit Prototype (AionUi Enhanced)
 ============================================================
 基于 AionUi 多代理协作 + Cherry Studio 交互体验 + Claude-Code-Workflow 状态管理
+Legacy note: Desktop client + MCP Gateway is the primary delivery path; this Streamlit entry is retained for compatibility and prototyping only.
 """
 
 import streamlit as st

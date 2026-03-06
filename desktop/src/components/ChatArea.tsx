@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, Paperclip, Mic } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
@@ -7,6 +6,10 @@ import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext,
 import type { ChatRequest, StreamDonePayload } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { PromptTemplatePanel, type ApplyTemplatePayload } from './PromptTemplatePanel'
+import { ChatAreaInlineActions } from './ChatAreaInlineActions'
+import { ChatAreaModeControls } from './ChatAreaModeControls'
+import { ChatAreaComposer } from './ChatAreaComposer'
+import { ChatAreaStreamStatus } from './ChatAreaStreamStatus'
 import { useI18n } from '../i18n'
 
 interface ChatAreaProps {
@@ -144,14 +147,14 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             comparison
           )
         } else {
-          addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+          addMessage('assistant', response.data.content || t.processingCompleted, response.data.skills_used || selectedSkills)
         }
         setRecoverableCheckpointId(null)
         setRecoverStatus(null)
         setStreamPhase('done')
         return 'done'
       }
-      addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
+      addMessage('assistant', response.error || t.serviceUnavailableRetry)
       if (checkpointId) {
         setRecoverStatus({ type: 'error', message: t.streamRestoreHint })
       }
@@ -255,7 +258,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
 
     if ((finalPhase === 'done' || finalPhase === 'recovered') && hasStreamContent) {
-      addMessage('assistant', streamText || '处理完成', selectedSkills)
+      addMessage('assistant', streamText || t.processingCompleted, selectedSkills)
       setRecoverableCheckpointId(null)
       if (finalPhase === 'recovered') {
         setRecoverStatus({ type: 'success', message: t.streamRecovered })
@@ -281,14 +284,14 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           comparison
         )
       } else {
-        addMessage('assistant', response.data.content || '处理完成', response.data.skills_used || selectedSkills)
+        addMessage('assistant', response.data.content || t.processingCompleted, response.data.skills_used || selectedSkills)
       }
       setRecoverableCheckpointId(null)
       setRecoverStatus(null)
       return finalPhase ?? 'done'
     }
 
-    addMessage('assistant', response.error || '抱歉，服务暂时不可用，请稍后重试。')
+    addMessage('assistant', response.error || t.serviceUnavailableRetry)
     if (checkpointId) {
       const streamMetaValue = streamMeta as StreamRuntimeMeta | null
       const diagnosticsText = streamMetaValue?.diagnostics?.fallback_reason || streamMetaValue?.diagnostics?.failure_reason
@@ -396,14 +399,14 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
 
     if (!uploadSessionId) {
-      setUploadStatus({ type: 'error', message: '无法创建会话，请重试。' })
+      setUploadStatus({ type: 'error', message: t.sessionCreateFailedRetry })
       return
     }
 
     const allowedExtensions = ['txt', 'md', 'pdf', 'docx']
     const extension = file.name.split('.').pop()?.toLowerCase()
     if (!extension || !allowedExtensions.includes(extension)) {
-      setUploadStatus({ type: 'error', message: '仅支持 TXT/MD/PDF/DOCX 文件。' })
+      setUploadStatus({ type: 'error', message: t.uploadUnsupportedFormat })
       return
     }
 
@@ -426,14 +429,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       })
 
       if (!response.success || !response.data) {
-        setUploadStatus({ type: 'error', message: response.error || '文件注入失败，请重试。' })
+        setUploadStatus({ type: 'error', message: response.error || t.uploadInjectionFailedRetry })
         return
       }
 
-      setUploadStatus({ type: 'success', message: `文件已注入上下文：${file.name}（${response.data.chunks} 段）` })
-      addMessage('assistant', `已完成文件上下文注入：${file.name}（${response.data.chunks} 段）`)
+      setUploadStatus({
+        type: 'success',
+        message: translate('uploadInjectedChunks', { fileName: file.name, chunks: response.data.chunks }),
+      })
+      addMessage('assistant', translate('uploadInjectedContext', { fileName: file.name, chunks: response.data.chunks }))
     } catch {
-      setUploadStatus({ type: 'error', message: '文件注入失败，请重试。' })
+      setUploadStatus({ type: 'error', message: t.uploadInjectionFailedRetry })
     } finally {
       setIsLoading(false)
     }
@@ -572,7 +578,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             ['memory', 'graph', 'skills']
           )
           if (contextResult.success && contextResult.data) {
-            addMessage('assistant', `上下文信息：\n\n${JSON.stringify(contextResult.data, null, 2)}`)
+            addMessage('assistant', `${t.chatAgentContextPrefix}\n\n${JSON.stringify(contextResult.data, null, 2)}`)
             setRecoverableCheckpointId(null)
             handled = true
           }
@@ -586,7 +592,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       }
     } catch {
       setStreamPhase('error')
-      addMessage('assistant', '无法连接到后端服务，请确保服务已启动。')
+      addMessage('assistant', t.backendConnectionFailed)
       if (checkpointId) {
         setRecoverStatus({ type: 'error', message: t.streamRestoreHint })
       }
@@ -661,225 +667,80 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         <div ref={messagesEndRef} />
       </div>
 
-      {recoverStatus && (
-        <div
-          className={`px-4 py-2 text-xs ${
-            recoverStatus.type === 'success'
-              ? 'text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
-              : 'text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400'
-          }`}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <span>{recoverStatus.message}</span>
-            {recoverableCheckpointId && recoverStatus.type === 'error' && (
-              <button
-                onClick={handleRestoreToCheckpoint}
-                className="px-2 py-1 rounded bg-white/80 dark:bg-dark-border dark:text-dark-text"
-              >
-                {t.streamRestoreToBeforeSend}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {uploadStatus && (
-        <div
-          className={`px-4 py-2 text-xs ${
-            uploadStatus.type === 'success'
-              ? 'text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
-              : 'text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400'
-          }`}
-        >
-          {uploadStatus.message}
-        </div>
-      )}
+        <ChatAreaStreamStatus
+          recoverStatus={recoverStatus}
+          recoverableCheckpointId={recoverableCheckpointId}
+          restoreBeforeSendLabel={t.streamRestoreToBeforeSend}
+          onRestoreToCheckpoint={handleRestoreToCheckpoint}
+          uploadStatus={uploadStatus}
+        />
 
       <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg">
         {selectionMeta && (
-          <div className="mb-3 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-2">
-            <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">
-              {translate('inlineSelectedTextInfo', { count: Math.min(selectedText.length, 80) })}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setInlineAction('continue')}
-                className={`px-2 py-1 text-xs rounded ${inlineAction === 'continue' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'}`}
-              >
-                {t.inlineContinue}
-              </button>
-              <button
-                onClick={() => setInlineAction('revise')}
-                disabled={!selectedText}
-                className={`px-2 py-1 text-xs rounded ${inlineAction === 'revise' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'} disabled:opacity-50`}
-              >
-                {t.inlineRevise}
-              </button>
-              <button
-                onClick={() => setInlineAction('generate')}
-                className={`px-2 py-1 text-xs rounded ${inlineAction === 'generate' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text'}`}
-              >
-                {t.inlineGenerate}
-              </button>
-              <button
-                onClick={runInlineAction}
-                disabled={!inlineAction || isLoading}
-                className="px-2 py-1 text-xs rounded bg-emerald-600 text-white disabled:opacity-50"
-              >
-                {t.inlineRun}
-              </button>
-              <button
-                onClick={resetInlineState}
-                className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-dark-border text-gray-700 dark:text-dark-text"
-              >
-                {t.inlineClearSelection}
-              </button>
-            </div>
-          </div>
+          <ChatAreaInlineActions
+            selectedText={selectedText}
+            inlineAction={inlineAction}
+            selectedTextInfo={translate('inlineSelectedTextInfo', { count: Math.min(selectedText.length, 80) })}
+            continueLabel={t.inlineContinue}
+            reviseLabel={t.inlineRevise}
+            generateLabel={t.inlineGenerate}
+            runLabel={t.inlineRun}
+            clearSelectionLabel={t.inlineClearSelection}
+            runDisabled={!inlineAction || isLoading}
+            onSelectAction={setInlineAction}
+            onRun={runInlineAction}
+            onClear={resetInlineState}
+          />
         )}
 
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs text-gray-500 dark:text-dark-text-secondary">模式：</span>
-          <button
-            onClick={() => setChatMode('chat')}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
-              chatMode === 'chat'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            普通聊天
-          </button>
-          <button
-            onClick={() => setChatMode('agent')}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
-              chatMode === 'agent'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Agent 高级
-          </button>
-          {chatMode === 'chat' && (
-            <>
-              <button
-                onClick={() => setEnableModelComparison((prev) => !prev)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  enableModelComparison
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                模型对比
-              </button>
-              <button
-                onClick={() => setIsTemplatePanelOpen(true)}
-                className="px-3 py-1 text-xs rounded-full transition-colors bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600"
-              >
-                {t.templateLibraryEntry}
-              </button>
-              {enableModelComparison && (
-                <select
-                  aria-label="对照模型"
-                  value={comparisonModel}
-                  onChange={(e) => setComparisonModel(e.target.value)}
-                  className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded"
-                >
-                  {availableComparisonModels.map((model) => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
-                </select>
-              )}
-            </>
-          )}
-          {chatMode === 'agent' && (
-            <select
-              value={agentAction}
-              onChange={(e) => setAgentAction(e.target.value as 'write' | 'revise' | 'context')}
-              className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded"
-            >
-              <option value="write">写作</option>
-              <option value="revise">润色/重写</option>
-              <option value="context">取上下文</option>
-            </select>
-          )}
-        </div>
+        <ChatAreaModeControls
+          modeLabel={t.chatModeLabel}
+          workflowLabel={`${t.workflow}:`}
+          selectedSkillsLabel={selectedSkills.length > 0 ? translate('selectedSkills', { count: selectedSkills.length }) : undefined}
+          chatMode={chatMode}
+          agentAction={agentAction}
+          enableModelComparison={enableModelComparison}
+          comparisonModel={comparisonModel}
+          comparisonModels={availableComparisonModels}
+          workflowLevel={workflowLevel}
+          chatModeNormalLabel={t.chatModeNormal}
+          chatModeAgentLabel={t.chatModeAgent}
+          chatModeComparisonLabel={t.chatModeComparison}
+          templateLibraryEntryLabel={t.templateLibraryEntry}
+          comparisonModelLabel={t.chatComparisonModelLabel}
+          chatAgentActionWriteLabel={t.chatAgentActionWrite}
+          chatAgentActionReviseLabel={t.chatAgentActionRevise}
+          chatAgentActionContextLabel={t.chatAgentActionContext}
+          workflowQuickLabel={t.quick}
+          workflowLiteLabel={t.lite}
+          workflowStandardLabel={t.standard}
+          workflowBrainstormLabel={t.brainstorm}
+          workflowCoordinatorLabel={t.coordinator}
+          onSetChatMode={setChatMode}
+          onToggleModelComparison={() => setEnableModelComparison((prev) => !prev)}
+          onOpenTemplateLibrary={() => setIsTemplatePanelOpen(true)}
+          onSetComparisonModel={setComparisonModel}
+          onSetAgentAction={setAgentAction}
+          onSetWorkflowLevel={setWorkflowLevel}
+        />
 
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.workflow}:</span>
-          {([
-            { level: 'L1', label: t.quick },
-            { level: 'L2', label: t.lite },
-            { level: 'L3', label: t.standard },
-            { level: 'L4', label: t.brainstorm },
-            { level: 'L5', label: t.coordinator },
-          ] as const).map(({ level, label }) => (
-            <button
-              key={level}
-              onClick={() => setWorkflowLevel(level)}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                workflowLevel === level
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-          {selectedSkills.length > 0 && (
-            <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">
-              {translate('selectedSkills', { count: selectedSkills.length })}
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-end gap-2">
-          <div className="flex-1 relative">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t.inputPlaceholder}
-              className="w-full px-4 py-3 pr-20 border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={1}
-              style={{ minHeight: '48px', maxHeight: '200px' }}
-            />
-            <div className="absolute right-2 bottom-2 flex items-center gap-1">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".txt,.md,.pdf,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors"
-              >
-                <Paperclip size={18} />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text transition-colors">
-                <Mic size={18} />
-              </button>
-            </div>
-          </div>
-          {isLoading ? (
-            <button
-              onClick={handleCancelStream}
-              className="px-4 py-3 bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition-colors"
-            >
-              {t.cancel}
-            </button>
-          ) : (
-            <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Send size={20} />
-            </button>
-          )}
-        </div>
+        <ChatAreaComposer
+          input={input}
+          isLoading={isLoading}
+          sendDisabled={!input.trim()}
+          inputPlaceholder={t.inputPlaceholder}
+          uploadLabel={t.composerUpload}
+          voiceInputLabel={t.composerVoiceInput}
+          sendLabel={t.composerSend}
+          cancelLabel={t.cancel}
+          fileInputRef={fileInputRef}
+          onInputChange={setInput}
+          onKeyDown={handleKeyDown}
+          onFileUpload={handleFileUpload}
+          onOpenFilePicker={() => fileInputRef.current?.click()}
+          onCancelStream={handleCancelStream}
+          onSend={handleSend}
+        />
       </div>
       {isTemplatePanelOpen && promptTemplateLibrary && (
         <PromptTemplatePanel

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, Plus, Folder, FileText, User, MapPin, BookOpen, Sparkles } from 'lucide-react'
 import { searchMemory, queryGraph, listSkills, loadSkill, matchSkills, getSkillChain } from '../api/client'
+import { useI18n } from '../i18n'
 
 interface KnowledgeModalProps {
   isOpen: boolean
@@ -27,6 +28,9 @@ const toGraphItems = (rows: unknown[] | undefined, key: string): KnowledgeItem[]
 }
 
 export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
+  const { t, translate } = useI18n()
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('characters')
   const [searchQuery, setSearchQuery] = useState('')
   const [items, setItems] = useState<KnowledgeItem[]>([])
@@ -43,14 +47,71 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   }, [isOpen, activeTab])
 
   useEffect(() => {
-    if (!isOpen) return
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose()
+    if (!isOpen) {
+      return
+    }
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+
+    const focusDialog = () => {
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = dialog.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      if (focusable) {
+        focusable.focus()
+      } else {
+        dialog.focus()
       }
     }
+
+    focusDialog()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const dialog = dialogRef.current
+      if (!dialog) {
+        return
+      }
+
+      const focusableElements = Array.from(
+        dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ).filter((element) => !element.hasAttribute('disabled') && element.tabIndex !== -1)
+
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        return
+      }
+
+      const first = focusableElements[0]
+      const last = focusableElements[focusableElements.length - 1]
+      const active = document.activeElement as HTMLElement | null
+
+      if (event.shiftKey) {
+        if (!active || active === first || !dialog.contains(active)) {
+          event.preventDefault()
+          last.focus()
+        }
+      } else if (!active || active === last || !dialog.contains(active)) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      previousFocusRef.current?.focus()
+    }
   }, [isOpen, onClose])
 
   const loadItems = async () => {
@@ -108,7 +169,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     if (response.success && response.data?.content) {
       setSkillDetails(response.data.content)
     } else {
-      setSkillDetails('加载技能详情失败')
+      setSkillDetails(t.knowledgeSkillDetailsLoadFailed)
     }
   }
 
@@ -138,23 +199,28 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   if (!isOpen) return null
 
   const tabs = [
-    { id: 'characters' as TabType, label: '角色', icon: User },
-    { id: 'locations' as TabType, label: '地点', icon: MapPin },
-    { id: 'plots' as TabType, label: '剧情', icon: BookOpen },
-    { id: 'skills' as TabType, label: '技能', icon: Sparkles },
+    { id: 'characters' as TabType, label: t.knowledgeTabCharacters, icon: User },
+    { id: 'locations' as TabType, label: t.knowledgeTabLocations, icon: MapPin },
+    { id: 'plots' as TabType, label: t.knowledgeTabPlots, icon: BookOpen },
+    { id: 'skills' as TabType, label: t.knowledgeTabSkills, icon: Sparkles },
   ]
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="知识库">
-      <div className="bg-white dark:bg-dark-surface rounded-2xl w-[800px] h-[600px] overflow-hidden shadow-2xl flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label={t.knowledgeTitle}>
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="bg-white dark:bg-dark-surface rounded-2xl w-[800px] h-[600px] overflow-hidden shadow-2xl flex flex-col"
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text">📚 知识库</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text">{t.knowledgeTitle}</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-            aria-label="关闭知识库"
+            aria-label={t.knowledgeClose}
+            title={t.knowledgeClose}
           >
-            ✕
+            ×
           </button>
         </div>
 
@@ -182,7 +248,8 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索..."
+              placeholder={t.knowledgeSearchPlaceholder}
+              aria-label={t.knowledgeSearchPlaceholder}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -191,25 +258,31 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
               <button
                 onClick={runSkillMatch}
                 className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                aria-label={t.knowledgeTaskMatch}
+                title={t.knowledgeTaskMatch}
               >
-                任务匹配
+                {t.knowledgeTaskMatch}
               </button>
               <button
                 onClick={loadSkillDetails}
                 disabled={!selectedSkillId}
                 className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+                aria-label={t.knowledgeSkillDetails}
+                title={t.knowledgeSkillDetails}
               >
-                技能详情
+                {t.knowledgeSkillDetails}
               </button>
               <button
                 onClick={loadSkillChain}
                 disabled={!selectedSkillId}
                 className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+                aria-label={t.knowledgeSkillChain}
+                title={t.knowledgeSkillChain}
               >
-                推荐链路
+                {t.knowledgeSkillChain}
               </button>
               {selectedSkillId && (
-                <span className="text-xs text-blue-600 dark:text-blue-400">当前技能：{selectedSkillId}</span>
+                <span className="text-xs text-blue-600 dark:text-blue-400">{translate('knowledgeCurrentSkill', { skillId: selectedSkillId })}</span>
               )}
             </div>
           )}
@@ -220,13 +293,13 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             <div className="mb-4 space-y-2">
               {skillDetails && (
                 <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">技能详情</div>
+                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeSkillDetails}</div>
                   <pre className="text-xs text-gray-600 dark:text-dark-text-secondary whitespace-pre-wrap break-all">{skillDetails}</pre>
                 </div>
               )}
               {skillMatches.length > 0 && (
                 <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">任务匹配</div>
+                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeTaskMatch}</div>
                   <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
                     {skillMatches.map((item) => `${item.skill_id} (${item.relevance})`).join('，')}
                   </div>
@@ -234,7 +307,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
               )}
               {skillChain.length > 0 && (
                 <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">推荐链路</div>
+                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeSkillChain}</div>
                   <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
                     {skillChain
                       .slice()
@@ -247,14 +320,19 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             </div>
           )}
           {loading ? (
-            <div className="flex items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">加载中...</div>
+            <div className="flex items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">{t.knowledgeLoading}</div>
           ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
               <Folder size={48} className="mb-2" />
-              <p>暂无数据</p>
-              <button className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <p>{t.knowledgeEmpty}</p>
+              <button
+                className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label={`${t.knowledgeAddPrefix}${tabs.find((tab) => tab.id === activeTab)?.label ?? ''}`}
+                title={`${t.knowledgeAddPrefix}${tabs.find((tab) => tab.id === activeTab)?.label ?? ''}`}
+                type="button"
+              >
                 <Plus size={16} />
-                添加{tabs.find((t) => t.id === activeTab)?.label}
+                {t.knowledgeAddPrefix}{tabs.find((tab) => tab.id === activeTab)?.label}
               </button>
             </div>
           ) : (
@@ -278,10 +356,10 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-gray-800 dark:text-dark-text truncate">
-                        {(item.name as string) || (item.title as string) || (item.id as string) || `Item ${index + 1}`}
+                        {(item.name as string) || (item.title as string) || (item.id as string) || translate('knowledgeItemFallback', { index: index + 1 })}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-dark-text-secondary mt-1 line-clamp-2">
-                        {(item.description as string) || (item.content as string) || '暂无描述'}
+                        {(item.description as string) || (item.content as string) || t.knowledgeNoDescription}
                       </p>
                     </div>
                   </div>

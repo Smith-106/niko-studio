@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { BarChart3, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
 import {
   evaluateContent,
@@ -13,6 +13,7 @@ import {
 } from '../api/client'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useI18n, type Translations } from '../i18n'
 
 interface EvaluationPanelProps {
   content: string
@@ -49,16 +50,19 @@ interface CheckpointItem {
   created_at: string
 }
 
-const buildDimensions = (data: {
-  lock_score: number
-  style_score: number
-  logic_score: number
-  actionable_feedback: string
-}) => {
+const buildDimensions = (
+  data: {
+    lock_score: number
+    style_score: number
+    logic_score: number
+    actionable_feedback: string
+  },
+  fallbackFeedback: string,
+) => {
   return [
-    { name: 'LOCK', score: Number((data.lock_score / 4).toFixed(1)), feedback: data.actionable_feedback || '无' },
-    { name: 'Style', score: Number((data.style_score / 4).toFixed(1)), feedback: data.actionable_feedback || '无' },
-    { name: 'Logic', score: Number((data.logic_score / 4).toFixed(1)), feedback: data.actionable_feedback || '无' },
+    { name: 'LOCK', score: Number((data.lock_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
+    { name: 'Style', score: Number((data.style_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
+    { name: 'Logic', score: Number((data.logic_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
   ]
 }
 
@@ -118,8 +122,12 @@ const defaultBatchState = (): BatchActionState => ({
   lastAppliedIds: [],
 })
 
-const formatSuggestionMessage = (result: RecommendationExecutionResult, fallbackAction: 'apply' | 'undo'): string => {
-  const actionLabel = fallbackAction === 'apply' ? '应用' : '撤销'
+const formatSuggestionMessage = (
+  result: RecommendationExecutionResult,
+  fallbackAction: 'apply' | 'undo',
+  t: Translations,
+): string => {
+  const actionLabel = fallbackAction === 'apply' ? t.evaluationApply : t.evaluationUndo
   if (result.error) {
     return `${actionLabel}失败：${result.error}`
   }
@@ -127,12 +135,15 @@ const formatSuggestionMessage = (result: RecommendationExecutionResult, fallback
     return result.message
   }
   if (result.status === 'failed') {
-    return `${actionLabel}失败`
+    return `${actionLabel}${t.restoreFailed}`
   }
-  return fallbackAction === 'apply' ? '建议已应用' : '建议已撤销'
+  return fallbackAction === 'apply' ? t.evaluationApply : t.evaluationUndo
 }
 
 export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
+  const { t, translate } = useI18n()
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
   const [loading, setLoading] = useState(true)
   const [result, setResult] = useState<EvaluationViewModel | null>(null)
   const [checkpointDescription, setCheckpointDescription] = useState('')
@@ -148,8 +159,65 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   }, [content])
 
   useEffect(() => {
-    refreshCheckpoints()
-  }, [])
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+
+    const focusPanel = () => {
+      const panel = dialogRef.current
+      if (!panel) return
+      const focusable = panel.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      if (focusable) {
+        focusable.focus()
+      } else {
+        panel.focus()
+      }
+    }
+
+    focusPanel()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const panel = dialogRef.current
+      if (!panel) return
+
+      const focusableElements = Array.from(
+        panel.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ).filter((element) => !element.hasAttribute('disabled') && element.tabIndex !== -1)
+
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        return
+      }
+
+      const first = focusableElements[0]
+      const last = focusableElements[focusableElements.length - 1]
+      const active = document.activeElement as HTMLElement | null
+
+      if (event.shiftKey) {
+        if (!active || active === first || !panel.contains(active)) {
+          event.preventDefault()
+          last.focus()
+        }
+      } else if (!active || active === last || !panel.contains(active)) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      previousFocusRef.current?.focus()
+    }
+  }, [onClose])
 
   const setSuggestionState = (id: string, next: SuggestionActionState) => {
     setSuggestionStates((prev) => ({
@@ -180,7 +248,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
         const suggestions = normalizeSuggestionPayloads(data.suggestions)
         setResult({
           score: Number((data.total_score / 10).toFixed(1)),
-          dimensions: buildDimensions(data),
+          dimensions: buildDimensions(data, t.evaluationNoFeedback),
           suggestions,
           decision: data.decision,
         })
@@ -204,25 +272,25 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       if (response.success && Array.isArray(response.data)) {
         setCheckpoints(response.data)
       } else {
-        setCheckpointError('加载 checkpoint 失败')
+        setCheckpointError(t.loadingCheckpoints)
       }
     } catch {
-      setCheckpointError('加载 checkpoint 失败')
+      setCheckpointError(t.loadingCheckpoints)
     }
   }
 
   const handleCreateCheckpoint = async () => {
     setCheckpointError(null)
     try {
-      const response = await createCheckpoint(checkpointDescription || '手动保存 checkpoint')
+      const response = await createCheckpoint(checkpointDescription || t.evaluationCheckpointPlaceholder)
       if (response.success) {
         setCheckpointDescription('')
         await refreshCheckpoints()
       } else {
-        setCheckpointError(response.error || '创建 checkpoint 失败')
+        setCheckpointError(response.error || t.save)
       }
     } catch {
-      setCheckpointError('创建 checkpoint 失败')
+      setCheckpointError(t.save)
     }
   }
 
@@ -231,13 +299,13 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     try {
       const response = await restoreCheckpoint(checkpointId)
       if (response.success) {
-        addMessage('assistant', `系统提示：已恢复 checkpoint ${checkpointId}`)
+        addMessage('assistant', translate('restoreSuccessWithCheckpoint', { checkpointId }))
         await refreshCheckpoints()
       } else {
-        setCheckpointError(response.error || '恢复 checkpoint 失败')
+        setCheckpointError(response.error || t.restoreFailed)
       }
     } catch {
-      setCheckpointError('恢复 checkpoint 失败')
+      setCheckpointError(t.restoreFailed)
     }
   }
 
@@ -247,7 +315,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     setSuggestionState(suggestion.id, {
       mode: 'processing',
       status: 'idle',
-      message: '执行中...'
+      message: t.evaluationApplying,
     })
 
     const response = await applyRecommendation(content, suggestion)
@@ -255,7 +323,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       setSuggestionState(suggestion.id, {
         mode: 'rollback-ready',
         status: 'error',
-        message: response.error || '应用失败',
+        message: response.error || t.evaluationFailed,
       })
       return
     }
@@ -266,7 +334,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     setSuggestionState(suggestion.id, {
       mode: nextMode,
       status: nextStatus,
-      message: formatSuggestionMessage(response.data, 'apply'),
+      message: formatSuggestionMessage(response.data, 'apply', t),
     })
   }
 
@@ -276,7 +344,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     setSuggestionState(suggestion.id, {
       mode: 'processing',
       status: 'idle',
-      message: '撤销中...'
+      message: t.evaluationUndoing,
     })
 
     const response = await undoRecommendation(content, suggestion)
@@ -284,7 +352,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       setSuggestionState(suggestion.id, {
         mode: 'rollback-ready',
         status: 'error',
-        message: response.error || '撤销失败',
+        message: response.error || t.evaluationFailed,
       })
       return
     }
@@ -295,7 +363,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     setSuggestionState(suggestion.id, {
       mode: nextMode,
       status: nextStatus,
-      message: formatSuggestionMessage(response.data, 'undo'),
+      message: formatSuggestionMessage(response.data, 'undo', t),
     })
   }
 
@@ -307,7 +375,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     setBatchState({
       mode: 'processing',
       status: 'idle',
-      message: '批量执行中...',
+      message: t.evaluationBatchApplying,
       lastAppliedIds: [],
     })
 
@@ -316,7 +384,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       setBatchState({
         mode: 'rollback-ready',
         status: 'error',
-        message: response.error || '批量应用失败',
+        message: response.error || t.evaluationFailed,
         lastAppliedIds: [],
       })
       return
@@ -330,14 +398,17 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       setSuggestionState(item.recommendation_id, {
         mode: item.status === 'applied' ? 'rollback-ready' : 'rollback-ready',
         status: item.status === 'applied' ? 'success' : 'error',
-        message: formatSuggestionMessage(item, 'apply'),
+        message: formatSuggestionMessage(item, 'apply', t),
       })
     }
 
     setBatchState({
       mode: response.data.failed > 0 || appliedIds.length > 0 ? 'rollback-ready' : 'idle',
       status: response.data.failed > 0 ? 'error' : 'success',
-      message: `批量结果：成功 ${response.data.applied}，失败 ${response.data.failed}`,
+      message: translate('evaluationBatchResult', {
+        applied: response.data.applied,
+        failed: response.data.failed,
+      }),
       lastAppliedIds: appliedIds,
     })
   }
@@ -351,7 +422,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       ...prev,
       mode: 'processing',
       status: 'idle',
-      message: '批量撤销中...',
+      message: t.evaluationBatchUndoing,
     }))
 
     const appliedSuggestions = result.suggestions.filter((item) => batchState.lastAppliedIds.includes(item.id))
@@ -365,14 +436,14 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
         setSuggestionState(suggestion.id, {
           mode: 'idle',
           status: 'success',
-          message: formatSuggestionMessage(response.data, 'undo'),
+          message: formatSuggestionMessage(response.data, 'undo', t),
         })
       } else {
         failedCount += 1
         setSuggestionState(suggestion.id, {
           mode: 'rollback-ready',
           status: 'error',
-          message: response.error || '撤销失败',
+          message: response.error || t.evaluationFailed,
         })
       }
     }
@@ -380,7 +451,10 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     setBatchState({
       mode: failedCount > 0 ? 'rollback-ready' : 'idle',
       status: failedCount > 0 ? 'error' : 'success',
-      message: `批量撤销结果：成功 ${successCount}，失败 ${failedCount}`,
+      message: translate('evaluationBatchUndoResult', {
+        success: successCount,
+        failed: failedCount,
+      }),
       lastAppliedIds: failedCount > 0 ? batchState.lastAppliedIds : [],
     })
   }
@@ -394,13 +468,13 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const getDecisionStyle = (decision: string) => {
     switch (decision) {
       case 'APPROVED':
-        return { icon: CheckCircle, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', label: '通过' }
+        return { icon: CheckCircle, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', label: t.evaluationPassed }
       case 'REVISE':
-        return { icon: AlertCircle, color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20', label: '需修改' }
+        return { icon: AlertCircle, color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20', label: t.evaluationNeedRevise }
       case 'REWRITE':
-        return { icon: AlertCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', label: '需重写' }
+        return { icon: AlertCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', label: t.evaluationNeedRewrite }
       default:
-        return { icon: AlertCircle, color: 'text-gray-600 dark:text-dark-text-secondary', bg: 'bg-gray-50 dark:bg-dark-bg', label: '未知' }
+        return { icon: AlertCircle, color: 'text-gray-600 dark:text-dark-text-secondary', bg: 'bg-gray-50 dark:bg-dark-bg', label: t.evaluationUnknown }
     }
   }
 
@@ -417,7 +491,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   if (!result) {
     return (
       <div className="fixed right-0 top-12 bottom-0 w-80 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg p-4">
-        <div className="text-center text-gray-400 dark:text-dark-text-secondary">评估失败</div>
+        <div className="text-center text-gray-400 dark:text-dark-text-secondary">{t.evaluationFailed}</div>
       </div>
     )
   }
@@ -426,20 +500,32 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const DecisionIcon = decisionStyle.icon
 
   return (
-    <div className="fixed right-0 top-12 bottom-0 w-80 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg flex flex-col" role="dialog" aria-modal="true" aria-label="评估面板">
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed right-0 top-12 bottom-0 w-80 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.evaluationTitle}
+    >
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-dark-border">
         <div className="flex items-center gap-2">
           <BarChart3 size={20} className="text-blue-600" />
-          <span className="font-semibold text-gray-900 dark:text-dark-text">质量评估</span>
+          <span className="font-semibold text-gray-900 dark:text-dark-text">{t.evaluationTitle}</span>
         </div>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded" aria-label="关闭评估面板">
-          ✕
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+          aria-label={t.evaluationClose}
+          title={t.evaluationClose}
+        >
+          ×
         </button>
       </div>
 
       <div className="p-4 border-b border-gray-200 dark:border-dark-border">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-gray-500 dark:text-dark-text-secondary">综合评分</span>
+          <span className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.evaluationOverallScore}</span>
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(result.score)}`}>
             {result.score.toFixed(1)} / 10
           </div>
@@ -451,7 +537,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">维度分析</h3>
+        <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.evaluationDimensionAnalysis}</h3>
         <div className="space-y-3">
           {result.dimensions.map((dim, index) => (
             <div key={index} className="p-3 bg-gray-50 dark:bg-dark-bg rounded-lg border border-gray-200 dark:border-dark-border">
@@ -476,22 +562,26 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
           <div className="mt-4">
             <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3 flex items-center gap-2">
               <TrendingUp size={16} />
-              改进建议
+              {t.evaluationSuggestions}
             </h3>
             <div className="mb-3 flex items-center gap-2">
               <button
                 onClick={handleBatchApply}
                 disabled={batchState.mode === 'processing'}
                 className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+                aria-label={t.evaluationBatchApply}
+                title={t.evaluationBatchApply}
               >
-                批量应用
+                {t.evaluationBatchApply}
               </button>
               <button
                 onClick={handleBatchUndo}
                 disabled={batchState.mode === 'processing' || batchState.lastAppliedIds.length === 0}
                 className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+                aria-label={t.evaluationBatchUndo}
+                title={t.evaluationBatchUndo}
               >
-                批量撤销
+                {t.evaluationBatchUndo}
               </button>
             </div>
             {batchState.message && (
@@ -519,15 +609,19 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
                             onClick={() => handleApplySuggestion(suggestion)}
                             disabled={actionState.mode === 'processing'}
                             className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+                            aria-label={t.evaluationApply}
+                            title={t.evaluationApply}
                           >
-                            apply
+                            {t.evaluationApply}
                           </button>
                           <button
                             onClick={() => handleUndoSuggestion(suggestion)}
                             disabled={actionState.mode === 'processing'}
                             className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+                            aria-label={t.evaluationUndo}
+                            title={t.evaluationUndo}
                           >
-                            undo
+                            {t.evaluationUndo}
                           </button>
                         </div>
                       </div>
@@ -540,25 +634,30 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
         )}
 
         <div className="mt-6 border-t border-gray-200 dark:border-dark-border pt-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">Checkpoint</h3>
+          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.evaluationCheckpointTitle}</h3>
           <div className="flex gap-2 mb-3">
             <input
               value={checkpointDescription}
               onChange={(e) => setCheckpointDescription(e.target.value)}
-              placeholder="checkpoint 描述"
+              placeholder={t.evaluationCheckpointPlaceholder}
+              aria-label={t.evaluationCheckpointPlaceholder}
               className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
             />
             <button
               onClick={handleCreateCheckpoint}
               className="px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+              aria-label={t.save}
+              title={t.save}
             >
-              保存
+              {t.save}
             </button>
             <button
               onClick={refreshCheckpoints}
               className="px-3 py-2 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+              aria-label={t.evaluationRefresh}
+              title={t.evaluationRefresh}
             >
-              刷新
+              {t.evaluationRefresh}
             </button>
           </div>
           {checkpointError && (
@@ -575,8 +674,10 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
                 <button
                   onClick={() => handleRestoreCheckpoint(checkpoint.id)}
                   className="mt-1 px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                  aria-label={t.restore}
+                  title={t.restore}
                 >
-                  恢复
+                  {t.restore}
                 </button>
               </div>
             ))}

@@ -71,7 +71,7 @@ uv sync
 
 - 主交付路径：Desktop 客户端 + `scripts/start_gateway.py` 启动的 Gateway。
 - Deprecated 路径：`src/web/app.py` 的 `GET /` 默认返回 `410`；仅在设置 `WEB_UI_FORWARD_URL` 时临时 `302` 转发。
-- Streamlit 路径：用于原型与辅助验证，不作为主交付入口。
+- Streamlit 路径：用于原型与辅助验证，不作为主交付入口（legacy compatibility path）。
 
 ### 单命令验收入口
 
