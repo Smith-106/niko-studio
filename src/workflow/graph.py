@@ -688,7 +688,6 @@ async def run_writing_session(
     return final_state or initial_state
 
 
-
 # Default compiled app for import
 try:
     app = compile_graph()
