@@ -2149,10 +2149,13 @@ class TestArchitectureBoundaryUnit:
     def test_architecture_boundary_adapter_bypass_engine_prohibited(self):
         adapter_src = self._read_source("src/workflow/adapters/novel_adapter.py")
 
+        assert "WorkflowEngine.warn_legacy_entrypoint(" in adapter_src
+
         forbidden_tokens = [
-            "WorkflowEngine",
-            "from src.workflow.workflow_engine import",
-            "from workflow.workflow_engine import",
+            "WorkflowEngine(",
+            "WorkflowEngine.plan(",
+            "WorkflowEngine.execute(",
+            "WorkflowEngine.run(",
         ]
 
         for token in forbidden_tokens:
@@ -2161,10 +2164,13 @@ class TestArchitectureBoundaryUnit:
     def test_architecture_boundary_graph_bypass_engine_prohibited(self):
         graph_src = self._read_source("src/workflow/graph.py")
 
+        assert "WorkflowEngine.warn_legacy_entrypoint(" in graph_src
+
         forbidden_tokens = [
-            "WorkflowEngine",
-            "from src.workflow.workflow_engine import",
-            "from workflow.workflow_engine import",
+            "WorkflowEngine(",
+            "WorkflowEngine.plan(",
+            "WorkflowEngine.execute(",
+            "WorkflowEngine.run(",
         ]
 
         for token in forbidden_tokens:
