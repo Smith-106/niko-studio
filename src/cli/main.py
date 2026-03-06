@@ -8,6 +8,7 @@ Click-based CLI application with command groups for:
 - chat: Interactive REPL
 - evaluate: Content evaluation
 - export: Export to various formats
+- project-tech-refresh: Refresh workflow metadata profile
 """
 
 import click
@@ -24,8 +25,10 @@ console = Console()
 def cli(ctx: click.Context) -> None:
     """Niko Studio - AI Writing Workbench CLI
 
-    A multi-agent collaborative writing system with workflow orchestration,
-    memory management, and narrative evaluation capabilities.
+    Single authoritative workflow execution entrypoint:
+    - `run` (uses `WorkflowEngine`)
+
+    Other command groups provide supporting capabilities (init/chat/evaluate/export/runtime).
     """
     ctx.ensure_object(dict)
     ctx.obj["console"] = console
@@ -38,6 +41,7 @@ from src.cli.commands.chat import chat
 from src.cli.commands.evaluate import evaluate
 from src.cli.commands.export import export
 from src.cli.commands.runtime import status_cmd, stats_cmd, search_cmd, serve_cmd
+from src.cli.commands.project_tech import project_tech_refresh_cmd
 from src.cli.commands.guided_draft import guided_draft
 
 cli.add_command(init)
@@ -49,6 +53,7 @@ cli.add_command(status_cmd)
 cli.add_command(stats_cmd)
 cli.add_command(search_cmd)
 cli.add_command(serve_cmd)
+cli.add_command(project_tech_refresh_cmd)
 cli.add_command(guided_draft)
 
 

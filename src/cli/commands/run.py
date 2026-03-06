@@ -109,7 +109,7 @@ def run(
     genre: str,
     namespace: str,
 ) -> None:
-    """Execute a writing workflow.
+    """Execute a writing workflow via single WorkflowEngine authority.
 
     Workflow levels:
     - L1: Quick response (direct answer)

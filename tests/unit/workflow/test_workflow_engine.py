@@ -23,6 +23,7 @@ from src.workflow.levels.types import (
     ANALYSIS_SCHEMA_VERSION,
     LEGACY_CONTRACT_FIELD_MAP,
 )
+from src.workflow import graph as workflow_graph
 
 
 # ============================================================
@@ -129,6 +130,10 @@ class TestWorkflowEngine:
         assert "level_slug" in result
         assert "description" in result
         assert "suggested_workflow" in result
+        assert "matched_features" in result
+        assert "score" in result
+        assert "final_level" in result
+        assert "routing_diagnostics" in result
 
     @pytest.mark.asyncio
     async def test_route_l1_keywords(self, engine):
@@ -148,10 +153,39 @@ class TestWorkflowEngine:
 
     @pytest.mark.asyncio
     async def test_route_long_text_upgrade(self, engine):
-        # Short task → L2, but long text upgrades to L3
+        # Short task -> L2, but long text upgrades to L3
         long_task = "写一段" + "A" * 150
         result = await engine.route(long_task)
         assert result["level"] == "L3"
+
+    @pytest.mark.asyncio
+    async def test_route_variant_intent_with_diagnostics(self, engine):
+        result = await engine.route("请简述这个设定的核心冲突并回答原因？")
+
+        assert result["level"] == "L1"
+        assert result["final_level"] == result["level"]
+        assert isinstance(result["matched_features"], list)
+        assert result["score"] >= 1
+        assert isinstance(result["routing_diagnostics"]["level_scores"], dict)
+        assert result["routing_diagnostics"]["feature_model"]["weights"]["keyword"] == 3
+        assert result["routing_diagnostics"]["feature_model"]["thresholds"]["default_level"] == "L2"
+
+    @pytest.mark.asyncio
+    async def test_route_matched_features_have_explanations(self, engine):
+        result = await engine.route("请简述这个设定的核心冲突并回答原因？")
+
+        assert len(result["matched_features"]) > 0
+        assert all("explanation" in feature for feature in result["matched_features"])
+        assert result["routing_diagnostics"]["feature_model"]["category_explanations"]["history"] == "命中历史反馈信号"
+
+    @pytest.mark.asyncio
+    async def test_route_mixed_intent_prefers_highest_structured_score(self, engine):
+        task = "请先回答这个问题，再给我写一章第3章的冲突场景"
+        result = await engine.route(task)
+
+        assert result["level"] in ["L3", "L4"]
+        assert result["routing_diagnostics"]["final_level"] == result["level"]
+        assert result["routing_diagnostics"]["baseline"]["legacy_level"] in ["L1", "L3", "L4"]
 
     @pytest.mark.asyncio
     async def test_get_workflow_template_all_levels(self, engine):
@@ -232,6 +266,22 @@ class TestWorkflowEngine:
 
         assert result["status"] == "completed"
         assert engine.plans[plan_id].recommendations_frozen is True
+
+    @pytest.mark.asyncio
+    async def test_run_public_entry_completes_l1_workflow(self, engine):
+        result = await engine.run("回答一个问题", level="L1")
+
+        assert result["status"] == "completed"
+        assert result["plan"]["level"] == "L1"
+        assert result["final_status"]["status"] == "completed"
+
+    def test_graph_legacy_entrypoints_emit_deprecation_warning(self):
+        with patch("src.workflow.adapters.AdapterRegistry.create_adapter") as mock_create_adapter:
+            mock_adapter = MagicMock()
+            mock_adapter.create_graph.return_value = MagicMock()
+            mock_create_adapter.return_value = mock_adapter
+            with pytest.warns(DeprecationWarning):
+                workflow_graph.create_writing_graph()
 
     @pytest.mark.asyncio
     async def test_execute_generate_draft_persists_generation_snapshot(self, engine):
@@ -2099,10 +2149,13 @@ class TestArchitectureBoundaryUnit:
     def test_architecture_boundary_adapter_bypass_engine_prohibited(self):
         adapter_src = self._read_source("src/workflow/adapters/novel_adapter.py")
 
+        assert "WorkflowEngine.warn_legacy_entrypoint(" in adapter_src
+
         forbidden_tokens = [
-            "WorkflowEngine",
-            "from src.workflow.workflow_engine import",
-            "from workflow.workflow_engine import",
+            "WorkflowEngine(",
+            "WorkflowEngine.plan(",
+            "WorkflowEngine.execute(",
+            "WorkflowEngine.run(",
         ]
 
         for token in forbidden_tokens:
@@ -2111,10 +2164,13 @@ class TestArchitectureBoundaryUnit:
     def test_architecture_boundary_graph_bypass_engine_prohibited(self):
         graph_src = self._read_source("src/workflow/graph.py")
 
+        assert "WorkflowEngine.warn_legacy_entrypoint(" in graph_src
+
         forbidden_tokens = [
-            "WorkflowEngine",
-            "from src.workflow.workflow_engine import",
-            "from workflow.workflow_engine import",
+            "WorkflowEngine(",
+            "WorkflowEngine.plan(",
+            "WorkflowEngine.execute(",
+            "WorkflowEngine.run(",
         ]
 
         for token in forbidden_tokens:

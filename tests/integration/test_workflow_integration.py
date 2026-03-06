@@ -23,8 +23,57 @@ from workflow.workflow_engine import (
 )
 from src.workflow.session.session_manager import ContentType
 
+class TestWorkflowSingleAuthorityEntry:
+    """单一权威入口测试"""
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_run_entry_executes_plan_to_completion(self, engine):
+        result = await engine.run("回答一个简短问题", level="L1")
+
+        assert result["status"] == "completed"
+        assert result["plan"]["level"] == "L1"
+        assert result["final_status"]["status"] == "completed"
+
+
 class TestWorkflowRouting:
     """工作流路由测试"""
+
+    ROBUSTNESS_TASKS = [
+        "请简述这个设定并解释核心矛盾？",
+        "写一段关于旧城雨夜的描写，强调气味和光影",
+        "根据上次反馈继续修改第2章冲突场景",
+        "请先回答这个问题，再给我写一章第3章的对决",
+        "写一段对白并补充角色动作细节",
+        "规划全书路线图并定义角色设定里程碑",
+        "继续多章创作并同步世界观设定",
+        "请给一个一句话速答：什么是叙事张力？",
+        "第5章场景重写，保留前文信息并优化节奏",
+        "汇总反馈后多轮讨论剧情转折点",
+        "请先解释人物动机，再写一段追逐场景",
+        "基于上一版意见调整第三章对白",
+        "写一段清晨港口的描写，突出潮湿感",
+        "给我一个简短回答：冲突要素有哪些？",
+        "继续上次内容并扩写战前会议",
+        "设计全书节奏并给出章节里程碑",
+        "多线并行推进三位角色的目标",
+        "先说明主题，再生成一段示例文本",
+        "按反馈迭代第4章收尾段落",
+        "规划世界观、角色弧线与主线结构",
+        "请一句话解释什么是叙事视角",
+        "写一章第6章：潜入失败后的反击",
+        "讨论三种结局方案并汇总优缺点",
+        "根据上次讨论继续完善冲突升级",
+        "写一段人物独白，语气压抑克制",
+        "给出短答：什么是节奏控制？",
+        "继续多章推进并同步关键伏笔",
+        "全书大纲重排，保留核心主题",
+        "先回答问题，再扩写第2章开场",
+        "汇总历史版本反馈并提出修订计划",
+    ]
 
     @pytest.fixture
     def engine(self, tmp_path):
@@ -68,6 +117,38 @@ class TestWorkflowRouting:
         result = await engine.route(long_task)
 
         assert result["level"] in ["L3", "L4", "L5"]
+
+    @pytest.mark.asyncio
+    async def test_route_diagnostics_backward_compatible(self, engine):
+        """验证新诊断字段与旧字段兼容"""
+        result = await engine.route("回答一个问题：什么是小说？")
+
+        assert result["level"] == "L1"
+        assert "reason" in result
+        assert "matched_features" in result
+        assert "score" in result
+        assert "final_level" in result
+        assert result["final_level"] == result["level"]
+        assert "routing_diagnostics" in result
+        assert result["routing_diagnostics"]["baseline"]["legacy_level"] in ["L1", "L2", "L3", "L4", "L5"]
+
+    @pytest.mark.asyncio
+    async def test_route_robustness_baseline_comparison(self, engine):
+        """鲁棒性样本集对比：结构化评分不劣于旧基线"""
+        baseline_miss = 0
+        structured_miss = 0
+
+        for task in self.ROBUSTNESS_TASKS:
+            result = await engine.route(task)
+            baseline = result["routing_diagnostics"]["baseline"]
+
+            if baseline["legacy_score"] <= 0:
+                baseline_miss += 1
+            if result["score"] <= 0:
+                structured_miss += 1
+
+        assert len(self.ROBUSTNESS_TASKS) >= 10
+        assert structured_miss <= baseline_miss
 
 
 class TestPlanMode:
@@ -563,9 +644,17 @@ class TestArchitectureBoundaryIntegration:
             Path(__file__).parent.parent.parent / "src" / "workflow" / "adapters" / "novel_adapter.py"
         ).read_text(encoding="utf-8")
 
-        assert "from src.workflow.workflow_engine import" not in adapter_source
-        assert "from workflow.workflow_engine import" not in adapter_source
-        assert "WorkflowEngine" not in adapter_source
+        assert "WorkflowEngine.warn_legacy_entrypoint(" in adapter_source
+
+        forbidden_tokens = [
+            "WorkflowEngine(",
+            "WorkflowEngine.plan(",
+            "WorkflowEngine.execute(",
+            "WorkflowEngine.run(",
+        ]
+
+        for token in forbidden_tokens:
+            assert token not in adapter_source
 
 
 class TestWorkflowTemplates:
