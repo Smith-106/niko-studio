@@ -56,7 +56,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamRequestIdRef = useRef(0)
   const { t, translate } = useI18n()
-  const previousConnectionStateRef = useRef(connectionState)
+  const previousConnectionStateRef = useRef<ChatAreaProps['connectionState'] | null>(null)
   const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
 
   const currentConversationId = useCurrentConversationId()
