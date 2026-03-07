@@ -5,10 +5,12 @@
 目前作为 facade，将逻辑委托给 Domain Adapters (如 NovelAdapter).
 
 Entry Points:
-- compile_graph: 编译工作流应用
-- run_writing_session: 运行一次性会话
-- add_distillation_node: 添加蒸馏节点到图中
+- compile_graph: 编译工作流应用 (legacy compatibility)
+- run_writing_session: 运行一次性会话 (legacy compatibility)
+- add_distillation_node: 添加蒸馏节点到图中 (legacy compatibility)
 - DistillationNode: 知识蒸馏节点类
+
+WorkflowEngine remains the single authoritative public workflow entry.
 """
 
 from typing import Dict, Any, Optional, List, Literal
@@ -587,9 +589,9 @@ def _warn_legacy_entrypoint(source: str) -> None:
 def create_writing_graph(config: WorkflowConfig = DEFAULT_CONFIG) -> StateGraph:
     _warn_legacy_entrypoint("src.workflow.graph.create_writing_graph")
     """
-    创建写作工作流图
+    创建写作工作流图（兼容入口）
     
-    Delegates to NovelAdapter for graph construction.
+    Delegates to NovelAdapter for graph construction and keeps backward compatibility.
     """
     from src.workflow.adapters import AdapterRegistry, DomainType
     
@@ -604,7 +606,7 @@ def create_writing_graph(config: WorkflowConfig = DEFAULT_CONFIG) -> StateGraph:
 def compile_graph(config: WorkflowConfig = DEFAULT_CONFIG, use_memory: bool = True):
     _warn_legacy_entrypoint("src.workflow.graph.compile_graph")
     """
-    编译工作流图
+    编译工作流图（兼容入口）
     
     Args:
         config: 工作流配置
@@ -635,7 +637,7 @@ async def run_writing_session(
 ) -> WritingState:
     _warn_legacy_entrypoint("src.workflow.graph.run_writing_session")
     """
-    运行完整写作会话
+    运行完整写作会话（兼容入口）
 
     Args:
         user_idea: 用户的故事灵感

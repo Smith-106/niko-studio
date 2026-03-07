@@ -147,9 +147,10 @@ WORKFLOW_STATE_ALLOWED_PHASES = {
 }
 
 
+ENGINE_PUBLIC_ENTRY_API = ("route", "plan", "execute", "run")
 ENGINE_PUBLIC_ENTRY_WARNING = (
     "Direct workflow graph/adapter entrypoints are deprecated and will be removed in a future release. "
-    "Use WorkflowEngine entry API as the single public authority."
+    f"Use WorkflowEngine entry API ({'/'.join(ENGINE_PUBLIC_ENTRY_API)}) as the single public authority."
 )
 
 
@@ -258,6 +259,10 @@ class Checkpoint:
 
 class WorkflowEngine:
     """工作流引擎"""
+
+    @classmethod
+    def public_entry_api(cls) -> Tuple[str, ...]:
+        return ENGINE_PUBLIC_ENTRY_API
 
     @classmethod
     def warn_legacy_entrypoint(cls, source: str) -> None:

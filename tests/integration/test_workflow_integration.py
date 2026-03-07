@@ -639,6 +639,30 @@ class TestArchitectureBoundaryIntegration:
         assert "workflow_level" in result or "errors" in result
 
     @pytest.mark.asyncio
+    async def test_boundary_graph_run_session_emits_legacy_warning(self, monkeypatch):
+        from src.workflow import graph as workflow_graph
+
+        class _DummyCompiledApp:
+            async def astream(self, initial_state):
+                yield {"writer": {"workflow_level": "L1"}}
+
+        monkeypatch.setattr(
+            workflow_graph,
+            "compile_graph",
+            lambda config, use_memory=False: _DummyCompiledApp(),
+        )
+
+        with pytest.warns(DeprecationWarning, match="single public authority"):
+            result = await workflow_graph.run_writing_session(
+                user_idea="写一个短故事开头",
+                target_chapters=1,
+                verbose=False,
+            )
+
+        assert isinstance(result, dict)
+        assert result.get("workflow_level") == "L1"
+
+    @pytest.mark.asyncio
     async def test_boundary_bypass_adapter_to_engine_prohibited_via_source_contract(self):
         adapter_source = (
             Path(__file__).parent.parent.parent / "src" / "workflow" / "adapters" / "novel_adapter.py"
