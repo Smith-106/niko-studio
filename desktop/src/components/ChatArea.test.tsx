@@ -111,7 +111,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '测试消息{enter}')
 
     await waitFor(() => {
@@ -146,7 +146,7 @@ describe('ChatArea P0 flows', () => {
     render(<ChatArea />)
 
     await userEvent.click(screen.getByRole('button', { name: '模型对比' }))
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '质量目标回归{enter}')
 
     await waitFor(() => {
@@ -191,7 +191,7 @@ describe('ChatArea P0 flows', () => {
     }))
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '检索参数透传{enter}')
 
     await waitFor(() => {
@@ -229,7 +229,7 @@ describe('ChatArea P0 flows', () => {
       'context'
     )
 
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '获取上下文{enter}')
 
     await waitFor(() => {
@@ -260,7 +260,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '渲染检索状态{enter}')
 
     await waitFor(() => {
@@ -289,7 +289,7 @@ describe('ChatArea P0 flows', () => {
     const modelSelect = screen.getByLabelText('对照模型')
     await userEvent.selectOptions(modelSelect, 'gpt-4-turbo')
 
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '比较测试{enter}')
 
     await waitFor(() => {
@@ -330,7 +330,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '需要取消{enter}')
 
     const cancelButton = await screen.findByRole('button', { name: '取消' })
@@ -348,7 +348,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '触发中断{enter}')
 
     await waitFor(() => {
@@ -369,7 +369,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '触发恢复态{enter}')
 
     await waitFor(() => {
@@ -421,7 +421,7 @@ describe('ChatArea P0 flows', () => {
     mockedChat.mockResolvedValue({ success: false, error: 'chat failed' })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '触发失败{enter}')
 
     await waitFor(() => {
@@ -436,7 +436,7 @@ describe('ChatArea P0 flows', () => {
     mockedChat.mockResolvedValue({ success: false, error: 'chat failed' })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '触发恢复{enter}')
 
     const restoreButton = await screen.findByRole('button', { name: '恢复到发送前' })
@@ -502,7 +502,7 @@ describe('ChatArea P0 flows', () => {
     await userEvent.type(screen.getByLabelText('主题 *'), '冒险')
     await userEvent.click(screen.getByRole('button', { name: '一键填充' }))
 
-    const input = screen.getByRole('textbox') as HTMLTextAreaElement
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...') as HTMLTextAreaElement
     expect(input.value).toContain('主题「冒险」')
 
     await userEvent.type(input, '{enter}')
@@ -533,7 +533,7 @@ describe('ChatArea P0 flows', () => {
   it('applies template in append mode with existing input', async () => {
     render(<ChatArea />)
 
-    const input = screen.getByRole('textbox') as HTMLTextAreaElement
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...') as HTMLTextAreaElement
     await userEvent.type(input, '已有内容')
 
     await userEvent.click(screen.getByRole('button', { name: '模板库' }))
