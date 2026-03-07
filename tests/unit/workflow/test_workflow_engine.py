@@ -2220,6 +2220,21 @@ class TestArchitectureBoundaryUnit:
         for token in forbidden_tokens:
             assert token not in graph_src
 
+    def test_architecture_boundary_cli_help_single_authority_narrative(self):
+        cli_src = self._read_source("src/cli/main.py")
+
+        assert "Single authoritative workflow execution entrypoint" in cli_src
+        assert "`run` (uses `WorkflowEngine`)" in cli_src
+
+        forbidden_tokens = [
+            "`compile_graph`",
+            "`run_writing_session`",
+            "`NovelAdapter`",
+        ]
+
+        for token in forbidden_tokens:
+            assert token not in cli_src
+
     def test_architecture_boundary_graph_delegates_to_adapter(self):
         graph_src = self._read_source("src/workflow/graph.py")
 

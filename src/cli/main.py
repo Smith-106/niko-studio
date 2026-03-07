@@ -4,11 +4,13 @@ Niko Studio CLI - Main Entry Point
 
 Click-based CLI application with command groups for:
 - init: Project/session initialization
-- run: Workflow execution
+- run: Workflow execution via WorkflowEngine single-authority entry
 - chat: Interactive REPL
 - evaluate: Content evaluation
 - export: Export to various formats
 - project-tech-refresh: Refresh workflow metadata profile
+
+Legacy graph/adapter entrypoints remain compatibility-only and emit deprecation warnings.
 """
 
 import click

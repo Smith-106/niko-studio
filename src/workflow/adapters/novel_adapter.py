@@ -68,6 +68,7 @@ class NovelAdapter(BaseDomainAdapter):
         )
 
     def create_graph(self):
+        """构建 Novel 图（兼容入口，推荐通过 WorkflowEngine 对外调用）。"""
         from src.workflow.workflow_engine import WorkflowEngine
 
         WorkflowEngine.warn_legacy_entrypoint("src.workflow.adapters.novel_adapter.NovelAdapter.create_graph")
