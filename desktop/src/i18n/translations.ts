@@ -87,6 +87,14 @@ export interface Translations {
   uploadInjectedChunks: string
   uploadInjectedContext: string
   chatAgentContextPrefix: string
+  quickRollbackTitle: string
+  quickRollbackPlanIdPlaceholder: string
+  quickRollbackCheckpointIdPlaceholder: string
+  quickRollbackReasonPlaceholder: string
+  quickRollbackAction: string
+  quickRollbackSuccess: string
+  quickRollbackFailed: string
+  quickRollbackMissingRequired: string
 
   // Knowledge Modal
   knowledgeTitle: string
@@ -106,6 +114,32 @@ export interface Translations {
   knowledgeNoDescription: string
   knowledgeItemFallback: string
   knowledgeSkillDetailsLoadFailed: string
+  knowledgeTemporalTitle: string
+  knowledgeTemporalEntityPlaceholder: string
+  knowledgeTemporalAtTimePlaceholder: string
+  knowledgeTemporalAction: string
+  knowledgeTemporalEntityRequired: string
+  knowledgeTemporalLoaded: string
+  knowledgeCharacterTitle: string
+  knowledgeCharacterNamePlaceholder: string
+  knowledgeCharacterAction: string
+  knowledgeCharacterNameRequired: string
+  knowledgeCharacterLoaded: string
+  knowledgeForeshadowTitle: string
+  knowledgeForeshadowStatusPlaceholder: string
+  knowledgeForeshadowChapterPlaceholder: string
+  knowledgeForeshadowAction: string
+  knowledgeForeshadowsLoaded: string
+  knowledgeMemoryTitle: string
+  knowledgeMemoryContentPlaceholder: string
+  knowledgeMemoryLayerPlaceholder: string
+  knowledgeMemoryDimensionPlaceholder: string
+  knowledgeMemoryEntityPlaceholder: string
+  knowledgeMemoryTagsPlaceholder: string
+  knowledgeMemoryAction: string
+  knowledgeMemoryContentRequired: string
+  knowledgeMemoryAdded: string
+  knowledgeRequestFailed: string
 
   // Evaluation Panel
   evaluationTitle: string
@@ -132,6 +166,8 @@ export interface Translations {
   evaluationCheckpointTitle: string
   evaluationCheckpointPlaceholder: string
   evaluationRefresh: string
+  evaluationSuggestionsRefresh: string
+  evaluationSuggestionsRefreshing: string
 
   // Chat Area Controls
   chatModeLabel: string
@@ -332,6 +368,14 @@ export const translations: Record<Language, Translations> = {
     uploadInjectedChunks: '已完成文件上下文注入：{fileName}（{chunks} 段）',
     uploadInjectedContext: '文件已注入上下文：{fileName}（{chunks} 段）',
     chatAgentContextPrefix: 'Agent 上下文结果',
+    quickRollbackTitle: 'Quick Rollback',
+    quickRollbackPlanIdPlaceholder: 'plan_id',
+    quickRollbackCheckpointIdPlaceholder: 'checkpoint_id',
+    quickRollbackReasonPlaceholder: '回滚原因（可选）',
+    quickRollbackAction: '执行回滚',
+    quickRollbackSuccess: 'Quick rollback 执行成功。',
+    quickRollbackFailed: 'Quick rollback 执行失败。',
+    quickRollbackMissingRequired: '请填写 plan_id 与 checkpoint_id。',
 
     // Knowledge Modal
     knowledgeTitle: '知识库',
@@ -351,6 +395,32 @@ export const translations: Record<Language, Translations> = {
     knowledgeNoDescription: '暂无描述',
     knowledgeItemFallback: '条目 {index}',
     knowledgeSkillDetailsLoadFailed: '加载技能详情失败',
+    knowledgeTemporalTitle: 'Temporal Facts',
+    knowledgeTemporalEntityPlaceholder: 'entity_id',
+    knowledgeTemporalAtTimePlaceholder: 'at_time（可选，ISO 时间）',
+    knowledgeTemporalAction: '查询 temporal facts',
+    knowledgeTemporalEntityRequired: '请输入 temporal 查询的 entity_id。',
+    knowledgeTemporalLoaded: 'Temporal facts 查询完成。',
+    knowledgeCharacterTitle: 'Character 详情',
+    knowledgeCharacterNamePlaceholder: '角色名',
+    knowledgeCharacterAction: '查询角色详情',
+    knowledgeCharacterNameRequired: '请输入角色名。',
+    knowledgeCharacterLoaded: '角色详情加载完成。',
+    knowledgeForeshadowTitle: 'Foreshadows 筛选',
+    knowledgeForeshadowStatusPlaceholder: 'status',
+    knowledgeForeshadowChapterPlaceholder: 'chapter',
+    knowledgeForeshadowAction: '查询 foreshadows',
+    knowledgeForeshadowsLoaded: 'Foreshadows 查询完成。',
+    knowledgeMemoryTitle: 'Add Memory',
+    knowledgeMemoryContentPlaceholder: 'memory content',
+    knowledgeMemoryLayerPlaceholder: 'layer',
+    knowledgeMemoryDimensionPlaceholder: 'dimension',
+    knowledgeMemoryEntityPlaceholder: 'entity_id（可选）',
+    knowledgeMemoryTagsPlaceholder: 'tags（逗号分隔）',
+    knowledgeMemoryAction: '添加 memory',
+    knowledgeMemoryContentRequired: '请输入 memory 内容。',
+    knowledgeMemoryAdded: 'Memory 添加成功。',
+    knowledgeRequestFailed: '请求失败，请稍后重试。',
 
     // Evaluation Panel
     evaluationTitle: '质量评估',
@@ -377,6 +447,8 @@ export const translations: Record<Language, Translations> = {
     evaluationCheckpointTitle: 'Checkpoint',
     evaluationCheckpointPlaceholder: 'checkpoint 描述',
     evaluationRefresh: '刷新',
+    evaluationSuggestionsRefresh: '刷新建议',
+    evaluationSuggestionsRefreshing: '刷新建议中...',
 
     // Chat Area Controls
     chatModeLabel: '模式：',
@@ -575,6 +647,14 @@ export const translations: Record<Language, Translations> = {
     uploadInjectedChunks: 'File context injected: {fileName} ({chunks} chunks)',
     uploadInjectedContext: 'Context injected from file: {fileName} ({chunks} chunks)',
     chatAgentContextPrefix: 'Agent context result',
+    quickRollbackTitle: 'Quick Rollback',
+    quickRollbackPlanIdPlaceholder: 'plan_id',
+    quickRollbackCheckpointIdPlaceholder: 'checkpoint_id',
+    quickRollbackReasonPlaceholder: 'Rollback reason (optional)',
+    quickRollbackAction: 'Run rollback',
+    quickRollbackSuccess: 'Quick rollback completed successfully.',
+    quickRollbackFailed: 'Quick rollback failed.',
+    quickRollbackMissingRequired: 'Please provide plan_id and checkpoint_id.',
 
     // Knowledge Modal
     knowledgeTitle: 'Knowledge Base',
@@ -594,6 +674,32 @@ export const translations: Record<Language, Translations> = {
     knowledgeNoDescription: 'No description',
     knowledgeItemFallback: 'Item {index}',
     knowledgeSkillDetailsLoadFailed: 'Failed to load skill details',
+    knowledgeTemporalTitle: 'Temporal Facts',
+    knowledgeTemporalEntityPlaceholder: 'entity_id',
+    knowledgeTemporalAtTimePlaceholder: 'at_time (optional, ISO time)',
+    knowledgeTemporalAction: 'Query temporal facts',
+    knowledgeTemporalEntityRequired: 'Please enter entity_id for temporal facts query.',
+    knowledgeTemporalLoaded: 'Temporal facts loaded.',
+    knowledgeCharacterTitle: 'Character Details',
+    knowledgeCharacterNamePlaceholder: 'Character name',
+    knowledgeCharacterAction: 'Load character details',
+    knowledgeCharacterNameRequired: 'Please enter character name.',
+    knowledgeCharacterLoaded: 'Character details loaded.',
+    knowledgeForeshadowTitle: 'Foreshadow Filters',
+    knowledgeForeshadowStatusPlaceholder: 'status',
+    knowledgeForeshadowChapterPlaceholder: 'chapter',
+    knowledgeForeshadowAction: 'Query foreshadows',
+    knowledgeForeshadowsLoaded: 'Foreshadows loaded.',
+    knowledgeMemoryTitle: 'Add Memory',
+    knowledgeMemoryContentPlaceholder: 'Memory content',
+    knowledgeMemoryLayerPlaceholder: 'layer',
+    knowledgeMemoryDimensionPlaceholder: 'dimension',
+    knowledgeMemoryEntityPlaceholder: 'entity_id (optional)',
+    knowledgeMemoryTagsPlaceholder: 'tags (comma separated)',
+    knowledgeMemoryAction: 'Add memory',
+    knowledgeMemoryContentRequired: 'Please enter memory content.',
+    knowledgeMemoryAdded: 'Memory added successfully.',
+    knowledgeRequestFailed: 'Request failed. Please try again.',
 
     // Evaluation Panel
     evaluationTitle: 'Quality Evaluation',
@@ -620,6 +726,8 @@ export const translations: Record<Language, Translations> = {
     evaluationCheckpointTitle: 'Checkpoint',
     evaluationCheckpointPlaceholder: 'Checkpoint description',
     evaluationRefresh: 'Refresh',
+    evaluationSuggestionsRefresh: 'Refresh suggestions',
+    evaluationSuggestionsRefreshing: 'Refreshing suggestions...',
 
     // Chat Area Controls
     chatModeLabel: 'Mode:',

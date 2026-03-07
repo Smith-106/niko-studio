@@ -1326,6 +1326,26 @@ export async function getImprovementSuggestions(
 
 // ============ Checkpoint API ============
 
+export interface WorkflowQuickRollbackResult {
+  status?: string
+  plan_id?: string
+  checkpoint_id?: string
+  message?: string
+  [key: string]: unknown
+}
+
+export async function quickRollbackWorkflow(
+  planId: string,
+  checkpointId: string,
+  reason?: string
+): Promise<ApiResponse<WorkflowQuickRollbackResult>> {
+  return callApi('/workflow/quick-rollback', 'POST', {
+    plan_id: planId,
+    checkpoint_id: checkpointId,
+    reason,
+  })
+}
+
 export async function createCheckpoint(
   description?: string,
   autoCommit?: boolean

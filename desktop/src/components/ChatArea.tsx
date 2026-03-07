@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
-import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, uploadMemoryFile } from '../api/client'
+import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, quickRollbackWorkflow, uploadMemoryFile } from '../api/client'
 import type { ChatRequest, StreamDonePayload } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { PromptTemplatePanel, type ApplyTemplatePayload } from './PromptTemplatePanel'
@@ -49,7 +49,11 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const [selectedText, setSelectedText] = useState('')
   const [selectionMeta, setSelectionMeta] = useState<SelectionMeta | null>(null)
   const [inlineAction, setInlineAction] = useState<InlineAction>(null)
-  const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [quickRollbackPlanId, setQuickRollbackPlanId] = useState('')
+  const [quickRollbackCheckpointId, setQuickRollbackCheckpointId] = useState('')
+  const [quickRollbackReason, setQuickRollbackReason] = useState('')
+  const [quickRollbackStatus, setQuickRollbackStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
+  const [uploadStatus, setUploadStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
   const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -490,6 +494,27 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
   }
 
+  const handleQuickRollback = async () => {
+    const planId = quickRollbackPlanId.trim()
+    const checkpointId = quickRollbackCheckpointId.trim()
+
+    if (!planId || !checkpointId || isLoading) {
+      setQuickRollbackStatus({ type: 'error', message: t.quickRollbackMissingRequired })
+      return
+    }
+
+    try {
+      const response = await quickRollbackWorkflow(planId, checkpointId, quickRollbackReason.trim() || undefined)
+      if (response.success) {
+        setQuickRollbackStatus({ type: 'success', message: t.quickRollbackSuccess })
+      } else {
+        setQuickRollbackStatus({ type: 'error', message: response.error || t.quickRollbackFailed })
+      }
+    } catch {
+      setQuickRollbackStatus({ type: 'error', message: t.quickRollbackFailed })
+    }
+  }
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
 
@@ -714,6 +739,48 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           onRestoreToCheckpoint={handleRestoreToCheckpoint}
           uploadStatus={uploadStatus}
         />
+
+      <div className="px-4 py-2 border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface">
+        <div className="text-xs font-medium text-gray-600 dark:text-dark-text-secondary mb-2">{t.quickRollbackTitle}</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <input
+            value={quickRollbackPlanId}
+            onChange={(event) => setQuickRollbackPlanId(event.target.value)}
+            placeholder={t.quickRollbackPlanIdPlaceholder}
+            aria-label={t.quickRollbackPlanIdPlaceholder}
+            className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+          />
+          <input
+            value={quickRollbackCheckpointId}
+            onChange={(event) => setQuickRollbackCheckpointId(event.target.value)}
+            placeholder={t.quickRollbackCheckpointIdPlaceholder}
+            aria-label={t.quickRollbackCheckpointIdPlaceholder}
+            className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+          />
+          <input
+            value={quickRollbackReason}
+            onChange={(event) => setQuickRollbackReason(event.target.value)}
+            placeholder={t.quickRollbackReasonPlaceholder}
+            aria-label={t.quickRollbackReasonPlaceholder}
+            className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+          />
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <button
+            onClick={handleQuickRollback}
+            type="button"
+            className="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+            disabled={isLoading}
+          >
+            {t.quickRollbackAction}
+          </button>
+          {quickRollbackStatus && (
+            <span className={`text-xs ${quickRollbackStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              {quickRollbackStatus.message}
+            </span>
+          )}
+        </div>
+      </div>
 
       <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg">
         {selectionMeta && (
