@@ -18,6 +18,20 @@ export interface LLMProvider {
 
 export type PromptTemplateCategory = 'brainstorm' | 'outline' | 'character' | 'rewrite' | 'analysis' | 'custom'
 
+export type ContextType = 'world' | 'character' | 'plot'
+export type RetrievalSearchMode = 'hybrid' | 'iterative' | 'context'
+
+export interface RetrievalSettings {
+  enabled: boolean
+  searchMode: RetrievalSearchMode
+  profile: string
+  minScore?: number
+  budgetTokens?: number
+  rerank: boolean
+  maxIterations: number
+  confidenceThreshold: number
+}
+
 export interface PromptTemplateVariable {
   id: string
   label: string
@@ -116,6 +130,8 @@ interface Settings {
   detectionEvasionGuardEnabled: boolean
   writingHelperUseLegacyPolish: boolean
   qualityGoals: QualityGoalsSettings
+  retrieval: RetrievalSettings
+  contextTypes: ContextType[]
 
   // Prompt templates
   promptTemplateLibrary?: PromptTemplateLibrarySettings
@@ -258,6 +274,62 @@ const defaultQualityGoals = (): QualityGoalsSettings => {
   }
 }
 
+const defaultRetrievalSettings = (): RetrievalSettings => ({
+  enabled: true,
+  searchMode: 'hybrid',
+  profile: 'balanced',
+  minScore: undefined,
+  budgetTokens: undefined,
+  rerank: false,
+  maxIterations: 3,
+  confidenceThreshold: 0.8,
+})
+
+const sanitizeNumeric = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === '') {
+    return undefined
+  }
+  const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+const normalizeRetrievalSettings = (retrieval: Partial<RetrievalSettings> | undefined): RetrievalSettings => {
+  const merged = {
+    ...defaultRetrievalSettings(),
+    ...(retrieval ?? {}),
+  }
+
+  const minScore = sanitizeNumeric(merged.minScore)
+  const budgetTokens = sanitizeNumeric(merged.budgetTokens)
+  const maxIterations = sanitizeNumeric(merged.maxIterations)
+  const confidenceThreshold = sanitizeNumeric(merged.confidenceThreshold)
+
+  const allowedModes: RetrievalSearchMode[] = ['hybrid', 'iterative', 'context']
+  const searchMode = allowedModes.includes(merged.searchMode) ? merged.searchMode : 'hybrid'
+
+  return {
+    enabled: Boolean(merged.enabled),
+    searchMode,
+    profile: (merged.profile ?? '').trim(),
+    minScore,
+    budgetTokens,
+    rerank: Boolean(merged.rerank),
+    maxIterations: maxIterations !== undefined ? Math.max(1, Math.floor(maxIterations)) : 3,
+    confidenceThreshold:
+      confidenceThreshold !== undefined
+        ? Math.max(0, Math.min(1, Number(confidenceThreshold.toFixed(3))))
+        : 0.8,
+  }
+}
+
+const normalizeContextTypes = (contextTypes: ContextType[] | undefined): ContextType[] => {
+  const fallback: ContextType[] = ['world', 'character', 'plot']
+  const allowed = new Set<ContextType>(fallback)
+  const list = (contextTypes ?? fallback).filter((item): item is ContextType => allowed.has(item))
+  const deduped = list.filter((item, index, arr) => arr.indexOf(item) === index)
+  return deduped.length > 0 ? deduped : fallback
+}
+
 const defaultSettings: Settings = {
   apiBaseUrl: 'http://127.0.0.1:8000',
   apiKey: '',
@@ -273,6 +345,8 @@ const defaultSettings: Settings = {
   detectionEvasionGuardEnabled: true,
   writingHelperUseLegacyPolish: false,
   qualityGoals: defaultQualityGoals(),
+  retrieval: defaultRetrievalSettings(),
+  contextTypes: ['world', 'character', 'plot'],
   promptTemplateLibrary: defaultPromptTemplateLibrary(),
   theme: 'light',
   fontSize: 'medium',
@@ -393,6 +467,8 @@ const normalizeSettings = (settings: Partial<Settings>): Settings => {
       ...defaultQualityGoals(),
       ...(settings.qualityGoals ?? {}),
     },
+    retrieval: normalizeRetrievalSettings(settings.retrieval),
+    contextTypes: normalizeContextTypes(settings.contextTypes),
   }
 
   return {

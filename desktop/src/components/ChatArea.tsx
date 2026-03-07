@@ -157,10 +157,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             'assistant',
             response.data.content || comparison.primary.content,
             response.data.skills_used || selectedSkills,
-            comparison
+            comparison,
+            response.data.writer_metadata
           )
         } else {
-          addMessage('assistant', response.data.content || t.processingCompleted, response.data.skills_used || selectedSkills)
+          addMessage(
+            'assistant',
+            response.data.content || t.processingCompleted,
+            response.data.skills_used || selectedSkills,
+            undefined,
+            response.data.writer_metadata
+          )
         }
         setRecoverableCheckpointId(null)
         setRecoverStatus(null)
@@ -178,6 +185,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     let streamFailed = false
     let hasStreamContent = false
     let streamText = ''
+    let streamWriterMetadata: StreamDonePayload['writer_metadata']
     let finalPhase: StreamPhase | null = null
     let finalized = false
     let streamDone = false
@@ -237,6 +245,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         },
         onDone: (payload) => {
           streamDone = true
+          streamWriterMetadata = payload.writer_metadata
           maybeShowGateHint(payload)
           const terminal = normalizeTerminal(payload)
           finalize(terminal, { terminal, decision: payload.decision, diagnostics: payload.diagnostics })
@@ -271,7 +280,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
 
     if ((finalPhase === 'done' || finalPhase === 'recovered') && hasStreamContent) {
-      addMessage('assistant', streamText || t.processingCompleted, selectedSkills)
+      addMessage('assistant', streamText || t.processingCompleted, selectedSkills, undefined, streamWriterMetadata)
       setRecoverableCheckpointId(null)
       if (finalPhase === 'recovered') {
         setRecoverStatus({ type: 'success', message: t.streamRecovered })
@@ -294,10 +303,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           'assistant',
           response.data.content || comparison.primary.content,
           response.data.skills_used || selectedSkills,
-          comparison
+          comparison,
+          response.data.writer_metadata
         )
       } else {
-        addMessage('assistant', response.data.content || t.processingCompleted, response.data.skills_used || selectedSkills)
+        addMessage(
+          'assistant',
+          response.data.content || t.processingCompleted,
+          response.data.skills_used || selectedSkills,
+          undefined,
+          response.data.writer_metadata
+        )
       }
       setRecoverableCheckpointId(null)
       setRecoverStatus(null)
@@ -501,6 +517,9 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       setStreamingContent('')
       setStreamPhase('idle')
 
+      const retrieval = settings.retrieval
+      const contextTypes = settings.contextTypes
+
       const request: ChatRequest = {
         messages: [{ role: 'user', content: userMessage }],
         workflowLevel,
@@ -516,6 +535,14 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
           rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
         },
+        knowledge_retrieval: retrieval.enabled,
+        search_mode: retrieval.searchMode,
+        profile: retrieval.profile || undefined,
+        min_score: retrieval.minScore,
+        budget_tokens: retrieval.budgetTokens,
+        rerank: retrieval.rerank,
+        max_iterations: retrieval.maxIterations,
+        confidence_threshold: retrieval.confidenceThreshold,
       }
 
       if (enableModelComparison && comparisonModel) {
@@ -588,7 +615,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               task: userMessage,
               workflow_level: workflowLevel,
             },
-            ['memory', 'graph', 'skills']
+            contextTypes
           )
           if (contextResult.success && contextResult.data) {
             addMessage('assistant', `${t.chatAgentContextPrefix}\n\n${JSON.stringify(contextResult.data, null, 2)}`)
