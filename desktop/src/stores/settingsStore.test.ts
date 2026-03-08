@@ -58,4 +58,23 @@ describe('settingsStore prompt template library', () => {
 
     expect(useSettingsStore.getState().settings.writingHelperUseLegacyPolish).toBe(true)
   })
+
+  it('defaults workflow backend mode to standard', () => {
+    localStorage.clear()
+    useSettingsStore.getState().resetSettings()
+
+    expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('standard')
+  })
+
+  it('resets workflow backend mode to standard after override', () => {
+    localStorage.clear()
+    const store = useSettingsStore.getState()
+
+    store.updateSettings({ workflowBackendMode: 'uiBridge' })
+    expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
+
+    store.resetSettings()
+
+    expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('standard')
+  })
 })
