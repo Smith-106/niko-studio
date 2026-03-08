@@ -23,6 +23,7 @@ import {
   createCheckpoint,
   restoreCheckpoint,
   uploadMemoryFile,
+  agentGetContext,
 } from '../api/client'
 
 const mockedChat = vi.mocked(chat)
@@ -30,6 +31,7 @@ const mockedChatStream = vi.mocked(chatStream)
 const mockedCreateCheckpoint = vi.mocked(createCheckpoint)
 const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
 const mockedUploadMemoryFile = vi.mocked(uploadMemoryFile)
+const mockedAgentGetContext = vi.mocked(agentGetContext)
 
 function resetStores(): void {
   localStorage.clear()
@@ -99,6 +101,7 @@ describe('ChatArea P0 flows', () => {
         memory_ids: ['m1', 'm2'],
       },
     })
+    mockedAgentGetContext.mockResolvedValue({ success: true, data: { context: 'ok' } as Record<string, unknown> })
   })
 
   it('streams content and commits on done without fallback chat', async () => {
@@ -108,7 +111,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '测试消息{enter}')
 
     await waitFor(() => {
@@ -143,7 +146,7 @@ describe('ChatArea P0 flows', () => {
     render(<ChatArea />)
 
     await userEvent.click(screen.getByRole('button', { name: '模型对比' }))
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '质量目标回归{enter}')
 
     await waitFor(() => {
@@ -161,6 +164,107 @@ describe('ChatArea P0 flows', () => {
           },
         })
       )
+    })
+  })
+
+  it('passes retrieval settings through chat request payload', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('检索透传结果', 0)
+      callbacks.onDone?.({ status: 'completed', skills_used: [] })
+    })
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        retrieval: {
+          enabled: true,
+          searchMode: 'iterative',
+          profile: 'strict',
+          minScore: 0.42,
+          budgetTokens: 1234,
+          rerank: true,
+          maxIterations: 5,
+          confidenceThreshold: 0.91,
+        },
+      },
+    }))
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    await userEvent.type(input, '检索参数透传{enter}')
+
+    await waitFor(() => {
+      expect(mockedChatStream).toHaveBeenCalledWith(
+        expect.objectContaining({
+          knowledge_retrieval: true,
+          search_mode: 'iterative',
+          profile: 'strict',
+          min_score: 0.42,
+          budget_tokens: 1234,
+          rerank: true,
+          max_iterations: 5,
+          confidence_threshold: 0.91,
+        }),
+        expect.any(Object),
+        expect.any(Object)
+      )
+    })
+  })
+
+  it('uses configured context types for agent context action', async () => {
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        contextTypes: ['world', 'plot'],
+      },
+    }))
+
+    render(<ChatArea />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Agent 高级' }))
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Agent 高级' }),
+      'context'
+    )
+
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    await userEvent.type(input, '获取上下文{enter}')
+
+    await waitFor(() => {
+      expect(mockedAgentGetContext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          task: '获取上下文',
+          workflow_level: 'L3',
+        }),
+        ['world', 'plot']
+      )
+    })
+  })
+
+  it('renders retrieval status when stream done includes writer metadata', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('带检索状态', 0)
+      callbacks.onDone?.({
+        status: 'completed',
+        skills_used: [],
+        writer_metadata: {
+          knowledge_retrieved: {
+            entities_count: 2,
+            relations_count: 1,
+            memories_count: 4,
+          },
+        },
+      })
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    await userEvent.type(input, '渲染检索状态{enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText(/检索状态：\s*实体\s*2\s*\/\s*关系\s*1\s*\/\s*记忆\s*4/)).toBeInTheDocument()
     })
   })
 
@@ -185,7 +289,7 @@ describe('ChatArea P0 flows', () => {
     const modelSelect = screen.getByLabelText('对照模型')
     await userEvent.selectOptions(modelSelect, 'gpt-4-turbo')
 
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '比较测试{enter}')
 
     await waitFor(() => {
@@ -226,7 +330,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '需要取消{enter}')
 
     const cancelButton = await screen.findByRole('button', { name: '取消' })
@@ -244,7 +348,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '触发中断{enter}')
 
     await waitFor(() => {
@@ -265,7 +369,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '触发恢复态{enter}')
 
     await waitFor(() => {
@@ -275,7 +379,9 @@ describe('ChatArea P0 flows', () => {
   })
 
   it('shows reconnecting hint when connection enters reconnecting state', async () => {
-    render(<ChatArea connectionState="reconnecting" />)
+    const { rerender } = render(<ChatArea connectionState="connected" />)
+
+    rerender(<ChatArea connectionState="reconnecting" />)
 
     await waitFor(() => {
       expect(screen.getByText('连接恢复中，请稍候...')).toBeInTheDocument()
@@ -283,7 +389,9 @@ describe('ChatArea P0 flows', () => {
   })
 
   it('shows recovered hint when connection returns from reconnecting to connected', async () => {
-    const { rerender } = render(<ChatArea connectionState="reconnecting" />)
+    const { rerender } = render(<ChatArea connectionState="connected" />)
+
+    rerender(<ChatArea connectionState="reconnecting" />)
 
     await waitFor(() => {
       expect(screen.getByText('连接恢复中，请稍候...')).toBeInTheDocument()
@@ -297,7 +405,9 @@ describe('ChatArea P0 flows', () => {
   })
 
   it('shows interrupted hint when connection becomes disconnected', async () => {
-    render(<ChatArea connectionState="disconnected" />)
+    const { rerender } = render(<ChatArea connectionState="connected" />)
+
+    rerender(<ChatArea connectionState="disconnected" />)
 
     await waitFor(() => {
       expect(screen.getByText('流式生成已中断。')).toBeInTheDocument()
@@ -311,7 +421,7 @@ describe('ChatArea P0 flows', () => {
     mockedChat.mockResolvedValue({ success: false, error: 'chat failed' })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '触发失败{enter}')
 
     await waitFor(() => {
@@ -326,7 +436,7 @@ describe('ChatArea P0 flows', () => {
     mockedChat.mockResolvedValue({ success: false, error: 'chat failed' })
 
     render(<ChatArea />)
-    const input = screen.getByRole('textbox')
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
     await userEvent.type(input, '触发恢复{enter}')
 
     const restoreButton = await screen.findByRole('button', { name: '恢复到发送前' })
@@ -392,7 +502,7 @@ describe('ChatArea P0 flows', () => {
     await userEvent.type(screen.getByLabelText('主题 *'), '冒险')
     await userEvent.click(screen.getByRole('button', { name: '一键填充' }))
 
-    const input = screen.getByRole('textbox') as HTMLTextAreaElement
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...') as HTMLTextAreaElement
     expect(input.value).toContain('主题「冒险」')
 
     await userEvent.type(input, '{enter}')
@@ -423,7 +533,7 @@ describe('ChatArea P0 flows', () => {
   it('applies template in append mode with existing input', async () => {
     render(<ChatArea />)
 
-    const input = screen.getByRole('textbox') as HTMLTextAreaElement
+    const input = screen.getByPlaceholderText('告诉我你想创作什么...') as HTMLTextAreaElement
     await userEvent.type(input, '已有内容')
 
     await userEvent.click(screen.getByRole('button', { name: '模板库' }))

@@ -54,4 +54,26 @@ describe('MessageBubble selection', () => {
     expect(screen.getByText('主模型内容')).toBeInTheDocument()
     expect(screen.getByText('对照模型内容')).toBeInTheDocument()
   })
+
+  it('renders retrieval status when writer metadata is present', () => {
+    render(
+      <MessageBubble
+        message={{
+          id: 'm4',
+          role: 'assistant',
+          content: '带检索状态的回复',
+          timestamp: new Date(),
+          writerMetadata: {
+            knowledge_retrieved: {
+              entities_count: 3,
+              relations_count: 2,
+              memories_count: 5,
+            },
+          },
+        }}
+      />
+    )
+
+    expect(screen.getByText('检索状态： 实体 3 / 关系 2 / 记忆 5')).toBeInTheDocument()
+  })
 })

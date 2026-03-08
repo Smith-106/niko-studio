@@ -34,6 +34,15 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
     if (prevComparison.control.content !== nextComparison.control.content) return false
   }
 
+  const prevKnowledge = prevMsg.writerMetadata?.knowledge_retrieved
+  const nextKnowledge = nextMsg.writerMetadata?.knowledge_retrieved
+  if (Boolean(prevKnowledge) !== Boolean(nextKnowledge)) return false
+  if (prevKnowledge && nextKnowledge) {
+    if (prevKnowledge.entities_count !== nextKnowledge.entities_count) return false
+    if (prevKnowledge.relations_count !== nextKnowledge.relations_count) return false
+    if (prevKnowledge.memories_count !== nextKnowledge.memories_count) return false
+  }
+
   return true
 }
 
@@ -79,6 +88,16 @@ function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubble
                 📦 {skill}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Retrieval Status */}
+        {!isUser && message.writerMetadata?.knowledge_retrieved && (
+          <div className="mb-2 text-xs text-gray-500 dark:text-dark-text-secondary">
+            检索状态：
+            实体 {message.writerMetadata.knowledge_retrieved.entities_count} /
+            关系 {message.writerMetadata.knowledge_retrieved.relations_count} /
+            记忆 {message.writerMetadata.knowledge_retrieved.memories_count}
           </div>
         )}
 

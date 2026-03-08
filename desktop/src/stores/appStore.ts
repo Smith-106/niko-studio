@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { checkBackendHealth, listSkills } from '@/api/client'
+import { checkBackendHealth, listSkills, type WriterMetadata } from '@/api/client'
 import { useSettingsStore, type QualityGoalsSettings } from './settingsStore'
 
 export interface MessageComparisonItem {
@@ -20,6 +20,7 @@ export interface Message {
   timestamp: Date
   skills?: string[]
   comparison?: MessageComparison
+  writerMetadata?: WriterMetadata
 }
 
 export interface Conversation {
@@ -43,7 +44,13 @@ interface AppState {
   // Actions
   createConversation: () => void
   selectConversation: (id: string) => void
-  addMessage: (role: 'user' | 'assistant', content: string, skills?: string[], comparison?: MessageComparison) => void
+  addMessage: (
+    role: 'user' | 'assistant',
+    content: string,
+    skills?: string[],
+    comparison?: MessageComparison,
+    writerMetadata?: WriterMetadata
+  ) => void
   getConversationById: (id: string) => Conversation | undefined
 
   // Skills
@@ -104,7 +111,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ currentConversationId: id })
   },
 
-  addMessage: (role, content, skills, comparison) => {
+  addMessage: (role, content, skills, comparison, writerMetadata) => {
     const { currentConversationId, conversationsById } = get()
     if (!currentConversationId) return
 
@@ -118,6 +125,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       timestamp: new Date(),
       skills,
       comparison,
+      writerMetadata,
     }
 
     // Direct update to specific conversation - avoids re-rendering unrelated conversations

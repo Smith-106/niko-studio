@@ -8,6 +8,7 @@ import {
   applyRecommendation,
   undoRecommendation,
   batchApplyRecommendations,
+  getImprovementSuggestions,
   type RecommendationPayload,
   type RecommendationExecutionResult,
 } from '../api/client'
@@ -151,6 +152,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const [checkpointError, setCheckpointError] = useState<string | null>(null)
   const [suggestionStates, setSuggestionStates] = useState<Record<string, SuggestionActionState>>({})
   const [batchState, setBatchState] = useState<BatchActionState>(defaultBatchState())
+  const [suggestionsRefreshing, setSuggestionsRefreshing] = useState(false)
   const { addMessage } = useAppStore()
   const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
 
@@ -262,6 +264,25 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       setResult(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const refreshSuggestions = async () => {
+    setSuggestionsRefreshing(true)
+    try {
+      const issues = result?.suggestions.map((item) => item.title).filter(Boolean)
+      const response = await getImprovementSuggestions(content, issues, 8)
+      if (response.success && Array.isArray(response.data) && result) {
+        const suggestions = normalizeSuggestionPayloads(response.data)
+        setResult({
+          ...result,
+          suggestions,
+        })
+        resetSuggestionStates(suggestions)
+        setBatchState(defaultBatchState())
+      }
+    } finally {
+      setSuggestionsRefreshing(false)
     }
   }
 
@@ -565,6 +586,15 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
               {t.evaluationSuggestions}
             </h3>
             <div className="mb-3 flex items-center gap-2">
+              <button
+                onClick={refreshSuggestions}
+                disabled={suggestionsRefreshing}
+                className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+                aria-label={t.evaluationSuggestionsRefresh}
+                title={t.evaluationSuggestionsRefresh}
+              >
+                {suggestionsRefreshing ? t.evaluationSuggestionsRefreshing : t.evaluationSuggestionsRefresh}
+              </button>
               <button
                 onClick={handleBatchApply}
                 disabled={batchState.mode === 'processing'}

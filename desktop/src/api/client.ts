@@ -596,6 +596,14 @@ export interface ChatRequest {
     chapterId?: string
   }
   comparison?: ChatModelComparisonRequest
+  knowledge_retrieval?: boolean
+  search_mode?: 'hybrid' | 'iterative' | 'context'
+  profile?: string
+  min_score?: number
+  budget_tokens?: number
+  rerank?: boolean
+  max_iterations?: number
+  confidence_threshold?: number
 }
 
 export interface ChatModelComparisonResultItem {
@@ -1318,6 +1326,26 @@ export async function getImprovementSuggestions(
 
 // ============ Checkpoint API ============
 
+export interface WorkflowQuickRollbackResult {
+  status?: string
+  plan_id?: string
+  checkpoint_id?: string
+  message?: string
+  [key: string]: unknown
+}
+
+export async function quickRollbackWorkflow(
+  planId: string,
+  checkpointId: string,
+  reason?: string
+): Promise<ApiResponse<WorkflowQuickRollbackResult>> {
+  return callApi('/workflow/quick-rollback', 'POST', {
+    plan_id: planId,
+    checkpoint_id: checkpointId,
+    reason,
+  })
+}
+
 export async function createCheckpoint(
   description?: string,
   autoCommit?: boolean
@@ -1364,6 +1392,7 @@ interface StreamTerminalPayload {
 export interface StreamDonePayload extends StreamTerminalPayload {
   skills_used?: string[]
   decision?: 'go' | 'soft_go' | 'no_go'
+  writer_metadata?: WriterMetadata
 }
 
 function normalizeTerminalValue(raw: unknown): StreamTerminal | undefined {
@@ -1591,6 +1620,9 @@ function handleStreamEventOptimized(
         terminal: terminalPayload.terminal === 'recovered' ? 'done' : terminalPayload.terminal,
         skills_used: Array.isArray(data.skills_used) ? (data.skills_used as string[]) : [],
         decision: parseLegacyDecision(data),
+        writer_metadata: typeof data.writer_metadata === 'object' && data.writer_metadata !== null
+          ? (data.writer_metadata as WriterMetadata)
+          : undefined,
       })
       break
     }

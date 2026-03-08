@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
 import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools } from '../api/client'
-import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId } from '../stores/settingsStore'
+import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
 
@@ -32,6 +32,44 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { t } = useI18n()
 
   if (!isOpen) return null
+
+  const retrievalModes: Array<{ value: RetrievalSearchMode; label: string }> = [
+    { value: 'hybrid', label: 'Hybrid' },
+    { value: 'iterative', label: 'Iterative' },
+    { value: 'context', label: 'Context' },
+  ]
+
+  const contextTypeOptions: Array<{ value: ContextType; label: string }> = [
+    { value: 'world', label: 'World' },
+    { value: 'character', label: 'Character' },
+    { value: 'plot', label: 'Plot' },
+  ]
+
+  const updateNumericRetrievalField = (field: 'minScore' | 'budgetTokens' | 'maxIterations' | 'confidenceThreshold', raw: string) => {
+    setLocalSettings((prev) => {
+      const trimmed = raw.trim()
+      const nextValue = trimmed === '' ? undefined : Number(trimmed)
+      return {
+        ...prev,
+        retrieval: {
+          ...prev.retrieval,
+          [field]: Number.isFinite(nextValue as number) ? nextValue : undefined,
+        },
+      }
+    })
+  }
+
+  const toggleContextType = (type: ContextType, checked: boolean) => {
+    setLocalSettings((prev) => {
+      const next = checked
+        ? Array.from(new Set([...prev.contextTypes, type]))
+        : prev.contextTypes.filter((item) => item !== type)
+      return {
+        ...prev,
+        contextTypes: next.length > 0 ? next : ['world', 'character', 'plot'],
+      }
+    })
+  }
 
   const applyQualityPreset = (presetId: QualityPresetId) => {
     const presetTemplate = QUALITY_PRESET_TEMPLATES.find((preset) => preset.id === presetId)
@@ -651,6 +689,145 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   )}
                 </div>
               )})}
+            </div>
+          </section>
+
+          {/* 检索设置 */}
+          <section>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">检索设置</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="retrievalEnabled"
+                  checked={localSettings.retrieval.enabled}
+                  onChange={(e) => setLocalSettings((prev) => ({
+                    ...prev,
+                    retrieval: {
+                      ...prev.retrieval,
+                      enabled: e.target.checked,
+                    },
+                  }))}
+                  className="rounded"
+                />
+                <label htmlFor="retrievalEnabled" className="text-sm text-gray-600 dark:text-dark-text-secondary">
+                  启用 Knowledge Retrieval
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Search Mode</label>
+                  <select
+                    value={localSettings.retrieval.searchMode}
+                    onChange={(e) => setLocalSettings((prev) => ({
+                      ...prev,
+                      retrieval: {
+                        ...prev.retrieval,
+                        searchMode: e.target.value as RetrievalSearchMode,
+                      },
+                    }))}
+                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    {retrievalModes.map((mode) => (
+                      <option key={mode.value} value={mode.value}>{mode.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Profile</label>
+                  <input
+                    type="text"
+                    value={localSettings.retrieval.profile}
+                    onChange={(e) => setLocalSettings((prev) => ({
+                      ...prev,
+                      retrieval: {
+                        ...prev.retrieval,
+                        profile: e.target.value,
+                      },
+                    }))}
+                    placeholder="balanced"
+                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Min Score</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={localSettings.retrieval.minScore ?? ''}
+                    onChange={(e) => updateNumericRetrievalField('minScore', e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Budget Tokens</label>
+                  <input
+                    type="number"
+                    value={localSettings.retrieval.budgetTokens ?? ''}
+                    onChange={(e) => updateNumericRetrievalField('budgetTokens', e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Max Iterations</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={localSettings.retrieval.maxIterations ?? ''}
+                    onChange={(e) => updateNumericRetrievalField('maxIterations', e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Confidence Threshold</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={localSettings.retrieval.confidenceThreshold ?? ''}
+                    onChange={(e) => updateNumericRetrievalField('confidenceThreshold', e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="retrievalRerank"
+                  checked={localSettings.retrieval.rerank}
+                  onChange={(e) => setLocalSettings((prev) => ({
+                    ...prev,
+                    retrieval: {
+                      ...prev.retrieval,
+                      rerank: e.target.checked,
+                    },
+                  }))}
+                  className="rounded"
+                />
+                <label htmlFor="retrievalRerank" className="text-sm text-gray-600 dark:text-dark-text-secondary">
+                  启用 Rerank
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">Agent Context Types</label>
+                <div className="flex flex-wrap gap-4">
+                  {contextTypeOptions.map((option) => (
+                    <label key={option.value} className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-text-secondary">
+                      <input
+                        type="checkbox"
+                        checked={localSettings.contextTypes.includes(option.value)}
+                        onChange={(e) => toggleContextType(option.value, e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
 
