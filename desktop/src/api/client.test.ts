@@ -1,19 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useSettingsStore } from '@/stores/settingsStore'
 import {
   applyRecommendation,
   batchApplyRecommendations,
   chat,
   chatStream,
   createGatewayServiceConfig,
+  createPlan,
   deriveGatewayRuntimeState,
+  executePlan,
   listGatewayServiceConfigs,
   mergeRecommendationBatchResults,
+  novelQualityCheck,
   probeGatewayServiceHealth,
   processWritingHelper,
   polishContent,
   polishContentCompat,
+  routeWorkflow,
   setGatewayServiceEnabled,
+  uiCreatePlan,
+  uiExecutePlan,
+  uiRouteWorkflow,
+  uiWorkflowLifecycle,
   updateGatewayServiceConfig,
+  workflowLifecycle,
   type ChatRequest,
   type GatewayHealth,
 } from './client'
@@ -297,6 +307,126 @@ describe('gateway service config APIs', () => {
     expect(fetchSpy).toHaveBeenNthCalledWith(
       4,
       expect.stringContaining('/mcp/services/search2/health'),
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+})
+
+describe('workflow bridge and quality-check APIs', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('posts payload to /api/novel/quality-check', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ decision: 'REVISE', total_score: 72, actionable_feedback: 'improve pacing' }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await novelQualityCheck('章节内容', { scene_id: 's1' }, ['logic'], { coherence: 80 })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/api/novel/quality-check'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          content: '章节内容',
+          scene_card: { scene_id: 's1' },
+          dimensions: ['logic'],
+          quality_goals: { coherence: 80 },
+        }),
+      })
+    )
+    expect(response).toEqual({
+      success: true,
+      data: { decision: 'REVISE', total_score: 72, actionable_feedback: 'improve pacing' },
+    })
+  })
+
+  it('maps fetch rejection for novelQualityCheck', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('network down')
+    }))
+
+    const response = await novelQualityCheck('章节内容')
+
+    expect(response.success).toBe(false)
+    expect(response.error).toContain('network down')
+  })
+
+  it('routes workflow calls by workflowBackendMode', async () => {
+    const fetchSpy = vi.fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ status: 'ok', plan_id: 'plan-1', step_id: 's-1' }) })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        workflowBackendMode: 'standard',
+      },
+    }))
+
+    await routeWorkflow('task-a', 'L3')
+    await createPlan('task-a', 'L3', ['建议'])
+    await executePlan('plan-1', undefined, ['建议'])
+    await workflowLifecycle('plan-1', 'status')
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/workflow/route'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/workflow/plan'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('/workflow/execute'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('/workflow/lifecycle'),
+      expect.objectContaining({ method: 'POST' })
+    )
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        workflowBackendMode: 'uiBridge',
+      },
+    }))
+
+    await routeWorkflow('task-b', 'L3')
+    await createPlan('task-b', 'L3', ['建议'])
+    await executePlan('plan-2', undefined, ['建议'])
+    await workflowLifecycle('plan-2', 'status')
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      5,
+      expect.stringContaining('/ui/workflow/route'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      6,
+      expect.stringContaining('/ui/workflow/plan'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      7,
+      expect.stringContaining('/ui/workflow/execute'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      8,
+      expect.stringContaining('/ui/workflow/lifecycle'),
       expect.objectContaining({ method: 'POST' })
     )
   })

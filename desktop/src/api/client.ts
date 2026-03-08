@@ -932,8 +932,18 @@ export function mergeRecommendationBatchResults(results: RecommendationExecution
   }
 }
 
+function resolveWorkflowEndpoint(path: '/route' | '/plan' | '/execute' | '/lifecycle', mode?: 'standard' | 'uiBridge'): string {
+  const backendMode = mode ?? useSettingsStore.getState().settings.workflowBackendMode
+  const prefix = backendMode === 'uiBridge' ? '/ui/workflow' : '/workflow'
+  return `${prefix}${path}`
+}
+
 export async function routeWorkflow(task: string, level?: string): Promise<ApiResponse<unknown>> {
-  return callApi('/workflow/route', 'POST', { task, level })
+  return callApi(resolveWorkflowEndpoint('/route'), 'POST', { task, level })
+}
+
+export async function uiRouteWorkflow(task: string, level?: string): Promise<ApiResponse<unknown>> {
+  return callApi(resolveWorkflowEndpoint('/route', 'uiBridge'), 'POST', { task, level })
 }
 
 export async function createPlan(
@@ -942,7 +952,20 @@ export async function createPlan(
   recommendations?: RecommendationInput[]
 ): Promise<ApiResponse<WorkflowPlanStatusResponse | WorkflowExecuteFailureResponse>> {
   const normalizedRecommendations = normalizeRecommendations(recommendations)
-  return callApi('/workflow/plan', 'POST', {
+  return callApi(resolveWorkflowEndpoint('/plan'), 'POST', {
+    task,
+    level,
+    recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
+  })
+}
+
+export async function uiCreatePlan(
+  task: string,
+  level?: string,
+  recommendations?: RecommendationInput[]
+): Promise<ApiResponse<WorkflowPlanStatusResponse | WorkflowExecuteFailureResponse>> {
+  const normalizedRecommendations = normalizeRecommendations(recommendations)
+  return callApi(resolveWorkflowEndpoint('/plan', 'uiBridge'), 'POST', {
     task,
     level,
     recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
@@ -955,7 +978,20 @@ export async function executePlan(
   recommendations?: RecommendationInput[]
 ): Promise<ApiResponse<WorkflowExecuteResponse>> {
   const normalizedRecommendations = normalizeRecommendations(recommendations)
-  return callApi('/workflow/execute', 'POST', {
+  return callApi(resolveWorkflowEndpoint('/execute'), 'POST', {
+    plan_id: planId,
+    step_id: stepId,
+    recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
+  })
+}
+
+export async function uiExecutePlan(
+  planId: string,
+  stepId?: string,
+  recommendations?: RecommendationInput[]
+): Promise<ApiResponse<WorkflowExecuteResponse>> {
+  const normalizedRecommendations = normalizeRecommendations(recommendations)
+  return callApi(resolveWorkflowEndpoint('/execute', 'uiBridge'), 'POST', {
     plan_id: planId,
     step_id: stepId,
     recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
@@ -966,7 +1002,17 @@ export async function workflowLifecycle(
   planId: string,
   action: 'start' | 'pause' | 'resume' | 'stop' | 'status'
 ): Promise<ApiResponse<WorkflowLifecycleResponse | WorkflowExecuteFailureResponse>> {
-  return callApi('/workflow/lifecycle', 'POST', {
+  return callApi(resolveWorkflowEndpoint('/lifecycle'), 'POST', {
+    plan_id: planId,
+    action,
+  })
+}
+
+export async function uiWorkflowLifecycle(
+  planId: string,
+  action: 'start' | 'pause' | 'resume' | 'stop' | 'status'
+): Promise<ApiResponse<WorkflowLifecycleResponse | WorkflowExecuteFailureResponse>> {
+  return callApi(resolveWorkflowEndpoint('/lifecycle', 'uiBridge'), 'POST', {
     plan_id: planId,
     action,
   })
@@ -1298,6 +1344,17 @@ export interface EvaluationResult {
   suggestions: RecommendationInput[]
 }
 
+export interface NovelQualityCheckResult {
+  decision: 'APPROVED' | 'REVISE' | 'REWRITE' | 'HUMAN_REVIEW' | string
+  total_score: number
+  lock_score?: number
+  style_score?: number
+  logic_score?: number
+  actionable_feedback?: string
+  suggestions?: RecommendationInput[]
+  [key: string]: unknown
+}
+
 export async function evaluateContent(
   content: string,
   sceneCard?: Record<string, unknown>,
@@ -1305,6 +1362,20 @@ export async function evaluateContent(
   qualityGoals?: QualityGoalsPayload
 ): Promise<ApiResponse<EvaluationResult>> {
   return callApi('/critic/evaluate', 'POST', {
+    content,
+    scene_card: sceneCard,
+    dimensions,
+    quality_goals: qualityGoals,
+  })
+}
+
+export async function novelQualityCheck(
+  content: string,
+  sceneCard?: Record<string, unknown>,
+  dimensions?: string[],
+  qualityGoals?: QualityGoalsPayload
+): Promise<ApiResponse<NovelQualityCheckResult>> {
+  return callApi('/api/novel/quality-check', 'POST', {
     content,
     scene_card: sceneCard,
     dimensions,
