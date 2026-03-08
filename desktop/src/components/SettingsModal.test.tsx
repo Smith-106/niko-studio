@@ -54,6 +54,52 @@ describe('SettingsModal quality presets', () => {
     expect(getInputByLabel('节奏变化目标').value).toBe('50')
   })
 
+  it('persists retrieval and context type settings after save', async () => {
+    const onClose = vi.fn()
+    render(<SettingsModal isOpen onClose={onClose} />)
+
+    const user = userEvent.setup()
+
+    await user.click(screen.getByLabelText('启用 Knowledge Retrieval'))
+    await user.selectOptions(screen.getByDisplayValue('Hybrid'), 'iterative')
+
+    const profileInput = screen.getByPlaceholderText('balanced')
+    await user.clear(profileInput)
+    await user.type(profileInput, 'strict')
+
+
+    const minScoreInput = getInputByLabel('Min Score')
+    const budgetTokensInput = getInputByLabel('Budget Tokens')
+    const maxIterationsInput = getInputByLabel('Max Iterations')
+    const confidenceThresholdInput = getInputByLabel('Confidence Threshold')
+
+    await user.clear(minScoreInput)
+    await user.type(minScoreInput, '0.35')
+    await user.clear(budgetTokensInput)
+    await user.type(budgetTokensInput, '2048')
+    await user.clear(maxIterationsInput)
+    await user.type(maxIterationsInput, '6')
+    await user.clear(confidenceThresholdInput)
+    await user.type(confidenceThresholdInput, '0.9')
+
+    await user.click(screen.getByLabelText('启用 Rerank'))
+    await user.click(screen.getByLabelText('Character'))
+
+    await user.click(screen.getByRole('button', { name: '保存' }))
+
+    const { retrieval, contextTypes } = useSettingsStore.getState().settings
+    expect(retrieval.enabled).toBe(false)
+    expect(retrieval.searchMode).toBe('iterative')
+    expect(retrieval.profile).toBe('strict')
+    expect(retrieval.minScore).toBe(0.35)
+    expect(retrieval.budgetTokens).toBe(2048)
+    expect(retrieval.maxIterations).toBe(6)
+    expect(retrieval.confidenceThreshold).toBe(0.9)
+    expect(retrieval.rerank).toBe(true)
+    expect(contextTypes).toEqual(['world', 'plot'])
+    expect(onClose).toHaveBeenCalled()
+  })
+
   it('persists workflow backend mode after save', async () => {
     const onClose = vi.fn()
     render(<SettingsModal isOpen onClose={onClose} />)

@@ -315,16 +315,14 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
         return
       }
 
-      const payload = response.data as Record<string, unknown>
+      const payload = response.data
       setQualityCheckResult({
-        decision: typeof payload.decision === 'string' ? payload.decision : 'UNKNOWN',
-        totalScore: typeof payload.total_score === 'number' ? Number(payload.total_score.toFixed(1)) : 0,
-        lockScore: typeof payload.lock_score === 'number' ? Number(payload.lock_score.toFixed(1)) : 0,
-        styleScore: typeof payload.style_score === 'number' ? Number(payload.style_score.toFixed(1)) : 0,
-        logicScore: typeof payload.logic_score === 'number' ? Number(payload.logic_score.toFixed(1)) : 0,
-        feedback: typeof payload.actionable_feedback === 'string' && payload.actionable_feedback.trim()
-          ? payload.actionable_feedback
-          : t.evaluationNoFeedback,
+        decision: payload.decision || 'UNKNOWN',
+        totalScore: Number(payload.total_score.toFixed(1)),
+        lockScore: payload.lock_score != null ? Number(payload.lock_score.toFixed(1)) : 0,
+        styleScore: payload.style_score != null ? Number(payload.style_score.toFixed(1)) : 0,
+        logicScore: payload.logic_score != null ? Number(payload.logic_score.toFixed(1)) : 0,
+        feedback: payload.actionable_feedback?.trim() || t.evaluationNoFeedback,
       })
     } catch (error) {
       setQualityCheckResult(null)

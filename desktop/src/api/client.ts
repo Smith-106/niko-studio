@@ -949,10 +949,11 @@ export async function uiRouteWorkflow(task: string, level?: string): Promise<Api
 export async function createPlan(
   task: string,
   level?: string,
-  recommendations?: RecommendationInput[]
+  recommendations?: RecommendationInput[],
+  mode?: 'standard' | 'uiBridge'
 ): Promise<ApiResponse<WorkflowPlanStatusResponse | WorkflowExecuteFailureResponse>> {
   const normalizedRecommendations = normalizeRecommendations(recommendations)
-  return callApi(resolveWorkflowEndpoint('/plan'), 'POST', {
+  return callApi(resolveWorkflowEndpoint('/plan', mode), 'POST', {
     task,
     level,
     recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
@@ -975,10 +976,11 @@ export async function uiCreatePlan(
 export async function executePlan(
   planId: string,
   stepId?: string,
-  recommendations?: RecommendationInput[]
+  recommendations?: RecommendationInput[],
+  mode?: 'standard' | 'uiBridge'
 ): Promise<ApiResponse<WorkflowExecuteResponse>> {
   const normalizedRecommendations = normalizeRecommendations(recommendations)
-  return callApi(resolveWorkflowEndpoint('/execute'), 'POST', {
+  return callApi(resolveWorkflowEndpoint('/execute', mode), 'POST', {
     plan_id: planId,
     step_id: stepId,
     recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
@@ -1000,9 +1002,10 @@ export async function uiExecutePlan(
 
 export async function workflowLifecycle(
   planId: string,
-  action: 'start' | 'pause' | 'resume' | 'stop' | 'status'
+  action: 'start' | 'pause' | 'resume' | 'stop' | 'status',
+  mode?: 'standard' | 'uiBridge'
 ): Promise<ApiResponse<WorkflowLifecycleResponse | WorkflowExecuteFailureResponse>> {
-  return callApi(resolveWorkflowEndpoint('/lifecycle'), 'POST', {
+  return callApi(resolveWorkflowEndpoint('/lifecycle', mode), 'POST', {
     plan_id: planId,
     action,
   })
@@ -1037,7 +1040,8 @@ export async function applyRecommendation(
     }
   }
 
-  const planResponse = await createPlan(task, level, normalized)
+  const mode = useSettingsStore.getState().settings.workflowBackendMode
+  const planResponse = await createPlan(task, level, normalized, mode)
   if (!planResponse.success) {
     return {
       success: false,
@@ -1053,7 +1057,7 @@ export async function applyRecommendation(
     }
   }
 
-  const executeResponse = await executePlan(planId, undefined, normalized)
+  const executeResponse = await executePlan(planId, undefined, normalized, mode)
   if (!executeResponse.success) {
     return {
       success: false,
@@ -1100,7 +1104,8 @@ export async function undoRecommendation(
     }
   }
 
-  const planResponse = await createPlan(task, level, normalized)
+  const mode = useSettingsStore.getState().settings.workflowBackendMode
+  const planResponse = await createPlan(task, level, normalized, mode)
   if (!planResponse.success) {
     return {
       success: false,
@@ -1116,7 +1121,7 @@ export async function undoRecommendation(
     }
   }
 
-  const executeResponse = await executePlan(planId, undefined, normalized)
+  const executeResponse = await executePlan(planId, undefined, normalized, mode)
   if (!executeResponse.success) {
     return {
       success: false,
