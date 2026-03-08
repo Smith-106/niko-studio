@@ -1,6 +1,12 @@
+interface ChatModePreset {
+  id: 'focusWriting' | 'agentDiagnose' | 'compareReview'
+  label: string
+}
+
 interface ChatAreaModeControlsProps {
   modeLabel: string
   workflowLabel: string
+  modePresetsLabel: string
   selectedSkillsLabel?: string
   chatMode: 'chat' | 'agent'
   agentAction: 'write' | 'revise' | 'context'
@@ -21,17 +27,20 @@ interface ChatAreaModeControlsProps {
   workflowStandardLabel: string
   workflowBrainstormLabel: string
   workflowCoordinatorLabel: string
+  modePresets: ChatModePreset[]
   onSetChatMode: (mode: 'chat' | 'agent') => void
   onToggleModelComparison: () => void
   onOpenTemplateLibrary: () => void
   onSetComparisonModel: (model: string) => void
   onSetAgentAction: (action: 'write' | 'revise' | 'context') => void
   onSetWorkflowLevel: (level: 'L1' | 'L2' | 'L3' | 'L4' | 'L5') => void
+  onApplyPreset: (presetId: ChatModePreset['id']) => void
 }
 
 export function ChatAreaModeControls({
   modeLabel,
   workflowLabel,
+  modePresetsLabel,
   selectedSkillsLabel,
   chatMode,
   agentAction,
@@ -52,16 +61,18 @@ export function ChatAreaModeControls({
   workflowStandardLabel,
   workflowBrainstormLabel,
   workflowCoordinatorLabel,
+  modePresets,
   onSetChatMode,
   onToggleModelComparison,
   onOpenTemplateLibrary,
   onSetComparisonModel,
   onSetAgentAction,
   onSetWorkflowLevel,
+  onApplyPreset,
 }: ChatAreaModeControlsProps) {
   return (
     <>
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{modeLabel}</span>
         <button
           onClick={() => onSetChatMode('chat')}
@@ -141,7 +152,21 @@ export function ChatAreaModeControls({
         )}
       </div>
 
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{modePresetsLabel}</span>
+        {modePresets.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => onApplyPreset(preset.id)}
+            className="px-3 py-1 text-xs rounded-full transition-colors bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600"
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-3">
         <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{workflowLabel}</span>
         {([
           { level: 'L1' as const, label: workflowQuickLabel },

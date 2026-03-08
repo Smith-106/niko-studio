@@ -81,14 +81,16 @@ const clearWritingHelperDraftStorage = (): void => {
   }
 }
 
-const APP_CONNECTION_LABEL: Record<string, string> = {
-  connected: '服务运行中',
-  degraded: '服务降级',
-  reconnecting: '连接恢复中',
-  disconnected: '服务未启动',
-}
+const APP_CONNECTION_LABEL = {
+  connected: 'serviceRunning',
+  degraded: 'serviceDegraded',
+  reconnecting: 'serviceReconnecting',
+  disconnected: 'serviceOffline',
+} as const
 
-const APP_CONNECTION_DOT: Record<string, string> = {
+type HeaderConnectionState = keyof typeof APP_CONNECTION_LABEL
+
+const APP_CONNECTION_DOT: Record<HeaderConnectionState, string> = {
   connected: 'bg-green-500',
   degraded: 'bg-amber-500',
   reconnecting: 'bg-blue-500',
@@ -249,7 +251,9 @@ function App() {
 
   const headerConnectionState = runtimeView?.connectionState ?? (backendStatus ? 'connected' : 'disconnected')
   const headerDotClass = APP_CONNECTION_DOT[headerConnectionState] ?? APP_CONNECTION_DOT.disconnected
-  const headerConnectionText = APP_CONNECTION_LABEL[headerConnectionState] ?? (backendStatus ? t.serviceRunning : t.serviceOffline)
+  const headerConnectionLabelKey = APP_CONNECTION_LABEL[headerConnectionState] ?? (backendStatus ? 'serviceRunning' : 'serviceOffline')
+  const headerConnectionText = t[headerConnectionLabelKey]
+  const contextUsageHint = contextUsage.percent >= 85 ? t.contextUsageHighHint : contextUsage.percent >= 65 ? t.contextUsageMediumHint : t.contextUsageLowHint
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-dark-bg">
@@ -269,7 +273,7 @@ function App() {
         {/* Header */}
         <header className="h-12 border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-gray-800 dark:text-dark-text">📖 {t.appTitle}</span>
+            <span className="text-lg font-semibold text-gray-800 dark:text-dark-text">{t.appTitle}</span>
           </div>
           <div className="flex items-center gap-3 relative">
             <div className={`w-2 h-2 rounded-full ${headerDotClass}`} />
@@ -279,6 +283,7 @@ function App() {
             <span className="text-xs text-gray-500 dark:text-dark-text-secondary">
               {t.contextUsage} ~{contextUsage.usedK.toFixed(1)}k/{contextUsage.totalK}k ({contextUsage.percent.toFixed(1)}%)
             </span>
+            <span className="text-[11px] text-gray-400 dark:text-dark-text-secondary">{contextUsageHint}</span>
             <button
               onClick={handleToggleCheckpointMenu}
               className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"

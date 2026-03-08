@@ -496,7 +496,7 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
-    await userEvent.click(screen.getByRole('button', { name: '模板库' }))
+    await userEvent.click(screen.getByLabelText('模板库'))
     expect(await screen.findByRole('dialog', { name: '模板库' })).toBeInTheDocument()
 
     await userEvent.type(screen.getByLabelText('主题 *'), '冒险')
@@ -536,7 +536,7 @@ describe('ChatArea P0 flows', () => {
     const input = screen.getByPlaceholderText('告诉我你想创作什么...') as HTMLTextAreaElement
     await userEvent.type(input, '已有内容')
 
-    await userEvent.click(screen.getByRole('button', { name: '模板库' }))
+    await userEvent.click(screen.getByLabelText('模板库'))
     await userEvent.type(screen.getByLabelText('主题 *'), '科幻')
     await userEvent.click(screen.getByRole('button', { name: '追加到输入框' }))
     await userEvent.click(screen.getByRole('button', { name: '一键填充' }))

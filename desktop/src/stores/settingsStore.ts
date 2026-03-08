@@ -21,6 +21,7 @@ export type PromptTemplateCategory = 'brainstorm' | 'outline' | 'character' | 'r
 export type ContextType = 'world' | 'character' | 'plot'
 export type RetrievalSearchMode = 'hybrid' | 'iterative' | 'context'
 export type WorkflowBackendMode = 'standard' | 'uiBridge'
+export type SendShortcut = 'enter' | 'ctrlEnter'
 
 export interface RetrievalSettings {
   enabled: boolean
@@ -143,6 +144,7 @@ interface Settings {
   fontSize: 'small' | 'medium' | 'large'
   language: 'zh' | 'en'
   sidebarCollapsed: boolean
+  sendShortcut: SendShortcut
 }
 
 const defaultProviders: LLMProvider[] = [
@@ -355,6 +357,7 @@ const defaultSettings: Settings = {
   fontSize: 'medium',
   language: 'zh',
   sidebarCollapsed: false,
+  sendShortcut: 'enter',
 }
 
 const normalizeModelId = (model: string): string => model.trim()
@@ -460,6 +463,13 @@ const normalizePromptTemplateLibrary = (
   }
 }
 
+const normalizeSendShortcut = (value: unknown): SendShortcut => {
+  if (value === 'ctrlEnter') {
+    return 'ctrlEnter'
+  }
+  return 'enter'
+}
+
 const normalizeSettings = (settings: Partial<Settings>): Settings => {
   const merged: Settings = {
     ...defaultSettings,
@@ -472,6 +482,7 @@ const normalizeSettings = (settings: Partial<Settings>): Settings => {
     },
     retrieval: normalizeRetrievalSettings(settings.retrieval),
     contextTypes: normalizeContextTypes(settings.contextTypes),
+    sendShortcut: normalizeSendShortcut(settings.sendShortcut),
   }
 
   return {

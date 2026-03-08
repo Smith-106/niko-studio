@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Wand2 } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
@@ -29,6 +29,35 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
     refreshAvailableSkills,
   } = useAppStore()
   const { t } = useI18n()
+
+  const groupedSkills = useMemo(() => {
+    const groups: Record<'core' | 'story' | 'quality' | 'tools', string[]> = {
+      core: [],
+      story: [],
+      quality: [],
+      tools: [],
+    }
+
+    for (const skill of availableSkills) {
+      const lowered = skill.toLowerCase()
+      if (lowered.includes('style') || lowered.includes('rewrite') || lowered.includes('quality') || lowered.includes('polish')) {
+        groups.quality.push(skill)
+      } else if (lowered.includes('plot') || lowered.includes('character') || lowered.includes('world') || lowered.includes('story')) {
+        groups.story.push(skill)
+      } else if (lowered.includes('context') || lowered.includes('memory') || lowered.includes('tool') || lowered.includes('retrieval')) {
+        groups.tools.push(skill)
+      } else {
+        groups.core.push(skill)
+      }
+    }
+
+    return [
+      { key: 'core', label: t.skillGroupCore, skills: groups.core },
+      { key: 'story', label: t.skillGroupStory, skills: groups.story },
+      { key: 'quality', label: t.skillGroupQuality, skills: groups.quality },
+      { key: 'tools', label: t.skillGroupTools, skills: groups.tools },
+    ]
+  }, [availableSkills, t])
 
   useEffect(() => {
     void refreshAvailableSkills()
@@ -99,19 +128,34 @@ export function Sidebar({ collapsed, onToggle, onOpenKnowledge, onOpenSettings, 
             <Sparkles size={12} />
             {t.skillPacks}
           </div>
-          <div className="space-y-1 max-h-40 overflow-y-auto">
-            {availableSkills.map((skill) => (
-              <button
-                key={skill}
-                onClick={() => toggleSkill(skill)}
-                className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${
-                  selectedSkills.includes(skill)
-                    ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-800 text-gray-400'
-                }`}
-              >
-                {skill}
-              </button>
+          <div className="space-y-2 max-h-56 overflow-y-auto">
+            {groupedSkills.map((group) => (
+              <div key={group.key}>
+                <div className="px-2 text-[11px] uppercase tracking-wide text-gray-500">{group.label}</div>
+                <div className="space-y-1 mt-1">
+                  {group.skills.length === 0 ? (
+                    <div className="px-3 py-1 text-[11px] text-gray-500">{t.skillGroupEmpty}</div>
+                  ) : (
+                    group.skills.map((skill) => (
+                      <button
+                        key={skill}
+                        onClick={() => toggleSkill(skill)}
+                        className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors ${
+                          selectedSkills.includes(skill)
+                            ? 'bg-blue-600 text-white'
+                            : 'hover:bg-gray-800 text-gray-300'
+                        }`}
+                        type="button"
+                      >
+                        <div className="font-medium truncate">{skill}</div>
+                        <div className={`text-[11px] truncate ${selectedSkills.includes(skill) ? 'text-blue-100' : 'text-gray-500'}`}>
+                          {t.skillDescriptionGeneric}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </div>

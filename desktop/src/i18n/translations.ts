@@ -42,6 +42,9 @@ export interface Translations {
   streamReconnecting: string
   streamRestoreHint: string
   streamRestoreToBeforeSend: string
+  streamRetryLastSend: string
+  streamCopyError: string
+  streamErrorCopied: string
   streamRestoreBeforeSendSuccess: string
   inlineNeedSelection: string
   inlineActionFailed: string
@@ -84,10 +87,18 @@ export interface Translations {
   sessionCreateFailedRetry: string
   uploadUnsupportedFormat: string
   uploadInjectionFailedRetry: string
+  uploadStageReading: string
+  uploadStageUploading: string
+  uploadStageInjecting: string
+  uploadErrorFormat: string
+  uploadErrorSize: string
+  uploadErrorNetwork: string
+  uploadErrorService: string
   uploadInjectedChunks: string
   uploadInjectedContext: string
   chatAgentContextPrefix: string
   quickRollbackTitle: string
+  quickRollbackAdvancedToggle: string
   quickRollbackPlanIdPlaceholder: string
   quickRollbackCheckpointIdPlaceholder: string
   quickRollbackReasonPlaceholder: string
@@ -199,6 +210,10 @@ export interface Translations {
   chatModeNormal: string
   chatModeAgent: string
   chatModeComparison: string
+  modePresetsLabel: string
+  modePresetFocusWriting: string
+  modePresetAgentDiagnose: string
+  modePresetCompareReview: string
   chatComparisonModelLabel: string
   chatAgentActionWrite: string
   chatAgentActionRevise: string
@@ -213,10 +228,19 @@ export interface Translations {
   sidebarWritingHelper: string
   sidebarMcpStatus: string
   sidebarEvaluationPanel: string
+  skillGroupCore: string
+  skillGroupStory: string
+  skillGroupQuality: string
+  skillGroupTools: string
+  skillGroupEmpty: string
+  skillDescriptionGeneric: string
 
   // App status
   serviceDegraded: string
   serviceReconnecting: string
+  contextUsageLowHint: string
+  contextUsageMediumHint: string
+  contextUsageHighHint: string
 
   // Writing Helper panel
   writingHelperTitle: string
@@ -299,6 +323,9 @@ export interface Translations {
   language: string
   langChinese: string
   langEnglish: string
+  sendShortcutLabel: string
+  sendShortcutEnter: string
+  sendShortcutCtrlEnter: string
   resetDefault: string
   cancel: string
   save: string
@@ -351,6 +378,9 @@ export const translations: Record<Language, Translations> = {
     streamReconnecting: '连接恢复中，请稍候...',
     streamRestoreHint: '发送失败，可恢复到发送前状态。',
     streamRestoreToBeforeSend: '恢复到发送前',
+    streamRetryLastSend: '重试发送',
+    streamCopyError: '复制错误',
+    streamErrorCopied: '（已复制）',
     streamRestoreBeforeSendSuccess: '已恢复到发送前状态。',
     inlineNeedSelection: '请先选中文本后再改写。',
     inlineActionFailed: '内联 AI 操作失败，请重试。',
@@ -393,10 +423,18 @@ export const translations: Record<Language, Translations> = {
     sessionCreateFailedRetry: '创建会话失败，请重试',
     uploadUnsupportedFormat: '不支持的文件格式，请上传 txt/md/pdf/docx',
     uploadInjectionFailedRetry: '文件注入失败，请重试',
+    uploadStageReading: '读取文件中...',
+    uploadStageUploading: '上传文件中...',
+    uploadStageInjecting: '注入上下文中...',
+    uploadErrorFormat: '文件格式不支持',
+    uploadErrorSize: '文件过大或超出限制',
+    uploadErrorNetwork: '网络错误，请检查连接',
+    uploadErrorService: '服务处理失败，请稍后重试',
     uploadInjectedChunks: '已完成文件上下文注入：{fileName}（{chunks} 段）',
     uploadInjectedContext: '文件已注入上下文：{fileName}（{chunks} 段）',
     chatAgentContextPrefix: 'Agent 上下文结果',
     quickRollbackTitle: 'Quick Rollback',
+    quickRollbackAdvancedToggle: '高级：Quick Rollback',
     quickRollbackPlanIdPlaceholder: 'plan_id',
     quickRollbackCheckpointIdPlaceholder: 'checkpoint_id',
     quickRollbackReasonPlaceholder: '回滚原因（可选）',
@@ -508,6 +546,10 @@ export const translations: Record<Language, Translations> = {
     chatModeNormal: '普通聊天',
     chatModeAgent: 'Agent 高级',
     chatModeComparison: '模型对比',
+    modePresetsLabel: '预设：',
+    modePresetFocusWriting: '专注写作',
+    modePresetAgentDiagnose: 'Agent 诊断',
+    modePresetCompareReview: '双模型校对',
     chatComparisonModelLabel: '对照模型',
     chatAgentActionWrite: '写作',
     chatAgentActionRevise: '润色/重写',
@@ -522,10 +564,19 @@ export const translations: Record<Language, Translations> = {
     sidebarWritingHelper: 'Writing Helper',
     sidebarMcpStatus: 'MCP 状态',
     sidebarEvaluationPanel: '评估面板',
+    skillGroupCore: '核心',
+    skillGroupStory: '故事',
+    skillGroupQuality: '质量',
+    skillGroupTools: '工具',
+    skillGroupEmpty: '暂无技能',
+    skillDescriptionGeneric: '点击启用到当前对话',
 
     // App status
     serviceDegraded: '服务降级',
     serviceReconnecting: '连接恢复中',
+    contextUsageLowHint: '上下文余量充足',
+    contextUsageMediumHint: '上下文接近上限，建议精简输入',
+    contextUsageHighHint: '上下文已接近满载，建议新建对话',
 
     // Writing Helper panel
     writingHelperTitle: 'Writing Helper',
@@ -608,6 +659,9 @@ export const translations: Record<Language, Translations> = {
     language: '语言',
     langChinese: '简体中文',
     langEnglish: 'English',
+    sendShortcutLabel: '发送快捷键',
+    sendShortcutEnter: 'Enter 发送',
+    sendShortcutCtrlEnter: 'Ctrl/Cmd + Enter 发送',
     resetDefault: '重置默认',
     cancel: '取消',
     save: '保存',
@@ -658,6 +712,9 @@ export const translations: Record<Language, Translations> = {
     streamReconnecting: 'Connection recovering. Please wait...',
     streamRestoreHint: 'Send failed. You can restore to the state before sending.',
     streamRestoreToBeforeSend: 'Restore to before send',
+    streamRetryLastSend: 'Retry send',
+    streamCopyError: 'Copy error',
+    streamErrorCopied: '(copied)',
     streamRestoreBeforeSendSuccess: 'Restored to the state before sending.',
     inlineNeedSelection: 'Please select text before revising.',
     inlineActionFailed: 'Inline AI action failed. Please try again.',
@@ -700,10 +757,18 @@ export const translations: Record<Language, Translations> = {
     sessionCreateFailedRetry: 'Failed to create session. Please retry.',
     uploadUnsupportedFormat: 'Unsupported file format. Please upload txt/md/pdf/docx.',
     uploadInjectionFailedRetry: 'File injection failed. Please retry.',
+    uploadStageReading: 'Reading file...',
+    uploadStageUploading: 'Uploading file...',
+    uploadStageInjecting: 'Injecting context...',
+    uploadErrorFormat: 'Unsupported file format.',
+    uploadErrorSize: 'File is too large or exceeds the limit.',
+    uploadErrorNetwork: 'Network error. Please check your connection.',
+    uploadErrorService: 'Service failed to process the file. Please retry later.',
     uploadInjectedChunks: 'File context injected: {fileName} ({chunks} chunks)',
     uploadInjectedContext: 'Context injected from file: {fileName} ({chunks} chunks)',
     chatAgentContextPrefix: 'Agent context result',
     quickRollbackTitle: 'Quick Rollback',
+    quickRollbackAdvancedToggle: 'Advanced: Quick Rollback',
     quickRollbackPlanIdPlaceholder: 'plan_id',
     quickRollbackCheckpointIdPlaceholder: 'checkpoint_id',
     quickRollbackReasonPlaceholder: 'Rollback reason (optional)',
@@ -815,6 +880,10 @@ export const translations: Record<Language, Translations> = {
     chatModeNormal: 'Normal Chat',
     chatModeAgent: 'Agent Advanced',
     chatModeComparison: 'Model Comparison',
+    modePresetsLabel: 'Presets:',
+    modePresetFocusWriting: 'Focus Writing',
+    modePresetAgentDiagnose: 'Agent Diagnose',
+    modePresetCompareReview: 'Dual-Model Review',
     chatComparisonModelLabel: 'Control Model',
     chatAgentActionWrite: 'Write',
     chatAgentActionRevise: 'Polish/Rewrite',
@@ -829,10 +898,19 @@ export const translations: Record<Language, Translations> = {
     sidebarWritingHelper: 'Writing Helper',
     sidebarMcpStatus: 'MCP Status',
     sidebarEvaluationPanel: 'Evaluation Panel',
+    skillGroupCore: 'Core',
+    skillGroupStory: 'Story',
+    skillGroupQuality: 'Quality',
+    skillGroupTools: 'Tools',
+    skillGroupEmpty: 'No skills',
+    skillDescriptionGeneric: 'Click to apply in current chat',
 
     // App status
     serviceDegraded: 'Service Degraded',
     serviceReconnecting: 'Reconnecting',
+    contextUsageLowHint: 'Context budget is healthy',
+    contextUsageMediumHint: 'Context usage is rising. Consider shorter prompts',
+    contextUsageHighHint: 'Context is near limit. Consider starting a new chat',
 
     // Writing Helper panel
     writingHelperTitle: 'Writing Helper',
@@ -915,6 +993,9 @@ export const translations: Record<Language, Translations> = {
     language: 'Language',
     langChinese: '简体中文',
     langEnglish: 'English',
+    sendShortcutLabel: 'Send shortcut',
+    sendShortcutEnter: 'Enter to send',
+    sendShortcutCtrlEnter: 'Ctrl/Cmd + Enter to send',
     resetDefault: 'Reset Default',
     cancel: 'Cancel',
     save: 'Save',
