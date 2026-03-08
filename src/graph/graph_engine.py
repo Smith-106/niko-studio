@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any, Iterable, Protocol
 
 from src.config import get_config_value
+from src.integrations.adapters import create_integration_adapters
 
 logger = logging.getLogger("niko-graph")
 
@@ -79,6 +80,7 @@ class GraphEngine:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self.db = sqlite3.connect(str(self.db_path), check_same_thread=False)
+        self._integration_adapters = create_integration_adapters()
         self._init_schema()
 
         logger.info(f"Graph engine initialized: {self.db_path}")
@@ -385,7 +387,17 @@ class GraphEngine:
             (entity_id, entity_type, name, json.dumps(properties or {}), now, now)
         )
         self.db.commit()
-        
+
+        await self._run_neo4j_entity_projection(
+            {
+                "id": entity_id,
+                "type": entity_type,
+                "name": name,
+                "properties": properties or {},
+                "created_at": now,
+            }
+        )
+
         logger.info(f"Created entity: {entity_type}/{name}")
         return {"id": entity_id, "status": "created"}
     
@@ -424,10 +436,39 @@ class GraphEngine:
             (relation_id, from_row[0], to_row[0], relation_type, json.dumps(properties or {}), now)
         )
         self.db.commit()
-        
+
+        await self._run_neo4j_relation_projection(
+            {
+                "id": relation_id,
+                "from_id": from_row[0],
+                "to_id": to_row[0],
+                "from_name": from_name,
+                "to_name": to_name,
+                "type": relation_type,
+                "properties": properties or {},
+                "created_at": now,
+            }
+        )
+
         logger.info(f"Created relation: {from_name} -[{relation_type}]-> {to_name}")
         return {"id": relation_id, "status": "created"}
     
+    async def _run_neo4j_entity_projection(self, entity: Dict[str, Any]) -> None:
+        if not self._integration_adapters.flags.neo4j_enabled:
+            return
+        try:
+            await self._integration_adapters.graph_projection.project_entity(entity)
+        except Exception as exc:
+            logger.warning("Neo4j entity projection failed, local-first path preserved: %s", exc)
+
+    async def _run_neo4j_relation_projection(self, relation: Dict[str, Any]) -> None:
+        if not self._integration_adapters.flags.neo4j_enabled:
+            return
+        try:
+            await self._integration_adapters.graph_projection.project_relation(relation)
+        except Exception as exc:
+            logger.warning("Neo4j relation projection failed, local-first path preserved: %s", exc)
+
     async def update_entity(
         self,
         name: str,

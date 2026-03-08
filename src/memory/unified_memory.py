@@ -23,6 +23,7 @@ from enum import Enum
 from pathlib import Path
 
 from src.config import get_config_value
+from src.integrations.adapters import create_integration_adapters
 
 from .query_cache import get_query_cache
 
@@ -323,6 +324,7 @@ class UnifiedMemoryEngine:
         self.db = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self.embedder = EmbeddingEngine()
         self.conflict_resolver = ConflictResolver(self.db)
+        self._integration_adapters = create_integration_adapters()
 
         self._init_schema()
         logger.info(f"Memory engine initialized: {self.db_path}")
@@ -490,6 +492,9 @@ class UnifiedMemoryEngine:
         # 4. 存储
         self._store(memory)
 
+        # 4.1 Optional PostgreSQL shadow-write hook (non-blocking)
+        await self._run_postgres_shadow_write(memory)
+
         # 5. 插件通知
         for plugin in self.plugins:
             try:
@@ -500,6 +505,25 @@ class UnifiedMemoryEngine:
         logger.info(f"Memory added: {memory.id[:8]}... [{layer}]")
         return {"id": memory.id, "status": "created"}
     
+    async def _run_postgres_shadow_write(self, memory: UnifiedMemory) -> None:
+        if not self._integration_adapters.flags.postgres_enabled:
+            return
+
+        payload = {
+            "id": memory.id,
+            "content": memory.content,
+            "layer": memory.layer,
+            "dimension": memory.dimension,
+            "entity_id": memory.entity_id,
+            "importance": memory.importance,
+            "tags": memory.tags,
+            "created_at": memory.created_at,
+        }
+        try:
+            await self._integration_adapters.storage_shadow.shadow_write_memory(payload)
+        except Exception as exc:
+            logger.warning("Postgres shadow write failed, local-first path preserved: %s", exc)
+
     def _store(self, memory: UnifiedMemory):
         """存储记忆到数据库"""
         data = memory.to_dict()

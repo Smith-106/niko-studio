@@ -61,3 +61,10 @@ gateway:
     - https://app.example.com
     - https://gray.example.com
   metrics_enabled: true
+
+integration:
+  postgres_enabled: false
+  redis_cache_enabled: false
+  elasticsearch_enabled: false
+  neo4j_enabled: false
+  langflow_enabled: false

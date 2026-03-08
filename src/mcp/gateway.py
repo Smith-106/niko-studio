@@ -43,6 +43,7 @@ from pathlib import Path
 
 from src import __version__
 from src.config import get_config_value
+from src.integrations.adapters import create_integration_adapters
 from src.knowledge.services import get_services
 from src.knowledge.services.config import load_config as load_services_config
 from src.workflow.state import (
@@ -118,6 +119,7 @@ _RUNTIME_SESSION_ID = f"gw-{int(time.time() * 1000)}"
 _RUNTIME_LAST_PROBE_AT: Optional[str] = None
 _RUNTIME_RECONNECT_ATTEMPTS = 0
 _RUNTIME_LAST_ERROR: Optional[str] = None
+_INTEGRATION_ADAPTERS = create_integration_adapters()
 
 
 def _record_request_metrics(status_code: int, latency_ms: float) -> None:
@@ -379,6 +381,80 @@ def _is_llm_available() -> bool:
         return True
     except Exception:
         return False
+
+
+def _resolve_search_route_mode() -> str:
+    raw = os.getenv("NIKO_SEARCH_ROUTE_MODE")
+    if raw is None:
+        raw = get_config_value("integration.search_route_mode", "legacy")
+    mode = str(raw).strip().lower() if raw is not None else "legacy"
+    if mode not in {"legacy", "elastic", "hybrid"}:
+        return "legacy"
+    return mode
+
+
+def _resolve_search_elastic_timeout_ms() -> int:
+    raw = os.getenv("NIKO_SEARCH_ELASTIC_TIMEOUT_MS")
+    if raw is None:
+        raw = get_config_value("integration.search_elastic_timeout_ms", 300)
+    try:
+        timeout = int(raw)
+    except (TypeError, ValueError):
+        timeout = 300
+    return max(timeout, 50)
+
+
+def _resolve_redis_rate_limit() -> tuple[int, int]:
+    raw_limit = os.getenv("NIKO_REDIS_RATE_LIMIT")
+    raw_window = os.getenv("NIKO_REDIS_RATE_LIMIT_WINDOW_SECONDS")
+
+    if raw_limit is None:
+        raw_limit = get_config_value("integration.redis_rate_limit", 120)
+    if raw_window is None:
+        raw_window = get_config_value("integration.redis_rate_limit_window_seconds", 60)
+
+    try:
+        limit = int(raw_limit)
+    except (TypeError, ValueError):
+        limit = 120
+
+    try:
+        window_seconds = int(raw_window)
+    except (TypeError, ValueError):
+        window_seconds = 60
+
+    return max(limit, 1), max(window_seconds, 1)
+
+
+def _resolve_langflow_flow_name() -> str:
+    raw = os.getenv("NIKO_LANGFLOW_FLOW_NAME")
+    if raw is None:
+        raw = get_config_value("integration.langflow_flow_name", "niko-search-pilot")
+    flow_name = str(raw).strip() if raw is not None else "niko-search-pilot"
+    return flow_name or "niko-search-pilot"
+
+
+def _resolve_governance_hook_enabled() -> bool:
+    raw = os.getenv("NIKO_DBHUB_GOVERNANCE_ENABLED")
+    if raw is not None:
+        return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+    return bool(get_config_value("integration.dbhub_governance_enabled", False))
+
+
+def _resolve_redis_cache_ttl_seconds() -> int:
+    raw = os.getenv("NIKO_REDIS_CACHE_TTL_SECONDS")
+    if raw is None:
+        raw = get_config_value("integration.redis_cache_ttl_seconds", 120)
+    try:
+        ttl = int(raw)
+    except (TypeError, ValueError):
+        ttl = 120
+    return max(ttl, 1)
+
+
+def _resolve_search_cache_key(query: str, scope: str, limit: int, profile: str | None) -> str:
+    profile_part = profile or "default"
+    return f"search:{scope}:{limit}:{profile_part}:{query.strip().lower()}"
 
 
 def _resolve_ui_bridge_enabled() -> bool:
@@ -1122,6 +1198,7 @@ async def search_hybrid(
     min_score: float | None = None,
     budget_tokens: int | None = None,
     rerank: bool = False,
+    route_mode: str | None = None,
 ) -> list:
     """
     混合搜索 (向量 + 关键词 + 图谱)
@@ -1134,20 +1211,85 @@ async def search_hybrid(
         min_score: 最小分数阈值（可选）
         budget_tokens: 上下文预算 token（可选）
         rerank: 是否启用重排（可选）
+        route_mode: 搜索路由 (legacy/elastic/hybrid, 可选)
 
     Returns:
         搜索结果列表
     """
+    flags = _INTEGRATION_ADAPTERS.flags
+
+    if flags.redis_cache_enabled:
+        rate_limit, window_seconds = _resolve_redis_rate_limit()
+        allowed = await _INTEGRATION_ADAPTERS.cache_rate_limit.allow_request(
+            key=f"search:rate:{scope}",
+            limit=rate_limit,
+            window_seconds=window_seconds,
+        )
+        if not allowed:
+            logger.warning("Redis rate-limit denied request, fallback safe response returned")
+            return []
+
+    cache_key = _resolve_search_cache_key(query=query, scope=scope, limit=limit, profile=profile)
+    if flags.redis_cache_enabled:
+        cached = await _INTEGRATION_ADAPTERS.cache_rate_limit.cache_get(cache_key)
+        if isinstance(cached, dict) and isinstance(cached.get("results"), list):
+            return cached["results"]
+
+    effective_route_mode = route_mode or _resolve_search_route_mode()
+    effective_timeout_ms = _resolve_search_elastic_timeout_ms()
+
     engine = get_search_engine()
-    return await engine.hybrid_search(
-        query=query,
-        scope=scope,
-        limit=limit,
-        profile=profile,
-        min_score=min_score,
-        budget_tokens=budget_tokens,
-        rerank=rerank,
-    )
+    hybrid_kwargs = {
+        "query": query,
+        "scope": scope,
+        "limit": limit,
+        "profile": profile,
+        "min_score": min_score,
+        "budget_tokens": budget_tokens,
+        "rerank": rerank,
+    }
+    if route_mode is not None or effective_route_mode != "legacy" or effective_timeout_ms != 300:
+        hybrid_kwargs["route_mode"] = effective_route_mode
+        hybrid_kwargs["elastic_timeout_ms"] = effective_timeout_ms
+    results = await engine.hybrid_search(**hybrid_kwargs)
+
+
+    if flags.redis_cache_enabled:
+        ttl_seconds = _resolve_redis_cache_ttl_seconds()
+        await _INTEGRATION_ADAPTERS.cache_rate_limit.cache_set(
+            cache_key,
+            {"results": results},
+            ttl_seconds=ttl_seconds,
+        )
+
+    if flags.elasticsearch_enabled:
+        async def _index_results_async() -> None:
+            for item in results[: min(len(results), 10)]:
+                if not isinstance(item, dict):
+                    continue
+                try:
+                    await _INTEGRATION_ADAPTERS.search.index_document(item)
+                except Exception as exc:
+                    logger.warning("Elasticsearch async indexing failed: %s", exc)
+
+        asyncio.create_task(_index_results_async())
+
+    if flags.langflow_enabled:
+        try:
+            await _INTEGRATION_ADAPTERS.orchestration.run(
+                flow_name=_resolve_langflow_flow_name(),
+                payload={
+                    "query": query,
+                    "scope": scope,
+                    "limit": limit,
+                    "result_count": len(results),
+                    "route_mode": effective_route_mode,
+                },
+            )
+        except Exception as exc:
+            logger.warning("Langflow orchestration hook failed, continue local-first: %s", exc)
+
+    return results
 
 
 @search_mcp.tool()
@@ -1256,8 +1398,22 @@ async def workflow_plan(
     Returns:
         {"plan_id": "...", "steps": [...], "dependencies": [...]}
     """
-    engine = get_workflow_engine()
     merged_recommendations = _merge_recommendations_with_genre(recommendations, genre)
+
+    if _resolve_governance_hook_enabled():
+        try:
+            await _INTEGRATION_ADAPTERS.governance.on_schema_workflow(
+                event="workflow_plan_requested",
+                payload={
+                    "task": task,
+                    "level": level,
+                    "recommendations_count": len(merged_recommendations or []),
+                },
+            )
+        except Exception as exc:
+            logger.warning("dbhub governance hook failed, continue local-first: %s", exc)
+
+    engine = get_workflow_engine()
     return await engine.plan(task, level, recommendations=merged_recommendations)
 
 
@@ -1617,11 +1773,16 @@ async def agent_revise(
         修订后的内容
     """
     agent = get_writer_agent()
+    revise_kwargs = {
+        "allow_llm_fallback": allow_llm_fallback,
+    }
+    if quality_goals is not None:
+        revise_kwargs["quality_goals"] = quality_goals
+
     result = await agent.revise(
         draft,
         feedback,
-        allow_llm_fallback=allow_llm_fallback,
-        quality_goals=quality_goals,
+        **revise_kwargs,
     )
 
     return {
@@ -3028,13 +3189,16 @@ async def agent_route_endpoint(request: Request):
 
 async def agent_write_endpoint(request: Request):
     body = await request.json()
-    result = await agent_write(
-        scene_card=body.get("scene_card") or {},
-        skills=body.get("skills"),
-        word_target=body.get("word_target", 2000),
-        allow_llm_fallback=body.get("allow_llm_fallback", True),
-        quality_goals=body.get("quality_goals") or body.get("qualityGoals"),
-    )
+    quality_goals_payload = body.get("quality_goals") or body.get("qualityGoals")
+    write_kwargs = {
+        "scene_card": body.get("scene_card") or {},
+        "skills": body.get("skills"),
+        "word_target": body.get("word_target", 2000),
+        "allow_llm_fallback": body.get("allow_llm_fallback", True),
+    }
+    if quality_goals_payload is not None:
+        write_kwargs["quality_goals"] = quality_goals_payload
+    result = await agent_write(**write_kwargs)
     return JSONResponse(result)
 
 
@@ -3059,16 +3223,17 @@ async def agent_revise_endpoint(request: Request):
 
     allow_llm_fallback = bool(body.get("allow_llm_fallback", body.get("allowLlmFallback", True)))
 
-    if not allow_llm_fallback and not _is_llm_available():
-        return JSONResponse({"error": "LLM unavailable and fallback disabled"}, status_code=503)
+    revise_kwargs = {
+        "draft": body.get("draft", ""),
+        "feedback": feedback_value,
+        "allow_llm_fallback": allow_llm_fallback,
+    }
+    quality_goals_payload = body.get("quality_goals") or body.get("qualityGoals")
+    if quality_goals_payload is not None:
+        revise_kwargs["quality_goals"] = quality_goals_payload
 
     try:
-        result = await agent_revise(
-            draft=body.get("draft", ""),
-            feedback=feedback_value,
-            allow_llm_fallback=allow_llm_fallback,
-            quality_goals=body.get("quality_goals") or body.get("qualityGoals"),
-        )
+        result = await agent_revise(**revise_kwargs)
         return JSONResponse(result)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)

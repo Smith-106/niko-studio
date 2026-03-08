@@ -227,6 +227,16 @@ class ObsidianConfig:
 
 
 @dataclass
+class IntegrationConfig:
+    """Optional external integrations (all disabled by default)."""
+    postgres_enabled: bool = False
+    redis_cache_enabled: bool = False
+    elasticsearch_enabled: bool = False
+    neo4j_enabled: bool = False
+    langflow_enabled: bool = False
+
+
+@dataclass
 class AppConfig:
     """应用主配置"""
     # 基础
@@ -249,6 +259,7 @@ class AppConfig:
     token: TokenConfig = field(default_factory=TokenConfig)
     obsidian: ObsidianConfig = field(default_factory=ObsidianConfig)
     gateway: GatewayConfig = field(default_factory=GatewayConfig)
+    integration: IntegrationConfig = field(default_factory=IntegrationConfig)
 
 
 class ConfigManager:
@@ -392,6 +403,18 @@ class ConfigManager:
         if os.getenv('NIKO_UI_BRIDGE_ENABLED'):
             self._config.gateway.ui_bridge_enabled = _parse_bool(os.getenv('NIKO_UI_BRIDGE_ENABLED', ''))
 
+        # Integration feature flags (all opt-in)
+        if os.getenv('NIKO_POSTGRES_ENABLED'):
+            self._config.integration.postgres_enabled = _parse_bool(os.getenv('NIKO_POSTGRES_ENABLED', ''))
+        if os.getenv('NIKO_REDIS_CACHE_ENABLED'):
+            self._config.integration.redis_cache_enabled = _parse_bool(os.getenv('NIKO_REDIS_CACHE_ENABLED', ''))
+        if os.getenv('NIKO_ELASTICSEARCH_ENABLED'):
+            self._config.integration.elasticsearch_enabled = _parse_bool(os.getenv('NIKO_ELASTICSEARCH_ENABLED', ''))
+        if os.getenv('NIKO_NEO4J_ENABLED'):
+            self._config.integration.neo4j_enabled = _parse_bool(os.getenv('NIKO_NEO4J_ENABLED', ''))
+        if os.getenv('NIKO_LANGFLOW_ENABLED'):
+            self._config.integration.langflow_enabled = _parse_bool(os.getenv('NIKO_LANGFLOW_ENABLED', ''))
+
     def _load_from_file(self) -> None:
         """从 YAML 文件加载配置"""
         if not self._config_path or not self._config_path.exists():
@@ -461,6 +484,13 @@ class ConfigManager:
             for key, value in gateway_data.items():
                 if hasattr(self._config.gateway, key):
                     setattr(self._config.gateway, key, value)
+
+        # Integration 配置
+        if 'integration' in data:
+            integration_data = data['integration']
+            for key, value in integration_data.items():
+                if hasattr(self._config.integration, key):
+                    setattr(self._config.integration, key, value)
 
     def _apply_overrides(self) -> None:
         """应用运行时覆盖"""
@@ -543,6 +573,13 @@ gateway:
     - https://gray.example.com
   metrics_enabled: true
   ui_bridge_enabled: false
+
+integration:
+  postgres_enabled: false
+  redis_cache_enabled: false
+  elasticsearch_enabled: false
+  neo4j_enabled: false
+  langflow_enabled: false
 """
         with open(self._config_path, 'w', encoding='utf-8') as f:
             f.write(default_config)
