@@ -178,6 +178,21 @@ export interface Translations {
   evaluationQualityCheckStyle: string
   evaluationQualityCheckLogic: string
   evaluationQualityCheckFeedback: string
+  evaluationWorkflowTitle: string
+  evaluationWorkflowTaskPlaceholder: string
+  evaluationWorkflowLevelPlaceholder: string
+  evaluationWorkflowPlanIdPlaceholder: string
+  evaluationWorkflowStepIdPlaceholder: string
+  evaluationWorkflowLifecycleActionLabel: string
+  evaluationWorkflowRoute: string
+  evaluationWorkflowPlan: string
+  evaluationWorkflowExecute: string
+  evaluationWorkflowLifecycle: string
+  evaluationWorkflowRetry: string
+  evaluationWorkflowLoading: string
+  evaluationWorkflowSuccess: string
+  evaluationWorkflowError: string
+  evaluationWorkflowPlanIdRequired: string
 
   // Chat Area Controls
   chatModeLabel: string
@@ -472,6 +487,21 @@ export const translations: Record<Language, Translations> = {
     evaluationQualityCheckStyle: 'Style 分',
     evaluationQualityCheckLogic: 'Logic 分',
     evaluationQualityCheckFeedback: '反馈',
+    evaluationWorkflowTitle: 'Advanced Workflow',
+    evaluationWorkflowTaskPlaceholder: 'workflow task',
+    evaluationWorkflowLevelPlaceholder: 'workflow level (e.g. L3)',
+    evaluationWorkflowPlanIdPlaceholder: 'plan_id',
+    evaluationWorkflowStepIdPlaceholder: 'step_id（可选）',
+    evaluationWorkflowLifecycleActionLabel: 'lifecycle action',
+    evaluationWorkflowRoute: 'route',
+    evaluationWorkflowPlan: 'plan',
+    evaluationWorkflowExecute: 'execute',
+    evaluationWorkflowLifecycle: 'lifecycle',
+    evaluationWorkflowRetry: '重试',
+    evaluationWorkflowLoading: '请求中...',
+    evaluationWorkflowSuccess: '执行成功',
+    evaluationWorkflowError: '执行失败',
+    evaluationWorkflowPlanIdRequired: '请先填写 plan_id。',
 
     // Chat Area Controls
     chatModeLabel: '模式：',
@@ -764,6 +794,21 @@ export const translations: Record<Language, Translations> = {
     evaluationQualityCheckStyle: 'Style',
     evaluationQualityCheckLogic: 'Logic',
     evaluationQualityCheckFeedback: 'Feedback',
+    evaluationWorkflowTitle: 'Advanced Workflow',
+    evaluationWorkflowTaskPlaceholder: 'workflow task',
+    evaluationWorkflowLevelPlaceholder: 'workflow level (e.g. L3)',
+    evaluationWorkflowPlanIdPlaceholder: 'plan_id',
+    evaluationWorkflowStepIdPlaceholder: 'step_id (optional)',
+    evaluationWorkflowLifecycleActionLabel: 'lifecycle action',
+    evaluationWorkflowRoute: 'route',
+    evaluationWorkflowPlan: 'plan',
+    evaluationWorkflowExecute: 'execute',
+    evaluationWorkflowLifecycle: 'lifecycle',
+    evaluationWorkflowRetry: 'Retry',
+    evaluationWorkflowLoading: 'Requesting...',
+    evaluationWorkflowSuccess: 'Success',
+    evaluationWorkflowError: 'Failed',
+    evaluationWorkflowPlanIdRequired: 'Please provide plan_id first.',
 
     // Chat Area Controls
     chatModeLabel: 'Mode:',

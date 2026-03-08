@@ -10,6 +10,10 @@ import {
   batchApplyRecommendations,
   getImprovementSuggestions,
   novelQualityCheck,
+  routeWorkflow,
+  createPlan,
+  executePlan,
+  workflowLifecycle,
   type RecommendationPayload,
   type RecommendationExecutionResult,
 } from '../api/client'
@@ -40,6 +44,14 @@ interface NovelQualityViewModel {
   styleScore: number
   logicScore: number
   feedback: string
+}
+
+type WorkflowAction = 'route' | 'plan' | 'execute' | 'lifecycle'
+type WorkflowLifecycleAction = 'start' | 'pause' | 'resume' | 'stop' | 'status'
+
+interface WorkflowActionState {
+  status: 'idle' | 'loading' | 'success' | 'error'
+  message?: string
 }
 
 interface SuggestionActionState {
@@ -133,6 +145,33 @@ const defaultBatchState = (): BatchActionState => ({
   lastAppliedIds: [],
 })
 
+const defaultWorkflowActionStates = (): Record<WorkflowAction, WorkflowActionState> => ({
+  route: { status: 'idle' },
+  plan: { status: 'idle' },
+  execute: { status: 'idle' },
+  lifecycle: { status: 'idle' },
+})
+
+const stringifyWorkflowPayload = (payload: unknown): string => {
+  try {
+    return JSON.stringify(payload ?? {}, null, 2)
+  } catch {
+    return String(payload)
+  }
+}
+
+const readRecord = (payload: unknown): Record<string, unknown> => {
+  if (!payload || typeof payload !== 'object') {
+    return {}
+  }
+  return payload as Record<string, unknown>
+}
+
+const readStringField = (payload: unknown, key: 'plan_id' | 'step_id'): string | null => {
+  const value = readRecord(payload)[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
 const formatSuggestionMessage = (
   result: RecommendationExecutionResult,
   fallbackAction: 'apply' | 'undo',
@@ -166,8 +205,19 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const [qualityChecking, setQualityChecking] = useState(false)
   const [qualityCheckError, setQualityCheckError] = useState<string | null>(null)
   const [qualityCheckResult, setQualityCheckResult] = useState<NovelQualityViewModel | null>(null)
+  const [workflowTask, setWorkflowTask] = useState(content)
+  const [workflowLevel, setWorkflowLevel] = useState('L3')
+  const [workflowPlanId, setWorkflowPlanId] = useState('')
+  const [workflowStepId, setWorkflowStepId] = useState('')
+  const [workflowLifecycleAction, setWorkflowLifecycleAction] = useState<WorkflowLifecycleAction>('status')
+  const [workflowStates, setWorkflowStates] = useState<Record<WorkflowAction, WorkflowActionState>>(defaultWorkflowActionStates())
+  const [workflowResult, setWorkflowResult] = useState<string>('')
   const { addMessage } = useAppStore()
   const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
+
+  useEffect(() => {
+    setWorkflowTask(content)
+  }, [content])
 
   useEffect(() => {
     runEvaluation()
@@ -526,6 +576,89 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     })
   }
 
+  const setWorkflowState = (action: WorkflowAction, next: WorkflowActionState) => {
+    setWorkflowStates((prev) => ({
+      ...prev,
+      [action]: next,
+    }))
+  }
+
+  const syncWorkflowIdsFromPayload = (payload: unknown) => {
+    const planId = readStringField(payload, 'plan_id')
+    if (planId) {
+      setWorkflowPlanId(planId)
+    }
+    const stepId = readStringField(payload, 'step_id')
+    if (stepId) {
+      setWorkflowStepId(stepId)
+    }
+  }
+
+  const executeWorkflowAction = async (
+    action: WorkflowAction,
+    run: () => Promise<{ success: boolean; data?: unknown; error?: string }>
+  ) => {
+    setWorkflowState(action, { status: 'loading', message: t.evaluationWorkflowLoading })
+    try {
+      const response = await run()
+      if (!response.success) {
+        setWorkflowState(action, {
+          status: 'error',
+          message: response.error || t.evaluationWorkflowError,
+        })
+        return
+      }
+      syncWorkflowIdsFromPayload(response.data)
+      setWorkflowResult(stringifyWorkflowPayload(response.data))
+      setWorkflowState(action, { status: 'success', message: t.evaluationWorkflowSuccess })
+    } catch (error) {
+      setWorkflowState(action, {
+        status: 'error',
+        message: String(error),
+      })
+    }
+  }
+
+  const handleWorkflowRoute = async () => {
+    await executeWorkflowAction('route', () => routeWorkflow(workflowTask, workflowLevel))
+  }
+
+  const handleWorkflowPlan = async () => {
+    await executeWorkflowAction('plan', () => createPlan(workflowTask, workflowLevel))
+  }
+
+  const handleWorkflowExecute = async () => {
+    if (!workflowPlanId.trim()) {
+      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
+      return
+    }
+    await executeWorkflowAction('execute', () => executePlan(workflowPlanId, workflowStepId || undefined))
+  }
+
+  const handleWorkflowLifecycle = async () => {
+    if (!workflowPlanId.trim()) {
+      setWorkflowState('lifecycle', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
+      return
+    }
+    await executeWorkflowAction('lifecycle', () => workflowLifecycle(workflowPlanId, workflowLifecycleAction))
+  }
+
+  const retryWorkflowAction = async (action: WorkflowAction) => {
+    if (action === 'route') {
+      await handleWorkflowRoute()
+      return
+    }
+    if (action === 'plan') {
+      await handleWorkflowPlan()
+      return
+    }
+    if (action === 'execute') {
+      await handleWorkflowExecute()
+      return
+    }
+    await handleWorkflowLifecycle()
+  }
+
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-green-600 bg-green-100 dark:bg-green-900/20 dark:text-green-400'
     if (score >= 6) return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400'
@@ -740,7 +873,113 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
         )}
 
         <div className="mt-6 border-t border-gray-200 dark:border-dark-border pt-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.evaluationCheckpointTitle}</h3>
+          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.evaluationWorkflowTitle}</h3>
+          <div className="space-y-2">
+            <input
+              value={workflowTask}
+              onChange={(e) => setWorkflowTask(e.target.value)}
+              placeholder={t.evaluationWorkflowTaskPlaceholder}
+              aria-label={t.evaluationWorkflowTaskPlaceholder}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+            />
+            <input
+              value={workflowLevel}
+              onChange={(e) => setWorkflowLevel(e.target.value)}
+              placeholder={t.evaluationWorkflowLevelPlaceholder}
+              aria-label={t.evaluationWorkflowLevelPlaceholder}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+            />
+            <input
+              value={workflowPlanId}
+              onChange={(e) => setWorkflowPlanId(e.target.value)}
+              placeholder={t.evaluationWorkflowPlanIdPlaceholder}
+              aria-label={t.evaluationWorkflowPlanIdPlaceholder}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+            />
+            <input
+              value={workflowStepId}
+              onChange={(e) => setWorkflowStepId(e.target.value)}
+              placeholder={t.evaluationWorkflowStepIdPlaceholder}
+              aria-label={t.evaluationWorkflowStepIdPlaceholder}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+            />
+            <select
+              value={workflowLifecycleAction}
+              onChange={(e) => setWorkflowLifecycleAction(e.target.value as WorkflowLifecycleAction)}
+              aria-label={t.evaluationWorkflowLifecycleActionLabel}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+            >
+              <option value="status">status</option>
+              <option value="start">start</option>
+              <option value="pause">pause</option>
+              <option value="resume">resume</option>
+              <option value="stop">stop</option>
+            </select>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              onClick={handleWorkflowRoute}
+              disabled={workflowStates.route.status === 'loading'}
+              className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+            >
+              {t.evaluationWorkflowRoute}
+            </button>
+            <button
+              onClick={handleWorkflowPlan}
+              disabled={workflowStates.plan.status === 'loading'}
+              className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+            >
+              {t.evaluationWorkflowPlan}
+            </button>
+            <button
+              onClick={handleWorkflowExecute}
+              disabled={workflowStates.execute.status === 'loading'}
+              className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+            >
+              {t.evaluationWorkflowExecute}
+            </button>
+            <button
+              onClick={handleWorkflowLifecycle}
+              disabled={workflowStates.lifecycle.status === 'loading'}
+              className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+            >
+              {t.evaluationWorkflowLifecycle}
+            </button>
+          </div>
+
+          <div className="mt-3 space-y-2 text-xs">
+            {(['route', 'plan', 'execute', 'lifecycle'] as WorkflowAction[]).map((action) => {
+              const state = workflowStates[action]
+              if (state.status === 'idle' || !state.message) {
+                return null
+              }
+              return (
+                <div key={action} className="flex items-center justify-between gap-2">
+                  <span className={state.status === 'error' ? 'text-red-500' : state.status === 'success' ? 'text-green-600' : 'text-gray-500'}>
+                    {action}: {state.message}
+                  </span>
+                  {state.status === 'error' && (
+                    <button
+                      onClick={() => retryWorkflowAction(action)}
+                      className="px-2 py-1 bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                    >
+                      {t.evaluationWorkflowRetry}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {workflowResult && (
+            <pre className="mt-3 p-2 rounded border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-[11px] text-gray-700 dark:text-dark-text-secondary overflow-x-auto whitespace-pre-wrap">
+              {workflowResult}
+            </pre>
+          )}
+        </div>
+
+        <div className="mt-6 border-t border-gray-200 dark:border-dark-border pt-4">
           <div className="flex gap-2 mb-3">
             <input
               value={checkpointDescription}

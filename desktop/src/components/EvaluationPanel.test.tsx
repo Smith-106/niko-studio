@@ -13,6 +13,10 @@ vi.mock('../api/client', () => ({
   applyRecommendation: vi.fn(),
   undoRecommendation: vi.fn(),
   batchApplyRecommendations: vi.fn(),
+  routeWorkflow: vi.fn(),
+  createPlan: vi.fn(),
+  executePlan: vi.fn(),
+  workflowLifecycle: vi.fn(),
 }))
 
 vi.mock('../stores/appStore', () => ({
@@ -25,11 +29,18 @@ import {
   applyRecommendation,
   batchApplyRecommendations,
   createCheckpoint,
+  createPlan,
   evaluateContent,
+  executePlan,
   listCheckpoints,
   novelQualityCheck,
   restoreCheckpoint,
+  routeWorkflow,
   undoRecommendation,
+  workflowLifecycle,
+  type WorkflowExecuteResponse,
+  type WorkflowLifecycleResponse,
+  type WorkflowPlanStatusResponse,
 } from '../api/client'
 
 const mockedEvaluateContent = vi.mocked(evaluateContent)
@@ -40,6 +51,59 @@ const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
 const mockedApplyRecommendation = vi.mocked(applyRecommendation)
 const mockedUndoRecommendation = vi.mocked(undoRecommendation)
 const mockedBatchApplyRecommendations = vi.mocked(batchApplyRecommendations)
+const mockedRouteWorkflow = vi.mocked(routeWorkflow)
+const mockedCreatePlan = vi.mocked(createPlan)
+const mockedExecutePlan = vi.mocked(executePlan)
+const mockedWorkflowLifecycle = vi.mocked(workflowLifecycle)
+
+const defaultPlanResponse: WorkflowPlanStatusResponse = {
+  plan_id: 'plan-1',
+  task: 'task',
+  level: 'L3',
+  status: 'ready',
+  runner_state: 'idle',
+  steps: [],
+  progress: '0/0',
+  execution_mode: 'serial',
+  observability_metrics: {},
+  budget_guardrail: {
+    threshold_triggered: false,
+    degraded: false,
+    degrade_mode: 'none',
+  },
+  handoff_package: {},
+}
+
+const defaultExecuteResponse: WorkflowExecuteResponse = {
+  status: 'completed',
+  execution_mode: 'serial',
+  observability_metrics: {},
+  budget_guardrail: {
+    threshold_triggered: false,
+    degraded: false,
+    degrade_mode: 'none',
+  },
+  current_phase: 'execute',
+  state_trace_id: 'trace-1',
+  can_resume_from_checkpoint: true,
+  plan_id: 'plan-1',
+  step_id: 'step-1',
+}
+
+const defaultLifecycleResponse: WorkflowLifecycleResponse = {
+  plan_id: 'plan-1',
+  action: 'status',
+  runner_state: 'running',
+  plan_status: 'in_progress',
+  execution_mode: 'serial',
+  observability_metrics: {},
+  budget_guardrail: {
+    threshold_triggered: false,
+    degraded: false,
+    degrade_mode: 'none',
+  },
+  handoff_package: {},
+}
 
 describe('EvaluationPanel actions', () => {
   beforeEach(() => {
@@ -77,6 +141,10 @@ describe('EvaluationPanel actions', () => {
     })
     mockedCreateCheckpoint.mockResolvedValue({ success: true, data: { checkpoint_id: 'cp-1' } })
     mockedRestoreCheckpoint.mockResolvedValue({ success: true, data: { status: 'ok' } })
+    mockedRouteWorkflow.mockResolvedValue({ success: true, data: { level: 'L3', reason: 'matched', suggested_workflow: 'plan' } })
+    mockedCreatePlan.mockResolvedValue({ success: true, data: defaultPlanResponse })
+    mockedExecutePlan.mockResolvedValue({ success: true, data: defaultExecuteResponse })
+    mockedWorkflowLifecycle.mockResolvedValue({ success: true, data: defaultLifecycleResponse })
   })
 
   it('supports apply and undo flow for a single suggestion', async () => {
@@ -173,6 +241,57 @@ describe('EvaluationPanel actions', () => {
 
     await waitFor(() => {
       expect(screen.getByText('service unavailable')).toBeInTheDocument()
+    })
+  })
+
+  it('supports direct workflow actions and autofills IDs from response', async () => {
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText('改进建议')
+
+    await userEvent.click(screen.getByRole('button', { name: 'route' }))
+    await waitFor(() => {
+      expect(mockedRouteWorkflow).toHaveBeenCalledWith('测试内容', 'L3')
+      expect(screen.getByText('route: 执行成功')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'plan' }))
+    await waitFor(() => {
+      expect(mockedCreatePlan).toHaveBeenCalledWith('测试内容', 'L3')
+      expect((screen.getByLabelText('plan_id') as HTMLInputElement).value).toBe('plan-1')
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'execute' }))
+    await waitFor(() => {
+      expect(mockedExecutePlan).toHaveBeenCalledWith('plan-1', undefined)
+      expect((screen.getByLabelText('step_id（可选）') as HTMLInputElement).value).toBe('step-1')
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'lifecycle' }))
+    await waitFor(() => {
+      expect(mockedWorkflowLifecycle).toHaveBeenCalledWith('plan-1', 'status')
+      expect(screen.getByText('lifecycle: 执行成功')).toBeInTheDocument()
+    })
+  })
+
+  it('shows workflow error state and supports retry', async () => {
+    mockedRouteWorkflow
+      .mockResolvedValueOnce({ success: false, error: 'route failed' })
+      .mockResolvedValueOnce({ success: true, data: { level: 'L3' } })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText('改进建议')
+
+    await userEvent.click(screen.getByRole('button', { name: 'route' }))
+    await waitFor(() => {
+      expect(screen.getByText('route: route failed')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: '重试' }))
+    await waitFor(() => {
+      expect(mockedRouteWorkflow).toHaveBeenCalledTimes(2)
+      expect(screen.getByText('route: 执行成功')).toBeInTheDocument()
     })
   })
 
