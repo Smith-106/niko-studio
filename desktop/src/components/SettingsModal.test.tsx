@@ -99,4 +99,37 @@ describe('SettingsModal quality presets', () => {
     expect(contextTypes).toEqual(['world', 'plot'])
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('persists workflow backend mode after save', async () => {
+    const onClose = vi.fn()
+    render(<SettingsModal isOpen onClose={onClose} />)
+
+    const user = userEvent.setup()
+
+    const modeLabel = screen.getByText('工作流后端模式')
+    const modeSelect = modeLabel.parentElement?.querySelector('select')
+    expect(modeSelect).toBeInstanceOf(HTMLSelectElement)
+
+    await user.selectOptions(modeSelect as HTMLSelectElement, 'uiBridge')
+    await user.click(screen.getByRole('button', { name: '保存' }))
+
+    expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('renders workflow backend mode labels in english', () => {
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        language: 'en',
+      },
+    }))
+
+    render(<SettingsModal isOpen onClose={vi.fn()} />)
+
+    expect(screen.getByText('Workflow Backend Mode')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Standard (/workflow/*)' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'UI Bridge (/ui/workflow/*)' })).toBeInTheDocument()
+  })
 })

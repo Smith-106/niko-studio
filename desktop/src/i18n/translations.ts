@@ -168,6 +168,16 @@ export interface Translations {
   evaluationRefresh: string
   evaluationSuggestionsRefresh: string
   evaluationSuggestionsRefreshing: string
+  evaluationQualityCheckTitle: string
+  evaluationQualityCheckRun: string
+  evaluationQualityCheckRunning: string
+  evaluationQualityCheckFailed: string
+  evaluationQualityCheckDecision: string
+  evaluationQualityCheckTotal: string
+  evaluationQualityCheckLock: string
+  evaluationQualityCheckStyle: string
+  evaluationQualityCheckLogic: string
+  evaluationQualityCheckFeedback: string
 
   // Chat Area Controls
   chatModeLabel: string
@@ -227,6 +237,9 @@ export interface Translations {
   temperatureDesc: string
   writingSettings: string
   defaultWorkflow: string
+  workflowBackendMode: string
+  workflowBackendModeStandard: string
+  workflowBackendModeUiBridge: string
   workflowL1: string
   workflowL2: string
   workflowL3: string
@@ -449,6 +462,16 @@ export const translations: Record<Language, Translations> = {
     evaluationRefresh: '刷新',
     evaluationSuggestionsRefresh: '刷新建议',
     evaluationSuggestionsRefreshing: '刷新建议中...',
+    evaluationQualityCheckTitle: 'Novel 质量检查',
+    evaluationQualityCheckRun: '执行质量检查',
+    evaluationQualityCheckRunning: '质量检查中...',
+    evaluationQualityCheckFailed: '质量检查失败',
+    evaluationQualityCheckDecision: '决策',
+    evaluationQualityCheckTotal: '总分',
+    evaluationQualityCheckLock: 'Lock 分',
+    evaluationQualityCheckStyle: 'Style 分',
+    evaluationQualityCheckLogic: 'Logic 分',
+    evaluationQualityCheckFeedback: '反馈',
 
     // Chat Area Controls
     chatModeLabel: '模式：',
@@ -508,6 +531,9 @@ export const translations: Record<Language, Translations> = {
     temperatureDesc: '较低值 (0-0.3): 更确定性，适合事实性写作 | 较高值 (0.7-1): 更创造性，适合创意写作',
     writingSettings: '写作设置',
     defaultWorkflow: '默认工作流',
+    workflowBackendMode: '工作流后端模式',
+    workflowBackendModeStandard: '标准（/workflow/*）',
+    workflowBackendModeUiBridge: 'UI 桥接（/ui/workflow/*）',
     workflowL1: 'L1 - 快速 (润色/问答)',
     workflowL2: 'L2 - 轻量 (短文/扩写)',
     workflowL3: 'L3 - 标准 (章节创作)',
@@ -728,6 +754,16 @@ export const translations: Record<Language, Translations> = {
     evaluationRefresh: 'Refresh',
     evaluationSuggestionsRefresh: 'Refresh suggestions',
     evaluationSuggestionsRefreshing: 'Refreshing suggestions...',
+    evaluationQualityCheckTitle: 'Novel Quality Check',
+    evaluationQualityCheckRun: 'Run quality check',
+    evaluationQualityCheckRunning: 'Running quality check...',
+    evaluationQualityCheckFailed: 'Quality check failed',
+    evaluationQualityCheckDecision: 'Decision',
+    evaluationQualityCheckTotal: 'Total',
+    evaluationQualityCheckLock: 'Lock',
+    evaluationQualityCheckStyle: 'Style',
+    evaluationQualityCheckLogic: 'Logic',
+    evaluationQualityCheckFeedback: 'Feedback',
 
     // Chat Area Controls
     chatModeLabel: 'Mode:',
@@ -787,6 +823,9 @@ export const translations: Record<Language, Translations> = {
     temperatureDesc: 'Lower (0-0.3): More deterministic, for factual writing | Higher (0.7-1): More creative, for creative writing',
     writingSettings: 'Writing Settings',
     defaultWorkflow: 'Default Workflow',
+    workflowBackendMode: 'Workflow Backend Mode',
+    workflowBackendModeStandard: 'Standard (/workflow/*)',
+    workflowBackendModeUiBridge: 'UI Bridge (/ui/workflow/*)',
     workflowL1: 'L1 - Quick (Polish/Q&A)',
     workflowL2: 'L2 - Lite (Short Drafts)',
     workflowL3: 'L3 - Standard (Chapter Writing)',

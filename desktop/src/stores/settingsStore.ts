@@ -20,6 +20,7 @@ export type PromptTemplateCategory = 'brainstorm' | 'outline' | 'character' | 'r
 
 export type ContextType = 'world' | 'character' | 'plot'
 export type RetrievalSearchMode = 'hybrid' | 'iterative' | 'context'
+export type WorkflowBackendMode = 'standard' | 'uiBridge'
 
 export interface RetrievalSettings {
   enabled: boolean
@@ -125,6 +126,7 @@ interface Settings {
 
   // Writing
   defaultWorkflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
+  workflowBackendMode: WorkflowBackendMode
   targetWordsPerChapter: number
   autoSkillMatch: boolean
   detectionEvasionGuardEnabled: boolean
@@ -340,6 +342,7 @@ const defaultSettings: Settings = {
   defaultModel: 'claude-3-sonnet',
   temperature: 0.7,
   defaultWorkflowLevel: 'L3',
+  workflowBackendMode: 'standard',
   targetWordsPerChapter: 2000,
   autoSkillMatch: true,
   detectionEvasionGuardEnabled: true,
