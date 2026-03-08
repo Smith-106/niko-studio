@@ -11,10 +11,13 @@
 import re
 import time
 import logging
+import asyncio
 from collections import Counter
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional, Tuple, Set
+
+from src.integrations.adapters import create_integration_adapters
 
 logger = logging.getLogger("niko-search")
 
@@ -118,6 +121,7 @@ class IterativeRetriever:
         self._project_root = project_root or Path.cwd()
         self._file_extensions = file_extensions or self.DEFAULT_FILE_EXTENSIONS
         self._last_trace: Dict[str, Any] = {}
+        self._integration_adapters = create_integration_adapters()
         logger.info("Search engine initialized")
 
     @property
@@ -149,6 +153,8 @@ class IterativeRetriever:
         min_score: Optional[float] = None,
         budget_tokens: Optional[int] = None,
         rerank: bool = False,
+        route_mode: str = "legacy",
+        elastic_timeout_ms: int = 300,
     ) -> list:
         """
         混合搜索 (向量 + 关键词 + 图谱)，内部四阶段:
@@ -164,9 +170,31 @@ class IterativeRetriever:
 
         collect_started = time.perf_counter()
         candidates = await self._collect_candidates(query=query, scope=scope, limit=limit, profile=active_profile)
+        legacy_candidates = candidates
+        elastic_candidates: List[SearchResult] = []
+
+        normalized_route = (route_mode or "legacy").strip().lower()
+        if normalized_route not in {"legacy", "elastic", "hybrid"}:
+            normalized_route = "legacy"
+
+        if normalized_route in {"elastic", "hybrid"}:
+            elastic_candidates = await self._collect_elastic_candidates(
+                query=query,
+                scope=scope,
+                limit=limit,
+                timeout_ms=elastic_timeout_ms,
+            )
+            if normalized_route == "elastic" and elastic_candidates:
+                candidates = elastic_candidates
+            elif normalized_route == "hybrid" and elastic_candidates:
+                candidates = self._merge_result_candidates(legacy_candidates, elastic_candidates, limit=limit * 2)
+
         trace["stages"]["collect"] = {
             "duration_ms": round((time.perf_counter() - collect_started) * 1000, 2),
             "candidates": len(candidates),
+            "route_mode": normalized_route,
+            "legacy_candidates": len(legacy_candidates),
+            "elastic_candidates": len(elastic_candidates),
         }
 
         rerank_enabled = bool(rerank or active_profile.rerank.get("enabled", False))
@@ -311,6 +339,62 @@ class IterativeRetriever:
             results.extend(file_results)
 
         return results
+
+    async def _collect_elastic_candidates(
+        self,
+        query: str,
+        scope: str,
+        limit: int,
+        timeout_ms: int,
+    ) -> List[SearchResult]:
+        if not self._integration_adapters.flags.elasticsearch_enabled:
+            return []
+
+        timeout_seconds = max(float(timeout_ms) / 1000.0, 0.05)
+        try:
+            response = await asyncio.wait_for(
+                self._integration_adapters.search.search(query=query, scope=scope, limit=limit),
+                timeout=timeout_seconds,
+            )
+        except Exception as exc:
+            logger.warning("Elasticsearch route failed, fallback to legacy search: %s", exc)
+            return []
+
+        candidates: List[SearchResult] = []
+        for item in response or []:
+            item_id = str(item.get("id") or "")
+            content = str(item.get("content") or "")
+            if not item_id or not content:
+                continue
+            candidates.append(
+                SearchResult(
+                    id=item_id,
+                    content=content,
+                    source="elastic",
+                    score=float(item.get("score", 0.0)),
+                    metadata=item.get("metadata") if isinstance(item.get("metadata"), dict) else {},
+                )
+            )
+        return candidates
+
+    def _merge_result_candidates(
+        self,
+        primary: List[SearchResult],
+        secondary: List[SearchResult],
+        limit: int,
+    ) -> List[SearchResult]:
+        merged: List[SearchResult] = []
+        seen_ids: Set[str] = set()
+
+        for item in sorted(primary + secondary, key=lambda r: r.score, reverse=True):
+            if item.id in seen_ids:
+                continue
+            seen_ids.add(item.id)
+            merged.append(item)
+            if len(merged) >= limit:
+                break
+
+        return merged
 
     def _extract_query_terms(self, query: str) -> Set[str]:
         terms = re.findall(r"[\u4e00-\u9fff]{2,}|[a-zA-Z0-9_]{2,}", query.lower())
@@ -609,6 +693,7 @@ class IterativeRetriever:
                 min_score=min_score,
                 budget_tokens=budget_tokens,
                 rerank=rerank,
+                route_mode="legacy",
             )
 
             traces.append(dict(self.last_trace))
