@@ -9,6 +9,7 @@ import {
   undoRecommendation,
   batchApplyRecommendations,
   getImprovementSuggestions,
+  novelQualityCheck,
   type RecommendationPayload,
   type RecommendationExecutionResult,
 } from '../api/client'
@@ -30,6 +31,15 @@ interface EvaluationViewModel {
   }[]
   suggestions: RecommendationPayload[]
   decision: 'APPROVED' | 'REVISE' | 'REWRITE' | 'HUMAN_REVIEW'
+}
+
+interface NovelQualityViewModel {
+  decision: string
+  totalScore: number
+  lockScore: number
+  styleScore: number
+  logicScore: number
+  feedback: string
 }
 
 interface SuggestionActionState {
@@ -153,6 +163,9 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const [suggestionStates, setSuggestionStates] = useState<Record<string, SuggestionActionState>>({})
   const [batchState, setBatchState] = useState<BatchActionState>(defaultBatchState())
   const [suggestionsRefreshing, setSuggestionsRefreshing] = useState(false)
+  const [qualityChecking, setQualityChecking] = useState(false)
+  const [qualityCheckError, setQualityCheckError] = useState<string | null>(null)
+  const [qualityCheckResult, setQualityCheckResult] = useState<NovelQualityViewModel | null>(null)
   const { addMessage } = useAppStore()
   const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
 
@@ -283,6 +296,41 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       }
     } finally {
       setSuggestionsRefreshing(false)
+    }
+  }
+
+  const runNovelQualityCheck = async () => {
+    setQualityChecking(true)
+    setQualityCheckError(null)
+    try {
+      const response = await novelQualityCheck(content, undefined, undefined, {
+        naturalness: qualityGoals.naturalness,
+        readability: qualityGoals.readability,
+        coherence: qualityGoals.coherence,
+        style_consistency: qualityGoals.styleConsistency,
+      })
+      if (!response.success || !response.data) {
+        setQualityCheckResult(null)
+        setQualityCheckError(response.error || t.evaluationQualityCheckFailed)
+        return
+      }
+
+      const payload = response.data as Record<string, unknown>
+      setQualityCheckResult({
+        decision: typeof payload.decision === 'string' ? payload.decision : 'UNKNOWN',
+        totalScore: typeof payload.total_score === 'number' ? Number(payload.total_score.toFixed(1)) : 0,
+        lockScore: typeof payload.lock_score === 'number' ? Number(payload.lock_score.toFixed(1)) : 0,
+        styleScore: typeof payload.style_score === 'number' ? Number(payload.style_score.toFixed(1)) : 0,
+        logicScore: typeof payload.logic_score === 'number' ? Number(payload.logic_score.toFixed(1)) : 0,
+        feedback: typeof payload.actionable_feedback === 'string' && payload.actionable_feedback.trim()
+          ? payload.actionable_feedback
+          : t.evaluationNoFeedback,
+      })
+    } catch (error) {
+      setQualityCheckResult(null)
+      setQualityCheckError(String(error))
+    } finally {
+      setQualityChecking(false)
     }
   }
 
@@ -555,6 +603,36 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
           <DecisionIcon size={20} className={decisionStyle.color} />
           <span className={`font-medium ${decisionStyle.color}`}>{decisionStyle.label}</span>
         </div>
+      </div>
+
+      <div className="p-4 border-b border-gray-200 dark:border-dark-border">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.evaluationQualityCheckTitle}</span>
+          <button
+            onClick={runNovelQualityCheck}
+            disabled={qualityChecking}
+            className="px-2 py-1 text-xs bg-indigo-600 text-white rounded disabled:opacity-50"
+            aria-label={t.evaluationQualityCheckRun}
+            title={t.evaluationQualityCheckRun}
+          >
+            {qualityChecking ? t.evaluationQualityCheckRunning : t.evaluationQualityCheckRun}
+          </button>
+        </div>
+        {qualityCheckError && (
+          <p className="text-xs text-red-500">{qualityCheckError}</p>
+        )}
+        {qualityCheckResult && (
+          <div className="mt-2 p-2 rounded border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-xs text-gray-700 dark:text-dark-text-secondary">
+            <div className="font-medium text-gray-800 dark:text-dark-text mb-1">
+              {t.evaluationQualityCheckDecision}: {qualityCheckResult.decision}
+            </div>
+            <div>{t.evaluationQualityCheckTotal}: {qualityCheckResult.totalScore}</div>
+            <div>{t.evaluationQualityCheckLock}: {qualityCheckResult.lockScore}</div>
+            <div>{t.evaluationQualityCheckStyle}: {qualityCheckResult.styleScore}</div>
+            <div>{t.evaluationQualityCheckLogic}: {qualityCheckResult.logicScore}</div>
+            <div className="mt-1">{t.evaluationQualityCheckFeedback}: {qualityCheckResult.feedback}</div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">

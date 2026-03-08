@@ -6,6 +6,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 
 vi.mock('../api/client', () => ({
   evaluateContent: vi.fn(),
+  novelQualityCheck: vi.fn(),
   createCheckpoint: vi.fn(),
   listCheckpoints: vi.fn(),
   restoreCheckpoint: vi.fn(),
@@ -26,11 +27,13 @@ import {
   createCheckpoint,
   evaluateContent,
   listCheckpoints,
+  novelQualityCheck,
   restoreCheckpoint,
   undoRecommendation,
 } from '../api/client'
 
 const mockedEvaluateContent = vi.mocked(evaluateContent)
+const mockedNovelQualityCheck = vi.mocked(novelQualityCheck)
 const mockedListCheckpoints = vi.mocked(listCheckpoints)
 const mockedCreateCheckpoint = vi.mocked(createCheckpoint)
 const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
@@ -61,6 +64,17 @@ describe('EvaluationPanel actions', () => {
     })
 
     mockedListCheckpoints.mockResolvedValue({ success: true, data: [] })
+    mockedNovelQualityCheck.mockResolvedValue({
+      success: true,
+      data: {
+        decision: 'REVISE',
+        total_score: 74,
+        lock_score: 26,
+        style_score: 24,
+        logic_score: 24,
+        actionable_feedback: '补强角色动机',
+      },
+    })
     mockedCreateCheckpoint.mockResolvedValue({ success: true, data: { checkpoint_id: 'cp-1' } })
     mockedRestoreCheckpoint.mockResolvedValue({ success: true, data: { status: 'ok' } })
   })
@@ -119,6 +133,46 @@ describe('EvaluationPanel actions', () => {
         expect.objectContaining({ id: 'rec-01' })
       )
       expect(screen.getByText('recommendation undone')).toBeInTheDocument()
+    })
+  })
+
+  it('runs novel quality check and renders result fields', async () => {
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText('改进建议')
+    await userEvent.click(screen.getByRole('button', { name: '执行质量检查' }))
+
+    await waitFor(() => {
+      expect(mockedNovelQualityCheck).toHaveBeenCalledWith(
+        '测试内容',
+        undefined,
+        undefined,
+        expect.objectContaining({
+          naturalness: 85,
+          readability: 80,
+          coherence: 80,
+          style_consistency: 78,
+        })
+      )
+      expect(screen.getByText('决策: REVISE')).toBeInTheDocument()
+      expect(screen.getByText('总分: 74')).toBeInTheDocument()
+      expect(screen.getByText('反馈: 补强角色动机')).toBeInTheDocument()
+    })
+  })
+
+  it('shows quality check error message when request fails', async () => {
+    mockedNovelQualityCheck.mockResolvedValueOnce({
+      success: false,
+      error: 'service unavailable',
+    })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText('改进建议')
+    await userEvent.click(screen.getByRole('button', { name: '执行质量检查' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('service unavailable')).toBeInTheDocument()
     })
   })
 
