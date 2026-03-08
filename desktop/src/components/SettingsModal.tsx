@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
 import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools } from '../api/client'
-import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode } from '../stores/settingsStore'
+import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
 
@@ -1045,6 +1045,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <option value="en">{t.langEnglish}</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.sendShortcutLabel}</label>
+                <select
+                  value={localSettings.sendShortcut}
+                  onChange={(e) => setLocalSettings({ ...localSettings, sendShortcut: e.target.value as SendShortcut })}
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="enter">{t.sendShortcutEnter}</option>
+                  <option value="ctrlEnter">{t.sendShortcutCtrlEnter}</option>
+                </select>
+              </div>
             </div>
           </section>
         </div>
@@ -1057,19 +1068,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-border rounded-lg transition-colors"
             >
               <RotateCcw size={16} />
-              重置默认
+              {t.resetDefault}
             </button>
             <button
               onClick={handleExport}
               className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-border rounded-lg transition-colors"
-              title="导出设置"
+              title={t.exportSettings}
             >
               <Download size={16} />
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-border rounded-lg transition-colors"
-              title="导入设置"
+              title={t.importSettings}
             >
               <Upload size={16} />
             </button>
@@ -1091,14 +1102,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               onClick={onClose}
               className="px-4 py-2 text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-dark-border rounded-lg transition-colors"
             >
-              取消
+              {t.cancel}
             </button>
             <button
               onClick={handleSave}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Save size={16} />
-              保存
+              {t.save}
             </button>
           </div>
         </div>

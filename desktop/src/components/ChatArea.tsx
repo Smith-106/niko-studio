@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
@@ -35,6 +36,33 @@ interface StreamRuntimeMeta {
   }
 }
 
+interface RecoverStatus {
+  type: 'error' | 'success' | 'info'
+  message: string
+  detail?: string
+}
+
+type UploadStage = 'reading' | 'uploading' | 'injecting' | 'done' | 'error'
+type UploadErrorCategory = 'format' | 'size' | 'network' | 'service'
+
+interface UploadStatus {
+  type: 'error' | 'success' | 'info'
+  stage: UploadStage
+  progress: number
+  message: string
+  errorCategory?: UploadErrorCategory
+}
+
+interface RetryPayload {
+  message: string
+  chatMode: 'chat' | 'agent'
+  agentAction: 'write' | 'revise' | 'context'
+  workflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
+  selectedSkills: string[]
+  enableModelComparison: boolean
+  comparisonModel: string
+}
+
 export function ChatArea({ onContextUsageChange, connectionState = 'connected' }: ChatAreaProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -45,20 +73,22 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const [enableModelComparison, setEnableModelComparison] = useState(false)
   const [comparisonModel, setComparisonModel] = useState('')
   const [recoverableCheckpointId, setRecoverableCheckpointId] = useState<string | null>(null)
-  const [recoverStatus, setRecoverStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
+  const [recoverStatus, setRecoverStatus] = useState<RecoverStatus | null>(null)
   const [selectedText, setSelectedText] = useState('')
   const [selectionMeta, setSelectionMeta] = useState<SelectionMeta | null>(null)
   const [inlineAction, setInlineAction] = useState<InlineAction>(null)
   const [quickRollbackPlanId, setQuickRollbackPlanId] = useState('')
   const [quickRollbackCheckpointId, setQuickRollbackCheckpointId] = useState('')
   const [quickRollbackReason, setQuickRollbackReason] = useState('')
+  const [showQuickRollbackAdvanced, setShowQuickRollbackAdvanced] = useState(false)
   const [quickRollbackStatus, setQuickRollbackStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
-  const [uploadStatus, setUploadStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null)
   const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamRequestIdRef = useRef(0)
+  const lastRetryPayloadRef = useRef<RetryPayload | null>(null)
   const { t, translate } = useI18n()
   const previousConnectionStateRef = useRef<ChatAreaProps['connectionState'] | null>(null)
   const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
@@ -76,6 +106,11 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     setTemplateVariablePreset,
   } = useSettingsStore()
   const promptTemplateLibrary = settings.promptTemplateLibrary
+  const modePresets = useMemo(() => ([
+    { id: 'focusWriting' as const, label: t.modePresetFocusWriting },
+    { id: 'agentDiagnose' as const, label: t.modePresetAgentDiagnose },
+    { id: 'compareReview' as const, label: t.modePresetCompareReview },
+  ]), [t])
   const availableComparisonModels = useMemo(() => {
     const allModels = settings.llmProviders.flatMap((provider) => {
       const models = [...(provider.models ?? []), ...(provider.fetchedModels ?? []), ...(provider.customModels ?? [])]
@@ -136,6 +171,43 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
 
   const { addMessage, setWorkflowLevel, createConversation } = useAppStore()
 
+  const makeRecoverError = (message: string, detail?: string): RecoverStatus => ({
+    type: 'error',
+    message,
+    detail,
+  })
+
+  const classifyUploadError = (errorMessage: string | undefined): UploadErrorCategory => {
+    const text = (errorMessage || '').toLowerCase()
+    if (text.includes('413') || text.includes('payload') || text.includes('too large') || text.includes('size')) {
+      return 'size'
+    }
+    if (text.includes('network') || text.includes('fetch') || text.includes('timeout') || text.includes('failed to fetch')) {
+      return 'network'
+    }
+    if (text.includes('format') || text.includes('extension') || text.includes('unsupported')) {
+      return 'format'
+    }
+    return 'service'
+  }
+
+  const getUploadErrorMessage = (category: UploadErrorCategory): string => {
+    if (category === 'format') return t.uploadErrorFormat
+    if (category === 'size') return t.uploadErrorSize
+    if (category === 'network') return t.uploadErrorNetwork
+    return t.uploadErrorService
+  }
+
+  const setUploadStage = (stage: UploadStage, message: string, progress: number, errorCategory?: UploadErrorCategory) => {
+    setUploadStatus({
+      type: stage === 'error' ? 'error' : stage === 'done' ? 'success' : 'info',
+      stage,
+      progress,
+      message,
+      errorCategory,
+    })
+  }
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -180,7 +252,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       }
       addMessage('assistant', response.error || t.serviceUnavailableRetry)
       if (checkpointId) {
-        setRecoverStatus({ type: 'error', message: t.streamRestoreHint })
+        setRecoverStatus(makeRecoverError(t.streamRestoreHint, response.error || t.serviceUnavailableRetry))
       }
       setStreamPhase('error')
       return 'error'
@@ -328,8 +400,9 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     if (checkpointId) {
       const streamMetaValue = streamMeta as StreamRuntimeMeta | null
       const diagnosticsText = streamMetaValue?.diagnostics?.fallback_reason || streamMetaValue?.diagnostics?.failure_reason
+      const detail = response.error || diagnosticsText || t.serviceUnavailableRetry
       const message = diagnosticsText ? `${t.streamRestoreHint}（${diagnosticsText}）` : t.streamRestoreHint
-      setRecoverStatus({ type: 'error', message })
+      setRecoverStatus(makeRecoverError(message, detail))
     }
     return 'error'
   }
@@ -346,7 +419,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     try {
       if (inlineAction === 'revise') {
         if (!selectedText) {
-          setRecoverStatus({ type: 'error', message: t.inlineNeedSelection })
+          setRecoverStatus(makeRecoverError(t.inlineNeedSelection, t.inlineNeedSelection))
           return
         }
         const reviseResult = await agentRevise(selectedText, {
@@ -407,10 +480,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       }
 
       setStreamPhase('error')
-      setRecoverStatus({ type: 'error', message: t.inlineActionFailed })
+      setRecoverStatus(makeRecoverError(t.inlineActionFailed, t.inlineActionFailed))
     } catch {
       setStreamPhase('error')
-      setRecoverStatus({ type: 'error', message: t.inlineActionFailed })
+      setRecoverStatus(makeRecoverError(t.inlineActionFailed, t.inlineActionFailed))
     } finally {
       setStreamingContent('')
       setIsLoading(false)
@@ -432,19 +505,19 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
 
     if (!uploadSessionId) {
-      setUploadStatus({ type: 'error', message: t.sessionCreateFailedRetry })
+      setUploadStage('error', t.sessionCreateFailedRetry, 100, 'service')
       return
     }
 
     const allowedExtensions = ['txt', 'md', 'pdf', 'docx']
     const extension = file.name.split('.').pop()?.toLowerCase()
     if (!extension || !allowedExtensions.includes(extension)) {
-      setUploadStatus({ type: 'error', message: t.uploadUnsupportedFormat })
+      setUploadStage('error', t.uploadUnsupportedFormat, 100, 'format')
       return
     }
 
     setIsLoading(true)
-    setUploadStatus(null)
+    setUploadStage('reading', t.uploadStageReading, 20)
 
     try {
       const buffer = await file.arrayBuffer()
@@ -455,6 +528,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       }
       const fileContentBase64 = btoa(binary)
 
+      setUploadStage('uploading', t.uploadStageUploading, 60)
       const response = await uploadMemoryFile({
         file_name: file.name,
         file_content_base64: fileContentBase64,
@@ -462,17 +536,27 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       })
 
       if (!response.success || !response.data) {
-        setUploadStatus({ type: 'error', message: response.error || t.uploadInjectionFailedRetry })
+        const category = classifyUploadError(response.error)
+        const message = response.error
+          ? `${getUploadErrorMessage(category)} (${response.error})`
+          : getUploadErrorMessage(category)
+        setUploadStage('error', message, 100, category)
         return
       }
 
-      setUploadStatus({
-        type: 'success',
-        message: translate('uploadInjectedChunks', { fileName: file.name, chunks: response.data.chunks }),
-      })
+      setUploadStage('injecting', t.uploadStageInjecting, 85)
+      setUploadStage(
+        'done',
+        translate('uploadInjectedChunks', { fileName: file.name, chunks: response.data.chunks }),
+        100
+      )
       addMessage('assistant', translate('uploadInjectedContext', { fileName: file.name, chunks: response.data.chunks }))
-    } catch {
-      setUploadStatus({ type: 'error', message: t.uploadInjectionFailedRetry })
+    } catch (error) {
+      const category = classifyUploadError(error instanceof Error ? error.message : undefined)
+      const baseMessage = getUploadErrorMessage(category)
+      const detail = error instanceof Error ? error.message : ''
+      const message = detail ? `${baseMessage} (${detail})` : baseMessage
+      setUploadStage('error', message, 100, category)
     } finally {
       setIsLoading(false)
     }
@@ -515,16 +599,27 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
   }
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return
+  const handleSend = async (overrideMessage?: string, overridePayload?: RetryPayload) => {
+    const payloadForSend = overridePayload ?? {
+      message: overrideMessage ?? input.trim(),
+      chatMode,
+      agentAction,
+      workflowLevel,
+      selectedSkills: [...selectedSkills],
+      enableModelComparison,
+      comparisonModel,
+    }
+
+    if (!payloadForSend.message.trim() || isLoading) return
 
     if (!currentConversationId) {
       createConversation()
     }
 
-    const userMessage = input.trim()
+    const userMessage = payloadForSend.message.trim()
     setInput('')
     setRecoverStatus(null)
+    lastRetryPayloadRef.current = payloadForSend
 
     let checkpointId: string | null = null
 
@@ -547,8 +642,8 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
 
       const request: ChatRequest = {
         messages: [{ role: 'user', content: userMessage }],
-        workflowLevel,
-        skills: selectedSkills,
+        workflowLevel: payloadForSend.workflowLevel,
+        skills: payloadForSend.selectedSkills,
         allowLlmFallback,
         qualityGoals: {
           naturalness: qualityGoals.naturalness,
@@ -570,17 +665,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         confidence_threshold: retrieval.confidenceThreshold,
       }
 
-      if (enableModelComparison && comparisonModel) {
+      if (payloadForSend.enableModelComparison && payloadForSend.comparisonModel) {
         request.comparison = {
           enabled: true,
-          controlModel: comparisonModel,
+          controlModel: payloadForSend.comparisonModel,
         }
       }
 
-      if (chatMode === 'agent') {
+      if (payloadForSend.chatMode === 'agent') {
         let handled = false
 
-        if (agentAction === 'write') {
+        if (payloadForSend.agentAction === 'write') {
           const routeResult = await agentRoute(userMessage)
           if (routeResult.success && routeResult.data) {
             const writeResult = await agentWrite(
@@ -590,7 +685,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
                 workflow_level: routeResult.data.workflow_level,
                 task_assignments: routeResult.data.task_assignments,
               },
-              selectedSkills,
+              payloadForSend.selectedSkills,
               undefined,
               {
                 naturalness: qualityGoals.naturalness,
@@ -600,21 +695,21 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               }
             )
             if (writeResult.success && writeResult.data?.content) {
-              addMessage('assistant', writeResult.data.content, selectedSkills)
+              addMessage('assistant', writeResult.data.content, payloadForSend.selectedSkills)
               setRecoverableCheckpointId(null)
               handled = true
             }
           }
         }
 
-        if (agentAction === 'revise') {
+        if (payloadForSend.agentAction === 'revise') {
           const lastAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')
           const reviseResult = await agentRevise(
             lastAssistantMessage?.content || userMessage,
             {
               instruction: userMessage,
-              workflow_level: workflowLevel,
-              skills: selectedSkills,
+              workflow_level: payloadForSend.workflowLevel,
+              skills: payloadForSend.selectedSkills,
             },
             {
               naturalness: qualityGoals.naturalness,
@@ -628,17 +723,17 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             }
           )
           if (reviseResult.success && reviseResult.data?.content) {
-            addMessage('assistant', reviseResult.data.content, selectedSkills)
+            addMessage('assistant', reviseResult.data.content, payloadForSend.selectedSkills)
             setRecoverableCheckpointId(null)
             handled = true
           }
         }
 
-        if (agentAction === 'context') {
+        if (payloadForSend.agentAction === 'context') {
           const contextResult = await agentGetContext(
             {
               task: userMessage,
-              workflow_level: workflowLevel,
+              workflow_level: payloadForSend.workflowLevel,
             },
             contextTypes
           )
@@ -659,13 +754,68 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       setStreamPhase('error')
       addMessage('assistant', t.backendConnectionFailed)
       if (checkpointId) {
-        setRecoverStatus({ type: 'error', message: t.streamRestoreHint })
+        setRecoverStatus(makeRecoverError(t.streamRestoreHint, t.backendConnectionFailed))
       }
     } finally {
       setStreamingContent('')
       setIsLoading(false)
       abortControllerRef.current = null
     }
+  }
+
+  const handleRetryLastSend = async () => {
+    const payload = lastRetryPayloadRef.current
+    if (!payload || isLoading) return
+
+    setChatMode(payload.chatMode)
+    setAgentAction(payload.agentAction)
+    setWorkflowLevel(payload.workflowLevel)
+    setEnableModelComparison(payload.enableModelComparison)
+    setComparisonModel(payload.comparisonModel)
+
+    await handleSend(payload.message, payload)
+  }
+
+  const handleCopyRecoverError = async (): Promise<boolean> => {
+    const detail = recoverStatus?.detail || recoverStatus?.message
+    if (!detail) return false
+
+    try {
+      await navigator.clipboard.writeText(detail)
+      setRecoverStatus((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          message: `${prev.message} ${t.streamErrorCopied}`,
+        }
+      })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const handleApplyModePreset = (presetId: 'focusWriting' | 'agentDiagnose' | 'compareReview') => {
+    if (presetId === 'focusWriting') {
+      setChatMode('chat')
+      setEnableModelComparison(false)
+      setAgentAction('write')
+      setWorkflowLevel('L3')
+      return
+    }
+
+    if (presetId === 'agentDiagnose') {
+      setChatMode('agent')
+      setAgentAction('context')
+      setEnableModelComparison(false)
+      setWorkflowLevel('L4')
+      return
+    }
+
+    setChatMode('chat')
+    setEnableModelComparison(true)
+    setAgentAction('write')
+    setWorkflowLevel('L2')
   }
 
   const handleAssistantSelection = (payload: { messageId: string; selectedText: string }) => {
@@ -675,10 +825,23 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+    const isEnter = e.key === 'Enter' && !e.shiftKey
+    if (!isEnter) return
+
+    const shortcut = settings.sendShortcut
+    const requireModifier = shortcut === 'ctrlEnter'
+    const hasModifier = e.ctrlKey || e.metaKey
+
+    if (requireModifier && !hasModifier) {
+      return
     }
+
+    if (!requireModifier && hasModifier) {
+      return
+    }
+
+    e.preventDefault()
+    void handleSend()
   }
 
   const handleApplyTemplate = ({ text, mode, templateId, variableValues }: ApplyTemplatePayload) => {
@@ -705,6 +868,32 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             <p className="text-sm text-gray-400 dark:text-dark-text-secondary max-w-md text-center">
               {t.startWritingDesc}
             </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 max-w-xl">
+              {modePresets.map((preset) => (
+                <button
+                  key={`empty-${preset.id}`}
+                  type="button"
+                  onClick={() => handleApplyModePreset(preset.id)}
+                  className="px-3 py-1.5 text-xs rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                >
+                  {preset.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setIsTemplatePanelOpen(true)}
+                className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-dark-border dark:text-dark-text hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                {t.templateLibraryEntry}
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-dark-border dark:text-dark-text hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                {t.composerUpload}
+              </button>
+            </div>
           </div>
         ) : (
           messages.map((message) => (
@@ -736,50 +925,67 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           recoverStatus={recoverStatus}
           recoverableCheckpointId={recoverableCheckpointId}
           restoreBeforeSendLabel={t.streamRestoreToBeforeSend}
+          retryLastSendLabel={t.streamRetryLastSend}
+          copyErrorLabel={t.streamCopyError}
           onRestoreToCheckpoint={handleRestoreToCheckpoint}
+          onRetryLastSend={handleRetryLastSend}
+          onCopyRecoverError={handleCopyRecoverError}
           uploadStatus={uploadStatus}
         />
 
       <div className="px-4 py-2 border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface">
-        <div className="text-xs font-medium text-gray-600 dark:text-dark-text-secondary mb-2">{t.quickRollbackTitle}</div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <input
-            value={quickRollbackPlanId}
-            onChange={(event) => setQuickRollbackPlanId(event.target.value)}
-            placeholder={t.quickRollbackPlanIdPlaceholder}
-            aria-label={t.quickRollbackPlanIdPlaceholder}
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-          />
-          <input
-            value={quickRollbackCheckpointId}
-            onChange={(event) => setQuickRollbackCheckpointId(event.target.value)}
-            placeholder={t.quickRollbackCheckpointIdPlaceholder}
-            aria-label={t.quickRollbackCheckpointIdPlaceholder}
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-          />
-          <input
-            value={quickRollbackReason}
-            onChange={(event) => setQuickRollbackReason(event.target.value)}
-            placeholder={t.quickRollbackReasonPlaceholder}
-            aria-label={t.quickRollbackReasonPlaceholder}
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-          />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <button
-            onClick={handleQuickRollback}
-            type="button"
-            className="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
-            disabled={isLoading}
-          >
-            {t.quickRollbackAction}
-          </button>
-          {quickRollbackStatus && (
-            <span className={`text-xs ${quickRollbackStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              {quickRollbackStatus.message}
-            </span>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowQuickRollbackAdvanced((prev) => !prev)}
+          className="w-full flex items-center justify-between text-xs font-medium text-gray-600 dark:text-dark-text-secondary"
+        >
+          <span>{t.quickRollbackAdvancedToggle}</span>
+          {showQuickRollbackAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </button>
+
+        {showQuickRollbackAdvanced && (
+          <>
+            <div className="text-xs font-medium text-gray-600 dark:text-dark-text-secondary mt-2 mb-2">{t.quickRollbackTitle}</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <input
+                value={quickRollbackPlanId}
+                onChange={(event) => setQuickRollbackPlanId(event.target.value)}
+                placeholder={t.quickRollbackPlanIdPlaceholder}
+                aria-label={t.quickRollbackPlanIdPlaceholder}
+                className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+              />
+              <input
+                value={quickRollbackCheckpointId}
+                onChange={(event) => setQuickRollbackCheckpointId(event.target.value)}
+                placeholder={t.quickRollbackCheckpointIdPlaceholder}
+                aria-label={t.quickRollbackCheckpointIdPlaceholder}
+                className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+              />
+              <input
+                value={quickRollbackReason}
+                onChange={(event) => setQuickRollbackReason(event.target.value)}
+                placeholder={t.quickRollbackReasonPlaceholder}
+                aria-label={t.quickRollbackReasonPlaceholder}
+                className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+              />
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <button
+                onClick={handleQuickRollback}
+                type="button"
+                className="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {t.quickRollbackAction}
+              </button>
+              {quickRollbackStatus && (
+                <span className={`text-xs ${quickRollbackStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {quickRollbackStatus.message}
+                </span>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg">
@@ -803,6 +1009,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         <ChatAreaModeControls
           modeLabel={t.chatModeLabel}
           workflowLabel={`${t.workflow}:`}
+          modePresetsLabel={t.modePresetsLabel}
           selectedSkillsLabel={selectedSkills.length > 0 ? translate('selectedSkills', { count: selectedSkills.length }) : undefined}
           chatMode={chatMode}
           agentAction={agentAction}
@@ -823,12 +1030,14 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           workflowStandardLabel={t.standard}
           workflowBrainstormLabel={t.brainstorm}
           workflowCoordinatorLabel={t.coordinator}
+          modePresets={modePresets}
           onSetChatMode={setChatMode}
           onToggleModelComparison={() => setEnableModelComparison((prev) => !prev)}
           onOpenTemplateLibrary={() => setIsTemplatePanelOpen(true)}
           onSetComparisonModel={setComparisonModel}
           onSetAgentAction={setAgentAction}
           onSetWorkflowLevel={setWorkflowLevel}
+          onApplyPreset={handleApplyModePreset}
         />
 
         <ChatAreaComposer
