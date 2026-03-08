@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
 import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools } from '../api/client'
-import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode } from '../stores/settingsStore'
+import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
 
@@ -861,7 +861,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">写作设置</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">默认工作流</label>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultWorkflow}</label>
                 <select
                   value={localSettings.defaultWorkflowLevel}
                   onChange={(e) => setLocalSettings({ ...localSettings, defaultWorkflowLevel: e.target.value as 'L1' | 'L2' | 'L3' | 'L4' | 'L5' })}
@@ -872,6 +872,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <option value="L3">{t.workflowL3}</option>
                   <option value="L4">{t.workflowL4}</option>
                   <option value="L5">{t.workflowL5}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.workflowBackendMode}</label>
+                <select
+                  value={localSettings.workflowBackendMode}
+                  onChange={(e) => setLocalSettings({ ...localSettings, workflowBackendMode: e.target.value as WorkflowBackendMode })}
+                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="standard">{t.workflowBackendModeStandard}</option>
+                  <option value="uiBridge">{t.workflowBackendModeUiBridge}</option>
                 </select>
               </div>
               <div>
