@@ -1210,7 +1210,8 @@ def main() -> int:
 
     weekly_evidence_dir = PROJECT_ROOT / ".workflow" / "evidence" / "weekly"
     quality_evidence_dir = PROJECT_ROOT / ".workflow" / "evidence" / "quality"
-    sessions_root = PROJECT_ROOT / ".writing" / "sessions"
+    report_root = REPORT_PATH.parent
+    sessions_root = report_root / ".writing" / "sessions"
 
     evidence_quality_count = _count_non_template_markdown(quality_evidence_dir)
     evidence_weekly_review_count = _count_non_template_markdown(weekly_evidence_dir)

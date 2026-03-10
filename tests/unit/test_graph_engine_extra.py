@@ -136,6 +136,10 @@ async def test_get_character_timeline_and_relationship_filter(tmp_path):
         engine.close()
 
 
+
+
+
+
 @pytest.mark.asyncio
 async def test_relation_and_entity_not_found_branches(tmp_path):
     engine = GraphEngine(db_path=str(tmp_path / "g.db"))
@@ -156,5 +160,32 @@ async def test_relation_and_entity_not_found_branches(tmp_path):
 
         miss_delete = await engine.delete_entity("missing")
         assert "error" in miss_delete
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_neo4j_projection_warning_branches(tmp_path, monkeypatch):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        graph_projection = MagicMock()
+        graph_projection.project_entity = AsyncMock(side_effect=RuntimeError("entity boom"))
+        graph_projection.project_relation = AsyncMock(side_effect=RuntimeError("relation boom"))
+
+        engine._integration_adapters = MagicMock()
+        engine._integration_adapters.flags.neo4j_enabled = True
+        engine._integration_adapters.graph_projection = graph_projection
+
+        warn_mock = MagicMock()
+        monkeypatch.setattr("src.graph.graph_engine.logger.warning", warn_mock)
+
+        await engine._run_neo4j_entity_projection({"id": "e1"})
+        await engine._run_neo4j_relation_projection({"id": "r1"})
+
+        assert warn_mock.call_count == 2
+        args1, _ = warn_mock.call_args_list[0]
+        args2, _ = warn_mock.call_args_list[1]
+        assert "Neo4j entity projection failed" in args1[0]
+        assert "Neo4j relation projection failed" in args2[0]
     finally:
         engine.close()

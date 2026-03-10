@@ -9,6 +9,7 @@ from datetime import datetime
 from src.services.memory_service import (
     MemoryService, Message, AddOptions, SearchOptions, SearchResult, Memory,
     get_memory_service, reset_memory_service, configure_memory_engine_provider,
+    _pack_embedding, _unpack_embedding,
 )
 import src.services.memory_service as memory_service_module
 
@@ -234,7 +235,109 @@ class TestMemoryServiceInitBranches:
         svc.close()
 
 
-class TestMemoryServiceFactoryBranches:
+class TestEmbeddingBlobHelpers:
+    def test_pack_embedding_empty_and_none(self):
+        assert _pack_embedding([]) is None
+        assert _pack_embedding(None) is None
+
+    def test_unpack_embedding_empty_and_non_float_aligned_blob(self):
+        assert _unpack_embedding(None) == []
+        assert _unpack_embedding(b"") == []
+        assert _unpack_embedding(b"abc") == []
+
+
+
+
+class TestMemoryServiceRemainingCoverage:
+    @pytest.fixture()
+    def svc(self, tmp_path):
+        return MemoryService(db_path=str(tmp_path / "mem-remaining.db"))
+
+    def test_compute_similarity_with_norms_zero_and_mismatch(self, svc):
+        assert svc._compute_similarity_with_norms([1.0], [1.0, 2.0]) == 0.0
+        assert svc._compute_similarity_with_norms([0.0, 0.0], [1.0, 0.0]) == 0.0
+
+    def test_parse_datetime_invalid_iso_returns_none(self, svc):
+        assert svc._parse_datetime("not-a-valid-iso") is None
+
+    def test_observability_metrics_zero_max_and_decay_branches(self, svc):
+        results = [
+            SearchResult(
+                id="r1",
+                content="x",
+                score=0.0,
+                metadata={
+                    "created_at": datetime(2020, 1, 1).isoformat(),
+                    "last_accessed": datetime(2020, 1, 2).isoformat(),
+                    "expires_at": datetime(2020, 1, 3).isoformat(),
+                    "importance": 0.8,
+                    "access_count": 3,
+                },
+                source="test",
+            )
+        ]
+        metrics = svc._compute_observability_metrics(results, limit=5)
+        assert metrics["s_final"] == 0.0
+        assert 0.0 <= metrics["r_memory"] <= 1.0
+
+    @pytest.mark.asyncio
+    async def test_search_and_get_fallback_to_json_embedding(self, svc):
+        db = svc._get_db()
+        now = datetime.now().isoformat()
+        db.execute(
+            """
+            INSERT INTO memories (
+                id, content, embedding, embedding_blob, namespace, importance, tags,
+                ttl, expires_at, metadata, created_at, updated_at,
+                embedding_model, embedding_dim, content_hash, last_accessed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "json-only-1",
+                "hello json embedding",
+                "[1.0, 0.0]",
+                None,
+                "default",
+                0.5,
+                "[]",
+                None,
+                None,
+                "{}",
+                now,
+                now,
+                None,
+                None,
+                "hash",
+                now,
+            ),
+        )
+        db.commit()
+
+        svc._embedder = MagicMock()
+        svc._embedder.embed.return_value = [1.0, 0.0]
+
+        results = await svc.search("hello", SearchOptions(namespace="default", threshold=0.0))
+        assert any(r.id == "json-only-1" for r in results)
+
+        memory = await svc.get("json-only-1")
+        assert memory is not None
+        assert memory.embedding == [1.0, 0.0]
+
+    def test_get_retrieval_profile_missing_returns_none(self, svc):
+        assert svc.get_retrieval_profile("missing-profile") is None
+
+    def test_cache_read_expired_row_releases_and_returns_none(self, svc):
+        cache_key = "expired-read"
+        svc.cache_pack(cache_key, {"ok": True}, ttl_seconds=60)
+        db = svc._get_db()
+        db.execute(
+            "UPDATE retrieval_cache SET expires_at = ? WHERE cache_key = ?",
+            ("2000-01-01T00:00:00", cache_key),
+        )
+        db.commit()
+
+        assert svc.cache_read(cache_key) is None
+        assert svc.cache_status(cache_key) is None
     def test_get_memory_service_singleton_branch(self):
         memory_service_module._memory_service = None
 

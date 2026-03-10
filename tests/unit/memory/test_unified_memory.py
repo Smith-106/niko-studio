@@ -8,6 +8,8 @@ EmbeddingEngine, and UnifiedMemoryEngine (DB-backed operations).
 import pytest
 import json
 import sqlite3
+import struct
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch, AsyncMock
 from src.memory.unified_memory import (
@@ -17,6 +19,8 @@ from src.memory.unified_memory import (
     EmbeddingEngine,
     UnifiedMemoryEngine,
     ConflictResolver,
+    _pack_embedding,
+    _unpack_embedding,
 )
 
 
@@ -125,6 +129,30 @@ class TestUnifiedMemory:
         assert restored.dimension == original.dimension
         assert restored.tags == original.tags
 
+    def test_to_dict_packs_embedding_blob_when_embedding_present(self):
+        m = UnifiedMemory(id="m-pack", content="packed", embedding=[1.0, 2.0])
+        data = m.to_dict()
+        assert data["embedding_blob"]
+
+    def test_from_dict_restores_embedding_from_blob_when_embedding_empty(self):
+        packed = sqlite3.Binary(struct.pack("<2f", 1.0, 2.0))
+        m = UnifiedMemory.from_dict(
+            {
+                "id": "m-unpack",
+                "content": "blob",
+                "layer": "session",
+                "tags": json.dumps([]),
+                "embedding": json.dumps([]),
+                "embedding_blob": packed,
+            }
+        )
+        assert len(m.embedding) == 2
+
+    def test_pack_unpack_embedding_helpers_empty_and_invalid(self):
+        assert _pack_embedding([]) == b""
+        assert _unpack_embedding(b"") == []
+        assert _unpack_embedding(b"\x00") == []
+
 
 # ============================================================
 # EmbeddingEngine Tests
@@ -167,6 +195,18 @@ class TestEmbeddingEngine:
         engine._model = "dummy"
         e = engine.embed_cached("test query")
         assert isinstance(e, list)
+
+    def test_embed_non_dummy_uses_model_embed(self):
+        model_output = MagicMock()
+        model_output.tolist.return_value = [0.1, 0.2]
+        model = MagicMock()
+        model.embed.return_value = [model_output]
+
+        engine = EmbeddingEngine()
+        engine._model = model
+
+        out = engine.embed("query")
+        assert out == [0.1, 0.2]
 
     def test_similarity_identical(self):
         engine = EmbeddingEngine()
@@ -534,7 +574,306 @@ class TestUnifiedMemoryEngineExtra:
         eng.close()
 
     @pytest.mark.asyncio
-    async def test_search_with_all_filters_and_at_time(self, tmp_path):
+    async def test_postgres_shadow_write_swallows_adapter_exception(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-shadow.db"))
+
+        eng._integration_adapters = MagicMock()
+        eng._integration_adapters.flags = MagicMock(postgres_enabled=True)
+        eng._integration_adapters.storage_shadow = MagicMock()
+        eng._integration_adapters.storage_shadow.shadow_write_memory = AsyncMock(side_effect=RuntimeError("shadow down"))
+
+        memory = UnifiedMemory(id="m-shadow", content="payload", layer="session")
+        await eng._run_postgres_shadow_write(memory)
+
+        eng._integration_adapters.storage_shadow.shadow_write_memory.assert_awaited_once()
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_retrieval_profile_and_cache_roundtrip(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-cache.db"))
+
+        assert eng.get_retrieval_profile("missing") is None
+
+        eng.upsert_retrieval_profile(
+            "p1",
+            source_weights={"memory": 0.7},
+            thresholds={"min": 0.3},
+            budget={"tokens": 1200},
+            enabled=False,
+        )
+
+        profile = eng.get_retrieval_profile("p1")
+        assert profile is not None
+        assert profile["profile_name"] == "p1"
+        assert profile["source_weights_json"]["memory"] == 0.7
+        assert profile["thresholds_json"]["min"] == 0.3
+        assert profile["budget_json"]["tokens"] == 1200
+        assert profile["enabled"] is False
+
+        eng.cache_pack("cache:p1", {"items": [1, 2]}, ttl_seconds=30, status="ready")
+        first = eng.cache_read("cache:p1")
+        second = eng.cache_read("cache:p1")
+        assert first is not None and second is not None
+        assert first["payload"]["items"] == [1, 2]
+        assert first["hit_count"] == 1
+        assert second["hit_count"] == 2
+        assert eng.cache_status("cache:p1") == "ready"
+
+        eng.cache_release("cache:p1")
+        assert eng.cache_status("cache:p1") is None
+
+        eng.cache_pack("cache:expired", {"x": 1}, ttl_seconds=30)
+        eng.db.execute(
+            "UPDATE retrieval_cache SET expires_at = ? WHERE cache_key = ?",
+            ("1970-01-01T00:00:00", "cache:expired"),
+        )
+        eng.db.commit()
+        assert eng.cache_read("cache:expired") is None
+        assert eng.cache_cleanup() >= 0
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_retrieval_profile_json_defaults_and_cache_read_empty_payload(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-cache-defaults.db"))
+
+        now = datetime.now().isoformat()
+        eng.db.execute(
+            """
+            INSERT INTO retrieval_profiles(profile_name, source_weights_json, thresholds_json, budget_json, enabled, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            ("raw", "{}", "{}", "{}", 1, now),
+        )
+        future = datetime.fromtimestamp(datetime.now().timestamp() + 3600).isoformat()
+        eng.db.execute(
+            """
+            INSERT INTO retrieval_cache(cache_key, payload_json, status, created_at, expires_at, hit_count)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            ("empty", "{}", "ready", now, future, 41),
+        )
+        eng.db.commit()
+
+        profile = eng.get_retrieval_profile("raw")
+        assert profile is not None
+        assert profile["source_weights_json"] == {}
+        assert profile["thresholds_json"] == {}
+        assert profile["budget_json"] == {}
+        assert profile["enabled"] is True
+
+        cache_entry = eng.cache_read("empty")
+        assert cache_entry is not None
+        assert cache_entry["payload"] == {}
+        assert cache_entry["hit_count"] == 42
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_detect_conflicts_candidate_pair_dedup(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-conflicts.db"))
+
+        eng.db.execute(
+            "INSERT INTO memories (id, content, entity_id, layer, superseded_by) VALUES (?, ?, ?, ?, ?)",
+            ("m1", "he is alive", "judge", "project", None),
+        )
+        eng.db.execute(
+            "INSERT INTO memories (id, content, entity_id, layer, superseded_by) VALUES (?, ?, ?, ?, ?)",
+            ("m2", "he is dead", "judge", "project", None),
+        )
+        eng.db.execute(
+            "INSERT INTO memories (id, content, entity_id, layer, superseded_by) VALUES (?, ?, ?, ?, ?)",
+            ("m3", "another dead claim", "judge", "project", None),
+        )
+        eng.db.commit()
+
+        calls = []
+
+        def fake_contradictory(a, b):
+            calls.append((a, b))
+            pair = f"{(a or '').lower()} {(b or '').lower()}"
+            return "alive" in pair and "dead" in pair
+
+        eng.conflict_resolver._is_contradictory = fake_contradictory
+
+        conflicts = await eng.detect_conflicts("judge")
+        assert len(calls) == 3
+        assert len(conflicts) == 2
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_search_rehydrates_embedding_from_blob(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-blob.db"))
+
+        eng.embedder.embed_cached = MagicMock(return_value=[1.0])
+        eng.embedder.similarity = MagicMock(return_value=0.9)
+
+        packed = sqlite3.Binary(struct.pack("<1f", 1.0))
+        eng.db.execute(
+            """
+            INSERT INTO memories (
+                id, content, layer, dimension, entity_id, valid_from, valid_until, supersedes, superseded_by,
+                user_id, project_id, session_id, embedding, embedding_blob, embedding_model, embedding_dim,
+                content_hash, last_accessed_at, importance, confidence, source, tags, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "blob-1",
+                "rehydrate me",
+                "session",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                json.dumps([]),
+                packed,
+                None,
+                None,
+                None,
+                None,
+                0.5,
+                1.0,
+                "user",
+                json.dumps([]),
+                datetime.now().isoformat(),
+                datetime.now().isoformat(),
+            ),
+        )
+        eng.db.commit()
+
+        out = await eng.search("rehydrate")
+        assert len(out) == 1
+        assert out[0]["id"] == "blob-1"
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_search_without_blob_uses_existing_embedding(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-no-blob.db"))
+
+        eng.embedder.embed_cached = MagicMock(return_value=[1.0])
+        eng.embedder.similarity = MagicMock(return_value=0.9)
+
+        eng.db.execute(
+            """
+            INSERT INTO memories (
+                id, content, layer, dimension, entity_id, valid_from, valid_until, supersedes, superseded_by,
+                user_id, project_id, session_id, embedding, embedding_blob, embedding_model, embedding_dim,
+                content_hash, last_accessed_at, importance, confidence, source, tags, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "plain-1",
+                "plain embedding",
+                "session",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                json.dumps([1.0]),
+                None,
+                None,
+                None,
+                None,
+                None,
+                0.5,
+                1.0,
+                "user",
+                json.dumps([]),
+                datetime.now().isoformat(),
+                datetime.now().isoformat(),
+            ),
+        )
+        eng.db.commit()
+
+        out = await eng.search("plain")
+        assert len(out) == 1
+        assert out[0]["id"] == "plain-1"
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_search_unpacks_blob_when_from_dict_embedding_empty(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-force-unpack.db"))
+
+        eng.embedder.embed_cached = MagicMock(return_value=[1.0])
+        eng.embedder.similarity = MagicMock(return_value=0.95)
+
+        packed = sqlite3.Binary(struct.pack("<1f", 1.0))
+        eng.db.execute(
+            """
+            INSERT INTO memories (
+                id, content, layer, dimension, entity_id, valid_from, valid_until, supersedes, superseded_by,
+                user_id, project_id, session_id, embedding, embedding_blob, embedding_model, embedding_dim,
+                content_hash, last_accessed_at, importance, confidence, source, tags, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "force-unpack-1",
+                "force unpack",
+                "session",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                json.dumps([]),
+                packed,
+                None,
+                None,
+                None,
+                None,
+                0.5,
+                1.0,
+                "user",
+                json.dumps([]),
+                datetime.now().isoformat(),
+                datetime.now().isoformat(),
+            ),
+        )
+        eng.db.commit()
+
+        original_from_dict = UnifiedMemory.from_dict
+
+        def _stub_from_dict(data):
+            restored = original_from_dict(data)
+            restored.embedding = []
+            return restored
+
+        with patch("src.memory.unified_memory.UnifiedMemory.from_dict", side_effect=_stub_from_dict):
+            out = await eng.search("force")
+
+        assert len(out) == 1
+        assert out[0]["id"] == "force-unpack-1"
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_search_returns_empty_when_cache_query_missing(self, tmp_path):
+        with patch("src.memory.unified_memory.get_config_value", return_value=None):
+            eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u-empty.db"))
+
+        assert eng.cache_read("missing") is None
+        eng.close()
+
+    @pytest.mark.asyncio
+    async def test_search_respects_explicit_min_score(self, tmp_path):
         with patch("src.memory.unified_memory.get_config_value", return_value=None):
             eng = UnifiedMemoryEngine(db_path=str(tmp_path / "u5.db"))
 

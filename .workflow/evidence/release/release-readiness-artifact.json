@@ -1,9 +1,12 @@
 {
   "artifact_type": "release_readiness",
   "schema_version": "evidence.v1",
-  "decision": "GO",
-  "go_no_go_reasons": [],
-  "generated_at": "2026-02-28T16:18:46.686506+00:00",
+  "decision": "NO_GO",
+  "go_no_go_reasons": [
+    "gate_score_or_critical_blocker_signal",
+    "unresolved_triage_blocker_signal"
+  ],
+  "generated_at": "2026-03-10T04:42:32.769433+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -27,7 +30,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=6101"
+      "detail": "status=passed,passed_count=1"
     },
     {
       "check_id": "desktop_check",
@@ -43,7 +46,7 @@
       "blocking": false,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=16"
+      "detail": "status=passed,passed_count=1"
     },
     {
       "check_id": "production_guard",
@@ -81,9 +84,9 @@
       "check_id": "gate_score_or_critical_blocker_signal",
       "priority": "P0",
       "blocking": true,
-      "status": "PASS",
-      "exit_code": 0,
-      "detail": "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=go"
+      "status": "FAIL",
+      "exit_code": 1,
+      "detail": "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=FAIL,blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=no_go"
     },
     {
       "check_id": "runtime_policy_conformance_signal",
@@ -211,39 +214,39 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0,decision=go"
+      "detail": "snapshots_scanned=3,linked_conflict_artifacts=1,critical_conflicts_linked=0,invalid_snapshots=0,decision=go"
     },
     {
       "check_id": "unresolved_triage_blocker_signal",
       "priority": "P0",
       "blocking": true,
-      "status": "PASS",
-      "exit_code": 0,
-      "detail": "state_files_scanned=263,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=263,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
+      "status": "FAIL",
+      "exit_code": 1,
+      "detail": "state_files_scanned=316,linked_triage_records=12,unresolved_triage_records=12,invalid_state_files=304,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=no_go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=0,linked_feedback_artifacts=0,invalid_snapshots=0"
+      "detail": "snapshots_scanned=1,linked_feedback_artifacts=1,invalid_snapshots=0"
     },
     {
       "check_id": "conflict_artifact_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0"
+      "detail": "snapshots_scanned=3,linked_conflict_artifacts=1,critical_conflicts_linked=0,invalid_snapshots=0"
     },
     {
       "check_id": "chapter_gate_evidence_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=0,eligible_release_gate_runs=0,chapter_gate_checks_linked=0,aggregation_window=active_sessions,result=insufficient_data,invalid_snapshots=0"
+      "detail": "snapshots_scanned=3,eligible_release_gate_runs=1,chapter_gate_checks_linked=1,aggregation_window=active_sessions,result=aggregated,invalid_snapshots=0"
     },
     {
       "check_id": "evidence_freshness_signal",
@@ -273,13 +276,13 @@
       "check_id": "tasks_completion_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "PASS",
+      "status": "WARN",
       "exit_code": 0,
-      "detail": "checked=29,unchecked=0,completion_ratio=100.0%,json_parse_error=none"
+      "detail": "checker_exit=0,json_parse_error=json payload not found in output"
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-02-28T16:18:46.686506+00:00",
+    "trace_id": "release-readiness-2026-03-10T04:42:32.769433+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",
