@@ -278,6 +278,16 @@ class TestMemoryContextProvider:
         items = await provider.get_context(query="test")
         assert len(items) == 1
 
+    async def test_skill_context_provider_skips_duplicate_skill_ids(self):
+        loader = MagicMock()
+        loader.load = MagicMock(return_value="skill content")
+
+        provider = SkillContextProvider(skill_loader=loader)
+        items = await provider.get_context(skill_ids=["dup-skill", "dup-skill"], include_summary=False)
+
+        assert len(items) == 1
+        loader.load.assert_called_once_with("dup-skill")
+
 
 # ============================================================
 # SkillContextProvider.get_context

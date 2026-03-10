@@ -129,6 +129,13 @@ class TestApplyDictToConfig:
             "workflow": {"session_timeout": 7200},
             "graph": {"max_connections": 20},
             "writing": {"character_depth_dimensions": 8},
+            "integration": {
+                "postgres_enabled": True,
+                "redis_cache_enabled": True,
+                "elasticsearch_enabled": True,
+                "neo4j_enabled": True,
+                "langflow_enabled": True,
+            },
         }), encoding="utf-8")
         mgr = ConfigManager(config_path=str(cfg_file), hot_reload=False)
         assert mgr.config.app_name == "full-test"
@@ -137,6 +144,11 @@ class TestApplyDictToConfig:
         assert mgr.config.workflow.session_timeout == 7200
         assert mgr.config.graph.max_connections == 20
         assert mgr.config.writing.character_depth_dimensions == 8
+        assert mgr.config.integration.postgres_enabled is True
+        assert mgr.config.integration.redis_cache_enabled is True
+        assert mgr.config.integration.elasticsearch_enabled is True
+        assert mgr.config.integration.neo4j_enabled is True
+        assert mgr.config.integration.langflow_enabled is True
 
 
 class TestCreateDefaultConfigFile:

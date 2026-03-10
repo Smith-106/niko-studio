@@ -798,6 +798,7 @@ def test_chat_stream_endpoint_rejects_no_messages(client_no_lifespan):
 # REST compatibility endpoints and gateway lifecycle
 # ============================================================
 
+import asyncio
 import contextlib
 import json
 import runpy
@@ -2816,3 +2817,860 @@ async def test_agent_get_context_character_only_and_skills_chain_invalid(monkeyp
     monkeypatch.setitem(sys.modules, "src.agents.skill_router", fake_skill_router_module)
 
     assert await raw_skills_get_chain("invalid") == []
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_rate_limit_denied_returns_empty(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_search_hybrid = _get_raw_mcp_tool_function(gateway_module.search_mcp, "search_hybrid")
+
+    adapters = SimpleNamespace(
+        flags=SimpleNamespace(redis_cache_enabled=True, elasticsearch_enabled=False, langflow_enabled=False),
+        cache_rate_limit=SimpleNamespace(
+            allow_request=AsyncMock(return_value=False),
+            cache_get=AsyncMock(),
+            cache_set=AsyncMock(),
+        ),
+        search=SimpleNamespace(index_document=AsyncMock()),
+        orchestration=SimpleNamespace(run=AsyncMock()),
+    )
+    monkeypatch.setattr(gateway_module, "_INTEGRATION_ADAPTERS", adapters)
+
+    result = await raw_search_hybrid("query")
+
+    assert result == []
+    adapters.cache_rate_limit.allow_request.assert_awaited_once()
+    adapters.cache_rate_limit.cache_get.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_cache_hit_bypasses_engine(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_search_hybrid = _get_raw_mcp_tool_function(gateway_module.search_mcp, "search_hybrid")
+
+    engine = MagicMock()
+    engine.hybrid_search = AsyncMock(return_value=[{"id": "engine"}])
+
+    adapters = SimpleNamespace(
+        flags=SimpleNamespace(redis_cache_enabled=True, elasticsearch_enabled=False, langflow_enabled=False),
+        cache_rate_limit=SimpleNamespace(
+            allow_request=AsyncMock(return_value=True),
+            cache_get=AsyncMock(return_value={"results": [{"id": "cached"}]}),
+            cache_set=AsyncMock(),
+        ),
+        search=SimpleNamespace(index_document=AsyncMock()),
+        orchestration=SimpleNamespace(run=AsyncMock()),
+    )
+
+    monkeypatch.setattr(gateway_module, "_INTEGRATION_ADAPTERS", adapters)
+    monkeypatch.setattr(gateway_module, "get_search_engine", lambda: engine)
+
+    result = await raw_search_hybrid("query")
+
+    assert result == [{"id": "cached"}]
+    engine.hybrid_search.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_injects_route_timeout_and_swallows_langflow_error(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_search_hybrid = _get_raw_mcp_tool_function(gateway_module.search_mcp, "search_hybrid")
+
+    engine = MagicMock()
+    engine.hybrid_search = AsyncMock(return_value=[{"id": "r1"}])
+
+    adapters = SimpleNamespace(
+        flags=SimpleNamespace(redis_cache_enabled=False, elasticsearch_enabled=False, langflow_enabled=True),
+        cache_rate_limit=SimpleNamespace(
+            allow_request=AsyncMock(),
+            cache_get=AsyncMock(),
+            cache_set=AsyncMock(),
+        ),
+        search=SimpleNamespace(index_document=AsyncMock()),
+        orchestration=SimpleNamespace(run=AsyncMock(side_effect=RuntimeError("langflow down"))),
+    )
+
+    monkeypatch.setattr(gateway_module, "_INTEGRATION_ADAPTERS", adapters)
+    monkeypatch.setattr(gateway_module, "get_search_engine", lambda: engine)
+    monkeypatch.setattr(gateway_module, "_resolve_search_route_mode", lambda: "elastic")
+    monkeypatch.setattr(gateway_module, "_resolve_search_elastic_timeout_ms", lambda: 120)
+
+    result = await raw_search_hybrid("query", scope="memory", limit=5, profile="p1")
+
+    assert result == [{"id": "r1"}]
+    engine.hybrid_search.assert_awaited_once_with(
+        query="query",
+        scope="memory",
+        limit=5,
+        profile="p1",
+        min_score=None,
+        budget_tokens=None,
+        rerank=False,
+        route_mode="elastic",
+        elastic_timeout_ms=120,
+    )
+    adapters.orchestration.run.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_memory_upload_endpoint_parse_error_and_sanitized_filename_fallback(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    mock_memory_add = AsyncMock(return_value={})
+    monkeypatch.setattr(gateway_module, "memory_add", mock_memory_add)
+    monkeypatch.setattr(gateway_module, "DocumentLoader", MagicMock(load_file=MagicMock(return_value="chunk one")))
+
+    class _FakeSplitter:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def split_text(self, _text):
+            return ["chunk-a"]
+
+    monkeypatch.setitem(sys.modules, "langchain_text_splitters", SimpleNamespace(RecursiveCharacterTextSplitter=_FakeSplitter))
+
+    req = await _json_request(
+        "/memory/upload",
+        {
+            "file_name": "???",
+            "file_content_base64": "data:text/plain;base64,aGVsbG8=",
+            "session_id": "sess-1",
+        },
+    )
+    res = await gateway_module.memory_upload_endpoint(req)
+
+    assert res.status_code == 500
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["error"] == "failed to inject any file chunks"
+    assert mock_memory_add.await_count == 1
+    assert "filename:uploaded_file" in mock_memory_add.await_args.kwargs["tags"]
+
+
+@pytest.mark.asyncio
+async def test_memory_upload_endpoint_handles_loader_exception(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(
+        gateway_module,
+        "DocumentLoader",
+        MagicMock(load_file=MagicMock(side_effect=RuntimeError("parse boom"))),
+    )
+
+    req = await _json_request(
+        "/memory/upload",
+        {
+            "file_name": "note.txt",
+            "file_content_base64": "aGVsbG8=",
+            "session_id": "sess-1",
+        },
+    )
+    res = await gateway_module.memory_upload_endpoint(req)
+
+    assert res.status_code == 400
+    assert b"failed to parse file" in res.body
+
+
+@pytest.mark.asyncio
+async def test_memory_upload_endpoint_normalizes_chunk_overlap_when_too_large(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    captured_kwargs = {}
+
+    class _FakeSplitter:
+        def __init__(self, *args, **kwargs):
+            captured_kwargs.update(kwargs)
+
+        def split_text(self, _text):
+            return ["chunk-a"]
+
+    monkeypatch.setitem(sys.modules, "langchain_text_splitters", SimpleNamespace(RecursiveCharacterTextSplitter=_FakeSplitter))
+    monkeypatch.setattr(gateway_module, "DocumentLoader", MagicMock(load_file=MagicMock(return_value="chunk one")))
+    monkeypatch.setattr(gateway_module, "memory_add", AsyncMock(return_value={"id": "m1"}))
+
+    req = await _json_request(
+        "/memory/upload",
+        {
+            "file_name": "note.txt",
+            "file_content_base64": "aGVsbG8=",
+            "session_id": "sess-1",
+            "chunk_size": 5,
+            "chunk_overlap": 9,
+        },
+    )
+    res = await gateway_module.memory_upload_endpoint(req)
+
+    assert res.status_code == 200
+    assert captured_kwargs["chunk_size"] == 5
+    assert captured_kwargs["chunk_overlap"] == 1
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_check_endpoint_falls_back_when_kwargs_not_supported(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    calls = []
+
+    def _eval(content: str, **kwargs):
+        calls.append(kwargs)
+        if kwargs:
+            raise TypeError("got an unexpected keyword argument 'quality_level'")
+        return {"quality_score": 55.0, "metrics": {}, "issues": []}
+
+    monkeypatch.setattr(gateway_module, "evaluate_novel_quality", _eval)
+
+    req = await _json_request(
+        "/api/novel/quality-check",
+        {
+            "content": "valid body",
+            "quality_level": "high",
+            "quality_mode": "auto",
+        },
+    )
+    res = await gateway_module.novel_quality_check_endpoint(req)
+
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["quality_score"] == 55.0
+    assert len(calls) == 2
+    assert calls[0] == {"quality_level": "high", "quality_mode": "auto"}
+    assert calls[1] == {}
+
+
+def test_gateway_helper_branches_for_runtime_and_resolvers(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(gateway_module, "genre_to_generation_recommendation", lambda _genre: None)
+    assert gateway_module._merge_recommendations_with_genre([{"id": 1}], "mystery") == [{"id": 1}]
+
+    services = {"memory": "error", "graph": "unknown", "search": "error", "workflow": "error", "critic": "error"}
+    assert gateway_module._to_runtime_connection_state("degraded", services) == "disconnected"
+    assert gateway_module._to_runtime_reconnect_state("disconnected") == "failed"
+    assert gateway_module._to_server_runtime_state("error", "disconnected") == "disconnected"
+    assert gateway_module._to_server_runtime_state("error", "other") == "reconnecting"
+
+    cfg = gateway_module._MCP_SERVICE_CONFIGS["memory"]
+    monkeypatch.setitem(gateway_module._MCP_SERVICE_CONFIGS, "tmp-disabled", cfg.__class__(
+        service_id="tmp-disabled", name="Tmp", path="/tmp", enabled=False, builtin=False
+    ))
+    assert gateway_module._service_is_ready("tmp-disabled", {"tmp-disabled": "ok"}) is False
+
+    monkeypatch.setenv("NIKO_SEARCH_ROUTE_MODE", "invalid")
+    assert gateway_module._resolve_search_route_mode() == "legacy"
+
+    monkeypatch.setenv("NIKO_SEARCH_ELASTIC_TIMEOUT_MS", "bad")
+    assert gateway_module._resolve_search_elastic_timeout_ms() == 300
+
+    monkeypatch.setenv("NIKO_REDIS_RATE_LIMIT", "bad")
+    monkeypatch.setenv("NIKO_REDIS_RATE_LIMIT_WINDOW_SECONDS", "bad")
+    assert gateway_module._resolve_redis_rate_limit() == (120, 60)
+
+    monkeypatch.setenv("NIKO_REDIS_CACHE_TTL_SECONDS", "bad")
+    assert gateway_module._resolve_redis_cache_ttl_seconds() == 120
+
+
+def test_gateway_service_config_error_branches():
+    from src.mcp import gateway as gateway_module
+
+    with pytest.raises(ValueError):
+        gateway_module._normalize_service_config_payload("   ", {"path": "/x"})
+
+    normalized = gateway_module._normalize_service_config_payload("svc", {"path": "abc", "health_url": "  "})
+    assert normalized["path"] == "/abc"
+    assert normalized["health_url"] is None
+
+    with pytest.raises(KeyError):
+        gateway_module._update_service_config("missing", {}, create_if_missing=False)
+
+    with pytest.raises(ValueError):
+        gateway_module._update_service_config("memory", {"path": "/x"}, create_if_missing=False)
+
+    with pytest.raises(ValueError):
+        gateway_module._update_service_config("memory", {"builtin": False}, create_if_missing=False)
+
+    with pytest.raises(KeyError):
+        gateway_module._set_service_enabled("missing", True)
+
+    with pytest.raises(ValueError):
+        gateway_module._set_service_enabled("memory", False)
+
+
+@pytest.mark.asyncio
+async def test_workflow_plan_governance_hook_failure_is_swallowed(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_workflow_plan = _get_raw_mcp_tool_function(gateway_module.workflow_mcp, "workflow_plan")
+
+    adapters = SimpleNamespace(
+        governance=SimpleNamespace(on_schema_workflow=AsyncMock(side_effect=RuntimeError("dbhub down"))),
+    )
+    monkeypatch.setattr(gateway_module, "_INTEGRATION_ADAPTERS", adapters)
+    monkeypatch.setattr(gateway_module, "_resolve_governance_hook_enabled", lambda: True)
+
+    engine = MagicMock()
+    engine.plan = AsyncMock(return_value={"plan_id": "p1"})
+    monkeypatch.setattr(gateway_module, "get_workflow_engine", lambda: engine)
+
+    result = await raw_workflow_plan("task")
+    assert result == {"plan_id": "p1"}
+
+
+@pytest.mark.asyncio
+async def test_mcp_service_and_agent_endpoint_validation_branches(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request("/mcp/services", {"id": "memory"})
+    res = await gateway_module.create_mcp_service(req)
+    assert res.status_code == 409
+
+    req = await _json_request("/mcp/services/x", {})
+    req.scope["path_params"] = {"service_id": ""}
+    res = await gateway_module.update_mcp_service(req)
+    assert res.status_code == 400
+
+    req = await _json_request("/mcp/services/x/enabled", {"enabled": "yes"})
+    req.scope["path_params"] = {"service_id": "memory"}
+    res = await gateway_module.set_mcp_service_enabled(req)
+    assert res.status_code == 400
+
+    req = await _json_request("/mcp/services/x/health", {})
+    req.scope["path_params"] = {"service_id": "missing"}
+    res = await gateway_module.probe_mcp_service_health(req)
+    assert res.status_code == 404
+
+    req = await _raw_request("/agent/revise", b"{bad-json")
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 400
+
+    req = await _raw_request("/agent/revise", b"[]")
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_memory_upload_remaining_error_and_normalization_branches(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request("/memory/upload", {"file_name": "note.txt", "session_id": "sess-1"})
+    res = await gateway_module.memory_upload_endpoint(req)
+    assert res.status_code == 400
+
+    req = await _json_request("/memory/upload", {"file_name": "note.txt", "file_content_base64": "aGVsbG8="})
+    res = await gateway_module.memory_upload_endpoint(req)
+    assert res.status_code == 400
+
+    monkeypatch.setattr(gateway_module, "DocumentLoader", MagicMock(load_file=MagicMock(return_value="text")))
+
+    class _FakeSplitterNoChunks:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def split_text(self, _text):
+            return []
+
+    monkeypatch.setitem(sys.modules, "langchain_text_splitters", SimpleNamespace(RecursiveCharacterTextSplitter=_FakeSplitterNoChunks))
+    req = await _json_request(
+        "/memory/upload",
+        {
+            "file_name": "note.txt",
+            "file_content_base64": "aGVsbG8=",
+            "session_id": "sess-1",
+            "chunk_size": 0,
+            "chunk_overlap": -3,
+        },
+    )
+    res = await gateway_module.memory_upload_endpoint(req)
+    assert res.status_code == 400
+
+    class _FakeSplitterRaise:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("split fail")
+
+    monkeypatch.setitem(sys.modules, "langchain_text_splitters", SimpleNamespace(RecursiveCharacterTextSplitter=_FakeSplitterRaise))
+    req = await _json_request(
+        "/memory/upload",
+        {"file_name": "note.txt", "file_content_base64": "aGVsbG8=", "session_id": "sess-1"},
+    )
+    res = await gateway_module.memory_upload_endpoint(req)
+    assert res.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_novel_quality_and_ui_bridge_additional_branches(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request(
+        "/api/novel/quality-check",
+        {"content": "ok", "quality_level": "high"},
+    )
+
+    def _bad_eval(_content: str, **kwargs):
+        if kwargs:
+            raise TypeError("boom")
+        return {"metrics": {}, "issues": []}
+
+    monkeypatch.setattr(gateway_module, "evaluate_novel_quality", _bad_eval)
+    res = await gateway_module.novel_quality_check_endpoint(req)
+    assert res.status_code == 200
+    data = json.loads(res.body.decode("utf-8"))
+    assert data["quality_score"] == 0.0
+
+    monkeypatch.setattr(gateway_module, "_resolve_ui_bridge_enabled", lambda: False)
+
+    req = await _json_request("/ui/workflow/plan", {"task": "x"})
+    assert (await gateway_module.ui_bridge_workflow_plan_endpoint(req)).status_code == 404
+
+    req = await _json_request("/ui/workflow/execute", {"plan_id": "p1"})
+    assert (await gateway_module.ui_bridge_workflow_execute_endpoint(req)).status_code == 404
+
+
+
+def test_gateway_resolvers_and_helpers_additional_branches(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(gateway_module, "get_services", lambda: object())
+    assert gateway_module._is_llm_available() is True
+
+    class _Svc:
+        def is_healthy(self):
+            return {"status": "ok"}
+
+    monkeypatch.setattr(gateway_module, "get_services", lambda: _Svc())
+    assert gateway_module._is_llm_available() is True
+
+    class _SvcBad:
+        def is_healthy(self):
+            return {"status": "down"}
+
+    monkeypatch.setattr(gateway_module, "get_services", lambda: _SvcBad())
+    assert gateway_module._is_llm_available() is False
+
+    monkeypatch.setenv("NIKO_GATEWAY_PORT", "bad")
+    host, port = gateway_module._resolve_gateway_host_port()
+    assert host
+    assert port == 8000
+
+    monkeypatch.setenv("NIKO_DBHUB_GOVERNANCE_ENABLED", "yes")
+    assert gateway_module._resolve_governance_hook_enabled() is True
+
+    monkeypatch.setenv("NIKO_DETECTION_EVASION_GUARD", "yes")
+    assert gateway_module._resolve_detection_evasion_guard_enabled() is True
+
+
+@pytest.mark.asyncio
+async def test_gateway_endpoints_additional_error_paths(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    req = await _raw_request("/writing-helper/process", b"{bad")
+    res = await gateway_module.writing_helper_process_endpoint(req)
+    assert res.status_code == 400
+
+    req = await _raw_request("/writing-helper/process", b"[]")
+    res = await gateway_module.writing_helper_process_endpoint(req)
+    assert res.status_code == 400
+
+    req = await _json_request("/chat", {"messages": [{"role": "assistant", "content": "noop"}]})
+    res = await gateway_module.chat_endpoint(req)
+    assert res.status_code == 400
+
+    req = await _json_request("/chat", {"messages": [{"role": "user", "content": "hi"}], "workflowLevel": "bad-level"})
+    res = await gateway_module.chat_endpoint(req)
+    assert res.status_code == 400
+
+    req = await _json_request("/mcp/services", {"id": ""})
+    res = await gateway_module.create_mcp_service(req)
+    assert res.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_cache_set_and_index_skips_non_dict(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_search_hybrid = _get_raw_mcp_tool_function(gateway_module.search_mcp, "search_hybrid")
+
+    engine = MagicMock()
+    engine.hybrid_search = AsyncMock(return_value=["bad", {"id": "ok"}])
+
+    create_task_calls = []
+
+    def _capture_task(coro):
+        create_task_calls.append(coro)
+        coro.close()
+        return SimpleNamespace(done=lambda: True)
+
+    adapters = SimpleNamespace(
+        flags=SimpleNamespace(redis_cache_enabled=True, elasticsearch_enabled=True, langflow_enabled=False),
+        cache_rate_limit=SimpleNamespace(
+            allow_request=AsyncMock(return_value=True),
+            cache_get=AsyncMock(return_value=None),
+            cache_set=AsyncMock(),
+        ),
+        search=SimpleNamespace(index_document=AsyncMock()),
+        orchestration=SimpleNamespace(run=AsyncMock()),
+    )
+
+    monkeypatch.setattr(gateway_module, "_INTEGRATION_ADAPTERS", adapters)
+    monkeypatch.setattr(gateway_module, "get_search_engine", lambda: engine)
+    monkeypatch.setattr(gateway_module.asyncio, "create_task", _capture_task)
+
+    results = await raw_search_hybrid("query", route_mode="legacy")
+
+    assert results == ["bad", {"id": "ok"}]
+    adapters.cache_rate_limit.cache_set.assert_awaited_once()
+    assert len(create_task_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_list_mcp_services_accepts_runtime_status_query(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    snapshot = _snapshot_mcp_service_state(gateway_module)
+    try:
+        req = await _json_request(
+            "/mcp/services",
+            payload={},
+            query_string="services=memory:error,graph:ok",
+        )
+        req.scope["method"] = "GET"
+
+        res = await gateway_module.list_mcp_services(req)
+
+        assert res.status_code == 200
+        data = json.loads(res.body.decode("utf-8"))
+        by_id = {item["id"]: item for item in data["services"]}
+        assert by_id["memory"]["status"] == "error"
+        assert by_id["graph"]["status"] == "ok"
+    finally:
+        _restore_mcp_service_state(gateway_module, *snapshot)
+
+
+@pytest.mark.asyncio
+async def test_mcp_service_endpoint_error_mapping_branches(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    req = await _json_request("/mcp/services", {"id": "custom"})
+    monkeypatch.setattr(gateway_module, "_update_service_config", MagicMock(side_effect=ValueError("bad payload")))
+    res = await gateway_module.create_mcp_service(req)
+    assert res.status_code == 400
+    assert json.loads(res.body.decode("utf-8"))["error"] == "bad payload"
+
+    req = await _json_request("/mcp/services/missing", {"name": "x"})
+    req.scope["path_params"] = {"service_id": "missing"}
+    monkeypatch.setattr(gateway_module, "_update_service_config", MagicMock(side_effect=KeyError("missing")))
+    res = await gateway_module.update_mcp_service(req)
+    assert res.status_code == 404
+
+    req = await _json_request("/mcp/services/memory", {"name": "x"})
+    req.scope["path_params"] = {"service_id": "memory"}
+    monkeypatch.setattr(gateway_module, "_update_service_config", MagicMock(side_effect=ValueError("immutable")))
+    res = await gateway_module.update_mcp_service(req)
+    assert res.status_code == 400
+    assert json.loads(res.body.decode("utf-8"))["error"] == "immutable"
+
+    req = await _json_request("/mcp/services/x/enabled", {"enabled": True})
+    req.scope["path_params"] = {"service_id": ""}
+    res = await gateway_module.set_mcp_service_enabled(req)
+    assert res.status_code == 400
+
+    req = await _json_request("/mcp/services/x/enabled", {"enabled": True})
+    req.scope["path_params"] = {"service_id": "x"}
+    monkeypatch.setattr(gateway_module, "_set_service_enabled", MagicMock(side_effect=KeyError("x")))
+    res = await gateway_module.set_mcp_service_enabled(req)
+    assert res.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_memory_upload_endpoint_fallback_splitter_and_skip_blank_chunks(monkeypatch):
+    from src.mcp import gateway as gateway_module
+    import builtins
+
+    monkeypatch.setattr(gateway_module, "DocumentLoader", MagicMock(load_file=MagicMock(return_value="text payload")))
+    monkeypatch.setattr(gateway_module, "memory_add", AsyncMock(return_value={"id": "m1"}))
+
+    class _FallbackSplitter:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def split_text(self, _text):
+            return ["   ", "\n"]
+
+    original_import = builtins.__import__
+
+    def _import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "langchain_text_splitters":
+            raise ImportError("simulated missing package")
+        if name == "langchain.text_splitter":
+            return SimpleNamespace(RecursiveCharacterTextSplitter=_FallbackSplitter)
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", _import)
+
+    req = await _json_request(
+        "/memory/upload",
+        {
+            "file_name": "note.txt",
+            "file_content_base64": "aGVsbG8=",
+            "session_id": "sess-1",
+        },
+    )
+    res = await gateway_module.memory_upload_endpoint(req)
+
+    assert res.status_code == 500
+    assert json.loads(res.body.decode("utf-8"))["error"] == "failed to inject any file chunks"
+    gateway_module.memory_add.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ui_bridge_workflow_lifecycle_returns_disabled_when_toggle_off(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(gateway_module, "_resolve_ui_bridge_enabled", lambda: False)
+    req = await _json_request("/ui/workflow/lifecycle", {"plan_id": "p1", "action": "status"})
+
+    res = await gateway_module.ui_bridge_workflow_lifecycle_endpoint(req)
+
+    assert res.status_code == 404
+    payload = json.loads(res.body.decode("utf-8"))
+    assert payload["reason"] == "ui_bridge_disabled"
+
+
+@pytest.mark.asyncio
+async def test_agent_write_endpoint_forwards_quality_goals_alias(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    mock_agent_write = AsyncMock(return_value={"content": "x"})
+    monkeypatch.setattr(gateway_module, "agent_write", mock_agent_write)
+
+    req = await _json_request(
+        "/agent/write",
+        {
+            "scene_card": {"id": "s"},
+            "word_target": 128,
+            "qualityGoals": {"tone": "calm"},
+        },
+    )
+    res = await gateway_module.agent_write_endpoint(req)
+
+    assert res.status_code == 200
+    mock_agent_write.assert_awaited_once_with(
+        scene_card={"id": "s"},
+        skills=None,
+        word_target=128,
+        allow_llm_fallback=True,
+        quality_goals={"tone": "calm"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_agent_revise_endpoint_guard_and_feedback_branches(monkeypatch):
+    from src.mcp import gateway as gateway_module
+    from starlette.responses import JSONResponse
+
+    blocked_response = JSONResponse({"error": "blocked"}, status_code=400)
+    monkeypatch.setattr(gateway_module, "_guard_detection_evasion_payload", lambda _payload: blocked_response)
+
+    req = await _json_request("/agent/revise", {"draft": "d", "feedback": {"x": 1}})
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 400
+
+    monkeypatch.setattr(gateway_module, "_guard_detection_evasion_payload", lambda _payload: None)
+    mock_revise = AsyncMock(return_value={"content": "ok", "wordcount": 1, "forbidden_words_found": []})
+    monkeypatch.setattr(gateway_module, "agent_revise", mock_revise)
+
+    req = await _json_request(
+        "/agent/revise",
+        {
+            "draft": "d",
+            "allowLlmFallback": False,
+            "qualityGoals": {"clarity": 0.8},
+        },
+    )
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 200
+    mock_revise.assert_awaited_once_with(
+        draft="d",
+        feedback={},
+        allow_llm_fallback=False,
+        quality_goals={"clarity": 0.8},
+    )
+
+    req = await _json_request("/agent/revise", {"draft": "d", "feedback": []})
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 400
+    assert json.loads(res.body.decode("utf-8"))["error"] == "feedback must be an object"
+
+
+@pytest.mark.asyncio
+async def test_agent_revise_endpoint_error_status_mapping(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    monkeypatch.setattr(gateway_module, "_guard_detection_evasion_payload", lambda _payload: None)
+
+    monkeypatch.setattr(gateway_module, "agent_revise", AsyncMock(side_effect=ValueError("bad request")))
+    req = await _json_request("/agent/revise", {"draft": "d", "feedback": {}})
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 400
+
+    monkeypatch.setattr(gateway_module, "agent_revise", AsyncMock(side_effect=RuntimeError("LLM unavailable")))
+    req = await _json_request("/agent/revise", {"draft": "d", "feedback": {}})
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 503
+
+    monkeypatch.setattr(gateway_module, "agent_revise", AsyncMock(side_effect=RuntimeError("other runtime")))
+    req = await _json_request("/agent/revise", {"draft": "d", "feedback": {}})
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 500
+
+    monkeypatch.setattr(gateway_module, "agent_revise", AsyncMock(side_effect=Exception("boom")))
+    req = await _json_request("/agent/revise", {"draft": "d", "feedback": {}})
+    res = await gateway_module.agent_revise_endpoint(req)
+    assert res.status_code == 500
+    payload = json.loads(res.body.decode("utf-8"))
+
+
+def test_gateway_helper_branches_remaining_lines(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    with pytest.raises(ValueError, match="path is required"):
+        gateway_module._normalize_service_config_payload("svc", {"path": "   "})
+
+    class _SvcBool:
+        def is_healthy(self):
+            return False
+
+    monkeypatch.setattr(gateway_module, "get_services", lambda: _SvcBool())
+    assert gateway_module._is_llm_available() is False
+
+    assert gateway_module._contains_detection_evasion_intent({"anti_detection": "on"}) is True
+    assert gateway_module._contains_detection_evasion_intent(["safe", {"x": "bypass ai detector"}]) is True
+
+    normalized = gateway_module._normalize_quality_payload("not-a-dict")
+    assert normalized["quality_score"] == 0.0
+
+    normalized2 = gateway_module._normalize_quality_payload({"metrics": "invalid"})
+    assert normalized2["metrics"]["dialogue_ratio"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_async_indexing_exception_is_swallowed(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_search_hybrid = _get_raw_mcp_tool_function(gateway_module.search_mcp, "search_hybrid")
+
+    engine = MagicMock()
+    engine.hybrid_search = AsyncMock(return_value=[{"id": "ok"}])
+
+    adapters = SimpleNamespace(
+        flags=SimpleNamespace(redis_cache_enabled=False, elasticsearch_enabled=True, langflow_enabled=False),
+        cache_rate_limit=SimpleNamespace(
+            allow_request=AsyncMock(),
+            cache_get=AsyncMock(),
+            cache_set=AsyncMock(),
+        ),
+        search=SimpleNamespace(index_document=AsyncMock(side_effect=RuntimeError("es down"))),
+        orchestration=SimpleNamespace(run=AsyncMock()),
+    )
+
+    warning_mock = MagicMock()
+    monkeypatch.setattr(gateway_module.logger, "warning", warning_mock)
+    monkeypatch.setattr(gateway_module, "_INTEGRATION_ADAPTERS", adapters)
+    monkeypatch.setattr(gateway_module, "get_search_engine", lambda: engine)
+
+    scheduled = []
+    original_create_task = gateway_module.asyncio.create_task
+
+    def _capture_task(coro):
+        task = original_create_task(coro)
+        scheduled.append(task)
+        return task
+
+    monkeypatch.setattr(gateway_module.asyncio, "create_task", _capture_task)
+
+    result = await raw_search_hybrid("query")
+    assert result == [{"id": "ok"}]
+
+    if scheduled:
+        await asyncio.gather(*scheduled)
+
+    adapters.search.index_document.assert_awaited_once()
+    assert warning_mock.call_count >= 1
+    log_args = warning_mock.call_args_list[-1].args
+    assert log_args[0] == "Elasticsearch async indexing failed: %s"
+    assert isinstance(log_args[1], RuntimeError)
+    assert str(log_args[1]) == "es down"
+
+
+@pytest.mark.asyncio
+async def test_agent_revise_tool_forwards_quality_goals(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_agent_revise = _get_raw_mcp_tool_function(gateway_module.agent_mcp, "agent_revise")
+
+    writer = MagicMock()
+    writer.revise = AsyncMock(return_value=SimpleNamespace(content="revised", wordcount=2, forbidden_words_found=[]))
+    monkeypatch.setattr(gateway_module, "get_writer_agent", lambda: writer)
+
+    result = await raw_agent_revise("draft", {"feedback": "ok"}, quality_goals={"clarity": 0.9})
+
+    assert result["content"] == "revised"
+    writer.revise.assert_awaited_once_with(
+        "draft",
+        {"feedback": "ok"},
+        allow_llm_fallback=True,
+        quality_goals={"clarity": 0.9},
+    )
+
+
+
+
+@pytest.mark.asyncio
+async def test_search_hybrid_async_indexing_skips_non_dict_items(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_search_hybrid = _get_raw_mcp_tool_function(gateway_module.search_mcp, "search_hybrid")
+
+    engine = MagicMock()
+    engine.hybrid_search = AsyncMock(return_value=["bad-item"])
+
+    adapters = SimpleNamespace(
+        flags=SimpleNamespace(redis_cache_enabled=False, elasticsearch_enabled=True, langflow_enabled=False),
+        cache_rate_limit=SimpleNamespace(
+            allow_request=AsyncMock(),
+            cache_get=AsyncMock(),
+            cache_set=AsyncMock(),
+        ),
+        search=SimpleNamespace(index_document=AsyncMock()),
+        orchestration=SimpleNamespace(run=AsyncMock()),
+    )
+
+    monkeypatch.setattr(gateway_module, "_INTEGRATION_ADAPTERS", adapters)
+    monkeypatch.setattr(gateway_module, "get_search_engine", lambda: engine)
+
+    scheduled = []
+    original_create_task = gateway_module.asyncio.create_task
+
+    def _capture_task(coro):
+        task = original_create_task(coro)
+        scheduled.append(task)
+        return task
+
+    monkeypatch.setattr(gateway_module.asyncio, "create_task", _capture_task)
+
+    result = await raw_search_hybrid("query")
+    assert result == ["bad-item"]
+
+
+
+def test_chat_endpoint_requires_control_model_when_comparison_enabled(client_no_lifespan):
+    response = client_no_lifespan.post(
+        "/chat",
+        json={
+            "messages": [{"role": "user", "content": "hello"}],
+            "comparison": {"enabled": True, "controlModel": "   "},
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "comparison.controlModel is required when comparison is enabled"

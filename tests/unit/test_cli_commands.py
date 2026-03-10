@@ -29,6 +29,22 @@ from src.cli.commands.export import (
 from src.cli.commands.init import init as init_cmd
 from src.cli.commands.run import _run_workflow, run as run_cmd
 from src.cli.commands.guided_draft import _run_guided_draft, guided_draft
+from src.cli.commands.runtime import (
+    _resolve_gateway_host_port_for_cli,
+    _resolve_reload_enabled_for_cli,
+    search_cmd,
+    serve_cmd,
+    stats_cmd,
+    status_cmd,
+)
+from src.cli.commands.project_tech import project_tech_refresh_cmd
+
+
+class TestGenreProfileHelpers:
+    def test_genre_profile_unknown_returns_none(self):
+        from src.cli.commands.genre_profile import genre_profile
+
+        assert genre_profile("unknown") is None
 
 
 class TestExportHelpers:
@@ -1264,6 +1280,114 @@ class TestGuidedDraftCommand:
         assert result.exit_code == 0
         assert calls["count"] == 1
 
+    def test_guided_draft_command_rejects_non_positive_max_steps(self):
+        runner = CliRunner()
+        result = runner.invoke(guided_draft, ["--idea", "demo", "--max-steps", "0"], obj={"console": Console(record=True)})
+        assert result.exit_code != 0
+        assert "max-steps must be >= 1" in result.output
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_handles_execute_error_payload(self):
+        class FakeWorkflowEngine:
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-guided-error",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-error-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {"error": "engine failed"}
+
+            def get_plan_status(self, plan_id):
+                return {"steps": []}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(console, "idea", max_steps=3, json_output=True)
+
+        assert "engine failed" in console.export_text()
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_reports_missing_draft_after_completion(self):
+        class FakeWorkflowEngine:
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-guided-no-draft",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-no-draft-0", "name": "outline", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "outline",
+                    "plan_status": "completed",
+                    "result": {"note": "done"},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {"steps": [{"name": "outline", "output": {"note": "done"}}]}
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(console, "idea", max_steps=3, json_output=True)
+
+        assert "Guided session ended before draft generation" in console.export_text()
+
+    @pytest.mark.asyncio
+    async def test_guided_draft_uses_generate_draft_output_from_final_status(self):
+        class FakeWorkflowEngine:
+            def __init__(self, *args, **kwargs):
+                self.plan_sessions = {}
+
+            async def route(self, task):
+                return {"level": "L3-Standard", "level_slug": "l3-standard", "reason": "r"}
+
+            async def plan(self, task, level=None, recommendations=None):
+                return {
+                    "plan_id": "p-guided-fallback-output",
+                    "level": level or "L3-Standard",
+                    "steps": [{"id": "p-guided-fallback-output-0", "name": "generate_draft", "description": "d", "status": "planned"}],
+                }
+
+            async def execute(self, plan_id):
+                return {
+                    "status": "completed",
+                    "step_name": "outline",
+                    "plan_status": "completed",
+                    "result": {"note": "done"},
+                }
+
+            def get_plan_status(self, plan_id):
+                return {
+                    "steps": [
+                        {
+                            "name": "generate_draft",
+                            "output": {"draft": "Recovered draft", "section_count": 1},
+                        }
+                    ]
+                }
+
+        fake_module = types.SimpleNamespace(WorkflowEngine=FakeWorkflowEngine)
+        console = Console(record=True)
+
+        with patch.dict(sys.modules, {"src.workflow.workflow_engine": fake_module}):
+            await _run_guided_draft(console, "idea", max_steps=3, json_output=True)
+
+        out = console.export_text()
+        assert "Recovered draft" in out
+
 
 class TestChatCommand:
     @pytest.mark.asyncio
@@ -1486,3 +1610,127 @@ class TestChatCommand:
 
         assert result.exit_code == 0
         assert calls["count"] == 1
+
+
+class TestRuntimeAndProjectTechCommands:
+    def test_status_cmd_error_branch(self):
+        with patch("src.cli.commands.runtime._gateway_request", side_effect=TimeoutError("timeout")):
+            runner = CliRunner()
+            result = runner.invoke(status_cmd, [], obj={"console": Console(record=True)})
+        assert result.exit_code != 0
+        assert "status failed" in result.output
+
+    def test_stats_cmd_error_branch(self):
+        with patch("src.cli.commands.runtime._gateway_request", side_effect=TimeoutError("timeout")):
+            runner = CliRunner()
+            result = runner.invoke(stats_cmd, [], obj={"console": Console(record=True)})
+        assert result.exit_code != 0
+        assert "stats failed" in result.output
+
+    def test_stats_cmd_json_output_branch(self):
+        with patch("src.cli.commands.runtime._gateway_request", return_value={"metrics": {}, "runtime": {}}):
+            runner = CliRunner()
+            result = runner.invoke(stats_cmd, ["--json-output"], obj={"console": Console(record=True)})
+        assert result.exit_code == 0
+
+    def test_search_cmd_error_branch(self):
+        with patch("src.cli.commands.runtime._gateway_request", side_effect=TimeoutError("timeout")):
+            runner = CliRunner()
+            result = runner.invoke(search_cmd, ["q"], obj={"console": Console(record=True)})
+        assert result.exit_code != 0
+        assert "search failed" in result.output
+
+    def test_search_cmd_non_collection_count_branch(self):
+        with patch("src.cli.commands.runtime._gateway_request", return_value="unexpected"):
+            runner = CliRunner()
+            result = runner.invoke(search_cmd, ["q"], obj={"console": Console(record=True)})
+        assert result.exit_code == 0
+        assert "results: 0" in result.output
+
+    def test_serve_cmd_uvicorn_import_error_branch(self):
+        original_import = __import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "uvicorn":
+                raise ImportError("no uvicorn")
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            with pytest.raises(Exception) as exc_info:
+                serve_cmd.callback(host=None, port=None, reload=None)
+        assert "no uvicorn" in str(exc_info.value)
+
+    def test_serve_cmd_gateway_resolver_import_error_branch(self):
+        fake_uvicorn = types.SimpleNamespace(run=lambda **kwargs: None)
+        original_import = __import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "uvicorn":
+                return fake_uvicorn
+            if name == "src.mcp.gateway":
+                raise ImportError("gateway import failed")
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            with pytest.raises(Exception) as exc_info:
+                serve_cmd.callback(host=None, port=None, reload=None)
+        assert "gateway import failed" in str(exc_info.value)
+
+    def test_runtime_gateway_resolver_wrappers(self):
+        fake_gateway = types.SimpleNamespace(
+            _resolve_gateway_host_port=lambda: ("0.0.0.0", 9001),
+            _resolve_reload_enabled=lambda: True,
+        )
+
+        with patch.dict(sys.modules, {"src.mcp.gateway": fake_gateway}):
+            assert _resolve_gateway_host_port_for_cli() == ("0.0.0.0", 9001)
+            assert _resolve_reload_enabled_for_cli() is True
+
+    def test_project_tech_refresh_cmd_error_branch(self):
+        with patch(
+            "src.cli.commands.project_tech.refresh_project_tech_metadata",
+            side_effect=FileNotFoundError("missing"),
+        ):
+            runner = CliRunner()
+            result = runner.invoke(project_tech_refresh_cmd, [], obj={"console": Console(record=True)})
+        assert result.exit_code != 0
+        assert "project-tech refresh failed" in result.output
+
+    def test_project_tech_refresh_cmd_panel_output_branch(self):
+        with patch(
+            "src.cli.commands.project_tech.refresh_project_tech_metadata",
+            return_value={
+                "path": "/tmp/.workflow/project-tech.json",
+                "freshness": {
+                    "generated_at": "2026-03-10T00:00:00+00:00",
+                    "source": "cli:manual",
+                    "schema_version": "1.1.0",
+                    "ttl_hours": 168,
+                },
+                "language_file_counts": {"Python": 3, "TypeScript": 2},
+            },
+        ):
+            runner = CliRunner()
+            result = runner.invoke(project_tech_refresh_cmd, [], obj={"console": Console(record=True)})
+        assert result.exit_code == 0
+        assert "Project-Tech Refresh" in result.output
+        assert "language_file_counts" in result.output
+
+    def test_project_tech_refresh_cmd_json_output_branch(self):
+        with patch(
+            "src.cli.commands.project_tech.refresh_project_tech_metadata",
+            return_value={
+                "path": "/tmp/.workflow/project-tech.json",
+                "freshness": {
+                    "generated_at": "2026-03-10T00:00:00+00:00",
+                    "source": "cli:manual",
+                    "schema_version": "1.1.0",
+                    "ttl_hours": 168,
+                },
+                "language_file_counts": {},
+            },
+        ):
+            runner = CliRunner()
+            result = runner.invoke(project_tech_refresh_cmd, ["--json-output"], obj={"console": Console(record=True)})
+        assert result.exit_code == 0
+        assert "generated_at" in result.output

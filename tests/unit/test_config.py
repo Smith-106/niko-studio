@@ -329,6 +329,35 @@ class TestConfigManagerLoadFromEnv:
             assert cm.config.gateway.cors_prod_origins == ["https://app.example.com", "https://gray.example.com"]
             assert cm.config.gateway.metrics_enabled is False
 
+    def test_env_workflow_quality_gateway_ui_bridge_and_integration_flags(self):
+        with patch.dict(os.environ, {
+            "NIKO_WORKFLOW_QUALITY_MODE": "manual",
+            "NIKO_WORKFLOW_QUALITY_LEVEL": "ultra",
+            "NIKO_WORKFLOW_DEGRADE_ON_TIMEOUT": "no",
+            "NIKO_WORKFLOW_DEGRADE_ON_ERROR": "0",
+            "NIKO_WORKFLOW_CRITICAL_GATE_ALWAYS_ON": "off",
+            "NIKO_WORKFLOW_QUALITY_PHASE_TIMEOUT_SECONDS": "45",
+            "NIKO_UI_BRIDGE_ENABLED": "yes",
+            "NIKO_POSTGRES_ENABLED": "on",
+            "NIKO_REDIS_CACHE_ENABLED": "true",
+            "NIKO_ELASTICSEARCH_ENABLED": "1",
+            "NIKO_NEO4J_ENABLED": "yes",
+            "NIKO_LANGFLOW_ENABLED": "on",
+        }, clear=False):
+            cm = ConfigManager(config_path=None, hot_reload=False)
+            assert cm.config.workflow.quality_mode == "manual"
+            assert cm.config.workflow.quality_level == "ultra"
+            assert cm.config.workflow.degrade_on_timeout is False
+            assert cm.config.workflow.degrade_on_error is False
+            assert cm.config.workflow.critical_gate_always_on is False
+            assert cm.config.workflow.quality_phase_timeout_seconds == 45
+            assert cm.config.gateway.ui_bridge_enabled is True
+            assert cm.config.integration.postgres_enabled is True
+            assert cm.config.integration.redis_cache_enabled is True
+            assert cm.config.integration.elasticsearch_enabled is True
+            assert cm.config.integration.neo4j_enabled is True
+            assert cm.config.integration.langflow_enabled is True
+
 
 class TestConfigManagerGetSet:
 
