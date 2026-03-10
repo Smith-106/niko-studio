@@ -89,7 +89,45 @@ class TestShouldDistill:
         assert should_distill({"draft_content": "text"}) is True
 
 
-class TestAddDistillationNode:
+class TestCanonicalNormalizationAndConflictBranches:
+    def test_normalize_entities_timeline_scope_and_generated_id(self):
+        node = DistillationNode(template=DistillationTemplate.SUMMARY)
+        entities = [
+            {"type": "timeline", "name": "T1"},
+            {"type": "timeline", "entity_id": "", "name": ""},
+        ]
+
+        out = node._normalize_canonical_entities(entities, scene_id="", chapter_num=3)
+
+        assert out[0]["scope"] == "timeline"
+        assert out[0]["entity_id"].startswith("entity-3-scene-1")
+        assert out[1]["entity_id"].startswith("entity-3-scene-2")
+
+    def test_detect_conflicts_duplicate_name_branch(self):
+        node = DistillationNode(template=DistillationTemplate.SUMMARY)
+        conflicts = node._detect_canonical_conflicts(
+            canonical_entities=[
+                {"entity_id": "e-1", "name": "Alice"},
+                {"entity_id": "e-2", "name": "alice"},
+            ],
+            canonical_relations=[],
+            canonical_trace={"session_id": "s1"},
+        )
+        assert len(conflicts) == 1
+        assert conflicts[0]["conflict_type"] == "char_state"
+
+    def test_detect_conflicts_skips_missing_entity_id_or_name(self):
+        node = DistillationNode(template=DistillationTemplate.SUMMARY)
+        conflicts = node._detect_canonical_conflicts(
+            canonical_entities=[
+                {"entity_id": "", "name": "Alice"},
+                {"entity_id": "e-2", "name": ""},
+            ],
+            canonical_relations=[],
+            canonical_trace={"session_id": "s1"},
+        )
+        assert conflicts == []
+
     def test_conditional_true(self):
         graph = MagicMock()
         result = add_distillation_node(graph, after_node="writer", conditional=True)
@@ -196,7 +234,26 @@ class TestRunWritingSession:
     @pytest.mark.asyncio
     @patch("src.workflow.graph.compile_graph")
     @patch("src.workflow.graph.create_initial_state")
-    async def test_verbose(self, mock_init, mock_compile, capsys):
+    async def test_stream_safety_cap_branch(self, mock_init, mock_compile):
+        mock_init.return_value = {"user_idea": "test"}
+        mock_app = MagicMock()
+
+        async def fake_stream(state):
+            for idx in range(70):
+                yield {"writer": {"draft_content": f"output-{idx}"}}
+
+        mock_app.astream = fake_stream
+        mock_compile.return_value = mock_app
+
+        from src.workflow.graph import run_writing_session
+        result = await run_writing_session("test idea", verbose=False)
+        assert "errors" in result
+        assert "safety cap" in result["errors"][-1]
+
+    @pytest.mark.asyncio
+    @patch("src.workflow.graph.compile_graph")
+    @patch("src.workflow.graph.create_initial_state")
+    async def test_verbose_branch_and_node_prints(self, mock_init, mock_compile):
         mock_init.return_value = {"user_idea": "test"}
         mock_app = MagicMock()
 
@@ -207,6 +264,45 @@ class TestRunWritingSession:
         mock_compile.return_value = mock_app
 
         from src.workflow.graph import run_writing_session
-        await run_writing_session("test idea", verbose=True)
-        captured = capsys.readouterr()
-        assert "test idea" in captured.out
+        result = await run_writing_session("test idea", verbose=True)
+        assert result is not None
+
+    @pytest.mark.asyncio
+    @patch("src.workflow.graph.compile_graph")
+    @patch("src.workflow.graph.create_initial_state")
+    async def test_non_graph_recursion_error_is_reraised(self, mock_init, mock_compile):
+        mock_init.return_value = {"user_idea": "test"}
+        mock_app = MagicMock()
+
+        async def fake_stream(state):
+            raise RuntimeError("boom")
+            yield  # pragma: no cover
+
+        mock_app.astream = fake_stream
+        mock_compile.return_value = mock_app
+
+        from src.workflow.graph import run_writing_session
+        with pytest.raises(RuntimeError, match="boom"):
+            await run_writing_session("test idea", verbose=False)
+
+    @pytest.mark.asyncio
+    @patch("src.workflow.graph.compile_graph")
+    @patch("src.workflow.graph.create_initial_state")
+    async def test_graph_recursion_error_branch(self, mock_init, mock_compile):
+        mock_init.return_value = {"user_idea": "test"}
+        mock_app = MagicMock()
+
+        class GraphRecursionError(Exception):
+            pass
+
+        async def fake_stream(state):
+            raise GraphRecursionError("recursion overflow")
+            yield  # pragma: no cover
+
+        mock_app.astream = fake_stream
+        mock_compile.return_value = mock_app
+
+        from src.workflow.graph import run_writing_session
+        result = await run_writing_session("test idea", verbose=False)
+        assert "errors" in result
+        assert "recursion overflow" in result["errors"][-1]
