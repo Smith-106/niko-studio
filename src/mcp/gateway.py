@@ -1532,7 +1532,8 @@ critic_mcp = FastMCP("NikoCritic", stateless_http=True)
 async def evaluate_content(
     content: str,
     scene_card: dict = None,
-    dimensions: list = None
+    dimensions: list = None,
+    quality_goals: Optional[dict] = None,
 ) -> dict:
     """
     多维度评估内容 (整合 Critic Agent)
@@ -1559,7 +1560,17 @@ async def evaluate_content(
     engine = get_critic_engine()
 
     # 当前容器中的 CriticEngine.evaluate 签名为 evaluate(content, dimensions=None)
-    raw = await engine.evaluate(content, dimensions)
+    # 兼容支持 quality_goals 的实现，保持向后兼容
+    if quality_goals is not None:
+        try:
+            raw = await engine.evaluate(content, dimensions, quality_goals=quality_goals)
+        except TypeError as exc:
+            if "unexpected keyword argument" in str(exc):
+                raw = await engine.evaluate(content, dimensions)
+            else:
+                raise
+    else:
+        raw = await engine.evaluate(content, dimensions)
 
     # 兼容两种结果结构：
     # 1) legacy: total_score/lock_score/style_score/logic_score/actionable_feedback
@@ -2969,10 +2980,14 @@ async def graph_foreshadows_endpoint(request: Request):
 
 async def critic_evaluate_endpoint(request: Request):
     body = await request.json()
+    quality_goals = body.get("quality_goals")
+    if quality_goals is None:
+        quality_goals = body.get("qualityGoals")
     result = await evaluate_content(
         content=body.get("content", ""),
         scene_card=body.get("scene_card"),
         dimensions=body.get("dimensions"),
+        quality_goals=quality_goals,
     )
     return JSONResponse(result)
 
