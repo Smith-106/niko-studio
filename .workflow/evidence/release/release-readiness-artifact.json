@@ -6,7 +6,7 @@
     "gate_score_or_critical_blocker_signal",
     "unresolved_triage_blocker_signal"
   ],
-  "generated_at": "2026-03-10T04:42:32.769433+00:00",
+  "generated_at": "2026-03-10T07:08:41.178925+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -282,7 +282,7 @@
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-03-10T04:42:32.769433+00:00",
+    "trace_id": "release-readiness-2026-03-10T07:08:41.178925+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",
