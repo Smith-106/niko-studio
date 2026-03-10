@@ -571,9 +571,16 @@ class TestWriterAdvancedExecution:
             await agent.revise("draft", {}, allow_llm_fallback=True)
 
     @pytest.mark.asyncio
-    async def test_revise_llm_failure_with_fallback_disabled_raises(self):
+    async def test_revise_llm_failure_with_fallback_enabled_reraises(self):
         llm = RunnableLambda(lambda _: (_ for _ in ()).throw(RuntimeError("llm failed")))
+        agent = WriterAgent(llm)
 
+        with pytest.raises(RuntimeError, match="llm failed"):
+            await agent.revise("draft", {}, allow_llm_fallback=True)
+
+    @pytest.mark.asyncio
+    async def test_revise_llm_failure_with_fallback_disabled_raises_runtime_error(self):
+        llm = RunnableLambda(lambda _: (_ for _ in ()).throw(RuntimeError("llm failed")))
         agent = WriterAgent(llm)
 
         with pytest.raises(RuntimeError, match="fallback disabled"):
@@ -772,9 +779,118 @@ class TestWriterRemainingBranches:
             await agent.continue_writing("old", "hint", allow_llm_fallback=True)
 
     @pytest.mark.asyncio
-    async def test_revise_llm_failure_with_fallback_enabled_reraises(self):
-        llm = RunnableLambda(lambda _: (_ for _ in ()).throw(RuntimeError("llm failed")))
+    async def test_revise_human_writing_preset_builds_style_guidance(self):
+        llm = RunnableLambda(lambda _: "正常文本")
         agent = WriterAgent(llm)
 
-        with pytest.raises(RuntimeError, match="llm failed"):
-            await agent.revise("draft", {}, allow_llm_fallback=True)
+        output = await agent.revise(
+            "draft",
+            {"issues": [], "suggestions": [], "dimension_scores": {}},
+            quality_goals={
+                "humanization_preset": "human_writing",
+                "sentence_entropy_target": 65,
+                "rhythm_variability_target": 55,
+            },
+        )
+
+        assert output.content == "正常文本"
+        assert output.forbidden_words_found == []
+
+    @pytest.mark.asyncio
+    async def test_revise_custom_preset_uses_custom_instruction(self):
+        llm = RunnableLambda(lambda _: "修订完成")
+        agent = WriterAgent(llm)
+
+        output = await agent.revise(
+            "draft",
+            {"issues": ["x"], "suggestions": [], "dimension_scores": {"style": 8}},
+            quality_goals={
+                "humanization_preset": "custom",
+                "custom_humanization_instruction": "保留克制语气",
+            },
+        )
+
+        assert output.content == "修订完成"
+
+    @pytest.mark.asyncio
+    async def test_revise_ai_edit_guidance_preset_branch(self):
+        llm = RunnableLambda(lambda _: "修订结果")
+        agent = WriterAgent(llm)
+
+        output = await agent.revise(
+            "draft",
+            {"issues": [], "suggestions": ["补充过渡"], "dimension_scores": {"coherence": 6}},
+            quality_goals={"humanization_preset": "ai_edit_guidance"},
+        )
+
+        assert output.content == "修订结果"
+
+    def test_enter_skill_scope_injection_failure_resets_state_and_warns(self):
+        agent = WriterAgent(MagicMock())
+        agent._injected_skills = ["existing"]
+        agent._injected_skill_guidance = "existing guidance"
+        warnings = []
+
+        with patch.object(agent, "inject_skills", side_effect=RuntimeError("inject boom")):
+            previous = agent._enter_skill_scope(["skill-a"], warnings=warnings)
+
+        assert previous == {"skills": ["existing"], "guidance": "existing guidance"}
+        assert agent._injected_skills == []
+        assert agent._injected_skill_guidance == ""
+        assert any("skill_injection_failed" in item and "inject boom" in item for item in warnings)
+
+    def test_safe_exit_skill_scope_failure_resets_state_and_warns(self):
+        agent = WriterAgent(MagicMock())
+        agent._injected_skills = ["active"]
+        agent._injected_skill_guidance = "active guidance"
+        warnings = []
+
+        with patch.object(agent, "_exit_skill_scope", side_effect=RuntimeError("exit boom")):
+            agent._safe_exit_skill_scope({"skills": ["prev"], "guidance": "prev guidance"}, warnings=warnings)
+
+        assert agent._injected_skills == []
+        assert agent._injected_skill_guidance == ""
+        assert any("skill_injection_failed" in item and "scope_exit: exit boom" in item for item in warnings)
+
+    def test_is_chapter_end_false_branches(self):
+        agent = WriterAgent(MagicMock())
+
+        empty_scene = WriterInput(
+            scene_id="   ",
+            chapter_num=1,
+            pov_character="A",
+            objective="x",
+            conflict="y",
+            outcome="+",
+            plot_beat="b",
+            emotional_arc="a→b",
+        )
+        assert agent._is_chapter_end(empty_scene) is False
+
+        invalid_suffix_scene = WriterInput(
+            scene_id="CH01-UNKNOWN",
+            chapter_num=1,
+            pov_character="A",
+            objective="x",
+            conflict="y",
+            outcome="+",
+            plot_beat="b",
+            emotional_arc="a→b",
+        )
+        assert agent._is_chapter_end(invalid_suffix_scene) is False
+
+        with patch("agents.writer.re.search") as mock_search:
+            mock_match = MagicMock()
+            mock_match.group.return_value = "not-a-number"
+            mock_search.return_value = mock_match
+            malformed_scene = WriterInput(
+                scene_id="CH01-SCXX",
+                chapter_num=1,
+                pov_character="A",
+                objective="x",
+                conflict="y",
+                outcome="+",
+                plot_beat="b",
+                emotional_arc="a→b",
+            )
+            assert agent._is_chapter_end(malformed_scene) is False

@@ -88,9 +88,6 @@ def _dedupe_adjacent_sentences(text: str) -> str:
             continue
 
         sentences = _split_sentences(stripped_line)
-        if not sentences:
-            deduped_lines.append(stripped_line)
-            continue
 
         deduped: list[str] = []
         previous_identity = ""
@@ -159,12 +156,31 @@ def _apply_instruction_tone(text: str, instruction: str) -> str:
     return _normalize_whitespace(result)
 
 
+def _has_adjacent_duplicate_sentence(text: str) -> bool:
+    for line in text.split("\n"):
+        stripped_line = line.strip()
+        if not stripped_line:
+            continue
+        sentences = _split_sentences(stripped_line)
+        previous_identity = ""
+        for sentence in sentences:
+            identity = _sentence_identity(sentence)
+            if identity and identity == previous_identity:
+                return True
+            previous_identity = identity
+    return False
+
+
 def _polish_text(content: str, instruction: str = "") -> str:
     polished = _normalize_whitespace(content)
     polished = _normalize_punctuation_spacing(polished)
     polished = _compress_redundant_phrases(polished)
+    had_adjacent_duplicates = _has_adjacent_duplicate_sentence(polished)
     polished = _dedupe_adjacent_sentences(polished)
     polished = _apply_instruction_tone(polished, instruction)
+    polished = _normalize_whitespace(polished)
+    if had_adjacent_duplicates:
+        polished = " ".join(line.strip() for line in polished.split("\n") if line.strip())
     return _normalize_whitespace(polished)
 
 
