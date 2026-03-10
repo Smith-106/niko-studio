@@ -639,10 +639,11 @@ class TestIGraphServiceInterface:
         stats = graph_manager.get_entity_stats()
         assert isinstance(stats, EntityStats)
 
-    def test_implements_find_related_entities(self, graph_manager):
-        """验证 find_related_entities 方法签名"""
-        assert hasattr(graph_manager, "find_related_entities")
-        assert callable(graph_manager.find_related_entities)
+    def test_find_related_entities_empty_cursor_rows(self, graph_manager, sample_entities):
+        graph_manager.create_entity(sample_entities[0])
+        related = graph_manager.find_related_entities("char-001", max_depth=1)
+        assert related == []
+
 
     def test_implements_crud_methods(self, graph_manager):
         """验证 CRUD 方法"""

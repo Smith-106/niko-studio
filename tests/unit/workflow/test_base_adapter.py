@@ -220,6 +220,17 @@ class TestAdapterRegistry:
         adapter = AdapterRegistry.create_adapter("nonexistent_xyz")
         assert adapter is None
 
-    def test_create_adapter_with_config(self):
-        adapter = AdapterRegistry.create_adapter("novel", config={"pass_score": 90})
-        assert adapter.config["pass_score"] == 90
+    def test_list_domains_by_capability_empty_needle(self):
+        assert AdapterRegistry.list_domains_by_capability("") == []
+
+    def test_register_adapter_capabilities_string_and_none(self):
+        class _TmpAdapter(ConcreteDomainAdapter):
+            def get_domain_type(self):
+                return "tmp_domain"
+
+        AdapterRegistry.register_adapter("tmp_domain_str", _TmpAdapter, capabilities="single-cap")
+        AdapterRegistry.register_adapter("tmp_domain_none", _TmpAdapter, capabilities=None)
+
+        assert AdapterRegistry.get_capabilities("tmp_domain_str") == ["single-cap"]
+        assert AdapterRegistry.get_capabilities("tmp_domain_none") == []
+

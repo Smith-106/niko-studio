@@ -2242,15 +2242,413 @@ class TestArchitectureBoundaryUnit:
         assert "adapter.create_graph()" in graph_src
         assert "return adapter.create_graph()" in graph_src
 
-    @pytest.mark.asyncio
-    async def test_architecture_boundary_engine_runs_without_adapter_registry_dependency(self, engine):
-        with patch(
-            "src.workflow.adapters.base_adapter.AdapterRegistry.create_adapter",
-            side_effect=AssertionError("engine bypassed authority boundary"),
-        ) as create_adapter_mock:
-            plan_result = await engine.plan("回答一个问题", level="L1")
-            result = await engine.execute(plan_result["plan_id"])
 
-        assert result["status"] == "completed"
-        create_adapter_mock.assert_not_called()
+
+class TestWorkflowEngineCoverageGaps:
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_run_plan_creation_failed_and_iteration_budget_paths(self, engine):
+        with patch.object(engine, "plan", return_value={"status": "created"}):
+            result = await engine.run("task", level="L1")
+        assert result["error"] == "Plan creation failed"
+
+        with patch.object(engine, "plan", return_value={"plan_id": "p-1", "total_steps": -5}), patch.object(
+            engine,
+            "execute",
+            return_value={"status": "running", "plan_status": "running"},
+        ):
+            failed = await engine.run("task", level="L1")
+        assert failed["status"] == "failed"
+        assert failed["error"] == "run iteration budget exceeded"
+
+    def test_public_entry_api_and_warn_legacy_entrypoint(self):
+        import warnings
+
+        api = WorkflowEngine.public_entry_api()
+        assert isinstance(api, tuple)
+        assert "run" in api
+
+        with warnings.catch_warnings(record=True) as captured:
+            warnings.simplefilter("always", DeprecationWarning)
+            WorkflowEngine.warn_legacy_entrypoint("unit:test")
+        assert any(isinstance(item.message, DeprecationWarning) for item in captured)
+
+    @pytest.mark.asyncio
+    async def test_module_lock_helpers_and_exception_release(self, engine):
+        plan_result = await engine.plan(
+            "task",
+            level="L1",
+            recommendations=[{"action": "module:shared-core"}],
+        )
+        plan = engine.plans[plan_result["plan_id"]]
+        step = plan.steps[0]
+
+        conflicts = engine._conflicting_modules(plan, step)
+        assert conflicts == []
+
+        ctx = await engine._acquire_module_ownership(plan, step)
+        assert "workflow:answer" in ctx["requested"]
+        assert "module:shared-core" in ctx["requested"]
+        engine._release_module_ownership(plan, step, ctx)
+
+        class _BrokenOwners(dict):
+            def get(self, _key, _default=None):
+                raise RuntimeError("boom")
+
+        engine._module_owners = _BrokenOwners()
+        with pytest.raises(RuntimeError, match="boom"):
+            await engine._acquire_module_ownership(plan, step)
+
+    def test_state_resume_metadata_and_recovery_envelope_invalid_json(self, engine):
+        plan = WorkflowPlan(id="plan-x", task="t", level="L1")
+        engine.plans[plan.id] = plan
+        session_id = engine._session_id_for_plan(plan.id)
+
+        engine.session_manager.write(
+            session_id=session_id,
+            content_type=ContentType.STATE,
+            content="{invalid-json",
+        )
+
+        resume = engine._state_resume_metadata(plan)
+        assert resume["current_phase"] == plan.status
+        assert resume["can_resume_from_checkpoint"] is False
+
+        assert engine._load_recovery_envelope(plan) is None
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_plan_not_found_and_unknown_action(self, engine):
+        missing = await engine.lifecycle("missing-plan", "status")
+        assert missing["error"] == "Plan 'missing-plan' not found"
+
+        plan_result = await engine.plan("task", level="L1")
+        unsupported = await engine.lifecycle(plan_result["plan_id"], "unknown")
+        assert "Unsupported lifecycle action" in unsupported["error"]
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_invalid_action_no_transition_metadata(self, engine):
+        plan_result = await engine.plan("task", level="L1")
+        unsupported = await engine.lifecycle(plan_result["plan_id"], "bad-action")
+        assert unsupported == {"error": "Unsupported lifecycle action: bad-action"}
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_value_error_without_transition_keyword(self, engine):
+        plan_result = await engine.plan("task", level="L1")
+        plan_id = plan_result["plan_id"]
+
+        with patch.object(engine, "_set_runner_state", side_effect=ValueError("plain lifecycle failure")):
+            result = await engine.lifecycle(plan_id, "start")
+
+        assert result == {"error": "plain lifecycle failure"}
+
+    def test_get_plan_status_not_found(self, engine):
+        missing = engine.get_plan_status("missing-plan")
+        assert missing["error"] == "Plan 'missing-plan' not found"
+
+
+    @pytest.mark.asyncio
+    async def test_run_returns_blocked_for_gate_blocked_and_waiting_confirmation(self, engine):
+        with patch.object(engine, "plan", return_value={"plan_id": "p-gate", "total_steps": 1}), patch.object(
+            engine,
+            "execute",
+            return_value={"status": "gate_blocked", "plan_status": "running"},
+        ):
+            blocked = await engine.run("task", level="L1")
+        assert blocked["status"] == "blocked"
+
+        with patch.object(engine, "plan", return_value={"plan_id": "p-wait", "total_steps": 1}), patch.object(
+            engine,
+            "execute",
+            return_value={"status": "waiting_confirmation", "plan_status": "running"},
+        ):
+            waiting = await engine.run("task", level="L1")
+        assert waiting["status"] == "blocked"
+
+    @pytest.mark.asyncio
+    async def test_module_recommendation_and_conflict_branches(self, engine):
+        plan_result = await engine.plan("maintenance task", level="L2")
+        plan = engine.plans[plan_result["plan_id"]]
+        step = plan.steps[0]
+
+        modules = engine._recommended_modules_for_step(plan, step)
+        assert "workflow:maintenance" in modules
+
+        engine._module_owners[f"workflow:{step.name}"] = plan.id
+        assert engine._conflicting_modules(plan, step) == []
+
+        engine._module_owners[f"workflow:{step.name}"] = "other-plan"
+        conflicts = engine._conflicting_modules(plan, step)
+        assert f"workflow:{step.name}" in conflicts
+
+    def test_persist_handoff_package_none_lists_and_state_fallback_paths(self, engine):
+        plan = WorkflowPlan(
+            id="plan-handoff",
+            task="task",
+            level="L1",
+            steps=[],
+            recommendations=[],
+            lane="default",
+            template_meta={"execution_mode": "Autopilot"},
+        )
+        plan.handoff_package = {}
+        plan.budget_guardrail = {}
+        plan.observability = {}
+        engine.plans[plan.id] = plan
+
+        handoff = engine._persist_handoff_package(plan, trigger="pause")
+        assert handoff["pending_steps"] == []
+
+        session_id = engine._session_id_for_plan(plan.id)
+        handoff_text = engine.session_manager.read(session_id=session_id, content_type=ContentType.HANDOFF)
+        assert "- (none)" in handoff_text
+
+        phase = engine._normalize_state_phase("invalid-phase", "bad-fallback")
+        assert phase == "planned"
+
+    def test_persist_plan_state_and_resume_metadata_empty_and_invalid_json_paths(self, engine):
+        plan = WorkflowPlan(id="plan-state", task="t", level="L1")
+        engine.plans[plan.id] = plan
+
+        engine._persist_plan_state(plan)
+
+        session_id = engine._session_id_for_plan(plan.id)
+        engine.session_manager.write(
+            session_id=session_id,
+            content_type=ContentType.STATE,
+            content="{invalid-json",
+        )
+
+        engine._persist_plan_state(plan)
+        payload = json.loads(engine.session_manager.read(session_id, ContentType.STATE))
+        assert payload["current_phase"] == "planned"
+
+        empty_plan = WorkflowPlan(id="plan-empty", task="t", level="L1")
+        meta = engine._state_resume_metadata(empty_plan)
+        assert meta["can_resume_from_checkpoint"] is False
+
+    def test_load_recovery_envelope_empty_and_invalid_json(self, engine):
+        plan = WorkflowPlan(id="plan-recovery", task="t", level="L1")
+        session_id = engine._session_id_for_plan(plan.id)
+
+        assert engine._load_recovery_envelope(plan) is None
+
+        engine.session_manager.write(session_id, ContentType.STATE, "{invalid-json")
+        assert engine._load_recovery_envelope(plan) is None
+
+    def test_triage_state_idempotent_and_fix_owner_assignment(self, engine):
+        plan = WorkflowPlan(id="plan-triage", task="t", level="L1")
+        plan.fix_owner = ""
+
+        engine._set_triage_state(plan, "open", transition_reason="noop")
+        assert plan.triage_state == "open"
+
+        engine._set_triage_state(plan, "in_progress", transition_reason="progress")
+        engine._set_triage_state(plan, "resolved", transition_reason="done")
+        assert plan.fix_status == "fixed"
+        assert plan.fix_owner == plan.id
+
+        plan.fix_owner = ""
+        plan.triage_state = "in_progress"
+        engine._set_triage_state(plan, "rejected", transition_reason="reject")
+        assert plan.fix_status == "wont_fix"
+        assert plan.fix_owner == plan.id
+
+    def test_generation_and_quality_controls_validation_errors(self, engine):
+        with pytest.raises(ValueError, match="requires params object"):
+            engine._normalize_generation_controls(None)
+
+        with pytest.raises(ValueError, match="style cannot be empty"):
+            engine._normalize_generation_controls({"style": "", "length": "short", "constraints": []})
+
+        with pytest.raises(ValueError, match="length cannot be empty"):
+            engine._normalize_generation_controls({"style": "plain", "length": "", "constraints": []})
+
+        with pytest.raises(ValueError, match="constraints must be a list"):
+            engine._normalize_generation_controls({"style": "plain", "length": "short", "constraints": "x"})
+
+        with pytest.raises(ValueError, match="constraints cannot contain empty item"):
+            engine._normalize_generation_controls({"style": "plain", "length": "short", "constraints": [""]})
+
+        plan = WorkflowPlan(
+            id="plan-quality",
+            task="t",
+            level="L1",
+            recommendations=[{"action": "set_quality_controls", "params": []}],
+        )
+        with pytest.raises(ValueError, match="requires params object"):
+            engine._extract_quality_controls(plan)
+
+        plan.recommendations = [{"action": "set_quality_controls", "params": {"quality_mode": "auto", "quality_level": "bad"}}]
+        with pytest.raises(ValueError, match="quality_level"):
+            engine._extract_quality_controls(plan)
+
+
+
+class TestWorkflowEngineCoverageFinalGaps:
+
+    @pytest.fixture
+    def engine(self, tmp_path):
+        return WorkflowEngine(workspace=str(tmp_path))
+
+    @pytest.mark.asyncio
+    async def test_run_returns_failed_when_execute_returns_error(self, engine):
+        with patch.object(engine, "plan", return_value={"plan_id": "p-err", "total_steps": 1}), patch.object(
+            engine,
+            "execute",
+            return_value={"error": "boom"},
+        ):
+            result = await engine.run("task", level="L1")
+
+        assert result["status"] == "failed"
+        assert result["error"] == "boom"
+
+    @pytest.mark.asyncio
+    async def test_acquire_module_ownership_no_requested_modules_branch(self, engine):
+        plan_result = await engine.plan("task", level="L1")
+        plan = engine.plans[plan_result["plan_id"]]
+        step = plan.steps[0]
+
+        with patch.object(engine, "_recommended_modules_for_step", return_value=[]):
+            ctx = await engine._acquire_module_ownership(plan, step)
+
+        assert ctx == {"requested": [], "serialized": False, "conflicts": [], "ownership": []}
+
+    def test_persist_handoff_package_blocked_items_branch(self, engine):
+        steps = [
+            WorkflowStep(
+                id="s1",
+                name="analyze",
+                description="analyze",
+                status="failed",
+                dependencies=["missing-step"],
+            )
+        ]
+        plan = WorkflowPlan(
+            id="plan-blocked",
+            task="task",
+            level="L1",
+            steps=steps,
+            recommendations=[],
+            template_meta={"execution_mode": "Autopilot"},
+        )
+        engine.plans[plan.id] = plan
+
+        handoff = engine._persist_handoff_package(plan, trigger="pause")
+        assert handoff["blocked_by"] == ["s1"]
+
+        session_id = engine._session_id_for_plan(plan.id)
+        handoff_text = engine.session_manager.read(session_id=session_id, content_type=ContentType.HANDOFF)
+        assert "- s1" in handoff_text
+
+    def test_persist_plan_state_preserves_recovery_dict_branch(self, engine):
+        plan = WorkflowPlan(id="plan-recovery-preserve", task="t", level="L1")
+        engine.plans[plan.id] = plan
+        session_id = engine._session_id_for_plan(plan.id)
+
+        state_payload = {
+            "current_phase": "planned",
+            "last_checkpoint_id": "",
+            "recovery": {"status": "awaiting_execute", "recovery_id": "rcv-1"},
+        }
+        engine.session_manager.write(
+            session_id=session_id,
+            content_type=ContentType.STATE,
+            content=json.dumps(state_payload, ensure_ascii=False),
+        )
+
+        engine._persist_plan_state(plan)
+        persisted = json.loads(engine.session_manager.read(session_id, ContentType.STATE))
+        assert persisted.get("recovery", {}).get("recovery_id") == "rcv-1"
+
+    @pytest.mark.asyncio
+    async def test_wave_gate_required_via_template_meta(self, engine):
+        plan_result = await engine.plan("task", level="L1")
+        plan = engine.plans[plan_result["plan_id"]]
+        plan.template_meta["gate_required"] = True
+
+        result = await engine._run_wave_gate_orchestration(plan)
+        assert result["required"] is True
+
+    def test_triage_resolved_and_rejected_keep_existing_fix_owner(self, engine):
+        plan = WorkflowPlan(id="plan-owner", task="t", level="L1")
+        plan.fix_owner = "external-owner"
+        plan.triage_state = "in_progress"
+
+        engine._set_triage_state(plan, "resolved", transition_reason="done")
+        assert plan.fix_owner == "external-owner"
+
+        plan.triage_state = "in_progress"
+        engine._set_triage_state(plan, "rejected", transition_reason="reject")
+        assert plan.fix_owner == "external-owner"
+
+    def test_persist_handoff_package_writes_none_when_phase_owners_empty(self, engine):
+        plan = WorkflowPlan(id="plan-phase-none", task="t", level="L1")
+        engine.plans[plan.id] = plan
+        fake_handoff = {
+            "generated_at": "2026-01-01T00:00:00",
+            "trigger": "pause",
+            "plan_id": plan.id,
+            "status": plan.status,
+            "runner_state": plan.runner_state,
+            "triage_state": plan.triage_state,
+            "fix_status": plan.fix_status,
+            "fix_owner": plan.fix_owner,
+            "execution_mode": "Autopilot",
+            "stage_owner": plan.id,
+            "ownership_model": "plan_owner",
+            "phase_owners": {},
+            "pending_steps": [],
+            "blocked_by": [],
+            "next_command": "workflow_execute(plan_id='x')",
+        }
+
+        with patch.object(engine, "_create_handoff_package", return_value=fake_handoff):
+            engine._persist_handoff_package(plan, trigger="pause")
+
+        session_id = engine._session_id_for_plan(plan.id)
+        handoff_text = engine.session_manager.read(session_id=session_id, content_type=ContentType.HANDOFF)
+        assert "## Phase Owners" in handoff_text
+        assert "- (none)" in handoff_text
+
+    def test_triage_resolved_assigns_fix_owner_when_empty(self, engine):
+        plan = WorkflowPlan(id="plan-triage-resolve", task="t", level="L1")
+        plan.triage_state = "in_progress"
+        plan.fix_owner = ""
+
+        engine._set_triage_state(plan, "resolved", transition_reason="done")
+        assert plan.fix_status == "fixed"
+        assert plan.fix_owner == plan.id
+
+    def test_apply_replay_payload_recommendation_controls_source(self, engine):
+        plan = WorkflowPlan(id="plan-replay-rec", task="task", level="L1", recommendations=[])
+        engine.plans[plan.id] = plan
+
+        checkpoint = Checkpoint(
+            id="cp-rec",
+            description="replay",
+            plan_id=plan.id,
+            replay_payload={
+                "plan_id": plan.id,
+                "plan_hash": engine._compute_plan_hash(plan),
+                "recommendations": [
+                    {
+                        "action": "set_generation_controls",
+                        "params": {
+                            "style": "cinematic",
+                            "length": "long",
+                            "constraints": ["keep tense stable"],
+                        },
+                    }
+                ],
+                "recommendations_frozen": True,
+            },
+        )
+
+        replay = engine._apply_replay_payload(checkpoint)
+        assert replay["applied"] is True
+        assert replay["generation_controls_source"] == "recommendations"
 

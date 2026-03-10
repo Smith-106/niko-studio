@@ -55,6 +55,24 @@ class TestKnowledgeLayerInit:
         assert "provenance" in tables
 
 
+    def test_add_document_vector_store_error_bubbles(self, tmp_path):
+        kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        kl.vector_store = MagicMock()
+        kl.vector_store.add_document.side_effect = RuntimeError("vector store down")
+
+        with pytest.raises(RuntimeError, match="vector store down"):
+            kl.add_document("doc-1", "content")
+
+    def test_add_document_logs_success(self, tmp_path):
+        kl = AgentKnowledgeLayer(db_path=str(tmp_path / "kl.db"))
+        kl.vector_store = MagicMock()
+
+        with patch("src.services.knowledge_layer.logger.info") as info:
+            kl.add_document("doc-2", "content")
+
+        info.assert_called_once_with("Ingested document doc-2 into unified store.")
+
+
 # ============================================================
 # Entity CRUD
 # ============================================================

@@ -561,3 +561,17 @@ class TestSessionIdValidation:
         sm = SessionManager(base_path=str(tmp_path / "sessions"))
         with pytest.raises(ValueError):
             sm._resolve_path("../escape", ContentType.OUTLINE)
+
+    def test_resolve_path_rejects_path_escape_from_kwargs(self, tmp_path):
+        sm = SessionManager(base_path=str(tmp_path / "sessions"))
+        sm.init("sess-safe")
+
+        class _BoundaryEscapeContentType:
+            value = "escape"
+
+        with patch(
+            "src.workflow.session.session_manager.PATH_ROUTES",
+            {**PATH_ROUTES, _BoundaryEscapeContentType: "{base}/{id}"},
+        ):
+            with pytest.raises(ValueError, match="escapes session boundary"):
+                sm._resolve_path("sess-safe", _BoundaryEscapeContentType, id="../outside")

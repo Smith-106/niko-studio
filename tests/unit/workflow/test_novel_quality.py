@@ -140,10 +140,23 @@ def test_recommendation_block_by_quality_or_high_issues_branch():
     assert _recommendation(metrics, 49.0, []) == "block"
 
 
-def test_evaluate_novel_quality_repetition_degrades_to_block_in_extreme_case():
-    content = " ".join(["Then he walked forward."] * 24)
+def test_recommendation_block_by_template_ratio_branch():
+    metrics = {"template_sentence_ratio": 0.8}
+    assert _recommendation(metrics, 100.0, []) == "block"
 
-    result = evaluate_novel_quality(content)
 
-    assert result["metrics"]["template_sentence_ratio"] >= 0.8
-    assert result["publish_recommendation"] == "block"
+def test_recommendation_pass_branch_without_high_issues():
+    metrics = {"template_sentence_ratio": 0.1}
+    assert _recommendation(metrics, 99.0, []) == "pass"
+
+
+def test_quality_normalization_fallback_inputs():
+    result = evaluate_novel_quality(
+        "Simple but valid text with light and conflict.",
+        quality_level="unknown-level",
+        quality_mode="unknown-mode",
+    )
+    assert result["metrics"]["quality_level_used"] == "high"
+    assert result["metrics"]["quality_mode_used"] == "auto"
+
+

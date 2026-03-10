@@ -586,3 +586,217 @@ class TestRunRevisionLoop:
         assert "修订循环完成" in out
         assert "最终决策: APPROVED" in out
         assert result["total_revisions"] == 2
+
+
+
+    def test_record_degrade_step_returns_false_at_fluent_floor_and_severity_mapping(self):
+        loop = RevisionLoop(RevisionConfig(quality_mode="auto", quality_level="fluent"))
+        assert loop._record_degrade_step("timeout:critic", "critic") is False
+
+        assert loop._normalize_severity("med") == "medium"
+        assert loop._normalize_severity("minor") == "low"
+        assert loop._normalize_severity("unknown") == "medium"
+
+    @pytest.mark.asyncio
+    async def test_run_revision_loop_timeout_and_error_verbose_branches(self, capsys):
+        call = {"n": 0}
+
+        async def critic_flaky(_draft, _scene_card):
+            call["n"] += 1
+            if call["n"] == 1:
+                raise RuntimeError("critic fail once")
+            return {"total_score": 99, "decision": "APPROVED", "lock_analysis": {"C": {"score": 9}}}
+
+        async def writer_passthrough(draft, _feedback):
+            return draft
+
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=writer_passthrough,
+            critic_fn=critic_flaky,
+            config=RevisionConfig(quality_mode="auto", quality_level="ultra", degrade_on_error=True),
+            verbose=True,
+        )
+
+        out = capsys.readouterr().out
+        assert "质量降级: critic error ->" in out
+        assert result["final_decision"] == "APPROVED"
+
+    @pytest.mark.asyncio
+    async def test_run_revision_loop_writer_timeout_and_error_verbose_branches(self, capsys):
+        async def critic_revise(_draft, _scene_card):
+            return {"total_score": 60, "decision": "REVISE", "actionable_feedback": "revise"}
+
+        writer_call = {"n": 0}
+
+        async def writer_flaky(_draft, _feedback):
+            writer_call["n"] += 1
+            if writer_call["n"] == 1:
+                await asyncio.sleep(0.02)
+            elif writer_call["n"] == 2:
+                raise RuntimeError("writer fail once")
+            return "revised"
+
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=writer_flaky,
+            critic_fn=critic_revise,
+            config=RevisionConfig(
+                quality_mode="auto",
+                quality_level="ultra",
+                quality_phase_timeout_seconds=0.001,
+                degrade_on_timeout=True,
+                degrade_on_error=True,
+                max_revisions=3,
+            ),
+            verbose=True,
+        )
+
+        out = capsys.readouterr().out
+        assert "writer timeout ->" in out
+        assert "writer error ->" in out
+        assert result["final_decision"] == "HUMAN_REVIEW"
+
+    @pytest.mark.asyncio
+    async def test_run_revision_loop_critic_timeout_with_degrade_prints_verbose_trace(self, capsys):
+        critic_call = {"n": 0}
+
+        async def critic_timeout_then_pass(_draft, _scene_card):
+            critic_call["n"] += 1
+            if critic_call["n"] == 1:
+                await asyncio.sleep(0.02)
+            return {"total_score": 99, "decision": "APPROVED", "lock_analysis": {"C": {"score": 9}}}
+
+        async def writer_passthrough(draft, _feedback):
+            return draft
+
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=writer_passthrough,
+            critic_fn=critic_timeout_then_pass,
+            config=RevisionConfig(
+                quality_mode="auto",
+                quality_level="ultra",
+                quality_phase_timeout_seconds=0.001,
+                degrade_on_timeout=True,
+            ),
+            verbose=True,
+        )
+
+        out = capsys.readouterr().out
+        assert "critic timeout ->" in out
+        assert result["final_decision"] == "APPROVED"
+
+    @pytest.mark.asyncio
+    async def test_run_revision_loop_writer_timeout_without_degrade_sets_timeout_reason(self):
+        async def critic_revise(_draft, _scene_card):
+            return {"total_score": 60, "decision": "REVISE", "actionable_feedback": "revise"}
+
+        async def writer_timeout(_draft, _feedback):
+            await asyncio.sleep(0.02)
+            return "revised"
+
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=writer_timeout,
+            critic_fn=critic_revise,
+            config=RevisionConfig(
+                quality_mode="auto",
+                quality_level="high",
+                quality_phase_timeout_seconds=0.001,
+                degrade_on_timeout=False,
+                max_revisions=2,
+            ),
+            verbose=False,
+        )
+
+        assert result["final_decision"] == "HUMAN_REVIEW"
+        assert result["degrade_reason"] == "timeout:writer"
+        assert RevisionLoop._normalize_quality_level("invalid") == "high"
+        assert RevisionLoop._next_quality_level("fluent") == "fluent"
+
+    def test_handle_runtime_event_respects_feature_flags(self):
+        timeout_disabled = RevisionLoop(RevisionConfig(degrade_on_timeout=False))
+        assert timeout_disabled.handle_runtime_event("timeout", "critic") is False
+
+        error_disabled = RevisionLoop(RevisionConfig(degrade_on_error=False))
+        assert error_disabled.handle_runtime_event("error", "writer") is False
+
+    def test_persist_checkpoint_empty_id_and_feedback_artifacts_instruction_paths(self):
+        loop = RevisionLoop()
+
+        assert loop._persist_checkpoint_artifact({}) == ""
+
+        loop.update_from_critic(
+            {
+                "total_score": 60,
+                "decision": "REVISE",
+                "actionable_feedback": "need revision",
+                "revision_instructions": [
+                    "not-a-dict",
+                    {
+                        "target": "scene-1",
+                        "issue": "pacing",
+                        "suggestion": "tighten beats",
+                        "priority": "critical",
+                    },
+                    {
+                        "target": "chapter-1",
+                        "issue": "tone",
+                        "suggestion": "smooth transitions",
+                        "priority": "minor",
+                    },
+                ],
+            }
+        )
+
+        artifacts = loop.state.feedback_artifacts
+        assert len(artifacts) == 2
+        assert artifacts[0]["scope"] == "scene"
+        assert artifacts[0]["severity"] == "high"
+        assert artifacts[1]["scope"] == "chapter"
+        assert artifacts[1]["severity"] == "low"
+
+    @pytest.mark.asyncio
+    async def test_run_revision_loop_critic_error_without_degrade_escalates_human_review(self):
+        async def critic_raises(_draft, _scene_card):
+            raise RuntimeError("critic boom")
+
+        async def writer_passthrough(draft, _feedback):
+            return draft
+
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=writer_passthrough,
+            critic_fn=critic_raises,
+            config=RevisionConfig(degrade_on_error=False),
+            verbose=False,
+        )
+
+        assert result["final_decision"] == "HUMAN_REVIEW"
+        assert result["degrade_reason"] == "error:critic:RuntimeError"
+
+    @pytest.mark.asyncio
+    async def test_run_revision_loop_writer_error_without_degrade_escalates_human_review(self):
+        async def critic_revise(_draft, _scene_card):
+            return {"total_score": 60, "decision": "REVISE", "actionable_feedback": "fix"}
+
+        async def writer_raises(_draft, _feedback):
+            raise RuntimeError("writer boom")
+
+        result = await run_revision_loop(
+            draft="initial",
+            scene_card={},
+            writer_fn=writer_raises,
+            critic_fn=critic_revise,
+            config=RevisionConfig(degrade_on_error=False),
+            verbose=False,
+        )
+
+        assert result["final_decision"] == "HUMAN_REVIEW"
+        assert result["degrade_reason"] == "error:writer:RuntimeError"

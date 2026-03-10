@@ -621,22 +621,29 @@ class TestArchitectureBoundaryIntegration:
 
     @pytest.mark.asyncio
     async def test_boundary_graph_run_session_uses_graph_facade_only(self, monkeypatch):
-        from src.workflow.adapters.novel_adapter import NovelAdapter
-        from src.workflow.graph import run_writing_session
+        from src.workflow import graph as workflow_graph
 
-        class _DummyLLM:
-            pass
+        class _DummyCompiledApp:
+            async def astream(self, initial_state):
+                yield {"writer": {"workflow_level": "L1"}}
 
-        monkeypatch.setattr(NovelAdapter, "_get_llm", lambda self: _DummyLLM())
+        compile_calls = {"count": 0}
 
-        result = await run_writing_session(
+        def _fake_compile_graph(config, use_memory=False):
+            compile_calls["count"] += 1
+            return _DummyCompiledApp()
+
+        monkeypatch.setattr(workflow_graph, "compile_graph", _fake_compile_graph)
+
+        result = await workflow_graph.run_writing_session(
             user_idea="写一个短故事开头",
             target_chapters=1,
             verbose=False,
         )
 
+        assert compile_calls["count"] == 1
         assert isinstance(result, dict)
-        assert "workflow_level" in result or "errors" in result
+        assert result.get("workflow_level") == "L1"
 
     @pytest.mark.asyncio
     async def test_boundary_graph_run_session_emits_legacy_warning(self, monkeypatch):
