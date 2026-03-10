@@ -444,9 +444,9 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
                   aria-label={t.knowledgeForeshadowStatusPlaceholder}
                   className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
                 >
-                  <option value="pending">pending</option>
-                  <option value="resolved">resolved</option>
-                  <option value="all">all</option>
+                  <option value="pending">{t.knowledgeForeshadowStatusPending}</option>
+                  <option value="resolved">{t.knowledgeForeshadowStatusResolved}</option>
+                  <option value="all">{t.knowledgeForeshadowStatusAll}</option>
                 </select>
                 <input
                   value={foreshadowChapter}

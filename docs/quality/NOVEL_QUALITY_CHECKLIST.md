@@ -70,6 +70,12 @@
 - [ ] 周度质量统计已同步：`.workflow/evidence/weekly/YYYY-Www-review.md`
 - [ ] 如涉及流程失败，已补失败记录：`.workflow/evidence/e2e/YYYY-MM-DD-failures.md`
 
+### 7.1 Phase 4（接口 -> UI）执行留档
+
+- [x] `npx vitest src/api/client.test.ts src/components/EvaluationPanel.test.tsx` 已执行（PASS，2026-03-11）。
+- [x] `pytest -q -o addopts='' tests/integration/test_workflow_integration.py` 已执行（PASS，2026-03-11）。
+- [x] 本次结果已落档到 `.workflow/evidence/e2e/2026-03-11-failures.md` 与 `.workflow/evidence/quality/2026-03-11-revision-case.md`。
+
 ## 8. 经典情节原型对照（Tobias 20 Master Plots）
 
 > 用途：在“章节目标一句话”与“卷级推进目标”阶段，快速校验当前章节属于哪类主驱动情节，避免主线偏航。

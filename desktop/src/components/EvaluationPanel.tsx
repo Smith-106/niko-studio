@@ -81,15 +81,20 @@ const buildDimensions = (
     actionable_feedback: string
   },
   fallbackFeedback: string,
+  t: Translations,
 ) => {
   return [
-    { name: 'LOCK', score: Number((data.lock_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
-    { name: 'Style', score: Number((data.style_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
-    { name: 'Logic', score: Number((data.logic_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
+    { name: t.evaluationDimensionLock, score: Number((data.lock_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
+    { name: t.evaluationDimensionStyle, score: Number((data.style_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
+    { name: t.evaluationDimensionLogic, score: Number((data.logic_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
   ]
 }
 
-const toRecommendationPayload = (raw: unknown, index: number): RecommendationPayload => {
+const toRecommendationPayload = (
+  raw: unknown,
+  index: number,
+  translate: (key: keyof Translations, params?: Record<string, string | number>) => string,
+): RecommendationPayload => {
   if (typeof raw === 'string') {
     const title = raw.trim()
     return {
@@ -101,7 +106,7 @@ const toRecommendationPayload = (raw: unknown, index: number): RecommendationPay
   }
 
   if (!raw || typeof raw !== 'object') {
-    const fallback = `recommendation-${index + 1}`
+    const fallback = translate('evaluationRecommendationFallback', { index: index + 1 })
     return {
       id: `rec-${String(index + 1).padStart(2, '0')}`,
       title: fallback,
@@ -112,7 +117,8 @@ const toRecommendationPayload = (raw: unknown, index: number): RecommendationPay
 
   const record = raw as Record<string, unknown>
   const titleRaw = record.title ?? record.name ?? record.recommendation
-  const title = typeof titleRaw === 'string' && titleRaw.trim() ? titleRaw.trim() : `recommendation-${index + 1}`
+  const fallbackTitle = translate('evaluationRecommendationFallback', { index: index + 1 })
+  const title = typeof titleRaw === 'string' && titleRaw.trim() ? titleRaw.trim() : fallbackTitle
   const reasonRaw = record.reason
   const actionRaw = record.action
 
@@ -124,13 +130,16 @@ const toRecommendationPayload = (raw: unknown, index: number): RecommendationPay
   }
 }
 
-const normalizeSuggestionPayloads = (rawSuggestions: unknown): RecommendationPayload[] => {
+const normalizeSuggestionPayloads = (
+  rawSuggestions: unknown,
+  translate: (key: keyof Translations, params?: Record<string, string | number>) => string,
+): RecommendationPayload[] => {
   if (!Array.isArray(rawSuggestions)) {
     return []
   }
 
   return rawSuggestions
-    .map((item, index) => toRecommendationPayload(item, index))
+    .map((item, index) => toRecommendationPayload(item, index, translate))
     .filter((item) => item.title.length > 0)
 }
 
@@ -151,6 +160,13 @@ const defaultWorkflowActionStates = (): Record<WorkflowAction, WorkflowActionSta
   execute: { status: 'idle' },
   lifecycle: { status: 'idle' },
 })
+
+const getWorkflowActionLabel = (action: WorkflowAction, t: Translations): string => {
+  if (action === 'route') return t.evaluationWorkflowRoute
+  if (action === 'plan') return t.evaluationWorkflowPlan
+  if (action === 'execute') return t.evaluationWorkflowExecute
+  return t.evaluationWorkflowLifecycle
+}
 
 const stringifyWorkflowPayload = (payload: unknown): string => {
   try {
@@ -176,10 +192,11 @@ const formatSuggestionMessage = (
   result: RecommendationExecutionResult,
   fallbackAction: 'apply' | 'undo',
   t: Translations,
+  translate: (key: keyof Translations, params?: Record<string, string | number>) => string,
 ): string => {
   const actionLabel = fallbackAction === 'apply' ? t.evaluationApply : t.evaluationUndo
   if (result.error) {
-    return `${actionLabel}失败：${result.error}`
+    return translate('evaluationActionFailedWithReason', { action: actionLabel, reason: result.error })
   }
   if (result.message) {
     return result.message
@@ -310,10 +327,10 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       })
       if (response.success && response.data) {
         const data = response.data
-        const suggestions = normalizeSuggestionPayloads(data.suggestions)
+        const suggestions = normalizeSuggestionPayloads(data.suggestions, translate)
         setResult({
           score: Number((data.total_score / 10).toFixed(1)),
-          dimensions: buildDimensions(data, t.evaluationNoFeedback),
+          dimensions: buildDimensions(data, t.evaluationNoFeedback, t),
           suggestions,
           decision: data.decision,
         })
@@ -336,7 +353,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       const issues = result?.suggestions.map((item) => item.title).filter(Boolean)
       const response = await getImprovementSuggestions(content, issues, 8)
       if (response.success && Array.isArray(response.data) && result) {
-        const suggestions = normalizeSuggestionPayloads(response.data)
+        const suggestions = normalizeSuggestionPayloads(response.data, translate)
         setResult({
           ...result,
           suggestions,
@@ -451,7 +468,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     setSuggestionState(suggestion.id, {
       mode: nextMode,
       status: nextStatus,
-      message: formatSuggestionMessage(response.data, 'apply', t),
+      message: formatSuggestionMessage(response.data, 'apply', t, translate),
     })
   }
 
@@ -480,7 +497,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     setSuggestionState(suggestion.id, {
       mode: nextMode,
       status: nextStatus,
-      message: formatSuggestionMessage(response.data, 'undo', t),
+      message: formatSuggestionMessage(response.data, 'undo', t, translate),
     })
   }
 
@@ -515,7 +532,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       setSuggestionState(item.recommendation_id, {
         mode: item.status === 'applied' ? 'rollback-ready' : 'rollback-ready',
         status: item.status === 'applied' ? 'success' : 'error',
-        message: formatSuggestionMessage(item, 'apply', t),
+        message: formatSuggestionMessage(item, 'apply', t, translate),
       })
     }
 
@@ -553,7 +570,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
         setSuggestionState(suggestion.id, {
           mode: 'idle',
           status: 'success',
-          message: formatSuggestionMessage(response.data, 'undo', t),
+          message: formatSuggestionMessage(response.data, 'undo', t, translate),
         })
       } else {
         failedCount += 1
@@ -909,11 +926,11 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
               aria-label={t.evaluationWorkflowLifecycleActionLabel}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
             >
-              <option value="status">status</option>
-              <option value="start">start</option>
-              <option value="pause">pause</option>
-              <option value="resume">resume</option>
-              <option value="stop">stop</option>
+              <option value="status">{t.evaluationWorkflowLifecycleStatus}</option>
+              <option value="start">{t.evaluationWorkflowLifecycleStart}</option>
+              <option value="pause">{t.evaluationWorkflowLifecyclePause}</option>
+              <option value="resume">{t.evaluationWorkflowLifecycleResume}</option>
+              <option value="stop">{t.evaluationWorkflowLifecycleStop}</option>
             </select>
           </div>
 
@@ -957,7 +974,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
               return (
                 <div key={action} className="flex items-center justify-between gap-2">
                   <span className={state.status === 'error' ? 'text-red-500' : state.status === 'success' ? 'text-green-600' : 'text-gray-500'}>
-                    {action}: {state.message}
+                    {getWorkflowActionLabel(action, t)}: {state.message}
                   </span>
                   {state.status === 'error' && (
                     <button

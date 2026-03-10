@@ -504,14 +504,26 @@ def test_streamlit_get_directory_state_skip_oserror(monkeypatch, tmp_path):
 
 def test_streamlit_language_switch_triggers_state_update(monkeypatch):
     def _setup_fake(fake_st):
-        fake_st._selectbox_values["Language / 语言"] = "English"
+        fake_st._selectbox_values["语言"] = "英文"
         fake_st._button_queue = [False, False, False]
         fake_st.session_state.language = "中文"
         fake_st.session_state.messages = []
 
     _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake)
 
-    assert fake_st.session_state.language == "English"
+    assert fake_st.session_state.language == "en"
+
+
+
+def test_streamlit_english_language_code_uses_english_workflow_options(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._button_queue = [False, False, False]
+        fake_st.session_state.language = "en"
+        fake_st.session_state.messages = []
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake)
+
+    assert fake_st.session_state.language == "en"
 
 
 

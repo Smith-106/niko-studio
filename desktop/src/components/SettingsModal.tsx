@@ -34,15 +34,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   if (!isOpen) return null
 
   const retrievalModes: Array<{ value: RetrievalSearchMode; label: string }> = [
-    { value: 'hybrid', label: 'Hybrid' },
-    { value: 'iterative', label: 'Iterative' },
-    { value: 'context', label: 'Context' },
+    { value: 'hybrid', label: t.settingsSearchModeHybrid },
+    { value: 'iterative', label: t.settingsSearchModeIterative },
+    { value: 'context', label: t.settingsSearchModeContext },
   ]
 
   const contextTypeOptions: Array<{ value: ContextType; label: string }> = [
-    { value: 'world', label: 'World' },
-    { value: 'character', label: 'Character' },
-    { value: 'plot', label: 'Plot' },
+    { value: 'world', label: t.settingsContextTypeWorld },
+    { value: 'character', label: t.settingsContextTypeCharacter },
+    { value: 'plot', label: t.settingsContextTypePlot },
   ]
 
   const updateNumericRetrievalField = (field: 'minScore' | 'budgetTokens' | 'maxIterations' | 'confidenceThreshold', raw: string) => {
@@ -121,13 +121,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const validateCustomModelInput = (value: string): { ok: boolean; reason?: string } => {
     if (!value) {
-      return { ok: false, reason: '模型名称不能为空。' }
+      return { ok: false, reason: t.settingsModelNameRequired }
     }
     if (value.length > 120) {
-      return { ok: false, reason: '模型名称过长（最多 120 个字符）。' }
+      return { ok: false, reason: t.settingsModelNameTooLong }
     }
     if (/\s/.test(value)) {
-      return { ok: false, reason: '模型名称不能包含空白字符。' }
+      return { ok: false, reason: t.settingsModelNameWhitespace }
     }
     return { ok: true }
   }
@@ -187,12 +187,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         })
       } else {
         const reason = res.error?.includes('gateway=')
-          ? `模型拉取失败（网关/直连均失败）：${res.error}`
-          : '模型拉取失败，请继续使用预置或自定义模型。'
+          ? t.settingsFetchModelsFailedWithReason.replace('{error}', res.error)
+          : t.settingsFetchModelsFailed
         setModelSyncError((prev) => ({ ...prev, [provider.id]: reason }))
       }
     } catch {
-      setModelSyncError((prev) => ({ ...prev, [provider.id]: '模型拉取失败，请继续使用预置或自定义模型。' }))
+      setModelSyncError((prev) => ({ ...prev, [provider.id]: t.settingsFetchModelsFailed }))
     } finally {
       setModelSyncLoading((prev) => ({ ...prev, [provider.id]: false }))
     }
@@ -202,7 +202,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const value = (customModelInputs[provider.id] ?? '').trim()
     const validation = validateCustomModelInput(value)
     if (!validation.ok) {
-      setModelSyncError((prev) => ({ ...prev, [provider.id]: validation.reason ?? '自定义模型不合法。' }))
+      setModelSyncError((prev) => ({ ...prev, [provider.id]: validation.reason ?? t.settingsInvalidCustomModel }))
       return
     }
 
@@ -224,13 +224,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const groups: Array<{ label: string; models: string[] }> = []
 
     if (staticModels.length > 0) {
-      groups.push({ label: '预置模型', models: staticModels })
+      groups.push({ label: t.settingsPresetModels, models: staticModels })
     }
     if (fetchedModels.length > 0) {
-      groups.push({ label: '自动拉取', models: fetchedModels })
+      groups.push({ label: t.settingsFetchedModels, models: fetchedModels })
     }
     if (customModels.length > 0) {
-      groups.push({ label: '自定义模型', models: customModels })
+      groups.push({ label: t.settingsCustomModels, models: customModels })
     }
 
     return groups
@@ -262,7 +262,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       if (!res.success || !data?.models?.length) {
         setModelValidateMessage((prev) => ({
           ...prev,
-          [provider.id]: { type: 'error', text: '默认模型校验失败：无法拉取模型列表。' },
+          [provider.id]: { type: 'error', text: t.settingsDefaultModelValidateFetchFailed },
         }))
         return
       }
@@ -274,18 +274,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       if (isValid) {
         setModelValidateMessage((prev) => ({
           ...prev,
-          [provider.id]: { type: 'success', text: `默认模型可用（来源：${data.source === 'gateway' ? '网关' : '直连'}）。` },
+          [provider.id]: {
+            type: 'success',
+            text: data.source === 'gateway' ? t.settingsDefaultModelAvailableViaGateway : t.settingsDefaultModelAvailableViaDirect,
+          },
         }))
       } else {
         setModelValidateMessage((prev) => ({
           ...prev,
-          [provider.id]: { type: 'error', text: '默认模型不在当前可用模型列表中。' },
+          [provider.id]: { type: 'error', text: t.settingsDefaultModelUnavailable },
         }))
       }
     } catch {
       setModelValidateMessage((prev) => ({
         ...prev,
-        [provider.id]: { type: 'error', text: '默认模型校验失败，请稍后重试。' },
+        [provider.id]: { type: 'error', text: t.settingsDefaultModelValidateFailed },
       }))
     } finally {
       setModelValidateLoading((prev) => ({ ...prev, [provider.id]: false }))
@@ -325,12 +328,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         setGatewayTools(null)
       }
       if (!(metricsRes.success && metricsRes.data?.metrics) || !(toolsRes.success && toolsRes.data)) {
-        setDiagnosticsError('诊断拉取失败，请稍后重试。')
+        setDiagnosticsError(t.settingsDiagnosticsFetchFailed)
       }
     } catch {
       setGatewayMetrics(null)
       setGatewayTools(null)
-      setDiagnosticsError('诊断拉取失败，请稍后重试。')
+      setDiagnosticsError(t.settingsDiagnosticsFetchFailed)
     } finally {
       setDiagnosticsLoading(false)
     }
@@ -367,17 +370,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         // 验证导入数据
         if (!importData.settings || !importData.version) {
-          throw new Error('无效的配置文件格式')
+          throw new Error(t.settingsInvalidConfigFile)
         }
 
         // 合并导入的设置
         setLocalSettings(importData.settings)
-        setImportMessage({ type: 'success', text: '设置导入成功！' })
+        setImportMessage({ type: 'success', text: t.importSuccess })
 
         // 3秒后清除消息
         setTimeout(() => setImportMessage(null), 3000)
       } catch (err) {
-        setImportMessage({ type: 'error', text: `导入失败: ${err instanceof Error ? err.message : '未知错误'}` })
+        setImportMessage({ type: 'error', text: `${t.settingsImportFailedPrefix}${err instanceof Error ? err.message : t.settingsUnknownError}` })
         setTimeout(() => setImportMessage(null), 3000)
       }
     }
@@ -394,7 +397,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       <div className="bg-white dark:bg-dark-surface rounded-2xl w-[700px] max-h-[85vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b dark:border-dark-border">
-          <h2 className="text-lg font-semibold dark:text-dark-text">设置</h2>
+          <h2 className="text-lg font-semibold dark:text-dark-text">{t.settingsTitle}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-lg transition-colors dark:text-dark-text"
@@ -407,10 +410,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div className="p-6 overflow-y-auto max-h-[65vh] space-y-6">
           {/* 后端设置 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">后端服务</h3>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.backendService}</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Niko-Studio 后端地址</label>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.backendUrl}</label>
                 <input
                   type="text"
                   value={localSettings.apiBaseUrl}
@@ -424,13 +427,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* 系统诊断 */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">系统诊断</h3>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.settingsDiagnostics}</h3>
               <button
                 onClick={refreshDiagnostics}
                 disabled={diagnosticsLoading}
                 className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
               >
-                {diagnosticsLoading ? '刷新中...' : '刷新诊断'}
+                {diagnosticsLoading ? t.mcpRefreshing : t.settingsRefreshDiagnostics}
               </button>
             </div>
 
@@ -440,21 +443,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
             <div className="space-y-3">
               <div className="border dark:border-dark-border rounded-lg p-3">
-                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">网关指标</div>
+                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsGatewayMetrics}</div>
                 {gatewayMetrics ? (
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-dark-text">
-                    <div>请求总数：{gatewayMetrics.requests_total}</div>
-                    <div>失败请求：{gatewayMetrics.requests_failed_total}</div>
-                    <div>平均延迟：{gatewayMetrics.latency_ms_avg} ms</div>
-                    <div>最大延迟：{gatewayMetrics.latency_ms_max} ms</div>
+                    <div>{t.mcpRequestsTotal.replace('{value}', String(gatewayMetrics.requests_total))}</div>
+                    <div>{t.mcpRequestsFailed.replace('{value}', String(gatewayMetrics.requests_failed_total))}</div>
+                    <div>{t.mcpLatencyAvg.replace('{value}', String(gatewayMetrics.latency_ms_avg))}</div>
+                    <div>{t.mcpLatencyMax.replace('{value}', String(gatewayMetrics.latency_ms_max))}</div>
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">暂无指标数据</div>
+                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">{t.settingsNoMetricsData}</div>
                 )}
               </div>
 
               <div className="border dark:border-dark-border rounded-lg p-3">
-                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">工具清单</div>
+                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsToolList}</div>
                 {gatewayTools && Object.keys(gatewayTools).length > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {Object.entries(gatewayTools).map(([service, tools]) => (
@@ -467,7 +470,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">暂无工具数据</div>
+                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">{t.settingsNoToolsData}</div>
                 )}
               </div>
             </div>
@@ -476,7 +479,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* LLM 提供商配置 */}
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">LLM 模型配置</h3>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.llmConfig}</h3>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -485,7 +488,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings({ ...localSettings, allowLlmFallback: e.target.checked })}
                     className="rounded"
                   />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">允许降级</span>
+                  <span className="text-gray-600 dark:text-dark-text-secondary">{t.settingsAllowFallback}</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -494,7 +497,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings({ ...localSettings, useMultiModel: e.target.checked })}
                     className="rounded"
                   />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">多模型并行</span>
+                  <span className="text-gray-600 dark:text-dark-text-secondary">{t.multiModel}</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -503,7 +506,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     onChange={(e) => setLocalSettings({ ...localSettings, detectionEvasionGuardEnabled: e.target.checked })}
                     className="rounded"
                   />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">检测规避拦截</span>
+                  <span className="text-gray-600 dark:text-dark-text-secondary">{t.settingsDetectionGuard}</span>
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -519,12 +522,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">检索 Provider / 模型</label>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProviderModel}</label>
                 <input
                   type="text"
                   value={providerSearch}
                   onChange={(e) => setProviderSearch(e.target.value)}
-                  placeholder="输入 provider 名称或模型关键字"
+                  placeholder={t.settingsRetrievalSearchPlaceholder}
                   className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
               </div>
@@ -547,7 +550,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       />
                       <span className="font-medium text-gray-800 dark:text-dark-text">{provider.name}</span>
                       {provider.id === localSettings.primaryProvider && provider.enabled && (
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">主要</span>
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">{t.primary}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -562,7 +565,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         disabled={!provider.apiKey || testingProvider === provider.id}
                         className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
                       >
-                        {testingProvider === provider.id ? '测试中...' : '测试连接'}
+                        {testingProvider === provider.id ? t.testing : t.testConnection}
                       </button>
                     </div>
                   </div>
@@ -570,14 +573,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   {provider.enabled && (
                     <div className="space-y-3 ml-6">
                       <div>
-                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">API Key</label>
+                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.apiKey}</label>
                         <div className="relative">
                           <input
                             type={showApiKeys[provider.id] ? 'text' : 'password'}
                             value={provider.apiKey}
                             onChange={(e) => updateLocalProvider(provider.id, { apiKey: e.target.value })}
                             className="w-full px-3 py-2 pr-10 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="sk-..."
+                            placeholder={t.settingsApiKeyPlaceholder}
                           />
                           <button
                             type="button"
@@ -591,7 +594,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Base URL</label>
+                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.baseUrl}</label>
                           <input
                             type="text"
                             value={provider.baseUrl}
@@ -600,7 +603,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">默认模型</label>
+                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultModel}</label>
                           <select
                             value={provider.defaultModel}
                             onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value, modelSelectionMode: 'list' })}
@@ -619,7 +622,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">模型来源</label>
+                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">{t.settingsModelSource}</label>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
@@ -627,14 +630,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                               disabled={modelValidateLoading[provider.id]}
                               className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
                             >
-                              {modelValidateLoading[provider.id] ? '校验中...' : '校验默认模型'}
+                              {modelValidateLoading[provider.id] ? t.settingsValidatingModel : t.settingsValidateDefaultModel}
                             </button>
                             <button
                               onClick={() => refreshProviderModels(provider)}
                               disabled={modelSyncLoading[provider.id]}
                               className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
                             >
-                              {modelSyncLoading[provider.id] ? '刷新中...' : '刷新模型'}
+                              {modelSyncLoading[provider.id] ? t.settingsRefreshingModels : t.settingsRefreshModels}
                             </button>
                           </div>
                         </div>
@@ -648,19 +651,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         )}
                         {provider.lastModelSyncAt && !modelSyncError[provider.id] && (
                           <p className="text-xs text-gray-400 dark:text-dark-text-secondary">
-                            最近同步：{new Date(provider.lastModelSyncAt).toLocaleString()}
+                            {t.settingsLastSync.replace('{value}', new Date(provider.lastModelSyncAt).toLocaleString())}
                           </p>
                         )}
                       </div>
 
                       <div className="space-y-2">
-                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">自定义模型</label>
+                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">{t.settingsCustomModel}</label>
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={customModelInputs[provider.id] ?? ''}
                             onChange={(e) => setCustomModelInputs((prev) => ({ ...prev, [provider.id]: e.target.value }))}
-                            placeholder="例如：gpt-4.1-mini"
+                            placeholder={t.settingsCustomModelPlaceholder}
                             className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                           />
                           <button
@@ -668,7 +671,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             onClick={() => applyCustomModel(provider)}
                             className="text-xs px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                           >
-                            使用该模型
+                            {t.settingsUseThisModel}
                           </button>
                         </div>
                       </div>
@@ -682,7 +685,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             onChange={() => setLocalSettings({ ...localSettings, primaryProvider: provider.id })}
                             className="text-blue-600"
                           />
-                          <label className="text-xs text-gray-600 dark:text-dark-text-secondary">设为主要提供商</label>
+                          <label className="text-xs text-gray-600 dark:text-dark-text-secondary">{t.setPrimary}</label>
                         </div>
                       )}
                     </div>
@@ -694,7 +697,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* 检索设置 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">检索设置</h3>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.settingsRetrieval}</h3>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <input
@@ -711,13 +714,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   className="rounded"
                 />
                 <label htmlFor="retrievalEnabled" className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                  启用 Knowledge Retrieval
+                  {t.settingsEnableKnowledgeRetrieval}
                 </label>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Search Mode</label>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsSearchMode}</label>
                   <select
                     value={localSettings.retrieval.searchMode}
                     onChange={(e) => setLocalSettings((prev) => ({
@@ -735,7 +738,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Profile</label>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProfile}</label>
                   <input
                     type="text"
                     value={localSettings.retrieval.profile}
@@ -746,12 +749,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         profile: e.target.value,
                       },
                     }))}
-                    placeholder="balanced"
+                    placeholder={t.settingsRetrievalProfilePlaceholder}
                     className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Min Score</label>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMinScore}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -761,7 +764,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Budget Tokens</label>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalBudgetTokens}</label>
                   <input
                     type="number"
                     value={localSettings.retrieval.budgetTokens ?? ''}
@@ -770,7 +773,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Max Iterations</label>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMaxIterations}</label>
                   <input
                     type="number"
                     min="1"
@@ -780,7 +783,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">Confidence Threshold</label>
+                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalConfidenceThreshold}</label>
                   <input
                     type="number"
                     min="0"
@@ -808,12 +811,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   className="rounded"
                 />
                 <label htmlFor="retrievalRerank" className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                  启用 Rerank
+                  {t.settingsEnableRerank}
                 </label>
               </div>
 
               <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">Agent Context Types</label>
+                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsAgentContextTypes}</label>
                 <div className="flex flex-wrap gap-4">
                   {contextTypeOptions.map((option) => (
                     <label key={option.value} className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-text-secondary">
@@ -850,7 +853,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <span className="text-sm text-gray-600 dark:text-dark-text w-10">{localSettings.temperature}</span>
                 </div>
                 <p className="text-xs text-gray-400 dark:text-dark-text-secondary mt-1">
-                  较低值 (0-0.3): 更确定性，适合事实性写作 | 较高值 (0.7-1): 更创造性，适合创意写作
+                  {t.temperatureDesc}
                 </p>
               </div>
             </div>
@@ -858,7 +861,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* 写作设置 */}
           <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">写作设置</h3>
+            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.writingSettings}</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultWorkflow}</label>

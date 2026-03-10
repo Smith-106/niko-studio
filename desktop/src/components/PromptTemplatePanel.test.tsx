@@ -3,6 +3,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { PromptTemplate } from '../stores/settingsStore'
 import { PromptTemplatePanel } from './PromptTemplatePanel'
+import { translations } from '../i18n'
+
+const zh = translations.zh
 
 const baseTemplates: PromptTemplate[] = [
   {
@@ -44,7 +47,7 @@ describe('PromptTemplatePanel', () => {
       />
     )
 
-    await userEvent.click(screen.getByRole('button', { name: '大纲' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.templateCategoryOutline }))
 
     expect(screen.queryByText('故事脑暴')).not.toBeInTheDocument()
     expect(screen.getAllByText('章节大纲').length).toBeGreaterThan(0)
@@ -63,7 +66,7 @@ describe('PromptTemplatePanel', () => {
       />
     )
 
-    await userEvent.click(screen.getByLabelText('收藏模板'))
+    await userEvent.click(screen.getByLabelText(zh.templateFavorite))
     expect(onToggleFavorite).toHaveBeenCalledWith('tpl-1')
   })
 
@@ -80,9 +83,9 @@ describe('PromptTemplatePanel', () => {
       />
     )
 
-    await userEvent.click(screen.getByRole('button', { name: '一键填充' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
 
-    expect(screen.getByText('该变量为必填项')).toBeInTheDocument()
+    expect(screen.getByText(zh.templateRequiredHint)).toBeInTheDocument()
     expect(onApplyTemplate).not.toHaveBeenCalled()
   })
 
@@ -103,9 +106,9 @@ describe('PromptTemplatePanel', () => {
       />
     )
 
-    await userEvent.type(screen.getByLabelText('主题 *'), '悬疑')
-    await userEvent.click(screen.getByRole('button', { name: '追加到输入框' }))
-    await userEvent.click(screen.getByRole('button', { name: '一键填充' }))
+    await userEvent.type(screen.getByLabelText(`${baseTemplates[0].variables[0].label} *`), '悬疑')
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAppend }))
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
 
     expect(onApplyTemplate).toHaveBeenCalledWith({
       text: '主题：悬疑；数量：7',
@@ -118,3 +121,4 @@ describe('PromptTemplatePanel', () => {
     })
   })
 })
+

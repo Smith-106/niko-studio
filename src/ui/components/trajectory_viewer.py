@@ -34,7 +34,7 @@ def render_trajectory_viewer(
     # 时间线视图
     for i, step in enumerate(trajectory):
         node_name = step.get("node", f"Step {i+1}")
-        default_action = "执行" if st.session_state.get("language") == "中文" else "Execute"
+        default_action = t("default_execute_action")
         action = step.get("action", default_action)
         thought = step.get("thought", "")
         result = step.get("result", {})

@@ -12,7 +12,7 @@ import os
 import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-from src.ui.translations import t
+from src.ui.translations import t, normalize_language_code
 from src.services.indexing_service import IndexingService
 from src.ui.file_utils import process_uploaded_file
 from src.ui.components.lock_radar import render_lock_radar
@@ -183,17 +183,18 @@ with st.sidebar:
 
     # Language Toggle
     if "language" not in st.session_state:
-        st.session_state.language = "中文"
+        st.session_state.language = "zh"
 
-    lang_idx = 0 if st.session_state.language == "中文" else 1
-    selected_lang = st.selectbox(
-        "Language / 语言",
-        ["中文", "English"],
-        index=lang_idx,
+    current_language_code = normalize_language_code(st.session_state.language)
+    selected_lang_label = st.selectbox(
+        t("language_selector"),
+        [t("lang_option_zh"), t("lang_option_en")],
+        index=0 if current_language_code == "zh" else 1,
         key="language_select"
     )
-    if selected_lang != st.session_state.language:
-        st.session_state.language = selected_lang
+    selected_lang_code = "zh" if selected_lang_label == t("lang_option_zh") else "en"
+    if selected_lang_code != current_language_code:
+        st.session_state.language = selected_lang_code
         st.rerun()
     
     # 会话管理
@@ -220,7 +221,7 @@ with st.sidebar:
         "L4: 故事探索 (brainstorm)",
         "L5: 全流程编排 (coordinator)"
     ]
-    if st.session_state.language == "English":
+    if current_language_code == "en":
         workflow_options = [
             "L1: Quick Edit (lite-lite-lite)",
             "L2: Scene Planning (lite-plan)",
@@ -246,7 +247,7 @@ with st.sidebar:
     
     # 参数设置 (参考 Cherry Studio)
     st.subheader(t("gen_params"))
-    temperature = st.slider("Temperature", 0.0, 1.0, 0.7, 0.1)
+    temperature = st.slider(t("temperature"), 0.0, 1.0, 0.7, 0.1)
     max_loops = st.number_input(t("max_loops"), min_value=1, max_value=10, value=3)
     
     # LOCK 评分阈值
@@ -402,9 +403,9 @@ with col_artifacts:
             file_key = f"{uploaded_file.name}_{uploaded_file.size}"
             if file_key not in st.session_state.processed_files:
                 try:
-                    with st.spinner(f"Processing {uploaded_file.name}..."):
+                    with st.spinner(t("processing_file", filename=uploaded_file.name)):
                         service = get_indexing_service()
-                        progress_bar = st.progress(0, text="Indexing chunks...")
+                        progress_bar = st.progress(0, text=t("indexing_chunks"))
 
                         process_uploaded_file(
                             uploaded_file,
@@ -418,7 +419,7 @@ with col_artifacts:
                         st.success(t("file_loaded", filename=uploaded_file.name))
 
                 except Exception as e:
-                    st.error(f"Error processing file: {e}")
+                    st.error(t("file_process_error", error=str(e)))
             else:
                 st.success(t("file_loaded", filename=uploaded_file.name))
 
@@ -465,7 +466,7 @@ with col_artifacts:
                     st.success(t("draft_saved_msg", version=version))
 
                     # Add system message
-                    sys_msg = f"Draft approved and saved as version v{version}"
+                    sys_msg = t("draft_saved_system_msg", version=version)
                     st.session_state.messages.append({"role": "assistant", "content": sys_msg})
                     save_message(conn, st.session_state.session_id, "assistant", sys_msg)
 

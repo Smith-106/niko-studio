@@ -6,7 +6,7 @@
     "gate_score_or_critical_blocker_signal",
     "unresolved_triage_blocker_signal"
   ],
-  "generated_at": "2026-03-10T07:08:41.178925+00:00",
+  "generated_at": "2026-03-10T11:17:09.543473+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -222,7 +222,7 @@
       "blocking": true,
       "status": "FAIL",
       "exit_code": 1,
-      "detail": "state_files_scanned=316,linked_triage_records=12,unresolved_triage_records=12,invalid_state_files=304,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=no_go"
+      "detail": "state_files_scanned=319,linked_triage_records=12,unresolved_triage_records=12,invalid_state_files=307,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=no_go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
@@ -282,7 +282,7 @@
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-03-10T07:08:41.178925+00:00",
+    "trace_id": "release-readiness-2026-03-10T11:17:09.543473+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",

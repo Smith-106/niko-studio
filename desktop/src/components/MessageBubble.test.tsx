@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MessageBubble } from './MessageBubble'
+import { translations } from '../i18n'
+
+const zh = translations.zh
 
 describe('MessageBubble selection', () => {
   it('triggers selection callback for assistant message', () => {
@@ -49,8 +52,8 @@ describe('MessageBubble selection', () => {
       />
     )
 
-    expect(screen.getByText('主模型：primary')).toBeInTheDocument()
-    expect(screen.getByText('对照模型：gpt-4-turbo')).toBeInTheDocument()
+    expect(screen.getByText(`${zh.messageBubblePrimaryModelLabel}primary`)).toBeInTheDocument()
+    expect(screen.getByText(`${zh.messageBubbleControlModelLabel}gpt-4-turbo`)).toBeInTheDocument()
     expect(screen.getByText('主模型内容')).toBeInTheDocument()
     expect(screen.getByText('对照模型内容')).toBeInTheDocument()
   })
@@ -74,6 +77,13 @@ describe('MessageBubble selection', () => {
       />
     )
 
-    expect(screen.getByText('检索状态： 实体 3 / 关系 2 / 记忆 5')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        zh.messageBubbleRetrievalStatus
+          .replace('{entities}', '3')
+          .replace('{relations}', '2')
+          .replace('{memories}', '5')
+      )
+    ).toBeInTheDocument()
   })
 })

@@ -161,7 +161,7 @@ def render_lock_breakdown(
             
             # 分析文本
             if analysis and key in analysis:
-                st.markdown(f"**分析**: {analysis[key]}")
+                st.markdown(f"**{t('analysis_label')}**: {analysis[key]}")
             
             # 冲突维度的特殊提示
             if is_conflict:

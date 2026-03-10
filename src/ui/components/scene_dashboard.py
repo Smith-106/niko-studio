@@ -248,7 +248,7 @@ def render_parallelization_analysis(scenes: List[Dict[str, Any]]) -> None:
     levels = analyze_parallelization(scenes)
     
     if not levels:
-        st.info("暂无可分析的场景")
+        st.info(t("no_analyzable_scenes"))
         return
     
     # 统计

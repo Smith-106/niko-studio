@@ -3,6 +3,10 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SettingsModal } from './SettingsModal'
 import { useSettingsStore } from '../stores/settingsStore'
+import { translations } from '../i18n'
+
+const zh = translations.zh
+const en = translations.en
 
 const getInputByLabel = (label: string): HTMLInputElement => {
   const labelNode = screen.getByText(label)
@@ -33,25 +37,25 @@ describe('SettingsModal quality presets', () => {
   it('updates quality goal sliders when preset changes', async () => {
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
-    expect(getInputByLabel('自然度').value).toBe('85')
-    expect(getInputByLabel('可读性').value).toBe('80')
-    expect(getInputByLabel('连贯性').value).toBe('80')
-    expect(getInputByLabel('风格一致性').value).toBe('78')
-    expect(getInputByLabel('句式熵目标').value).toBe('60')
-    expect(getInputByLabel('节奏变化目标').value).toBe('60')
+    expect(getInputByLabel(zh.qualityGoalNaturalness).value).toBe('85')
+    expect(getInputByLabel(zh.qualityGoalReadability).value).toBe('80')
+    expect(getInputByLabel(zh.qualityGoalCoherence).value).toBe('80')
+    expect(getInputByLabel(zh.qualityGoalStyleConsistency).value).toBe('78')
+    expect(getInputByLabel(zh.qualityGoalSentenceEntropy).value).toBe('60')
+    expect(getInputByLabel(zh.qualityGoalRhythmVariability).value).toBe('60')
 
-    const presetLabel = screen.getByText('优化预设')
+    const presetLabel = screen.getByText(zh.qualityGoalPreset)
     const presetSelect = presetLabel.parentElement?.querySelector('select')
     expect(presetSelect).toBeInstanceOf(HTMLSelectElement)
 
     await userEvent.selectOptions(presetSelect as HTMLSelectElement, 'ai_edit_guidance')
 
-    expect(getInputByLabel('自然度').value).toBe('80')
-    expect(getInputByLabel('可读性').value).toBe('88')
-    expect(getInputByLabel('连贯性').value).toBe('86')
-    expect(getInputByLabel('风格一致性').value).toBe('84')
-    expect(getInputByLabel('句式熵目标').value).toBe('52')
-    expect(getInputByLabel('节奏变化目标').value).toBe('50')
+    expect(getInputByLabel(zh.qualityGoalNaturalness).value).toBe('80')
+    expect(getInputByLabel(zh.qualityGoalReadability).value).toBe('88')
+    expect(getInputByLabel(zh.qualityGoalCoherence).value).toBe('86')
+    expect(getInputByLabel(zh.qualityGoalStyleConsistency).value).toBe('84')
+    expect(getInputByLabel(zh.qualityGoalSentenceEntropy).value).toBe('52')
+    expect(getInputByLabel(zh.qualityGoalRhythmVariability).value).toBe('50')
   })
 
   it('persists retrieval and context type settings after save', async () => {
@@ -60,18 +64,18 @@ describe('SettingsModal quality presets', () => {
 
     const user = userEvent.setup()
 
-    await user.click(screen.getByLabelText('启用 Knowledge Retrieval'))
-    await user.selectOptions(screen.getByDisplayValue('Hybrid'), 'iterative')
+    await user.click(screen.getByLabelText(zh.settingsEnableKnowledgeRetrieval))
+    await user.selectOptions(screen.getByDisplayValue(zh.settingsSearchModeHybrid), 'iterative')
 
-    const profileInput = screen.getByPlaceholderText('balanced')
+    const profileInput = screen.getByPlaceholderText(zh.settingsRetrievalProfilePlaceholder)
     await user.clear(profileInput)
     await user.type(profileInput, 'strict')
 
 
-    const minScoreInput = getInputByLabel('Min Score')
-    const budgetTokensInput = getInputByLabel('Budget Tokens')
-    const maxIterationsInput = getInputByLabel('Max Iterations')
-    const confidenceThresholdInput = getInputByLabel('Confidence Threshold')
+    const minScoreInput = getInputByLabel(zh.settingsRetrievalMinScore)
+    const budgetTokensInput = getInputByLabel(zh.settingsRetrievalBudgetTokens)
+    const maxIterationsInput = getInputByLabel(zh.settingsRetrievalMaxIterations)
+    const confidenceThresholdInput = getInputByLabel(zh.settingsRetrievalConfidenceThreshold)
 
     await user.clear(minScoreInput)
     await user.type(minScoreInput, '0.35')
@@ -82,10 +86,10 @@ describe('SettingsModal quality presets', () => {
     await user.clear(confidenceThresholdInput)
     await user.type(confidenceThresholdInput, '0.9')
 
-    await user.click(screen.getByLabelText('启用 Rerank'))
-    await user.click(screen.getByLabelText('Character'))
+    await user.click(screen.getByLabelText(zh.settingsEnableRerank))
+    await user.click(screen.getByLabelText(zh.settingsContextTypeCharacter))
 
-    await user.click(screen.getByRole('button', { name: '保存' }))
+    await user.click(screen.getByRole('button', { name: zh.save }))
 
     const { retrieval, contextTypes } = useSettingsStore.getState().settings
     expect(retrieval.enabled).toBe(false)
@@ -106,12 +110,12 @@ describe('SettingsModal quality presets', () => {
 
     const user = userEvent.setup()
 
-    const modeLabel = screen.getByText('工作流后端模式')
+    const modeLabel = screen.getByText(zh.workflowBackendMode)
     const modeSelect = modeLabel.parentElement?.querySelector('select')
     expect(modeSelect).toBeInstanceOf(HTMLSelectElement)
 
     await user.selectOptions(modeSelect as HTMLSelectElement, 'uiBridge')
-    await user.click(screen.getByRole('button', { name: '保存' }))
+    await user.click(screen.getByRole('button', { name: zh.save }))
 
     expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
     expect(onClose).toHaveBeenCalled()
@@ -128,8 +132,8 @@ describe('SettingsModal quality presets', () => {
 
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
-    expect(screen.getByText('Workflow Backend Mode')).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Standard (/workflow/*)' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'UI Bridge (/ui/workflow/*)' })).toBeInTheDocument()
+    expect(screen.getByText(en.workflowBackendMode)).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: en.workflowBackendModeStandard })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: en.workflowBackendModeUiBridge })).toBeInTheDocument()
   })
 })

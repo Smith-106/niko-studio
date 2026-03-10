@@ -2,6 +2,7 @@ import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
 import type { Message } from '../stores/appStore'
+import { useI18n } from '../i18n'
 
 interface MessageBubbleProps {
   message: Message
@@ -47,6 +48,7 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
 }
 
 function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubbleProps) {
+  const { t } = useI18n()
   const isUser = message.role === 'user'
 
   const handleMouseUp = () => {
@@ -94,10 +96,10 @@ function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubble
         {/* Retrieval Status */}
         {!isUser && message.writerMetadata?.knowledge_retrieved && (
           <div className="mb-2 text-xs text-gray-500 dark:text-dark-text-secondary">
-            检索状态：
-            实体 {message.writerMetadata.knowledge_retrieved.entities_count} /
-            关系 {message.writerMetadata.knowledge_retrieved.relations_count} /
-            记忆 {message.writerMetadata.knowledge_retrieved.memories_count}
+            {t.messageBubbleRetrievalStatus
+              .replace('{entities}', String(message.writerMetadata.knowledge_retrieved.entities_count))
+              .replace('{relations}', String(message.writerMetadata.knowledge_retrieved.relations_count))
+              .replace('{memories}', String(message.writerMetadata.knowledge_retrieved.memories_count))}
           </div>
         )}
 
@@ -106,7 +108,7 @@ function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubble
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3" onMouseUp={handleMouseUp}>
             <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-3">
               <div className="text-xs font-semibold mb-2 text-gray-500 dark:text-dark-text-secondary">
-                主模型：{message.comparison.primary.model}
+                {`${t.messageBubblePrimaryModelLabel}${message.comparison.primary.model}`}
               </div>
               <div className="markdown-body">
                 <ReactMarkdown components={markdownComponents}>
@@ -116,7 +118,7 @@ function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubble
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-3">
               <div className="text-xs font-semibold mb-2 text-gray-500 dark:text-dark-text-secondary">
-                对照模型：{message.comparison.control.model}
+                {`${t.messageBubbleControlModelLabel}${message.comparison.control.model}`}
               </div>
               <div className="markdown-body">
                 <ReactMarkdown components={markdownComponents}>

@@ -10,6 +10,18 @@ TRANSLATIONS = {
         "en": "Agent Orchestrator",
         "zh": "Agent 编排器"
     },
+    "language_selector": {
+        "en": "Language",
+        "zh": "语言"
+    },
+    "lang_option_zh": {
+        "en": "Chinese",
+        "zh": "中文"
+    },
+    "lang_option_en": {
+        "en": "English",
+        "zh": "英文"
+    },
     "session_mgmt": {
         "en": "Session Management",
         "zh": "📂 会话管理"
@@ -49,6 +61,10 @@ TRANSLATIONS = {
     "max_loops": {
         "en": "Max Loops",
         "zh": "最大修改循环"
+    },
+    "temperature": {
+        "en": "Temperature",
+        "zh": "温度"
     },
     "quality_thresholds": {
         "en": "Quality Thresholds",
@@ -141,6 +157,22 @@ TRANSLATIONS = {
     "file_loaded": {
         "en": "✅ Loaded: {filename}",
         "zh": "✅ 已加载: {filename}"
+    },
+    "processing_file": {
+        "en": "Processing {filename}...",
+        "zh": "正在处理 {filename}..."
+    },
+    "indexing_chunks": {
+        "en": "Indexing chunks...",
+        "zh": "正在索引文本块..."
+    },
+    "file_process_error": {
+        "en": "Error processing file: {error}",
+        "zh": "处理文件失败：{error}"
+    },
+    "draft_saved_system_msg": {
+        "en": "Draft approved and saved as version v{version}",
+        "zh": "草稿已批准并保存为版本 v{version}"
     },
 
     # === Tabs ===
@@ -462,6 +494,10 @@ TRANSLATIONS = {
         "en": "Output Result",
         "zh": "输出结果"
     },
+    "analysis_label": {
+        "en": "Analysis",
+        "zh": "分析"
+    },
     "workflow_progress": {
         "en": "Workflow Progress",
         "zh": "📊 工作流进度"
@@ -485,17 +521,46 @@ TRANSLATIONS = {
     "decision_question_default": {
         "en": "Decision Question",
         "zh": "决策问题"
+    },
+    "default_execute_action": {
+        "en": "Execute",
+        "zh": "执行"
     }
 }
+
+LANGUAGE_CODE_TO_LABEL = {
+    "zh": "中文",
+    "en": "English",
+}
+
+LANGUAGE_LABEL_TO_CODE = {
+    label: code for code, label in LANGUAGE_CODE_TO_LABEL.items()
+}
+
+
+def normalize_language_code(value: str | None) -> str:
+    if not value:
+        return "zh"
+
+    candidate = str(value).strip()
+    if candidate in LANGUAGE_CODE_TO_LABEL:
+        return candidate
+
+    return LANGUAGE_LABEL_TO_CODE.get(candidate, "zh")
+
+
+
+def get_language_label(language_code: str) -> str:
+    return LANGUAGE_CODE_TO_LABEL.get(normalize_language_code(language_code), "中文")
+
+
 
 def t(key, **kwargs):
     """
     Translate a key to the current language.
     Usage: t("page_title") or t("file_loaded", filename="doc.pdf")
     """
-    # Default to Chinese if not set
-    lang_label = st.session_state.get("language", "中文")
-    lang_code = "en" if lang_label == "English" else "zh"
+    lang_code = normalize_language_code(st.session_state.get("language", "zh"))
 
     entry = TRANSLATIONS.get(key, {})
     # If key not found, return key itself
@@ -507,6 +572,6 @@ def t(key, **kwargs):
     if kwargs:
         try:
             return template.format(**kwargs)
-        except Exception as e:
+        except Exception:
             return template
     return template

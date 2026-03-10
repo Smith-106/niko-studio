@@ -138,6 +138,9 @@ export interface Translations {
   knowledgeCharacterLoaded: string
   knowledgeForeshadowTitle: string
   knowledgeForeshadowStatusPlaceholder: string
+  knowledgeForeshadowStatusPending: string
+  knowledgeForeshadowStatusResolved: string
+  knowledgeForeshadowStatusAll: string
   knowledgeForeshadowChapterPlaceholder: string
   knowledgeForeshadowAction: string
   knowledgeForeshadowsLoaded: string
@@ -174,6 +177,11 @@ export interface Translations {
   evaluationNeedRewrite: string
   evaluationUnknown: string
   evaluationNoFeedback: string
+  evaluationDimensionLock: string
+  evaluationDimensionStyle: string
+  evaluationDimensionLogic: string
+  evaluationActionFailedWithReason: string
+  evaluationRecommendationFallback: string
   evaluationCheckpointTitle: string
   evaluationCheckpointPlaceholder: string
   evaluationRefresh: string
@@ -195,6 +203,11 @@ export interface Translations {
   evaluationWorkflowPlanIdPlaceholder: string
   evaluationWorkflowStepIdPlaceholder: string
   evaluationWorkflowLifecycleActionLabel: string
+  evaluationWorkflowLifecycleStatus: string
+  evaluationWorkflowLifecycleStart: string
+  evaluationWorkflowLifecyclePause: string
+  evaluationWorkflowLifecycleResume: string
+  evaluationWorkflowLifecycleStop: string
   evaluationWorkflowRoute: string
   evaluationWorkflowPlan: string
   evaluationWorkflowExecute: string
@@ -215,6 +228,9 @@ export interface Translations {
   modePresetAgentDiagnose: string
   modePresetCompareReview: string
   chatComparisonModelLabel: string
+  messageBubblePrimaryModelLabel: string
+  messageBubbleControlModelLabel: string
+  messageBubbleRetrievalStatus: string
   chatAgentActionWrite: string
   chatAgentActionRevise: string
   chatAgentActionContext: string
@@ -333,6 +349,123 @@ export interface Translations {
   importSettings: string
   importSuccess: string
   importFailed: string
+
+  // MCP Status Panel
+  mcpPanelAriaLabel: string
+  mcpPanelTitle: string
+  mcpRefresh: string
+  mcpRefreshing: string
+  mcpCloseAria: string
+  mcpFetchPartialError: string
+  mcpFetchFailed: string
+  mcpProbeFailed: string
+  mcpUpdateFailed: string
+  mcpServiceIdRequired: string
+  mcpCreateFailed: string
+  mcpGatewayStatus: string
+  mcpGatewayHealth: string
+  mcpSessionId: string
+  mcpNotAvailable: string
+  mcpReconnect: string
+  mcpLastErrorPrefix: string
+  mcpKeyServiceStatus: string
+  mcpServiceOnline: string
+  mcpServiceNotReady: string
+  mcpRuntimeMetrics: string
+  mcpRequestsTotal: string
+  mcpRequestsFailed: string
+  mcpLatencyAvg: string
+  mcpLatencyMax: string
+  mcpNoMetricsData: string
+  mcpServiceDynamicConfig: string
+  mcpServiceIdPlaceholder: string
+  mcpServiceNamePlaceholder: string
+  mcpServicePathPlaceholder: string
+  mcpCreating: string
+  mcpCreateService: string
+  mcpServiceEnabled: string
+  mcpServiceDisabled: string
+  mcpSaving: string
+  mcpSaveName: string
+  mcpDisable: string
+  mcpEnable: string
+  mcpProbing: string
+  mcpHealthCheck: string
+  mcpNoServiceConfigData: string
+  mcpToolStats: string
+  mcpTotalTools: string
+  mcpNoToolData: string
+  mcpStatusOk: string
+  mcpStatusError: string
+  mcpStatusDisabled: string
+  mcpStatusUnknown: string
+  mcpConnectionConnected: string
+  mcpConnectionDegraded: string
+  mcpConnectionDisconnected: string
+  mcpConnectionReconnecting: string
+  mcpReconnectIdle: string
+  mcpReconnectProbing: string
+  mcpReconnectBackoff: string
+  mcpReconnectRetrying: string
+  mcpReconnectRecovered: string
+  mcpReconnectFailed: string
+
+  // Settings Modal Diagnostics & Retrieval
+  settingsDiagnostics: string
+  settingsRefreshDiagnostics: string
+  settingsGatewayMetrics: string
+  settingsToolList: string
+  settingsNoMetricsData: string
+  settingsNoToolsData: string
+  settingsAllowFallback: string
+  settingsDetectionGuard: string
+  settingsRetrieval: string
+  settingsRetrievalProviderModel: string
+  settingsRetrievalSearchPlaceholder: string
+  settingsEnableKnowledgeRetrieval: string
+  settingsEnableRerank: string
+  settingsModelSource: string
+  settingsValidatingModel: string
+  settingsValidateDefaultModel: string
+  settingsRefreshModels: string
+  settingsRefreshingModels: string
+  settingsLastSync: string
+  settingsCustomModel: string
+  settingsCustomModelPlaceholder: string
+  settingsUseThisModel: string
+  settingsInvalidConfigFile: string
+  settingsImportFailedPrefix: string
+  settingsUnknownError: string
+  settingsModelNameRequired: string
+  settingsModelNameTooLong: string
+  settingsModelNameWhitespace: string
+  settingsFetchModelsFailed: string
+  settingsFetchModelsFailedWithReason: string
+  settingsInvalidCustomModel: string
+  settingsPresetModels: string
+  settingsFetchedModels: string
+  settingsCustomModels: string
+  settingsDefaultModelValidateFetchFailed: string
+  settingsDefaultModelAvailableViaGateway: string
+  settingsDefaultModelAvailableViaDirect: string
+  settingsDefaultModelUnavailable: string
+  settingsDefaultModelValidateFailed: string
+  settingsDiagnosticsFetchFailed: string
+  settingsApiKeyPlaceholder: string
+  settingsSearchMode: string
+  settingsSearchModeHybrid: string
+  settingsSearchModeIterative: string
+  settingsSearchModeContext: string
+  settingsRetrievalProfile: string
+  settingsRetrievalProfilePlaceholder: string
+  settingsRetrievalMinScore: string
+  settingsRetrievalBudgetTokens: string
+  settingsRetrievalMaxIterations: string
+  settingsRetrievalConfidenceThreshold: string
+  settingsAgentContextTypes: string
+  settingsContextTypeWorld: string
+  settingsContextTypeCharacter: string
+  settingsContextTypePlot: string
 }
 
 export const translations: Record<Language, Translations> = {
@@ -474,6 +607,9 @@ export const translations: Record<Language, Translations> = {
     knowledgeCharacterLoaded: '角色详情加载完成。',
     knowledgeForeshadowTitle: 'Foreshadows 筛选',
     knowledgeForeshadowStatusPlaceholder: 'status',
+    knowledgeForeshadowStatusPending: '待处理',
+    knowledgeForeshadowStatusResolved: '已解决',
+    knowledgeForeshadowStatusAll: '全部',
     knowledgeForeshadowChapterPlaceholder: 'chapter',
     knowledgeForeshadowAction: '查询 foreshadows',
     knowledgeForeshadowsLoaded: 'Foreshadows 查询完成。',
@@ -510,31 +646,41 @@ export const translations: Record<Language, Translations> = {
     evaluationNeedRewrite: '需重写',
     evaluationUnknown: '未知',
     evaluationNoFeedback: '无',
-    evaluationCheckpointTitle: 'Checkpoint',
-    evaluationCheckpointPlaceholder: 'checkpoint 描述',
+    evaluationDimensionLock: '结构锁定',
+    evaluationDimensionStyle: '风格',
+    evaluationDimensionLogic: '逻辑',
+    evaluationActionFailedWithReason: '{action}失败：{reason}',
+    evaluationRecommendationFallback: '建议 {index}',
+    evaluationCheckpointTitle: '检查点',
+    evaluationCheckpointPlaceholder: '检查点描述',
     evaluationRefresh: '刷新',
     evaluationSuggestionsRefresh: '刷新建议',
     evaluationSuggestionsRefreshing: '刷新建议中...',
-    evaluationQualityCheckTitle: 'Novel 质量检查',
+    evaluationQualityCheckTitle: '小说质量检查',
     evaluationQualityCheckRun: '执行质量检查',
     evaluationQualityCheckRunning: '质量检查中...',
     evaluationQualityCheckFailed: '质量检查失败',
     evaluationQualityCheckDecision: '决策',
     evaluationQualityCheckTotal: '总分',
-    evaluationQualityCheckLock: 'Lock 分',
-    evaluationQualityCheckStyle: 'Style 分',
-    evaluationQualityCheckLogic: 'Logic 分',
+    evaluationQualityCheckLock: '结构锁定分',
+    evaluationQualityCheckStyle: '风格分',
+    evaluationQualityCheckLogic: '逻辑分',
     evaluationQualityCheckFeedback: '反馈',
-    evaluationWorkflowTitle: 'Advanced Workflow',
-    evaluationWorkflowTaskPlaceholder: 'workflow task',
-    evaluationWorkflowLevelPlaceholder: 'workflow level (e.g. L3)',
-    evaluationWorkflowPlanIdPlaceholder: 'plan_id',
-    evaluationWorkflowStepIdPlaceholder: 'step_id（可选）',
-    evaluationWorkflowLifecycleActionLabel: 'lifecycle action',
-    evaluationWorkflowRoute: 'route',
-    evaluationWorkflowPlan: 'plan',
-    evaluationWorkflowExecute: 'execute',
-    evaluationWorkflowLifecycle: 'lifecycle',
+    evaluationWorkflowTitle: '高级工作流',
+    evaluationWorkflowTaskPlaceholder: '工作流任务',
+    evaluationWorkflowLevelPlaceholder: '工作流级别（如 L3）',
+    evaluationWorkflowPlanIdPlaceholder: '计划 ID',
+    evaluationWorkflowStepIdPlaceholder: '步骤 ID（可选）',
+    evaluationWorkflowLifecycleActionLabel: '生命周期动作',
+    evaluationWorkflowLifecycleStatus: '状态',
+    evaluationWorkflowLifecycleStart: '开始',
+    evaluationWorkflowLifecyclePause: '暂停',
+    evaluationWorkflowLifecycleResume: '继续',
+    evaluationWorkflowLifecycleStop: '停止',
+    evaluationWorkflowRoute: '路由',
+    evaluationWorkflowPlan: '规划',
+    evaluationWorkflowExecute: '执行',
+    evaluationWorkflowLifecycle: '生命周期',
     evaluationWorkflowRetry: '重试',
     evaluationWorkflowLoading: '请求中...',
     evaluationWorkflowSuccess: '执行成功',
@@ -551,6 +697,9 @@ export const translations: Record<Language, Translations> = {
     modePresetAgentDiagnose: 'Agent 诊断',
     modePresetCompareReview: '双模型校对',
     chatComparisonModelLabel: '对照模型',
+    messageBubblePrimaryModelLabel: '主模型：',
+    messageBubbleControlModelLabel: '对照模型：',
+    messageBubbleRetrievalStatus: '检索状态： 实体 {entities} / 关系 {relations} / 记忆 {memories}',
     chatAgentActionWrite: '写作',
     chatAgentActionRevise: '润色/重写',
     chatAgentActionContext: '取上下文',
@@ -669,6 +818,123 @@ export const translations: Record<Language, Translations> = {
     importSettings: '导入设置',
     importSuccess: '设置导入成功！',
     importFailed: '导入失败',
+
+    // MCP Status Panel
+    mcpPanelAriaLabel: 'MCP 状态面板',
+    mcpPanelTitle: 'MCP 状态',
+    mcpRefresh: '刷新',
+    mcpRefreshing: '刷新中...',
+    mcpCloseAria: '关闭 MCP 状态面板',
+    mcpFetchPartialError: '部分状态拉取失败，以下信息可能不完整。',
+    mcpFetchFailed: '状态拉取失败，请稍后重试。',
+    mcpProbeFailed: '探测失败',
+    mcpUpdateFailed: '更新失败',
+    mcpServiceIdRequired: '请先填写服务 ID',
+    mcpCreateFailed: '创建失败',
+    mcpGatewayStatus: '网关状态',
+    mcpGatewayHealth: 'Gateway Health',
+    mcpSessionId: 'Session ID',
+    mcpNotAvailable: 'N/A',
+    mcpReconnect: 'Reconnect',
+    mcpLastErrorPrefix: 'Last error: ',
+    mcpKeyServiceStatus: '关键服务状态',
+    mcpServiceOnline: '在线',
+    mcpServiceNotReady: '未就绪',
+    mcpRuntimeMetrics: '运行指标',
+    mcpRequestsTotal: '请求总数：{value}',
+    mcpRequestsFailed: '失败请求：{value}',
+    mcpLatencyAvg: '平均延迟：{value} ms',
+    mcpLatencyMax: '最大延迟：{value} ms',
+    mcpNoMetricsData: '暂无指标数据',
+    mcpServiceDynamicConfig: '服务动态配置',
+    mcpServiceIdPlaceholder: '服务 ID',
+    mcpServiceNamePlaceholder: '服务名（可选）',
+    mcpServicePathPlaceholder: '路径（可选）',
+    mcpCreating: '创建中...',
+    mcpCreateService: '新增服务',
+    mcpServiceEnabled: '启用中',
+    mcpServiceDisabled: '已禁用',
+    mcpSaving: '保存中...',
+    mcpSaveName: '保存名称',
+    mcpDisable: '禁用',
+    mcpEnable: '启用',
+    mcpProbing: '探测中...',
+    mcpHealthCheck: '健康检测',
+    mcpNoServiceConfigData: '暂无服务配置数据',
+    mcpToolStats: '工具统计',
+    mcpTotalTools: '总工具数',
+    mcpNoToolData: '暂无工具数据',
+    mcpStatusOk: '正常',
+    mcpStatusError: '异常',
+    mcpStatusDisabled: '已禁用',
+    mcpStatusUnknown: '未知',
+    mcpConnectionConnected: '已连接',
+    mcpConnectionDegraded: '降级',
+    mcpConnectionDisconnected: '已断开',
+    mcpConnectionReconnecting: '重连中',
+    mcpReconnectIdle: '空闲',
+    mcpReconnectProbing: '探测中',
+    mcpReconnectBackoff: '退避',
+    mcpReconnectRetrying: '重试中',
+    mcpReconnectRecovered: '已恢复',
+    mcpReconnectFailed: '失败',
+
+    // Settings Modal Diagnostics & Retrieval
+    settingsDiagnostics: '系统诊断',
+    settingsRefreshDiagnostics: '刷新诊断',
+    settingsGatewayMetrics: '网关指标',
+    settingsToolList: '工具清单',
+    settingsNoMetricsData: '暂无指标数据',
+    settingsNoToolsData: '暂无工具数据',
+    settingsAllowFallback: '允许降级',
+    settingsDetectionGuard: '检测规避拦截',
+    settingsRetrieval: '检索设置',
+    settingsRetrievalProviderModel: '检索 Provider / 模型',
+    settingsRetrievalSearchPlaceholder: '输入 provider 名称或模型关键字',
+    settingsEnableKnowledgeRetrieval: '启用 Knowledge Retrieval',
+    settingsEnableRerank: '启用 Rerank',
+    settingsModelSource: '模型来源',
+    settingsValidatingModel: '校验中...',
+    settingsValidateDefaultModel: '校验默认模型',
+    settingsRefreshModels: '刷新模型',
+    settingsRefreshingModels: '刷新中...',
+    settingsLastSync: '最近同步：{value}',
+    settingsCustomModel: '自定义模型',
+    settingsCustomModelPlaceholder: '例如：gpt-4.1-mini',
+    settingsUseThisModel: '使用该模型',
+    settingsInvalidConfigFile: '无效的配置文件格式',
+    settingsImportFailedPrefix: '导入失败: ',
+    settingsUnknownError: '未知错误',
+    settingsModelNameRequired: '模型名称不能为空。',
+    settingsModelNameTooLong: '模型名称过长（最多 120 个字符）。',
+    settingsModelNameWhitespace: '模型名称不能包含空白字符。',
+    settingsFetchModelsFailed: '模型拉取失败，请继续使用预置或自定义模型。',
+    settingsFetchModelsFailedWithReason: '模型拉取失败（网关/直连均失败）：{error}',
+    settingsInvalidCustomModel: '自定义模型不合法。',
+    settingsPresetModels: '预置模型',
+    settingsFetchedModels: '自动拉取',
+    settingsCustomModels: '自定义模型',
+    settingsDefaultModelValidateFetchFailed: '默认模型校验失败：无法拉取模型列表。',
+    settingsDefaultModelAvailableViaGateway: '默认模型可用（来源：网关）。',
+    settingsDefaultModelAvailableViaDirect: '默认模型可用（来源：直连）。',
+    settingsDefaultModelUnavailable: '默认模型不在当前可用模型列表中。',
+    settingsDefaultModelValidateFailed: '默认模型校验失败，请稍后重试。',
+    settingsDiagnosticsFetchFailed: '诊断拉取失败，请稍后重试。',
+    settingsApiKeyPlaceholder: 'sk-...',
+    settingsSearchMode: '检索模式',
+    settingsSearchModeHybrid: 'Hybrid',
+    settingsSearchModeIterative: 'Iterative',
+    settingsSearchModeContext: 'Context',
+    settingsRetrievalProfile: '检索配置',
+    settingsRetrievalProfilePlaceholder: 'balanced',
+    settingsRetrievalMinScore: '最小分数',
+    settingsRetrievalBudgetTokens: '预算 Tokens',
+    settingsRetrievalMaxIterations: '最大迭代次数',
+    settingsRetrievalConfidenceThreshold: '置信阈值',
+    settingsAgentContextTypes: 'Agent 上下文类型',
+    settingsContextTypeWorld: 'World',
+    settingsContextTypeCharacter: 'Character',
+    settingsContextTypePlot: 'Plot',
   },
   en: {
     // App
@@ -808,6 +1074,9 @@ export const translations: Record<Language, Translations> = {
     knowledgeCharacterLoaded: 'Character details loaded.',
     knowledgeForeshadowTitle: 'Foreshadow Filters',
     knowledgeForeshadowStatusPlaceholder: 'status',
+    knowledgeForeshadowStatusPending: 'pending',
+    knowledgeForeshadowStatusResolved: 'resolved',
+    knowledgeForeshadowStatusAll: 'all',
     knowledgeForeshadowChapterPlaceholder: 'chapter',
     knowledgeForeshadowAction: 'Query foreshadows',
     knowledgeForeshadowsLoaded: 'Foreshadows loaded.',
@@ -844,6 +1113,11 @@ export const translations: Record<Language, Translations> = {
     evaluationNeedRewrite: 'Needs rewrite',
     evaluationUnknown: 'Unknown',
     evaluationNoFeedback: 'None',
+    evaluationDimensionLock: 'Lock',
+    evaluationDimensionStyle: 'Style',
+    evaluationDimensionLogic: 'Logic',
+    evaluationActionFailedWithReason: '{action} failed: {reason}',
+    evaluationRecommendationFallback: 'Recommendation {index}',
     evaluationCheckpointTitle: 'Checkpoint',
     evaluationCheckpointPlaceholder: 'Checkpoint description',
     evaluationRefresh: 'Refresh',
@@ -865,6 +1139,11 @@ export const translations: Record<Language, Translations> = {
     evaluationWorkflowPlanIdPlaceholder: 'plan_id',
     evaluationWorkflowStepIdPlaceholder: 'step_id (optional)',
     evaluationWorkflowLifecycleActionLabel: 'lifecycle action',
+    evaluationWorkflowLifecycleStatus: 'status',
+    evaluationWorkflowLifecycleStart: 'start',
+    evaluationWorkflowLifecyclePause: 'pause',
+    evaluationWorkflowLifecycleResume: 'resume',
+    evaluationWorkflowLifecycleStop: 'stop',
     evaluationWorkflowRoute: 'route',
     evaluationWorkflowPlan: 'plan',
     evaluationWorkflowExecute: 'execute',
@@ -885,6 +1164,9 @@ export const translations: Record<Language, Translations> = {
     modePresetAgentDiagnose: 'Agent Diagnose',
     modePresetCompareReview: 'Dual-Model Review',
     chatComparisonModelLabel: 'Control Model',
+    messageBubblePrimaryModelLabel: 'Primary Model: ',
+    messageBubbleControlModelLabel: 'Control Model: ',
+    messageBubbleRetrievalStatus: 'Retrieval: Entities {entities} / Relations {relations} / Memories {memories}',
     chatAgentActionWrite: 'Write',
     chatAgentActionRevise: 'Polish/Rewrite',
     chatAgentActionContext: 'Get Context',
@@ -1003,5 +1285,122 @@ export const translations: Record<Language, Translations> = {
     importSettings: 'Import Settings',
     importSuccess: 'Settings imported successfully!',
     importFailed: 'Import failed',
+
+    // MCP Status Panel
+    mcpPanelAriaLabel: 'MCP status panel',
+    mcpPanelTitle: 'MCP status',
+    mcpRefresh: 'Refresh',
+    mcpRefreshing: 'Refreshing...',
+    mcpCloseAria: 'Close MCP status panel',
+    mcpFetchPartialError: 'Some status data failed to load. Information below may be incomplete.',
+    mcpFetchFailed: 'Failed to load status. Please try again later.',
+    mcpProbeFailed: 'Probe failed',
+    mcpUpdateFailed: 'Update failed',
+    mcpServiceIdRequired: 'Please provide a service ID first',
+    mcpCreateFailed: 'Create failed',
+    mcpGatewayStatus: 'Gateway status',
+    mcpGatewayHealth: 'Gateway Health',
+    mcpSessionId: 'Session ID',
+    mcpNotAvailable: 'N/A',
+    mcpReconnect: 'Reconnect',
+    mcpLastErrorPrefix: 'Last error: ',
+    mcpKeyServiceStatus: 'Key service status',
+    mcpServiceOnline: 'Online',
+    mcpServiceNotReady: 'Not ready',
+    mcpRuntimeMetrics: 'Runtime metrics',
+    mcpRequestsTotal: 'Total requests: {value}',
+    mcpRequestsFailed: 'Failed requests: {value}',
+    mcpLatencyAvg: 'Average latency: {value} ms',
+    mcpLatencyMax: 'Max latency: {value} ms',
+    mcpNoMetricsData: 'No metrics data',
+    mcpServiceDynamicConfig: 'Dynamic service config',
+    mcpServiceIdPlaceholder: 'Service ID',
+    mcpServiceNamePlaceholder: 'Service name (optional)',
+    mcpServicePathPlaceholder: 'Path (optional)',
+    mcpCreating: 'Creating...',
+    mcpCreateService: 'Add service',
+    mcpServiceEnabled: 'Enabled',
+    mcpServiceDisabled: 'Disabled',
+    mcpSaving: 'Saving...',
+    mcpSaveName: 'Save name',
+    mcpDisable: 'Disable',
+    mcpEnable: 'Enable',
+    mcpProbing: 'Probing...',
+    mcpHealthCheck: 'Health check',
+    mcpNoServiceConfigData: 'No service config data',
+    mcpToolStats: 'Tool stats',
+    mcpTotalTools: 'Total tools',
+    mcpNoToolData: 'No tool data',
+    mcpStatusOk: 'OK',
+    mcpStatusError: 'Error',
+    mcpStatusDisabled: 'Disabled',
+    mcpStatusUnknown: 'Unknown',
+    mcpConnectionConnected: 'Connected',
+    mcpConnectionDegraded: 'Degraded',
+    mcpConnectionDisconnected: 'Disconnected',
+    mcpConnectionReconnecting: 'Reconnecting',
+    mcpReconnectIdle: 'Idle',
+    mcpReconnectProbing: 'Probing',
+    mcpReconnectBackoff: 'Backoff',
+    mcpReconnectRetrying: 'Retrying',
+    mcpReconnectRecovered: 'Recovered',
+    mcpReconnectFailed: 'Failed',
+
+    // Settings Modal Diagnostics & Retrieval
+    settingsDiagnostics: 'System diagnostics',
+    settingsRefreshDiagnostics: 'Refresh diagnostics',
+    settingsGatewayMetrics: 'Gateway metrics',
+    settingsToolList: 'Tool list',
+    settingsNoMetricsData: 'No metrics data',
+    settingsNoToolsData: 'No tool data',
+    settingsAllowFallback: 'Allow fallback',
+    settingsDetectionGuard: 'Detection-evasion guard',
+    settingsRetrieval: 'Retrieval settings',
+    settingsRetrievalProviderModel: 'Retrieval provider / model',
+    settingsRetrievalSearchPlaceholder: 'Enter provider name or model keyword',
+    settingsEnableKnowledgeRetrieval: 'Enable Knowledge Retrieval',
+    settingsEnableRerank: 'Enable Rerank',
+    settingsModelSource: 'Model source',
+    settingsValidatingModel: 'Validating...',
+    settingsValidateDefaultModel: 'Validate default model',
+    settingsRefreshModels: 'Refresh models',
+    settingsRefreshingModels: 'Refreshing...',
+    settingsLastSync: 'Last sync: {value}',
+    settingsCustomModel: 'Custom model',
+    settingsCustomModelPlaceholder: 'Example: gpt-4.1-mini',
+    settingsUseThisModel: 'Use this model',
+    settingsInvalidConfigFile: 'Invalid config file format',
+    settingsImportFailedPrefix: 'Import failed: ',
+    settingsUnknownError: 'Unknown error',
+    settingsModelNameRequired: 'Model name cannot be empty.',
+    settingsModelNameTooLong: 'Model name is too long (max 120 characters).',
+    settingsModelNameWhitespace: 'Model name cannot contain whitespace.',
+    settingsFetchModelsFailed: 'Failed to fetch models. Please continue with preset or custom models.',
+    settingsFetchModelsFailedWithReason: 'Failed to fetch models (gateway/direct both failed): {error}',
+    settingsInvalidCustomModel: 'Invalid custom model.',
+    settingsPresetModels: 'Preset models',
+    settingsFetchedModels: 'Fetched models',
+    settingsCustomModels: 'Custom models',
+    settingsDefaultModelValidateFetchFailed: 'Default model validation failed: could not fetch model list.',
+    settingsDefaultModelAvailableViaGateway: 'Default model is available (source: gateway).',
+    settingsDefaultModelAvailableViaDirect: 'Default model is available (source: direct).',
+    settingsDefaultModelUnavailable: 'Default model is not in the current available model list.',
+    settingsDefaultModelValidateFailed: 'Default model validation failed. Please try again later.',
+    settingsDiagnosticsFetchFailed: 'Failed to fetch diagnostics. Please try again later.',
+    settingsApiKeyPlaceholder: 'sk-...',
+    settingsSearchMode: 'Search mode',
+    settingsSearchModeHybrid: 'Hybrid',
+    settingsSearchModeIterative: 'Iterative',
+    settingsSearchModeContext: 'Context',
+    settingsRetrievalProfile: 'Profile',
+    settingsRetrievalProfilePlaceholder: 'balanced',
+    settingsRetrievalMinScore: 'Min score',
+    settingsRetrievalBudgetTokens: 'Budget tokens',
+    settingsRetrievalMaxIterations: 'Max iterations',
+    settingsRetrievalConfidenceThreshold: 'Confidence threshold',
+    settingsAgentContextTypes: 'Agent context types',
+    settingsContextTypeWorld: 'World',
+    settingsContextTypeCharacter: 'Character',
+    settingsContextTypePlot: 'Plot',
   },
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WritingHelperPanel } from './WritingHelperPanel'
+import { translations } from '../i18n'
 import { processWritingHelper, polishContent } from '../api/client'
 import { useSettingsStore } from '../stores/settingsStore'
 
@@ -12,6 +13,7 @@ vi.mock('../api/client', () => ({
 
 const mockProcessWritingHelper = vi.mocked(processWritingHelper)
 const mockPolishContent = vi.mocked(polishContent)
+const zh = translations.zh
 
 describe('WritingHelperPanel clear draft', () => {
   beforeEach(() => {
@@ -39,17 +41,17 @@ describe('WritingHelperPanel clear draft', () => {
 
     const user = userEvent.setup()
 
-    const contentInput = screen.getByLabelText('输入文本') as HTMLTextAreaElement
-    const modeSelect = screen.getByLabelText('模式') as HTMLSelectElement
-    const maxSentencesInput = screen.getByLabelText('最大句数（摘要）') as HTMLInputElement
-    const maxItemsInput = screen.getByLabelText('最大条目（提纲）') as HTMLInputElement
+    const contentInput = screen.getByLabelText(zh.writingHelperInputText) as HTMLTextAreaElement
+    const modeSelect = screen.getByLabelText(zh.writingHelperMode) as HTMLSelectElement
+    const maxSentencesInput = screen.getByLabelText(zh.writingHelperMaxSentences) as HTMLInputElement
+    const maxItemsInput = screen.getByLabelText(zh.writingHelperMaxItems) as HTMLInputElement
 
     expect(contentInput.value).toBe('已有草稿内容')
     expect(modeSelect.value).toBe('outline')
     expect(maxSentencesInput.value).toBe('9')
     expect(maxItemsInput.value).toBe('11')
 
-    await user.click(screen.getByRole('button', { name: '清空草稿' }))
+    await user.click(screen.getByRole('button', { name: zh.writingHelperClearDraft }))
 
     expect(onClearDraft).toHaveBeenCalledOnce()
     expect(contentInput.value).toBe('')
@@ -69,7 +71,7 @@ describe('WritingHelperPanel mode options and payload', () => {
   it('renders rewrite and expand mode options', () => {
     render(<WritingHelperPanel onClose={() => {}} onOpenSettings={() => {}} />)
 
-    const modeSelect = screen.getByLabelText('模式') as HTMLSelectElement
+    const modeSelect = screen.getByLabelText(zh.writingHelperMode) as HTMLSelectElement
     const optionValues = Array.from(modeSelect.options).map((option) => option.value)
 
     expect(optionValues).toContain('rewrite')
@@ -86,12 +88,12 @@ describe('WritingHelperPanel mode options and payload', () => {
     render(<WritingHelperPanel onClose={() => {}} onOpenSettings={() => {}} />)
 
     const user = userEvent.setup()
-    const contentInput = screen.getByLabelText('输入文本') as HTMLTextAreaElement
-    const legacyToggle = screen.getByLabelText('Writing Helper 润色走 legacy 接口') as HTMLInputElement
+    const contentInput = screen.getByLabelText(zh.writingHelperInputText) as HTMLTextAreaElement
+    const legacyToggle = screen.getByLabelText(zh.writingHelperLegacyPolish) as HTMLInputElement
 
     await user.type(contentInput, '原始内容。')
     await user.click(legacyToggle)
-    await user.click(screen.getByRole('button', { name: '执行' }))
+    await user.click(screen.getByRole('button', { name: zh.writingHelperRun }))
 
     expect(mockPolishContent).toHaveBeenCalledWith(
       expect.objectContaining({

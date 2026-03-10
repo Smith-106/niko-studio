@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EvaluationPanel } from './EvaluationPanel'
 import { useSettingsStore } from '../stores/settingsStore'
+import { translations } from '../i18n'
 
 vi.mock('../api/client', () => ({
   evaluateContent: vi.fn(),
@@ -55,6 +56,9 @@ const mockedRouteWorkflow = vi.mocked(routeWorkflow)
 const mockedCreatePlan = vi.mocked(createPlan)
 const mockedExecutePlan = vi.mocked(executePlan)
 const mockedWorkflowLifecycle = vi.mocked(workflowLifecycle)
+const zh = translations.zh
+const evaluationWorkflowSuccessRoute = `${zh.evaluationWorkflowRoute}: ${zh.evaluationWorkflowSuccess}`
+const evaluationWorkflowSuccessLifecycle = `${zh.evaluationWorkflowLifecycle}: ${zh.evaluationWorkflowSuccess}`
 
 const defaultPlanResponse: WorkflowPlanStatusResponse = {
   plan_id: 'plan-1',
@@ -168,7 +172,7 @@ describe('EvaluationPanel actions', () => {
 
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
-    await screen.findByText('改进建议')
+    await screen.findByText(zh.evaluationSuggestions)
     expect(mockedEvaluateContent).toHaveBeenCalledWith(
       '测试内容',
       undefined,
@@ -181,7 +185,7 @@ describe('EvaluationPanel actions', () => {
       })
     )
 
-    const applyButtons = await screen.findAllByRole('button', { name: '应用' })
+    const applyButtons = await screen.findAllByRole('button', { name: zh.evaluationApply })
     await userEvent.click(applyButtons[0])
 
     await waitFor(() => {
@@ -192,7 +196,7 @@ describe('EvaluationPanel actions', () => {
       expect(screen.getByText('recommendation applied')).toBeInTheDocument()
     })
 
-    const undoButtons = await screen.findAllByRole('button', { name: '撤销' })
+    const undoButtons = await screen.findAllByRole('button', { name: zh.evaluationUndo })
     await userEvent.click(undoButtons[0])
 
     await waitFor(() => {
@@ -207,8 +211,8 @@ describe('EvaluationPanel actions', () => {
   it('runs novel quality check and renders result fields', async () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
-    await screen.findByText('改进建议')
-    await userEvent.click(screen.getByRole('button', { name: '执行质量检查' }))
+    await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationQualityCheckRun }))
 
     await waitFor(() => {
       expect(mockedNovelQualityCheck).toHaveBeenCalledWith(
@@ -222,9 +226,9 @@ describe('EvaluationPanel actions', () => {
           style_consistency: 78,
         })
       )
-      expect(screen.getByText('决策: REVISE')).toBeInTheDocument()
-      expect(screen.getByText('总分: 74')).toBeInTheDocument()
-      expect(screen.getByText('反馈: 补强角色动机')).toBeInTheDocument()
+      expect(screen.getByText(`${zh.evaluationQualityCheckDecision}: REVISE`)).toBeInTheDocument()
+      expect(screen.getByText(`${zh.evaluationQualityCheckTotal}: 74`)).toBeInTheDocument()
+      expect(screen.getByText(`${zh.evaluationQualityCheckFeedback}: 补强角色动机`)).toBeInTheDocument()
     })
   })
 
@@ -236,8 +240,8 @@ describe('EvaluationPanel actions', () => {
 
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
-    await screen.findByText('改进建议')
-    await userEvent.click(screen.getByRole('button', { name: '执行质量检查' }))
+    await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationQualityCheckRun }))
 
     await waitFor(() => {
       expect(screen.getByText('service unavailable')).toBeInTheDocument()
@@ -247,30 +251,30 @@ describe('EvaluationPanel actions', () => {
   it('supports direct workflow actions and autofills IDs from response', async () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
-    await screen.findByText('改进建议')
+    await screen.findByText(zh.evaluationSuggestions)
 
-    await userEvent.click(screen.getByRole('button', { name: 'route' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowRoute }))
     await waitFor(() => {
       expect(mockedRouteWorkflow).toHaveBeenCalledWith('测试内容', 'L3')
-      expect(screen.getByText('route: 执行成功')).toBeInTheDocument()
+      expect(screen.getByText(evaluationWorkflowSuccessRoute)).toBeInTheDocument()
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'plan' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowPlan }))
     await waitFor(() => {
       expect(mockedCreatePlan).toHaveBeenCalledWith('测试内容', 'L3')
-      expect((screen.getByLabelText('plan_id') as HTMLInputElement).value).toBe('plan-1')
+      expect((screen.getByLabelText(zh.evaluationWorkflowPlanIdPlaceholder) as HTMLInputElement).value).toBe('plan-1')
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'execute' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowExecute }))
     await waitFor(() => {
       expect(mockedExecutePlan).toHaveBeenCalledWith('plan-1', undefined)
-      expect((screen.getByLabelText('step_id（可选）') as HTMLInputElement).value).toBe('step-1')
+      expect((screen.getByLabelText(zh.evaluationWorkflowStepIdPlaceholder) as HTMLInputElement).value).toBe('step-1')
     })
 
-    await userEvent.click(screen.getByRole('button', { name: 'lifecycle' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowLifecycle }))
     await waitFor(() => {
       expect(mockedWorkflowLifecycle).toHaveBeenCalledWith('plan-1', 'status')
-      expect(screen.getByText('lifecycle: 执行成功')).toBeInTheDocument()
+      expect(screen.getByText(evaluationWorkflowSuccessLifecycle)).toBeInTheDocument()
     })
   })
 
@@ -281,17 +285,17 @@ describe('EvaluationPanel actions', () => {
 
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
-    await screen.findByText('改进建议')
+    await screen.findByText(zh.evaluationSuggestions)
 
-    await userEvent.click(screen.getByRole('button', { name: 'route' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowRoute }))
     await waitFor(() => {
-      expect(screen.getByText('route: route failed')).toBeInTheDocument()
+      expect(screen.getByText(`${zh.evaluationWorkflowRoute}: route failed`)).toBeInTheDocument()
     })
 
-    await userEvent.click(screen.getByRole('button', { name: '重试' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowRetry }))
     await waitFor(() => {
       expect(mockedRouteWorkflow).toHaveBeenCalledTimes(2)
-      expect(screen.getByText('route: 执行成功')).toBeInTheDocument()
+      expect(screen.getByText(evaluationWorkflowSuccessRoute)).toBeInTheDocument()
     })
   })
 
@@ -329,9 +333,9 @@ describe('EvaluationPanel actions', () => {
 
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
-    await screen.findByText('改进建议')
+    await screen.findByText(zh.evaluationSuggestions)
 
-    await userEvent.click(screen.getByRole('button', { name: '批量应用' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationBatchApply }))
 
     await waitFor(() => {
       expect(mockedBatchApplyRecommendations).toHaveBeenCalledWith(
@@ -341,14 +345,14 @@ describe('EvaluationPanel actions', () => {
           expect.objectContaining({ id: 'rec-02' }),
         ])
       )
-      expect(screen.getByText('批量结果：成功 2，失败 0')).toBeInTheDocument()
+      expect(screen.getByText(zh.evaluationBatchResult.replace('{applied}', '2').replace('{failed}', '0'))).toBeInTheDocument()
     })
 
-    await userEvent.click(screen.getByRole('button', { name: '批量撤销' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationBatchUndo }))
 
     await waitFor(() => {
       expect(mockedUndoRecommendation).toHaveBeenCalledTimes(2)
-      expect(screen.getByText('批量撤销结果：成功 2，失败 0')).toBeInTheDocument()
+      expect(screen.getByText(zh.evaluationBatchUndoResult.replace('{success}', '2').replace('{failed}', '0'))).toBeInTheDocument()
     })
   })
 })

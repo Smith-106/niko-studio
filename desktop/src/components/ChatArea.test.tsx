@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { ChatArea } from './ChatArea'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
+import { translations } from '../i18n'
 
 vi.mock('../api/client', () => ({
   chat: vi.fn(),
@@ -32,6 +33,7 @@ const mockedCreateCheckpoint = vi.mocked(createCheckpoint)
 const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
 const mockedUploadMemoryFile = vi.mocked(uploadMemoryFile)
 const mockedAgentGetContext = vi.mocked(agentGetContext)
+const zh = translations.zh
 
 function resetStores(): void {
   localStorage.clear()
@@ -111,7 +113,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '测试消息{enter}')
 
     await waitFor(() => {
@@ -145,8 +147,8 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
-    await userEvent.click(screen.getByRole('button', { name: '模型对比' }))
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    await userEvent.click(screen.getByRole('button', { name: zh.chatModeComparison }))
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '质量目标回归{enter}')
 
     await waitFor(() => {
@@ -191,7 +193,7 @@ describe('ChatArea P0 flows', () => {
     }))
 
     render(<ChatArea />)
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '检索参数透传{enter}')
 
     await waitFor(() => {
@@ -223,13 +225,13 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Agent 高级' }))
+    await userEvent.click(screen.getByRole('button', { name: zh.chatModeAgent }))
     await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Agent 高级' }),
+      screen.getByRole('combobox', { name: zh.chatModeAgent }),
       'context'
     )
 
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '获取上下文{enter}')
 
     await waitFor(() => {
@@ -260,11 +262,18 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '渲染检索状态{enter}')
 
     await waitFor(() => {
-      expect(screen.getByText(/检索状态：\s*实体\s*2\s*\/\s*关系\s*1\s*\/\s*记忆\s*4/)).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          zh.messageBubbleRetrievalStatus
+            .replace('{entities}', '2')
+            .replace('{relations}', '1')
+            .replace('{memories}', '4')
+        )
+      ).toBeInTheDocument()
     })
   })
 
@@ -285,11 +294,11 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
-    await userEvent.click(screen.getByRole('button', { name: '模型对比' }))
-    const modelSelect = screen.getByLabelText('对照模型')
+    await userEvent.click(screen.getByRole('button', { name: zh.chatModeComparison }))
+    const modelSelect = screen.getByLabelText(zh.chatComparisonModelLabel)
     await userEvent.selectOptions(modelSelect, 'gpt-4-turbo')
 
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '比较测试{enter}')
 
     await waitFor(() => {
@@ -313,8 +322,8 @@ describe('ChatArea P0 flows', () => {
     })
 
     expect(mockedChatStream).not.toHaveBeenCalled()
-    expect(screen.getByText('主模型：primary')).toBeInTheDocument()
-    expect(screen.getByText('对照模型：gpt-4-turbo')).toBeInTheDocument()
+    expect(screen.getByText(`${zh.messageBubblePrimaryModelLabel}primary`)).toBeInTheDocument()
+    expect(screen.getByText(`${zh.messageBubbleControlModelLabel}gpt-4-turbo`)).toBeInTheDocument()
     expect(screen.getByText('主模型结果')).toBeInTheDocument()
     expect(screen.getByText('对照模型结果')).toBeInTheDocument()
   })
@@ -330,14 +339,14 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '需要取消{enter}')
 
-    const cancelButton = await screen.findByRole('button', { name: '取消' })
+    const cancelButton = await screen.findByRole('button', { name: zh.cancel })
     await userEvent.click(cancelButton)
 
     await waitFor(() => {
-      expect(screen.getByText('流式生成已中断。')).toBeInTheDocument()
+      expect(screen.getByText(zh.streamInterrupted)).toBeInTheDocument()
     })
     expect(mockedChat).not.toHaveBeenCalled()
   })
@@ -348,11 +357,11 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '触发中断{enter}')
 
     await waitFor(() => {
-      expect(screen.getByText('流式生成已中断。')).toBeInTheDocument()
+      expect(screen.getByText(zh.streamInterrupted)).toBeInTheDocument()
     })
     expect(mockedChat).not.toHaveBeenCalled()
   })
@@ -369,12 +378,12 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '触发恢复态{enter}')
 
     await waitFor(() => {
       expect(screen.getByText('已恢复内容')).toBeInTheDocument()
-      expect(screen.getByText('已从流式降级恢复，结果可继续使用。')).toBeInTheDocument()
+      expect(screen.getByText(zh.streamRecovered)).toBeInTheDocument()
     })
   })
 
@@ -384,7 +393,7 @@ describe('ChatArea P0 flows', () => {
     rerender(<ChatArea connectionState="reconnecting" />)
 
     await waitFor(() => {
-      expect(screen.getByText('连接恢复中，请稍候...')).toBeInTheDocument()
+      expect(screen.getByText(zh.streamReconnecting)).toBeInTheDocument()
     })
   })
 
@@ -394,13 +403,13 @@ describe('ChatArea P0 flows', () => {
     rerender(<ChatArea connectionState="reconnecting" />)
 
     await waitFor(() => {
-      expect(screen.getByText('连接恢复中，请稍候...')).toBeInTheDocument()
+      expect(screen.getByText(zh.streamReconnecting)).toBeInTheDocument()
     })
 
     rerender(<ChatArea connectionState="connected" />)
 
     await waitFor(() => {
-      expect(screen.getByText('已从流式降级恢复，结果可继续使用。')).toBeInTheDocument()
+      expect(screen.getByText(zh.streamRecovered)).toBeInTheDocument()
     })
   })
 
@@ -410,7 +419,7 @@ describe('ChatArea P0 flows', () => {
     rerender(<ChatArea connectionState="disconnected" />)
 
     await waitFor(() => {
-      expect(screen.getByText('流式生成已中断。')).toBeInTheDocument()
+      expect(screen.getByText(zh.streamInterrupted)).toBeInTheDocument()
     })
   })
 
@@ -421,11 +430,11 @@ describe('ChatArea P0 flows', () => {
     mockedChat.mockResolvedValue({ success: false, error: 'chat failed' })
 
     render(<ChatArea />)
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '触发失败{enter}')
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '恢复到发送前' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: zh.streamRestoreToBeforeSend })).toBeInTheDocument()
     })
   })
 
@@ -436,17 +445,17 @@ describe('ChatArea P0 flows', () => {
     mockedChat.mockResolvedValue({ success: false, error: 'chat failed' })
 
     render(<ChatArea />)
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...')
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '触发恢复{enter}')
 
-    const restoreButton = await screen.findByRole('button', { name: '恢复到发送前' })
+    const restoreButton = await screen.findByRole('button', { name: zh.streamRestoreToBeforeSend })
     await userEvent.click(restoreButton)
 
     await waitFor(() => {
       expect(mockedRestoreCheckpoint).toHaveBeenCalledWith('cp-1')
-      expect(screen.getByText('已恢复到发送前状态。')).toBeInTheDocument()
+      expect(screen.getByText(zh.streamRestoreBeforeSendSuccess)).toBeInTheDocument()
     })
-    expect(screen.queryByRole('button', { name: '恢复到发送前' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: zh.streamRestoreToBeforeSend })).not.toBeInTheDocument()
   })
 
   it('shows inline actions after assistant selection and no action before selection', async () => {
@@ -456,7 +465,7 @@ describe('ChatArea P0 flows', () => {
     selectionMock.mockReturnValue({ toString: () => '' } as Selection)
     const { container } = render(<ChatArea />)
 
-    expect(screen.queryByRole('button', { name: '改写' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: zh.inlineRevise })).not.toBeInTheDocument()
 
     selectionMock.mockReturnValue({ toString: () => '选中的文本' } as Selection)
     const markdownBody = container.querySelector('.markdown-body')
@@ -464,9 +473,9 @@ describe('ChatArea P0 flows', () => {
     fireEvent.mouseUp(markdownBody!)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '续写' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '改写' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '生成' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: zh.inlineContinue })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: zh.inlineRevise })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: zh.inlineGenerate })).toBeInTheDocument()
     })
 
     selectionMock.mockRestore()
@@ -486,8 +495,8 @@ describe('ChatArea P0 flows', () => {
 
     await waitFor(() => {
       expect(mockedUploadMemoryFile).toHaveBeenCalledTimes(1)
-      expect(screen.getByText('文件已注入上下文：context.txt（2 段）')).toBeInTheDocument()
-      expect(screen.getByText('已完成文件上下文注入：context.txt（2 段）')).toBeInTheDocument()
+      expect(screen.getByText(zh.uploadInjectedContext.replace('{fileName}', 'context.txt').replace('{chunks}', '2'))).toBeInTheDocument()
+      expect(screen.getByText(zh.uploadInjectedChunks.replace('{fileName}', 'context.txt').replace('{chunks}', '2'))).toBeInTheDocument()
     })
   })
 
@@ -496,13 +505,13 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
-    await userEvent.click(screen.getByLabelText('模板库'))
-    expect(await screen.findByRole('dialog', { name: '模板库' })).toBeInTheDocument()
+    await userEvent.click(screen.getByLabelText(zh.templateLibraryEntry))
+    expect(await screen.findByRole('dialog', { name: zh.templateLibraryTitle })).toBeInTheDocument()
 
-    await userEvent.type(screen.getByLabelText('主题 *'), '冒险')
-    await userEvent.click(screen.getByRole('button', { name: '一键填充' }))
+    await userEvent.type(screen.getAllByLabelText(/.+ \*$/)[0], '冒险')
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
 
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...') as HTMLTextAreaElement
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder) as HTMLTextAreaElement
     expect(input.value).toContain('主题「冒险」')
 
     await userEvent.type(input, '{enter}')
@@ -533,13 +542,13 @@ describe('ChatArea P0 flows', () => {
   it('applies template in append mode with existing input', async () => {
     render(<ChatArea />)
 
-    const input = screen.getByPlaceholderText('告诉我你想创作什么...') as HTMLTextAreaElement
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder) as HTMLTextAreaElement
     await userEvent.type(input, '已有内容')
 
-    await userEvent.click(screen.getByLabelText('模板库'))
-    await userEvent.type(screen.getByLabelText('主题 *'), '科幻')
-    await userEvent.click(screen.getByRole('button', { name: '追加到输入框' }))
-    await userEvent.click(screen.getByRole('button', { name: '一键填充' }))
+    await userEvent.click(screen.getByLabelText(zh.templateLibraryEntry))
+    await userEvent.type(screen.getAllByLabelText(/.+ \*$/)[0], '科幻')
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAppend }))
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
 
     expect(input.value).toContain('已有内容')
     expect(input.value).toContain('主题「科幻」')
