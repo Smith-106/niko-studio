@@ -72,3 +72,24 @@ def test_tauri_proxy_supports_frontend_used_http_methods():
 
     assert "PUT" in frontend_methods
     assert frontend_methods.issubset(tauri_methods)
+
+
+def test_gateway_base_source_contract_parity_between_frontend_and_tauri():
+    client_ts = _read("desktop/src/api/client.ts")
+    tauri_main_rs = _read("desktop/src-tauri/src/main.rs")
+
+    frontend_env_keys = set(re.findall(r"env\.(NIKO_GATEWAY_URL|VITE_NIKO_GATEWAY_URL)", client_ts))
+    tauri_env_keys = set(re.findall(r'"(NIKO_GATEWAY_URL|VITE_NIKO_GATEWAY_URL)"', tauri_main_rs))
+
+    assert frontend_env_keys == {"NIKO_GATEWAY_URL", "VITE_NIKO_GATEWAY_URL"}
+    assert frontend_env_keys.issubset(tauri_env_keys)
+
+
+def test_gateway_cors_allow_methods_includes_put_contract():
+    gateway_py = _read("src/mcp/gateway.py")
+
+    match = re.search(r"allow_methods=\[(?P<body>[^\]]+)\]", gateway_py)
+    assert match is not None
+    methods = set(re.findall(r'"(GET|POST|PUT|PATCH|DELETE|OPTIONS)"', match.group("body")))
+
+    assert "PUT" in methods

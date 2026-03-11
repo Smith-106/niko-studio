@@ -13,10 +13,12 @@ fn normalize_base_url(value: &str) -> String {
 }
 
 fn get_configured_gateway_base() -> Option<String> {
-    if let Ok(env_value) = std::env::var("NIKO_GATEWAY_URL") {
-        let trimmed = env_value.trim();
-        if !trimmed.is_empty() {
-            return Some(normalize_base_url(trimmed));
+    for key in ["NIKO_GATEWAY_URL", "VITE_NIKO_GATEWAY_URL"] {
+        if let Ok(env_value) = std::env::var(key) {
+            let trimmed = env_value.trim();
+            if !trimmed.is_empty() {
+                return Some(normalize_base_url(trimmed));
+            }
         }
     }
     None

@@ -299,6 +299,27 @@ def test_resolve_cors_origins_requires_real_prod_whitelist(monkeypatch):
         gateway_module._resolve_cors_origins()
 
 
+def test_gateway_cors_preflight_allows_put(monkeypatch):
+    from src.mcp import gateway as gateway_module
+    from starlette.testclient import TestClient
+
+    monkeypatch.setenv("NIKO_ENV", "development")
+    app = gateway_module.create_gateway()
+    client = TestClient(app)
+
+    response = client.options(
+        "/mcp/services/search",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "PUT",
+        },
+    )
+
+    assert response.status_code == 200
+    allow_methods = response.headers.get("access-control-allow-methods", "")
+    assert "PUT" in {method.strip() for method in allow_methods.split(",")}
+
+
 
 
 def _reset_gateway_metrics(gateway_module):
