@@ -230,7 +230,6 @@ jobs:
 
   i18n-check:
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -240,7 +239,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Run desktop i18n consistency check (warn mode)
+      - name: Run desktop i18n key parity check
         run: |
           python scripts/check_i18n_keys.py
 
@@ -335,11 +334,11 @@ jobs:
 
       - name: Run desktop parser + evaluation apply/undo contracts (high-risk soft fail)
         run: |
-          npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx
+          npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx src/components/KnowledgeModal.test.tsx
 
   p2-selected-hard-fail:
     runs-on: ubuntu-latest
-    needs: [tests, desktop-build, p2-baseline-soft-warn, p2-high-risk-soft-fail]
+    needs: [tests, desktop-build, i18n-check, p2-baseline-soft-warn, p2-high-risk-soft-fail]
 
     steps:
       - uses: actions/checkout@v4
@@ -371,5 +370,5 @@ jobs:
           pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q --no-cov
           pytest tests/unit/test_ci_gate_workflows.py -q --no-cov
           pytest tests/unit/mcp/test_gateway_endpoints.py -k "cors_preflight_allows_put" -q --no-cov
-          npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx
+          npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx src/components/KnowledgeModal.test.tsx
 
