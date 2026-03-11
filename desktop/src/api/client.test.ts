@@ -8,6 +8,7 @@ import {
   createGatewayServiceConfig,
   createPlan,
   deriveGatewayRuntimeState,
+  evaluateContent,
   executePlan,
   listGatewayServiceConfigs,
   mergeRecommendationBatchResults,
@@ -313,6 +314,31 @@ describe('workflow bridge and quality-check APIs', () => {
     vi.restoreAllMocks()
   })
 
+  it('posts payload to /critic/evaluate with quality_goals', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ total_score: 90, actionable_feedback: 'ok' }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await evaluateContent('章节内容', { scene_id: 's1' }, ['logic'], { coherence: 88 })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/critic/evaluate'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          content: '章节内容',
+          scene_card: { scene_id: 's1' },
+          dimensions: ['logic'],
+          quality_goals: { coherence: 88 },
+        }),
+      })
+    )
+    expect(response.success).toBe(true)
+  })
+
   it('posts payload to /api/novel/quality-check', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
@@ -339,6 +365,32 @@ describe('workflow bridge and quality-check APIs', () => {
       success: true,
       data: { decision: 'REVISE', total_score: 72, actionable_feedback: 'improve pacing' },
     })
+  })
+
+  it('maps non-2xx JSON error payload for novelQualityCheck', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'content is required' }),
+    }))
+
+    const response = await novelQualityCheck('')
+
+    expect(response.success).toBe(false)
+    expect(response.error).toBe('content is required')
+  })
+
+  it('maps non-2xx response without error field for novelQualityCheck', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ message: 'server exploded' }),
+    }))
+
+    const response = await novelQualityCheck('章节内容')
+
+    expect(response.success).toBe(false)
+    expect(response.error).toBe('HTTP error: 500')
   })
 
   it('maps fetch rejection for novelQualityCheck', async () => {

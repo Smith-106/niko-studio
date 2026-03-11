@@ -222,7 +222,25 @@ async function callApi<T>(
         options.body = JSON.stringify(body)
       }
       const response = await fetch(`${getResolvedApiBase()}${endpoint}`, options)
-      data = await response.json()
+      let payload: unknown
+      try {
+        payload = await response.json()
+      } catch {
+        payload = undefined
+      }
+
+      if (!response.ok) {
+        const errorMessage =
+          payload &&
+          typeof payload === 'object' &&
+          typeof (payload as { error?: unknown }).error === 'string' &&
+          (payload as { error: string }).error.trim().length > 0
+            ? (payload as { error: string }).error
+            : `HTTP error: ${response.status}`
+        return { success: false, error: errorMessage }
+      }
+
+      data = payload as T
     }
 
     return { success: true, data }

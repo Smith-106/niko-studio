@@ -940,10 +940,40 @@ async def test_rest_memory_graph_and_critic_endpoints_forward_payload(monkeypatc
     assert res.status_code == 200
     mock_graph_foreshadows.assert_awaited_once_with(status="pending", chapter="3")
 
-    req = await _json_request("/critic/evaluate", {"content": "abc", "dimensions": ["logic"]})
+    req = await _json_request(
+        "/critic/evaluate",
+        {
+            "content": "abc",
+            "dimensions": ["logic"],
+            "quality_goals": {"coherence": 80},
+        },
+    )
     res = await gateway_module.critic_evaluate_endpoint(req)
     assert res.status_code == 200
-    mock_critic_eval.assert_awaited_once_with(content="abc", scene_card=None, dimensions=["logic"])
+    mock_critic_eval.assert_awaited_once_with(
+        content="abc",
+        scene_card=None,
+        dimensions=["logic"],
+        quality_goals={"coherence": 80},
+    )
+
+    mock_critic_eval.reset_mock()
+    req = await _json_request(
+        "/critic/evaluate",
+        {
+            "content": "abc",
+            "dimensions": ["logic"],
+            "qualityGoals": {"coherence": 85},
+        },
+    )
+    res = await gateway_module.critic_evaluate_endpoint(req)
+    assert res.status_code == 200
+    mock_critic_eval.assert_awaited_once_with(
+        content="abc",
+        scene_card=None,
+        dimensions=["logic"],
+        quality_goals={"coherence": 85},
+    )
 
     req = await _json_request("/critic/suggestions", {"content": "abc", "max_suggestions": 2})
     res = await gateway_module.critic_suggestions_endpoint(req)
