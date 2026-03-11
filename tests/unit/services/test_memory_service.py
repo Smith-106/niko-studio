@@ -165,6 +165,24 @@ class TestComputeSimilarity:
         assert optimized == pytest.approx(baseline)
 
 
+class TestEnsureColumn:
+
+    @pytest.fixture
+    def service(self, tmp_path):
+        db = str(tmp_path / "test_mem.db")
+        return MemoryService(db_path=db)
+
+    def test_ensure_column_returns_when_column_exists(self, service):
+        db = service._get_db()
+        before = [row[1] for row in db.execute("PRAGMA table_info(memories)").fetchall()]
+        assert "content_hash" in before
+
+        service._ensure_column("memories", "content_hash", "TEXT")
+
+        after = [row[1] for row in db.execute("PRAGMA table_info(memories)").fetchall()]
+        assert before == after
+
+
 # ============================================================
 # MemoryService._extract_keywords
 # ============================================================

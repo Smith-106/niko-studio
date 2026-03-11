@@ -278,3 +278,16 @@ def test_atomic_write_temp_cleanup_failure_still_raises_builder_error(tmp_path):
     ):
         with pytest.raises(FileBuilderError, match="Failed to write file"):
             builder.build()
+
+
+def test_atomic_write_windows_unlinks_existing_target_before_rename(tmp_path):
+    target = tmp_path / "windows_existing.txt"
+    target.write_text("old", encoding="utf-8")
+    builder = FileBuilder().with_path(target).with_content("new")
+
+    with patch("src.storage.file_builder.os.name", "nt"), patch("pathlib.Path.rename", return_value=None), patch(
+        "pathlib.Path.unlink"
+    ) as unlink_spy:
+        builder.build()
+
+    unlink_spy.assert_called_once_with()

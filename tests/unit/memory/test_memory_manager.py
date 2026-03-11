@@ -774,6 +774,19 @@ class TestMemoryManagerCoverageClosure:
         manager = MemoryManager(base_path=tmp_path / ".writing")
         assert manager.get_batch([]) == []
 
+    def test_update_topic_link_fallback_to_copy_when_symlink_fails(self, tmp_path):
+        manager = MemoryManager(base_path=tmp_path / ".writing")
+        entry = manager.add(content="topic fallback", topics=["old-topic"])
+
+        with patch("pathlib.Path.symlink_to", side_effect=OSError("no symlink")):
+            updated = manager.update(entry.id, topics=["new-topic"])
+
+        assert updated is not None
+        fallback_link = manager.topics_dir / "new-topic" / f"{entry.id}.md"
+        assert fallback_link.exists()
+        assert fallback_link.read_text(encoding="utf-8")
+        assert "topic fallback" in fallback_link.read_text(encoding="utf-8")
+
     def test_get_by_date_excludes_superseded_frontmatter_field(self, tmp_path):
         manager = MemoryManager(base_path=tmp_path / ".writing")
         entry = manager.add(content="to hide", topics=["x"])

@@ -2376,6 +2376,43 @@ async def test_evaluate_content_legacy_and_transformed_paths(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_evaluate_content_reraises_non_compat_type_error(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_evaluate_content = _get_raw_mcp_tool_function(gateway_module.critic_mcp, "evaluate_content")
+
+    engine = MagicMock()
+    engine.evaluate = AsyncMock(side_effect=TypeError("bad conversion"))
+    monkeypatch.setattr(gateway_module, "get_critic_engine", lambda: engine)
+
+    with pytest.raises(TypeError, match="bad conversion"):
+        await raw_evaluate_content("text", dimensions=["logic"], quality_goals={"coherence": 90})
+
+
+@pytest.mark.asyncio
+async def test_evaluate_content_falls_back_when_quality_goals_not_supported(monkeypatch):
+    from src.mcp import gateway as gateway_module
+
+    raw_evaluate_content = _get_raw_mcp_tool_function(gateway_module.critic_mcp, "evaluate_content")
+
+    engine = MagicMock()
+    engine.evaluate = AsyncMock(side_effect=[TypeError("unexpected keyword argument 'quality_goals'"), {
+        "total_score": 91,
+        "lock_score": 32,
+        "style_score": 31,
+        "logic_score": 28,
+        "actionable_feedback": "fallback ok",
+    }])
+    monkeypatch.setattr(gateway_module, "get_critic_engine", lambda: engine)
+
+    result = await raw_evaluate_content("text", dimensions=["logic"], quality_goals={"coherence": 90})
+
+    assert result["total_score"] == 91
+    assert result["actionable_feedback"] == "fallback ok"
+    assert engine.evaluate.await_count == 2
+
+
+@pytest.mark.asyncio
 async def test_agent_route_and_agent_write_internal_paths(monkeypatch):
     from src.mcp import gateway as gateway_module
 

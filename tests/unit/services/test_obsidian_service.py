@@ -144,6 +144,25 @@ class TestGetVaultInfo:
         assert info.file_count >= 1
 
 
+class TestDiscoverFromCommonPaths:
+
+    @patch("src.services.obsidian_service.Path.home")
+    @patch("src.services.obsidian_service.sys.platform", "win32")
+    def test_windows_specific_common_paths_are_checked(self, mock_home, tmp_path):
+        home = tmp_path / "home"
+        one_drive_vault = home / "OneDrive" / "Documents" / "Obsidian"
+        one_drive_vault.mkdir(parents=True, exist_ok=True)
+        (one_drive_vault / ".obsidian").mkdir(parents=True, exist_ok=True)
+        (one_drive_vault / "note.md").write_text("x", encoding="utf-8")
+
+        mock_home.return_value = home
+
+        svc = ObsidianService()
+        vaults = svc._discover_from_common_paths()
+
+        assert any(v.path == str(one_drive_vault) for v in vaults)
+
+
 # ============================================================
 # get_vault_structure
 # ============================================================
