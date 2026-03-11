@@ -154,14 +154,14 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             })))
           } else {
             setItems([
-              { name: 'character-forge', description: '角色塑造' },
-              { name: 'suspense-craft', description: '悬念张力' },
-              { name: 'dialogue-system', description: '对话系统' },
-              { name: 'tension-arc', description: '张力曲线' },
-              { name: 'emotion-arc', description: '情感弧光' },
-              { name: 'opening-craft', description: '开篇技巧' },
-              { name: 'ending-craft', description: '结尾技巧' },
-              { name: 'conflict-escalation', description: '冲突升级' },
+              { name: 'character-forge', description: t.skillDescCharacterForge },
+              { name: 'suspense-craft', description: t.skillDescSuspenseCraft },
+              { name: 'dialogue-system', description: t.skillDescDialogueSystem },
+              { name: 'tension-arc', description: t.skillDescTensionArc },
+              { name: 'emotion-arc', description: t.skillDescEmotionArc },
+              { name: 'opening-craft', description: t.skillDescOpeningCraft },
+              { name: 'ending-craft', description: t.skillDescEndingCraft },
+              { name: 'conflict-escalation', description: t.skillDescConflictEscalation },
             ])
           }
           break

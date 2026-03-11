@@ -250,6 +250,14 @@ export interface Translations {
   skillGroupTools: string
   skillGroupEmpty: string
   skillDescriptionGeneric: string
+  skillDescCharacterForge: string
+  skillDescSuspenseCraft: string
+  skillDescDialogueSystem: string
+  skillDescTensionArc: string
+  skillDescEmotionArc: string
+  skillDescOpeningCraft: string
+  skillDescEndingCraft: string
+  skillDescConflictEscalation: string
 
   // App status
   serviceDegraded: string
@@ -719,6 +727,14 @@ export const translations: Record<Language, Translations> = {
     skillGroupTools: '工具',
     skillGroupEmpty: '暂无技能',
     skillDescriptionGeneric: '点击启用到当前对话',
+    skillDescCharacterForge: '角色塑造',
+    skillDescSuspenseCraft: '悬念张力',
+    skillDescDialogueSystem: '对话系统',
+    skillDescTensionArc: '张力曲线',
+    skillDescEmotionArc: '情感弧光',
+    skillDescOpeningCraft: '开篇技巧',
+    skillDescEndingCraft: '结尾技巧',
+    skillDescConflictEscalation: '冲突升级',
 
     // App status
     serviceDegraded: '服务降级',
@@ -1186,6 +1202,14 @@ export const translations: Record<Language, Translations> = {
     skillGroupTools: 'Tools',
     skillGroupEmpty: 'No skills',
     skillDescriptionGeneric: 'Click to apply in current chat',
+    skillDescCharacterForge: 'Character Forge',
+    skillDescSuspenseCraft: 'Suspense Craft',
+    skillDescDialogueSystem: 'Dialogue System',
+    skillDescTensionArc: 'Tension Arc',
+    skillDescEmotionArc: 'Emotion Arc',
+    skillDescOpeningCraft: 'Opening Craft',
+    skillDescEndingCraft: 'Ending Craft',
+    skillDescConflictEscalation: 'Conflict Escalation',
 
     // App status
     serviceDegraded: 'Service Degraded',
