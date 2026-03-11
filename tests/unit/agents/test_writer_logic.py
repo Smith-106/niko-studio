@@ -341,6 +341,28 @@ class TestWriteRuntimeLogic:
         assert "knowledge_retrieved" in output.metadata
         assert any("knowledge_retrieval_failed" in w for w in output.metadata.get("warnings", []))
 
+    @pytest.mark.asyncio
+    async def test_write_with_knowledge_preserves_existing_metadata_warnings(self):
+        llm = RunnableLambda(lambda _: "chunk")
+        kl = MagicMock()
+
+        agent = WriterAgent(llm=llm, knowledge_layer=kl)
+        agent.retrieve_context = AsyncMock(return_value={"entities": [], "relations": [], "memories": []})
+        agent.write = AsyncMock(
+            return_value=WriterOutput(
+                content="text",
+                wordcount=1,
+                metadata={"warnings": [123, "legacy-warn"], "source": "existing"},
+            )
+        )
+
+        output = await agent.write_with_knowledge(WriterInput(scene_id="CH01-SC02", sensory_guidance={}))
+
+        assert output.metadata is not None
+        assert output.metadata["warnings"] == ["123", "legacy-warn"]
+        assert output.metadata["source"] == "existing"
+        assert "knowledge_retrieved" in output.metadata
+
 
 class TestBuildKnowledgeContext:
     """Tests for _build_knowledge_context()"""

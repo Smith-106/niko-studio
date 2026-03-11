@@ -356,6 +356,22 @@ class TestMissingBranchCoverage:
 
         warn_mock.assert_called_once()
 
+    def test_ensure_environment_returns_when_no_errors(self):
+        import src.config as cfg_mod
+
+        cfg_mod._config_manager = None
+        mgr = ConfigManager(config_path=None, hot_reload=False)
+        mgr.set("env", "production")
+        mgr.set("agent.google_api_key", "gkey")
+        mgr.set("agent.openai_api_key", "")
+        mgr.set("graph.db_path", "./graph.db")
+        cfg_mod._config_manager = mgr
+
+        with patch("src.config.logger.warning") as warn_mock:
+            cfg_mod.ensure_environment(strict=True)
+
+        warn_mock.assert_not_called()
+
     def test_init_config_uses_existing_candidate_path(self, tmp_path, monkeypatch):
         import src.config as cfg_mod
 
