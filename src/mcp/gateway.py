@@ -3411,7 +3411,7 @@ def create_gateway() -> Starlette:
     gateway = CORSMiddleware(
         gateway,
         allow_origins=_resolve_cors_origins(),
-        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
         expose_headers=["Mcp-Session-Id"],  # 重要: Session 管理必需
     )

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSettingsStore } from '@/stores/settingsStore'
 import {
   applyRecommendation,
@@ -10,6 +10,7 @@ import {
   deriveGatewayRuntimeState,
   evaluateContent,
   executePlan,
+  getResolvedApiBase,
   listGatewayServiceConfigs,
   mergeRecommendationBatchResults,
   novelQualityCheck,
@@ -43,6 +44,81 @@ function createSseResponse(chunks: string[]): Response {
     },
   })
 }
+
+describe('gateway base resolution', () => {
+  const env = import.meta.env as Record<string, string | undefined>
+  let previousNikoGatewayUrl: string | undefined
+  let previousViteGatewayUrl: string | undefined
+  let previousApiBaseUrl: string
+
+  beforeEach(() => {
+    previousNikoGatewayUrl = env.NIKO_GATEWAY_URL
+    previousViteGatewayUrl = env.VITE_NIKO_GATEWAY_URL
+    previousApiBaseUrl = useSettingsStore.getState().settings.apiBaseUrl
+
+    delete env.NIKO_GATEWAY_URL
+    delete env.VITE_NIKO_GATEWAY_URL
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        apiBaseUrl: '',
+      },
+    }))
+  })
+
+  afterEach(() => {
+    if (previousNikoGatewayUrl === undefined) {
+      delete env.NIKO_GATEWAY_URL
+    } else {
+      env.NIKO_GATEWAY_URL = previousNikoGatewayUrl
+    }
+
+    if (previousViteGatewayUrl === undefined) {
+      delete env.VITE_NIKO_GATEWAY_URL
+    } else {
+      env.VITE_NIKO_GATEWAY_URL = previousViteGatewayUrl
+    }
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        apiBaseUrl: previousApiBaseUrl,
+      },
+    }))
+  })
+
+  it('prefers NIKO_GATEWAY_URL over settings and VITE fallback', () => {
+    env.NIKO_GATEWAY_URL = 'http://env-niko.example.com/'
+    env.VITE_NIKO_GATEWAY_URL = 'http://env-vite.example.com/'
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        apiBaseUrl: 'http://settings.example.com/',
+      },
+    }))
+
+    expect(getResolvedApiBase()).toBe('http://env-niko.example.com')
+  })
+
+  it('falls back to settings when gateway env vars are absent', () => {
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        apiBaseUrl: 'http://settings.example.com/',
+      },
+    }))
+
+    expect(getResolvedApiBase()).toBe('http://settings.example.com')
+  })
+
+  it('falls back to default base when env and settings are empty', () => {
+    expect(getResolvedApiBase()).toBe('http://127.0.0.1:8000')
+  })
+})
 
 describe('recommendation helpers', () => {
   beforeEach(() => {

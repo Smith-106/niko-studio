@@ -11,7 +11,8 @@ const DEFAULT_API_BASE = 'http://127.0.0.1:8000'
 const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, '')
 
 const resolveApiBase = (): string => {
-  const envBase = import.meta.env.VITE_NIKO_GATEWAY_URL as string | undefined
+  const env = import.meta.env as Record<string, string | undefined>
+  const envBase = env.NIKO_GATEWAY_URL ?? env.VITE_NIKO_GATEWAY_URL
   if (envBase && envBase.trim()) {
     return normalizeBaseUrl(envBase.trim())
   }
@@ -26,7 +27,7 @@ const resolveApiBase = (): string => {
 
 // Gateway 配置：
 // - 默认本地 127.0.0.1:8000
-// - 远程模式：settings apiBaseUrl 或 VITE_NIKO_GATEWAY_URL
+// - 远程模式：env(NIKO_GATEWAY_URL / VITE_NIKO_GATEWAY_URL) 或 settings apiBaseUrl
 const API_BASE = resolveApiBase()
 
 export const getApiBase = (): string => API_BASE
