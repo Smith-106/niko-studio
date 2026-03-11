@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """CI workflow gate configuration tests."""
 
+import re
 from pathlib import Path
 
 
@@ -60,3 +61,14 @@ def test_integration_workflow_hard_gate_runs_selected_contracts():
     assert "pytest tests/unit/workflow/test_workflow_engine.py -k \"decision\" -q" in content
     assert "pytest tests/unit/mcp/test_gateway_stream.py -k \"contract\" -q" in content
     assert "npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx" in content
+
+
+def test_tauri_proxy_supports_frontend_used_http_methods():
+    client_ts = _read("desktop/src/api/client.ts")
+    tauri_main_rs = _read("desktop/src-tauri/src/main.rs")
+
+    frontend_methods = set(re.findall(r"callApi\([^\n]*,\s*'(GET|POST|PUT|PATCH|DELETE)'", client_ts))
+    tauri_methods = set(re.findall(r'"(GET|POST|PUT|PATCH|DELETE)"\s*=>', tauri_main_rs))
+
+    assert "PUT" in frontend_methods
+    assert frontend_methods.issubset(tauri_methods)
