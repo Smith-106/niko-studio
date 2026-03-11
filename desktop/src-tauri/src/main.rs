@@ -84,6 +84,13 @@ async fn call_api(endpoint: String, method: String, body: Option<String>) -> Res
             }
             req.send().await
         },
+        "PUT" => {
+            let mut req = client.put(&url);
+            if let Some(b) = body {
+                req = req.header("Content-Type", "application/json").body(b);
+            }
+            req.send().await
+        },
         _ => return Err("Unsupported method".to_string()),
     };
 
