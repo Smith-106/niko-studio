@@ -556,12 +556,15 @@ class IterativeRetriever:
 
         results = []
         for word in words[:5]:
-            safe_word = word.replace("'", "''")
-            cypher = f"MATCH (n:Character) WHERE n.name CONTAINS '{safe_word}' RETURN n"
-            entities = await self.graph_engine.execute_cypher(cypher)
+            # Use LIKE with parameterized query for safe CONTAINS semantics
+            # This prevents Cypher injection by using SQL parameters
+            entities = await self.graph_engine.search_entities_by_name(
+                entity_type="Character",
+                name_pattern=f"%{word}%"
+            )
 
             for e in entities:
-                if "error" not in e:
+                if isinstance(e, dict) and "error" not in e:
                     e["score"] = 0.7
                     results.append(e)
 

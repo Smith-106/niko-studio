@@ -238,7 +238,42 @@ class GraphEngine:
             return results
         
         return []
-    
+
+    async def search_entities_by_name(
+        self,
+        entity_type: str,
+        name_pattern: str,
+        limit: int = 50
+    ) -> list:
+        """
+        安全搜索实体（使用参数化查询防止注入）
+
+        Args:
+            entity_type: 实体类型 (Character, Location, etc.)
+            name_pattern: 名称模式 (支持 % 通配符)
+            limit: 返回数量限制
+
+        Returns:
+            匹配的实体列表
+        """
+        # 使用参数化 LIKE 查询，防止注入
+        cursor = self.db.execute(
+            "SELECT * FROM entities WHERE type = ? AND name LIKE ? LIMIT ?",
+            (entity_type, name_pattern, limit)
+        )
+
+        results = []
+        for row in cursor.fetchall():
+            results.append({
+                "id": row[0],
+                "type": row[1],
+                "name": row[2],
+                "properties": json.loads(row[3]) if row[3] else {},
+                "created_at": row[4],
+                "updated_at": row[5]
+            })
+        return results
+
     async def get_character(
         self,
         name: str,
