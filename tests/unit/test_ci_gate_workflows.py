@@ -44,7 +44,8 @@ def test_integration_workflow_gate_lane_policies_match_expected():
     assert "continue-on-error: true" in content
     assert "p2-high-risk-soft-fail:" in content
     assert "p2-selected-hard-fail:" in content
-    assert "needs: [tests, desktop-build, p2-baseline-soft-warn, p2-high-risk-soft-fail]" in content
+    # Workflow includes i18n-check in needs for p2-selected-hard-fail
+    assert "needs: [tests, desktop-build, i18n-check, p2-baseline-soft-warn, p2-high-risk-soft-fail]" in content
 
 
 def test_integration_workflow_contains_all_four_contract_groups():
