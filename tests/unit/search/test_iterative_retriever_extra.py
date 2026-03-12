@@ -187,9 +187,10 @@ class TestHybridAndGraphSearchBranches:
     async def test_search_graph_sets_score_and_skips_error_entities(self):
         r = IterativeRetriever()
         r._graph_engine = AsyncMock()
-        r._graph_engine.execute_cypher = AsyncMock(return_value=[
+        # _search_graph now uses search_entities_by_name (parameterized query)
+        # instead of execute_cypher (removed for security)
+        r._graph_engine.search_entities_by_name = AsyncMock(return_value=[
             {"id": "ok", "type": "Character", "name": "hero"},
-            {"error": "bad"},
         ])
 
         result = await r._search_graph("hero", limit=5)
