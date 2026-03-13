@@ -53,6 +53,8 @@ from src.mcp.config import (
     _is_production_env,
     _resolve_reload_enabled,
     _resolve_gateway_host_port,
+    _resolve_localhost_only_enabled,
+    _resolve_localhost_only_exempt_paths,
     _resolve_search_route_mode,
     _resolve_search_elastic_timeout_ms,
     _resolve_redis_rate_limit,
@@ -221,6 +223,7 @@ from src.mcp.endpoints import (
     chat_stream_endpoint,
 )
 
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from starlette.middleware.cors import CORSMiddleware
@@ -454,6 +457,48 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("niko-gateway")
 
 
+# ============ Localhost-only access guard ============
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    if not host:
+        return False
+    host = str(host).strip().lower()
+    if host in {"::1", "localhost", "testclient"}:
+        return True
+    if host.startswith("127."):
+        return True
+    return False
+
+
+class GatewayLocalhostOnlyMiddleware(BaseHTTPMiddleware):
+    """Reject non-loopback callers when enabled.
+
+    Notes:
+    - Starlette TestClient reports request.client.host == "testclient".
+    """
+
+    def __init__(self, app, enabled: bool, exempt_paths: list[str]):
+        super().__init__(app)
+        self._enabled = bool(enabled)
+        self._exempt_paths = set(exempt_paths or [])
+
+    async def dispatch(self, request, call_next):
+        if not self._enabled:
+            return await call_next(request)
+
+        path = str(getattr(request, "url", None).path if getattr(request, "url", None) else request.scope.get("path", ""))
+        if path in self._exempt_paths:
+            return await call_next(request)
+
+        client = getattr(request, "client", None)
+        host = getattr(client, "host", None) if client is not None else None
+        if _is_loopback_host(host):
+            return await call_next(request)
+
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+
+
 # ============ 创建 Gateway ============
 
 def create_gateway() -> Starlette:
@@ -560,6 +605,11 @@ def create_gateway() -> Starlette:
             Mount("/skills", skills_mcp.streamable_http_app()),
         ],
         lifespan=lifespan,
+    )
+    gateway.add_middleware(
+        GatewayLocalhostOnlyMiddleware,
+        enabled=_resolve_localhost_only_enabled(),
+        exempt_paths=_resolve_localhost_only_exempt_paths(),
     )
     gateway.add_middleware(GatewayMetricsMiddleware)
 

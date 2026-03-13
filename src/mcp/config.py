@@ -64,6 +64,41 @@ def _is_llm_available() -> bool:
         return False
 
 
+def _resolve_localhost_only_enabled() -> bool:
+    """Resolve whether gateway endpoints are restricted to localhost callers."""
+    raw = os.getenv("NIKO_GATEWAY_LOCALHOST_ONLY")
+    if raw is not None:
+        return str(raw).strip().lower() in {"true", "1", "yes", "on"}
+
+    raw_config = get_config_value("gateway.localhost_only", True)
+    if isinstance(raw_config, bool):
+        return raw_config
+    return str(raw_config).strip().lower() in {"true", "1", "yes", "on"}
+
+
+def _resolve_localhost_only_exempt_paths() -> List[str]:
+    """Resolve paths that bypass localhost-only guard."""
+    raw = os.getenv("NIKO_GATEWAY_LOCALHOST_ONLY_EXEMPT_PATHS")
+    if raw is None:
+        raw = get_config_value("gateway.localhost_only_exempt_paths", [])
+
+    paths: List[str] = []
+    if isinstance(raw, str):
+        paths = [item.strip() for item in raw.split(",") if item.strip()]
+    elif isinstance(raw, Iterable):
+        paths = [str(item).strip() for item in raw if str(item).strip()]
+
+    normalized: List[str] = []
+    for path in paths:
+        if not path.startswith("/"):
+            path = "/" + path
+        if len(path) > 1 and path.endswith("/"):
+            path = path[:-1]
+        normalized.append(path)
+
+    return normalized
+
+
 def _resolve_search_route_mode() -> str:
     """Resolve search routing mode."""
     raw = os.getenv("NIKO_SEARCH_ROUTE_MODE")
@@ -207,6 +242,8 @@ __all__ = [
     "_resolve_reload_enabled",
     "_resolve_gateway_host_port",
     "_is_llm_available",
+    "_resolve_localhost_only_enabled",
+    "_resolve_localhost_only_exempt_paths",
     "_resolve_search_route_mode",
     "_resolve_search_elastic_timeout_ms",
     "_resolve_redis_rate_limit",

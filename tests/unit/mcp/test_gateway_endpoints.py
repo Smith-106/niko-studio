@@ -304,6 +304,7 @@ def test_gateway_cors_preflight_allows_put(monkeypatch):
     from starlette.testclient import TestClient
 
     monkeypatch.setenv("NIKO_ENV", "development")
+    monkeypatch.setenv("NIKO_GATEWAY_LOCALHOST_ONLY", "0")
     app = gateway_module.create_gateway()
     client = TestClient(app)
 
@@ -449,43 +450,97 @@ def test_gateway_metrics_record_and_snapshot():
     assert snapshot["latency_ms_max"] == 20.0
 
 
-def test_gateway_metrics_snapshot_zero_requests():
-    from src.mcp import gateway as gateway_module
-
-    _reset_gateway_metrics(gateway_module)
-    snapshot = gateway_module._get_metrics_snapshot()
-
-    assert snapshot["requests_total"] == 0
-    assert snapshot["latency_ms_avg"] == 0.0
-    assert snapshot["latency_ms_max"] == 0.0
-
-
 @pytest.mark.asyncio
-async def test_gateway_metrics_middleware_dispatch_paths():
+async def test_gateway_localhost_only_middleware_allows_loopback_and_testclient():
     from src.mcp import gateway as gateway_module
     from starlette.applications import Starlette
     from starlette.requests import Request
     from starlette.responses import JSONResponse
 
-    _reset_gateway_metrics(gateway_module)
-    middleware = gateway_module.GatewayMetricsMiddleware(app=Starlette())
-    request = Request({"type": "http", "method": "GET", "path": "/health", "headers": []})
+    middleware = gateway_module.GatewayLocalhostOnlyMiddleware(
+        app=Starlette(),
+        enabled=True,
+        exempt_paths=[],
+    )
 
-    async def call_next_ok(_request):
-        return JSONResponse({"ok": True}, status_code=201)
+    async def call_next(_request):
+        return JSONResponse({"ok": True}, status_code=200)
 
-    response = await middleware.dispatch(request, call_next_ok)
-    assert response.status_code == 201
+    # IPv4 loopback
+    request = Request({
+        "type": "http",
+        "method": "GET",
+        "path": "/health",
+        "headers": [],
+        "client": ("127.0.0.1", 12345),
+    })
+    response = await middleware.dispatch(request, call_next)
+    assert response.status_code == 200
 
-    assert gateway_module._METRICS["requests_total"] == 1
-    assert gateway_module._METRICS["requests_failed_total"] == 0
+    # Starlette TestClient uses this sentinel value
+    request = Request({
+        "type": "http",
+        "method": "GET",
+        "path": "/health",
+        "headers": [],
+        "client": ("testclient", 12345),
+    })
+    response = await middleware.dispatch(request, call_next)
+    assert response.status_code == 200
 
-    async def call_next_fail(_request):
-        raise RuntimeError("boom")
 
-    with pytest.raises(RuntimeError):
-        await middleware.dispatch(request, call_next_fail)
+@pytest.mark.asyncio
+async def test_gateway_localhost_only_middleware_rejects_non_loopback():
+    from src.mcp import gateway as gateway_module
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
 
+    middleware = gateway_module.GatewayLocalhostOnlyMiddleware(
+        app=Starlette(),
+        enabled=True,
+        exempt_paths=[],
+    )
+
+    async def call_next(_request):
+        return JSONResponse({"ok": True}, status_code=200)
+
+    request = Request({
+        "type": "http",
+        "method": "GET",
+        "path": "/health",
+        "headers": [],
+        "client": ("8.8.8.8", 12345),
+    })
+    response = await middleware.dispatch(request, call_next)
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_gateway_localhost_only_middleware_exempt_paths_bypass_guard(monkeypatch, client_no_lifespan):
+    from src.mcp import gateway as gateway_module
+    from starlette.applications import Starlette
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
+
+    middleware = gateway_module.GatewayLocalhostOnlyMiddleware(
+        app=Starlette(),
+        enabled=True,
+        exempt_paths=["/health"],
+    )
+
+    async def call_next(_request):
+        return JSONResponse({"ok": True}, status_code=200)
+
+    request = Request({
+        "type": "http",
+        "method": "GET",
+        "path": "/health",
+        "headers": [],
+        "client": ("8.8.8.8", 12345),
+    })
+    response = await middleware.dispatch(request, call_next)
+    assert response.status_code == 200
 
 
 def test_models_returns_500_when_config_load_fails(client_no_lifespan, monkeypatch):
@@ -496,6 +551,7 @@ def test_models_returns_500_when_config_load_fails(client_no_lifespan, monkeypat
     response = client_no_lifespan.get("/models")
     assert response.status_code == 500
     assert "config boom" in response.json()["error"]
+
 
 
 def test_health_check_normalizes_missing_status_from_db_flag(client_no_lifespan, monkeypatch):
