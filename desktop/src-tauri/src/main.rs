@@ -2,11 +2,18 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, CustomMenuItem};
-use std::process::{Command, Child};
 use std::sync::Mutex;
+use std::time::Duration;
 
-const DEFAULT_GATEWAY_BASE: &str = "http://127.0.0.1:8000";
+use tokio::sync::Mutex as AsyncMutex;
+
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
+use tauri::Manager;
+use tauri_plugin_shell::process::CommandChild;
+use tauri_plugin_shell::ShellExt;
+
+const TRAY_ICON: tauri::image::Image<'static> = tauri::include_image!("icons/icon.png");
 
 fn normalize_base_url(value: &str) -> String {
     value.trim_end_matches('/').to_string()
@@ -26,7 +33,14 @@ fn get_configured_gateway_base() -> Option<String> {
 
 async fn is_gateway_healthy(base: &str) -> bool {
     let health_url = format!("{}/health", base);
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(2))
+        .build()
+        .ok();
+    let client = match client {
+        Some(c) => c,
+        None => return false,
+    };
     client
         .get(&health_url)
         .send()
@@ -36,44 +50,202 @@ async fn is_gateway_healthy(base: &str) -> bool {
         .unwrap_or(false)
 }
 
-async fn resolve_gateway_base_with_fallback() -> String {
-    if let Some(remote_base) = get_configured_gateway_base() {
-        if is_gateway_healthy(&remote_base).await {
-            return remote_base;
-        }
-    }
-    DEFAULT_GATEWAY_BASE.to_string()
+struct GatewayState {
+    child: Mutex<Option<CommandChild>>,
+    local_base: Mutex<Option<String>>,
+    base_override: Mutex<Option<String>>,
+    start_lock: AsyncMutex<()>,
 }
 
-struct PythonBackend(Mutex<Option<Child>>);
-
-#[tauri::command]
-async fn start_backend() -> Result<String, String> {
-    if let Some(remote_base) = get_configured_gateway_base() {
-        if is_gateway_healthy(&remote_base).await {
-            return Ok("Remote Gateway is healthy, skip local backend start".to_string());
+impl GatewayState {
+    fn new() -> Self {
+        Self {
+            child: Mutex::new(None),
+            local_base: Mutex::new(None),
+            base_override: Mutex::new(None),
+            start_lock: AsyncMutex::new(()),
         }
     }
 
-    // Start Python backend (local fallback)
-    let child = Command::new("python")
-        .args(["-m", "uvicorn", "src.mcp.gateway:app", "--host", "127.0.0.1", "--port", "8000"])
-        .current_dir("..")
-        .spawn()
-        .map_err(|e| format!("Failed to start backend: {}", e))?;
+    async fn resolve_base(&self, app: &tauri::AppHandle) -> Result<String, String> {
+        // 1) Hard override via env (highest priority, for dev / advanced use)
+        if let Some(env_base) = get_configured_gateway_base() {
+            if is_gateway_healthy(&env_base).await {
+                return Ok(env_base);
+            }
+        }
 
-    Ok(format!("Backend started with PID: {}", child.id()))
+        // 2) UI override
+        let override_base = { self.base_override.lock().unwrap().clone() };
+        if let Some(override_base) = override_base {
+            if is_gateway_healthy(&override_base).await {
+                return Ok(override_base);
+            }
+        }
+
+        // 3) Local base (already started)
+        let local_base = { self.local_base.lock().unwrap().clone() };
+        if let Some(local_base) = local_base {
+            if is_gateway_healthy(&local_base).await {
+                return Ok(local_base);
+            }
+            // Stale local base; clear state before respawning.
+            self.stop_child_best_effort();
+        }
+
+        // 4) Start local sidecar
+        self.start_local_sidecar(app).await
+    }
+
+    async fn start_local_sidecar(&self, app: &tauri::AppHandle) -> Result<String, String> {
+        // Serialize sidecar start to avoid spawning duplicates under concurrent calls.
+        let _guard = self.start_lock.lock().await;
+
+        // If another call already started it while waiting for the lock, reuse.
+        let existing_local = { self.local_base.lock().unwrap().clone() };
+        if let Some(local_base) = existing_local {
+            if is_gateway_healthy(&local_base).await {
+                return Ok(local_base);
+            }
+            // Existing instance is unhealthy; clear stale state before respawning.
+            self.stop_child_best_effort();
+        }
+
+        // Pick a free port.
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .map_err(|e| format!("Failed to bind ephemeral port: {e}"))?
+            .local_addr()
+            .map_err(|e| format!("Failed to read bound addr: {e}"))?
+            .port();
+
+        let base = format!("http://127.0.0.1:{port}");
+
+        // Compute paths.
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map_err(|e| format!("Failed to resolve resource_dir: {e}"))?;
+        let skills_dir = resource_dir.join("skills");
+
+        let app_data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|e| format!("Failed to resolve app_data_dir: {e}"))?;
+        std::fs::create_dir_all(&app_data_dir).map_err(|e| format!("Failed to create app_data_dir: {e}"))?;
+
+        // Retry spawn + health check.
+        const MAX_ATTEMPTS: usize = 3;
+
+        for attempt in 1..=MAX_ATTEMPTS {
+            let mut cmd = app
+                .shell()
+                .sidecar("niko-gateway")
+                .map_err(|e| format!("Failed to create sidecar command: {e}"))?;
+
+            cmd = cmd
+                .current_dir(&app_data_dir)
+                .env("NIKO_GATEWAY_HOST", "127.0.0.1")
+                .env("NIKO_GATEWAY_PORT", port.to_string())
+                .env("NIKO_GATEWAY_RELOAD", "0")
+                .env("NIKO_ENV", "development")
+                .env("NIKO_CORS_DEV_ORIGINS", "tauri://localhost,http://localhost:5173")
+                .env("NIKO_SKILLS_DIR", skills_dir.to_string_lossy().to_string());
+
+            let (_rx, child) = cmd
+                .spawn()
+                .map_err(|e| format!("Failed to spawn sidecar (attempt {attempt}): {e}"))?;
+
+            // Save child handle and tentatively set local_base (port is bound).
+            // If health check fails, we'll clear it.
+            *self.child.lock().unwrap() = Some(child);
+            *self.local_base.lock().unwrap() = Some(base.clone());
+
+            // Wait until healthy.
+            let wait_result = self.wait_until_healthy(&base, Duration::from_secs(20)).await;
+            match wait_result {
+                Ok(()) => {
+                    return Ok(base);
+                }
+                Err(err) => {
+                    self.stop_child_best_effort();
+                    if attempt == MAX_ATTEMPTS {
+                        return Err(err);
+                    }
+                    tokio::time::sleep(Duration::from_millis(200)).await;
+                }
+            }
+        }
+
+        Err("Failed to start gateway sidecar".to_string())
+    }
+
+    async fn wait_until_healthy(&self, base: &str, timeout: Duration) -> Result<(), String> {
+        let start = std::time::Instant::now();
+        let mut interval = Duration::from_millis(150);
+        let max_interval = Duration::from_secs(1);
+
+        loop {
+            if is_gateway_healthy(base).await {
+                return Ok(());
+            }
+
+            let _pid = { self.child.lock().unwrap().as_ref().map(|child| child.pid()) };
+
+            if start.elapsed() >= timeout {
+                return Err(format!("Gateway did not become healthy in {:?}", timeout));
+            }
+
+            tokio::time::sleep(interval).await;
+            interval = std::cmp::min(max_interval, interval.saturating_mul(2));
+        }
+    }
+
+    fn stop_child_best_effort(&self) {
+        let child_opt = self.child.lock().unwrap().take();
+        if let Some(child) = child_opt {
+            // Best-effort kill; ignore errors.
+            let _ = child.kill();
+        }
+        *self.local_base.lock().unwrap() = None;
+    }
+
+    fn set_base_override(&self, base: Option<String>) {
+        *self.base_override.lock().unwrap() = base.map(|v| normalize_base_url(v.trim()));
+    }
 }
 
 #[tauri::command]
-async fn check_backend_health() -> Result<bool, String> {
-    let base_url = resolve_gateway_base_with_fallback().await;
+async fn get_gateway_base(app: tauri::AppHandle, state: tauri::State<'_, GatewayState>) -> Result<String, String> {
+    state.resolve_base(&app).await
+}
+
+#[tauri::command]
+async fn set_gateway_base_override(base: Option<String>, state: tauri::State<'_, GatewayState>) -> Result<(), String> {
+    state.set_base_override(base);
+    Ok(())
+}
+
+#[tauri::command]
+async fn start_backend(app: tauri::AppHandle, state: tauri::State<'_, GatewayState>) -> Result<String, String> {
+    let base = state.resolve_base(&app).await?;
+    Ok(format!("Gateway ready: {base}"))
+}
+
+#[tauri::command]
+async fn check_backend_health(app: tauri::AppHandle, state: tauri::State<'_, GatewayState>) -> Result<bool, String> {
+    let base_url = state.resolve_base(&app).await?;
     Ok(is_gateway_healthy(&base_url).await)
 }
 
 #[tauri::command]
-async fn call_api(endpoint: String, method: String, body: Option<String>) -> Result<String, String> {
-    let base_url = resolve_gateway_base_with_fallback().await;
+async fn call_api(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, GatewayState>,
+    endpoint: String,
+    method: String,
+    body: Option<String>,
+) -> Result<String, String> {
+    let base_url = state.resolve_base(&app).await?;
     let url = format!("{}{}", base_url, endpoint);
     let client = reqwest::Client::new();
 
@@ -85,14 +257,14 @@ async fn call_api(endpoint: String, method: String, body: Option<String>) -> Res
                 req = req.header("Content-Type", "application/json").body(b);
             }
             req.send().await
-        },
+        }
         "PUT" => {
             let mut req = client.put(&url);
             if let Some(b) = body {
                 req = req.header("Content-Type", "application/json").body(b);
             }
             req.send().await
-        },
+        }
         _ => return Err("Unsupported method".to_string()),
     };
 
@@ -103,50 +275,77 @@ async fn call_api(endpoint: String, method: String, body: Option<String>) -> Res
 }
 
 fn main() {
-    // System tray menu
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-    let show = CustomMenuItem::new("show".to_string(), "Show Window");
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(show)
-        .add_native_item(tauri::SystemTrayMenuItem::Separator)
-        .add_item(quit);
-
-    let system_tray = SystemTray::new().with_menu(tray_menu);
-
     tauri::Builder::default()
-        .manage(PythonBackend(Mutex::new(None)))
+        .manage(GatewayState::new())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .system_tray(system_tray)
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::LeftClick { .. } => {
-                let window = app.get_window("main").unwrap();
-                window.show().unwrap();
-                window.set_focus().unwrap();
-            }
-            SystemTrayEvent::MenuItemClick { id, .. } => {
-                match id.as_str() {
-                    "quit" => {
-                        app.exit(0);
+        .on_window_event(|window, event| {
+            // When main window is closed, clean up sidecar before app exits
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                if window.label() == "main" {
+                    if let Some(state) = window.app_handle().try_state::<GatewayState>() {
+                        state.stop_child_best_effort();
                     }
-                    "show" => {
-                        let window = app.get_window("main").unwrap();
-                        window.show().unwrap();
-                        window.set_focus().unwrap();
-                    }
-                    _ => {}
                 }
             }
-            _ => {}
+        })
+        .setup(|app| {
+            // Tray menu
+            let show = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let menu = Menu::with_items(app, &[&show, &separator, &quit])?;
+
+            tauri::tray::TrayIconBuilder::new()
+                .icon(TRAY_ICON.clone())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id().0.as_str() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        if let Some(state) = app.try_state::<GatewayState>() {
+                            state.stop_child_best_effort();
+                        }
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click { button, button_state, .. } = event {
+                        if button == MouseButton::Left && button_state == MouseButtonState::Up {
+                            if let Some(window) = tray.app_handle().get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_gateway_base,
+            set_gateway_base_override,
             start_backend,
             check_backend_health,
             call_api
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+impl Drop for GatewayState {
+    fn drop(&mut self) {
+        // Fallback cleanup when GatewayState is dropped (e.g., on app exit).
+        self.stop_child_best_effort();
+    }
 }

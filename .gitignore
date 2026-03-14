@@ -50,12 +50,17 @@ htmlcov/
 .tmp/
 .niko-studio/
 .workflow/.analysis/
+src/.task/
 node_modules/
 desktop/node_modules/
 test-results/
 desktop/test-results/
 coverage.xml
 pytest-*.xml
+
+# Desktop gateway sidecar build artifacts
+.build/
+desktop/src-tauri/bin/
 
 # Reference projects (submodules or downloaded)
 参考/

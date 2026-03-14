@@ -37,6 +37,25 @@ export const getResolvedApiBase = (): string => resolveApiBase()
 // 是否在 Tauri 环境中运行
 const isTauri = '__TAURI__' in window
 
+let cachedRuntimeGatewayBase: string | null = null
+let cachedRuntimeGatewayBaseAt: number | null = null
+
+const getRuntimeGatewayBase = async (): Promise<string> => {
+  if (!isTauri) {
+    return getResolvedApiBase()
+  }
+
+  const now = Date.now()
+  if (cachedRuntimeGatewayBase && cachedRuntimeGatewayBaseAt && now - cachedRuntimeGatewayBaseAt < 5000) {
+    return cachedRuntimeGatewayBase
+  }
+
+  const base = await invoke<string>('get_gateway_base')
+  cachedRuntimeGatewayBase = normalizeBaseUrl(base)
+  cachedRuntimeGatewayBaseAt = now
+  return cachedRuntimeGatewayBase
+}
+
 interface ApiResponse<T> {
   success: boolean
   data?: T
@@ -1566,7 +1585,8 @@ export async function chatStream(
   callbacks: StreamCallbacks,
   options?: StreamOptions
 ): Promise<void> {
-  const url = `${getResolvedApiBase()}/chat/stream`
+  const base = isTauri ? await getRuntimeGatewayBase() : getResolvedApiBase()
+  const url = `${base}/chat/stream`
 
   // 内容缓冲区，用于批量更新
   let contentBuffer: Array<{ chunk: string; index: number }> = []

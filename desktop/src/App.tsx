@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { Sidebar } from './components/Sidebar'
 import { ChatArea } from './components/ChatArea'
 import { SettingsModal } from './components/SettingsModal'
@@ -9,6 +10,7 @@ import { WritingHelperPanel } from './components/WritingHelperPanel'
 import { type WritingHelperMode } from './api/client'
 import { deriveGatewayRuntimeState, GatewayRuntimeView, getGatewayHealth, listCheckpoints, restoreCheckpoint } from './api/client'
 import { useAppStore } from './stores/appStore'
+import { useSettingsStore } from './stores/settingsStore'
 import { useMessages } from './stores/selectors'
 import { useTheme } from './hooks/useTheme'
 import { useI18n } from './i18n'
@@ -118,6 +120,20 @@ function App() {
 
   // 应用主题
   useTheme()
+
+  useEffect(() => {
+    if (!('__TAURI__' in window)) {
+      return
+    }
+
+    const settings = useSettingsStore.getState().settings
+
+    void invoke('set_gateway_base_override', {
+      base: settings.apiBaseUrl && settings.apiBaseUrl.trim() ? settings.apiBaseUrl.trim() : null,
+    })
+
+    void invoke('start_backend')
+  }, [])
 
   useEffect(() => {
     // Check backend status on mount

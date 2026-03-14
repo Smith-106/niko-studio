@@ -22,6 +22,7 @@
 
 import re
 import logging
+import os
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
@@ -64,16 +65,25 @@ class SkillLoader:
     """
     
     def __init__(self, base_path: Optional[str] = None):
-        self.skill_paths = [
+        skills_dir_override = str(os.getenv("NIKO_SKILLS_DIR") or "").strip()
+
+        self.skill_paths = []
+
+        # 环境变量覆盖（最高优先级）
+        if skills_dir_override:
+            self.skill_paths.append(Path(skills_dir_override))
+
+        # 默认路径优先级
+        self.skill_paths.extend([
             Path(".niko/skills"),           # 项目级
             Path.home() / ".niko/skills",   # 用户级
-            Path("skills"),                  # 内置
-        ]
-        
-        # 如果指定了 base_path，添加到最高优先级
+            Path("skills"),                # 内置
+        ])
+
+        # 如果指定了 base_path，添加到最高优先级（在 env override 之后）
         if base_path:
-            self.skill_paths.insert(0, Path(base_path) / "skills")
-        
+            self.skill_paths.insert(0 if not skills_dir_override else 1, Path(base_path) / "skills")
+
         self._cache: Dict[str, Skill] = {}
         self._all_skills: Optional[List[Skill]] = None
     

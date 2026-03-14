@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
 import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools } from '../api/client'
 import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
@@ -103,6 +104,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     localSettings.llmProviders.forEach((provider) => {
       updateProvider(provider.id, provider)
     })
+
+    if ('__TAURI__' in window) {
+      try {
+        await invoke('set_gateway_base_override', {
+          base:
+            localSettings.apiBaseUrl && localSettings.apiBaseUrl.trim()
+              ? localSettings.apiBaseUrl.trim()
+              : null,
+        })
+      } catch {
+        // ignore override sync failures
+      }
+    }
+
     await checkBackend()
     onClose()
   }
