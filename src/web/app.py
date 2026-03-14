@@ -15,22 +15,12 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import workflow components
-# Note: We might need to adjust imports depending on how Python path is set
-try:
-    from src.workflow.graph import run_writing_session, compile_graph
-    from src.workflow.state import create_initial_state, DEFAULT_CONFIG
-except ImportError:
-    # For development when running from src/web/
-    import sys
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from src.workflow.graph import run_writing_session, compile_graph
-    from src.workflow.state import create_initial_state, DEFAULT_CONFIG
-
+# Import WorkflowEngine as the authoritative entry point
+from src.workflow.workflow_engine import WorkflowEngine
 
 app = FastAPI(title="AI Writing Agent Platform")
 
-# 🛡️ Sentinel: Add CORS/CSWSH protection
+# Sentinel: Add CORS/CSWSH protection
 # Restrict WebSocket access to trusted origins to prevent Cross-Site WebSocket Hijacking
 origins = [
     "http://localhost",
@@ -125,7 +115,7 @@ async def get(request: Request):
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
-    # 🛡️ Sentinel: Manual CSWSH check (Defense in Depth)
+    # Sentinel: Manual CSWSH check (Defense in Depth)
     # Ensure Origin is trusted before accepting connection
     if "origin" in websocket.headers:
         origin = websocket.headers["origin"]
@@ -172,58 +162,77 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "message": f"Starting workflow in {mode} mode..."
                 }, websocket)
 
-                # Run the workflow
+                # Run the workflow using WorkflowEngine.run_stream (authoritative API)
                 try:
-                    # Initialize state
-                    initial_state = create_initial_state(
-                        user_idea=user_idea,
-                        genre="悬疑",  # Default for prototype
-                        target_chapters=3     # Default for prototype
-                    )
+                    engine = WorkflowEngine()
+                    async for event in engine.run_stream(task=user_idea, level=mode):
+                        event_type = event.get("type", "unknown")
 
-                    # Compile graph
-                    workflow_app = compile_graph(DEFAULT_CONFIG, use_memory=False)
-
-                    # Run stream
-                    current_state = initial_state
-                    async for output in workflow_app.astream(initial_state):
-                        for node_name, node_output in output.items():
-                            # Update state
-                            current_state.update(node_output)
-
-                            # Send update to client
+                        if event_type == "plan_created":
                             await manager.send_json({
-                                "type": "node_update",
-                                "node": node_name,
-                                "data": _serialize_state(node_output)
+                                "type": "plan_created",
+                                "plan_id": event.get("plan_id"),
+                                "message": "Plan created successfully."
+                            }, websocket)
+
+                        elif event_type == "step_start":
+                            await manager.send_json({
+                                "type": "step_start",
+                                "step_id": event.get("step_id"),
+                                "step_name": event.get("step_name"),
+                                "message": f"Starting step: {event.get('step_name', 'unknown')}"
+                            }, websocket)
+
+                        elif event_type == "step_complete":
+                            step_result = event.get("result", {})
+                            await manager.send_json({
+                                "type": "step_complete",
+                                "step_id": event.get("step_id"),
+                                "step_name": event.get("step_name"),
+                                "status": event.get("status"),
+                                "data": _serialize_state(step_result) if step_result else {}
                             }, websocket)
 
                             # If we have a draft, send it specifically
-                            if "draft_content" in node_output:
-                                await manager.send_json({
-                                    "type": "draft_update",
-                                    "content": node_output["draft_content"]
-                                }, websocket)
+                            if isinstance(step_result, dict):
+                                if "draft_content" in step_result:
+                                    await manager.send_json({
+                                        "type": "draft_update",
+                                        "content": step_result["draft_content"]
+                                    }, websocket)
 
-                            # If we have LOCK analysis, send it
-                            if "lock_analysis" in node_output:
-                                await manager.send_json({
-                                    "type": "lock_update",
-                                    "data": node_output["lock_analysis"]
-                                }, websocket)
+                                if "lock_analysis" in step_result:
+                                    await manager.send_json({
+                                        "type": "lock_update",
+                                        "data": step_result["lock_analysis"]
+                                    }, websocket)
 
-                            # If we have scene cards, send them
-                            if "scene_cards" in node_output:
-                                await manager.send_json({
-                                    "type": "scenes_update",
-                                    "data": node_output["scene_cards"]
-                                }, websocket)
+                                if "scene_cards" in step_result:
+                                    await manager.send_json({
+                                        "type": "scenes_update",
+                                        "data": step_result["scene_cards"]
+                                    }, websocket)
 
-                    await manager.send_json({
-                        "type": "status",
-                        "status": "completed",
-                        "message": "Workflow completed successfully."
-                    }, websocket)
+                        elif event_type == "plan_complete":
+                            await manager.send_json({
+                                "type": "status",
+                                "status": "completed",
+                                "message": "Workflow completed successfully.",
+                                "plan_id": event.get("plan_id"),
+                            }, websocket)
+
+                        elif event_type in ("plan_error", "error"):
+                            await manager.send_json({
+                                "type": "error",
+                                "message": event.get("error", "Unknown error"),
+                            }, websocket)
+
+                        elif event_type == "plan_blocked":
+                            await manager.send_json({
+                                "type": "blocked",
+                                "status": event.get("status"),
+                                "message": f"Workflow blocked: {event.get('status', 'unknown')}",
+                            }, websocket)
 
                 except Exception as e:
                     import traceback

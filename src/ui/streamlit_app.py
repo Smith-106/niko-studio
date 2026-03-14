@@ -301,57 +301,53 @@ with col_chat:
         # 显示处理状态
         with st.status(t("workflow_running"), expanded=True) as status:
             st.write(t("parsing_command"))
-            
-            # 尝试导入并执行 LangGraph 工作流
+
+            # 使用 WorkflowEngine.run_stream (权威入口点)
             try:
-                from src.workflow.graph import compile_graph
-                from src.workflow.state import WritingState, DEFAULT_CONFIG
-                
+                import asyncio
+                from src.workflow.workflow_engine import WorkflowEngine
+
                 st.write(t("starting_langgraph"))
-                
+
                 # Parse work_mode string to int level (e.g. "L1: ..." -> 1)
                 try:
-                    level_int = int(work_mode.split(":")[0].replace("L", ""))
+                    level_str = work_mode.split(":")[0].replace("L", "").strip()
+                    level = f"L{level_str}" if level_str.isdigit() else "L3"
                 except:
-                    level_int = 3
+                    level = "L3"
 
-                # Update config with UI params
-                config = DEFAULT_CONFIG.copy()
-                config["max_revisions"] = int(max_loops)
+                # Run workflow using WorkflowEngine
+                engine = WorkflowEngine()
 
-                # Compile graph
-                langgraph_app = compile_graph(config=config, use_memory=True)
+                async def run_workflow():
+                    results = []
+                    async for event in engine.run_stream(task=user_input, level=level):
+                        results.append(event)
+                        event_type = event.get("type", "unknown")
 
-                # 构造初始状态
-                # Parse "L1: ..." -> 1
-                try:
-                    level_int = int(work_mode.split(":")[0].replace("L", ""))
-                except:
-                    level_int = 3
+                        if event_type == "step_complete":
+                            step_name = event.get("step_name", "unknown")
+                            st.write(t("node_completed", node_name=step_name))
 
-                initial_state = {
-                    "user_idea": user_input,
-                    "revision_count": 0,
-                    "workflow_level": level_int,
-                    "model_name": model_name,
-                    "max_revisions": max_loops
-                }
-                
-                # 流式执行
-                for output in langgraph_app.stream(initial_state):
-                    for node_name, node_content in output.items():
-                        st.write(t("node_completed", node_name=node_name))
-                        
-                        # 捕获草稿内容
-                        if "draft_content" in node_content:
-                            st.session_state.current_draft = node_content["draft_content"]
-                        
-                        # 捕获评估结果
-                        if "critique_result" in node_content:
-                            st.session_state.critique_result = node_content["critique_result"]
-                
+                            # Capture draft content
+                            result = event.get("result", {})
+                            if isinstance(result, dict):
+                                if "draft_content" in result:
+                                    st.session_state.current_draft = result["draft_content"]
+
+                                if "critique_result" in result:
+                                    st.session_state.critique_result = result["critique_result"]
+
+                        elif event_type in ("plan_error", "error"):
+                            raise Exception(event.get("error", "Unknown error"))
+
+                    return results
+
+                # Run async workflow
+                asyncio.run(run_workflow())
+
                 status.update(label=t("workflow_completed"), state="complete")
-                
+
                 # 添加助手消息
                 assistant_msg = {
                     "role": "assistant",
@@ -359,9 +355,9 @@ with col_chat:
                     "agent_name": "Coordinator"
                 }
                 st.session_state.messages.append(assistant_msg)
-                save_message(conn, st.session_state.session_id, "assistant", 
+                save_message(conn, st.session_state.session_id, "assistant",
                            assistant_msg["content"], "Coordinator")
-                
+
             except ImportError as e:
                 error_msg = t("workflow_dependency_missing", error=str(e))
                 status.update(label=error_msg, state="error")
@@ -375,7 +371,7 @@ with col_chat:
                 st.session_state.messages.append(assistant_msg)
                 save_message(conn, st.session_state.session_id, "assistant",
                            error_msg, "System")
-            
+
             except Exception as e:
                 status.update(label=t("workflow_failed", error=str(e)), state="error")
                 st.error(t("workflow_failed", error=str(e)))
