@@ -61,6 +61,8 @@ pytest-*.xml
 # Desktop gateway sidecar build artifacts
 .build/
 desktop/src-tauri/bin/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
 
 # Reference projects (submodules or downloaded)
 参考/
