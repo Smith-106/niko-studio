@@ -7,7 +7,7 @@ Reranker 数据模型定义
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class RerankerType(str, Enum):
@@ -20,14 +20,8 @@ class RerankerType(str, Enum):
 
 class RankedDocument(BaseModel):
     """重排后的文档结果"""
-    id: str = Field(..., description="文档唯一标识")
-    content: str = Field(..., description="文档内容")
-    score: float = Field(..., ge=0.0, le=1.0, description="相关性分数 (0-1)")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="文档元数据")
-    original_index: int = Field(default=-1, description="原始列表中的索引位置")
-
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "doc_001",
                 "content": "这是一段示例文档内容",
@@ -36,6 +30,12 @@ class RankedDocument(BaseModel):
                 "original_index": 0,
             }
         }
+    )
+    id: str = Field(..., description="文档唯一标识")
+    content: str = Field(..., description="文档内容")
+    score: float = Field(..., ge=0.0, le=1.0, description="相关性分数 (0-1)")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="文档元数据")
+    original_index: int = Field(default=-1, description="原始列表中的索引位置")
 
 
 class RerankerConfig(BaseModel):
