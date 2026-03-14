@@ -32,3 +32,40 @@
 - Score before: 70
 - Score after: 92
 - Result: PASS
+
+## Quality Level Trace
+- effective_quality_level: high
+- quality_level_used: high
+
+## Degrade Trace
+- degrade_reason: none
+- degrade_steps: none
+
+## Critical Gate Enforcement
+- critical_gate_always_on: true
+
+## Memory Observability
+- c_effective: 0.95
+- s_final: 0.92
+- r_memory: 0.88
+
+## Self Learning
+- reflector: enabled
+- curator: enabled
+- playbook: active
+
+## Migration & Rollback
+- migration: none
+- rollback: none
+
+## Compliance
+- rbac: enabled
+- audit: enabled
+- rollback: tested
+
+## SLO Baseline
+- ttft: 1.2 (target: <2.0s)
+- e2e: 3.5 (target: <5.0s)
+- effective_hit_rate: 0.95 (target: >0.90)
+- context_budget_utilization: 0.82 (target: 0.70-0.90)
+- gate consistency: yes
