@@ -237,6 +237,7 @@ def _runtime_policy_contract() -> dict[str, object]:
     from src.workflow.novel_quality import BLOCK_THRESHOLD, PASS_THRESHOLD, evaluate_novel_quality
     from src.workflow.state import DEFAULT_CONFIG, NOVEL_HUMAN_REVIEW_SCORE, NOVEL_PASS_SCORE
     from src.mcp import gateway as gateway_module
+    from src.mcp import contract as contract_module
 
     sample_text = (
         '"Open the door," she whispered. '
@@ -255,9 +256,9 @@ def _runtime_policy_contract() -> dict[str, object]:
         "novel_quality_pass_threshold": float(PASS_THRESHOLD),
         "default_pass_score": float(DEFAULT_CONFIG.get("pass_score", 0)),
         "default_human_review_score": float(DEFAULT_CONFIG.get("human_review_score", 0)),
-        "publish_from_go": gateway_module._normalize_publish_recommendation({"decision": "go"}, "revise"),
-        "publish_from_soft_go": gateway_module._normalize_publish_recommendation({"decision": "soft_go"}, "pass"),
-        "publish_from_no_go": gateway_module._normalize_publish_recommendation({"decision": "no_go"}, "pass"),
+        "publish_from_go": contract_module._normalize_publish_recommendation({"decision": "go"}, "revise"),
+        "publish_from_soft_go": contract_module._normalize_publish_recommendation({"decision": "soft_go"}, "pass"),
+        "publish_from_no_go": contract_module._normalize_publish_recommendation({"decision": "no_go"}, "pass"),
         "terminal_default_decision": gateway_module._with_terminal_contract({"status": "completed"}).get("decision"),
         "terminal_no_go_preserved": gateway_module._with_terminal_contract({"terminal": "interrupted", "decision": "no_go"}).get("decision") == "no_go",
         "quality_mode_consistent": auto_eval.get("publish_recommendation") == manual_eval.get("publish_recommendation"),
