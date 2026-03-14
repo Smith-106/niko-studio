@@ -1,61 +1,28 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, Plus, Folder, FileText, User, MapPin, BookOpen, Sparkles } from 'lucide-react'
-import { searchMemory, queryGraph, listSkills, loadSkill, matchSkills, getSkillChain, addMemory, getTemporalFacts, getCharacter, getForeshadows } from '../api/client'
+import { Search, User, MapPin, BookOpen, Sparkles } from 'lucide-react'
 import { useI18n } from '../i18n'
+import type { TabType, KnowledgeItem, OperationStatus, TabConfig } from './knowledge/KnowledgeTypes'
+import { CharacterTab } from './knowledge/CharacterTab'
+import { LocationTab } from './knowledge/LocationTab'
+import { PlotTab } from './knowledge/PlotTab'
+import { SkillTab } from './knowledge/SkillTab'
+import { MemoryForm } from './knowledge/MemoryForm'
 
 interface KnowledgeModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-type TabType = 'characters' | 'locations' | 'plots' | 'skills'
-type KnowledgeItem = Record<string, unknown>
-
-const toGraphItems = (rows: unknown[] | undefined, key: string): KnowledgeItem[] => {
-  if (!Array.isArray(rows)) return []
-  return rows.map((row) => {
-    if (row && typeof row === 'object' && key in (row as Record<string, unknown>)) {
-      const value = (row as Record<string, unknown>)[key]
-      if (value && typeof value === 'object') {
-        return value as Record<string, unknown>
-      }
-    }
-    if (row && typeof row === 'object') {
-      return row as Record<string, unknown>
-    }
-    return { value: String(row) }
-  })
-}
-
 export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
-  const { t, translate } = useI18n()
+  const { t } = useI18n()
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('characters')
   const [searchQuery, setSearchQuery] = useState('')
   const [items, setItems] = useState<KnowledgeItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [temporalEntityId, setTemporalEntityId] = useState('')
-  const [temporalAtTime, setTemporalAtTime] = useState('')
-  const [characterName, setCharacterName] = useState('')
-  const [foreshadowStatus, setForeshadowStatus] = useState('pending')
-  const [foreshadowChapter, setForeshadowChapter] = useState('')
-  const [memoryContent, setMemoryContent] = useState('')
-  const [memoryLayer, setMemoryLayer] = useState('session')
-  const [memoryDimension, setMemoryDimension] = useState('context')
-  const [memoryEntityId, setMemoryEntityId] = useState('')
-  const [memoryTags, setMemoryTags] = useState('')
-  const [operationStatus, setOperationStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null)
   const [selectedSkillId, setSelectedSkillId] = useState<string>('')
-  const [skillDetails, setSkillDetails] = useState<string>('')
-  const [skillMatches, setSkillMatches] = useState<Array<{ skill_id: string; relevance: number }>>([])
-  const [skillChain, setSkillChain] = useState<Array<{ skill_id: string; step: number }>>([])
-
-  useEffect(() => {
-    if (isOpen) {
-      loadItems()
-    }
-  }, [isOpen, activeTab])
 
   useEffect(() => {
     if (!isOpen) {
@@ -67,7 +34,9 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     const focusDialog = () => {
       const dialog = dialogRef.current
       if (!dialog) return
-      const focusable = dialog.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      const focusable = dialog.querySelector<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
       if (focusable) {
         focusable.focus()
       } else {
@@ -94,7 +63,9 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
       }
 
       const focusableElements = Array.from(
-        dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
       ).filter((element) => !element.hasAttribute('disabled') && element.tabIndex !== -1)
 
       if (focusableElements.length === 0) {
@@ -125,192 +96,114 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     }
   }, [isOpen, onClose])
 
-  const loadItems = async () => {
-    setLoading(true)
-    try {
-      switch (activeTab) {
-        case 'characters': {
-          const charResult = await queryGraph('MATCH (c:Character) RETURN c LIMIT 50')
-          setItems(toGraphItems(charResult.data, 'c'))
-          break
-        }
-        case 'locations': {
-          const locResult = await queryGraph('MATCH (l:Location) RETURN l LIMIT 50')
-          setItems(toGraphItems(locResult.data, 'l'))
-          break
-        }
-        case 'plots': {
-          const plotResult = await searchMemory('plot outline', { limit: 50 })
-          setItems((plotResult.data as KnowledgeItem[]) || [])
-          break
-        }
-        case 'skills': {
-          const skillsResult = await listSkills()
-          if (skillsResult.success && Array.isArray(skillsResult.data)) {
-            setItems(skillsResult.data.map((skill) => ({
-              id: skill.id,
-              name: skill.name || skill.id,
-              description: '',
-            })))
-          } else {
-            setItems([
-              { name: 'character-forge', description: t.skillDescCharacterForge },
-              { name: 'suspense-craft', description: t.skillDescSuspenseCraft },
-              { name: 'dialogue-system', description: t.skillDescDialogueSystem },
-              { name: 'tension-arc', description: t.skillDescTensionArc },
-              { name: 'emotion-arc', description: t.skillDescEmotionArc },
-              { name: 'opening-craft', description: t.skillDescOpeningCraft },
-              { name: 'ending-craft', description: t.skillDescEndingCraft },
-              { name: 'conflict-escalation', description: t.skillDescConflictEscalation },
-            ])
-          }
-          break
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load items:', error)
-    } finally {
-      setLoading(false)
-    }
+  // Reset items when tab changes
+  useEffect(() => {
+    setItems([])
+  }, [activeTab])
+
+  const handleStatusChange = (status: OperationStatus | null) => {
+    setOperationStatus(status)
   }
 
-  const loadSkillDetails = async () => {
-    if (!selectedSkillId) return
-    const response = await loadSkill(selectedSkillId)
-    if (response.success && response.data?.content) {
-      setSkillDetails(response.data.content)
-    } else {
-      setSkillDetails(t.knowledgeSkillDetailsLoadFailed)
-    }
+  const handleItemsChange = (newItems: KnowledgeItem[]) => {
+    setItems(newItems)
   }
 
-  const runSkillMatch = async () => {
-    const keywords = searchQuery.trim() ? searchQuery.trim().split(/\s+/).slice(0, 5) : undefined
-    const response = await matchSkills(undefined, keywords)
-    if (response.success && Array.isArray(response.data)) {
-      setSkillMatches(response.data)
-    } else {
-      setSkillMatches([])
-    }
+  const handleLoadingChange = (isLoading: boolean) => {
+    setLoading(isLoading)
   }
 
-  const loadSkillChain = async () => {
-    if (!selectedSkillId) return
-    const response = await getSkillChain(selectedSkillId)
-    if (response.success && Array.isArray(response.data)) {
-      setSkillChain(response.data)
-    } else {
-      setSkillChain([])
-    }
+  const handleItemClick = (_item: KnowledgeItem) => {
+    // Generic click handler - skill tab uses this differently
   }
-
-  const runTemporalFactsQuery = async () => {
-    const entityId = temporalEntityId.trim()
-    if (!entityId) {
-      setOperationStatus({ type: 'error', message: t.knowledgeTemporalEntityRequired })
-      return
-    }
-
-    const response = await getTemporalFacts(entityId, temporalAtTime.trim() || undefined)
-    if (response.success && Array.isArray(response.data)) {
-      const temporalItems = response.data.map((fact) => ({
-        id: fact.id,
-        name: fact.id,
-        description: fact.content,
-        content: fact.content,
-      }))
-      setItems(temporalItems)
-      setOperationStatus({ type: 'success', message: t.knowledgeTemporalLoaded })
-    } else {
-      setOperationStatus({ type: 'error', message: response.error || t.knowledgeRequestFailed })
-    }
-  }
-
-  const loadCharacterDetails = async () => {
-    const name = characterName.trim()
-    if (!name) {
-      setOperationStatus({ type: 'error', message: t.knowledgeCharacterNameRequired })
-      return
-    }
-
-    const response = await getCharacter(name, true)
-    if (response.success && response.data) {
-      const relationships = response.data.relationships
-        ? Object.entries(response.data.relationships).map(([target, relation]) => `${target}: ${relation}`).join('；')
-        : ''
-      setItems([
-        {
-          id: response.data.name,
-          name: response.data.name,
-          title: response.data.role,
-          description: relationships || t.knowledgeNoDescription,
-        },
-      ])
-      setOperationStatus({ type: 'success', message: t.knowledgeCharacterLoaded })
-    } else {
-      setOperationStatus({ type: 'error', message: response.error || t.knowledgeRequestFailed })
-    }
-  }
-
-  const loadForeshadows = async () => {
-    const chapter = Number(foreshadowChapter)
-    const chapterValue = Number.isFinite(chapter) && chapter > 0 ? chapter : undefined
-    const response = await getForeshadows(foreshadowStatus || undefined, chapterValue)
-    if (response.success && Array.isArray(response.data)) {
-      setItems(response.data.map((item) => ({
-        id: item.id,
-        name: item.id,
-        title: item.status,
-        description: item.description,
-      })))
-      setOperationStatus({ type: 'success', message: t.knowledgeForeshadowsLoaded })
-    } else {
-      setOperationStatus({ type: 'error', message: response.error || t.knowledgeRequestFailed })
-    }
-  }
-
-  const handleAddMemory = async () => {
-    const content = memoryContent.trim()
-    if (!content) {
-      setOperationStatus({ type: 'error', message: t.knowledgeMemoryContentRequired })
-      return
-    }
-
-    const tags = memoryTags
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter(Boolean)
-
-    const response = await addMemory(content, {
-      layer: memoryLayer,
-      dimension: memoryDimension,
-      entity_id: memoryEntityId.trim() || undefined,
-      tags,
-    })
-
-    if (response.success) {
-      setMemoryContent('')
-      setOperationStatus({ type: 'success', message: t.knowledgeMemoryAdded })
-    } else {
-      setOperationStatus({ type: 'error', message: response.error || t.knowledgeRequestFailed })
-    }
-  }
-
-  const filteredItems = items.filter((item) =>
-    JSON.stringify(item).toLowerCase().includes(searchQuery.toLowerCase())
-  )
 
   if (!isOpen) return null
 
-  const tabs = [
-    { id: 'characters' as TabType, label: t.knowledgeTabCharacters, icon: User },
-    { id: 'locations' as TabType, label: t.knowledgeTabLocations, icon: MapPin },
-    { id: 'plots' as TabType, label: t.knowledgeTabPlots, icon: BookOpen },
-    { id: 'skills' as TabType, label: t.knowledgeTabSkills, icon: Sparkles },
+  const tabs: TabConfig[] = [
+    { id: 'characters', label: t.knowledgeTabCharacters, icon: User },
+    { id: 'locations', label: t.knowledgeTabLocations, icon: MapPin },
+    { id: 'plots', label: t.knowledgeTabPlots, icon: BookOpen },
+    { id: 'skills', label: t.knowledgeTabSkills, icon: Sparkles },
   ]
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'characters':
+        return (
+          <CharacterTab
+            items={items}
+            onItemsChange={handleItemsChange}
+            loading={loading}
+            onLoadingChange={handleLoadingChange}
+            onItemClick={handleItemClick}
+            searchQuery={searchQuery}
+          />
+        )
+      case 'locations':
+        return (
+          <LocationTab
+            items={items}
+            onItemsChange={handleItemsChange}
+            loading={loading}
+            onLoadingChange={handleLoadingChange}
+            onItemClick={handleItemClick}
+            searchQuery={searchQuery}
+          />
+        )
+      case 'plots':
+        return (
+          <PlotTab
+            items={items}
+            onItemsChange={handleItemsChange}
+            loading={loading}
+            onLoadingChange={handleLoadingChange}
+            onItemClick={handleItemClick}
+            searchQuery={searchQuery}
+          />
+        )
+      case 'skills': {
+        const skillTab = SkillTab({
+          items,
+          onItemsChange: handleItemsChange,
+          loading,
+          onLoadingChange: handleLoadingChange,
+          selectedSkillId,
+          onSelectedSkillIdChange: setSelectedSkillId,
+          searchQuery,
+        })
+        return (
+          <>
+            {skillTab.details}
+            {skillTab.content}
+          </>
+        )
+      }
+      default:
+        return null
+    }
+  }
+
+  const getSkillTabControls = () => {
+    if (activeTab !== 'skills') return null
+    const skillTab = SkillTab({
+      items,
+      onItemsChange: handleItemsChange,
+      loading,
+      onLoadingChange: handleLoadingChange,
+      selectedSkillId,
+      onSelectedSkillIdChange: setSelectedSkillId,
+      searchQuery,
+    })
+    return skillTab.controls
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label={t.knowledgeTitle}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.knowledgeTitle}
+    >
       <div
         ref={dialogRef}
         tabIndex={-1}
@@ -357,252 +250,20 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          {activeTab === 'skills' && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                onClick={runSkillMatch}
-                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
-                aria-label={t.knowledgeTaskMatch}
-                title={t.knowledgeTaskMatch}
-              >
-                {t.knowledgeTaskMatch}
-              </button>
-              <button
-                onClick={loadSkillDetails}
-                disabled={!selectedSkillId}
-                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
-                aria-label={t.knowledgeSkillDetails}
-                title={t.knowledgeSkillDetails}
-              >
-                {t.knowledgeSkillDetails}
-              </button>
-              <button
-                onClick={loadSkillChain}
-                disabled={!selectedSkillId}
-                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
-                aria-label={t.knowledgeSkillChain}
-                title={t.knowledgeSkillChain}
-              >
-                {t.knowledgeSkillChain}
-              </button>
-              {selectedSkillId && (
-                <span className="text-xs text-blue-600 dark:text-blue-400">{translate('knowledgeCurrentSkill', { skillId: selectedSkillId })}</span>
-              )}
-            </div>
-          )}
+          {getSkillTabControls()}
 
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div className="p-2 border border-gray-200 dark:border-dark-border rounded space-y-2">
-              <div className="text-xs font-medium text-gray-600 dark:text-dark-text-secondary">{t.knowledgeTemporalTitle}</div>
-              <input
-                value={temporalEntityId}
-                onChange={(event) => setTemporalEntityId(event.target.value)}
-                placeholder={t.knowledgeTemporalEntityPlaceholder}
-                aria-label={t.knowledgeTemporalEntityPlaceholder}
-                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-              />
-              <input
-                value={temporalAtTime}
-                onChange={(event) => setTemporalAtTime(event.target.value)}
-                placeholder={t.knowledgeTemporalAtTimePlaceholder}
-                aria-label={t.knowledgeTemporalAtTimePlaceholder}
-                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-              />
-              <button
-                onClick={runTemporalFactsQuery}
-                className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
-                type="button"
-              >
-                {t.knowledgeTemporalAction}
-              </button>
-            </div>
-
-            <div className="p-2 border border-gray-200 dark:border-dark-border rounded space-y-2">
-              <div className="text-xs font-medium text-gray-600 dark:text-dark-text-secondary">{t.knowledgeCharacterTitle}</div>
-              <input
-                value={characterName}
-                onChange={(event) => setCharacterName(event.target.value)}
-                placeholder={t.knowledgeCharacterNamePlaceholder}
-                aria-label={t.knowledgeCharacterNamePlaceholder}
-                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-              />
-              <button
-                onClick={loadCharacterDetails}
-                className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
-                type="button"
-              >
-                {t.knowledgeCharacterAction}
-              </button>
-            </div>
-
-            <div className="p-2 border border-gray-200 dark:border-dark-border rounded space-y-2">
-              <div className="text-xs font-medium text-gray-600 dark:text-dark-text-secondary">{t.knowledgeForeshadowTitle}</div>
-              <div className="flex gap-2">
-                <select
-                  value={foreshadowStatus}
-                  onChange={(event) => setForeshadowStatus(event.target.value)}
-                  aria-label={t.knowledgeForeshadowStatusPlaceholder}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-                >
-                  <option value="pending">{t.knowledgeForeshadowStatusPending}</option>
-                  <option value="resolved">{t.knowledgeForeshadowStatusResolved}</option>
-                  <option value="all">{t.knowledgeForeshadowStatusAll}</option>
-                </select>
-                <input
-                  value={foreshadowChapter}
-                  onChange={(event) => setForeshadowChapter(event.target.value)}
-                  placeholder={t.knowledgeForeshadowChapterPlaceholder}
-                  aria-label={t.knowledgeForeshadowChapterPlaceholder}
-                  className="w-24 px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-                />
-              </div>
-              <button
-                onClick={loadForeshadows}
-                className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
-                type="button"
-              >
-                {t.knowledgeForeshadowAction}
-              </button>
-            </div>
-
-            <div className="p-2 border border-gray-200 dark:border-dark-border rounded space-y-2">
-              <div className="text-xs font-medium text-gray-600 dark:text-dark-text-secondary">{t.knowledgeMemoryTitle}</div>
-              <input
-                value={memoryContent}
-                onChange={(event) => setMemoryContent(event.target.value)}
-                placeholder={t.knowledgeMemoryContentPlaceholder}
-                aria-label={t.knowledgeMemoryContentPlaceholder}
-                className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-              />
-              <div className="flex gap-2">
-                <input
-                  value={memoryLayer}
-                  onChange={(event) => setMemoryLayer(event.target.value)}
-                  placeholder={t.knowledgeMemoryLayerPlaceholder}
-                  aria-label={t.knowledgeMemoryLayerPlaceholder}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-                />
-                <input
-                  value={memoryDimension}
-                  onChange={(event) => setMemoryDimension(event.target.value)}
-                  placeholder={t.knowledgeMemoryDimensionPlaceholder}
-                  aria-label={t.knowledgeMemoryDimensionPlaceholder}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-                />
-              </div>
-              <div className="flex gap-2">
-                <input
-                  value={memoryEntityId}
-                  onChange={(event) => setMemoryEntityId(event.target.value)}
-                  placeholder={t.knowledgeMemoryEntityPlaceholder}
-                  aria-label={t.knowledgeMemoryEntityPlaceholder}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-                />
-                <input
-                  value={memoryTags}
-                  onChange={(event) => setMemoryTags(event.target.value)}
-                  placeholder={t.knowledgeMemoryTagsPlaceholder}
-                  aria-label={t.knowledgeMemoryTagsPlaceholder}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-                />
-              </div>
-              <button
-                onClick={handleAddMemory}
-                className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
-                type="button"
-              >
-                {t.knowledgeMemoryAction}
-              </button>
-            </div>
-          </div>
+          <MemoryForm onStatusChange={handleStatusChange} onItemsChange={handleItemsChange} />
 
           {operationStatus && (
-            <p className={`mt-2 text-xs ${operationStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <p
+              className={`mt-2 text-xs ${operationStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+            >
               {operationStatus.message}
             </p>
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          {activeTab === 'skills' && (
-            <div className="mb-4 space-y-2">
-              {skillDetails && (
-                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeSkillDetails}</div>
-                  <pre className="text-xs text-gray-600 dark:text-dark-text-secondary whitespace-pre-wrap break-all">{skillDetails}</pre>
-                </div>
-              )}
-              {skillMatches.length > 0 && (
-                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeTaskMatch}</div>
-                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
-                    {skillMatches.map((item) => `${item.skill_id} (${item.relevance})`).join('，')}
-                  </div>
-                </div>
-              )}
-              {skillChain.length > 0 && (
-                <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-                  <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeSkillChain}</div>
-                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
-                    {skillChain
-                      .slice()
-                      .sort((a, b) => a.step - b.step)
-                      .map((item) => `Step ${item.step}: ${item.skill_id}`)
-                      .join(' → ')}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          {loading ? (
-            <div className="flex items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">{t.knowledgeLoading}</div>
-          ) : filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
-              <Folder size={48} className="mb-2" />
-              <p>{t.knowledgeEmpty}</p>
-              <button
-                className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-label={`${t.knowledgeAddPrefix}${tabs.find((tab) => tab.id === activeTab)?.label ?? ''}`}
-                title={`${t.knowledgeAddPrefix}${tabs.find((tab) => tab.id === activeTab)?.label ?? ''}`}
-                type="button"
-              >
-                <Plus size={16} />
-                {t.knowledgeAddPrefix}{tabs.find((tab) => tab.id === activeTab)?.label}
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {filteredItems.map((item, index) => (
-                <div
-                  key={index}
-                  onClick={() => {
-                    if (activeTab === 'skills') {
-                      setSelectedSkillId((item.id as string) || (item.name as string) || '')
-                    }
-                  }}
-                  className="p-4 border border-gray-200 dark:border-dark-border rounded-lg hover:border-blue-500 hover:shadow-md cursor-pointer transition-all"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                      {activeTab === 'characters' && <User size={20} className="text-blue-600 dark:text-blue-400" />}
-                      {activeTab === 'locations' && <MapPin size={20} className="text-blue-600 dark:text-blue-400" />}
-                      {activeTab === 'plots' && <FileText size={20} className="text-blue-600 dark:text-blue-400" />}
-                      {activeTab === 'skills' && <Sparkles size={20} className="text-blue-600 dark:text-blue-400" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-800 dark:text-dark-text truncate">
-                        {(item.name as string) || (item.title as string) || (item.id as string) || translate('knowledgeItemFallback', { index: index + 1 })}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-dark-text-secondary mt-1 line-clamp-2">
-                        {(item.description as string) || (item.content as string) || t.knowledgeNoDescription}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="flex-1 overflow-y-auto p-4">{renderTabContent()}</div>
       </div>
     </div>
   )
