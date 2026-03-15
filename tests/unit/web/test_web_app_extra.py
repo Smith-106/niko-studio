@@ -154,6 +154,8 @@ class TestWebSocketOriginCheck:
         """Trusted origin with explicit enable should process start_workflow and complete."""
 
         async def mock_run_stream(*args, **kwargs):
+            yield {"type": "plan_created", "plan_id": "p1"}
+            yield {"type": "step_start", "step_id": "s1", "step_name": "writer"}
             yield {
                 "type": "step_complete",
                 "step_name": "writer",
@@ -164,6 +166,7 @@ class TestWebSocketOriginCheck:
                     "other": object(),
                 },
             }
+            yield {"type": "plan_complete", "plan_id": "p1"}
 
         mgr = ConnectionManager()
         monkeypatch.setattr(web_app, "manager", mgr)
@@ -186,6 +189,8 @@ class TestWebSocketOriginCheck:
         sent_types = [call.args[0]["type"] for call in ws.send_json.await_args_list]
         assert "risk_prompt" in sent_types
         assert "status" in sent_types
+        assert "plan_created" in sent_types
+        assert "step_start" in sent_types
         assert "step_complete" in sent_types
         assert "draft_update" in sent_types
         assert "lock_update" in sent_types
@@ -218,6 +223,60 @@ class TestWebSocketOriginCheck:
         sent_payloads = [call.args[0] for call in ws.send_json.await_args_list]
         assert any(payload.get("type") == "error" for payload in sent_payloads)
         assert ws not in mgr.active_connections
+
+    async def test_plan_error_event_sends_error(self, monkeypatch):
+        mgr = ConnectionManager()
+        monkeypatch.setattr(web_app, "manager", mgr)
+        monkeypatch.setenv("WEB_WORKFLOW_ENABLED", "true")
+
+        ws = AsyncMock()
+        ws.headers = {"origin": "http://localhost:8000"}
+        ws.receive_text = AsyncMock(
+            side_effect=[
+                json.dumps({"type": "start_workflow", "content": "idea", "mode": "L3"}),
+                WebSocketDisconnect(),
+            ]
+        )
+
+        async def mock_run_stream(*args, **kwargs):
+            yield {"type": "plan_error", "error": "boom"}
+
+        with patch.object(web_app.WorkflowEngine, "run_stream", mock_run_stream):
+            await web_app.websocket_endpoint(ws, "c8")
+
+        sent_payloads = [call.args[0] for call in ws.send_json.await_args_list]
+        assert any(
+            payload.get("type") == "error" and payload.get("message") == "boom"
+            for payload in sent_payloads
+        )
+
+    async def test_plan_blocked_event_sends_blocked(self, monkeypatch):
+        mgr = ConnectionManager()
+        monkeypatch.setattr(web_app, "manager", mgr)
+        monkeypatch.setenv("WEB_WORKFLOW_ENABLED", "true")
+
+        ws = AsyncMock()
+        ws.headers = {"origin": "http://localhost:8000"}
+        ws.receive_text = AsyncMock(
+            side_effect=[
+                json.dumps({"type": "start_workflow", "content": "idea", "mode": "L3"}),
+                WebSocketDisconnect(),
+            ]
+        )
+
+        async def mock_run_stream(*args, **kwargs):
+            yield {"type": "plan_blocked", "status": "waiting_confirmation"}
+
+        with patch.object(web_app.WorkflowEngine, "run_stream", mock_run_stream):
+            await web_app.websocket_endpoint(ws, "c9")
+
+        sent_payloads = [call.args[0] for call in ws.send_json.await_args_list]
+        assert any(
+            payload.get("type") == "blocked"
+            and payload.get("status") == "waiting_confirmation"
+            for payload in sent_payloads
+        )
+
 
     async def test_generic_exception_disconnects(self, monkeypatch):
         mgr = ConnectionManager()

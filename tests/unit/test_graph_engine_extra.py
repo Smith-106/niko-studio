@@ -116,6 +116,22 @@ async def test_execute_match_property_field_and_no_pattern_branch(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_search_entities_by_name_like_query_branch(tmp_path):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        await engine.create_entity("Character", "hero", {"role": "protagonist"})
+
+        results = await engine.search_entities_by_name("Character", "%he%", limit=10)
+
+        assert len(results) == 1
+        assert results[0]["name"] == "hero"
+        assert "created_at" in results[0]
+        assert "updated_at" in results[0]
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
 async def test_get_character_timeline_and_relationship_filter(tmp_path):
     engine = GraphEngine(db_path=str(tmp_path / "g.db"))
     try:
@@ -134,10 +150,6 @@ async def test_get_character_timeline_and_relationship_filter(tmp_path):
         assert len(filtered) == 2
     finally:
         engine.close()
-
-
-
-
 
 
 @pytest.mark.asyncio

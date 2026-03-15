@@ -66,6 +66,23 @@ def test_priority_order_prefers_base_path(tmp_path, monkeypatch):
     assert "custom" in content
 
 
+
+
+def test_skill_loader_skills_dir_override_path_is_added(monkeypatch, tmp_path):
+    override = tmp_path / "override-skills"
+    override.mkdir()
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("NIKO_SKILLS_DIR", str(override))
+
+    loader = SkillLoader()
+
+    assert loader.skill_paths
+    assert loader.skill_paths[0] == override
+
+
+
+
 def test_resolve_refs_truncates_long_content_and_handles_missing(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     skills_root = tmp_path / "skills"

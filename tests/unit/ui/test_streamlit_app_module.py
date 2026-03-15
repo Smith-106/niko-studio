@@ -706,7 +706,66 @@ def test_streamlit_workflow_stream_without_optional_fields(monkeypatch):
 
 
 
-def test_streamlit_lock_analysis_expander_render(monkeypatch):
+def test_streamlit_work_mode_parse_exception_falls_back_to_l3(monkeypatch):
+    captured = {}
+
+    class _BadWorkMode:
+        """A selectbox value that does not implement .split()"""
+
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = "idea"
+        fake_st._button_queue = [False, False, False]
+        fake_st.session_state.messages = []
+        # Ensure selectbox returns a non-string to trigger the except branch
+        fake_st._selectbox_values["Workflow Level"] = _BadWorkMode()
+        fake_st._selectbox_values["工作流级别"] = _BadWorkMode()
+
+    def _setup_modules(mp):
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
+
+        async def _run_stream(*, task, level, **_kwargs):
+            captured["level"] = level
+            if False:
+                yield {}  # pragma: no cover
+
+        class _WorkflowEngine:
+            def run_stream(self, *args, **kwargs):
+                return _run_stream(*args, **kwargs)
+
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
+
+    _mod, _fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
+
+    assert captured["level"] == "L3"
+
+
+
+def test_streamlit_plan_error_event_triggers_error_path(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = "idea"
+        fake_st._button_queue = [False, False, False]
+        fake_st.session_state.messages = []
+
+    def _setup_modules(mp):
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
+
+        async def _run_stream(*_args, **_kwargs):
+            yield {"type": "plan_error", "error": "boom"}
+
+        class _WorkflowEngine:
+            def run_stream(self, *args, **kwargs):
+                return _run_stream(*args, **kwargs)
+
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
+
+    assert fake_st.calls["error"]
+
+
+def test_streamlit_lock_analysis_expander_renders_markdown(monkeypatch):
     def _setup_fake(fake_st):
         fake_st._button_queue = [False, False, False]
         fake_st.session_state.messages = []

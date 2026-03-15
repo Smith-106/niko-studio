@@ -2507,6 +2507,80 @@ class TestWorkflowEngineCoverageFinalGaps:
         assert result["error"] == "boom"
 
     @pytest.mark.asyncio
+    async def test_run_stream_yields_error_when_plan_id_missing(self, engine):
+        with patch.object(engine, "plan", return_value={"total_steps": 1}):
+            events = [event async for event in engine.run_stream("task", level="L1")]
+
+        assert len(events) == 1
+        assert events[0]["type"] == "error"
+
+    @pytest.mark.asyncio
+    async def test_run_stream_yields_plan_error_when_execute_returns_error(self, engine):
+        plan = WorkflowPlan(id="p-err", task="t", level="L1", steps=[WorkflowStep(id="s1", name="writer", description="d")])
+        engine.plans["p-err"] = plan
+
+        with patch.object(engine, "plan", return_value={"plan_id": "p-err", "total_steps": 1}), patch.object(
+            engine,
+            "execute",
+            return_value={"error": "boom"},
+        ):
+            events = [event async for event in engine.run_stream("task", level="L1")]
+
+        types = [e.get("type") for e in events]
+        assert types[0] == "plan_created"
+        assert "step_start" in types
+        assert "step_complete" in types
+        assert types[-1] == "plan_error"
+        assert events[-1]["error"] == "boom"
+
+    @pytest.mark.asyncio
+    async def test_run_stream_yields_plan_blocked_when_waiting_confirmation(self, engine):
+        plan = WorkflowPlan(id="p-block", task="t", level="L1", steps=[WorkflowStep(id="s1", name="writer", description="d")])
+        engine.plans["p-block"] = plan
+
+        with patch.object(engine, "plan", return_value={"plan_id": "p-block", "total_steps": 1}), patch.object(
+            engine,
+            "execute",
+            return_value={"status": "waiting_confirmation"},
+        ):
+            events = [event async for event in engine.run_stream("task", level="L1")]
+
+        assert events[-1]["type"] == "plan_blocked"
+        assert events[-1]["status"] == "waiting_confirmation"
+
+    @pytest.mark.asyncio
+    async def test_run_stream_yields_plan_complete_when_completed(self, engine):
+        plan = WorkflowPlan(id="p-done", task="t", level="L1", steps=[WorkflowStep(id="s1", name="writer", description="d")])
+        engine.plans["p-done"] = plan
+
+        with patch.object(engine, "plan", return_value={"plan_id": "p-done", "total_steps": 1}), patch.object(
+            engine,
+            "execute",
+            return_value={"status": "completed", "plan_status": "completed", "result": {}},
+        ), patch.object(engine, "get_plan_status", return_value={"status": "completed"}):
+            events = [event async for event in engine.run_stream("task", level="L1")]
+
+        types = [e.get("type") for e in events]
+        assert types[:2] == ["plan_created", "step_start"]
+        assert "step_complete" in types
+        assert types[-1] == "plan_complete"
+
+    @pytest.mark.asyncio
+    async def test_run_stream_yields_budget_exceeded_error_when_never_completes(self, engine):
+        plan = WorkflowPlan(id="p-loop", task="t", level="L1", steps=[WorkflowStep(id="s1", name="writer", description="d")])
+        engine.plans["p-loop"] = plan
+
+        with patch.object(engine, "plan", return_value={"plan_id": "p-loop", "total_steps": 0}), patch.object(
+            engine,
+            "execute",
+            return_value={"status": "running"},
+        ):
+            events = [event async for event in engine.run_stream("task", level="L1")]
+
+        assert events[-1]["type"] == "plan_error"
+        assert events[-1]["error"] == "run iteration budget exceeded"
+
+    @pytest.mark.asyncio
     async def test_acquire_module_ownership_no_requested_modules_branch(self, engine):
         plan_result = await engine.plan("task", level="L1")
         plan = engine.plans[plan_result["plan_id"]]
