@@ -6,7 +6,7 @@
     "gate_score_or_critical_blocker_signal",
     "unresolved_triage_blocker_signal"
   ],
-  "generated_at": "2026-03-10T11:17:09.543473+00:00",
+  "generated_at": "2026-03-15T03:32:30.224517+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -78,7 +78,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "quality_non_template=1,weekly_non_template=5,machine_payload_available=yes,missing_evidence_classes=,decision=go"
+      "detail": "quality_non_template=2,weekly_non_template=5,machine_payload_available=yes,missing_evidence_classes=,decision=go"
     },
     {
       "check_id": "gate_score_or_critical_blocker_signal",
@@ -102,15 +102,15 @@
       "blocking": false,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "quality_non_template=1,weekly_non_template=5"
+      "detail": "quality_non_template=2,weekly_non_template=5"
     },
     {
       "check_id": "slo_baseline_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "missing_keywords=ttft,effective_hit_rate,context_budget_utilization,gate consistency"
+      "detail": "keywords_present=ttft,e2e,effective_hit_rate,context_budget_utilization,gate consistency"
     },
     {
       "check_id": "evidence_links_signal",
@@ -124,41 +124,41 @@
       "check_id": "self_learning_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "missing_fields=reflector,curator,playbook"
+      "detail": "fields_present=reflector,curator,playbook"
     },
     {
       "check_id": "memory_observability_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "missing_metrics=c_effective,s_final,r_memory,invalid_metrics="
+      "detail": "metrics_present=c_effective,s_final,r_memory"
     },
     {
       "check_id": "quality_level_trace_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "effective_quality_level=missing,quality_level_used=missing"
+      "detail": "effective_quality_level=high,quality_level_used=high"
     },
     {
       "check_id": "degrade_trace_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "degrade_reason=missing,degrade_steps=missing"
+      "detail": "degrade_reason=present,degrade_steps=present"
     },
     {
       "check_id": "critical_gate_enforcement_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "critical_gate=missing"
+      "detail": "critical_gate=enforced"
     },
     {
       "check_id": "chapter_gate_scoring_signal",
@@ -172,41 +172,41 @@
       "check_id": "cycle_time_kpi_measurement_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "window_policy=full_7_day_only,manual_override=forbidden,missing_rules=baseline_window_days,measurement_window_days,baseline_state,cycle_time_baseline_median,cycle_time_current_median,eligible_samples,present_exclusion_reason_codes="
+      "detail": "window_policy=full_7_day_only,manual_override=forbidden,missing_rules=,present_exclusion_reason_codes=missing_timestamps"
     },
     {
       "check_id": "comparable_quality_rubric_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "rubric_version=v1,quality_score=99.0,threshold=99.0,critical_issue_count=0,publish_recommendation=pass,quality_level_match=no,degrade_trace_complete=yes,decision=not_comparable"
+      "detail": "rubric_version=v1,quality_score=99.0,threshold=99.0,critical_issue_count=0,publish_recommendation=pass,quality_level_match=yes,degrade_trace_complete=yes,decision=comparable"
     },
     {
       "check_id": "weekly_kpi_dashboard_schema_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "schema_name=weekly_kpi_dashboard,schema_version=v1,manual_override=forbidden,missing_fields=schema_version,window_label,baseline_state,cycle_time_baseline_median,cycle_time_current_median,cycle_time_trend,comparability_decision,chapter_gate_aggregation_result"
+      "detail": "schema_name=weekly_kpi_dashboard,schema_version=v1,manual_override=forbidden,missing_fields="
     },
     {
       "check_id": "weekly_kpi_rollup_readiness_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "rollup_source=canonical_evidence,manual_override=forbidden,baseline_state=missing,cycle_time_trend=missing,missing_fields=window_label,baseline_state,cycle_time_baseline_median,cycle_time_current_median,cycle_time_trend"
+      "detail": "rollup_source=canonical_evidence,manual_override=forbidden,baseline_state=ready,cycle_time_trend=down,missing_fields="
     },
     {
       "check_id": "weekly_kpi_comparability_visibility_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "visibility_source=comparable_quality_plus_cycle_time,manual_override=forbidden,comparability_decision=missing,cycle_time_trend=missing,baseline_state=missing,missing_fields=comparability_decision,cycle_time_trend,baseline_state"
+      "detail": "visibility_source=comparable_quality_plus_cycle_time,manual_override=forbidden,comparability_decision=comparable,cycle_time_trend=down,baseline_state=ready,missing_fields="
     },
     {
       "check_id": "critical_conflict_blocker_signal",
@@ -222,7 +222,7 @@
       "blocking": true,
       "status": "FAIL",
       "exit_code": 1,
-      "detail": "state_files_scanned=319,linked_triage_records=12,unresolved_triage_records=12,invalid_state_files=307,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=no_go"
+      "detail": "state_files_scanned=349,linked_triage_records=10,unresolved_triage_records=10,invalid_state_files=339,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=no_go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
@@ -254,23 +254,23 @@
       "blocking": false,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "fresh_files=6,stale_files=0,window_days=14"
+      "detail": "fresh_files=7,stale_files=0,window_days=14"
     },
     {
       "check_id": "migration_rollback_evidence_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "migration=missing,rollback=missing,traceable_link=present"
+      "detail": "migration=present,rollback=present,traceable_link=present"
     },
     {
       "check_id": "compliance_keywords_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "missing_keywords=rbac,audit,rollback"
+      "detail": "keywords_present=rbac,audit,rollback"
     },
     {
       "check_id": "tasks_completion_signal",
@@ -282,7 +282,7 @@
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-03-10T11:17:09.543473+00:00",
+    "trace_id": "release-readiness-2026-03-15T03:32:30.224517+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",
