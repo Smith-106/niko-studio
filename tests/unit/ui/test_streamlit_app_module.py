@@ -381,27 +381,28 @@ def test_streamlit_import_executes_interactive_branches(monkeypatch):
         }
 
     def _setup_modules(mp):
-        wf_graph = types.ModuleType("src.workflow.graph")
+        # Mock WorkflowEngine.run_stream (new API after migration)
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
 
-        class _Graph:
-            def stream(self, _state):
-                yield {
-                    "writer": {
-                        "draft_content": "new-draft",
-                        "critique_result": {
-                            "lock_scores": {"L": 8},
-                            "quality_scores": {"Q": 88},
-                        },
-                    }
-                }
+        async def _run_stream(*args, **kwargs):
+            yield {
+                "type": "step_complete",
+                "step_name": "writer",
+                "result": {
+                    "draft_content": "new-draft",
+                    "critique_result": {
+                        "lock_scores": {"L": 8},
+                        "quality_scores": {"Q": 88},
+                    },
+                },
+            }
 
-        wf_graph.compile_graph = lambda *args, **kwargs: _Graph()
-        mp.setitem(sys.modules, "src.workflow.graph", wf_graph)
+        class _WorkflowEngine:
+            def run_stream(self, *args, **kwargs):
+                return _run_stream(*args, **kwargs)
 
-        wf_state = types.ModuleType("src.workflow.state")
-        wf_state.WritingState = dict
-        wf_state.DEFAULT_CONFIG = {"max_revisions": 3}
-        mp.setitem(sys.modules, "src.workflow.state", wf_state)
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
 
         traj_mod = types.ModuleType("src.ui.components.trajectory_viewer")
 
@@ -454,24 +455,25 @@ def test_streamlit_work_mode_fallback_to_l3(monkeypatch):
     captured = {}
 
     def _setup_modules(mp):
-        wf_graph = types.ModuleType("src.workflow.graph")
+        # Mock WorkflowEngine.run_stream (new API after migration)
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
 
-        class _Graph:
-            def stream(self, _state):
-                captured["state"] = dict(_state)
-                return iter(())
+        async def _run_stream(*args, **kwargs):
+            captured["kwargs"] = kwargs
+            return
+            yield {}  # pragma: no cover
 
-        wf_graph.compile_graph = lambda *args, **kwargs: _Graph()
-        mp.setitem(sys.modules, "src.workflow.graph", wf_graph)
+        class _WorkflowEngine:
+            def run_stream(self, *args, **kwargs):
+                return _run_stream(*args, **kwargs)
 
-        wf_state = types.ModuleType("src.workflow.state")
-        wf_state.WritingState = dict
-        wf_state.DEFAULT_CONFIG = {"max_revisions": 3}
-        mp.setitem(sys.modules, "src.workflow.state", wf_state)
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
 
     _mod, _fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
 
-    assert captured["state"]["workflow_level"] == 3
+    # level should default to "L3" when invalid
+    assert captured["kwargs"].get("level") == "L3"
 
 
 
@@ -549,12 +551,19 @@ def test_streamlit_workflow_importerror_branch(monkeypatch):
         fake_st.session_state.messages = []
 
     def _setup_modules(mp):
-        wf_graph = types.ModuleType("src.workflow.graph")
-        wf_state = types.ModuleType("src.workflow.state")
-        wf_state.WritingState = dict
-        wf_state.DEFAULT_CONFIG = {"max_revisions": 3}
-        mp.setitem(sys.modules, "src.workflow.graph", wf_graph)
-        mp.setitem(sys.modules, "src.workflow.state", wf_state)
+        # Remove workflow_engine from sys.modules to force ImportError
+        # This simulates the case where WorkflowEngine cannot be imported
+        if "src.workflow.workflow_engine" in sys.modules:
+            del sys.modules["src.workflow.workflow_engine"]
+
+        # Create a broken module that raises ImportError on attribute access
+        broken_module = types.ModuleType("src.workflow.workflow_engine")
+
+        def _raise_import_error(*args, **kwargs):
+            raise ImportError("No module named 'workflow_engine'")
+
+        broken_module.WorkflowEngine = _raise_import_error
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", broken_module)
 
     mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
 
@@ -570,19 +579,19 @@ def test_streamlit_workflow_exception_branch(monkeypatch):
         fake_st.session_state.messages = []
 
     def _setup_modules(mp):
-        wf_graph = types.ModuleType("src.workflow.graph")
+        # Mock WorkflowEngine.run_stream to raise exception
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
 
-        class _Graph:
-            def stream(self, _state):
-                raise RuntimeError("stream failed")
+        async def _run_stream(*args, **kwargs):
+            raise RuntimeError("stream failed")
+            yield {}  # pragma: no cover
 
-        wf_graph.compile_graph = lambda *args, **kwargs: _Graph()
-        mp.setitem(sys.modules, "src.workflow.graph", wf_graph)
+        class _WorkflowEngine:
+            def run_stream(self, *args, **kwargs):
+                return _run_stream(*args, **kwargs)
 
-        wf_state = types.ModuleType("src.workflow.state")
-        wf_state.WritingState = dict
-        wf_state.DEFAULT_CONFIG = {"max_revisions": 3}
-        mp.setitem(sys.modules, "src.workflow.state", wf_state)
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
 
     _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
 
@@ -661,22 +670,31 @@ def test_streamlit_workflow_stream_without_optional_fields(monkeypatch):
         fake_st.session_state.messages = []
 
     def _setup_modules(mp):
-        wf_graph = types.ModuleType("src.workflow.graph")
+        # Mock WorkflowEngine.run_stream (new API after migration)
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
 
-        class _Graph:
-            def stream(self, _state):
-                yield {
-                    "writer": {"other": "x"},
-                    "critic": {"score": 90},
-                }
+        async def _run_stream(*args, **kwargs):
+            yield {
+                "type": "step_complete",
+                "step_name": "writer",
+                "result": {
+                    "other": "x",
+                },
+            }
+            yield {
+                "type": "step_complete",
+                "step_name": "critic",
+                "result": {
+                    "score": 90,
+                },
+            }
 
-        wf_graph.compile_graph = lambda *args, **kwargs: _Graph()
-        mp.setitem(sys.modules, "src.workflow.graph", wf_graph)
+        class _WorkflowEngine:
+            def run_stream(self, *args, **kwargs):
+                return _run_stream(*args, **kwargs)
 
-        wf_state = types.ModuleType("src.workflow.state")
-        wf_state.WritingState = dict
-        wf_state.DEFAULT_CONFIG = {"max_revisions": 3}
-        mp.setitem(sys.modules, "src.workflow.state", wf_state)
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
 
     mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
 
