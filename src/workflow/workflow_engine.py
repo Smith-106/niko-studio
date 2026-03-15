@@ -338,7 +338,7 @@ class WorkflowEngine:
         Streaming version of run() that yields intermediate results.
 
         This is the recommended streaming entry point for real-time UI updates.
-        Replaces legacy compile_graph().astream() pattern.
+        Replaces legacy graph streaming pattern.
 
         Yields:
             dict: Step execution results with keys:
