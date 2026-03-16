@@ -12,6 +12,48 @@ import os
 import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, List
+
+
+def list_draft_versions(conn: sqlite3.Connection, session_id: str, limit: int = 20) -> List[Dict[str, Any]]:
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT version, created_at
+        FROM draft_versions
+        WHERE session_id = ?
+        ORDER BY version DESC
+        LIMIT ?
+        """,
+        (session_id, limit),
+    )
+    return [{"version": row[0], "created_at": row[1]} for row in c.fetchall()]
+
+
+def load_draft_version(conn: sqlite3.Connection, session_id: str, version: int) -> Optional[Dict[str, Any]]:
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT content, lock_scores, quality_scores, created_at
+        FROM draft_versions
+        WHERE session_id = ? AND version = ?
+        LIMIT 1
+        """,
+        (session_id, version),
+    )
+    row = c.fetchone()
+    if not row:
+        return None
+
+    content, lock_scores, quality_scores, created_at = row
+    return {
+        "version": version,
+        "created_at": created_at,
+        "content": content or "",
+        "lock_scores": json.loads(lock_scores) if lock_scores else None,
+        "quality_scores": json.loads(quality_scores) if quality_scores else None,
+    }
+
+
 from src.ui.translations import t, normalize_language_code
 from src.services.indexing_service import IndexingService
 from src.ui.file_utils import process_uploaded_file
@@ -28,7 +70,8 @@ st.set_page_config(
 )
 
 # === AionUi 参考: SQLite 本地存储 ===
-DB_PATH = os.path.join(os.path.dirname(__file__), "local_memory.db")
+_DB_PATH_OVERRIDE = os.environ.get("NIKO_STUDIO_STREAMLIT_DB_PATH")
+DB_PATH = _DB_PATH_OVERRIDE or os.path.join(os.path.dirname(__file__), "local_memory.db")
 
 
 def get_directory_state(task_dir: str) -> tuple:
@@ -176,6 +219,17 @@ if "critique_result" not in st.session_state:
 if "workflow_running" not in st.session_state:
     st.session_state.workflow_running = False
 
+if "workflow_engine" not in st.session_state:
+    st.session_state.workflow_engine = None
+if "current_plan_id" not in st.session_state:
+    st.session_state.current_plan_id = ""
+if "blocked_status" not in st.session_state:
+    st.session_state.blocked_status = ""
+if "blocked_last_step" not in st.session_state:
+    st.session_state.blocked_last_step = None
+if "confirm_token" not in st.session_state:
+    st.session_state.confirm_token = ""
+
 
 # === 1. Sidebar: AionUi 多代理协作设置 ===
 with st.sidebar:
@@ -206,6 +260,11 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.current_draft = ""
         st.session_state.critique_result = {}
+        st.session_state.workflow_engine = None
+        st.session_state.current_plan_id = ""
+        st.session_state.blocked_status = ""
+        st.session_state.blocked_last_step = None
+        st.session_state.confirm_token = ""
         st.rerun()
     
     st.divider()
@@ -316,8 +375,10 @@ with col_chat:
                 except:
                     level = "L3"
 
-                # Run workflow using WorkflowEngine
-                engine = WorkflowEngine()
+        # Run workflow using WorkflowEngine
+                if st.session_state.workflow_engine is None:
+                    st.session_state.workflow_engine = WorkflowEngine()
+                engine = st.session_state.workflow_engine
 
                 async def run_workflow():
                     results = []
@@ -325,7 +386,14 @@ with col_chat:
                         results.append(event)
                         event_type = event.get("type", "unknown")
 
-                        if event_type == "step_complete":
+                        if event_type == "plan_created":
+                            st.session_state.current_plan_id = event.get("plan_id", "")
+
+                        elif event_type == "step_start":
+                            step_name = event.get("step_name", "unknown")
+                            st.write(t("node_started", node_name=step_name))
+
+                        elif event_type == "step_complete":
                             step_name = event.get("step_name", "unknown")
                             st.write(t("node_completed", node_name=step_name))
 
@@ -338,6 +406,15 @@ with col_chat:
                                 if "critique_result" in result:
                                     st.session_state.critique_result = result["critique_result"]
 
+                        elif event_type == "plan_blocked":
+                            st.session_state.current_plan_id = event.get("plan_id", "")
+                            st.session_state.blocked_status = event.get("status", "")
+                            st.session_state.blocked_last_step = event.get("last_step")
+                            status.update(label=t("workflow_blocked"), state="error")
+
+                        elif event_type == "plan_complete":
+                            status.update(label=t("workflow_completed"), state="complete")
+
                         elif event_type in ("plan_error", "error"):
                             raise Exception(event.get("error", "Unknown error"))
 
@@ -346,17 +423,21 @@ with col_chat:
                 # Run async workflow
                 asyncio.run(run_workflow())
 
-                status.update(label=t("workflow_completed"), state="complete")
+                # If blocked, don't append generic "task completed" message.
+                if st.session_state.blocked_status:
+                    status.update(label=t("workflow_blocked"), state="error")
+                else:
+                    status.update(label=t("workflow_completed"), state="complete")
 
-                # 添加助手消息
-                assistant_msg = {
-                    "role": "assistant",
-                    "content": t("task_completed_msg"),
-                    "agent_name": "Coordinator"
-                }
-                st.session_state.messages.append(assistant_msg)
-                save_message(conn, st.session_state.session_id, "assistant",
-                           assistant_msg["content"], "Coordinator")
+                    # 添加助手消息
+                    assistant_msg = {
+                        "role": "assistant",
+                        "content": t("task_completed_msg"),
+                        "agent_name": "Coordinator"
+                    }
+                    st.session_state.messages.append(assistant_msg)
+                    save_message(conn, st.session_state.session_id, "assistant",
+                               assistant_msg["content"], "Coordinator")
 
             except ImportError as e:
                 error_msg = t("workflow_dependency_missing", error=str(e))
@@ -432,10 +513,109 @@ with col_artifacts:
         preview_container = st.container(height=350)
         with preview_container:
             st.markdown(draft)
-        
+
+        # Version history
+        with st.expander(t("version_history_title"), expanded=False):
+            versions = list_draft_versions(conn, st.session_state.session_id, limit=20)
+            if not versions:
+                st.caption(t("version_history_empty"))
+            else:
+                options = [f"v{v['version']} • {v['created_at']}" for v in versions]
+                selected = st.selectbox(t("version_history_select"), options, index=0)
+                selected_version = int(str(selected).split(" ")[0].lstrip("v"))
+                loaded = load_draft_version(conn, st.session_state.session_id, selected_version)
+                if loaded:
+                    st.caption(t("version_history_meta", version=loaded["version"], created_at=loaded["created_at"]))
+                    if st.button(t("version_history_load"), use_container_width=True):
+                        st.session_state.current_draft = loaded["content"]
+                        if loaded.get("lock_scores") is not None or loaded.get("quality_scores") is not None:
+                            critique = dict(st.session_state.get("critique_result") or {})
+                            if loaded.get("lock_scores") is not None:
+                                critique["lock_scores"] = loaded["lock_scores"]
+                            if loaded.get("quality_scores") is not None:
+                                critique["quality_scores"] = loaded["quality_scores"]
+                            st.session_state.critique_result = critique
+                        st.success(t("version_history_loaded_msg", version=loaded["version"]))
+                        st.rerun()
+
         # HITL 人工介入
         st.divider()
         st.subheader(t("hitl_title"))
+
+        # Unblock flow for waiting_confirmation
+        if st.session_state.get("blocked_status") == "waiting_confirmation":
+            last_step = st.session_state.get("blocked_last_step") or {}
+            gate = last_step.get("gate") if isinstance(last_step, dict) else {}
+            reason = gate.get("reason") if isinstance(gate, dict) else None
+
+            st.warning(t("workflow_waiting_confirmation"))
+            if reason:
+                st.caption(t("workflow_gate_reason", reason=reason))
+
+            token_value = st.text_input(
+                t("confirm_token_label"),
+                value=st.session_state.get("confirm_token", ""),
+                type="password",
+            )
+            st.session_state.confirm_token = token_value
+
+            col_unblock_1, col_unblock_2 = st.columns(2)
+            with col_unblock_1:
+                if st.button(t("confirm_and_resume"), use_container_width=True, type="primary"):
+                    plan_id = st.session_state.get("current_plan_id")
+                    step_id = last_step.get("step_id") if isinstance(last_step, dict) else None
+                    token = (st.session_state.get("confirm_token") or "").strip()
+
+                    if not plan_id:
+                        st.error(t("confirm_missing_plan_id"))
+                    elif not token:
+                        st.error(t("confirm_missing_token"))
+                    else:
+                        try:
+                            engine = st.session_state.workflow_engine
+                            if engine is None:
+                                from src.workflow.workflow_engine import WorkflowEngine
+
+                                engine = WorkflowEngine()
+                                st.session_state.workflow_engine = engine
+
+                            import asyncio
+
+                            async def _resume():
+                                await engine.execute(plan_id, step_id=step_id, confirm_token=token)
+                                max_iters = 50
+                                for _ in range(max_iters):
+                                    result = await engine.execute(plan_id)
+                                    if isinstance(result, dict):
+                                        if "result" in result and isinstance(result.get("result"), dict):
+                                            inner = result.get("result")
+                                            if "draft_content" in inner:
+                                                st.session_state.current_draft = inner["draft_content"]
+                                            if "critique_result" in inner:
+                                                st.session_state.critique_result = inner["critique_result"]
+                                        if result.get("status") in {"waiting_confirmation", "preflight_blocked", "gate_blocked"}:
+                                            st.session_state.blocked_status = result.get("status") or ""
+                                            st.session_state.blocked_last_step = result
+                                            return
+                                        if result.get("plan_status") == "completed" or result.get("status") == "completed":
+                                            st.session_state.blocked_status = ""
+                                            st.session_state.blocked_last_step = None
+                                            st.session_state.confirm_token = ""
+                                            return
+                                raise RuntimeError("resume iteration budget exceeded")
+
+                            asyncio.run(_resume())
+                            st.rerun()
+                        except Exception as e:
+                            st.error(t("workflow_failed", error=str(e)))
+
+            with col_unblock_2:
+                if st.button(t("cancel_blocked"), use_container_width=True):
+                    st.session_state.blocked_status = ""
+                    st.session_state.blocked_last_step = None
+                    st.session_state.confirm_token = ""
+                    st.rerun()
+
         feedback = st.text_area(t("feedback_label"), placeholder=t("feedback_placeholder"))
         
         col_btn1, col_btn2 = st.columns(2)
@@ -510,13 +690,29 @@ with col_artifacts:
         })
 
         import pandas as pd
+        import plotly.graph_objects as go
 
         df_quality = pd.DataFrame({
             "维度": list(quality_scores.keys()),
             "分数": list(quality_scores.values())
         })
 
-        st.bar_chart(df_quality.set_index("维度"))
+        fig = go.Figure(
+            data=[
+                go.Bar(
+                    x=list(df_quality["维度"]),
+                    y=list(df_quality["分数"]),
+                    marker_color="rgba(99, 102, 241, 0.8)",
+                )
+            ]
+        )
+        fig.update_layout(
+            xaxis_title=None,
+            yaxis_title=None,
+            yaxis=dict(range=[0, 100]),
+            margin=dict(l=20, r=20, t=10, b=20),
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
         avg_quality = sum(quality_scores.values()) / len(quality_scores)
         st.metric(t("avg_quality"), f"{avg_quality:.1f}/100",

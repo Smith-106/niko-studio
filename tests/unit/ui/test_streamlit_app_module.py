@@ -3,6 +3,8 @@
 
 import importlib
 import json
+import os
+import sqlite3
 import sys
 import types
 from pathlib import Path
@@ -160,6 +162,9 @@ class _FakeStreamlit(types.ModuleType):
     def bar_chart(self, *_args, **_kwargs):
         return None
 
+    def plotly_chart(self, *_args, **_kwargs):
+        return None
+
     def text_area(self, *_args, **_kwargs):
         return self._text_area_value
 
@@ -179,7 +184,9 @@ class _DummyIndexingService:
 
 
 
-def _install_stubs(monkeypatch, setup_fake=None, setup_modules=None):
+def _install_stubs(monkeypatch, setup_fake=None, setup_modules=None, db_path=":memory:"):
+    os.environ["NIKO_STUDIO_STREAMLIT_DB_PATH"] = db_path
+
     fake_st = _FakeStreamlit()
     if setup_fake:
         setup_fake(fake_st)
@@ -210,6 +217,30 @@ def _install_stubs(monkeypatch, setup_fake=None, setup_modules=None):
 
     pandas_mod.DataFrame = lambda data: _DataFrame(data)
     monkeypatch.setitem(sys.modules, "pandas", pandas_mod)
+
+    plotly_mod = types.ModuleType("plotly")
+    graph_objects_mod = types.ModuleType("plotly.graph_objects")
+
+    class _Figure:
+        def __init__(self, *_args, **_kwargs):
+            return None
+
+        def add_trace(self, *_args, **_kwargs):
+            return None
+
+        def update_layout(self, *_args, **_kwargs):
+            return None
+
+    class _Bar:
+        def __init__(self, **_kwargs):
+            return None
+
+    graph_objects_mod.Figure = _Figure
+    graph_objects_mod.Bar = _Bar
+    plotly_mod.graph_objects = graph_objects_mod
+
+    monkeypatch.setitem(sys.modules, "plotly", plotly_mod)
+    monkeypatch.setitem(sys.modules, "plotly.graph_objects", graph_objects_mod)
 
     if setup_modules:
         setup_modules(monkeypatch)
@@ -247,10 +278,8 @@ def test_streamlit_module_import_and_scene_loaders(monkeypatch, tmp_path):
 
 
 def test_streamlit_db_helpers(monkeypatch, tmp_path):
-    mod, _fake_st = _install_stubs(monkeypatch)
-
     db_path = tmp_path / "local_memory.db"
-    monkeypatch.setattr(mod, "DB_PATH", str(db_path))
+    mod, _fake_st = _install_stubs(monkeypatch, db_path=str(db_path))
 
     conn = mod.init_db()
     mod.save_message(conn, "s1", "user", "hello", "agent", {"k": "v"})
@@ -265,6 +294,8 @@ def test_streamlit_db_helpers(monkeypatch, tmp_path):
     v2 = mod.save_draft(conn, "s1", "draft-2")
     assert v1 == 1
     assert v2 == 2
+
+    assert mod.load_draft_version(conn, "s1", 999) is None
 
     conn.close()
 
@@ -396,6 +427,7 @@ def test_streamlit_import_executes_interactive_branches(monkeypatch):
                     },
                 },
             }
+            yield {"type": "plan_complete"}
 
         class _WorkflowEngine:
             def run_stream(self, *args, **kwargs):
@@ -444,6 +476,57 @@ def test_streamlit_warning_when_approve_without_draft(monkeypatch):
     assert fake_st.calls["warning"]
 
 
+def test_streamlit_version_history_load_button_loads_draft(monkeypatch, tmp_path):
+    db_path = tmp_path / "local_memory.db"
+
+    # Pre-create the DB and a draft version BEFORE importing the module,
+    # so the module-level UI code can hit the version-history load branch.
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
+    c = conn.cursor()
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS draft_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
+            version INTEGER,
+            content TEXT,
+            lock_scores TEXT,
+            quality_scores TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    c.execute(
+        "INSERT INTO draft_versions (session_id, version, content, lock_scores, quality_scores) VALUES (?, ?, ?, ?, ?)",
+        (
+            "s1",
+            1,
+            "loaded-content",
+            json.dumps({"L": 9}),
+            json.dumps({"Q": 91}),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    def _setup_fake(fake_st):
+        fake_st._selectbox_values["Select a version"] = "v1 • 2026-01-01"
+        fake_st._selectbox_values["选择版本"] = "v1 • 2026-01-01"
+        fake_st._button_queue = [False, True, False, False]  # new_session / version_load / submit_feedback / approve
+        fake_st.session_state.session_id = "s1"
+        fake_st.session_state.messages = []
+        fake_st.session_state.current_draft = "old"
+        fake_st.session_state.critique_result = {"lock_scores": {}, "quality_scores": {}}
+
+    mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, db_path=str(db_path))
+
+    assert mod.st.session_state.current_draft == "loaded-content"
+    assert mod.st.session_state.critique_result["lock_scores"]["L"] == 9
+    assert mod.st.session_state.critique_result["quality_scores"]["Q"] == 91
+    assert fake_st.calls["success"]
+
+
+
 def test_streamlit_work_mode_fallback_to_l3(monkeypatch):
     def _setup_fake(fake_st):
         fake_st._chat_input_value = "idea"
@@ -474,6 +557,8 @@ def test_streamlit_work_mode_fallback_to_l3(monkeypatch):
 
     # level should default to "L3" when invalid
     assert captured["kwargs"].get("level") == "L3"
+
+
 
 
 
@@ -741,6 +826,199 @@ def test_streamlit_work_mode_parse_exception_falls_back_to_l3(monkeypatch):
 
 
 
+
+
+def test_streamlit_run_stream_plan_blocked_sets_state_and_skips_completion(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = "idea"
+        fake_st._button_queue = [False, False, False]
+        fake_st.session_state.messages = []
+
+    def _setup_modules(mp):
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
+
+        async def _run_stream(*_args, **_kwargs):
+            yield {"type": "plan_created", "plan_id": "p1"}
+            yield {"type": "step_start", "step_name": "GateStep"}
+            yield {
+                "type": "plan_blocked",
+                "plan_id": "p1",
+                "status": "waiting_confirmation",
+                "last_step": {"step_id": "s1", "gate": {"reason": "danger"}},
+            }
+
+        class _WorkflowEngine:
+            async def execute(self, *_args, **_kwargs):
+                return {"status": "running"}
+
+            def run_stream(self, *args, **kwargs):
+                return _run_stream(*args, **kwargs)
+
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
+
+    assert fake_st.session_state.current_plan_id == "p1"
+    assert fake_st.session_state.blocked_status == "waiting_confirmation"
+    assert fake_st.session_state.blocked_last_step["step_id"] == "s1"
+    assert fake_st.session_state.workflow_running is False
+
+    completed_msg = _mod.t("task_completed_msg")
+    assert completed_msg not in fake_st.calls["markdown"]
+    assert all(completed_msg not in str(item) for item in fake_st.session_state.messages)
+
+
+def test_streamlit_unblock_confirm_missing_plan_id(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = None
+        fake_st._button_queue = [False, True, False, False, False]  # new_session / confirm / cancel / submit_feedback / approve
+        fake_st.session_state.messages = []
+        fake_st.session_state.blocked_status = "waiting_confirmation"
+        fake_st.session_state.blocked_last_step = {"step_id": "s1", "gate": {"reason": "danger"}}
+        fake_st.session_state.current_plan_id = ""
+        fake_st.session_state.confirm_token = "token"
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake)
+
+    # Should emit missing plan id error.
+    assert fake_st.calls["error"]
+
+
+def test_streamlit_unblock_confirm_missing_token(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = None
+        fake_st._button_queue = [False, True, False, False, False]  # new_session / confirm / cancel / submit_feedback / approve
+        fake_st.session_state.messages = []
+        fake_st.session_state.blocked_status = "waiting_confirmation"
+        fake_st.session_state.blocked_last_step = {"step_id": "s1", "gate": {"reason": "danger"}}
+        fake_st.session_state.current_plan_id = "p1"
+        fake_st.session_state.confirm_token = ""
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake)
+
+    # Should emit missing token error.
+    assert fake_st.calls["error"]
+
+
+def test_streamlit_unblock_confirm_resume_can_block_again(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = None
+        fake_st._button_queue = [False, True, False, False, False]  # new_session / confirm / cancel / submit_feedback / approve
+        fake_st.session_state.messages = []
+        fake_st.session_state.blocked_status = "waiting_confirmation"
+        fake_st.session_state.blocked_last_step = {"step_id": "s1", "gate": {"reason": "danger"}}
+        fake_st.session_state.current_plan_id = "p1"
+        fake_st.session_state.confirm_token = "token"
+
+    def _setup_modules(mp):
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
+
+        class _WorkflowEngine:
+            def __init__(self):
+                self._calls = 0
+
+            async def execute(self, *_args, **_kwargs):
+                self._calls += 1
+                # call 1: confirm gate; call 2: next execute returns blocked again
+                if self._calls >= 2:
+                    return {"status": "waiting_confirmation", "step_id": "s2"}
+                return {"status": "running"}
+
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
+
+    assert fake_st.session_state.blocked_status == "waiting_confirmation"
+    assert fake_st.session_state.blocked_last_step["step_id"] == "s2"
+
+
+def test_streamlit_unblock_confirm_resume_can_complete(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = None
+        fake_st._button_queue = [False, True, False, False, False]  # new_session / confirm / cancel / submit_feedback / approve
+        fake_st.session_state.messages = []
+        fake_st.session_state.blocked_status = "waiting_confirmation"
+        fake_st.session_state.blocked_last_step = {"step_id": "s1", "gate": {"reason": "danger"}}
+        fake_st.session_state.current_plan_id = "p1"
+        fake_st.session_state.confirm_token = "token"
+
+    def _setup_modules(mp):
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
+
+        class _WorkflowEngine:
+            def __init__(self):
+                self._calls = 0
+
+            async def execute(self, *_args, **_kwargs):
+                self._calls += 1
+                # call 1: confirm gate; call 2: complete
+                if self._calls >= 2:
+                    return {
+                        "status": "completed",
+                        "plan_status": "completed",
+                        "result": {
+                            "draft_content": "resumed-draft",
+                            "critique_result": {"lock_scores": {"L": 1}, "quality_scores": {"Q": 2}},
+                        },
+                    }
+                return {"status": "running"}
+
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
+
+    assert fake_st.session_state.blocked_status == ""
+    assert fake_st.session_state.blocked_last_step is None
+    assert fake_st.session_state.confirm_token == ""
+    assert fake_st.session_state.current_draft == "resumed-draft"
+
+
+def test_streamlit_unblock_confirm_resume_budget_exceeded_shows_error(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = None
+        fake_st._button_queue = [False, True, False, False, False]  # new_session / confirm / cancel / submit_feedback / approve
+        fake_st.session_state.messages = []
+        fake_st.session_state.blocked_status = "waiting_confirmation"
+        fake_st.session_state.blocked_last_step = {"step_id": "s1", "gate": {"reason": "danger"}}
+        fake_st.session_state.current_plan_id = "p1"
+        fake_st.session_state.confirm_token = "token"
+
+    def _setup_modules(mp):
+        wf_engine = types.ModuleType("src.workflow.workflow_engine")
+
+        class _WorkflowEngine:
+            async def execute(self, *_args, **_kwargs):
+                return {"status": "running"}
+
+        wf_engine.WorkflowEngine = _WorkflowEngine
+        mp.setitem(sys.modules, "src.workflow.workflow_engine", wf_engine)
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
+
+    assert fake_st.calls["error"]
+
+
+def test_streamlit_unblock_cancel_resets_blocked_state(monkeypatch):
+    def _setup_fake(fake_st):
+        fake_st._chat_input_value = None
+        fake_st._button_queue = [False, False, True, False, False]  # new_session / confirm / cancel / submit_feedback / approve
+        fake_st.session_state.messages = []
+        fake_st.session_state.blocked_status = "waiting_confirmation"
+        fake_st.session_state.blocked_last_step = {"step_id": "s1"}
+        fake_st.session_state.current_plan_id = "p1"
+        fake_st.session_state.confirm_token = "token"
+
+    _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake)
+
+    assert fake_st.session_state.blocked_status == ""
+    assert fake_st.session_state.blocked_last_step is None
+    assert fake_st.session_state.confirm_token == ""
+
+
+
 def test_streamlit_plan_error_event_triggers_error_path(monkeypatch):
     def _setup_fake(fake_st):
         fake_st._chat_input_value = "idea"
@@ -763,7 +1041,6 @@ def test_streamlit_plan_error_event_triggers_error_path(monkeypatch):
     _mod, fake_st = _install_stubs(monkeypatch, setup_fake=_setup_fake, setup_modules=_setup_modules)
 
     assert fake_st.calls["error"]
-
 
 def test_streamlit_lock_analysis_expander_renders_markdown(monkeypatch):
     def _setup_fake(fake_st):

@@ -217,6 +217,11 @@ export interface Translations {
   evaluationWorkflowSuccess: string
   evaluationWorkflowError: string
   evaluationWorkflowPlanIdRequired: string
+  evaluationWorkflowWaitingConfirmation: string
+  evaluationWorkflowGateReason: string
+  evaluationWorkflowConfirmTokenPlaceholder: string
+  evaluationWorkflowConfirmAndContinue: string
+  evaluationWorkflowConfirmTokenRequired: string
 
   // Chat Area Controls
   chatModeLabel: string
@@ -694,6 +699,11 @@ export const translations: Record<Language, Translations> = {
     evaluationWorkflowSuccess: '执行成功',
     evaluationWorkflowError: '执行失败',
     evaluationWorkflowPlanIdRequired: '请先填写 plan_id。',
+    evaluationWorkflowWaitingConfirmation: '需要确认后才能继续。',
+    evaluationWorkflowGateReason: '阻塞原因',
+    evaluationWorkflowConfirmTokenPlaceholder: '确认令牌（confirm_token）',
+    evaluationWorkflowConfirmAndContinue: '确认并继续',
+    evaluationWorkflowConfirmTokenRequired: '请先填写 confirm_token。',
 
     // Chat Area Controls
     chatModeLabel: '模式：',
@@ -1169,6 +1179,11 @@ export const translations: Record<Language, Translations> = {
     evaluationWorkflowSuccess: 'Success',
     evaluationWorkflowError: 'Failed',
     evaluationWorkflowPlanIdRequired: 'Please provide plan_id first.',
+    evaluationWorkflowWaitingConfirmation: 'Waiting for confirmation to continue.',
+    evaluationWorkflowGateReason: 'Gate reason',
+    evaluationWorkflowConfirmTokenPlaceholder: 'confirm_token',
+    evaluationWorkflowConfirmAndContinue: 'Confirm & Continue',
+    evaluationWorkflowConfirmTokenRequired: 'Please provide confirm_token first.',
 
     // Chat Area Controls
     chatModeLabel: 'Mode:',

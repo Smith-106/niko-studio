@@ -229,6 +229,9 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const [workflowLifecycleAction, setWorkflowLifecycleAction] = useState<WorkflowLifecycleAction>('status')
   const [workflowStates, setWorkflowStates] = useState<Record<WorkflowAction, WorkflowActionState>>(defaultWorkflowActionStates())
   const [workflowResult, setWorkflowResult] = useState<string>('')
+  const [workflowConfirmToken, setWorkflowConfirmToken] = useState('')
+  const [workflowGateReason, setWorkflowGateReason] = useState<string | null>(null)
+  const [workflowWaitingConfirmation, setWorkflowWaitingConfirmation] = useState(false)
   const { addMessage } = useAppStore()
   const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
 
@@ -611,6 +614,26 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     }
   }
 
+  const syncWorkflowConfirmationFromPayload = (payload: unknown) => {
+    if (!payload || typeof payload !== 'object') {
+      setWorkflowWaitingConfirmation(false)
+      setWorkflowGateReason(null)
+      return
+    }
+
+    const record = payload as Record<string, unknown>
+    if (record.status === 'waiting_confirmation') {
+      setWorkflowWaitingConfirmation(true)
+      const gate = record.gate
+      const reason = gate && typeof gate === 'object' ? String((gate as { reason?: unknown }).reason ?? '') : ''
+      setWorkflowGateReason(reason.trim().length > 0 ? reason : null)
+      return
+    }
+
+    setWorkflowWaitingConfirmation(false)
+    setWorkflowGateReason(null)
+  }
+
   const executeWorkflowAction = async (
     action: WorkflowAction,
     run: () => Promise<{ success: boolean; data?: unknown; error?: string }>
@@ -626,6 +649,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
         return
       }
       syncWorkflowIdsFromPayload(response.data)
+      syncWorkflowConfirmationFromPayload(response.data)
       setWorkflowResult(stringifyWorkflowPayload(response.data))
       setWorkflowState(action, { status: 'success', message: t.evaluationWorkflowSuccess })
     } catch (error) {
@@ -650,6 +674,20 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
       return
     }
     await executeWorkflowAction('execute', () => executePlan(workflowPlanId, workflowStepId || undefined))
+  }
+
+  const handleWorkflowConfirmAndContinue = async () => {
+    if (!workflowPlanId.trim()) {
+      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
+      return
+    }
+    if (!workflowConfirmToken.trim()) {
+      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowConfirmTokenRequired })
+      return
+    }
+    await executeWorkflowAction('execute', () =>
+      executePlan(workflowPlanId, workflowStepId || undefined, undefined, undefined, workflowConfirmToken.trim())
+    )
   }
 
   const handleWorkflowLifecycle = async () => {
@@ -964,6 +1002,31 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
               {t.evaluationWorkflowLifecycle}
             </button>
           </div>
+
+          {workflowWaitingConfirmation && (
+            <div className="mt-3 rounded border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10 p-2 text-xs">
+              <div className="font-medium text-amber-700 dark:text-amber-200">{t.evaluationWorkflowWaitingConfirmation}</div>
+              {workflowGateReason && (
+                <div className="mt-1 text-amber-700/80 dark:text-amber-200/80">{t.evaluationWorkflowGateReason}: {workflowGateReason}</div>
+              )}
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={workflowConfirmToken}
+                  onChange={(e) => setWorkflowConfirmToken(e.target.value)}
+                  placeholder={t.evaluationWorkflowConfirmTokenPlaceholder}
+                  aria-label={t.evaluationWorkflowConfirmTokenPlaceholder}
+                  className="flex-1 px-2 py-1 text-xs border border-amber-200 dark:border-amber-700 dark:bg-dark-bg dark:text-dark-text rounded"
+                />
+                <button
+                  onClick={handleWorkflowConfirmAndContinue}
+                  disabled={workflowStates.execute.status === 'loading'}
+                  className="px-2 py-1 text-xs bg-amber-600 text-white rounded disabled:opacity-50"
+                >
+                  {t.evaluationWorkflowConfirmAndContinue}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 space-y-2 text-xs">
             {(['route', 'plan', 'execute', 'lifecycle'] as WorkflowAction[]).map((action) => {

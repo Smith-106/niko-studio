@@ -106,10 +106,67 @@ TRANSLATIONS = {
         "en": "🚀 Starting LangGraph State Machine...",
         "zh": "🚀 启动 LangGraph 状态机..."
     },
-    "node_completed": {
-        "en": "✅ **{node_name}** Completed",
-        "zh": "✅ **{node_name}** 完成"
+    "node_started": {
+        "en": "⏳ **{node_name}** Started",
+        "zh": "⏳ **{node_name}** 开始"
     },
+    "workflow_blocked": {
+        "en": "⛔ Workflow Blocked",
+        "zh": "⛔ 工作流已阻塞"
+    },
+    "workflow_waiting_confirmation": {
+        "en": "This workflow is waiting for confirmation.",
+        "zh": "该工作流需要确认后才能继续。"
+    },
+    "workflow_gate_reason": {
+        "en": "Gate reason: {reason}",
+        "zh": "阻塞原因：{reason}"
+    },
+    "confirm_token_label": {
+        "en": "Confirm token",
+        "zh": "确认令牌"
+    },
+    "confirm_and_resume": {
+        "en": "Confirm & Resume",
+        "zh": "确认并继续"
+    },
+    "cancel_blocked": {
+        "en": "Cancel",
+        "zh": "取消"
+    },
+    "confirm_missing_plan_id": {
+        "en": "Missing plan_id; please rerun the workflow.",
+        "zh": "缺少 plan_id，请重新运行工作流。"
+    },
+    "confirm_missing_token": {
+        "en": "Please enter a non-empty confirm token.",
+        "zh": "请输入非空确认令牌。"
+    },
+    "version_history_title": {
+        "en": "Version History",
+        "zh": "🕘 版本历史"
+    },
+    "version_history_empty": {
+        "en": "No versions saved yet.",
+        "zh": "暂无已保存的版本。"
+    },
+    "version_history_select": {
+        "en": "Select a version",
+        "zh": "选择版本"
+    },
+    "version_history_meta": {
+        "en": "Selected: v{version} • {created_at}",
+        "zh": "已选择：v{version} • {created_at}"
+    },
+    "version_history_load": {
+        "en": "Load this version",
+        "zh": "加载此版本"
+    },
+    "version_history_loaded_msg": {
+        "en": "Loaded version v{version}.",
+        "zh": "已加载版本 v{version}。"
+    },
+
     "workflow_completed": {
         "en": "✅ Workflow Completed",
         "zh": "✅ 工作流完成"

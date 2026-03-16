@@ -1015,12 +1015,14 @@ export async function executePlan(
   planId: string,
   stepId?: string,
   recommendations?: RecommendationInput[],
-  mode?: 'standard' | 'uiBridge'
+  mode?: 'standard' | 'uiBridge',
+  confirm_token?: string
 ): Promise<ApiResponse<WorkflowExecuteResponse>> {
   const normalizedRecommendations = normalizeRecommendations(recommendations)
   return callApi(resolveWorkflowEndpoint('/execute', mode), 'POST', {
     plan_id: planId,
     step_id: stepId,
+    confirm_token: confirm_token && confirm_token.trim().length > 0 ? confirm_token : undefined,
     recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
   })
 }
@@ -1028,12 +1030,14 @@ export async function executePlan(
 export async function uiExecutePlan(
   planId: string,
   stepId?: string,
-  recommendations?: RecommendationInput[]
+  recommendations?: RecommendationInput[],
+  confirm_token?: string
 ): Promise<ApiResponse<WorkflowExecuteResponse>> {
   const normalizedRecommendations = normalizeRecommendations(recommendations)
   return callApi(resolveWorkflowEndpoint('/execute', 'uiBridge'), 'POST', {
     plan_id: planId,
     step_id: stepId,
+    confirm_token: confirm_token && confirm_token.trim().length > 0 ? confirm_token : undefined,
     recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
   })
 }
