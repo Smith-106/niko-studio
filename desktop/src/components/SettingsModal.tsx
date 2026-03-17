@@ -11,6 +11,17 @@ interface SettingsModalProps {
   onClose: () => void
 }
 
+type SettingsSectionId = 'backend' | 'workflow' | 'retrieval' | 'templates' | 'models' | 'ui' | 'diagnostics'
+
+type SettingsSection = {
+  id: SettingsSectionId
+  label: string
+}
+
+function classNames(...parts: Array<string | false | undefined | null>) {
+  return parts.filter(Boolean).join(' ')
+}
+
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings, updateProvider, resetSettings } = useSettingsStore()
   const { setAllowLlmFallback, setQualityGoals, checkBackend } = useAppStore()
@@ -31,6 +42,18 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [modelValidateMessage, setModelValidateMessage] = useState<Record<string, { type: 'success' | 'error'; text: string } | null>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useI18n()
+
+  const sections: SettingsSection[] = [
+    { id: 'backend', label: t.backendService },
+    { id: 'workflow', label: t.writingSettings },
+    { id: 'retrieval', label: t.settingsRetrieval },
+    { id: 'templates', label: t.templateLibraryTitle },
+    { id: 'models', label: t.llmConfig },
+    { id: 'ui', label: t.uiSettings },
+    { id: 'diagnostics', label: t.settingsDiagnostics },
+  ]
+
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>('workflow')
 
   if (!isOpen) return null
 
@@ -409,7 +432,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-dark-surface rounded-2xl w-[700px] max-h-[85vh] overflow-hidden shadow-2xl">
+      <div className="bg-white dark:bg-dark-surface rounded-2xl w-[900px] max-h-[85vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b dark:border-dark-border">
           <h2 className="text-lg font-semibold dark:text-dark-text">{t.settingsTitle}</h2>
@@ -421,661 +444,683 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[65vh] space-y-6">
-          {/* 后端设置 */}
-          <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.backendService}</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.backendUrl}</label>
-                <input
-                  type="text"
-                  value={localSettings.apiBaseUrl}
-                  onChange={(e) => setLocalSettings({ ...localSettings, apiBaseUrl: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* 系统诊断 */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.settingsDiagnostics}</h3>
-              <button
-                onClick={refreshDiagnostics}
-                disabled={diagnosticsLoading}
-                className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
-              >
-                {diagnosticsLoading ? t.mcpRefreshing : t.settingsRefreshDiagnostics}
-              </button>
-            </div>
-
-            {diagnosticsError && (
-              <p className="text-xs text-red-500 mb-2">{diagnosticsError}</p>
-            )}
-
-            <div className="space-y-3">
-              <div className="border dark:border-dark-border rounded-lg p-3">
-                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsGatewayMetrics}</div>
-                {gatewayMetrics ? (
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-dark-text">
-                    <div>{t.mcpRequestsTotal.replace('{value}', String(gatewayMetrics.requests_total))}</div>
-                    <div>{t.mcpRequestsFailed.replace('{value}', String(gatewayMetrics.requests_failed_total))}</div>
-                    <div>{t.mcpLatencyAvg.replace('{value}', String(gatewayMetrics.latency_ms_avg))}</div>
-                    <div>{t.mcpLatencyMax.replace('{value}', String(gatewayMetrics.latency_ms_max))}</div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">{t.settingsNoMetricsData}</div>
-                )}
-              </div>
-
-              <div className="border dark:border-dark-border rounded-lg p-3">
-                <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsToolList}</div>
-                {gatewayTools && Object.keys(gatewayTools).length > 0 ? (
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {Object.entries(gatewayTools).map(([service, tools]) => (
-                      <div key={service}>
-                        <div className="text-xs font-medium text-gray-700 dark:text-dark-text">{service}</div>
-                        <div className="text-xs text-gray-500 dark:text-dark-text-secondary break-all">
-                          {tools.join('，')}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-400 dark:text-dark-text-secondary">{t.settingsNoToolsData}</div>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* LLM 提供商配置 */}
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.llmConfig}</h3>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.allowLlmFallback}
-                    onChange={(e) => setLocalSettings({ ...localSettings, allowLlmFallback: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">{t.settingsAllowFallback}</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.useMultiModel}
-                    onChange={(e) => setLocalSettings({ ...localSettings, useMultiModel: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">{t.multiModel}</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.detectionEvasionGuardEnabled}
-                    onChange={(e) => setLocalSettings({ ...localSettings, detectionEvasionGuardEnabled: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">{t.settingsDetectionGuard}</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.writingHelperUseLegacyPolish}
-                    onChange={(e) => setLocalSettings({ ...localSettings, writingHelperUseLegacyPolish: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-gray-600 dark:text-dark-text-secondary">{t.writingHelperLegacyPolish}</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProviderModel}</label>
-                <input
-                  type="text"
-                  value={providerSearch}
-                  onChange={(e) => setProviderSearch(e.target.value)}
-                  placeholder={t.settingsRetrievalSearchPlaceholder}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-              </div>
-
-              {getFilteredProviders().map((provider) => {
-                return (
-                <div
-                  key={provider.id}
-                  className={`border rounded-lg p-4 transition-colors ${
-                    provider.enabled ? 'border-blue-300 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-dark-border'
-                  }`}
+        {/* Body */}
+        <div className="flex">
+          {/* Secondary navigation */}
+          <nav className="w-[220px] border-r dark:border-dark-border bg-gray-50 dark:bg-dark-bg">
+            <div className="p-3 space-y-1">
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => setActiveSection(section.id)}
+                  className={classNames(
+                    'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
+                    activeSection === section.id
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
+                      : 'hover:bg-gray-100 dark:hover:bg-dark-border text-gray-700 dark:text-dark-text'
+                  )}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={provider.enabled}
-                        onChange={(e) => updateLocalProvider(provider.id, { enabled: e.target.checked })}
-                        className="rounded"
-                      />
-                      <span className="font-medium text-gray-800 dark:text-dark-text">{provider.name}</span>
-                      {provider.id === localSettings.primaryProvider && provider.enabled && (
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">{t.primary}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {testResults[provider.id] === 'success' && (
-                        <Check size={16} className="text-green-500" />
-                      )}
-                      {testResults[provider.id] === 'error' && (
-                        <AlertCircle size={16} className="text-red-500" />
-                      )}
-                      <button
-                        onClick={() => testConnection(provider)}
-                        disabled={!provider.apiKey || testingProvider === provider.id}
-                        className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
-                      >
-                        {testingProvider === provider.id ? t.testing : t.testConnection}
-                      </button>
-                    </div>
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+
+          {/* Content */}
+          <div className="flex-1 p-6 overflow-y-auto max-h-[65vh] space-y-6">
+            <div className={activeSection === 'backend' ? 'block' : 'hidden'}>
+              <section>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.backendService}</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.backendUrl}</label>
+                    <input
+                      type="text"
+                      value={localSettings.apiBaseUrl}
+                      onChange={(e) => setLocalSettings({ ...localSettings, apiBaseUrl: e.target.value })}
+                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
                   </div>
+                </div>
+              </section>
+            </div>
 
-                  {provider.enabled && (
-                    <div className="space-y-3 ml-6">
+            <div className={activeSection === 'workflow' ? 'block' : 'hidden'}>
+              <>
+                <section>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.writingSettings}</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultWorkflow}</label>
+                      <select
+                        value={localSettings.defaultWorkflowLevel}
+                        onChange={(e) => setLocalSettings({ ...localSettings, defaultWorkflowLevel: e.target.value as 'L1' | 'L2' | 'L3' | 'L4' | 'L5' })}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="L1">{t.workflowL1}</option>
+                        <option value="L2">{t.workflowL2}</option>
+                        <option value="L3">{t.workflowL3}</option>
+                        <option value="L4">{t.workflowL4}</option>
+                        <option value="L5">{t.workflowL5}</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.workflowBackendMode}</label>
+                      <select
+                        value={localSettings.workflowBackendMode}
+                        onChange={(e) => setLocalSettings({ ...localSettings, workflowBackendMode: e.target.value as WorkflowBackendMode })}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="standard">{t.workflowBackendModeStandard}</option>
+                        <option value="uiBridge">{t.workflowBackendModeUiBridge}</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.apiKey}</label>
-                        <div className="relative">
-                          <input
-                            type={showApiKeys[provider.id] ? 'text' : 'password'}
-                            value={provider.apiKey}
-                            onChange={(e) => updateLocalProvider(provider.id, { apiKey: e.target.value })}
-                            className="w-full px-3 py-2 pr-10 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder={t.settingsApiKeyPlaceholder}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => toggleShowApiKey(provider.id)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text"
-                          >
-                            {showApiKeys[provider.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
+                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.targetWords}</label>
+                        <input
+                          type="number"
+                          value={localSettings.targetWordsPerChapter}
+                          onChange={(e) => setLocalSettings({ ...localSettings, targetWordsPerChapter: parseInt(e.target.value) })}
+                          className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
                       </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="autoSkillMatch"
+                          checked={localSettings.autoSkillMatch}
+                          onChange={(e) => setLocalSettings({ ...localSettings, autoSkillMatch: e.target.checked })}
+                          className="rounded"
+                        />
+                        <label htmlFor="autoSkillMatch" className="text-sm text-gray-600 dark:text-dark-text-secondary">
+                          {t.autoSkillMatch}
+                        </label>
+                      </div>
+                    </div>
 
+                    <div className="border dark:border-dark-border rounded-lg p-3">
+                      <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-2">{t.qualityGoalsTitle}</div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.baseUrl}</label>
+                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalPreset}</label>
+                          <select
+                            value={localSettings.qualityGoals.humanizationPreset}
+                            onChange={(e) => applyQualityPreset(e.target.value as QualityPresetId)}
+                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            {QUALITY_PRESET_TEMPLATES.map((preset) => (
+                              <option key={preset.id} value={preset.id}>{t[preset.labelKey]}</option>
+                            ))}
+                            <option value="custom">{t.qualityPresetCustom}</option>
+                          </select>
+                        </div>
+                        {QUALITY_GOAL_METRIC_FIELDS.map((field) => (
+                          <div key={field.key}>
+                            <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t[field.labelKey]}</label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={localSettings.qualityGoals[field.key]}
+                              onChange={(e) => {
+                                const nextValue = parseInt(e.target.value)
+                                setLocalSettings((prev) => ({
+                                  ...prev,
+                                  qualityGoals: {
+                                    ...prev.qualityGoals,
+                                    [field.key]: nextValue,
+                                    humanizationPreset: 'custom',
+                                  },
+                                }))
+                              }}
+                              className="w-full"
+                            />
+                          </div>
+                        ))}
+                        <div>
+                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalSentenceEntropy}</label>
                           <input
-                            type="text"
-                            value={provider.baseUrl}
-                            onChange={(e) => updateLocalProvider(provider.id, { baseUrl: e.target.value })}
-                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={localSettings.qualityGoals.sentenceEntropyTarget}
+                            onChange={(e) => setLocalSettings((prev) => ({
+                              ...prev,
+                              qualityGoals: {
+                                ...prev.qualityGoals,
+                                sentenceEntropyTarget: parseInt(e.target.value),
+                                humanizationPreset: 'custom',
+                              },
+                            }))}
+                            className="w-full"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultModel}</label>
-                          <select
-                            value={provider.defaultModel}
-                            onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value, modelSelectionMode: 'list' })}
-                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          >
-                            {getModelGroups(provider).map((group) => (
-                              <optgroup key={group.label} label={group.label}>
-                                {group.models.map((model) => (
-                                  <option key={`${group.label}-${model}`} value={model}>{model}</option>
-                                ))}
-                              </optgroup>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">{t.settingsModelSource}</label>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => validateProviderDefaultModel(provider)}
-                              disabled={modelValidateLoading[provider.id]}
-                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
-                            >
-                              {modelValidateLoading[provider.id] ? t.settingsValidatingModel : t.settingsValidateDefaultModel}
-                            </button>
-                            <button
-                              onClick={() => refreshProviderModels(provider)}
-                              disabled={modelSyncLoading[provider.id]}
-                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
-                            >
-                              {modelSyncLoading[provider.id] ? t.settingsRefreshingModels : t.settingsRefreshModels}
-                            </button>
-                          </div>
-                        </div>
-                        {modelValidateMessage[provider.id] && (
-                          <p className={`text-xs ${modelValidateMessage[provider.id]?.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
-                            {modelValidateMessage[provider.id]?.text}
-                          </p>
-                        )}
-                        {modelSyncError[provider.id] && (
-                          <p className="text-xs text-red-500">{modelSyncError[provider.id]}</p>
-                        )}
-                        {provider.lastModelSyncAt && !modelSyncError[provider.id] && (
-                          <p className="text-xs text-gray-400 dark:text-dark-text-secondary">
-                            {t.settingsLastSync.replace('{value}', new Date(provider.lastModelSyncAt).toLocaleString())}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">{t.settingsCustomModel}</label>
-                        <div className="flex items-center gap-2">
+                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalRhythmVariability}</label>
                           <input
-                            type="text"
-                            value={customModelInputs[provider.id] ?? ''}
-                            onChange={(e) => setCustomModelInputs((prev) => ({ ...prev, [provider.id]: e.target.value }))}
-                            placeholder={t.settingsCustomModelPlaceholder}
-                            className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={localSettings.qualityGoals.rhythmVariabilityTarget}
+                            onChange={(e) => setLocalSettings((prev) => ({
+                              ...prev,
+                              qualityGoals: {
+                                ...prev.qualityGoals,
+                                rhythmVariabilityTarget: parseInt(e.target.value),
+                                humanizationPreset: 'custom',
+                              },
+                            }))}
+                            className="w-full"
                           />
-                          <button
-                            type="button"
-                            onClick={() => applyCustomModel(provider)}
-                            className="text-xs px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            {t.settingsUseThisModel}
-                          </button>
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalCustomInstruction}</label>
+                          <textarea
+                            rows={2}
+                            value={localSettings.qualityGoals.customHumanizationInstruction}
+                            onChange={(e) => setLocalSettings((prev) => ({
+                              ...prev,
+                              qualityGoals: {
+                                ...prev.qualityGoals,
+                                customHumanizationInstruction: e.target.value,
+                                humanizationPreset: 'custom',
+                              },
+                            }))}
+                            placeholder={t.qualityGoalCustomInstructionPlaceholder}
+                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
                         </div>
                       </div>
-
-                      {provider.enabled && (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="primaryProvider"
-                            checked={localSettings.primaryProvider === provider.id}
-                            onChange={() => setLocalSettings({ ...localSettings, primaryProvider: provider.id })}
-                            className="text-blue-600"
-                          />
-                          <label className="text-xs text-gray-600 dark:text-dark-text-secondary">{t.setPrimary}</label>
-                        </div>
-                      )}
                     </div>
-                  )}
-                </div>
-              )})}
+                  </div>
+                </section>
+              </>
             </div>
-          </section>
 
-          {/* 检索设置 */}
-          <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.settingsRetrieval}</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="retrievalEnabled"
-                  checked={localSettings.retrieval.enabled}
-                  onChange={(e) => setLocalSettings((prev) => ({
-                    ...prev,
-                    retrieval: {
-                      ...prev.retrieval,
-                      enabled: e.target.checked,
-                    },
-                  }))}
-                  className="rounded"
-                />
-                <label htmlFor="retrievalEnabled" className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                  {t.settingsEnableKnowledgeRetrieval}
-                </label>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsSearchMode}</label>
-                  <select
-                    value={localSettings.retrieval.searchMode}
-                    onChange={(e) => setLocalSettings((prev) => ({
-                      ...prev,
-                      retrieval: {
-                        ...prev.retrieval,
-                        searchMode: e.target.value as RetrievalSearchMode,
-                      },
-                    }))}
-                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    {retrievalModes.map((mode) => (
-                      <option key={mode.value} value={mode.value}>{mode.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProfile}</label>
-                  <input
-                    type="text"
-                    value={localSettings.retrieval.profile}
-                    onChange={(e) => setLocalSettings((prev) => ({
-                      ...prev,
-                      retrieval: {
-                        ...prev.retrieval,
-                        profile: e.target.value,
-                      },
-                    }))}
-                    placeholder={t.settingsRetrievalProfilePlaceholder}
-                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMinScore}</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={localSettings.retrieval.minScore ?? ''}
-                    onChange={(e) => updateNumericRetrievalField('minScore', e.target.value)}
-                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalBudgetTokens}</label>
-                  <input
-                    type="number"
-                    value={localSettings.retrieval.budgetTokens ?? ''}
-                    onChange={(e) => updateNumericRetrievalField('budgetTokens', e.target.value)}
-                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMaxIterations}</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={localSettings.retrieval.maxIterations ?? ''}
-                    onChange={(e) => updateNumericRetrievalField('maxIterations', e.target.value)}
-                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalConfidenceThreshold}</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={localSettings.retrieval.confidenceThreshold ?? ''}
-                    onChange={(e) => updateNumericRetrievalField('confidenceThreshold', e.target.value)}
-                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="retrievalRerank"
-                  checked={localSettings.retrieval.rerank}
-                  onChange={(e) => setLocalSettings((prev) => ({
-                    ...prev,
-                    retrieval: {
-                      ...prev.retrieval,
-                      rerank: e.target.checked,
-                    },
-                  }))}
-                  className="rounded"
-                />
-                <label htmlFor="retrievalRerank" className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                  {t.settingsEnableRerank}
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsAgentContextTypes}</label>
-                <div className="flex flex-wrap gap-4">
-                  {contextTypeOptions.map((option) => (
-                    <label key={option.value} className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-text-secondary">
-                      <input
-                        type="checkbox"
-                        checked={localSettings.contextTypes.includes(option.value)}
-                        onChange={(e) => toggleContextType(option.value, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span>{option.label}</span>
+            <div className={activeSection === 'retrieval' ? 'block' : 'hidden'}>
+              <section>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.settingsRetrieval}</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="retrievalEnabled"
+                      checked={localSettings.retrieval.enabled}
+                      onChange={(e) => setLocalSettings((prev) => ({
+                        ...prev,
+                        retrieval: {
+                          ...prev.retrieval,
+                          enabled: e.target.checked,
+                        },
+                      }))}
+                      className="rounded"
+                    />
+                    <label htmlFor="retrievalEnabled" className="text-sm text-gray-600 dark:text-dark-text-secondary">
+                      {t.settingsEnableKnowledgeRetrieval}
                     </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
+                  </div>
 
-          {/* 模型参数 */}
-          <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.modelParams}</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.temperature}</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={localSettings.temperature}
-                    onChange={(e) => setLocalSettings({ ...localSettings, temperature: parseFloat(e.target.value) })}
-                    className="flex-1"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-dark-text w-10">{localSettings.temperature}</span>
-                </div>
-                <p className="text-xs text-gray-400 dark:text-dark-text-secondary mt-1">
-                  {t.temperatureDesc}
-                </p>
-              </div>
-            </div>
-          </section>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsSearchMode}</label>
+                      <select
+                        value={localSettings.retrieval.searchMode}
+                        onChange={(e) => setLocalSettings((prev) => ({
+                          ...prev,
+                          retrieval: {
+                            ...prev.retrieval,
+                            searchMode: e.target.value as RetrievalSearchMode,
+                          },
+                        }))}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {retrievalModes.map((mode) => (
+                          <option key={mode.value} value={mode.value}>{mode.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProfile}</label>
+                      <input
+                        type="text"
+                        value={localSettings.retrieval.profile}
+                        onChange={(e) => setLocalSettings((prev) => ({
+                          ...prev,
+                          retrieval: {
+                            ...prev.retrieval,
+                            profile: e.target.value,
+                          },
+                        }))}
+                        placeholder={t.settingsRetrievalProfilePlaceholder}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMinScore}</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={localSettings.retrieval.minScore ?? ''}
+                        onChange={(e) => updateNumericRetrievalField('minScore', e.target.value)}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalBudgetTokens}</label>
+                      <input
+                        type="number"
+                        value={localSettings.retrieval.budgetTokens ?? ''}
+                        onChange={(e) => updateNumericRetrievalField('budgetTokens', e.target.value)}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMaxIterations}</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={localSettings.retrieval.maxIterations ?? ''}
+                        onChange={(e) => updateNumericRetrievalField('maxIterations', e.target.value)}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalConfidenceThreshold}</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={localSettings.retrieval.confidenceThreshold ?? ''}
+                        onChange={(e) => updateNumericRetrievalField('confidenceThreshold', e.target.value)}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
 
-          {/* 写作设置 */}
-          <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.writingSettings}</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultWorkflow}</label>
-                <select
-                  value={localSettings.defaultWorkflowLevel}
-                  onChange={(e) => setLocalSettings({ ...localSettings, defaultWorkflowLevel: e.target.value as 'L1' | 'L2' | 'L3' | 'L4' | 'L5' })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="L1">{t.workflowL1}</option>
-                  <option value="L2">{t.workflowL2}</option>
-                  <option value="L3">{t.workflowL3}</option>
-                  <option value="L4">{t.workflowL4}</option>
-                  <option value="L5">{t.workflowL5}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.workflowBackendMode}</label>
-                <select
-                  value={localSettings.workflowBackendMode}
-                  onChange={(e) => setLocalSettings({ ...localSettings, workflowBackendMode: e.target.value as WorkflowBackendMode })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="standard">{t.workflowBackendModeStandard}</option>
-                  <option value="uiBridge">{t.workflowBackendModeUiBridge}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.targetWords}</label>
-                <input
-                  type="number"
-                  value={localSettings.targetWordsPerChapter}
-                  onChange={(e) => setLocalSettings({ ...localSettings, targetWordsPerChapter: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.qualityGoalsTitle}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="retrievalRerank"
+                      checked={localSettings.retrieval.rerank}
+                      onChange={(e) => setLocalSettings((prev) => ({
+                        ...prev,
+                        retrieval: {
+                          ...prev.retrieval,
+                          rerank: e.target.checked,
+                        },
+                      }))}
+                      className="rounded"
+                    />
+                    <label htmlFor="retrievalRerank" className="text-sm text-gray-600 dark:text-dark-text-secondary">
+                      {t.settingsEnableRerank}
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsAgentContextTypes}</label>
+                    <div className="flex flex-wrap gap-4">
+                      {contextTypeOptions.map((option) => (
+                        <label key={option.value} className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-text-secondary">
+                          <input
+                            type="checkbox"
+                            checked={localSettings.contextTypes.includes(option.value)}
+                            onChange={(e) => toggleContextType(option.value, e.target.checked)}
+                            className="rounded"
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className={activeSection === 'templates' ? 'block' : 'hidden'}>
+              <section>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.templateLibraryTitle}</h3>
+                <p className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.templateLibraryTitle}</p>
+              </section>
+            </div>
+
+            <div className={activeSection === 'models' ? 'block' : 'hidden'}>
+              <>
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.llmConfig}</h3>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={localSettings.allowLlmFallback}
+                          onChange={(e) => setLocalSettings({ ...localSettings, allowLlmFallback: e.target.checked })}
+                          className="rounded"
+                        />
+                        <span className="text-gray-600 dark:text-dark-text-secondary">{t.settingsAllowFallback}</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={localSettings.useMultiModel}
+                          onChange={(e) => setLocalSettings({ ...localSettings, useMultiModel: e.target.checked })}
+                          className="rounded"
+                        />
+                        <span className="text-gray-600 dark:text-dark-text-secondary">{t.multiModel}</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={localSettings.detectionEvasionGuardEnabled}
+                          onChange={(e) => setLocalSettings({ ...localSettings, detectionEvasionGuardEnabled: e.target.checked })}
+                          className="rounded"
+                        />
+                        <span className="text-gray-600 dark:text-dark-text-secondary">{t.settingsDetectionGuard}</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={localSettings.writingHelperUseLegacyPolish}
+                          onChange={(e) => setLocalSettings({ ...localSettings, writingHelperUseLegacyPolish: e.target.checked })}
+                          className="rounded"
+                        />
+                        <span className="text-gray-600 dark:text-dark-text-secondary">{t.writingHelperLegacyPolish}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProviderModel}</label>
+                      <input
+                        type="text"
+                        value={providerSearch}
+                        onChange={(e) => setProviderSearch(e.target.value)}
+                        placeholder={t.settingsRetrievalSearchPlaceholder}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      />
+                    </div>
+
+                    {getFilteredProviders().map((provider) => {
+                      return (
+                        <div
+                          key={provider.id}
+                          className={`border rounded-lg p-4 transition-colors ${
+                            provider.enabled ? 'border-blue-300 bg-blue-50/50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-dark-border'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={provider.enabled}
+                                onChange={(e) => updateLocalProvider(provider.id, { enabled: e.target.checked })}
+                                className="rounded"
+                              />
+                              <span className="font-medium text-gray-800 dark:text-dark-text">{provider.name}</span>
+                              {provider.id === localSettings.primaryProvider && provider.enabled && (
+                                <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">{t.primary}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {testResults[provider.id] === 'success' && (
+                                <Check size={16} className="text-green-500" />
+                              )}
+                              {testResults[provider.id] === 'error' && (
+                                <AlertCircle size={16} className="text-red-500" />
+                              )}
+                              <button
+                                onClick={() => testConnection(provider)}
+                                disabled={!provider.apiKey || testingProvider === provider.id}
+                                className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                              >
+                                {testingProvider === provider.id ? t.testing : t.testConnection}
+                              </button>
+                            </div>
+                          </div>
+
+                          {provider.enabled && (
+                            <div className="space-y-3 ml-6">
+                              <div>
+                                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.apiKey}</label>
+                                <div className="relative">
+                                  <input
+                                    type={showApiKeys[provider.id] ? 'text' : 'password'}
+                                    value={provider.apiKey}
+                                    onChange={(e) => updateLocalProvider(provider.id, { apiKey: e.target.value })}
+                                    className="w-full px-3 py-2 pr-10 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder={t.settingsApiKeyPlaceholder}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleShowApiKey(provider.id)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text"
+                                  >
+                                    {showApiKeys[provider.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.baseUrl}</label>
+                                  <input
+                                    type="text"
+                                    value={provider.baseUrl}
+                                    onChange={(e) => updateLocalProvider(provider.id, { baseUrl: e.target.value })}
+                                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultModel}</label>
+                                  <select
+                                    value={provider.defaultModel}
+                                    onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value, modelSelectionMode: 'list' })}
+                                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  >
+                                    {getModelGroups(provider).map((group) => (
+                                      <optgroup key={group.label} label={group.label}>
+                                        {group.models.map((model) => (
+                                          <option key={`${group.label}-${model}`} value={model}>{model}</option>
+                                        ))}
+                                      </optgroup>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">{t.settingsModelSource}</label>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => validateProviderDefaultModel(provider)}
+                                      disabled={modelValidateLoading[provider.id]}
+                                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                                    >
+                                      {modelValidateLoading[provider.id] ? t.settingsValidatingModel : t.settingsValidateDefaultModel}
+                                    </button>
+                                    <button
+                                      onClick={() => refreshProviderModels(provider)}
+                                      disabled={modelSyncLoading[provider.id]}
+                                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                                    >
+                                      {modelSyncLoading[provider.id] ? t.settingsRefreshingModels : t.settingsRefreshModels}
+                                    </button>
+                                  </div>
+                                </div>
+                                {modelValidateMessage[provider.id] && (
+                                  <p className={`text-xs ${modelValidateMessage[provider.id]?.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                                    {modelValidateMessage[provider.id]?.text}
+                                  </p>
+                                )}
+                                {modelSyncError[provider.id] && (
+                                  <p className="text-xs text-red-500">{modelSyncError[provider.id]}</p>
+                                )}
+                                {provider.lastModelSyncAt && !modelSyncError[provider.id] && (
+                                  <p className="text-xs text-gray-400 dark:text-dark-text-secondary">
+                                    {t.settingsLastSync.replace('{value}', new Date(provider.lastModelSyncAt).toLocaleString())}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">{t.settingsCustomModel}</label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={customModelInputs[provider.id] ?? ''}
+                                    onChange={(e) => setCustomModelInputs((prev) => ({ ...prev, [provider.id]: e.target.value }))}
+                                    placeholder={t.settingsCustomModelPlaceholder}
+                                    className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => applyCustomModel(provider)}
+                                    className="text-xs px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                  >
+                                    {t.settingsUseThisModel}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {provider.enabled && (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    name="primaryProvider"
+                                    checked={localSettings.primaryProvider === provider.id}
+                                    onChange={() => setLocalSettings({ ...localSettings, primaryProvider: provider.id })}
+                                    className="text-blue-600"
+                                  />
+                                  <label className="text-xs text-gray-600 dark:text-dark-text-secondary">{t.setPrimary}</label>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              </>
+            </div>
+
+            <div className={activeSection === 'ui' ? 'block' : 'hidden'}>
+              <section>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.uiSettings}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalPreset}</label>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.theme}</label>
                     <select
-                      value={localSettings.qualityGoals.humanizationPreset}
-                      onChange={(e) => applyQualityPreset(e.target.value as QualityPresetId)}
+                      value={localSettings.theme}
+                      onChange={(e) => setLocalSettings({ ...localSettings, theme: e.target.value as 'light' | 'dark' | 'system' })}
                       className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      {QUALITY_PRESET_TEMPLATES.map((preset) => (
-                        <option key={preset.id} value={preset.id}>{t[preset.labelKey]}</option>
-                      ))}
-                      <option value="custom">{t.qualityPresetCustom}</option>
+                      <option value="light">{t.themeLight}</option>
+                      <option value="dark">{t.themeDark}</option>
+                      <option value="system">{t.themeSystem}</option>
                     </select>
                   </div>
-                  {QUALITY_GOAL_METRIC_FIELDS.map((field) => (
-                    <div key={field.key}>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t[field.labelKey]}</label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="1"
-                        value={localSettings.qualityGoals[field.key]}
-                        onChange={(e) => {
-                          const nextValue = parseInt(e.target.value)
-                          setLocalSettings((prev) => ({
-                            ...prev,
-                            qualityGoals: {
-                              ...prev.qualityGoals,
-                              [field.key]: nextValue,
-                              humanizationPreset: 'custom',
-                            },
-                          }))
-                        }}
-                        className="w-full"
-                      />
-                    </div>
-                  ))}
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalSentenceEntropy}</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={localSettings.qualityGoals.sentenceEntropyTarget}
-                      onChange={(e) => setLocalSettings((prev) => ({
-                        ...prev,
-                        qualityGoals: {
-                          ...prev.qualityGoals,
-                          sentenceEntropyTarget: parseInt(e.target.value),
-                          humanizationPreset: 'custom',
-                        },
-                      }))}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalRhythmVariability}</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={localSettings.qualityGoals.rhythmVariabilityTarget}
-                      onChange={(e) => setLocalSettings((prev) => ({
-                        ...prev,
-                        qualityGoals: {
-                          ...prev.qualityGoals,
-                          rhythmVariabilityTarget: parseInt(e.target.value),
-                          humanizationPreset: 'custom',
-                        },
-                      }))}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalCustomInstruction}</label>
-                    <textarea
-                      rows={2}
-                      value={localSettings.qualityGoals.customHumanizationInstruction}
-                      onChange={(e) => setLocalSettings((prev) => ({
-                        ...prev,
-                        qualityGoals: {
-                          ...prev.qualityGoals,
-                          customHumanizationInstruction: e.target.value,
-                          humanizationPreset: 'custom',
-                        },
-                      }))}
-                      placeholder={t.qualityGoalCustomInstructionPlaceholder}
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.fontSize}</label>
+                    <select
+                      value={localSettings.fontSize}
+                      onChange={(e) => setLocalSettings({ ...localSettings, fontSize: e.target.value as 'small' | 'medium' | 'large' })}
                       className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    >
+                      <option value="small">{t.fontSmall}</option>
+                      <option value="medium">{t.fontMedium}</option>
+                      <option value="large">{t.fontLarge}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.language}</label>
+                    <select
+                      value={localSettings.language}
+                      onChange={(e) => setLocalSettings({ ...localSettings, language: e.target.value as 'zh' | 'en' })}
+                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="zh">{t.langChinese}</option>
+                      <option value="en">{t.langEnglish}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.sendShortcutLabel}</label>
+                    <select
+                      value={localSettings.sendShortcut}
+                      onChange={(e) => setLocalSettings({ ...localSettings, sendShortcut: e.target.value as SendShortcut })}
+                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="enter">{t.sendShortcutEnter}</option>
+                      <option value="ctrlEnter">{t.sendShortcutCtrlEnter}</option>
+                    </select>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="autoSkillMatch"
-                  checked={localSettings.autoSkillMatch}
-                  onChange={(e) => setLocalSettings({ ...localSettings, autoSkillMatch: e.target.checked })}
-                  className="rounded"
-                />
-                <label htmlFor="autoSkillMatch" className="text-sm text-gray-600 dark:text-dark-text-secondary">
-                  {t.autoSkillMatch}
-                </label>
-              </div>
+              </section>
             </div>
-          </section>
 
-          {/* 界面设置 */}
-          <section>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.uiSettings}</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.theme}</label>
-                <select
-                  value={localSettings.theme}
-                  onChange={(e) => setLocalSettings({ ...localSettings, theme: e.target.value as 'light' | 'dark' | 'system' })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="light">{t.themeLight}</option>
-                  <option value="dark">{t.themeDark}</option>
-                  <option value="system">{t.themeSystem}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.fontSize}</label>
-                <select
-                  value={localSettings.fontSize}
-                  onChange={(e) => setLocalSettings({ ...localSettings, fontSize: e.target.value as 'small' | 'medium' | 'large' })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="small">{t.fontSmall}</option>
-                  <option value="medium">{t.fontMedium}</option>
-                  <option value="large">{t.fontLarge}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.language}</label>
-                <select
-                  value={localSettings.language}
-                  onChange={(e) => setLocalSettings({ ...localSettings, language: e.target.value as 'zh' | 'en' })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="zh">{t.langChinese}</option>
-                  <option value="en">{t.langEnglish}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.sendShortcutLabel}</label>
-                <select
-                  value={localSettings.sendShortcut}
-                  onChange={(e) => setLocalSettings({ ...localSettings, sendShortcut: e.target.value as SendShortcut })}
-                  className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="enter">{t.sendShortcutEnter}</option>
-                  <option value="ctrlEnter">{t.sendShortcutCtrlEnter}</option>
-                </select>
-              </div>
+            <div className={activeSection === 'diagnostics' ? 'block' : 'hidden'}>
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.settingsDiagnostics}</h3>
+                  <button
+                    onClick={refreshDiagnostics}
+                    disabled={diagnosticsLoading}
+                    className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                  >
+                    {diagnosticsLoading ? t.mcpRefreshing : t.settingsRefreshDiagnostics}
+                  </button>
+                </div>
+
+                {diagnosticsError && (
+                  <p className="text-xs text-red-500 mb-2">{diagnosticsError}</p>
+                )}
+
+                <div className="space-y-3">
+                  <div className="border dark:border-dark-border rounded-lg p-3">
+                    <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsGatewayMetrics}</div>
+                    {gatewayMetrics ? (
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-dark-text">
+                        <div>{t.mcpRequestsTotal.replace('{value}', String(gatewayMetrics.requests_total))}</div>
+                        <div>{t.mcpRequestsFailed.replace('{value}', String(gatewayMetrics.requests_failed_total))}</div>
+                        <div>{t.mcpLatencyAvg.replace('{value}', String(gatewayMetrics.latency_ms_avg))}</div>
+                        <div>{t.mcpLatencyMax.replace('{value}', String(gatewayMetrics.latency_ms_max))}</div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 dark:text-dark-text-secondary">{t.settingsNoMetricsData}</div>
+                    )}
+                  </div>
+
+                  <div className="border dark:border-dark-border rounded-lg p-3">
+                    <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsToolList}</div>
+                    {gatewayTools && Object.keys(gatewayTools).length > 0 ? (
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {Object.entries(gatewayTools).map(([service, tools]) => (
+                          <div key={service}>
+                            <div className="text-xs font-medium text-gray-700 dark:text-dark-text">{service}</div>
+                            <div className="text-xs text-gray-500 dark:text-dark-text-secondary break-all">
+                              {tools.join('，')}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 dark:text-dark-text-secondary">{t.settingsNoToolsData}</div>
+                    )}
+                  </div>
+                </div>
+              </section>
             </div>
-          </section>
+          </div>
         </div>
 
         {/* Footer */}
