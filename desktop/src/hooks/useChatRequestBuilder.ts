@@ -59,23 +59,19 @@ const applyHistoryBudget = (
     return { ...msg, content }
   })
 
-  const systemMessages = clipped.filter((m) => m.role === 'system')
-  const nonSystem = clipped.filter((m) => m.role !== 'system')
-  const recentNonSystem = nonSystem.slice(-keepRecentMessages)
+  const recent = clipped.slice(-Math.max(1, keepRecentMessages))
 
-  const selected: ChatMessage[] = [...systemMessages, ...recentNonSystem]
+  const selected: ChatMessage[] = [...recent]
 
   const countChars = (messages: ChatMessage[]) => messages.reduce((sum, m) => sum + m.content.length, 0)
 
   let usedChars = countChars(selected)
 
-  while (selected.length > 1 && usedChars > maxTotalChars) {
-    const firstNonSystemIdx = selected.findIndex((m) => m.role !== 'system')
-    if (firstNonSystemIdx === -1) break
-    selected.splice(firstNonSystemIdx, 1)
-    droppedCount += 1
-    usedChars = countChars(selected)
-  }
+    while (selected.length > 1 && usedChars > maxTotalChars) {
+      selected.shift()
+      droppedCount += 1
+      usedChars = countChars(selected)
+    }
 
   return {
     messages: selected,
