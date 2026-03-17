@@ -50,6 +50,7 @@ htmlcov/
 .tmp/
 .niko-studio/
 .workflow/.analysis/
+.workflow/.scratchpad/
 src/.task/
 node_modules/
 desktop/node_modules/
