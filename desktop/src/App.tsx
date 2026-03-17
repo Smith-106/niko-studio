@@ -6,6 +6,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { KnowledgeModal } from './components/KnowledgeModal'
 import { EvaluationPanel } from './components/EvaluationPanel'
 import { McpStatusPanel } from './components/McpStatusPanel'
+import { PromptTemplatePanel } from './components/PromptTemplatePanel'
 import { WritingHelperPanel } from './components/WritingHelperPanel'
 import { type WritingHelperMode } from './api/client'
 import { deriveGatewayRuntimeState, GatewayRuntimeView, getGatewayHealth, listCheckpoints, restoreCheckpoint } from './api/client'
@@ -105,6 +106,7 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [knowledgeOpen, setKnowledgeOpen] = useState(false)
+  const [promptsOpen, setPromptsOpen] = useState(false)
   const [evaluationOpen, setEvaluationOpen] = useState(false)
   const [mcpStatusOpen, setMcpStatusOpen] = useState(false)
   const [writingHelperOpen, setWritingHelperOpen] = useState(false)
@@ -278,6 +280,7 @@ function App() {
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         onOpenKnowledge={() => setKnowledgeOpen(true)}
+        onOpenPrompts={() => setPromptsOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenEvaluation={() => setEvaluationOpen(true)}
         onOpenMcpStatus={() => setMcpStatusOpen(true)}
@@ -356,6 +359,17 @@ function App() {
         </div>
       </main>
 
+      {promptsOpen && (
+        <PromptTemplatePanel
+          templates={useSettingsStore.getState().settings.promptTemplateLibrary?.templates ?? []}
+          variablePresets={useSettingsStore.getState().settings.promptTemplateLibrary?.variablePresets ?? {}}
+          onToggleFavorite={(templateId) => useSettingsStore.getState().toggleTemplateFavorite(templateId)}
+          onApplyTemplate={() => {
+            // Prompts is a top-level entry; applying to composer is handled in ChatArea.
+          }}
+          onClose={() => setPromptsOpen(false)}
+        />
+      )}
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => {
