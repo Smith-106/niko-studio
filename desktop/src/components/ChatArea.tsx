@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
-import { chat, chatStream, agentRoute, agentWrite, agentRevise, agentGetContext, createCheckpoint, restoreCheckpoint, quickRollbackWorkflow, uploadMemoryFile } from '../api/client'
+import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, quickRollbackWorkflow } from '../api/client'
 import type { ChatRequest, StreamDonePayload } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { PromptTemplatePanel, type ApplyTemplatePayload } from './PromptTemplatePanel'
@@ -12,6 +12,11 @@ import { ChatAreaModeControls } from './ChatAreaModeControls'
 import { ChatAreaComposer } from './ChatAreaComposer'
 import { ChatAreaStreamStatus } from './ChatAreaStreamStatus'
 import { useI18n } from '../i18n'
+import { useChatRequestBuilder } from '../hooks/useChatRequestBuilder'
+import { useChatStreaming } from '../hooks/useChatStreaming'
+import { useChatRecovery } from '../hooks/useChatRecovery'
+import { useMemoryUpload } from '../hooks/useMemoryUpload'
+import { useInlineActions } from '../hooks/useInlineActions'
 
 interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
@@ -20,11 +25,6 @@ interface ChatAreaProps {
 
 type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'interrupted' | 'recovered'
 type StreamTerminal = 'done' | 'error' | 'interrupted' | 'recovered'
-type InlineAction = 'continue' | 'revise' | 'generate' | null
-
-interface SelectionMeta {
-  messageId: string
-}
 
 interface StreamRuntimeMeta {
   terminal: StreamTerminal
@@ -42,17 +42,6 @@ interface RecoverStatus {
   detail?: string
 }
 
-type UploadStage = 'reading' | 'uploading' | 'injecting' | 'done' | 'error'
-type UploadErrorCategory = 'format' | 'size' | 'network' | 'service'
-
-interface UploadStatus {
-  type: 'error' | 'success' | 'info'
-  stage: UploadStage
-  progress: number
-  message: string
-  errorCategory?: UploadErrorCategory
-}
-
 interface RetryPayload {
   message: string
   chatMode: 'chat' | 'agent'
@@ -66,33 +55,45 @@ interface RetryPayload {
 export function ChatArea({ onContextUsageChange, connectionState = 'connected' }: ChatAreaProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [streamingContent, setStreamingContent] = useState('')
   const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')
   const [chatMode, setChatMode] = useState<'chat' | 'agent'>('chat')
   const [agentAction, setAgentAction] = useState<'write' | 'revise' | 'context'>('write')
   const [enableModelComparison, setEnableModelComparison] = useState(false)
   const [comparisonModel, setComparisonModel] = useState('')
-  const [recoverableCheckpointId, setRecoverableCheckpointId] = useState<string | null>(null)
-  const [recoverStatus, setRecoverStatus] = useState<RecoverStatus | null>(null)
-  const [selectedText, setSelectedText] = useState('')
-  const [selectionMeta, setSelectionMeta] = useState<SelectionMeta | null>(null)
-  const [inlineAction, setInlineAction] = useState<InlineAction>(null)
+  const { streamingContent, setStreamingContent, startStream, cancelStream } = useChatStreaming()
+  const {
+    selectedText,
+    selectionMeta,
+    inlineAction,
+    setInlineAction,
+    resetInlineState,
+    handleAssistantSelection,
+    runDisabled,
+  } = useInlineActions({ isLoading })
   const [quickRollbackPlanId, setQuickRollbackPlanId] = useState('')
   const [quickRollbackCheckpointId, setQuickRollbackCheckpointId] = useState('')
   const [quickRollbackReason, setQuickRollbackReason] = useState('')
   const [showQuickRollbackAdvanced, setShowQuickRollbackAdvanced] = useState(false)
   const [quickRollbackStatus, setQuickRollbackStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
-  const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null)
   const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const streamRequestIdRef = useRef(0)
-  const lastRetryPayloadRef = useRef<RetryPayload | null>(null)
   const { t, translate } = useI18n()
-  const previousConnectionStateRef = useRef<ChatAreaProps['connectionState'] | null>(null)
-  const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
-
+  const {
+    recoverableCheckpointId,
+    setRecoverableCheckpointId,
+    recoverStatus,
+    setRecoverStatus,
+    createBeforeSendCheckpoint,
+    restoreToCheckpoint,
+  } = useChatRecovery({
+    connectionState,
+    t: {
+      streamReconnecting: t.streamReconnecting,
+      streamRecovered: t.streamRecovered,
+      streamInterrupted: t.streamInterrupted,
+      streamRestoreBeforeSendSuccess: t.streamRestoreBeforeSendSuccess,
+      restoreFailed: t.restoreFailed,
+    },
+  })
   const currentConversationId = useCurrentConversationId()
   const messages = useMessages()
   const workflowLevel = useWorkflowLevel()
@@ -100,12 +101,42 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const allowLlmFallback = useAllowLlmFallback()
   const qualityGoals = useQualityGoals()
   const { settings } = useSettingsStore()
+  const promptTemplateLibrary = settings.promptTemplateLibrary
   const {
     toggleTemplateFavorite,
     recordTemplateUsage,
     setTemplateVariablePreset,
   } = useSettingsStore()
-  const promptTemplateLibrary = settings.promptTemplateLibrary
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const lastRetryPayloadRef = useRef<RetryPayload | null>(null)
+  const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
+
+  const { addMessage, setWorkflowLevel, createConversation } = useAppStore()
+
+  const {
+    uploadStatus,
+    fileInputRef,
+    openPicker,
+    handleFileUpload,
+  } = useMemoryUpload({
+    t: {
+      sessionCreateFailedRetry: t.sessionCreateFailedRetry,
+      uploadUnsupportedFormat: t.uploadUnsupportedFormat,
+      uploadStageReading: t.uploadStageReading,
+      uploadStageUploading: t.uploadStageUploading,
+      uploadStageInjecting: t.uploadStageInjecting,
+      uploadErrorFormat: t.uploadErrorFormat,
+      uploadErrorSize: t.uploadErrorSize,
+      uploadErrorNetwork: t.uploadErrorNetwork,
+      uploadErrorService: t.uploadErrorService,
+    },
+    translate: (key, vars) => translate(key, vars),
+    currentConversationId,
+    createConversation,
+    getCurrentConversationId: () => useAppStore.getState().currentConversationId,
+    addMessage,
+  })
   const modePresets = useMemo(() => ([
     { id: 'focusWriting' as const, label: t.modePresetFocusWriting },
     { id: 'agentDiagnose' as const, label: t.modePresetAgentDiagnose },
@@ -152,24 +183,11 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     onContextUsageChange(nextUsage)
   }, [messages, streamingContent, onContextUsageChange])
 
-  useEffect(() => {
-    const previous = previousConnectionStateRef.current
-    if (connectionState === previous) {
-      return
-    }
-
-    if (connectionState === 'reconnecting') {
-      setRecoverStatus({ type: 'error', message: t.streamReconnecting })
-    } else if (connectionState === 'connected' && previous === 'reconnecting') {
-      setRecoverStatus({ type: 'success', message: t.streamRecovered })
-    } else if (connectionState === 'disconnected') {
-      setRecoverStatus({ type: 'error', message: t.streamInterrupted })
-    }
-
-    previousConnectionStateRef.current = connectionState
-  }, [connectionState, t])
-
-  const { addMessage, setWorkflowLevel, createConversation } = useAppStore()
+  const { buildChatRequest } = useChatRequestBuilder({
+    allowLlmFallback,
+    qualityGoals,
+    retrieval: settings.retrieval,
+  })
 
   const makeRecoverError = (message: string, detail?: string): RecoverStatus => ({
     type: 'error',
@@ -177,50 +195,16 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     detail,
   })
 
-  const classifyUploadError = (errorMessage: string | undefined): UploadErrorCategory => {
-    const text = (errorMessage || '').toLowerCase()
-    if (text.includes('413') || text.includes('payload') || text.includes('too large') || text.includes('size')) {
-      return 'size'
-    }
-    if (text.includes('network') || text.includes('fetch') || text.includes('timeout') || text.includes('failed to fetch')) {
-      return 'network'
-    }
-    if (text.includes('format') || text.includes('extension') || text.includes('unsupported')) {
-      return 'format'
-    }
-    return 'service'
-  }
 
-  const getUploadErrorMessage = (category: UploadErrorCategory): string => {
-    if (category === 'format') return t.uploadErrorFormat
-    if (category === 'size') return t.uploadErrorSize
-    if (category === 'network') return t.uploadErrorNetwork
-    return t.uploadErrorService
-  }
-
-  const setUploadStage = (stage: UploadStage, message: string, progress: number, errorCategory?: UploadErrorCategory) => {
-    setUploadStatus({
-      type: stage === 'error' ? 'error' : stage === 'done' ? 'success' : 'info',
-      stage,
-      progress,
-      message,
-      errorCategory,
-    })
-  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const handleCancelStream = () => {
-    abortControllerRef.current?.abort()
+    cancelStream()
   }
 
-  const resetInlineState = () => {
-    setInlineAction(null)
-    setSelectionMeta(null)
-    setSelectedText('')
-  }
 
   const runNormalChat = async (request: ChatRequest, checkpointId?: string | null): Promise<StreamPhase> => {
     if (request.comparison?.enabled) {
@@ -258,28 +242,6 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       return 'error'
     }
 
-    let streamFailed = false
-    let hasStreamContent = false
-    let streamText = ''
-    let streamWriterMetadata: StreamDonePayload['writer_metadata']
-    let finalPhase: StreamPhase | null = null
-    let finalized = false
-    let streamDone = false
-    let streamMeta: StreamRuntimeMeta | null = null
-
-    const requestId = ++streamRequestIdRef.current
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
-    setStreamPhase('streaming')
-
-    const finalize = (phase: StreamPhase, meta?: StreamRuntimeMeta) => {
-      if (finalized || requestId !== streamRequestIdRef.current) return
-      finalized = true
-      finalPhase = phase
-      streamMeta = meta ?? streamMeta
-      setStreamPhase(phase)
-    }
-
     const normalizeTerminal = (payload?: StreamDonePayload): StreamTerminal => {
       if (payload?.terminal === 'done' || payload?.terminal === 'error' || payload?.terminal === 'interrupted' || payload?.terminal === 'recovered') {
         return payload.terminal
@@ -293,6 +255,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       return 'done'
     }
 
+    let streamMeta: StreamRuntimeMeta | null = null
     const maybeShowGateHint = (payload?: StreamDonePayload) => {
       if (!payload?.decision) return
       if (payload.decision === 'soft_go') {
@@ -311,66 +274,37 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       }
     }
 
-    await chatStream(
-      request,
-      {
-        onContent: (chunk) => {
-          hasStreamContent = true
-          streamText += chunk
-          setStreamingContent(streamText)
-        },
-        onDone: (payload) => {
-          streamDone = true
-          streamWriterMetadata = payload.writer_metadata
-          maybeShowGateHint(payload)
-          const terminal = normalizeTerminal(payload)
-          finalize(terminal, { terminal, decision: payload.decision, diagnostics: payload.diagnostics })
-        },
-        onError: (error, payload) => {
-          const terminal = payload?.terminal === 'interrupted' ? 'interrupted' : 'error'
-          if (abortController.signal.aborted || terminal === 'interrupted' || error.toLowerCase().includes('abort')) {
-            finalize('interrupted', { terminal: 'interrupted', diagnostics: payload?.diagnostics })
-            return
-          }
-          streamFailed = true
-          finalize('error', { terminal: 'error', diagnostics: payload?.diagnostics })
-        },
+    const { phase, meta } = await startStream(request, {
+      t: {
+        processingCompleted: t.processingCompleted,
+        streamRecovered: t.streamRecovered,
       },
-      { signal: abortController.signal }
-    )
+      normalizeTerminal,
+      maybeShowGateHint,
+      onStreamPhase: setStreamPhase,
+      onRecoverStatus: (status) => {
+        if (!status) {
+          setRecoverStatus(null)
+          return
+        }
+        setRecoverStatus(status)
+      },
+      onCommitAssistantMessage: ({ content, writerMetadata }) => {
+        addMessage('assistant', content, selectedSkills, undefined, writerMetadata)
+        setRecoverableCheckpointId(null)
+      },
+      onInterrupted: () => {
+        addMessage('assistant', t.streamInterrupted)
+      },
+    })
 
-    if (abortControllerRef.current === abortController) {
-      abortControllerRef.current = null
+    if (phase === 'done' || phase === 'recovered') {
+      return phase
     }
 
-    if (!finalized) {
-      if (abortController.signal.aborted) {
-        finalize('interrupted', { terminal: 'interrupted' })
-      } else if (streamDone || hasStreamContent) {
-        finalize('done', { terminal: 'done' })
-      } else if (streamFailed) {
-        finalize('error', { terminal: 'error' })
-      } else {
-        finalize('error', { terminal: 'error' })
-      }
-    }
-
-    if ((finalPhase === 'done' || finalPhase === 'recovered') && hasStreamContent) {
-      addMessage('assistant', streamText || t.processingCompleted, selectedSkills, undefined, streamWriterMetadata)
-      setRecoverableCheckpointId(null)
-      if (finalPhase === 'recovered') {
-        setRecoverStatus({ type: 'success', message: t.streamRecovered })
-      } else {
-        setRecoverStatus(null)
-      }
-      return finalPhase
-    }
-
-    if (finalPhase === 'interrupted') {
-      addMessage('assistant', t.streamInterrupted)
+    if (phase === 'interrupted') {
       return 'interrupted'
     }
-
     const response = await chat(request)
     if (response.success && response.data) {
       if (response.data.comparison?.enabled) {
@@ -393,13 +327,12 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
       }
       setRecoverableCheckpointId(null)
       setRecoverStatus(null)
-      return finalPhase ?? 'done'
+      return phase
     }
 
     addMessage('assistant', response.error || t.serviceUnavailableRetry)
     if (checkpointId) {
-      const streamMetaValue = streamMeta as StreamRuntimeMeta | null
-      const diagnosticsText = streamMetaValue?.diagnostics?.fallback_reason || streamMetaValue?.diagnostics?.failure_reason
+      const diagnosticsText = meta?.diagnostics?.fallback_reason || meta?.diagnostics?.failure_reason
       const detail = response.error || diagnosticsText || t.serviceUnavailableRetry
       const message = diagnosticsText ? `${t.streamRestoreHint}（${diagnosticsText}）` : t.streamRestoreHint
       setRecoverStatus(makeRecoverError(message, detail))
@@ -490,92 +423,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     }
   }
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-
-    if (!file) {
-      return
-    }
-
-    let uploadSessionId = currentConversationId
-    if (!uploadSessionId) {
-      createConversation()
-      uploadSessionId = useAppStore.getState().currentConversationId
-    }
-
-    if (!uploadSessionId) {
-      setUploadStage('error', t.sessionCreateFailedRetry, 100, 'service')
-      return
-    }
-
-    const allowedExtensions = ['txt', 'md', 'pdf', 'docx']
-    const extension = file.name.split('.').pop()?.toLowerCase()
-    if (!extension || !allowedExtensions.includes(extension)) {
-      setUploadStage('error', t.uploadUnsupportedFormat, 100, 'format')
-      return
-    }
-
-    setIsLoading(true)
-    setUploadStage('reading', t.uploadStageReading, 20)
-
-    try {
-      const buffer = await file.arrayBuffer()
-      const bytes = new Uint8Array(buffer)
-      let binary = ''
-      for (let index = 0; index < bytes.length; index += 1) {
-        binary += String.fromCharCode(bytes[index])
-      }
-      const fileContentBase64 = btoa(binary)
-
-      setUploadStage('uploading', t.uploadStageUploading, 60)
-      const response = await uploadMemoryFile({
-        file_name: file.name,
-        file_content_base64: fileContentBase64,
-        session_id: uploadSessionId,
-      })
-
-      if (!response.success || !response.data) {
-        const category = classifyUploadError(response.error)
-        const message = response.error
-          ? `${getUploadErrorMessage(category)} (${response.error})`
-          : getUploadErrorMessage(category)
-        setUploadStage('error', message, 100, category)
-        return
-      }
-
-      setUploadStage('injecting', t.uploadStageInjecting, 85)
-      setUploadStage(
-        'done',
-        translate('uploadInjectedChunks', { fileName: file.name, chunks: response.data.chunks }),
-        100
-      )
-      addMessage('assistant', translate('uploadInjectedContext', { fileName: file.name, chunks: response.data.chunks }))
-    } catch (error) {
-      const category = classifyUploadError(error instanceof Error ? error.message : undefined)
-      const baseMessage = getUploadErrorMessage(category)
-      const detail = error instanceof Error ? error.message : ''
-      const message = detail ? `${baseMessage} (${detail})` : baseMessage
-      setUploadStage('error', message, 100, category)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleRestoreToCheckpoint = async () => {
     if (!recoverableCheckpointId || isLoading) return
-
-    try {
-      const response = await restoreCheckpoint(recoverableCheckpointId)
-      if (response.success) {
-        setRecoverStatus({ type: 'success', message: t.streamRestoreBeforeSendSuccess })
-        setRecoverableCheckpointId(null)
-      } else {
-        setRecoverStatus({ type: 'error', message: response.error || t.restoreFailed })
-      }
-    } catch {
-      setRecoverStatus({ type: 'error', message: t.restoreFailed })
-    }
+    await restoreToCheckpoint()
   }
 
   const handleQuickRollback = async () => {
@@ -624,53 +475,22 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     let checkpointId: string | null = null
 
     try {
-      const checkpointResponse = await createCheckpoint(`before-send:${Date.now()}`)
-      checkpointId = checkpointResponse.success && checkpointResponse.data?.checkpoint_id
-        ? checkpointResponse.data.checkpoint_id
-        : null
-      if (checkpointId) {
-        setRecoverableCheckpointId(checkpointId)
-      }
+      checkpointId = await createBeforeSendCheckpoint(`before-send:${Date.now()}`)
 
       addMessage('user', userMessage)
       setIsLoading(true)
       setStreamingContent('')
       setStreamPhase('idle')
 
-      const retrieval = settings.retrieval
-      const contextTypes = settings.contextTypes
-
-      const request: ChatRequest = {
-        messages: [{ role: 'user', content: userMessage }],
+      const request = buildChatRequest({
+        userMessage,
         workflowLevel: payloadForSend.workflowLevel,
-        skills: payloadForSend.selectedSkills,
-        allowLlmFallback,
-        qualityGoals: {
-          naturalness: qualityGoals.naturalness,
-          readability: qualityGoals.readability,
-          coherence: qualityGoals.coherence,
-          style_consistency: qualityGoals.styleConsistency,
-          humanization_preset: qualityGoals.humanizationPreset,
-          custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
-          sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
-          rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
-        },
-        knowledge_retrieval: retrieval.enabled,
-        search_mode: retrieval.searchMode,
-        profile: retrieval.profile || undefined,
-        min_score: retrieval.minScore,
-        budget_tokens: retrieval.budgetTokens,
-        rerank: retrieval.rerank,
-        max_iterations: retrieval.maxIterations,
-        confidence_threshold: retrieval.confidenceThreshold,
-      }
+        selectedSkills: payloadForSend.selectedSkills,
+        enableModelComparison: payloadForSend.enableModelComparison,
+        comparisonModel: payloadForSend.comparisonModel,
+      })
 
-      if (payloadForSend.enableModelComparison && payloadForSend.comparisonModel) {
-        request.comparison = {
-          enabled: true,
-          controlModel: payloadForSend.comparisonModel,
-        }
-      }
+      const contextTypes = settings.contextTypes
 
       if (payloadForSend.chatMode === 'agent') {
         let handled = false
@@ -759,7 +579,6 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     } finally {
       setStreamingContent('')
       setIsLoading(false)
-      abortControllerRef.current = null
     }
   }
 
@@ -818,11 +637,6 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     setWorkflowLevel('L2')
   }
 
-  const handleAssistantSelection = (payload: { messageId: string; selectedText: string }) => {
-    setSelectionMeta({ messageId: payload.messageId })
-    setSelectedText(payload.selectedText)
-    setInlineAction(null)
-  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const isEnter = e.key === 'Enter' && !e.shiftKey
@@ -888,7 +702,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               </button>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => openPicker()}
                 className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-dark-border dark:text-dark-text hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 {t.composerUpload}
@@ -999,7 +813,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
             generateLabel={t.inlineGenerate}
             runLabel={t.inlineRun}
             clearSelectionLabel={t.inlineClearSelection}
-            runDisabled={!inlineAction || isLoading}
+            runDisabled={runDisabled}
             onSelectAction={setInlineAction}
             onRun={runInlineAction}
             onClear={resetInlineState}
@@ -1053,7 +867,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           onInputChange={setInput}
           onKeyDown={handleKeyDown}
           onFileUpload={handleFileUpload}
-          onOpenFilePicker={() => fileInputRef.current?.click()}
+          onOpenFilePicker={openPicker}
           onCancelStream={handleCancelStream}
           onSend={handleSend}
         />
