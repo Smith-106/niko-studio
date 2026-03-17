@@ -99,6 +99,67 @@ class TestChatEndpointErrors:
         assert "error" in data
         assert "No messages provided" in data["error"]
 
+    def test_chat_missing_messages_returns_400(self, client_no_lifespan):
+        """Test chat without messages field returns 400"""
+        response = client_no_lifespan.post("/chat", json={})
+        assert response.status_code == 400
+
+    def test_chat_messages_not_array_returns_400(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat", json={
+            "messages": "not-an-array",
+        })
+        assert response.status_code == 400
+        assert response.json()["error"] == "Invalid messages. Expected array"
+
+    def test_chat_too_many_messages_returns_400(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": "x"}] * 129,
+        })
+        assert response.status_code == 400
+        assert response.json()["error"] == "Too many messages. Max 128"
+
+    def test_chat_message_not_object_returns_400(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat", json={
+            "messages": ["bad"],
+        })
+        assert response.status_code == 400
+        assert response.json()["error"] == "Invalid message at index 0. Expected object"
+
+    def test_chat_invalid_role_returns_400(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "tool", "content": "x"}],
+        })
+        assert response.status_code == 400
+        assert response.json()["error"] == "Invalid message.role at index 0"
+
+    def test_chat_content_not_string_returns_400(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": {"no": "string"}}],
+        })
+        assert response.status_code == 400
+        assert response.json()["error"] == "Invalid message.content at index 0. Expected string"
+
+    def test_chat_message_too_long_returns_400(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [{"role": "user", "content": "x" * 24001}],
+        })
+        assert response.status_code == 400
+        assert response.json()["error"] == "Message too long at index 0. Max 24000 chars"
+
+    def test_chat_total_context_too_long_returns_400(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat", json={
+            "messages": [
+                {"role": "user", "content": "x" * 24000},
+                {"role": "assistant", "content": "y" * 24000},
+                {"role": "user", "content": "z" * 24000},
+                {"role": "assistant", "content": "w" * 24000},
+                {"role": "user", "content": "v" * 24000},
+                {"role": "assistant", "content": "u"},
+            ],
+        })
+        assert response.status_code == 400
+        assert response.json()["error"] == "Context too long. Max 120000 chars"
+
     def test_chat_no_user_message_returns_400(self, client_no_lifespan):
         """Test chat with no user message returns 400"""
         response = client_no_lifespan.post("/chat", json={
@@ -110,11 +171,6 @@ class TestChatEndpointErrors:
         data = response.json()
         assert "error" in data
         assert "No user message found" in data["error"]
-
-    def test_chat_missing_messages_returns_400(self, client_no_lifespan):
-        """Test chat without messages field returns 400"""
-        response = client_no_lifespan.post("/chat", json={})
-        assert response.status_code == 400
 
     def test_chat_invalid_workflow_level_returns_400(self, client_no_lifespan):
         """Test chat with invalid workflowLevel returns 400"""
@@ -219,10 +275,27 @@ class TestChatWithSkills:
         data = response.json()
         assert len(data["skills_used"]) <= 5
 
+class TestChatEndpointValidationHelpers:
+    def test_count_total_chars_counts_only_string_content(self):
+        from src.mcp.endpoints.chat import _count_total_chars
+
+        assert _count_total_chars([
+            {"role": "user", "content": "abc"},
+            {"role": "assistant", "content": "d"},
+            {"role": "user", "content": {"not": "string"}},
+            "bad",
+            {"role": "system"},
+        ]) == 4
 
 
+class TestChatStreamEndpointValidation:
+    def test_chat_stream_messages_not_array_returns_400(self, client_no_lifespan):
+        response = client_no_lifespan.post("/chat/stream", json={
+            "messages": "not-an-array",
+        })
+        assert response.status_code == 400
+        assert response.json()["error"] == "Invalid messages. Expected array"
 
-class TestChatLlmFallback:
     """Tests for LLM fallback behavior"""
 
     def test_chat_llm_unavailable_returns_503_when_fallback_disabled(self, client_no_lifespan, monkeypatch):

@@ -19,6 +19,49 @@ from src.mcp.contract import _with_contract, _with_terminal_contract
 logger = logging.getLogger("niko-gateway")
 
 
+MAX_MESSAGES = 128
+MAX_MESSAGE_CHARS = 24_000
+MAX_TOTAL_CHARS = 120_000
+
+
+def _count_total_chars(messages: list) -> int:
+    # Used for validation (total context cap) and kept as a separate helper for testability.
+    total = 0
+    for m in messages:
+        if isinstance(m, dict):
+            content = m.get("content")
+            if isinstance(content, str):
+                total += len(content)
+    return total
+
+
+def _validate_chat_messages_limits(messages: list) -> Optional[JSONResponse]:
+    if not isinstance(messages, list):
+        return JSONResponse({"error": "Invalid messages. Expected array"}, status_code=400)
+
+    if len(messages) > MAX_MESSAGES:
+        return JSONResponse({"error": f"Too many messages. Max {MAX_MESSAGES}"}, status_code=400)
+
+    # Validate message shape/types first (to preserve deterministic error semantics), then apply
+    # total context cap using the shared helper.
+    for idx, m in enumerate(messages):
+        if not isinstance(m, dict):
+            return JSONResponse({"error": f"Invalid message at index {idx}. Expected object"}, status_code=400)
+
+        role = m.get("role")
+        content = m.get("content")
+        if role not in {"system", "user", "assistant"}:
+            return JSONResponse({"error": f"Invalid message.role at index {idx}"}, status_code=400)
+        if not isinstance(content, str):
+            return JSONResponse({"error": f"Invalid message.content at index {idx}. Expected string"}, status_code=400)
+
+        if len(content) > MAX_MESSAGE_CHARS:
+            return JSONResponse({"error": f"Message too long at index {idx}. Max {MAX_MESSAGE_CHARS} chars"}, status_code=400)
+
+    if _count_total_chars(messages) > MAX_TOTAL_CHARS:
+        return JSONResponse({"error": f"Context too long. Max {MAX_TOTAL_CHARS} chars"}, status_code=400)
+
+    return None
 def adaptive_chunk_content(
     content: str,
     max_chunk_size: int = 500,
@@ -119,6 +162,10 @@ async def chat_endpoint(request: Request):
     try:
         body = await request.json()
         messages = body.get("messages", [])
+
+        limit_error = _validate_chat_messages_limits(messages)
+        if limit_error is not None:
+            return limit_error
         has_explicit_workflow_level = "workflowLevel" in body
         if has_explicit_workflow_level:
             raw_workflow_level = body.get("workflowLevel")
@@ -360,6 +407,10 @@ async def chat_stream_endpoint(request: Request):
     try:
         body = await request.json()
         messages = body.get("messages", [])
+
+        limit_error = _validate_chat_messages_limits(messages)
+        if limit_error is not None:
+            return limit_error
         has_explicit_workflow_level = "workflowLevel" in body
         if has_explicit_workflow_level:
             raw_workflow_level = body.get("workflowLevel")
