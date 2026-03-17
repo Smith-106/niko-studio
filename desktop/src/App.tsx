@@ -16,6 +16,8 @@ import { useMessages } from './stores/selectors'
 import { useTheme } from './hooks/useTheme'
 import { useI18n } from './i18n'
 
+type RightPanelType = 'none' | 'prompts' | 'evaluation' | 'mcpStatus' | 'writingHelper'
+
 interface CheckpointItem {
   id: string
   description: string
@@ -106,10 +108,7 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [knowledgeOpen, setKnowledgeOpen] = useState(false)
-  const [promptsOpen, setPromptsOpen] = useState(false)
-  const [evaluationOpen, setEvaluationOpen] = useState(false)
-  const [mcpStatusOpen, setMcpStatusOpen] = useState(false)
-  const [writingHelperOpen, setWritingHelperOpen] = useState(false)
+  const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>('none')
   const [writingHelperDraft, setWritingHelperDraft] = useState<WritingHelperDraftState>(() => loadWritingHelperDraft())
   const [resumeWritingHelperAfterSettings, setResumeWritingHelperAfterSettings] = useState(false)
   const [checkpointMenuOpen, setCheckpointMenuOpen] = useState(false)
@@ -119,6 +118,14 @@ function App() {
   const [contextUsage, setContextUsage] = useState<ContextUsage>({ usedChars: 0, usedK: 0, totalK: 128, percent: 0 })
   const [runtimeView, setRuntimeView] = useState<GatewayRuntimeView | null>(null)
   const { t } = useI18n()
+
+  const closeRightPanel = useCallback(() => {
+    setActiveRightPanel('none')
+  }, [])
+
+  const toggleRightPanel = useCallback((panel: Exclude<RightPanelType, 'none'>) => {
+    setActiveRightPanel((prev) => (prev === panel ? 'none' : panel))
+  }, [])
 
   // 应用主题
   useTheme()
@@ -280,11 +287,11 @@ function App() {
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         onOpenKnowledge={() => setKnowledgeOpen(true)}
-        onOpenPrompts={() => setPromptsOpen(true)}
+        onOpenPrompts={() => toggleRightPanel('prompts')}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenEvaluation={() => setEvaluationOpen(true)}
-        onOpenMcpStatus={() => setMcpStatusOpen(true)}
-        onOpenWritingHelper={() => setWritingHelperOpen(true)}
+        onOpenEvaluation={() => toggleRightPanel('evaluation')}
+        onOpenMcpStatus={() => toggleRightPanel('mcpStatus')}
+        onOpenWritingHelper={() => toggleRightPanel('writingHelper')}
       />
 
       {/* Main Content */}
@@ -359,7 +366,7 @@ function App() {
         </div>
       </main>
 
-      {promptsOpen && (
+      {activeRightPanel === 'prompts' && (
         <PromptTemplatePanel
           templates={useSettingsStore.getState().settings.promptTemplateLibrary?.templates ?? []}
           variablePresets={useSettingsStore.getState().settings.promptTemplateLibrary?.variablePresets ?? {}}
@@ -367,33 +374,34 @@ function App() {
           onApplyTemplate={() => {
             // Prompts is a top-level entry; applying to composer is handled in ChatArea.
           }}
-          onClose={() => setPromptsOpen(false)}
+          onClose={closeRightPanel}
         />
       )}
+
       <SettingsModal
         isOpen={settingsOpen}
         onClose={() => {
           setSettingsOpen(false)
           if (resumeWritingHelperAfterSettings) {
-            setWritingHelperOpen(true)
+            setActiveRightPanel('writingHelper')
             setResumeWritingHelperAfterSettings(false)
           }
         }}
       />
       <KnowledgeModal isOpen={knowledgeOpen} onClose={() => setKnowledgeOpen(false)} />
-      {evaluationOpen && (
+      {activeRightPanel === 'evaluation' && (
         <EvaluationPanel
           content={messages.filter((m) => m.role === 'assistant').slice(-1)[0]?.content || ''}
-          onClose={() => setEvaluationOpen(false)}
+          onClose={closeRightPanel}
         />
       )}
-      {mcpStatusOpen && <McpStatusPanel onClose={() => setMcpStatusOpen(false)} />}
-      {writingHelperOpen && (
+      {activeRightPanel === 'mcpStatus' && <McpStatusPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'writingHelper' && (
         <WritingHelperPanel
-          onClose={() => setWritingHelperOpen(false)}
+          onClose={closeRightPanel}
           onOpenSettings={() => {
             setResumeWritingHelperAfterSettings(true)
-            setWritingHelperOpen(false)
+            setActiveRightPanel('none')
             setSettingsOpen(true)
           }}
           draftState={writingHelperDraft}
