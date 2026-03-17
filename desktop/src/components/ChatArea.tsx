@@ -488,6 +488,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
         selectedSkills: payloadForSend.selectedSkills,
         enableModelComparison: payloadForSend.enableModelComparison,
         comparisonModel: payloadForSend.comparisonModel,
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
       })
 
       const contextTypes = settings.contextTypes
