@@ -199,72 +199,68 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed right-0 top-12 bottom-0 w-full max-w-[800px] bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg flex flex-col z-40"
       role="dialog"
       aria-modal="true"
       aria-label={t.knowledgeTitle}
     >
-      <div
-        ref={dialogRef}
-        tabIndex={-1}
-        className="bg-white dark:bg-dark-surface rounded-2xl w-[800px] h-[600px] overflow-hidden shadow-2xl flex flex-col"
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text">{t.knowledgeTitle}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-            aria-label={t.knowledgeClose}
-            title={t.knowledgeClose}
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="flex border-b border-gray-200 dark:border-dark-border">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text'
-              }`}
-            >
-              <tab.icon size={18} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="p-4 border-b border-gray-200 dark:border-dark-border">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.knowledgeSearchPlaceholder}
-              aria-label={t.knowledgeSearchPlaceholder}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          {getSkillTabControls()}
-
-          <MemoryForm onStatusChange={handleStatusChange} onItemsChange={handleItemsChange} />
-
-          {operationStatus && (
-            <p
-              className={`mt-2 text-xs ${operationStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
-            >
-              {operationStatus.message}
-            </p>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4">{renderTabContent()}</div>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text">{t.knowledgeTitle}</h2>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+          aria-label={t.knowledgeClose}
+          title={t.knowledgeClose}
+        >
+          ×
+        </button>
       </div>
+
+      <div className="flex border-b border-gray-200 dark:border-dark-border">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              activeTab === tab.id
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text'
+            }`}
+          >
+            <tab.icon size={18} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-4 border-b border-gray-200 dark:border-dark-border">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t.knowledgeSearchPlaceholder}
+            aria-label={t.knowledgeSearchPlaceholder}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        {getSkillTabControls()}
+
+        <MemoryForm onStatusChange={handleStatusChange} onItemsChange={handleItemsChange} />
+
+        {operationStatus && (
+          <p
+            className={`mt-2 text-xs ${operationStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+          >
+            {operationStatus.message}
+          </p>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4">{renderTabContent()}</div>
     </div>
   )
 }

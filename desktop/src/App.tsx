@@ -6,7 +6,6 @@ import { SettingsModal } from './components/SettingsModal'
 import { KnowledgeModal } from './components/KnowledgeModal'
 import { EvaluationPanel } from './components/EvaluationPanel'
 import { McpStatusPanel } from './components/McpStatusPanel'
-import { PromptTemplatePanel } from './components/PromptTemplatePanel'
 import { WritingHelperPanel } from './components/WritingHelperPanel'
 import { type WritingHelperMode } from './api/client'
 import { deriveGatewayRuntimeState, GatewayRuntimeView, getGatewayHealth, listCheckpoints, restoreCheckpoint } from './api/client'
@@ -16,7 +15,7 @@ import { useMessages } from './stores/selectors'
 import { useTheme } from './hooks/useTheme'
 import { useI18n } from './i18n'
 
-type RightPanelType = 'none' | 'prompts' | 'evaluation' | 'mcpStatus' | 'writingHelper'
+type RightPanelType = 'none' | 'knowledge' | 'evaluation' | 'mcpStatus' | 'writingHelper'
 
 interface CheckpointItem {
   id: string
@@ -107,8 +106,8 @@ function App() {
   const messages = useMessages()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [knowledgeOpen, setKnowledgeOpen] = useState(false)
   const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>('none')
+  const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
   const [writingHelperDraft, setWritingHelperDraft] = useState<WritingHelperDraftState>(() => loadWritingHelperDraft())
   const [resumeWritingHelperAfterSettings, setResumeWritingHelperAfterSettings] = useState(false)
   const [checkpointMenuOpen, setCheckpointMenuOpen] = useState(false)
@@ -124,6 +123,7 @@ function App() {
   }, [])
 
   const toggleRightPanel = useCallback((panel: Exclude<RightPanelType, 'none'>) => {
+    setIsTemplatePanelOpen(false)
     setActiveRightPanel((prev) => (prev === panel ? 'none' : panel))
   }, [])
 
@@ -286,8 +286,11 @@ function App() {
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onOpenKnowledge={() => setKnowledgeOpen(true)}
-        onOpenPrompts={() => toggleRightPanel('prompts')}
+        onOpenKnowledge={() => toggleRightPanel('knowledge')}
+        onOpenPrompts={() => {
+          setActiveRightPanel('none')
+          setIsTemplatePanelOpen(true)
+        }}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenEvaluation={() => toggleRightPanel('evaluation')}
         onOpenMcpStatus={() => toggleRightPanel('mcpStatus')}
@@ -359,23 +362,20 @@ function App() {
         )}
 
         {/* Chat Area */}
-        <ChatArea onContextUsageChange={handleContextUsageChange} connectionState={headerConnectionState} />
+        <ChatArea
+          onContextUsageChange={handleContextUsageChange}
+          connectionState={headerConnectionState}
+          isTemplatePanelOpen={isTemplatePanelOpen}
+          onTemplatePanelOpenChange={setIsTemplatePanelOpen}
+        />
 
         <div className="px-4 py-1 text-[11px] text-gray-400 dark:text-dark-text-secondary border-t border-gray-100 dark:border-dark-border">
           {t.contextEstimated}
         </div>
       </main>
 
-      {activeRightPanel === 'prompts' && (
-        <PromptTemplatePanel
-          templates={useSettingsStore.getState().settings.promptTemplateLibrary?.templates ?? []}
-          variablePresets={useSettingsStore.getState().settings.promptTemplateLibrary?.variablePresets ?? {}}
-          onToggleFavorite={(templateId) => useSettingsStore.getState().toggleTemplateFavorite(templateId)}
-          onApplyTemplate={() => {
-            // Prompts is a top-level entry; applying to composer is handled in ChatArea.
-          }}
-          onClose={closeRightPanel}
-        />
+      {activeRightPanel === 'knowledge' && (
+        <KnowledgeModal isOpen onClose={closeRightPanel} />
       )}
 
       <SettingsModal
@@ -388,7 +388,6 @@ function App() {
           }
         }}
       />
-      <KnowledgeModal isOpen={knowledgeOpen} onClose={() => setKnowledgeOpen(false)} />
       {activeRightPanel === 'evaluation' && (
         <EvaluationPanel
           content={messages.filter((m) => m.role === 'assistant').slice(-1)[0]?.content || ''}
