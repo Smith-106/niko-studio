@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -83,6 +84,17 @@ function setConversationWithAssistant(content: string): void {
     allConversationIds: ['c1'],
     currentConversationId: 'c1',
   })
+}
+
+function ControlledTemplateChatArea() {
+  const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
+
+  return (
+    <ChatArea
+      isTemplatePanelOpen={isTemplatePanelOpen}
+      onTemplatePanelOpenChange={setIsTemplatePanelOpen}
+    />
+  )
 }
 
 describe('ChatArea P0 flows', () => {
@@ -286,8 +298,8 @@ describe('ChatArea P0 flows', () => {
         skills_used: [],
         comparison: {
           enabled: true,
-          primary: { model: 'primary', content: '主模型结果' },
-          control: { model: 'gpt-4-turbo', content: '对照模型结果' },
+          primary: { model: 'primary', content: '共享段落\n主模型结果' },
+          control: { model: 'gpt-4-turbo', content: '共享段落\n对照模型结果' },
         },
       },
     })
@@ -326,6 +338,13 @@ describe('ChatArea P0 flows', () => {
     expect(screen.getByText(`${zh.messageBubbleControlModelLabel}gpt-4-turbo`)).toBeInTheDocument()
     expect(screen.getByText('主模型结果')).toBeInTheDocument()
     expect(screen.getByText('对照模型结果')).toBeInTheDocument()
+    expect(screen.getAllByText(zh.messageBubbleDiffHighlightsLabel)).toHaveLength(2)
+
+    await userEvent.click(screen.getByRole('button', { name: zh.messageBubbleAcceptPrimary }))
+    expect((screen.getByPlaceholderText(zh.inputPlaceholder) as HTMLTextAreaElement).value).toBe('共享段落\n主模型结果')
+
+    await userEvent.click(screen.getByRole('button', { name: zh.messageBubbleAcceptControl }))
+    expect((screen.getByPlaceholderText(zh.inputPlaceholder) as HTMLTextAreaElement).value).toBe('共享段落\n对照模型结果')
   })
 
   it('cancels streaming and does not trigger fallback chat', async () => {
@@ -503,13 +522,19 @@ describe('ChatArea P0 flows', () => {
   it('opens template library panel and applies template in replace mode', async () => {
     mockedChatStream.mockResolvedValue()
 
-    render(<ChatArea />)
+    render(<ControlledTemplateChatArea />)
+
+    expect(screen.queryByRole('dialog', { name: zh.templateLibraryTitle })).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByLabelText(zh.templateLibraryEntry))
     expect(await screen.findByRole('dialog', { name: zh.templateLibraryTitle })).toBeInTheDocument()
 
     await userEvent.type(screen.getAllByLabelText(/.+ \*$/)[0], '冒险')
     await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: zh.templateLibraryTitle })).not.toBeInTheDocument()
+    })
 
     const input = screen.getByPlaceholderText(zh.inputPlaceholder) as HTMLTextAreaElement
     expect(input.value).toContain('主题「冒险」')
@@ -540,15 +565,20 @@ describe('ChatArea P0 flows', () => {
   })
 
   it('applies template in append mode with existing input', async () => {
-    render(<ChatArea />)
+    render(<ControlledTemplateChatArea />)
 
     const input = screen.getByPlaceholderText(zh.inputPlaceholder) as HTMLTextAreaElement
     await userEvent.type(input, '已有内容')
 
     await userEvent.click(screen.getByLabelText(zh.templateLibraryEntry))
+    expect(await screen.findByRole('dialog', { name: zh.templateLibraryTitle })).toBeInTheDocument()
     await userEvent.type(screen.getAllByLabelText(/.+ \*$/)[0], '科幻')
     await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAppend }))
     await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: zh.templateLibraryTitle })).not.toBeInTheDocument()
+    })
 
     expect(input.value).toContain('已有内容')
     expect(input.value).toContain('主题「科幻」')

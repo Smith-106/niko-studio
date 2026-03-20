@@ -235,6 +235,9 @@ export interface Translations {
   chatComparisonModelLabel: string
   messageBubblePrimaryModelLabel: string
   messageBubbleControlModelLabel: string
+  messageBubbleDiffHighlightsLabel: string
+  messageBubbleAcceptPrimary: string
+  messageBubbleAcceptControl: string
   messageBubbleRetrievalStatus: string
   chatAgentActionWrite: string
   chatAgentActionRevise: string
@@ -717,6 +720,9 @@ export const translations: Record<Language, Translations> = {
     chatComparisonModelLabel: '对照模型',
     messageBubblePrimaryModelLabel: '主模型：',
     messageBubbleControlModelLabel: '对照模型：',
+    messageBubbleDiffHighlightsLabel: '差异亮点',
+    messageBubbleAcceptPrimary: '采纳主模型',
+    messageBubbleAcceptControl: '采纳对照模型',
     messageBubbleRetrievalStatus: '检索状态： 实体 {entities} / 关系 {relations} / 记忆 {memories}',
     chatAgentActionWrite: '写作',
     chatAgentActionRevise: '润色/重写',
@@ -1197,6 +1203,9 @@ export const translations: Record<Language, Translations> = {
     chatComparisonModelLabel: 'Control Model',
     messageBubblePrimaryModelLabel: 'Primary Model: ',
     messageBubbleControlModelLabel: 'Control Model: ',
+    messageBubbleDiffHighlightsLabel: 'Diff highlights',
+    messageBubbleAcceptPrimary: 'Accept primary',
+    messageBubbleAcceptControl: 'Accept control',
     messageBubbleRetrievalStatus: 'Retrieval: Entities {entities} / Relations {relations} / Memories {memories}',
     chatAgentActionWrite: 'Write',
     chatAgentActionRevise: 'Polish/Rewrite',

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -21,6 +21,8 @@ import { useInlineActions } from '../hooks/useInlineActions'
 interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
   connectionState?: 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
+  isTemplatePanelOpen?: boolean
+  onTemplatePanelOpenChange?: (open: boolean) => void
 }
 
 type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'interrupted' | 'recovered'
@@ -52,7 +54,12 @@ interface RetryPayload {
   comparisonModel: string
 }
 
-export function ChatArea({ onContextUsageChange, connectionState = 'connected' }: ChatAreaProps) {
+export function ChatArea({
+  onContextUsageChange,
+  connectionState = 'connected',
+  isTemplatePanelOpen = false,
+  onTemplatePanelOpenChange,
+}: ChatAreaProps) {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')
@@ -75,7 +82,6 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const [quickRollbackReason, setQuickRollbackReason] = useState('')
   const [showQuickRollbackAdvanced, setShowQuickRollbackAdvanced] = useState(false)
   const [quickRollbackStatus, setQuickRollbackStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
-  const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
   const { t, translate } = useI18n()
   const {
     recoverableCheckpointId,
@@ -204,6 +210,10 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
   const handleCancelStream = () => {
     cancelStream()
   }
+
+  const handleComparisonAccept = useCallback((content: string) => {
+    setInput(content)
+  }, [])
 
 
   const runNormalChat = async (request: ChatRequest, checkpointId?: string | null): Promise<StreamPhase> => {
@@ -670,7 +680,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
     for (const [variableId, value] of Object.entries(variableValues)) {
       setTemplateVariablePreset(templateId, variableId, value)
     }
-    setIsTemplatePanelOpen(false)
+    onTemplatePanelOpenChange?.(false)
   }
 
   return (
@@ -696,7 +706,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
               ))}
               <button
                 type="button"
-                onClick={() => setIsTemplatePanelOpen(true)}
+                onClick={() => onTemplatePanelOpenChange?.(true)}
                 className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-dark-border dark:text-dark-text hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 {t.templateLibraryEntry}
@@ -712,7 +722,12 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           </div>
         ) : (
           messages.map((message) => (
-            <MessageBubble key={message.id} message={message} onAssistantSelection={handleAssistantSelection} />
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onAssistantSelection={handleAssistantSelection}
+              onComparisonAccept={handleComparisonAccept}
+            />
           ))
         )}
         {isLoading && streamingContent && (
@@ -848,7 +863,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           modePresets={modePresets}
           onSetChatMode={setChatMode}
           onToggleModelComparison={() => setEnableModelComparison((prev) => !prev)}
-          onOpenTemplateLibrary={() => setIsTemplatePanelOpen(true)}
+          onOpenTemplateLibrary={() => onTemplatePanelOpenChange?.(true)}
           onSetComparisonModel={setComparisonModel}
           onSetAgentAction={setAgentAction}
           onSetWorkflowLevel={setWorkflowLevel}
@@ -879,7 +894,7 @@ export function ChatArea({ onContextUsageChange, connectionState = 'connected' }
           variablePresets={promptTemplateLibrary.variablePresets}
           onToggleFavorite={toggleTemplateFavorite}
           onApplyTemplate={handleApplyTemplate}
-          onClose={() => setIsTemplatePanelOpen(false)}
+          onClose={() => onTemplatePanelOpenChange?.(false)}
         />
       )}
     </div>

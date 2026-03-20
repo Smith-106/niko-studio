@@ -36,6 +36,8 @@ describe('MessageBubble selection', () => {
   })
 
   it('renders structured dual-column comparison content for assistant message', () => {
+    const onComparisonAccept = vi.fn()
+
     render(
       <MessageBubble
         message={{
@@ -45,17 +47,27 @@ describe('MessageBubble selection', () => {
           timestamp: new Date(),
           comparison: {
             enabled: true,
-            primary: { model: 'primary', content: '主模型内容' },
-            control: { model: 'gpt-4-turbo', content: '对照模型内容' },
+            primary: { model: 'primary', content: '共享行\n主模型独有' },
+            control: { model: 'gpt-4-turbo', content: '共享行\n对照模型独有' },
           },
         }}
+        onComparisonAccept={onComparisonAccept}
       />
     )
 
     expect(screen.getByText(`${zh.messageBubblePrimaryModelLabel}primary`)).toBeInTheDocument()
     expect(screen.getByText(`${zh.messageBubbleControlModelLabel}gpt-4-turbo`)).toBeInTheDocument()
-    expect(screen.getByText('主模型内容')).toBeInTheDocument()
-    expect(screen.getByText('对照模型内容')).toBeInTheDocument()
+    expect(screen.getByText('主模型独有')).toBeInTheDocument()
+    expect(screen.getByText('对照模型独有')).toBeInTheDocument()
+    expect(screen.getAllByText(zh.messageBubbleDiffHighlightsLabel)).toHaveLength(2)
+    expect(screen.getByRole('button', { name: zh.messageBubbleAcceptPrimary })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: zh.messageBubbleAcceptControl })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: zh.messageBubbleAcceptPrimary }))
+    expect(onComparisonAccept).toHaveBeenCalledWith('共享行\n主模型独有')
+
+    fireEvent.click(screen.getByRole('button', { name: zh.messageBubbleAcceptControl }))
+    expect(onComparisonAccept).toHaveBeenCalledWith('共享行\n对照模型独有')
   })
 
   it('renders retrieval status when writer metadata is present', () => {

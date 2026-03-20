@@ -7,6 +7,21 @@ import { useI18n } from '../i18n'
 interface MessageBubbleProps {
   message: Message
   onAssistantSelection?: (payload: { messageId: string; selectedText: string }) => void
+  onComparisonAccept?: (content: string) => void
+}
+
+const getUniqueComparisonLines = (source: string, target: string): string[] => {
+  const targetLines = new Set(
+    target
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+  )
+
+  return source
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line, index, lines) => Boolean(line) && !targetLines.has(line) && lines.indexOf(line) === index)
 }
 
 // Custom comparison function for React.memo
@@ -14,6 +29,8 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
   const prevMsg = prevProps.message
   const nextMsg = nextProps.message
 
+  if (prevProps.onAssistantSelection !== nextProps.onAssistantSelection) return false
+  if (prevProps.onComparisonAccept !== nextProps.onComparisonAccept) return false
   if (prevMsg.id !== nextMsg.id) return false
   if (prevMsg.content !== nextMsg.content) return false
 
@@ -47,9 +64,15 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
   return true
 }
 
-function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubbleProps) {
+function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAccept }: MessageBubbleProps) {
   const { t } = useI18n()
   const isUser = message.role === 'user'
+  const primaryDiffLines = message.comparison?.enabled
+    ? getUniqueComparisonLines(message.comparison.primary.content, message.comparison.control.content)
+    : []
+  const controlDiffLines = message.comparison?.enabled
+    ? getUniqueComparisonLines(message.comparison.control.content, message.comparison.primary.content)
+    : []
 
   const handleMouseUp = () => {
     if (isUser || !onAssistantSelection) return
@@ -107,9 +130,33 @@ function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubble
         {message.comparison?.enabled ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3" onMouseUp={handleMouseUp}>
             <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-3">
-              <div className="text-xs font-semibold mb-2 text-gray-500 dark:text-dark-text-secondary">
-                {`${t.messageBubblePrimaryModelLabel}${message.comparison.primary.model}`}
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-gray-500 dark:text-dark-text-secondary">
+                  {`${t.messageBubblePrimaryModelLabel}${message.comparison.primary.model}`}
+                </div>
+                {onComparisonAccept && (
+                  <button
+                    type="button"
+                    onClick={() => onComparisonAccept(message.comparison!.primary.content)}
+                    className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 dark:bg-dark-border dark:text-dark-text"
+                  >
+                    {t.messageBubbleAcceptPrimary}
+                  </button>
+                )}
               </div>
+              {primaryDiffLines.length > 0 && (
+                <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
+                  <span className="font-medium">{t.messageBubbleDiffHighlightsLabel}</span>
+                  {primaryDiffLines.map((line) => (
+                    <span
+                      key={line}
+                      className="rounded-full bg-amber-100 px-2 py-0.5 dark:bg-amber-900/40"
+                    >
+                      {line}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="markdown-body">
                 <ReactMarkdown components={markdownComponents}>
                   {message.comparison.primary.content}
@@ -117,9 +164,33 @@ function MessageBubbleComponent({ message, onAssistantSelection }: MessageBubble
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-3">
-              <div className="text-xs font-semibold mb-2 text-gray-500 dark:text-dark-text-secondary">
-                {`${t.messageBubbleControlModelLabel}${message.comparison.control.model}`}
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-gray-500 dark:text-dark-text-secondary">
+                  {`${t.messageBubbleControlModelLabel}${message.comparison.control.model}`}
+                </div>
+                {onComparisonAccept && (
+                  <button
+                    type="button"
+                    onClick={() => onComparisonAccept(message.comparison!.control.content)}
+                    className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-dark-border dark:text-dark-text"
+                  >
+                    {t.messageBubbleAcceptControl}
+                  </button>
+                )}
               </div>
+              {controlDiffLines.length > 0 && (
+                <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
+                  <span className="font-medium">{t.messageBubbleDiffHighlightsLabel}</span>
+                  {controlDiffLines.map((line) => (
+                    <span
+                      key={line}
+                      className="rounded-full bg-amber-100 px-2 py-0.5 dark:bg-amber-900/40"
+                    >
+                      {line}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="markdown-body">
                 <ReactMarkdown components={markdownComponents}>
                   {message.comparison.control.content}
