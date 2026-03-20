@@ -234,24 +234,6 @@ export function Sidebar({
           <BarChart3 size={18} />
           {!collapsed && <span className="text-sm">{t.sidebarEvaluationPanel}</span>}
         </button>
-        <button
-          onClick={onOpenKnowledge}
-          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
-          aria-label={t.knowledgeBase}
-          title={t.knowledgeBase}
-        >
-          <BookOpen size={18} />
-          {!collapsed && <span className="text-sm">{t.knowledgeBase}</span>}
-        </button>
-        <button
-          onClick={onOpenSettings}
-          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-800 rounded-lg text-gray-300"
-          aria-label={t.settings}
-          title={t.settings}
-        >
-          <Settings size={18} />
-          {!collapsed && <span className="text-sm">{t.settings}</span>}
-        </button>
       </div>
     </aside>
   )

@@ -212,7 +212,7 @@ class TestStreamErrorCases:
         })
         assert response.status_code == 400
         data = response.json()
-        assert "error" in data
+        assert data["error"] == "No messages provided"
 
     def test_stream_no_user_message_returns_400(self, client_no_lifespan):
         """Test stream with no user message returns 400"""
@@ -222,6 +222,7 @@ class TestStreamErrorCases:
             ]
         })
         assert response.status_code == 400
+        assert response.json()["error"] == "No user message found"
 
     def test_stream_invalid_workflow_level_returns_400(self, client_no_lifespan):
         """Test stream with invalid workflowLevel returns 400"""

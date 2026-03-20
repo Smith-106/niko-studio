@@ -82,6 +82,7 @@ Thumbs.db
 *.pem
 *.key
 .ace-tool/
+.ccw/
 .worktrees/
 .claude/worktrees/
 NUL
