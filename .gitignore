@@ -86,3 +86,4 @@ Thumbs.db
 .worktrees/
 .claude/worktrees/
 NUL
+.vite/
