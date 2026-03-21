@@ -96,6 +96,8 @@ export interface Translations {
   uploadErrorService: string
   uploadInjectedChunks: string
   uploadInjectedContext: string
+  uploadMultipleProgress: string
+  uploadMultipleComplete: string
   chatAgentContextPrefix: string
   quickRollbackTitle: string
   quickRollbackAdvancedToggle: string
@@ -232,6 +234,8 @@ export interface Translations {
   modePresetFocusWriting: string
   modePresetAgentDiagnose: string
   modePresetCompareReview: string
+  showMore: string
+  showLess: string
   chatComparisonModelLabel: string
   messageBubblePrimaryModelLabel: string
   messageBubbleControlModelLabel: string
@@ -609,6 +613,8 @@ export const translations: Record<Language, Translations> = {
     uploadErrorService: '服务处理失败，请稍后重试',
     uploadInjectedChunks: '已完成文件上下文注入：{fileName}（{chunks} 段）',
     uploadInjectedContext: '文件已注入上下文：{fileName}（{chunks} 段）',
+    uploadMultipleProgress: '正在处理文件 {current}/{total}...',
+    uploadMultipleComplete: '已完成 {success}/{total} 个文件上传',
     chatAgentContextPrefix: 'Agent 上下文结果',
     quickRollbackTitle: 'Quick Rollback',
     quickRollbackAdvancedToggle: '高级：Quick Rollback',
@@ -745,6 +751,8 @@ export const translations: Record<Language, Translations> = {
     modePresetFocusWriting: '专注写作',
     modePresetAgentDiagnose: 'Agent 诊断',
     modePresetCompareReview: '双模型校对',
+    showMore: '更多',
+    showLess: '收起',
     chatComparisonModelLabel: '对照模型',
     messageBubblePrimaryModelLabel: '主模型：',
     messageBubbleControlModelLabel: '对照模型：',
@@ -1120,6 +1128,8 @@ export const translations: Record<Language, Translations> = {
     uploadErrorService: 'Service failed to process the file. Please retry later.',
     uploadInjectedChunks: 'File context injected: {fileName} ({chunks} chunks)',
     uploadInjectedContext: 'Context injected from file: {fileName} ({chunks} chunks)',
+    uploadMultipleProgress: 'Processing file {current}/{total}...',
+    uploadMultipleComplete: 'Successfully uploaded {success}/{total} files',
     chatAgentContextPrefix: 'Agent context result',
     quickRollbackTitle: 'Quick Rollback',
     quickRollbackAdvancedToggle: 'Advanced: Quick Rollback',
@@ -1256,6 +1266,8 @@ export const translations: Record<Language, Translations> = {
     modePresetFocusWriting: 'Focus Writing',
     modePresetAgentDiagnose: 'Agent Diagnose',
     modePresetCompareReview: 'Dual-Model Review',
+    showMore: 'More',
+    showLess: 'Less',
     chatComparisonModelLabel: 'Control Model',
     messageBubblePrimaryModelLabel: 'Primary Model: ',
     messageBubbleControlModelLabel: 'Control Model: ',
