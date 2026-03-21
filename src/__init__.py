@@ -8,5 +8,5 @@ Niko-Studio: 专业的 AI 辅助写作平台
 - Storage Layer: Kùzu/SQLite/FastEmbed/FileIO
 """
 
-__version__ = "8.1.0"
+__version__ = "8.1.1"
 __author__ = "Niko-Studio Team"
