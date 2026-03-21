@@ -395,7 +395,9 @@ export async function fetchProviderModels(
         if (!apiKey.trim()) {
           return { success: false, error: `${providerId} provider requires API key` }
         }
-        payload = await requestJson(`${normalizedBase}/models`, {
+        // OpenAI-compatible APIs use /v1/models endpoint
+        const openaiBaseUrl = normalizedBase.includes('/v1') ? normalizedBase : `${normalizedBase}/v1`
+        payload = await requestJson(`${openaiBaseUrl}/models`, {
           headers: {
             Authorization: `Bearer ${apiKey.trim()}`,
           },
