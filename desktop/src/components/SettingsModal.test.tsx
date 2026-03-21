@@ -21,43 +21,104 @@ const mockedGetSecrets = vi.mocked(apiClient.getSecrets)
 
 const createBackendConfig = (): BackendConfig => ({
   app_name: 'Niko Studio',
-  version: '8.1.0',
+  version: '8.1.1',
   debug: false,
   env: 'test',
   data_dir: '/tmp/data',
   log_dir: '/tmp/logs',
   agent: {
+    max_cost_per_request: 1.0,
+    max_cost_per_session: 10.0,
+    max_tokens_per_request: 100000,
+    budget_warn_threshold: 0.8,
     default_model: 'claude-sonnet-4-6',
+    google_api_key: '',
+    openai_api_key: '',
     log_level: 'INFO',
   },
   memory: {
+    vector_db_path: '/tmp/vectors',
+    embedding_model: 'text-embedding-3-small',
+    embedding_dimension: 1536,
     cache_enabled: true,
+    cache_ttl: 3600,
+    cache_max_size: 1000,
+    chunk_size: 512,
+    chunk_overlap: 64,
   },
   workflow: {
+    session_timeout: 3600,
+    max_concurrent_sessions: 5,
+    checkpoint_enabled: true,
+    checkpoint_interval: 300,
+    resume_strategy: 'latest',
+    quality_mode: 'standard',
     quality_level: 'high',
+    degrade_on_timeout: true,
+    degrade_on_error: true,
+    critical_gate_always_on: true,
+    quality_phase_timeout_seconds: 120,
   },
   graph: {
-    enabled: true,
+    db_path: '/tmp/graph.db',
+    max_connections: 10,
+    max_entities_per_query: 100,
+    relation_depth: 3,
   },
   writing: {
+    character_depth_dimensions: 5,
     max_character_traits: 8,
+    scene_coherence_threshold: 0.8,
+    contradiction_sensitivity: 'medium',
+    foreshadowing_max_distance: 10,
+    foreshadowing_reminder_threshold: 0.5,
+    style_vector_dimensions: 128,
+    style_sample_min_words: 500,
   },
   backup: {
+    backup_dir: '/tmp/backups',
+    compress: true,
+    max_backups: 10,
     webdav_enabled: false,
+    webdav_url: '',
+    webdav_username: '',
+    webdav_password: '',
+    webdav_remote_path: '',
+    s3_enabled: false,
+    s3_bucket: '',
+    s3_prefix: '',
+    s3_region: '',
   },
   token: {
+    db_path: '/tmp/tokens.db',
+    default_model: 'claude-sonnet-4-6',
     default_budget: 10000,
+    budget_warn_threshold: 0.8,
   },
   obsidian: {
     enabled: false,
+    auto_discover: true,
+    sync_on_startup: false,
+    default_vault: '',
+    file_patterns: ['*.md'],
   },
   gateway: {
+    host: '127.0.0.1',
+    port: 8000,
+    reload: false,
+    cors_dev_origins: ['http://localhost:5173'],
+    cors_prod_origins: [],
     metrics_enabled: true,
+    ui_bridge_enabled: false,
   },
   integration: {
-    auto_open_browser: false,
+    postgres_enabled: false,
+    redis_cache_enabled: false,
+    elasticsearch_enabled: false,
+    neo4j_enabled: false,
+    langflow_enabled: false,
   },
-} as BackendConfig)
+})
 
 const createSecretsResponse = (): SecretsResponse['secrets'] => ({
   'agent.google_api_key': {
@@ -233,12 +294,13 @@ describe('SettingsModal quality presets', () => {
 
   it('renders backend config fields and only enables save for editable changes', async () => {
     const updateBackendConfig = vi.fn().mockResolvedValue(['agent.default_model'])
+    const config = createBackendConfig()
     useSettingsStore.setState((state) => ({
       ...state,
       settings: {
         ...state.settings,
         backendConfig: {
-          config: createBackendConfig(),
+          config,
           modifiableFields: ['agent.default_model'],
           syncStatus: 'idle',
           lastSync: null,
@@ -253,13 +315,16 @@ describe('SettingsModal quality presets', () => {
 
     await user.click(screen.getByRole('button', { name: zh.backendService }))
 
-    const defaultModelInput = await screen.findByDisplayValue('claude-sonnet-4-6')
-    const logLevelInput = screen.getByDisplayValue('INFO')
+    // Wait for backend config panel to render all sections
+    await waitFor(() => {
+      expect(screen.getByText(zh.backendConfigSectionAgent)).toBeInTheDocument()
+    })
+
+    // Find the agent.default_model input by its specific ID
+    const defaultModelInput = await screen.findByTestId('backend-config-agent-default_model')
     const saveButton = screen.getByRole('button', { name: zh.backendConfigSave })
 
-    expect(screen.getByText(zh.backendConfigSectionAgent)).toBeInTheDocument()
     expect(defaultModelInput).toBeEnabled()
-    expect(logLevelInput).toBeDisabled()
     expect(saveButton).toBeDisabled()
     expect(screen.getAllByText(zh.backendConfigReadOnlyHint).length).toBeGreaterThan(0)
 

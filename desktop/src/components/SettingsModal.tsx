@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
 import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools, getSecrets, BackendConfig, SecretsResponse, SECRET_FIELDS } from '../api/client'
@@ -38,19 +38,6 @@ const BACKEND_SECTION_KEYS: BackendSectionKey[] = [
 
 const MASKED_SECRET_VALUE = '***MASKED***'
 
-const BACKEND_SECTION_LABEL_KEYS = {
-  agent: 'backendConfigSectionAgent',
-  memory: 'backendConfigSectionMemory',
-  workflow: 'backendConfigSectionWorkflow',
-  graph: 'backendConfigSectionGraph',
-  writing: 'backendConfigSectionWriting',
-  gateway: 'backendConfigSectionGateway',
-  backup: 'backendConfigSectionBackup',
-  token: 'backendConfigSectionToken',
-  obsidian: 'backendConfigSectionObsidian',
-  integration: 'backendConfigSectionIntegration',
-} as const
-
 function classNames(...parts: Array<string | false | undefined | null>) {
   return parts.filter(Boolean).join(' ')
 }
@@ -78,7 +65,7 @@ function getBackendFieldValue(config: BackendConfig, path: string): unknown {
   if (!sectionValue || typeof sectionValue !== 'object' || Array.isArray(sectionValue)) {
     return undefined
   }
-  return (sectionValue as Record<string, unknown>)[field]
+  return (sectionValue as unknown as Record<string, unknown>)[field]
 }
 
 function setBackendFieldValue(config: BackendConfig, path: string, value: unknown): BackendConfig {
@@ -93,7 +80,7 @@ function setBackendFieldValue(config: BackendConfig, path: string, value: unknow
     return config
   }
 
-  ;(sectionValue as Record<string, unknown>)[field] = value
+  ;(sectionValue as unknown as Record<string, unknown>)[field] = value
   return nextConfig
 }
 
@@ -854,7 +841,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           return null
                         }
 
-                        const entries = Object.entries(sectionValue as Record<string, unknown>)
+                        const entries = Object.entries(sectionValue as unknown as Record<string, unknown>)
                         if (entries.length === 0) {
                           return null
                         }
@@ -917,6 +904,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                       )}
                                     </div>
                                     <input
+            data-testid={inputId}
                                       id={inputId}
                                       type={typeof value === 'number' ? 'number' : 'text'}
                                       value={formattedValue}
