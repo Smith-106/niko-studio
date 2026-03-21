@@ -514,7 +514,7 @@ describe('ChatArea P0 flows', () => {
 
     await waitFor(() => {
       expect(mockedUploadMemoryFile).toHaveBeenCalledTimes(1)
-      expect(screen.getByText(zh.uploadInjectedContext.replace('{fileName}', 'context.txt').replace('{chunks}', '2'))).toBeInTheDocument()
+      // Upload status is now shown in banner, not as assistant message
       expect(screen.getByText(zh.uploadInjectedChunks.replace('{fileName}', 'context.txt').replace('{chunks}', '2'))).toBeInTheDocument()
     })
   })

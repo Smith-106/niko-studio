@@ -2,7 +2,7 @@
 # 此文件支持热加载，修改后自动生效
 
 app_name: niko-studio
-version: "8.1.0"
+version: "8.1.1"
 debug: false
 env: development
 data_dir: .writing
