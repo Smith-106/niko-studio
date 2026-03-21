@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { BackendConfig, SecretsResponse } from '@/api/client'
 
 // LLM 提供商配置
 export interface LLMProvider {
@@ -110,6 +111,14 @@ export const QUALITY_PRESET_TEMPLATES: QualityPresetTemplate[] = [
   },
 ]
 
+export interface BackendConfigState {
+  config: BackendConfig | null
+  modifiableFields: string[]
+  syncStatus: 'idle' | 'loading' | 'syncing' | 'error'
+  lastSync: string | null
+  error: string | null
+}
+
 interface Settings {
   // API
   apiBaseUrl: string
@@ -138,6 +147,9 @@ interface Settings {
 
   // Prompt templates
   promptTemplateLibrary?: PromptTemplateLibrarySettings
+
+  // Backend config
+  backendConfig: BackendConfigState
 
   // UI
   theme: 'light' | 'dark' | 'system'
@@ -334,6 +346,14 @@ const normalizeContextTypes = (contextTypes: ContextType[] | undefined): Context
   return deduped.length > 0 ? deduped : fallback
 }
 
+const defaultBackendConfigState = (): BackendConfigState => ({
+  config: null,
+  modifiableFields: [],
+  syncStatus: 'idle',
+  lastSync: null,
+  error: null,
+})
+
 const defaultSettings: Settings = {
   apiBaseUrl: 'http://127.0.0.1:8000',
   apiKey: '',
@@ -353,6 +373,7 @@ const defaultSettings: Settings = {
   retrieval: defaultRetrievalSettings(),
   contextTypes: ['world', 'character', 'plot'],
   promptTemplateLibrary: defaultPromptTemplateLibrary(),
+  backendConfig: defaultBackendConfigState(),
   theme: 'light',
   fontSize: 'medium',
   language: 'zh',
@@ -505,6 +526,11 @@ interface SettingsStore {
   toggleTemplateFavorite: (templateId: string) => void
   recordTemplateUsage: (templateId: string) => void
   setTemplateVariablePreset: (templateId: string, variableId: string, value: string) => void
+  // Backend config actions
+  loadBackendConfig: () => Promise<void>
+  updateBackendConfig: (fields: Record<string, unknown>) => Promise<string[]>
+  updateSecrets: (secrets: SecretsResponse['secrets']) => Promise<void>
+  reloadBackendConfig: () => Promise<void>
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -655,6 +681,233 @@ export const useSettingsStore = create<SettingsStore>()(
             }),
           }
         }),
+      // Backend config actions
+      loadBackendConfig: async () => {
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            backendConfig: {
+              ...state.settings.backendConfig,
+              syncStatus: 'loading',
+              error: null,
+            },
+          },
+        }))
+
+        try {
+          const { getConfig } = await import('@/api/client')
+          const response = await getConfig()
+          if (response.success && response.data) {
+            const configData = response.data
+            set((state) => ({
+              settings: {
+                ...state.settings,
+                backendConfig: {
+                  config: configData.config,
+                  modifiableFields: configData.modifiable_fields,
+                  syncStatus: 'idle',
+                  lastSync: nowIso(),
+                  error: null,
+                },
+              },
+            }))
+          } else {
+            set((state) => ({
+              settings: {
+                ...state.settings,
+                backendConfig: {
+                  ...state.settings.backendConfig,
+                  syncStatus: 'error',
+                  error: response.error ?? 'Failed to load backend config',
+                },
+              },
+            }))
+          }
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error loading config'
+          set((state) => ({
+            settings: {
+              ...state.settings,
+              backendConfig: {
+                ...state.settings.backendConfig,
+                syncStatus: 'error',
+                error: errorMessage,
+              },
+            },
+          }))
+        }
+      },
+      updateBackendConfig: async (fields: Record<string, unknown>) => {
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            backendConfig: {
+              ...state.settings.backendConfig,
+              syncStatus: 'syncing',
+              error: null,
+            },
+          },
+        }))
+
+        try {
+          const { getConfig, updateConfig } = await import('@/api/client')
+          const response = await updateConfig(fields)
+          if (response.success && response.data) {
+            const configResponse = await getConfig()
+            if (configResponse.success && configResponse.data) {
+              const configData = configResponse.data
+              set((state) => ({
+                settings: {
+                  ...state.settings,
+                  backendConfig: {
+                    config: configData.config,
+                    modifiableFields: configData.modifiable_fields,
+                    syncStatus: 'idle',
+                    lastSync: nowIso(),
+                    error: null,
+                  },
+                },
+              }))
+            }
+            return response.data.updated ?? []
+          }
+
+          set((state) => ({
+            settings: {
+              ...state.settings,
+              backendConfig: {
+                ...state.settings.backendConfig,
+                syncStatus: 'error',
+                error: response.error ?? 'Failed to update backend config',
+              },
+            },
+          }))
+          return []
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error updating config'
+          set((state) => ({
+            settings: {
+              ...state.settings,
+              backendConfig: {
+                ...state.settings.backendConfig,
+                syncStatus: 'error',
+                error: errorMessage,
+              },
+            },
+          }))
+          return []
+        }
+      },
+      updateSecrets: async (secrets: SecretsResponse['secrets']) => {
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            backendConfig: {
+              ...state.settings.backendConfig,
+              syncStatus: 'syncing',
+              error: null,
+            },
+          },
+        }))
+
+        try {
+          const { getConfig, updateSecrets: updateSecretsApi } = await import('@/api/client')
+          const secretValues: Record<string, string> = {}
+          for (const [key, field] of Object.entries(secrets)) {
+            if (typeof field.value === 'string') {
+              secretValues[key] = field.value
+            }
+          }
+
+          const response = await updateSecretsApi(secretValues)
+          if (response.success) {
+            const configResponse = await getConfig()
+            if (configResponse.success && configResponse.data) {
+              const configData = configResponse.data
+              set((state) => ({
+                settings: {
+                  ...state.settings,
+                  backendConfig: {
+                    config: configData.config,
+                    modifiableFields: configData.modifiable_fields,
+                    syncStatus: 'idle',
+                    lastSync: nowIso(),
+                    error: null,
+                  },
+                },
+              }))
+              return
+            }
+          }
+
+          set((state) => ({
+            settings: {
+              ...state.settings,
+              backendConfig: {
+                ...state.settings.backendConfig,
+                syncStatus: 'error',
+                error: response.error ?? 'Failed to update secrets',
+              },
+            },
+          }))
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error updating secrets'
+          set((state) => ({
+            settings: {
+              ...state.settings,
+              backendConfig: {
+                ...state.settings.backendConfig,
+                syncStatus: 'error',
+                error: errorMessage,
+              },
+            },
+          }))
+        }
+      },
+      reloadBackendConfig: async () => {
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            backendConfig: {
+              ...state.settings.backendConfig,
+              syncStatus: 'syncing',
+              error: null,
+            },
+          },
+        }))
+
+        try {
+          const { reloadConfig: reloadConfigApi } = await import('@/api/client')
+          const reloadResponse = await reloadConfigApi()
+          if (reloadResponse.success) {
+            await get().loadBackendConfig()
+            return
+          }
+
+          set((state) => ({
+            settings: {
+              ...state.settings,
+              backendConfig: {
+                ...state.settings.backendConfig,
+                syncStatus: 'error',
+                error: reloadResponse.error ?? 'Failed to reload backend config',
+              },
+            },
+          }))
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error reloading config'
+          set((state) => ({
+            settings: {
+              ...state.settings,
+              backendConfig: {
+                ...state.settings.backendConfig,
+                syncStatus: 'error',
+                error: errorMessage,
+              },
+            },
+          }))
+        }
+      },
     }),
     {
       name: 'niko-settings',

@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
-import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools } from '../api/client'
+import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools, getSecrets, BackendConfig, SecretsResponse, SECRET_FIELDS } from '../api/client'
 import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
@@ -18,14 +18,145 @@ type SettingsSection = {
   label: string
 }
 
+type BackendSectionKey = keyof Pick<
+  BackendConfig,
+  'agent' | 'memory' | 'workflow' | 'graph' | 'writing' | 'gateway' | 'backup' | 'token' | 'obsidian' | 'integration'
+>
+
+const BACKEND_SECTION_KEYS: BackendSectionKey[] = [
+  'agent',
+  'memory',
+  'workflow',
+  'graph',
+  'writing',
+  'gateway',
+  'backup',
+  'token',
+  'obsidian',
+  'integration',
+]
+
+const MASKED_SECRET_VALUE = '***MASKED***'
+
+const BACKEND_SECTION_LABEL_KEYS = {
+  agent: 'backendConfigSectionAgent',
+  memory: 'backendConfigSectionMemory',
+  workflow: 'backendConfigSectionWorkflow',
+  graph: 'backendConfigSectionGraph',
+  writing: 'backendConfigSectionWriting',
+  gateway: 'backendConfigSectionGateway',
+  backup: 'backendConfigSectionBackup',
+  token: 'backendConfigSectionToken',
+  obsidian: 'backendConfigSectionObsidian',
+  integration: 'backendConfigSectionIntegration',
+} as const
+
 function classNames(...parts: Array<string | false | undefined | null>) {
   return parts.filter(Boolean).join(' ')
 }
 
+function formatBackendFieldLabel(field: string) {
+  return field.replace(/_/g, ' ')
+}
+
+function formatBackendFieldValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.join(', ')
+  }
+  if (value === null || value === undefined) {
+    return ''
+  }
+  return String(value)
+}
+
+function getBackendFieldValue(config: BackendConfig, path: string): unknown {
+  const [section, field] = path.split('.')
+  if (!section || !field) {
+    return undefined
+  }
+  const sectionValue = config[section as keyof BackendConfig]
+  if (!sectionValue || typeof sectionValue !== 'object' || Array.isArray(sectionValue)) {
+    return undefined
+  }
+  return (sectionValue as Record<string, unknown>)[field]
+}
+
+function setBackendFieldValue(config: BackendConfig, path: string, value: unknown): BackendConfig {
+  const [section, field] = path.split('.')
+  if (!section || !field) {
+    return config
+  }
+
+  const nextConfig = JSON.parse(JSON.stringify(config)) as BackendConfig
+  const sectionValue = nextConfig[section as keyof BackendConfig]
+  if (!sectionValue || typeof sectionValue !== 'object' || Array.isArray(sectionValue)) {
+    return config
+  }
+
+  ;(sectionValue as Record<string, unknown>)[field] = value
+  return nextConfig
+}
+
+function parseBackendFieldInput(rawValue: string, currentValue: unknown): unknown {
+  if (Array.isArray(currentValue)) {
+    return rawValue
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+  if (typeof currentValue === 'number') {
+    if (rawValue.trim() === '') {
+      return currentValue
+    }
+    const parsed = Number(rawValue)
+    return Number.isFinite(parsed) ? parsed : currentValue
+  }
+  return rawValue
+}
+
+function buildBackendConfigUpdates(
+  currentConfig: BackendConfig,
+  draftConfig: BackendConfig,
+  modifiableFields: string[]
+): Record<string, unknown> {
+  const updates: Record<string, unknown> = {}
+
+  for (const fieldPath of modifiableFields) {
+    if (SECRET_FIELDS.includes(fieldPath)) {
+      continue
+    }
+
+    const currentValue = getBackendFieldValue(currentConfig, fieldPath)
+    const draftValue = getBackendFieldValue(draftConfig, fieldPath)
+    if (JSON.stringify(currentValue) !== JSON.stringify(draftValue)) {
+      updates[fieldPath] = draftValue
+    }
+  }
+
+  return updates
+}
+
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { settings, updateSettings, updateProvider, resetSettings } = useSettingsStore()
+  const {
+    settings,
+    updateSettings,
+    updateProvider,
+    resetSettings,
+    loadBackendConfig,
+    updateBackendConfig,
+    updateSecrets,
+    reloadBackendConfig,
+  } = useSettingsStore()
   const { setAllowLlmFallback, setQualityGoals, checkBackend } = useAppStore()
   const [localSettings, setLocalSettings] = useState(settings)
+  const [backendConfigDraft, setBackendConfigDraft] = useState<BackendConfig | null>(settings.backendConfig.config)
+  const [backendSecrets, setBackendSecrets] = useState<SecretsResponse['secrets']>({})
+  const [backendSecretsDraft, setBackendSecretsDraft] = useState<Record<string, string>>({})
+  const [backendSecretsLoading, setBackendSecretsLoading] = useState(false)
+  const [backendSecretsError, setBackendSecretsError] = useState<string | null>(null)
+  const [backendConfigSaving, setBackendConfigSaving] = useState(false)
+  const [backendSecretsSaving, setBackendSecretsSaving] = useState(false)
+  const [showBackendSecrets, setShowBackendSecrets] = useState<Record<string, boolean>>({})
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({})
   const [testingProvider, setTestingProvider] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<Record<string, 'success' | 'error' | null>>({})
@@ -54,6 +185,92 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   ]
 
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('workflow')
+  const backendConfigState = settings.backendConfig
+  const modifiableFieldSet = new Set(backendConfigState.modifiableFields)
+  const backendSectionLabels = {
+    agent: t.backendConfigSectionAgent,
+    memory: t.backendConfigSectionMemory,
+    workflow: t.backendConfigSectionWorkflow,
+    graph: t.backendConfigSectionGraph,
+    writing: t.backendConfigSectionWriting,
+    gateway: t.backendConfigSectionGateway,
+    backup: t.backendConfigSectionBackup,
+    token: t.backendConfigSectionToken,
+    obsidian: t.backendConfigSectionObsidian,
+    integration: t.backendConfigSectionIntegration,
+  } as const
+
+  const backendSyncMessage =
+    backendConfigState.syncStatus === 'loading'
+      ? t.backendConfigLoading
+      : backendConfigState.syncStatus === 'syncing'
+        ? t.backendConfigSyncing
+        : backendConfigState.syncStatus === 'error'
+          ? backendConfigState.error ?? t.settingsUnknownError
+          : backendConfigState.lastSync
+            ? `${t.backendConfigSyncSuccess} · ${new Date(backendConfigState.lastSync).toLocaleString()}`
+            : null
+
+  const hasBackendConfigChanges =
+    Boolean(backendConfigState.config) &&
+    Boolean(backendConfigDraft) &&
+    Object.keys(
+      buildBackendConfigUpdates(
+        backendConfigState.config as BackendConfig,
+        backendConfigDraft as BackendConfig,
+        backendConfigState.modifiableFields
+      )
+    ).length > 0
+
+  const hasBackendSecretChanges = Object.values(backendSecretsDraft).some((value) => {
+    const trimmed = value.trim()
+    return trimmed.length > 0 && trimmed !== MASKED_SECRET_VALUE
+  })
+
+  useEffect(() => {
+    if (settings.backendConfig.config) {
+      setBackendConfigDraft(settings.backendConfig.config)
+    }
+  }, [settings.backendConfig.config])
+
+  useEffect(() => {
+    setBackendSecretsDraft((prev) => {
+      const nextDraft: Record<string, string> = {}
+      for (const key of Object.keys(backendSecrets)) {
+        nextDraft[key] = prev[key] ?? ''
+      }
+      return nextDraft
+    })
+  }, [backendSecrets])
+
+  useEffect(() => {
+    if (!isOpen || activeSection !== 'backend') {
+      return
+    }
+
+    const loadSecrets = async () => {
+      setBackendSecretsLoading(true)
+      setBackendSecretsError(null)
+      try {
+        const response = await getSecrets()
+        if (response.success && response.data) {
+          setBackendSecrets(response.data.secrets)
+          return
+        }
+        setBackendSecretsError(response.error ?? t.settingsUnknownError)
+      } catch (err) {
+        setBackendSecretsError(err instanceof Error ? err.message : t.settingsUnknownError)
+      } finally {
+        setBackendSecretsLoading(false)
+      }
+    }
+
+    if (!backendConfigState.config && backendConfigState.syncStatus === 'idle') {
+      void loadBackendConfig()
+    }
+
+    void loadSecrets()
+  }, [activeSection, backendConfigState.config, backendConfigState.syncStatus, isOpen, loadBackendConfig, t.settingsUnknownError])
 
   if (!isOpen) return null
 
@@ -143,6 +360,108 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
     await checkBackend()
     onClose()
+  }
+
+  const handleBackendConfigFieldChange = (path: string, rawValue: string, currentValue: unknown) => {
+    setBackendConfigDraft((prev) => {
+      if (!prev) {
+        return prev
+      }
+      return setBackendFieldValue(prev, path, parseBackendFieldInput(rawValue, currentValue))
+    })
+  }
+
+  const handleBackendConfigToggle = (path: string, checked: boolean) => {
+    setBackendConfigDraft((prev) => {
+      if (!prev) {
+        return prev
+      }
+      return setBackendFieldValue(prev, path, checked)
+    })
+  }
+
+  const handleSaveBackendConfig = async () => {
+    if (!backendConfigState.config || !backendConfigDraft) {
+      return
+    }
+
+    const updates = buildBackendConfigUpdates(
+      backendConfigState.config,
+      backendConfigDraft,
+      backendConfigState.modifiableFields
+    )
+
+    if (Object.keys(updates).length === 0) {
+      return
+    }
+
+    setBackendConfigSaving(true)
+    try {
+      await updateBackendConfig(updates)
+    } finally {
+      setBackendConfigSaving(false)
+    }
+  }
+
+  const handleSaveBackendSecrets = async () => {
+    const nextSecrets = Object.entries(backendSecretsDraft).reduce<SecretsResponse['secrets']>((acc, [key, value]) => {
+      const trimmed = value.trim()
+      if (!trimmed || trimmed === MASKED_SECRET_VALUE) {
+        return acc
+      }
+
+      const field = backendSecrets[key]
+      if (!field) {
+        return acc
+      }
+
+      acc[key] = {
+        ...field,
+        configured: true,
+        value: trimmed,
+      }
+      return acc
+    }, {})
+
+    if (Object.keys(nextSecrets).length === 0) {
+      return
+    }
+
+    setBackendSecretsSaving(true)
+    setBackendSecretsError(null)
+    try {
+      await updateSecrets(nextSecrets)
+      setBackendSecretsDraft((prev) => {
+        const cleared = { ...prev }
+        for (const key of Object.keys(nextSecrets)) {
+          cleared[key] = ''
+        }
+        return cleared
+      })
+      setBackendSecrets((prev) => {
+        const updated = { ...prev }
+        for (const key of Object.keys(nextSecrets)) {
+          const current = updated[key]
+          if (current) {
+            updated[key] = {
+              ...current,
+              configured: true,
+              value: MASKED_SECRET_VALUE,
+            }
+          }
+        }
+        return updated
+      })
+    } catch (err) {
+      setBackendSecretsError(err instanceof Error ? err.message : t.settingsUnknownError)
+    } finally {
+      setBackendSecretsSaving(false)
+    }
+  }
+
+  const handleReloadBackendConfig = async () => {
+    setBackendSecretsError(null)
+    await reloadBackendConfig()
   }
 
   const handleReset = () => {
@@ -470,20 +789,231 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* Content */}
           <div className="flex-1 p-6 overflow-y-auto max-h-[65vh] space-y-6">
             <div className={activeSection === 'backend' ? 'block' : 'hidden'}>
-              <section>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.backendService}</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.backendUrl}</label>
-                    <input
-                      type="text"
-                      value={localSettings.apiBaseUrl}
-                      onChange={(e) => setLocalSettings({ ...localSettings, apiBaseUrl: e.target.value })}
-                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+              <div className="space-y-6">
+                <section>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.backendService}</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.backendUrl}</label>
+                      <input
+                        type="text"
+                        value={localSettings.apiBaseUrl}
+                        onChange={(e) => setLocalSettings({ ...localSettings, apiBaseUrl: e.target.value })}
+                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+
+                <section className="border dark:border-dark-border rounded-lg p-4 space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.backendConfigTitle}</h3>
+                      <p className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.backendConfigDescription}</p>
+                      {backendSyncMessage && (
+                        <div
+                          className={classNames(
+                            'inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs',
+                            backendConfigState.syncStatus === 'error'
+                              ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+                              : 'bg-gray-100 text-gray-600 dark:bg-dark-border dark:text-dark-text-secondary'
+                          )}
+                        >
+                          {backendConfigState.syncStatus === 'error' ? <AlertCircle size={14} /> : <Check size={14} />}
+                          <span>{backendSyncMessage}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleReloadBackendConfig}
+                        disabled={backendConfigState.syncStatus === 'loading' || backendConfigState.syncStatus === 'syncing'}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RotateCcw size={16} />
+                        {t.backendConfigReload}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveBackendConfig()}
+                        disabled={!hasBackendConfigChanges || backendConfigSaving || backendConfigState.syncStatus === 'loading' || backendConfigState.syncStatus === 'syncing'}
+                        className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Save size={16} />
+                        {t.backendConfigSave}
+                      </button>
+                    </div>
+                  </div>
+
+                  {backendConfigDraft ? (
+                    <div className="space-y-4">
+                      {BACKEND_SECTION_KEYS.map((sectionKey) => {
+                        const sectionValue = backendConfigDraft[sectionKey]
+                        if (!sectionValue || typeof sectionValue !== 'object' || Array.isArray(sectionValue)) {
+                          return null
+                        }
+
+                        const entries = Object.entries(sectionValue as Record<string, unknown>)
+                        if (entries.length === 0) {
+                          return null
+                        }
+
+                        return (
+                          <div key={sectionKey} className="border dark:border-dark-border rounded-lg p-4 space-y-3">
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-dark-text">
+                              {backendSectionLabels[sectionKey]}
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {entries.map(([field, value]) => {
+                                const fieldPath = `${sectionKey}.${field}`
+                                const editable = modifiableFieldSet.has(fieldPath)
+                                const inputId = `backend-config-${sectionKey}-${field}`
+                                const formattedValue = formatBackendFieldValue(value)
+
+                                if (typeof value === 'boolean') {
+                                  return (
+                                    <div key={fieldPath} className="border dark:border-dark-border rounded-lg p-3 space-y-2">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <label htmlFor={inputId} className="text-xs font-medium text-gray-700 dark:text-dark-text">
+                                          {formatBackendFieldLabel(field)}
+                                        </label>
+                                        {!editable && (
+                                          <span className="text-[10px] px-2 py-0.5 rounded bg-gray-100 text-gray-500 dark:bg-dark-border dark:text-dark-text-secondary">
+                                            {t.backendConfigReadOnly}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <label htmlFor={inputId} className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-text-secondary">
+                                        <input
+                                          id={inputId}
+                                          type="checkbox"
+                                          checked={value}
+                                          disabled={!editable}
+                                          onChange={(e) => handleBackendConfigToggle(fieldPath, e.target.checked)}
+                                          className="rounded"
+                                        />
+                                        <span>{formatBackendFieldValue(value)}</span>
+                                      </label>
+                                      {!editable && (
+                                        <p className="text-[11px] text-gray-400 dark:text-dark-text-secondary">
+                                          {t.backendConfigReadOnlyHint}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )
+                                }
+
+                                return (
+                                  <div key={fieldPath} className="space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <label htmlFor={inputId} className="block text-xs text-gray-500 dark:text-dark-text-secondary">
+                                        {formatBackendFieldLabel(field)}
+                                      </label>
+                                      {!editable && (
+                                        <span className="text-[10px] px-2 py-0.5 rounded bg-gray-100 text-gray-500 dark:bg-dark-border dark:text-dark-text-secondary">
+                                          {t.backendConfigReadOnly}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <input
+                                      id={inputId}
+                                      type={typeof value === 'number' ? 'number' : 'text'}
+                                      value={formattedValue}
+                                      disabled={!editable}
+                                      onChange={(e) => handleBackendConfigFieldChange(fieldPath, e.target.value, value)}
+                                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed"
+                                    />
+                                    {!editable && (
+                                      <p className="text-[11px] text-gray-400 dark:text-dark-text-secondary">
+                                        {t.backendConfigReadOnlyHint}
+                                      </p>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.backendConfigNoConfig}</div>
+                  )}
+                </section>
+
+                <section className="border dark:border-dark-border rounded-lg p-4 space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.backendConfigSecretsTitle}</h3>
+                      <p className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.backendConfigSecretsDescription}</p>
+                      {backendSecretsError && (
+                        <div className="inline-flex items-center gap-2 rounded-md bg-red-50 px-2.5 py-1 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                          <AlertCircle size={14} />
+                          <span>{backendSecretsError}</span>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveBackendSecrets()}
+                      disabled={!hasBackendSecretChanges || backendSecretsLoading || backendSecretsSaving}
+                      className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Save size={16} />
+                      {t.backendConfigSaveSecrets}
+                    </button>
+                  </div>
+
+                  {backendSecretsLoading ? (
+                    <div className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.backendConfigLoading}</div>
+                  ) : Object.keys(backendSecrets).length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {Object.entries(backendSecrets).map(([key, field]) => {
+                        const inputId = `backend-secret-${key.replace(/\./g, '-')}`
+                        const visible = Boolean(showBackendSecrets[key])
+                        return (
+                          <div key={key} className="border dark:border-dark-border rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <label htmlFor={inputId} className="text-xs font-medium text-gray-700 dark:text-dark-text">
+                                {key}
+                              </label>
+                              <span className={classNames(
+                                'text-[10px] px-2 py-0.5 rounded',
+                                field.configured
+                                  ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+                                  : 'bg-gray-100 text-gray-500 dark:bg-dark-border dark:text-dark-text-secondary'
+                              )}>
+                                {field.configured ? t.backendConfigConfigured : t.backendConfigNotConfigured}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                id={inputId}
+                                type={visible ? 'text' : 'password'}
+                                value={backendSecretsDraft[key] ?? ''}
+                                onChange={(e) => setBackendSecretsDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                                placeholder={field.configured ? MASKED_SECRET_VALUE : ''}
+                                className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowBackendSecrets((prev) => ({ ...prev, [key]: !prev[key] }))}
+                                className="p-2 text-gray-500 hover:bg-gray-100 dark:text-dark-text-secondary dark:hover:bg-dark-border rounded-lg transition-colors"
+                                aria-label={visible ? t.backendConfigHideSecret : t.backendConfigShowSecret}
+                              >
+                                {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.backendConfigNoSecrets}</div>
+                  )}
+                </section>
+              </div>
             </div>
 
             <div className={activeSection === 'workflow' ? 'block' : 'hidden'}>

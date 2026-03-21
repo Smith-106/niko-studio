@@ -294,6 +294,34 @@ export interface Translations {
   settingsTitle: string
   backendService: string
   backendUrl: string
+  backendConfigTitle: string
+  backendConfigDescription: string
+  backendConfigLoading: string
+  backendConfigSyncing: string
+  backendConfigSyncSuccess: string
+  backendConfigReload: string
+  backendConfigSave: string
+  backendConfigSaveSecrets: string
+  backendConfigReadOnly: string
+  backendConfigReadOnlyHint: string
+  backendConfigSecretsTitle: string
+  backendConfigSecretsDescription: string
+  backendConfigShowSecret: string
+  backendConfigHideSecret: string
+  backendConfigConfigured: string
+  backendConfigNotConfigured: string
+  backendConfigNoConfig: string
+  backendConfigNoSecrets: string
+  backendConfigSectionAgent: string
+  backendConfigSectionMemory: string
+  backendConfigSectionWorkflow: string
+  backendConfigSectionGraph: string
+  backendConfigSectionWriting: string
+  backendConfigSectionGateway: string
+  backendConfigSectionBackup: string
+  backendConfigSectionToken: string
+  backendConfigSectionObsidian: string
+  backendConfigSectionIntegration: string
   llmConfig: string
   multiModel: string
   primary: string
@@ -779,6 +807,34 @@ export const translations: Record<Language, Translations> = {
     settingsTitle: '设置',
     backendService: '后端服务',
     backendUrl: 'Niko-Studio 后端地址',
+    backendConfigTitle: '后端配置',
+    backendConfigDescription: '查看并编辑后端运行时配置。只读字段需要修改配置文件或重启服务。',
+    backendConfigLoading: '加载配置中...',
+    backendConfigSyncing: '同步中...',
+    backendConfigSyncSuccess: '同步成功',
+    backendConfigReload: '从文件重新加载',
+    backendConfigSave: '保存更改',
+    backendConfigSaveSecrets: '保存密钥',
+    backendConfigReadOnly: '只读',
+    backendConfigReadOnlyHint: '该字段需要修改配置文件或重启服务后生效',
+    backendConfigSecretsTitle: '敏感字段',
+    backendConfigSecretsDescription: '敏感字段会单独通过 secrets 接口保存。',
+    backendConfigShowSecret: '显示',
+    backendConfigHideSecret: '隐藏',
+    backendConfigConfigured: '已配置',
+    backendConfigNotConfigured: '未配置',
+    backendConfigNoConfig: '暂无后端配置数据。',
+    backendConfigNoSecrets: '当前没有可编辑的敏感字段。',
+    backendConfigSectionAgent: 'Agent',
+    backendConfigSectionMemory: 'Memory',
+    backendConfigSectionWorkflow: 'Workflow',
+    backendConfigSectionGraph: 'Graph',
+    backendConfigSectionWriting: 'Writing',
+    backendConfigSectionGateway: 'Gateway',
+    backendConfigSectionBackup: 'Backup',
+    backendConfigSectionToken: 'Token',
+    backendConfigSectionObsidian: 'Obsidian',
+    backendConfigSectionIntegration: 'Integration',
     llmConfig: 'LLM 模型配置',
     multiModel: '多模型并行',
     primary: '主要',
@@ -1262,6 +1318,34 @@ export const translations: Record<Language, Translations> = {
     settingsTitle: 'Settings',
     backendService: 'Backend Service',
     backendUrl: 'Niko-Studio Backend URL',
+    backendConfigTitle: 'Backend Configuration',
+    backendConfigDescription: 'View and edit runtime backend configuration. Read-only fields still require file changes or a service restart.',
+    backendConfigLoading: 'Loading configuration...',
+    backendConfigSyncing: 'Syncing...',
+    backendConfigSyncSuccess: 'Sync successful',
+    backendConfigReload: 'Reload from file',
+    backendConfigSave: 'Save changes',
+    backendConfigSaveSecrets: 'Save secrets',
+    backendConfigReadOnly: 'Read only',
+    backendConfigReadOnlyHint: 'This field requires a config file change or service restart to take effect',
+    backendConfigSecretsTitle: 'Sensitive Fields',
+    backendConfigSecretsDescription: 'Sensitive fields are saved separately through the secrets endpoint.',
+    backendConfigShowSecret: 'Show',
+    backendConfigHideSecret: 'Hide',
+    backendConfigConfigured: 'Configured',
+    backendConfigNotConfigured: 'Not configured',
+    backendConfigNoConfig: 'No backend configuration data available.',
+    backendConfigNoSecrets: 'There are currently no editable sensitive fields.',
+    backendConfigSectionAgent: 'Agent',
+    backendConfigSectionMemory: 'Memory',
+    backendConfigSectionWorkflow: 'Workflow',
+    backendConfigSectionGraph: 'Graph',
+    backendConfigSectionWriting: 'Writing',
+    backendConfigSectionGateway: 'Gateway',
+    backendConfigSectionBackup: 'Backup',
+    backendConfigSectionToken: 'Token',
+    backendConfigSectionObsidian: 'Obsidian',
+    backendConfigSectionIntegration: 'Integration',
     llmConfig: 'LLM Configuration',
     multiModel: 'Multi-Model Parallel',
     primary: 'Primary',

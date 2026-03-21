@@ -240,6 +240,13 @@ def client_no_lifespan(
         set_mcp_service_enabled,
         probe_mcp_service_health,
     )
+    from src.mcp.endpoints.config import (
+        get_config,
+        update_config,
+        get_secrets,
+        update_secrets,
+        reload_config,
+    )
 
     # Create minimal app without MCP lifespan
     app = Starlette(
@@ -255,6 +262,12 @@ def client_no_lifespan(
             Route("/mcp/services/{service_id}/health", probe_mcp_service_health, methods=["POST"]),
             Route("/chat", chat_endpoint, methods=["POST"]),
             Route("/chat/stream", chat_stream_endpoint, methods=["POST"]),
+            # Config endpoints
+            Route("/config", get_config, methods=["GET"]),
+            Route("/config", update_config, methods=["PUT"]),
+            Route("/config/secrets", get_secrets, methods=["GET"]),
+            Route("/config/secrets", update_secrets, methods=["PUT"]),
+            Route("/config/reload", reload_config, methods=["POST"]),
         ]
     )
     return TestClient(app)

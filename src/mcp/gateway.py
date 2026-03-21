@@ -221,6 +221,12 @@ from src.mcp.endpoints import (
     # Chat endpoints
     chat_endpoint,
     chat_stream_endpoint,
+    # Config endpoints
+    get_config,
+    update_config,
+    get_secrets,
+    update_secrets,
+    reload_config,
 )
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -595,6 +601,12 @@ def create_gateway() -> Starlette:
             Route("/skills/chain", skills_chain_endpoint, methods=["POST"]),
             Route("/chat", chat_endpoint, methods=["POST"]),
             Route("/chat/stream", chat_stream_endpoint, methods=["POST"]),
+            # Config endpoints
+            Route("/config", get_config, methods=["GET"]),
+            Route("/config", update_config, methods=["PUT"]),
+            Route("/config/secrets", get_secrets, methods=["GET"]),
+            Route("/config/secrets", update_secrets, methods=["PUT"]),
+            Route("/config/reload", reload_config, methods=["POST"]),
             # MCP 服务挂载 (7个服务)
             Mount("/memory", memory_mcp.streamable_http_app()),
             Mount("/graph", graph_mcp.streamable_http_app()),

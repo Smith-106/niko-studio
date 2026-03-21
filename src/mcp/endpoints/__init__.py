@@ -67,6 +67,13 @@ from src.mcp.endpoints.chat import (
     chat_endpoint,
     chat_stream_endpoint,
 )
+from src.mcp.endpoints.config import (
+    get_config,
+    update_config,
+    get_secrets,
+    update_secrets,
+    reload_config,
+)
 
 __all__ = [
     # Health endpoints
@@ -122,4 +129,10 @@ __all__ = [
     # Chat endpoints
     "chat_endpoint",
     "chat_stream_endpoint",
+    # Config endpoints
+    "get_config",
+    "update_config",
+    "get_secrets",
+    "update_secrets",
+    "reload_config",
 ]
