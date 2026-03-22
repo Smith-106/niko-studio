@@ -744,6 +744,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <h2 className="text-lg font-semibold dark:text-dark-text">{t.settingsTitle}</h2>
           <button
             onClick={onClose}
+            aria-label={t.settingsClose}
+            title={t.settingsClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-lg transition-colors dark:text-dark-text"
           >
             <X size={20} />
