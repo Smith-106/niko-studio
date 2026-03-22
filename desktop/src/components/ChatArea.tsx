@@ -115,6 +115,8 @@ export function ChatArea({
   } = useSettingsStore()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const shouldStickToBottomRef = useRef(true)
   const lastRetryPayloadRef = useRef<RetryPayload | null>(null)
   const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
 
@@ -136,12 +138,13 @@ export function ChatArea({
       uploadErrorSize: t.uploadErrorSize,
       uploadErrorNetwork: t.uploadErrorNetwork,
       uploadErrorService: t.uploadErrorService,
+      uploadMultipleProgress: t.uploadMultipleProgress,
+      uploadMultipleComplete: t.uploadMultipleComplete,
     },
     translate: (key, vars) => translate(key, vars),
     currentConversationId,
     createConversation,
     getCurrentConversationId: () => useAppStore.getState().currentConversationId,
-    addMessage,
   })
   const modePresets = useMemo(() => ([
     { id: 'focusWriting' as const, label: t.modePresetFocusWriting },
@@ -203,9 +206,27 @@ export function ChatArea({
 
 
 
+  const handleContainerScroll = useCallback(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const { scrollTop, scrollHeight, clientHeight } = container
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50
+    shouldStickToBottomRef.current = isAtBottom
+  }, [])
+
   useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    container.addEventListener('scroll', handleContainerScroll)
+    return () => container.removeEventListener('scroll', handleContainerScroll)
+  }, [handleContainerScroll])
+
+  useEffect(() => {
+    if (!shouldStickToBottomRef.current) return
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, streamingContent])
 
   const handleCancelStream = () => {
     cancelStream()
@@ -685,7 +706,7 @@ export function ChatArea({
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-dark-surface">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
             <div className="text-6xl mb-4">...</div>
@@ -860,6 +881,8 @@ export function ChatArea({
           workflowStandardLabel={t.standard}
           workflowBrainstormLabel={t.brainstorm}
           workflowCoordinatorLabel={t.coordinator}
+          showMoreLabel={t.showMore}
+          showLessLabel={t.showLess}
           modePresets={modePresets}
           onSetChatMode={setChatMode}
           onToggleModelComparison={() => setEnableModelComparison((prev) => !prev)}
@@ -879,6 +902,8 @@ export function ChatArea({
           voiceInputLabel={t.composerVoiceInput}
           sendLabel={t.composerSend}
           cancelLabel={t.cancel}
+          sendShortcutLabel={t.sendShortcutLabel}
+          sendShortcutHint={settings.sendShortcut === 'ctrlEnter' ? t.sendShortcutCtrlEnter : t.sendShortcutEnter}
           fileInputRef={fileInputRef}
           onInputChange={setInput}
           onKeyDown={handleKeyDown}
