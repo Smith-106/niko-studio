@@ -26,10 +26,10 @@ interface McpStatusPanelProps {
 const KEY_SERVICES = ['memory', 'graph', 'search', 'workflow', 'critic', 'agent', 'skills']
 
 const CONNECTION_STATE_COLOR: Record<string, string> = {
-  connected: 'text-green-600',
-  degraded: 'text-amber-600',
-  disconnected: 'text-red-600',
-  reconnecting: 'text-blue-600',
+  connected: 'text-success-600 dark:text-success-500',
+  degraded: 'text-warning-600 dark:text-warning-500',
+  disconnected: 'text-danger-600 dark:text-danger-500',
+  reconnecting: 'text-primary-600 dark:text-primary-500',
 }
 
 export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
@@ -274,28 +274,28 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
 
   return (
     <div
-      className="fixed right-0 top-12 bottom-0 w-96 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg flex flex-col"
+      className="fixed right-0 top-14 bottom-0 w-96 bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col z-30 transform transition-transform"
       role="dialog"
       aria-modal="true"
       aria-label={t.mcpPanelAriaLabel}
     >
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-dark-border">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md">
         <div className="flex items-center gap-2">
-          <Server size={20} className="text-blue-600" />
-          <span className="font-semibold text-gray-900 dark:text-dark-text">{t.mcpPanelTitle}</span>
+          <Server size={18} className="text-primary-600" />
+          <span className="font-semibold text-gray-800 dark:text-dark-text tracking-wide text-sm">{t.mcpPanelTitle}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={refreshStatus}
             disabled={loading}
-            className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text flex items-center gap-1"
+            className="text-xs px-3 py-1.5 font-medium bg-white dark:bg-dark-bg hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin text-primary-500' : ''} />
             {loading ? t.mcpRefreshing : t.mcpRefresh}
           </button>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none rounded-md p-1 hover:bg-gray-200 dark:hover:bg-dark-surface2 transition-colors"
             aria-label={t.mcpCloseAria}
           >
             ✕
@@ -303,179 +303,195 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar bg-white dark:bg-dark-bg">
         {error && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm">
-            <AlertCircle size={16} />
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-warning-50 border border-warning-200 text-warning-700 dark:bg-warning-900/20 dark:border-warning-500/20 dark:text-warning-400 text-xs font-medium shadow-sm animate-fade-in">
+            <AlertCircle size={16} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {serviceActionError && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm">
-            <AlertCircle size={16} />
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-danger-50 border border-danger-200 text-danger-600 dark:bg-danger-900/20 dark:border-danger-500/20 dark:text-danger-400 text-xs font-medium shadow-sm animate-fade-in">
+            <AlertCircle size={16} className="shrink-0" />
             <span>{serviceActionError}</span>
           </div>
         )}
 
-        <section className="border border-gray-200 dark:border-dark-border rounded-lg p-3">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2">{t.mcpGatewayStatus}</h3>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.mcpGatewayHealth}</span>
-              <span className={`text-sm font-medium ${connectionStateColor}`}>
+        <section className="border border-gray-200 dark:border-dark-border rounded-xl p-4 bg-slate-50 dark:bg-dark-surface shadow-sm">
+          <h3 className="text-[13px] font-semibold text-gray-700 dark:text-dark-text mb-3 uppercase tracking-wider">{t.mcpGatewayStatus}</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-200/60 dark:border-dark-border/60">
+              <span className="text-xs font-medium text-gray-500 dark:text-dark-text-secondary">{t.mcpGatewayHealth}</span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-md bg-white dark:bg-dark-bg shadow-sm border border-gray-100 dark:border-dark-border/50 ${connectionStateColor}`}>
                 {connectionStateLabel}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.mcpSessionId}</span>
-              <span className="text-xs font-mono text-gray-700 dark:text-dark-text truncate max-w-[220px]" title={runtimeView.sessionId ?? t.mcpNotAvailable}>
+            <div className="flex items-center justify-between pb-2 border-b border-gray-200/60 dark:border-dark-border/60">
+              <span className="text-xs font-medium text-gray-500 dark:text-dark-text-secondary">{t.mcpSessionId}</span>
+              <span className="text-[11px] font-mono text-gray-600 dark:text-dark-text bg-gray-100 dark:bg-dark-bg px-2 py-0.5 rounded truncate max-w-[200px]" title={runtimeView.sessionId ?? t.mcpNotAvailable}>
                 {runtimeView.sessionId ?? t.mcpNotAvailable}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.mcpReconnect}</span>
-              <span className="text-sm text-gray-700 dark:text-dark-text">
-                {reconnectStateLabel} · #{runtimeView.reconnectAttempts}
+              <span className="text-xs font-medium text-gray-500 dark:text-dark-text-secondary">{t.mcpReconnect}</span>
+              <span className="text-xs font-medium text-gray-700 dark:text-dark-text">
+                {reconnectStateLabel} <span className="text-gray-400 mx-1">·</span> <span className="text-primary-500">#{runtimeView.reconnectAttempts}</span>
               </span>
             </div>
             {runtimeView.lastError && (
-              <div className="text-xs text-red-600 dark:text-red-300 break-all">
-                {t.mcpLastErrorPrefix}{runtimeView.lastError}
+              <div className="text-[11px] text-danger-600 dark:text-danger-400 break-all bg-danger-50 dark:bg-danger-900/10 p-2 rounded-md border border-danger-100 dark:border-danger-500/20 mt-2">
+                <span className="font-semibold">{t.mcpLastErrorPrefix}</span> {runtimeView.lastError}
               </div>
             )}
           </div>
         </section>
 
-        <section className="border border-gray-200 dark:border-dark-border rounded-lg p-3">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2">{t.mcpKeyServiceStatus}</h3>
+        <section className="border border-gray-200 dark:border-dark-border rounded-xl p-4 bg-slate-50 dark:bg-dark-surface shadow-sm">
+          <h3 className="text-[13px] font-semibold text-gray-700 dark:text-dark-text mb-3 uppercase tracking-wider">{t.mcpKeyServiceStatus}</h3>
           <div className="space-y-2">
             {serviceStatus.map(({ service, online, statusLabel }) => (
-              <div key={service} className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 dark:text-dark-text-secondary">{service}</span>
-                <span className={online ? 'text-green-600' : 'text-gray-400 dark:text-dark-text-secondary'}>
-                  {online ? t.mcpServiceOnline : t.mcpServiceNotReady}（{statusLabel}）
-                </span>
+              <div key={service} className="flex items-center justify-between text-xs p-2 rounded-lg bg-white dark:bg-dark-bg border border-gray-100 dark:border-dark-border/50 shadow-sm transition-colors hover:border-primary-500/30">
+                <span className="font-medium text-gray-700 dark:text-dark-text capitalize tracking-wide">{service}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-success-500 animate-pulse-subtle' : 'bg-gray-400'}`}></span>
+                  <span className={online ? 'text-success-600 dark:text-success-500 font-medium' : 'text-gray-500 dark:text-dark-text-muted font-medium'}>
+                    {online ? t.mcpServiceOnline : t.mcpServiceNotReady}
+                    <span className="text-gray-400 font-normal ml-1">({statusLabel})</span>
+                  </span>
+                </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="border border-gray-200 dark:border-dark-border rounded-lg p-3">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2 flex items-center gap-1">
-            <Activity size={14} />
+        <section className="border border-gray-200 dark:border-dark-border rounded-xl p-4 bg-slate-50 dark:bg-dark-surface shadow-sm">
+          <h3 className="text-[13px] font-semibold text-gray-700 dark:text-dark-text mb-3 uppercase tracking-wider flex items-center gap-1.5">
+            <Activity size={14} className="text-primary-500" />
             {t.mcpRuntimeMetrics}
           </h3>
           {metrics ? (
-            <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 dark:text-dark-text">
-              <div>{t.mcpRequestsTotal.replace('{value}', String(metrics.requests_total))}</div>
-              <div>{t.mcpRequestsFailed.replace('{value}', String(metrics.requests_failed_total))}</div>
-              <div>{t.mcpLatencyAvg.replace('{value}', String(metrics.latency_ms_avg))}</div>
-              <div>{t.mcpLatencyMax.replace('{value}', String(metrics.latency_ms_max))}</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white dark:bg-dark-bg p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 shadow-sm">
+                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">Total</div>
+                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.mcpRequestsTotal.replace('{value}', String(metrics.requests_total)).replace('请求总数: ', '')}</div>
+              </div>
+              <div className="bg-white dark:bg-dark-bg p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 shadow-sm">
+                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">Failed</div>
+                <div className="text-sm font-semibold text-danger-500">{t.mcpRequestsFailed.replace('{value}', String(metrics.requests_failed_total)).replace('失败请求: ', '')}</div>
+              </div>
+              <div className="bg-white dark:bg-dark-bg p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 shadow-sm">
+                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">Avg Latency</div>
+                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.mcpLatencyAvg.replace('{value}', String(metrics.latency_ms_avg)).replace('平均延迟: ', '')}</div>
+              </div>
+              <div className="bg-white dark:bg-dark-bg p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 shadow-sm">
+                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">Max Latency</div>
+                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.mcpLatencyMax.replace('{value}', String(metrics.latency_ms_max)).replace('最大延迟: ', '')}</div>
+              </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-400 dark:text-dark-text-secondary">{t.mcpNoMetricsData}</div>
+            <div className="text-xs text-gray-400 dark:text-dark-text-muted italic">{t.mcpNoMetricsData}</div>
           )}
         </section>
 
-        <section className="border border-gray-200 dark:border-dark-border rounded-lg p-3">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2">{t.mcpServiceDynamicConfig}</h3>
-          <div className="space-y-2">
+        <section className="border border-gray-200 dark:border-dark-border rounded-xl p-4 bg-slate-50 dark:bg-dark-surface shadow-sm">
+          <h3 className="text-[13px] font-semibold text-gray-700 dark:text-dark-text mb-3 uppercase tracking-wider">{t.mcpServiceDynamicConfig}</h3>
+          <div className="space-y-4">
             <div className="grid grid-cols-3 gap-2">
               <input
                 value={newServiceId}
                 onChange={(event) => setNewServiceId(event.target.value)}
                 placeholder={t.mcpServiceIdPlaceholder}
-                className="col-span-1 px-2 py-1 text-xs border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text"
+                className="col-span-1 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-dark-border rounded-md bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500 outline-none transition-all shadow-sm"
               />
               <input
                 value={newServiceName}
                 onChange={(event) => setNewServiceName(event.target.value)}
                 placeholder={t.mcpServiceNamePlaceholder}
-                className="col-span-1 px-2 py-1 text-xs border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text"
+                className="col-span-1 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-dark-border rounded-md bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500 outline-none transition-all shadow-sm"
               />
               <input
                 value={newServicePath}
                 onChange={(event) => setNewServicePath(event.target.value)}
                 placeholder={t.mcpServicePathPlaceholder}
-                className="col-span-1 px-2 py-1 text-xs border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text"
+                className="col-span-1 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-dark-border rounded-md bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500 outline-none transition-all shadow-sm"
               />
             </div>
             <button
               onClick={handleCreateService}
               disabled={serviceActionLoading === 'create'}
-              className="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
+              className="w-full text-xs font-medium px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-md disabled:opacity-50 transition-all shadow-sm active:scale-[0.98]"
             >
               {serviceActionLoading === 'create' ? t.mcpCreating : t.mcpCreateService}
             </button>
 
-            <div className="space-y-2">
+            <div className="space-y-3 pt-2 border-t border-gray-200/60 dark:border-dark-border/60">
               {serviceConfigRows.length > 0 ? serviceConfigRows.map((service) => (
-                <div key={service.id} className="border border-gray-200 dark:border-dark-border rounded p-2 space-y-2">
+                <div key={service.id} className="border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg rounded-xl p-3 space-y-2.5 shadow-sm transition-all hover:shadow-md">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-mono text-gray-600 dark:text-dark-text-secondary">{service.id}</span>
-                    <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{service.statusLabel}</span>
+                    <span className="text-[11px] font-mono font-bold text-gray-500 dark:text-dark-text-muted bg-gray-100 dark:bg-dark-surface2 px-1.5 py-0.5 rounded">{service.id}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${service.status === 'ok' ? 'bg-success-50 text-success-600 dark:bg-success-900/20 dark:text-success-400' : 'bg-gray-100 text-gray-600 dark:bg-dark-surface2 dark:text-gray-400'}`}>{service.statusLabel}</span>
                   </div>
                   <input
                     value={service.draftName}
                     onChange={(event) => setServiceDraftNames((prev) => ({ ...prev, [service.id]: event.target.value }))}
-                    className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-dark-border rounded bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text"
+                    className="w-full px-2.5 py-1.5 text-xs font-medium border border-gray-200 dark:border-dark-border rounded-md bg-gray-50 dark:bg-dark-surface text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500 outline-none transition-all"
                   />
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-dark-text-secondary">
-                    <span className="truncate" title={service.path}>{service.path}</span>
-                    <span>{service.enabled ? t.mcpServiceEnabled : t.mcpServiceDisabled}</span>
+                  <div className="flex items-center justify-between text-[11px] font-medium text-gray-500 dark:text-dark-text-secondary">
+                    <span className="truncate max-w-[160px]" title={service.path}>{service.path}</span>
+                    <span className={service.enabled ? 'text-primary-600 dark:text-primary-400' : ''}>{service.enabled ? t.mcpServiceEnabled : t.mcpServiceDisabled}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pt-1">
                     <button
                       onClick={() => void handleServiceRename(service)}
                       disabled={serviceActionLoading === `rename:${service.id}`}
-                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                      className="flex-1 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
                     >
                       {serviceActionLoading === `rename:${service.id}` ? t.mcpSaving : t.mcpSaveName}
                     </button>
                     <button
                       onClick={() => void handleServiceToggle(service)}
                       disabled={serviceActionLoading === `toggle:${service.id}` || service.builtin}
-                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                      className={`flex-1 text-[11px] font-medium px-2 py-1.5 border rounded-md disabled:opacity-50 transition-all active:scale-95 ${service.enabled ? 'bg-white dark:bg-dark-surface border-gray-200 dark:border-dark-border text-warning-600 dark:text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-900/10' : 'bg-primary-50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-500/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100'}`}
                     >
                       {service.enabled ? t.mcpDisable : t.mcpEnable}
                     </button>
                     <button
                       onClick={() => void handleServiceProbe(service.id)}
                       disabled={serviceActionLoading === `probe:${service.id}`}
-                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                      className="flex-1 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
                     >
                       {serviceActionLoading === `probe:${service.id}` ? t.mcpProbing : t.mcpHealthCheck}
                     </button>
                   </div>
                 </div>
               )) : (
-                <div className="text-sm text-gray-400 dark:text-dark-text-secondary">{t.mcpNoServiceConfigData}</div>
+                <div className="text-xs text-gray-400 dark:text-dark-text-muted italic">{t.mcpNoServiceConfigData}</div>
               )}
             </div>
           </div>
         </section>
 
-        <section className="border border-gray-200 dark:border-dark-border rounded-lg p-3">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2 flex items-center gap-1">
-            <Wrench size={14} />
+        <section className="border border-gray-200 dark:border-dark-border rounded-xl p-4 bg-slate-50 dark:bg-dark-surface shadow-sm mb-4">
+          <h3 className="text-[13px] font-semibold text-gray-700 dark:text-dark-text mb-3 uppercase tracking-wider flex items-center gap-1.5">
+            <Wrench size={14} className="text-primary-500" />
             {t.mcpToolStats}
           </h3>
           {serviceToolCounts.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {serviceToolCounts.map((item) => (
-                <div key={item.service} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 dark:text-dark-text-secondary">{item.service}</span>
-                  <span className="text-gray-800 dark:text-dark-text font-medium">{item.count}</span>
+                <div key={item.service} className="flex items-center justify-between text-xs px-2">
+                  <span className="font-medium text-gray-600 dark:text-dark-text-secondary capitalize">{item.service}</span>
+                  <span className="text-gray-800 dark:text-dark-text font-bold bg-white dark:bg-dark-bg px-2 py-0.5 rounded border border-gray-100 dark:border-dark-border/50 shadow-sm">{item.count}</span>
                 </div>
               ))}
-              <div className="pt-2 border-t border-gray-200 dark:border-dark-border flex items-center justify-between text-sm font-medium">
-                <span className="text-gray-700 dark:text-dark-text">{t.mcpTotalTools}</span>
-                <span className="text-blue-600">{totalTools}</span>
+              <div className="pt-3 mt-1 border-t border-gray-200/60 dark:border-dark-border/60 flex items-center justify-between text-sm">
+                <span className="font-semibold text-gray-700 dark:text-dark-text uppercase tracking-wider text-[11px]">{t.mcpTotalTools}</span>
+                <span className="font-bold text-primary-600 text-base">{totalTools}</span>
               </div>
             </div>
           ) : (
-            <div className="text-sm text-gray-400 dark:text-dark-text-secondary">{t.mcpNoToolData}</div>
+            <div className="text-xs text-gray-400 dark:text-dark-text-muted italic">{t.mcpNoToolData}</div>
           )}
         </section>
 

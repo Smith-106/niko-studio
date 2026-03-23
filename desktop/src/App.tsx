@@ -278,10 +278,9 @@ function App() {
   const headerDotClass = APP_CONNECTION_DOT[headerConnectionState] ?? APP_CONNECTION_DOT.disconnected
   const headerConnectionLabelKey = APP_CONNECTION_LABEL[headerConnectionState] ?? (backendStatus ? 'serviceRunning' : 'serviceOffline')
   const headerConnectionText = t[headerConnectionLabelKey]
-  const contextUsageHint = contextUsage.percent >= 85 ? t.contextUsageHighHint : contextUsage.percent >= 65 ? t.contextUsageMediumHint : t.contextUsageLowHint
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-dark-bg">
+    <div className="flex h-screen bg-slate-50 dark:bg-dark-bg text-slate-900 dark:text-dark-text font-sans antialiased overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -298,24 +297,33 @@ function App() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col relative min-w-0 bg-white dark:bg-dark-bg shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] z-20">
         {/* Header */}
-        <header className="h-12 border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface flex items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-gray-800 dark:text-dark-text">{t.appTitle}</span>
+        <header className="h-14 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-10 relative">
+          <div className="flex items-center gap-3">
+            <span className="text-base font-semibold text-gray-800 dark:text-dark-text tracking-wide">{t.appTitle}</span>
           </div>
-          <div className="flex items-center gap-3 relative">
-            <div className={`w-2 h-2 rounded-full ${headerDotClass}`} />
-            <span className="text-sm text-gray-500 dark:text-dark-text-secondary">
-              {headerConnectionText}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-dark-text-secondary">
-              {t.contextUsage} ~{contextUsage.usedK.toFixed(1)}k/{contextUsage.totalK}k ({contextUsage.percent.toFixed(1)}%)
-            </span>
-            <span className="text-[11px] text-gray-400 dark:text-dark-text-secondary">{contextUsageHint}</span>
+          <div className="flex items-center gap-4 relative">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-dark-surface2 shadow-inner border border-gray-200 dark:border-dark-border2">
+              <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} />
+              <span className="text-[11px] font-medium text-gray-600 dark:text-dark-text">
+                {headerConnectionText}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-gray-500 dark:text-dark-text-secondary">
+                {t.contextUsage} <span className="text-gray-700 dark:text-dark-text">{contextUsage.usedK.toFixed(1)}k/{contextUsage.totalK}k</span>
+              </span>
+              <div className="w-16 h-1.5 bg-gray-200 dark:bg-dark-border2 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-300 ${contextUsage.percent > 85 ? 'bg-danger-500' : contextUsage.percent > 65 ? 'bg-warning-500' : 'bg-primary-500'}`} 
+                  style={{ width: `${Math.min(100, Math.max(0, contextUsage.percent))}%` }} 
+                />
+              </div>
+            </div>
             <button
               onClick={handleToggleCheckpointMenu}
-              className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border2 text-gray-700 dark:text-dark-text rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all active:scale-[0.98]"
             >
               {t.checkpoint}
             </button>
@@ -413,3 +421,4 @@ function App() {
 }
 
 export default App
+

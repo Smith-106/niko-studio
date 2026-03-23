@@ -41,19 +41,19 @@ export function ChatAreaComposer({
   onSend,
 }: ChatAreaComposerProps) {
   return (
-    <div className="flex items-end gap-3">
-      <div className="flex-1 rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-sm dark:border-dark-border dark:bg-dark-surface">
+    <div className="flex items-end gap-3 mt-4">
+      <div className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all">
         <div className="relative">
           <textarea
             value={input}
             onChange={(event) => onInputChange(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder={inputPlaceholder}
-            className="w-full resize-none border-0 bg-transparent px-1 py-1 pr-24 text-sm text-gray-900 focus:outline-none focus:ring-0 dark:text-dark-text"
-            rows={1}
-            style={{ minHeight: '48px', maxHeight: '200px' }}
+            className="w-full resize-none border-0 bg-transparent py-1 pr-24 text-[15px] leading-relaxed text-gray-900 focus:outline-none focus:ring-0 dark:text-dark-text custom-scrollbar"
+            rows={Math.min(8, Math.max(1, input.split('\n').length))}
+            style={{ minHeight: '28px', maxHeight: '200px' }}
           />
-          <div className="absolute right-0 bottom-0 flex items-center gap-1">
+          <div className="absolute right-0 bottom-0 flex items-center gap-1 bg-white dark:bg-dark-surface">
             <input
               ref={fileInputRef}
               type="file"
@@ -82,12 +82,9 @@ export function ChatAreaComposer({
             </button>
           </div>
         </div>
-        <div className="mt-2 flex items-center justify-between gap-3 px-1">
-          <span className="text-xs text-gray-500 dark:text-dark-text-secondary">
-            {sendShortcutLabel}: {sendShortcutHint}
-          </span>
-          <span className="text-xs text-gray-400 dark:text-dark-text-secondary">
-            {isLoading ? cancelLabel : sendLabel}
+        <div className="mt-2 flex items-center justify-between gap-3 px-1 border-t border-gray-100 dark:border-dark-border/50 pt-2">
+          <span className="text-[11px] text-gray-400 dark:text-dark-text-muted">
+            {sendShortcutLabel}: <kbd className="font-sans px-1 py-0.5 bg-gray-100 dark:bg-dark-bg rounded border border-gray-200 dark:border-dark-border">{sendShortcutHint}</kbd>
           </span>
         </div>
       </div>
@@ -96,10 +93,10 @@ export function ChatAreaComposer({
           onClick={onCancelStream}
           aria-label={cancelLabel}
           title={cancelLabel}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-600 text-white transition-colors hover:bg-rose-700"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger-500 text-white transition-all hover:bg-danger-600 active:scale-95 shadow-sm"
           type="button"
         >
-          <Square size={18} />
+          <Square size={18} className="fill-current" />
         </button>
       ) : (
         <button
@@ -107,12 +104,13 @@ export function ChatAreaComposer({
           aria-label={sendLabel}
           title={sendLabel}
           disabled={sendDisabled}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white transition-all hover:bg-primary-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm"
           type="button"
         >
-          <Send size={20} />
+          <Send size={18} className="ml-0.5" />
         </button>
       )}
     </div>
   )
 }
+

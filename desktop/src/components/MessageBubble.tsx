@@ -86,7 +86,7 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
     code({ className, children }) {
       const codeText = String(children).replace(/\n$/, '')
       return (
-        <pre className="rounded-md overflow-x-auto bg-[#1f2937] text-[#f9fafb] p-3 text-sm">
+        <pre className="rounded-md overflow-x-auto bg-dark-bg text-dark-text p-3 text-sm my-2 border border-dark-border shadow-sm">
           <code className={className}>{codeText}</code>
         </pre>
       )
@@ -94,21 +94,21 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
   }
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+        className={`max-w-[85%] rounded-2xl px-5 py-4 shadow-sm transition-all duration-200 ${
           isUser
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-800'
+            ? 'bg-primary-600 text-white rounded-tr-sm'
+            : 'bg-dark-surface border border-dark-border text-dark-text rounded-tl-sm'
         }`}
       >
         {/* Skills Badge */}
         {message.skills && message.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {message.skills.map((skill) => (
               <span
                 key={skill}
-                className="px-2 py-0.5 bg-blue-500/20 text-blue-600 text-xs rounded-full"
+                className="px-2.5 py-1 bg-primary-500/10 text-primary-400 text-[11px] uppercase tracking-wider font-medium rounded-full border border-primary-500/20"
               >
                 📦 {skill}
               </span>
@@ -118,7 +118,8 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
 
         {/* Retrieval Status */}
         {!isUser && message.writerMetadata?.knowledge_retrieved && (
-          <div className="mb-2 text-xs text-gray-500 dark:text-dark-text-secondary">
+          <div className="mb-3 text-xs text-dark-text-muted flex items-center gap-1.5 bg-dark-bg/50 px-3 py-1.5 rounded-md border border-dark-border/50">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse-subtle"></span>
             {t.messageBubbleRetrievalStatus
               .replace('{entities}', String(message.writerMetadata.knowledge_retrieved.entities_count))
               .replace('{relations}', String(message.writerMetadata.knowledge_retrieved.relations_count))
@@ -128,70 +129,72 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
 
         {/* Content */}
         {message.comparison?.enabled ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3" onMouseUp={handleMouseUp}>
-            <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="text-xs font-semibold text-gray-500 dark:text-dark-text-secondary">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2" onMouseUp={handleMouseUp}>
+            <div className="rounded-xl border border-dark-border bg-dark-bg p-4 shadow-inner">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-dark-text-secondary flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-primary-400"></span>
                   {`${t.messageBubblePrimaryModelLabel}${message.comparison.primary.model}`}
                 </div>
                 {onComparisonAccept && (
                   <button
                     type="button"
                     onClick={() => onComparisonAccept(message.comparison!.primary.content)}
-                    className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 dark:bg-dark-border dark:text-dark-text"
+                    className="rounded-full bg-primary-600/10 px-3 py-1.5 text-xs font-medium text-primary-400 hover:bg-primary-600/20 border border-primary-500/20 transition-colors"
                   >
                     {t.messageBubbleAcceptPrimary}
                   </button>
                 )}
               </div>
               {primaryDiffLines.length > 0 && (
-                <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
-                  <span className="font-medium">{t.messageBubbleDiffHighlightsLabel}</span>
+                <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="font-medium text-warning-500">{t.messageBubbleDiffHighlightsLabel}</span>
                   {primaryDiffLines.map((line) => (
                     <span
                       key={line}
-                      className="rounded-full bg-amber-100 px-2 py-0.5 dark:bg-amber-900/40"
+                      className="rounded-full bg-warning-500/10 text-warning-500 px-2.5 py-0.5 border border-warning-500/20"
                     >
                       {line}
                     </span>
                   ))}
                 </div>
               )}
-              <div className="markdown-body">
+              <div className="markdown-body prose prose-invert max-w-none text-sm leading-relaxed text-dark-text font-serif">
                 <ReactMarkdown components={markdownComponents}>
                   {message.comparison.primary.content}
                 </ReactMarkdown>
               </div>
             </div>
-            <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="text-xs font-semibold text-gray-500 dark:text-dark-text-secondary">
+            <div className="rounded-xl border border-dark-border bg-dark-bg p-4 shadow-inner">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-dark-text-secondary flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-dark-border2"></span>
                   {`${t.messageBubbleControlModelLabel}${message.comparison.control.model}`}
                 </div>
                 {onComparisonAccept && (
                   <button
                     type="button"
                     onClick={() => onComparisonAccept(message.comparison!.control.content)}
-                    className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-dark-border dark:text-dark-text"
+                    className="rounded-full bg-dark-surface2 px-3 py-1.5 text-xs font-medium text-dark-text hover:bg-dark-border border border-dark-border2 transition-colors"
                   >
                     {t.messageBubbleAcceptControl}
                   </button>
                 )}
               </div>
               {controlDiffLines.length > 0 && (
-                <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
-                  <span className="font-medium">{t.messageBubbleDiffHighlightsLabel}</span>
+                <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="font-medium text-warning-500">{t.messageBubbleDiffHighlightsLabel}</span>
                   {controlDiffLines.map((line) => (
                     <span
                       key={line}
-                      className="rounded-full bg-amber-100 px-2 py-0.5 dark:bg-amber-900/40"
+                      className="rounded-full bg-warning-500/10 text-warning-500 px-2.5 py-0.5 border border-warning-500/20"
                     >
                       {line}
                     </span>
                   ))}
                 </div>
               )}
-              <div className="markdown-body">
+              <div className="markdown-body prose prose-invert max-w-none text-sm leading-relaxed text-dark-text font-serif">
                 <ReactMarkdown components={markdownComponents}>
                   {message.comparison.control.content}
                 </ReactMarkdown>
@@ -199,7 +202,7 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
             </div>
           </div>
         ) : (
-          <div className="markdown-body" onMouseUp={handleMouseUp}>
+          <div className={`markdown-body prose max-w-none text-sm md:text-base leading-relaxed ${isUser ? 'prose-invert text-white' : 'prose-invert text-dark-text font-serif'}`} onMouseUp={handleMouseUp}>
             <ReactMarkdown
               components={markdownComponents}
             >
@@ -210,11 +213,11 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
 
         {/* Timestamp */}
         <div
-          className={`text-xs mt-2 ${
-            isUser ? 'text-blue-200' : 'text-gray-400'
+          className={`text-[11px] mt-3 flex items-center gap-1 ${
+            isUser ? 'text-primary-100/70 justify-end' : 'text-dark-text-muted justify-start'
           }`}
         >
-          {new Date(message.timestamp).toLocaleTimeString()}
+          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
     </div>

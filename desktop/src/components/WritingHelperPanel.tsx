@@ -167,20 +167,20 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={t.writingHelperTitle}>
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-label={t.writingHelperTitle}>
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="w-full max-w-3xl rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-xl"
+        className="w-full max-w-3xl rounded-2xl bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-2xl overflow-hidden transform transition-all"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-dark-border">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.writingHelperTitle}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border/50 bg-slate-50 dark:bg-dark-surface2/50">
+          <div className="flex items-center gap-3">
+            <h2 className="text-[15px] font-semibold text-gray-800 dark:text-dark-text tracking-wide">{t.writingHelperTitle}</h2>
             <span
-              className={`px-2 py-0.5 text-[11px] rounded-full ${
+              className={`px-2.5 py-0.5 text-[11px] font-medium rounded-full border ${
                 detectionEvasionGuardEnabled
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                  ? 'bg-success-50 text-success-700 border-success-200 dark:bg-success-900/20 dark:text-success-400 dark:border-success-500/20'
+                  : 'bg-warning-50 text-warning-700 border-warning-200 dark:bg-warning-900/20 dark:text-warning-400 dark:border-warning-500/20'
               }`}
             >
               {translate('writingHelperGuardStatus', {
@@ -190,29 +190,32 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
           </div>
           <button
             onClick={onClose}
-            className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-dark-border dark:text-dark-text"
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-dark-text dark:hover:bg-dark-border rounded-md transition-colors"
+            aria-label={t.writingHelperClose}
+            title={t.writingHelperClose}
           >
-            {t.writingHelperClose}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
 
-        <div className="p-4 pb-0">
+        <div className="p-6 pb-2">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-[11px] text-gray-500 dark:text-dark-text-secondary">
+            <div className="text-[11px] font-medium text-gray-500 dark:text-dark-text-muted">
               {t.writingHelperHint}
             </div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-1 text-[11px] text-gray-600 dark:text-dark-text-secondary">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary cursor-pointer hover:text-gray-800 dark:hover:text-dark-text transition-colors">
                 <input
                   type="checkbox"
                   checked={useLegacyPolish}
                   onChange={(event) => updateSettings({ writingHelperUseLegacyPolish: event.target.checked })}
+                  className="rounded text-primary-600 focus:ring-primary-500 bg-gray-50 border-gray-300 dark:bg-dark-bg dark:border-dark-border"
                 />
                 {t.writingHelperLegacyPolish}
               </label>
               <button
                 onClick={onOpenSettings}
-                className="px-2 py-1 text-[11px] rounded bg-gray-100 hover:bg-gray-200 dark:bg-dark-border dark:hover:bg-gray-600 dark:text-dark-text"
+                className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-surface2 text-gray-700 dark:text-dark-text transition-all shadow-sm active:scale-95"
               >
                 {t.writingHelperOpenSettings}
               </button>
@@ -220,14 +223,14 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
           </div>
         </div>
 
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label className="text-xs text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 dark:bg-dark-bg p-4 rounded-xl border border-gray-100 dark:border-dark-border/50">
+            <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
               {t.writingHelperMode}
               <select
                 value={mode}
                 onChange={(event) => setMode(event.target.value as WritingHelperMode)}
-                className="px-2 py-2 rounded border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-sm"
+                className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
               >
                 {MODE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -237,68 +240,74 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
               </select>
             </label>
 
-            <label className="text-xs text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+            <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
               {t.writingHelperMaxSentences}
               <input
                 type="number"
                 min={1}
                 value={maxSentences}
                 onChange={(event) => setMaxSentences(Number(event.target.value) || 1)}
-                className="px-2 py-2 rounded border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-sm"
+                className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
               />
             </label>
 
-            <label className="text-xs text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+            <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
               {t.writingHelperMaxItems}
               <input
                 type="number"
                 min={1}
                 value={maxItems}
                 onChange={(event) => setMaxItems(Number(event.target.value) || 1)}
-                className="px-2 py-2 rounded border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-sm"
+                className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
               />
             </label>
           </div>
 
-          <label className="text-xs text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+          <label className="text-sm font-semibold text-gray-800 dark:text-dark-text flex flex-col gap-2">
             {t.writingHelperInputText}
             <textarea
               value={content}
               onChange={(event) => setContent(event.target.value)}
-              rows={8}
+              rows={6}
               placeholder={t.writingHelperInputPlaceholder}
-              className="w-full px-3 py-2 rounded border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-sm"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-bg text-[14px] leading-relaxed text-gray-900 dark:text-dark-text focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none shadow-inner transition-all custom-scrollbar resize-y"
             />
           </label>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 pt-2">
             <button
               onClick={handleSubmit}
               disabled={buttonDisabled}
-              className="px-3 py-2 text-sm rounded bg-blue-600 text-white disabled:bg-blue-300"
+              className="px-5 py-2.5 text-sm font-medium rounded-lg bg-primary-600 text-white shadow-sm hover:bg-primary-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-2"
             >
+              {loading && <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-transparent animate-spin" />}
               {loading ? t.writingHelperRunning : t.writingHelperRun}
             </button>
             <button
               onClick={handleClearDraft}
               disabled={loading}
-              className="px-3 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:text-gray-400 dark:bg-dark-border dark:hover:bg-gray-600 dark:text-dark-text"
+              className="px-4 py-2.5 text-sm font-medium rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 active:scale-[0.98] transition-all disabled:opacity-50 shadow-sm"
             >
               {t.writingHelperClearDraft}
             </button>
-            {error && <span className="text-xs text-red-600">{error}</span>}
+            {error && <span className="text-[13px] font-medium text-danger-500 ml-2 px-2 py-1 bg-danger-50 dark:bg-danger-900/10 rounded">{error}</span>}
           </div>
 
           {result && (
-            <div className="rounded border border-gray-200 dark:border-dark-border p-3 bg-gray-50 dark:bg-dark-bg">
-              <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{translate('writingHelperModePrefix', { mode: result.mode ?? '' })}</div>
+            <div className="rounded-xl border border-primary-100 dark:border-primary-500/20 p-5 bg-primary-50/50 dark:bg-primary-900/10 shadow-sm mt-4 animate-fade-in">
+              <div className="text-[11px] font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse-subtle"></span>
+                {translate('writingHelperModePrefix', { mode: result.mode ?? '' })}
+              </div>
               {result.processedText && (
-                <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-dark-text">{result.processedText}</pre>
+                <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-dark-text font-serif leading-relaxed">
+                  {result.processedText}
+                </div>
               )}
               {result.outline && result.outline.length > 0 && (
-                <ul className="list-disc pl-5 text-sm text-gray-800 dark:text-dark-text space-y-1">
+                <ul className="list-disc pl-6 text-sm text-gray-800 dark:text-dark-text space-y-2 font-serif mt-2">
                   {result.outline.map((item, index) => (
-                    <li key={`${item}-${index}`}>{item}</li>
+                    <li key={`${item}-${index}`} className="leading-relaxed pl-1 marker:text-primary-400">{item}</li>
                   ))}
                 </ul>
               )}

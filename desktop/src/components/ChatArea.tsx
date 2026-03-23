@@ -705,22 +705,24 @@ export function ChatArea({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white dark:bg-dark-surface">
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex-1 flex flex-col bg-slate-50 dark:bg-dark-bg h-full relative z-0">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar scroll-smooth">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
-            <div className="text-6xl mb-4">...</div>
-            <h2 className="text-xl font-semibold text-gray-600 dark:text-dark-text mb-2">{t.startWriting}</h2>
-            <p className="text-sm text-gray-400 dark:text-dark-text-secondary max-w-md text-center">
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-dark-text-muted mt-10">
+            <div className="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/10 flex items-center justify-center mb-6 shadow-sm border border-primary-100 dark:border-primary-500/20 animate-fade-in">
+              <span className="text-3xl">✨</span>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text mb-3 tracking-wide">{t.startWriting}</h2>
+            <p className="text-sm text-gray-500 dark:text-dark-text-secondary max-w-md text-center leading-relaxed mb-8">
               {t.startWritingDesc}
             </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 max-w-xl">
+            <div className="flex flex-wrap items-center justify-center gap-3 max-w-2xl">
               {modePresets.map((preset) => (
                 <button
                   key={`empty-${preset.id}`}
                   type="button"
                   onClick={() => handleApplyModePreset(preset.id)}
-                  className="px-3 py-1.5 text-xs rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                  className="px-4 py-2 text-sm font-medium rounded-full bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 border border-primary-100 dark:border-primary-500/20 transition-all active:scale-[0.98]"
                 >
                   {preset.label}
                 </button>
@@ -728,14 +730,14 @@ export function ChatArea({
               <button
                 type="button"
                 onClick={() => onTemplatePanelOpenChange?.(true)}
-                className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-dark-border dark:text-dark-text hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="px-4 py-2 text-sm font-medium rounded-full bg-white dark:bg-dark-surface text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border shadow-sm transition-all active:scale-[0.98]"
               >
                 {t.templateLibraryEntry}
               </button>
               <button
                 type="button"
                 onClick={() => openPicker()}
-                className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-dark-border dark:text-dark-text hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="px-4 py-2 text-sm font-medium rounded-full bg-white dark:bg-dark-surface text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border shadow-sm transition-all active:scale-[0.98]"
               >
                 {t.composerUpload}
               </button>
@@ -784,62 +786,62 @@ export function ChatArea({
           uploadStatus={uploadStatus}
         />
 
-      <div className="px-4 py-2 border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface">
+      <div className="px-6 py-2 border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-[0_-2px_10px_rgba(0,0,0,0.02)] z-10">
         <button
           type="button"
           onClick={() => setShowQuickRollbackAdvanced((prev) => !prev)}
-          className="w-full flex items-center justify-between text-xs font-medium text-gray-600 dark:text-dark-text-secondary"
+          className="w-full flex items-center justify-between text-xs font-medium text-gray-500 dark:text-dark-text-secondary hover:text-gray-800 dark:hover:text-dark-text transition-colors py-1"
         >
           <span>{t.quickRollbackAdvancedToggle}</span>
           {showQuickRollbackAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
 
         {showQuickRollbackAdvanced && (
-          <>
-            <div className="text-xs font-medium text-gray-600 dark:text-dark-text-secondary mt-2 mb-2">{t.quickRollbackTitle}</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="animate-fade-in mt-3 mb-2">
+            <div className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 dark:text-dark-text-muted mb-2">{t.quickRollbackTitle}</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <input
                 value={quickRollbackPlanId}
                 onChange={(event) => setQuickRollbackPlanId(event.target.value)}
                 placeholder={t.quickRollbackPlanIdPlaceholder}
                 aria-label={t.quickRollbackPlanIdPlaceholder}
-                className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+                className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
               />
               <input
                 value={quickRollbackCheckpointId}
                 onChange={(event) => setQuickRollbackCheckpointId(event.target.value)}
                 placeholder={t.quickRollbackCheckpointIdPlaceholder}
                 aria-label={t.quickRollbackCheckpointIdPlaceholder}
-                className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+                className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
               />
               <input
                 value={quickRollbackReason}
                 onChange={(event) => setQuickRollbackReason(event.target.value)}
                 placeholder={t.quickRollbackReasonPlaceholder}
                 aria-label={t.quickRollbackReasonPlaceholder}
-                className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+                className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
               />
             </div>
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-3">
               <button
                 onClick={handleQuickRollback}
                 type="button"
-                className="px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+                className="px-4 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md shadow-sm hover:bg-amber-600 active:scale-[0.98] disabled:opacity-50 transition-all"
                 disabled={isLoading}
               >
                 {t.quickRollbackAction}
               </button>
               {quickRollbackStatus && (
-                <span className={`text-xs ${quickRollbackStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <span className={`text-[11px] font-medium px-2 py-1 rounded ${quickRollbackStatus.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
                   {quickRollbackStatus.message}
                 </span>
               )}
             </div>
-          </>
+          </div>
         )}
       </div>
 
-      <div className="border-t border-gray-200 dark:border-dark-border p-4 bg-gray-50 dark:bg-dark-bg">
+      <div className="border-t border-gray-200 dark:border-dark-border p-4 md:p-6 bg-slate-50 dark:bg-dark-bg shrink-0">
         {selectionMeta && (
           <ChatAreaInlineActions
             selectedText={selectedText}
