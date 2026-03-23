@@ -402,18 +402,21 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
                 value={newServiceId}
                 onChange={(event) => setNewServiceId(event.target.value)}
                 placeholder={t.mcpServiceIdPlaceholder}
+                aria-label={t.mcpServiceIdPlaceholder}
                 className="col-span-1 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-dark-border rounded-md bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500 outline-none transition-all shadow-sm"
               />
               <input
                 value={newServiceName}
                 onChange={(event) => setNewServiceName(event.target.value)}
                 placeholder={t.mcpServiceNamePlaceholder}
+                aria-label={t.mcpServiceNamePlaceholder}
                 className="col-span-1 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-dark-border rounded-md bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500 outline-none transition-all shadow-sm"
               />
               <input
                 value={newServicePath}
                 onChange={(event) => setNewServicePath(event.target.value)}
                 placeholder={t.mcpServicePathPlaceholder}
+                aria-label={t.mcpServicePathPlaceholder}
                 className="col-span-1 px-2.5 py-1.5 text-xs border border-gray-200 dark:border-dark-border rounded-md bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500 outline-none transition-all shadow-sm"
               />
             </div>
@@ -435,6 +438,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
                   <input
                     value={service.draftName}
                     onChange={(event) => setServiceDraftNames((prev) => ({ ...prev, [service.id]: event.target.value }))}
+                    aria-label={t.mcpServiceNamePlaceholder}
                     className="w-full px-2.5 py-1.5 text-xs font-medium border border-gray-200 dark:border-dark-border rounded-md bg-gray-50 dark:bg-dark-surface text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500 outline-none transition-all"
                   />
                   <div className="flex items-center justify-between text-[11px] font-medium text-gray-500 dark:text-dark-text-secondary">

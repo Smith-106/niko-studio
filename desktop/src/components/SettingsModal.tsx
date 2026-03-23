@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload } from 'lucide-react'
+import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload, Settings } from 'lucide-react'
 import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools, getSecrets, BackendConfig, SecretsResponse, SECRET_FIELDS } from '../api/client'
 import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
@@ -717,7 +717,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           throw new Error(t.settingsInvalidConfigFile)
         }
 
-        // 合并导入的设置
+        // 合并导入的设�?
         setLocalSettings(importData.settings)
         setImportMessage({ type: 'success', text: t.importSuccess })
 
@@ -737,36 +737,41 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-dark-surface rounded-2xl w-[900px] max-h-[85vh] overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-white dark:bg-dark-bg rounded-2xl w-full max-w-5xl h-[85vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-dark-border flex flex-col transform transition-all">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-dark-border">
-          <h2 className="text-lg font-semibold dark:text-dark-text">{t.settingsTitle}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border bg-slate-50 dark:bg-dark-surface/80 backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center shadow-sm">
+              <Settings className="text-white" size={18} />
+            </div>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-dark-text tracking-wide">{t.settingsTitle}</h2>
+          </div>
           <button
             onClick={onClose}
             aria-label={t.settingsClose}
             title={t.settingsClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-lg transition-colors dark:text-dark-text"
+            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-surface2 rounded-xl transition-all"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex">
+        <div className="flex flex-1 overflow-hidden">
           {/* Secondary navigation */}
-          <nav className="w-[220px] border-r dark:border-dark-border bg-gray-50 dark:bg-dark-bg">
-            <div className="p-3 space-y-1">
+          <nav className="w-60 border-r border-gray-200 dark:border-dark-border bg-slate-50 dark:bg-dark-bg overflow-y-auto custom-scrollbar shrink-0">
+            <div className="p-4 space-y-1">
               {sections.map((section) => (
                 <button
                   key={section.id}
                   type="button"
                   onClick={() => setActiveSection(section.id)}
                   className={classNames(
-                    'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
+                    'w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98]',
                     activeSection === section.id
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
-                      : 'hover:bg-gray-100 dark:hover:bg-dark-border text-gray-700 dark:text-dark-text'
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'hover:bg-gray-100 dark:hover:bg-dark-surface2 text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text'
                   )}
                 >
                   {section.label}
@@ -776,11 +781,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </nav>
 
           {/* Content */}
-          <div className="flex-1 p-6 overflow-y-auto max-h-[65vh] space-y-6">
+          <div className="flex-1 p-8 overflow-y-auto custom-scrollbar space-y-8 bg-white dark:bg-dark-bg">
             <div className={activeSection === 'backend' ? 'block' : 'hidden'}>
               <div className="space-y-6">
                 <section>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.backendService}</h3>
+                  <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.backendService}</h3>
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.backendUrl}</label>
@@ -788,7 +793,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         type="text"
                         value={localSettings.apiBaseUrl}
                         onChange={(e) => setLocalSettings({ ...localSettings, apiBaseUrl: e.target.value })}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
@@ -827,7 +832,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         type="button"
                         onClick={() => void handleSaveBackendConfig()}
                         disabled={!hasBackendConfigChanges || backendConfigSaving || backendConfigState.syncStatus === 'loading' || backendConfigState.syncStatus === 'syncing'}
-                        className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-3 py-2 text-sm bg-primary-600 text-white rounded-xl hover:bg-primary-500 shadow-md active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Save size={16} />
                         {t.backendConfigSave}
@@ -912,7 +917,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                       value={formattedValue}
                                       disabled={!editable}
                                       onChange={(e) => handleBackendConfigFieldChange(fieldPath, e.target.value, value)}
-                                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed"
+                                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                                     />
                                     {!editable && (
                                       <p className="text-[11px] text-gray-400 dark:text-dark-text-secondary">
@@ -948,7 +953,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       type="button"
                       onClick={() => void handleSaveBackendSecrets()}
                       disabled={!hasBackendSecretChanges || backendSecretsLoading || backendSecretsSaving}
-                      className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-3 py-2 text-sm bg-primary-600 text-white rounded-xl hover:bg-primary-500 shadow-md active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Save size={16} />
                       {t.backendConfigSaveSecrets}
@@ -984,7 +989,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                 value={backendSecretsDraft[key] ?? ''}
                                 onChange={(e) => setBackendSecretsDraft((prev) => ({ ...prev, [key]: e.target.value }))}
                                 placeholder={field.configured ? MASKED_SECRET_VALUE : ''}
-                                className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                               />
                               <button
                                 type="button"
@@ -1009,14 +1014,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <div className={activeSection === 'workflow' ? 'block' : 'hidden'}>
               <>
                 <section>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.writingSettings}</h3>
+                  <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.writingSettings}</h3>
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultWorkflow}</label>
                       <select
                         value={localSettings.defaultWorkflowLevel}
                         onChange={(e) => setLocalSettings({ ...localSettings, defaultWorkflowLevel: e.target.value as 'L1' | 'L2' | 'L3' | 'L4' | 'L5' })}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       >
                         <option value="L1">{t.workflowL1}</option>
                         <option value="L2">{t.workflowL2}</option>
@@ -1031,7 +1036,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       <select
                         value={localSettings.workflowBackendMode}
                         onChange={(e) => setLocalSettings({ ...localSettings, workflowBackendMode: e.target.value as WorkflowBackendMode })}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       >
                         <option value="standard">{t.workflowBackendModeStandard}</option>
                         <option value="uiBridge">{t.workflowBackendModeUiBridge}</option>
@@ -1045,7 +1050,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           type="number"
                           value={localSettings.targetWordsPerChapter}
                           onChange={(e) => setLocalSettings({ ...localSettings, targetWordsPerChapter: parseInt(e.target.value) })}
-                          className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -1070,7 +1075,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           <select
                             value={localSettings.qualityGoals.humanizationPreset}
                             onChange={(e) => applyQualityPreset(e.target.value as QualityPresetId)}
-                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                           >
                             {QUALITY_PRESET_TEMPLATES.map((preset) => (
                               <option key={preset.id} value={preset.id}>{t[preset.labelKey]}</option>
@@ -1154,7 +1159,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                               },
                             }))}
                             placeholder={t.qualityGoalCustomInstructionPlaceholder}
-                            className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                           />
                         </div>
                       </div>
@@ -1166,7 +1171,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
             <div className={activeSection === 'retrieval' ? 'block' : 'hidden'}>
               <section>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.settingsRetrieval}</h3>
+                <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.settingsRetrieval}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <input
@@ -1199,7 +1204,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             searchMode: e.target.value as RetrievalSearchMode,
                           },
                         }))}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       >
                         {retrievalModes.map((mode) => (
                           <option key={mode.value} value={mode.value}>{mode.label}</option>
@@ -1219,7 +1224,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           },
                         }))}
                         placeholder={t.settingsRetrievalProfilePlaceholder}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                     <div>
@@ -1229,7 +1234,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         step="0.01"
                         value={localSettings.retrieval.minScore ?? ''}
                         onChange={(e) => updateNumericRetrievalField('minScore', e.target.value)}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                     <div>
@@ -1238,7 +1243,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         type="number"
                         value={localSettings.retrieval.budgetTokens ?? ''}
                         onChange={(e) => updateNumericRetrievalField('budgetTokens', e.target.value)}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                     <div>
@@ -1248,7 +1253,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         min="1"
                         value={localSettings.retrieval.maxIterations ?? ''}
                         onChange={(e) => updateNumericRetrievalField('maxIterations', e.target.value)}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                     <div>
@@ -1260,7 +1265,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         step="0.01"
                         value={localSettings.retrieval.confidenceThreshold ?? ''}
                         onChange={(e) => updateNumericRetrievalField('confidenceThreshold', e.target.value)}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
@@ -1306,7 +1311,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
             <div className={activeSection === 'templates' ? 'block' : 'hidden'}>
               <section>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.templateLibraryTitle}</h3>
+                <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.templateLibraryTitle}</h3>
                 <p className="text-xs text-gray-500 dark:text-dark-text-secondary">{t.templateLibraryTitle}</p>
               </section>
             </div>
@@ -1364,7 +1369,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         value={providerSearch}
                         onChange={(e) => setProviderSearch(e.target.value)}
                         placeholder={t.settingsRetrievalSearchPlaceholder}
-                        className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm text-sm"
                       />
                     </div>
 
@@ -1399,7 +1404,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                               <button
                                 onClick={() => testConnection(provider)}
                                 disabled={!provider.apiKey || testingProvider === provider.id}
-                                className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                                className="text-xs px-2 py-1 text-xs px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all shadow-sm active:scale-95"
                               >
                                 {testingProvider === provider.id ? t.testing : t.testConnection}
                               </button>
@@ -1435,7 +1440,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                     type="text"
                                     value={provider.baseUrl}
                                     onChange={(e) => updateLocalProvider(provider.id, { baseUrl: e.target.value })}
-                                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm text-sm"
                                   />
                                 </div>
                                 <div>
@@ -1443,7 +1448,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   <select
                                     value={provider.defaultModel}
                                     onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value, modelSelectionMode: 'list' })}
-                                    className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm text-sm"
                                   >
                                     {getModelGroups(provider).map((group) => (
                                       <optgroup key={group.label} label={group.label}>
@@ -1464,14 +1469,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                       type="button"
                                       onClick={() => validateProviderDefaultModel(provider)}
                                       disabled={modelValidateLoading[provider.id]}
-                                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                                      className="text-xs px-2 py-1 text-xs px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all shadow-sm active:scale-95"
                                     >
                                       {modelValidateLoading[provider.id] ? t.settingsValidatingModel : t.settingsValidateDefaultModel}
                                     </button>
                                     <button
                                       onClick={() => refreshProviderModels(provider)}
                                       disabled={modelSyncLoading[provider.id]}
-                                      className="text-xs px-2 py-1 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                                      className="text-xs px-2 py-1 text-xs px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all shadow-sm active:scale-95"
                                     >
                                       {modelSyncLoading[provider.id] ? t.settingsRefreshingModels : t.settingsRefreshModels}
                                     </button>
@@ -1500,7 +1505,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                     value={customModelInputs[provider.id] ?? ''}
                                     onChange={(e) => setCustomModelInputs((prev) => ({ ...prev, [provider.id]: e.target.value }))}
                                     placeholder={t.settingsCustomModelPlaceholder}
-                                    className="flex-1 px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm text-sm"
                                   />
                                   <button
                                     type="button"
@@ -1536,14 +1541,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
             <div className={activeSection === 'ui' ? 'block' : 'hidden'}>
               <section>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.uiSettings}</h3>
+                <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.uiSettings}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.theme}</label>
                     <select
                       value={localSettings.theme}
                       onChange={(e) => setLocalSettings({ ...localSettings, theme: e.target.value as 'light' | 'dark' | 'system' })}
-                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                     >
                       <option value="light">{t.themeLight}</option>
                       <option value="dark">{t.themeDark}</option>
@@ -1555,7 +1560,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <select
                       value={localSettings.fontSize}
                       onChange={(e) => setLocalSettings({ ...localSettings, fontSize: e.target.value as 'small' | 'medium' | 'large' })}
-                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                     >
                       <option value="small">{t.fontSmall}</option>
                       <option value="medium">{t.fontMedium}</option>
@@ -1567,7 +1572,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <select
                       value={localSettings.language}
                       onChange={(e) => setLocalSettings({ ...localSettings, language: e.target.value as 'zh' | 'en' })}
-                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                     >
                       <option value="zh">{t.langChinese}</option>
                       <option value="en">{t.langEnglish}</option>
@@ -1578,7 +1583,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <select
                       value={localSettings.sendShortcut}
                       onChange={(e) => setLocalSettings({ ...localSettings, sendShortcut: e.target.value as SendShortcut })}
-                      className="w-full px-3 py-2 border dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                     >
                       <option value="enter">{t.sendShortcutEnter}</option>
                       <option value="ctrlEnter">{t.sendShortcutCtrlEnter}</option>
@@ -1595,7 +1600,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <button
                     onClick={refreshDiagnostics}
                     disabled={diagnosticsLoading}
-                    className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-dark-border hover:bg-gray-200 dark:hover:bg-gray-600 rounded disabled:opacity-50 dark:text-dark-text"
+                    className="text-xs px-3 py-1.5 text-xs px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all shadow-sm active:scale-95"
                   >
                     {diagnosticsLoading ? t.mcpRefreshing : t.settingsRefreshDiagnostics}
                   </button>
@@ -1628,7 +1633,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           <div key={service}>
                             <div className="text-xs font-medium text-gray-700 dark:text-dark-text">{service}</div>
                             <div className="text-xs text-gray-500 dark:text-dark-text-secondary break-all">
-                              {tools.join('，')}
+                              {tools.join(', ')}
                             </div>
                           </div>
                         ))}
@@ -1689,7 +1694,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-500 shadow-md active:scale-95 transition-all"
             >
               <Save size={16} />
               {t.save}
@@ -1700,3 +1705,5 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     </div>
   )
 }
+
+
