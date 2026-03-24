@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Sidebar } from './components/Sidebar'
 import { ChatArea } from './components/ChatArea'
@@ -38,6 +38,8 @@ interface WritingHelperDraftState {
 }
 
 const WRITING_HELPER_DRAFT_STORAGE_KEY = 'niko.writing-helper-draft-v1'
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'niko.sidebar-collapsed-v1'
+const ACTIVE_RIGHT_PANEL_STORAGE_KEY = 'niko.active-right-panel-v1'
 
 const DEFAULT_WRITING_HELPER_DRAFT: WritingHelperDraftState = {
   content: '',
@@ -85,6 +87,31 @@ const clearWritingHelperDraftStorage = (): void => {
   }
 }
 
+const loadSidebarCollapsed = (): boolean => {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)
+    if (raw === 'true') return true
+    if (raw === 'false') return false
+    return false
+  } catch {
+    return false
+  }
+}
+
+const isRightPanelType = (value: unknown): value is RightPanelType => {
+  return value === 'none' || value === 'knowledge' || value === 'evaluation' || value === 'mcpStatus' || value === 'writingHelper'
+}
+
+const loadActiveRightPanel = (): RightPanelType => {
+  try {
+    const raw = localStorage.getItem(ACTIVE_RIGHT_PANEL_STORAGE_KEY)
+    if (!raw) return 'none'
+    return isRightPanelType(raw) ? raw : 'none'
+  } catch {
+    return 'none'
+  }
+}
+
 const APP_CONNECTION_LABEL = {
   connected: 'serviceRunning',
   degraded: 'serviceDegraded',
@@ -104,13 +131,14 @@ const APP_CONNECTION_DOT: Record<HeaderConnectionState, string> = {
 function App() {
   const { backendStatus, checkBackend } = useAppStore()
   const messages = useMessages()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => loadSidebarCollapsed())
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>('none')
+  const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(() => loadActiveRightPanel())
   const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
   const [writingHelperDraft, setWritingHelperDraft] = useState<WritingHelperDraftState>(() => loadWritingHelperDraft())
   const [resumeWritingHelperAfterSettings, setResumeWritingHelperAfterSettings] = useState(false)
   const [checkpointMenuOpen, setCheckpointMenuOpen] = useState(false)
+  const checkpointMenuContainerRef = useRef<HTMLDivElement | null>(null)
   const [checkpointsLoading, setCheckpointsLoading] = useState(false)
   const [checkpoints, setCheckpoints] = useState<CheckpointItem[]>([])
   const [restoreStatus, setRestoreStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -215,6 +243,47 @@ function App() {
     }
   }, [writingHelperDraft])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, sidebarCollapsed ? 'true' : 'false')
+    } catch {
+      // ignore localStorage write failures
+    }
+  }, [sidebarCollapsed])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ACTIVE_RIGHT_PANEL_STORAGE_KEY, activeRightPanel)
+    } catch {
+      // ignore localStorage write failures
+    }
+  }, [activeRightPanel])
+
+  useEffect(() => {
+    if (!checkpointMenuOpen) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (checkpointMenuContainerRef.current?.contains(target)) return
+      setCheckpointMenuOpen(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCheckpointMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [checkpointMenuOpen])
+
   const refreshCheckpoints = async () => {
     setCheckpointsLoading(true)
     try {
@@ -303,7 +372,7 @@ function App() {
           <div className="flex items-center gap-3">
             <span className="text-base font-semibold text-gray-800 dark:text-dark-text tracking-wide">{t.appTitle}</span>
           </div>
-          <div className="flex items-center gap-4 relative">
+          <div className="flex items-center gap-4 relative" ref={checkpointMenuContainerRef}>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-dark-surface2 shadow-inner border border-gray-200 dark:border-dark-border2">
               <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} />
               <span className="text-[11px] font-medium text-gray-600 dark:text-dark-text">

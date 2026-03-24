@@ -365,7 +365,7 @@ describe('ChatArea P0 flows', () => {
     await userEvent.click(cancelButton)
 
     await waitFor(() => {
-      expect(screen.getByText(zh.streamInterrupted)).toBeInTheDocument()
+      expect(screen.getAllByText(zh.streamInterrupted).length).toBeGreaterThan(0)
     })
     expect(mockedChat).not.toHaveBeenCalled()
   })
@@ -380,7 +380,7 @@ describe('ChatArea P0 flows', () => {
     await userEvent.type(input, '触发中断{enter}')
 
     await waitFor(() => {
-      expect(screen.getByText(zh.streamInterrupted)).toBeInTheDocument()
+      expect(screen.getAllByText(zh.streamInterrupted).length).toBeGreaterThan(0)
     })
     expect(mockedChat).not.toHaveBeenCalled()
   })
@@ -438,7 +438,7 @@ describe('ChatArea P0 flows', () => {
     rerender(<ChatArea connectionState="disconnected" />)
 
     await waitFor(() => {
-      expect(screen.getByText(zh.streamInterrupted)).toBeInTheDocument()
+      expect(screen.getAllByText(zh.streamInterrupted).length).toBeGreaterThan(0)
     })
   })
 

@@ -334,6 +334,7 @@ export function ChatArea({
     }
 
     if (phase === 'interrupted') {
+      setRecoverStatus((prev) => prev ?? makeRecoverError(t.streamInterrupted, t.streamInterrupted))
       return 'interrupted'
     }
     const response = await chat(request)
@@ -704,6 +705,14 @@ export function ChatArea({
     onTemplatePanelOpenChange?.(false)
   }
 
+  const streamStatusText = streamPhase === 'interrupted'
+    ? t.streamInterrupted
+    : streamPhase === 'recovered'
+      ? t.streamRecovered
+      : connectionState === 'reconnecting' && streamPhase === 'streaming'
+        ? t.streamReconnecting
+        : t.thinking
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50 dark:bg-dark-bg h-full relative z-0">
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar scroll-smooth">
@@ -766,9 +775,7 @@ export function ChatArea({
         )}
         {isLoading && (
           <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-secondary">
-            <div className="animate-pulse">
-              {streamPhase === 'streaming' ? t.thinking : streamPhase === 'interrupted' ? t.streamInterrupted : t.thinking}
-            </div>
+            <div className="animate-pulse">{streamStatusText}</div>
           </div>
         )}
         <div ref={messagesEndRef} />

@@ -126,7 +126,16 @@ export function Sidebar({
             title={collapsed ? conv.title : undefined}
           >
             {collapsed ? (
-              <MessageSquarePlus size={18} className={currentConversationId === conv.id ? 'text-primary-400' : 'text-dark-text-muted group-hover:text-dark-text-secondary'} />
+              <span
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold transition-colors ${
+                  currentConversationId === conv.id
+                    ? 'bg-primary-600/20 text-primary-300 ring-1 ring-primary-500/40'
+                    : 'bg-dark-surface2 text-dark-text-muted group-hover:text-dark-text-secondary'
+                }`}
+                aria-hidden="true"
+              >
+                {(conv.title || '?').trim().charAt(0).toUpperCase()}
+              </span>
             ) : (
               <span className="text-sm truncate block">{conv.title}</span>
             )}
