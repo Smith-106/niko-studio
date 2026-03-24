@@ -288,7 +288,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
           <button
             onClick={refreshStatus}
             disabled={loading}
-            className="text-xs px-3 py-1.5 font-medium bg-white dark:bg-dark-bg hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg text-xs px-3 py-1.5 font-medium bg-white dark:bg-dark-bg hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin text-primary-500' : ''} />
             {loading ? t.mcpRefreshing : t.mcpRefresh}
@@ -305,14 +305,14 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar bg-white dark:bg-dark-bg">
         {error && (
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-warning-50 border border-warning-200 text-warning-700 dark:bg-warning-900/20 dark:border-warning-500/20 dark:text-warning-400 text-xs font-medium shadow-sm animate-fade-in">
+          <div role="alert" aria-live="polite" className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-warning-50 border border-warning-200 text-warning-700 dark:bg-warning-900/20 dark:border-warning-500/20 dark:text-warning-400 text-xs font-medium shadow-sm animate-fade-in">
             <AlertCircle size={16} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {serviceActionError && (
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-danger-50 border border-danger-200 text-danger-600 dark:bg-danger-900/20 dark:border-danger-500/20 dark:text-danger-400 text-xs font-medium shadow-sm animate-fade-in">
+          <div role="alert" aria-live="assertive" className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-danger-50 border border-danger-200 text-danger-600 dark:bg-danger-900/20 dark:border-danger-500/20 dark:text-danger-400 text-xs font-medium shadow-sm animate-fade-in">
             <AlertCircle size={16} className="shrink-0" />
             <span>{serviceActionError}</span>
           </div>
@@ -423,7 +423,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
             <button
               onClick={handleCreateService}
               disabled={serviceActionLoading === 'create'}
-              className="w-full flex items-center justify-center gap-2 text-xs font-medium px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-md disabled:opacity-50 transition-all shadow-sm active:scale-[0.98]"
+              className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg w-full flex items-center justify-center gap-2 text-xs font-medium px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-md disabled:opacity-50 transition-all shadow-sm active:scale-[0.98]"
             >
               {serviceActionLoading === 'create' && <RefreshCw size={14} className="animate-spin" />}
               {serviceActionLoading === 'create' ? t.mcpCreating : t.mcpCreateService}
@@ -450,7 +450,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
                     <button
                       onClick={() => void handleServiceRename(service)}
                       disabled={serviceActionLoading === `rename:${service.id}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
+                      className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
                     >
                       {serviceActionLoading === `rename:${service.id}` && <RefreshCw size={12} className="animate-spin" />}
                       {serviceActionLoading === `rename:${service.id}` ? t.mcpSaving : t.mcpSaveName}
@@ -458,7 +458,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
                     <button
                       onClick={() => void handleServiceToggle(service)}
                       disabled={serviceActionLoading === `toggle:${service.id}` || service.builtin}
-                      className={`flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 border rounded-md disabled:opacity-50 transition-all active:scale-95 ${service.enabled ? 'bg-white dark:bg-dark-surface border-gray-200 dark:border-dark-border text-warning-600 dark:text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-900/10' : 'bg-primary-50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-500/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100'}`}
+                      className={`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 border rounded-md disabled:opacity-50 transition-all active:scale-95 ${service.enabled ? 'bg-white dark:bg-dark-surface border-gray-200 dark:border-dark-border text-warning-600 dark:text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-900/10' : 'bg-primary-50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-500/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100'}`}
                     >
                       {serviceActionLoading === `toggle:${service.id}` && <RefreshCw size={12} className="animate-spin" />}
                       {service.enabled ? t.mcpDisable : t.mcpEnable}
@@ -466,7 +466,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
                     <button
                       onClick={() => void handleServiceProbe(service.id)}
                       disabled={serviceActionLoading === `probe:${service.id}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
+                      className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
                     >
                       {serviceActionLoading === `probe:${service.id}` && <RefreshCw size={12} className="animate-spin" />}
                       {serviceActionLoading === `probe:${service.id}` ? t.mcpProbing : t.mcpHealthCheck}
