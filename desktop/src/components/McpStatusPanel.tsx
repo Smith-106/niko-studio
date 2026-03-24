@@ -120,6 +120,16 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
     void refreshStatus()
   }, [refreshStatus])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   const serviceToolCounts = useMemo(() => {
     if (!tools) return []
     return Object.entries(tools).map(([service, serviceTools]) => ({
@@ -297,6 +307,8 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md p-1 hover:bg-gray-200 dark:hover:bg-dark-surface2 transition-colors"
             aria-label={t.mcpCloseAria}
+            aria-keyshortcuts="Escape"
+            title={`${t.mcpCloseAria} (Esc)`}
           >
             ✕
           </button>
