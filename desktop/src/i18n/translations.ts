@@ -437,6 +437,7 @@ export interface Translations {
   mcpSaveName: string
   mcpDisable: string
   mcpEnable: string
+  mcpBuiltinServiceCannotToggle: string
   mcpProbing: string
   mcpHealthCheck: string
   mcpNoServiceConfigData: string
@@ -954,6 +955,7 @@ export const translations: Record<Language, Translations> = {
     mcpSaveName: '保存名称',
     mcpDisable: '禁用',
     mcpEnable: '启用',
+    mcpBuiltinServiceCannotToggle: '内置服务不可禁用',
     mcpProbing: '探测中...',
     mcpHealthCheck: '健康检测',
     mcpNoServiceConfigData: '暂无服务配置数据',
@@ -1469,6 +1471,7 @@ export const translations: Record<Language, Translations> = {
     mcpSaveName: 'Save name',
     mcpDisable: 'Disable',
     mcpEnable: 'Enable',
+    mcpBuiltinServiceCannotToggle: 'Built-in services cannot be disabled',
     mcpProbing: 'Probing...',
     mcpHealthCheck: 'Health check',
     mcpNoServiceConfigData: 'No service config data',

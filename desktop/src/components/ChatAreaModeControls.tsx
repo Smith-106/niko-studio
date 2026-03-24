@@ -85,17 +85,17 @@ export function ChatAreaModeControls({
   }, [chatMode, enableModelComparison, workflowLevel])
 
   return (
-    <div className="mb-3 rounded-2xl border border-gray-200 bg-white/80 p-3 dark:border-dark-border dark:bg-dark-surface/80">
+    <div className="mb-4 rounded-2xl border border-gray-200 bg-white/80 p-4 dark:border-dark-border dark:bg-dark-surface/80 backdrop-blur-sm shadow-sm transition-all animate-fade-in">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{modeLabel}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mr-1">{modeLabel}</span>
         <button
           onClick={() => onSetChatMode('chat')}
           aria-label={chatModeNormalLabel}
           title={chatModeNormalLabel}
-          className={`px-3 py-1 text-xs rounded-full transition-colors ${
+          className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
             chatMode === 'chat'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+              ? 'bg-primary-600 text-white shadow-md'
+              : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
           }`}
           type="button"
         >
@@ -105,10 +105,10 @@ export function ChatAreaModeControls({
           onClick={() => onSetChatMode('agent')}
           aria-label={chatModeAgentLabel}
           title={chatModeAgentLabel}
-          className={`px-3 py-1 text-xs rounded-full transition-colors ${
+          className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
             chatMode === 'agent'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+              ? 'bg-primary-600 text-white shadow-md'
+              : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
           }`}
           type="button"
         >
@@ -118,7 +118,7 @@ export function ChatAreaModeControls({
           onClick={onOpenTemplateLibrary}
           aria-label={templateLibraryEntryLabel}
           title={templateLibraryEntryLabel}
-          className="px-3 py-1 text-xs rounded-full transition-colors bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600"
+          className="px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text"
           type="button"
         >
           {templateLibraryEntryLabel}
@@ -126,42 +126,42 @@ export function ChatAreaModeControls({
         <button
           type="button"
           onClick={() => setShowAdvanced((prev) => !prev)}
-          className="ml-auto px-3 py-1 text-xs rounded-full transition-colors bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text hover:bg-gray-200 dark:hover:bg-gray-700"
+          className="ml-auto px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-full transition-all bg-gray-50 dark:bg-dark-bg text-gray-500 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface2 active:scale-95 border border-gray-100 dark:border-dark-border/50"
         >
           {showAdvanced ? showLessLabel : showMoreLabel}
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{modePresetsLabel}</span>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mr-1">{modePresetsLabel}</span>
         {modePresets.map((preset) => (
           <button
             key={preset.id}
             type="button"
             onClick={() => onApplyPreset(preset.id)}
-            className="px-3 py-1 text-xs rounded-full transition-colors bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-300 dark:hover:bg-primary-900/40 border border-primary-100 dark:border-primary-500/20"
           >
             {preset.label}
           </button>
         ))}
         {selectedSkillsLabel ? (
-          <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">{selectedSkillsLabel}</span>
+          <span className="text-xs font-medium text-primary-600 dark:text-primary-400 ml-2 bg-primary-50 dark:bg-primary-900/20 px-3 py-1 rounded-full border border-primary-100 dark:border-primary-500/20">{selectedSkillsLabel}</span>
         ) : null}
       </div>
 
       {showAdvanced && (
-        <>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-dark-border/50 space-y-4 animate-fade-in">
+          <div className="flex flex-wrap items-center gap-2">
             {chatMode === 'chat' ? (
               <>
                 <button
                   onClick={onToggleModelComparison}
                   aria-label={chatModeComparisonLabel}
                   title={chatModeComparisonLabel}
-                  className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
                     enableModelComparison
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
+                      ? 'bg-success-500 text-white shadow-md'
+                      : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
                   }`}
                   type="button"
                 >
@@ -172,7 +172,7 @@ export function ChatAreaModeControls({
                     aria-label={comparisonModelLabel}
                     value={comparisonModel}
                     onChange={(event) => onSetComparisonModel(event.target.value)}
-                    className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded"
+                    className="px-3 py-1.5 text-xs border border-gray-200 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                   >
                     {comparisonModels.map((model) => (
                       <option key={model} value={model}>{model}</option>
@@ -181,43 +181,48 @@ export function ChatAreaModeControls({
                 )}
               </>
             ) : (
-              <select
-                aria-label={chatModeAgentLabel}
-                value={agentAction}
-                onChange={(event) => onSetAgentAction(event.target.value as 'write' | 'revise' | 'context')}
-                className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text rounded"
-              >
-                <option value="write">{chatAgentActionWriteLabel}</option>
-                <option value="revise">{chatAgentActionReviseLabel}</option>
-                <option value="context">{chatAgentActionContextLabel}</option>
-              </select>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mr-1">{chatModeAgentLabel}</span>
+                <select
+                  aria-label={chatModeAgentLabel}
+                  value={agentAction}
+                  onChange={(event) => onSetAgentAction(event.target.value as 'write' | 'revise' | 'context')}
+                  className="px-3 py-1.5 text-xs border border-gray-200 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
+                >
+                  <option value="write">{chatAgentActionWriteLabel}</option>
+                  <option value="revise">{chatAgentActionReviseLabel}</option>
+                  <option value="context">{chatAgentActionContextLabel}</option>
+                </select>
+              </div>
             )}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-gray-500 dark:text-dark-text-secondary">{workflowLabel}</span>
-            {([
-              { level: 'L1' as const, label: workflowQuickLabel },
-              { level: 'L2' as const, label: workflowLiteLabel },
-              { level: 'L3' as const, label: workflowStandardLabel },
-              { level: 'L4' as const, label: workflowBrainstormLabel },
-              { level: 'L5' as const, label: workflowCoordinatorLabel },
-            ]).map(({ level, label }) => (
-              <button
-                key={level}
-                onClick={() => onSetWorkflowLevel(level)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  workflowLevel === level
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 dark:bg-dark-border text-gray-600 dark:text-dark-text hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mr-1">{workflowLabel}</span>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { level: 'L1' as const, label: workflowQuickLabel },
+                { level: 'L2' as const, label: workflowLiteLabel },
+                { level: 'L3' as const, label: workflowStandardLabel },
+                { level: 'L4' as const, label: workflowBrainstormLabel },
+                { level: 'L5' as const, label: workflowCoordinatorLabel },
+              ]).map(({ level, label }) => (
+                <button
+                  key={level}
+                  onClick={() => onSetWorkflowLevel(level)}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
+                    workflowLevel === level
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
+                  }`}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )

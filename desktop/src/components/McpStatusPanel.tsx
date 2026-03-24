@@ -470,6 +470,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
                     <button
                       onClick={() => void handleServiceToggle(service)}
                       disabled={serviceActionLoading === `toggle:${service.id}` || service.builtin}
+                      title={service.builtin ? t.mcpBuiltinServiceCannotToggle : undefined}
                       className={`focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 border rounded-md disabled:opacity-50 transition-all active:scale-95 ${service.enabled ? 'bg-white dark:bg-dark-surface border-gray-200 dark:border-dark-border text-warning-600 dark:text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-900/10' : 'bg-primary-50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-500/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100'}`}
                     >
                       {serviceActionLoading === `toggle:${service.id}` && <RefreshCw size={12} className="animate-spin" />}
