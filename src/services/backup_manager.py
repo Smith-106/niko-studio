@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +161,20 @@ class BackupManager:
             if item.is_file():
                 files.append(item)
         return files
+
+    def _validate_webdav_base_url(self, url: str) -> Optional[str]:
+        """验证 WebDAV 基础 URL（默认仅允许 HTTPS，loopback 允许 HTTP）"""
+        parsed = urlparse(url)
+        scheme = (parsed.scheme or '').lower()
+        host = (parsed.hostname or '').lower()
+
+        if not scheme:
+            return "WebDAV URL must include scheme"
+        if scheme == 'https':
+            return None
+        if scheme == 'http' and (host == 'localhost' or host == '::1' or host.startswith('127.')):
+            return None
+        return "WebDAV URL must use https (except localhost/127.0.0.1/::1 for local development)"
 
     # ============================================================
     # 本地备份
@@ -502,6 +517,10 @@ class BackupManager:
         password = webdav_config.get('password', '')
         remote_path = webdav_config.get('remote_path', '/backups')
 
+        url_error = self._validate_webdav_base_url(url)
+        if url_error:
+            return {"success": False, "error": url_error}
+
         auth = HTTPBasicAuth(username, password)
 
         try:
@@ -542,7 +561,7 @@ class BackupManager:
 
         except Exception as e:
             logger.error(f"WebDAV upload failed: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "WebDAV upload failed"}
 
     def restore_from_webdav(
         self,
@@ -571,6 +590,10 @@ class BackupManager:
         url = webdav_config.get('url', '').rstrip('/')
         username = webdav_config.get('username', '')
         password = webdav_config.get('password', '')
+
+        url_error = self._validate_webdav_base_url(url)
+        if url_error:
+            return {"success": False, "error": url_error}
 
         auth = HTTPBasicAuth(username, password)
         full_url = f"{url}{remote_path}"
@@ -632,7 +655,7 @@ class BackupManager:
 
         except Exception as e:
             logger.error(f"WebDAV restore failed: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "WebDAV restore failed"}
 
     # ============================================================
     # S3 对象存储

@@ -130,6 +130,73 @@ def test_backup_to_webdav_with_mock_requests(tmp_path, monkeypatch):
     manager.close()
 
 
+def test_backup_to_webdav_rejects_non_loopback_http(tmp_path):
+    source_file = tmp_path / "webdav-http.txt"
+    source_file.write_text("webdav", encoding="utf-8")
+    manager = BackupManager(backup_dir=str(tmp_path / "backups"))
+    created = manager.create_backup(str(source_file), compress=False)
+
+    result = manager.backup_to_webdav(
+        created["backup_id"],
+        {
+            "url": "http://example.com/dav",
+            "username": "u",
+            "password": "p",
+            "remote_path": "/backups",
+        },
+    )
+
+    assert result["success"] is False
+    assert "must use https" in result["error"]
+    manager.close()
+
+
+def test_backup_to_webdav_allows_loopback_http(tmp_path, monkeypatch):
+    source_file = tmp_path / "webdav-local.txt"
+    source_file.write_text("webdav", encoding="utf-8")
+    manager = BackupManager(backup_dir=str(tmp_path / "backups"))
+    created = manager.create_backup(str(source_file), compress=False)
+
+    requests_module = types.SimpleNamespace()
+
+    class _Response:
+        def raise_for_status(self):
+            return None
+
+    calls = {"mkcol": 0, "put": 0}
+
+    def _request(method, *_args, **_kwargs):
+        if method == "MKCOL":
+            calls["mkcol"] += 1
+        return _Response()
+
+    def _put(*_args, **_kwargs):
+        calls["put"] += 1
+        return _Response()
+
+    requests_module.request = _request
+    requests_module.put = _put
+
+    auth_module = types.SimpleNamespace(HTTPBasicAuth=lambda u, p: (u, p))
+
+    monkeypatch.setitem(sys.modules, "requests", requests_module)
+    monkeypatch.setitem(sys.modules, "requests.auth", auth_module)
+
+    result = manager.backup_to_webdav(
+        created["backup_id"],
+        {
+            "url": "http://localhost:8080/dav",
+            "username": "u",
+            "password": "p",
+            "remote_path": "/backups",
+        },
+    )
+
+    assert result["success"] is True
+    assert calls["put"] >= 1
+    manager.close()
+
+
 def test_backup_to_and_restore_from_s3_with_mock_boto3(tmp_path, monkeypatch):
     source_file = tmp_path / "s3.txt"
     source_file.write_text("s3-content", encoding="utf-8")
