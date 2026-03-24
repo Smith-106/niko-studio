@@ -295,7 +295,7 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
           </button>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none rounded-md p-1 hover:bg-gray-200 dark:hover:bg-dark-surface2 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded-md p-1 hover:bg-gray-200 dark:hover:bg-dark-surface2 transition-colors"
             aria-label={t.mcpCloseAria}
           >
             ✕
@@ -423,8 +423,9 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
             <button
               onClick={handleCreateService}
               disabled={serviceActionLoading === 'create'}
-              className="w-full text-xs font-medium px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-md disabled:opacity-50 transition-all shadow-sm active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 text-xs font-medium px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-md disabled:opacity-50 transition-all shadow-sm active:scale-[0.98]"
             >
+              {serviceActionLoading === 'create' && <RefreshCw size={14} className="animate-spin" />}
               {serviceActionLoading === 'create' ? t.mcpCreating : t.mcpCreateService}
             </button>
 
@@ -449,22 +450,25 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
                     <button
                       onClick={() => void handleServiceRename(service)}
                       disabled={serviceActionLoading === `rename:${service.id}`}
-                      className="flex-1 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
+                      className="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
                     >
+                      {serviceActionLoading === `rename:${service.id}` && <RefreshCw size={12} className="animate-spin" />}
                       {serviceActionLoading === `rename:${service.id}` ? t.mcpSaving : t.mcpSaveName}
                     </button>
                     <button
                       onClick={() => void handleServiceToggle(service)}
                       disabled={serviceActionLoading === `toggle:${service.id}` || service.builtin}
-                      className={`flex-1 text-[11px] font-medium px-2 py-1.5 border rounded-md disabled:opacity-50 transition-all active:scale-95 ${service.enabled ? 'bg-white dark:bg-dark-surface border-gray-200 dark:border-dark-border text-warning-600 dark:text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-900/10' : 'bg-primary-50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-500/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100'}`}
+                      className={`flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 border rounded-md disabled:opacity-50 transition-all active:scale-95 ${service.enabled ? 'bg-white dark:bg-dark-surface border-gray-200 dark:border-dark-border text-warning-600 dark:text-warning-500 hover:bg-warning-50 dark:hover:bg-warning-900/10' : 'bg-primary-50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-500/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100'}`}
                     >
+                      {serviceActionLoading === `toggle:${service.id}` && <RefreshCw size={12} className="animate-spin" />}
                       {service.enabled ? t.mcpDisable : t.mcpEnable}
                     </button>
                     <button
                       onClick={() => void handleServiceProbe(service.id)}
                       disabled={serviceActionLoading === `probe:${service.id}`}
-                      className="flex-1 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
+                      className="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium px-2 py-1.5 bg-white dark:bg-dark-surface hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border rounded-md disabled:opacity-50 text-gray-700 dark:text-dark-text transition-all active:scale-95"
                     >
+                      {serviceActionLoading === `probe:${service.id}` && <RefreshCw size={12} className="animate-spin" />}
                       {serviceActionLoading === `probe:${service.id}` ? t.mcpProbing : t.mcpHealthCheck}
                     </button>
                   </div>
