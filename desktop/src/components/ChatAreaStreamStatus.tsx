@@ -28,9 +28,9 @@ interface ChatAreaStreamStatusProps {
 }
 
 const STATUS_CLASS = {
-  success: 'text-green-700 bg-green-50 dark:bg-green-900/20 dark:text-green-400',
-  error: 'text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400',
-  info: 'text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300',
+  success: 'text-success-700 bg-success-50 border-success-100 dark:bg-success-900/20 dark:text-success-400 dark:border-success-500/20',
+  error: 'text-danger-700 bg-danger-50 border-danger-100 dark:bg-danger-900/20 dark:text-danger-400 dark:border-danger-500/20',
+  info: 'text-primary-700 bg-primary-50 border-primary-100 dark:bg-primary-900/20 dark:text-primary-300 dark:border-primary-500/20',
 }
 
 export function ChatAreaStreamStatus({
@@ -45,16 +45,16 @@ export function ChatAreaStreamStatus({
   uploadStatus,
 }: ChatAreaStreamStatusProps) {
   return (
-    <>
+    <div className="space-y-2 mb-2 animate-fade-in">
       {recoverStatus && (
-        <div className={`px-4 py-2 text-xs ${STATUS_CLASS[recoverStatus.type]}`}>
-          <div className="flex flex-col gap-2">
-            <span>{recoverStatus.message}</span>
+        <div className={`px-4 py-3 text-xs rounded-xl border shadow-sm ${STATUS_CLASS[recoverStatus.type]}`}>
+          <div className="flex flex-col gap-3">
+            <span className="font-medium leading-relaxed">{recoverStatus.message}</span>
             {recoverStatus.type === 'error' && (
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={onRetryLastSend}
-                  className="px-2 py-1 rounded bg-white/80 dark:bg-dark-border dark:text-dark-text"
+                  className="px-3 py-1.5 rounded-lg bg-white/80 dark:bg-dark-surface dark:text-dark-text border border-gray-200 dark:border-dark-border hover:bg-white dark:hover:bg-dark-surface2 transition-all active:scale-95 shadow-sm font-semibold"
                   type="button"
                 >
                   {retryLastSendLabel}
@@ -62,7 +62,7 @@ export function ChatAreaStreamStatus({
                 {recoverableCheckpointId && (
                   <button
                     onClick={onRestoreToCheckpoint}
-                    className="px-2 py-1 rounded bg-white/80 dark:bg-dark-border dark:text-dark-text"
+                    className="px-3 py-1.5 rounded-lg bg-white/80 dark:bg-dark-surface dark:text-dark-text border border-gray-200 dark:border-dark-border hover:bg-white dark:hover:bg-dark-surface2 transition-all active:scale-95 shadow-sm font-semibold"
                     type="button"
                   >
                     {restoreBeforeSendLabel}
@@ -72,7 +72,7 @@ export function ChatAreaStreamStatus({
                   onClick={() => {
                     void onCopyRecoverError()
                   }}
-                  className="px-2 py-1 rounded bg-white/80 dark:bg-dark-border dark:text-dark-text"
+                  className="px-3 py-1.5 rounded-lg bg-white/80 dark:bg-dark-surface dark:text-dark-text border border-gray-200 dark:border-dark-border hover:bg-white dark:hover:bg-dark-surface2 transition-all active:scale-95 shadow-sm font-semibold"
                   type="button"
                 >
                   {copyErrorLabel}
@@ -84,16 +84,26 @@ export function ChatAreaStreamStatus({
       )}
 
       {uploadStatus && (
-        <div className={`px-4 py-2 text-xs ${STATUS_CLASS[uploadStatus.type]}`}>
+        <div className={`px-4 py-3 text-xs rounded-xl border shadow-sm ${STATUS_CLASS[uploadStatus.type]}`}>
           <div className="flex items-center justify-between gap-3">
-            <span>{uploadStatus.message}</span>
-            <span className="font-medium">{Math.max(0, Math.min(100, Math.round(uploadStatus.progress)))}%</span>
+            <span className="font-medium">{uploadStatus.message}</span>
+            <div className="flex items-center gap-2">
+              <div className="w-20 h-1.5 bg-gray-200/50 dark:bg-black/20 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-current transition-all duration-300" 
+                  style={{ width: `${Math.max(0, Math.min(100, Math.round(uploadStatus.progress)))}%` }}
+                />
+              </div>
+              <span className="font-bold min-w-[32px] text-right">{Math.max(0, Math.min(100, Math.round(uploadStatus.progress)))}%</span>
+            </div>
           </div>
           {uploadStatus.errorCategory && (
-            <div className="mt-1 opacity-80">{uploadStatus.errorCategory}</div>
+            <div className="mt-2 text-[10px] font-bold uppercase tracking-wider opacity-70">
+              Error Category: {uploadStatus.errorCategory}
+            </div>
           )}
         </div>
       )}
-    </>
+    </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, User, MapPin, BookOpen, Sparkles } from 'lucide-react'
+import { Search, User, MapPin, BookOpen, Sparkles, X } from 'lucide-react'
 import { useI18n } from '../i18n'
 import type { TabType, KnowledgeItem, OperationStatus, TabConfig } from './knowledge/KnowledgeTypes'
 import { CharacterTab } from './knowledge/CharacterTab'
@@ -201,41 +201,41 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed right-0 top-12 bottom-0 w-full max-w-[800px] bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg flex flex-col z-40"
+      className="fixed right-0 top-14 bottom-0 w-full max-w-[800px] bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col z-40 transform transition-transform animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-label={t.knowledgeTitle}
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text">{t.knowledgeTitle}</h2>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md">
+        <h2 className="text-base font-semibold text-gray-800 dark:text-dark-text tracking-wide">{t.knowledgeTitle}</h2>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none rounded-md p-1 hover:bg-gray-200 dark:hover:bg-dark-surface2 transition-colors"
           aria-label={t.knowledgeClose}
           title={t.knowledgeClose}
         >
-          ×
+          <X size={20} />
         </button>
       </div>
 
-      <div className="flex border-b border-gray-200 dark:border-dark-border">
+      <div className="flex border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg overflow-x-auto custom-scrollbar">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-all focus:outline-none shrink-0 text-sm font-medium ${
               activeTab === tab.id
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text'
+                ? 'border-primary-600 text-primary-600 dark:text-primary-400 bg-primary-50/30 dark:bg-primary-900/10'
+                : 'border-transparent text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2'
             }`}
           >
-            <tab.icon size={18} />
+            <tab.icon size={18} className={activeTab === tab.id ? 'text-primary-600' : ''} />
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div className="p-4 border-b border-gray-200 dark:border-dark-border">
+      <div className="p-6 border-b border-gray-200 dark:border-dark-border space-y-4 bg-white dark:bg-dark-bg">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
@@ -244,7 +244,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t.knowledgeSearchPlaceholder}
             aria-label={t.knowledgeSearchPlaceholder}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
           />
         </div>
         {getSkillTabControls()}
@@ -252,15 +252,19 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
         <MemoryForm onStatusChange={handleStatusChange} onItemsChange={handleItemsChange} />
 
         {operationStatus && (
-          <p
-            className={`mt-2 text-xs ${operationStatus.type === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+          <div
+            className={`mt-2 p-3 rounded-lg text-xs font-medium shadow-sm animate-fade-in ${
+              operationStatus.type === 'success' 
+                ? 'bg-success-50 text-success-700 border border-success-100 dark:bg-success-900/20 dark:text-success-400 dark:border-success-500/20' 
+                : 'bg-danger-50 text-danger-700 border border-danger-100 dark:bg-danger-900/20 dark:text-danger-400 dark:border-danger-500/20'
+            }`}
           >
             {operationStatus.message}
-          </p>
+          </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">{renderTabContent()}</div>
+      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50 dark:bg-dark-bg">{renderTabContent()}</div>
     </div>
   )
 }
