@@ -3,7 +3,7 @@
   "schema_version": "evidence.v1",
   "decision": "GO",
   "go_no_go_reasons": [],
-  "generated_at": "2026-03-15T05:32:12.886563+00:00",
+  "generated_at": "2026-03-24T12:40:41.951737+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -27,7 +27,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=6337"
+      "detail": "status=passed,passed_count=1"
     },
     {
       "check_id": "desktop_check",
@@ -43,7 +43,7 @@
       "blocking": false,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=16"
+      "detail": "status=passed,passed_count=1"
     },
     {
       "check_id": "production_guard",
@@ -65,9 +65,9 @@
       "check_id": "codecov_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "PASS",
+      "status": "WARN",
       "exit_code": 0,
-      "detail": "strict_mode=false,token_present=false,coverage_xml=yes,result=coverage_available"
+      "detail": "strict_mode=false,token_present=false,coverage_xml=no,result=coverage_missing_in_soft_mode"
     },
     {
       "check_id": "evidence_completeness_blocker_signal",
@@ -211,7 +211,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "snapshots_scanned=3,linked_conflict_artifacts=1,critical_conflicts_linked=0,invalid_snapshots=0,decision=go"
+      "detail": "snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0,decision=go"
     },
     {
       "check_id": "unresolved_triage_blocker_signal",
@@ -219,31 +219,31 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "state_files_scanned=367,linked_triage_records=23,unresolved_triage_records=0,invalid_state_files=344,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
+      "detail": "state_files_scanned=9,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=9,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "PASS",
+      "status": "WARN",
       "exit_code": 0,
-      "detail": "snapshots_scanned=1,linked_feedback_artifacts=1,invalid_snapshots=0"
+      "detail": "snapshots_scanned=0,linked_feedback_artifacts=0,invalid_snapshots=0"
     },
     {
       "check_id": "conflict_artifact_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "PASS",
+      "status": "WARN",
       "exit_code": 0,
-      "detail": "snapshots_scanned=3,linked_conflict_artifacts=1,critical_conflicts_linked=0,invalid_snapshots=0"
+      "detail": "snapshots_scanned=0,linked_conflict_artifacts=0,critical_conflicts_linked=0,invalid_snapshots=0"
     },
     {
       "check_id": "chapter_gate_evidence_linkage_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "PASS",
+      "status": "WARN",
       "exit_code": 0,
-      "detail": "snapshots_scanned=3,eligible_release_gate_runs=1,chapter_gate_checks_linked=1,aggregation_window=active_sessions,result=aggregated,invalid_snapshots=0"
+      "detail": "snapshots_scanned=0,eligible_release_gate_runs=0,chapter_gate_checks_linked=0,aggregation_window=active_sessions,result=insufficient_data,invalid_snapshots=0"
     },
     {
       "check_id": "evidence_freshness_signal",
@@ -273,13 +273,13 @@
       "check_id": "tasks_completion_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "PASS",
+      "status": "WARN",
       "exit_code": 0,
-      "detail": "checked=29,unchecked=0,completion_ratio=100.0%,json_parse_error=none"
+      "detail": "checker_exit=0,json_parse_error=json payload not found in output"
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-03-15T05:32:12.886563+00:00",
+    "trace_id": "release-readiness-2026-03-24T12:40:41.951737+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",
