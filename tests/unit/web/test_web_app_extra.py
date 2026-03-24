@@ -291,17 +291,17 @@ class TestWebSocketOriginCheck:
         assert ws not in mgr.active_connections
 
     async def test_no_origin_header(self, monkeypatch):
-        """No origin header should continue path and then disconnect on close."""
+        """Missing origin header should be rejected with policy violation."""
         mgr = ConnectionManager()
         monkeypatch.setattr(web_app, "manager", mgr)
 
         ws = AsyncMock()
         ws.headers = {}
-        ws.receive_text = AsyncMock(side_effect=WebSocketDisconnect())
 
         await web_app.websocket_endpoint(ws, "c5")
 
-        ws.close.assert_not_called()
+        ws.close.assert_awaited_once_with(code=1008)
+        ws.accept.assert_not_awaited()
         assert ws not in mgr.active_connections
 
 

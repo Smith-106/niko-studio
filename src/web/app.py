@@ -117,15 +117,15 @@ async def get(request: Request):
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
     # Sentinel: Manual CSWSH check (Defense in Depth)
     # Ensure Origin is trusted before accepting connection
-    if "origin" in websocket.headers:
-        origin = websocket.headers["origin"]
-        if origin not in origins:
-            print(f"Rejected WebSocket connection from untrusted origin: {origin}")
-            await websocket.close(code=1008)  # Policy Violation
-            return
+    origin = websocket.headers.get("origin")
+    if not origin or origin not in origins:
+        print(f"Rejected WebSocket connection from untrusted origin: {origin or '<missing>'}")
+        await websocket.close(code=1008)  # Policy Violation
+        return
 
     await manager.connect(websocket)
     try:
+
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
