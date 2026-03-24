@@ -279,6 +279,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
               onClick={handleSubmit}
               disabled={buttonDisabled}
               className="px-5 py-2.5 text-sm font-medium rounded-lg bg-primary-600 text-white shadow-sm hover:bg-primary-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-2"
+              title={buttonDisabled ? (loading ? t.writingHelperRunning : t.writingHelperInputPlaceholder) : undefined}
             >
               {loading && <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-transparent animate-spin" />}
               {loading ? t.writingHelperRunning : t.writingHelperRun}
