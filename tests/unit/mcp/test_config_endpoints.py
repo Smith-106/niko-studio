@@ -298,12 +298,142 @@ class TestReloadConfig:
         assert data["status"] == "ok"
         mock_manager.reload.assert_called_once()
 
-    def test_reload_config_no_manager_returns_500(self, client_no_lifespan, monkeypatch):
-        """Test POST /config/reload returns 500 when manager not initialized"""
+
+
+class TestConfigHelpers:
+    """Tests for config endpoint helper functions"""
+
+    def test_set_nested_value_invalid_path_returns_false(self):
+        from src.mcp.endpoints import config as config_endpoints
+
+        config_dict = {"agent": {"default_model": "gpt-4o"}}
+        assert config_endpoints._set_nested_value(config_dict, "invalidpath", "x") is False
+
+    def test_set_nested_value_missing_section_returns_false(self):
+        from src.mcp.endpoints import config as config_endpoints
+
+        config_dict = {"agent": {"default_model": "gpt-4o"}}
+        assert config_endpoints._set_nested_value(config_dict, "memory.cache_ttl", 10) is False
+
+    def test_set_nested_value_missing_field_returns_false(self):
+        from src.mcp.endpoints import config as config_endpoints
+
+        config_dict = {"agent": {"default_model": "gpt-4o"}}
+        assert config_endpoints._set_nested_value(config_dict, "agent.missing", "x") is False
+
+    def test_set_nested_value_success_updates_value(self):
+        from src.mcp.endpoints import config as config_endpoints
+
+        config_dict = {"agent": {"default_model": "gpt-4o"}}
+        assert config_endpoints._set_nested_value(config_dict, "agent.default_model", "gpt-4o-mini") is True
+        assert config_dict["agent"]["default_model"] == "gpt-4o-mini"
+
+
+class TestConfigEndpointErrorBranches:
+    """Additional branch coverage for config endpoints"""
+
+    def test_get_config_exception_returns_500(self, client_no_lifespan, monkeypatch):
+        def _raise(*args, **kwargs):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(config_module, "get_config", _raise)
+
+        response = client_no_lifespan.get("/config")
+        assert response.status_code == 500
+        assert "Failed to get configuration" in response.json()["error"]
+
+    def test_update_config_invalid_field_path_returns_400(self, client_no_lifespan, monkeypatch):
+        from src.mcp.endpoints import config as config_endpoints
+
+        monkeypatch.setattr(config_endpoints, "MODIFIABLE_FIELDS", ["invalidpath"])
+        monkeypatch.setattr(config_module, "get_config_value", lambda *args, **kwargs: None)
+
+        response = client_no_lifespan.put("/config", json={
+            "fields": {
+                "invalidpath": "value"
+            }
+        })
+
+        assert response.status_code == 400
+        errors = response.json().get("errors", [])
+        assert any("Invalid field path" in err["error"] for err in errors)
+
+    def test_update_config_set_config_value_exception_returns_400(self, client_no_lifespan, monkeypatch):
+        monkeypatch.setattr(config_module, "get_config_value", lambda *args, **kwargs: "current")
+
+        def _raise(*args, **kwargs):
+            raise RuntimeError("set failed")
+
+        monkeypatch.setattr(config_module, "set_config_value", _raise)
+
+        response = client_no_lifespan.put("/config", json={
+            "fields": {
+                "agent.default_model": "gpt-4o-mini"
+            }
+        })
+
+        assert response.status_code == 400
+        errors = response.json().get("errors", [])
+        assert any(err["field"] == "agent.default_model" and "set failed" in err["error"] for err in errors)
+
+    def test_update_config_request_json_exception_returns_500(self, client_no_lifespan, monkeypatch):
+        async def _raise_json(self):
+            raise RuntimeError("bad json")
+
+        monkeypatch.setattr("starlette.requests.Request.json", _raise_json)
+
+        response = client_no_lifespan.put("/config", json={"fields": {"agent.default_model": "x"}})
+        assert response.status_code == 500
+        assert "Failed to update configuration" in response.json()["error"]
+
+    def test_get_secrets_exception_returns_500(self, client_no_lifespan, monkeypatch):
+        def _raise(*args, **kwargs):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(config_module, "get_config_value", _raise)
+
+        response = client_no_lifespan.get("/config/secrets")
+        assert response.status_code == 500
+        assert "Failed to get secrets" in response.json()["error"]
+
+    def test_update_secrets_set_config_value_exception_returns_400(self, client_no_lifespan, monkeypatch):
+        def _raise(*args, **kwargs):
+            raise RuntimeError("set secret failed")
+
+        monkeypatch.setattr(config_module, "set_config_value", _raise)
+
+        response = client_no_lifespan.put("/config/secrets", json={
+            "secrets": {
+                "agent.google_api_key": "new-key"
+            }
+        })
+
+        assert response.status_code == 400
+        errors = response.json().get("errors", [])
+        assert any(err["field"] == "agent.google_api_key" and "set secret failed" in err["error"] for err in errors)
+
+    def test_update_secrets_request_json_exception_returns_500(self, client_no_lifespan, monkeypatch):
+        async def _raise_json(self):
+            raise RuntimeError("bad json")
+
+        monkeypatch.setattr("starlette.requests.Request.json", _raise_json)
+
+        response = client_no_lifespan.put("/config/secrets", json={"secrets": {"agent.google_api_key": "x"}})
+        assert response.status_code == 500
+        assert "Failed to update secrets" in response.json()["error"]
+
+    def test_reload_config_reload_exception_returns_500(self, client_no_lifespan, monkeypatch):
+        mock_manager = MagicMock()
+        mock_manager.reload.side_effect = RuntimeError("reload failed")
+        monkeypatch.setattr(config_module, "_config_manager", mock_manager)
+
+        response = client_no_lifespan.post("/config/reload")
+        assert response.status_code == 500
+        assert "Failed to reload configuration" in response.json()["error"]
+
+    def test_reload_config_manager_none_returns_500(self, client_no_lifespan, monkeypatch):
         monkeypatch.setattr(config_module, "_config_manager", None)
 
         response = client_no_lifespan.post("/config/reload")
-
         assert response.status_code == 500
-        data = response.json()
-        assert "error" in data
+        assert response.json()["error"] == "Config manager not initialized"

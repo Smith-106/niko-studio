@@ -238,6 +238,7 @@ from starlette.requests import Request
 
 import re  # For test compatibility
 import asyncio  # For test compatibility
+from urllib.parse import urlparse
 
 def _is_llm_available() -> bool:
     """Wrapper to allow test monkeypatching of get_services."""
@@ -505,6 +506,33 @@ class GatewayLocalhostOnlyMiddleware(BaseHTTPMiddleware):
         return JSONResponse({"error": "forbidden"}, status_code=403)
 
 
+class GatewayConfigMutationOriginGuardMiddleware(BaseHTTPMiddleware):
+    """Block cross-origin browser mutation requests for config write endpoints."""
+
+    _PROTECTED_ROUTES = {
+        ("PUT", "/config"),
+        ("PUT", "/config/secrets"),
+        ("POST", "/config/reload"),
+    }
+
+    async def dispatch(self, request, call_next):
+        method = str(getattr(request, "method", "") or "").upper()
+        path = str(getattr(request, "url", None).path if getattr(request, "url", None) else request.scope.get("path", ""))
+
+        if (method, path) not in self._PROTECTED_ROUTES:
+            return await call_next(request)
+
+        origin = request.headers.get("origin")
+        if not origin:
+            return await call_next(request)
+
+        parsed = urlparse(origin)
+        if _is_loopback_host(parsed.hostname):
+            return await call_next(request)
+
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+
+
 # ============ 创建 Gateway ============
 
 def create_gateway() -> Starlette:
@@ -623,6 +651,7 @@ def create_gateway() -> Starlette:
         enabled=_resolve_localhost_only_enabled(),
         exempt_paths=_resolve_localhost_only_exempt_paths(),
     )
+    gateway.add_middleware(GatewayConfigMutationOriginGuardMiddleware)
     gateway.add_middleware(GatewayMetricsMiddleware)
 
     # 添加 CORS 支持

@@ -543,6 +543,82 @@ async def test_gateway_localhost_only_middleware_exempt_paths_bypass_guard(monke
     assert response.status_code == 200
 
 
+def _build_gateway_client_for_origin_guard(monkeypatch):
+    from src.mcp import gateway as gateway_module
+    from starlette.responses import JSONResponse
+    from starlette.testclient import TestClient
+
+    async def _ok_get_config(_request):
+        return JSONResponse({"status": "ok", "route": "get_config"}, status_code=200)
+
+    async def _ok_update_config(_request):
+        return JSONResponse({"status": "ok", "route": "update_config"}, status_code=200)
+
+    async def _ok_update_secrets(_request):
+        return JSONResponse({"status": "ok", "route": "update_secrets"}, status_code=200)
+
+    async def _ok_reload_config(_request):
+        return JSONResponse({"status": "ok", "route": "reload_config"}, status_code=200)
+
+    monkeypatch.setenv("NIKO_ENV", "development")
+    monkeypatch.setenv("NIKO_GATEWAY_LOCALHOST_ONLY", "0")
+    monkeypatch.setattr(gateway_module, "get_config", _ok_get_config)
+    monkeypatch.setattr(gateway_module, "update_config", _ok_update_config)
+    monkeypatch.setattr(gateway_module, "update_secrets", _ok_update_secrets)
+    monkeypatch.setattr(gateway_module, "reload_config", _ok_reload_config)
+
+    return TestClient(gateway_module.create_gateway())
+
+
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("put", "/config"),
+        ("put", "/config/secrets"),
+        ("post", "/config/reload"),
+    ],
+)
+def test_gateway_config_origin_guard_blocks_non_loopback_origin(monkeypatch, method, path):
+    client = _build_gateway_client_for_origin_guard(monkeypatch)
+
+    response = getattr(client, method)(
+        path,
+        json={},
+        headers={"Origin": "https://evil.example.com"},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"error": "forbidden"}
+
+
+@pytest.mark.parametrize("origin", ["http://localhost:3000", "http://127.0.0.1:3000"])
+def test_gateway_config_origin_guard_allows_loopback_origins(monkeypatch, origin):
+    client = _build_gateway_client_for_origin_guard(monkeypatch)
+
+    response = client.put("/config", json={}, headers={"Origin": origin})
+
+    assert response.status_code == 200
+    assert response.json()["route"] == "update_config"
+
+
+def test_gateway_config_origin_guard_allows_missing_origin(monkeypatch):
+    client = _build_gateway_client_for_origin_guard(monkeypatch)
+
+    response = client.put("/config", json={})
+
+    assert response.status_code == 200
+    assert response.json()["route"] == "update_config"
+
+
+def test_gateway_config_origin_guard_does_not_affect_get_config(monkeypatch):
+    client = _build_gateway_client_for_origin_guard(monkeypatch)
+
+    response = client.get("/config", headers={"Origin": "https://evil.example.com"})
+
+    assert response.status_code == 200
+    assert response.json()["route"] == "get_config"
+
+
 def test_models_returns_500_when_config_load_fails(client_no_lifespan, monkeypatch):
     from src.mcp import gateway as gateway_module
 
