@@ -7,7 +7,7 @@ Legacy note: Desktop client + MCP Gateway is the primary delivery path; this Web
 import os
 import json
 import asyncio
-from typing import Dict, List, Any
+from typing import Dict, List, Set, Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
@@ -67,15 +67,14 @@ def _is_web_workflow_enabled() -> bool:
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: Set[WebSocket] = set()
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
-        self.active_connections.append(websocket)
+        self.active_connections.add(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
+        self.active_connections.discard(websocket)
     async def send_personal_message(self, message: str, websocket: WebSocket):
         await websocket.send_text(message)
 
@@ -127,120 +126,132 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     try:
 
         while True:
-            data = await websocket.receive_text()
-            message = json.loads(data)
+            try:
+                data = await websocket.receive_text()
+                message = json.loads(data)
 
-            # Handle different message types
-            if message.get("type") == "start_workflow":
-                user_idea = message.get("content", "")
-                mode = message.get("mode", "L3")
+                # Handle different message types
+                if message.get("type") == "start_workflow":
+                    user_idea = message.get("content", "")
+                    mode = message.get("mode", "L3")
 
-                if not _is_web_workflow_enabled():
+                    if not _is_web_workflow_enabled():
+                        print(
+                            f"[audit] websocket_workflow_rejected client_id={client_id} "
+                            "reason=disabled"
+                        )
+                        await manager.send_json({
+                            "type": "error",
+                            "code": "workflow_disabled",
+                            "message": WEB_WORKFLOW_DISABLED_MESSAGE,
+                        }, websocket)
+                        continue
+
                     print(
-                        f"[audit] websocket_workflow_rejected client_id={client_id} "
-                        "reason=disabled"
+                        f"[audit] websocket_workflow_enabled client_id={client_id} mode={mode}"
                     )
                     await manager.send_json({
-                        "type": "error",
-                        "code": "workflow_disabled",
-                        "message": WEB_WORKFLOW_DISABLED_MESSAGE,
+                        "type": "risk_prompt",
+                        "severity": "warning",
+                        "message": WEB_WORKFLOW_RISK_MESSAGE,
                     }, websocket)
-                    continue
 
-                print(
-                    f"[audit] websocket_workflow_enabled client_id={client_id} mode={mode}"
-                )
-                await manager.send_json({
-                    "type": "risk_prompt",
-                    "severity": "warning",
-                    "message": WEB_WORKFLOW_RISK_MESSAGE,
-                }, websocket)
-
-                await manager.send_json({
-                    "type": "status",
-                    "status": "starting",
-                    "message": f"Starting workflow in {mode} mode..."
-                }, websocket)
-
-                # Run the workflow using WorkflowEngine.run_stream (authoritative API)
-                try:
-                    engine = WorkflowEngine()
-                    async for event in engine.run_stream(task=user_idea, level=mode):
-                        event_type = event.get("type", "unknown")
-
-                        if event_type == "plan_created":
-                            await manager.send_json({
-                                "type": "plan_created",
-                                "plan_id": event.get("plan_id"),
-                                "message": "Plan created successfully."
-                            }, websocket)
-
-                        elif event_type == "step_start":
-                            await manager.send_json({
-                                "type": "step_start",
-                                "step_id": event.get("step_id"),
-                                "step_name": event.get("step_name"),
-                                "message": f"Starting step: {event.get('step_name', 'unknown')}"
-                            }, websocket)
-
-                        elif event_type == "step_complete":
-                            step_result = event.get("result", {})
-                            await manager.send_json({
-                                "type": "step_complete",
-                                "step_id": event.get("step_id"),
-                                "step_name": event.get("step_name"),
-                                "status": event.get("status"),
-                                "data": _serialize_state(step_result) if step_result else {}
-                            }, websocket)
-
-                            # If we have a draft, send it specifically
-                            if isinstance(step_result, dict):
-                                if "draft_content" in step_result:
-                                    await manager.send_json({
-                                        "type": "draft_update",
-                                        "content": step_result["draft_content"]
-                                    }, websocket)
-
-                                if "lock_analysis" in step_result:
-                                    await manager.send_json({
-                                        "type": "lock_update",
-                                        "data": step_result["lock_analysis"]
-                                    }, websocket)
-
-                                if "scene_cards" in step_result:
-                                    await manager.send_json({
-                                        "type": "scenes_update",
-                                        "data": step_result["scene_cards"]
-                                    }, websocket)
-
-                        elif event_type == "plan_complete":
-                            await manager.send_json({
-                                "type": "status",
-                                "status": "completed",
-                                "message": "Workflow completed successfully.",
-                                "plan_id": event.get("plan_id"),
-                            }, websocket)
-
-                        elif event_type in ("plan_error", "error"):
-                            await manager.send_json({
-                                "type": "error",
-                                "message": event.get("error", "Unknown error"),
-                            }, websocket)
-
-                        elif event_type == "plan_blocked":
-                            await manager.send_json({
-                                "type": "blocked",
-                                "status": event.get("status"),
-                                "message": f"Workflow blocked: {event.get('status', 'unknown')}",
-                            }, websocket)
-
-                except Exception as e:
-                    import traceback
-                    traceback.print_exc()
                     await manager.send_json({
-                        "type": "error",
-                        "message": str(e)
+                        "type": "status",
+                        "status": "starting",
+                        "message": f"Starting workflow in {mode} mode..."
                     }, websocket)
+
+                    # Run the workflow using WorkflowEngine.run_stream (authoritative API)
+                    try:
+                        engine = WorkflowEngine()
+                        async for event in engine.run_stream(task=user_idea, level=mode):
+                            event_type = event.get("type", "unknown")
+
+                            if event_type == "plan_created":
+                                await manager.send_json({
+                                    "type": "plan_created",
+                                    "plan_id": event.get("plan_id"),
+                                    "message": "Plan created successfully."
+                                }, websocket)
+
+                            elif event_type == "step_start":
+                                await manager.send_json({
+                                    "type": "step_start",
+                                    "step_id": event.get("step_id"),
+                                    "step_name": event.get("step_name"),
+                                    "message": f"Starting step: {event.get('step_name', 'unknown')}"
+                                }, websocket)
+
+                            elif event_type == "step_complete":
+                                step_result = event.get("result", {})
+                                await manager.send_json({
+                                    "type": "step_complete",
+                                    "step_id": event.get("step_id"),
+                                    "step_name": event.get("step_name"),
+                                    "status": event.get("status"),
+                                    "data": _serialize_state(step_result) if step_result else {}
+                                }, websocket)
+
+                                # If we have a draft, send it specifically
+                                if isinstance(step_result, dict):
+                                    if "draft_content" in step_result:
+                                        await manager.send_json({
+                                            "type": "draft_update",
+                                            "content": step_result["draft_content"]
+                                        }, websocket)
+
+                                    if "lock_analysis" in step_result:
+                                        await manager.send_json({
+                                            "type": "lock_update",
+                                            "data": step_result["lock_analysis"]
+                                        }, websocket)
+
+                                    if "scene_cards" in step_result:
+                                        await manager.send_json({
+                                            "type": "scenes_update",
+                                            "data": step_result["scene_cards"]
+                                        }, websocket)
+
+                            elif event_type == "plan_complete":
+                                await manager.send_json({
+                                    "type": "status",
+                                    "status": "completed",
+                                    "message": "Workflow completed successfully.",
+                                    "plan_id": event.get("plan_id"),
+                                }, websocket)
+
+                            elif event_type in ("plan_error", "error"):
+                                await manager.send_json({
+                                    "type": "error",
+                                    "message": event.get("error", "Unknown error"),
+                                }, websocket)
+
+                            elif event_type == "plan_blocked":
+                                await manager.send_json({
+                                    "type": "blocked",
+                                    "status": event.get("status"),
+                                    "message": f"Workflow blocked: {event.get('status', 'unknown')}",
+                                }, websocket)
+
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        await manager.send_json({
+                            "type": "error",
+                            "message": str(e)
+                        }, websocket)
+            except WebSocketDisconnect:
+                raise
+            except Exception as e:
+                print(f"[audit] websocket_message_error client_id={client_id} error={e}")
+                await manager.send_json({
+                    "type": "error",
+                    "code": "message_processing_failed",
+                    "message": str(e)
+                }, websocket)
+                manager.disconnect(websocket)
+                break
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)

@@ -87,14 +87,31 @@ def test_from_config_uses_data_dir_fallback(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_execute_cypher_sql_success_and_error_paths(tmp_path):
+async def test_execute_cypher_rejects_non_match_queries(tmp_path):
     engine = GraphEngine(db_path=str(tmp_path / "g.db"))
     try:
-        ok = await engine.execute_cypher("SELECT 1 AS x")
-        assert ok[0]["x"] == 1
+        bad_select = await engine.execute_cypher("SELECT 1 AS x")
+        assert bad_select == [{"error": "Only MATCH queries are allowed"}]
 
-        bad = await engine.execute_cypher("SELECT * FROM no_such_table")
-        assert "error" in bad[0]
+        bad_create = await engine.execute_cypher("CREATE (n:Character {name:'hero'})")
+        assert bad_create == [{"error": "Only MATCH queries are allowed"}]
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_execute_cypher_rejects_invalid_and_oversized_input(tmp_path):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        non_string = await engine.execute_cypher(None)
+        assert non_string == [{"error": "Invalid query input"}]
+
+        empty_query = await engine.execute_cypher("   ")
+        assert empty_query == [{"error": "Query cannot be empty"}]
+
+        oversized = "MATCH " + "x" * (GraphEngine.MAX_CYPHER_LENGTH + 1)
+        too_long = await engine.execute_cypher(oversized)
+        assert too_long == [{"error": "Query too long"}]
     finally:
         engine.close()
 
@@ -127,6 +144,28 @@ async def test_search_entities_by_name_like_query_branch(tmp_path):
         assert results[0]["name"] == "hero"
         assert "created_at" in results[0]
         assert "updated_at" in results[0]
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_search_entities_by_name_normalizes_limit_boundaries(tmp_path):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        for idx in range(220):
+            await engine.create_entity("Character", f"hero-{idx}", {"role": "protagonist"})
+
+        invalid_limit = await engine.search_entities_by_name("Character", "%hero%", limit="oops")
+        assert len(invalid_limit) == 50
+
+        negative_limit = await engine.search_entities_by_name("Character", "%hero%", limit=-10)
+        assert len(negative_limit) == 1
+
+        zero_limit = await engine.search_entities_by_name("Character", "%hero%", limit=0)
+        assert len(zero_limit) == 1
+
+        huge_limit = await engine.search_entities_by_name("Character", "%hero%", limit=10_000)
+        assert len(huge_limit) == 200
     finally:
         engine.close()
 
@@ -172,6 +211,129 @@ async def test_relation_and_entity_not_found_branches(tmp_path):
 
         miss_delete = await engine.delete_entity("missing")
         assert "error" in miss_delete
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_foreshadows_entity_type_validation_and_delete_success(tmp_path):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        invalid = await engine.create_entity("InvalidType", "bad", {})
+        assert invalid == {"error": "Invalid entity type: InvalidType"}
+
+        await engine.create_entity("Foreshadow", "clue-open", {"status": "pending", "planted_chapter": 2})
+        await engine.create_entity("Foreshadow", "clue-closed", {"status": "resolved", "planted_chapter": 5})
+        pending = await engine.get_foreshadows()
+        assert [item["name"] for item in pending] == ["clue-open"]
+
+        up_to_chapter = await engine.get_foreshadows(status="pending", chapter=3)
+        assert [item["name"] for item in up_to_chapter] == ["clue-open"]
+
+        no_status_filter = await engine.get_foreshadows(status=None, chapter=3)
+        assert [item["name"] for item in no_status_filter] == ["clue-open"]
+
+        deleted = await engine.delete_entity("clue-open")
+        assert deleted == {"status": "deleted"}
+        assert await engine.get_foreshadows() == []
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_execute_match_name_and_search_invalid_patterns(tmp_path):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        await engine.create_entity("Character", "hero", {"role": "protagonist"})
+
+        by_name = await engine.execute_cypher("MATCH (n:Character) WHERE n.name = 'hero' RETURN n")
+        assert len(by_name) == 1
+        assert by_name[0]["name"] == "hero"
+
+        assert await engine.search_entities_by_name("Character", None) == []
+        assert await engine.search_entities_by_name("Character", "") == []
+        assert await engine.search_entities_by_name("Character", "x" * (GraphEngine.MAX_NAME_PATTERN_LENGTH + 1)) == []
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_get_character_without_optional_sections_and_update_success(tmp_path):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        await engine.create_entity("Character", "hero", {"role": "protagonist"})
+
+        updated = await engine.update_entity("hero", {"age": 18})
+        assert updated["status"] == "updated"
+        assert updated["properties"]["role"] == "protagonist"
+        assert updated["properties"]["age"] == 18
+
+        character = await engine.get_character("hero", include_relations=False, include_timeline=False)
+        assert character["name"] == "hero"
+        assert "relations" not in character
+        assert "timeline" not in character
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_create_relation_success_path(tmp_path):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        await engine.create_entity("Character", "hero", {})
+        await engine.create_entity("Character", "ally", {})
+
+        created = await engine.create_relation("hero", "ally", "KNOWS", {"since": "childhood"})
+        assert created["status"] == "created"
+        assert "id" in created
+
+        relations = await engine.get_relationships("hero", relationship_type="KNOWS")
+        assert len(relations) == 1
+        assert relations[0]["from"] == "hero"
+        assert relations[0]["to"] == "ally"
+        assert relations[0]["properties"]["since"] == "childhood"
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_from_config_with_explicit_graph_db_path(tmp_path):
+    explicit = tmp_path / "explicit.db"
+    with patch("src.graph.graph_engine.get_config_value", side_effect=lambda key, default=None: str(explicit) if key == "graph.db_path" else default):
+        engine = GraphEngine.from_config()
+    try:
+        assert engine.db_path == explicit
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_from_config_without_graph_db_path_or_data_dir_uses_home_fallback(tmp_path, monkeypatch):
+    monkeypatch.setattr("src.graph.graph_engine.Path.home", lambda: tmp_path / "home-dir")
+    with patch("src.graph.graph_engine.get_config_value", return_value=None):
+        engine = GraphEngine.from_config()
+    try:
+        assert engine.db_path == Path(tmp_path / "home-dir" / ".niko" / "graph.db")
+    finally:
+        engine.close()
+
+
+@pytest.mark.asyncio
+async def test_health_check_without_plugins_and_projection_disabled_paths(tmp_path):
+    engine = GraphEngine(db_path=str(tmp_path / "g.db"))
+    try:
+        status = await engine.health_check()
+        assert status["db_ok"] is True
+        assert status["plugins"] == {}
+
+        all_characters = await engine.execute_cypher("MATCH (n:Character) RETURN n")
+        assert all_characters == []
+
+        missing = await engine.get_character("ghost", include_relations=False, include_timeline=False)
+        assert missing == {"error": "Character 'ghost' not found"}
+
+        await engine._run_neo4j_entity_projection({"id": "e1"})
+        await engine._run_neo4j_relation_projection({"id": "r1"})
     finally:
         engine.close()
 
