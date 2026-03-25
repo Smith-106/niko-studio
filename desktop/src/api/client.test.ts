@@ -477,7 +477,7 @@ describe('workflow bridge and quality-check APIs', () => {
     const response = await novelQualityCheck('章节内容')
 
     expect(response.success).toBe(false)
-    expect(response.error).toContain('network down')
+    expect(response.error).toBe('Request failed. Please try again.')
   })
 
   it('routes workflow calls by workflowBackendMode', async () => {

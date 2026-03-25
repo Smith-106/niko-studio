@@ -1083,15 +1083,35 @@ async def test_rest_memory_graph_and_critic_endpoints_forward_payload(monkeypatc
     assert res.status_code == 200
     mock_graph_query.assert_awaited_once_with(cypher="MATCH (n) RETURN n")
 
+    mock_graph_query.reset_mock()
+    req = await _json_request("/graph/query", {})
+    res = await gateway_module.graph_query_endpoint(req)
+    assert res.status_code == 200
+    mock_graph_query.assert_awaited_once_with(cypher="")
+
+    mock_graph_character.reset_mock()
     req = await _json_request("/graph/character", {"name": "Niko", "include_relations": False})
     res = await gateway_module.graph_character_endpoint(req)
     assert res.status_code == 200
     mock_graph_character.assert_awaited_once_with(name="Niko", include_relations=False, include_timeline=False)
 
+    mock_graph_character.reset_mock()
+    req = await _json_request("/graph/character", {"name": "Niko", "include_timeline": True})
+    res = await gateway_module.graph_character_endpoint(req)
+    assert res.status_code == 200
+    mock_graph_character.assert_awaited_once_with(name="Niko", include_relations=True, include_timeline=True)
+
+    mock_graph_foreshadows.reset_mock()
     req = await _json_request("/graph/foreshadows", {"chapter": "3"})
     res = await gateway_module.graph_foreshadows_endpoint(req)
     assert res.status_code == 200
     mock_graph_foreshadows.assert_awaited_once_with(status="pending", chapter="3")
+
+    mock_graph_foreshadows.reset_mock()
+    req = await _json_request("/graph/foreshadows", {})
+    res = await gateway_module.graph_foreshadows_endpoint(req)
+    assert res.status_code == 200
+    mock_graph_foreshadows.assert_awaited_once_with(status="pending", chapter=None)
 
     req = await _json_request(
         "/critic/evaluate",
@@ -2830,9 +2850,14 @@ async def test_internal_raw_mcp_wrappers_cover_engine_delegation(monkeypatch):
     await raw_graph_query("MATCH (n) RETURN n")
     await raw_graph_character("Niko")
     await raw_graph_relationships("Niko")
+    await raw_graph_relationships("Niko", relationship_type="ALLY", depth=2)
     await raw_graph_foreshadows()
     await raw_graph_add_entity("Character", "Niko")
     await raw_graph_add_relation("A", "B", "KNOWS")
+
+    assert graph_engine.get_relationships.await_count == 2
+    assert graph_engine.get_relationships.await_args_list[0].args == ("Niko", None, 1)
+    assert graph_engine.get_relationships.await_args_list[1].args == ("Niko", "ALLY", 2)
 
     await raw_search_hybrid(
         "query",

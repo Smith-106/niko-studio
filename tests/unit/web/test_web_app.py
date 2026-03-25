@@ -58,7 +58,7 @@ class TestConnectionManager:
         from src.web.app import ConnectionManager
         mgr = ConnectionManager()
         ws = MagicMock()
-        mgr.active_connections.append(ws)
+        mgr.active_connections.add(ws)
         mgr.disconnect(ws)
         assert ws not in mgr.active_connections
 
@@ -84,7 +84,7 @@ class TestConnectionManager:
         mgr = ConnectionManager()
         ws1 = AsyncMock()
         ws2 = AsyncMock()
-        mgr.active_connections = [ws1, ws2]
+        mgr.active_connections = {ws1, ws2}
         await mgr.broadcast("msg")
         ws1.send_text.assert_awaited_once_with("msg")
         ws2.send_text.assert_awaited_once_with("msg")

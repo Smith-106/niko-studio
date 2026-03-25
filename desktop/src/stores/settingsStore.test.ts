@@ -66,15 +66,29 @@ describe('settingsStore prompt template library', () => {
     expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('standard')
   })
 
-  it('resets workflow backend mode to standard after override', () => {
+  it('does not persist sensitive api keys to localStorage', () => {
     localStorage.clear()
     const store = useSettingsStore.getState()
 
-    store.updateSettings({ workflowBackendMode: 'uiBridge' })
-    expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
+    store.updateSettings({ apiKey: 'top-secret-key' })
+    store.updateProvider('anthropic', { apiKey: 'provider-secret-key' })
 
-    store.resetSettings()
+    const persistedRaw = localStorage.getItem('niko-settings')
+    expect(persistedRaw).toBeTruthy()
 
-    expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('standard')
+    const persisted = JSON.parse(persistedRaw!) as {
+      state?: {
+        settings?: {
+          apiKey?: string
+          llmProviders?: Array<{ id: string; apiKey?: string }>
+        }
+      }
+    }
+
+    expect(persisted.state?.settings?.apiKey).toBe('')
+    const anthropic = persisted.state?.settings?.llmProviders?.find((provider) => provider.id === 'anthropic')
+    expect(anthropic?.apiKey).toBe('')
+    expect(persistedRaw).not.toContain('top-secret-key')
+    expect(persistedRaw).not.toContain('provider-secret-key')
   })
 })

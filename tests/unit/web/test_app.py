@@ -58,7 +58,7 @@ class TestConnectionManager:
 
     def test_init(self):
         cm = ConnectionManager()
-        assert cm.active_connections == []
+        assert cm.active_connections == set()
 
     @pytest.mark.asyncio
     async def test_connect(self):
@@ -71,7 +71,7 @@ class TestConnectionManager:
     def test_disconnect(self):
         cm = ConnectionManager()
         mock_ws = MagicMock()
-        cm.active_connections.append(mock_ws)
+        cm.active_connections.add(mock_ws)
         cm.disconnect(mock_ws)
         assert mock_ws not in cm.active_connections
 
@@ -95,7 +95,7 @@ class TestConnectionManager:
         cm = ConnectionManager()
         ws1 = AsyncMock()
         ws2 = AsyncMock()
-        cm.active_connections = [ws1, ws2]
+        cm.active_connections = {ws1, ws2}
         await cm.broadcast("msg")
         ws1.send_text.assert_called_once_with("msg")
         ws2.send_text.assert_called_once_with("msg")
