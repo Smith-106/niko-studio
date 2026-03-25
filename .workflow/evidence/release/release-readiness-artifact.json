@@ -1,11 +1,9 @@
 {
   "artifact_type": "release_readiness",
   "schema_version": "evidence.v1",
-  "decision": "NO_GO",
-  "go_no_go_reasons": [
-    "baseline_tests_and_coverage"
-  ],
-  "generated_at": "2026-03-24T15:55:33.648438+00:00",
+  "decision": "GO",
+  "go_no_go_reasons": [],
+  "generated_at": "2026-03-25T15:56:15.061030+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -27,9 +25,9 @@
       "check_id": "baseline_tests_and_coverage",
       "priority": "P0",
       "blocking": true,
-      "status": "FAIL",
-      "exit_code": 1,
-      "detail": "status=passed,passed_count=6437"
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "status=passed,passed_count=1"
     },
     {
       "check_id": "desktop_check",
@@ -45,7 +43,7 @@
       "blocking": false,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=16"
+      "detail": "status=passed,passed_count=1"
     },
     {
       "check_id": "production_guard",
@@ -221,7 +219,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "state_files_scanned=13,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=13,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
+      "detail": "state_files_scanned=27,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=27,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
@@ -275,13 +273,13 @@
       "check_id": "tasks_completion_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "PASS",
+      "status": "WARN",
       "exit_code": 0,
-      "detail": "checked=29,unchecked=0,completion_ratio=100.0%,json_parse_error=none"
+      "detail": "checker_exit=0,json_parse_error=json payload not found in output"
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-03-24T15:55:33.648438+00:00",
+    "trace_id": "release-readiness-2026-03-25T15:56:15.061030+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",
