@@ -733,7 +733,7 @@ class BackupManager:
 
         except Exception as e:
             logger.error(f"S3 upload failed: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "S3 upload failed"}
 
     def restore_from_s3(
         self,
@@ -802,7 +802,7 @@ class BackupManager:
 
         except Exception as e:
             logger.error(f"S3 restore failed: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "S3 restore failed"}
 
     def close(self):
         """关闭服务"""

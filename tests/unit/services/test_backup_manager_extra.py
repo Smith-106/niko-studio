@@ -272,7 +272,8 @@ class TestBackupManagerAdditionalBranches:
 
         result = mgr.backup_to_webdav(created["backup_id"], {"url": "https://example.com"})
         assert result["success"] is False
-        assert "put-fail" in result["error"]
+        assert result["error"] == "WebDAV upload failed"
+        assert "put-fail" not in result["error"]
 
     def test_restore_from_webdav_success(self, mgr, tmp_path, monkeypatch):
         class Response:
@@ -319,7 +320,8 @@ class TestBackupManagerAdditionalBranches:
 
         result = mgr.restore_from_webdav("/remote/path", {"url": "https://example.com"})
         assert result["success"] is False
-        assert "propfind-fail" in result["error"]
+        assert result["error"] == "WebDAV restore failed"
+        assert "propfind-fail" not in result["error"]
 
     def test_restore_from_webdav_skips_response_without_href(self, mgr, tmp_path, monkeypatch):
         class Response:
@@ -404,7 +406,75 @@ class TestBackupManagerAdditionalBranches:
 
         assert captured["endpoint_url"] == "http://minio:9000"
         assert result["success"] is False
-        assert "upload-fail" in result["error"]
+        assert result["error"] == "S3 upload failed"
+        assert "upload-fail" not in result["error"]
+
+    def test_create_backup_exception_when_cleanup_target_already_missing(self, mgr, tmp_path):
+        source = tmp_path / "src-missing-cleanup"
+        source.mkdir()
+        (source / "a.txt").write_text("a", encoding="utf-8")
+
+        def boom_after_removing_backup_dir(_source):
+            for item in mgr.backup_dir.iterdir():
+                if item != mgr.db_path:
+                    import shutil
+                    shutil.rmtree(item)
+            raise RuntimeError("boom-no-cleanup")
+
+        with patch.object(mgr, "_collect_files", side_effect=boom_after_removing_backup_dir):
+            result = mgr.create_backup(str(source))
+
+        assert result["success"] is False
+        assert "boom-no-cleanup" in result["error"]
+
+    def test_restore_backup_without_checksum_verification(self, mgr, tmp_path):
+        source = tmp_path / "plain.txt"
+        source.write_text("abc", encoding="utf-8")
+        created = mgr.create_backup(str(source), compress=False)
+
+        with patch.object(mgr, "_compute_file_checksum", side_effect=AssertionError("should not run")):
+            result = mgr.restore_backup(
+                created["backup_id"],
+                target_path=str(tmp_path / "restore-no-verify"),
+                verify_checksum=False,
+            )
+
+        assert result["success"] is True
+        assert result["file_count"] == 1
+
+    def test_delete_backup_when_directory_already_missing(self, mgr, tmp_path):
+        source = tmp_path / "delete-missing.txt"
+        source.write_text("abc", encoding="utf-8")
+        created = mgr.create_backup(str(source), compress=False)
+        import shutil
+        shutil.rmtree(Path(created["backup_path"]))
+
+        assert mgr.delete_backup(created["backup_id"]) is True
+        assert mgr.get_backup(created["backup_id"]) is None
+
+    def test_backup_to_s3_success_skips_directories_during_walk(self, mgr, tmp_path, monkeypatch):
+        source = tmp_path / "tree"
+        (source / "nested").mkdir(parents=True)
+        (source / "nested" / "a.txt").write_text("a", encoding="utf-8")
+        created = mgr.create_backup(str(source), compress=False)
+
+        uploaded = []
+
+        class GoodClient:
+            def upload_file(self, file_path, bucket, key):
+                uploaded.append((Path(file_path).name, bucket, key))
+
+        boto3_mod = types.SimpleNamespace(client=lambda **kwargs: GoodClient())
+        cfg_mod = types.SimpleNamespace(Config=object)
+        monkeypatch.setitem(sys.modules, "boto3", boto3_mod)
+        monkeypatch.setitem(sys.modules, "botocore", types.SimpleNamespace())
+        monkeypatch.setitem(sys.modules, "botocore.config", cfg_mod)
+
+        result = mgr.backup_to_s3(created["backup_id"], {"bucket": "b"})
+
+        assert result["success"] is True
+        assert result["file_count"] == 1
+        assert uploaded == [("a.txt", "b", f"backups/{created['backup_id']}/nested\\a.txt")]
 
     def test_restore_from_s3_default_target_endpoint_and_exception(self, mgr, tmp_path, monkeypatch):
         captured = {}
@@ -442,5 +512,146 @@ class TestBackupManagerAdditionalBranches:
 
         assert captured["endpoint_url"] == "http://minio:9000"
         assert result["success"] is False
-        assert "download-fail" in result["error"]
+        assert result["error"] == "S3 restore failed"
+        assert "download-fail" not in result["error"]
         assert result.get("target_path") is None
+
+    def test_validate_webdav_base_url_variants(self, mgr):
+        assert mgr._validate_webdav_base_url("example.com") == "WebDAV URL must include scheme"
+        assert mgr._validate_webdav_base_url("http://example.com") == (
+            "WebDAV URL must use https (except localhost/127.0.0.1/::1 for local development)"
+        )
+        assert mgr._validate_webdav_base_url("http://127.0.0.1:8080") is None
+
+    def test_backup_to_webdav_invalid_url(self, mgr, tmp_path):
+        source = tmp_path / "f.txt"
+        source.write_text("x", encoding="utf-8")
+        created = mgr.create_backup(str(source), compress=False)
+
+        result = mgr.backup_to_webdav(created["backup_id"], {"url": "http://example.com"})
+
+        assert result["success"] is False
+        assert "must use https" in result["error"]
+
+    def test_restore_from_webdav_invalid_url(self, mgr):
+        result = mgr.restore_from_webdav("/remote/path", {"url": "http://example.com"})
+
+        assert result["success"] is False
+        assert "must use https" in result["error"]
+
+    def test_restore_from_webdav_import_error(self, mgr):
+        with patch.dict("sys.modules", {"requests": None}):
+            with patch("builtins.__import__", side_effect=ImportError("no requests")):
+                result = mgr.restore_from_webdav("/remote/path", {"url": "https://example.com"})
+
+        assert result["success"] is False
+        assert result["error"] == "requests library not installed"
+
+    def test_backup_to_s3_import_error(self, mgr):
+        with patch.dict("sys.modules", {"boto3": None, "botocore.config": None}):
+            with patch("builtins.__import__", side_effect=ImportError("no boto3")):
+                result = mgr.backup_to_s3("missing", {"bucket": "b"})
+
+        assert result["success"] is False
+        assert result["error"] == "boto3 library not installed"
+
+    def test_backup_to_s3_backup_not_found(self, mgr, monkeypatch):
+        boto3_mod = types.SimpleNamespace(client=lambda **kwargs: object())
+        cfg_mod = types.SimpleNamespace(Config=object)
+        monkeypatch.setitem(sys.modules, "boto3", boto3_mod)
+        monkeypatch.setitem(sys.modules, "botocore", types.SimpleNamespace())
+        monkeypatch.setitem(sys.modules, "botocore.config", cfg_mod)
+
+        result = mgr.backup_to_s3("missing", {"bucket": "b"})
+
+        assert result["success"] is False
+        assert "Backup not found" in result["error"]
+
+    def test_backup_to_s3_success_without_endpoint(self, mgr, tmp_path, monkeypatch):
+        source = tmp_path / "src"
+        source.mkdir()
+        (source / "a.txt").write_text("a", encoding="utf-8")
+        created = mgr.create_backup(str(source), compress=False)
+
+        captured = {"uploads": []}
+
+        class GoodClient:
+            def upload_file(self, file_path, bucket, key):
+                captured["uploads"].append((Path(file_path).name, bucket, key))
+
+        def fake_client(**kwargs):
+            captured["kwargs"] = kwargs
+            return GoodClient()
+
+        boto3_mod = types.SimpleNamespace(client=fake_client)
+        cfg_mod = types.SimpleNamespace(Config=object)
+        monkeypatch.setitem(sys.modules, "boto3", boto3_mod)
+        monkeypatch.setitem(sys.modules, "botocore", types.SimpleNamespace())
+        monkeypatch.setitem(sys.modules, "botocore.config", cfg_mod)
+
+        result = mgr.backup_to_s3(created["backup_id"], {"bucket": "b", "prefix": "custom"})
+
+        assert result["success"] is True
+        assert result["bucket"] == "b"
+        assert result["prefix"] == f"custom/{created['backup_id']}"
+        assert "endpoint_url" not in captured["kwargs"]
+        assert captured["uploads"][0][1] == "b"
+
+    def test_restore_from_s3_import_error(self, mgr):
+        with patch.dict("sys.modules", {"boto3": None}):
+            with patch("builtins.__import__", side_effect=ImportError("no boto3")):
+                result = mgr.restore_from_s3("prefix/b1", {"bucket": "b"})
+
+        assert result["success"] is False
+        assert result["error"] == "boto3 library not installed"
+
+    def test_restore_from_s3_success_without_endpoint(self, mgr, tmp_path, monkeypatch):
+        captured = {"downloads": []}
+
+        class Paginator:
+            def paginate(self, **kwargs):
+                captured["paginate"] = kwargs
+                return [{"Contents": [{"Key": "prefix/b1/a.txt"}, {"Key": "prefix/b1/nested/b.txt"}]}]
+
+        class GoodClient:
+            def get_paginator(self, name):
+                assert name == "list_objects_v2"
+                return Paginator()
+
+            def download_file(self, bucket, key, local_file):
+                Path(local_file).write_text(key, encoding="utf-8")
+                captured["downloads"].append((bucket, key, Path(local_file).name))
+
+        def fake_client(**kwargs):
+            captured["kwargs"] = kwargs
+            return GoodClient()
+
+        boto3_mod = types.SimpleNamespace(client=fake_client)
+        monkeypatch.setitem(sys.modules, "boto3", boto3_mod)
+
+        result = mgr.restore_from_s3(
+            "prefix/b1",
+            {"bucket": "b"},
+            target_path=str(tmp_path / "s3_restore"),
+        )
+
+        assert result["success"] is True
+        assert result["file_count"] == 2
+        assert "endpoint_url" not in captured["kwargs"]
+        assert captured["paginate"] == {"Bucket": "b", "Prefix": "prefix/b1"}
+        assert (tmp_path / "s3_restore" / "a.txt").read_text(encoding="utf-8") == "prefix/b1/a.txt"
+        assert (tmp_path / "s3_restore" / "nested" / "b.txt").read_text(encoding="utf-8") == "prefix/b1/nested/b.txt"
+
+    def test_close_and_singleton_helpers(self, tmp_path):
+        from src.services import backup_manager as backup_manager_module
+
+        backup_manager_module.reset_backup_manager()
+        singleton = backup_manager_module.get_backup_manager(str(tmp_path / "singleton"))
+        assert backup_manager_module.get_backup_manager(str(tmp_path / "other")) is singleton
+        assert singleton._db is not None
+
+        singleton.close()
+        assert singleton._db is None
+
+        backup_manager_module.reset_backup_manager()
+        assert backup_manager_module._backup_manager is None

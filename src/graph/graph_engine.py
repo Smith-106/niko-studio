@@ -62,6 +62,8 @@ class GraphEngine:
     """知识图谱引擎 (主系统)"""
 
     ENTITY_TYPES = ["Character", "Location", "Event", "Item", "Foreshadow", "Chapter", "Scene"]
+    MAX_CYPHER_LENGTH = 4096
+    MAX_NAME_PATTERN_LENGTH = 256
 
     def __init__(self, db_path: str = None, plugins: Optional[Iterable[EnginePlugin]] = None):
         self.is_primary_engine = True
@@ -180,20 +182,24 @@ class GraphEngine:
         - MATCH (n:Type) WHERE n.name = 'xxx' RETURN n
         - MATCH (a)-[r:REL]->(b) RETURN a, r, b
         """
+        if not isinstance(cypher, str):
+            logger.warning("Blocked non-string graph query input")
+            return [{"error": "Invalid query input"}]
+
         cypher = cypher.strip()
+        if not cypher:
+            return [{"error": "Query cannot be empty"}]
 
-        # 简单的 MATCH 查询转换
-        if cypher.upper().startswith("MATCH"):
-            return await self._execute_match(cypher)
+        if len(cypher) > self.MAX_CYPHER_LENGTH:
+            logger.warning("Blocked oversized graph query")
+            return [{"error": "Query too long"}]
 
-        # 直接 SQL (fallback)
-        try:
-            cursor = self.db.execute(cypher)
-            columns = [desc[0] for desc in cursor.description] if cursor.description else []
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
-        except Exception as e:
-            logger.error(f"Query error: {e}")
-            return [{"error": str(e)}]
+        # 仅允许 MATCH 查询
+        if not cypher.upper().startswith("MATCH"):
+            logger.warning("Blocked non-MATCH graph query")
+            return [{"error": "Only MATCH queries are allowed"}]
+
+        return await self._execute_match(cypher)
     
     async def _execute_match(self, cypher: str) -> list:
         """解析并执行 MATCH 查询"""
@@ -256,10 +262,27 @@ class GraphEngine:
         Returns:
             匹配的实体列表
         """
+        if not isinstance(name_pattern, str):
+            return []
+
+        if not name_pattern:
+            return []
+
+        if len(name_pattern) > self.MAX_NAME_PATTERN_LENGTH:
+            logger.warning("Blocked oversized entity name pattern")
+            return []
+
+        # 防止异常/过大 limit 导致查询行为失控
+        try:
+            normalized_limit = int(limit)
+        except (TypeError, ValueError):
+            normalized_limit = 50
+        normalized_limit = max(1, min(normalized_limit, 200))
+
         # 使用参数化 LIKE 查询，防止注入
         cursor = self.db.execute(
             "SELECT * FROM entities WHERE type = ? AND name LIKE ? LIMIT ?",
-            (entity_type, name_pattern, limit)
+            (entity_type, name_pattern, normalized_limit)
         )
 
         results = []
