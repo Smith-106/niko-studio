@@ -7,8 +7,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '@/stores/settingsStore'
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:8000'
-
+const GENERIC_API_ERROR_MESSAGE = 'Request failed. Please try again.'
+const GENERIC_EMPTY_MODELS_ERROR_MESSAGE = 'No models found.'
 const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, '')
+
+const getErrorName = (error: unknown): string => (error instanceof Error ? error.name : 'UnknownError')
 
 const resolveApiBase = (): string => {
   const env = import.meta.env as Record<string, string | undefined>
@@ -265,8 +268,9 @@ async function callApi<T>(
 
     return { success: true, data }
   } catch (error) {
-    console.error(`API call failed: ${endpoint}`, error)
-    return { success: false, error: String(error) }
+    const errorName = error instanceof Error ? error.name : 'UnknownError'
+    console.error(`API call failed: ${endpoint} (${errorName})`)
+    return { success: false, error: GENERIC_API_ERROR_MESSAGE }
   }
 }
 
@@ -344,8 +348,6 @@ export async function fetchProviderModels(
   baseUrl: string,
   apiKey: string
 ): Promise<ApiResponse<ModelFetchResult>> {
-  let gatewayError: string | null = null
-
   try {
     const gatewayRes = await callApi<unknown>(`/models?provider=${encodeURIComponent(providerId)}`, 'GET')
     if (gatewayRes.success && gatewayRes.data) {
@@ -353,12 +355,9 @@ export async function fetchProviderModels(
       if (gatewayModels.length > 0) {
         return { success: true, data: { models: gatewayModels, source: 'gateway' } }
       }
-      gatewayError = 'gateway returned empty models'
-    } else {
-      gatewayError = gatewayRes.error ?? 'gateway unavailable'
     }
   } catch (error) {
-    gatewayError = String(error)
+    console.error(`Gateway models fallback failed (${getErrorName(error)})`)
   }
 
   const normalizedBase = normalizeBaseUrl(baseUrl.trim())
@@ -410,16 +409,16 @@ export async function fetchProviderModels(
     if (models.length === 0) {
       return {
         success: false,
-        error: `No models found (gateway=${gatewayError ?? 'n/a'}, direct=empty)`
+        error: GENERIC_EMPTY_MODELS_ERROR_MESSAGE,
       }
     }
 
     return { success: true, data: { models, source: 'direct' } }
   } catch (error) {
-    console.error('Fetch provider models failed:', error)
+    console.error(`Fetch provider models failed (${getErrorName(error)})`)
     return {
       success: false,
-      error: `Fetch failed (gateway=${gatewayError ?? 'n/a'}, direct=${String(error)})`
+      error: GENERIC_API_ERROR_MESSAGE,
     }
   }
 }

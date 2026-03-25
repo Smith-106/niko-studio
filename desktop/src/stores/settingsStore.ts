@@ -513,6 +513,15 @@ const normalizeSettings = (settings: Partial<Settings>): Settings => {
   }
 }
 
+const sanitizeSettingsForPersist = (settings: Settings): Settings => ({
+  ...settings,
+  apiKey: '',
+  llmProviders: settings.llmProviders.map((provider) => ({
+    ...provider,
+    apiKey: '',
+  })),
+})
+
 interface SettingsStore {
   settings: Settings
   updateSettings: (partial: Partial<Settings>) => void
@@ -911,6 +920,10 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: 'niko-settings',
+      partialize: (state) => ({
+        ...state,
+        settings: sanitizeSettingsForPersist(state.settings),
+      }),
     }
   )
 )

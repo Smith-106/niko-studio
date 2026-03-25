@@ -7,8 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
         draft: "",
         lockData: null,
         sceneCards: [],
-        isConnected: false
+        isConnected: false,
+        reconnectDelay: 1000,
+        reconnectMaxDelay: 30000,
+        reconnectTimer: null
     };
+
+    function escapeHtml(text) {
+        const value = String(text ?? '');
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     // === DOM Elements ===
     const dom = {
@@ -53,11 +66,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === WebSocket Connection ===
     function connect() {
+        if (state.reconnectTimer) {
+            clearTimeout(state.reconnectTimer);
+            state.reconnectTimer = null;
+        }
+
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         socket = new WebSocket(`${protocol}//${window.location.host}/ws/${clientId}`);
 
         socket.onopen = () => {
             state.isConnected = true;
+            state.reconnectDelay = 1000;
             updateConnectionStatus(true);
             addSystemMessage("系统连接成功。");
         };
@@ -66,11 +85,22 @@ document.addEventListener('DOMContentLoaded', () => {
             state.isConnected = false;
             updateConnectionStatus(false);
             addSystemMessage("系统断开连接，正在重试...");
-            setTimeout(connect, 3000);
+
+            const jitter = Math.floor(Math.random() * 300);
+            const delay = Math.min(state.reconnectDelay + jitter, state.reconnectMaxDelay);
+            state.reconnectTimer = setTimeout(connect, delay);
+            state.reconnectDelay = Math.min(state.reconnectDelay * 2, state.reconnectMaxDelay);
         };
 
         socket.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
+            let msg;
+            try {
+                msg = JSON.parse(event.data);
+            } catch (error) {
+                console.error('Invalid WebSocket message payload:', error, event.data);
+                addSystemMessage('收到无效消息，已忽略。');
+                return;
+            }
             handleMessage(msg);
         };
     }
@@ -141,10 +171,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function addSystemMessage(text) {
         const el = document.createElement('div');
         el.className = 'message system';
-        el.innerHTML = `
-            <div class="avatar"><i class="fas fa-info-circle"></i></div>
-            <div class="content">${text}</div>
-        `;
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.innerHTML = '<i class="fas fa-info-circle"></i>';
+        const content = document.createElement('div');
+        content.className = 'content';
+        content.textContent = text;
+        el.appendChild(avatar);
+        el.appendChild(content);
         dom.chat.stream.appendChild(el);
         scrollToBottom();
     }
@@ -152,10 +186,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function addUserMessage(text) {
         const el = document.createElement('div');
         el.className = 'message user';
-        el.innerHTML = `
-            <div class="avatar"><i class="fas fa-user"></i></div>
-            <div class="content">${text}</div>
-        `;
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.innerHTML = '<i class="fas fa-user"></i>';
+        const content = document.createElement('div');
+        content.className = 'content';
+        content.textContent = text;
+        el.appendChild(avatar);
+        el.appendChild(content);
         dom.chat.stream.appendChild(el);
         scrollToBottom();
     }
@@ -163,18 +201,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function addAgentMessage(agentName, text) {
         const el = document.createElement('div');
         el.className = 'message assistant';
-        el.innerHTML = `
-            <div class="avatar" title="${agentName}"><i class="fas fa-robot"></i></div>
-            <div class="content"><strong>${agentName}:</strong> ${text}</div>
-        `;
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.title = agentName;
+        avatar.innerHTML = '<i class="fas fa-robot"></i>';
+        const content = document.createElement('div');
+        content.className = 'content';
+        content.innerHTML = `<strong>${escapeHtml(agentName)}:</strong> ${escapeHtml(text)}`;
+        el.appendChild(avatar);
+        el.appendChild(content);
         dom.chat.stream.appendChild(el);
         scrollToBottom();
     }
 
     function updateAgentStatus(status, text) {
-        dom.status.agent.innerHTML = `<div><i class="fas fa-spinner fa-spin"></i> ${text}</div>`;
+        dom.status.agent.innerHTML = `<div><i class="fas fa-spinner fa-spin"></i> ${escapeHtml(text)}</div>`;
         if (status === 'completed') {
-            dom.status.agent.innerHTML = `<div><i class="fas fa-check"></i> 就绪</div>`;
+            dom.status.agent.innerHTML = '<div><i class="fas fa-check"></i> 就绪</div>';
         }
     }
 
