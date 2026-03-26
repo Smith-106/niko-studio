@@ -1,76 +1,21 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { BarChart3, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
 import {
-  evaluateContent,
-  createCheckpoint,
-  listCheckpoints,
-  restoreCheckpoint,
-  applyRecommendation,
-  undoRecommendation,
-  batchApplyRecommendations,
-  getImprovementSuggestions,
-  novelQualityCheck,
-  routeWorkflow,
-  createPlan,
-  executePlan,
-  workflowLifecycle,
   type RecommendationPayload,
-  type RecommendationExecutionResult,
 } from '../api/client'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n, type Translations } from '../i18n'
+import { useEvaluationWorkflow, type WorkflowAction, type WorkflowLifecycleAction } from '../hooks/useEvaluationWorkflow'
+import { useEvaluationRecommendations, defaultSuggestionState } from '../hooks/useEvaluationRecommendations'
+import { useEvaluationCheckpoints } from '../hooks/useEvaluationCheckpoints'
+import { useEvaluationQualityCheck } from '../hooks/useEvaluationQualityCheck'
+import { useEvaluationData } from '../hooks/useEvaluationData'
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 
 interface EvaluationPanelProps {
   content: string
   onClose: () => void
-}
-
-interface EvaluationViewModel {
-  score: number
-  dimensions: {
-    name: string
-    score: number
-    feedback: string
-  }[]
-  suggestions: RecommendationPayload[]
-  decision: 'APPROVED' | 'REVISE' | 'REWRITE' | 'HUMAN_REVIEW'
-}
-
-interface NovelQualityViewModel {
-  decision: string
-  totalScore: number
-  lockScore: number
-  styleScore: number
-  logicScore: number
-  feedback: string
-}
-
-type WorkflowAction = 'route' | 'plan' | 'execute' | 'lifecycle'
-type WorkflowLifecycleAction = 'start' | 'pause' | 'resume' | 'stop' | 'status'
-
-interface WorkflowActionState {
-  status: 'idle' | 'loading' | 'success' | 'error'
-  message?: string
-}
-
-interface SuggestionActionState {
-  mode: 'idle' | 'processing' | 'rollback-ready'
-  status: 'idle' | 'success' | 'error'
-  message?: string
-}
-
-interface BatchActionState {
-  mode: 'idle' | 'processing' | 'rollback-ready'
-  status: 'idle' | 'success' | 'error'
-  message?: string
-  lastAppliedIds: string[]
-}
-
-interface CheckpointItem {
-  id: string
-  description: string
-  created_at: string
 }
 
 const buildDimensions = (
@@ -143,24 +88,6 @@ const normalizeSuggestionPayloads = (
     .filter((item) => item.title.length > 0)
 }
 
-const defaultSuggestionState = (): SuggestionActionState => ({
-  mode: 'idle',
-  status: 'idle',
-})
-
-const defaultBatchState = (): BatchActionState => ({
-  mode: 'idle',
-  status: 'idle',
-  lastAppliedIds: [],
-})
-
-const defaultWorkflowActionStates = (): Record<WorkflowAction, WorkflowActionState> => ({
-  route: { status: 'idle' },
-  plan: { status: 'idle' },
-  execute: { status: 'idle' },
-  lifecycle: { status: 'idle' },
-})
-
 const getWorkflowActionLabel = (action: WorkflowAction, t: Translations): string => {
   if (action === 'route') return t.evaluationWorkflowRoute
   if (action === 'plan') return t.evaluationWorkflowPlan
@@ -168,551 +95,125 @@ const getWorkflowActionLabel = (action: WorkflowAction, t: Translations): string
   return t.evaluationWorkflowLifecycle
 }
 
-const stringifyWorkflowPayload = (payload: unknown): string => {
-  try {
-    return JSON.stringify(payload ?? {}, null, 2)
-  } catch {
-    return String(payload)
-  }
-}
-
-const readRecord = (payload: unknown): Record<string, unknown> => {
-  if (!payload || typeof payload !== 'object') {
-    return {}
-  }
-  return payload as Record<string, unknown>
-}
-
-const readStringField = (payload: unknown, key: 'plan_id' | 'step_id'): string | null => {
-  const value = readRecord(payload)[key]
-  return typeof value === 'string' && value.trim() ? value.trim() : null
-}
-
-const formatSuggestionMessage = (
-  result: RecommendationExecutionResult,
-  fallbackAction: 'apply' | 'undo',
-  t: Translations,
-  translate: (key: keyof Translations, params?: Record<string, string | number>) => string,
-): string => {
-  const actionLabel = fallbackAction === 'apply' ? t.evaluationApply : t.evaluationUndo
-  if (result.error) {
-    return translate('evaluationActionFailedWithReason', { action: actionLabel, reason: result.error })
-  }
-  if (result.message) {
-    return result.message
-  }
-  if (result.status === 'failed') {
-    return `${actionLabel}${t.restoreFailed}`
-  }
-  return fallbackAction === 'apply' ? t.evaluationApply : t.evaluationUndo
-}
-
 export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const { t, translate } = useI18n()
   const dialogRef = useRef<HTMLDivElement | null>(null)
-  const previousFocusRef = useRef<HTMLElement | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [result, setResult] = useState<EvaluationViewModel | null>(null)
-  const [checkpointDescription, setCheckpointDescription] = useState('')
-  const [checkpoints, setCheckpoints] = useState<CheckpointItem[]>([])
-  const [checkpointError, setCheckpointError] = useState<string | null>(null)
-  const [suggestionStates, setSuggestionStates] = useState<Record<string, SuggestionActionState>>({})
-  const [batchState, setBatchState] = useState<BatchActionState>(defaultBatchState())
-  const [suggestionsRefreshing, setSuggestionsRefreshing] = useState(false)
-  const [qualityChecking, setQualityChecking] = useState(false)
-  const [qualityCheckError, setQualityCheckError] = useState<string | null>(null)
-  const [qualityCheckResult, setQualityCheckResult] = useState<NovelQualityViewModel | null>(null)
-  const [workflowTask, setWorkflowTask] = useState(content)
-  const [workflowLevel, setWorkflowLevel] = useState('L3')
-  const [workflowPlanId, setWorkflowPlanId] = useState('')
-  const [workflowStepId, setWorkflowStepId] = useState('')
-  const [workflowLifecycleAction, setWorkflowLifecycleAction] = useState<WorkflowLifecycleAction>('status')
-  const [workflowStates, setWorkflowStates] = useState<Record<WorkflowAction, WorkflowActionState>>(defaultWorkflowActionStates())
-  const [workflowResult, setWorkflowResult] = useState<string>('')
-  const [workflowConfirmToken, setWorkflowConfirmToken] = useState('')
-  const [workflowGateReason, setWorkflowGateReason] = useState<string | null>(null)
-  const [workflowWaitingConfirmation, setWorkflowWaitingConfirmation] = useState(false)
-  const { addMessage } = useAppStore()
   const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
+  const {
+    workflowTask,
+    workflowLevel,
+    workflowPlanId,
+    workflowStepId,
+    workflowLifecycleAction,
+    workflowStates,
+    workflowResult,
+    workflowConfirmToken,
+    workflowGateReason,
+    workflowWaitingConfirmation,
+    setWorkflowTask,
+    setWorkflowLevel,
+    setWorkflowPlanId,
+    setWorkflowStepId,
+    setWorkflowLifecycleAction,
+    setWorkflowConfirmToken,
+    handleWorkflowRoute,
+    handleWorkflowPlan,
+    handleWorkflowExecute,
+    handleWorkflowConfirmAndContinue,
+    handleWorkflowLifecycle,
+    retryWorkflowAction,
+  } = useEvaluationWorkflow({
+    content,
+    defaultLevel: 'L3',
+    t: {
+      evaluationWorkflowLoading: t.evaluationWorkflowLoading,
+      evaluationWorkflowError: t.evaluationWorkflowError,
+      evaluationWorkflowSuccess: t.evaluationWorkflowSuccess,
+      evaluationWorkflowPlanIdRequired: t.evaluationWorkflowPlanIdRequired,
+      evaluationWorkflowConfirmTokenRequired: t.evaluationWorkflowConfirmTokenRequired,
+    },
+  })
+  const {
+    loading,
+    result,
+    suggestionsRefreshing,
+    refreshSuggestions,
+  } = useEvaluationData({
+    content,
+    qualityGoals,
+    translateSuggestions: (rawSuggestions) => normalizeSuggestionPayloads(rawSuggestions, translate),
+    buildViewModel: (data) => ({
+      score: Number((data.total_score / 10).toFixed(1)),
+      dimensions: buildDimensions(
+        {
+          lock_score: data.lock_score as number,
+          style_score: data.style_score as number,
+          logic_score: data.logic_score as number,
+          actionable_feedback: data.actionable_feedback as string,
+        },
+        t.evaluationNoFeedback,
+        t,
+      ),
+      suggestions: data.suggestions,
+      decision: data.decision,
+    }),
+  })
+  const {
+    suggestionStates,
+    batchState,
+    resetRecommendationStates,
+    handleApplySuggestion,
+    handleUndoSuggestion,
+    handleBatchApply,
+    handleBatchUndo,
+  } = useEvaluationRecommendations({
+    content,
+    suggestions: result?.suggestions ?? [],
+    t,
+    translate,
+  })
+  const { addMessage } = useAppStore()
+  const {
+    checkpointDescription,
+    checkpoints,
+    checkpointError,
+    setCheckpointDescription,
+    refreshCheckpoints,
+    handleCreateCheckpoint,
+    handleRestoreCheckpoint,
+  } = useEvaluationCheckpoints({
+    t: {
+      loadingCheckpoints: t.loadingCheckpoints,
+      evaluationCheckpointPlaceholder: t.evaluationCheckpointPlaceholder,
+      save: t.save,
+      restoreFailed: t.restoreFailed,
+    },
+    onRestoreSuccess: async (checkpointId) => {
+      addMessage('assistant', translate('restoreSuccessWithCheckpoint', { checkpointId }))
+    },
+  })
+  const {
+    qualityChecking,
+    qualityCheckError,
+    qualityCheckResult,
+    runNovelQualityCheck,
+  } = useEvaluationQualityCheck({
+    content,
+    qualityGoals,
+    t: {
+      evaluationQualityCheckFailed: t.evaluationQualityCheckFailed,
+      evaluationNoFeedback: t.evaluationNoFeedback,
+    },
+  })
 
   useEffect(() => {
-    setWorkflowTask(content)
-  }, [content])
+    resetRecommendationStates(result?.suggestions ?? [])
+  }, [result?.suggestions])
 
-  useEffect(() => {
-    runEvaluation()
-  }, [content])
-
-  useEffect(() => {
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-
-    const focusPanel = () => {
-      const panel = dialogRef.current
-      if (!panel) return
-      const focusable = panel.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
-      if (focusable) {
-        focusable.focus()
-      } else {
-        panel.focus()
-      }
-    }
-
-    focusPanel()
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-        return
-      }
-
-      if (event.key !== 'Tab') {
-        return
-      }
-
-      const panel = dialogRef.current
-      if (!panel) return
-
-      const focusableElements = Array.from(
-        panel.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
-      ).filter((element) => !element.hasAttribute('disabled') && element.tabIndex !== -1)
-
-      if (focusableElements.length === 0) {
-        event.preventDefault()
-        return
-      }
-
-      const first = focusableElements[0]
-      const last = focusableElements[focusableElements.length - 1]
-      const active = document.activeElement as HTMLElement | null
-
-      if (event.shiftKey) {
-        if (!active || active === first || !panel.contains(active)) {
-          event.preventDefault()
-          last.focus()
-        }
-      } else if (!active || active === last || !panel.contains(active)) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      previousFocusRef.current?.focus()
-    }
-  }, [onClose])
-
-  const setSuggestionState = (id: string, next: SuggestionActionState) => {
-    setSuggestionStates((prev) => ({
-      ...prev,
-      [id]: next,
-    }))
-  }
-
-  const resetSuggestionStates = (suggestions: RecommendationPayload[]) => {
-    const next: Record<string, SuggestionActionState> = {}
-    for (const suggestion of suggestions) {
-      next[suggestion.id] = defaultSuggestionState()
-    }
-    setSuggestionStates(next)
-  }
-
-  const runEvaluation = async () => {
-    setLoading(true)
-    try {
-      const response = await evaluateContent(content, undefined, undefined, {
-        naturalness: qualityGoals.naturalness,
-        readability: qualityGoals.readability,
-        coherence: qualityGoals.coherence,
-        style_consistency: qualityGoals.styleConsistency,
-      })
-      if (response.success && response.data) {
-        const data = response.data
-        const suggestions = normalizeSuggestionPayloads(data.suggestions, translate)
-        setResult({
-          score: Number((data.total_score / 10).toFixed(1)),
-          dimensions: buildDimensions(data, t.evaluationNoFeedback, t),
-          suggestions,
-          decision: data.decision,
-        })
-        resetSuggestionStates(suggestions)
-        setBatchState(defaultBatchState())
-      } else {
-        setResult(null)
-      }
-    } catch (error) {
-      console.error('Evaluation failed:', error)
-      setResult(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const refreshSuggestions = async () => {
-    setSuggestionsRefreshing(true)
-    try {
-      const issues = result?.suggestions.map((item) => item.title).filter(Boolean)
-      const response = await getImprovementSuggestions(content, issues, 8)
-      if (response.success && Array.isArray(response.data) && result) {
-        const suggestions = normalizeSuggestionPayloads(response.data, translate)
-        setResult({
-          ...result,
-          suggestions,
-        })
-        resetSuggestionStates(suggestions)
-        setBatchState(defaultBatchState())
-      }
-    } finally {
-      setSuggestionsRefreshing(false)
-    }
-  }
-
-  const runNovelQualityCheck = async () => {
-    setQualityChecking(true)
-    setQualityCheckError(null)
-    try {
-      const response = await novelQualityCheck(content, undefined, undefined, {
-        naturalness: qualityGoals.naturalness,
-        readability: qualityGoals.readability,
-        coherence: qualityGoals.coherence,
-        style_consistency: qualityGoals.styleConsistency,
-      })
-      if (!response.success || !response.data) {
-        setQualityCheckResult(null)
-        setQualityCheckError(response.error || t.evaluationQualityCheckFailed)
-        return
-      }
-
-      const payload = response.data
-      setQualityCheckResult({
-        decision: payload.decision || 'UNKNOWN',
-        totalScore: Number(payload.total_score.toFixed(1)),
-        lockScore: payload.lock_score != null ? Number(payload.lock_score.toFixed(1)) : 0,
-        styleScore: payload.style_score != null ? Number(payload.style_score.toFixed(1)) : 0,
-        logicScore: payload.logic_score != null ? Number(payload.logic_score.toFixed(1)) : 0,
-        feedback: payload.actionable_feedback?.trim() || t.evaluationNoFeedback,
-      })
-    } catch (error) {
-      setQualityCheckResult(null)
-      setQualityCheckError(String(error))
-    } finally {
-      setQualityChecking(false)
-    }
-  }
-
-  const refreshCheckpoints = async () => {
-    setCheckpointError(null)
-    try {
-      const response = await listCheckpoints(20)
-      if (response.success && Array.isArray(response.data)) {
-        setCheckpoints(response.data)
-      } else {
-        setCheckpointError(t.loadingCheckpoints)
-      }
-    } catch {
-      setCheckpointError(t.loadingCheckpoints)
-    }
-  }
-
-  const handleCreateCheckpoint = async () => {
-    setCheckpointError(null)
-    try {
-      const response = await createCheckpoint(checkpointDescription || t.evaluationCheckpointPlaceholder)
-      if (response.success) {
-        setCheckpointDescription('')
-        await refreshCheckpoints()
-      } else {
-        setCheckpointError(response.error || t.save)
-      }
-    } catch {
-      setCheckpointError(t.save)
-    }
-  }
-
-  const handleRestoreCheckpoint = async (checkpointId: string) => {
-    setCheckpointError(null)
-    try {
-      const response = await restoreCheckpoint(checkpointId)
-      if (response.success) {
-        addMessage('assistant', translate('restoreSuccessWithCheckpoint', { checkpointId }))
-        await refreshCheckpoints()
-      } else {
-        setCheckpointError(response.error || t.restoreFailed)
-      }
-    } catch {
-      setCheckpointError(t.restoreFailed)
-    }
-  }
-
-  const handleApplySuggestion = async (suggestion: RecommendationPayload) => {
-    if (!result) return
-
-    setSuggestionState(suggestion.id, {
-      mode: 'processing',
-      status: 'idle',
-      message: t.evaluationApplying,
-    })
-
-    const response = await applyRecommendation(content, suggestion)
-    if (!response.success || !response.data) {
-      setSuggestionState(suggestion.id, {
-        mode: 'rollback-ready',
-        status: 'error',
-        message: response.error || t.evaluationFailed,
-      })
-      return
-    }
-
-    const nextMode = response.data.status === 'applied' ? 'rollback-ready' : 'rollback-ready'
-    const nextStatus = response.data.status === 'applied' ? 'success' : 'error'
-
-    setSuggestionState(suggestion.id, {
-      mode: nextMode,
-      status: nextStatus,
-      message: formatSuggestionMessage(response.data, 'apply', t, translate),
-    })
-  }
-
-  const handleUndoSuggestion = async (suggestion: RecommendationPayload) => {
-    if (!result) return
-
-    setSuggestionState(suggestion.id, {
-      mode: 'processing',
-      status: 'idle',
-      message: t.evaluationUndoing,
-    })
-
-    const response = await undoRecommendation(content, suggestion)
-    if (!response.success || !response.data) {
-      setSuggestionState(suggestion.id, {
-        mode: 'rollback-ready',
-        status: 'error',
-        message: response.error || t.evaluationFailed,
-      })
-      return
-    }
-
-    const nextMode = response.data.status === 'undone' ? 'idle' : 'rollback-ready'
-    const nextStatus = response.data.status === 'undone' ? 'success' : 'error'
-
-    setSuggestionState(suggestion.id, {
-      mode: nextMode,
-      status: nextStatus,
-      message: formatSuggestionMessage(response.data, 'undo', t, translate),
-    })
-  }
-
-  const handleBatchApply = async () => {
-    if (!result || result.suggestions.length === 0) {
-      return
-    }
-
-    setBatchState({
-      mode: 'processing',
-      status: 'idle',
-      message: t.evaluationBatchApplying,
-      lastAppliedIds: [],
-    })
-
-    const response = await batchApplyRecommendations(content, result.suggestions)
-    if (!response.success || !response.data) {
-      setBatchState({
-        mode: 'rollback-ready',
-        status: 'error',
-        message: response.error || t.evaluationFailed,
-        lastAppliedIds: [],
-      })
-      return
-    }
-
-    const appliedIds = response.data.results
-      .filter((item) => item.status === 'applied')
-      .map((item) => item.recommendation_id)
-
-    for (const item of response.data.results) {
-      setSuggestionState(item.recommendation_id, {
-        mode: item.status === 'applied' ? 'rollback-ready' : 'rollback-ready',
-        status: item.status === 'applied' ? 'success' : 'error',
-        message: formatSuggestionMessage(item, 'apply', t, translate),
-      })
-    }
-
-    setBatchState({
-      mode: response.data.failed > 0 || appliedIds.length > 0 ? 'rollback-ready' : 'idle',
-      status: response.data.failed > 0 ? 'error' : 'success',
-      message: translate('evaluationBatchResult', {
-        applied: response.data.applied,
-        failed: response.data.failed,
-      }),
-      lastAppliedIds: appliedIds,
-    })
-  }
-
-  const handleBatchUndo = async () => {
-    if (!result || batchState.lastAppliedIds.length === 0) {
-      return
-    }
-
-    setBatchState((prev) => ({
-      ...prev,
-      mode: 'processing',
-      status: 'idle',
-      message: t.evaluationBatchUndoing,
-    }))
-
-    const appliedSuggestions = result.suggestions.filter((item) => batchState.lastAppliedIds.includes(item.id))
-    let successCount = 0
-    let failedCount = 0
-
-    for (const suggestion of appliedSuggestions) {
-      const response = await undoRecommendation(content, suggestion)
-      if (response.success && response.data && response.data.status === 'undone') {
-        successCount += 1
-        setSuggestionState(suggestion.id, {
-          mode: 'idle',
-          status: 'success',
-          message: formatSuggestionMessage(response.data, 'undo', t, translate),
-        })
-      } else {
-        failedCount += 1
-        setSuggestionState(suggestion.id, {
-          mode: 'rollback-ready',
-          status: 'error',
-          message: response.error || t.evaluationFailed,
-        })
-      }
-    }
-
-    setBatchState({
-      mode: failedCount > 0 ? 'rollback-ready' : 'idle',
-      status: failedCount > 0 ? 'error' : 'success',
-      message: translate('evaluationBatchUndoResult', {
-        success: successCount,
-        failed: failedCount,
-      }),
-      lastAppliedIds: failedCount > 0 ? batchState.lastAppliedIds : [],
-    })
-  }
-
-  const setWorkflowState = (action: WorkflowAction, next: WorkflowActionState) => {
-    setWorkflowStates((prev) => ({
-      ...prev,
-      [action]: next,
-    }))
-  }
-
-  const syncWorkflowIdsFromPayload = (payload: unknown) => {
-    const planId = readStringField(payload, 'plan_id')
-    if (planId) {
-      setWorkflowPlanId(planId)
-    }
-    const stepId = readStringField(payload, 'step_id')
-    if (stepId) {
-      setWorkflowStepId(stepId)
-    }
-  }
-
-  const syncWorkflowConfirmationFromPayload = (payload: unknown) => {
-    if (!payload || typeof payload !== 'object') {
-      setWorkflowWaitingConfirmation(false)
-      setWorkflowGateReason(null)
-      return
-    }
-
-    const record = payload as Record<string, unknown>
-    if (record.status === 'waiting_confirmation') {
-      setWorkflowWaitingConfirmation(true)
-      const gate = record.gate
-      const reason = gate && typeof gate === 'object' ? String((gate as { reason?: unknown }).reason ?? '') : ''
-      setWorkflowGateReason(reason.trim().length > 0 ? reason : null)
-      return
-    }
-
-    setWorkflowWaitingConfirmation(false)
-    setWorkflowGateReason(null)
-  }
-
-  const executeWorkflowAction = async (
-    action: WorkflowAction,
-    run: () => Promise<{ success: boolean; data?: unknown; error?: string }>
-  ) => {
-    setWorkflowState(action, { status: 'loading', message: t.evaluationWorkflowLoading })
-    try {
-      const response = await run()
-      if (!response.success) {
-        setWorkflowState(action, {
-          status: 'error',
-          message: response.error || t.evaluationWorkflowError,
-        })
-        return
-      }
-      syncWorkflowIdsFromPayload(response.data)
-      syncWorkflowConfirmationFromPayload(response.data)
-      setWorkflowResult(stringifyWorkflowPayload(response.data))
-      setWorkflowState(action, { status: 'success', message: t.evaluationWorkflowSuccess })
-    } catch (error) {
-      setWorkflowState(action, {
-        status: 'error',
-        message: String(error),
-      })
-    }
-  }
-
-  const handleWorkflowRoute = async () => {
-    await executeWorkflowAction('route', () => routeWorkflow(workflowTask, workflowLevel))
-  }
-
-  const handleWorkflowPlan = async () => {
-    await executeWorkflowAction('plan', () => createPlan(workflowTask, workflowLevel))
-  }
-
-  const handleWorkflowExecute = async () => {
-    if (!workflowPlanId.trim()) {
-      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
-      return
-    }
-    await executeWorkflowAction('execute', () => executePlan(workflowPlanId, workflowStepId || undefined))
-  }
-
-  const handleWorkflowConfirmAndContinue = async () => {
-    if (!workflowPlanId.trim()) {
-      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
-      return
-    }
-    if (!workflowConfirmToken.trim()) {
-      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowConfirmTokenRequired })
-      return
-    }
-    await executeWorkflowAction('execute', () =>
-      executePlan(workflowPlanId, workflowStepId || undefined, undefined, undefined, workflowConfirmToken.trim())
-    )
-  }
-
-  const handleWorkflowLifecycle = async () => {
-    if (!workflowPlanId.trim()) {
-      setWorkflowState('lifecycle', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
-      return
-    }
-    await executeWorkflowAction('lifecycle', () => workflowLifecycle(workflowPlanId, workflowLifecycleAction))
-  }
-
-  const retryWorkflowAction = async (action: WorkflowAction) => {
-    if (action === 'route') {
-      await handleWorkflowRoute()
-      return
-    }
-    if (action === 'plan') {
-      await handleWorkflowPlan()
-      return
-    }
-    if (action === 'execute') {
-      await handleWorkflowExecute()
-      return
-    }
-    await handleWorkflowLifecycle()
-  }
+  useDialogFocusTrap({
+    containerRef: dialogRef,
+    onClose,
+  })
 
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-green-600 bg-green-100 dark:bg-green-900/20 dark:text-green-400'

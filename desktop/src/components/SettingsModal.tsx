@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload, Settings } from 'lucide-react'
-import { checkBackendHealth, fetchProviderModels, getGatewayMetrics, listGatewayTools, GatewayMetrics, GatewayTools, getSecrets, BackendConfig, SecretsResponse, SECRET_FIELDS } from '../api/client'
-import { useSettingsStore, LLMProvider, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
+import { BackendConfig } from '../api/client'
+import { useSettingsStore, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
+import { MASKED_SECRET_VALUE, formatBackendFieldValue, useSettingsBackendConfig } from '../hooks/useSettingsBackendConfig'
+import { useSettingsProviderModels } from '../hooks/useSettingsProviderModels'
+import { useSettingsDiagnostics } from '../hooks/useSettingsDiagnostics'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -36,8 +39,6 @@ const BACKEND_SECTION_KEYS: BackendSectionKey[] = [
   'integration',
 ]
 
-const MASKED_SECRET_VALUE = '***MASKED***'
-
 function classNames(...parts: Array<string | false | undefined | null>) {
   return parts.filter(Boolean).join(' ')
 }
@@ -46,118 +47,16 @@ function formatBackendFieldLabel(field: string) {
   return field.replace(/_/g, ' ')
 }
 
-function formatBackendFieldValue(value: unknown) {
-  if (Array.isArray(value)) {
-    return value.join(', ')
-  }
-  if (value === null || value === undefined) {
-    return ''
-  }
-  return String(value)
-}
-
-function getBackendFieldValue(config: BackendConfig, path: string): unknown {
-  const [section, field] = path.split('.')
-  if (!section || !field) {
-    return undefined
-  }
-  const sectionValue = config[section as keyof BackendConfig]
-  if (!sectionValue || typeof sectionValue !== 'object' || Array.isArray(sectionValue)) {
-    return undefined
-  }
-  return (sectionValue as unknown as Record<string, unknown>)[field]
-}
-
-function setBackendFieldValue(config: BackendConfig, path: string, value: unknown): BackendConfig {
-  const [section, field] = path.split('.')
-  if (!section || !field) {
-    return config
-  }
-
-  const nextConfig = JSON.parse(JSON.stringify(config)) as BackendConfig
-  const sectionValue = nextConfig[section as keyof BackendConfig]
-  if (!sectionValue || typeof sectionValue !== 'object' || Array.isArray(sectionValue)) {
-    return config
-  }
-
-  ;(sectionValue as unknown as Record<string, unknown>)[field] = value
-  return nextConfig
-}
-
-function parseBackendFieldInput(rawValue: string, currentValue: unknown): unknown {
-  if (Array.isArray(currentValue)) {
-    return rawValue
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
-  }
-  if (typeof currentValue === 'number') {
-    if (rawValue.trim() === '') {
-      return currentValue
-    }
-    const parsed = Number(rawValue)
-    return Number.isFinite(parsed) ? parsed : currentValue
-  }
-  return rawValue
-}
-
-function buildBackendConfigUpdates(
-  currentConfig: BackendConfig,
-  draftConfig: BackendConfig,
-  modifiableFields: string[]
-): Record<string, unknown> {
-  const updates: Record<string, unknown> = {}
-
-  for (const fieldPath of modifiableFields) {
-    if (SECRET_FIELDS.includes(fieldPath)) {
-      continue
-    }
-
-    const currentValue = getBackendFieldValue(currentConfig, fieldPath)
-    const draftValue = getBackendFieldValue(draftConfig, fieldPath)
-    if (JSON.stringify(currentValue) !== JSON.stringify(draftValue)) {
-      updates[fieldPath] = draftValue
-    }
-  }
-
-  return updates
-}
-
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const {
     settings,
     updateSettings,
     updateProvider,
     resetSettings,
-    loadBackendConfig,
-    updateBackendConfig,
-    updateSecrets,
-    reloadBackendConfig,
   } = useSettingsStore()
-  const { setAllowLlmFallback, setQualityGoals, checkBackend } = useAppStore()
+  const { checkBackend } = useAppStore()
   const [localSettings, setLocalSettings] = useState(settings)
-  const [backendConfigDraft, setBackendConfigDraft] = useState<BackendConfig | null>(settings.backendConfig.config)
-  const [backendSecrets, setBackendSecrets] = useState<SecretsResponse['secrets']>({})
-  const [backendSecretsDraft, setBackendSecretsDraft] = useState<Record<string, string>>({})
-  const [backendSecretsLoading, setBackendSecretsLoading] = useState(false)
-  const [backendSecretsError, setBackendSecretsError] = useState<string | null>(null)
-  const [backendConfigSaving, setBackendConfigSaving] = useState(false)
-  const [backendSecretsSaving, setBackendSecretsSaving] = useState(false)
-  const [showBackendSecrets, setShowBackendSecrets] = useState<Record<string, boolean>>({})
-  const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({})
-  const [testingProvider, setTestingProvider] = useState<string | null>(null)
-  const [testResults, setTestResults] = useState<Record<string, 'success' | 'error' | null>>({})
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false)
-  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null)
-  const [gatewayMetrics, setGatewayMetrics] = useState<GatewayMetrics | null>(null)
-  const [gatewayTools, setGatewayTools] = useState<GatewayTools | null>(null)
-  const [modelSyncLoading, setModelSyncLoading] = useState<Record<string, boolean>>({})
-  const [modelSyncError, setModelSyncError] = useState<Record<string, string | null>>({})
-  const [customModelInputs, setCustomModelInputs] = useState<Record<string, string>>({})
-  const [providerSearch, setProviderSearch] = useState('')
-  const [modelValidateLoading, setModelValidateLoading] = useState<Record<string, boolean>>({})
-  const [modelValidateMessage, setModelValidateMessage] = useState<Record<string, { type: 'success' | 'error'; text: string } | null>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useI18n()
 
@@ -172,8 +71,87 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   ]
 
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('workflow')
-  const backendConfigState = settings.backendConfig
+  const {
+    backendConfigState,
+    backendConfigDraft,
+    backendSecrets,
+    backendSecretsDraft,
+    backendSecretsLoading,
+    backendSecretsError,
+    backendConfigSaving,
+    backendSecretsSaving,
+    showBackendSecrets,
+    hasBackendConfigChanges,
+    hasBackendSecretChanges,
+    handleBackendConfigFieldChange,
+    handleBackendConfigToggle,
+    handleSaveBackendConfig,
+    handleSaveBackendSecrets,
+    handleReloadBackendConfig,
+    updateBackendSecretDraft,
+    toggleShowBackendSecret,
+  } = useSettingsBackendConfig({
+    isOpen,
+    isActive: activeSection === 'backend',
+    settingsUnknownError: t.settingsUnknownError,
+  })
   const modifiableFieldSet = new Set(backendConfigState.modifiableFields)
+  const {
+    showApiKeys,
+    testingProvider,
+    testResults,
+    modelSyncLoading,
+    modelSyncError,
+    customModelInputs,
+    providerSearch,
+    modelValidateLoading,
+    modelValidateMessage,
+    filteredProviders,
+    updateLocalProvider,
+    toggleShowApiKey,
+    refreshProviderModels,
+    applyCustomModel,
+    getModelGroups,
+    validateProviderDefaultModel,
+    testConnection,
+    setCustomModelInputs,
+    setProviderSearch,
+  } = useSettingsProviderModels({
+    llmProviders: localSettings.llmProviders,
+    onProviderChange: (providerId, updates) => {
+      setLocalSettings((prev) => ({
+        ...prev,
+        llmProviders: prev.llmProviders.map((provider) => (
+          provider.id === providerId ? { ...provider, ...updates } : provider
+        )),
+      }))
+    },
+    texts: {
+      settingsModelNameRequired: t.settingsModelNameRequired,
+      settingsModelNameTooLong: t.settingsModelNameTooLong,
+      settingsModelNameWhitespace: t.settingsModelNameWhitespace,
+      settingsInvalidCustomModel: t.settingsInvalidCustomModel,
+      settingsFetchModelsFailedWithReason: t.settingsFetchModelsFailedWithReason,
+      settingsFetchModelsFailed: t.settingsFetchModelsFailed,
+      settingsPresetModels: t.settingsPresetModels,
+      settingsFetchedModels: t.settingsFetchedModels,
+      settingsCustomModels: t.settingsCustomModels,
+      settingsDefaultModelValidateFetchFailed: t.settingsDefaultModelValidateFetchFailed,
+      settingsDefaultModelAvailableViaGateway: t.settingsDefaultModelAvailableViaGateway,
+      settingsDefaultModelAvailableViaDirect: t.settingsDefaultModelAvailableViaDirect,
+      settingsDefaultModelUnavailable: t.settingsDefaultModelUnavailable,
+      settingsDefaultModelValidateFailed: t.settingsDefaultModelValidateFailed,
+    },
+  })
+  const {
+    diagnosticsLoading,
+    diagnosticsError,
+    gatewayMetrics,
+    gatewayTools,
+    refreshDiagnostics,
+  } = useSettingsDiagnostics({
+    settingsDiagnosticsFetchFailed: t.settingsDiagnosticsFetchFailed,
+  })
   const backendSectionLabels = {
     agent: t.backendConfigSectionAgent,
     memory: t.backendConfigSectionMemory,
@@ -186,7 +164,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     obsidian: t.backendConfigSectionObsidian,
     integration: t.backendConfigSectionIntegration,
   } as const
-
   const backendSyncMessage =
     backendConfigState.syncStatus === 'loading'
       ? t.backendConfigLoading
@@ -197,67 +174,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           : backendConfigState.lastSync
             ? `${t.backendConfigSyncSuccess} · ${new Date(backendConfigState.lastSync).toLocaleString()}`
             : null
-
-  const hasBackendConfigChanges =
-    Boolean(backendConfigState.config) &&
-    Boolean(backendConfigDraft) &&
-    Object.keys(
-      buildBackendConfigUpdates(
-        backendConfigState.config as BackendConfig,
-        backendConfigDraft as BackendConfig,
-        backendConfigState.modifiableFields
-      )
-    ).length > 0
-
-  const hasBackendSecretChanges = Object.values(backendSecretsDraft).some((value) => {
-    const trimmed = value.trim()
-    return trimmed.length > 0 && trimmed !== MASKED_SECRET_VALUE
-  })
-
-  useEffect(() => {
-    if (settings.backendConfig.config) {
-      setBackendConfigDraft(settings.backendConfig.config)
-    }
-  }, [settings.backendConfig.config])
-
-  useEffect(() => {
-    setBackendSecretsDraft((prev) => {
-      const nextDraft: Record<string, string> = {}
-      for (const key of Object.keys(backendSecrets)) {
-        nextDraft[key] = prev[key] ?? ''
-      }
-      return nextDraft
-    })
-  }, [backendSecrets])
-
-  useEffect(() => {
-    if (!isOpen || activeSection !== 'backend') {
-      return
-    }
-
-    const loadSecrets = async () => {
-      setBackendSecretsLoading(true)
-      setBackendSecretsError(null)
-      try {
-        const response = await getSecrets()
-        if (response.success && response.data) {
-          setBackendSecrets(response.data.secrets)
-          return
-        }
-        setBackendSecretsError(response.error ?? t.settingsUnknownError)
-      } catch (err) {
-        setBackendSecretsError(err instanceof Error ? err.message : t.settingsUnknownError)
-      } finally {
-        setBackendSecretsLoading(false)
-      }
-    }
-
-    if (!backendConfigState.config && backendConfigState.syncStatus === 'idle') {
-      void loadBackendConfig()
-    }
-
-    void loadSecrets()
-  }, [activeSection, backendConfigState.config, backendConfigState.syncStatus, isOpen, loadBackendConfig, t.settingsUnknownError])
 
   if (!isOpen) return null
 
@@ -325,8 +241,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   const handleSave = async () => {
     updateSettings(localSettings)
-    setAllowLlmFallback(localSettings.allowLlmFallback)
-    setQualityGoals(localSettings.qualityGoals)
     // 同步更新各个 provider
     localSettings.llmProviders.forEach((provider) => {
       updateProvider(provider.id, provider)
@@ -349,338 +263,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     onClose()
   }
 
-  const handleBackendConfigFieldChange = (path: string, rawValue: string, currentValue: unknown) => {
-    setBackendConfigDraft((prev) => {
-      if (!prev) {
-        return prev
-      }
-      return setBackendFieldValue(prev, path, parseBackendFieldInput(rawValue, currentValue))
-    })
-  }
-
-  const handleBackendConfigToggle = (path: string, checked: boolean) => {
-    setBackendConfigDraft((prev) => {
-      if (!prev) {
-        return prev
-      }
-      return setBackendFieldValue(prev, path, checked)
-    })
-  }
-
-  const handleSaveBackendConfig = async () => {
-    if (!backendConfigState.config || !backendConfigDraft) {
-      return
-    }
-
-    const updates = buildBackendConfigUpdates(
-      backendConfigState.config,
-      backendConfigDraft,
-      backendConfigState.modifiableFields
-    )
-
-    if (Object.keys(updates).length === 0) {
-      return
-    }
-
-    setBackendConfigSaving(true)
-    try {
-      await updateBackendConfig(updates)
-    } finally {
-      setBackendConfigSaving(false)
-    }
-  }
-
-  const handleSaveBackendSecrets = async () => {
-    const nextSecrets = Object.entries(backendSecretsDraft).reduce<SecretsResponse['secrets']>((acc, [key, value]) => {
-      const trimmed = value.trim()
-      if (!trimmed || trimmed === MASKED_SECRET_VALUE) {
-        return acc
-      }
-
-      const field = backendSecrets[key]
-      if (!field) {
-        return acc
-      }
-
-      acc[key] = {
-        ...field,
-        configured: true,
-        value: trimmed,
-      }
-      return acc
-    }, {})
-
-    if (Object.keys(nextSecrets).length === 0) {
-      return
-    }
-
-    setBackendSecretsSaving(true)
-    setBackendSecretsError(null)
-    try {
-      await updateSecrets(nextSecrets)
-      setBackendSecretsDraft((prev) => {
-        const cleared = { ...prev }
-        for (const key of Object.keys(nextSecrets)) {
-          cleared[key] = ''
-        }
-        return cleared
-      })
-      setBackendSecrets((prev) => {
-        const updated = { ...prev }
-        for (const key of Object.keys(nextSecrets)) {
-          const current = updated[key]
-          if (current) {
-            updated[key] = {
-              ...current,
-              configured: true,
-              value: MASKED_SECRET_VALUE,
-            }
-          }
-        }
-        return updated
-      })
-    } catch (err) {
-      setBackendSecretsError(err instanceof Error ? err.message : t.settingsUnknownError)
-    } finally {
-      setBackendSecretsSaving(false)
-    }
-  }
-
-  const handleReloadBackendConfig = async () => {
-    setBackendSecretsError(null)
-    await reloadBackendConfig()
-  }
-
   const handleReset = () => {
     resetSettings()
     const nextSettings = useSettingsStore.getState().settings
     setLocalSettings(nextSettings)
-    setAllowLlmFallback(nextSettings.allowLlmFallback)
-    setQualityGoals(nextSettings.qualityGoals)
-  }
-
-  const toggleShowApiKey = (providerId: string) => {
-    setShowApiKeys((prev) => ({ ...prev, [providerId]: !prev[providerId] }))
-  }
-
-  const validateCustomModelInput = (value: string): { ok: boolean; reason?: string } => {
-    if (!value) {
-      return { ok: false, reason: t.settingsModelNameRequired }
-    }
-    if (value.length > 120) {
-      return { ok: false, reason: t.settingsModelNameTooLong }
-    }
-    if (/\s/.test(value)) {
-      return { ok: false, reason: t.settingsModelNameWhitespace }
-    }
-    return { ok: true }
-  }
-
-  const ensureValidDefaultModel = (provider: LLMProvider, updates: Partial<LLMProvider>): Partial<LLMProvider> => {
-    const nextProvider: LLMProvider = { ...provider, ...updates }
-    const effectiveModels = getEffectiveModels(nextProvider)
-    if (effectiveModels.length === 0) {
-      return updates
-    }
-
-    const requestedDefault = (nextProvider.defaultModel ?? '').trim()
-    const hasRequestedDefault = effectiveModels.some((model) => model.toLowerCase() === requestedDefault.toLowerCase())
-    const safeDefaultModel = hasRequestedDefault ? requestedDefault : effectiveModels[0]
-
-    return {
-      ...updates,
-      defaultModel: safeDefaultModel,
-      modelSelectionMode: updates.modelSelectionMode ?? (hasRequestedDefault ? nextProvider.modelSelectionMode : 'list'),
-    }
-  }
-
-  const updateLocalProvider = (providerId: string, updates: Partial<LLMProvider>) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      llmProviders: prev.llmProviders.map((p) => {
-        if (p.id !== providerId) {
-          return p
-        }
-        return { ...p, ...ensureValidDefaultModel(p, updates) }
-      }),
-    }))
-  }
-
-  const deduplicateModels = (models: string[]): string[] => {
-    return Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)))
-  }
-
-  const getEffectiveModels = (provider: LLMProvider): string[] => {
-    return deduplicateModels([
-      ...provider.models,
-      ...(provider.fetchedModels ?? []),
-      ...(provider.customModels ?? []),
-    ])
-  }
-
-  const refreshProviderModels = async (provider: LLMProvider) => {
-    setModelSyncLoading((prev) => ({ ...prev, [provider.id]: true }))
-    setModelSyncError((prev) => ({ ...prev, [provider.id]: null }))
-
-    try {
-      const res = await fetchProviderModels(provider.id, provider.baseUrl, provider.apiKey)
-      if (res.success && res.data?.models) {
-        updateLocalProvider(provider.id, {
-          fetchedModels: res.data.models,
-          lastModelSyncAt: new Date().toISOString(),
-        })
-      } else {
-        const reason = res.error?.includes('gateway=')
-          ? t.settingsFetchModelsFailedWithReason.replace('{error}', res.error)
-          : t.settingsFetchModelsFailed
-        setModelSyncError((prev) => ({ ...prev, [provider.id]: reason }))
-      }
-    } catch {
-      setModelSyncError((prev) => ({ ...prev, [provider.id]: t.settingsFetchModelsFailed }))
-    } finally {
-      setModelSyncLoading((prev) => ({ ...prev, [provider.id]: false }))
-    }
-  }
-
-  const applyCustomModel = (provider: LLMProvider) => {
-    const value = (customModelInputs[provider.id] ?? '').trim()
-    const validation = validateCustomModelInput(value)
-    if (!validation.ok) {
-      setModelSyncError((prev) => ({ ...prev, [provider.id]: validation.reason ?? t.settingsInvalidCustomModel }))
-      return
-    }
-
-    const nextCustomModels = deduplicateModels([...(provider.customModels ?? []), value])
-    updateLocalProvider(provider.id, {
-      customModels: nextCustomModels,
-      defaultModel: value,
-      modelSelectionMode: 'custom',
-    })
-    setCustomModelInputs((prev) => ({ ...prev, [provider.id]: '' }))
-    setModelSyncError((prev) => ({ ...prev, [provider.id]: null }))
-  }
-
-  const getModelGroups = (provider: LLMProvider): Array<{ label: string; models: string[] }> => {
-    const staticModels = deduplicateModels(provider.models ?? [])
-    const fetchedModels = deduplicateModels(provider.fetchedModels ?? [])
-    const customModels = deduplicateModels(provider.customModels ?? [])
-
-    const groups: Array<{ label: string; models: string[] }> = []
-
-    if (staticModels.length > 0) {
-      groups.push({ label: t.settingsPresetModels, models: staticModels })
-    }
-    if (fetchedModels.length > 0) {
-      groups.push({ label: t.settingsFetchedModels, models: fetchedModels })
-    }
-    if (customModels.length > 0) {
-      groups.push({ label: t.settingsCustomModels, models: customModels })
-    }
-
-    return groups
-  }
-
-  const getFilteredProviders = (): LLMProvider[] => {
-    const keyword = providerSearch.trim().toLowerCase()
-    if (!keyword) {
-      return localSettings.llmProviders
-    }
-
-    return localSettings.llmProviders.filter((provider) => {
-      if (provider.name.toLowerCase().includes(keyword)) {
-        return true
-      }
-
-      const effectiveModels = getEffectiveModels(provider)
-      return effectiveModels.some((model) => model.toLowerCase().includes(keyword))
-    })
-  }
-
-  const validateProviderDefaultModel = async (provider: LLMProvider) => {
-    setModelValidateLoading((prev) => ({ ...prev, [provider.id]: true }))
-    setModelValidateMessage((prev) => ({ ...prev, [provider.id]: null }))
-
-    try {
-      const res = await fetchProviderModels(provider.id, provider.baseUrl, provider.apiKey)
-      const data = res.data
-      if (!res.success || !data?.models?.length) {
-        setModelValidateMessage((prev) => ({
-          ...prev,
-          [provider.id]: { type: 'error', text: t.settingsDefaultModelValidateFetchFailed },
-        }))
-        return
-      }
-
-      const fetchedModels = data.models
-      const defaultModel = provider.defaultModel.trim().toLowerCase()
-      const isValid = fetchedModels.some((model) => model.toLowerCase() === defaultModel)
-
-      if (isValid) {
-        setModelValidateMessage((prev) => ({
-          ...prev,
-          [provider.id]: {
-            type: 'success',
-            text: data.source === 'gateway' ? t.settingsDefaultModelAvailableViaGateway : t.settingsDefaultModelAvailableViaDirect,
-          },
-        }))
-      } else {
-        setModelValidateMessage((prev) => ({
-          ...prev,
-          [provider.id]: { type: 'error', text: t.settingsDefaultModelUnavailable },
-        }))
-      }
-    } catch {
-      setModelValidateMessage((prev) => ({
-        ...prev,
-        [provider.id]: { type: 'error', text: t.settingsDefaultModelValidateFailed },
-      }))
-    } finally {
-      setModelValidateLoading((prev) => ({ ...prev, [provider.id]: false }))
-    }
-  }
-
-  const testConnection = async (provider: LLMProvider) => {
-    setTestingProvider(provider.id)
-    setTestResults((prev) => ({ ...prev, [provider.id]: null }))
-
-    try {
-      const healthy = await checkBackendHealth()
-      setTestResults((prev) => ({ ...prev, [provider.id]: healthy ? 'success' : 'error' }))
-    } catch {
-      setTestResults((prev) => ({ ...prev, [provider.id]: 'error' }))
-    } finally {
-      setTestingProvider(null)
-    }
-  }
-
-  const refreshDiagnostics = async () => {
-    setDiagnosticsLoading(true)
-    setDiagnosticsError(null)
-    try {
-      const [metricsRes, toolsRes] = await Promise.all([
-        getGatewayMetrics(),
-        listGatewayTools(),
-      ])
-      if (metricsRes.success && metricsRes.data?.metrics) {
-        setGatewayMetrics(metricsRes.data.metrics)
-      } else {
-        setGatewayMetrics(null)
-      }
-      if (toolsRes.success && toolsRes.data) {
-        setGatewayTools(toolsRes.data)
-      } else {
-        setGatewayTools(null)
-      }
-      if (!(metricsRes.success && metricsRes.data?.metrics) || !(toolsRes.success && toolsRes.data)) {
-        setDiagnosticsError(t.settingsDiagnosticsFetchFailed)
-      }
-    } catch {
-      setGatewayMetrics(null)
-      setGatewayTools(null)
-      setDiagnosticsError(t.settingsDiagnosticsFetchFailed)
-    } finally {
-      setDiagnosticsLoading(false)
-    }
   }
 
   // 导出设置
@@ -987,13 +573,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                 id={inputId}
                                 type={visible ? 'text' : 'password'}
                                 value={backendSecretsDraft[key] ?? ''}
-                                onChange={(e) => setBackendSecretsDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                                onChange={(e) => updateBackendSecretDraft(key, e.target.value)}
                                 placeholder={field.configured ? MASKED_SECRET_VALUE : ''}
                                 className="flex-1 px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                               />
                               <button
                                 type="button"
-                                onClick={() => setShowBackendSecrets((prev) => ({ ...prev, [key]: !prev[key] }))}
+                                onClick={() => toggleShowBackendSecret(key)}
                                 className="p-2 text-gray-500 hover:bg-gray-100 dark:text-dark-text-secondary dark:hover:bg-dark-border rounded-lg transition-colors"
                                 aria-label={visible ? t.backendConfigHideSecret : t.backendConfigShowSecret}
                               >
@@ -1373,7 +959,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       />
                     </div>
 
-                    {getFilteredProviders().map((provider) => {
+                    {filteredProviders.map((provider) => {
                       return (
                         <div
                           key={provider.id}

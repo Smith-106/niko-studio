@@ -120,7 +120,13 @@ export function ChatArea({
   const lastRetryPayloadRef = useRef<RetryPayload | null>(null)
   const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
 
-  const { addMessage, setWorkflowLevel, createConversation } = useAppStore()
+  const {
+    addMessage,
+    createConversation,
+  } = useAppStore()
+  const setWorkflowLevel = useSettingsStore((state) => (level: 'L1' | 'L2' | 'L3' | 'L4' | 'L5') => {
+    state.updateSettings({ defaultWorkflowLevel: level })
+  })
 
   const {
     uploadStatus,
@@ -204,6 +210,11 @@ export function ChatArea({
     detail,
   })
 
+  const resetLoadingState = () => {
+    setStreamingContent('')
+    setIsLoading(false)
+  }
+
 
 
   const handleContainerScroll = useCallback(() => {
@@ -236,39 +247,95 @@ export function ChatArea({
     setInput(content)
   }, [])
 
+  const commitAssistantResponse = (response: Awaited<ReturnType<typeof chat>>) => {
+    if (!response.success || !response.data) return
+
+    if (response.data.comparison?.enabled) {
+      const comparison = response.data.comparison
+      addMessage(
+        'assistant',
+        response.data.content || comparison.primary.content,
+        response.data.skills_used || selectedSkills,
+        comparison,
+        response.data.writer_metadata
+      )
+      return
+    }
+
+    addMessage(
+      'assistant',
+      response.data.content || t.processingCompleted,
+      response.data.skills_used || selectedSkills,
+      undefined,
+      response.data.writer_metadata
+    )
+  }
+
+  const setSendFailureRecoverStatus = ({
+    checkpointId,
+    detail,
+    diagnosticsText,
+  }: {
+    checkpointId?: string | null
+    detail: string
+    diagnosticsText?: string | null
+  }) => {
+    if (!checkpointId) return
+    const message = diagnosticsText ? `${t.streamRestoreHint}（${diagnosticsText}）` : t.streamRestoreHint
+    setRecoverStatus(makeRecoverError(message, detail))
+  }
+
+  const finalizeInlineSuccess = (content: string) => {
+    setStreamingContent(content)
+    addMessage('assistant', content, selectedSkills)
+    setStreamPhase('done')
+    resetInlineState()
+  }
+
+  const finalizeInlineFailure = () => {
+    setStreamPhase('error')
+    setRecoverStatus(makeRecoverError(t.inlineActionFailed, t.inlineActionFailed))
+  }
+
+  const buildWriteQualityGoals = () => ({
+    naturalness: qualityGoals.naturalness,
+    readability: qualityGoals.readability,
+    coherence: qualityGoals.coherence,
+    style_consistency: qualityGoals.styleConsistency,
+  })
+
+  const buildReviseQualityGoals = () => ({
+    naturalness: qualityGoals.naturalness,
+    readability: qualityGoals.readability,
+    coherence: qualityGoals.coherence,
+    style_consistency: qualityGoals.styleConsistency,
+    humanization_preset: qualityGoals.humanizationPreset,
+    custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
+    sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
+    rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
+  })
 
   const runNormalChat = async (request: ChatRequest, checkpointId?: string | null): Promise<StreamPhase> => {
+    const commitNormalChatSuccess = (response: Awaited<ReturnType<typeof chat>>) => {
+      commitAssistantResponse(response)
+      setRecoverableCheckpointId(null)
+      setRecoverStatus(null)
+    }
+
     if (request.comparison?.enabled) {
       setStreamPhase('streaming')
       const response = await chat(request)
       if (response.success && response.data) {
-        if (response.data.comparison?.enabled) {
-          const comparison = response.data.comparison
-          addMessage(
-            'assistant',
-            response.data.content || comparison.primary.content,
-            response.data.skills_used || selectedSkills,
-            comparison,
-            response.data.writer_metadata
-          )
-        } else {
-          addMessage(
-            'assistant',
-            response.data.content || t.processingCompleted,
-            response.data.skills_used || selectedSkills,
-            undefined,
-            response.data.writer_metadata
-          )
-        }
-        setRecoverableCheckpointId(null)
-        setRecoverStatus(null)
+        commitNormalChatSuccess(response)
         setStreamPhase('done')
         return 'done'
       }
-      addMessage('assistant', response.error || t.serviceUnavailableRetry)
-      if (checkpointId) {
-        setRecoverStatus(makeRecoverError(t.streamRestoreHint, response.error || t.serviceUnavailableRetry))
-      }
+      const errorMessage = response.error || t.serviceUnavailableRetry
+      addMessage('assistant', errorMessage)
+      setSendFailureRecoverStatus({
+        checkpointId,
+        detail: errorMessage,
+      })
       setStreamPhase('error')
       return 'error'
     }
@@ -339,36 +406,14 @@ export function ChatArea({
     }
     const response = await chat(request)
     if (response.success && response.data) {
-      if (response.data.comparison?.enabled) {
-        const comparison = response.data.comparison
-        addMessage(
-          'assistant',
-          response.data.content || comparison.primary.content,
-          response.data.skills_used || selectedSkills,
-          comparison,
-          response.data.writer_metadata
-        )
-      } else {
-        addMessage(
-          'assistant',
-          response.data.content || t.processingCompleted,
-          response.data.skills_used || selectedSkills,
-          undefined,
-          response.data.writer_metadata
-        )
-      }
-      setRecoverableCheckpointId(null)
-      setRecoverStatus(null)
+      commitNormalChatSuccess(response)
       return phase
     }
 
+    const diagnosticsText = meta?.diagnostics?.fallback_reason || meta?.diagnostics?.failure_reason
+    const detail = response.error || diagnosticsText || t.serviceUnavailableRetry
     addMessage('assistant', response.error || t.serviceUnavailableRetry)
-    if (checkpointId) {
-      const diagnosticsText = meta?.diagnostics?.fallback_reason || meta?.diagnostics?.failure_reason
-      const detail = response.error || diagnosticsText || t.serviceUnavailableRetry
-      const message = diagnosticsText ? `${t.streamRestoreHint}（${diagnosticsText}）` : t.streamRestoreHint
-      setRecoverStatus(makeRecoverError(message, detail))
-    }
+    setSendFailureRecoverStatus({ checkpointId, detail, diagnosticsText })
     return 'error'
   }
 
@@ -391,21 +436,9 @@ export function ChatArea({
           instruction: promptText || t.inlineReviseDefaultInstruction,
           workflow_level: workflowLevel,
           skills: selectedSkills,
-        }, {
-          naturalness: qualityGoals.naturalness,
-          readability: qualityGoals.readability,
-          coherence: qualityGoals.coherence,
-          style_consistency: qualityGoals.styleConsistency,
-          humanization_preset: qualityGoals.humanizationPreset,
-          custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
-          sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
-          rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
-        })
+        }, buildReviseQualityGoals())
         if (reviseResult.success && reviseResult.data?.content) {
-          setStreamingContent(reviseResult.data.content)
-          addMessage('assistant', reviseResult.data.content, selectedSkills)
-          setStreamPhase('done')
-          resetInlineState()
+          finalizeInlineSuccess(reviseResult.data.content)
           return
         }
       } else {
@@ -423,35 +456,20 @@ export function ChatArea({
           },
           selectedSkills,
           undefined,
-          {
-            naturalness: qualityGoals.naturalness,
-            readability: qualityGoals.readability,
-            coherence: qualityGoals.coherence,
-            style_consistency: qualityGoals.styleConsistency,
-            humanization_preset: qualityGoals.humanizationPreset,
-            custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
-            sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
-            rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
-          }
+          buildReviseQualityGoals()
         )
 
         if (writeResult.success && writeResult.data?.content) {
-          setStreamingContent(writeResult.data.content)
-          addMessage('assistant', writeResult.data.content, selectedSkills)
-          setStreamPhase('done')
-          resetInlineState()
+          finalizeInlineSuccess(writeResult.data.content)
           return
         }
       }
 
-      setStreamPhase('error')
-      setRecoverStatus(makeRecoverError(t.inlineActionFailed, t.inlineActionFailed))
+      finalizeInlineFailure()
     } catch {
-      setStreamPhase('error')
-      setRecoverStatus(makeRecoverError(t.inlineActionFailed, t.inlineActionFailed))
+      finalizeInlineFailure()
     } finally {
-      setStreamingContent('')
-      setIsLoading(false)
+      resetLoadingState()
     }
   }
 
@@ -470,16 +488,85 @@ export function ChatArea({
       return
     }
 
+    const setQuickRollbackFailed = (message?: string) => {
+      setQuickRollbackStatus({ type: 'error', message: message || t.quickRollbackFailed })
+    }
+
     try {
       const response = await quickRollbackWorkflow(planId, checkpointId, quickRollbackReason.trim() || undefined)
       if (response.success) {
         setQuickRollbackStatus({ type: 'success', message: t.quickRollbackSuccess })
       } else {
-        setQuickRollbackStatus({ type: 'error', message: response.error || t.quickRollbackFailed })
+        setQuickRollbackFailed(response.error)
       }
     } catch {
-      setQuickRollbackStatus({ type: 'error', message: t.quickRollbackFailed })
+      setQuickRollbackFailed()
     }
+  }
+
+  const runAgentAction = async ({
+    payloadForSend,
+    userMessage,
+    contextTypes,
+  }: {
+    payloadForSend: RetryPayload
+    userMessage: string
+    contextTypes: string[]
+  }): Promise<boolean> => {
+    let handled = false
+
+    const commitAgentActionSuccess = (content: string) => {
+      addMessage('assistant', content, payloadForSend.selectedSkills)
+      setRecoverableCheckpointId(null)
+      handled = true
+    }
+
+    if (payloadForSend.agentAction === 'write') {
+      const routeResult = await agentRoute(userMessage)
+      if (routeResult.success && routeResult.data) {
+        const writeResult = await agentWrite(
+          {
+            task: userMessage,
+            scene_type: routeResult.data.scene_type,
+            workflow_level: routeResult.data.workflow_level,
+            task_assignments: routeResult.data.task_assignments,
+          },
+          payloadForSend.selectedSkills,
+          undefined,
+          buildWriteQualityGoals()
+        )
+        if (writeResult.success && writeResult.data?.content) {
+          commitAgentActionSuccess(writeResult.data.content)
+        }
+      }
+    } else if (payloadForSend.agentAction === 'revise') {
+      const lastAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')
+      const reviseResult = await agentRevise(
+        lastAssistantMessage?.content || userMessage,
+        {
+          instruction: userMessage,
+          workflow_level: payloadForSend.workflowLevel,
+          skills: payloadForSend.selectedSkills,
+        },
+        buildReviseQualityGoals()
+      )
+      if (reviseResult.success && reviseResult.data?.content) {
+        commitAgentActionSuccess(reviseResult.data.content)
+      }
+    } else if (payloadForSend.agentAction === 'context') {
+      const contextResult = await agentGetContext(
+        {
+          task: userMessage,
+          workflow_level: payloadForSend.workflowLevel,
+        },
+        contextTypes
+      )
+      if (contextResult.success && contextResult.data) {
+        commitAgentActionSuccess(`${t.chatAgentContextPrefix}\n\n${JSON.stringify(contextResult.data, null, 2)}`)
+      }
+    }
+
+    return handled
   }
 
   const handleSend = async (overrideMessage?: string, overridePayload?: RetryPayload) => {
@@ -525,105 +612,44 @@ export function ChatArea({
 
       const contextTypes = settings.contextTypes
 
+      let shouldRunNormalChat = true
       if (payloadForSend.chatMode === 'agent') {
-        let handled = false
+        const handled = await runAgentAction({
+          payloadForSend,
+          userMessage,
+          contextTypes,
+        })
+        shouldRunNormalChat = !handled
+      }
 
-        if (payloadForSend.agentAction === 'write') {
-          const routeResult = await agentRoute(userMessage)
-          if (routeResult.success && routeResult.data) {
-            const writeResult = await agentWrite(
-              {
-                task: userMessage,
-                scene_type: routeResult.data.scene_type,
-                workflow_level: routeResult.data.workflow_level,
-                task_assignments: routeResult.data.task_assignments,
-              },
-              payloadForSend.selectedSkills,
-              undefined,
-              {
-                naturalness: qualityGoals.naturalness,
-                readability: qualityGoals.readability,
-                coherence: qualityGoals.coherence,
-                style_consistency: qualityGoals.styleConsistency,
-              }
-            )
-            if (writeResult.success && writeResult.data?.content) {
-              addMessage('assistant', writeResult.data.content, payloadForSend.selectedSkills)
-              setRecoverableCheckpointId(null)
-              handled = true
-            }
-          }
-        }
-
-        if (payloadForSend.agentAction === 'revise') {
-          const lastAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')
-          const reviseResult = await agentRevise(
-            lastAssistantMessage?.content || userMessage,
-            {
-              instruction: userMessage,
-              workflow_level: payloadForSend.workflowLevel,
-              skills: payloadForSend.selectedSkills,
-            },
-            {
-              naturalness: qualityGoals.naturalness,
-              readability: qualityGoals.readability,
-              coherence: qualityGoals.coherence,
-              style_consistency: qualityGoals.styleConsistency,
-              humanization_preset: qualityGoals.humanizationPreset,
-              custom_humanization_instruction: qualityGoals.customHumanizationInstruction,
-              sentence_entropy_target: qualityGoals.sentenceEntropyTarget,
-              rhythm_variability_target: qualityGoals.rhythmVariabilityTarget,
-            }
-          )
-          if (reviseResult.success && reviseResult.data?.content) {
-            addMessage('assistant', reviseResult.data.content, payloadForSend.selectedSkills)
-            setRecoverableCheckpointId(null)
-            handled = true
-          }
-        }
-
-        if (payloadForSend.agentAction === 'context') {
-          const contextResult = await agentGetContext(
-            {
-              task: userMessage,
-              workflow_level: payloadForSend.workflowLevel,
-            },
-            contextTypes
-          )
-          if (contextResult.success && contextResult.data) {
-            addMessage('assistant', `${t.chatAgentContextPrefix}\n\n${JSON.stringify(contextResult.data, null, 2)}`)
-            setRecoverableCheckpointId(null)
-            handled = true
-          }
-        }
-
-        if (!handled) {
-          await runNormalChat(request, checkpointId)
-        }
-      } else {
+      if (shouldRunNormalChat) {
         await runNormalChat(request, checkpointId)
       }
     } catch {
       setStreamPhase('error')
       addMessage('assistant', t.backendConnectionFailed)
-      if (checkpointId) {
-        setRecoverStatus(makeRecoverError(t.streamRestoreHint, t.backendConnectionFailed))
-      }
+      setSendFailureRecoverStatus({
+        checkpointId,
+        detail: t.backendConnectionFailed,
+      })
     } finally {
-      setStreamingContent('')
-      setIsLoading(false)
+      resetLoadingState()
     }
+  }
+
+  const applyRetryPayloadState = (payload: RetryPayload) => {
+    setChatMode(payload.chatMode)
+    setAgentAction(payload.agentAction)
+    setWorkflowLevel(payload.workflowLevel)
+    setEnableModelComparison(payload.enableModelComparison)
+    setComparisonModel(payload.comparisonModel)
   }
 
   const handleRetryLastSend = async () => {
     const payload = lastRetryPayloadRef.current
     if (!payload || isLoading) return
 
-    setChatMode(payload.chatMode)
-    setAgentAction(payload.agentAction)
-    setWorkflowLevel(payload.workflowLevel)
-    setEnableModelComparison(payload.enableModelComparison)
-    setComparisonModel(payload.comparisonModel)
+    applyRetryPayloadState(payload)
 
     await handleSend(payload.message, payload)
   }
@@ -647,28 +673,52 @@ export function ChatArea({
     }
   }
 
+  const applyModePreset = ({
+    nextChatMode,
+    nextEnableModelComparison,
+    nextAgentAction,
+    nextWorkflowLevel,
+  }: {
+    nextChatMode: 'chat' | 'agent'
+    nextEnableModelComparison: boolean
+    nextAgentAction: 'write' | 'revise' | 'context'
+    nextWorkflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
+  }) => {
+    setChatMode(nextChatMode)
+    setEnableModelComparison(nextEnableModelComparison)
+    setAgentAction(nextAgentAction)
+    setWorkflowLevel(nextWorkflowLevel)
+  }
+
   const handleApplyModePreset = (presetId: 'focusWriting' | 'agentDiagnose' | 'compareReview') => {
     if (presetId === 'focusWriting') {
-      setChatMode('chat')
-      setEnableModelComparison(false)
-      setAgentAction('write')
-      setWorkflowLevel('L3')
+      applyModePreset({
+        nextChatMode: 'chat',
+        nextEnableModelComparison: false,
+        nextAgentAction: 'write',
+        nextWorkflowLevel: 'L3',
+      })
       return
     }
 
     if (presetId === 'agentDiagnose') {
-      setChatMode('agent')
-      setAgentAction('context')
-      setEnableModelComparison(false)
-      setWorkflowLevel('L4')
+      applyModePreset({
+        nextChatMode: 'agent',
+        nextEnableModelComparison: false,
+        nextAgentAction: 'context',
+        nextWorkflowLevel: 'L4',
+      })
       return
     }
 
-    setChatMode('chat')
-    setEnableModelComparison(true)
-    setAgentAction('write')
-    setWorkflowLevel('L2')
+    applyModePreset({
+      nextChatMode: 'chat',
+      nextEnableModelComparison: true,
+      nextAgentAction: 'write',
+      nextWorkflowLevel: 'L2',
+    })
   }
+
 
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -679,11 +729,7 @@ export function ChatArea({
     const requireModifier = shortcut === 'ctrlEnter'
     const hasModifier = e.ctrlKey || e.metaKey
 
-    if (requireModifier && !hasModifier) {
-      return
-    }
-
-    if (!requireModifier && hasModifier) {
+    if (requireModifier !== hasModifier) {
       return
     }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, User, MapPin, BookOpen, Sparkles, X } from 'lucide-react'
 import { useI18n } from '../i18n'
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import type { TabType, KnowledgeItem, OperationStatus, TabConfig } from './knowledge/KnowledgeTypes'
 import { CharacterTab } from './knowledge/CharacterTab'
 import { LocationTab } from './knowledge/LocationTab'
@@ -16,7 +17,6 @@ interface KnowledgeModalProps {
 export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   const { t } = useI18n()
   const dialogRef = useRef<HTMLDivElement | null>(null)
-  const previousFocusRef = useRef<HTMLElement | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('characters')
   const [searchQuery, setSearchQuery] = useState('')
   const [items, setItems] = useState<KnowledgeItem[]>([])
@@ -24,77 +24,11 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null)
   const [selectedSkillId, setSelectedSkillId] = useState<string>('')
 
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-
-    const focusDialog = () => {
-      const dialog = dialogRef.current
-      if (!dialog) return
-      const focusable = dialog.querySelector<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      )
-      if (focusable) {
-        focusable.focus()
-      } else {
-        dialog.focus()
-      }
-    }
-
-    focusDialog()
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-        return
-      }
-
-      if (event.key !== 'Tab') {
-        return
-      }
-
-      const dialog = dialogRef.current
-      if (!dialog) {
-        return
-      }
-
-      const focusableElements = Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter((element) => !element.hasAttribute('disabled') && element.tabIndex !== -1)
-
-      if (focusableElements.length === 0) {
-        event.preventDefault()
-        return
-      }
-
-      const first = focusableElements[0]
-      const last = focusableElements[focusableElements.length - 1]
-      const active = document.activeElement as HTMLElement | null
-
-      if (event.shiftKey) {
-        if (!active || active === first || !dialog.contains(active)) {
-          event.preventDefault()
-          last.focus()
-        }
-      } else if (!active || active === last || !dialog.contains(active)) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      previousFocusRef.current?.focus()
-    }
-  }, [isOpen, onClose])
+  useDialogFocusTrap({
+    containerRef: dialogRef,
+    onClose,
+    isActive: isOpen,
+  })
 
   // Reset items when tab changes
   useEffect(() => {

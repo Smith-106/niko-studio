@@ -1,4 +1,5 @@
 import { useAppStore, Conversation, Message } from './appStore'
+import { useSettingsStore } from './settingsStore'
 import { shallow } from 'zustand/shallow'
 
 /**
@@ -34,6 +35,25 @@ export function useMessages(): Message[] {
 }
 
 /**
+ * Selector for latest assistant message content
+ */
+export function useLatestAssistantMessageContent(): string {
+  return useAppStore((state) => {
+    const { currentConversationId, conversationsById } = state
+    if (!currentConversationId) return ''
+
+    const messages = conversationsById[currentConversationId]?.messages || []
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index]?.role === 'assistant') {
+        return messages[index]?.content || ''
+      }
+    }
+
+    return ''
+  })
+}
+
+/**
  * Selector for conversation list (for sidebar)
  * Uses shallow comparison to prevent unnecessary re-renders
  */
@@ -48,21 +68,21 @@ export function useConversationList(): Conversation[] {
  * Selector for workflow level
  */
 export function useWorkflowLevel(): 'L1' | 'L2' | 'L3' | 'L4' | 'L5' {
-  return useAppStore((state) => state.workflowLevel)
+  return useSettingsStore((state) => state.settings.defaultWorkflowLevel)
 }
 
 /**
  * Selector for LLM fallback toggle
  */
 export function useAllowLlmFallback(): boolean {
-  return useAppStore((state) => state.allowLlmFallback)
+  return useSettingsStore((state) => state.settings.allowLlmFallback)
 }
 
 /**
  * Selector for quality goals
  */
 export function useQualityGoals() {
-  return useAppStore((state) => state.qualityGoals)
+  return useSettingsStore((state) => state.settings.qualityGoals)
 }
 
 /**

@@ -52,18 +52,6 @@ function resetStores(): void {
     allConversationIds: [],
     currentConversationId: null,
     selectedSkills: [],
-    workflowLevel: 'L3',
-    allowLlmFallback: true,
-    qualityGoals: {
-      naturalness: 80,
-      readability: 80,
-      coherence: 80,
-      styleConsistency: 80,
-      humanizationPreset: 'human_writing',
-      customHumanizationInstruction: '',
-      sentenceEntropyTarget: 55,
-      rhythmVariabilityTarget: 55,
-    },
   })
 }
 
@@ -144,18 +132,22 @@ describe('ChatArea P0 flows', () => {
       },
     })
 
-    useAppStore.setState({
-      qualityGoals: {
-        naturalness: 92,
-        readability: 74,
-        coherence: 88,
-        styleConsistency: 67,
-        humanizationPreset: 'ai_edit_guidance',
-        customHumanizationInstruction: '减少模板化表达',
-        sentenceEntropyTarget: 62,
-        rhythmVariabilityTarget: 58,
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        qualityGoals: {
+          naturalness: 92,
+          readability: 74,
+          coherence: 88,
+          styleConsistency: 67,
+          humanizationPreset: 'ai_edit_guidance',
+          customHumanizationInstruction: '减少模板化表达',
+          sentenceEntropyTarget: 62,
+          rhythmVariabilityTarget: 58,
+        },
       },
-    })
+    }))
 
     render(<ChatArea />)
 
@@ -321,13 +313,13 @@ describe('ChatArea P0 flows', () => {
             controlModel: 'gpt-4-turbo',
           },
           qualityGoals: expect.objectContaining({
-            naturalness: 80,
+            naturalness: 85,
             readability: 80,
             coherence: 80,
-            style_consistency: 80,
+            style_consistency: 78,
             humanization_preset: 'human_writing',
-            sentence_entropy_target: 55,
-            rhythm_variability_target: 55,
+            sentence_entropy_target: 60,
+            rhythm_variability_target: 60,
           }),
         })
       )
@@ -551,13 +543,13 @@ describe('ChatArea P0 flows', () => {
             }),
           ],
           qualityGoals: expect.objectContaining({
-            naturalness: 80,
+            naturalness: 85,
             readability: 80,
             coherence: 80,
-            style_consistency: 80,
+            style_consistency: 78,
             humanization_preset: 'human_writing',
-            sentence_entropy_target: 55,
-            rhythm_variability_target: 55,
+            sentence_entropy_target: 60,
+            rhythm_variability_target: 60,
           }),
         })
       )

@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { checkBackendHealth, listSkills, type WriterMetadata } from '@/api/client'
-import { useSettingsStore, type QualityGoalsSettings } from './settingsStore'
 
 export interface MessageComparisonItem {
   model: string
@@ -58,18 +57,6 @@ interface AppState {
   selectedSkills: string[]
   toggleSkill: (skill: string) => void
   refreshAvailableSkills: () => Promise<void>
-
-  // Workflow level
-  workflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
-  setWorkflowLevel: (level: 'L1' | 'L2' | 'L3' | 'L4' | 'L5') => void
-
-  // LLM fallback
-  allowLlmFallback: boolean
-  setAllowLlmFallback: (allow: boolean) => void
-
-  // Quality goals
-  qualityGoals: QualityGoalsSettings
-  setQualityGoals: (qualityGoals: QualityGoalsSettings) => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -189,26 +176,5 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch {
       // 忽略动态拉取失败，保留静态兜底列表
     }
-  },
-
-  // Workflow level
-  workflowLevel: useSettingsStore.getState().settings.defaultWorkflowLevel,
-  setWorkflowLevel: (level) => {
-    set({ workflowLevel: level })
-    useSettingsStore.getState().updateSettings({ defaultWorkflowLevel: level })
-  },
-
-  // LLM fallback
-  allowLlmFallback: useSettingsStore.getState().settings.allowLlmFallback,
-  setAllowLlmFallback: (allow) => {
-    set({ allowLlmFallback: allow })
-    useSettingsStore.getState().updateSettings({ allowLlmFallback: allow })
-  },
-
-  // Quality goals
-  qualityGoals: useSettingsStore.getState().settings.qualityGoals,
-  setQualityGoals: (qualityGoals) => {
-    set({ qualityGoals })
-    useSettingsStore.getState().updateSettings({ qualityGoals })
   },
 }))

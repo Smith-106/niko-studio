@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { processWritingHelper, polishContent, type WritingHelperMode } from '../api/client'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n, type Translations } from '../i18n'
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 
 interface WritingHelperPanelDraftState {
   content: string
@@ -28,7 +29,6 @@ const MODE_OPTIONS: Array<{ value: WritingHelperMode; labelKey: keyof Translatio
 
 export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraftStateChange, onClearDraft }: WritingHelperPanelProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null)
-  const previousFocusRef = useRef<HTMLElement | null>(null)
   const detectionEvasionGuardEnabled = useSettingsStore((state) => state.settings.detectionEvasionGuardEnabled)
   const useLegacyPolish = useSettingsStore((state) => state.settings.writingHelperUseLegacyPolish)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
@@ -46,66 +46,10 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
     onDraftStateChange?.({ content, mode, maxSentences, maxItems })
   }, [content, mode, maxSentences, maxItems, onDraftStateChange])
 
-  useEffect(() => {
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-
-    const focusDialog = () => {
-      const dialog = dialogRef.current
-      if (!dialog) return
-      const focusable = dialog.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
-      if (focusable) {
-        focusable.focus()
-      } else {
-        dialog.focus()
-      }
-    }
-
-    focusDialog()
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-        return
-      }
-
-      if (event.key !== 'Tab') {
-        return
-      }
-
-      const dialog = dialogRef.current
-      if (!dialog) return
-
-      const focusableElements = Array.from(
-        dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
-      ).filter((element) => !element.hasAttribute('disabled') && element.tabIndex !== -1)
-
-      if (focusableElements.length === 0) {
-        event.preventDefault()
-        return
-      }
-
-      const first = focusableElements[0]
-      const last = focusableElements[focusableElements.length - 1]
-      const active = document.activeElement as HTMLElement | null
-
-      if (event.shiftKey) {
-        if (!active || active === first || !dialog.contains(active)) {
-          event.preventDefault()
-          last.focus()
-        }
-      } else if (!active || active === last || !dialog.contains(active)) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      previousFocusRef.current?.focus()
-    }
-  }, [onClose])
+  useDialogFocusTrap({
+    containerRef: dialogRef,
+    onClose,
+  })
 
   const handleSubmit = async () => {
     setLoading(true)
