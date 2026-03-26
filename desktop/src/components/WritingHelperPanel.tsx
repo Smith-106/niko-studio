@@ -134,7 +134,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-dark-text dark:hover:bg-dark-border rounded-md transition-colors"
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-dark-text dark:hover:bg-dark-border rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             aria-label={t.writingHelperClose}
             title={t.writingHelperClose}
           >
@@ -159,7 +159,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
               </label>
               <button
                 onClick={onOpenSettings}
-                className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-surface2 text-gray-700 dark:text-dark-text transition-all shadow-sm active:scale-95"
+                className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-surface2 text-gray-700 dark:text-dark-text transition-all shadow-sm active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
               >
                 {t.writingHelperOpenSettings}
               </button>
@@ -222,7 +222,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
             <button
               onClick={handleSubmit}
               disabled={buttonDisabled}
-              className="px-5 py-2.5 text-sm font-medium rounded-lg bg-primary-600 text-white shadow-sm hover:bg-primary-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-2"
+              className="px-5 py-2.5 text-sm font-medium rounded-lg bg-primary-600 text-white shadow-sm hover:bg-primary-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
               title={buttonDisabled ? (loading ? t.writingHelperRunning : t.writingHelperInputPlaceholder) : undefined}
             >
               {loading && <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-transparent animate-spin" />}
@@ -231,7 +231,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
             <button
               onClick={handleClearDraft}
               disabled={loading}
-              className="px-4 py-2.5 text-sm font-medium rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 active:scale-[0.98] transition-all disabled:opacity-50 shadow-sm"
+              className="px-4 py-2.5 text-sm font-medium rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 active:scale-[0.98] transition-all disabled:opacity-50 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
             >
               {t.writingHelperClearDraft}
             </button>
