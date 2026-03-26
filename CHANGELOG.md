@@ -1,5 +1,11 @@
 # Changelog
 
+## [8.2.0] - 2026-03-27
+
+### Changed
+- 同步 Python/配置/Desktop/Tauri 版本号到 `8.2.0`。
+- external 发布流程准备：沿用既有门禁与发布汇总脚本执行校验。
+
 ## [8.0.0] - 2026-02-10
 
 ### Changed

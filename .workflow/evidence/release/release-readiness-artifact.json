@@ -3,7 +3,7 @@
   "schema_version": "evidence.v1",
   "decision": "GO",
   "go_no_go_reasons": [],
-  "generated_at": "2026-03-25T15:56:15.061030+00:00",
+  "generated_at": "2026-03-26T18:01:16.079055+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -27,7 +27,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=1"
+      "detail": "status=passed,passed_count=6470"
     },
     {
       "check_id": "desktop_check",
@@ -43,7 +43,7 @@
       "blocking": false,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "status=passed,passed_count=1"
+      "detail": "status=passed,passed_count=16"
     },
     {
       "check_id": "production_guard",
@@ -219,7 +219,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "state_files_scanned=27,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=27,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
+      "detail": "state_files_scanned=30,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=30,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
@@ -273,13 +273,13 @@
       "check_id": "tasks_completion_signal",
       "priority": "P1",
       "blocking": false,
-      "status": "WARN",
+      "status": "PASS",
       "exit_code": 0,
-      "detail": "checker_exit=0,json_parse_error=json payload not found in output"
+      "detail": "checked=29,unchecked=0,completion_ratio=100.0%,json_parse_error=none"
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-03-25T15:56:15.061030+00:00",
+    "trace_id": "release-readiness-2026-03-26T18:01:16.079055+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",
