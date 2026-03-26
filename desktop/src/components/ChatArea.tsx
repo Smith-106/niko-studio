@@ -210,6 +210,10 @@ export function ChatArea({
     detail,
   })
 
+  const setRecoverError = (message: string, detail?: string) => {
+    setRecoverStatus(makeRecoverError(message, detail ?? message))
+  }
+
   const resetLoadingState = () => {
     setStreamingContent('')
     setIsLoading(false)
@@ -282,7 +286,7 @@ export function ChatArea({
   }) => {
     if (!checkpointId) return
     const message = diagnosticsText ? `${t.streamRestoreHint}（${diagnosticsText}）` : t.streamRestoreHint
-    setRecoverStatus(makeRecoverError(message, detail))
+    setRecoverError(message, detail)
   }
 
   const finalizeInlineSuccess = (content: string) => {
@@ -294,7 +298,7 @@ export function ChatArea({
 
   const finalizeInlineFailure = () => {
     setStreamPhase('error')
-    setRecoverStatus(makeRecoverError(t.inlineActionFailed, t.inlineActionFailed))
+    setRecoverError(t.inlineActionFailed)
   }
 
   const buildWriteQualityGoals = () => ({
@@ -429,7 +433,7 @@ export function ChatArea({
     try {
       if (inlineAction === 'revise') {
         if (!selectedText) {
-          setRecoverStatus(makeRecoverError(t.inlineNeedSelection, t.inlineNeedSelection))
+          setRecoverError(t.inlineNeedSelection)
           return
         }
         const reviseResult = await agentRevise(selectedText, {
@@ -751,13 +755,21 @@ export function ChatArea({
     onTemplatePanelOpenChange?.(false)
   }
 
-  const streamStatusText = streamPhase === 'interrupted'
-    ? t.streamInterrupted
-    : streamPhase === 'recovered'
-      ? t.streamRecovered
-      : connectionState === 'reconnecting' && streamPhase === 'streaming'
-        ? t.streamReconnecting
-        : t.thinking
+  const streamStatusText = (() => {
+    if (streamPhase === 'interrupted') {
+      return t.streamInterrupted
+    }
+
+    if (streamPhase === 'recovered') {
+      return t.streamRecovered
+    }
+
+    if (connectionState === 'reconnecting' && streamPhase === 'streaming') {
+      return t.streamReconnecting
+    }
+
+    return t.thinking
+  })()
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 dark:bg-dark-bg h-full relative z-0">
