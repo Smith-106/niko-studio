@@ -121,7 +121,7 @@ export function useSettingsProviderModels({
           lastModelSyncAt: new Date().toISOString(),
         })
       } else {
-        const reason = res.error?.includes('gateway=')
+        const reason = res.error
           ? texts.settingsFetchModelsFailedWithReason.replace('{error}', res.error)
           : texts.settingsFetchModelsFailed
         setModelSyncError((prev) => ({ ...prev, [provider.id]: reason }))

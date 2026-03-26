@@ -343,11 +343,17 @@ async function requestJson(url: string, init?: RequestInit): Promise<unknown> {
   return response.json()
 }
 
+function buildModelFetchError(gatewayReason: string, directReason: string): string {
+  return `gateway=${gatewayReason}; direct=${directReason}`
+}
+
 export async function fetchProviderModels(
   providerId: string,
   baseUrl: string,
   apiKey: string
 ): Promise<ApiResponse<ModelFetchResult>> {
+  let gatewayReason = 'request_failed'
+
   try {
     const gatewayRes = await callApi<unknown>(`/models?provider=${encodeURIComponent(providerId)}`, 'GET')
     if (gatewayRes.success && gatewayRes.data) {
@@ -355,12 +361,17 @@ export async function fetchProviderModels(
       if (gatewayModels.length > 0) {
         return { success: true, data: { models: gatewayModels, source: 'gateway' } }
       }
+      gatewayReason = 'empty_models'
+    } else {
+      gatewayReason = (gatewayRes.error ?? '').trim() || 'request_failed'
     }
   } catch (error) {
-    console.error(`Gateway models fallback failed (${getErrorName(error)})`)
+    gatewayReason = getErrorName(error)
+    console.error(`Gateway models fallback failed (${gatewayReason})`)
   }
 
   const normalizedBase = normalizeBaseUrl(baseUrl.trim())
+  const trimmedApiKey = apiKey.trim()
   let payload: unknown
 
   try {
@@ -370,19 +381,19 @@ export async function fetchProviderModels(
         break
       }
       case 'google': {
-        if (!apiKey.trim()) {
-          return { success: false, error: 'Google provider requires API key' }
+        if (!trimmedApiKey) {
+          return { success: false, error: buildModelFetchError(gatewayReason, 'api_key_required') }
         }
-        payload = await requestJson(`${normalizedBase}/v1beta/models?key=${encodeURIComponent(apiKey.trim())}`)
+        payload = await requestJson(`${normalizedBase}/v1beta/models?key=${encodeURIComponent(trimmedApiKey)}`)
         break
       }
       case 'anthropic': {
-        if (!apiKey.trim()) {
-          return { success: false, error: 'Anthropic provider requires API key' }
+        if (!trimmedApiKey) {
+          return { success: false, error: buildModelFetchError(gatewayReason, 'api_key_required') }
         }
         payload = await requestJson(`${normalizedBase}/v1/models`, {
           headers: {
-            'x-api-key': apiKey.trim(),
+            'x-api-key': trimmedApiKey,
             'anthropic-version': '2023-06-01',
           },
         })
@@ -391,14 +402,14 @@ export async function fetchProviderModels(
       case 'openai':
       case 'openrouter':
       default: {
-        if (!apiKey.trim()) {
-          return { success: false, error: `${providerId} provider requires API key` }
+        if (!trimmedApiKey) {
+          return { success: false, error: buildModelFetchError(gatewayReason, 'api_key_required') }
         }
         // OpenAI-compatible APIs use /v1/models endpoint
         const openaiBaseUrl = normalizedBase.includes('/v1') ? normalizedBase : `${normalizedBase}/v1`
         payload = await requestJson(`${openaiBaseUrl}/models`, {
           headers: {
-            Authorization: `Bearer ${apiKey.trim()}`,
+            Authorization: `Bearer ${trimmedApiKey}`,
           },
         })
         break
@@ -409,16 +420,17 @@ export async function fetchProviderModels(
     if (models.length === 0) {
       return {
         success: false,
-        error: GENERIC_EMPTY_MODELS_ERROR_MESSAGE,
+        error: buildModelFetchError(gatewayReason, 'empty_models'),
       }
     }
 
     return { success: true, data: { models, source: 'direct' } }
   } catch (error) {
+    const directReason = error instanceof Error ? error.message : GENERIC_API_ERROR_MESSAGE
     console.error(`Fetch provider models failed (${getErrorName(error)})`)
     return {
       success: false,
-      error: GENERIC_API_ERROR_MESSAGE,
+      error: buildModelFetchError(gatewayReason, directReason),
     }
   }
 }

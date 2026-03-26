@@ -194,6 +194,7 @@ class TestModelsEndpoint:
         assert response.status_code == 404
         data = response.json()
         assert data["status"] == "not_found"
+        assert data["error"] == "provider_not_found"
         assert data["provider"] == "unknown"
         assert data["models"] == []
 
