@@ -1,11 +1,12 @@
 import { Sidebar } from './components/Sidebar'
 import { AppRightPanels } from './components/AppRightPanels'
 import { AppMainContent } from './components/AppMainContent'
+import { ChatSidebar } from './components/ChatSidebar'
 import { useAppViewModel } from './hooks/useAppViewModel'
 import { useAppStartup } from './hooks/useAppStartup'
 
 function App() {
-  const { sidebarProps, appRightPanelsProps, appMainContentProps } = useAppViewModel()
+  const { sidebarProps, appRightPanelsProps, appMainContentProps, chatSidebarProps } = useAppViewModel()
 
   useAppStartup()
 
@@ -14,6 +15,8 @@ function App() {
       <Sidebar {...sidebarProps} />
 
       <AppMainContent {...appMainContentProps} />
+
+      <ChatSidebar {...chatSidebarProps} />
 
       <AppRightPanels {...appRightPanelsProps} />
     </div>

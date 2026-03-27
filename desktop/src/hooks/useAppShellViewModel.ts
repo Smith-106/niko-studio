@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react'
 import { Sidebar } from '../components/Sidebar'
 import { AppRightPanels } from '../components/AppRightPanels'
 import { AppMainContent } from '../components/AppMainContent'
+import { ChatSidebar } from '../components/ChatSidebar'
 import type { RightPanelType, WritingHelperDraftState } from './useAppUiPersistence'
 
 interface UseAppShellViewModelOptions {
@@ -15,8 +16,8 @@ interface UseAppShellViewModelOptions {
   }
   panelOrchestration: {
     settingsOpen: boolean
-    isTemplatePanelOpen: ComponentProps<typeof AppMainContent>['chatAreaProps']['isTemplatePanelOpen']
-    setIsTemplatePanelOpen: ComponentProps<typeof AppMainContent>['chatAreaProps']['onTemplatePanelOpenChange']
+    isTemplatePanelOpen: ComponentProps<typeof ChatSidebar>['chatAreaProps']['isTemplatePanelOpen']
+    setIsTemplatePanelOpen: ComponentProps<typeof ChatSidebar>['chatAreaProps']['onTemplatePanelOpenChange']
     closeRightPanel: () => void
     toggleRightPanel: (panel: Exclude<RightPanelType, 'none'>) => void
     openSettings: () => void
@@ -35,7 +36,7 @@ interface UseAppShellViewModelOptions {
     contextEstimated: string
   }
   headerViewModel: {
-    headerConnectionState: ComponentProps<typeof AppMainContent>['chatAreaProps']['connectionState']
+    headerConnectionState: ComponentProps<typeof ChatSidebar>['chatAreaProps']['connectionState']
     headerDotClass: string
     headerConnectionText: string
     contextUsageText: string
@@ -51,7 +52,7 @@ interface UseAppShellViewModelOptions {
     handleRestoreCheckpoint: ComponentProps<typeof AppMainContent>['headerProps']['onRestoreCheckpoint']
     restoreStatus: ComponentProps<typeof AppMainContent>['restoreStatus']
   }
-  onContextUsageChange: ComponentProps<typeof AppMainContent>['chatAreaProps']['onContextUsageChange']
+  onContextUsageChange: ComponentProps<typeof ChatSidebar>['chatAreaProps']['onContextUsageChange']
 }
 
 export function useAppShellViewModel({
@@ -107,18 +108,23 @@ export function useAppShellViewModel({
       onRestoreCheckpoint: checkpointMenu.handleRestoreCheckpoint,
     },
     restoreStatus: checkpointMenu.restoreStatus,
+    contextEstimatedText: t.contextEstimated,
+    onOpenWritingHelper: () => panelOrchestration.toggleRightPanel('writingHelper'),
+  }
+
+  const chatSidebarProps = {
     chatAreaProps: {
       onContextUsageChange,
       connectionState: headerViewModel.headerConnectionState,
       isTemplatePanelOpen: panelOrchestration.isTemplatePanelOpen,
       onTemplatePanelOpenChange: panelOrchestration.setIsTemplatePanelOpen,
-    },
-    contextEstimatedText: t.contextEstimated,
+    }
   }
 
   return {
     sidebarProps,
     appRightPanelsProps,
     appMainContentProps,
+    chatSidebarProps,
   }
 }

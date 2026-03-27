@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { MessageSquarePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Wand2, Library } from 'lucide-react'
+import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Wand2, Library } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
 import { useI18n } from '../i18n'
@@ -96,23 +96,23 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* New Chat Button */}
+      {/* New Document Button */}
       <div className="p-3 shrink-0">
         <button
           onClick={createConversation}
           className={`w-full flex items-center justify-center gap-2 py-2.5 bg-primary-600 hover:bg-primary-500 active:scale-[0.98] text-white rounded-lg shadow-sm transition-all duration-200 ${collapsed ? 'px-0' : 'px-4'}`}
-          aria-label={t.newChat}
-          title={t.newChat}
+          aria-label="New Document"
+          title="New Document"
         >
-          <MessageSquarePlus size={18} />
-          {!collapsed && <span className="font-medium text-sm">{t.newChat}</span>}
+          <FilePlus size={18} />
+          {!collapsed && <span className="font-medium text-sm">New Document</span>}
         </button>
       </div>
 
-      {/* Conversations List */}
+      {/* Document List */}
       <div className="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">
         {!collapsed && (
-          <div className="text-xs font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-3 mt-1">{t.chatList}</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-3 mt-1">Documents</div>
         )}
         {conversations.map((conv) => (
           <button
