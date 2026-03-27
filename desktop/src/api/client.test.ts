@@ -10,6 +10,7 @@ import {
   deriveGatewayRuntimeState,
   evaluateContent,
   executePlan,
+  fetchProviderModels,
   getResolvedApiBase,
   listGatewayServiceConfigs,
   mergeRecommendationBatchResults,
@@ -117,6 +118,68 @@ describe('gateway base resolution', () => {
 
   it('falls back to default base when env and settings are empty', () => {
     expect(getResolvedApiBase()).toBe('http://127.0.0.1:8000')
+  })
+})
+
+describe('fetchProviderModels', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns combined gateway/direct reason when gateway 404 and direct fails', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'provider_not_found' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'unauthorized' }),
+      }))
+
+    const result = await fetchProviderModels('openai', 'https://api.openai.com', 'sk-test')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('gateway=provider_not_found; direct=HTTP error: 401')
+  })
+
+  it('falls back to direct source when gateway returns empty models', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok', provider: 'openai', models: [] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [{ id: 'gpt-4o' }] }),
+      }))
+
+    const result = await fetchProviderModels('openai', 'https://api.openai.com', 'sk-test')
+
+    expect(result.success).toBe(true)
+    expect(result.data).toEqual({
+      models: ['gpt-4o'],
+      source: 'direct',
+    })
+  })
+
+  it('returns explicit empty_models reasons when both gateway and direct have no models', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok', provider: 'openai', models: [] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
+      }))
+
+    const result = await fetchProviderModels('openai', 'https://api.openai.com', 'sk-test')
+
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('gateway=empty_models; direct=empty_models')
   })
 })
 

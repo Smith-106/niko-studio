@@ -236,7 +236,12 @@ async def list_models(request):
 
     if provider_filter:
         if provider_filter not in provider_models:
-            return JSONResponse({"status": "not_found", "provider": provider_filter, "models": []}, status_code=404)
+            return JSONResponse({
+                "status": "not_found",
+                "error": "provider_not_found",
+                "provider": provider_filter,
+                "models": [],
+            }, status_code=404)
         return JSONResponse({
             "status": "ok",
             "provider": provider_filter,
