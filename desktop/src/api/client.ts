@@ -8,7 +8,6 @@ import { useSettingsStore } from '@/stores/settingsStore'
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:8000'
 const GENERIC_API_ERROR_MESSAGE = 'Request failed. Please try again.'
-const GENERIC_EMPTY_MODELS_ERROR_MESSAGE = 'No models found.'
 const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, '')
 
 const getErrorName = (error: unknown): string => (error instanceof Error ? error.name : 'UnknownError')
