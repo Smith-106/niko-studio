@@ -51,6 +51,7 @@ htmlcov/
 .niko-studio/
 .workflow/.analysis/
 .workflow/.scratchpad/
+.workflow/evidence/
 src/.task/
 node_modules/
 desktop/node_modules/
@@ -58,6 +59,7 @@ test-results/
 desktop/test-results/
 coverage.xml
 pytest-*.xml
+release-check-summary.md
 
 # Desktop gateway sidecar build artifacts
 .build/
