@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "ensure-deps": "node -e \"const fs=require('fs');const cp=require('child_process');if(!fs.existsSync('node_modules/typescript/bin/tsc')){console.log('Dependencies missing, running npm ci...');cp.execSync('npm ci',{stdio:'inherit'});}\"",
+    "check:node-sidecar": "node --check src-tauri/bin/niko-gateway-node",
+    "build:sidecar:node": "npm run check:node-sidecar && node -e \"const fs=require('fs');const path=require('path');const binDir=path.join('src-tauri','bin');const source=path.join(binDir,'niko-gateway-node');if(!fs.existsSync(source)){throw new Error('Missing Node sidecar entry: '+source);}const target=path.join(binDir,'niko-gateway');fs.copyFileSync(source,target);try{fs.chmodSync(target,0o755);}catch{}if(process.platform==='win32'){const cmdSource=path.join(binDir,'niko-gateway-node.cmd');if(fs.existsSync(cmdSource)){fs.copyFileSync(cmdSource,path.join(binDir,'niko-gateway.cmd'));}}console.log('Node sidecar staged:',target);\"",
+    "build:sidecar": "npm run build:sidecar:node",
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -14,8 +17,8 @@
     "build": "npm run ensure-deps && tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:dev": "npm run build:sidecar && tauri dev",
+    "tauri:build": "npm run build:sidecar && tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

@@ -1,0 +1,86 @@
+#!/usr/bin/env node
+
+const http = require('node:http');
+const https = require('node:https');
+
+function trimTrailingSlash(value) {
+  return value.replace(/\/+$/, '');
+}
+
+function getBaseUrl() {
+  const env = process.env;
+  const raw = env.NIKO_GATEWAY_SHADOW_UPSTREAM || env.NIKO_GATEWAY_URL || env.VITE_NIKO_GATEWAY_URL || 'http://127.0.0.1:8000';
+  return trimTrailingSlash(String(raw || 'http://127.0.0.1:8000'));
+}
+
+function getListenHost() {
+  const host = (process.env.NIKO_GATEWAY_HOST || '127.0.0.1').trim();
+  return host || '127.0.0.1';
+}
+
+function getListenPort() {
+  const parsed = Number.parseInt(process.env.NIKO_GATEWAY_PORT || '8000', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 8000;
+}
+
+const upstreamBase = getBaseUrl();
+const upstreamUrl = new URL(upstreamBase);
+const upstreamClient = upstreamUrl.protocol === 'https:' ? https : http;
+
+function writeJson(res, code, payload) {
+  const body = JSON.stringify(payload);
+  res.writeHead(code, {
+    'content-type': 'application/json; charset=utf-8',
+    'content-length': Buffer.byteLength(body),
+  });
+  res.end(body);
+}
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    writeJson(res, 200, {
+      status: 'healthy',
+      runtime: 'node-shadow',
+      upstream: upstreamBase,
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
+  const targetUrl = new URL(req.url || '/', upstreamBase);
+  const proxyReq = upstreamClient.request(
+    {
+      protocol: targetUrl.protocol,
+      hostname: targetUrl.hostname,
+      port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
+      method: req.method,
+      path: `${targetUrl.pathname}${targetUrl.search}`,
+      headers: req.headers,
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    },
+  );
+
+  proxyReq.on('error', (error) => {
+    writeJson(res, 502, {
+      error: 'Node shadow proxy failed',
+      detail: error.message,
+      upstream: upstreamBase,
+    });
+  });
+
+  req.pipe(proxyReq);
+});
+
+server.listen(getListenPort(), getListenHost(), () => {
+  console.log(`[niko-gateway-node] listening on ${getListenHost()}:${getListenPort()} -> ${upstreamBase}`);
+});
+
+function shutdown() {
+  server.close(() => process.exit(0));
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

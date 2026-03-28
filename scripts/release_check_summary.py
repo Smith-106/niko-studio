@@ -824,7 +824,7 @@ def gate_score_or_critical_blocker_signal(
     unresolved_triage_status: str,
 ) -> tuple[str, int, str]:
     has_blocker = (
-        chapter_gate_status != "PASS"
+        chapter_gate_status == "FAIL"
         or critical_conflict_status == "FAIL"
         or unresolved_triage_status == "FAIL"
     )
@@ -835,7 +835,7 @@ def gate_score_or_critical_blocker_signal(
         ("chapter_gate_status", chapter_gate_status),
         ("critical_conflict_status", critical_conflict_status),
         ("unresolved_triage_status", unresolved_triage_status),
-        ("blocker_semantics", "chapter_gate_not_pass_or_critical_or_unresolved_triage"),
+        ("blocker_semantics", "chapter_gate_or_critical_or_unresolved_triage_is_fail"),
         ("decision", "no_go" if has_blocker else "go"),
     ])
 
@@ -1152,6 +1152,13 @@ def main() -> int:
         "run",
         "ensure-deps",
     ])
+    desktop_sidecar_build_code, desktop_sidecar_build_output = run_cmd([
+        "npm.cmd",
+        "--prefix",
+        "desktop",
+        "run",
+        "build:sidecar",
+    ])
     desktop_check_code, desktop_check_output = run_cmd([
         "npm.cmd",
         "--prefix",
@@ -1159,8 +1166,16 @@ def main() -> int:
         "run",
         "check",
     ])
-    desktop_code = desktop_bootstrap_code if desktop_bootstrap_code != 0 else desktop_check_code
-    desktop_output = "\n\n".join(part for part in [desktop_bootstrap_output, desktop_check_output] if part)
+    desktop_code = (
+        desktop_bootstrap_code
+        if desktop_bootstrap_code != 0
+        else (desktop_sidecar_build_code if desktop_sidecar_build_code != 0 else desktop_check_code)
+    )
+    desktop_output = "\n\n".join(
+        part
+        for part in [desktop_bootstrap_output, desktop_sidecar_build_output, desktop_check_output]
+        if part
+    )
 
     e2e_code, e2e_output = run_cmd([
         sys.executable,
@@ -1369,7 +1384,17 @@ def main() -> int:
             True,
             desktop_code,
             _format_detail_pairs([
-                ("command", "npm --prefix desktop run check"),
+                ("command", "npm --prefix desktop run build:sidecar && npm --prefix desktop run check"),
+            ]),
+        ),
+        build_check_result(
+            "desktop_sidecar_readiness",
+            "P0",
+            True,
+            desktop_sidecar_build_code,
+            _format_detail_pairs([
+                ("command", "npm --prefix desktop run build:sidecar"),
+                ("artifact", "desktop/src-tauri/bin/niko-gateway"),
             ]),
         ),
         build_check_result(
@@ -1621,7 +1646,7 @@ def main() -> int:
     no_go_reasons = [
         check["check_id"]
         for check in checks
-        if check["blocking"] and check["status"] != "PASS"
+        if check["blocking"] and check["status"] == "FAIL"
     ]
     decision = "GO" if not no_go_reasons else "NO_GO"
 

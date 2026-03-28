@@ -3,7 +3,7 @@
   "schema_version": "evidence.v1",
   "decision": "GO",
   "go_no_go_reasons": [],
-  "generated_at": "2026-03-26T18:01:16.079055+00:00",
+  "generated_at": "2026-03-27T17:09:00.074038+00:00",
   "checks": [
     {
       "check_id": "version_consistency",
@@ -35,7 +35,15 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "command=npm --prefix desktop run check"
+      "detail": "command=npm --prefix desktop run build:sidecar && npm --prefix desktop run check"
+    },
+    {
+      "check_id": "desktop_sidecar_readiness",
+      "priority": "P0",
+      "blocking": true,
+      "status": "PASS",
+      "exit_code": 0,
+      "detail": "command=npm --prefix desktop run build:sidecar,artifact=desktop/src-tauri/bin/niko-gateway"
     },
     {
       "check_id": "external_e2e_smoke",
@@ -219,7 +227,7 @@
       "blocking": true,
       "status": "PASS",
       "exit_code": 0,
-      "detail": "state_files_scanned=30,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=30,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
+      "detail": "state_files_scanned=43,linked_triage_records=0,unresolved_triage_records=0,invalid_state_files=43,blocker_semantics=triage_state_not_in_{resolved,rejected},decision=go"
     },
     {
       "check_id": "feedback_artifact_linkage_signal",
@@ -279,7 +287,7 @@
     }
   ],
   "trace": {
-    "trace_id": "release-readiness-2026-03-26T18:01:16.079055+00:00",
+    "trace_id": "release-readiness-2026-03-27T17:09:00.074038+00:00",
     "session_id": "release-summary",
     "run_id": "release-check-summary",
     "artifact_path": ".workflow/evidence/release/release-readiness-artifact.json",

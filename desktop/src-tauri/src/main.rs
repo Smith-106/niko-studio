@@ -31,6 +31,41 @@ fn get_configured_gateway_base() -> Option<String> {
     None
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum GatewayRuntime {
+    Python,
+    Node,
+}
+
+impl GatewayRuntime {
+    fn sidecar_name(self) -> &'static str {
+        match self {
+            GatewayRuntime::Python => "niko-gateway",
+            GatewayRuntime::Node => {
+                if cfg!(target_os = "windows") {
+                    "niko-gateway-node.cmd"
+                } else {
+                    "niko-gateway-node"
+                }
+            }
+        }
+    }
+
+    fn as_env(self) -> &'static str {
+        match self {
+            GatewayRuntime::Python => "python",
+            GatewayRuntime::Node => "node",
+        }
+    }
+}
+
+fn get_requested_gateway_runtime() -> GatewayRuntime {
+    match std::env::var("NIKO_GATEWAY_RUNTIME") {
+        Ok(value) if value.trim().eq_ignore_ascii_case("node") => GatewayRuntime::Node,
+        _ => GatewayRuntime::Python,
+    }
+}
+
 async fn is_gateway_healthy(base: &str) -> bool {
     let health_url = format!("{}/health", base);
     let client = reqwest::Client::builder()
@@ -133,50 +168,82 @@ impl GatewayState {
             .map_err(|e| format!("Failed to resolve app_data_dir: {e}"))?;
         std::fs::create_dir_all(&app_data_dir).map_err(|e| format!("Failed to create app_data_dir: {e}"))?;
 
+        let requested_runtime = get_requested_gateway_runtime();
+        let runtimes = if requested_runtime == GatewayRuntime::Node {
+            vec![GatewayRuntime::Node, GatewayRuntime::Python]
+        } else {
+            vec![GatewayRuntime::Python]
+        };
+
         // Retry spawn + health check.
         const MAX_ATTEMPTS: usize = 3;
+        let mut last_error: Option<String> = None;
 
-        for attempt in 1..=MAX_ATTEMPTS {
-            let mut cmd = app
-                .shell()
-                .sidecar("niko-gateway")
-                .map_err(|e| format!("Failed to create sidecar command: {e}"))?;
-
-            cmd = cmd
-                .current_dir(&app_data_dir)
-                .env("NIKO_GATEWAY_HOST", "127.0.0.1")
-                .env("NIKO_GATEWAY_PORT", port.to_string())
-                .env("NIKO_GATEWAY_RELOAD", "0")
-                .env("NIKO_ENV", "development")
-                .env("NIKO_CORS_DEV_ORIGINS", "tauri://localhost,http://localhost:5173")
-                .env("NIKO_SKILLS_DIR", skills_dir.to_string_lossy().to_string());
-
-            let (_rx, child) = cmd
-                .spawn()
-                .map_err(|e| format!("Failed to spawn sidecar (attempt {attempt}): {e}"))?;
-
-            // Save child handle and tentatively set local_base (port is bound).
-            // If health check fails, we'll clear it.
-            *self.child.lock().unwrap() = Some(child);
-            *self.local_base.lock().unwrap() = Some(base.clone());
-
-            // Wait until healthy.
-            let wait_result = self.wait_until_healthy(&base, Duration::from_secs(20)).await;
-            match wait_result {
-                Ok(()) => {
-                    return Ok(base);
-                }
-                Err(err) => {
-                    self.stop_child_best_effort();
-                    if attempt == MAX_ATTEMPTS {
-                        return Err(err);
+        for runtime in runtimes {
+            for attempt in 1..=MAX_ATTEMPTS {
+                let mut cmd = match app.shell().sidecar(runtime.sidecar_name()) {
+                    Ok(cmd) => cmd,
+                    Err(e) => {
+                        last_error = Some(format!(
+                            "Failed to create {} sidecar command: {e}",
+                            runtime.as_env()
+                        ));
+                        break;
                     }
-                    tokio::time::sleep(Duration::from_millis(200)).await;
+                };
+
+                cmd = cmd
+                    .current_dir(&app_data_dir)
+                    .env("NIKO_GATEWAY_HOST", "127.0.0.1")
+                    .env("NIKO_GATEWAY_PORT", port.to_string())
+                    .env("NIKO_GATEWAY_RELOAD", "0")
+                    .env("NIKO_ENV", "development")
+                    .env("NIKO_GATEWAY_RUNTIME", runtime.as_env())
+                    .env("NIKO_CORS_DEV_ORIGINS", "tauri://localhost,http://localhost:5173")
+                    .env("NIKO_SKILLS_DIR", skills_dir.to_string_lossy().to_string());
+
+                let (_rx, child) = match cmd.spawn() {
+                    Ok(result) => result,
+                    Err(e) => {
+                        last_error = Some(format!(
+                            "Failed to spawn {} sidecar (attempt {attempt}): {e}",
+                            runtime.as_env()
+                        ));
+                        if attempt == MAX_ATTEMPTS {
+                            break;
+                        }
+                        tokio::time::sleep(Duration::from_millis(200)).await;
+                        continue;
+                    }
+                };
+
+                // Save child handle and tentatively set local_base (port is bound).
+                // If health check fails, we'll clear it.
+                *self.child.lock().unwrap() = Some(child);
+                *self.local_base.lock().unwrap() = Some(base.clone());
+
+                // Wait until healthy.
+                let wait_result = self.wait_until_healthy(&base, Duration::from_secs(20)).await;
+                match wait_result {
+                    Ok(()) => {
+                        return Ok(base);
+                    }
+                    Err(err) => {
+                        self.stop_child_best_effort();
+                        last_error = Some(format!(
+                            "{} sidecar failed health check (attempt {attempt}): {err}",
+                            runtime.as_env()
+                        ));
+                        if attempt == MAX_ATTEMPTS {
+                            break;
+                        }
+                        tokio::time::sleep(Duration::from_millis(200)).await;
+                    }
                 }
             }
         }
 
-        Err("Failed to start gateway sidecar".to_string())
+        Err(last_error.unwrap_or_else(|| "Failed to start gateway sidecar".to_string()))
     }
 
     async fn wait_until_healthy(&self, base: &str, timeout: Duration) -> Result<(), String> {

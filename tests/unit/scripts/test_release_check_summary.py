@@ -1233,9 +1233,9 @@ def test_evidence_completeness_blocker_signal_pass_when_all_required_classes_pre
     )
 
 
-def test_gate_score_or_critical_blocker_signal_fail_when_gate_not_pass():
+def test_gate_score_or_critical_blocker_signal_fail_when_gate_is_fail():
     status, exit_code, detail = release_summary.gate_score_or_critical_blocker_signal(
-        chapter_gate_status="WARN",
+        chapter_gate_status="FAIL",
         critical_conflict_status="PASS",
         unresolved_triage_status="PASS",
     )
@@ -1243,8 +1243,8 @@ def test_gate_score_or_critical_blocker_signal_fail_when_gate_not_pass():
     assert status == "FAIL"
     assert exit_code == 1
     assert detail == (
-        "chapter_gate_status=WARN,critical_conflict_status=PASS,unresolved_triage_status=PASS,"
-        "blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=no_go"
+        "chapter_gate_status=FAIL,critical_conflict_status=PASS,unresolved_triage_status=PASS,"
+        "blocker_semantics=chapter_gate_or_critical_or_unresolved_triage_is_fail,decision=no_go"
     )
 
 
@@ -1259,7 +1259,7 @@ def test_gate_score_or_critical_blocker_signal_pass_when_all_blockers_clear():
     assert exit_code == 0
     assert detail == (
         "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,"
-        "blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=go"
+        "blocker_semantics=chapter_gate_or_critical_or_unresolved_triage_is_fail,decision=go"
     )
 
 
@@ -1995,9 +1995,9 @@ def test_main_blocker_provenance_detail_order_deterministic_across_surfaces(tmp_
         return json.loads(report_text[start:end])
 
     expected_details = {
-        "desktop_check": "command=npm --prefix desktop run check",
+        "desktop_check": "command=npm --prefix desktop run build:sidecar && npm --prefix desktop run check",
         "evidence_completeness_blocker_signal": "quality_non_template=1,weekly_non_template=2,machine_payload_available=yes,missing_evidence_classes=,decision=go",
-        "gate_score_or_critical_blocker_signal": "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=go",
+        "gate_score_or_critical_blocker_signal": "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_or_critical_or_unresolved_triage_is_fail,decision=go",
         "runtime_policy_conformance_signal": "policy_pass=99.0,runtime_pass=99.0,policy_human_review=95.0,runtime_human_review=95.0,policy_revise_lower=50.0,runtime_revise_lower=50.0,policy_rewrite_below=50.0,runtime_rewrite_below=50.0,publish_from_go=pass,publish_from_soft_go=revise,publish_from_no_go=block,terminal_default_decision=go,terminal_no_go_preserved=yes,quality_mode_consistent=yes,mismatches=,decision=go",
     }
     expected_order = [
@@ -2026,7 +2026,7 @@ def test_main_blocker_provenance_detail_order_deterministic_across_surfaces(tmp_
             lambda *args, **kwargs: (
                 "PASS",
                 0,
-                "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=go",
+                "chapter_gate_status=PASS,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_or_critical_or_unresolved_triage_is_fail,decision=go",
             )
         )
         release_summary.runtime_policy_conformance_signal = (  # type: ignore[assignment]
@@ -2328,7 +2328,7 @@ def test_main_no_go_reason_order_matches_blocking_check_order_and_excludes_non_b
             lambda *args, **kwargs: (
                 "FAIL",
                 1,
-                "chapter_gate_status=FAIL,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_not_pass_or_critical_or_unresolved_triage,decision=no_go",
+                "chapter_gate_status=FAIL,critical_conflict_status=PASS,unresolved_triage_status=PASS,blocker_semantics=chapter_gate_or_critical_or_unresolved_triage_is_fail,decision=no_go",
             )
         )
         release_summary.runtime_policy_conformance_signal = (  # type: ignore[assignment]

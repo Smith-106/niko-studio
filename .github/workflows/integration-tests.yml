@@ -224,6 +224,15 @@ jobs:
           name: desktop-vitest-report
           path: desktop/test-results/vitest.junit.xml
 
+      - name: Build desktop sidecar contract artifact
+        run: npm run build:sidecar
+        working-directory: desktop
+
+      - name: Verify desktop sidecar contract artifact
+        run: |
+          test -f src-tauri/bin/niko-gateway
+        working-directory: desktop
+
       - name: Check desktop frontend constraints (typecheck + build)
         run: npm run check
         working-directory: desktop

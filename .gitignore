@@ -61,7 +61,9 @@ pytest-*.xml
 
 # Desktop gateway sidecar build artifacts
 .build/
-desktop/src-tauri/bin/
+desktop/src-tauri/bin/*
+!desktop/src-tauri/bin/niko-gateway-node
+!desktop/src-tauri/bin/niko-gateway-node.cmd
 desktop/src-tauri/target/
 desktop/src-tauri/gen/
 
