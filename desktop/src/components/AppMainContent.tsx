@@ -18,7 +18,7 @@ export function AppMainContent({
   onOpenWritingHelper,
 }: AppMainContentProps) {
   return (
-    <main className="flex-1 flex flex-col relative min-w-0 bg-white dark:bg-dark-bg shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] z-20">
+    <main className="flex-1 flex flex-col relative min-w-0 bg-slate-50 dark:bg-[#0f0f0f] shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] z-20">
       <AppHeader {...headerProps} />
 
       <AppRestoreStatusBanner restoreStatus={restoreStatus} />
