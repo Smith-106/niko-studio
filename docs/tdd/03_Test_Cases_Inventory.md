@@ -361,24 +361,24 @@ d:\工作目录\写作Agent系统\docs\tdd\
 ### 6.1 运行所有单元测试
 
 ```bash
-# 运行所有单元测试
-pytest tests/unit/ -v
+# 运行所有单元测试（本地定点入口，默认绕开 pytest.ini addopts 与全局覆盖率门槛）
+python scripts/run_targeted_pytest.py tests/unit/ -v
 
 # 运行特定模块测试
-pytest tests/unit/test_obsidian_mcp.py -v
+python scripts/run_targeted_pytest.py tests/unit/test_obsidian_mcp.py -v
 
 # 运行带标记的测试
-pytest -m "not slow" -v
+python scripts/run_targeted_pytest.py -m "not slow" -v
 ```
 
 ### 6.2 运行集成测试
 
 ```bash
 # 运行集成测试
-pytest tests/integration/ -v
+python scripts/run_targeted_pytest.py tests/integration/ -v
 
 # 仅运行工作流测试
-pytest tests/integration/test_workflow.py -v
+python scripts/run_targeted_pytest.py tests/integration/test_workflow.py -v
 ```
 
 ### 6.3 运行评估测试

@@ -27,7 +27,10 @@ python -c "from src.config import init_config, ensure_environment; init_config(h
 
 ```bash
 # 交付基线（单元 + 集成，排除 e2e）
-pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80
+pytest -o addopts="" tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80
+
+# 本地定点调试（默认绕开 pytest.ini addopts 与全局覆盖率门槛）
+python scripts/run_targeted_pytest.py tests/unit/test_ci_gate_workflows.py -q
 ```
 
 4. e2e 冒烟通过（external 必选）：
@@ -70,8 +73,9 @@ external 对外“100% 完成度”仅指核心可达链路：
 
 - Desktop 构建日志：`npm --prefix "D:/工作目录/niko-studio/desktop" run build`
 - Python 测试日志：
-  - `pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80`
+  - `pytest -o addopts="" tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80`
   - `pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=short`
+- 本地定点调试（非发布门禁）：`python scripts/run_targeted_pytest.py tests/unit/test_ci_gate_workflows.py -q`
 - 发布汇总输出：`python scripts/release_check_summary.py`
 
 ### internal（dry-run）

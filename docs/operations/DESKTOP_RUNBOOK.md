@@ -88,17 +88,17 @@ npm --prefix desktop run test -- src/api/client.test.ts
 
 ```bash
 # Verify CORS preflight allows PUT
-pytest tests/unit/mcp/test_gateway_endpoints.py -k "cors_preflight_allows_put" -q --no-cov
+python scripts/run_targeted_pytest.py tests/unit/mcp/test_gateway_endpoints.py -k "cors_preflight_allows_put" -q
 ```
 
 ### Full Contract Suite (CI Hard Gate)
 
 ```bash
-# P2 selected hard gate contracts
-pytest tests/unit/workflow/test_workflow_engine.py -k "decision" -q --no-cov
-pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q --no-cov
-pytest tests/unit/test_ci_gate_workflows.py -q --no-cov
-pytest tests/unit/mcp/test_gateway_endpoints.py -k "cors_preflight_allows_put" -q --no-cov
+# P2 selected hard gate contracts (local targeted run)
+python scripts/run_targeted_pytest.py tests/unit/workflow/test_workflow_engine.py -k "decision" -q
+python scripts/run_targeted_pytest.py tests/unit/mcp/test_gateway_stream.py -k "contract" -q
+python scripts/run_targeted_pytest.py tests/unit/test_ci_gate_workflows.py -q
+python scripts/run_targeted_pytest.py tests/unit/mcp/test_gateway_endpoints.py -k "cors_preflight_allows_put" -q
 npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx src/components/KnowledgeModal.test.tsx
 ```
 

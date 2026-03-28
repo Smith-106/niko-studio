@@ -604,13 +604,13 @@ jobs:
         run: pip install -r requirements.txt
         
       - name: Run Unit Tests
-        run: pytest tests/unit/ -v
-        
+        run: pytest -o addopts="" tests/unit/ -v
+
       - name: Run LLM Evaluation Tests
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
-          pytest tests/evaluation/ -v \
+          pytest -o addopts="" tests/evaluation/ -v \
             --tb=short \
             --junitxml=evaluation-results.xml
             

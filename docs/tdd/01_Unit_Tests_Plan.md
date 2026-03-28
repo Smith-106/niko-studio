@@ -643,11 +643,14 @@ CoverageRequirements:
 ### 5.1 生成覆盖率报告
 
 ```bash
-# 运行测试并生成覆盖率报告
-pytest -m "not e2e" --cov=src --cov-report=html --cov-report=term-missing
+# 运行测试并生成覆盖率报告（覆盖率场景直接调用 pytest）
+pytest -o addopts="" -m "not e2e" --cov=src --cov-report=html --cov-report=term-missing
 
 # 检查覆盖率是否满足要求
-pytest -m "not e2e" --cov=src --cov-fail-under=80
+pytest -o addopts="" -m "not e2e" --cov=src --cov-fail-under=80
+
+# 本地定点调试（默认绕开 pytest.ini addopts 与全局覆盖率门槛）
+python scripts/run_targeted_pytest.py tests/unit/test_workflow.py -q
 ```
 
 ---
