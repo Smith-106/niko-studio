@@ -37,3 +37,28 @@ export {
   type VectorSearchConfig,
   type HNSWConfig,
 } from './vector-search';
+
+export {
+  IterativeRetriever,
+  createIterativeRetriever,
+  type IterativeRetrieverConfig,
+} from './iterative-retriever';
+
+export {
+  type SearchResult,
+  type RetrievalProfile,
+  type FusionConfig,
+  type RerankConfig,
+  type RouteMode,
+  type ContextType,
+  type ResolvedReference,
+  type ElasticSearchAdapter,
+  type MemorySearchProvider,
+  type GraphSearchProvider,
+  type SkillProvider,
+  type CollectStageTrace,
+  type RerankStageTrace,
+  type TrimStageTrace,
+  type RetrievalTrace,
+  type IterativeRetrieveResult,
+} from './retrieval-types';
