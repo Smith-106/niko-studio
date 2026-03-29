@@ -5,7 +5,7 @@ ServiceContainer Tests
 Tests for get_container, reset_container, ServiceContainer
 (reset, register_mock, _get_or_create, _schedule_init_task,
 _load_gateway_engine_config, _load_engine_plugins, engine properties,
-ensure_initialized, initialize_all).
+ensure_initialized, initialize_all, AgentFactory integration).
 """
 
 import asyncio
@@ -17,6 +17,7 @@ from src.container import (
     get_container,
     reset_container,
 )
+from src.agents.base import AgentType
 
 
 @pytest.fixture(autouse=True)
@@ -66,10 +67,23 @@ class TestServiceContainerBasics:
         sc._engines["test"] = "engine"
         sc._mocks["test"] = "mock"
         sc._initialized = True
+        # Add agent factory
+        sc._agent_factory = MagicMock()
+        sc._agent_factory.reset = MagicMock()
         sc.reset()
         assert sc._engines == {}
         assert sc._mocks == {}
         assert sc._initialized is False
+        # Verify agent factory was reset
+        sc._agent_factory.reset.assert_called_once()
+
+    def test_reset_without_agent_factory(self):
+        sc = ServiceContainer()
+        sc._engines["test"] = "engine"
+        sc._initialized = True
+        sc._agent_factory = None
+        sc.reset()  # Should not raise
+        assert sc._engines == {}
 
     def test_register_mock(self):
         sc = ServiceContainer()
@@ -226,13 +240,13 @@ class TestEnginePropertiesWithMocks:
     def test_commander_returns_mock(self):
         sc = ServiceContainer()
         mock = MagicMock()
-        sc.register_mock("commander", mock)
+        sc.register_mock_agent(AgentType.COMMANDER, mock)
         assert sc.commander is mock
 
     def test_writer_returns_mock(self):
         sc = ServiceContainer()
         mock = MagicMock()
-        sc.register_mock("writer", mock)
+        sc.register_mock_agent(AgentType.WRITER, mock)
         assert sc.writer is mock
 
     def test_backup_returns_mock(self):
@@ -286,3 +300,101 @@ class TestAsyncLifecycle:
         sc._init_tasks["test"] = task
         sc.reset()
         assert sc._init_tasks == {}
+
+
+# ============================================================
+# AgentFactory Integration
+# ============================================================
+
+class TestAgentFactoryIntegration:
+
+    def test_agent_factory_property_creates_factory(self):
+        sc = ServiceContainer()
+        factory = sc.agent_factory
+        assert factory is not None
+        assert hasattr(factory, 'get_agent')
+
+    def test_agent_factory_lazy_initialization(self):
+        sc = ServiceContainer()
+        # Factory should not exist initially
+        assert sc._agent_factory is None
+        # Access property to trigger lazy init
+        factory = sc.agent_factory
+        assert sc._agent_factory is factory
+        # Second access returns same instance
+        factory2 = sc.agent_factory
+        assert factory is factory2
+
+    def test_get_agent_commander(self):
+        sc = ServiceContainer()
+        agent = sc.get_agent(AgentType.COMMANDER)
+        assert agent is not None
+        # CommanderAgent has an llm attribute
+        assert hasattr(agent, 'llm')
+
+    def test_get_agent_writer(self):
+        sc = ServiceContainer()
+        agent = sc.get_agent(AgentType.WRITER)
+        assert agent is not None
+        # WriterAgent has an llm attribute
+        assert hasattr(agent, 'llm')
+
+    def test_get_agent_caches_instance(self):
+        sc = ServiceContainer()
+        agent1 = sc.get_agent(AgentType.COMMANDER)
+        agent2 = sc.get_agent(AgentType.COMMANDER)
+        assert agent1 is agent2
+
+    def test_get_agent_with_custom_name(self):
+        sc = ServiceContainer()
+        agent = sc.get_agent(AgentType.PLOT, name="custom_plot")
+        assert agent is not None
+        assert agent.name == "custom_plot"
+
+    def test_get_agent_with_custom_config(self):
+        sc = ServiceContainer()
+        config = {"model": "gpt-4", "temperature": 0.5}
+        agent = sc.get_agent(AgentType.PLOT, config=config)
+        assert agent is not None
+        assert agent.config == config
+
+    def test_register_mock_agent(self):
+        sc = ServiceContainer()
+        mock_agent = MagicMock()
+        mock_agent.run = MagicMock(return_value="mocked result")
+
+        sc.register_mock_agent(AgentType.COMMANDER, mock_agent)
+
+        # get_agent should return mock
+        agent = sc.get_agent(AgentType.COMMANDER)
+        assert agent is mock_agent
+        assert agent.run() == "mocked result"
+
+    def test_commander_property_uses_factory(self):
+        sc = ServiceContainer()
+        commander = sc.commander
+        assert commander is not None
+        # Should be cached
+        commander2 = sc.commander
+        assert commander is commander2
+
+    def test_writer_property_uses_factory(self):
+        sc = ServiceContainer()
+        writer = sc.writer
+        assert writer is not None
+        # Should be cached
+        writer2 = sc.writer
+        assert writer is writer2
+
+    def test_reset_clears_agent_factory_cache(self):
+        sc = ServiceContainer()
+        # Create some agents
+        sc.get_agent(AgentType.COMMANDER)
+        factory = sc.agent_factory
+        assert len(factory.get_cached_types()) == 1
+
+        # Reset
+        sc.reset()
+
+        # Factory should be cleared
+        assert len(factory.get_cached_types()) == 0

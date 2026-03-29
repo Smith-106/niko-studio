@@ -16,6 +16,7 @@ from datetime import datetime
 import uuid
 from .base_level import BaseLevel, LevelRegistry
 from ..base_state import BaseState
+from ...agents.base import AgentType
 
 
 @dataclass
@@ -230,10 +231,8 @@ class Level2Lite(BaseLevel):
 
     def _execute_lite(self, state: BaseState) -> BaseState:
         """执行阶段 (轻量)"""
-        from ...agents.writer import WriterAgent
-
         try:
-            writer = WriterAgent(name="lite_writer")
+            writer = self.container.get_agent(AgentType.WRITER, name="lite_writer")
 
             plan = state.get("lite_plan", {})
             feedback = state.get("feedback_context", "")
@@ -254,10 +253,8 @@ class Level2Lite(BaseLevel):
 
     def _verify_lite(self, state: BaseState) -> BaseState:
         """验证阶段 (轻量)"""
-        from ...agents.critic import CriticAgent
-
         try:
-            critic = CriticAgent(name="lite_critic")
+            critic = self.container.get_agent(AgentType.CRITIC, name="lite_critic")
 
             result = critic.run({
                 "content": state.get("draft_content", ""),

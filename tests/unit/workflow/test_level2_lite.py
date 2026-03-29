@@ -157,52 +157,58 @@ class TestLevel2LiteClass:
 
 class TestExecuteAndVerifyLite:
 
-    @patch("src.agents.writer.WriterAgent")
-    def test_execute_lite_success(self, mock_writer_cls):
-        l2 = Level2Lite()
+    def test_execute_lite_success(self):
+        mock_writer = MagicMock()
+        mock_writer.run.return_value = {"content": "draft content"}
+
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(return_value=mock_writer)
+
+        l2 = Level2Lite(container=mock_container)
         state = BaseState()
         state["lite_plan"] = {"objective": "test", "key_points": ["a"]}
         state["context"] = "ctx"
-
-        mock_writer = MagicMock()
-        mock_writer.run.return_value = {"content": "draft content"}
-        mock_writer_cls.return_value = mock_writer
 
         result = l2._execute_lite(state)
         assert result["draft_content"] == "draft content"
         assert result["draft_version"] == 1
 
-    @patch("src.agents.writer.WriterAgent", side_effect=Exception("writer boom"))
-    def test_execute_lite_exception(self, _mock_writer_cls):
-        l2 = Level2Lite()
+    def test_execute_lite_exception(self):
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(side_effect=Exception("writer boom"))
+
+        l2 = Level2Lite(container=mock_container)
         state = BaseState()
 
         result = l2._execute_lite(state)
         assert any("执行失败" in e for e in result.get("errors", []))
 
-    @patch("src.agents.critic.CriticAgent")
-    def test_verify_lite_success(self, mock_critic_cls):
-        l2 = Level2Lite()
-        state = BaseState()
-        state["draft_content"] = "draft"
-        state["lite_plan"] = {"objective": "o"}
-
+    def test_verify_lite_success(self):
         mock_critic = MagicMock()
         mock_critic.run.return_value = {
             "score": 88,
             "decision": "APPROVED",
             "feedback": "ok",
         }
-        mock_critic_cls.return_value = mock_critic
+
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(return_value=mock_critic)
+
+        l2 = Level2Lite(container=mock_container)
+        state = BaseState()
+        state["draft_content"] = "draft"
+        state["lite_plan"] = {"objective": "o"}
 
         result = l2._verify_lite(state)
         assert result["score"] == 88
         assert result["decision"] == "APPROVED"
         assert result["feedback_context"] == "ok"
 
-    @patch("src.agents.critic.CriticAgent", side_effect=Exception("critic boom"))
-    def test_verify_lite_exception_defaults_approved(self, _mock_critic_cls):
-        l2 = Level2Lite()
+    def test_verify_lite_exception_defaults_approved(self):
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(side_effect=Exception("critic boom"))
+
+        l2 = Level2Lite(container=mock_container)
         state = BaseState()
 
         result = l2._verify_lite(state)

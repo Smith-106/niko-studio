@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .base_level import BaseLevel, LevelRegistry
 from ..base_state import BaseState
+from ...agents.base import AgentType
 
 logger = logging.getLogger(__name__)
 
@@ -284,8 +285,8 @@ class Level4Brainstorm(BaseLevel):
     DEFAULT_MAX_PARALLEL = 4
     DEFAULT_ROLES = BrainstormRole.get_default_roles()
 
-    def __init__(self, config: Optional[Dict] = None):
-        super().__init__(config)
+    def __init__(self, config: Optional[Dict] = None, container = None):
+        super().__init__(config, container)
         self.max_parallel = self.config.get("max_parallel", self.DEFAULT_MAX_PARALLEL)
         self.executor = None
 
@@ -598,10 +599,8 @@ class Level4Brainstorm(BaseLevel):
         prompt = self._build_role_prompt(role, topic, context)
 
         try:
-            # 尝试调用 LLM
-            from ...agents.writer import WriterAgent
-
-            writer = WriterAgent(name=f"brainstorm_{role.value}")
+            # 使用 DI 获取 Writer Agent
+            writer = self.container.get_agent(AgentType.WRITER, name=f"brainstorm_{role.value}")
             result = writer.run({
                 "prompt": prompt,
                 "mode": "analysis",
@@ -613,10 +612,6 @@ class Level4Brainstorm(BaseLevel):
             # 解析结果
             return self._parse_analysis_result(role, content)
 
-        except ImportError:
-            # 如果 Agent 不可用，生成占位结果
-            logger.warning(f"WriterAgent not available, generating placeholder for {role.display_name}")
-            return self._generate_placeholder_analysis(role, topic)
         except Exception as e:
             logger.error(f"Analysis failed for role {role.display_name}: {e}")
             return RoleAnalysis(

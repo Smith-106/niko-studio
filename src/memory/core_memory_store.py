@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict, field
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional, Dict, Any, Callable, TYPE_CHECKING
 from pathlib import Path
 import time
 import uuid
@@ -7,7 +7,9 @@ import json
 import logging
 import sqlite3
 import re
-from ..search.vector_search import VectorSearch
+
+if TYPE_CHECKING:
+    from ..knowledge.services.protocols import SearchInterface
 
 logger = logging.getLogger("niko-core-memory")
 
@@ -65,7 +67,7 @@ class CoreMemoryStore:
 
     def __init__(
         self,
-        vector_search: Optional[VectorSearch] = None,
+        vector_search: Optional["SearchInterface"] = None,
         summary_generator: Optional[Callable[[str], str]] = None,
         db_path: Optional[str] = None,
     ):
@@ -73,7 +75,7 @@ class CoreMemoryStore:
         Initialize CoreMemoryStore.
 
         Args:
-            vector_search: Optional VectorSearch instance for embedding storage
+            vector_search: Optional SearchInterface instance for embedding storage
             summary_generator: Optional callable for generating summaries
                                Signature: (content: str) -> str
             db_path: Optional SQLite path for core memory persistence

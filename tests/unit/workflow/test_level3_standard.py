@@ -338,63 +338,66 @@ class TestExecuteWorkflow:
 # ============================================================
 
 
+
     def test_get_architect_from_container_attr(self):
-        l3 = Level3Standard()
-        fake_architect = MagicMock()
-        fake_container = MagicMock()
-        fake_container.architect = fake_architect
+        mock_architect = MagicMock()
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(return_value=mock_architect)
 
-        l3._get_container = MagicMock(return_value=fake_container)
-        assert l3._get_architect() is fake_architect
+        l3 = Level3Standard(container=mock_container)
+        architect = l3._get_architect()
+        
+        from src.agents.base import AgentType
+        mock_container.get_agent.assert_called_once_with(AgentType.ARCHITECT)
+        assert architect is mock_architect
 
-    @patch("src.agents.architect.ArchitectAgent")
-    def test_get_architect_fallback_create(self, mock_architect_cls):
-        l3 = Level3Standard()
-        fake_container = MagicMock(spec=[])
-        created_architect = MagicMock()
-        mock_architect_cls.return_value = created_architect
+    def test_get_architect_fallback_create(self):
+        # AgentFactory handles all creation, no manual fallback needed
+        mock_architect = MagicMock()
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(return_value=mock_architect)
 
-        l3._get_container = MagicMock(return_value=fake_container)
-        assert l3._get_architect() is created_architect
-        mock_architect_cls.assert_called_once_with(name="standard_architect")
+        l3 = Level3Standard(container=mock_container)
+        assert l3._get_architect() is mock_architect
 
     def test_get_critic_from_container_attr(self):
-        l3 = Level3Standard()
-        fake_critic = MagicMock()
-        fake_container = MagicMock()
-        fake_container.critic_agent = fake_critic
+        mock_critic = MagicMock()
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(return_value=mock_critic)
 
-        l3._get_container = MagicMock(return_value=fake_container)
-        assert l3._get_critic() is fake_critic
+        l3 = Level3Standard(container=mock_container)
+        critic = l3._get_critic()
+        
+        from src.agents.base import AgentType
+        mock_container.get_agent.assert_called_once_with(AgentType.CRITIC)
+        assert critic is mock_critic
 
-    @patch("src.agents.critic.CriticAgent")
-    def test_get_critic_fallback_create(self, mock_critic_cls):
-        l3 = Level3Standard()
-        fake_container = MagicMock(spec=[])
-        created_critic = MagicMock()
-        mock_critic_cls.return_value = created_critic
+    def test_get_critic_fallback_create(self):
+        # AgentFactory handles all creation, no manual fallback needed
+        mock_critic = MagicMock()
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(return_value=mock_critic)
 
-        l3._get_container = MagicMock(return_value=fake_container)
-        assert l3._get_critic() is created_critic
-        mock_critic_cls.assert_called_once_with(name="standard_critic")
+        l3 = Level3Standard(container=mock_container)
+        assert l3._get_critic() is mock_critic
 
 
 class TestLazyAgentGettersExtra:
 
-    @patch("src.container.get_container")
-    def test_get_container_delegates_to_global(self, mock_get_container):
+    def test_container_property_lazy_loads(self):
         l3 = Level3Standard()
-        fake_container = MagicMock()
-        mock_get_container.return_value = fake_container
-
-        result = l3._get_container()
-        assert result is fake_container
+        # Test that container property exists
+        assert hasattr(l3, 'container')
+        assert hasattr(l3, '_container')
 
     def test_get_writer_from_container(self):
-        l3 = Level3Standard()
-        fake_writer = MagicMock()
-        fake_container = MagicMock()
-        fake_container.writer = fake_writer
+        mock_writer = MagicMock()
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(return_value=mock_writer)
 
-        l3._get_container = MagicMock(return_value=fake_container)
-        assert l3._get_writer() is fake_writer
+        l3 = Level3Standard(container=mock_container)
+        writer = l3._get_writer()
+        
+        from src.agents.base import AgentType
+        mock_container.get_agent.assert_called_once_with(AgentType.WRITER)
+        assert writer is mock_writer

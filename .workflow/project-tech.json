@@ -2,86 +2,141 @@
   "project_name": "niko-studio",
   "initialized_at": "2026-02-09T00:00:00+08:00",
   "overview": {
-    "description": "Local-first extensible AI Agent platform with workflow orchestration, memory layer, and multi-domain adapters.",
+    "description": "Local-first, extensible AI Agent platform with multi-agent collaboration, OpenKL memory management, and workflow orchestration. Supports multiple domain adapters including novel writing, code development, and knowledge management.",
     "technology_stack": {
       "languages": [
         {
           "name": "Python",
-          "file_count": 0,
+          "file_count": 464,
           "primary": true
         },
         {
           "name": "TypeScript",
-          "file_count": 0,
+          "file_count": 35,
           "primary": false
         },
         {
           "name": "Rust",
-          "file_count": 0,
+          "file_count": 38,
+          "primary": false
+        },
+        {
+          "name": "JavaScript",
+          "file_count": 3,
+          "primary": false
+        },
+        {
+          "name": "TSX",
+          "file_count": 3,
           "primary": false
         }
       ],
       "frameworks": [
-        "Starlette",
+        "FastAPI",
         "React",
-        "Tauri"
+        "Tauri",
+        "LangChain",
+        "LangGraph",
+        "MCP",
+        "Vite",
+        "Tailwind CSS",
+        "Zustand"
       ],
       "build_tools": [
-        "Vite",
-        "TypeScript",
-        "uv"
+        "npm",
+        "cargo",
+        "pytest",
+        "vitest",
+        "vite"
       ],
       "test_frameworks": [
         "pytest",
-        "pytest-asyncio"
+        "pytest-asyncio",
+        "vitest",
+        "@testing-library/react"
       ]
     },
     "architecture": {
-      "style": "layered",
+      "style": "Layered architecture with Platform Core + Domain Adapters pattern, combining multi-agent collaboration, memory management, and workflow orchestration",
       "layers": [
-        "agents",
-        "services",
-        "workflow",
-        "memory",
-        "graph",
-        "ui"
+        "presentation: desktop/src (React/TypeScript frontend)",
+        "business-logic: src/agents (multi-agent collaboration), src/workflow (5-level workflow engine), src/narrative (narrative engine), src/memory (OpenKL memory layer)",
+        "data-access: src/graph (Kùzu graph database), src/store (document storage), src/db (SQLite database)",
+        "services: src/services (platform services), src/mcp (MCP tools integration), src/search (smart search)",
+        "cli: src/cli (command-line interface)"
       ],
       "patterns": [
-        "singleton",
-        "factory",
-        "adapter"
+        "Multi-Agent System",
+        "Model Context Protocol (MCP)",
+        "Workflow Engine",
+        "Memory Layer (OpenKL)",
+        "Knowledge Graph",
+        "Citation System",
+        "Repository Pattern",
+        "Factory Pattern",
+        "Strategy Pattern"
       ]
     },
     "key_components": [
       {
-        "name": "Workflow Engine",
-        "path": "src/workflow",
-        "description": "Session orchestration and execution levels",
+        "name": "Narrative Engine",
+        "path": "src/narrative",
+        "description": "Core narrative generation and management system with story planning, character development, and plot construction capabilities",
         "importance": "high"
       },
       {
-        "name": "Agent Layer",
-        "path": "src/agents",
-        "description": "Commander/Writer/Critic and role-based agents",
+        "name": "Workflow Engine",
+        "path": "src/workflow",
+        "description": "5-level workflow orchestration system (Rapid → Lite → Standard → Brainstorm → Coordinator) with session management and resume strategies",
         "importance": "high"
       },
       {
         "name": "Memory Layer",
         "path": "src/memory",
-        "description": "OpenKL-compatible memory management",
+        "description": "OpenKL-based memory management with temporal organization, topic symlinks, vector search (FastEmbed 384-dim), and citation system",
+        "importance": "high"
+      },
+      {
+        "name": "Agent System",
+        "path": "src/agents",
+        "description": "Multi-agent collaboration framework including Commander, Architect, Writer, Critic, Plot, Character, Worldbuilding, and Skill Router agents",
+        "importance": "high"
+      },
+      {
+        "name": "MCP Integration",
+        "path": "src/mcp",
+        "description": "Model Context Protocol tools and servers integration for external CLI and service orchestration",
+        "importance": "high"
+      },
+      {
+        "name": "Services Layer",
+        "path": "src/services",
+        "description": "Platform services including BackupManager, TokenService, ObsidianService, and Reranker with 4 strategies",
         "importance": "high"
       },
       {
         "name": "Knowledge Graph",
         "path": "src/graph",
-        "description": "Graph storage and indexing",
+        "description": "Kùzu graph database manager with HNSW indexes, Cypher query support, and cross-domain relations",
         "importance": "medium"
       },
       {
-        "name": "Platform Services",
-        "path": "src/services",
-        "description": "Backup/token/obsidian and integration services",
+        "name": "Smart Search",
+        "path": "src/search",
+        "description": "Hybrid search system combining fuzzy (FTS + ripgrep) and semantic (Embedding + RRF) search strategies",
+        "importance": "medium"
+      },
+      {
+        "name": "Desktop Application",
+        "path": "desktop/src",
+        "description": "Tauri-based desktop client with React frontend, providing native UI for the AI Agent platform",
         "importance": "high"
+      },
+      {
+        "name": "Tauri Sidecar",
+        "path": "desktop/src-tauri",
+        "description": "Rust-based sidecar providing gateway services and native integrations for the desktop application",
+        "importance": "medium"
       }
     ]
   },
@@ -553,12 +608,12 @@
   "statistics": {
     "total_features": 23,
     "total_sessions": 22,
-    "last_updated": "2026-02-19T16:00:00Z"
+    "last_updated": "2026-03-28T16:43:05Z"
   },
   "_metadata": {
-    "initialized_by": "workflow:init-fallback",
-    "analysis_timestamp": "2026-02-09T00:00:00+08:00",
-    "analysis_mode": "fallback-scan",
+    "initialized_by": "cli-explore-agent",
+    "analysis_timestamp": "2026-03-28T16:43:05Z",
+    "analysis_mode": "deep-scan",
     "version": "1.0.0"
   }
 }

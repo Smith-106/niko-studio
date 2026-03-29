@@ -68,7 +68,8 @@
       "Bash(ccw view:*)",
       "WebFetch(domain:docs.knox.chat)",
       "WebFetch(domain:github.com)",
-      "mcp__ccw-tools__edit_file"
+      "mcp__ccw-tools__edit_file",
+      "mcp__exa__get_code_context_exa"
     ]
   },
   "hooks": {

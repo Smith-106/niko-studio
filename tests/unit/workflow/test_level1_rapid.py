@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 from src.workflow.levels.level1_rapid import Level1Rapid
 from src.workflow.base_state import BaseState
+from src.agents.base import AgentType
 
 
 # ============================================================
@@ -48,6 +49,11 @@ class TestLevel1RapidInit:
         l1 = Level1Rapid(config={"key": "val"})
         assert l1.config["key"] == "val"
 
+    def test_with_container(self):
+        container = MagicMock()
+        l1 = Level1Rapid(container=container)
+        assert l1._container is container
+
 
 # ============================================================
 # _get_writer
@@ -61,12 +67,15 @@ class TestGetWriter:
         assert l1._get_writer() is w
 
     def test_lazy_loads_from_container(self):
+        mock_writer = MagicMock()
         mock_container = MagicMock()
-        mock_container.writer = MagicMock()
-        with patch("src.container.get_container", return_value=mock_container):
-            l1 = Level1Rapid()
-            writer = l1._get_writer()
-            assert writer is mock_container.writer
+        mock_container.get_agent = MagicMock(return_value=mock_writer)
+
+        l1 = Level1Rapid(container=mock_container)
+        writer = l1._get_writer()
+
+        mock_container.get_agent.assert_called_once_with(AgentType.WRITER)
+        assert writer is mock_writer
 
 
 # ============================================================

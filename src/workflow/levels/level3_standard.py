@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from .base_level import BaseLevel, LevelRegistry
 from ..base_state import BaseState
+from ...agents.base import AgentType
 
 
 @dataclass
@@ -53,54 +54,40 @@ class Level3Standard(BaseLevel):
         architect: Any = None,
         writer: Any = None,
         critic: Any = None,
-        config: Dict = None
+        config: Dict = None,
+        container = None
     ):
         """
         初始化 L3 標準模式
 
         Args:
-            architect: ArchitectAgent 實例（依賴注入）
-            writer: WriterAgent 實例（依賴注入）
-            critic: CriticAgent 實例（依賴注入）
+            architect: ArchitectAgent 實例（可選，優先使用 DI）
+            writer: WriterAgent 實例（可選，優先使用 DI）
+            critic: CriticAgent 實例（可選，優先使用 DI）
             config: 配置字典
+            container: ServiceContainer 實例（依賴注入）
         """
-        super().__init__(config)
+        super().__init__(config, container)
         self._architect = architect
         self._writer = writer
         self._critic = critic
 
-    def _get_container(self):
-        """獲取 ServiceContainer（懶加載）"""
-        from ...container import get_container
-        return get_container()
-
     def _get_architect(self):
-        """獲取 Architect Agent（懶加載）"""
+        """獲取 Architect Agent（懶加載，通過 DI）"""
         if self._architect is None:
-            container = self._get_container()
-            # 如果 container 沒有 architect，則創建新實例
-            if hasattr(container, 'architect'):
-                self._architect = container.architect
-            else:
-                from ...agents.architect import ArchitectAgent
-                self._architect = ArchitectAgent(name="standard_architect")
+            self._architect = self.container.get_agent(AgentType.ARCHITECT)
         return self._architect
 
     def _get_writer(self):
-        """獲取 Writer Agent（懶加載）"""
+        """獲取 Writer Agent（懶加載，通過 DI）"""
         if self._writer is None:
-            self._writer = self._get_container().writer
+            self._writer = self.container.get_agent(AgentType.WRITER)
         return self._writer
 
     def _get_critic(self):
-        """獲取 Critic Agent（懶加載）"""
+        """獲取 Critic Agent（懶加載，通過 DI）"""
         if self._critic is None:
-            container = self._get_container()
-            if hasattr(container, 'critic_agent'):
-                self._critic = container.critic_agent
-            else:
-                from ...agents.critic import CriticAgent
-                self._critic = CriticAgent(name="standard_critic")
+            self._critic = self.container.get_agent(AgentType.CRITIC)
         return self._critic
 
     def execute(self, state: BaseState, **kwargs) -> BaseState:

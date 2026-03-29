@@ -5,27 +5,47 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...container import ServiceContainer
+
 from ..base_state import BaseState
 
 
 class BaseLevel(ABC):
     """
     工作流層級基類
-    
+
     L1 Rapid:      無狀態、無工件、直接輸出
     L2 Lightweight: 內存計劃、輕量持久化
     L3 Standard:   完整會話、驗證步驟
     L4 Brainstorm: 多角色並行分析
     L5 Coordinator: 智能鏈推薦、狀態持久化
     """
-    
+
     level: int = 0
     name: str = "base"
     description: str = ""
-    
-    def __init__(self, config: Optional[Dict] = None):
+
+    def __init__(self, config: Optional[Dict] = None, container: Optional["ServiceContainer"] = None):
+        """
+        初始化工作流層級
+
+        Args:
+            config: 配置字典
+            container: ServiceContainer 實例（依賴注入）
+        """
         self.config = config or {}
+        self._container = container
+
+    @property
+    def container(self) -> "ServiceContainer":
+        """獲取 ServiceContainer（懶加載）"""
+        if self._container is None:
+            from ...container import get_container
+            self._container = get_container()
+        return self._container
     
     @abstractmethod
     def execute(self, state: BaseState, **kwargs) -> BaseState:
@@ -73,14 +93,18 @@ class LevelRegistry:
         return cls._levels.get(level_num)
     
     @classmethod
-    def create(cls, level_num: int, config: Optional[Dict] = None) -> Optional[BaseLevel]:
+    def create(cls, level_num: int, config: Optional[Dict] = None, container = None) -> Optional[BaseLevel]:
         """創建層級實例"""
         level_class = cls.get(level_num)
         if not level_class:
             return None
 
-        # 优先使用命名参数传递 config，兼容各层级构造函数参数顺序差异
+        # 优先使用命名参数传递 config 和 container，兼容各层级构造函数参数顺序差异
         try:
-            return level_class(config=config)
+            return level_class(config=config, container=container)
         except TypeError:
-            return level_class(config)
+            # Fallback: 尝试只传递 config（向后兼容）
+            try:
+                return level_class(config=config)
+            except TypeError:
+                return level_class(config)

@@ -12,6 +12,8 @@ import logging
 import os
 from typing import Any, Dict, Optional, List
 
+from src.agents.factory import AgentFactory, AgentType
+
 logger = logging.getLogger("niko-container")
 
 # Singleton container instance
@@ -43,6 +45,7 @@ class ServiceContainer:
         self._initialized = False
         self._engine_plugins_cache: Dict[str, List[Any]] = {}
         self._init_tasks: Dict[str, asyncio.Task] = {}
+        self._agent_factory: Optional[AgentFactory] = None
 
     def reset(self) -> None:
         """Clear all cached engines (for testing)."""
@@ -54,11 +57,25 @@ class ServiceContainer:
         self._engines.clear()
         self._mocks.clear()
         self._engine_plugins_cache.clear()
+        if self._agent_factory is not None:
+            self._agent_factory.reset()
         self._initialized = False
 
     def register_mock(self, name: str, mock: Any) -> None:
         """Register a mock for testing."""
         self._mocks[name] = mock
+
+    def register_mock_agent(self, agent_type: AgentType, mock: Any) -> None:
+        """
+        Register a mock agent for testing.
+
+        Args:
+            agent_type: Type of agent to mock
+            mock: Mock agent instance
+        """
+        if self._agent_factory is None:
+            self._agent_factory = AgentFactory()
+        self._agent_factory.register_mock(agent_type, mock)
 
     def _get_or_create(self, name: str, factory) -> Any:
         """Get cached engine or create new one."""
@@ -135,6 +152,36 @@ class ServiceContainer:
         self._engine_plugins_cache[cache_key] = plugins
         return plugins
 
+    # ============ Agent Factory ============
+
+    @property
+    def agent_factory(self) -> AgentFactory:
+        """Get agent factory (lazy loaded)."""
+        if self._agent_factory is None:
+            self._agent_factory = AgentFactory()
+        return self._agent_factory
+
+    def get_agent(
+        self,
+        agent_type: AgentType,
+        name: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
+        llm: Optional[Any] = None
+    ) -> Any:
+        """
+        Get agent instance via factory (lazy loaded with caching).
+
+        Args:
+            agent_type: Type of agent to retrieve
+            name: Optional agent name
+            config: Optional agent configuration
+            llm: Optional LLM instance
+
+        Returns:
+            Agent instance of requested type
+        """
+        return self.agent_factory.get_agent(agent_type, name, config, llm)
+
     # ============ Engine Properties ============
 
     @property
@@ -186,70 +233,12 @@ class ServiceContainer:
     @property
     def commander(self) -> Any:
         """Get commander agent (lazy loaded)."""
-        def factory():
-            from src.agents.commander import CommanderAgent
-            return CommanderAgent(llm=None)
-        return self._get_or_create("commander", factory)
+        return self.get_agent(AgentType.COMMANDER)
 
     @property
     def writer(self) -> Any:
         """Get writer agent (lazy loaded)."""
-        def factory():
-            from src.agents.writer import WriterAgent
-            from src.config import get_config
-
-            config = get_config()
-            google_key = (
-                config.agent.google_api_key
-                or os.getenv("GOOGLE_API_KEY")
-                or os.getenv("GEMINI_API_KEY")
-            )
-            openai_key = config.agent.openai_api_key or os.getenv("OPENAI_API_KEY")
-
-            llm = None
-
-            if google_key:
-                try:
-                    from langchain_google_genai import ChatGoogleGenerativeAI
-                    llm = ChatGoogleGenerativeAI(
-                        model="gemini-pro",
-                        temperature=0.7,
-                        google_api_key=google_key,
-                    )
-                except Exception as exc:
-                    logger.warning(f"Failed to initialize Google LLM for WriterAgent: {exc}")
-
-            if llm is None and openai_key:
-                try:
-                    from langchain_openai import ChatOpenAI
-
-                    openai_base = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE")
-                    if openai_base:
-                        normalized = openai_base.rstrip("/")
-                        if not normalized.endswith("/v1"):
-                            normalized = f"{normalized}/v1"
-                        openai_base = normalized
-                    openai_model = (
-                        os.getenv("OPENAI_MODEL")
-                        or os.getenv("OPENAI_CHAT_MODEL")
-                        or config.agent.default_model
-                        or "gpt-4o"
-                    )
-
-                    chat_openai_kwargs = {
-                        "model": openai_model,
-                        "temperature": 0.7,
-                        "openai_api_key": openai_key,
-                    }
-                    if openai_base:
-                        chat_openai_kwargs["openai_api_base"] = openai_base
-
-                    llm = ChatOpenAI(**chat_openai_kwargs)
-                except Exception as exc:
-                    logger.warning(f"Failed to initialize OpenAI LLM for WriterAgent: {exc}")
-
-            return WriterAgent(llm=llm)
-        return self._get_or_create("writer", factory)
+        return self.get_agent(AgentType.WRITER)
 
     @property
     def backup(self) -> Any:

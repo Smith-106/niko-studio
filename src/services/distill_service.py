@@ -25,7 +25,9 @@ import warnings
 from typing import List, Dict, Any, Optional
 import json
 import logging
-from ..agents.base import BaseAgent  # Import BaseAgent to reuse Prompt Protocol later if needed
+
+# Note: BaseAgent import removed to prevent circular dependency
+# If needed, import from protocols.agent.AgentProtocol instead
 
 logger = logging.getLogger("DistillService")
 

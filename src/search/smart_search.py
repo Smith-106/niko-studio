@@ -903,6 +903,56 @@ class SmartSearch:
             )
             return result
 
+    # ============ SearchInterface Implementation ============
+
+    def index(
+        self,
+        id: str,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        type: str = "chunk",
+    ) -> None:
+        """Index a document (implements SearchInterface).
+
+        Args:
+            id: Document unique identifier
+            content: Document content
+            metadata: Metadata dictionary
+            type: Document type (e.g., 'memory', 'chunk')
+        """
+        if self.vector_index:
+            self.vector_index.upsert(
+                id=id,
+                content=content,
+                metadata=metadata or {},
+                type=type
+            )
+        elif self.vector_search:
+            self.vector_search.upsert_vector(
+                id=id,
+                content=content,
+                metadata=metadata or {},
+                type=type
+            )
+        else:
+            raise ValueError("No vector search backend available for indexing")
+
+    def delete(self, id: str) -> bool:
+        """Delete a document (implements SearchInterface).
+
+        Args:
+            id: Document unique identifier
+
+        Returns:
+            True if deleted, False if not found
+        """
+        if self.vector_index:
+            return self.vector_index.delete(id)
+        elif self.vector_search:
+            return self.vector_search.delete_vector(id)
+        else:
+            raise ValueError("No vector search backend available for deletion")
+
     # ============ Legacy API Compatibility ============
 
     def _keyword_search(

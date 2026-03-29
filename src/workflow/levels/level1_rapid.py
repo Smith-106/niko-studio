@@ -8,6 +8,7 @@ L1 快速模式 (Rapid)
 from typing import Dict, List, Optional, Any
 from .base_level import BaseLevel, LevelRegistry
 from ..base_state import BaseState
+from ...agents.base import AgentType
 
 
 @LevelRegistry.register(1)
@@ -26,22 +27,22 @@ class Level1Rapid(BaseLevel):
     name = "rapid"
     description = "快速模式 - 無狀態、無工件、直接輸出"
 
-    def __init__(self, writer: Any = None, config: Dict = None):
+    def __init__(self, writer: Any = None, config: Dict = None, container = None):
         """
         初始化 L1 快速模式
 
         Args:
-            writer: WriterAgent 實例（依賴注入）
+            writer: WriterAgent 實例（可選，優先使用 DI）
             config: 配置字典
+            container: ServiceContainer 實例（依賴注入）
         """
-        super().__init__(config)
+        super().__init__(config, container)
         self._writer = writer
 
     def _get_writer(self):
-        """獲取 Writer Agent（懶加載）"""
+        """獲取 Writer Agent（懶加載，通過 DI）"""
         if self._writer is None:
-            from ...container import get_container
-            self._writer = get_container().writer
+            self._writer = self.container.get_agent(AgentType.WRITER)
         return self._writer
 
     def execute(self, state: BaseState, **kwargs) -> BaseState:

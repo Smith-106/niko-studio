@@ -15,6 +15,15 @@ class ModelProvider(Enum):
     LOCAL = "local"
 
 
+class AgentType(Enum):
+    """Supported agent types for factory creation."""
+    COMMANDER = "commander"
+    ARCHITECT = "architect"
+    WRITER = "writer"
+    CRITIC = "critic"
+    PLOT = "plot"
+
+
 @dataclass
 class ModelPricing:
     """模型定价信息 (per 1M tokens)"""

@@ -753,24 +753,27 @@ class TestAnalyzeAsRoleBranches:
         assert isinstance(result.recommendations, list)
         assert isinstance(result.concerns, list)
 
-    @patch("src.agents.writer.WriterAgent")
-    def test_analyze_as_role_exception(self, mock_writer_cls):
-        l4 = Level4Brainstorm()
+    def test_analyze_as_role_exception(self):
         mock_writer = MagicMock()
         mock_writer.run.side_effect = RuntimeError("boom")
-        mock_writer_cls.return_value = mock_writer
 
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(return_value=mock_writer)
+
+        l4 = Level4Brainstorm(container=mock_container)
         result = l4._analyze_as_role(BrainstormRole.PRODUCT_MANAGER, "topic", "ctx")
         assert result.score == 0.0
         assert "分析过程中出错" in result.analysis_content
 
-    @patch("src.agents.writer.WriterAgent", side_effect=ImportError("mocked missing writer"))
-    def test_analyze_as_role_import_error_placeholder(self, _mock_writer_cls):
-        l4 = Level4Brainstorm()
+    def test_analyze_as_role_general_exception(self):
+        mock_container = MagicMock()
+        mock_container.get_agent = MagicMock(side_effect=RuntimeError("mocked agent error"))
+
+        l4 = Level4Brainstorm(container=mock_container)
         result = l4._analyze_as_role(BrainstormRole.PRODUCT_MANAGER, "topic", "ctx")
 
-        assert result.score == 50.0
-        assert "待生成" in result.analysis_content
+        assert result.score == 0.0
+        assert "分析过程中出错" in result.analysis_content
 
     @pytest.mark.asyncio
     async def test_generate_artifacts_async_exception_item(self):
