@@ -21,6 +21,13 @@ import {
   IMCPGateway,
   AgentType,
   IAgent,
+  IDistillationService,
+  ILLMService,
+  IEmbeddingService,
+  IKnowledgeService,
+  ISmartSearch,
+  IHybridSearch,
+  IVectorSearch,
 } from '../../container/types';
 
 describe('ServiceContainer', () => {
@@ -608,6 +615,259 @@ describe('ServiceContainer', () => {
       expect(symbols).toHaveLength(10);
       symbols.forEach(symbol => {
         expect(typeof symbol).toBe('symbol');
+      });
+    });
+  });
+
+  // ============ Migrated Services Tests ============
+
+  describe('Migrated Services', () => {
+    describe('Mock Injection', () => {
+      it('should register mock for DistillationService', () => {
+        const mockDistillation: IDistillationService = {
+          getPrompt: vi.fn(),
+          distill: vi.fn(),
+          getResult: vi.fn(),
+          listByTemplate: vi.fn(),
+          distillChapter: vi.fn(),
+          applyToGraph: vi.fn(),
+          getDistillationPrompt: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.DistillationService, mockDistillation);
+        const result = container.distillation;
+
+        expect(result).toBe(mockDistillation);
+      });
+
+      it('should register mock for LLMService', () => {
+        const mockLLM: ILLMService = {
+          generate: vi.fn(),
+          generateWithMetadata: vi.fn(),
+          generateJson: vi.fn(),
+          stream: vi.fn(),
+          batchGenerate: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.LLMService, mockLLM);
+        const result = container.llm;
+
+        expect(result).toBe(mockLLM);
+      });
+
+      it('should register mock for EmbeddingService', () => {
+        const mockEmbedding: IEmbeddingService = {
+          embed: vi.fn(),
+          embedBatch: vi.fn(),
+          embedWithMetadata: vi.fn(),
+          similarity: vi.fn(),
+          getDimensions: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.EmbeddingService, mockEmbedding);
+        const result = container.embedding;
+
+        expect(result).toBe(mockEmbedding);
+      });
+
+      it('should register mock for KnowledgeService', () => {
+        const mockKnowledge: IKnowledgeService = {
+          initialize: vi.fn(),
+          addDocument: vi.fn(),
+          addEntity: vi.fn(),
+          addRelation: vi.fn(),
+          search: vi.fn(),
+          getNeighbors: vi.fn(),
+          distillKnowledge: vi.fn(),
+          syncFile: vi.fn(),
+          healthCheck: vi.fn(),
+          shutdown: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.KnowledgeService, mockKnowledge);
+        const result = container.knowledge;
+
+        expect(result).toBe(mockKnowledge);
+      });
+
+      it('should register mock for SmartSearch', () => {
+        const mockSmartSearch: ISmartSearch = {
+          search: vi.fn(),
+          index: vi.fn(),
+          delete: vi.fn(),
+          clear: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.SmartSearch, mockSmartSearch);
+        const result = container.smartSearch;
+
+        expect(result).toBe(mockSmartSearch);
+      });
+
+      it('should register mock for HybridSearch', () => {
+        const mockHybridSearch: IHybridSearch = {
+          search: vi.fn(),
+          addStrategy: vi.fn(),
+          removeStrategy: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.HybridSearch, mockHybridSearch);
+        const result = container.hybridSearch;
+
+        expect(result).toBe(mockHybridSearch);
+      });
+
+      it('should register mock for VectorSearch', () => {
+        const mockVectorSearch: IVectorSearch = {
+          search: vi.fn(),
+          index: vi.fn(),
+          delete: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.VectorSearch, mockVectorSearch);
+        const result = container.vectorSearch;
+
+        expect(result).toBe(mockVectorSearch);
+      });
+    });
+
+    describe('Lazy Initialization', () => {
+      it('should lazily initialize DistillationService on first access', () => {
+        const service = container.distillation;
+        expect(service).toBeDefined();
+        expect(service).toBeInstanceOf(Object);
+      });
+
+      it('should lazily initialize LLMService on first access', () => {
+        const service = container.llm;
+        expect(service).toBeDefined();
+        expect(service).toBeInstanceOf(Object);
+      });
+
+      it('should lazily initialize EmbeddingService on first access', () => {
+        const service = container.embedding;
+        expect(service).toBeDefined();
+        expect(service).toBeInstanceOf(Object);
+      });
+
+      it('should lazily initialize KnowledgeService on first access', () => {
+        const service = container.knowledge;
+        expect(service).toBeDefined();
+        expect(service).toBeInstanceOf(Object);
+      });
+
+      it('should lazily initialize SmartSearch on first access', () => {
+        const service = container.smartSearch;
+        expect(service).toBeDefined();
+        expect(service).toBeInstanceOf(Object);
+      });
+
+      it('should lazily initialize HybridSearch on first access', () => {
+        const service = container.hybridSearch;
+        expect(service).toBeDefined();
+        expect(service).toBeInstanceOf(Object);
+      });
+
+      it('should lazily initialize VectorSearch on first access', () => {
+        const service = container.vectorSearch;
+        expect(service).toBeDefined();
+        expect(service).toBeInstanceOf(Object);
+      });
+    });
+
+    describe('Singleton Behavior', () => {
+      it('should return same DistillationService instance on multiple accesses', () => {
+        const instance1 = container.distillation;
+        const instance2 = container.distillation;
+
+        expect(instance1).toBe(instance2);
+      });
+
+      it('should return same LLMService instance on multiple accesses', () => {
+        const instance1 = container.llm;
+        const instance2 = container.llm;
+
+        expect(instance1).toBe(instance2);
+      });
+
+      it('should return same EmbeddingService instance on multiple accesses', () => {
+        const instance1 = container.embedding;
+        const instance2 = container.embedding;
+
+        expect(instance1).toBe(instance2);
+      });
+
+      it('should return same KnowledgeService instance on multiple accesses', () => {
+        const instance1 = container.knowledge;
+        const instance2 = container.knowledge;
+
+        expect(instance1).toBe(instance2);
+      });
+
+      it('should return same SmartSearch instance on multiple accesses', () => {
+        const instance1 = container.smartSearch;
+        const instance2 = container.smartSearch;
+
+        expect(instance1).toBe(instance2);
+      });
+
+      it('should return same HybridSearch instance on multiple accesses', () => {
+        const instance1 = container.hybridSearch;
+        const instance2 = container.hybridSearch;
+
+        expect(instance1).toBe(instance2);
+      });
+
+      it('should return same VectorSearch instance on multiple accesses', () => {
+        const instance1 = container.vectorSearch;
+        const instance2 = container.vectorSearch;
+
+        expect(instance1).toBe(instance2);
+      });
+    });
+
+    describe('ServiceTypes Symbols', () => {
+      it('should have unique symbol for DistillationService', () => {
+        expect(ServiceTypes.DistillationService).toBeDefined();
+        expect(typeof ServiceTypes.DistillationService).toBe('symbol');
+      });
+
+      it('should have unique symbol for LLMService', () => {
+        expect(ServiceTypes.LLMService).toBeDefined();
+        expect(typeof ServiceTypes.LLMService).toBe('symbol');
+      });
+
+      it('should have unique symbol for EmbeddingService', () => {
+        expect(ServiceTypes.EmbeddingService).toBeDefined();
+        expect(typeof ServiceTypes.EmbeddingService).toBe('symbol');
+      });
+
+      it('should have unique symbol for KnowledgeService', () => {
+        expect(ServiceTypes.KnowledgeService).toBeDefined();
+        expect(typeof ServiceTypes.KnowledgeService).toBe('symbol');
+      });
+
+      it('should have unique symbol for SmartSearch', () => {
+        expect(ServiceTypes.SmartSearch).toBeDefined();
+        expect(typeof ServiceTypes.SmartSearch).toBe('symbol');
+      });
+
+      it('should have unique symbol for HybridSearch', () => {
+        expect(ServiceTypes.HybridSearch).toBeDefined();
+        expect(typeof ServiceTypes.HybridSearch).toBe('symbol');
+      });
+
+      it('should have unique symbol for VectorSearch', () => {
+        expect(ServiceTypes.VectorSearch).toBeDefined();
+        expect(typeof ServiceTypes.VectorSearch).toBe('symbol');
+      });
+
+      it('should have all 17 service symbols defined (10 placeholder + 7 migrated)', () => {
+        const symbols = Object.values(ServiceTypes);
+        expect(symbols).toHaveLength(17);
+        symbols.forEach(symbol => {
+          expect(typeof symbol).toBe('symbol');
+        });
       });
     });
   });
