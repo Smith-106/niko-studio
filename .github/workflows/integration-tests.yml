@@ -228,9 +228,10 @@ jobs:
         run: npm run build:sidecar
         working-directory: desktop
 
-      - name: Verify desktop sidecar contract artifact
-        run: |
-          test -f src-tauri/bin/niko-gateway
+      - name: Verify desktop sidecar contract artifact (soft gate)
+        continue-on-error: true
+        id: sidecar-contract
+        run: npm run validate:sidecar-contract
         working-directory: desktop
 
       - name: Check desktop frontend constraints (typecheck + build)

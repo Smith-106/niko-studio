@@ -74,12 +74,10 @@ jobs:
         working-directory: desktop
 
       - name: Check desktop sidecar readiness (soft)
+        id: sidecar-readiness
         run: |
           npm run build:sidecar || { echo "::warning::desktop sidecar build failed (soft gate)"; exit 0; }
-          if [ ! -f src-tauri/bin/niko-gateway ]; then
-            echo "::warning::desktop sidecar artifact missing: src-tauri/bin/niko-gateway (soft gate)"
-            exit 0
-          fi
+          npm run validate:sidecar-contract || { echo "::warning::desktop sidecar contract validation failed (soft gate)"; exit 0; }
           echo "desktop sidecar readiness ok"
         working-directory: desktop
 
