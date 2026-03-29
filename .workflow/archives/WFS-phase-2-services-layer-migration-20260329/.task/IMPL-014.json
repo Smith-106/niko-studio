@@ -1,0 +1,115 @@
+{
+  "id": "IMPL-014",
+  "title": "Register services to DI Container",
+  "description": "将所有迁移的服务注册到 TypeScript DI 容器，实现依赖注入和生命周期管理",
+  "meta": {
+    "type": "feature",
+    "priority": "high",
+    "agent": "code-developer",
+    "execution_group": "integration",
+    "estimated_lines": 400
+  },
+  "status": "completed",
+  "status_history": [
+    {
+      "from": null,
+      "to": "pending",
+      "changed_at": "2026-03-29T10:05:00Z"
+    },
+    {
+      "from": "pending",
+      "to": "in_progress",
+      "changed_at": "2026-03-29T12:13:31+08:00"
+    },
+    {
+      "from": "in_progress",
+      "to": "completed",
+      "changed_at": "2026-03-29T12:25:54+08:00"
+    },
+    {
+      "from": "pending",
+      "to": "completed",
+      "changed_at": "2026-03-29T12:27:54+08:00"
+    }
+  ],
+  "depends_on": [
+    "IMPL-007",
+    "IMPL-008",
+    "IMPL-009",
+    "IMPL-010",
+    "IMPL-011",
+    "IMPL-012",
+    "IMPL-013"
+  ],
+  "convergence": {
+    "criteria": [
+      "所有服务注册到 ContainerModule",
+      "实现延迟初始化（lazy initialization）",
+      "支持 Mock 注入用于测试",
+      "TypeScript strict mode 编译通过",
+      "集成测试验证服务解析"
+    ],
+    "verification": "运行集成测试，验证 DI 容器服务注册"
+  },
+  "implementation": {
+    "modification_points": [
+      {
+        "file": "src-ts/container/ContainerModule.ts",
+        "action": "modify",
+        "description": "注册所有服务到 DI 容器"
+      },
+      {
+        "file": "src-ts/container/types.ts",
+        "action": "modify",
+        "description": "添加服务类型标识"
+      },
+      {
+        "file": "src-ts/container/ServiceContainer.ts",
+        "action": "modify",
+        "description": "添加服务 getter 方法"
+      },
+      {
+        "file": "src-ts/tests/container/ServiceContainer.test.ts",
+        "action": "modify",
+        "description": "添加服务注册测试"
+      }
+    ],
+    "logic_flow": [
+      "为每个服务定义 DI 标识符",
+      "在 ContainerModule 中注册服务绑定",
+      "实现延迟初始化逻辑",
+      "添加 ServiceContainer 的 getter 方法",
+      "编写集成测试验证服务解析",
+      "验证 Mock 注入功能"
+    ]
+  },
+  "execution_config": {
+    "method": "agent",
+    "pre_analysis": [
+      {
+        "type": "file_read",
+        "paths": [
+          "src-ts/container/ContainerModule.ts",
+          "src-ts/container/types.ts",
+          "src-ts/container/ServiceContainer.ts"
+        ],
+        "purpose": "理解现有 DI 容器结构"
+      },
+      {
+        "type": "file_read",
+        "paths": [
+          "src-ts/services/index.ts",
+          "src-ts/search/index.ts"
+        ],
+        "purpose": "确认服务导出结构"
+      },
+      {
+        "type": "file_read",
+        "paths": [
+          "src-ts/tests/container/ServiceContainer.test.ts"
+        ],
+        "purpose": "理解现有测试模式"
+      }
+    ]
+  }
+}

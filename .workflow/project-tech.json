@@ -599,7 +599,16 @@
     }
   ],
   "development_index": {
-    "feature": [],
+    "feature": [
+      {
+        "title": "Phase 2: Services Layer Migration - TypeScript migration for services/",
+        "sub_feature": "services",
+        "date": "2026-03-29",
+        "description": "Phase 2: Services Layer Migration - TypeScript migration for services/ (6,006 lines) and search",
+        "status": "completed",
+        "session_id": "WFS-phase-2-services-layer-migration-20260329"
+      }
+    ],
     "enhancement": [],
     "bugfix": [],
     "refactor": [],

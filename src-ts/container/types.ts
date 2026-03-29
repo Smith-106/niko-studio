@@ -16,6 +16,13 @@ export const ServiceTypes = {
   TokenService: Symbol.for('TokenService'),
   ObsidianService: Symbol.for('ObsidianService'),
   MCPGateway: Symbol.for('MCPGateway'),
+  DistillationService: Symbol.for('DistillationService'),
+  KnowledgeService: Symbol.for('KnowledgeService'),
+  LLMService: Symbol.for('LLMService'),
+  EmbeddingService: Symbol.for('EmbeddingService'),
+  SmartSearch: Symbol.for('SmartSearch'),
+  HybridSearch: Symbol.for('HybridSearch'),
+  VectorSearch: Symbol.for('VectorSearch'),
 } as const;
 
 export type ServiceIdentifier<T = unknown> = symbol;
@@ -364,3 +371,348 @@ export interface IMCPGateway {
 }
 
 export type MCPHandler = (params: unknown) => Promise<unknown>;
+
+/**
+ * Distillation Service Interface
+ * Knowledge distillation for extracting structured knowledge from content
+ */
+export interface IDistillationService {
+  /**
+   * Get the prompt template for a distillation type
+   */
+  getPrompt(template: string): string;
+
+  /**
+   * Perform distillation on source content
+   */
+  distill(
+    sources: string[],
+    template: string,
+    sourceIds?: string[],
+    metadata?: Record<string, unknown>
+  ): Promise<unknown>;
+
+  /**
+   * Get distillation result by ID
+   */
+  getResult(resultId: string): unknown;
+
+  /**
+   * List all results by template
+   */
+  listByTemplate(template: string): unknown[];
+
+  /**
+   * Legacy compatibility: distill chapter
+   */
+  distillChapter(content: string): Promise<unknown>;
+
+  /**
+   * Legacy compatibility: apply to graph
+   */
+  applyToGraph(
+    knowledgeLayer: unknown,
+    distilledData: unknown
+  ): void;
+
+  /**
+   * Legacy compatibility: get distillation prompt
+   */
+  getDistillationPrompt(taskType: string, content?: string): string;
+}
+
+/**
+ * LLM Service Interface
+ * Language model service for text generation
+ */
+export interface ILLMService {
+  /**
+   * Generate text response
+   */
+  generate(
+    prompt: string,
+    options?: {
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
+      systemPrompt?: string;
+      stopSequences?: string[];
+    }
+  ): Promise<string>;
+
+  /**
+   * Generate text response with metadata
+   */
+  generateWithMetadata(request: unknown): Promise<unknown>;
+
+  /**
+   * Generate JSON format response
+   */
+  generateJson(
+    prompt: string,
+    options?: {
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
+      systemPrompt?: string;
+    }
+  ): Promise<Record<string, unknown>>;
+
+  /**
+   * Stream text response
+   */
+  stream(
+    prompt: string,
+    options?: {
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
+      systemPrompt?: string;
+    }
+  ): AsyncIterableIterator<unknown>;
+
+  /**
+   * Batch generate text responses
+   */
+  batchGenerate(
+    prompts: string[],
+    options?: {
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
+      maxConcurrency?: number;
+    }
+  ): Promise<string[]>;
+}
+
+/**
+ * Embedding Service Interface
+ * Text embedding service for vector representations
+ */
+export interface IEmbeddingService {
+  /**
+   * Generate vector representation for a single text
+   */
+  embed(
+    text: string,
+    options?: { model?: string }
+  ): Promise<number[]>;
+
+  /**
+   * Batch generate vector representations for texts
+   */
+  embedBatch(
+    texts: string[],
+    options?: {
+      model?: string;
+      batchSize?: number;
+    }
+  ): Promise<number[][]>;
+
+  /**
+   * Generate vector representation (including metadata)
+   */
+  embedWithMetadata(request: unknown): Promise<unknown>;
+
+  /**
+   * Calculate similarity between two vectors
+   */
+  similarity(embedding1: number[], embedding2: number[]): number;
+
+  /**
+   * Get vector dimensions of the model
+   */
+  getDimensions(model?: string): number;
+}
+
+/**
+ * Knowledge Service Interface
+ * Unified knowledge management service
+ */
+export interface IKnowledgeService {
+  /**
+   * Initialize the knowledge service
+   */
+  initialize(): Promise<void>;
+
+  /**
+   * Add a document to the knowledge base
+   */
+  addDocument(
+    docId: string,
+    content: string,
+    metadata?: Partial<unknown>
+  ): Promise<void>;
+
+  /**
+   * Add an entity to the knowledge graph
+   */
+  addEntity(entity: unknown): Promise<void>;
+
+  /**
+   * Add a relation to the knowledge graph
+   */
+  addRelation(relation: unknown): Promise<void>;
+
+  /**
+   * Perform hybrid search (vector + graph)
+   */
+  search(
+    query: string,
+    options?: {
+      topK?: number;
+      entityFilter?: string[];
+    }
+  ): Promise<unknown>;
+
+  /**
+   * Get neighboring entities in the knowledge graph
+   */
+  getNeighbors(entityId: string): Promise<unknown[]>;
+
+  /**
+   * Distill knowledge from content using LLM
+   */
+  distillKnowledge(
+    content: string,
+    template: string,
+    metadata?: Record<string, unknown>
+  ): Promise<unknown>;
+
+  /**
+   * Sync a file to the knowledge base
+   */
+  syncFile(
+    filePath: string,
+    options?: {
+      force?: boolean;
+      sourceType?: 'citation' | 'memory' | 'document';
+    }
+  ): Promise<{
+    success: boolean;
+    action: string;
+    message: string;
+    docId?: string;
+    contentHash?: string;
+  }>;
+
+  /**
+   * Health check
+   */
+  healthCheck(): Promise<boolean>;
+
+  /**
+   * Shutdown the service
+   */
+  shutdown(): Promise<void>;
+}
+
+/**
+ * Smart Search Interface
+ * Intelligent search with multiple modes
+ */
+export interface ISmartSearch {
+  /**
+   * Search with automatic mode selection
+   */
+  search(
+    query: string,
+    options?: {
+      mode?: 'auto' | 'vector' | 'keyword' | 'hybrid';
+      topK?: number;
+      minScore?: number;
+      filters?: Record<string, unknown>;
+    }
+  ): Promise<unknown[]>;
+
+  /**
+   * Index a document
+   */
+  index(
+    id: string,
+    content: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void>;
+
+  /**
+   * Delete a document
+   */
+  delete(id: string): Promise<boolean>;
+
+  /**
+   * Hybrid search with RRF fusion
+   */
+  hybridSearch?(
+    query: string,
+    options?: {
+      topK?: number;
+      vectorWeight?: number;
+      keywordWeight?: number;
+      rrfK?: number;
+    }
+  ): Promise<unknown[]>;
+}
+
+/**
+ * Hybrid Search Interface
+ * Multi-strategy search combination
+ */
+export interface IHybridSearch {
+  /**
+   * Execute hybrid search
+   */
+  search(
+    query: string,
+    options?: {
+      strategies?: string[];
+      topK?: number;
+      weights?: Record<string, number>;
+    }
+  ): Promise<unknown[]>;
+
+  /**
+   * Add search strategy
+   */
+  addStrategy(
+    name: string,
+    searcher: unknown,
+    weight?: number
+  ): void;
+
+  /**
+   * Remove search strategy
+   */
+  removeStrategy(name: string): boolean;
+}
+
+/**
+ * Vector Search Interface
+ * Vector-based similarity search
+ */
+export interface IVectorSearch {
+  /**
+   * Vector similarity search
+   */
+  search(
+    query: string,
+    options?: {
+      topK?: number;
+      minScore?: number;
+      filters?: Record<string, unknown>;
+    }
+  ): Promise<unknown[]>;
+
+  /**
+   * Index document with vector
+   */
+  index(
+    id: string,
+    content: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void>;
+
+  /**
+   * Delete document
+   */
+  delete(id: string): Promise<boolean>;
+}

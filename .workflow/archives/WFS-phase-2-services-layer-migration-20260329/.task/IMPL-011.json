@@ -1,0 +1,100 @@
+{
+  "id": "IMPL-011",
+  "title": "Migrate SmartSearch to TypeScript",
+  "description": "将 search/smart_search.py (智能搜索) 迁移到 TypeScript，实现 SearchInterface 协议接口",
+  "meta": {
+    "type": "feature",
+    "priority": "high",
+    "agent": "code-developer",
+    "execution_group": "search-layer",
+    "estimated_lines": 700
+  },
+  "status": "completed",
+  "status_history": [
+    {
+      "from": null,
+      "to": "pending",
+      "changed_at": "2026-03-29T10:05:00Z"
+    },
+    {
+      "from": "pending",
+      "to": "in_progress",
+      "changed_at": "2026-03-29T10:59:44+08:00"
+    },
+    {
+      "from": "in_progress",
+      "to": "completed",
+      "changed_at": "2026-03-29T11:43:41+08:00"
+    },
+    {
+      "from": "pending",
+      "to": "completed",
+      "changed_at": "2026-03-29T11:46:20+08:00"
+    }
+  ],
+  "depends_on": [
+    "IMPL-009"
+  ],
+  "convergence": {
+    "criteria": [
+      "src-ts/search/smart-search.ts 存在且实现 SearchInterface",
+      "实现智能搜索算法（关键词+语义混合）",
+      "TypeScript strict mode 编译通过",
+      "单元测试覆盖搜索、索引、删除功能"
+    ],
+    "verification": "运行 vitest 测试，验证智能搜索实现"
+  },
+  "implementation": {
+    "modification_points": [
+      {
+        "file": "src/search/smart_search.py",
+        "action": "reference",
+        "description": "参考 Python SmartSearch 实现"
+      },
+      {
+        "file": "src-ts/search/smart-search.ts",
+        "action": "create",
+        "description": "创建 TypeScript SmartSearch 实现"
+      },
+      {
+        "file": "src-ts/search/index.ts",
+        "action": "create",
+        "description": "创建搜索模块导出"
+      }
+    ],
+    "logic_flow": [
+      "分析 Python smart_search.py 的搜索算法",
+      "实现 TypeScript SmartSearch 类",
+      "实现 SearchInterface 的 search(), index(), delete() 方法",
+      "实现混合搜索策略（关键词+语义）",
+      "添加错误处理和类型安全",
+      "编写单元测试"
+    ]
+  },
+  "execution_config": {
+    "method": "agent",
+    "pre_analysis": [
+      {
+        "type": "file_read",
+        "paths": [
+          "src/search/smart_search.py"
+        ],
+        "purpose": "理解 Python SmartSearch 实现"
+      },
+      {
+        "type": "file_read",
+        "paths": [
+          "src-ts/protocols/search.ts"
+        ],
+        "purpose": "确认 SearchInterface 协议接口"
+      },
+      {
+        "type": "file_read",
+        "paths": [
+          "src-ts/services/embedding-service.ts"
+        ],
+        "purpose": "确认 EmbeddingService 依赖"
+      }
+    ]
+  }
+}

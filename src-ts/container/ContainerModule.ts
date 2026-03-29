@@ -1,6 +1,6 @@
 /**
  * ContainerModule - InversifyJS Bindings Configuration
- * 
+ *
  * Defines service bindings for dependency injection container
  */
 
@@ -17,15 +17,124 @@ import {
   ITokenService,
   IObsidianService,
   IMCPGateway,
+  IDistillationService,
+  ILLMService,
+  IEmbeddingService,
+  IKnowledgeService,
+  ISmartSearch,
+  IHybridSearch,
+  IVectorSearch,
 } from './types';
+import {
+  DistillationService,
+  LLMServiceImpl,
+  EmbeddingServiceImpl,
+  KnowledgeServiceImpl,
+} from '../services';
+import {
+  SmartSearch,
+  HybridSearch,
+  VectorSearch,
+} from '../search';
+
+/**
+ * Create service instances with default configurations
+ * These factory functions provide minimal configuration for services
+ */
+function createDistillationService(): IDistillationService {
+  return new DistillationService();
+}
+
+function createLLMService(): ILLMService {
+  // Create LLMService with empty providers map (will be configured later)
+  return new LLMServiceImpl(new Map(), {});
+}
+
+function createEmbeddingService(): IEmbeddingService {
+  // Create EmbeddingService with empty providers map (will be configured later)
+  return new EmbeddingServiceImpl(new Map(), {});
+}
+
+function createKnowledgeService(): IKnowledgeService {
+  // Create KnowledgeService with default configuration
+  return new KnowledgeServiceImpl({
+    dbPath: '.writing/knowledge.db',
+    enableDistillation: true,
+  });
+}
+
+function createSmartSearch(): ISmartSearch {
+  // Create SmartSearch with default configuration
+  return new SmartSearch({});
+}
+
+function createHybridSearch(): IHybridSearch {
+  // Create HybridSearch with default configuration
+  return new HybridSearch({
+    strategies: [],
+    rrfK: 60,
+    defaultTopK: 10,
+    parallelExecution: true,
+  });
+}
+
+function createVectorSearch(): IVectorSearch {
+  // Create VectorSearch with default configuration
+  // Note: Requires embedding service in production
+  return new VectorSearch({
+    dbPath: '.writing/vectors.db',
+    dimension: 384,
+    modelName: 'BAAI/bge-small-en-v1.5',
+    embeddingService: null as any, // Will be injected later
+  });
+}
 
 /**
  * Container Module for Service Registration
- * 
- * This module will be updated as services are migrated from Python to TypeScript.
- * Each service binding uses toDynamicValue for lazy initialization.
+ *
+ * All migrated services are registered with lazy initialization support.
+ * Services are created on first access and cached as singletons.
  */
 export const ContainerModule = new InversifyContainerModule((bind) => {
+  // ============ Migrated Services (TypeScript) ============
+
+  // Distillation Service
+  bind<IDistillationService>(ServiceTypes.DistillationService)
+    .toDynamicValue(() => createDistillationService())
+    .inSingletonScope();
+
+  // LLM Service
+  bind<ILLMService>(ServiceTypes.LLMService)
+    .toDynamicValue(() => createLLMService())
+    .inSingletonScope();
+
+  // Embedding Service
+  bind<IEmbeddingService>(ServiceTypes.EmbeddingService)
+    .toDynamicValue(() => createEmbeddingService())
+    .inSingletonScope();
+
+  // Knowledge Service
+  bind<IKnowledgeService>(ServiceTypes.KnowledgeService)
+    .toDynamicValue(() => createKnowledgeService())
+    .inSingletonScope();
+
+  // Smart Search
+  bind<ISmartSearch>(ServiceTypes.SmartSearch)
+    .toDynamicValue(() => createSmartSearch())
+    .inSingletonScope();
+
+  // Hybrid Search
+  bind<IHybridSearch>(ServiceTypes.HybridSearch)
+    .toDynamicValue(() => createHybridSearch())
+    .inSingletonScope();
+
+  // Vector Search
+  bind<IVectorSearch>(ServiceTypes.VectorSearch)
+    .toDynamicValue(() => createVectorSearch())
+    .inSingletonScope();
+
+  // ============ Placeholder Services (To Be Migrated) ============
+
   // Memory Engine Binding
   // Will be implemented when MemoryEngine is migrated from Python
   // bind<IMemoryEngine>(ServiceTypes.MemoryEngine)

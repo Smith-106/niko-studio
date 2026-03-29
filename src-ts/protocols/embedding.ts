@@ -8,6 +8,23 @@ export interface EmbeddingResponse {
   metadata: Record<string, unknown>;
 }
 
+export interface BatchEmbeddingResponse {
+  embeddings: number[][];
+  model: string;
+  provider: string;
+  dimensions: number;
+  usage?: TokenUsage;
+  latencyMs?: number;
+  cacheHits?: number;
+}
+
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  estimatedCost: number;
+}
+
 /**
  * Embedding Service Protocol
  * 
@@ -52,7 +69,7 @@ export interface EmbeddingService {
 
 /**
  * Embedding Provider Protocol
- * 
+ *
  * Adapter interface for underlying Embedding providers.
  */
 export interface EmbeddingProvider {
@@ -68,7 +85,7 @@ export interface EmbeddingProvider {
     texts: string[],
     model: string,
     options?: { dimensions?: number }
-  ): Promise<EmbeddingResponse>;
+  ): Promise<BatchEmbeddingResponse>;
 
   /**
    * Check provider health status

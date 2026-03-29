@@ -21,7 +21,25 @@ import {
   IMCPGateway,
   AgentType,
   IAgent,
+  IDistillationService,
+  ILLMService,
+  IEmbeddingService,
+  IKnowledgeService,
+  ISmartSearch,
+  IHybridSearch,
+  IVectorSearch,
 } from './types';
+import {
+  DistillationService,
+  LLMServiceImpl,
+  EmbeddingServiceImpl,
+  KnowledgeServiceImpl,
+} from '../services';
+import {
+  SmartSearch,
+  HybridSearch,
+  VectorSearch,
+} from '../search';
 
 /**
  * ServiceContainer - Lightweight DI Container with Lazy Initialization
@@ -48,6 +66,45 @@ export class ServiceContainer {
    * Uses toDynamicValue for lazy initialization
    */
   private registerServices(): void {
+    // ============ Migrated Services (TypeScript) ============
+
+    // Distillation Service
+    this.container.bind<IDistillationService>(ServiceTypes.DistillationService).toDynamicValue(() => {
+      return this.createDistillationService();
+    }).inSingletonScope();
+
+    // LLM Service
+    this.container.bind<ILLMService>(ServiceTypes.LLMService).toDynamicValue(() => {
+      return this.createLLMService();
+    }).inSingletonScope();
+
+    // Embedding Service
+    this.container.bind<IEmbeddingService>(ServiceTypes.EmbeddingService).toDynamicValue(() => {
+      return this.createEmbeddingService();
+    }).inSingletonScope();
+
+    // Knowledge Service
+    this.container.bind<IKnowledgeService>(ServiceTypes.KnowledgeService).toDynamicValue(() => {
+      return this.createKnowledgeService();
+    }).inSingletonScope();
+
+    // Smart Search
+    this.container.bind<ISmartSearch>(ServiceTypes.SmartSearch).toDynamicValue(() => {
+      return this.createSmartSearch();
+    }).inSingletonScope();
+
+    // Hybrid Search
+    this.container.bind<IHybridSearch>(ServiceTypes.HybridSearch).toDynamicValue(() => {
+      return this.createHybridSearch();
+    }).inSingletonScope();
+
+    // Vector Search
+    this.container.bind<IVectorSearch>(ServiceTypes.VectorSearch).toDynamicValue(() => {
+      return this.createVectorSearch();
+    }).inSingletonScope();
+
+    // ============ Placeholder Services (To Be Migrated) ============
+
     // Memory Engine
     this.container.bind<IMemoryEngine>(ServiceTypes.MemoryEngine).toDynamicValue(() => {
       return this.createMemoryEngine();
@@ -219,6 +276,78 @@ export class ServiceContainer {
     return this.container.get<IMCPGateway>(ServiceTypes.MCPGateway);
   }
 
+  // ============ Migrated Service Getters ============
+
+  /**
+   * Get Distillation Service (lazy loaded)
+   */
+  get distillation(): IDistillationService {
+    if (this.mocks.has(ServiceTypes.DistillationService)) {
+      return this.mocks.get(ServiceTypes.DistillationService) as IDistillationService;
+    }
+    return this.container.get<IDistillationService>(ServiceTypes.DistillationService);
+  }
+
+  /**
+   * Get LLM Service (lazy loaded)
+   */
+  get llm(): ILLMService {
+    if (this.mocks.has(ServiceTypes.LLMService)) {
+      return this.mocks.get(ServiceTypes.LLMService) as ILLMService;
+    }
+    return this.container.get<ILLMService>(ServiceTypes.LLMService);
+  }
+
+  /**
+   * Get Embedding Service (lazy loaded)
+   */
+  get embedding(): IEmbeddingService {
+    if (this.mocks.has(ServiceTypes.EmbeddingService)) {
+      return this.mocks.get(ServiceTypes.EmbeddingService) as IEmbeddingService;
+    }
+    return this.container.get<IEmbeddingService>(ServiceTypes.EmbeddingService);
+  }
+
+  /**
+   * Get Knowledge Service (lazy loaded)
+   */
+  get knowledge(): IKnowledgeService {
+    if (this.mocks.has(ServiceTypes.KnowledgeService)) {
+      return this.mocks.get(ServiceTypes.KnowledgeService) as IKnowledgeService;
+    }
+    return this.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService);
+  }
+
+  /**
+   * Get Smart Search (lazy loaded)
+   */
+  get smartSearch(): ISmartSearch {
+    if (this.mocks.has(ServiceTypes.SmartSearch)) {
+      return this.mocks.get(ServiceTypes.SmartSearch) as ISmartSearch;
+    }
+    return this.container.get<ISmartSearch>(ServiceTypes.SmartSearch);
+  }
+
+  /**
+   * Get Hybrid Search (lazy loaded)
+   */
+  get hybridSearch(): IHybridSearch {
+    if (this.mocks.has(ServiceTypes.HybridSearch)) {
+      return this.mocks.get(ServiceTypes.HybridSearch) as IHybridSearch;
+    }
+    return this.container.get<IHybridSearch>(ServiceTypes.HybridSearch);
+  }
+
+  /**
+   * Get Vector Search (lazy loaded)
+   */
+  get vectorSearch(): IVectorSearch {
+    if (this.mocks.has(ServiceTypes.VectorSearch)) {
+      return this.mocks.get(ServiceTypes.VectorSearch) as IVectorSearch;
+    }
+    return this.container.get<IVectorSearch>(ServiceTypes.VectorSearch);
+  }
+
   // ============ Agent Shortcut Methods ============
 
   /**
@@ -334,8 +463,59 @@ export class ServiceContainer {
     this.initialized = false;
   }
 
-  // ============ Service Factories (Placeholder Implementations) ============
-  // These will be replaced with actual implementations as services are migrated
+  // ============ Service Factories ============
+
+  // Migrated Service Factories
+
+  private createDistillationService(): IDistillationService {
+    return new DistillationService();
+  }
+
+  private createLLMService(): ILLMService {
+    // Create LLMService with empty providers map (will be configured later)
+    return new LLMServiceImpl(new Map(), {});
+  }
+
+  private createEmbeddingService(): IEmbeddingService {
+    // Create EmbeddingService with empty providers map (will be configured later)
+    return new EmbeddingServiceImpl(new Map(), {});
+  }
+
+  private createKnowledgeService(): IKnowledgeService {
+    // Create KnowledgeService with default configuration
+    return new KnowledgeServiceImpl({
+      dbPath: '.writing/knowledge.db',
+      enableDistillation: true,
+    });
+  }
+
+  private createSmartSearch(): ISmartSearch {
+    // Create SmartSearch with default configuration
+    return new SmartSearch({});
+  }
+
+  private createHybridSearch(): IHybridSearch {
+    // Create HybridSearch with default configuration
+    return new HybridSearch({
+      strategies: [],
+      rrfK: 60,
+      defaultTopK: 10,
+      parallelExecution: true,
+    });
+  }
+
+  private createVectorSearch(): IVectorSearch {
+    // Create VectorSearch with default configuration
+    // Note: Requires embedding service in production
+    return new VectorSearch({
+      dbPath: '.writing/vectors.db',
+      dimension: 384,
+      modelName: 'BAAI/bge-small-en-v1.5',
+      embeddingService: null as any, // Will be injected later
+    });
+  }
+
+  // Placeholder Service Factories (To Be Migrated)
 
   private createMemoryEngine(): IMemoryEngine {
     // Placeholder - will be implemented when MemoryEngine is migrated

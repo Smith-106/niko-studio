@@ -1,0 +1,132 @@
+{
+  "id": "IMPL-015",
+  "title": "Migrate service tests to vitest",
+  "description": "将服务的 Python 单元测试迁移到 vitest，确保测试覆盖率不低于 Python 版本",
+  "meta": {
+    "type": "test-gen",
+    "priority": "high",
+    "agent": "code-developer",
+    "execution_group": "integration",
+    "estimated_lines": 1500
+  },
+  "status": "completed",
+  "status_history": [
+    {
+      "from": null,
+      "to": "pending",
+      "changed_at": "2026-03-29T10:05:00Z"
+    },
+    {
+      "from": "pending",
+      "to": "in_progress",
+      "changed_at": "2026-03-29T12:32:21+08:00"
+    },
+    {
+      "from": "in_progress",
+      "to": "completed",
+      "changed_at": "2026-03-29T12:39:26+08:00"
+    },
+    {
+      "from": "pending",
+      "to": "completed",
+      "changed_at": "2026-03-29T12:42:01+08:00"
+    }
+  ],
+  "depends_on": [
+    "IMPL-014"
+  ],
+  "convergence": {
+    "criteria": [
+      "所有服务的 vitest 测试文件存在",
+      "测试覆盖率 >= Python 版本覆盖率",
+      "所有测试通过",
+      "Mock 注入测试通过",
+      "集成测试验证服务交互"
+    ],
+    "verification": "运行 vitest --coverage，验证测试覆盖率"
+  },
+  "implementation": {
+    "modification_points": [
+      {
+        "file": "tests/unit/services/test_distill_service.py",
+        "action": "reference",
+        "description": "参考 Python DistillService 测试"
+      },
+      {
+        "file": "tests/unit/services/test_llm_service.py",
+        "action": "reference",
+        "description": "参考 Python LLMService 测试"
+      },
+      {
+        "file": "tests/unit/services/test_embedding_service.py",
+        "action": "reference",
+        "description": "参考 Python EmbeddingService 测试"
+      },
+      {
+        "file": "tests/unit/services/test_knowledge_service.py",
+        "action": "reference",
+        "description": "参考 Python KnowledgeService 测试"
+      },
+      {
+        "file": "tests/unit/search/test_smart_search.py",
+        "action": "reference",
+        "description": "参考 Python SmartSearch 测试"
+      },
+      {
+        "file": "tests/unit/search/test_hybrid_search.py",
+        "action": "reference",
+        "description": "参考 Python HybridSearch 测试"
+      },
+      {
+        "file": "tests/unit/search/test_vector_search.py",
+        "action": "reference",
+        "description": "参考 Python VectorSearch 测试"
+      },
+      {
+        "file": "src-ts/tests/services/",
+        "action": "create",
+        "description": "创建服务测试目录"
+      },
+      {
+        "file": "src-ts/tests/search/",
+        "action": "create",
+        "description": "创建搜索测试目录"
+      }
+    ],
+    "logic_flow": [
+      "分析 Python 测试文件结构",
+      "为每个服务创建对应的 vitest 测试文件",
+      "迁移单元测试（DistillService, LLMService, EmbeddingService, KnowledgeService）",
+      "迁移搜索测试（SmartSearch, HybridSearch, VectorSearch）",
+      "添加 Mock 注入测试",
+      "添加集成测试",
+      "验证测试覆盖率"
+    ]
+  },
+  "execution_config": {
+    "method": "agent",
+    "pre_analysis": [
+      {
+        "type": "file_read",
+        "paths": [
+          "tests/unit/services/",
+          "tests/unit/search/"
+        ],
+        "purpose": "分析 Python 测试结构和覆盖率"
+      },
+      {
+        "type": "file_read",
+        "paths": [
+          "src-ts/tests/container/ServiceContainer.test.ts",
+          "src-ts/tests/protocols.test.ts"
+        ],
+        "purpose": "理解现有 vitest 测试模式"
+      },
+      {
+        "type": "bash",
+        "command": "cd /d D:\\工作目录\\niko-studio && pytest --cov=services --cov=search --cov-report=term-missing tests/unit/services/ tests/unit/search/ 2>&1 | head -100",
+        "purpose": "获取 Python 测试覆盖率基线"
+      }
+    ]
+  }
+}
