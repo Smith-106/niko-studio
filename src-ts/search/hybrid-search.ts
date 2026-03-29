@@ -12,6 +12,7 @@
  */
 
 import type { SearchInterface } from '../protocols/search';
+import { rrfMerge as rrfMergeUtil, type RrfSource } from './utils/rrf-fusion';
 
 /**
  * Search strategy weight configuration
@@ -238,43 +239,39 @@ export class HybridSearch implements SearchInterface {
   /**
    * Reciprocal Rank Fusion to merge results
    *
-   * RRF score = weight / (k + rank)
+   * Delegates to the shared rrfMerge utility in ./utils/rrf-fusion.ts
    */
   private rrfMerge(
     resultsByStrategy: Map<string, HybridSearchResult[]>
   ): HybridSearchResult[] {
-    const scores = new Map<string, number>();
+    // Convert strategy results to RrfSource format
+    const sources: RrfSource[] = this.strategies.map((strategy) => ({
+      name: strategy.name,
+      weight: strategy.weight,
+      items: (resultsByStrategy.get(strategy.name) ?? []).map((r) => ({
+        id: r.id,
+        score: r.score,
+      })),
+    }));
+
+    const merged = rrfMergeUtil(sources, this.rrfK);
+
+    // Build id→result lookup for enrichment
     const resultMap = new Map<string, HybridSearchResult>();
-
-    // Process each strategy's results
     for (const strategy of this.strategies) {
-      const results = resultsByStrategy.get(strategy.name) ?? [];
-
-      results.forEach((result, rank) => {
-        const docId = result.id;
-        const rrfScore = strategy.weight / (this.rrfK + rank + 1);
-
-        scores.set(docId, (scores.get(docId) ?? 0) + rrfScore);
-
-        if (!resultMap.has(docId)) {
-          resultMap.set(docId, result);
-        }
-      });
+      for (const r of resultsByStrategy.get(strategy.name) ?? []) {
+        if (!resultMap.has(r.id)) resultMap.set(r.id, r);
+      }
     }
 
-    // Sort by combined score
-    const sortedIds = Array.from(scores.keys()).sort(
-      (a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0)
-    );
-
-    // Build result list with combined scores
-    const merged: HybridSearchResult[] = [];
-    for (const docId of sortedIds) {
-      const result = resultMap.get(docId)!;
-      merged.push({
+    const results: HybridSearchResult[] = [];
+    for (const { id, score } of merged) {
+      const result = resultMap.get(id);
+      if (!result) continue;
+      results.push({
         id: result.id,
         content: result.content,
-        score: scores.get(docId) ?? 0,
+        score,
         type: result.type,
         metadata: result.metadata,
         source: 'hybrid',
@@ -282,8 +279,7 @@ export class HybridSearch implements SearchInterface {
         loc: result.loc,
       });
     }
-
-    return merged;
+    return results;
   }
 
   /**
