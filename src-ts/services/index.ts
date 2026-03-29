@@ -50,3 +50,70 @@ export type {
   DocumentMetadata,
   KnowledgeServiceConfig,
 } from '../protocols/knowledge';
+
+export {
+  BackupManager,
+  getBackupManager,
+  resetBackupManager,
+} from './backup-manager';
+export type {
+  BackupInfo,
+  BackupProgress,
+  BackupResult,
+  ProgressCallback,
+} from './backup-manager';
+
+export {
+  MemoryService,
+  SimpleEmbedder,
+  getMemoryService,
+  resetMemoryService,
+  configureMemoryEngineProvider,
+} from './memory-service';
+export type {
+  Message,
+  AddOptions,
+  SearchOptions,
+  SearchResult,
+  Memory,
+  Embedder,
+} from './memory-service';
+
+export {
+  ObsidianService,
+  getObsidianService,
+  resetObsidianService,
+} from './obsidian-service';
+export type {
+  VaultInfo,
+  NoteInfo,
+} from './obsidian-service';
+
+export {
+  TokenService,
+  MODEL_PRICING,
+  getTokenService,
+  resetTokenService,
+} from './token-service';
+export type {
+  TokenUsageRecord,
+  BudgetStatus,
+} from './token-service';
+
+export {
+  RerankerType,
+  RerankerError,
+  DEFAULT_RERANKER_CONFIG,
+  RerankerStrategy,
+  RerankerFactory,
+  JinaReranker,
+  VoyageReranker,
+  TEIReranker,
+  BailianReranker,
+} from './reranker';
+export type {
+  RankedDocument,
+  RerankerConfig,
+  RerankerRequest,
+  RerankerResponse,
+} from './reranker';
