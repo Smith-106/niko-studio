@@ -45,6 +45,15 @@ export {
 } from './iterative-retriever';
 
 export {
+  rrfMerge,
+  heatDecayScore,
+  DEFAULT_RRF_K,
+  type RrfItem,
+  type RrfSource,
+  type RrfResult,
+} from './utils/rrf-fusion';
+
+export {
   type SearchResult,
   type RetrievalProfile,
   type FusionConfig,

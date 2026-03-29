@@ -36,12 +36,16 @@ export interface SearchResult {
 export interface FusionConfig {
   /** Whether fusion is enabled */
   enabled: boolean
+  /** Fusion mode: 'linear' (original weighted sum) or 'rrf' (Reciprocal Rank Fusion) */
+  mode?: 'linear' | 'rrf'
   /** Weight for vector/dense similarity score */
   dense: number
   /** Weight for sparse/keyword hit ratio */
   sparse: number
   /** Weight for graph signal (only applied when source === 'graph') */
   graph: number
+  /** Weight for heat/popularity decay signal (only in RRF mode) */
+  heat?: number
 }
 
 /**

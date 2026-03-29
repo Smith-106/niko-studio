@@ -19,6 +19,8 @@ import { performance } from 'node:perf_hooks'
 import { RerankerFactory } from '../services/reranker/factory'
 import type { RankedDocument } from '../services/reranker/models'
 
+import { rrfMerge, heatDecayScore, type RrfSource, DEFAULT_RRF_K } from './utils/rrf-fusion'
+
 import type {
   CollectStageTrace,
   ContextType,
@@ -68,7 +70,7 @@ const DEFAULT_PROFILE: RetrievalProfile = {
   budget: { budget_tokens: null },
   rerank: { enabled: false, topK: 20 },
   sourceQuota: {},
-  fusion: { enabled: false, dense: 0.65, sparse: 0.20, graph: 0.15 },
+  fusion: { enabled: false, mode: 'rrf', dense: 0.65, sparse: 0.20, graph: 0.15 },
 }
 
 const BUILT_IN_PROFILES: Record<string, RetrievalProfile> = {
@@ -81,7 +83,7 @@ const BUILT_IN_PROFILES: Record<string, RetrievalProfile> = {
     budget: { budget_tokens: 900 },
     rerank: { enabled: false, topK: 10 },
     sourceQuota: { memory: 8, graph: 4, file: 3 },
-    fusion: { enabled: true, dense: 0.70, sparse: 0.20, graph: 0.10 },
+    fusion: { enabled: true, mode: 'rrf', dense: 0.70, sparse: 0.20, graph: 0.10 },
   },
 
   standard_balanced: {
@@ -91,7 +93,7 @@ const BUILT_IN_PROFILES: Record<string, RetrievalProfile> = {
     budget: { budget_tokens: 1400 },
     rerank: { enabled: true, topK: 20 },
     sourceQuota: { memory: 10, graph: 6, file: 5 },
-    fusion: { enabled: true, dense: 0.65, sparse: 0.20, graph: 0.15 },
+    fusion: { enabled: true, mode: 'rrf', dense: 0.65, sparse: 0.20, graph: 0.15 },
   },
 
   brainstorm_quality: {
@@ -101,7 +103,7 @@ const BUILT_IN_PROFILES: Record<string, RetrievalProfile> = {
     budget: { budget_tokens: 2200 },
     rerank: { enabled: true, topK: 30 },
     sourceQuota: { memory: 12, graph: 8, file: 6 },
-    fusion: { enabled: true, dense: 0.60, sparse: 0.20, graph: 0.20 },
+    fusion: { enabled: true, mode: 'rrf', dense: 0.60, sparse: 0.20, graph: 0.20 },
   },
 
   coordinator_quality: {
@@ -111,7 +113,7 @@ const BUILT_IN_PROFILES: Record<string, RetrievalProfile> = {
     budget: { budget_tokens: 2600 },
     rerank: { enabled: true, topK: 35 },
     sourceQuota: { memory: 14, graph: 10, file: 8 },
-    fusion: { enabled: true, dense: 0.58, sparse: 0.20, graph: 0.22 },
+    fusion: { enabled: true, mode: 'rrf', dense: 0.58, sparse: 0.20, graph: 0.22 },
   },
 }
 
@@ -554,7 +556,7 @@ export class IterativeRetriever {
   }
 
   // ==================================================================
-  // Private: score fusion
+  // Private: score fusion (linear + RRF modes)
   // ==================================================================
 
   private fuseScore(
@@ -563,28 +565,101 @@ export class IterativeRetriever {
     content: string,
     queryTerms: Set<string>,
     profile: RetrievalProfile,
+    heatScore?: number,
   ): number {
     const sourceWeight = profile.sourceWeights[source] ?? 1.0
     const weightedBase = baseScore * sourceWeight
 
     if (!profile.fusion.enabled) return weightedBase
 
-    let sparseHit = 0.0
-    if (queryTerms.size > 0 && content) {
-      const lower = content.toLowerCase()
-      let matched = 0
-      for (const term of queryTerms) {
-        if (lower.includes(term)) matched++
-      }
-      sparseHit = matched / Math.max(queryTerms.size, 1)
+    const fusionMode = profile.fusion.mode ?? 'linear'
+
+    if (fusionMode === 'rrf') {
+      return this.rrfFuseScore(weightedBase, source, content, queryTerms, profile, heatScore)
     }
 
-    const denseW = profile.fusion.dense
-    const sparseW = profile.fusion.sparse
-    const graphW = source === 'graph' ? profile.fusion.graph : 0.0
+    // Legacy linear fusion (fallback)
+    return this.linearFuseScore(weightedBase, source, content, queryTerms, profile)
+  }
 
-    const fused = denseW * weightedBase + sparseW * sparseHit + graphW
+  /**
+   * RRF-style fusion: treats each signal (dense, sparse, graph, heat) as
+   * a separate ranked source and combines via Reciprocal Rank Fusion.
+   */
+  private rrfFuseScore(
+    weightedBase: number,
+    source: string,
+    content: string,
+    queryTerms: Set<string>,
+    profile: RetrievalProfile,
+    heatScore?: number,
+  ): number {
+    // Build ranked sources for RRF
+    const sources: RrfSource[] = []
+
+    // Dense source (vector similarity)
+    sources.push({
+      name: 'dense',
+      weight: profile.fusion.dense,
+      items: [{ id: 'doc', score: weightedBase }],
+    })
+
+    // Sparse source (keyword hit ratio)
+    const sparseHit = this.computeSparseHit(content, queryTerms)
+    sources.push({
+      name: 'sparse',
+      weight: profile.fusion.sparse,
+      items: [{ id: 'doc', score: sparseHit }],
+    })
+
+    // Graph source (only for graph entities)
+    if (source === 'graph') {
+      sources.push({
+        name: 'graph',
+        weight: profile.fusion.graph,
+        items: [{ id: 'doc', score: 0.5 }],
+      })
+    }
+
+    // Heat source (popularity decay)
+    if (heatScore !== undefined && heatScore > 0 && profile.fusion.heat !== undefined) {
+      sources.push({
+        name: 'heat',
+        weight: profile.fusion.heat,
+        items: [{ id: 'doc', score: heatScore }],
+      })
+    }
+
+    const merged = rrfMerge(sources)
+    return Math.max(0.0, Math.min(1.0, merged[0]?.score ?? weightedBase))
+  }
+
+  /**
+   * Legacy linear weighted sum fusion (original behavior).
+   * Rollback: set fusion.mode = 'linear' in profile.
+   */
+  private linearFuseScore(
+    weightedBase: number,
+    source: string,
+    content: string,
+    queryTerms: Set<string>,
+    profile: RetrievalProfile,
+  ): number {
+    const sparseHit = this.computeSparseHit(content, queryTerms)
+    const graphW = source === 'graph' ? profile.fusion.graph : 0.0
+    const fused = profile.fusion.dense * weightedBase + profile.fusion.sparse * sparseHit + graphW
     return Math.max(0.0, Math.min(1.0, fused))
+  }
+
+  /** Compute sparse/keyword hit ratio */
+  private computeSparseHit(content: string, queryTerms: Set<string>): number {
+    if (queryTerms.size === 0 || !content) return 0
+    const lower = content.toLowerCase()
+    let matched = 0
+    for (const term of queryTerms) {
+      if (lower.includes(term)) matched++
+    }
+    return matched / Math.max(queryTerms.size, 1)
   }
 
   // ==================================================================

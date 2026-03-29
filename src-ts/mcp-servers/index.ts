@@ -26,6 +26,7 @@ export type {
   Entity as MemoryEntity,
   Relation as MemoryRelation,
   GraphStats,
+  SearchEntityResult,
 } from "./memory-mcp";
 
 // ---------- Sequential Thinking MCP Server ----------
