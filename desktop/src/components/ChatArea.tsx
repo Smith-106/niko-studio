@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
@@ -17,6 +18,7 @@ import { useChatStreaming } from '../hooks/useChatStreaming'
 import { useChatRecovery } from '../hooks/useChatRecovery'
 import { useMemoryUpload } from '../hooks/useMemoryUpload'
 import { useInlineActions } from '../hooks/useInlineActions'
+import { useScrollPosition } from '../hooks/useScrollPosition'
 
 interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
@@ -114,10 +116,21 @@ export function ChatArea({
     setTemplateVariablePreset,
   } = useSettingsStore()
 
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const messagesContainerRef = useRef<HTMLDivElement>(null)
-  const shouldStickToBottomRef = useRef(true)
+  const scrollPos = useScrollPosition(currentConversationId ?? 'default')
   const lastRetryPayloadRef = useRef<RetryPayload | null>(null)
+
+  // Virtual scrolling for long conversations
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => scrollPos.containerRef.current,
+    estimateSize: (index) => {
+      const msg = messages[index]
+      if (!msg) return 80
+      return Math.max(80, Math.min(600, msg.content.length * 0.4 + 60))
+    },
+    overscan: 5,
+  })
+
   const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
 
   const {
@@ -221,27 +234,11 @@ export function ChatArea({
 
 
 
-  const handleContainerScroll = useCallback(() => {
-    const container = messagesContainerRef.current
-    if (!container) return
-
-    const { scrollTop, scrollHeight, clientHeight } = container
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 50
-    shouldStickToBottomRef.current = isAtBottom
-  }, [])
-
+  // Auto-scroll to bottom when near bottom and new content arrives
   useEffect(() => {
-    const container = messagesContainerRef.current
-    if (!container) return
-
-    container.addEventListener('scroll', handleContainerScroll)
-    return () => container.removeEventListener('scroll', handleContainerScroll)
-  }, [handleContainerScroll])
-
-  useEffect(() => {
-    if (!shouldStickToBottomRef.current) return
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingContent])
+    if (!scrollPos.isNearBottom) return
+    scrollPos.scrollToBottom()
+  }, [messages, streamingContent, scrollPos])
 
   const handleCancelStream = () => {
     cancelStream()
@@ -773,7 +770,7 @@ export function ChatArea({
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 dark:bg-dark-bg h-full relative z-0">
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar scroll-smooth">
+      <div ref={scrollPos.containerRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar scroll-smooth" onScroll={scrollPos.handleScroll}>
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-dark-text-muted mt-10">
             <div className="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/10 flex items-center justify-center mb-6 shadow-sm border border-primary-100 dark:border-primary-500/20 animate-fade-in">
@@ -810,14 +807,49 @@ export function ChatArea({
               </button>
             </div>
           </div>
+        ) : messages.length > 50 ? (
+          <div
+            style={{
+              height: virtualizer.getTotalSize(),
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const message = messages[virtualRow.index]
+              if (!message) return null
+              return (
+                <div
+                  key={message.id}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="pb-6"
+                >
+                  <MessageBubble
+                    message={message}
+                    onAssistantSelection={handleAssistantSelection}
+                    onComparisonAccept={handleComparisonAccept}
+                  />
+                </div>
+              )
+            })}
+          </div>
         ) : (
           messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              onAssistantSelection={handleAssistantSelection}
-              onComparisonAccept={handleComparisonAccept}
-            />
+            <div key={message.id} className="pb-6">
+              <MessageBubble
+                message={message}
+                onAssistantSelection={handleAssistantSelection}
+                onComparisonAccept={handleComparisonAccept}
+              />
+            </div>
           ))
         )}
         {isLoading && streamingContent && (
@@ -836,7 +868,6 @@ export function ChatArea({
             <div className="animate-pulse">{streamStatusText}</div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
         <ChatAreaStreamStatus

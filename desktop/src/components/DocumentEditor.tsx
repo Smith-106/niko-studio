@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Sparkles, Wand2, RefreshCw } from 'lucide-react'
 import { useI18n } from '../i18n'
+import { countWords, countChars, readingTimeMinutes } from '../utils/wordCount'
 
 interface DocumentEditorProps {
   onOpenWritingHelper: () => void
@@ -10,6 +11,30 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const { t } = useI18n()
   const [title, setTitle] = useState(t.appTitle || 'Untitled Document')
   const [content, setContent] = useState('')
+  const [showSaved, setShowSaved] = useState(false)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const stats = useMemo(() => ({
+    words: countWords(content),
+    chars: countChars(content),
+    readingTime: readingTimeMinutes(content),
+  }), [content])
+
+  const handleChange = useCallback((value: string) => {
+    setContent(value)
+    // Show "saved" indicator after 1.5s of no typing
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      setShowSaved(true)
+      setTimeout(() => setShowSaved(false), 2000)
+    }, 1500)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+  }, [])
 
   return (
     <div className="flex-1 flex flex-col bg-transparent z-0 min-w-0 h-full">
@@ -48,11 +73,23 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
           <div className="w-full h-px bg-gray-100 dark:bg-dark-border/50 my-8" />
           <textarea
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             className="w-full flex-1 min-h-[60vh] text-lg md:text-[21px] leading-[1.8] text-gray-800 dark:text-gray-300 bg-transparent border-none outline-none resize-none custom-scrollbar placeholder-gray-300 dark:placeholder-gray-700 font-serif"
             placeholder="Start writing your masterpiece..."
           />
         </div>
+      </div>
+
+      {/* Status Bar */}
+      <div className="flex items-center justify-between h-7 px-4 border-t border-gray-100 dark:border-dark-border bg-gray-50/80 dark:bg-dark-surface2/20 text-[11px] text-gray-400 dark:text-dark-text-muted shrink-0">
+        <div className="flex items-center gap-4">
+          <span>{t.editorWordCount}: {stats.words.toLocaleString()}</span>
+          <span>{t.editorCharCount}: {stats.chars.toLocaleString()}</span>
+          <span>{t.editorReadingTime.replace('{min}', String(stats.readingTime))}</span>
+        </div>
+        {showSaved && (
+          <span className="text-green-500 dark:text-green-400 animate-fade-in">{t.editorAutoSaved}</span>
+        )}
       </div>
     </div>
   )

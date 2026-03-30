@@ -73,6 +73,11 @@ export function useScrollPosition(key: string, throttleWait = 100) {
   const scrollToBottom = useCallback(() => {
     const container = containerRef.current
     if (!container) return
+    if (typeof container.scrollTo !== 'function') {
+      // JSDOM fallback
+      container.scrollTop = container.scrollHeight
+      return
+    }
     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
   }, [])
 

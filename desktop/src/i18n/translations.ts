@@ -533,6 +533,10 @@ export interface Translations {
   mcpMetricFailed: string
   mcpMetricAvgLatency: string
   mcpMetricMaxLatency: string
+  editorWordCount: string
+  editorCharCount: string
+  editorReadingTime: string
+  editorAutoSaved: string
 }
 
 export const translations: Record<Language, Translations> = {
@@ -1069,6 +1073,10 @@ export const translations: Record<Language, Translations> = {
     mcpMetricFailed: '失败',
     mcpMetricAvgLatency: '平均延迟',
     mcpMetricMaxLatency: '最大延迟',
+    editorWordCount: '字数',
+    editorCharCount: '字符',
+    editorReadingTime: '约 {min} 分钟阅读',
+    editorAutoSaved: '已保存',
   },
   en: {
     // App
@@ -1603,5 +1611,9 @@ export const translations: Record<Language, Translations> = {
     mcpMetricFailed: 'Failed',
     mcpMetricAvgLatency: 'Avg Latency',
     mcpMetricMaxLatency: 'Max Latency',
+    editorWordCount: 'Words',
+    editorCharCount: 'Chars',
+    editorReadingTime: '~{min} min read',
+    editorAutoSaved: 'Saved',
   },
 }
