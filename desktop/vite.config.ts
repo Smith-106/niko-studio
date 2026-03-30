@@ -17,6 +17,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-markdown': ['react-markdown'],
+          'vendor-virtual': ['@tanstack/react-virtual'],
+          'vendor-lucide': ['lucide-react'],
+        },
+      },
+    },
   },
   test: {
     environment: 'jsdom',

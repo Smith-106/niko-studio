@@ -1,3 +1,5 @@
+import React from 'react'
+
 interface ChatAreaStatus {
   type: 'success' | 'error' | 'info'
   message: string
@@ -21,6 +23,7 @@ interface ChatAreaStreamStatusProps {
   restoreBeforeSendLabel: string
   retryLastSendLabel: string
   copyErrorLabel: string
+  errorCategoryLabel: string
   onRestoreToCheckpoint: () => void
   onRetryLastSend: () => void
   onCopyRecoverError: () => Promise<boolean>
@@ -33,12 +36,13 @@ const STATUS_CLASS = {
   info: 'text-primary-700 bg-primary-50 border-primary-100 dark:bg-primary-900/20 dark:text-primary-300 dark:border-primary-500/20',
 }
 
-export function ChatAreaStreamStatus({
+export const ChatAreaStreamStatus = React.memo(function ChatAreaStreamStatus({
   recoverStatus,
   recoverableCheckpointId,
   restoreBeforeSendLabel,
   retryLastSendLabel,
   copyErrorLabel,
+  errorCategoryLabel,
   onRestoreToCheckpoint,
   onRetryLastSend,
   onCopyRecoverError,
@@ -99,11 +103,11 @@ export function ChatAreaStreamStatus({
           </div>
           {uploadStatus.errorCategory && (
             <div className="mt-2 text-[10px] font-bold uppercase tracking-wider opacity-70">
-              Error Category: {uploadStatus.errorCategory}
+              {errorCategoryLabel}: {uploadStatus.errorCategory}
             </div>
           )}
         </div>
       )}
     </div>
   )
-}
+})

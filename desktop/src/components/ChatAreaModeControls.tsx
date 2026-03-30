@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 interface ChatModePreset {
   id: 'focusWriting' | 'agentDiagnose' | 'compareReview'
@@ -41,7 +41,7 @@ interface ChatAreaModeControlsProps {
   onApplyPreset: (presetId: ChatModePreset['id']) => void
 }
 
-export function ChatAreaModeControls({
+export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   modeLabel,
   workflowLabel,
   modePresetsLabel,
@@ -226,4 +226,4 @@ export function ChatAreaModeControls({
       )}
     </div>
   )
-}
+})

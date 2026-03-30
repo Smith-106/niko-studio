@@ -515,6 +515,24 @@ export interface Translations {
   settingsContextTypeWorld: string
   settingsContextTypeCharacter: string
   settingsContextTypePlot: string
+  quickPanelSearchPlaceholder: string
+  quickPanelNoMatch: string
+  quickPanelSelect: string
+  quickPanelConfirm: string
+  quickPanelClose: string
+  contentSearchPlaceholder: string
+  errorBoundaryTitle: string
+  errorBoundaryDescription: string
+  errorBoundaryTryAgain: string
+  errorBoundaryReload: string
+  streamErrorCategory: string
+  scrollToBottom: string
+  sidebarNewDocument: string
+  sidebarDocuments: string
+  mcpMetricTotal: string
+  mcpMetricFailed: string
+  mcpMetricAvgLatency: string
+  mcpMetricMaxLatency: string
 }
 
 export const translations: Record<Language, Translations> = {
@@ -1033,6 +1051,24 @@ export const translations: Record<Language, Translations> = {
     settingsContextTypeWorld: 'World',
     settingsContextTypeCharacter: 'Character',
     settingsContextTypePlot: 'Plot',
+    quickPanelSearchPlaceholder: '搜索命令...',
+    quickPanelNoMatch: '无匹配命令',
+    quickPanelSelect: '↑↓ 选择',
+    quickPanelConfirm: '↵ 确认',
+    quickPanelClose: 'ESC 关闭',
+    contentSearchPlaceholder: '搜索内容...',
+    errorBoundaryTitle: '出了点问题',
+    errorBoundaryDescription: '发生了意外错误。',
+    errorBoundaryTryAgain: '重试',
+    errorBoundaryReload: '重新加载',
+    streamErrorCategory: '错误类别',
+    scrollToBottom: '滚动到底部',
+    sidebarNewDocument: '新建文档',
+    sidebarDocuments: '文档列表',
+    mcpMetricTotal: '总请求',
+    mcpMetricFailed: '失败',
+    mcpMetricAvgLatency: '平均延迟',
+    mcpMetricMaxLatency: '最大延迟',
   },
   en: {
     // App
@@ -1549,5 +1585,23 @@ export const translations: Record<Language, Translations> = {
     settingsContextTypeWorld: 'World',
     settingsContextTypeCharacter: 'Character',
     settingsContextTypePlot: 'Plot',
+    quickPanelSearchPlaceholder: 'Search commands...',
+    quickPanelNoMatch: 'No matching commands',
+    quickPanelSelect: '↑↓ Select',
+    quickPanelConfirm: '↵ Confirm',
+    quickPanelClose: 'ESC Close',
+    contentSearchPlaceholder: 'Search content...',
+    errorBoundaryTitle: 'Something went wrong',
+    errorBoundaryDescription: 'An unexpected error occurred.',
+    errorBoundaryTryAgain: 'Try Again',
+    errorBoundaryReload: 'Reload Page',
+    streamErrorCategory: 'Error Category',
+    scrollToBottom: 'Scroll to bottom',
+    sidebarNewDocument: 'New Document',
+    sidebarDocuments: 'Documents',
+    mcpMetricTotal: 'Total',
+    mcpMetricFailed: 'Failed',
+    mcpMetricAvgLatency: 'Avg Latency',
+    mcpMetricMaxLatency: 'Max Latency',
   },
 }

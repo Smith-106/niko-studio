@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Wand2, Library } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
@@ -15,7 +15,7 @@ interface SidebarProps {
   onOpenWritingHelper: () => void
 }
 
-export function Sidebar({
+export const Sidebar = React.memo(function Sidebar({
   collapsed,
   onToggle,
   onOpenKnowledge,
@@ -101,18 +101,18 @@ export function Sidebar({
         <button
           onClick={createConversation}
           className={`w-full flex items-center justify-center gap-2 py-2.5 bg-primary-600 hover:bg-primary-500 active:scale-[0.98] text-white rounded-lg shadow-sm transition-all duration-200 ${collapsed ? 'px-0' : 'px-4'}`}
-          aria-label="New Document"
-          title="New Document"
+          aria-label={t.sidebarNewDocument}
+          title={t.sidebarNewDocument}
         >
           <FilePlus size={18} />
-          {!collapsed && <span className="font-medium text-sm">New Document</span>}
+          {!collapsed && <span className="font-medium text-sm">{t.sidebarNewDocument}</span>}
         </button>
       </div>
 
       {/* Document List */}
       <div className="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">
         {!collapsed && (
-          <div className="text-xs font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-3 mt-1">Documents</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-3 mt-1">{t.sidebarDocuments}</div>
         )}
         {conversations.map((conv) => (
           <button
@@ -249,4 +249,4 @@ export function Sidebar({
       </div>
     </aside>
   )
-}
+})

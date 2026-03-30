@@ -385,20 +385,20 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
           {metrics ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white dark:bg-dark-bg p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 shadow-sm">
-                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">Total</div>
-                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.mcpRequestsTotal.replace('{value}', String(metrics.requests_total)).replace('请求总数: ', '')}</div>
+                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">{t.mcpMetricTotal}</div>
+                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{metrics.requests_total}</div>
               </div>
               <div className="bg-white dark:bg-dark-bg p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 shadow-sm">
-                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">Failed</div>
-                <div className="text-sm font-semibold text-danger-500">{t.mcpRequestsFailed.replace('{value}', String(metrics.requests_failed_total)).replace('失败请求: ', '')}</div>
+                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">{t.mcpMetricFailed}</div>
+                <div className="text-sm font-semibold text-danger-500">{metrics.requests_failed_total}</div>
               </div>
               <div className="bg-white dark:bg-dark-bg p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 shadow-sm">
-                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">Avg Latency</div>
-                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.mcpLatencyAvg.replace('{value}', String(metrics.latency_ms_avg)).replace('平均延迟: ', '')}</div>
+                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">{t.mcpMetricAvgLatency}</div>
+                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{metrics.latency_ms_avg} ms</div>
               </div>
               <div className="bg-white dark:bg-dark-bg p-2.5 rounded-lg border border-gray-100 dark:border-dark-border/50 shadow-sm">
-                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">Max Latency</div>
-                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.mcpLatencyMax.replace('{value}', String(metrics.latency_ms_max)).replace('最大延迟: ', '')}</div>
+                <div className="text-[10px] text-gray-500 dark:text-dark-text-muted uppercase tracking-wider mb-1">{t.mcpMetricMaxLatency}</div>
+                <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{metrics.latency_ms_max} ms</div>
               </div>
             </div>
           ) : (

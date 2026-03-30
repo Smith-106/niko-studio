@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { chatStream } from '../api/client'
 import type { ChatRequest, StreamDonePayload } from '../api/client'
+import { useSmoothStream } from './useSmoothStream'
 
 type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'interrupted' | 'recovered'
 
@@ -36,8 +37,14 @@ interface StartStreamOptions {
 
 export function useChatStreaming() {
   const [streamingContent, setStreamingContent] = useState('')
+  const [streamDone, setStreamDone] = useState(true)
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamRequestIdRef = useRef(0)
+
+  const { addChunk, reset } = useSmoothStream({
+    onUpdate: setStreamingContent,
+    streamDone,
+  })
 
   const cancelStream = useCallback(() => {
     abortControllerRef.current?.abort()
@@ -50,12 +57,13 @@ export function useChatStreaming() {
     let streamWriterMetadata: StreamDonePayload['writer_metadata']
     let finalPhase: StreamPhase | null = null
     let finalized = false
-    let streamDone = false
+    let streamDoneFlag = false
     let streamMeta: StreamRuntimeMeta | null = null
 
     const requestId = ++streamRequestIdRef.current
     const abortController = new AbortController()
     abortControllerRef.current = abortController
+    setStreamDone(false)
     options.onStreamPhase('streaming')
 
     const finalize = (phase: StreamPhase, meta?: StreamRuntimeMeta) => {
@@ -72,10 +80,11 @@ export function useChatStreaming() {
         onContent: (chunk) => {
           hasStreamContent = true
           streamText += chunk
-          setStreamingContent(streamText)
+          addChunk(chunk)
         },
         onDone: (payload) => {
-          streamDone = true
+          streamDoneFlag = true
+          setStreamDone(true)
           streamWriterMetadata = payload.writer_metadata
           options.maybeShowGateHint(payload)
           const terminal = options.normalizeTerminal(payload)
@@ -101,7 +110,7 @@ export function useChatStreaming() {
     if (!finalized) {
       if (abortController.signal.aborted) {
         finalize('interrupted', { terminal: 'interrupted' })
-      } else if (streamDone || hasStreamContent) {
+      } else if (streamDoneFlag || hasStreamContent) {
         finalize('done', { terminal: 'done' })
       } else if (streamFailed) {
         finalize('error', { terminal: 'error' })
@@ -127,12 +136,18 @@ export function useChatStreaming() {
     }
 
     return { phase: 'error', meta: streamMeta }
-  }, [])
+  }, [addChunk])
+
+  const resetStream = useCallback(() => {
+    reset('')
+    setStreamDone(true)
+  }, [reset])
 
   return {
     streamingContent,
     setStreamingContent,
     startStream,
     cancelStream,
+    resetStream,
   }
 }

@@ -1,3 +1,5 @@
+import React from 'react'
+
 interface ChatAreaInlineActionsProps {
   selectedText: string
   inlineAction: 'continue' | 'revise' | 'generate' | null
@@ -13,7 +15,7 @@ interface ChatAreaInlineActionsProps {
   onClear: () => void
 }
 
-export function ChatAreaInlineActions({
+export const ChatAreaInlineActions = React.memo(function ChatAreaInlineActionsComponent({
   selectedText,
   inlineAction,
   selectedTextInfo,
@@ -71,4 +73,4 @@ export function ChatAreaInlineActions({
       </div>
     </div>
   )
-}
+})

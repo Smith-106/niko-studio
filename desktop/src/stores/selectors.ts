@@ -92,10 +92,3 @@ export function useQualityGoals() {
 export function useSelectedSkills(): string[] {
   return useAppStore((state) => state.selectedSkills, shallow)
 }
-
-/**
- * Selector for backend status
- */
-export function useBackendStatus(): boolean {
-  return useAppStore((state) => state.backendStatus)
-}

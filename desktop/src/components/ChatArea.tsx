@@ -845,6 +845,7 @@ export function ChatArea({
           restoreBeforeSendLabel={t.streamRestoreToBeforeSend}
           retryLastSendLabel={t.streamRetryLastSend}
           copyErrorLabel={t.streamCopyError}
+          errorCategoryLabel={t.streamErrorCategory}
           onRestoreToCheckpoint={handleRestoreToCheckpoint}
           onRetryLastSend={handleRetryLastSend}
           onCopyRecoverError={handleCopyRecoverError}

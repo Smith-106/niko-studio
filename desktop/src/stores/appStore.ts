@@ -1,6 +1,17 @@
 import { create } from 'zustand'
 import { checkBackendHealth, listSkills, type WriterMetadata } from '@/api/client'
 
+/** Generate a conversation title from the first user message content */
+function generateTitle(content: string): string {
+  // Strip leading slashes (commands), whitespace, and newlines
+  const cleaned = content.replace(/^\/\w+\s*/, '').trim()
+  // Take first line only
+  const firstLine = cleaned.split('\n')[0]
+  // Truncate to 30 chars with ellipsis
+  if (firstLine.length <= 30) return firstLine
+  return firstLine.slice(0, 30) + '...'
+}
+
 export interface MessageComparisonItem {
   model: string
   content: string
@@ -50,6 +61,8 @@ interface AppState {
     comparison?: MessageComparison,
     writerMetadata?: WriterMetadata
   ) => void
+  deleteMessage: (messageId: string) => void
+  editMessage: (messageId: string, content: string) => void
   getConversationById: (id: string) => Conversation | undefined
 
   // Skills
@@ -57,6 +70,12 @@ interface AppState {
   selectedSkills: string[]
   toggleSkill: (skill: string) => void
   refreshAvailableSkills: () => Promise<void>
+
+  // Centralized loading state
+  loadingMap: Record<string, boolean>
+  startLoading: (id: string) => void
+  finishLoading: (id: string) => void
+  isLoading: (id: string) => boolean
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -124,8 +143,44 @@ export const useAppStore = create<AppState>((set, get) => ({
           messages: [...conversation.messages, message],
           updatedAt: new Date(),
           title: conversation.messages.length === 0 && role === 'user'
-            ? content.slice(0, 20) + '...'
+            ? generateTitle(content)
             : conversation.title,
+        },
+      },
+    })
+  },
+
+  deleteMessage: (messageId: string) => {
+    const { currentConversationId, conversationsById } = get()
+    if (!currentConversationId) return
+    const conversation = conversationsById[currentConversationId]
+    if (!conversation) return
+    set({
+      conversationsById: {
+        ...conversationsById,
+        [currentConversationId]: {
+          ...conversation,
+          messages: conversation.messages.filter((m) => m.id !== messageId),
+          updatedAt: new Date(),
+        },
+      },
+    })
+  },
+
+  editMessage: (messageId: string, content: string) => {
+    const { currentConversationId, conversationsById } = get()
+    if (!currentConversationId) return
+    const conversation = conversationsById[currentConversationId]
+    if (!conversation) return
+    set({
+      conversationsById: {
+        ...conversationsById,
+        [currentConversationId]: {
+          ...conversation,
+          messages: conversation.messages.map((m) =>
+            m.id === messageId ? { ...m, content, timestamp: new Date() } : m,
+          ),
+          updatedAt: new Date(),
         },
       },
     })
@@ -176,5 +231,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch {
       // 忽略动态拉取失败，保留静态兜底列表
     }
+  },
+
+  // Centralized loading state
+  loadingMap: {},
+  startLoading: (id: string) => {
+    set((state) => ({ loadingMap: { ...state.loadingMap, [id]: true } }))
+  },
+  finishLoading: (id: string) => {
+    set((state) => ({ loadingMap: { ...state.loadingMap, [id]: false } }))
+  },
+  isLoading: (id: string) => {
+    return get().loadingMap[id] ?? false
   },
 }))

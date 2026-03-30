@@ -27,12 +27,9 @@ const resolveApiBase = (): string => {
   return DEFAULT_API_BASE
 }
 
-// Gateway 配置：
-// - 默认本地 127.0.0.1:8000
-// - 远程模式：env(NIKO_GATEWAY_URL / VITE_NIKO_GATEWAY_URL) 或 settings apiBaseUrl
-const API_BASE = resolveApiBase()
-
-export const getApiBase = (): string => API_BASE
+// Gateway configuration:
+// - Default local 127.0.0.1:8000
+// - Remote mode: env(NIKO_GATEWAY_URL / VITE_NIKO_GATEWAY_URL) or settings apiBaseUrl
 
 export const getResolvedApiBase = (): string => resolveApiBase()
 

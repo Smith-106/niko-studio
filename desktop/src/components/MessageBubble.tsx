@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
 import type { Message } from '../stores/appStore'
@@ -64,9 +64,23 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
   return true
 }
 
+const MAX_USER_LINES = 8
+
+const markdownComponents: Components = {
+  code({ className, children }) {
+    const codeText = String(children).replace(/\n$/, '')
+    return (
+      <pre className="rounded-md overflow-x-auto bg-dark-bg text-dark-text p-3 text-sm my-2 border border-dark-border shadow-sm">
+        <code className={className}>{codeText}</code>
+      </pre>
+    )
+  },
+}
+
 function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAccept }: MessageBubbleProps) {
   const { t } = useI18n()
   const isUser = message.role === 'user'
+  const [isExpanded, setIsExpanded] = useState(false)
   const primaryDiffLines = message.comparison?.enabled
     ? getUniqueComparisonLines(message.comparison.primary.content, message.comparison.control.content)
     : []
@@ -80,17 +94,6 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
     const text = selection?.toString().trim() || ''
     if (!text) return
     onAssistantSelection({ messageId: message.id, selectedText: text })
-  }
-
-  const markdownComponents: Components = {
-    code({ className, children }) {
-      const codeText = String(children).replace(/\n$/, '')
-      return (
-        <pre className="rounded-md overflow-x-auto bg-dark-bg text-dark-text p-3 text-sm my-2 border border-dark-border shadow-sm">
-          <code className={className}>{codeText}</code>
-        </pre>
-      )
-    },
   }
 
   return (
@@ -206,8 +209,19 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
             <ReactMarkdown
               components={markdownComponents}
             >
-              {message.content}
+              {isUser && !isExpanded && message.content.split('\n').length > MAX_USER_LINES
+                ? message.content.split('\n').slice(0, MAX_USER_LINES).join('\n') + '...'
+                : message.content}
             </ReactMarkdown>
+            {isUser && !isExpanded && message.content.split('\n').length > MAX_USER_LINES && (
+              <button
+                type="button"
+                onClick={() => setIsExpanded(true)}
+                className="mt-2 text-xs text-primary-200 hover:text-white underline"
+              >
+                {t.scrollToBottom}
+              </button>
+            )}
           </div>
         )}
 
