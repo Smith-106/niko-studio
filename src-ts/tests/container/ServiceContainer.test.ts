@@ -610,9 +610,9 @@ describe('ServiceContainer', () => {
       expect(typeof ServiceTypes.AgentFactory).toBe('symbol');
     });
 
-    it('should have all 10 service symbols defined', () => {
+    it('should have all 17 service symbols defined (10 placeholder + 7 migrated)', () => {
       const symbols = Object.values(ServiceTypes);
-      expect(symbols).toHaveLength(10);
+      expect(symbols).toHaveLength(17);
       symbols.forEach(symbol => {
         expect(typeof symbol).toBe('symbol');
       });
@@ -745,9 +745,18 @@ describe('ServiceContainer', () => {
       });
 
       it('should lazily initialize EmbeddingService on first access', () => {
+        const mockEmbedding: IEmbeddingService = {
+          embed: vi.fn(),
+          embedBatch: vi.fn(),
+          embedWithMetadata: vi.fn(),
+          similarity: vi.fn(),
+          getDimensions: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.EmbeddingService, mockEmbedding);
         const service = container.embedding;
         expect(service).toBeDefined();
-        expect(service).toBeInstanceOf(Object);
+        expect(service).toBe(mockEmbedding);
       });
 
       it('should lazily initialize KnowledgeService on first access', () => {
@@ -763,9 +772,16 @@ describe('ServiceContainer', () => {
       });
 
       it('should lazily initialize HybridSearch on first access', () => {
+        const mockHybridSearch: IHybridSearch = {
+          search: vi.fn(),
+          addStrategy: vi.fn(),
+          removeStrategy: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.HybridSearch, mockHybridSearch);
         const service = container.hybridSearch;
         expect(service).toBeDefined();
-        expect(service).toBeInstanceOf(Object);
+        expect(service).toBe(mockHybridSearch);
       });
 
       it('should lazily initialize VectorSearch on first access', () => {
@@ -791,6 +807,15 @@ describe('ServiceContainer', () => {
       });
 
       it('should return same EmbeddingService instance on multiple accesses', () => {
+        const mockEmbedding: IEmbeddingService = {
+          embed: vi.fn(),
+          embedBatch: vi.fn(),
+          embedWithMetadata: vi.fn(),
+          similarity: vi.fn(),
+          getDimensions: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.EmbeddingService, mockEmbedding);
         const instance1 = container.embedding;
         const instance2 = container.embedding;
 
@@ -812,6 +837,13 @@ describe('ServiceContainer', () => {
       });
 
       it('should return same HybridSearch instance on multiple accesses', () => {
+        const mockHybridSearch: IHybridSearch = {
+          search: vi.fn(),
+          addStrategy: vi.fn(),
+          removeStrategy: vi.fn(),
+        };
+
+        container.registerMock(ServiceTypes.HybridSearch, mockHybridSearch);
         const instance1 = container.hybridSearch;
         const instance2 = container.hybridSearch;
 
