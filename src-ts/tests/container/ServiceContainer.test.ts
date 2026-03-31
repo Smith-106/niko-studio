@@ -213,7 +213,7 @@ describe('ServiceContainer', () => {
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.clearMocks();
 
-      expect(() => container.memory).toThrow('not yet migrated');
+      expect(() => container.memory).toBeDefined();
     });
   });
 
@@ -221,43 +221,43 @@ describe('ServiceContainer', () => {
 
   describe('Lazy Initialization', () => {
     it('should lazily initialize MemoryEngine on first access', () => {
-      expect(() => container.memory).toThrow('not yet migrated');
+      expect(container.memory).toBeDefined();
     });
 
     it('should lazily initialize GraphEngine on first access', () => {
-      expect(() => container.graph).toThrow('not yet migrated');
+      expect(container.graph).toBeDefined();
     });
 
     it('should lazily initialize SearchEngine on first access', () => {
-      expect(() => container.search).toThrow('not yet migrated');
+      expect(container.search).toBeDefined();
     });
 
     it('should lazily initialize WorkflowEngine on first access', () => {
-      expect(() => container.workflow).toThrow('not yet migrated');
+      expect(container.workflow).toBeDefined();
     });
 
     it('should lazily initialize CriticEngine on first access', () => {
-      expect(() => container.critic).toThrow('not yet migrated');
+      expect(container.critic).toBeDefined();
     });
 
     it('should lazily initialize AgentFactory on first access', () => {
-      expect(() => container.agentFactory).toThrow('not yet migrated');
+      expect(container.agentFactory).toBeDefined();
     });
 
     it('should lazily initialize BackupManager on first access', () => {
-      expect(() => container.backup).toThrow('not yet migrated');
+      expect(container.backup).toBeDefined();
     });
 
     it('should lazily initialize TokenService on first access', () => {
-      expect(() => container.token).toThrow('not yet migrated');
+      expect(container.token).toBeDefined();
     });
 
     it('should lazily initialize ObsidianService on first access', () => {
-      expect(() => container.obsidian).toThrow('not yet migrated');
+      expect(container.obsidian).toBeDefined();
     });
 
     it('should lazily initialize MCPGateway on first access', () => {
-      expect(() => container.mcpGateway).toThrow('not yet migrated');
+      expect(container.mcpGateway).toBeDefined();
     });
   });
 
@@ -488,44 +488,44 @@ describe('ServiceContainer', () => {
   // ============ Error Handling Tests ============
 
   describe('Error Handling', () => {
-    it('should throw error for unmigrated MemoryEngine', () => {
-      expect(() => container.memory).toThrow('MemoryEngine implementation not yet migrated');
+    it('should return MemoryEngine instance', () => {
+      expect(container.memory).toBeDefined();
     });
 
-    it('should throw error for unmigrated GraphEngine', () => {
-      expect(() => container.graph).toThrow('GraphEngine implementation not yet migrated');
+    it('should return GraphEngine instance', () => {
+      expect(container.graph).toBeDefined();
     });
 
-    it('should throw error for unmigrated SearchEngine', () => {
-      expect(() => container.search).toThrow('SearchEngine implementation not yet migrated');
+    it('should return SearchEngine instance', () => {
+      expect(container.search).toBeDefined();
     });
 
-    it('should throw error for unmigrated WorkflowEngine', () => {
-      expect(() => container.workflow).toThrow('WorkflowEngine implementation not yet migrated');
+    it('should return WorkflowEngine instance', () => {
+      expect(container.workflow).toBeDefined();
     });
 
-    it('should throw error for unmigrated CriticEngine', () => {
-      expect(() => container.critic).toThrow('CriticEngine implementation not yet migrated');
+    it('should return CriticEngine instance', () => {
+      expect(container.critic).toBeDefined();
     });
 
-    it('should throw error for unmigrated AgentFactory', () => {
-      expect(() => container.agentFactory).toThrow('AgentFactory implementation not yet migrated');
+    it('should return AgentFactory instance', () => {
+      expect(container.agentFactory).toBeDefined();
     });
 
-    it('should throw error for unmigrated BackupManager', () => {
-      expect(() => container.backup).toThrow('BackupManager implementation not yet migrated');
+    it('should return BackupManager instance', () => {
+      expect(container.backup).toBeDefined();
     });
 
-    it('should throw error for unmigrated TokenService', () => {
-      expect(() => container.token).toThrow('TokenService implementation not yet migrated');
+    it('should return TokenService instance', () => {
+      expect(container.token).toBeDefined();
     });
 
-    it('should throw error for unmigrated ObsidianService', () => {
-      expect(() => container.obsidian).toThrow('ObsidianService implementation not yet migrated');
+    it('should return ObsidianService instance', () => {
+      expect(container.obsidian).toBeDefined();
     });
 
-    it('should throw error for unmigrated MCPGateway', () => {
-      expect(() => container.mcpGateway).toThrow('MCPGateway implementation not yet migrated');
+    it('should return MCPGateway instance', () => {
+      expect(container.mcpGateway).toBeDefined();
     });
   });
 
@@ -544,7 +544,9 @@ describe('ServiceContainer', () => {
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.reset();
 
-      expect(() => container.memory).toThrow('not yet migrated');
+      // After reset, mock is cleared — falls back to real adapter instance
+      expect(container.memory).toBeDefined();
+      expect(container.memory).not.toBe(mockMemory);
     });
 
     it('should reset initialized flag on reset', async () => {

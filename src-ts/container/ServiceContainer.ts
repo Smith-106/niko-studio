@@ -40,6 +40,18 @@ import {
   HybridSearch,
   VectorSearch,
 } from '../search';
+import {
+  MemoryEngineAdapter,
+  GraphEngineAdapter,
+  SearchEngineAdapter,
+  WorkflowEngineAdapter,
+  CriticEngineAdapter,
+  AgentFactoryAdapter,
+  BackupManagerAdapter,
+  TokenServiceAdapter,
+  ObsidianServiceAdapter,
+  MCPGatewayAdapter,
+} from './adapters';
 
 /**
  * ServiceContainer - Lightweight DI Container with Lazy Initialization
@@ -515,56 +527,46 @@ export class ServiceContainer {
     });
   }
 
-  // Placeholder Service Factories (To Be Migrated)
+  // Placeholder Service Factories (Adapted to implementations)
 
   private createMemoryEngine(): IMemoryEngine {
-    // Placeholder - will be implemented when MemoryEngine is migrated
-    throw new Error('MemoryEngine implementation not yet migrated to TypeScript');
+    return new MemoryEngineAdapter();
   }
 
   private createGraphEngine(): IGraphEngine {
-    // Placeholder - will be implemented when GraphEngine is migrated
-    throw new Error('GraphEngine implementation not yet migrated to TypeScript');
+    return new GraphEngineAdapter();
   }
 
   private createSearchEngine(): ISearchEngine {
-    // Placeholder - will be implemented when SearchEngine is migrated
-    throw new Error('SearchEngine implementation not yet migrated to TypeScript');
+    return new SearchEngineAdapter();
   }
 
   private createWorkflowEngine(): IWorkflowEngine {
-    // Placeholder - will be implemented when WorkflowEngine is migrated
-    throw new Error('WorkflowEngine implementation not yet migrated to TypeScript');
+    return new WorkflowEngineAdapter();
   }
 
   private createCriticEngine(): ICriticEngine {
-    // Placeholder - will be implemented when CriticEngine is migrated
-    throw new Error('CriticEngine implementation not yet migrated to TypeScript');
+    return new CriticEngineAdapter();
   }
 
   private createAgentFactory(): IAgentFactory {
-    // Placeholder - will be implemented when AgentFactory is migrated
-    throw new Error('AgentFactory implementation not yet migrated to TypeScript');
+    return new AgentFactoryAdapter();
   }
 
   private createBackupManager(): IBackupManager {
-    // Placeholder - will be implemented when BackupManager is migrated
-    throw new Error('BackupManager implementation not yet migrated to TypeScript');
+    return new BackupManagerAdapter();
   }
 
   private createTokenService(): ITokenService {
-    // Placeholder - will be implemented when TokenService is migrated
-    throw new Error('TokenService implementation not yet migrated to TypeScript');
+    return new TokenServiceAdapter();
   }
 
   private createObsidianService(): IObsidianService {
-    // Placeholder - will be implemented when ObsidianService is migrated
-    throw new Error('ObsidianService implementation not yet migrated to TypeScript');
+    return new ObsidianServiceAdapter();
   }
 
   private createMCPGateway(): IMCPGateway {
-    // Placeholder - will be implemented when MCPGateway is migrated
-    throw new Error('MCPGateway implementation not yet migrated to TypeScript');
+    return new MCPGatewayAdapter();
   }
 }
 
