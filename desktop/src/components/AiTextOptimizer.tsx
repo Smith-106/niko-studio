@@ -356,7 +356,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
 
     const instruction = buildInstruction(preset, customInstruction, language)
     if (!instruction.trim()) {
-      setError(language === 'zh' ? '请输入自定义指令' : 'Please enter a custom instruction')
+      setError('请输入自定义指令')
       setLoading(false)
       return
     }
@@ -364,11 +364,9 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
     try {
       if (twoStepMode) {
         // Step 1: Analyze AI characteristics
-        const analysisPrompt = language === 'zh'
-          ? `${instruction}\n\n请先对以下文本进行AI特征分析，输出诊断报告（不要改写文本）。仅列出发现的AI痕迹和问题。`
-          : `${instruction}\n\nFirst, analyze the following text for AI characteristics. Output a diagnostic report only (do NOT rewrite). List the AI traces and issues found.`
+        const analysisPrompt = `${instruction}\n\n请先对以下文本进行AI特征分析，输出诊断报告（不要改写文本）。仅列出发现的AI痕迹和问题。`
 
-        setStepLabel(language === 'zh' ? '步骤 1/2: 分析中...' : 'Step 1/2: Analyzing...')
+        setStepLabel('步骤 1/2: 分析中...')
         const analysisResp = await processWritingHelper({
           content,
           mode: 'polish',
@@ -383,11 +381,9 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
         const diagnosis = analysisResp.data.processed_text || ''
 
         // Step 2: Rewrite based on diagnosis
-        const rewritePrompt = language === 'zh'
-          ? `${instruction}\n\n基于以下AI特征诊断报告进行改写：\n\n${diagnosis}`
-          : `${instruction}\n\nBased on the following AI trait diagnosis, rewrite the text:\n\n${diagnosis}`
+        const rewritePrompt = `${instruction}\n\n基于以下 AI 特征诊断报告进行改写：\n\n${diagnosis}`
 
-        setStepLabel(language === 'zh' ? '步骤 2/2: 改写中...' : 'Step 2/2: Rewriting...')
+        setStepLabel('步骤 2/2: 改写中...')
         const rewriteResp = await processWritingHelper({
           content,
           mode: 'polish',
@@ -517,7 +513,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
                   value={customInstruction}
                   onChange={(e) => setCustomInstruction(e.target.value)}
                   rows={4}
-                  placeholder={language === 'zh' ? '例如：将文本改写为更加口语化的风格，加入个人观点和情感表达...' : 'e.g., Rewrite in a more conversational style with personal opinions and emotions...'}
+                  placeholder="例如：将文本改写为更加口语化的风格，加入个人观点和情感表达..."
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-bg text-sm leading-relaxed text-gray-900 dark:text-dark-text focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none shadow-inner transition-all custom-scrollbar resize-y"
                 />
               </div>

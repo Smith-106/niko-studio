@@ -35,6 +35,26 @@ export const Sidebar = React.memo(function Sidebar({
   } = useAppStore()
   const { t } = useI18n()
 
+  // ── 技能 ID → 中文显示名 / 描述映射 ──────────────────────────
+  const SKILL_DISPLAY_MAP: Record<string, { name: string; desc: string }> = useMemo(() => ({
+    'character-forge':       { name: '角色熔炉',   desc: t.skillDescCharacterForge },
+    'suspense-craft':        { name: '悬念工坊',   desc: t.skillDescSuspenseCraft },
+    'dialogue-system':       { name: '对话系统',   desc: t.skillDescDialogueSystem },
+    'tension-arc':           { name: '张力曲线',   desc: t.skillDescTensionArc },
+    'emotion-arc':           { name: '情感弧光',   desc: t.skillDescEmotionArc },
+    'opening-craft':         { name: '开篇技巧',   desc: t.skillDescOpeningCraft },
+    'ending-craft':          { name: '结尾技巧',   desc: t.skillDescEndingCraft },
+    'conflict-escalation':   { name: '冲突升级',   desc: t.skillDescConflictEscalation },
+  }), [t])
+
+  const getSkillDisplay = (skillId: string) => {
+    const entry = SKILL_DISPLAY_MAP[skillId]
+    if (entry) return entry
+    // 未知技能：kebab-case → 首字母大写可读名
+    const fallbackName = skillId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    return { name: fallbackName, desc: t.skillDescriptionGeneric }
+  }
+
   const groupedSkills = useMemo(() => {
     const groups: Record<'core' | 'story' | 'quality' | 'tools', string[]> = {
       core: [],
@@ -156,7 +176,9 @@ export const Sidebar = React.memo(function Sidebar({
                   {group.skills.length === 0 ? (
                     <div className="px-3 py-1.5 text-[11px] text-dark-text-muted italic">{t.skillGroupEmpty}</div>
                   ) : (
-                    group.skills.map((skill) => (
+                    group.skills.map((skill) => {
+                      const display = getSkillDisplay(skill)
+                      return (
                       <button
                         key={skill}
                         onClick={() => toggleSkill(skill)}
@@ -167,12 +189,13 @@ export const Sidebar = React.memo(function Sidebar({
                         }`}
                         type="button"
                       >
-                        <div className={`font-medium truncate ${selectedSkills.includes(skill) ? 'text-primary-400' : 'text-dark-text'}`}>{skill}</div>
+                        <div className={`font-medium truncate ${selectedSkills.includes(skill) ? 'text-primary-400' : 'text-dark-text'}`}>{display.name}</div>
                         <div className={`text-[10px] truncate ${selectedSkills.includes(skill) ? 'text-primary-400/70' : 'text-dark-text-muted'}`}>
-                          {t.skillDescriptionGeneric}
+                          {display.desc}
                         </div>
                       </button>
-                    ))
+                      )
+                    })
                   )}
                 </div>
               </div>
@@ -223,7 +246,7 @@ export const Sidebar = React.memo(function Sidebar({
           title={t.sidebarMcpStatus}
         >
           <Server size={14} />
-          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">MCP</span>}
+          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">节点</span>}
         </button>
         <button
           onClick={onOpenEvaluation}
@@ -231,7 +254,7 @@ export const Sidebar = React.memo(function Sidebar({
           title={t.sidebarEvaluationPanel}
         >
           <BarChart3 size={14} />
-          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">Eval</span>}
+          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">评估</span>}
         </button>
       </div>
     </aside>

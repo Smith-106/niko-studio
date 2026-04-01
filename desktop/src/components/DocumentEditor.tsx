@@ -13,7 +13,7 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const { t } = useI18n()
-  const [title, setTitle] = useState(t.appTitle || 'Untitled Document')
+  const [title, setTitle] = useState(t.appTitle || '未命名文档')
   const [editorText, setEditorText] = useState('')
   const [editorJson, setEditorJson] = useState<JSONContent | null>(null)
   const [showSaved, setShowSaved] = useState(false)
@@ -61,7 +61,7 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 bg-transparent border-none outline-none placeholder-gray-300 dark:placeholder-gray-700 tracking-tight"
-            placeholder="Document Title"
+            placeholder="文档标题"
           />
           <div className="w-full h-px bg-gray-100 dark:bg-dark-border/50 my-8" />
           <NikoEditor

@@ -53,7 +53,7 @@ function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: string 
           className="px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--surface-sunken)] border border-[var(--border-subtle)]"
         >
           <div className="text-sm font-medium text-[var(--text-primary)]">
-            {item.name || item.title || item.id || `Item ${i + 1}`}
+            {item.name || item.title || item.id || `条目 ${i + 1}`}
           </div>
           {(item.description || item.content) && (
             <div className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
@@ -67,7 +67,6 @@ function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: string 
 }
 
 const GENRE_PRESETS_ZH = ['奇幻', '言情', '悬疑', '科幻', '恐怖', '历史', '武侠', '都市', '青春', '冒险', '宫斗', '末世', '仙侠', '推理', '轻小说']
-const GENRE_PRESETS_EN = ['Fantasy', 'Romance', 'Mystery', 'Sci-Fi', 'Horror', 'Historical', 'Thriller', 'Adventure', 'Cozy Mystery', 'Dystopian', 'Literary Fiction', 'Urban Fantasy', 'Dark Academia']
 
 function loadFromStorage(key: string): string {
   try { return localStorage.getItem(key) || '' } catch { return '' }
@@ -80,7 +79,7 @@ function saveToStorage(key: string, value: string) {
 type StyleId = 'tried' | 'matchMy' | 'soundsLike' | 'custom'
 
 export function StoryBiblePanel() {
-  const { t, language } = useI18n()
+  const { t } = useI18n()
   const [characters, setCharacters] = useState<GraphItem[]>([])
   const [locations, setLocations] = useState<GraphItem[]>([])
   const [braindump, setBraindump] = useState(() => loadFromStorage('niko.sb-braindump-v1'))
@@ -152,7 +151,7 @@ export function StoryBiblePanel() {
     return () => { cancelled = true }
   }, [])
 
-  const genrePresets = language === 'zh' ? GENRE_PRESETS_ZH : GENRE_PRESETS_EN
+  const genrePresets = GENRE_PRESETS_ZH
 
   const styles: { id: StyleId; icon: React.ReactNode; label: string; desc: string }[] = [
     { id: 'tried', icon: <Sparkles size={16} />, label: t.storyBibleStyleTried, desc: t.storyBibleStyleTriedDesc },
@@ -298,7 +297,7 @@ export function StoryBiblePanel() {
         <textarea
           value={outline}
           onChange={(e) => saveOutline(e.target.value)}
-          placeholder={language === 'zh' ? '故事大纲、章节计划、关键情节...' : 'Story outline, chapter plans, key plot points...'}
+          placeholder="故事大纲、章节计划、关键情节..."
           className="w-full min-h-32 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
         />
       ),

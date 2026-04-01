@@ -386,7 +386,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
                 className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-50 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-surface2 transition-colors"
               >
                 <span className="text-[12px] font-semibold text-gray-700 dark:text-dark-text">{t.styleSettingsTitle}</span>
-                <span className="text-[10px] text-gray-400 dark:text-dark-text-muted">8 {language === 'zh' ? '维风格控制' : 'dimensions'}</span>
+                <span className="text-[10px] text-gray-400 dark:text-dark-text-muted">8 维风格控制</span>
                 <ChevronDown
                   size={14}
                   className={`ml-auto text-gray-400 dark:text-dark-text-muted transition-transform duration-200 ${styleOpen ? 'rotate-180' : ''}`}
@@ -616,7 +616,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
                   </CollapsibleGroup>
 
                   {/* Uniqueness & Cultural — Tag Inputs */}
-                  <CollapsibleGroup title={t.styleUniqueness || (language === 'zh' ? '独特性 / 文化' : 'Uniqueness / Culture')}>
+                  <CollapsibleGroup title={t.styleUniqueness || '独特性 / 文化'}>
                     <div className="space-y-3">
                       <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
                         {t.styleSignaturePhrases}
