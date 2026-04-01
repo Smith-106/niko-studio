@@ -516,6 +516,8 @@ export interface Translations {
   optimizerPresetCharacterDesc: string
   optimizerPresetLiterary: string
   optimizerPresetLiteraryDesc: string
+  optimizerPresetAcademic: string
+  optimizerPresetAcademicDesc: string
   optimizerPresetCustom: string
   optimizerPresetCustomDesc: string
   optimizerCustomInstruction: string
@@ -525,6 +527,8 @@ export interface Translations {
   optimizerRunning: string
   optimizerFailed: string
   optimizerResultTitle: string
+  optimizerDiagnosisTitle: string
+  optimizerDiagnosisHint: string
   optimizerFeaturePerplexity: string
   optimizerFeatureBurstiness: string
   optimizerFeatureDetection: string
@@ -1258,6 +1262,8 @@ export const translations: Record<Language, Translations> = {
     optimizerPresetCharacterDesc: '以特定角色视角改写文本，消除AI模式化痕迹',
     optimizerPresetLiterary: '文学散文深度优化',
     optimizerPresetLiteraryDesc: '在保留艺术价值的前提下，进行深度文学性优化',
+    optimizerPresetAcademic: '学术论文深度优化',
+    optimizerPresetAcademicDesc: '基于CMU 2025框架优化TF-IDF、CST、VADER等指标',
     optimizerPresetCustom: '自定义指令',
     optimizerPresetCustomDesc: '使用自定义洗稿指令，满足个性化需求',
     optimizerCustomInstruction: '自定义指令',
@@ -1267,6 +1273,8 @@ export const translations: Record<Language, Translations> = {
     optimizerRunning: '优化中...',
     optimizerFailed: '优化失败',
     optimizerResultTitle: '优化结果',
+    optimizerDiagnosisTitle: 'AI特征诊断报告',
+    optimizerDiagnosisHint: '点击展开',
     optimizerFeaturePerplexity: '困惑度优化',
     optimizerFeatureBurstiness: '突发性优化',
     optimizerFeatureDetection: '检测对抗',
@@ -1995,6 +2003,8 @@ export const translations: Record<Language, Translations> = {
     optimizerPresetCharacterDesc: 'Rewrite from a specific character perspective to eliminate AI patterns',
     optimizerPresetLiterary: 'Literary Polish',
     optimizerPresetLiteraryDesc: 'Deep literary optimization while preserving artistic value',
+    optimizerPresetAcademic: 'Academic Paper',
+    optimizerPresetAcademicDesc: 'Optimize TF-IDF, CST, VADER metrics based on CMU 2025 framework',
     optimizerPresetCustom: 'Custom',
     optimizerPresetCustomDesc: 'Use custom rewriting instructions for personalized results',
     optimizerCustomInstruction: 'Custom Instruction',
@@ -2004,6 +2014,8 @@ export const translations: Record<Language, Translations> = {
     optimizerRunning: 'Optimizing...',
     optimizerFailed: 'Optimization failed',
     optimizerResultTitle: 'Optimized Result',
+    optimizerDiagnosisTitle: 'AI Characteristic Diagnosis Report',
+    optimizerDiagnosisHint: 'Click to expand',
     optimizerFeaturePerplexity: 'Perplexity',
     optimizerFeatureBurstiness: 'Burstiness',
     optimizerFeatureDetection: 'Anti-Detection',

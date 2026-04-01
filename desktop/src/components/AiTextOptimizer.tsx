@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react'
-import { Shield, Sparkles, BookOpen, SlidersHorizontal, Zap, AlertTriangle } from 'lucide-react'
+import { Shield, Sparkles, BookOpen, SlidersHorizontal, Zap, AlertTriangle, GraduationCap } from 'lucide-react'
 import { processWritingHelper } from '../api/client'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n, type Language } from '../i18n'
@@ -8,7 +8,7 @@ import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 
 // ── Preset System ───────────────────────────────────────────────
 
-type OptimizerPreset = 'humanize' | 'aiGuide' | 'characterNarrative' | 'literaryPolish' | 'custom'
+type OptimizerPreset = 'humanize' | 'aiGuide' | 'characterNarrative' | 'literaryPolish' | 'academicPaper' | 'custom'
 
 interface OptimizerPresetDef {
   id: OptimizerPreset
@@ -20,6 +20,7 @@ const PRESET_DEFS: OptimizerPresetDef[] = [
   { id: 'aiGuide', icon: <BookOpen size={16} /> },
   { id: 'characterNarrative', icon: <Sparkles size={16} /> },
   { id: 'literaryPolish', icon: <Zap size={16} /> },
+  { id: 'academicPaper', icon: <GraduationCap size={16} /> },
   { id: 'custom', icon: <SlidersHorizontal size={16} /> },
 ]
 
@@ -46,6 +47,10 @@ function buildInstruction(
 
   if (preset === 'literaryPolish') {
     return buildLiteraryPolishInstruction(language)
+  }
+
+  if (preset === 'academicPaper') {
+    return buildAcademicPaperInstruction(language)
   }
 
   return customInstruction.trim()
@@ -187,15 +192,22 @@ function buildCharacterNarrativeInstruction(language: Language): string {
       '## 核心目标',
       '1. 赋予文本强烈的人类角色特征和个性化表达',
       '2. 通过角色扮演方式消除AI生成的模式化痕迹',
-      '3. 创建一个具体的叙述者形象（如"林浩,38岁产品经理"），以此为视角重新组织文本',
+      '',
+      '## 默认角色设定',
+      '请根据文本内容自动推断并设定一个具体的叙述者角色。角色应具备：',
+      '- 具体的姓名、年龄（25-55岁之间）、职业',
+      '- 与文本主题相关的专业背景和生活经历',
+      '- 独特的表达习惯、口头禅和思维方式',
+      '- 合理的认知边界（不可能全知全能）',
+      '',
+      '示例角色：如果文本关于产品管理，可以设定为"林浩，38岁产品经理，在互联网行业摸爬滚打12年"；如果文本关于教育，可以设定为"陈雨薇，32岁高中语文教师，热爱文学和写作"。',
       '',
       '## 角色化策略',
-      '- 为叙述者设定具体身份背景、年龄、职业',
       '- 使用该角色特有的表达习惯和用词偏好',
       '- 加入个人化的情感反应和主观判断',
-      '- 通过角色的有限视角过滤信息（不可能全知全能）',
-      '- 添加角色特有的口头禅、思维方式、偏见',
-      '- 保持角色的认知边界，不使用超出其身份的专业术语',
+      '- 通过角色的有限视角过滤信息',
+      '- 添加角色特有的偏见和认知特点',
+      '- 不使用超出其身份的专业术语',
       '',
       '## 约束条件',
       '- 保持原文核心信息量',
@@ -209,15 +221,22 @@ function buildCharacterNarrativeInstruction(language: Language): string {
     '## Core Objectives',
     '1. Infuse the text with strong human character traits and personalized expression',
     '2. Eliminate AI-generated patterned traces through role-play',
-    '3. Create a specific narrator persona (e.g., "Lin Hao, 38-year-old product manager") and reorganize the text from their viewpoint',
+    '',
+    '## Default Character Setup',
+    'Automatically infer and define a specific narrator character based on the text content. The character should have:',
+    '- A specific name, age (25-55), and profession',
+    '- Professional background and life experience relevant to the topic',
+    '- Unique expression habits, catchphrases, and thought patterns',
+    '- Reasonable cognitive boundaries (not omniscient)',
+    '',
+    'Example: If the text is about product management, set "Lin Hao, 38-year-old PM with 12 years in tech"; if about education, set "Chen Yuwei, 32-year-old high school literature teacher who loves writing."',
     '',
     '## Character-Driven Strategies',
-    '- Define a specific identity, age, and profession for the narrator',
     '- Use the character\'s unique expressions and vocabulary preferences',
     '- Add personal emotional reactions and subjective judgments',
     '- Filter information through the character\'s limited perspective',
-    '- Include the character\'s catchphrases, thought patterns, biases',
-    '- Respect cognitive boundaries — avoid jargon beyond the character\'s expertise',
+    '- Include the character\'s biases and cognitive traits',
+    '- Avoid jargon beyond the character\'s expertise',
     '',
     '## Constraints',
     '- Preserve the core information density of the original',
@@ -290,6 +309,82 @@ function buildLiteraryPolishInstruction(language: Language): string {
   ].join('\n')
 }
 
+// academicPaper preset — 学术论文深度优化 (CMU 2025 framework)
+function buildAcademicPaperInstruction(language: Language): string {
+  if (language === 'zh') {
+    return [
+      '你是一位学术论文人类化专家。请基于CMU 2025年AI文本检测研究框架，对以下文本进行学术写作优化：',
+      '',
+      '## 核心目标',
+      '1. 消除AI生成文本的统计特征，使论文通过主流AI检测器',
+      '2. 保持学术严谨性和专业术语准确性',
+      '3. 优化文本使其符合人类学者的写作模式',
+      '',
+      '## 检测对抗策略（基于CMU 2025框架）',
+      '### TF-IDF词汇分布优化',
+      '- 降低高TF-IDF词频（AI偏好"此外"、"值得注意的是"、"综上所述"等连接词）',
+      '- 引入领域特定的低频但精确的学术表达',
+      '- 增加术语使用的自然变化（同一概念使用同义表述交替出现）',
+      '',
+      '### 交叉句法树(CST)结构多样化',
+      '- 句法树深度应有自然波动（避免所有句子结构相似）',
+      '- 混合使用简单陈述句和复杂复合句',
+      '- 在方法描述中穿插简要结论性短句',
+      '',
+      '### 情感分析(VADER)指标优化',
+      '- 保持学术文本的中性基调（compound score: -0.1 ~ 0.3）',
+      '- 在讨论部分适当引入作者立场和批判性评价',
+      '- 避免过度正面的评价语气（AI文本常表现出异常积极倾向）',
+      '',
+      '### PageRank段落连贯性优化',
+      '- 段落间过渡应自然而非机械',
+      '- 使用回指和前指建立跨段落的语义连接',
+      '- 避免每个段落都以主题句开头的AI典型模式',
+      '',
+      '## 约束条件',
+      '- 保持原文的学术论点和数据引用不变',
+      '- 不改变专业术语和公式表达',
+      '- 参考文献格式保持原样',
+      '- 优化后的文本应读起来像是一位经验丰富的学者撰写的研究论文',
+    ].join('\n')
+  }
+  return [
+    'You are an academic paper humanization expert. Optimize the following text based on the CMU 2025 AI text detection research framework:',
+    '',
+    '## Core Objectives',
+    '1. Eliminate AI-generated statistical features to pass mainstream AI detectors',
+    '2. Maintain academic rigor and terminology accuracy',
+    '3. Optimize text to match human scholars\' writing patterns',
+    '',
+    '## Detection Counter-Strategies (CMU 2025 Framework)',
+    '### TF-IDF Vocabulary Distribution Optimization',
+    '- Reduce high TF-IDF word frequencies (AI overuses "furthermore," "notably," "in conclusion")',
+    '- Introduce domain-specific low-frequency but precise academic expressions',
+    '- Add natural variation in terminology (alternate synonymous expressions for the same concept)',
+    '',
+    '### Cross-Syntax-Tree (CST) Structure Diversification',
+    '- Syntax tree depth should vary naturally (avoid uniform sentence structures)',
+    '- Mix simple declarative sentences with complex compound sentences',
+    '- Interleave brief conclusive short sentences in methodology descriptions',
+    '',
+    '### VADER Sentiment Analysis Metric Optimization',
+    '- Maintain neutral academic tone (compound score: -0.1 ~ 0.3)',
+    '- Introduce appropriate author stance and critical evaluation in discussion sections',
+    '- Avoid overly positive evaluation tone (AI text often shows abnormally positive bias)',
+    '',
+    '### PageRank Paragraph Coherence Optimization',
+    '- Paragraph transitions should be natural, not mechanical',
+    '- Use anaphora and cataphora for cross-paragraph semantic connections',
+    '- Avoid the AI-typical pattern of starting every paragraph with a topic sentence',
+    '',
+    '## Constraints',
+    '- Preserve original academic arguments and data citations',
+    '- Do not alter terminology or formula expressions',
+    '- Keep reference formatting unchanged',
+    '- The optimized text should read as if written by an experienced scholar',
+  ].join('\n')
+}
+
 // ── Component ───────────────────────────────────────────────────
 
 export function AiTextOptimizer({ onClose, onOpenSettings }: {
@@ -322,6 +417,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
   const [customInstruction, setCustomInstruction] = useState('')
   const [twoStepMode, setTwoStepMode] = useState(false)
   const [stepLabel, setStepLabel] = useState<string | null>(null)
+  const [diagnosis, setDiagnosis] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
@@ -335,6 +431,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
       case 'aiGuide': return t.optimizerPresetAiGuide
       case 'characterNarrative': return t.optimizerPresetCharacter
       case 'literaryPolish': return t.optimizerPresetLiterary
+      case 'academicPaper': return t.optimizerPresetAcademic
       case 'custom': return t.optimizerPresetCustom
     }
   }, [t])
@@ -345,6 +442,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
       case 'aiGuide': return t.optimizerPresetAiGuideDesc
       case 'characterNarrative': return t.optimizerPresetCharacterDesc
       case 'literaryPolish': return t.optimizerPresetLiteraryDesc
+      case 'academicPaper': return t.optimizerPresetAcademicDesc
       case 'custom': return t.optimizerPresetCustomDesc
     }
   }, [t])
@@ -353,6 +451,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
     setLoading(true)
     setError(null)
     setResult(null)
+    setDiagnosis(null)
 
     const instruction = buildInstruction(preset, customInstruction, language)
     if (!instruction.trim()) {
@@ -363,10 +462,14 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
 
     try {
       if (twoStepMode) {
-        // Step 1: Analyze AI characteristics
-        const analysisPrompt = `${instruction}\n\n请先对以下文本进行AI特征分析，输出诊断报告（不要改写文本）。仅列出发现的AI痕迹和问题。`
+        // Step 1: Analyze AI characteristics using dedicated aiGuide analysis prompt
+        const analysisInstruction = buildAiGuideInstruction(language)
+        const analysisPrompt = language === 'zh'
+          ? `${analysisInstruction}\n\n请仅对以下文本进行AI特征分析，输出诊断报告（不要改写文本）。列出所有发现的AI痕迹和具体问题。`
+          : `${analysisInstruction}\n\nAnalyze the following text for AI-generated characteristics ONLY. Output a diagnostic report (do NOT rewrite the text). List all detected AI traces and specific issues.`
 
-        setStepLabel('步骤 1/2: 分析中...')
+        setStepLabel(language === 'zh' ? '步骤 1/2: 分析中...' : 'Step 1/2: Analyzing...')
+        setDiagnosis(null)
         const analysisResp = await processWritingHelper({
           content,
           mode: 'polish',
@@ -378,12 +481,15 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
           setError(analysisResp.error || t.optimizerFailed)
           return
         }
-        const diagnosis = analysisResp.data.processed_text || ''
+        const diagnosisText = analysisResp.data.processed_text || ''
+        setDiagnosis(diagnosisText)
 
         // Step 2: Rewrite based on diagnosis
-        const rewritePrompt = `${instruction}\n\n基于以下 AI 特征诊断报告进行改写：\n\n${diagnosis}`
+        const rewritePrompt = language === 'zh'
+          ? `${instruction}\n\n基于以下 AI 特征诊断报告进行改写：\n\n${diagnosisText}`
+          : `${instruction}\n\nRewrite based on the following AI characteristic diagnosis report:\n\n${diagnosisText}`
 
-        setStepLabel('步骤 2/2: 改写中...')
+        setStepLabel(language === 'zh' ? '步骤 2/2: 改写中...' : 'Step 2/2: Rewriting...')
         const rewriteResp = await processWritingHelper({
           content,
           mode: 'polish',
@@ -558,6 +664,19 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
                   <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse-subtle"></span>
                   {t.optimizerResultTitle}
                 </div>
+                {/* Diagnosis report (two-step mode) */}
+                {diagnosis && (
+                  <details className="mb-4 rounded-lg border border-gray-200 dark:border-dark-border/50 bg-white dark:bg-dark-bg overflow-hidden">
+                    <summary className="px-4 py-2.5 text-xs font-semibold text-gray-600 dark:text-dark-text-secondary cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-surface2/50 transition-colors select-none flex items-center gap-2">
+                      <BookOpen size={13} className="text-primary-500" />
+                      {t.optimizerDiagnosisTitle}
+                      <span className="text-[10px] font-normal text-gray-400 dark:text-dark-text-muted ml-auto">{t.optimizerDiagnosisHint}</span>
+                    </summary>
+                    <div className="px-4 py-3 text-sm text-gray-600 dark:text-dark-text-secondary border-t border-gray-100 dark:border-dark-border/30 whitespace-pre-wrap font-mono leading-relaxed">
+                      {diagnosis}
+                    </div>
+                  </details>
+                )}
                 <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-dark-text font-serif leading-relaxed whitespace-pre-wrap">
                   {result}
                 </div>
