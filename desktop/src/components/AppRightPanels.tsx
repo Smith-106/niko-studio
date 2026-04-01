@@ -3,6 +3,7 @@ import { KnowledgeModal } from './KnowledgeModal'
 import { EvaluationPanel } from './EvaluationPanel'
 import { McpStatusPanel } from './McpStatusPanel'
 import { WritingHelperPanel } from './WritingHelperPanel'
+import { AiTextOptimizer } from './AiTextOptimizer'
 import type { RightPanelType, WritingHelperDraftState } from '../hooks/useAppUiPersistence'
 
 interface AppRightPanelsProps {
@@ -55,6 +56,13 @@ export function AppRightPanels({
           draftState={writingHelperDraft}
           onDraftStateChange={setWritingHelperDraft}
           onClearDraft={clearWritingHelperDraft}
+        />
+      )}
+
+      {activeRightPanel === 'textOptimizer' && (
+        <AiTextOptimizer
+          onClose={closeRightPanel}
+          onOpenSettings={openSettingsFromWritingHelper}
         />
       )}
     </>

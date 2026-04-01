@@ -699,6 +699,7 @@ describe('writing helper API', () => {
           mode: 'polish',
           instruction: '使用更正式、学术的书面表达',
           detection_evasion_guard_enabled: true,
+          model: 'gpt-4o',
         }),
       })
     )

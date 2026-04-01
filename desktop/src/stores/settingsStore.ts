@@ -152,7 +152,7 @@ interface Settings {
   backendConfig: BackendConfigState
 
   // UI
-  theme: 'light' | 'dark' | 'system'
+  theme: 'system' | 'sorbet' | 'slate' | 'amber' | 'forest' | 'charcoal' | 'cauldron' | 'aurora' | 'moonbeam' | 'sepia' | 'forest' | 'charcoal' | 'cauldron' | 'aurora' | 'moonbeam' | 'sepia'
   fontSize: 'small' | 'medium' | 'large'
   language: 'zh' | 'en'
   sidebarCollapsed: boolean
@@ -374,7 +374,7 @@ const defaultSettings: Settings = {
   contextTypes: ['world', 'character', 'plot'],
   promptTemplateLibrary: defaultPromptTemplateLibrary(),
   backendConfig: defaultBackendConfigState(),
-  theme: 'light',
+  theme: 'slate',
   fontSize: 'medium',
   language: 'zh',
   sidebarCollapsed: false,
@@ -491,6 +491,17 @@ const normalizeSendShortcut = (value: unknown): SendShortcut => {
   return 'enter'
 }
 
+const VALID_THEMES = ['system', 'sorbet', 'slate', 'amber', 'forest', 'charcoal', 'cauldron', 'aurora', 'moonbeam', 'sepia'] as const
+type ValidTheme = typeof VALID_THEMES[number]
+
+const normalizeTheme = (value: unknown): ValidTheme => {
+  if (typeof value === 'string' && (VALID_THEMES as readonly string[]).includes(value)) return value as ValidTheme
+  // Migrate old values
+  if (value === 'light') return 'sorbet'
+  if (value === 'dark') return 'slate'
+  return 'slate'
+}
+
 const normalizeSettings = (settings: Partial<Settings>): Settings => {
   const merged: Settings = {
     ...defaultSettings,
@@ -504,6 +515,7 @@ const normalizeSettings = (settings: Partial<Settings>): Settings => {
     retrieval: normalizeRetrievalSettings(settings.retrieval),
     contextTypes: normalizeContextTypes(settings.contextTypes),
     sendShortcut: normalizeSendShortcut(settings.sendShortcut),
+    theme: normalizeTheme(settings.theme),
   }
 
   return {

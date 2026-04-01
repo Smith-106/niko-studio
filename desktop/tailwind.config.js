@@ -16,30 +16,57 @@ export default {
         mono: ['Fira Code', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       colors: {
+        // Backward-compatible aliases (hardcoded values for opacity modifier support)
         dark: {
-          bg: '#0f172a',          // slate-900 (main background)
-          surface: '#1e293b',     // slate-800 (panels, bubbles)
-          surface2: '#334155',    // slate-700 (hover states)
-          border: '#334155',      // slate-700
-          border2: '#475569',     // slate-600
-          text: '#f8fafc',        // slate-50
-          'text-secondary': '#94a3b8', // slate-400
-          'text-muted': '#64748b',     // slate-500
+          bg: '#0f172a',
+          surface: '#1e293b',
+          surface2: '#334155',
+          border: '#334155',
+          border2: '#475569',
+          text: '#f8fafc',
+          'text-secondary': '#94a3b8',
+          'text-muted': '#64748b',
         },
         primary: {
-          400: '#818cf8',         // indigo-400
-          500: '#6366f1',         // indigo-500
-          600: '#4f46e5',         // indigo-600
+          400: '#9b7ae1',
+          500: '#7240dd',
+          600: '#4808d1',
         },
         success: {
-          500: '#10b981',         // emerald-500
+          500: '#10b981',
         },
         warning: {
-          500: '#f59e0b',         // amber-500
+          500: '#f59e0b',
         },
         danger: {
-          500: '#ef4444',         // red-500
-        }
+          500: '#ef4444',
+        },
+        // Semantic token colors via CSS variables
+        surface: {
+          base: 'var(--surface-base)',
+          elevated: 'var(--surface-elevated)',
+          sunken: 'var(--surface-sunken)',
+        },
+        cta: {
+          DEFAULT: 'var(--primary-cta)',
+          hover: 'var(--primary-cta-hover)',
+          active: 'var(--primary-cta-active)',
+        },
+        txt: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          muted: 'var(--text-muted)',
+        },
+      },
+      boxShadow: {
+        tiny: 'var(--shadow-tiny)',
+        DEFAULT: 'var(--shadow-default)',
+        card: 'var(--shadow-card)',
+      },
+      borderRadius: {
+        sm: '8px',
+        md: '10px',
+        pill: '20px',
       },
       transitionDuration: {
         120: '120ms',

@@ -1,4 +1,7 @@
 import type { MutableRefObject } from 'react'
+import { PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { useI18n } from '../i18n'
+import { AiToolbar } from './AiToolbar'
 
 interface CheckpointItem {
   id: string
@@ -24,6 +27,15 @@ interface AppHeaderProps {
   checkpointMenuContainerRef: MutableRefObject<HTMLDivElement | null>
   onToggleCheckpointMenu: () => void | Promise<void>
   onRestoreCheckpoint: (checkpointId: string) => void | Promise<void>
+  chatSidebarCollapsed: boolean
+  onToggleChatSidebar: () => void
+  aiToolbarDisabled?: boolean
+  onAiWrite: () => void
+  onAiRewrite: () => void
+  onAiDescribe: () => void
+  onAiBrainstorm: () => void
+  onOpenWritingHelper: () => void
+  onOpenTextOptimizer: () => void
 }
 
 export function AppHeader({
@@ -44,13 +56,40 @@ export function AppHeader({
   checkpointMenuContainerRef,
   onToggleCheckpointMenu,
   onRestoreCheckpoint,
+  chatSidebarCollapsed,
+  onToggleChatSidebar,
+  aiToolbarDisabled,
+  onAiWrite,
+  onAiRewrite,
+  onAiDescribe,
+  onAiBrainstorm,
+  onOpenWritingHelper,
+  onOpenTextOptimizer,
 }: AppHeaderProps) {
+  const { t } = useI18n()
   return (
     <header className="h-14 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-10 relative">
       <div className="flex items-center gap-3">
         <span className="text-base font-semibold text-gray-800 dark:text-dark-text tracking-wide">{appTitle}</span>
+        <AiToolbar
+          disabled={aiToolbarDisabled}
+          onWrite={onAiWrite}
+          onRewrite={onAiRewrite}
+          onDescribe={onAiDescribe}
+          onBrainstorm={onAiBrainstorm}
+          onOpenWritingHelper={onOpenWritingHelper}
+          onOpenTextOptimizer={onOpenTextOptimizer}
+        />
       </div>
       <div className="flex items-center gap-4 relative" ref={checkpointMenuContainerRef}>
+        <button
+          onClick={onToggleChatSidebar}
+          className="p-1.5 rounded-md text-gray-500 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface2 hover:text-gray-700 dark:hover:text-dark-text transition-colors"
+          title={chatSidebarCollapsed ? t.chatSidebarToggleExpand : t.chatSidebarToggleCollapse}
+          aria-label={chatSidebarCollapsed ? t.chatSidebarToggleExpand : t.chatSidebarToggleCollapse}
+        >
+          {chatSidebarCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
+        </button>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-dark-surface2 shadow-inner border border-gray-200 dark:border-dark-border2">
           <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} />
           <span className="text-[11px] font-medium text-gray-600 dark:text-dark-text">{headerConnectionText}</span>

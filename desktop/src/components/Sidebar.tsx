@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react'
-import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Wand2, Library } from 'lucide-react'
+import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Library } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
 import { useI18n } from '../i18n'
@@ -12,7 +12,6 @@ interface SidebarProps {
   onOpenSettings: () => void
   onOpenEvaluation: () => void
   onOpenMcpStatus: () => void
-  onOpenWritingHelper: () => void
 }
 
 export const Sidebar = React.memo(function Sidebar({
@@ -23,7 +22,6 @@ export const Sidebar = React.memo(function Sidebar({
   onOpenSettings,
   onOpenEvaluation,
   onOpenMcpStatus,
-  onOpenWritingHelper,
 }: SidebarProps) {
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
@@ -217,34 +215,23 @@ export const Sidebar = React.memo(function Sidebar({
         </button>
       </div>
 
-      {/* Footer Tools */}
-      <div className="border-t border-dark-border p-3 space-y-0.5 shrink-0 bg-dark-bg/50">
-        <button
-          onClick={onOpenWritingHelper}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors ${collapsed ? 'justify-center' : ''}`}
-          aria-label={t.sidebarWritingHelper}
-          title={t.sidebarWritingHelper}
-        >
-          <Wand2 size={18} />
-          {!collapsed && <span className="text-sm font-medium">{t.sidebarWritingHelper}</span>}
-        </button>
+      {/* Footer Tools - Console Status Tags */}
+      <div className="border-t border-dark-border p-3 flex flex-wrap gap-2 shrink-0 bg-dark-bg">
         <button
           onClick={onOpenMcpStatus}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors ${collapsed ? 'justify-center' : ''}`}
-          aria-label={t.sidebarMcpStatus}
+          className="flex items-center gap-2 px-2 py-1 bg-dark-surface border border-dark-border2 rounded hover:bg-dark-surface2 transition-colors text-dark-text-secondary hover:text-dark-text"
           title={t.sidebarMcpStatus}
         >
-          <Server size={18} />
-          {!collapsed && <span className="text-sm font-medium">{t.sidebarMcpStatus}</span>}
+          <Server size={14} />
+          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">MCP</span>}
         </button>
         <button
           onClick={onOpenEvaluation}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors ${collapsed ? 'justify-center' : ''}`}
-          aria-label={t.sidebarEvaluationPanel}
+          className="flex items-center gap-2 px-2 py-1 bg-dark-surface border border-dark-border2 rounded hover:bg-dark-surface2 transition-colors text-dark-text-secondary hover:text-dark-text"
           title={t.sidebarEvaluationPanel}
         >
-          <BarChart3 size={18} />
-          {!collapsed && <span className="text-sm font-medium">{t.sidebarEvaluationPanel}</span>}
+          <BarChart3 size={14} />
+          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">Eval</span>}
         </button>
       </div>
     </aside>

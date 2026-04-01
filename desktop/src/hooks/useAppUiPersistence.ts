@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { WritingHelperMode } from '../api/client'
 
-export type RightPanelType = 'none' | 'knowledge' | 'evaluation' | 'mcpStatus' | 'writingHelper'
+export type RightPanelType = 'none' | 'knowledge' | 'evaluation' | 'mcpStatus' | 'writingHelper' | 'textOptimizer'
 
 export interface WritingHelperDraftState {
   content: string
@@ -13,6 +13,7 @@ export interface WritingHelperDraftState {
 const WRITING_HELPER_DRAFT_STORAGE_KEY = 'niko.writing-helper-draft-v1'
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'niko.sidebar-collapsed-v1'
 const ACTIVE_RIGHT_PANEL_STORAGE_KEY = 'niko.active-right-panel-v1'
+const CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY = 'niko.chat-sidebar-collapsed-v1'
 
 const DEFAULT_WRITING_HELPER_DRAFT: WritingHelperDraftState = {
   content: '',
@@ -71,8 +72,19 @@ const loadSidebarCollapsed = (): boolean => {
   }
 }
 
+const loadChatSidebarCollapsed = (): boolean => {
+  try {
+    const raw = localStorage.getItem(CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY)
+    if (raw === 'true') return true
+    if (raw === 'false') return false
+    return false
+  } catch {
+    return false
+  }
+}
+
 const isRightPanelType = (value: unknown): value is RightPanelType => {
-  return value === 'none' || value === 'knowledge' || value === 'evaluation' || value === 'mcpStatus' || value === 'writingHelper'
+  return value === 'none' || value === 'knowledge' || value === 'evaluation' || value === 'mcpStatus' || value === 'writingHelper' || value === 'textOptimizer'
 }
 
 const loadActiveRightPanel = (): RightPanelType => {
@@ -87,6 +99,7 @@ const loadActiveRightPanel = (): RightPanelType => {
 
 export function useAppUiPersistence() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => loadSidebarCollapsed())
+  const [chatSidebarCollapsed, setChatSidebarCollapsed] = useState(() => loadChatSidebarCollapsed())
   const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(() => loadActiveRightPanel())
   const [writingHelperDraft, setWritingHelperDraft] = useState<WritingHelperDraftState>(() => loadWritingHelperDraft())
 
@@ -114,6 +127,14 @@ export function useAppUiPersistence() {
     }
   }, [activeRightPanel])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY, chatSidebarCollapsed ? 'true' : 'false')
+    } catch {
+      // ignore localStorage write failures
+    }
+  }, [chatSidebarCollapsed])
+
   const clearWritingHelperDraft = useCallback(() => {
     clearWritingHelperDraftStorage()
     setWritingHelperDraft(DEFAULT_WRITING_HELPER_DRAFT)
@@ -122,6 +143,8 @@ export function useAppUiPersistence() {
   return {
     sidebarCollapsed,
     setSidebarCollapsed,
+    chatSidebarCollapsed,
+    setChatSidebarCollapsed,
     activeRightPanel,
     setActiveRightPanel,
     writingHelperDraft,

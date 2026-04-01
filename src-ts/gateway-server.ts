@@ -50,7 +50,7 @@ import {
   uiBridgeWorkflowExecuteEndpoint,
   uiBridgeWorkflowLifecycleEndpoint,
 } from './mcp/endpoints/workflow';
-import { novelQualityCheckEndpoint, writingHelperProcessEndpoint } from './mcp/endpoints/writing';
+import { novelQualityCheckEndpoint, writingHelperProcessEndpoint, writingStreamEndpoint } from './mcp/endpoints/writing';
 import {
   listMcpServices,
   createMcpService,
@@ -140,6 +140,9 @@ const routes: Route[] = [
   // Writing
   { method: 'POST', pattern: /^\/writing\/quality$/,        handler: novelQualityCheckEndpoint },
   { method: 'POST', pattern: /^\/writing\/helper$/,         handler: writingHelperProcessEndpoint },
+  { method: 'POST', pattern: /^\/writing\/stream$/,         handler: writingStreamEndpoint },
+  // Legacy route alias for desktop frontend compatibility
+  { method: 'POST', pattern: /^\/writing-helper\/process$/, handler: writingHelperProcessEndpoint },
 
   // MCP Admin
   { method: 'GET',  pattern: /^\/admin\/mcp\/services$/,                      handler: listMcpServices },

@@ -1130,16 +1130,35 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.uiSettings}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.theme}</label>
-                    <select
-                      value={localSettings.theme}
-                      onChange={(e) => setLocalSettings({ ...localSettings, theme: e.target.value as 'light' | 'dark' | 'system' })}
-                      className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
-                    >
-                      <option value="light">{t.themeLight}</option>
-                      <option value="dark">{t.themeDark}</option>
-                      <option value="system">{t.themeSystem}</option>
-                    </select>
+                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.theme}</label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {([
+                        { value: 'system', label: t.themeSystem, dot: '#64748b' },
+                        { value: 'sorbet', label: t.themeSorbet, dot: '#4808d1' },
+                        { value: 'slate', label: t.themeSlate, dot: '#6366f1' },
+                        { value: 'amber', label: t.themeAmber, dot: '#f59e0b' },
+                        { value: 'forest', label: t.themeForest, dot: '#22c55e' },
+                        { value: 'charcoal', label: t.themeCharcoal, dot: '#e2e8f0' },
+                        { value: 'cauldron', label: t.themeCauldron, dot: '#a855f7' },
+                        { value: 'aurora', label: t.themeAurora, dot: '#06b6d4' },
+                        { value: 'moonbeam', label: t.themeMoonbeam, dot: '#818cf8' },
+                        { value: 'sepia', label: t.themeSepia, dot: '#d97706' },
+                      ] as const).map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setLocalSettings({ ...localSettings, theme: option.value })}
+                          className={`flex flex-col items-center gap-1.5 px-2 py-2.5 text-[11px] font-medium rounded-lg border transition-all ${
+                            localSettings.theme === option.value
+                              ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 shadow-sm'
+                              : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface text-gray-600 dark:text-dark-text-secondary hover:border-gray-300 dark:hover:border-dark-border2'
+                          }`}
+                        >
+                          <span className="w-4 h-4 rounded-full inline-block shrink-0 ring-1 ring-black/10" style={{ backgroundColor: option.dot }} />
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.fontSize}</label>

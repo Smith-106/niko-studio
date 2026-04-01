@@ -9,6 +9,8 @@ interface UseAppShellViewModelOptions {
   uiPersistence: {
     sidebarCollapsed: boolean
     setSidebarCollapsed: (collapsed: boolean) => void
+    chatSidebarCollapsed: boolean
+    setChatSidebarCollapsed: (collapsed: boolean) => void
     activeRightPanel: RightPanelType
     writingHelperDraft: WritingHelperDraftState
     setWritingHelperDraft: (draft: WritingHelperDraftState) => void
@@ -72,7 +74,6 @@ export function useAppShellViewModel({
     onOpenSettings: panelOrchestration.openSettings,
     onOpenEvaluation: () => panelOrchestration.toggleRightPanel('evaluation'),
     onOpenMcpStatus: () => panelOrchestration.toggleRightPanel('mcpStatus'),
-    onOpenWritingHelper: () => panelOrchestration.toggleRightPanel('writingHelper'),
   }
 
   const appRightPanelsProps: ComponentProps<typeof AppRightPanels> = {
@@ -106,6 +107,27 @@ export function useAppShellViewModel({
       checkpointMenuContainerRef: checkpointMenu.checkpointMenuContainerRef,
       onToggleCheckpointMenu: checkpointMenu.handleToggleCheckpointMenu,
       onRestoreCheckpoint: checkpointMenu.handleRestoreCheckpoint,
+      chatSidebarCollapsed: uiPersistence.chatSidebarCollapsed,
+      onToggleChatSidebar: () => uiPersistence.setChatSidebarCollapsed(!uiPersistence.chatSidebarCollapsed),
+      aiToolbarDisabled: false,
+      onAiWrite: () => {
+        uiPersistence.setWritingHelperDraft({ ...uiPersistence.writingHelperDraft, mode: 'polish' })
+        panelOrchestration.toggleRightPanel('writingHelper')
+      },
+      onAiRewrite: () => {
+        uiPersistence.setWritingHelperDraft({ ...uiPersistence.writingHelperDraft, mode: 'rewrite' })
+        panelOrchestration.toggleRightPanel('writingHelper')
+      },
+      onAiDescribe: () => {
+        uiPersistence.setWritingHelperDraft({ ...uiPersistence.writingHelperDraft, mode: 'expand' })
+        panelOrchestration.toggleRightPanel('writingHelper')
+      },
+      onAiBrainstorm: () => {
+        uiPersistence.setWritingHelperDraft({ ...uiPersistence.writingHelperDraft, mode: 'outline' })
+        panelOrchestration.toggleRightPanel('writingHelper')
+      },
+      onOpenWritingHelper: () => panelOrchestration.toggleRightPanel('writingHelper'),
+      onOpenTextOptimizer: () => panelOrchestration.toggleRightPanel('textOptimizer'),
     },
     restoreStatus: checkpointMenu.restoreStatus,
     contextEstimatedText: t.contextEstimated,
@@ -113,6 +135,8 @@ export function useAppShellViewModel({
   }
 
   const chatSidebarProps = {
+    chatSidebarCollapsed: uiPersistence.chatSidebarCollapsed,
+    onToggleChatSidebar: () => uiPersistence.setChatSidebarCollapsed(!uiPersistence.chatSidebarCollapsed),
     chatAreaProps: {
       onContextUsageChange,
       connectionState: headerViewModel.headerConnectionState,

@@ -1,8 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, X } from 'lucide-react'
 import { processWritingHelper, polishContent, type WritingHelperMode } from '../api/client'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n, type Translations } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
+import { getEditorHandle } from '../utils/editorHandle'
+import {
+  type WritingStyle,
+  type ToneOption,
+  type PerspectiveOption,
+  type SentenceStyleOption,
+  type RhythmOption,
+  loadStyle,
+  saveStyle,
+  buildStyleInstruction,
+  addTag,
+  removeTag,
+} from './editor/WritingStyle'
 
 interface WritingHelperPanelDraftState {
   content: string
@@ -19,6 +33,24 @@ interface WritingHelperPanelProps {
   onClearDraft?: () => void
 }
 
+// ── Style types imported from WritingStyle module ────────────────
+// WritingStyle, loadStyle, saveStyle are imported from './editor/WritingStyle'
+
+// ── Label maps (localized in component via t) ──────────────────
+
+const TONE_OPTIONS: ToneOption[] = ['warm', 'formal', 'casual', 'humorous', 'serious', 'melancholic']
+const PERSPECTIVE_OPTIONS: PerspectiveOption[] = ['first', 'third', 'second', 'omniscient']
+const SENTENCE_STYLE_OPTIONS: SentenceStyleOption[] = ['concise', 'flowing', 'varied', 'complex']
+const RHYTHM_OPTIONS: RhythmOption[] = ['brisk', 'moderate', 'leisurely']
+
+// i18n key suffixes mapped to option values
+const toneLabelKey = (v: ToneOption): keyof Translations => `styleTone${v.charAt(0).toUpperCase() + v.slice(1)}` as keyof Translations
+const perspectiveLabelKey = (v: PerspectiveOption): keyof Translations => `stylePerspective${v.charAt(0).toUpperCase() + v.slice(1)}` as keyof Translations
+const sentenceStyleLabelKey = (v: SentenceStyleOption): keyof Translations => `styleSentence${v.charAt(0).toUpperCase() + v.slice(1)}` as keyof Translations
+const rhythmLabelKey = (v: RhythmOption): keyof Translations => `styleRhythm${v.charAt(0).toUpperCase() + v.slice(1)}` as keyof Translations
+
+// ── Constants ──────────────────────────────────────────────────
+
 const MODE_OPTIONS: Array<{ value: WritingHelperMode; labelKey: keyof Translations }> = [
   { value: 'polish', labelKey: 'writingHelperModePolish' },
   { value: 'rewrite', labelKey: 'writingHelperModeRewrite' },
@@ -27,20 +59,152 @@ const MODE_OPTIONS: Array<{ value: WritingHelperMode; labelKey: keyof Translatio
   { value: 'outline', labelKey: 'writingHelperModeOutline' },
 ]
 
+// ── Sub-components ─────────────────────────────────────────────
+
+function StyleSlider({ label, value, onChange, min = 1, max = 5 }: {
+  label: string
+  value: number
+  onChange: (v: number) => void
+  min?: number
+  max?: number
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary">{label}</span>
+        <span className="text-[11px] font-mono text-gray-400 dark:text-dark-text-muted">{value}/{max}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-1.5 rounded-full appearance-none bg-gray-200 dark:bg-dark-border cursor-pointer accent-primary-600 dark:accent-primary-500"
+      />
+    </label>
+  )
+}
+
+function TagInput({ tags, onAdd, onRemove, placeholder }: {
+  tags: string[]
+  onAdd: (tag: string) => void
+  onRemove: (tag: string) => void
+  placeholder?: string
+}) {
+  const [input, setInput] = useState('')
+  return (
+    <div className="flex flex-wrap items-center gap-1 px-2.5 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface min-h-[34px]">
+      {tags.map(tag => (
+        <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-900/20 text-[11px] font-medium text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-500/20">
+          {tag}
+          <button type="button" onClick={() => onRemove(tag)} className="hover:text-primary-900 dark:hover:text-primary-100">
+            <X size={12} />
+          </button>
+        </span>
+      ))}
+      <div className="relative flex-1 min-w-[80px]">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && input.trim()) {
+              e.preventDefault()
+              onAdd(input.trim())
+              setInput('')
+            }
+          }}
+          placeholder={placeholder}
+          className="w-full bg-transparent text-[12px] text-gray-800 dark:text-dark-text outline-none placeholder-gray-400 dark:placeholder-dark-text-muted"
+        />
+      </div>
+    </div>
+  )
+}
+
+function CollapsibleGroup({ title, defaultOpen = false, children }: {
+  title: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="border border-gray-100 dark:border-dark-border/50 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left bg-gray-50/50 dark:bg-dark-bg/50 hover:bg-gray-100 dark:hover:bg-dark-surface2 transition-colors"
+      >
+        <span className="text-[11px] font-semibold text-gray-600 dark:text-dark-text-secondary">{title}</span>
+        <ChevronDown size={12} className={`ml-auto text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-3 py-2.5 space-y-2.5 border-t border-gray-100 dark:border-dark-border/30">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main Component ─────────────────────────────────────────────
+
 export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraftStateChange, onClearDraft }: WritingHelperPanelProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const detectionEvasionGuardEnabled = useSettingsStore((state) => state.settings.detectionEvasionGuardEnabled)
   const useLegacyPolish = useSettingsStore((state) => state.settings.writingHelperUseLegacyPolish)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
-  const { t, translate } = useI18n()
-  const [content, setContent] = useState(draftState?.content ?? '')
+  const { t, translate, language } = useI18n()
+
+  const getProviderFields = useCallback(() => {
+    const { settings } = useSettingsStore.getState()
+    const provider = settings.llmProviders.find(
+      (p) => p.id === settings.primaryProvider && p.enabled && p.apiKey,
+    )
+    return provider
+      ? { api_key: provider.apiKey, base_url: provider.baseUrl, model: provider.defaultModel, provider: provider.id }
+      : {}
+  }, [])
+  const [content, setContent] = useState(() => {
+    if (draftState?.content) return draftState.content
+    // Prefill from editor selection
+    const handle = getEditorHandle()
+    if (handle) {
+      const selected = handle.getSelectedText()
+      if (selected.trim()) return selected
+    }
+    return ''
+  })
   const [mode, setMode] = useState<WritingHelperMode>(draftState?.mode ?? 'polish')
   const [maxSentences, setMaxSentences] = useState(draftState?.maxSentences ?? 3)
   const [maxItems, setMaxItems] = useState(draftState?.maxItems ?? 6)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ processedText?: string; outline?: string[]; mode?: string } | null>(null)
+  const [styleOpen, setStyleOpen] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [style, setStyle] = useState<WritingStyle>(loadStyle)
   const buttonDisabled = useMemo(() => loading || content.trim().length === 0, [loading, content])
+
+  const updateStyle = useCallback((patch: Partial<WritingStyle>) => {
+    setStyle(prev => {
+      const next = { ...prev, ...patch }
+      saveStyle(next)
+      return next
+    })
+  }, [])
+
+  const updateSubStyle = useCallback(<K extends keyof WritingStyle>(key: K, sub: Partial<NonNullable<WritingStyle[K]>>) => {
+    setStyle(prev => {
+      const prevVal = prev[key]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const merged = prevVal && typeof prevVal === 'object' ? { ...prevVal as any, ...sub as any } : sub
+      const next = { ...prev, [key]: merged } as WritingStyle
+      saveStyle(next)
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     onDraftStateChange?.({ content, mode, maxSentences, maxItems })
@@ -61,6 +225,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
         const legacyResponse = await polishContent({
           originalText: content,
           polishType: 'standard',
+          ...getProviderFields(),
         })
 
         if (legacyResponse.error) {
@@ -75,12 +240,15 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
         return
       }
 
+      const styleInstruction = buildStyleInstruction(style, language === 'zh')
       const response = await processWritingHelper({
         content,
         mode,
         max_sentences: maxSentences,
         max_items: maxItems,
+        instruction: styleInstruction,
         detection_evasion_guard_enabled: detectionEvasionGuardEnabled,
+        ...getProviderFields(),
       })
 
       if (!response.success || !response.data) {
@@ -115,9 +283,10 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="w-full max-w-3xl rounded-2xl bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-2xl overflow-hidden transform transition-all"
+        className="w-full max-w-3xl max-h-[90vh] rounded-2xl bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-2xl overflow-hidden transform transition-all flex flex-col"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border/50 bg-slate-50 dark:bg-dark-surface2/50">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border/50 bg-slate-50 dark:bg-dark-surface2/50 shrink-0">
           <div className="flex items-center gap-3">
             <h2 className="text-[15px] font-semibold text-gray-800 dark:text-dark-text tracking-wide">{t.writingHelperTitle}</h2>
             <span
@@ -142,122 +311,404 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
           </button>
         </div>
 
-        <div className="p-6 pb-2">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-[11px] font-medium text-gray-500 dark:text-dark-text-muted">
-              {t.writingHelperHint}
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary cursor-pointer hover:text-gray-800 dark:hover:text-dark-text transition-colors">
-                <input
-                  type="checkbox"
-                  checked={useLegacyPolish}
-                  onChange={(event) => updateSettings({ writingHelperUseLegacyPolish: event.target.checked })}
-                  className="rounded text-primary-600 focus:ring-primary-500 bg-gray-50 border-gray-300 dark:bg-dark-bg dark:border-dark-border"
-                />
-                {t.writingHelperLegacyPolish}
-              </label>
-              <button
-                onClick={onOpenSettings}
-                className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-surface2 text-gray-700 dark:text-dark-text transition-all shadow-sm active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
-              >
-                {t.writingHelperOpenSettings}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 dark:bg-dark-bg p-4 rounded-xl border border-gray-100 dark:border-dark-border/50">
-            <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
-              {t.writingHelperMode}
-              <select
-                value={mode}
-                onChange={(event) => setMode(event.target.value as WritingHelperMode)}
-                className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
-              >
-                {MODE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {t[option.labelKey]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
-              {t.writingHelperMaxSentences}
-              <input
-                type="number"
-                min={1}
-                value={maxSentences}
-                onChange={(event) => setMaxSentences(Number(event.target.value) || 1)}
-                className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
-              />
-            </label>
-
-            <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
-              {t.writingHelperMaxItems}
-              <input
-                type="number"
-                min={1}
-                value={maxItems}
-                onChange={(event) => setMaxItems(Number(event.target.value) || 1)}
-                className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
-              />
-            </label>
-          </div>
-
-          <label className="text-sm font-semibold text-gray-800 dark:text-dark-text flex flex-col gap-2">
-            {t.writingHelperInputText}
-            <textarea
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              rows={6}
-              placeholder={t.writingHelperInputPlaceholder}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-bg text-[14px] leading-relaxed text-gray-900 dark:text-dark-text focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none shadow-inner transition-all custom-scrollbar resize-y"
-            />
-          </label>
-
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              onClick={handleSubmit}
-              disabled={buttonDisabled}
-              className="px-5 py-2.5 text-sm font-medium rounded-lg bg-primary-600 text-white shadow-sm hover:bg-primary-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
-              title={buttonDisabled ? (loading ? t.writingHelperRunning : t.writingHelperInputPlaceholder) : undefined}
-            >
-              {loading && <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-transparent animate-spin" />}
-              {loading ? t.writingHelperRunning : t.writingHelperRun}
-            </button>
-            <button
-              onClick={handleClearDraft}
-              disabled={loading}
-              className="px-4 py-2.5 text-sm font-medium rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 active:scale-[0.98] transition-all disabled:opacity-50 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
-            >
-              {t.writingHelperClearDraft}
-            </button>
-            {error && <span className="text-[13px] font-medium text-danger-500 ml-2 px-2 py-1 bg-danger-50 dark:bg-danger-900/10 rounded">{error}</span>}
-          </div>
-
-          {result && (
-            <div className="rounded-xl border border-primary-100 dark:border-primary-500/20 p-5 bg-primary-50/50 dark:bg-primary-900/10 shadow-sm mt-4 animate-fade-in">
-              <div className="text-[11px] font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse-subtle"></span>
-                {translate('writingHelperModePrefix', { mode: result.mode ?? '' })}
+        {/* Scrollable body */}
+        <div className="overflow-y-auto custom-scrollbar">
+          <div className="p-6 pb-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[11px] font-medium text-gray-500 dark:text-dark-text-muted">
+                {t.writingHelperHint}
               </div>
-              {result.processedText && (
-                <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-dark-text font-serif leading-relaxed">
-                  {result.processedText}
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary cursor-pointer hover:text-gray-800 dark:hover:text-dark-text transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={useLegacyPolish}
+                    onChange={(event) => updateSettings({ writingHelperUseLegacyPolish: event.target.checked })}
+                    className="rounded text-primary-600 focus:ring-primary-500 bg-gray-50 border-gray-300 dark:bg-dark-bg dark:border-dark-border"
+                  />
+                  {t.writingHelperLegacyPolish}
+                </label>
+                <button
+                  onClick={onOpenSettings}
+                  className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-white dark:bg-dark-bg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-surface2 text-gray-700 dark:text-dark-text transition-all shadow-sm active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
+                >
+                  {t.writingHelperOpenSettings}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 space-y-4 pb-6">
+            {/* Mode controls */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 dark:bg-dark-bg p-4 rounded-xl border border-gray-100 dark:border-dark-border/50">
+              <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
+                {t.writingHelperMode}
+                <select
+                  value={mode}
+                  onChange={(event) => setMode(event.target.value as WritingHelperMode)}
+                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
+                >
+                  {MODE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {t[option.labelKey]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
+                {t.writingHelperMaxSentences}
+                <input
+                  type="number"
+                  min={1}
+                  value={maxSentences}
+                  onChange={(event) => setMaxSentences(Number(event.target.value) || 1)}
+                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
+                />
+              </label>
+
+              <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
+                {t.writingHelperMaxItems}
+                <input
+                  type="number"
+                  min={1}
+                  value={maxItems}
+                  onChange={(event) => setMaxItems(Number(event.target.value) || 1)}
+                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
+                />
+              </label>
+            </div>
+
+            {/* ── 8-Dimensional Style Settings ── */}
+            <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden">
+              <button
+                onClick={() => setStyleOpen(!styleOpen)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-50 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-surface2 transition-colors"
+              >
+                <span className="text-[12px] font-semibold text-gray-700 dark:text-dark-text">{t.styleSettingsTitle}</span>
+                <span className="text-[10px] text-gray-400 dark:text-dark-text-muted">8 {language === 'zh' ? '维风格控制' : 'dimensions'}</span>
+                <ChevronDown
+                  size={14}
+                  className={`ml-auto text-gray-400 dark:text-dark-text-muted transition-transform duration-200 ${styleOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {styleOpen && (
+                <div className="px-4 py-3 border-t border-gray-100 dark:border-dark-border/50 space-y-4 bg-white dark:bg-dark-surface/50">
+                  {/* Row 1: Selects */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <label className="text-[11px] font-semibold text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1.5">
+                      {t.styleTone}
+                      <select
+                        value={style.tone}
+                        onChange={(e) => updateStyle({ tone: e.target.value as ToneOption })}
+                        className="px-2.5 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none"
+                      >
+                        {TONE_OPTIONS.map(v => <option key={v} value={v}>{t[toneLabelKey(v)]}</option>)}
+                      </select>
+                    </label>
+
+                    <label className="text-[11px] font-semibold text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1.5">
+                      {t.stylePerspective}
+                      <select
+                        value={style.perspective}
+                        onChange={(e) => updateStyle({ perspective: e.target.value as PerspectiveOption })}
+                        className="px-2.5 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none"
+                      >
+                        {PERSPECTIVE_OPTIONS.map(v => <option key={v} value={v}>{t[perspectiveLabelKey(v)]}</option>)}
+                      </select>
+                    </label>
+
+                    <label className="text-[11px] font-semibold text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1.5">
+                      {t.styleSentence}
+                      <select
+                        value={style.sentenceStyle}
+                        onChange={(e) => updateStyle({ sentenceStyle: e.target.value as SentenceStyleOption })}
+                        className="px-2.5 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none"
+                      >
+                        {SENTENCE_STYLE_OPTIONS.map(v => <option key={v} value={v}>{t[sentenceStyleLabelKey(v)]}</option>)}
+                      </select>
+                    </label>
+
+                    <label className="text-[11px] font-semibold text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1.5">
+                      {t.styleRhythmLabel}
+                      <select
+                        value={style.rhythm}
+                        onChange={(e) => updateStyle({ rhythm: e.target.value as RhythmOption })}
+                        className="px-2.5 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none"
+                      >
+                        {RHYTHM_OPTIONS.map(v => <option key={v} value={v}>{t[rhythmLabelKey(v)]}</option>)}
+                      </select>
+                    </label>
+                  </div>
+
+                  {/* Row 2: Sliders */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
+                    <StyleSlider
+                      label={t.styleFormality}
+                      value={style.formality}
+                      onChange={(v) => updateStyle({ formality: v })}
+                    />
+                    <StyleSlider
+                      label={t.styleEmotion}
+                      value={style.emotionIntensity}
+                      onChange={(v) => updateStyle({ emotionIntensity: v })}
+                    />
+                    <StyleSlider
+                      label={t.styleCreativity}
+                      value={style.creativity}
+                      onChange={(v) => updateStyle({ creativity: v })}
+                    />
+                    <StyleSlider
+                      label={t.styleNarrativeDistance}
+                      value={style.narrativeDistance}
+                      onChange={(v) => updateStyle({ narrativeDistance: v })}
+                    />
+                  </div>
                 </div>
               )}
-              {result.outline && result.outline.length > 0 && (
-                <ul className="list-disc pl-6 text-sm text-gray-800 dark:text-dark-text space-y-2 font-serif mt-2">
-                  {result.outline.map((item, index) => (
-                    <li key={`${item}-${index}`} className="leading-relaxed pl-1 marker:text-primary-400">{item}</li>
-                  ))}
-                </ul>
+            </div>
+
+            {/* ── Advanced Style Sub-Properties ── */}
+            <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen(!advancedOpen)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-50 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-surface2 transition-colors"
+              >
+                <span className="text-[12px] font-semibold text-gray-700 dark:text-dark-text">{t.styleAdvancedTitle}</span>
+                <ChevronDown
+                  size={14}
+                  className={`ml-auto text-gray-400 dark:text-dark-text-muted transition-transform duration-200 ${advancedOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {advancedOpen && (
+                <div className="px-4 py-3 border-t border-gray-100 dark:border-dark-border/50 space-y-3 bg-white dark:bg-dark-surface/50">
+                  {/* Structure */}
+                  <CollapsibleGroup title={t.styleStructure}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleParagraphLength}
+                        <select value={style.structure.paragraphLength} onChange={(e) => updateSubStyle('structure', { paragraphLength: e.target.value as WritingStyle['structure']['paragraphLength'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="short">{t.styleParagraphShort}</option>
+                          <option value="medium">{t.styleParagraphMedium}</option>
+                          <option value="long">{t.styleParagraphLong}</option>
+                          <option value="varied">{t.styleParagraphVaried}</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleTransition}
+                        <select value={style.structure.transitionStyle} onChange={(e) => updateSubStyle('structure', { transitionStyle: e.target.value as WritingStyle['structure']['transitionStyle'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="smooth">{t.styleTransitionSmooth}</option>
+                          <option value="direct">{t.styleTransitionDirect}</option>
+                          <option value="dramatic">{t.styleTransitionDramatic}</option>
+                          <option value="subtle">{t.styleTransitionSubtle}</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleHierarchy}
+                        <select value={style.structure.hierarchyPattern} onChange={(e) => updateSubStyle('structure', { hierarchyPattern: e.target.value as WritingStyle['structure']['hierarchyPattern'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="flat">{t.styleHierarchyFlat}</option>
+                          <option value="nested">{t.styleHierarchyNested}</option>
+                          <option value="parallel">{t.styleHierarchyParallel}</option>
+                          <option value="progressive">{t.styleHierarchyProgressive}</option>
+                        </select>
+                      </label>
+                    </div>
+                  </CollapsibleGroup>
+
+                  {/* Emotion */}
+                  <CollapsibleGroup title={`${t.styleEmotionExpression} / ${t.styleEmotion}`}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleEmotionExpression}
+                        <select value={style.emotion.expressionStyle} onChange={(e) => updateSubStyle('emotion', { expressionStyle: e.target.value as WritingStyle['emotion']['expressionStyle'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="implicit">{t.styleEmotionImplicit}</option>
+                          <option value="explicit">{t.styleEmotionExplicit}</option>
+                          <option value="restrained">{t.styleEmotionRestrained}</option>
+                          <option value="passionate">{t.styleEmotionPassionate}</option>
+                        </select>
+                      </label>
+                      <StyleSlider label={t.styleEmotion} value={style.emotion.intensity} onChange={(v) => updateSubStyle('emotion', { intensity: v })} />
+                    </div>
+                  </CollapsibleGroup>
+
+                  {/* Thinking */}
+                  <CollapsibleGroup title={t.styleThinkingLogic}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleThinkingLogic}
+                        <select value={style.thinking.logicPattern} onChange={(e) => updateSubStyle('thinking', { logicPattern: e.target.value as WritingStyle['thinking']['logicPattern'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="deductive">{t.styleThinkingDeductive}</option>
+                          <option value="inductive">{t.styleThinkingInductive}</option>
+                          <option value="analogical">{t.styleThinkingAnalogical}</option>
+                          <option value="dialectical">{t.styleThinkingDialectical}</option>
+                        </select>
+                      </label>
+                      <StyleSlider label={t.styleThinkingDepth} value={style.thinking.depth} onChange={(v) => updateSubStyle('thinking', { depth: v })} />
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleThinkingRhythm}
+                        <select value={style.thinking.rhythm} onChange={(e) => updateSubStyle('thinking', { rhythm: e.target.value as WritingStyle['thinking']['rhythm'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="methodical">{t.styleThinkingMethodical}</option>
+                          <option value="exploratory">{t.styleThinkingExploratory}</option>
+                          <option value="rapid">{t.styleThinkingRapid}</option>
+                          <option value="contemplative">{t.styleThinkingContemplative}</option>
+                        </select>
+                      </label>
+                    </div>
+                  </CollapsibleGroup>
+
+                  {/* Narrative */}
+                  <CollapsibleGroup title={t.stylePerspective}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleNarrativeTime}
+                        <select value={style.narrative.timeSequence} onChange={(e) => updateSubStyle('narrative', { timeSequence: e.target.value as WritingStyle['narrative']['timeSequence'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="linear">{t.styleNarrativeTimeLinear}</option>
+                          <option value="flashback">{t.styleNarrativeTimeFlashback}</option>
+                          <option value="interleaved">{t.styleNarrativeTimeInterleaved}</option>
+                          <option value="circular">{t.styleNarrativeTimeCircular}</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleNarrativeAttitude}
+                        <select value={style.narrative.narratorAttitude} onChange={(e) => updateSubStyle('narrative', { narratorAttitude: e.target.value as WritingStyle['narrative']['narratorAttitude'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="objective">{t.styleNarrativeObjective}</option>
+                          <option value="sympathetic">{t.styleNarrativeSympathetic}</option>
+                          <option value="critical">{t.styleNarrativeCritical}</option>
+                          <option value="detached">{t.styleNarrativeDetached}</option>
+                        </select>
+                      </label>
+                    </div>
+                  </CollapsibleGroup>
+
+                  {/* Rhythm */}
+                  <CollapsibleGroup title={t.styleRhythmLabel}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleRhythmSyllable}
+                        <select value={style.rhythmFull.syllablePattern} onChange={(e) => updateSubStyle('rhythmFull', { syllablePattern: e.target.value as WritingStyle['rhythmFull']['syllablePattern'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="dense">{t.styleRhythmSyllableDense}</option>
+                          <option value="balanced">{t.styleRhythmSyllableBalanced}</option>
+                          <option value="sparse">{t.styleRhythmSyllableSparse}</option>
+                          <option value="free">{t.styleRhythmSyllableFree}</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleRhythmPause}
+                        <select value={style.rhythmFull.pausePattern} onChange={(e) => updateSubStyle('rhythmFull', { pausePattern: e.target.value as WritingStyle['rhythmFull']['pausePattern'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="frequent">{t.styleRhythmPauseFrequent}</option>
+                          <option value="moderate">{t.styleRhythmPauseModerate}</option>
+                          <option value="minimal">{t.styleRhythmPauseMinimal}</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleRhythmTempo}
+                        <select value={style.rhythmFull.tempo} onChange={(e) => updateSubStyle('rhythmFull', { tempo: e.target.value as WritingStyle['rhythmFull']['tempo'] })} className="px-2 py-1.5 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-[12px] text-gray-800 dark:text-dark-text outline-none">
+                          <option value="fast">{t.styleRhythmTempoFast}</option>
+                          <option value="moderate">{t.styleRhythmTempoModerate || t.styleRhythmModerate}</option>
+                          <option value="slow">{t.styleRhythmTempoSlow}</option>
+                          <option value="varied">{t.styleRhythmTempoVaried}</option>
+                        </select>
+                      </label>
+                    </div>
+                  </CollapsibleGroup>
+
+                  {/* Uniqueness & Cultural — Tag Inputs */}
+                  <CollapsibleGroup title={t.styleUniqueness || (language === 'zh' ? '独特性 / 文化' : 'Uniqueness / Culture')}>
+                    <div className="space-y-3">
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleSignaturePhrases}
+                        <TagInput tags={style.uniqueness.signaturePhrases} placeholder={t.styleTagPlaceholder} onAdd={(tag) => updateSubStyle('uniqueness', { signaturePhrases: addTag(style.uniqueness.signaturePhrases, tag) })} onRemove={(tag) => updateSubStyle('uniqueness', { signaturePhrases: removeTag(style.uniqueness.signaturePhrases, tag) })} />
+                      </label>
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleImagerySystem}
+                        <TagInput tags={style.uniqueness.imagerySystem} placeholder={t.styleTagPlaceholder} onAdd={(tag) => updateSubStyle('uniqueness', { imagerySystem: addTag(style.uniqueness.imagerySystem, tag) })} onRemove={(tag) => updateSubStyle('uniqueness', { imagerySystem: removeTag(style.uniqueness.imagerySystem, tag) })} />
+                      </label>
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleAllusions}
+                        <TagInput tags={style.cultural.allusions} placeholder={t.styleTagPlaceholder} onAdd={(tag) => updateSubStyle('cultural', { allusions: addTag(style.cultural.allusions, tag) })} onRemove={(tag) => updateSubStyle('cultural', { allusions: removeTag(style.cultural.allusions, tag) })} />
+                      </label>
+                      <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                        {t.styleKnowledgeDomains}
+                        <TagInput tags={style.cultural.knowledgeDomains} placeholder={t.styleTagPlaceholder} onAdd={(tag) => updateSubStyle('cultural', { knowledgeDomains: addTag(style.cultural.knowledgeDomains, tag) })} onRemove={(tag) => updateSubStyle('cultural', { knowledgeDomains: removeTag(style.cultural.knowledgeDomains, tag) })} />
+                      </label>
+                    </div>
+                  </CollapsibleGroup>
+                </div>
               )}
             </div>
-          )}
+
+            {/* Textarea */}
+            <label className="text-sm font-semibold text-gray-800 dark:text-dark-text flex flex-col gap-2">
+              {t.writingHelperInputText}
+              <textarea
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+                rows={6}
+                placeholder={t.writingHelperInputPlaceholder}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-bg text-[14px] leading-relaxed text-gray-900 dark:text-dark-text focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none shadow-inner transition-all custom-scrollbar resize-y"
+              />
+            </label>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={handleSubmit}
+                disabled={buttonDisabled}
+                className="px-5 py-2.5 text-sm font-medium rounded-lg bg-primary-600 text-white shadow-sm hover:bg-primary-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
+                title={buttonDisabled ? (loading ? t.writingHelperRunning : t.writingHelperInputPlaceholder) : undefined}
+              >
+                {loading && <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-transparent animate-spin" />}
+                {loading ? t.writingHelperRunning : t.writingHelperRun}
+              </button>
+              <button
+                onClick={handleClearDraft}
+                disabled={loading}
+                className="px-4 py-2.5 text-sm font-medium rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 active:scale-[0.98] transition-all disabled:opacity-50 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-dark-bg"
+              >
+                {t.writingHelperClearDraft}
+              </button>
+              {error && <span className="text-[13px] font-medium text-danger-500 ml-2 px-2 py-1 bg-danger-50 dark:bg-danger-900/10 rounded">{error}</span>}
+            </div>
+
+            {/* Result */}
+            {result && (
+              <div className="rounded-xl border border-primary-100 dark:border-primary-500/20 p-5 bg-primary-50/50 dark:bg-primary-900/10 shadow-sm mt-4 animate-fade-in">
+                <div className="text-[11px] font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse-subtle"></span>
+                  {translate('writingHelperModePrefix', { mode: result.mode ?? '' })}
+                </div>
+                {result.processedText && (
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-dark-text font-serif leading-relaxed">
+                    {result.processedText}
+                  </div>
+                )}
+                {result.processedText && (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const handle = getEditorHandle()
+                        if (handle) handle.insertText(result.processedText || '')
+                      }}
+                      className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-primary-600 text-white hover:bg-primary-500 active:scale-95 transition-all shadow-sm"
+                    >
+                      {t.writingHelperInsertToEditor}
+                    </button>
+                  </div>
+                )}
+                {result.outline && result.outline.length > 0 && (
+                  <ul className="list-disc pl-6 text-sm text-gray-800 dark:text-dark-text space-y-2 font-serif mt-2">
+                    {result.outline.map((item, index) => (
+                      <li key={`${item}-${index}`} className="leading-relaxed pl-1 marker:text-primary-400">{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

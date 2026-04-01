@@ -253,6 +253,35 @@ export interface Translations {
   // Sidebar
   sidebarToggleExpand: string
   sidebarToggleCollapse: string
+  chatSidebarToggleExpand: string
+  chatSidebarToggleCollapse: string
+  storyBibleTitle: string
+  storyBibleDesc: string
+  storyBibleBraindump: string
+  storyBibleBraindumpHint: string
+  storyBibleGenre: string
+  storyBibleGenrePlaceholder: string
+  storyBibleSynopsis: string
+  storyBibleSynopsisPlaceholder: string
+  storyBibleCharacters: string
+  storyBibleWorldbuilding: string
+  storyBibleOutline: string
+  storyBibleStyleTitle: string
+  storyBibleStyleTried: string
+  storyBibleStyleTriedDesc: string
+  storyBibleStyleMatchMy: string
+  storyBibleStyleMatchMyDesc: string
+  storyBibleStyleSoundsLike: string
+  storyBibleStyleSoundsLikeDesc: string
+  storyBibleStyleCustom: string
+  storyBibleStyleCustomDesc: string
+  storyBibleGenerate: string
+  storyBibleEmpty: string
+  storyBibleLoading: string
+  aiToolWrite: string
+  aiToolRewrite: string
+  aiToolDescribe: string
+  aiToolBrainstorm: string
   sidebarWritingHelper: string
   sidebarMcpStatus: string
   sidebarEvaluationPanel: string
@@ -375,11 +404,147 @@ export interface Translations {
   writingHelperRunning: string
   writingHelperClearDraft: string
   writingHelperFailed: string
+  writingHelperInsertToEditor: string
+
+  // Style Settings (8 dimensions)
+  styleSettingsTitle: string
+  styleTone: string
+  styleToneWarm: string
+  styleToneFormal: string
+  styleToneCasual: string
+  styleToneHumorous: string
+  styleToneSerious: string
+  styleToneMelancholic: string
+  styleFormality: string
+  styleEmotion: string
+  styleCreativity: string
+  stylePerspective: string
+  stylePerspectiveFirst: string
+  stylePerspectiveThird: string
+  stylePerspectiveSecond: string
+  stylePerspectiveOmniscient: string
+  styleSentence: string
+  styleSentenceConcise: string
+  styleSentenceFlowing: string
+  styleSentenceVaried: string
+  styleSentenceComplex: string
+  styleRhythmLabel: string
+  styleRhythmBrisk: string
+  styleRhythmModerate: string
+  styleRhythmLeisurely: string
+  styleNarrativeDistance: string
+
+  // Style sub-property labels
+  styleAdvancedTitle: string
+  styleStructure: string
+  styleParagraphLength: string
+  styleParagraphShort: string
+  styleParagraphMedium: string
+  styleParagraphLong: string
+  styleParagraphVaried: string
+  styleTransition: string
+  styleTransitionSmooth: string
+  styleTransitionDirect: string
+  styleTransitionDramatic: string
+  styleTransitionSubtle: string
+  styleHierarchy: string
+  styleHierarchyFlat: string
+  styleHierarchyNested: string
+  styleHierarchyParallel: string
+  styleHierarchyProgressive: string
+  styleEmotionExpression: string
+  styleEmotionImplicit: string
+  styleEmotionExplicit: string
+  styleEmotionRestrained: string
+  styleEmotionPassionate: string
+  styleThinkingLogic: string
+  styleThinkingDeductive: string
+  styleThinkingInductive: string
+  styleThinkingAnalogical: string
+  styleThinkingDialectical: string
+  styleThinkingDepth: string
+  styleThinkingRhythm: string
+  styleThinkingMethodical: string
+  styleThinkingExploratory: string
+  styleThinkingRapid: string
+  styleThinkingContemplative: string
+  styleNarrativeTime: string
+  styleNarrativeTimeLinear: string
+  styleNarrativeTimeFlashback: string
+  styleNarrativeTimeInterleaved: string
+  styleNarrativeTimeCircular: string
+  styleNarrativeAttitude: string
+  styleNarrativeObjective: string
+  styleNarrativeSympathetic: string
+  styleNarrativeCritical: string
+  styleNarrativeDetached: string
+  styleRhythmSyllable: string
+  styleRhythmSyllableDense: string
+  styleRhythmSyllableBalanced: string
+  styleRhythmSyllableSparse: string
+  styleRhythmSyllableFree: string
+  styleRhythmPause: string
+  styleRhythmPauseFrequent: string
+  styleRhythmPauseModerate: string
+  styleRhythmPauseMinimal: string
+  styleRhythmTempo: string
+  styleRhythmTempoFast: string
+  styleRhythmTempoModerate: string
+  styleRhythmTempoSlow: string
+  styleRhythmTempoVaried: string
+  styleTagAdd: string
+  styleTagPlaceholder: string
+  styleSignaturePhrases: string
+  styleImagerySystem: string
+  styleAllusions: string
+  styleKnowledgeDomains: string
+  styleVocabularyPreferred: string
+  styleVocabularyAvoid: string
+  styleUniqueness: string
+  optimizerTwoStepMode: string
+  optimizerTwoStepAnalysis: string
+
+  // AI Text Optimizer
+  optimizerTitle: string
+  optimizerBadge: string
+  optimizerPresetLabel: string
+  optimizerPresetHumanize: string
+  optimizerPresetHumanizeDesc: string
+  optimizerPresetAiGuide: string
+  optimizerPresetAiGuideDesc: string
+  optimizerPresetCharacter: string
+  optimizerPresetCharacterDesc: string
+  optimizerPresetLiterary: string
+  optimizerPresetLiteraryDesc: string
+  optimizerPresetCustom: string
+  optimizerPresetCustomDesc: string
+  optimizerCustomInstruction: string
+  optimizerInputText: string
+  optimizerInputPlaceholder: string
+  optimizerRun: string
+  optimizerRunning: string
+  optimizerFailed: string
+  optimizerResultTitle: string
+  optimizerFeaturePerplexity: string
+  optimizerFeatureBurstiness: string
+  optimizerFeatureDetection: string
+  optimizerFeatureNatural: string
+  sidebarTextOptimizer: string
+
   uiSettings: string
   theme: string
   themeLight: string
   themeDark: string
   themeSystem: string
+  themeSorbet: string
+  themeSlate: string
+  themeAmber: string
+  themeForest: string
+  themeCharcoal: string
+  themeCauldron: string
+  themeAurora: string
+  themeMoonbeam: string
+  themeSepia: string
   fontSize: string
   fontSmall: string
   fontMedium: string
@@ -537,6 +702,43 @@ export interface Translations {
   editorCharCount: string
   editorReadingTime: string
   editorAutoSaved: string
+  editorPlaceholder: string
+  editorAiGenerating: string
+  editorAiCancel: string
+  // Slash commands
+  editorCmdGenerate: string
+  editorCmdGenerateDesc: string
+  editorCmdContinue: string
+  editorCmdContinueDesc: string
+  editorCmdFullArticle: string
+  editorCmdFullArticleDesc: string
+  editorCmdHeading1: string
+  editorCmdHeading1Desc: string
+  editorCmdHeading2: string
+  editorCmdHeading2Desc: string
+  editorCmdHeading3: string
+  editorCmdHeading3Desc: string
+  editorCmdBulletList: string
+  editorCmdBulletListDesc: string
+  editorCmdOrderedList: string
+  editorCmdOrderedListDesc: string
+  editorCmdBlockquote: string
+  editorCmdBlockquoteDesc: string
+  editorCmdCodeBlock: string
+  editorCmdCodeBlockDesc: string
+  editorCmdHorizontalRule: string
+  editorCmdHorizontalRuleDesc: string
+  // Bubble toolbar
+  editorBubbleRewrite: string
+  editorBubblePolish: string
+  editorBubbleSimplify: string
+  editorBubbleExpand: string
+  editorBubbleFormal: string
+  editorBubbleCasual: string
+  editorBubbleContinue: string
+  // Export
+  exportMarkdown: string
+  exportHtml: string
 }
 
 export const translations: Record<Language, Translations> = {
@@ -793,6 +995,35 @@ export const translations: Record<Language, Translations> = {
     // Sidebar
     sidebarToggleExpand: '展开侧边栏',
     sidebarToggleCollapse: '折叠侧边栏',
+    chatSidebarToggleExpand: '展开聊天面板',
+    chatSidebarToggleCollapse: '折叠聊天面板',
+    storyBibleTitle: 'Story Bible',
+    storyBibleDesc: '记录你故事世界的关键细节，帮助 AI 生成更好的建议，或逐步完善你的创意直到完成初稿。',
+    storyBibleBraindump: 'Braindump',
+    storyBibleBraindumpHint: '写下你对故事所知的一切——情节、角色、世界观、主题，任何想法都可以！',
+    storyBibleGenre: '题材类型',
+    storyBibleGenrePlaceholder: '输入题材，如：奇幻、言情、悬疑...',
+    storyBibleSynopsis: '故事概要',
+    storyBibleSynopsisPlaceholder: '介绍角色、他们的目标、核心冲突，传达故事的基调和独特元素...',
+    storyBibleCharacters: '角色',
+    storyBibleWorldbuilding: '世界观',
+    storyBibleOutline: '小说大纲',
+    storyBibleStyleTitle: '写作风格',
+    storyBibleStyleTried: '经典风格',
+    storyBibleStyleTriedDesc: '经过验证的写作风格',
+    storyBibleStyleMatchMy: '匹配我的风格',
+    storyBibleStyleMatchMyDesc: '分析你的文字风格',
+    storyBibleStyleSoundsLike: '听起来像',
+    storyBibleStyleSoundsLikeDesc: '模仿指定作家的风格',
+    storyBibleStyleCustom: '自定义',
+    storyBibleStyleCustomDesc: '完全控制你的风格',
+    storyBibleGenerate: '生成',
+    storyBibleEmpty: '暂无内容',
+    storyBibleLoading: '加载中...',
+    aiToolWrite: '写作',
+    aiToolRewrite: '改写',
+    aiToolDescribe: '描写',
+    aiToolBrainstorm: '头脑风暴',
     sidebarWritingHelper: 'Writing Helper',
     sidebarMcpStatus: 'MCP 状态',
     sidebarEvaluationPanel: '评估面板',
@@ -915,11 +1146,147 @@ export const translations: Record<Language, Translations> = {
     writingHelperRunning: '处理中...',
     writingHelperClearDraft: '清空草稿',
     writingHelperFailed: '处理失败',
+    writingHelperInsertToEditor: '插入到编辑器',
+
+    // Style Settings
+    styleSettingsTitle: '风格设置',
+    styleTone: '情感基调',
+    styleToneWarm: '温暖',
+    styleToneFormal: '正式',
+    styleToneCasual: '随性',
+    styleToneHumorous: '幽默',
+    styleToneSerious: '严肃',
+    styleToneMelancholic: '忧郁',
+    styleFormality: '正式程度',
+    styleEmotion: '情感强度',
+    styleCreativity: '创意度',
+    stylePerspective: '叙事视角',
+    stylePerspectiveFirst: '第一人称',
+    stylePerspectiveThird: '第三人称',
+    stylePerspectiveSecond: '第二人称',
+    stylePerspectiveOmniscient: '全知视角',
+    styleSentence: '句式风格',
+    styleSentenceConcise: '简洁',
+    styleSentenceFlowing: '流畅',
+    styleSentenceVaried: '多变',
+    styleSentenceComplex: '复杂',
+    styleRhythmLabel: '节奏',
+    styleRhythmBrisk: '明快',
+    styleRhythmModerate: '适中',
+    styleRhythmLeisurely: '舒缓',
+    styleNarrativeDistance: '叙事距离',
+
+    // Style sub-property labels
+    styleAdvancedTitle: '高级风格设置',
+    styleStructure: '结构',
+    styleParagraphLength: '段落长度',
+    styleParagraphShort: '短段落',
+    styleParagraphMedium: '中等段落',
+    styleParagraphLong: '长段落',
+    styleParagraphVaried: '多变长度',
+    styleTransition: '过渡风格',
+    styleTransitionSmooth: '平滑',
+    styleTransitionDirect: '直接',
+    styleTransitionDramatic: '戏剧化',
+    styleTransitionSubtle: '含蓄',
+    styleHierarchy: '层次模式',
+    styleHierarchyFlat: '扁平',
+    styleHierarchyNested: '嵌套',
+    styleHierarchyParallel: '并列',
+    styleHierarchyProgressive: '递进',
+    styleEmotionExpression: '表达风格',
+    styleEmotionImplicit: '含蓄',
+    styleEmotionExplicit: '外露',
+    styleEmotionRestrained: '克制',
+    styleEmotionPassionate: '热烈',
+    styleThinkingLogic: '思维逻辑',
+    styleThinkingDeductive: '演绎',
+    styleThinkingInductive: '归纳',
+    styleThinkingAnalogical: '类比',
+    styleThinkingDialectical: '辩证',
+    styleThinkingDepth: '思维深度',
+    styleThinkingRhythm: '思维节奏',
+    styleThinkingMethodical: '条理',
+    styleThinkingExploratory: '探索',
+    styleThinkingRapid: '快速',
+    styleThinkingContemplative: '沉思',
+    styleNarrativeTime: '时间序列',
+    styleNarrativeTimeLinear: '线性',
+    styleNarrativeTimeFlashback: '倒叙',
+    styleNarrativeTimeInterleaved: '交错',
+    styleNarrativeTimeCircular: '环形',
+    styleNarrativeAttitude: '叙述态度',
+    styleNarrativeObjective: '客观',
+    styleNarrativeSympathetic: '同情',
+    styleNarrativeCritical: '批判',
+    styleNarrativeDetached: '疏离',
+    styleRhythmSyllable: '音节模式',
+    styleRhythmSyllableDense: '密集',
+    styleRhythmSyllableBalanced: '平衡',
+    styleRhythmSyllableSparse: '稀疏',
+    styleRhythmSyllableFree: '自由',
+    styleRhythmPause: '停顿模式',
+    styleRhythmPauseFrequent: '频繁',
+    styleRhythmPauseModerate: '适中',
+    styleRhythmPauseMinimal: '极简',
+    styleRhythmTempo: '速度',
+    styleRhythmTempoFast: '快速',
+    styleRhythmTempoModerate: '适中',
+    styleRhythmTempoSlow: '缓慢',
+    styleRhythmTempoVaried: '多变',
+    styleTagAdd: '添加',
+    styleTagPlaceholder: '输入后回车添加...',
+    styleSignaturePhrases: '标志性短语',
+    styleImagerySystem: '意象系统',
+    styleAllusions: '典故',
+    styleKnowledgeDomains: '知识领域',
+    styleVocabularyPreferred: '偏好词汇',
+    styleVocabularyAvoid: '避免词汇',
+    styleUniqueness: '独特性',
+    optimizerTwoStepMode: '两步分析模式',
+    optimizerTwoStepAnalysis: '先分析AI特征，再基于诊断改写',
+
+    // AI Text Optimizer
+    optimizerTitle: 'AI 文本优化器',
+    optimizerBadge: 'AI检测规避',
+    optimizerPresetLabel: '优化模式',
+    optimizerPresetHumanize: '人类写作特征优化',
+    optimizerPresetHumanizeDesc: '去除AI特征，优化困惑度和突发性，使文本更自然',
+    optimizerPresetAiGuide: 'AI修改指导',
+    optimizerPresetAiGuideDesc: '分析AI痕迹并给出针对性修改建议和优化文本',
+    optimizerPresetCharacter: '角色化叙事重构',
+    optimizerPresetCharacterDesc: '以特定角色视角改写文本，消除AI模式化痕迹',
+    optimizerPresetLiterary: '文学散文深度优化',
+    optimizerPresetLiteraryDesc: '在保留艺术价值的前提下，进行深度文学性优化',
+    optimizerPresetCustom: '自定义指令',
+    optimizerPresetCustomDesc: '使用自定义洗稿指令，满足个性化需求',
+    optimizerCustomInstruction: '自定义指令',
+    optimizerInputText: '待优化文本',
+    optimizerInputPlaceholder: '粘贴需要优化的AI生成文本...',
+    optimizerRun: '开始优化',
+    optimizerRunning: '优化中...',
+    optimizerFailed: '优化失败',
+    optimizerResultTitle: '优化结果',
+    optimizerFeaturePerplexity: '困惑度优化',
+    optimizerFeatureBurstiness: '突发性优化',
+    optimizerFeatureDetection: '检测对抗',
+    optimizerFeatureNatural: '自然语言',
+    sidebarTextOptimizer: 'AI 文本优化',
+
     uiSettings: '界面设置',
     theme: '主题',
     themeLight: '浅色',
     themeDark: '深色',
     themeSystem: '跟随系统',
+    themeSorbet: 'Sorbet',
+    themeSlate: 'Slate',
+    themeAmber: 'Amber',
+    themeForest: 'Forest',
+    themeCharcoal: 'Charcoal',
+    themeCauldron: 'Cauldron',
+    themeAurora: 'Aurora',
+    themeMoonbeam: 'Moonbeam',
+    themeSepia: 'Sepia',
     fontSize: '字体大小',
     fontSmall: '小',
     fontMedium: '中',
@@ -1077,6 +1444,40 @@ export const translations: Record<Language, Translations> = {
     editorCharCount: '字符',
     editorReadingTime: '约 {min} 分钟阅读',
     editorAutoSaved: '已保存',
+    editorPlaceholder: '输入 / 唤出 AI 命令，或直接开始写作...',
+    editorAiGenerating: 'AI 生成中...',
+    editorAiCancel: '取消',
+    editorCmdGenerate: 'AI 生成段落',
+    editorCmdGenerateDesc: '根据上下文生成一段文本',
+    editorCmdContinue: 'AI 续写',
+    editorCmdContinueDesc: '从当前位置继续写作',
+    editorCmdFullArticle: 'AI 生成文章',
+    editorCmdFullArticleDesc: '生成一篇完整文章',
+    editorCmdHeading1: '标题 1',
+    editorCmdHeading1Desc: '大标题',
+    editorCmdHeading2: '标题 2',
+    editorCmdHeading2Desc: '中标题',
+    editorCmdHeading3: '标题 3',
+    editorCmdHeading3Desc: '小标题',
+    editorCmdBulletList: '无序列表',
+    editorCmdBulletListDesc: '创建无序列表',
+    editorCmdOrderedList: '有序列表',
+    editorCmdOrderedListDesc: '创建有序列表',
+    editorCmdBlockquote: '引用',
+    editorCmdBlockquoteDesc: '插入引用块',
+    editorCmdCodeBlock: '代码块',
+    editorCmdCodeBlockDesc: '插入代码块',
+    editorCmdHorizontalRule: '分割线',
+    editorCmdHorizontalRuleDesc: '插入水平分割线',
+    editorBubbleRewrite: 'AI 改写',
+    editorBubblePolish: '润色',
+    editorBubbleSimplify: '简化',
+    editorBubbleExpand: '扩写',
+    editorBubbleFormal: '正式化',
+    editorBubbleCasual: '口语化',
+    editorBubbleContinue: '续写',
+    exportMarkdown: '导出 Markdown',
+    exportHtml: '导出 HTML',
   },
   en: {
     // App
@@ -1331,6 +1732,35 @@ export const translations: Record<Language, Translations> = {
     // Sidebar
     sidebarToggleExpand: 'Expand sidebar',
     sidebarToggleCollapse: 'Collapse sidebar',
+    chatSidebarToggleExpand: 'Expand chat panel',
+    chatSidebarToggleCollapse: 'Collapse chat panel',
+    storyBibleTitle: 'Story Bible',
+    storyBibleDesc: 'Track the key details of your story\'s world to improve AI suggestions, or fill it step-by-step to grow your idea into a first draft.',
+    storyBibleBraindump: 'Braindump',
+    storyBibleBraindumpHint: 'Write down everything you know about the story — plot, characters, worldbuilding, themes, anything!',
+    storyBibleGenre: 'Genre',
+    storyBibleGenrePlaceholder: 'Enter genres, e.g.: Fantasy, Romance, Mystery...',
+    storyBibleSynopsis: 'Synopsis',
+    storyBibleSynopsisPlaceholder: 'Introduce the characters, their goals, and the central conflict, while conveying the story\'s tone and unique elements...',
+    storyBibleCharacters: 'Characters',
+    storyBibleWorldbuilding: 'Worldbuilding',
+    storyBibleOutline: 'Novel Outline',
+    storyBibleStyleTitle: 'Writing Style',
+    storyBibleStyleTried: 'Tried and True',
+    storyBibleStyleTriedDesc: 'Proven writing styles',
+    storyBibleStyleMatchMy: 'Match My Style',
+    storyBibleStyleMatchMyDesc: 'Analyze your writing style',
+    storyBibleStyleSoundsLike: 'Sounds Like You',
+    storyBibleStyleSoundsLikeDesc: 'Mimic a specific author\'s style',
+    storyBibleStyleCustom: 'Custom',
+    storyBibleStyleCustomDesc: 'Full control over your style',
+    storyBibleGenerate: 'Generate',
+    storyBibleEmpty: 'No items yet',
+    storyBibleLoading: 'Loading...',
+    aiToolWrite: 'Write',
+    aiToolRewrite: 'Rewrite',
+    aiToolDescribe: 'Describe',
+    aiToolBrainstorm: 'Brainstorm',
     sidebarWritingHelper: 'Writing Helper',
     sidebarMcpStatus: 'MCP Status',
     sidebarEvaluationPanel: 'Evaluation Panel',
@@ -1453,11 +1883,147 @@ export const translations: Record<Language, Translations> = {
     writingHelperRunning: 'Processing...',
     writingHelperClearDraft: 'Clear Draft',
     writingHelperFailed: 'Processing failed',
+    writingHelperInsertToEditor: 'Insert to Editor',
+
+    // Style Settings
+    styleSettingsTitle: 'Style Settings',
+    styleTone: 'Tone',
+    styleToneWarm: 'Warm',
+    styleToneFormal: 'Formal',
+    styleToneCasual: 'Casual',
+    styleToneHumorous: 'Humorous',
+    styleToneSerious: 'Serious',
+    styleToneMelancholic: 'Melancholic',
+    styleFormality: 'Formality',
+    styleEmotion: 'Emotion',
+    styleCreativity: 'Creativity',
+    stylePerspective: 'Perspective',
+    stylePerspectiveFirst: '1st Person',
+    stylePerspectiveThird: '3rd Person',
+    stylePerspectiveSecond: '2nd Person',
+    stylePerspectiveOmniscient: 'Omniscient',
+    styleSentence: 'Sentence Style',
+    styleSentenceConcise: 'Concise',
+    styleSentenceFlowing: 'Flowing',
+    styleSentenceVaried: 'Varied',
+    styleSentenceComplex: 'Complex',
+    styleRhythmLabel: 'Rhythm',
+    styleRhythmBrisk: 'Brisk',
+    styleRhythmModerate: 'Moderate',
+    styleRhythmLeisurely: 'Leisurely',
+    styleNarrativeDistance: 'Narrative Distance',
+
+    // Style sub-property labels
+    styleAdvancedTitle: 'Advanced Style Settings',
+    styleStructure: 'Structure',
+    styleParagraphLength: 'Paragraph Length',
+    styleParagraphShort: 'Short',
+    styleParagraphMedium: 'Medium',
+    styleParagraphLong: 'Long',
+    styleParagraphVaried: 'Varied',
+    styleTransition: 'Transition',
+    styleTransitionSmooth: 'Smooth',
+    styleTransitionDirect: 'Direct',
+    styleTransitionDramatic: 'Dramatic',
+    styleTransitionSubtle: 'Subtle',
+    styleHierarchy: 'Hierarchy',
+    styleHierarchyFlat: 'Flat',
+    styleHierarchyNested: 'Nested',
+    styleHierarchyParallel: 'Parallel',
+    styleHierarchyProgressive: 'Progressive',
+    styleEmotionExpression: 'Expression',
+    styleEmotionImplicit: 'Implicit',
+    styleEmotionExplicit: 'Explicit',
+    styleEmotionRestrained: 'Restrained',
+    styleEmotionPassionate: 'Passionate',
+    styleThinkingLogic: 'Logic Pattern',
+    styleThinkingDeductive: 'Deductive',
+    styleThinkingInductive: 'Inductive',
+    styleThinkingAnalogical: 'Analogical',
+    styleThinkingDialectical: 'Dialectical',
+    styleThinkingDepth: 'Thinking Depth',
+    styleThinkingRhythm: 'Thinking Rhythm',
+    styleThinkingMethodical: 'Methodical',
+    styleThinkingExploratory: 'Exploratory',
+    styleThinkingRapid: 'Rapid',
+    styleThinkingContemplative: 'Contemplative',
+    styleNarrativeTime: 'Time Sequence',
+    styleNarrativeTimeLinear: 'Linear',
+    styleNarrativeTimeFlashback: 'Flashback',
+    styleNarrativeTimeInterleaved: 'Interleaved',
+    styleNarrativeTimeCircular: 'Circular',
+    styleNarrativeAttitude: 'Narrator Attitude',
+    styleNarrativeObjective: 'Objective',
+    styleNarrativeSympathetic: 'Sympathetic',
+    styleNarrativeCritical: 'Critical',
+    styleNarrativeDetached: 'Detached',
+    styleRhythmSyllable: 'Syllable Pattern',
+    styleRhythmSyllableDense: 'Dense',
+    styleRhythmSyllableBalanced: 'Balanced',
+    styleRhythmSyllableSparse: 'Sparse',
+    styleRhythmSyllableFree: 'Free',
+    styleRhythmPause: 'Pause Pattern',
+    styleRhythmPauseFrequent: 'Frequent',
+    styleRhythmPauseModerate: 'Moderate',
+    styleRhythmPauseMinimal: 'Minimal',
+    styleRhythmTempo: 'Tempo',
+    styleRhythmTempoFast: 'Fast',
+    styleRhythmTempoModerate: 'Moderate',
+    styleRhythmTempoSlow: 'Slow',
+    styleRhythmTempoVaried: 'Varied',
+    styleTagAdd: 'Add',
+    styleTagPlaceholder: 'Type and press Enter...',
+    styleSignaturePhrases: 'Signature Phrases',
+    styleImagerySystem: 'Imagery System',
+    styleAllusions: 'Allusions',
+    styleKnowledgeDomains: 'Knowledge Domains',
+    styleVocabularyPreferred: 'Preferred Words',
+    styleVocabularyAvoid: 'Avoid Words',
+    styleUniqueness: 'Uniqueness',
+    optimizerTwoStepMode: 'Two-Step Analysis',
+    optimizerTwoStepAnalysis: 'Analyze AI traits first, then rewrite based on diagnosis',
+
+    // AI Text Optimizer
+    optimizerTitle: 'AI Text Optimizer',
+    optimizerBadge: 'Detection Evasion',
+    optimizerPresetLabel: 'Optimization Mode',
+    optimizerPresetHumanize: 'Humanize',
+    optimizerPresetHumanizeDesc: 'Remove AI traits, optimize perplexity & burstiness for natural text',
+    optimizerPresetAiGuide: 'AI Modification Guide',
+    optimizerPresetAiGuideDesc: 'Analyze AI traces and provide targeted modification suggestions',
+    optimizerPresetCharacter: 'Character Narrative',
+    optimizerPresetCharacterDesc: 'Rewrite from a specific character perspective to eliminate AI patterns',
+    optimizerPresetLiterary: 'Literary Polish',
+    optimizerPresetLiteraryDesc: 'Deep literary optimization while preserving artistic value',
+    optimizerPresetCustom: 'Custom',
+    optimizerPresetCustomDesc: 'Use custom rewriting instructions for personalized results',
+    optimizerCustomInstruction: 'Custom Instruction',
+    optimizerInputText: 'Text to Optimize',
+    optimizerInputPlaceholder: 'Paste AI-generated text to optimize...',
+    optimizerRun: 'Optimize',
+    optimizerRunning: 'Optimizing...',
+    optimizerFailed: 'Optimization failed',
+    optimizerResultTitle: 'Optimized Result',
+    optimizerFeaturePerplexity: 'Perplexity',
+    optimizerFeatureBurstiness: 'Burstiness',
+    optimizerFeatureDetection: 'Anti-Detection',
+    optimizerFeatureNatural: 'Natural Language',
+    sidebarTextOptimizer: 'Text Optimizer',
+
     uiSettings: 'UI Settings',
     theme: 'Theme',
     themeLight: 'Light',
     themeDark: 'Dark',
     themeSystem: 'System',
+    themeSorbet: 'Sorbet',
+    themeSlate: 'Slate',
+    themeAmber: 'Amber',
+    themeForest: 'Forest',
+    themeCharcoal: 'Charcoal',
+    themeCauldron: 'Cauldron',
+    themeAurora: 'Aurora',
+    themeMoonbeam: 'Moonbeam',
+    themeSepia: 'Sepia',
     fontSize: 'Font Size',
     fontSmall: 'Small',
     fontMedium: 'Medium',
@@ -1615,5 +2181,39 @@ export const translations: Record<Language, Translations> = {
     editorCharCount: 'Chars',
     editorReadingTime: '~{min} min read',
     editorAutoSaved: 'Saved',
+    editorPlaceholder: 'Type / for AI commands, or just start writing...',
+    editorAiGenerating: 'AI generating...',
+    editorAiCancel: 'Cancel',
+    editorCmdGenerate: 'AI Generate',
+    editorCmdGenerateDesc: 'Generate text based on context',
+    editorCmdContinue: 'AI Continue',
+    editorCmdContinueDesc: 'Continue writing from cursor',
+    editorCmdFullArticle: 'AI Full Article',
+    editorCmdFullArticleDesc: 'Generate a complete article',
+    editorCmdHeading1: 'Heading 1',
+    editorCmdHeading1Desc: 'Large heading',
+    editorCmdHeading2: 'Heading 2',
+    editorCmdHeading2Desc: 'Medium heading',
+    editorCmdHeading3: 'Heading 3',
+    editorCmdHeading3Desc: 'Small heading',
+    editorCmdBulletList: 'Bullet List',
+    editorCmdBulletListDesc: 'Create a bullet list',
+    editorCmdOrderedList: 'Ordered List',
+    editorCmdOrderedListDesc: 'Create an ordered list',
+    editorCmdBlockquote: 'Blockquote',
+    editorCmdBlockquoteDesc: 'Insert a blockquote',
+    editorCmdCodeBlock: 'Code Block',
+    editorCmdCodeBlockDesc: 'Insert a code block',
+    editorCmdHorizontalRule: 'Divider',
+    editorCmdHorizontalRuleDesc: 'Insert a horizontal rule',
+    editorBubbleRewrite: 'AI Rewrite',
+    editorBubblePolish: 'Polish',
+    editorBubbleSimplify: 'Simplify',
+    editorBubbleExpand: 'Expand',
+    editorBubbleFormal: 'Formal',
+    editorBubbleCasual: 'Casual',
+    editorBubbleContinue: 'Continue',
+    exportMarkdown: 'Export Markdown',
+    exportHtml: 'Export HTML',
   },
 }

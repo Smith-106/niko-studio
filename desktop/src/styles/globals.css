@@ -11,6 +11,35 @@
   --color-border: #e2e8f0;
   --color-primary: #4f46e5;
   --focus-ring: 0 0 0 2px rgba(79, 70, 229, 0.45);
+
+  /* Design Tokens — Light (Sorbet) */
+  --primary-cta: #4808d1;
+  --primary-cta-hover: #6530d8;
+  --primary-cta-active: #7240dd;
+  --grey-0: #f8fafc;
+  --grey-1: #e2e8f0;
+  --grey-2: #94a3b8;
+  --grey-3: #64748b;
+  --grey-4: #334155;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --surface-base: #f8fafc;
+  --surface-elevated: #ffffff;
+  --surface-sunken: #f1f5f9;
+  --document-background: #ffffff;
+  --document-canvas: #f8fafc;
+  --border-default: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --shadow-tiny: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-default: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card: 0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-pill: 20px;
+  --sidebar-bg: #f8fafc;
+  --sidebar-text: #0f172a;
+  --sidebar-text-secondary: #64748b;
 }
 
 .dark {
@@ -18,6 +47,35 @@
   --color-surface: #1e293b;
   --color-text: #f8fafc;
   --color-border: #334155;
+
+  /* Design Tokens — Dark (Aurora/Charcoal) */
+  --primary-cta: #6366f1;
+  --primary-cta-hover: #818cf8;
+  --primary-cta-active: #4808d1;
+  --grey-0: #0f172a;
+  --grey-1: #1e293b;
+  --grey-2: #334155;
+  --grey-3: #475569;
+  --grey-4: #64748b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --surface-base: #0f172a;
+  --surface-elevated: #1e293b;
+  --surface-sunken: #0f172a;
+  --document-background: #1a1a1a;
+  --document-canvas: #0f0f0f;
+  --border-default: #334155;
+  --border-subtle: #1e293b;
+  --shadow-tiny: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-default: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-card: 0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-pill: 20px;
+  --sidebar-bg: #0f172a;
+  --sidebar-text: #f8fafc;
+  --sidebar-text-secondary: #94a3b8;
 }
 
 body {
@@ -188,4 +246,162 @@ select:disabled {
 
 .animate-pulse-subtle {
   animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── TipTap Editor Styles ──────────────────────────────────── */
+
+.niko-editor-content .ProseMirror {
+  outline: none;
+  min-height: 60vh;
+  max-width: 680px;
+  margin: 0 auto;
+  font-family: var(--font-serif, "Merriweather", "Lora", serif);
+  font-size: 1.125rem;
+  line-height: 1.8;
+  padding: 2rem 1rem;
+}
+
+.niko-editor-content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #94a3b8;
+  pointer-events: none;
+  height: 0;
+}
+
+.dark .niko-editor-content .ProseMirror p.is-editor-empty:first-child::before {
+  color: #475569;
+}
+
+/* Headings */
+.niko-editor-content .ProseMirror h1 {
+  font-size: 2.2em;
+  font-weight: 700;
+  margin-top: 2em;
+  margin-bottom: 0.8em;
+  line-height: 1.3;
+  font-family: var(--font-sans, "Inter", sans-serif);
+}
+
+.niko-editor-content .ProseMirror h2 {
+  font-size: 1.6em;
+  font-weight: 600;
+  margin-top: 1.8em;
+  margin-bottom: 0.6em;
+  line-height: 1.35;
+  font-family: var(--font-sans, "Inter", sans-serif);
+}
+
+.niko-editor-content .ProseMirror h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.3em;
+  line-height: 1.4;
+}
+
+/* Lists */
+.niko-editor-content .ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.niko-editor-content .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.niko-editor-content .ProseMirror li {
+  margin: 0.25em 0;
+}
+
+.niko-editor-content .ProseMirror li p {
+  margin: 0;
+}
+
+/* Blockquote */
+.niko-editor-content .ProseMirror blockquote {
+  border-left: 3px solid #a5b4fc;
+  padding-left: 1em;
+  margin: 0.75em 0;
+  color: #64748b;
+  font-style: italic;
+}
+
+.dark .niko-editor-content .ProseMirror blockquote {
+  border-left-color: #6366f1;
+  color: #94a3b8;
+}
+
+/* Code Block */
+.niko-editor-content .ProseMirror pre {
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 1em;
+  margin: 0.75em 0;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.875em;
+  overflow-x: auto;
+}
+
+.dark .niko-editor-content .ProseMirror pre {
+  background: #1e293b;
+}
+
+.niko-editor-content .ProseMirror code {
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.875em;
+}
+
+.dark .niko-editor-content .ProseMirror code {
+  background: #1e293b;
+}
+
+.niko-editor-content .ProseMirror pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Horizontal Rule */
+.niko-editor-content .ProseMirror hr {
+  border: none;
+  border-top: 2px solid #e2e8f0;
+  margin: 1.5em 0;
+}
+
+.dark .niko-editor-content .ProseMirror hr {
+  border-top-color: #334155;
+}
+
+/* Paragraphs */
+.niko-editor-content .ProseMirror p {
+  margin: 0.4em 0;
+}
+
+/* Bold, Italic, Strike */
+.niko-editor-content .ProseMirror strong {
+  font-weight: 700;
+}
+
+.niko-editor-content .ProseMirror em {
+  font-style: italic;
+}
+
+.niko-editor-content .ProseMirror s {
+  text-decoration: line-through;
+}
+
+/* Selection */
+.niko-editor-content .ProseMirror ::selection {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.dark .niko-editor-content .ProseMirror ::selection {
+  background: rgba(99, 102, 241, 0.3);
 }

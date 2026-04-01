@@ -79,6 +79,9 @@ export interface LegacyPolishRequest {
   llmApiKey?: string
   model?: string
   polishType?: LegacyPolishType
+  api_key?: string
+  base_url?: string
+  provider?: string
 }
 
 export interface LegacyPolishResponse {
@@ -95,6 +98,10 @@ export interface WritingHelperRequest {
   max_items?: number
   instruction?: string
   detection_evasion_guard_enabled?: boolean
+  api_key?: string
+  base_url?: string
+  model?: string
+  provider?: string
 }
 
 export interface WritingHelperResponse {
@@ -480,6 +487,69 @@ export async function processWritingHelper(
   return callApi('/writing-helper/process', 'POST', payload as unknown as Record<string, unknown>)
 }
 
+export interface StreamWritingHelperRequest {
+  content: string
+  mode?: string
+  instruction?: string
+  model?: string
+  provider?: string
+  api_key?: string
+  base_url?: string
+}
+
+export async function streamWritingHelper(
+  payload: StreamWritingHelperRequest,
+  callbacks: {
+    onContent: (chunk: string, index: number) => void
+    onDone: () => void
+    onError: (error: string) => void
+  },
+  options?: { signal?: AbortSignal }
+): Promise<void> {
+  const base = isTauri ? await getRuntimeGatewayBase() : getResolvedApiBase()
+  const url = `${base}/writing/stream`
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify(payload),
+      signal: options?.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`)
+    }
+
+    const data = await response.json() as {
+      streaming?: boolean
+      events?: Array<{ event: string; data: Record<string, unknown> }>
+    }
+
+    if (data.events) {
+      for (const evt of data.events) {
+        if (evt.event === 'content' && evt.data) {
+          callbacks.onContent(
+            evt.data.chunk as string,
+            evt.data.index as number,
+          )
+        } else if (evt.event === 'done') {
+          callbacks.onDone()
+        } else if (evt.event === 'error') {
+          callbacks.onError(evt.data.error as string)
+        }
+      }
+    }
+  } catch (err) {
+    if ((err as Error).name !== 'AbortError') {
+      callbacks.onError(err instanceof Error ? err.message : String(err))
+    }
+  }
+}
+
 function mapPolishTypeToInstruction(polishType?: LegacyPolishType): string {
   switch (polishType) {
     case 'academic':
@@ -555,6 +625,10 @@ export async function polishContentCompat(request: LegacyPolishRequest): Promise
     mode: 'polish',
     instruction: mapPolishTypeToInstruction(request.polishType),
     detection_evasion_guard_enabled: true,
+    api_key: request.api_key,
+    base_url: request.base_url,
+    model: request.model,
+    provider: request.provider,
   })
 
   if (!response.success || !response.data) {
