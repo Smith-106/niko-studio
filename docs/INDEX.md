@@ -20,6 +20,7 @@ Niko-Studio 文档目录
 |------|------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献指南 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
+| [niko-studio-writing-workflow.md](niko-studio-writing-workflow.md) | Niko-Studio Writing Workflow Explorer（工作台导览） |
 | [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md) | 发布流程、发布级别矩阵（internal / external）与 Go/No-Go 条件 |
 | [operations/ROLLBACK.md](operations/ROLLBACK.md) | 回退触发条件、external 回退验证与操作手册 |
 
