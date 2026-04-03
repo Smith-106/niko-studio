@@ -83,7 +83,8 @@
       "mcp__chrome-devtools__get_console_message",
       "mcp__chrome-devtools__select_page",
       "mcp__chrome-devtools__type_text",
-      "mcp__chrome-devtools__press_key"
+      "mcp__chrome-devtools__press_key",
+      "WebFetch(domain:ccw-command-explorer.vercel.app)"
     ]
   },
   "hooks": {
