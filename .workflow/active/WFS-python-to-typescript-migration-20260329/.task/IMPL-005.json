@@ -1,0 +1,301 @@
+{
+  "id": "IMPL-005",
+  "title": "Phase 1: Migrate Core Infrastructure - ServiceContainer to TypeScript DI",
+  "description": "Migrate Python ServiceContainer to TypeScript using InversifyJS or tsyringe dependency injection framework. This is the foundation for all subsequent migrations, enabling dependency injection pattern in TypeScript. Must be completed after pre-migration refactoring (IMPL-001 to IMPL-004).",
+  "status": "completed",
+  "type": "feature",
+  "scope": "src-ts/container/",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-001",
+    "IMPL-002",
+    "IMPL-003",
+    "IMPL-004"
+  ],
+  "focus_paths": [
+    "src/container.py",
+    "src-ts/container/",
+    "tsconfig.json",
+    "package.json"
+  ],
+  "convergence": {
+    "criteria": [
+      "1 TypeScript DI container created at src-ts/container/ServiceContainer.ts",
+      "Container supports lazy initialization pattern (properties with getters)",
+      "Container supports mock injection for testing (registerMock method)",
+      "Container supports async initialization with Promise-based pattern",
+      "Container registers 10+ core services: MemoryEngine, GraphEngine, SearchEngine, WorkflowEngine, AgentFactory, BackupManager, TokenService, ObsidianService, Reranker, MCPGateway",
+      "50+ unit tests created with vitest covering all container features",
+      "Python backend remains functional during migration (dual runtime)"
+    ],
+    "verification": "cd src-ts && npm test && ts-node -e \"import { ServiceContainer } from './container/ServiceContainer'; const c = new ServiceContainer(); console.log('OK');\"",
+    "definition_of_done": "TypeScript DI container fully functional, enabling subsequent service migrations"
+  },
+  "files": [
+    {
+      "path": "src-ts/container/ServiceContainer.ts",
+      "action": "create",
+      "change": "TypeScript DI container with lazy initialization, mock injection, async init (200 lines)"
+    },
+    {
+      "path": "src-ts/container/types.ts",
+      "action": "create",
+      "change": "TypeScript interfaces for all services (150 lines)"
+    },
+    {
+      "path": "src-ts/container/ContainerModule.ts",
+      "action": "create",
+      "change": "InversifyJS module for service registration (100 lines)"
+    },
+    {
+      "path": "src-ts/tests/container/ServiceContainer.test.ts",
+      "action": "create",
+      "change": "Vitest tests for container functionality (300 lines)"
+    },
+    {
+      "path": "package.json",
+      "action": "modify",
+      "change": "Add inversify, reflect-metadata, tsyringe dependencies"
+    },
+    {
+      "path": "tsconfig.json",
+      "action": "modify",
+      "change": "Add decorator support for DI framework"
+    },
+    {
+      "path": "src-ts/index.ts",
+      "action": "modify",
+      "change": "Export ServiceContainer and types"
+    }
+  ],
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Select and configure DI framework",
+      "description": "Choose between InversifyJS and tsyringe, configure TypeScript for decorators",
+      "modification_points": [
+        "Add inversify and reflect-metadata to package.json",
+        "Add inversify-binding-decorators for convenience",
+        "Update tsconfig.json with experimentalDecorators: true, emitDecoratorMetadata: true",
+        "Add reflect-metadata import in entry point"
+      ],
+      "logic_flow": [
+        "Evaluate InversifyJS vs tsyringe: InversifyJS has more features, tsyringe is simpler",
+        "Choose InversifyJS for production-grade DI with lazy loading support",
+        "Add dependencies: npm install inversify reflect-metadata inversify-binding-decorators",
+        "Update tsconfig.json compiler options",
+        "Create src-ts/container/ directory structure"
+      ],
+      "depends_on": [],
+      "output": "di_framework_configured"
+    },
+    {
+      "step": 2,
+      "title": "Define TypeScript service interfaces",
+      "description": "Create TypeScript interfaces for all services that will be registered in container",
+      "modification_points": [
+        "Create src-ts/container/types.ts with 10+ service interfaces (150 lines)",
+        "Define IMemoryEngine, IGraphEngine, ISearchEngine interfaces",
+        "Define IWorkflowEngine, IAgentFactory, IBackupManager interfaces",
+        "Define ITokenService, IObsidianService, IReranker, IMCPGateway interfaces",
+        "Use TypeScript interface inheritance patterns"
+      ],
+      "logic_flow": [
+        "Analyze Python ServiceContainer properties to identify services",
+        "Define interface for each service with method signatures",
+        "Use TypeScript 'interface' keyword for structural typing",
+        "Add Symbol identifiers for InversifyJS injection tokens",
+        "Document each interface with JSDoc comments"
+      ],
+      "depends_on": [
+        1
+      ],
+      "output": "service_interfaces_defined"
+    },
+    {
+      "step": 3,
+      "title": "Implement ServiceContainer with lazy initialization",
+      "description": "Create TypeScript ServiceContainer with lazy initialization and async pattern",
+      "modification_points": [
+        "Create src-ts/container/ServiceContainer.ts (200 lines)",
+        "Implement lazy initialization with private _instance properties and getters",
+        "Implement registerMock() for testing",
+        "Implement async initialize() with Promise-based pattern",
+        "Support 10+ core service registrations"
+      ],
+      "logic_flow": [
+        "Import inversify Container and interfaces",
+        "Create ServiceContainer class with private container: Container",
+        "Implement private _services properties for lazy loading",
+        "Implement getters for each service with lazy initialization pattern",
+        "Add registerMock(serviceIdentifier, mock) method",
+        "Add async initialize() method for async service setup",
+        "Add reset() method for testing",
+        "Export singleton instance: export const container = new ServiceContainer()"
+      ],
+      "depends_on": [
+        2
+      ],
+      "output": "service_container_implemented"
+    },
+    {
+      "step": 4,
+      "title": "Create InversifyJS binding module",
+      "description": "Create ContainerModule with InversifyJS bindings for all services",
+      "modification_points": [
+        "Create src-ts/container/ContainerModule.ts (100 lines)",
+        "Define bindings for each service interface to implementation",
+        "Use toDynamicValue for lazy initialization",
+        "Support both singleton and transient scopes"
+      ],
+      "logic_flow": [
+        "Create ContainerModule class extending inversify ContainerModule",
+        "Define bindings using bind<T>(SERVICE_IDENTIFIER).toDynamicValue(() => ...)",
+        "Configure singleton scope for stateful services",
+        "Configure transient scope for stateless services",
+        "Export containerModule for use in ServiceContainer"
+      ],
+      "depends_on": [
+        3
+      ],
+      "output": "binding_module_created"
+    },
+    {
+      "step": 5,
+      "title": "Add comprehensive test coverage",
+      "description": "Create vitest tests for ServiceContainer covering all features",
+      "modification_points": [
+        "Create src-ts/tests/container/ServiceContainer.test.ts (300 lines)",
+        "Test lazy initialization for each service",
+        "Test mock injection functionality",
+        "Test async initialization",
+        "Test singleton behavior",
+        "Test error handling for missing services"
+      ],
+      "logic_flow": [
+        "Describe ServiceContainer test suite",
+        "Write test('lazy initialization') for each service getter",
+        "Write test('registerMock replaces service') with mock objects",
+        "Write test('async initialize completes') with async/await",
+        "Write test('singleton returns same instance') verifying instance reuse",
+        "Write test('get missing service throws error') for error cases",
+        "Run: cd src-ts && npm test",
+        "Verify 50+ tests pass"
+      ],
+      "depends_on": [
+        4
+      ],
+      "output": "tests_created"
+    },
+    {
+      "step": 6,
+      "title": "Validate integration and dual runtime",
+      "description": "Ensure TypeScript container works alongside Python backend during migration",
+      "modification_points": [
+        "Test TypeScript container in isolation",
+        "Verify no conflicts with Python backend",
+        "Document dual runtime approach",
+        "Add integration test for TypeScript-Python coexistence"
+      ],
+      "logic_flow": [
+        "Run TypeScript tests: cd src-ts && npm test",
+        "Run Python tests: python -m pytest tests/ -v",
+        "Verify both test suites pass simultaneously",
+        "Document migration approach in README",
+        "Add src-ts/tests/integration/dual-runtime.test.ts"
+      ],
+      "depends_on": [
+        5
+      ],
+      "output": "validation_complete"
+    }
+  ],
+  "pre_analysis": [
+    {
+      "step": "load_context_package",
+      "action": "Load context package for ServiceContainer patterns",
+      "commands": [
+        "Read(.workflow/active/WFS-python-to-typescript-migration-20260329/.process/context-package.json)"
+      ],
+      "output_to": "context_package",
+      "on_error": "fail"
+    },
+    {
+      "step": "analyze_python_container",
+      "action": "Analyze Python ServiceContainer implementation patterns",
+      "commands": [
+        "Read(src/container.py)"
+      ],
+      "output_to": "container_patterns"
+    },
+    {
+      "step": "research_di_frameworks",
+      "action": "Research InversifyJS and tsyringe capabilities for lazy initialization",
+      "commands": [
+        "mcp__exa__get_code_context_exa(query=\"InversifyJS lazy initialization dependency injection TypeScript\", tokensNum=3000)",
+        "mcp__exa__get_code_context_exa(query=\"tsyringe dependency injection TypeScript singleton\", tokensNum=2000)"
+      ],
+      "output_to": "di_framework_comparison"
+    }
+  ],
+  "artifacts": [],
+  "inherited": {
+    "from": "IMPL-001",
+    "context": [
+      "AgentFactory pattern",
+      "ServiceContainer.get_agent() method"
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-python-to-typescript-migration-20260329/.process/context-package.json",
+  "cli_execution": {
+    "id": "WFS-python-to-typescript-migration-20260329-IMPL-005",
+    "strategy": "merge_fork",
+    "merge_from": [
+      "WFS-python-to-typescript-migration-20260329-IMPL-001",
+      "WFS-python-to-typescript-migration-20260329-IMPL-002",
+      "WFS-python-to-typescript-migration-20260329-IMPL-003",
+      "WFS-python-to-typescript-migration-20260329-IMPL-004"
+    ]
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": "phase-1-infrastructure",
+    "module": "backend",
+    "execution_config": {
+      "method": "cli",
+      "cli_tool": "gemini",
+      "enable_resume": true
+    }
+  },
+  "reference": {
+    "phase": "Phase 1: Infrastructure",
+    "rationale": "Foundation for all subsequent migrations - DI container enables TypeScript dependency injection"
+  },
+  "risks": [
+    "DI framework incompatibility with lazy initialization pattern",
+    "Performance overhead from reflection and decorators",
+    "Circular dependencies in service initialization",
+    "Test complexity for mocking DI container"
+  ],
+  "test": {
+    "framework": "vitest",
+    "coverage_target": "90%",
+    "commands": {
+      "run_tests": "cd src-ts && npm test",
+      "run_coverage": "cd src-ts && npm test -- --coverage"
+    }
+  },
+  "status_history": [
+    {
+      "from": "pending",
+      "to": "in_progress",
+      "changed_at": "2026-03-29T02:41:53+08:00"
+    },
+    {
+      "from": "in_progress",
+      "to": "completed",
+      "changed_at": "2026-03-29T03:05:01+08:00"
+    }
+  ]
+}

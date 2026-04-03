@@ -1,0 +1,80 @@
+{
+  "session_id": "WFS-python-to-typescript-migration-20260329",
+  "resolved_at": "2026-03-29T00:00:00Z",
+  "summary": {
+    "total_conflicts": 4,
+    "resolved_with_strategy": 4,
+    "custom_handling": 0,
+    "fallback_constraints": 0
+  },
+  "resolved_conflicts": [
+    {
+      "conflict_id": "ARCH-001",
+      "strategy_name": "预迁移 DI 重构",
+      "strategy_approach": "在迁移到 TypeScript 之前，先在 Python 代码中重构 agent 实例化，使用 ServiceContainer 的依赖注入模式。创建 AgentFactory 并将其注册到容器中，使 workflow levels 通过容器获取 agents 而不是直接实例化。",
+      "clarifications": [],
+      "modifications_applied": []
+    },
+    {
+      "conflict_id": "ARCH-002",
+      "strategy_name": "分层依赖注入",
+      "strategy_approach": "将 WorkflowLevels 与具体的 Agent 实现解耦。定义 Agent 接口（Protocol），通过 ServiceContainer 注入具体的 Agent 实现。这样在迁移到 TypeScript 时可以使用 InversifyJS 或 tsyringe 实现相同的 DI 模式。",
+      "clarifications": [],
+      "modifications_applied": []
+    },
+    {
+      "conflict_id": "ARCH-003",
+      "strategy_name": "搜索层抽象接口",
+      "strategy_approach": "在 memory 和 search 层之间引入抽象接口层。定义 SearchInterface 和 MemoryInterface，使 memory 层不直接依赖具体的 search 实现。迁移到 TypeScript 时可以用接口继承实现相同的解耦。",
+      "clarifications": [],
+      "modifications_applied": []
+    },
+    {
+      "conflict_id": "ARCH-004",
+      "strategy_name": "共享协议提取",
+      "strategy_approach": "从 services 层提取共享的 protocols 到独立的 protocols 模块。定义 LLMProtocol、EmbeddingProtocol、SearchProtocol 等接口，使 services 和 agents 都依赖抽象接口而非具体实现。",
+      "clarifications": [],
+      "modifications_applied": []
+    }
+  ],
+  "custom_conflicts": [],
+  "planning_constraints": [
+    {
+      "source": "conflict-resolution",
+      "conflict_id": "ARCH-001",
+      "target_file": "src/container.py",
+      "section": "agent_instantiation",
+      "change_type": "refactor",
+      "content": "Add AgentFactory to ServiceContainer with lazy initialization",
+      "rationale": "解耦 agent 实例化，为 TypeScript DI 迁移做准备"
+    },
+    {
+      "source": "conflict-resolution",
+      "conflict_id": "ARCH-002",
+      "target_file": "src/workflow/levels.py",
+      "section": "workflow_levels",
+      "change_type": "refactor",
+      "content": "Use container.get_agent() instead of direct instantiation",
+      "rationale": "通过 DI 获取 agents，支持未来 TypeScript DI 框架迁移"
+    },
+    {
+      "source": "conflict-resolution",
+      "conflict_id": "ARCH-003",
+      "target_file": "src/memory/",
+      "section": "memory_search_coupling",
+      "change_type": "refactor",
+      "content": "Introduce SearchInterface abstraction layer between memory and search",
+      "rationale": "解耦 memory 和 search 层，便于独立迁移"
+    },
+    {
+      "source": "conflict-resolution",
+      "conflict_id": "ARCH-004",
+      "target_file": "src/protocols/",
+      "section": "shared_protocols",
+      "change_type": "create",
+      "content": "Extract shared protocols from services to independent module",
+      "rationale": "统一协议定义，支持 TypeScript interface 迁移"
+    }
+  ],
+  "failed_modifications": []
+}

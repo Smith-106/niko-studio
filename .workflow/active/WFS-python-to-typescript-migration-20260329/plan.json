@@ -1,0 +1,119 @@
+{
+  "summary": "大规模 Python → TypeScript 迁移 - Phase 1 (基础设施) + 预迁移重构",
+  "approach": "渐进式迁移策略：首先完成 4 个预迁移重构任务（解决架构耦合问题），然后迁移基础设施层（DI 容器和协议接口）。后续阶段将在独立 session 中执行。",
+  "task_ids": [
+    "IMPL-001",
+    "IMPL-002",
+    "IMPL-003",
+    "IMPL-004",
+    "IMPL-005",
+    "IMPL-006"
+  ],
+  "task_count": 6,
+  "complexity": "High",
+  "estimated_time": "2-3 weeks for Phase 1 (estimated 4-6 weeks for complete migration)",
+  "recommended_execution": "Sequential with parallel pre-migration",
+  "shared_context": {
+    "tech_stack": {
+      "current_python": {
+        "language": "Python 3.11+",
+        "frameworks": ["FastAPI", "LangChain", "LangGraph", "MCP", "pydantic"],
+        "testing": ["pytest", "pytest-asyncio"],
+        "build_system": "pip/uv"
+      },
+      "target_typescript": {
+        "language": "TypeScript 5.4+",
+        "frameworks": ["Fastify or NestJS or Hono (TBD)"],
+        "di_library": "InversifyJS",
+        "validation": "zod",
+        "testing": "vitest",
+        "build_system": "npm"
+      }
+    },
+    "conventions": {
+      "naming": {
+        "python": {
+          "classes": "PascalCase",
+          "functions": "snake_case",
+          "constants": "UPPER_SNAKE_CASE"
+        },
+        "typescript": {
+          "classes": "PascalCase",
+          "functions": "camelCase",
+          "constants": "UPPER_SNAKE_CASE",
+          "interfaces": "IPascalCase or PascalCase"
+        }
+      },
+      "di_pattern": "ServiceContainer with lazy loading and factory pattern → InversifyJS",
+      "testing_pattern": "pytest → vitest, module-by-module migration"
+    },
+    "architecture_constraints": [
+      "ARCH-001: Agent instantiation must use DI (resolved by IMPL-001)",
+      "ARCH-002: Workflow levels must use container.get_agent() (resolved by IMPL-002)",
+      "ARCH-003: Memory layer must be decoupled from search (resolved by IMPL-003)",
+      "ARCH-004: Shared protocols must be extracted (resolved by IMPL-004)",
+      "Dual runtime: Python backend must remain functional during migration",
+      "API compatibility: desktop app must be unaware of migration progress"
+    ],
+    "migration_phases": [
+      {
+        "phase": "Pre-Migration",
+        "tasks": ["IMPL-001", "IMPL-002", "IMPL-003", "IMPL-004"],
+        "description": "Refactoring to resolve architecture coupling issues"
+      },
+      {
+        "phase": "Phase 1: Infrastructure",
+        "tasks": ["IMPL-005", "IMPL-006"],
+        "description": "Migrate DI container and protocols"
+      },
+      {
+        "phase": "Phase 2: Services",
+        "tasks": "(Future session)",
+        "description": "Migrate services/ and search/ modules (6,006 + 3,160 lines)"
+      },
+      {
+        "phase": "Phase 3: Domain Logic",
+        "tasks": "(Future session)",
+        "description": "Migrate agents/, workflow/, narrative/ (34,382 lines total)"
+      },
+      {
+        "phase": "Phase 4: Data Layer",
+        "tasks": "(Future session)",
+        "description": "Migrate memory/, graph/, store/ (12,891 lines total)"
+      },
+      {
+        "phase": "Phase 5: Integration",
+        "tasks": "(Future session)",
+        "description": "Eliminate sidecar proxy, direct TypeScript backend"
+      }
+    ]
+  },
+  "_metadata": {
+    "timestamp": "2026-03-29T00:00:00Z",
+    "source": "action-planning-agent",
+    "planning_mode": "agent-based",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "session_id": "WFS-python-to-typescript-migration-20260329",
+    "codebase_metrics": {
+      "python_files": 202,
+      "python_lines": 75132,
+      "typescript_files": 72,
+      "typescript_lines": 16919,
+      "critical_modules": [
+        "narrative (14,985 lines)",
+        "workflow (13,890 lines)",
+        "memory (9,401 lines)",
+        "services (6,006 lines)",
+        "mcp (5,569 lines)",
+        "agents (5,507 lines)"
+      ]
+    },
+    "conflict_resolutions": [
+      "ARCH-001: 预迁移 DI 重构",
+      "ARCH-002: 分层依赖注入",
+      "ARCH-003: 搜索层抽象接口",
+      "ARCH-004: 共享协议提取"
+    ]
+  }
+}

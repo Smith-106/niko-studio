@@ -1,0 +1,304 @@
+{
+  "id": "IMPL-006",
+  "title": "Phase 1: Migrate Protocols to TypeScript Interfaces",
+  "description": "Migrate Python Protocol definitions to TypeScript interfaces, converting knowledge/services/protocols.py to TypeScript type system. This enables type-safe service contracts for the TypeScript DI container. Must be completed after IMPL-005 (TypeScript DI Container).",
+  "status": "completed",
+  "type": "feature",
+  "scope": "src-ts/protocols/",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-005"
+  ],
+  "focus_paths": [
+    "src/knowledge/services/protocols.py",
+    "src-ts/protocols/",
+    "src-ts/container/types.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "15+ TypeScript interfaces created in src-ts/protocols/",
+      "LLMProtocol, EmbeddingProtocol, AgentProtocol, ServiceProtocol migrated",
+      "SearchInterface, MemoryInterface, GraphInterface added",
+      "All interfaces have JSDoc documentation",
+      "40+ type tests created with vitest verifying protocol compliance",
+      "TypeScript strict mode passes with no 'any' types",
+      "Python protocols remain functional during migration"
+    ],
+    "verification": "cd src-ts && npm test && tsc --noEmit --strict",
+    "definition_of_done": "TypeScript protocol interfaces fully defined, enabling type-safe service contracts"
+  },
+  "files": [
+    {
+      "path": "src-ts/protocols/index.ts",
+      "action": "create",
+      "change": "Export all protocol interfaces"
+    },
+    {
+      "path": "src-ts/protocols/LLMProtocol.ts",
+      "action": "create",
+      "change": "LLM service interface with generate(), stream(), embed() methods (80 lines)"
+    },
+    {
+      "path": "src-ts/protocols/EmbeddingProtocol.ts",
+      "action": "create",
+      "change": "Embedding service interface with embed(), embedBatch() methods (50 lines)"
+    },
+    {
+      "path": "src-ts/protocols/AgentProtocol.ts",
+      "action": "create",
+      "change": "Agent interface with execute(), validate(), formatOutput() methods (60 lines)"
+    },
+    {
+      "path": "src-ts/protocols/ServiceProtocol.ts",
+      "action": "create",
+      "change": "Service layer interface with initialize(), shutdown(), healthCheck() methods (40 lines)"
+    },
+    {
+      "path": "src-ts/protocols/SearchInterface.ts",
+      "action": "create",
+      "change": "Search interface with search(), index(), delete() methods (50 lines)"
+    },
+    {
+      "path": "src-ts/protocols/MemoryInterface.ts",
+      "action": "create",
+      "change": "Memory layer interface with store(), retrieve(), query() methods (60 lines)"
+    },
+    {
+      "path": "src-ts/protocols/GraphInterface.ts",
+      "action": "create",
+      "change": "Graph database interface with createNode(), createEdge(), query() methods (50 lines)"
+    },
+    {
+      "path": "src-ts/tests/protocols/",
+      "action": "create",
+      "change": "Directory with protocol compliance tests for each interface"
+    }
+  ],
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Create protocols directory structure",
+      "description": "Set up src-ts/protocols/ directory with proper TypeScript project structure",
+      "modification_points": [
+        "Create src-ts/protocols/ directory",
+        "Create index.ts with barrel exports",
+        "Add JSDoc documentation for module"
+      ],
+      "logic_flow": [
+        "Create protocols directory",
+        "Create index.ts with export statements for all interfaces",
+        "Add comprehensive JSDoc documentation",
+        "Configure TypeScript path mapping if needed"
+      ],
+      "depends_on": [],
+      "output": "directory_created"
+    },
+    {
+      "step": 2,
+      "title": "Migrate LLM and Embedding protocols",
+      "description": "Convert Python LLMProtocol and EmbeddingProtocol to TypeScript interfaces",
+      "modification_points": [
+        "Create src-ts/protocols/LLMProtocol.ts (80 lines)",
+        "Define generate(prompt: string, options?: LLMOptions): Promise<string>",
+        "Define stream(prompt: string, options?: LLMOptions): AsyncIterable<string>",
+        "Define embed(text: string): Promise<number[]>",
+        "Create src-ts/protocols/EmbeddingProtocol.ts (50 lines)",
+        "Define embed(text: string): Promise<number[]>",
+        "Define embedBatch(texts: string[]): Promise<number[][]>"
+      ],
+      "logic_flow": [
+        "Read Python protocols.py for method signatures",
+        "Define TypeScript interface for LLMProtocol",
+        "Add type definitions for LLMOptions",
+        "Define TypeScript interface for EmbeddingProtocol",
+        "Add JSDoc documentation for each method",
+        "Export interfaces from index.ts"
+      ],
+      "depends_on": [
+        1
+      ],
+      "output": "llm_embedding_protocols_migrated"
+    },
+    {
+      "step": 3,
+      "title": "Migrate Agent and Service protocols",
+      "description": "Convert Python AgentProtocol and ServiceProtocol to TypeScript interfaces",
+      "modification_points": [
+        "Create src-ts/protocols/AgentProtocol.ts (60 lines)",
+        "Define execute(input: AgentInput): Promise<AgentOutput>",
+        "Define validate(input: AgentInput): boolean",
+        "Define formatOutput(output: AgentOutput): string",
+        "Create src-ts/protocols/ServiceProtocol.ts (40 lines)",
+        "Define initialize(): Promise<void>",
+        "Define shutdown(): Promise<void>",
+        "Define healthCheck(): Promise<HealthStatus>"
+      ],
+      "logic_flow": [
+        "Analyze Python agent protocol patterns",
+        "Define TypeScript interface for AgentProtocol",
+        "Add type definitions for AgentInput and AgentOutput",
+        "Define TypeScript interface for ServiceProtocol",
+        "Add HealthStatus type definition",
+        "Export interfaces from index.ts"
+      ],
+      "depends_on": [
+        2
+      ],
+      "output": "agent_service_protocols_migrated"
+    },
+    {
+      "step": 4,
+      "title": "Add new interfaces for TypeScript migration",
+      "description": "Create SearchInterface, MemoryInterface, GraphInterface for layer abstraction",
+      "modification_points": [
+        "Create src-ts/protocols/SearchInterface.ts (50 lines)",
+        "Create src-ts/protocols/MemoryInterface.ts (60 lines)",
+        "Create src-ts/protocols/GraphInterface.ts (50 lines)",
+        "Define method signatures with TypeScript types"
+      ],
+      "logic_flow": [
+        "Design SearchInterface based on Python search implementations",
+        "Design MemoryInterface based on Python memory layer",
+        "Design GraphInterface based on Python graph manager",
+        "Add comprehensive type definitions for each interface",
+        "Add JSDoc documentation for each method",
+        "Export interfaces from index.ts"
+      ],
+      "depends_on": [
+        3
+      ],
+      "output": "new_interfaces_added"
+    },
+    {
+      "step": 5,
+      "title": "Add comprehensive type tests",
+      "description": "Create vitest tests verifying protocol compliance and type safety",
+      "modification_points": [
+        "Create src-ts/tests/protocols/ directory",
+        "Add LLMProtocol.test.ts with compliance tests",
+        "Add EmbeddingProtocol.test.ts with compliance tests",
+        "Add AgentProtocol.test.ts with compliance tests",
+        "Add SearchInterface.test.ts with compliance tests",
+        "Create 40+ tests total across all protocols"
+      ],
+      "logic_flow": [
+        "For each protocol, create test file",
+        "Define mock implementations implementing each interface",
+        "Test that mock implementations satisfy interface contracts",
+        "Test type inference for interface methods",
+        "Test edge cases and error handling",
+        "Run: cd src-ts && npm test",
+        "Verify all 40+ tests pass"
+      ],
+      "depends_on": [
+        4
+      ],
+      "output": "type_tests_created"
+    },
+    {
+      "step": 6,
+      "title": "Validate strict type safety",
+      "description": "Ensure all protocols pass TypeScript strict mode with no 'any' types",
+      "modification_points": [
+        "Run TypeScript compiler in strict mode",
+        "Fix any type errors",
+        "Ensure no 'any' types are used",
+        "Add strict type checking CI step"
+      ],
+      "logic_flow": [
+        "Run: tsc --noEmit --strict",
+        "Fix any type errors that appear",
+        "Search for 'any' usage: grep -r ': any' src-ts/protocols/",
+        "Replace any with proper types",
+        "Run tests again: cd src-ts && npm test",
+        "Document strict mode compliance"
+      ],
+      "depends_on": [
+        5
+      ],
+      "output": "validation_complete"
+    }
+  ],
+  "pre_analysis": [
+    {
+      "step": "load_context_package",
+      "action": "Load context package for protocol patterns",
+      "commands": [
+        "Read(.workflow/active/WFS-python-to-typescript-migration-20260329/.process/context-package.json)"
+      ],
+      "output_to": "context_package",
+      "on_error": "fail"
+    },
+    {
+      "step": "analyze_python_protocols",
+      "action": "Analyze Python protocol definitions to understand method signatures",
+      "commands": [
+        "Read(src/knowledge/services/protocols.py)"
+      ],
+      "output_to": "python_protocols"
+    },
+    {
+      "step": "research_typescript_patterns",
+      "action": "Research TypeScript interface best practices for protocol definitions",
+      "commands": [
+        "mcp__exa__get_code_context_exa(query=\"TypeScript interface best practices dependency injection protocols\", tokensNum=3000)"
+      ],
+      "output_to": "typescript_patterns"
+    }
+  ],
+  "artifacts": [],
+  "inherited": {
+    "from": "IMPL-004",
+    "context": [
+      "Shared protocols module structure",
+      "AgentProtocol, ServiceProtocol definitions"
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-python-to-typescript-migration-20260329/.process/context-package.json",
+  "cli_execution": {
+    "id": "WFS-python-to-typescript-migration-20260329-IMPL-006",
+    "strategy": "resume",
+    "resume_from": "WFS-python-to-typescript-migration-20260329-IMPL-005"
+  },
+  "meta": {
+    "type": "feature",
+    "agent": "@code-developer",
+    "execution_group": "phase-1-infrastructure",
+    "module": "backend",
+    "execution_config": {
+      "method": "cli",
+      "cli_tool": "gemini",
+      "enable_resume": true
+    }
+  },
+  "reference": {
+    "phase": "Phase 1: Infrastructure",
+    "rationale": "Type-safe service contracts for DI container"
+  },
+  "risks": [
+    "Incomplete interface definitions missing Python protocol methods",
+    "Type incompatibility between Python and TypeScript",
+    "Strict mode type errors requiring extensive refactoring",
+    "Test coverage gaps for protocol compliance"
+  ],
+  "test": {
+    "framework": "vitest",
+    "coverage_target": "90%",
+    "commands": {
+      "run_tests": "cd src-ts && npm test",
+      "type_check": "tsc --noEmit --strict"
+    }
+  },
+  "status_history": [
+    {
+      "from": "pending",
+      "to": "in_progress",
+      "changed_at": "2026-03-29T03:07:28+08:00"
+    },
+    {
+      "from": "in_progress",
+      "to": "completed",
+      "changed_at": "2026-03-29T03:14:43+08:00"
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "id": "IMPL-001",
+  "title": "Pre-Migration: Add AgentFactory to ServiceContainer",
+  "description": "Refactor agent instantiation to use dependency injection pattern by creating AgentFactory and registering it in ServiceContainer. This resolves ARCH-001 tight coupling issue where workflow levels directly instantiate agents. Must be completed before TypeScript migration to enable seamless DI framework transition.",
+  "status": "completed",
+  "type": "refactor",
+  "scope": "src/container.py, src/agents/",
+  "action": "Refactor",
+  "depends_on": [],
+  "focus_paths": [
+    "src/container.py",
+    "src/agents/base.py",
+    "src/workflow/levels/"
+  ],
+  "convergence": {
+    "criteria": [
+      "1 AgentFactory class created in src/agents/factory.py with lazy initialization pattern",
+      "AgentFactory registered in ServiceContainer with get_agent() method",
+      "5 agent types (Commander, Architect, Writer, Critic, Plot) supported by factory",
+      "All agent instantiation uses container.get_agent() instead of direct Agent() calls",
+      "74 existing pytest tests pass after refactoring",
+      "No functional changes - behavior remains identical"
+    ],
+    "verification": "python -m pytest tests/ -v && grep -r 'AgentFactory' src/container.py src/agents/factory.py | wc -l >= 2",
+    "definition_of_done": "Agent instantiation fully decoupled via DI, enabling TypeScript DI framework migration"
+  },
+  "files": [
+    {
+      "path": "src/agents/factory.py",
+      "action": "create",
+      "change": "New AgentFactory class with lazy initialization, supporting 5 agent types (Commander, Architect, Writer, Critic, Plot)"
+    },
+    {
+      "path": "src/container.py",
+      "action": "modify",
+      "change": "Add AgentFactory registration in ServiceContainer, implement get_agent() method with lazy loading (lines 180-220)"
+    },
+    {
+      "path": "src/agents/base.py",
+      "action": "modify",
+      "change": "Add AgentType enum and factory interface contract"
+    },
+    {
+      "path": "tests/unit/test_container.py",
+      "action": "modify",
+      "change": "Add test cases for AgentFactory registration and get_agent() method (20 lines)"
+    },
+    {
+      "path": "tests/unit/test_agents/test_factory.py",
+      "action": "create",
+      "change": "New test file for AgentFactory with 10 test cases covering all agent types"
+    }
+  ],
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Create AgentFactory class",
+      "description": "Implement AgentFactory with lazy initialization pattern, supporting all 5 agent types (Commander, Architect, Writer, Critic, Plot)",
+      "modification_points": [
+        "Create src/agents/factory.py with AgentFactory class (80 lines)",
+        "Implement get_agent(agent_type: AgentType) -> BaseAgent method",
+        "Add lazy initialization with caching (agent instances created once and reused)",
+        "Support 5 agent types: Commander, Architect, Writer, Critic, Plot"
+      ],
+      "logic_flow": [
+        "Define AgentType enum with 5 agent types",
+        "Create AgentFactory class with _instances dict for caching",
+        "Implement get_agent() with lazy initialization",
+        "Import agent classes lazily to avoid circular dependencies",
+        "Add error handling for unsupported agent types"
+      ],
+      "depends_on": [],
+      "output": "agent_factory_created"
+    },
+    {
+      "step": 2,
+      "title": "Register AgentFactory in ServiceContainer",
+      "description": "Add AgentFactory to ServiceContainer with proper registration and lazy initialization",
+      "modification_points": [
+        "Modify src/container.py lines 180-220 to add AgentFactory registration",
+        "Implement get_agent() method in ServiceContainer class",
+        "Add agent_factory property with lazy initialization",
+        "Ensure thread-safe initialization with asyncio.Lock"
+      ],
+      "logic_flow": [
+        "Import AgentFactory and AgentType in container.py",
+        "Add _agent_factory private attribute to ServiceContainer",
+        "Implement agent_factory property with lazy initialization",
+        "Implement get_agent(agent_type) method delegating to factory",
+        "Add register_mock_agent() for testing support"
+      ],
+      "depends_on": [
+        1
+      ],
+      "output": "container_updated"
+    },
+    {
+      "step": 3,
+      "title": "Add test coverage for AgentFactory",
+      "description": "Create comprehensive tests for AgentFactory and ServiceContainer integration",
+      "modification_points": [
+        "Create tests/unit/test_agents/test_factory.py with 10 test cases",
+        "Modify tests/unit/test_container.py to add AgentFactory tests (20 lines)",
+        "Test all 5 agent types, lazy initialization, caching behavior",
+        "Test mock injection for testing scenarios"
+      ],
+      "logic_flow": [
+        "Write test_get_agent_for_each_type() covering 5 agent types",
+        "Write test_lazy_initialization() verifying single instance creation",
+        "Write test_agent_caching() verifying instance reuse",
+        "Write test_mock_injection() for testing support",
+        "Write test_container_integration() verifying ServiceContainer.get_agent()"
+      ],
+      "depends_on": [
+        2
+      ],
+      "output": "tests_created"
+    },
+    {
+      "step": 4,
+      "title": "Verify and validate refactoring",
+      "description": "Run all tests to ensure no functional changes, verify behavior remains identical",
+      "modification_points": [
+        "Run pytest on all 74 test files",
+        "Verify AgentFactory integration in ServiceContainer",
+        "Ensure no agent instantiation remains in workflow levels"
+      ],
+      "logic_flow": [
+        "Execute: python -m pytest tests/ -v",
+        "Verify all tests pass",
+        "Check agent instantiation patterns: grep -r 'Agent(' src/workflow/levels/ should return 0 results",
+        "Validate get_agent() usage: grep -r 'get_agent(' src/ should show container calls"
+      ],
+      "depends_on": [
+        3
+      ],
+      "output": "validation_complete"
+    }
+  ],
+  "pre_analysis": [
+    {
+      "step": "load_context_package",
+      "action": "Load context package for architecture patterns and constraints",
+      "commands": [
+        "Read(.workflow/active/WFS-python-to-typescript-migration-20260329/.process/context-package.json)"
+      ],
+      "output_to": "context_package",
+      "on_error": "fail"
+    },
+    {
+      "step": "analyze_current_container",
+      "action": "Analyze current ServiceContainer implementation to understand registration patterns",
+      "commands": [
+        "Read(src/container.py)",
+        "bash(grep -n 'def.*property' src/container.py | head -20)"
+      ],
+      "output_to": "container_structure"
+    },
+    {
+      "step": "analyze_agent_instantiation",
+      "action": "Identify all agent instantiation patterns in workflow levels",
+      "commands": [
+        "bash(grep -rn 'Agent(' src/workflow/levels/ | grep -v 'BaseAgent' | head -20)",
+        "Read(src/agents/base.py)"
+      ],
+      "output_to": "agent_patterns"
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-python-to-typescript-migration-20260329/.process/context-package.json",
+  "cli_execution": {
+    "id": "WFS-python-to-typescript-migration-20260329-IMPL-001",
+    "strategy": "new"
+  },
+  "meta": {
+    "type": "refactor",
+    "agent": "@code-developer",
+    "execution_group": "pre-migration",
+    "module": "backend",
+    "execution_config": {
+      "method": "agent",
+      "cli_tool": null,
+      "enable_resume": false
+    }
+  },
+  "reference": {
+    "conflict_id": "ARCH-001",
+    "conflict_resolution": ".workflow/active/WFS-python-to-typescript-migration-20260329/.process/conflict-resolution.json",
+    "rationale": "Pre-migration refactoring to decouple agent instantiation, enabling TypeScript DI framework migration"
+  },
+  "risks": [
+    "Breaking existing agent instantiation patterns in workflow levels",
+    "Circular import dependencies between container and agents",
+    "Performance impact from lazy initialization",
+    "Test coverage gaps for new factory code"
+  ],
+  "test": {
+    "commands": {
+      "run_tests": "python -m pytest tests/unit/test_container.py tests/unit/test_agents/test_factory.py -v",
+      "run_all": "python -m pytest tests/ -v"
+    }
+  },
+  "status_history": [
+    {
+      "from": "pending",
+      "to": "in_progress",
+      "changed_at": "2026-03-29T01:49:51+08:00"
+    },
+    {
+      "from": "in_progress",
+      "to": "completed",
+      "changed_at": "2026-03-29T01:58:48+08:00"
+    },
+    {
+      "from": "pending",
+      "to": "completed",
+      "changed_at": "2026-03-29T02:00:25+08:00"
+    }
+  ]
+}
