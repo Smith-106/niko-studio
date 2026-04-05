@@ -58,6 +58,7 @@ desktop/node_modules/
 test-results/
 desktop/test-results/
 coverage.xml
+src-ts/coverage/
 pytest-*.xml
 release-check-summary.md
 
@@ -91,3 +92,7 @@ Thumbs.db
 .claude/worktrees/
 NUL
 .vite/
+src-ts/integrations/adapters.js
+src-ts/integrations/index.js
+src-ts/memory/query-cache.js
+src-ts/memory/unified-memory.js
