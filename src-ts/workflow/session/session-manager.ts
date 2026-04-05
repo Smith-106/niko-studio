@@ -419,8 +419,9 @@ export class SessionManager {
   }
 
   private _loadSessionInfo(sessionId: string, base?: string): SessionInfo | null {
-    const dir = base ?? this._getSessionPath(sessionId);
-    const filePath = path.join(dir, sessionId, 'session.json');
+    const filePath = base
+      ? path.join(base, sessionId, 'session.json')
+      : path.join(this._getSessionPath(sessionId), 'session.json');
 
     if (!fs.existsSync(filePath)) return null;
 

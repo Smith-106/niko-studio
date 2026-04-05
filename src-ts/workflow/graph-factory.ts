@@ -68,7 +68,8 @@ export class WorkflowFactory {
     const mergedConfig = adapter.mergeConfig(config ?? null) as Record<string, unknown>;
     mergedConfig['workflow_level'] = typeof workflowLevel === 'number' ? workflowLevel : 3;
 
-    return adapter.createGraph();
+    const configuredAdapter = AdapterRegistry.createAdapter(domain, mergedConfig);
+    return (configuredAdapter ?? adapter).createGraph();
   }
 
   static createAdapter(

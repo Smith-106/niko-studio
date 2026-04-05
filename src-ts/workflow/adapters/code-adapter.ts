@@ -14,6 +14,7 @@ import {
 } from './base-adapter';
 import type { BaseState } from '../state';
 import { createBaseState } from '../state';
+import { SimpleWorkflowGraph } from '../graph';
 
 export class CodeAdapter extends BaseDomainAdapter {
 
@@ -39,11 +40,11 @@ export class CodeAdapter extends BaseDomainAdapter {
       }
     }
 
-    return createBaseState(userRequest, {
+    const baseState = createBaseState(userRequest, {
       domain: 'code',
       metadata,
-      ...filtered,
     });
+    return { ...(baseState as Record<string, unknown>), ...filtered } as BaseState;
   }
 
   evaluate(state: BaseState): BaseEvaluationResult {
@@ -156,7 +157,6 @@ export class CodeAdapter extends BaseDomainAdapter {
   }
 
   createGraph(): import('./base-adapter').IWorkflowGraph {
-    const { SimpleWorkflowGraph } = require('../graph');
     const graph = new SimpleWorkflowGraph();
 
     graph.addNode('planner', this._plannerNode.bind(this));

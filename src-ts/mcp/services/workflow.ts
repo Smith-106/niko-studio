@@ -5,6 +5,8 @@
  * Ported from src/mcp/services/workflow.py
  */
 
+import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
+
 // ---------------------------------------------------------------
 // Engine accessor
 // ---------------------------------------------------------------
@@ -38,9 +40,53 @@ interface WorkflowEngine {
   listCheckpoints(limit: number): Promise<unknown[]>;
 }
 
+let workflowEngineInstance: WorkflowEngine | null = null;
+
+function resolveWorkflowWorkspace(): string {
+  const override = String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim();
+  return override || process.cwd();
+}
+
 function getEngine(): WorkflowEngine | null {
-  // Lazy accessor -- will be wired through container / gateway
-  return null;
+  if (!workflowEngineInstance) {
+    const engine = new WorkflowEngineRuntime(resolveWorkflowWorkspace(), 'mcp-workflow');
+    workflowEngineInstance = {
+      route(task: string) {
+        return engine.route(task);
+      },
+      plan(task: string, level?: string | null, params?: { recommendations?: unknown[] | null }) {
+        return engine.plan(task, level ?? undefined, params?.recommendations ?? undefined);
+      },
+      execute(
+        planId: string,
+        stepId?: string | null,
+        params?: { recommendations?: unknown[] | null; confirmToken?: string | null },
+      ) {
+        return engine.execute(
+          planId,
+          stepId ?? undefined,
+          params?.recommendations ?? undefined,
+          params?.confirmToken ?? undefined,
+        );
+      },
+      quickRollback(params: { planId: string; checkpointId: string; reason: string }) {
+        return engine.quickRollback(params.planId, params.checkpointId, params.reason);
+      },
+      lifecycle(planId: string, action: string) {
+        return engine.lifecycle(planId, action);
+      },
+      createCheckpoint(description: string, autoCommit: boolean) {
+        return engine.createCheckpoint(description, autoCommit);
+      },
+      restoreCheckpoint(checkpointId: string, params?: { confirmToken?: string | null }) {
+        return engine.restoreCheckpoint(checkpointId, params?.confirmToken ?? undefined);
+      },
+      listCheckpoints(limit: number) {
+        return engine.listCheckpoints(limit);
+      },
+    };
+  }
+  return workflowEngineInstance;
 }
 
 // ---------------------------------------------------------------

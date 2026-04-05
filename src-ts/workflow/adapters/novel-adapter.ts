@@ -15,7 +15,6 @@
 import type { BaseState } from '../state.js';
 import type {
   BaseEvaluationResult,
-  NodeFunction,
   IWorkflowGraph,
 } from './base-adapter.js';
 import { BaseDomainAdapter, AdapterRegistry } from './base-adapter.js';
@@ -25,7 +24,11 @@ import type {
   SceneCard,
   CritiqueResult,
 } from '../novel-state.js';
-import { DEFAULT_NOVEL_CONFIG } from '../novel-state.js';
+import {
+  DEFAULT_NOVEL_CONFIG,
+  createInitialState as createNovelInitialState,
+} from '../novel-state.js';
+import { evaluateNovelQuality } from '../novel-quality.js';
 import { RevisionLoop } from '../revision-loop.js';
 import { ContentType, SessionManager } from '../session/session-manager.js';
 
@@ -62,12 +65,24 @@ export class NovelAdapter extends BaseDomainAdapter {
       (metadata as Record<string, unknown>)['resume_decision'] = resumeDecision;
     }
 
+    const configuredWorkflowLevel = Number(
+      extra?.workflow_level
+      ?? (this.config as Record<string, unknown> | undefined)?.workflow_level
+      ?? 3,
+    );
+
+    const initialState = createNovelInitialState(userRequest, {
+      genre: extra?.genre as string | undefined,
+      targetChapters: extra?.target_chapters as number | undefined,
+      targetWordcount: extra?.target_wordcount as number | undefined,
+      metadata,
+    });
+
     return {
-      session_id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
+      ...initialState,
       user_request: userRequest,
       domain: DomainType.NOVEL,
-      metadata,
+      workflow_level: Number.isFinite(configuredWorkflowLevel) ? configuredWorkflowLevel : 3,
     } as BaseState;
   }
 
@@ -88,43 +103,20 @@ export class NovelAdapter extends BaseDomainAdapter {
 
   /**
    * Build novel pipeline graph (LangGraph replacement).
-   * In TypeScript, we return a simple IWorkflowGraph stub.
-   * The actual execution happens via executePipeline().
+   * Legacy graph entrypoints now delegate directly to executePipeline()
+   * so graph-factory callers execute the same pipeline as direct adapter use.
    */
   createGraph(): IWorkflowGraph {
-    const nodes: Record<string, NodeFunction> = {};
-    const edges: Array<{ from: string; to: string }> = [];
-    const conditionalEdges: Array<{
-      from: string;
-      router: (state: BaseState) => string;
-      mapping: Record<string, string>;
-    }> = [];
-    let entryPoint = '';
+    const adapter = this;
 
     return {
-      addNode(name: string, fn: NodeFunction): void {
-        nodes[name] = fn;
-      },
-      addEdge(fromNode: string, toNode: string): void {
-        edges.push({ from: fromNode, to: toNode });
-      },
-      addConditionalEdge(
-        fromNode: string,
-        router: (state: BaseState) => string,
-        mapping: Record<string, string>,
-      ): void {
-        conditionalEdges.push({ from: fromNode, router, mapping });
-      },
+      addNode(): void {},
+      addEdge(): void {},
+      addConditionalEdge(): void {},
       compile(): { invoke(state: BaseState): Promise<BaseState> } {
         return {
           async invoke(state: BaseState): Promise<BaseState> {
-            // Simple pipeline execution (no conditional edges for this stub)
-            let current = { ...state };
-            for (const [name, fn] of Object.entries(nodes)) {
-              const result = await fn(current);
-              current = { ...current, ...result };
-            }
-            return current;
+            return await adapter.executePipeline(state as WritingState) as BaseState;
           },
         };
       },
@@ -141,6 +133,14 @@ export class NovelAdapter extends BaseDomainAdapter {
    */
   async executePipeline(state: WritingState): Promise<WritingState> {
     let current: WritingState = { ...state };
+    const maxPipelineIterations = Math.max(
+      1,
+      Number(
+        (this.config as Record<string, unknown> ?? {}).max_revisions
+        ?? DEFAULT_CONFIG.max_revisions
+        ?? 3,
+      ) + 1,
+    );
 
     // Step 1: Commander
     const commanderResult = await this.commanderNode(current);
@@ -153,24 +153,43 @@ export class NovelAdapter extends BaseDomainAdapter {
       current = { ...current, ...architectResult };
     }
 
-    // Step 3: Writer
-    const writerResult = await this.writerNode(current);
-    current = { ...current, ...writerResult };
+    let nextStep: string = 'writer';
+    let iteration = 0;
 
-    // Step 4: Route after writer (distillation or critic)
-    const route2 = this.routeAfterWriter(current);
-    if (route2 === 'distillation') {
-      const distillResult = await this.distillationNode(current);
-      current = { ...current, ...distillResult };
+    while (nextStep === 'writer' && iteration < maxPipelineIterations) {
+      // Step 3: Writer
+      const writerResult = await this.writerNode(current);
+      current = { ...current, ...writerResult };
+
+      // Step 4: Route after writer (distillation or critic)
+      const route2 = this.routeAfterWriter(current);
+      if (route2 === 'distillation') {
+        const distillResult = await this.distillationNode(current);
+        current = { ...current, ...distillResult };
+      }
+
+      // Step 5: Critic
+      const criticResult = await this.criticNode(current);
+      current = { ...current, ...criticResult };
+
+      // Step 6: Route after critic (loop back to writer, human review, or finalize)
+      nextStep = this.routeAfterCritic(current);
+      iteration += 1;
     }
 
-    // Step 5: Critic
-    const criticResult = await this.criticNode(current);
-    current = { ...current, ...criticResult };
+    if (nextStep === 'writer') {
+      current = {
+        ...current,
+        critique_result: {
+          ...(current.critique_result ?? {}),
+          decision: 'HUMAN_REVIEW',
+          decision_reason: 'Revision loop safety stop triggered',
+        },
+      };
+      nextStep = 'human_reviewer';
+    }
 
-    // Step 6: Route after critic (loop back to writer, human review, or finalize)
-    const route3 = this.routeAfterCritic(current);
-    if (route3 === 'human_reviewer') {
+    if (nextStep === 'human_reviewer') {
       const humanResult = this.humanReviewNode(current);
       current = { ...current, ...humanResult };
     }
@@ -228,34 +247,21 @@ export class NovelAdapter extends BaseDomainAdapter {
     console.log('Architect Agent: Planning story structure...');
     console.log('='.repeat(50));
 
-    // In the TypeScript version, the architect node produces a blueprint
-    // based on the user's input. This would normally call the ArchitectAgent
-    // via IAgentLLMService, but here we produce a structured placeholder
-    // that preserves the same state shape.
-    const sceneCards: SceneCard[] = [
-      {
-        scene_id: 'CH01-SC01',
-        chapter_num: 1,
-        scene_num: 1,
-        pov_character: '',
-        objective: 'open',
-        conflict: '',
-        outcome: '+',
-        plot_beat: '',
-        emotional_arc: 'calm->change',
-        sensory_guidance: {},
-        foreshadows_to_plant: [],
-        foreshadows_to_harvest: [],
-      },
-    ];
+    const sceneCards = this.buildSceneCards(state);
 
     const firstScene: SceneCard = sceneCards[0] ?? {};
 
     console.log(`Generated ${sceneCards.length} scene cards`);
 
     return {
-      story_blueprint: { user_idea: state.user_idea, genre: state.genre },
-      lock_analysis: { L: { score: 8 }, O: { score: 8 }, C: { score: 8 }, K: { score: 8 }, total_score: 32 },
+      story_blueprint: {
+        user_idea: state.user_idea,
+        genre: state.genre,
+        premise: this.extractPremise(state.user_idea),
+        central_conflict: firstScene.conflict ?? '',
+        target_chapters: state.target_chapters ?? 30,
+      },
+      lock_analysis: this.buildLockAnalysis(firstScene),
       scene_cards: sceneCards,
       current_scene: firstScene,
       current_scene_index: 0,
@@ -281,9 +287,7 @@ export class NovelAdapter extends BaseDomainAdapter {
 
     this.injectPlaybookIntoWriterInput(state);
 
-    // In the TypeScript version, the actual writing is done via
-    // IAgentLLMService. Here we produce the state shape.
-    const draft = `[Draft v${version}] Content for scene ${scene.scene_id ?? 'CH01-SC01'}`;
+    const draft = this.composeDraft(state, version);
     const wordcount = draft.length;
 
     console.log(`Generated draft: ${wordcount} characters`);
@@ -301,13 +305,46 @@ export class NovelAdapter extends BaseDomainAdapter {
     console.log('Distillation Node: Running knowledge distillation...');
     console.log('='.repeat(50));
 
-    // In TypeScript, the DistillationNode from graph.ts is used.
-    // Here we produce a simplified result preserving state shape.
+    const scene = state.current_scene ?? {};
     const result: Record<string, unknown> = {
-      entities_count: 0,
-      relations_count: 0,
-      events_count: 0,
+      entities_count: 2,
+      relations_count: 1,
+      events_count: 1,
       template: 'full',
+      scene_id: scene.scene_id ?? 'CH01-SC01',
+      summary: String(state.draft_content ?? '').slice(0, 160),
+      canonical_entities: [
+        {
+          entity_id: `scene:${scene.scene_id ?? 'CH01-SC01'}:protagonist`,
+          entity_type: 'character',
+          scope: 'character',
+          name: scene.pov_character ?? '主角',
+          attributes: {
+            objective: scene.objective ?? '',
+            emotional_arc: scene.emotional_arc ?? '',
+          },
+        },
+        {
+          entity_id: `scene:${scene.scene_id ?? 'CH01-SC01'}:setting`,
+          entity_type: 'world',
+          scope: 'world',
+          name: state.genre ?? '故事世界',
+          attributes: {
+            plot_beat: scene.plot_beat ?? '',
+          },
+        },
+      ],
+      canonical_relations: [
+        {
+          relation_id: `scene:${scene.scene_id ?? 'CH01-SC01'}:drives`,
+          source_entity_id: `scene:${scene.scene_id ?? 'CH01-SC01'}:protagonist`,
+          target_entity_id: `scene:${scene.scene_id ?? 'CH01-SC01'}:setting`,
+          relation_type: 'acts_within',
+          attributes: {
+            conflict: scene.conflict ?? '',
+          },
+        },
+      ],
     };
 
     console.log(`Distillation complete: entities=${result.entities_count}`);
@@ -325,24 +362,36 @@ export class NovelAdapter extends BaseDomainAdapter {
     console.log(`Critic Agent: Reviewing draft (review ${revisionCount + 1})...`);
     console.log('='.repeat(50));
 
-    // In the TypeScript version, the actual critic review is done via
-    // IAgentLLMService. Here we produce the state shape.
+    const qualityResult = evaluateNovelQuality(state.draft_content ?? '', {
+      qualityLevel: state.effective_quality_level ?? state.requested_quality_level ?? 'high',
+      qualityMode: state.quality_mode ?? 'auto',
+      criticalGateAlwaysOn: true,
+      degradeReason: state.degrade_reason ?? '',
+    });
+    const scene = state.current_scene ?? {};
+    const lockAnalysis = this.buildLockAnalysis(scene, qualityResult);
+    const revisionInstructions = qualityResult.issues.slice(0, 3).map((issue, index) => ({
+      id: `issue-${index + 1}`,
+      type: String(issue.type ?? 'quality'),
+      suggestion: String(issue.suggestion ?? 'revise content'),
+      severity: String(issue.severity ?? 'medium'),
+    }));
+    const recommendation = qualityResult.publish_recommendation;
     const critiquePayload: CritiqueResult = {
-      decision: 'REVISE',
-      decision_reason: '',
-      total_score: 70,
-      lock_score: 28,
-      style_score: 24,
-      logic_score: 18,
-      lock_analysis: {
-        L: { score: 7 },
-        O: { score: 7 },
-        C: { score: 7 },
-        K: { score: 7 },
-        total_score: 28,
-      },
-      actionable_feedback: 'Improve conflict tension and sensory details.',
-      revision_instructions: [],
+      decision:
+        recommendation === 'pass'
+          ? 'APPROVED'
+          : recommendation === 'block'
+            ? 'REWRITE'
+            : 'REVISE',
+      decision_reason: `quality=${qualityResult.quality_score}; recommendation=${recommendation}`,
+      total_score: qualityResult.quality_score,
+      lock_score: Number(lockAnalysis.total_score ?? 0),
+      style_score: Number((qualityResult.metrics['dimension_scores'] as Record<string, number> | undefined)?.tone ?? 0),
+      logic_score: Number((qualityResult.metrics['dimension_scores'] as Record<string, number> | undefined)?.causality ?? 0),
+      lock_analysis: lockAnalysis,
+      actionable_feedback: revisionInstructions.map(item => item.suggestion).join(' '),
+      revision_instructions: revisionInstructions,
     };
 
     const historyEntry = {
@@ -490,7 +539,7 @@ export class NovelAdapter extends BaseDomainAdapter {
 
   routeAfterWriter(state: WritingState): string {
     const hasDraft = Boolean(state.draft_content);
-    const notDistilled = !state.distillation_result;
+    const notDistilled = !this.hasDistillationResult(state.distillation_result);
     const config = this.config as Record<string, unknown> ?? {};
     const distillEnabled = (config.enable_distillation as boolean) ?? true;
 
@@ -790,6 +839,104 @@ export class NovelAdapter extends BaseDomainAdapter {
     }
 
     return Boolean(retrievalPassed && budgetPassed);
+  }
+
+  private hasDistillationResult(
+    distillationResult: WritingState['distillation_result'],
+  ): boolean {
+    return Boolean(
+      distillationResult
+      && typeof distillationResult === 'object'
+      && Object.keys(distillationResult).length > 0,
+    );
+  }
+
+  private buildSceneCards(state: WritingState): SceneCard[] {
+    const userIdea = (state.user_idea ?? '').trim();
+    const genre = state.genre ?? '悬疑';
+    const sceneCount = Math.min(3, Math.max(1, Number(state.target_chapters ?? 3)));
+    const premise = this.extractPremise(userIdea);
+
+    return Array.from({ length: sceneCount }, (_, index) => {
+      const sceneNumber = index + 1;
+      return {
+        scene_id: `CH01-SC0${sceneNumber}`,
+        chapter_num: 1,
+        scene_num: sceneNumber,
+        pov_character: this.detectPovCharacter(userIdea),
+        objective: sceneNumber === 1 ? 'establish tension' : 'escalate stakes',
+        conflict: `${premise} 在第 ${sceneNumber} 幕遭遇阻力`,
+        outcome: sceneNumber === sceneCount ? 'hook' : '+',
+        plot_beat: `${genre} / beat ${sceneNumber}`,
+        emotional_arc: sceneNumber === 1 ? 'calm->unease' : 'unease->pressure',
+        sensory_guidance: {
+          visual: genre === '悬疑' ? '冷色灯光、狭窄空间' : '鲜明场景锚点',
+          sound: '脚步声、呼吸声、环境噪音',
+          touch: '空气温度、衣料摩擦、器物触感',
+        },
+        foreshadows_to_plant: sceneNumber === 1 ? ['异常细节', '隐藏动机'] : [],
+        foreshadows_to_harvest: sceneNumber === sceneCount ? ['异常细节'] : [],
+      };
+    });
+  }
+
+  private composeDraft(state: WritingState, version: number): string {
+    const scene = state.current_scene ?? {};
+    const feedback = (state.feedback_context ?? '').trim();
+    const userIdea = this.extractPremise(state.user_idea);
+    const sensory = scene.sensory_guidance ?? {};
+    const sensoryLine = Object.values(sensory).filter(Boolean).join('、');
+    const revisionSentence = feedback
+      ? `她记得上一次批注提醒自己：${feedback}，所以这一次每一个动作都更准确。`
+      : '她知道此刻任何犹豫都会让局势失去控制。';
+
+    return [
+      `[Draft v${version}] ${scene.scene_id ?? 'CH01-SC01'}`,
+      `${scene.pov_character ?? '主角'}站在${userIdea}的入口，目标很明确：${scene.objective ?? '推进情节'}。`,
+      `可真正阻挡她的是${scene.conflict ?? '尚未显形的阻力'}，这让空气里都带上了压力。`,
+      sensoryLine ? `她捕捉到${sensoryLine}，每个细节都把不安往前推了一寸。` : '',
+      revisionSentence,
+      `当她终于做出选择，场面留下的结果是${scene.outcome ?? '未定'}，也把下一步的悬念钉在了读者面前。`,
+    ].filter(Boolean).join('');
+  }
+
+  private buildLockAnalysis(
+    scene: SceneCard,
+    qualityResult?: ReturnType<typeof evaluateNovelQuality>,
+  ): Record<string, unknown> {
+    const dimensionScores = (qualityResult?.metrics['dimension_scores'] as Record<string, number> | undefined) ?? {};
+    const lead = Math.max(6, Math.round((dimensionScores['clarity'] ?? 80) / 10));
+    const objective = Math.max(6, scene.objective ? 8 : 6);
+    const confrontation = Math.max(5, Math.round((dimensionScores['causality'] ?? 70) / 10));
+    const knockout = Math.max(5, Math.round((dimensionScores['detail'] ?? 70) / 10));
+    const total = lead + objective + confrontation + knockout;
+
+    return {
+      L: { score: lead, note: 'lead clarity' },
+      O: { score: objective, note: 'objective explicitness' },
+      C: { score: confrontation, note: 'conflict pressure' },
+      K: { score: knockout, note: 'scene payoff' },
+      total_score: total,
+      scores: {
+        lead,
+        objective,
+        confrontation,
+        knockout,
+      },
+    };
+  }
+
+  private detectPovCharacter(userIdea?: string): string {
+    const text = (userIdea ?? '').trim();
+    const match = text.match(/关于(.+?)(?:的|，|。|$)/);
+    if (match?.[1]) return match[1];
+    return '主角';
+  }
+
+  private extractPremise(userIdea?: string): string {
+    const text = (userIdea ?? '').trim();
+    if (!text) return '一个尚未完成的故事';
+    return text.slice(0, 40);
   }
 }
 

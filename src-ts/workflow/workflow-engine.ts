@@ -34,7 +34,7 @@ export const TEMPLATE_METADATA_MAP: Record<number, Record<string, unknown>> = {
 };
 
 export const RUNNER_ALLOWED_TRANSITIONS: Record<string, Set<string>> = {
-  pending: new Set(['running', 'stopped']),
+  pending: new Set(['running', 'paused', 'stopped']),
   running: new Set(['paused', 'stopped']),
   paused: new Set(['running', 'stopped']),
   stopped: new Set(),
@@ -705,7 +705,10 @@ export class WorkflowEngine {
     }
 
     try {
+      this._transitionStepState(plan, step, 'executing', 'execution_started');
       const result = await this._executeStep(plan, step);
+      this._transitionStepState(plan, step, 'review', 'execution_review');
+      this._transitionStepState(plan, step, 'test', 'execution_test');
       this._transitionStepState(plan, step, 'done', 'execution_completed');
       step.output = result;
 

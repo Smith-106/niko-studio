@@ -17,10 +17,12 @@ import { join } from 'node:path';
 
 import type { BaseState } from '../state.js';
 import { AgentType } from '../../agents/base.js';
+import { createIterativeRetriever } from '../../search/index.js';
 import type { IServiceContainer } from './level1-rapid.js';
 import { Level2Lite } from './level2-lite.js';
 import { Level3Standard } from './level3-standard.js';
 import { Level4Brainstorm } from './level4-brainstorm.js';
+import { ContentType, SessionManager } from '../session/session-manager.js';
 
 // ============================================================
 // Minimal SessionManager interface (not yet migrated)
@@ -32,11 +34,64 @@ export interface ISessionManager {
   read(sessionId: string, contentType: string): string | null;
 }
 
-function noopSessionManager(): ISessionManager {
+interface ICoordinatorAnalysisRetriever {
+  hybridSearch(params: {
+    query: string;
+    scope?: string;
+    limit?: number;
+    profile?: string | null;
+    minScore?: number | null;
+    budgetTokens?: number | null;
+    rerank?: boolean;
+    routeMode?: string | null;
+  }): Promise<Array<Record<string, unknown>>>;
+  resolveContext(text: string): Promise<string>;
+}
+
+function createSessionManagerAdapter(sessionManager = new SessionManager()): ISessionManager {
   return {
-    init() {},
-    write() {},
-    read() { return null; },
+    init(sessionId: string, options?: { sessionType?: string; domain?: string }): void {
+      sessionManager.init(
+        sessionId,
+        options?.sessionType ?? 'coordinator',
+        'workflow',
+        options?.domain ?? 'novel',
+      );
+    },
+    write(sessionId: string, contentType: string, content: string): void {
+      if (contentType !== 'state') return;
+      sessionManager.write(sessionId, ContentType.STATE, content);
+    },
+    read(sessionId: string, contentType: string): string | null {
+      if (contentType !== 'state') return null;
+      const payload = sessionManager.read(sessionId, ContentType.STATE);
+      return payload || null;
+    },
+  };
+}
+
+function createDefaultAnalysisRetriever(): ICoordinatorAnalysisRetriever {
+  const retriever = createIterativeRetriever({
+    projectRoot: process.cwd(),
+  });
+
+  return {
+    async hybridSearch(params) {
+      const results = await retriever.hybridSearch(
+        params.query,
+        params.scope ?? 'all',
+        params.limit ?? 5,
+        params.profile ?? undefined,
+        params.minScore ?? undefined,
+        params.budgetTokens ?? undefined,
+        params.rerank ?? true,
+        params.routeMode ?? 'hybrid',
+      );
+      return results as Array<Record<string, unknown>>;
+    },
+    resolveContext(text: string) {
+      return retriever.resolveContext(text);
+    },
   };
 }
 
@@ -448,15 +503,18 @@ export class Level5Coordinator {
   private persistDir: string;
   private _coordinatorState: CoordinatorState;
   private _sessionManager: ISessionManager;
+  private _analysisRetriever: ICoordinatorAnalysisRetriever;
 
   constructor(
     config?: Record<string, unknown> | null,
     sessionManager?: ISessionManager,
+    analysisRetriever?: ICoordinatorAnalysisRetriever,
   ) {
     this.config = config ?? {};
     this.persistDir = (this.config.persist_dir as string) ?? DEFAULT_PERSIST_DIR;
     this._coordinatorState = createCoordinatorState('init');
-    this._sessionManager = sessionManager ?? noopSessionManager();
+    this._sessionManager = sessionManager ?? createSessionManagerAdapter();
+    this._analysisRetriever = analysisRetriever ?? createDefaultAnalysisRetriever();
   }
 
   /**
@@ -510,7 +568,7 @@ export class Level5Coordinator {
       // Phase 3: execute command chain
       if (this._coordinatorState.phase === 'planning') {
         this._coordinatorState.phase = 'executing';
-        state = this._executeChainPhase(state);
+        state = await this._executeChainPhase(state);
         await this.persistState(this._coordinatorState);
       }
 
@@ -638,7 +696,7 @@ export class Level5Coordinator {
   /**
    * Execute a command chain
    */
-  executeChain(chain: CommandChain, state: BaseState): BaseState {
+  async executeChain(chain: CommandChain, state: BaseState): Promise<BaseState> {
     const units: ExecutionUnit[] = [];
     for (const cmdId of chain.executionOrder) {
       const cmd = getCommandFromChain(chain, cmdId);
@@ -670,7 +728,7 @@ export class Level5Coordinator {
         continue;
       }
 
-      state = this._executeUnit(unit, state);
+      state = await this._executeUnit(unit, state);
 
       // Checkpoint
       if (this._coordinatorState) {
@@ -681,7 +739,7 @@ export class Level5Coordinator {
       if (unit.state === ExecutionStatus.FAILED) {
         if (canRetryUnit(unit)) {
           unit.retryCount++;
-          state = this._executeUnit(unit, state);
+          state = await this._executeUnit(unit, state);
         } else {
           state.errors = [...(state.errors ?? []), `单元执行失败: ${unit.error}`];
         }
@@ -780,16 +838,16 @@ export class Level5Coordinator {
     return state;
   }
 
-  private _executeChainPhase(state: BaseState): BaseState {
+  private async _executeChainPhase(state: BaseState): Promise<BaseState> {
     if (!this._coordinatorState?.commandChain) {
       state.errors = [...(state.errors ?? []), '命令链未生成'];
       return state;
     }
 
-    return this.executeChain(this._coordinatorState.commandChain, state);
+    return await this.executeChain(this._coordinatorState.commandChain, state);
   }
 
-  private _executeUnit(unit: ExecutionUnit, state: BaseState): BaseState {
+  private async _executeUnit(unit: ExecutionUnit, state: BaseState): Promise<BaseState> {
     startUnit(unit);
 
     try {
@@ -797,7 +855,7 @@ export class Level5Coordinator {
       let result: Record<string, unknown> = {};
 
       if (cmd.commandType === CommandType.ANALYZE) {
-        result = this._executeAnalyze(cmd, state);
+        result = await this._executeAnalyze(cmd, state);
       } else if (cmd.commandType === CommandType.PLAN) {
         result = this._executePlan(cmd, state);
       } else if (cmd.commandType === CommandType.EXECUTE) {
@@ -836,15 +894,41 @@ export class Level5Coordinator {
     return state;
   }
 
-  private _executeAnalyze(cmd: Command, state: BaseState): Record<string, unknown> {
+  private async _executeAnalyze(cmd: Command, state: BaseState): Promise<Record<string, unknown>> {
     const query = state.user_request || cmd.description || cmd.name;
+    const profile = String(this.config.retrieval_profile ?? 'coordinator_quality');
+    const scope = String(cmd.parameters.scope ?? 'all');
+    const limit = Number(cmd.parameters.limit ?? 5);
+    const routeMode = String(cmd.parameters.route_mode ?? 'hybrid');
 
-    // In the Python version, this calls SmartSearch/VectorSearch and CitationManager.
-    // Those services are not yet migrated. We produce a placeholder analysis result.
-    const warnings = state.warnings ?? [];
-    state.warnings = warnings;
+    try {
+      const resolvedContext = await this._analysisRetriever.resolveContext(String(query));
+      const searchResults = await this._analysisRetriever.hybridSearch({
+        query: resolvedContext,
+        scope,
+        limit,
+        profile,
+        rerank: true,
+        routeMode,
+      });
 
-    return { analysis: [], status: 'completed' };
+      const analysis = searchResults.slice(0, limit).map((item, index) => ({
+        rank: index + 1,
+        id: String(item.id ?? `analysis-${index + 1}`),
+        source: String(item.source ?? 'unknown'),
+        score: Number(item.score ?? 0),
+        preview: String(item.content ?? '').slice(0, 200),
+      }));
+
+      return {
+        analysis,
+        resolved_context: resolvedContext,
+        status: 'completed',
+      };
+    } catch (exc) {
+      state.warnings = [...(state.warnings ?? []), `L5 分析阶段检索失败: ${exc}`];
+      return { analysis: [], status: 'completed' };
+    }
   }
 
   private _executePlan(cmd: Command, state: BaseState): Record<string, unknown> {
