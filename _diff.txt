@@ -1,0 +1,313 @@
+diff --git a/desktop/src/components/AiTextOptimizer.tsx b/desktop/src/components/AiTextOptimizer.tsx
+index 7d377b2..b0960fb 100644
+--- a/desktop/src/components/AiTextOptimizer.tsx
++++ b/desktop/src/components/AiTextOptimizer.tsx
+@@ -356,7 +356,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
+ 
+     const instruction = buildInstruction(preset, customInstruction, language)
+     if (!instruction.trim()) {
+-      setError(language === 'zh' ? '请输入自定义指令' : 'Please enter a custom instruction')
++      setError('请输入自定义指令')
+       setLoading(false)
+       return
+     }
+@@ -364,11 +364,9 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
+     try {
+       if (twoStepMode) {
+         // Step 1: Analyze AI characteristics
+-        const analysisPrompt = language === 'zh'
+-          ? `${instruction}\n\n请先对以下文本进行AI特征分析，输出诊断报告（不要改写文本）。仅列出发现的AI痕迹和问题。`
+-          : `${instruction}\n\nFirst, analyze the following text for AI characteristics. Output a diagnostic report only (do NOT rewrite). List the AI traces and issues found.`
++        const analysisPrompt = `${instruction}\n\n请先对以下文本进行AI特征分析，输出诊断报告（不要改写文本）。仅列出发现的AI痕迹和问题。`
+ 
+-        setStepLabel(language === 'zh' ? '步骤 1/2: 分析中...' : 'Step 1/2: Analyzing...')
++        setStepLabel('步骤 1/2: 分析中...')
+         const analysisResp = await processWritingHelper({
+           content,
+           mode: 'polish',
+@@ -383,11 +381,9 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
+         const diagnosis = analysisResp.data.processed_text || ''
+ 
+         // Step 2: Rewrite based on diagnosis
+-        const rewritePrompt = language === 'zh'
+-          ? `${instruction}\n\n基于以下AI特征诊断报告进行改写：\n\n${diagnosis}`
+-          : `${instruction}\n\nBased on the following AI trait diagnosis, rewrite the text:\n\n${diagnosis}`
++        const rewritePrompt = `${instruction}\n\n基于以下 AI 特征诊断报告进行改写：\n\n${diagnosis}`
+ 
+-        setStepLabel(language === 'zh' ? '步骤 2/2: 改写中...' : 'Step 2/2: Rewriting...')
++        setStepLabel('步骤 2/2: 改写中...')
+         const rewriteResp = await processWritingHelper({
+           content,
+           mode: 'polish',
+@@ -517,7 +513,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
+                   value={customInstruction}
+                   onChange={(e) => setCustomInstruction(e.target.value)}
+                   rows={4}
+-                  placeholder={language === 'zh' ? '例如：将文本改写为更加口语化的风格，加入个人观点和情感表达...' : 'e.g., Rewrite in a more conversational style with personal opinions and emotions...'}
++                  placeholder="例如：将文本改写为更加口语化的风格，加入个人观点和情感表达..."
+                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-bg text-sm leading-relaxed text-gray-900 dark:text-dark-text focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none shadow-inner transition-all custom-scrollbar resize-y"
+                 />
+               </div>
+diff --git a/desktop/src/components/Sidebar.tsx b/desktop/src/components/Sidebar.tsx
+index acc699e..d748951 100644
+--- a/desktop/src/components/Sidebar.tsx
++++ b/desktop/src/components/Sidebar.tsx
+@@ -35,6 +35,26 @@ export const Sidebar = React.memo(function Sidebar({
+   } = useAppStore()
+   const { t } = useI18n()
+ 
++  // ── 技能 ID → 中文显示名 / 描述映射 ──────────────────────────
++  const SKILL_DISPLAY_MAP: Record<string, { name: string; desc: string }> = useMemo(() => ({
++    'character-forge':       { name: '角色熔炉',   desc: t.skillDescCharacterForge },
++    'suspense-craft':        { name: '悬念工坊',   desc: t.skillDescSuspenseCraft },
++    'dialogue-system':       { name: '对话系统',   desc: t.skillDescDialogueSystem },
++    'tension-arc':           { name: '张力曲线',   desc: t.skillDescTensionArc },
++    'emotion-arc':           { name: '情感弧光',   desc: t.skillDescEmotionArc },
++    'opening-craft':         { name: '开篇技巧',   desc: t.skillDescOpeningCraft },
++    'ending-craft':          { name: '结尾技巧',   desc: t.skillDescEndingCraft },
++    'conflict-escalation':   { name: '冲突升级',   desc: t.skillDescConflictEscalation },
++  }), [t])
++
++  const getSkillDisplay = (skillId: string) => {
++    const entry = SKILL_DISPLAY_MAP[skillId]
++    if (entry) return entry
++    // 未知技能：kebab-case → 首字母大写可读名
++    const fallbackName = skillId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
++    return { name: fallbackName, desc: t.skillDescriptionGeneric }
++  }
++
+   const groupedSkills = useMemo(() => {
+     const groups: Record<'core' | 'story' | 'quality' | 'tools', string[]> = {
+       core: [],
+@@ -156,7 +176,9 @@ export const Sidebar = React.memo(function Sidebar({
+                   {group.skills.length === 0 ? (
+                     <div className="px-3 py-1.5 text-[11px] text-dark-text-muted italic">{t.skillGroupEmpty}</div>
+                   ) : (
+-                    group.skills.map((skill) => (
++                    group.skills.map((skill) => {
++                      const display = getSkillDisplay(skill)
++                      return (
+                       <button
+                         key={skill}
+                         onClick={() => toggleSkill(skill)}
+@@ -167,12 +189,13 @@ export const Sidebar = React.memo(function Sidebar({
+                         }`}
+                         type="button"
+                       >
+-                        <div className={`font-medium truncate ${selectedSkills.includes(skill) ? 'text-primary-400' : 'text-dark-text'}`}>{skill}</div>
++                        <div className={`font-medium truncate ${selectedSkills.includes(skill) ? 'text-primary-400' : 'text-dark-text'}`}>{display.name}</div>
+                         <div className={`text-[10px] truncate ${selectedSkills.includes(skill) ? 'text-primary-400/70' : 'text-dark-text-muted'}`}>
+-                          {t.skillDescriptionGeneric}
++                          {display.desc}
+                         </div>
+                       </button>
+-                    ))
++                      )
++                    })
+                   )}
+                 </div>
+               </div>
+@@ -223,7 +246,7 @@ export const Sidebar = React.memo(function Sidebar({
+           title={t.sidebarMcpStatus}
+         >
+           <Server size={14} />
+-          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">MCP</span>}
++          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">节点</span>}
+         </button>
+         <button
+           onClick={onOpenEvaluation}
+@@ -231,7 +254,7 @@ export const Sidebar = React.memo(function Sidebar({
+           title={t.sidebarEvaluationPanel}
+         >
+           <BarChart3 size={14} />
+-          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">Eval</span>}
++          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">评估</span>}
+         </button>
+       </div>
+     </aside>
+diff --git a/desktop/src/components/StoryBiblePanel.tsx b/desktop/src/components/StoryBiblePanel.tsx
+index 3bf9af9..a7d92a0 100644
+--- a/desktop/src/components/StoryBiblePanel.tsx
++++ b/desktop/src/components/StoryBiblePanel.tsx
+@@ -53,7 +53,7 @@ function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: string
+           className="px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--surface-sunken)] border border-[var(--border-subtle)]"
+         >
+           <div className="text-sm font-medium text-[var(--text-primary)]">
+-            {item.name || item.title || item.id || `Item ${i + 1}`}
++            {item.name || item.title || item.id || `条目 ${i + 1}`}
+           </div>
+           {(item.description || item.content) && (
+             <div className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
+@@ -67,7 +67,6 @@ function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: string
+ }
+ 
+ const GENRE_PRESETS_ZH = ['奇幻', '言情', '悬疑', '科幻', '恐怖', '历史', '武侠', '都市', '青春', '冒险', '宫斗', '末世', '仙侠', '推理', '轻小说']
+-const GENRE_PRESETS_EN = ['Fantasy', 'Romance', 'Mystery', 'Sci-Fi', 'Horror', 'Historical', 'Thriller', 'Adventure', 'Cozy Mystery', 'Dystopian', 'Literary Fiction', 'Urban Fantasy', 'Dark Academia']
+ 
+ function loadFromStorage(key: string): string {
+   try { return localStorage.getItem(key) || '' } catch { return '' }
+@@ -80,7 +79,7 @@ function saveToStorage(key: string, value: string) {
+ type StyleId = 'tried' | 'matchMy' | 'soundsLike' | 'custom'
+ 
+ export function StoryBiblePanel() {
+-  const { t, language } = useI18n()
++  const { t } = useI18n()
+   const [characters, setCharacters] = useState<GraphItem[]>([])
+   const [locations, setLocations] = useState<GraphItem[]>([])
+   const [braindump, setBraindump] = useState(() => loadFromStorage('niko.sb-braindump-v1'))
+@@ -152,7 +151,7 @@ export function StoryBiblePanel() {
+     return () => { cancelled = true }
+   }, [])
+ 
+-  const genrePresets = language === 'zh' ? GENRE_PRESETS_ZH : GENRE_PRESETS_EN
++  const genrePresets = GENRE_PRESETS_ZH
+ 
+   const styles: { id: StyleId; icon: React.ReactNode; label: string; desc: string }[] = [
+     { id: 'tried', icon: <Sparkles size={16} />, label: t.storyBibleStyleTried, desc: t.storyBibleStyleTriedDesc },
+@@ -298,7 +297,7 @@ export function StoryBiblePanel() {
+         <textarea
+           value={outline}
+           onChange={(e) => saveOutline(e.target.value)}
+-          placeholder={language === 'zh' ? '故事大纲、章节计划、关键情节...' : 'Story outline, chapter plans, key plot points...'}
++          placeholder="故事大纲、章节计划、关键情节..."
+           className="w-full min-h-32 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+         />
+       ),
+diff --git a/desktop/src/components/WritingHelperPanel.tsx b/desktop/src/components/WritingHelperPanel.tsx
+index 6e60434..5cf1a2e 100644
+--- a/desktop/src/components/WritingHelperPanel.tsx
++++ b/desktop/src/components/WritingHelperPanel.tsx
+@@ -386,7 +386,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
+                 className="w-full flex items-center gap-3 px-4 py-3 text-left bg-gray-50 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-surface2 transition-colors"
+               >
+                 <span className="text-[12px] font-semibold text-gray-700 dark:text-dark-text">{t.styleSettingsTitle}</span>
+-                <span className="text-[10px] text-gray-400 dark:text-dark-text-muted">8 {language === 'zh' ? '维风格控制' : 'dimensions'}</span>
++                <span className="text-[10px] text-gray-400 dark:text-dark-text-muted">8 维风格控制</span>
+                 <ChevronDown
+                   size={14}
+                   className={`ml-auto text-gray-400 dark:text-dark-text-muted transition-transform duration-200 ${styleOpen ? 'rotate-180' : ''}`}
+@@ -616,7 +616,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
+                   </CollapsibleGroup>
+ 
+                   {/* Uniqueness & Cultural — Tag Inputs */}
+-                  <CollapsibleGroup title={t.styleUniqueness || (language === 'zh' ? '独特性 / 文化' : 'Uniqueness / Culture')}>
++                  <CollapsibleGroup title={t.styleUniqueness || '独特性 / 文化'}>
+                     <div className="space-y-3">
+                       <label className="text-[11px] font-medium text-gray-600 dark:text-dark-text-secondary flex flex-col gap-1">
+                         {t.styleSignaturePhrases}
+diff --git a/desktop/src/i18n/translations.ts b/desktop/src/i18n/translations.ts
+index 56495cd..f50dc55 100644
+--- a/desktop/src/i18n/translations.ts
++++ b/desktop/src/i18n/translations.ts
+@@ -841,15 +841,15 @@ export const translations: Record<Language, Translations> = {
+     uploadMultipleProgress: '正在处理文件 {current}/{total}...',
+     uploadMultipleComplete: '已完成 {success}/{total} 个文件上传',
+     chatAgentContextPrefix: 'Agent 上下文结果',
+-    quickRollbackTitle: 'Quick Rollback',
+-    quickRollbackAdvancedToggle: '高级：Quick Rollback',
+-    quickRollbackPlanIdPlaceholder: 'plan_id',
+-    quickRollbackCheckpointIdPlaceholder: 'checkpoint_id',
++    quickRollbackTitle: '快速回滚',
++    quickRollbackAdvancedToggle: '高级：快速回滚',
++    quickRollbackPlanIdPlaceholder: '计划 ID',
++    quickRollbackCheckpointIdPlaceholder: '检查点 ID',
+     quickRollbackReasonPlaceholder: '回滚原因（可选）',
+     quickRollbackAction: '执行回滚',
+-    quickRollbackSuccess: 'Quick rollback 执行成功。',
+-    quickRollbackFailed: 'Quick rollback 执行失败。',
+-    quickRollbackMissingRequired: '请填写 plan_id 与 checkpoint_id。',
++    quickRollbackSuccess: '快速回滚执行成功。',
++    quickRollbackFailed: '快速回滚执行失败。',
++    quickRollbackMissingRequired: '请填写计划 ID 与检查点 ID。',
+ 
+     // Knowledge Modal
+     knowledgeTitle: '知识库',
+@@ -997,9 +997,9 @@ export const translations: Record<Language, Translations> = {
+     sidebarToggleCollapse: '折叠侧边栏',
+     chatSidebarToggleExpand: '展开聊天面板',
+     chatSidebarToggleCollapse: '折叠聊天面板',
+-    storyBibleTitle: 'Story Bible',
++    storyBibleTitle: '故事圣经',
+     storyBibleDesc: '记录你故事世界的关键细节，帮助 AI 生成更好的建议，或逐步完善你的创意直到完成初稿。',
+-    storyBibleBraindump: 'Braindump',
++    storyBibleBraindump: '灵感倾泻',
+     storyBibleBraindumpHint: '写下你对故事所知的一切——情节、角色、世界观、主题，任何想法都可以！',
+     storyBibleGenre: '题材类型',
+     storyBibleGenrePlaceholder: '输入题材，如：奇幻、言情、悬疑...',
+@@ -1024,7 +1024,7 @@ export const translations: Record<Language, Translations> = {
+     aiToolRewrite: '改写',
+     aiToolDescribe: '描写',
+     aiToolBrainstorm: '头脑风暴',
+-    sidebarWritingHelper: 'Writing Helper',
++    sidebarWritingHelper: '写作助手',
+     sidebarMcpStatus: 'MCP 状态',
+     sidebarEvaluationPanel: '评估面板',
+     skillGroupCore: '核心',
+@@ -1050,13 +1050,13 @@ export const translations: Record<Language, Translations> = {
+     contextUsageHighHint: '上下文已接近满载，建议新建对话',
+ 
+     // Writing Helper panel
+-    writingHelperTitle: 'Writing Helper',
++    writingHelperTitle: '写作助手',
+     writingHelperMode: '模式',
+-    writingHelperModePolish: '润色（polish）',
+-    writingHelperModeRewrite: '改写（rewrite）',
+-    writingHelperModeExpand: '扩写（expand）',
+-    writingHelperModeSummarize: '摘要（summarize）',
+-    writingHelperModeOutline: '提纲（outline）',
++    writingHelperModePolish: '润色',
++    writingHelperModeRewrite: '改写',
++    writingHelperModeExpand: '扩写',
++    writingHelperModeSummarize: '摘要',
++    writingHelperModeOutline: '提纲',
+     writingHelperMaxSentences: '最大句数（摘要）',
+     writingHelperMaxItems: '最大条目（提纲）',
+     writingHelperInputText: '输入文本',
+@@ -1134,7 +1134,7 @@ export const translations: Record<Language, Translations> = {
+     qualityGoalRhythmVariability: '节奏变化目标',
+     qualityGoalCustomInstruction: '自定义优化指令',
+     qualityGoalCustomInstructionPlaceholder: '输入你的个性化洗稿/润色要求',
+-    writingHelperLegacyPolish: 'Writing Helper 润色走 legacy 接口',
++    writingHelperLegacyPolish: '写作助手润色走旧版接口',
+     writingHelperClose: '关闭',
+     writingHelperGuardStatus: '检测规避拦截：{status}',
+     writingHelperGuardOn: '开启',
+@@ -1318,11 +1318,11 @@ export const translations: Record<Language, Translations> = {
+     mcpServiceIdRequired: '请先填写服务 ID',
+     mcpCreateFailed: '创建失败',
+     mcpGatewayStatus: '网关状态',
+-    mcpGatewayHealth: 'Gateway Health',
+-    mcpSessionId: 'Session ID',
+-    mcpNotAvailable: 'N/A',
+-    mcpReconnect: 'Reconnect',
+-    mcpLastErrorPrefix: 'Last error: ',
++    mcpGatewayHealth: '网关健康度',
++    mcpSessionId: '会话 ID',
++    mcpNotAvailable: '暂无',
++    mcpReconnect: '重新连接',
++    mcpLastErrorPrefix: '最近错误：',
+     mcpKeyServiceStatus: '关键服务状态',
+     mcpServiceOnline: '在线',
+     mcpServiceNotReady: '未就绪',
+diff --git a/desktop/src/components/DocumentEditor.tsx b/desktop/src/components/DocumentEditor.tsx
+index c86a31c..1b03cc7 100644
+--- a/desktop/src/components/DocumentEditor.tsx
++++ b/desktop/src/components/DocumentEditor.tsx
+@@ -13,7 +13,7 @@ interface DocumentEditorProps {
+ 
+ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
+   const { t } = useI18n()
+-  const [title, setTitle] = useState(t.appTitle || 'Untitled Document')
++  const [title, setTitle] = useState(t.appTitle || '未命名文档')
+   const [editorText, setEditorText] = useState('')
+   const [editorJson, setEditorJson] = useState<JSONContent | null>(null)
+   const [showSaved, setShowSaved] = useState(false)
+@@ -61,7 +61,7 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
+             value={title}
+             onChange={(e) => setTitle(e.target.value)}
+             className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 bg-transparent border-none outline-none placeholder-gray-300 dark:placeholder-gray-700 tracking-tight"
+-            placeholder="Document Title"
++            placeholder="文档标题"
+           />
+           <div className="w-full h-px bg-gray-100 dark:bg-dark-border/50 my-8" />
+           <NikoEditor

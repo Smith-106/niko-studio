@@ -14,12 +14,12 @@
 
 ## Active Follow-up Work
 
-- [ ] Add and run parity tests
+- [x] Add and run parity tests
 - [x] Inspect novel workflow implementation
-- [ ] Implement novel adapter parity
-- [/] Repair novel adapter parity
-- [ ] Add novel adapter parity tests
-- [ ] Verify runtime integration path
+- [x] Implement novel adapter parity
+- [x] Repair novel adapter parity
+- [x] Add novel adapter parity tests
+- [x] Verify runtime integration path
 
 ## Future Phases (Not in Current Session)
 
