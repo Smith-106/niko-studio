@@ -5,6 +5,10 @@
  */
 
 import type { IAgentLLMService } from './base';
+import {
+  DistillationService,
+  type LegacyDistillationData,
+} from '../services/distill-service';
 
 // ============================================================
 // Interfaces (Pydantic models -> TS interfaces)
@@ -93,10 +97,29 @@ export interface StoryBlueprint {
 // ============================================================
 
 export interface IDistillService {
-  distillChapter(content: string): Record<string, unknown>;
-  applyToGraph(knowledgeLayer: unknown, data: Record<string, unknown>): void;
+  distillChapter(content: string): Promise<LegacyDistillationData>;
+  applyToGraph(knowledgeLayer: unknown, data: LegacyDistillationData): void;
   getDistillationPrompt(taskType: string, content?: string): string;
 }
+
+interface GraphKnowledgeLayer {
+  addEntity?: (
+    id: string,
+    name: string,
+    type: string,
+    description?: string
+  ) => void;
+  addRelation?: (
+    source: string,
+    target: string,
+    type: string,
+    props?: Record<string, unknown>
+  ) => void;
+}
+
+type DistilledBlueprintData = LegacyDistillationData & {
+  status?: string;
+};
 
 // ============================================================
 // SequentialThinking stub (minimal interface used by architect)
@@ -205,7 +228,7 @@ Generate the complete story blueprint based on the LOCK system.
 // ============================================================
 
 export class ArchitectAgent {
-  private llmService: IAgentLLMService;
+  private llmService: IAgentLLMService | null;
   private goldenDataset: Record<string, unknown>[];
   private enableSequentialThinking: boolean;
   private enableDistillation: boolean;
@@ -220,33 +243,79 @@ export class ArchitectAgent {
     thinkingMaxDepth?: number;
     enableDistillation?: boolean;
     knowledgeLayer?: unknown;
-  }) {
-    this.llmService = options.llmService;
+  } | IAgentLLMService | null) {
+    const normalizedOptions = this.normalizeOptions(options);
+
+    this.llmService = normalizedOptions.llmService;
     this.goldenDataset = [];
-    this.enableSequentialThinking = options.enableSequentialThinking ?? true;
-    this.enableDistillation = options.enableDistillation ?? true;
-    this.knowledgeLayer = options.knowledgeLayer ?? null;
+    this.enableSequentialThinking = normalizedOptions.enableSequentialThinking ?? true;
+    this.enableDistillation = normalizedOptions.enableDistillation ?? true;
+    this.knowledgeLayer = normalizedOptions.knowledgeLayer ?? null;
 
     // SequentialThinking stub (full implementation to be migrated separately)
     if (this.enableSequentialThinking) {
-      this.thinkingEngine = this.createThinkingEngine(options.thinkingMaxDepth ?? 10);
+      this.thinkingEngine = this.createThinkingEngine(normalizedOptions.thinkingMaxDepth ?? 10);
     } else {
       this.thinkingEngine = null;
     }
 
-    this.distillService = null;
+    this.distillService = this.enableDistillation ? this.createDistillService() : null;
+  }
+
+  private createDistillService(): IDistillService {
+    const service = new DistillationService();
+    return {
+      distillChapter: (content: string) => service.distillChapter(content),
+      applyToGraph: (knowledgeLayer: unknown, data: LegacyDistillationData) => {
+        service.applyToGraph(
+          this.asKnowledgeLayer(knowledgeLayer),
+          data,
+        );
+      },
+      getDistillationPrompt: (taskType: string, content: string = '') =>
+        service.getDistillationPrompt(taskType, content),
+    };
+  }
+
+  private asKnowledgeLayer(knowledgeLayer: unknown): GraphKnowledgeLayer {
+    if (typeof knowledgeLayer === 'object' && knowledgeLayer !== null) {
+      return knowledgeLayer as GraphKnowledgeLayer;
+    }
+    return {};
   }
 
   private createThinkingEngine(_maxDepth: number): ThinkingEngine {
-    // Minimal in-memory thinking engine for now.
-    // Will be replaced by SequentialThinking migration.
     const thoughts: Array<{ content: string; type: string; metadata?: Record<string, unknown>; confidence?: number }> = [];
+    const branches = new Map<string, string>();
+    let currentBranch = 'main';
+    let branchCounter = 0;
     return {
-      reset: () => { thoughts.length = 0; },
-      think: (content, opts) => { thoughts.push({ content, type: opts.thoughtType, metadata: opts.metadata, confidence: opts.confidence }); },
-      branch: () => ({ id: 'branch-stub' }),
-      switchBranch: () => {},
-      conclude: (content, opts) => { thoughts.push({ content, type: 'conclusion', confidence: opts.confidence }); },
+      reset: () => {
+        thoughts.length = 0;
+        branches.clear();
+        currentBranch = 'main';
+        branchCounter = 0;
+      },
+      think: (content, opts) => {
+        thoughts.push({
+          content,
+          type: opts.thoughtType,
+          metadata: { branch: currentBranch, ...(opts.metadata ?? {}) },
+          confidence: opts.confidence,
+        });
+      },
+      branch: ({ name }) => {
+        branchCounter += 1;
+        const id = `branch-${branchCounter}`;
+        branches.set(id, name);
+        return { id };
+      },
+      switchBranch: (id: string) => {
+        currentBranch = id === 'main' ? 'main' : (branches.get(id) ?? currentBranch);
+      },
+      conclude: (content, opts) => {
+        thoughts.push({ content, type: 'conclusion', metadata: { branch: currentBranch }, confidence: opts.confidence });
+      },
       toMarkdown: () => thoughts.map((t, i) => `${i + 1}. [${t.type}] ${t.content}`).join('\n'),
       toDict: () => ({ thoughts }),
     };
@@ -271,10 +340,18 @@ export class ArchitectAgent {
       .replace('{target_chapters}', String(targetChapters))
       .replace('{target_wordcount}', String(targetWordcount));
 
-    const result = await this.llmService.generateJson<StoryBlueprint>(
-      userPrompt,
-      { systemPrompt: ARCHITECT_SYSTEM_PROMPT },
-    );
+    let result: StoryBlueprint;
+    try {
+      if (!this.llmService) {
+        throw new Error('ArchitectAgent requires llmService or heuristic fallback');
+      }
+      result = await this.llmService.generateJson<StoryBlueprint>(
+        userPrompt,
+        { systemPrompt: ARCHITECT_SYSTEM_PROMPT },
+      );
+    } catch {
+      result = this.buildFallbackBlueprint(userIdea, genre, targetChapters, targetWordcount);
+    }
 
     // Validation
     this.validate(result);
@@ -376,21 +453,23 @@ export class ArchitectAgent {
 
   // ---------- Distillation ----------
 
-  async distillBlueprint(blueprint: StoryBlueprint): Promise<Record<string, unknown>> {
+  async distillBlueprint(blueprint: StoryBlueprint): Promise<DistilledBlueprintData> {
     if (!this.distillService) {
       return { entities: [], relations: [], status: 'distillation_disabled' };
     }
 
     const content = this.buildDistillContent(blueprint);
-    const distilledData = this.distillService.distillChapter(content);
+    const distilledData = await this.distillService.distillChapter(content);
 
     if (this.knowledgeLayer) {
       this.distillService.applyToGraph(this.knowledgeLayer, distilledData);
     }
 
     if (this.thinkingEngine) {
+      const entityCount = Array.isArray(distilledData.entities) ? distilledData.entities.length : 0;
+      const relationCount = Array.isArray(distilledData.relations) ? distilledData.relations.length : 0;
       this.thinkingEngine.think(
-        `Knowledge distillation complete: ${Array.isArray((distilledData as Record<string, unknown[]>).entities) ? (distilledData as Record<string, unknown[]>).entities.length : 0} entities, ${Array.isArray((distilledData as Record<string, unknown[]>).relations) ? (distilledData as Record<string, unknown[]>).relations.length : 0} relations`,
+        `Knowledge distillation complete: ${entityCount} entities, ${relationCount} relations`,
         { thoughtType: THOUGHT_TYPES.CONCLUSION, metadata: { distilled: true } },
       );
     }
@@ -439,7 +518,7 @@ export class ArchitectAgent {
     genre: string,
     targetChapters: number = 30,
     targetWordcount: number = 600000,
-  ): Promise<[StoryBlueprint, Record<string, unknown>]> {
+  ): Promise<[StoryBlueprint, DistilledBlueprintData]> {
     const blueprint = await this.plan(userIdea, genre, targetChapters, targetWordcount);
     const distilledData = await this.distillBlueprint(blueprint);
     return [blueprint, distilledData];
@@ -454,6 +533,131 @@ export class ArchitectAgent {
   }
 
   // ---------- Validation ----------
+
+  private normalizeOptions(
+    options: {
+      llmService: IAgentLLMService;
+      goldenDatasetPath?: string;
+      enableSequentialThinking?: boolean;
+      thinkingMaxDepth?: number;
+      enableDistillation?: boolean;
+      knowledgeLayer?: unknown;
+    } | IAgentLLMService | null,
+  ): {
+    llmService: IAgentLLMService | null;
+    goldenDatasetPath?: string;
+    enableSequentialThinking?: boolean;
+    thinkingMaxDepth?: number;
+    enableDistillation?: boolean;
+    knowledgeLayer?: unknown;
+  } {
+    if (options == null) {
+      return { llmService: null };
+    }
+    if (typeof options === 'object' && 'generateJson' in options) {
+      return { llmService: options as IAgentLLMService };
+    }
+    return {
+      llmService: (options as { llmService: IAgentLLMService }).llmService ?? null,
+      goldenDatasetPath: (options as { goldenDatasetPath?: string }).goldenDatasetPath,
+      enableSequentialThinking: (options as { enableSequentialThinking?: boolean }).enableSequentialThinking,
+      thinkingMaxDepth: (options as { thinkingMaxDepth?: number }).thinkingMaxDepth,
+      enableDistillation: (options as { enableDistillation?: boolean }).enableDistillation,
+      knowledgeLayer: (options as { knowledgeLayer?: unknown }).knowledgeLayer,
+    };
+  }
+
+  private buildFallbackBlueprint(
+    userIdea: string,
+    genre: string,
+    targetChapters: number,
+    targetWordcount: number,
+  ): StoryBlueprint {
+    const protagonist = this.extractProtagonist(userIdea);
+    const desire = this.extractDesire(userIdea);
+    const conflict = `${desire}的过程中遭遇持续升级的阻力`;
+    const hooks = [
+      `${protagonist}发现第一个异常线索`,
+      `${protagonist}意识到信任对象并不可靠`,
+      `${protagonist}必须在代价与真相之间二选一`,
+    ];
+    const sceneCount = Math.max(3, Math.min(targetChapters, 12));
+    const sceneCards: SceneCard[] = Array.from({ length: sceneCount }, (_, index) => ({
+      scene_id: `CH${String(Math.floor(index / 3) + 1).padStart(2, '0')}-SC${String((index % 3) + 1).padStart(2, '0')}`,
+      chapter_num: Math.floor(index / 3) + 1,
+      scene_num: (index % 3) + 1,
+      pov_character: protagonist,
+      objective: index === 0 ? desire : `推进${desire}`,
+      conflict,
+      outcome: index % 2 === 0 ? '+' : '-',
+      structural_function: index === 0 ? 'setup' : index >= sceneCount - 2 ? 'payoff' : 'escalation',
+      emotional_arc: index === 0 ? 'curious->uneasy' : 'pressure->resolve',
+      sensory_guidance: {
+        visual: genre === '悬疑' ? '阴影、封闭空间、细微动作' : '明确场景锚点',
+        sound: '突兀声响、对话停顿、环境噪声',
+      },
+      plot_beat: hooks[Math.min(index, hooks.length - 1)] ?? hooks[0],
+      hook: hooks[Math.min(index, hooks.length - 1)] ?? hooks[0],
+      foreshadows_to_plant: index === 0 ? ['异常细节'] : [],
+      foreshadows_to_harvest: index >= sceneCount - 2 ? ['异常细节'] : [],
+    }));
+
+    const lockAnalysis: LOCKAnalysis = {
+      L_score: 8,
+      L_protagonist: protagonist,
+      L_desire: desire,
+      L_pain_point: `${protagonist}无法承受再次失败`,
+      L_unique_trait: `${protagonist}能注意到别人忽视的细节`,
+      O_score: 8,
+      O_short_term: `找到与${desire}相关的第一条关键线索`,
+      O_long_term: `完成${desire}`,
+      O_measurable: true,
+      C_score: 8,
+      C_external: conflict,
+      C_internal: `${protagonist}怀疑自己的判断`,
+      C_escalation: '每推进一步，代价和误导同时增加',
+      K_score: 8,
+      K_hooks: hooks,
+      K_transformation: `${protagonist}从被动追随转向主动承担后果`,
+    };
+
+    return {
+      title: `${protagonist}的${genre}计划`,
+      genre,
+      logline: `${protagonist}为了${desire}，被迫穿过层层升级的冲突并完成自我转变。`,
+      lock_analysis: lockAnalysis,
+      two_doors: {
+        disturbance: { trigger: hooks[0] },
+        door_1: { chapter: Math.max(1, Math.round(targetChapters * 0.25)), event: '第一次不可逆选择' },
+        midpoint: { chapter: Math.max(2, Math.round(targetChapters * 0.5)), event: '真相出现反转' },
+        door_2: { chapter: Math.max(3, Math.round(targetChapters * 0.75)), event: '主角失去退路' },
+        climax: { chapter: targetChapters, event: '主角承担最终代价' },
+        resolution: { chapter: targetChapters, state: '新的平衡建立' },
+      },
+      scene_cards: sceneCards,
+      rhythm_analysis: {
+        positive_scenes: sceneCards.filter(scene => scene.outcome === '+').length,
+        negative_scenes: sceneCards.filter(scene => scene.outcome === '-').length,
+        balance_score: 0.8,
+        warnings: [],
+      },
+      target_chapters: targetChapters,
+      target_wordcount: targetWordcount,
+    };
+  }
+
+  private extractProtagonist(userIdea: string): string {
+    const trimmed = (userIdea ?? '').trim();
+    const match = trimmed.match(/关于(.+?)(?:在|的|，|。|$)/);
+    if (match?.[1]) return match[1];
+    return '主角';
+  }
+
+  private extractDesire(userIdea: string): string {
+    const trimmed = (userIdea ?? '').trim();
+    if (!trimmed) return '完成目标';
+    return trimmed.slice(0, 30);
+  }
 
   private validate(blueprint: StoryBlueprint): void {
     const errors: string[] = [];

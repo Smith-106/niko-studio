@@ -7,6 +7,11 @@
 
 import type { IAgentLLMService } from './base';
 import { AgentType } from './base';
+import { CommanderAgent } from './commander';
+import { ArchitectAgent } from './architect';
+import { WriterAgent } from './writer';
+import { CriticAgent } from './critic';
+import { PlotAgent } from './plot';
 
 export class AgentFactory {
   private instances: Map<AgentType, unknown> = new Map();
@@ -57,20 +62,19 @@ export class AgentFactory {
 
     switch (agentType) {
       case AgentType.COMMANDER: {
-        const { CommanderAgent } = require('./commander');
         return new CommanderAgent(llmService);
       }
       case AgentType.ARCHITECT: {
-        const { ArchitectAgent } = require('./architect');
         return new ArchitectAgent(llmService);
       }
       case AgentType.WRITER: {
-        const { WriterAgent } = require('./writer');
-        return new WriterAgent(llmService);
+        return new WriterAgent({ llmService: llmService as IAgentLLMService });
       }
       case AgentType.CRITIC: {
-        const { CriticAgent } = require('./critic');
-        return new CriticAgent(llmService);
+        return new CriticAgent({ llmService: llmService as IAgentLLMService });
+      }
+      case AgentType.PLOT: {
+        return new PlotAgent();
       }
       default:
         throw new Error(`Unsupported agent type: ${agentType}`);

@@ -16,6 +16,8 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { performance } from 'node:perf_hooks'
 
+import { GraphEngine } from '../graph/graph-engine'
+import { UnifiedMemoryEngine } from '../memory/unified-memory'
 import { RerankerFactory } from '../services/reranker/factory'
 import type { RankedDocument } from '../services/reranker/models'
 
@@ -117,6 +119,32 @@ const BUILT_IN_PROFILES: Record<string, RetrievalProfile> = {
   },
 }
 
+class UnifiedMemorySearchAdapter implements MemorySearchProvider {
+  private readonly engine: UnifiedMemoryEngine
+
+  constructor(engine?: UnifiedMemoryEngine) {
+    this.engine = engine ?? new UnifiedMemoryEngine()
+  }
+
+  async search(
+    query: string,
+    options?: {
+      dimensions?: string[]
+      limit?: number
+    },
+  ): Promise<Array<Record<string, unknown>>> {
+    return this.engine.search({
+      query,
+      dimensions: options?.dimensions ?? null,
+      limit: options?.limit ?? 10,
+    })
+  }
+
+  getRetrievalProfile(name: string): Record<string, unknown> | undefined {
+    return this.engine.getRetrievalProfile(name) ?? undefined
+  }
+}
+
 // ============================================================
 // IterativeRetriever
 // ============================================================
@@ -165,11 +193,7 @@ export class IterativeRetriever {
   /** Memory engine (lazy-loaded from container when first accessed) */
   get memoryEngine(): MemorySearchProvider {
     if (this._memoryEngine === null || this._memoryEngine === undefined) {
-      // Dynamic import avoids hard coupling; container must be bootstrapped
-      const { UnifiedMemoryEngine } = require('../memory/unified-memory') as {
-        UnifiedMemoryEngine: new () => MemorySearchProvider
-      }
-      this._memoryEngine = new UnifiedMemoryEngine()
+      this._memoryEngine = new UnifiedMemorySearchAdapter()
     }
     return this._memoryEngine
   }
@@ -177,9 +201,6 @@ export class IterativeRetriever {
   /** Graph engine (lazy-loaded from container when first accessed) */
   get graphEngine(): GraphSearchProvider {
     if (this._graphEngine === null || this._graphEngine === undefined) {
-      const { GraphEngine } = require('../graph/graph-engine') as {
-        GraphEngine: new () => GraphSearchProvider
-      }
       this._graphEngine = new GraphEngine()
     }
     return this._graphEngine

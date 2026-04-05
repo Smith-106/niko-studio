@@ -39,16 +39,9 @@ export function getConfigValue<T>(key: string, fallback: T): T {
   const envKey = key.toUpperCase().replace(/\./g, '_');
   const envVal = process.env[`NIKO_${envKey}`];
   if (envVal !== undefined) {
-    if (typeof fallback === 'boolean') {
-      return (envVal.trim().toLowerCase() in TRUTHY_STRINGS) as unknown as T;
-    }
-    if (typeof fallback === 'number') {
-      const parsed = Number(envVal);
-      return (Number.isNaN(parsed) ? fallback : parsed) as unknown as T;
-    }
-    return envVal as unknown as T;
+    return coerceConfigValue(envVal, fallback);
   }
-  return (CONFIG_DEFAULTS[key] ?? fallback) as T;
+  return coerceConfigValue(CONFIG_DEFAULTS[key] ?? fallback, fallback);
 }
 
 /** Stub for Python's get_services(). */
@@ -64,10 +57,58 @@ function getServices(): ServicesStub {
 // ============================================================
 
 const TRUTHY_STRINGS = new Set(['true', '1', 'yes', 'on']);
+const FALSY_STRINGS = new Set(['false', '0', 'no', 'off']);
 
 export function isTruthyString(raw: string | undefined): boolean {
   if (raw === undefined) return false;
   return TRUTHY_STRINGS.has(raw.trim().toLowerCase());
+}
+
+function coerceConfigValue<T>(rawValue: unknown, fallback: T): T {
+  if (typeof fallback === 'boolean') {
+    return parseBooleanValue(rawValue, fallback) as T;
+  }
+
+  if (typeof fallback === 'number') {
+    return parseNumberValue(rawValue, fallback) as T;
+  }
+
+  if (typeof fallback === 'string') {
+    return (typeof rawValue === 'string' ? rawValue : String(rawValue ?? fallback)) as T;
+  }
+
+  return (rawValue ?? fallback) as T;
+}
+
+function parseBooleanValue(rawValue: unknown, fallback: boolean): boolean {
+  if (typeof rawValue === 'boolean') return rawValue;
+
+  if (typeof rawValue === 'number') {
+    if (rawValue === 1) return true;
+    if (rawValue === 0) return false;
+    return fallback;
+  }
+
+  if (typeof rawValue === 'string') {
+    const normalized = rawValue.trim().toLowerCase();
+    if (TRUTHY_STRINGS.has(normalized)) return true;
+    if (FALSY_STRINGS.has(normalized)) return false;
+  }
+
+  return fallback;
+}
+
+function parseNumberValue(rawValue: unknown, fallback: number): number {
+  if (typeof rawValue === 'number') {
+    return Number.isNaN(rawValue) ? fallback : rawValue;
+  }
+
+  if (typeof rawValue === 'string') {
+    const parsed = Number(rawValue);
+    return Number.isNaN(parsed) ? fallback : parsed;
+  }
+
+  return fallback;
 }
 
 // ============================================================
