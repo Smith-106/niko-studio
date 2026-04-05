@@ -211,8 +211,8 @@ export class SceneCoherenceDetector {
     title: string,
     content: string,
     order: number,
-    timeInfo?: { relativeTime?: string; timeOfDay?: string },
-    locationInfo?: { name?: string; type?: string; parent?: string },
+    timeInfo?: { relativeTime?: string; timeOfDay?: string; duration?: string },
+    locationInfo?: { name?: string; type?: string; parent?: string; travelTimeFromPrev?: string },
     characters?: string[],
     objects?: string[],
   ): Scene {
@@ -237,7 +237,7 @@ export class SceneCoherenceDetector {
         timestamp: null,
         relativeTime: timeInfo.relativeTime ?? null,
         timeOfDay: timeInfo.timeOfDay ?? null,
-        duration: null,
+        duration: timeInfo.duration ?? null,
         order,
       };
     }
@@ -249,7 +249,7 @@ export class SceneCoherenceDetector {
         locationType: locationInfo.type ?? '',
         parentLocation: locationInfo.parent ?? '',
         coordinates: null,
-        travelTimeFromPrev: null,
+        travelTimeFromPrev: locationInfo.travelTimeFromPrev ?? null,
       };
     }
 
@@ -449,7 +449,12 @@ export class SceneCoherenceDetector {
         if (prevLoc !== currLoc) {
           const travelTime = this.getTravelTime(prevLoc, currLoc);
           if (travelTime && prev.timeMarker && curr.timeMarker) {
-            if (prev.timeMarker.duration) {
+            const actualInterval =
+              curr.locationMarker.travelTimeFromPrev ??
+              prev.timeMarker.duration ??
+              curr.timeMarker.relativeTime ??
+              null;
+            if (actualInterval && this.isTravelTimeInsufficient(actualInterval, travelTime)) {
               issues.push({
                 id: this.generateContradictionId(),
                 type: ContradictionType.LOCATION,
@@ -459,7 +464,7 @@ export class SceneCoherenceDetector {
                 sceneB: curr.id,
                 entityInvolved: '',
                 expectedValue: `\u81F3\u5C11${travelTime}\u7684\u95F4\u9694`,
-                actualValue: `${prev.timeMarker.duration}`,
+                actualValue: actualInterval,
                 contextA: '',
                 contextB: '',
                 suggestion: '\u589E\u52A0\u8FC7\u6E21\u573A\u666F\u6216\u8C03\u6574\u65F6\u95F4\u7EBF',
@@ -743,6 +748,29 @@ export class SceneCoherenceDetector {
       if (keywords.some((kw) => lower.includes(kw))) return period;
     }
     return null;
+  }
+
+  private isTravelTimeInsufficient(actualInterval: string, requiredInterval: string): boolean {
+    const actualMinutes = this.parseDurationToMinutes(actualInterval);
+    const requiredMinutes = this.parseDurationToMinutes(requiredInterval);
+    if (actualMinutes == null || requiredMinutes == null) return false;
+    return actualMinutes < requiredMinutes;
+  }
+
+  private parseDurationToMinutes(raw: string): number | null {
+    const value = String(raw ?? '').trim().toLowerCase();
+    if (!value) return null;
+
+    const dayMatch = value.match(/(\d+(?:\.\d+)?)\s*(?:天|day|days|d)/);
+    const hourMatch = value.match(/(\d+(?:\.\d+)?)\s*(?:小时|小時|hour|hours|h)/);
+    const minuteMatch = value.match(/(\d+(?:\.\d+)?)\s*(?:分钟|分鐘|min|mins|minute|minutes|m)/);
+
+    let total = 0;
+    if (dayMatch) total += Number(dayMatch[1]) * 24 * 60;
+    if (hourMatch) total += Number(hourMatch[1]) * 60;
+    if (minuteMatch) total += Number(minuteMatch[1]);
+
+    return total > 0 ? total : null;
   }
 
   private checkContentTimeContradiction(

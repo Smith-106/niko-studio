@@ -98,6 +98,44 @@ export class PremiseEvaluator extends BaseEvaluator {
     );
   }
 
+  override quickScan(content: string): EvaluationResult {
+    const causality = this.evaluateCausality(content);
+    const irony = this.evaluateIrony(content);
+    const consistency = 60;
+    const totalScore = causality * 0.45 + irony * 0.35 + consistency * 0.2;
+
+    const issues: Issue[] = [];
+    if (causality < 55) {
+      issues.push({
+        code: 'PREMISE_QUICK_CAUSALITY_WEAK',
+        message: '快速扫描发现因果链偏弱',
+        severity: Severity.MINOR,
+        relatedSkill: 'premise-magic',
+      });
+    }
+    if (irony < 45) {
+      issues.push({
+        code: 'PREMISE_QUICK_IRONY_WEAK',
+        message: '快速扫描发现戏剧性反差不足',
+        severity: Severity.INFO,
+        relatedSkill: 'premise-magic',
+      });
+    }
+
+    return new EvaluationResult(
+      this.name,
+      totalScore,
+      this.scoreToLevel(totalScore),
+      issues,
+      {
+        causality,
+        irony,
+        consistency,
+      },
+      `预设快速扫描：${this.scoreToLevel(totalScore)}`,
+    );
+  }
+
   private evaluateCausality(content: string): number {
     let score = 40;
     for (const m of PremiseEvaluator.CAUSALITY_MARKERS) {

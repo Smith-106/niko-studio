@@ -129,6 +129,47 @@ export class VoiceEvaluator extends BaseEvaluator {
     );
   }
 
+  override quickScan(content: string): EvaluationResult {
+    const specificity = this.evaluateSpecificity(content);
+    const vaguenessPenalty = this.evaluateVagueness(content);
+    const narratorPresence = this.evaluateNarratorPresence(content);
+    const totalScore =
+      specificity * 0.45 +
+      (100 - vaguenessPenalty) * 0.35 +
+      narratorPresence * 0.2;
+
+    const issues: Issue[] = [];
+    if (vaguenessPenalty > 45) {
+      issues.push({
+        code: 'VOICE_QUICK_VAGUE',
+        message: '快速扫描发现空泛修饰词偏多',
+        severity: Severity.MINOR,
+        relatedSkill: 'voice-workshop',
+      });
+    }
+    if (specificity < 60) {
+      issues.push({
+        code: 'VOICE_QUICK_DETAIL_WEAK',
+        message: '快速扫描发现具体细节不足',
+        severity: Severity.MINOR,
+        relatedSkill: 'voice-workshop',
+      });
+    }
+
+    return new EvaluationResult(
+      this.name,
+      totalScore,
+      this.scoreToLevel(totalScore),
+      issues,
+      {
+        specificity,
+        vagueness_penalty: vaguenessPenalty,
+        narrator_presence: narratorPresence,
+      },
+      `语气快速扫描：${this.scoreToLevel(totalScore)}`,
+    );
+  }
+
   private evaluateSpecificity(content: string): number {
     let score = 50;
     for (const pattern of VoiceEvaluator.SPECIFIC_MARKERS) {

@@ -116,6 +116,44 @@ export class CharacterEvaluator extends BaseEvaluator {
     );
   }
 
+  override quickScan(content: string): EvaluationResult {
+    const competence = this.evaluateCompetence(content);
+    const eccentricity = this.evaluateEccentricity(content);
+    const innerConflict = this.evaluateInnerConflict(content);
+    const totalScore = (competence + eccentricity + innerConflict) / 3;
+
+    const issues: Issue[] = [];
+    if (eccentricity < 50) {
+      issues.push({
+        code: 'CHAR_QUICK_BLAND',
+        message: '快速扫描发现角色辨识度偏低',
+        severity: Severity.MINOR,
+        relatedSkill: 'character-forge',
+      });
+    }
+    if (innerConflict < 50) {
+      issues.push({
+        code: 'CHAR_QUICK_STATIC',
+        message: '快速扫描发现角色内在冲突不足',
+        severity: Severity.MINOR,
+        relatedSkill: 'character-forge',
+      });
+    }
+
+    return new EvaluationResult(
+      this.name,
+      totalScore,
+      this.scoreToLevel(totalScore),
+      issues,
+      {
+        competence,
+        eccentricity,
+        inner_conflict: innerConflict,
+      },
+      `人物快速扫描：${this.scoreToLevel(totalScore)}`,
+    );
+  }
+
   private evaluateCompetence(content: string): number {
     let score = 40;
     for (const m of CharacterEvaluator.COMPETENCE_MARKERS) {

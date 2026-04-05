@@ -145,33 +145,37 @@ export class SuspenseAnalyzer {
   async detectStoryQuestions(content: string): Promise<SuspenseScore> {
     if (!this.llmClient) return this.mockStoryQuestions();
 
-    const prompt = STORY_QUESTION_PROMPT.replace('{content}', content);
-    const result = await this.llmClient.generateJson<{
-      questions: Array<{
-        question: string;
-        location: string;
-        intensity: number;
-      }>;
-      score: number;
-      issues: string[];
-      suggestions: string[];
-    }>(prompt);
+    try {
+      const prompt = STORY_QUESTION_PROMPT.replace('{content}', content);
+      const result = await this.llmClient.generateJson<{
+        questions: Array<{
+          question: string;
+          location: string;
+          intensity: number;
+        }>;
+        score: number;
+        issues: string[];
+        suggestions: string[];
+      }>(prompt);
 
-    const questions: StoryQuestion[] = (result.questions ?? []).map((q) => ({
-      question: q.question,
-      location: q.location,
-      intensity: q.intensity,
-      isAnswered: false,
-      answerLocation: null,
-    }));
+      const questions: StoryQuestion[] = (result.questions ?? []).map((q) => ({
+        question: q.question,
+        location: q.location,
+        intensity: q.intensity,
+        isAnswered: false,
+        answerLocation: null,
+      }));
 
-    return {
-      pillar: SuspensePillar.STORY_QUESTION,
-      score: result.score,
-      elements: questions,
-      issues: result.issues ?? [],
-      suggestions: result.suggestions ?? [],
-    };
+      return {
+        pillar: SuspensePillar.STORY_QUESTION,
+        score: result.score,
+        elements: questions,
+        issues: result.issues ?? [],
+        suggestions: result.suggestions ?? [],
+      };
+    } catch {
+      return this.mockStoryQuestions();
+    }
   }
 
   async analyzeThreatSituations(
@@ -180,71 +184,79 @@ export class SuspenseAnalyzer {
   ): Promise<SuspenseScore> {
     if (!this.llmClient) return this.mockThreatSituations();
 
-    const prompt = THREAT_SITUATION_PROMPT.replace(
-      '{content}',
-      content,
-    ).replace('{character_info}', JSON.stringify(characterInfo));
+    try {
+      const prompt = THREAT_SITUATION_PROMPT.replace(
+        '{content}',
+        content,
+      ).replace('{character_info}', JSON.stringify(characterInfo));
 
-    const result = await this.llmClient.generateJson<{
-      threats: Array<{
-        threat_type: string;
-        description: string;
-        target_character: string;
-        intensity: number;
-      }>;
-      score: number;
-      issues: string[];
-      suggestions: string[];
-    }>(prompt);
+      const result = await this.llmClient.generateJson<{
+        threats: Array<{
+          threat_type: string;
+          description: string;
+          target_character: string;
+          intensity: number;
+        }>;
+        score: number;
+        issues: string[];
+        suggestions: string[];
+      }>(prompt);
 
-    const threats: ThreatSituation[] = (result.threats ?? []).map((t) => ({
-      threatType: t.threat_type,
-      description: t.description,
-      targetCharacter: t.target_character,
-      intensity: t.intensity,
-      isResolved: false,
-    }));
+      const threats: ThreatSituation[] = (result.threats ?? []).map((t) => ({
+        threatType: t.threat_type,
+        description: t.description,
+        targetCharacter: t.target_character,
+        intensity: t.intensity,
+        isResolved: false,
+      }));
 
-    return {
-      pillar: SuspensePillar.THREAT_SITUATION,
-      score: result.score,
-      elements: threats,
-      issues: result.issues ?? [],
-      suggestions: result.suggestions ?? [],
-    };
+      return {
+        pillar: SuspensePillar.THREAT_SITUATION,
+        score: result.score,
+        elements: threats,
+        issues: result.issues ?? [],
+        suggestions: result.suggestions ?? [],
+      };
+    } catch {
+      return this.mockThreatSituations();
+    }
   }
 
   async findLitFuses(content: string): Promise<SuspenseScore> {
     if (!this.llmClient) return this.mockLitFuses();
 
-    const prompt = LIT_FUSE_PROMPT.replace('{content}', content);
-    const result = await this.llmClient.generateJson<{
-      fuses: Array<{
-        crisis: string;
-        deadline: string;
-        consequence: string;
-        intensity: number;
-      }>;
-      score: number;
-      issues: string[];
-      suggestions: string[];
-    }>(prompt);
+    try {
+      const prompt = LIT_FUSE_PROMPT.replace('{content}', content);
+      const result = await this.llmClient.generateJson<{
+        fuses: Array<{
+          crisis: string;
+          deadline: string;
+          consequence: string;
+          intensity: number;
+        }>;
+        score: number;
+        issues: string[];
+        suggestions: string[];
+      }>(prompt);
 
-    const fuses: LitFuse[] = (result.fuses ?? []).map((f) => ({
-      crisis: f.crisis,
-      deadline: f.deadline,
-      consequence: f.consequence,
-      intensity: f.intensity,
-      isDefused: false,
-    }));
+      const fuses: LitFuse[] = (result.fuses ?? []).map((f) => ({
+        crisis: f.crisis,
+        deadline: f.deadline,
+        consequence: f.consequence,
+        intensity: f.intensity,
+        isDefused: false,
+      }));
 
-    return {
-      pillar: SuspensePillar.LIT_FUSE,
-      score: result.score,
-      elements: fuses,
-      issues: result.issues ?? [],
-      suggestions: result.suggestions ?? [],
-    };
+      return {
+        pillar: SuspensePillar.LIT_FUSE,
+        score: result.score,
+        elements: fuses,
+        issues: result.issues ?? [],
+        suggestions: result.suggestions ?? [],
+      };
+    } catch {
+      return this.mockLitFuses();
+    }
   }
 
   async analyzeFull(
