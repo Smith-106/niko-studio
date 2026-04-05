@@ -17,6 +17,9 @@ export async function memorySearchEndpoint(request: HttpRequest): Promise<HttpRe
     layer: body.layer as string | undefined,
     dimensions: body.dimensions as string[] | undefined,
     entityId: body.entity_id as string | undefined,
+    userId: body.user_id as string | undefined,
+    projectId: body.project_id as string | undefined,
+    sessionId: body.session_id as string | undefined,
     atTime: body.at_time as string | undefined,
     limit: (body.limit as number) ?? 10,
   });
@@ -33,8 +36,13 @@ export async function memoryAddEndpoint(request: HttpRequest): Promise<HttpRespo
     entityId: body.entity_id as string | undefined,
     validFrom: body.valid_from as string | undefined,
     validUntil: body.valid_until as string | undefined,
+    userId: body.user_id as string | undefined,
+    projectId: body.project_id as string | undefined,
+    sessionId: body.session_id as string | undefined,
     importance: (body.importance as number) ?? 0.5,
     tags: (body.tags as string[]) ?? [],
+    source: body.source as string | undefined,
+    confidence: body.confidence as number | undefined,
   });
   return jsonResponse(result);
 }
@@ -74,7 +82,12 @@ export async function memoryTemporalEndpoint(request: HttpRequest): Promise<Http
   const body = parseBody(request) as Record<string, unknown>;
   const result = await memoryGetTemporal(
     (body.entity_id as string) ?? '',
-    body.at_time as string | undefined
+    body.at_time as string | undefined,
+    {
+      userId: body.user_id as string | undefined,
+      projectId: body.project_id as string | undefined,
+      sessionId: body.session_id as string | undefined,
+    }
   );
   return jsonResponse(result);
 }

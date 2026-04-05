@@ -30,6 +30,23 @@ import {
   IVectorSearch,
 } from '../../container/types';
 
+function createMockMemoryEngine(
+  overrides: Partial<IMemoryEngine> = {},
+): IMemoryEngine {
+  return {
+    initialize: vi.fn(),
+    store: vi.fn(),
+    add: vi.fn(),
+    retrieve: vi.fn(),
+    search: vi.fn(),
+    getTemporalFacts: vi.fn(),
+    detectConflicts: vi.fn(),
+    resolveConflict: vi.fn(),
+    clear: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe('ServiceContainer', () => {
   let container: ServiceContainer;
 
@@ -63,13 +80,7 @@ describe('ServiceContainer', () => {
 
   describe('Mock Injection', () => {
     it('should register mock for MemoryEngine', () => {
-      const mockMemory: IMemoryEngine = {
-        initialize: vi.fn(),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      const mockMemory = createMockMemoryEngine();
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       const result = container.memory;
@@ -202,13 +213,7 @@ describe('ServiceContainer', () => {
     });
 
     it('should clear all mocks', () => {
-      const mockMemory: IMemoryEngine = {
-        initialize: vi.fn(),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      const mockMemory = createMockMemoryEngine();
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.clearMocks();
@@ -265,13 +270,7 @@ describe('ServiceContainer', () => {
 
   describe('Service Getters', () => {
     it('should return same MemoryEngine instance on multiple accesses', () => {
-      const mockMemory: IMemoryEngine = {
-        initialize: vi.fn(),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      const mockMemory = createMockMemoryEngine();
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       const instance1 = container.memory;
@@ -364,13 +363,9 @@ describe('ServiceContainer', () => {
 
   describe('Async Initialization', () => {
     it('should mark engines as initialized after initializeAll()', async () => {
-      const mockMemory: IMemoryEngine = {
+      const mockMemory = createMockMemoryEngine({
         initialize: vi.fn().mockResolvedValue(undefined),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      });
 
       const mockGraph: IGraphEngine = {
         initialize: vi.fn().mockResolvedValue(undefined),
@@ -398,13 +393,9 @@ describe('ServiceContainer', () => {
     });
 
     it('should call initialize on services with initialize method', async () => {
-      const mockMemory: IMemoryEngine = {
+      const mockMemory = createMockMemoryEngine({
         initialize: vi.fn().mockResolvedValue(undefined),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      });
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.registerMock(ServiceTypes.GraphEngine, {} as any);
@@ -418,13 +409,9 @@ describe('ServiceContainer', () => {
     });
 
     it('should not re-initialize if already initialized', async () => {
-      const mockMemory: IMemoryEngine = {
+      const mockMemory = createMockMemoryEngine({
         initialize: vi.fn().mockResolvedValue(undefined),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      });
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.registerMock(ServiceTypes.GraphEngine, {} as any);
@@ -439,13 +426,9 @@ describe('ServiceContainer', () => {
     });
 
     it('should handle initialization timeout', async () => {
-      const mockMemory: IMemoryEngine = {
+      const mockMemory = createMockMemoryEngine({
         initialize: vi.fn().mockImplementation(() => new Promise(resolve => setTimeout(resolve, 5000))),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      });
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.registerMock(ServiceTypes.GraphEngine, {} as any);
@@ -533,13 +516,7 @@ describe('ServiceContainer', () => {
 
   describe('Reset', () => {
     it('should clear mocks on reset', () => {
-      const mockMemory: IMemoryEngine = {
-        initialize: vi.fn(),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      const mockMemory = createMockMemoryEngine();
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.reset();
@@ -550,13 +527,9 @@ describe('ServiceContainer', () => {
     });
 
     it('should reset initialized flag on reset', async () => {
-      const mockMemory: IMemoryEngine = {
+      const mockMemory = createMockMemoryEngine({
         initialize: vi.fn().mockResolvedValue(undefined),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      });
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.registerMock(ServiceTypes.GraphEngine, {} as any);
@@ -572,13 +545,9 @@ describe('ServiceContainer', () => {
     });
 
     it('should clear initPromises on reset', async () => {
-      const mockMemory: IMemoryEngine = {
+      const mockMemory = createMockMemoryEngine({
         initialize: vi.fn().mockResolvedValue(undefined),
-        store: vi.fn(),
-        retrieve: vi.fn(),
-        search: vi.fn(),
-        clear: vi.fn(),
-      };
+      });
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
       container.registerMock(ServiceTypes.GraphEngine, {} as any);

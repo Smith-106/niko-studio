@@ -14,14 +14,139 @@
 
 import BetterSqlite3 from "better-sqlite3";
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 
-import { getQueryCache } from "./query-cache";
+import { createIntegrationAdapters as createDefaultIntegrationAdapters } from "../integrations";
 
 type DatabaseType = InstanceType<typeof BetterSqlite3>;
+
+interface StorageShadowAdapter {
+  shadowWriteMemory(payload: Record<string, unknown>): Promise<boolean>;
+}
+
+interface IntegrationAdapterBundle {
+  flags: IntegrationFlags;
+  storageShadow: StorageShadowAdapter;
+}
+
+export interface MemoryScopeFilters {
+  userId?: string | null;
+  projectId?: string | null;
+  sessionId?: string | null;
+}
+
+interface QueryCacheStats {
+  size: number;
+  max_size: number;
+  hits: number;
+  misses: number;
+  hit_rate: number;
+  ttl_seconds: number;
+}
+
+interface QueryCache {
+  get(query: string): number[] | null;
+  put(query: string, embedding: number[]): void;
+  readonly stats: QueryCacheStats;
+}
+
+class EmbeddingQueryCache implements QueryCache {
+  private readonly maxSize: number;
+  private readonly ttlSeconds: number;
+  private readonly cache = new Map<string, { embedding: number[]; createdAt: number }>();
+  private hits = 0;
+  private misses = 0;
+
+  constructor(maxSize: number = 1000, ttlSeconds: number = 3600) {
+    this.maxSize = maxSize;
+    this.ttlSeconds = ttlSeconds;
+  }
+
+  private hashQuery(query: string): string {
+    return createHash("sha256").update(query).digest("hex").slice(0, 16);
+  }
+
+  get(query: string): number[] | null {
+    const key = this.hashQuery(query);
+    const entry = this.cache.get(key);
+    if (!entry) {
+      this.misses++;
+      return null;
+    }
+
+    if (Date.now() - entry.createdAt > this.ttlSeconds * 1000) {
+      this.cache.delete(key);
+      this.misses++;
+      return null;
+    }
+
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    this.hits++;
+    return entry.embedding;
+  }
+
+  put(query: string, embedding: number[]): void {
+    const key = this.hashQuery(query);
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+
+    while (this.cache.size >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey === undefined) {
+        break;
+      }
+      this.cache.delete(oldestKey);
+    }
+
+    this.cache.set(key, { embedding, createdAt: Date.now() });
+  }
+
+  get stats(): QueryCacheStats {
+    const attempts = this.hits + this.misses;
+    return {
+      size: this.cache.size,
+      max_size: this.maxSize,
+      hits: this.hits,
+      misses: this.misses,
+      hit_rate: attempts === 0 ? 0 : Math.round((this.hits / attempts) * 10000) / 10000,
+      ttl_seconds: this.ttlSeconds,
+    };
+  }
+}
+
+let _queryCache: QueryCache | null = null;
+
+function getQueryCache(maxSize: number = 1000, ttlSeconds: number = 3600): QueryCache {
+  if (_queryCache === null) {
+    _queryCache = new EmbeddingQueryCache(maxSize, ttlSeconds);
+  }
+  return _queryCache;
+}
+
+function appendScopeFilters(
+  sql: string,
+  sqlParams: unknown[],
+  scope: MemoryScopeFilters
+): string {
+  if (scope.userId !== undefined && scope.userId !== null) {
+    sql += " AND user_id = ?";
+    sqlParams.push(scope.userId);
+  }
+  if (scope.projectId !== undefined && scope.projectId !== null) {
+    sql += " AND project_id = ?";
+    sqlParams.push(scope.projectId);
+  }
+  if (scope.sessionId !== undefined && scope.sessionId !== null) {
+    sql += " AND session_id = ?";
+    sqlParams.push(scope.sessionId);
+  }
+  return sql;
+}
 
 // ============================================================
 // Configuration defaults
@@ -327,21 +452,26 @@ export class EngineConflictResolver {
   ];
 
   /** Detect potential conflicts. */
-  async check(content: string, entityId?: string | null): Promise<Array<Record<string, unknown>>> {
+  async check(
+    content: string,
+    entityId?: string | null,
+    scope: MemoryScopeFilters = {}
+  ): Promise<Array<Record<string, unknown>>> {
     if (!entityId) {
       return [];
     }
 
-    const cursor = this._db.execute(
-      `
+    let sql = `
       SELECT id, content, valid_from, valid_until
       FROM memories
       WHERE entity_id = ?
       AND superseded_by IS NULL
       AND (valid_until IS NULL OR valid_until > datetime('now'))
-    `,
-      [entityId]
-    );
+    `;
+    const sqlParams: unknown[] = [entityId];
+    sql = appendScopeFilters(sql, sqlParams, scope);
+
+    const cursor = this._db.execute(sql, sqlParams);
 
     const conflicts: Array<Record<string, unknown>> = [];
     const rows = cursor.fetchAll();
@@ -437,6 +567,10 @@ export class EmbeddingEngine {
    * @param useCache - Whether to use cache (only for queries, not storage)
    */
   embed(text: string, useCache: boolean = false): number[] {
+    if (!this._cache) {
+      this._cache = getQueryCache(1000, 3600);
+    }
+
     if (useCache) {
       const cached = this._cache.get(text);
       if (cached !== null) {
@@ -477,7 +611,10 @@ export class EmbeddingEngine {
   }
 
   /** Get cache statistics. */
-  get cacheStats(): Record<string, unknown> {
+  get cacheStats(): QueryCacheStats {
+    if (!this._cache) {
+      this._cache = getQueryCache(1000, 3600);
+    }
     return this._cache.stats;
   }
 
@@ -519,31 +656,24 @@ export class EmbeddingEngine {
 // Integration adapters (minimal placeholder)
 // ============================================================
 
-/** Integration flags for optional services */
 export interface IntegrationFlags {
   postgresEnabled: boolean;
+  redisCacheEnabled: boolean;
+  elasticsearchEnabled: boolean;
+  neo4jEnabled: boolean;
+  langflowEnabled: boolean;
 }
 
-/** Storage shadow-write interface */
-export interface StorageShadowWriter {
-  shadowWriteMemory(payload: Record<string, unknown>): Promise<void>;
-}
+export type StorageShadowWriter = StorageShadowAdapter;
 
-/** Integration adapters container */
-export interface IntegrationAdapters {
-  flags: IntegrationFlags;
-  storageShadow: StorageShadowWriter;
-}
+export type IntegrationAdapters = Pick<IntegrationAdapterBundle, "flags" | "storageShadow">;
 
 /** Minimal no-op integration adapters */
 function createNoOpAdapters(): IntegrationAdapters {
+  const adapters = createDefaultIntegrationAdapters();
   return {
-    flags: { postgresEnabled: false },
-    storageShadow: {
-      async shadowWriteMemory(_payload: Record<string, unknown>): Promise<void> {
-        // no-op
-      },
-    },
+    flags: adapters.flags,
+    storageShadow: adapters.storageShadow,
   };
 }
 
@@ -603,11 +733,11 @@ export class UnifiedMemoryEngine {
     if (dbPath === null) {
       const dataDir = getConfigValue("data_dir", null) as string | null;
       if (dataDir) {
-        dbPath = dataDir + "/memory.db";
+        dbPath = join(dataDir, "memory.db");
       }
     }
     if (dbPath === null) {
-      dbPath = homedir() + "/.niko/memory.db";
+      dbPath = join(homedir(), ".niko", "memory.db");
     }
 
     this.dbPath = dbPath;
@@ -638,7 +768,14 @@ export class UnifiedMemoryEngine {
     return {
       execute(sql: string, params: unknown[] = []): { fetchAll(): unknown[][] } {
         const stmt = db.prepare(sql);
-        const rows = stmt.all(...params) as unknown[][];
+        const columns = stmt.columns().map((column: { name: string }) => column.name);
+        const rawRows = stmt.all(...params) as Array<Record<string, unknown> | unknown[]>;
+        const rows = rawRows.map((row) => {
+          if (Array.isArray(row)) {
+            return row;
+          }
+          return columns.map((name) => row[name]);
+        });
         return {
           fetchAll(): unknown[][] {
             return rows;
@@ -824,7 +961,11 @@ export class UnifiedMemoryEngine {
     } = params;
 
     // 1. Conflict detection
-    const conflicts = await this.conflictResolver.check(content, entityId);
+    const conflicts = await this.conflictResolver.check(content, entityId, {
+      userId,
+      projectId,
+      sessionId,
+    });
     if (conflicts.length > 0) {
       const resolution = await this.conflictResolver.resolve(
         content,
@@ -878,14 +1019,7 @@ export class UnifiedMemoryEngine {
     await this._runPostgresShadowWrite(memory);
 
     // 5. Plugin notification
-    for (const plugin of this.plugins) {
-      try {
-        await plugin.onMemoryAdded(memory);
-      } catch (exc) {
-        const name = (plugin as unknown as Record<string, unknown>).name ?? "unknown";
-        console.error(`Memory plugin callback failed: ${name}: ${exc}`);
-      }
-    }
+    await this._notifyPlugins(memory);
 
     console.log(`Memory added: ${memory.id.slice(0, 8)}... [${layer}]`);
     return { id: memory.id, status: "created" };
@@ -905,9 +1039,17 @@ export class UnifiedMemoryEngine {
       layer: memory.layer,
       dimension: memory.dimension,
       entity_id: memory.entityId,
+      valid_from: memory.validFrom,
+      valid_until: memory.validUntil,
+      user_id: memory.userId,
+      project_id: memory.projectId,
+      session_id: memory.sessionId,
       importance: memory.importance,
+      confidence: memory.confidence,
+      source: memory.source,
       tags: memory.tags,
       created_at: memory.createdAt,
+      updated_at: memory.updatedAt,
     };
     try {
       await this._integrationAdapters.storageShadow.shadowWriteMemory(payload);
@@ -931,6 +1073,37 @@ export class UnifiedMemoryEngine {
         `INSERT OR REPLACE INTO memories (${columns}) VALUES (${placeholders})`
       )
       .run(...Object.values(data));
+  }
+
+  private _getMemoryById(memoryId: string): UnifiedMemory | null {
+    const stmt = this._db.prepare("SELECT * FROM memories WHERE id = ?");
+    const row = stmt.get(memoryId) as Record<string, unknown> | unknown[] | undefined;
+    if (!row) {
+      return null;
+    }
+
+    const columns = stmt.columns().map((column: { name: string }) => column.name);
+    const values = Array.isArray(row)
+      ? row
+      : columns.map((column) => row[column]);
+    const data: Record<string, unknown> = {};
+
+    for (let i = 0; i < columns.length; i++) {
+      data[columns[i]] = values[i];
+    }
+
+    return UnifiedMemory.fromDict(data);
+  }
+
+  private async _notifyPlugins(memory: UnifiedMemory): Promise<void> {
+    for (const plugin of this.plugins) {
+      try {
+        await plugin.onMemoryAdded(memory);
+      } catch (exc) {
+        const name = (plugin as unknown as Record<string, unknown>).name ?? "unknown";
+        console.error(`Memory plugin callback failed: ${name}: ${exc}`);
+      }
+    }
   }
 
   /** Mark memory as superseded. */
@@ -961,6 +1134,9 @@ export class UnifiedMemoryEngine {
     layer?: string | null;
     dimensions?: string[] | null;
     entityId?: string | null;
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
     atTime?: string | null;
     limit?: number;
     minScore?: number | null;
@@ -970,6 +1146,9 @@ export class UnifiedMemoryEngine {
       layer = null,
       dimensions = null,
       entityId = null,
+      userId = null,
+      projectId = null,
+      sessionId = null,
       atTime = null,
       limit = 10,
       minScore = null,
@@ -996,6 +1175,12 @@ export class UnifiedMemoryEngine {
       sqlParams.push(entityId);
     }
 
+    sql = appendScopeFilters(sql, sqlParams, {
+      userId,
+      projectId,
+      sessionId,
+    });
+
     if (atTime) {
       sql += `
         AND (valid_from IS NULL OR valid_from <= ?)
@@ -1005,7 +1190,7 @@ export class UnifiedMemoryEngine {
     }
 
     const stmt = this._db.prepare(sql);
-    const rows = stmt.all(...sqlParams) as Array<Record<string, unknown>>[];
+    const rows = stmt.all(...sqlParams) as Array<Record<string, unknown> | unknown[]>;
 
     const threshold = minScore ?? DEFAULT_MIN_SCORE;
 
@@ -1013,9 +1198,12 @@ export class UnifiedMemoryEngine {
     const columns = stmt.columns().map((c: { name: string }) => c.name);
 
     for (const rowValues of rows) {
+      const values = Array.isArray(rowValues)
+        ? rowValues
+        : columns.map((column) => rowValues[column]);
       const data: Record<string, unknown> = {};
       for (let i = 0; i < columns.length; i++) {
-        data[columns[i]] = rowValues[i];
+        data[columns[i]] = values[i];
       }
       const memory = UnifiedMemory.fromDict(data);
 
@@ -1067,32 +1255,60 @@ export class UnifiedMemoryEngine {
   async getTemporalFacts(params: {
     entityId: string;
     atTime?: string | null;
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
   }): Promise<Array<Record<string, unknown>>> {
-    const { entityId, atTime = null } = params;
+    const {
+      entityId,
+      atTime = null,
+      userId = null,
+      projectId = null,
+      sessionId = null,
+    } = params;
     const time = atTime ?? new Date().toISOString();
 
-    const rows = this._db
-      .prepare(
-        `
+    let sql = `
       SELECT id, content, dimension, valid_from, valid_until, importance
       FROM memories
       WHERE entity_id = ?
       AND superseded_by IS NULL
       AND (valid_from IS NULL OR valid_from <= ?)
       AND (valid_until IS NULL OR valid_until > ?)
-      ORDER BY importance DESC, valid_from DESC
-    `
-      )
-      .all(entityId, time, time) as unknown[][];
+    `;
+    const sqlParams: unknown[] = [entityId, time, time];
+    sql = appendScopeFilters(sql, sqlParams, {
+      userId,
+      projectId,
+      sessionId,
+    });
+    sql += ' ORDER BY importance DESC, valid_from DESC';
 
-    return rows.map((row) => ({
-      id: row[0],
-      content: row[1],
-      dimension: row[2],
-      valid_from: row[3],
-      valid_until: row[4],
-      importance: row[5],
-    }));
+    const rows = this._db
+      .prepare(sql)
+      .all(...sqlParams) as Array<Record<string, unknown> | unknown[]>;
+
+    return rows.map((row) => {
+      if (Array.isArray(row)) {
+        return {
+          id: row[0],
+          content: row[1],
+          dimension: row[2],
+          valid_from: row[3],
+          valid_until: row[4],
+          importance: row[5],
+        };
+      }
+
+      return {
+        id: row['id'],
+        content: row['content'],
+        dimension: row['dimension'],
+        valid_from: row['valid_from'],
+        valid_until: row['valid_until'],
+        importance: row['importance'],
+      };
+    });
   }
 
   // ----------------------------------------------------------
@@ -1102,20 +1318,29 @@ export class UnifiedMemoryEngine {
   /**
    * Detect all conflicts for an entity.
    */
-  async detectConflicts(entityId: string): Promise<Array<Record<string, unknown>>> {
-    const rows = this._db
-      .prepare(
-        `
+  async detectConflicts(
+    entityId: string,
+    scope: MemoryScopeFilters = {}
+  ): Promise<Array<Record<string, unknown>>> {
+    let sql = `
       SELECT id, content, valid_from, valid_until
       FROM memories
       WHERE entity_id = ?
       AND superseded_by IS NULL
-      ORDER BY valid_from DESC
-    `
-      )
-      .all(entityId) as unknown[][];
+    `;
+    const sqlParams: unknown[] = [entityId];
+    sql = appendScopeFilters(sql, sqlParams, scope);
+    sql += ' ORDER BY valid_from DESC';
 
-    const memories = rows;
+    const rows = this._db
+      .prepare(sql)
+      .all(...sqlParams) as Array<Record<string, unknown> | unknown[]>;
+
+    const memories = rows.map((row) =>
+      Array.isArray(row)
+        ? row
+        : [row["id"], row["content"], row["valid_from"], row["valid_until"]]
+    );
 
     function isCandidate(content: string): boolean {
       const lowered = content.toLowerCase();
@@ -1174,6 +1399,22 @@ export class UnifiedMemoryEngine {
     resolution?: string;
   }): Promise<Record<string, unknown>> {
     const { memoryIdA, memoryIdB, resolution = "auto" } = params;
+    const memoryA = this._getMemoryById(memoryIdA);
+    const memoryB = this._getMemoryById(memoryIdB);
+
+    if (!memoryA || !memoryB) {
+      return {
+        status: "error",
+        error: "Memory not found",
+        missing: [!memoryA ? memoryIdA : null, !memoryB ? memoryIdB : null].filter(
+          (value): value is string => value !== null
+        ),
+      };
+    }
+
+    const memoryAIsNewer = memoryA.createdAt >= memoryB.createdAt;
+    const newerMemory = memoryAIsNewer ? memoryA : memoryB;
+    const olderMemory = memoryAIsNewer ? memoryB : memoryA;
 
     if (resolution === "keep_a") {
       await this._markSuperseded(memoryIdB, memoryIdA);
@@ -1189,27 +1430,76 @@ export class UnifiedMemoryEngine {
         kept: memoryIdB,
         removed: memoryIdA,
       };
-    } else {
-      // auto - keep newer
-      const row = this._db
-        .prepare(
-          `
-        SELECT id FROM memories
-        WHERE id IN (?, ?)
-        ORDER BY created_at DESC LIMIT 1
-      `
-        )
-        .get(memoryIdA, memoryIdB) as Record<string, unknown> | undefined;
-
-      const newerId = row!["id"] as string;
-      const olderId =
-        newerId === memoryIdA ? memoryIdB : memoryIdA;
-
-      await this._markSuperseded(olderId, newerId);
+    } else if (resolution === "keep_old") {
+      await this._markSuperseded(newerMemory.id, olderMemory.id);
       return {
         status: "resolved",
-        kept: newerId,
-        removed: olderId,
+        kept: olderMemory.id,
+        removed: newerMemory.id,
+      };
+    } else if (resolution === "keep_new") {
+      await this._markSuperseded(olderMemory.id, newerMemory.id);
+      return {
+        status: "resolved",
+        kept: newerMemory.id,
+        removed: olderMemory.id,
+      };
+    } else if (resolution === "merge") {
+      const now = new Date().toISOString();
+      const mergedContent = `${olderMemory.content}\n\n[Updated]: ${newerMemory.content}`;
+      const mergedEmbedding = this.embedder.embed(mergedContent);
+      const mergedMemory = new UnifiedMemory({
+        id: randomUUID(),
+        content: mergedContent,
+        layer: newerMemory.layer,
+        dimension: newerMemory.dimension ?? olderMemory.dimension,
+        entityId: newerMemory.entityId ?? olderMemory.entityId,
+        validFrom: olderMemory.validFrom ?? newerMemory.validFrom ?? now,
+        validUntil: newerMemory.validUntil ?? olderMemory.validUntil,
+        userId: newerMemory.userId ?? olderMemory.userId,
+        projectId: newerMemory.projectId ?? olderMemory.projectId,
+        sessionId: newerMemory.sessionId ?? olderMemory.sessionId,
+        embedding: mergedEmbedding,
+        embeddingBlob: packEmbedding(mergedEmbedding),
+        embeddingModel: DEFAULT_EMBEDDING_MODEL,
+        embeddingDim: mergedEmbedding.length,
+        contentHash: createHash("sha256").update(mergedContent).digest("hex"),
+        lastAccessedAt: now,
+        importance: Math.max(olderMemory.importance, newerMemory.importance),
+        confidence: Math.max(olderMemory.confidence, newerMemory.confidence),
+        source: newerMemory.source,
+        tags: [...new Set([...olderMemory.tags, ...newerMemory.tags])],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      this._store(mergedMemory);
+      await this._runPostgresShadowWrite(mergedMemory);
+      await this._notifyPlugins(mergedMemory);
+      await this._markSuperseded(memoryA.id, mergedMemory.id);
+      await this._markSuperseded(memoryB.id, mergedMemory.id);
+
+      return {
+        status: "resolved",
+        kept: mergedMemory.id,
+        removed: [memoryA.id, memoryB.id],
+        merged_content: mergedContent,
+      };
+    } else if (resolution === "manual") {
+      return {
+        status: "manual_required",
+        requires_manual: true,
+        conflicts: [
+          { id: memoryA.id, content: memoryA.content },
+          { id: memoryB.id, content: memoryB.content },
+        ],
+      };
+    } else {
+      await this._markSuperseded(olderMemory.id, newerMemory.id);
+      return {
+        status: "resolved",
+        kept: newerMemory.id,
+        removed: olderMemory.id,
       };
     }
   }
@@ -1230,22 +1520,33 @@ export class UnifiedMemoryEngine {
       WHERE profile_name = ?
     `
       )
-      .get(profileName) as unknown[] | undefined;
+      .get(profileName) as Record<string, unknown> | unknown[] | undefined;
 
     if (!row) {
       return null;
     }
 
+    const values = Array.isArray(row)
+      ? row
+      : [
+          row["profile_name"],
+          row["source_weights_json"],
+          row["thresholds_json"],
+          row["budget_json"],
+          row["enabled"],
+          row["updated_at"],
+        ];
+
     return {
-      profile_name: row[0],
+      profile_name: values[0],
       source_weights_json:
-        row[1] ? JSON.parse(row[1] as string) : {},
+        values[1] ? JSON.parse(values[1] as string) : {},
       thresholds_json:
-        row[2] ? JSON.parse(row[2] as string) : {},
+        values[2] ? JSON.parse(values[2] as string) : {},
       budget_json:
-        row[3] ? JSON.parse(row[3] as string) : {},
-      enabled: Boolean(row[4]),
-      updated_at: row[5],
+        values[3] ? JSON.parse(values[3] as string) : {},
+      enabled: Boolean(values[4]),
+      updated_at: values[5],
     };
   }
 
@@ -1336,13 +1637,17 @@ export class UnifiedMemoryEngine {
       WHERE cache_key = ?
     `
       )
-      .get(cacheKey) as unknown[] | undefined;
+      .get(cacheKey) as Record<string, unknown> | unknown[] | undefined;
 
     if (!row) {
       return null;
     }
 
-    const expiresAt = row[2] as string | null;
+    const values = Array.isArray(row)
+      ? row
+      : [row["payload_json"], row["status"], row["expires_at"], row["hit_count"]];
+
+    const expiresAt = (values[2] as string | null) ?? null;
     if (expiresAt && expiresAt <= new Date().toISOString()) {
       this.cacheRelease(cacheKey);
       return null;
@@ -1355,10 +1660,10 @@ export class UnifiedMemoryEngine {
       .run(cacheKey);
 
     return {
-      payload: row[0] ? JSON.parse(row[0] as string) : {},
-      status: row[1],
-      expires_at: row[2],
-      hit_count: (row[3] as number) + 1,
+      payload: values[0] ? JSON.parse(values[0] as string) : {},
+      status: values[1],
+      expires_at: values[2],
+      hit_count: Number(values[3] ?? 0) + 1,
     };
   }
 
@@ -1366,8 +1671,13 @@ export class UnifiedMemoryEngine {
   cacheStatus(cacheKey: string): string | null {
     const row = this._db
       .prepare("SELECT status FROM retrieval_cache WHERE cache_key = ?")
-      .get(cacheKey) as unknown[] | undefined;
-    return row ? (row[0] as string) : null;
+      .get(cacheKey) as Record<string, unknown> | unknown[] | undefined;
+    if (!row) {
+      return null;
+    }
+    return Array.isArray(row)
+      ? ((row[0] as string | null) ?? null)
+      : ((row["status"] as string | null) ?? null);
   }
 
   /** Release (delete) a cache entry. */
@@ -1402,7 +1712,7 @@ export class UnifiedMemoryEngine {
     if (dbPath === null) {
       const dataDir = getConfigValue("data_dir", null) as string | null;
       if (dataDir) {
-        dbPath = dataDir + "/memory.db";
+        dbPath = join(dataDir, "memory.db");
       }
     }
     if (dbPath === null) {

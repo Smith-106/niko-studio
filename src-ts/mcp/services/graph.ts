@@ -5,6 +5,8 @@
  * Ported from src/mcp/services/graph.py
  */
 
+import { getGraphEngine } from '../engine';
+
 // ---------------------------------------------------------------
 // Engine accessor
 // ---------------------------------------------------------------
@@ -35,9 +37,22 @@ interface GraphEngine {
   ): Promise<Record<string, unknown>>;
 }
 
+function isGraphEngine(engine: unknown): engine is GraphEngine {
+  return (
+    typeof engine === 'object' &&
+    engine !== null &&
+    typeof (engine as GraphEngine).executeCypher === 'function' &&
+    typeof (engine as GraphEngine).getCharacter === 'function' &&
+    typeof (engine as GraphEngine).getRelationships === 'function' &&
+    typeof (engine as GraphEngine).getForeshadows === 'function' &&
+    typeof (engine as GraphEngine).createEntity === 'function' &&
+    typeof (engine as GraphEngine).createRelation === 'function'
+  );
+}
+
 function getEngine(): GraphEngine | null {
-  // Lazy accessor -- will be wired through container / gateway
-  return null;
+  const engine = getGraphEngine();
+  return isGraphEngine(engine) ? engine : null;
 }
 
 // ---------------------------------------------------------------

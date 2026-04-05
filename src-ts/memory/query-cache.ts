@@ -277,7 +277,7 @@ export class QueryEmbeddingCache {
 }
 
 /** Global cache instance */
-let _globalCache: QueryEmbeddingCache | null;
+let _globalCache: QueryEmbeddingCache | null = null;
 
 /**
  * Get or create the global query embedding cache.

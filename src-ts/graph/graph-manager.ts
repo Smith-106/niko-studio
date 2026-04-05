@@ -1082,6 +1082,11 @@ export class GraphManager {
     });
   }
 
+  /** Compatibility alias for adjacent callers expecting lower-case "g". */
+  getSubgraph(centerId: string, radius: number = 2): SubGraph {
+    return this.getSubGraph(centerId, radius);
+  }
+
   // -----------------------------------------------------------------------
   // Search
   // -----------------------------------------------------------------------

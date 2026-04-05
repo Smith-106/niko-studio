@@ -43,6 +43,25 @@ export interface IMemoryEngine {
   store(key: string, value: unknown): Promise<void>;
 
   /**
+   * Add a rich memory entry through the unified memory surface.
+   */
+  add(params: {
+    content: string;
+    layer?: string;
+    dimension?: string | null;
+    entityId?: string | null;
+    validFrom?: string | null;
+    validUntil?: string | null;
+    importance?: number;
+    tags?: string[];
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
+    source?: string;
+    confidence?: number;
+  }): Promise<Record<string, unknown>>;
+
+  /**
    * Retrieve a memory entry
    */
   retrieve(key: string): Promise<unknown>;
@@ -51,6 +70,54 @@ export interface IMemoryEngine {
    * Search memories by query
    */
   search(query: string, limit?: number): Promise<unknown[]>;
+
+  /**
+   * Search memories with the richer MCP-facing filter shape.
+   */
+  search(params: {
+    query: string;
+    layer?: string | null;
+    dimensions?: string[] | null;
+    entityId?: string | null;
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
+    atTime?: string | null;
+    limit?: number;
+    minScore?: number | null;
+  }): Promise<unknown[]>;
+
+  /**
+   * Get temporal facts for an entity at a point in time.
+   */
+  getTemporalFacts(params: {
+    entityId: string;
+    atTime?: string | null;
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
+  }): Promise<unknown[]>;
+
+  /**
+   * Detect conflicts for an entity.
+   */
+  detectConflicts(
+    entityId: string,
+    scope?: {
+      userId?: string | null;
+      projectId?: string | null;
+      sessionId?: string | null;
+    }
+  ): Promise<unknown[]>;
+
+  /**
+   * Resolve a conflict between two memories.
+   */
+  resolveConflict(params: {
+    memoryIdA: string;
+    memoryIdB: string;
+    resolution?: string;
+  }): Promise<Record<string, unknown>>;
 
   /**
    * Clear all memories

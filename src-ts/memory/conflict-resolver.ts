@@ -104,7 +104,12 @@ export interface IConflictResolver {
    */
   check(
     content: string,
-    entityId?: string | null
+    entityId?: string | null,
+    scope?: {
+      userId?: string | null;
+      projectId?: string | null;
+      sessionId?: string | null;
+    }
   ): Promise<ConflictInfo[]>;
 
   /**
@@ -195,22 +200,43 @@ export class ConflictResolver implements IConflictResolver {
    */
   async check(
     content: string,
-    entityId?: string | null
+    entityId?: string | null,
+    scope: {
+      userId?: string | null;
+      projectId?: string | null;
+      sessionId?: string | null;
+    } = {}
   ): Promise<ConflictInfo[]> {
     if (!entityId || !this.db) {
       return [];
     }
 
     try {
-      const cursor = this.db.execute(
-        `
+      let sql = `
         SELECT id, content, valid_from, valid_until, importance
         FROM memories
         WHERE entity_id = ?
         AND superseded_by IS NULL
         AND (valid_until IS NULL OR valid_until > datetime('now'))
-      `,
-        [entityId]
+      `;
+      const sqlParams: unknown[] = [entityId];
+
+      if (scope.userId !== undefined && scope.userId !== null) {
+        sql += ' AND user_id = ?';
+        sqlParams.push(scope.userId);
+      }
+      if (scope.projectId !== undefined && scope.projectId !== null) {
+        sql += ' AND project_id = ?';
+        sqlParams.push(scope.projectId);
+      }
+      if (scope.sessionId !== undefined && scope.sessionId !== null) {
+        sql += ' AND session_id = ?';
+        sqlParams.push(scope.sessionId);
+      }
+
+      const cursor = this.db.execute(
+        sql,
+        sqlParams
       );
 
       const conflicts: ConflictInfo[] = [];

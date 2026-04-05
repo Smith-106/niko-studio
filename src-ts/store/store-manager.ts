@@ -785,9 +785,9 @@ normalized_at: ${now}
           null,
           true,
           {
+            ...doc.metadata,
             format: doc.format as string,
             chunk_count: doc.chunkCount,
-            ...doc.metadata,
           }
         );
         synced++;
@@ -820,11 +820,18 @@ normalized_at: ${now}
 
       const content = docData.content as string;
       const path = (docData.path as string) ?? `${id}.md`;
+      const metadata = {
+        ...((docData.metadata as Record<string, unknown>) ?? {}),
+      };
+      const sourceTypeValue = docData.source_type;
+      if (typeof sourceTypeValue === 'string' && sourceTypeValue.length > 0) {
+        metadata['source_type'] = sourceTypeValue;
+      }
 
       this.addDocument(
         path,
         content,
-        (docData.metadata as Record<string, unknown>) ?? {},
+        metadata,
         id,
         false // Already normalized in OpenKL
       );

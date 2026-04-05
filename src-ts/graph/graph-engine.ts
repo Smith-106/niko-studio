@@ -334,10 +334,35 @@ export class GraphEngine {
 
   /** Parse and execute a MATCH query */
   private async _executeMatch(cypher: string): Promise<Record<string, unknown>[]> {
+    const traversalMatch = cypher.match(
+      /^MATCH\s*\((\w+)\)\s*-\[(\w+)\*1\.\.(\d+)\]-\((\w+)\)\s*WHERE\s*\1\.name\s+CONTAINS\s+['"](.+?)['"]\s*RETURN\s*\4\s*,\s*\2(?:\s+LIMIT\s+(\d+))?\s*$/i
+    );
+    if (traversalMatch) {
+      return this._executeTraversalMatch(
+        traversalMatch[3],
+        traversalMatch[5],
+        traversalMatch[6]
+      );
+    }
+
+    const relationshipMatch = cypher.match(
+      /^MATCH\s*\((\w+)(?::(\w+))?\)\s*-\[(\w+)(?::(\w+))?\]->\s*\((\w+)(?::(\w+))?\)\s*RETURN\s+.+?(?:\s+LIMIT\s+(\d+))?\s*$/i
+    );
+    if (relationshipMatch) {
+      return this._executeRelationshipMatch(
+        relationshipMatch[2] ?? null,
+        relationshipMatch[4] ?? null,
+        relationshipMatch[6] ?? null,
+        relationshipMatch[7]
+      );
+    }
+
     // Parse (n:Type)
     const nodeMatch = cypher.match(/\((\w+):(\w+)\)/);
     if (nodeMatch) {
+      const nodeAlias = nodeMatch[1];
       const entityType = nodeMatch[2];
+      const resultKey = this._resolveNodeResultKey(cypher, nodeAlias);
 
       // Parse WHERE condition
       const whereMatch = cypher.match(
@@ -362,26 +387,269 @@ export class GraphEngine {
             .all(entityType, `$.${field}`, value) as Record<string, unknown>[];
         }
 
-        return rows.map((row) => ({
-          id: row.id,
-          type: row.type,
-          name: row.name,
-          properties: typeof row.properties === 'string' ? JSON.parse(row.properties) : {},
-        }));
+        return rows.map((row) => this._wrapEntityResult(resultKey, row));
       }
 
       const rows = this.db
         .prepare('SELECT * FROM entities WHERE type = ?')
         .all(entityType) as Record<string, unknown>[];
-      return rows.map((row) => ({
-        id: row.id,
-        type: row.type,
-        name: row.name,
-        properties: typeof row.properties === 'string' ? JSON.parse(row.properties) : {},
-      }));
+      return rows.map((row) => this._wrapEntityResult(resultKey, row));
     }
 
     return [];
+  }
+
+  private _executeRelationshipMatch(
+    sourceType: string | null,
+    relationType: string | null,
+    targetType: string | null,
+    limitValue?: string
+  ): Record<string, unknown>[] {
+    let sql = `
+      SELECT
+        r.id as relation_id,
+        r.type as relation_type,
+        r.properties as relation_properties,
+        r.created_at as relation_created_at,
+        e1.id as source_id,
+        e1.type as source_type,
+        e1.name as source_name,
+        e1.properties as source_properties,
+        e1.created_at as source_created_at,
+        e1.updated_at as source_updated_at,
+        e2.id as target_id,
+        e2.type as target_type,
+        e2.name as target_name,
+        e2.properties as target_properties,
+        e2.created_at as target_created_at,
+        e2.updated_at as target_updated_at
+      FROM relations r
+      JOIN entities e1 ON r.from_id = e1.id
+      JOIN entities e2 ON r.to_id = e2.id
+      WHERE 1 = 1
+    `;
+    const params: unknown[] = [];
+
+    if (sourceType) {
+      sql += ' AND e1.type = ?';
+      params.push(sourceType);
+    }
+    if (relationType) {
+      sql += ' AND r.type = ?';
+      params.push(relationType);
+    }
+    if (targetType) {
+      sql += ' AND e2.type = ?';
+      params.push(targetType);
+    }
+
+    sql += ' ORDER BY e1.name, e2.name';
+
+    const limit = this._normalizeCypherLimit(limitValue);
+    if (limit !== null) {
+      sql += ' LIMIT ?';
+      params.push(limit);
+    }
+
+    const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
+
+    return rows.map((row) => ({
+      source: {
+        id: row.source_id,
+        type: row.source_type,
+        name: row.source_name,
+        properties: this._parseProperties(row.source_properties),
+        created_at: row.source_created_at,
+        updated_at: row.source_updated_at,
+      },
+      relationship: {
+        id: row.relation_id,
+        type: row.relation_type,
+        properties: this._parseProperties(row.relation_properties),
+        created_at: row.relation_created_at,
+      },
+      target: {
+        id: row.target_id,
+        type: row.target_type,
+        name: row.target_name,
+        properties: this._parseProperties(row.target_properties),
+        created_at: row.target_created_at,
+        updated_at: row.target_updated_at,
+      },
+    }));
+  }
+
+  private _executeTraversalMatch(
+    depthValue: string,
+    startNameFragment: string,
+    limitValue?: string
+  ): Record<string, unknown>[] {
+    const maxDepth = Math.max(1, Math.min(parseInt(depthValue, 10) || 1, 10));
+    const limit = this._normalizeCypherLimit(limitValue);
+    const startRows = this.db
+      .prepare('SELECT * FROM entities WHERE name LIKE ? ORDER BY name')
+      .all(`%${startNameFragment}%`) as Record<string, unknown>[];
+
+    if (!startRows.length) {
+      return [];
+    }
+
+    const queue: Array<{
+      entityId: string;
+      path: Record<string, unknown>[];
+      visited: string[];
+    }> = startRows.map((row) => ({
+      entityId: row.id as string,
+      path: [],
+      visited: [row.id as string],
+    }));
+    const results = new Map<string, { m: Record<string, unknown>; r: Record<string, unknown>[] }>();
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current.path.length >= maxDepth) {
+        continue;
+      }
+
+      const adjacencyRows = this.db.prepare(`
+        SELECT
+          r.id as relation_id,
+          r.type as relation_type,
+          r.properties as relation_properties,
+          r.created_at as relation_created_at,
+          r.from_id,
+          r.to_id,
+          e1.id as from_entity_id,
+          e1.type as from_entity_type,
+          e1.name as from_entity_name,
+          e1.properties as from_entity_properties,
+          e1.created_at as from_entity_created_at,
+          e1.updated_at as from_entity_updated_at,
+          e2.id as to_entity_id,
+          e2.type as to_entity_type,
+          e2.name as to_entity_name,
+          e2.properties as to_entity_properties,
+          e2.created_at as to_entity_created_at,
+          e2.updated_at as to_entity_updated_at
+        FROM relations r
+        JOIN entities e1 ON r.from_id = e1.id
+        JOIN entities e2 ON r.to_id = e2.id
+        WHERE r.from_id = ? OR r.to_id = ?
+      `).all(current.entityId, current.entityId) as Record<string, unknown>[];
+
+      for (const row of adjacencyRows) {
+        const nextIsTarget = row.from_id === current.entityId;
+        const nextId = String(nextIsTarget ? row.to_id : row.from_id);
+        if (current.visited.includes(nextId)) {
+          continue;
+        }
+
+        const relationStep = {
+          id: row.relation_id,
+          type: row.relation_type,
+          properties: this._parseProperties(row.relation_properties),
+          from: row.from_entity_name,
+          to: row.to_entity_name,
+          created_at: row.relation_created_at,
+        };
+        const nextPath = [...current.path, relationStep];
+        const nextEntity = nextIsTarget
+          ? {
+              id: row.to_entity_id,
+              type: row.to_entity_type,
+              name: row.to_entity_name,
+              properties: this._parseProperties(row.to_entity_properties),
+              created_at: row.to_entity_created_at,
+              updated_at: row.to_entity_updated_at,
+            }
+          : {
+              id: row.from_entity_id,
+              type: row.from_entity_type,
+              name: row.from_entity_name,
+              properties: this._parseProperties(row.from_entity_properties),
+              created_at: row.from_entity_created_at,
+              updated_at: row.from_entity_updated_at,
+            };
+
+        const existing = results.get(nextId);
+        if (!existing || existing.r.length > nextPath.length) {
+          results.set(nextId, { m: nextEntity, r: nextPath });
+        }
+
+        if (nextPath.length < maxDepth) {
+          queue.push({
+            entityId: nextId,
+            path: nextPath,
+            visited: [...current.visited, nextId],
+          });
+        }
+      }
+    }
+
+    const ordered = Array.from(results.values()).sort((left, right) => {
+      const depthDiff = left.r.length - right.r.length;
+      if (depthDiff !== 0) {
+        return depthDiff;
+      }
+      return String(left.m.name).localeCompare(String(right.m.name));
+    });
+
+    return limit === null ? ordered : ordered.slice(0, limit);
+  }
+
+  private _normalizeCypherLimit(limitValue?: string): number | null {
+    if (!limitValue) {
+      return null;
+    }
+
+    const parsed = parseInt(limitValue, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null;
+    }
+
+    return Math.min(parsed, 200);
+  }
+
+  private _resolveNodeResultKey(cypher: string, nodeAlias: string): string {
+    const returnMatch = cypher.match(/\bRETURN\s+(\w+)\b/i);
+    if (!returnMatch) {
+      return nodeAlias;
+    }
+
+    return returnMatch[1] === nodeAlias ? returnMatch[1] : nodeAlias;
+  }
+
+  private _wrapEntityResult(resultKey: string, row: Record<string, unknown>): Record<string, unknown> {
+    return {
+      [resultKey]: this._mapEntityResult(row),
+    };
+  }
+
+  private _mapEntityResult(row: Record<string, unknown>): Record<string, unknown> {
+    return {
+      id: row.id,
+      type: row.type,
+      name: row.name,
+      properties: this._parseProperties(row.properties),
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  }
+
+  private _parseProperties(raw: unknown): Record<string, unknown> {
+    if (typeof raw === 'string') {
+      try {
+        return JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        return {};
+      }
+    }
+
+    if (raw && typeof raw === 'object') {
+      return raw as Record<string, unknown>;
+    }
+
+    return {};
   }
 
   // -----------------------------------------------------------------------
@@ -495,7 +763,7 @@ export class GraphEngine {
       FROM relations r
       JOIN entities e1 ON r.from_id = e1.id
       JOIN entities e2 ON r.to_id = e2.id
-      WHERE r.from_id = ? OR r.to_id = ?
+      WHERE (r.from_id = ? OR r.to_id = ?)
     `;
     const params: unknown[] = [entityId, entityId];
 

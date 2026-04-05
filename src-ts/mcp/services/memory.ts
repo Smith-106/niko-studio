@@ -5,6 +5,8 @@
  * Ported from src/mcp/services/memory.py
  */
 
+import { getMemoryEngine } from '../engine';
+
 // ---------------------------------------------------------------
 // Engine accessor
 // ---------------------------------------------------------------
@@ -17,29 +19,62 @@ interface MemoryEngine {
     entityId?: string | null;
     validFrom?: string | null;
     validUntil?: string | null;
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
     importance: number;
     tags: string[];
+    source?: string;
+    confidence?: number;
   }): Promise<Record<string, unknown>>;
   search(params: {
     query: string;
     layer?: string | null;
     dimensions?: string[] | null;
     entityId?: string | null;
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
     atTime?: string | null;
     limit: number;
   }): Promise<unknown[]>;
-  getTemporalFacts(entityId: string, atTime?: string | null): Promise<unknown[]>;
-  detectConflicts(entityId: string): Promise<unknown[]>;
-  resolveConflict(
-    memoryIdA: string,
-    memoryIdB: string,
-    resolution: string
-  ): Promise<Record<string, unknown>>;
+  getTemporalFacts(params: {
+    entityId: string;
+    atTime?: string | null;
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
+  }): Promise<unknown[]>;
+  detectConflicts(
+    entityId: string,
+    scope?: {
+      userId?: string | null;
+      projectId?: string | null;
+      sessionId?: string | null;
+    }
+  ): Promise<unknown[]>;
+  resolveConflict(params: {
+    memoryIdA: string;
+    memoryIdB: string;
+    resolution?: string;
+  }): Promise<Record<string, unknown>>;
+}
+
+function isMemoryEngine(engine: unknown): engine is MemoryEngine {
+  return (
+    typeof engine === 'object' &&
+    engine !== null &&
+    typeof (engine as MemoryEngine).add === 'function' &&
+    typeof (engine as MemoryEngine).search === 'function' &&
+    typeof (engine as MemoryEngine).getTemporalFacts === 'function' &&
+    typeof (engine as MemoryEngine).detectConflicts === 'function' &&
+    typeof (engine as MemoryEngine).resolveConflict === 'function'
+  );
 }
 
 function getEngine(): MemoryEngine | null {
-  // Lazy accessor -- will be wired through container / gateway
-  return null;
+  const engine = getMemoryEngine();
+  return isMemoryEngine(engine) ? engine : null;
 }
 
 // ---------------------------------------------------------------
@@ -53,8 +88,13 @@ export interface MemoryAddParams {
   entityId?: string | null;
   validFrom?: string | null;
   validUntil?: string | null;
+  userId?: string | null;
+  projectId?: string | null;
+  sessionId?: string | null;
   importance?: number;
   tags?: string[];
+  source?: string;
+  confidence?: number;
 }
 
 export async function memoryAdd(params: MemoryAddParams): Promise<Record<string, unknown>> {
@@ -67,8 +107,13 @@ export async function memoryAdd(params: MemoryAddParams): Promise<Record<string,
     entityId: params.entityId ?? null,
     validFrom: params.validFrom ?? null,
     validUntil: params.validUntil ?? null,
+    userId: params.userId ?? null,
+    projectId: params.projectId ?? null,
+    sessionId: params.sessionId ?? null,
     importance: params.importance ?? 0.5,
     tags: params.tags ?? [],
+    source: params.source ?? 'user',
+    confidence: params.confidence ?? 1.0,
   });
 }
 
@@ -77,6 +122,9 @@ export interface MemorySearchParams {
   layer?: string | null;
   dimensions?: string[] | null;
   entityId?: string | null;
+  userId?: string | null;
+  projectId?: string | null;
+  sessionId?: string | null;
   atTime?: string | null;
   limit?: number;
 }
@@ -89,6 +137,9 @@ export async function memorySearch(params: MemorySearchParams): Promise<unknown[
     layer: params.layer ?? null,
     dimensions: params.dimensions ?? null,
     entityId: params.entityId ?? null,
+    userId: params.userId ?? null,
+    projectId: params.projectId ?? null,
+    sessionId: params.sessionId ?? null,
     atTime: params.atTime ?? null,
     limit: params.limit ?? 10,
   });
@@ -96,17 +147,39 @@ export async function memorySearch(params: MemorySearchParams): Promise<unknown[
 
 export async function memoryGetTemporal(
   entityId: string,
-  atTime?: string | null
+  atTime?: string | null,
+  scope?: {
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
+  }
 ): Promise<unknown[]> {
   const engine = getEngine();
   if (!engine) return [];
-  return engine.getTemporalFacts(entityId, atTime ?? null);
+  return engine.getTemporalFacts({
+    entityId,
+    atTime: atTime ?? null,
+    userId: scope?.userId ?? null,
+    projectId: scope?.projectId ?? null,
+    sessionId: scope?.sessionId ?? null,
+  });
 }
 
-export async function memoryGetConflicts(entityId: string): Promise<unknown[]> {
+export async function memoryGetConflicts(
+  entityId: string,
+  scope?: {
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
+  }
+): Promise<unknown[]> {
   const engine = getEngine();
   if (!engine) return [];
-  return engine.detectConflicts(entityId);
+  return engine.detectConflicts(entityId, {
+    userId: scope?.userId ?? null,
+    projectId: scope?.projectId ?? null,
+    sessionId: scope?.sessionId ?? null,
+  });
 }
 
 export async function memoryResolveConflict(
@@ -116,5 +189,9 @@ export async function memoryResolveConflict(
 ): Promise<Record<string, unknown>> {
   const engine = getEngine();
   if (!engine) return { error: 'Memory engine unavailable' };
-  return engine.resolveConflict(memoryIdA, memoryIdB, resolution);
+  return engine.resolveConflict({
+    memoryIdA,
+    memoryIdB,
+    resolution,
+  });
 }
