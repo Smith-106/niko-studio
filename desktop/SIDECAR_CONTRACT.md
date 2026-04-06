@@ -20,7 +20,7 @@ This is configured in `tauri.conf.json`:
 
 ## Naming Contracts
 
-### Python Sidecar (Primary Runtime)
+### Python Sidecar (Fallback / Packaged Runtime)
 
 Produced by PyInstaller via `scripts/build_gateway_sidecar.py`.
 
@@ -31,7 +31,7 @@ Produced by PyInstaller via `scripts/build_gateway_sidecar.py`.
 **Unix (macOS/Linux)**:
 - `niko-gateway` - Primary executable (plain name)
 
-### Node.js Sidecar (Shadow Runtime)
+### Node.js Sidecar (Preferred Local Runtime)
 
 Standalone proxy implemented in pure Node.js.
 
@@ -49,19 +49,24 @@ Controlled by `NIKO_GATEWAY_RUNTIME` environment variable:
 ```rust
 // desktop/src-tauri/src/main.rs
 enum GatewayRuntime {
-    Python,  // Default: uses niko-gateway
-    Node,    // Set NIKO_GATEWAY_RUNTIME=node: uses niko-gateway-node
+    Python,  // Explicit override / fallback: uses niko-gateway
+    Node,    // Default local runtime: uses niko-gateway-node
 }
 ```
 
 **Usage**:
 ```bash
-# Python sidecar (default)
+# Desktop runtime default (Node-first in the Rust host)
 npm run tauri:dev
 
-# Node sidecar
-NIKO_GATEWAY_RUNTIME=node npm run tauri:dev
+# Explicit Python fallback
+NIKO_GATEWAY_RUNTIME=python npm run tauri:dev
 ```
+
+**Build-time note**:
+
+- `desktop/scripts/choose_sidecar.cjs` still defaults to building the Python sidecar when `NIKO_GATEWAY_RUNTIME` is unset.
+- Runtime preference and packaged build default are intentionally separate until the final packaged/runtime cutover is complete.
 
 ## Validation
 

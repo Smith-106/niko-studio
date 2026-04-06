@@ -7,20 +7,17 @@
 
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
+import {
+  MCP_SERVICE_CONFIGS,
+  MCP_SERVICE_HEALTH_CACHE,
+  serializeServiceConfig as serializeSharedServiceConfig,
+  setServiceEnabled as setSharedServiceEnabled,
+  updateServiceConfig as updateSharedServiceConfig,
+  type McpServiceConfig,
+} from '../service-config';
 
 // ---------------------------------------------------------------
 // Service config types
-// ---------------------------------------------------------------
-
-interface McpServiceConfig {
-  id: string;
-  enabled: boolean;
-  builtin: boolean;
-  [key: string]: unknown;
-}
-
-// ---------------------------------------------------------------
-// Gateway state (to be wired via dependency injection)
 // ---------------------------------------------------------------
 
 let mcpServiceConfigs: Map<string, McpServiceConfig> = new Map();
@@ -38,16 +35,35 @@ function utcNowIso(): string {
   return new Date().toISOString();
 }
 
-function serializeServiceConfig(
+function serializeRuntimeServiceConfig(
   config: McpServiceConfig,
   runtimeServices?: Record<string, string> | null
 ): Record<string, unknown> {
-  return {
-    id: config.id,
-    enabled: config.enabled,
-    builtin: config.builtin,
-    status: runtimeServices?.[config.id] ?? 'unknown',
-  };
+  const services = runtimeServices ?? Object.fromEntries(mcpServiceHealthCache.entries());
+  return serializeSharedServiceConfig(config, services);
+}
+
+function getServiceConfig(serviceId: string): McpServiceConfig | undefined {
+  return mcpServiceConfigs.get(serviceId) ?? MCP_SERVICE_CONFIGS[serviceId];
+}
+
+function syncRuntimeConfig(config: McpServiceConfig): McpServiceConfig {
+  mcpServiceConfigs.set(config.serviceId, { ...config });
+  if (!mcpServiceHealthCache.has(config.serviceId)) {
+    mcpServiceHealthCache.set(
+      config.serviceId,
+      MCP_SERVICE_HEALTH_CACHE[config.serviceId] ?? 'unknown',
+    );
+  }
+  return config;
+}
+
+function isMissingServiceError(message: string): boolean {
+  return message.includes('not found') || message.includes('Unknown service:');
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function updateServiceConfig(
@@ -55,28 +71,13 @@ function updateServiceConfig(
   body: Record<string, unknown>,
   createIfMissing: boolean
 ): McpServiceConfig {
-  if (!createIfMissing && !mcpServiceConfigs.has(serviceId)) {
-    throw new Error(`service '${serviceId}' not found`);
-  }
-
-  const existing = mcpServiceConfigs.get(serviceId);
-  const config: McpServiceConfig = {
-    id: serviceId,
-    enabled: (body.enabled as boolean) ?? existing?.enabled ?? true,
-    builtin: existing?.builtin ?? false,
-  };
-
-  mcpServiceConfigs.set(serviceId, config);
-  return config;
+  const config = updateSharedServiceConfig(serviceId, body, { createIfMissing });
+  return syncRuntimeConfig(config);
 }
 
 function setServiceEnabled(serviceId: string, enabled: boolean): McpServiceConfig {
-  const config = mcpServiceConfigs.get(serviceId);
-  if (!config) throw new Error(`service '${serviceId}' not found`);
-  if (config.builtin && !enabled) throw new Error('cannot disable builtin service');
-
-  config.enabled = enabled;
-  return config;
+  const config = setSharedServiceEnabled(serviceId, enabled);
+  return syncRuntimeConfig(config);
 }
 
 // ---------------------------------------------------------------
@@ -99,7 +100,7 @@ export async function listMcpServices(request: HttpRequest): Promise<HttpRespons
   }
 
   const payload = Array.from(mcpServiceConfigs.values()).map((config) =>
-    serializeServiceConfig(config, runtimeServices)
+    serializeRuntimeServiceConfig(config, runtimeServices)
   );
   return jsonResponse({ services: payload });
 }
@@ -120,10 +121,10 @@ export async function createMcpService(request: HttpRequest): Promise<HttpRespon
   try {
     config = updateServiceConfig(rawServiceId, body, true);
   } catch (exc) {
-    return jsonResponse({ error: String(exc) }, 400);
+    return jsonResponse({ error: errorMessage(exc) }, 400);
   }
 
-  return jsonResponse({ service: serializeServiceConfig(config) }, 201);
+  return jsonResponse({ service: serializeRuntimeServiceConfig(config) }, 201);
 }
 
 /** PUT /admin/mcp/services/:service_id - Update an MCP service config */
@@ -139,14 +140,14 @@ export async function updateMcpService(request: HttpRequest): Promise<HttpRespon
   try {
     config = updateServiceConfig(serviceId, body, false);
   } catch (exc) {
-    const msg = String(exc);
-    if (msg.includes('not found')) {
+    const msg = errorMessage(exc);
+    if (isMissingServiceError(msg)) {
       return jsonResponse({ error: msg }, 404);
     }
     return jsonResponse({ error: msg }, 400);
   }
 
-  return jsonResponse({ service: serializeServiceConfig(config) });
+  return jsonResponse({ service: serializeRuntimeServiceConfig(config) });
 }
 
 /** DELETE /admin/mcp/services/:service_id - Delete an MCP service config */
@@ -156,7 +157,7 @@ export async function deleteMcpService(request: HttpRequest): Promise<HttpRespon
     return jsonResponse({ error: 'service_id is required' }, 400);
   }
 
-  const config = mcpServiceConfigs.get(serviceId);
+  const config = getServiceConfig(serviceId);
   if (!config) {
     return jsonResponse({ error: `service '${serviceId}' not found` }, 404);
   }
@@ -167,6 +168,8 @@ export async function deleteMcpService(request: HttpRequest): Promise<HttpRespon
 
   mcpServiceConfigs.delete(serviceId);
   mcpServiceHealthCache.delete(serviceId);
+  delete MCP_SERVICE_CONFIGS[serviceId];
+  delete MCP_SERVICE_HEALTH_CACHE[serviceId];
 
   return jsonResponse({ status: 'deleted', service_id: serviceId });
 }
@@ -188,32 +191,31 @@ export async function setMcpServiceEnabled(request: HttpRequest): Promise<HttpRe
   try {
     config = setServiceEnabled(serviceId, enabled);
   } catch (exc) {
-    const message = String(exc);
-    if (message.includes('not found')) {
+    const message = errorMessage(exc);
+    if (isMissingServiceError(message)) {
       return jsonResponse({ error: message }, 404);
     }
     return jsonResponse({ error: message }, 400);
   }
 
-  return jsonResponse({ service: serializeServiceConfig(config) });
+  return jsonResponse({ service: serializeRuntimeServiceConfig(config) });
 }
 
 /** POST /admin/mcp/services/:service_id/probe - Probe MCP service health */
 export async function probeMcpServiceHealth(request: HttpRequest): Promise<HttpResponse> {
   const serviceId = (request.params['service_id'] ?? '').trim().toLowerCase();
-  const config = mcpServiceConfigs.get(serviceId);
+  const config = getServiceConfig(serviceId);
   if (!config) {
     return jsonResponse({ error: `service '${serviceId}' not found` }, 404);
   }
 
   const status = config.enabled ? 'ok' : 'disabled';
   mcpServiceHealthCache.set(serviceId, status);
+  MCP_SERVICE_HEALTH_CACHE[serviceId] = status;
 
   return jsonResponse({
     service: {
-      id: serviceId,
-      status,
-      enabled: config.enabled,
+      ...serializeRuntimeServiceConfig(config, { [serviceId]: status }),
       checked_at: utcNowIso(),
     },
   });

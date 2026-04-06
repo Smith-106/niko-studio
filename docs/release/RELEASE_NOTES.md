@@ -65,9 +65,14 @@ python scripts/release_check_summary.py
 
 external 对外“100% 完成度”仅指核心可达链路：
 
-1. Desktop 主入口可达：`Knowledge` / `Settings` / `Evaluation`。
+1. Desktop 主入口可达：`Knowledge` / `Settings` / `Evaluation`，且本地 Gateway 运行态可恢复。
 2. Chat 默认流式：优先 `/chat/stream`，失败自动降级 `/chat`。
-3. Streamlit UI 闭环：tab4/tab5 使用组件渲染（`scene_dashboard`），避免内联重复逻辑。
+3. Streamlit 仅作为兼容验证路径：若当前发布候选包含该路径，tab4/tab5 仍需保持组件渲染（`scene_dashboard`），但它不是主交付入口。
+
+补充说明：
+
+- Desktop 运行时当前默认优先 Node/TypeScript Gateway，并保留显式 Python override/fallback。
+- sidecar 打包链与运行时选择不是同一层语义：构建/打包仍可按 `NIKO_GATEWAY_RUNTIME` 选择 Python 或 Node 产物。
 
 证据链建议在同一次发布中保留：
 

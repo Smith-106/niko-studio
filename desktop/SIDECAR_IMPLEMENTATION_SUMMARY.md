@@ -34,8 +34,8 @@ npm run build:sidecar  # 默认选择 Python sidecar + 契约验证
 **实施内容**:
 1. **双轨构建选择器**: `desktop/scripts/choose_sidecar.cjs`
    - 通过 `NIKO_GATEWAY_RUNTIME` 环境变量选择运行时
-   - 默认：Python sidecar（生产就绪）
-   - 可选：Node sidecar（开发中）
+   - 构建默认：Python sidecar（便于保持已打包产物兼容）
+   - 可选：Node sidecar
 
 2. **构建脚本重构**:
    ```json
@@ -54,7 +54,7 @@ npm run build:sidecar  # 默认选择 Python sidecar + 契约验证
 **验证结果**:
 ```bash
 NIKO_GATEWAY_RUNTIME=node npm run build:sidecar  # 选择 Node sidecar
-npm run build:sidecar                              # 默认 Python sidecar
+npm run build:sidecar                              # 默认构建 Python sidecar
 ```
 
 ---
@@ -81,8 +81,9 @@ npm run build:sidecar                              # 默认 Python sidecar
 
 3. **运行时切换机制**:
    - Rust 代码已支持 `NIKO_GATEWAY_RUNTIME` 环境变量
-   - 默认使用 Python sidecar
-   - 设置 `NIKO_GATEWAY_RUNTIME=node` 切换到 Node sidecar
+   - Desktop 本地运行时现已默认优先 Node sidecar
+   - 设置 `NIKO_GATEWAY_RUNTIME=python` 可强制切换到 Python sidecar
+   - 当 Node 路径不可用时，Rust 侧仍保留 Python fallback
 
 **验证结果**:
 - ✅ `tauri dev` 前置构建正常
@@ -143,11 +144,11 @@ npm run build:sidecar                              # 默认 Python sidecar
 
 **本地开发**:
 ```bash
-# 默认 Python sidecar
+# Desktop 运行时默认优先 Node sidecar
 npm run tauri:dev
 
-# 切换到 Node sidecar
-NIKO_GATEWAY_RUNTIME=node npm run tauri:dev
+# 显式切换到 Python sidecar
+NIKO_GATEWAY_RUNTIME=python npm run tauri:dev
 ```
 
 **CI/CD**:
@@ -193,9 +194,9 @@ npm run validate:sidecar-contract  # 验证契约（soft gate）
 3. **自动化测试**: 添加 sidecar 启动健康检查
 
 ### 长期（Python → Node 迁移）
-1. **功能对齐**: 确保 Node sidecar 完全对齐 Python 功能
+1. **功能对齐**: 继续压缩 Python fallback 仅剩必要兼容场景
 2. **性能测试**: 对比两种运行时的性能
-3. **逐步切换**: 考虑将 Node sidecar 设为默认
+3. **最终收口**: 统一 packaged build 默认值与运行时默认值
 
 ---
 
@@ -215,8 +216,8 @@ npm run validate:sidecar-contract  # 验证契约（soft gate）
 **所有 4 个 Phase 均已完成**，Node sidecar 打包链已成功打通：
 
 1. ✅ 契约固化（不改运行时）
-2. ✅ 双轨构建（Python fallback）
+2. ✅ 双轨构建（保留 Python fallback）
 3. ✅ 前置构建（本地链闭环）
 4. ✅ CI 门禁（soft gate）
 
-系统现在支持通过 `NIKO_GATEWAY_RUNTIME` 环境变量在 Python 和 Node sidecar 之间切换，同时保持向后兼容性和生产稳定性。
+系统现在支持通过 `NIKO_GATEWAY_RUNTIME` 环境变量在 Python 和 Node sidecar 之间切换；当前 Desktop 本地运行时默认优先 Node，打包链仍保留 Python 默认构建以维持兼容性和生产稳定性。

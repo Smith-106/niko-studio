@@ -55,15 +55,17 @@ pytest
 
 - Sidebar 入口失效（无法打开 Knowledge/Settings/Evaluation）。
 - Chat 流式异常且未成功降级，导致响应不可用或消息丢失。
-- Streamlit tab4/tab5 组件化渲染异常，影响场景看板查看。
+- Desktop 本地 Gateway 启动失败，且 Node-first 路径到 Python fallback 仍无法恢复。
+- Streamlit 兼容路径若在当前发布候选中启用，tab4/tab5 组件化渲染异常，影响场景看板查看。
 
 建议回滚步骤：
 
 1. 回退到上一个稳定 commit/tag。
 2. 启动后先做核心链路验证：
    - Desktop：Sidebar 三入口可打开并关闭。
+   - Gateway：确认本地运行时可恢复，必要时验证 Python fallback。
    - Chat：发送一条消息，确认至少非流式路径可用。
-   - Streamlit：tab4/tab5 可正常展示场景看板。
+   - Streamlit：仅在当前候选包含兼容路径时，验证 tab4/tab5 可正常展示场景看板。
 3. 再执行本 runbook 的通用健康检查与测试回归。
 
 - 回退触发原因：

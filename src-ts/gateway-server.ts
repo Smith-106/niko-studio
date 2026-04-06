@@ -29,6 +29,7 @@ import {
   refreshServiceHealthCache as refreshSharedServiceHealthCache,
   serializeServiceConfig as serializeSharedServiceConfig,
   serviceRuntimeStatus,
+  type McpServiceConfig,
 } from './mcp/service-config';
 import {
   RUNTIME_SESSION_ID,
@@ -88,16 +89,6 @@ import {
 
 type GatewayDeps = Parameters<typeof setGatewayDeps>[0];
 type ConfigAccess = Parameters<typeof setConfigAccess>[0];
-type McpAdminConfig = {
-  id: string;
-  enabled: boolean;
-  builtin: boolean;
-  serviceId: string;
-  name: string;
-  path: string;
-  healthUrl: string | null;
-  transport: string;
-};
 
 function snakeToCamelSegment(segment: string): string {
   return segment.replace(/_([a-z])/g, (_match, char: string) => char.toUpperCase());
@@ -131,20 +122,11 @@ function toSnakeCaseValue(value: unknown): unknown {
   return value;
 }
 
-function createMcpServiceConfigMap(): Map<string, McpAdminConfig> {
+function createMcpServiceConfigMap(): Map<string, McpServiceConfig> {
   return new Map(
     Object.entries(MCP_SERVICE_CONFIGS).map(([serviceId, config]) => [
       serviceId,
-      {
-        id: serviceId,
-        enabled: config.enabled,
-        builtin: config.builtin,
-        serviceId: config.serviceId,
-        name: config.name,
-        path: config.path,
-        healthUrl: config.healthUrl,
-        transport: config.transport,
-      },
+      { ...config },
     ]),
   );
 }
@@ -169,7 +151,7 @@ export function buildConfigAccess(): ConfigAccess {
 export function buildGatewayDeps(
   container: ReturnType<typeof getContainer>,
   state?: {
-    mcpConfigs?: Map<string, McpAdminConfig>;
+    mcpConfigs?: Map<string, McpServiceConfig>;
     healthCache?: Map<string, string>;
   },
 ): GatewayDeps {
@@ -216,7 +198,7 @@ export function buildGatewayDeps(
     toRuntimeReconnectState,
     buildRuntimeServers,
     serializeServiceConfig: (config: unknown, services?: Record<string, string> | null) => {
-      const candidate = config as Partial<McpAdminConfig> | null;
+      const candidate = config as (Partial<McpServiceConfig> & { id?: string }) | null;
       const serviceId = String(candidate?.serviceId ?? candidate?.id ?? '').trim().toLowerCase();
       const sharedConfig = serviceId ? MCP_SERVICE_CONFIGS[serviceId] : undefined;
       if (sharedConfig) {

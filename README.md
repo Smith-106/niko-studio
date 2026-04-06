@@ -69,9 +69,10 @@ uv sync
 
 当前 Web 交付模型以 **Desktop + MCP Gateway** 为主路径：
 
-- 主交付路径：Desktop 客户端 + `scripts/start_gateway.py` 启动的 Gateway。
-- Deprecated 路径：`src/web/app.py` 的 `GET /` 默认返回 `410`；仅在设置 `WEB_UI_FORWARD_URL` 时临时 `302` 转发。
-- Streamlit 路径：用于原型与辅助验证，不作为主交付入口（legacy compatibility path）。
+- 主交付路径：Desktop 客户端 + Tauri 宿主管理的本地 Gateway。当前桌面运行时默认优先 Node/TypeScript Gateway，并保留显式 Python override/fallback。
+- 兼容启动路径：`scripts/start_gateway.py` 仍可单独拉起 Python Gateway，用于兼容验证、独立调试和回退场景。
+- Deprecated 路径：`src-ts/web/app.ts` 的 `GET /` 默认返回 `410`；仅在设置 `WEB_UI_FORWARD_URL` 时临时 `302` 转发。
+- Streamlit 路径：用于原型与兼容性验证，不作为主交付入口。
 
 ### 单命令验收入口
 

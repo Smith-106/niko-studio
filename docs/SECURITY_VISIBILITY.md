@@ -35,11 +35,11 @@
 ## 3. fallback / rollback 入口
 
 ### Web fallback（deprecated）
-- `src/web/app.py` 根路径默认 `410`，仅在 `WEB_UI_FORWARD_URL` 存在时 `302` 转发：`src/web/app.py:81`、`src/web/app.py:98`
+- `src-ts/web/app.ts` 根路径默认 `410`，仅在 `WEB_UI_FORWARD_URL` 存在时 `302` 转发：`src-ts/web/app.ts:154`、`src-ts/web/app.ts:163`
 
 ### 回滚入口
 - 回滚手册：`docs/operations/ROLLBACK.md:1`
-- external 回滚补充（Desktop/Chat/Streamlit 核心链路）：`docs/operations/ROLLBACK.md:51`
+- external 回滚补充（Desktop/Gateway/Chat/Streamlit 兼容链路）：`docs/operations/ROLLBACK.md:52`
 
 ## 4. 发布前检查清单（脚本与 CI 映射）
 
