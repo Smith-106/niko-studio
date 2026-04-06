@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -15,6 +16,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = PROJECT_ROOT / "release-check-summary.md"
 RELEASE_EVIDENCE_DIR = PROJECT_ROOT / ".workflow" / "evidence" / "release"
 RELEASE_READINESS_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "release-readiness-artifact.json"
+
+
+@dataclass(frozen=True)
+class FileAnchorRule:
+    file_path: str
+    pattern: str
+    reason: str
+    required: bool = True
 
 
 def run_cmd(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str]:
@@ -36,13 +45,54 @@ def run_cmd(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str
 
 
 def parse_pytest_counts(output: str) -> tuple[str, str]:
-    match = re.search(r"(\d+)\s+passed", output)
+    match = re.search(r"(\d+)\s+passed", output, flags=re.IGNORECASE)
     if match:
         return "passed", match.group(1)
+    vitest_match = re.search(r"tests?\s+(\d+)\s+passed", output, flags=re.IGNORECASE)
+    if vitest_match:
+        return "passed", vitest_match.group(1)
     if "failed" in output.lower():
-        fail_match = re.search(r"(\d+)\s+failed", output)
+        fail_match = re.search(r"(\d+)\s+failed", output, flags=re.IGNORECASE)
         return "failed", fail_match.group(1) if fail_match else "unknown"
     return "unknown", "0"
+
+
+def _read_project_text(path: str) -> str | None:
+    target = PROJECT_ROOT / path
+    if not target.exists():
+        return None
+    return target.read_text(encoding="utf-8", errors="replace")
+
+
+def _run_file_anchor_guard(name: str, rules: list[FileAnchorRule]) -> tuple[int, str]:
+    cache: dict[str, str | None] = {}
+    failures: list[str] = []
+    passed: list[str] = []
+
+    for rule in rules:
+        if rule.file_path not in cache:
+            cache[rule.file_path] = _read_project_text(rule.file_path)
+        content = cache[rule.file_path]
+        if content is None:
+            failures.append(f"[FAIL] 缺少门禁文件: {rule.file_path}")
+            continue
+
+        matched = bool(re.search(rule.pattern, content, flags=re.MULTILINE))
+        if rule.required and not matched:
+            failures.append(f"[FAIL] {rule.file_path}: {rule.reason}")
+            continue
+        if not rule.required and matched:
+            failures.append(f"[FAIL] {rule.file_path}: {rule.reason}")
+            continue
+
+        passed.append(f"[PASS] {rule.file_path}: {rule.reason}")
+
+    if failures:
+        output = "\n".join([f"{name}: blocked", *failures])
+        return 1, output
+
+    output = "\n".join([f"{name}: ok", *passed])
+    return 0, output
 
 
 def parse_first_json_object(output: str) -> tuple[dict[str, object] | None, str | None]:
@@ -234,10 +284,11 @@ def _extract_policy_contract_from_docs(quality_doc: Path, pdd_doc: Path) -> dict
 
 
 def _runtime_policy_contract() -> dict[str, object]:
-    from src.workflow.novel_quality import BLOCK_THRESHOLD, PASS_THRESHOLD, evaluate_novel_quality
-    from src.workflow.state import DEFAULT_CONFIG, NOVEL_HUMAN_REVIEW_SCORE, NOVEL_PASS_SCORE
-    from src.mcp import gateway as gateway_module
-    from src.mcp import contract as contract_module
+    # Deprecated runtime contract path kept only for historical fallback.
+    from legacy_runtime.workflow.novel_quality import BLOCK_THRESHOLD, PASS_THRESHOLD, evaluate_novel_quality
+    from legacy_runtime.workflow.state import DEFAULT_CONFIG, NOVEL_HUMAN_REVIEW_SCORE, NOVEL_PASS_SCORE
+    from legacy_runtime.mcp import gateway as gateway_module
+    from legacy_runtime.mcp import contract as contract_module
 
     sample_text = (
         '"Open the door," she whispered. '
@@ -333,6 +384,200 @@ def runtime_policy_conformance_signal(
         ("terminal_default_decision", terminal_default_decision or "missing"),
         ("terminal_no_go_preserved", "yes" if runtime.get("terminal_no_go_preserved") else "no"),
         ("quality_mode_consistent", "yes" if runtime.get("quality_mode_consistent") else "no"),
+        ("mismatches", _format_csv(mismatches)),
+        ("decision", "no_go" if has_mismatch else "go"),
+    ])
+
+
+def _extract_first_float(pattern: str, text: str) -> float | None:
+    match = re.search(pattern, text, flags=re.MULTILINE)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return None
+
+
+def _extract_single_quoted_map_value(text: str, key: str) -> str | None:
+    match = re.search(rf"'{re.escape(key)}'\s*:\s*'([^']+)'", text, flags=re.MULTILINE)
+    if not match:
+        return None
+    return match.group(1).strip()
+
+
+def _typescript_production_guard() -> tuple[int, str]:
+    return _run_file_anchor_guard(
+        "production guard",
+        [
+            FileAnchorRule(
+                "src-ts/mcp/config.ts",
+                r"export function resolveReloadEnabled\(\): boolean",
+                "缺少 resolveReloadEnabled 定义",
+            ),
+            FileAnchorRule(
+                "src-ts/mcp/config.ts",
+                r"if \(isProductionEnv\(\)\)\s*return false;",
+                "生产环境未显式关闭 reload",
+            ),
+            FileAnchorRule(
+                "src-ts/mcp/config.ts",
+                r"export function resolveCorsOrigins\(\): string\[\]",
+                "缺少 resolveCorsOrigins 定义",
+            ),
+            FileAnchorRule(
+                "src-ts/mcp/config.ts",
+                r"const forbidden = new Set\(\['\*', 'http://localhost:3000', 'http://127.0.0.1:3000'\]\);",
+                "生产 CORS 黑名单锚点缺失",
+            ),
+            FileAnchorRule(
+                "src-ts/mcp/config.ts",
+                r"Production CORS origins are empty",
+                "生产 CORS 为空时未显式抛错",
+            ),
+        ],
+    )
+
+
+def _typescript_metrics_guard() -> tuple[int, str]:
+    return _run_file_anchor_guard(
+        "metrics guard",
+        [
+            FileAnchorRule(
+                "src-ts/mcp/endpoints/health.ts",
+                r"export async function metricsEndpoint",
+                "缺少 metricsEndpoint 入口",
+            ),
+            FileAnchorRule(
+                "src-ts/mcp/endpoints/health.ts",
+                r"metricsEnabled = !!gw\.getConfigValue\('gateway\.metrics_enabled', true\);",
+                "缺少 metrics_enabled 守卫读取",
+            ),
+            FileAnchorRule(
+                "src-ts/mcp/endpoints/health.ts",
+                r"return jsonResponse\(\{ status: 'disabled' \}, 404\);",
+                "缺少 metrics 禁用态 404 响应守卫",
+            ),
+            FileAnchorRule(
+                "src-ts/mcp/endpoints/health.ts",
+                r"metrics: gw\.getMetricsSnapshot\(\),",
+                "缺少 metrics 快照输出",
+            ),
+            FileAnchorRule(
+                "src-ts/gateway-server.ts",
+                r"pattern:\s*/\^\\/metrics\$/\s*,\s*handler:\s*metricsEndpoint",
+                "缺少 /metrics 路由注册",
+            ),
+        ],
+    )
+
+
+def _runtime_policy_contract() -> dict[str, object]:
+    novel_state_text = _read_project_text("src-ts/workflow/novel-state.ts") or ""
+    novel_quality_text = _read_project_text("src-ts/workflow/novel-quality.ts") or ""
+    contract_text = _read_project_text("src-ts/mcp/contract.ts") or ""
+    workflow_engine_text = _read_project_text("src-ts/workflow/workflow-engine.ts") or ""
+
+    pass_score = _extract_first_float(r"export const NOVEL_PASS_SCORE = (\d+(?:\.\d+)?)", novel_state_text)
+    human_review_score = _extract_first_float(
+        r"export const NOVEL_HUMAN_REVIEW_SCORE = (\d+(?:\.\d+)?)",
+        novel_state_text,
+    )
+    block_threshold = _extract_first_float(r"block:\s*(\d+(?:\.\d+)?)", novel_state_text)
+    novel_quality_pass_threshold = _extract_first_float(r"pass:\s*(\d+(?:\.\d+)?)", novel_quality_text)
+
+    default_pass_bound = bool(re.search(r"pass_score:\s*NOVEL_PASS_SCORE\b", novel_state_text))
+    default_review_bound = bool(re.search(r"human_review_score:\s*NOVEL_HUMAN_REVIEW_SCORE\b", novel_state_text))
+    public_entry_api_present = bool(
+        re.search(
+            r"ENGINE_PUBLIC_ENTRY_API\s*=\s*\['route',\s*'plan',\s*'execute',\s*'run',\s*'run_stream'\]",
+            workflow_engine_text,
+        )
+    )
+    workflow_hard_gate_present = (
+        "WorkflowDecision.NO_GO" in workflow_engine_text
+        and "confirm_required: true" in workflow_engine_text
+    )
+
+    return {
+        "quality_pass_score": pass_score,
+        "human_review_score": human_review_score,
+        "revise_lower_bound": block_threshold,
+        "rewrite_below": block_threshold,
+        "novel_quality_pass_threshold": novel_quality_pass_threshold,
+        "default_pass_score": pass_score if default_pass_bound else None,
+        "default_human_review_score": human_review_score if default_review_bound else None,
+        "publish_from_go": _extract_single_quoted_map_value(contract_text, "pass"),
+        "publish_from_soft_go": _extract_single_quoted_map_value(contract_text, "revise"),
+        "publish_from_no_go": _extract_single_quoted_map_value(contract_text, "block"),
+        "workflow_hard_gate_present": workflow_hard_gate_present,
+        "public_entry_api_present": public_entry_api_present,
+        "blocked_semantics_declared": workflow_hard_gate_present,
+    }
+
+
+def runtime_policy_conformance_signal(
+    quality_doc: Path | None = None,
+    pdd_doc: Path | None = None,
+    runtime_contract: dict[str, object] | None = None,
+) -> tuple[str, int, str]:
+    quality_path = quality_doc or (PROJECT_ROOT / "docs" / "quality" / "QUALITY_CRITERIA.md")
+    pdd_path = pdd_doc or (PROJECT_ROOT / "docs" / "PDD.md")
+
+    policy_contract = _extract_policy_contract_from_docs(quality_path, pdd_path)
+    runtime = runtime_contract if runtime_contract is not None else _runtime_policy_contract()
+
+    mismatches: list[str] = []
+
+    if runtime.get("quality_pass_score") != policy_contract.get("quality_pass_score"):
+        mismatches.append("quality_pass_score")
+    if runtime.get("human_review_score") != policy_contract.get("human_review_score"):
+        mismatches.append("human_review_score")
+    if runtime.get("revise_lower_bound") != policy_contract.get("revise_lower_bound"):
+        mismatches.append("revise_lower_bound")
+    if runtime.get("rewrite_below") != policy_contract.get("rewrite_below"):
+        mismatches.append("rewrite_below")
+
+    if runtime.get("default_pass_score") != runtime.get("quality_pass_score"):
+        mismatches.append("default_pass_score")
+    if runtime.get("default_human_review_score") != runtime.get("human_review_score"):
+        mismatches.append("default_human_review_score")
+    if runtime.get("novel_quality_pass_threshold") != runtime.get("quality_pass_score"):
+        mismatches.append("novel_quality_pass_threshold")
+
+    if runtime.get("publish_from_go") != "go":
+        mismatches.append("publish_from_go")
+    if runtime.get("publish_from_soft_go") != "soft_go":
+        mismatches.append("publish_from_soft_go")
+    if runtime.get("publish_from_no_go") != "no_go":
+        mismatches.append("publish_from_no_go")
+
+    if runtime.get("workflow_hard_gate_present") is not True:
+        mismatches.append("workflow_hard_gate_present")
+    if runtime.get("public_entry_api_present") is not True:
+        mismatches.append("public_entry_api_present")
+    if policy_contract.get("blocked_semantics_declared") is not True:
+        mismatches.append("blocked_semantics_declared")
+    if runtime.get("blocked_semantics_declared") is not True:
+        mismatches.append("runtime_blocked_semantics_declared")
+
+    has_mismatch = len(mismatches) > 0
+    status = "FAIL" if has_mismatch else "PASS"
+    exit_code = 1 if has_mismatch else 0
+    return status, exit_code, _format_detail_pairs([
+        ("policy_pass", policy_contract.get("quality_pass_score")),
+        ("runtime_pass", runtime.get("quality_pass_score")),
+        ("policy_human_review", policy_contract.get("human_review_score")),
+        ("runtime_human_review", runtime.get("human_review_score")),
+        ("policy_revise_lower", policy_contract.get("revise_lower_bound")),
+        ("runtime_revise_lower", runtime.get("revise_lower_bound")),
+        ("policy_rewrite_below", policy_contract.get("rewrite_below")),
+        ("runtime_rewrite_below", runtime.get("rewrite_below")),
+        ("publish_from_go", runtime.get("publish_from_go")),
+        ("publish_from_soft_go", runtime.get("publish_from_soft_go")),
+        ("publish_from_no_go", runtime.get("publish_from_no_go")),
+        ("workflow_hard_gate_present", "yes" if runtime.get("workflow_hard_gate_present") else "no"),
+        ("public_entry_api_present", "yes" if runtime.get("public_entry_api_present") else "no"),
         ("mismatches", _format_csv(mismatches)),
         ("decision", "no_go" if has_mismatch else "go"),
     ])
@@ -1129,20 +1374,11 @@ def main() -> int:
     delivery_code, delivery_output = run_cmd([sys.executable, "scripts/delivery_gate.py"])
 
     baseline_code, baseline_output = run_cmd([
-        sys.executable,
-        "-m",
-        "pytest",
-        "-o",
-        "addopts=",
-        "tests/unit",
-        "tests/integration",
-        "-m",
-        "not e2e",
-        "--cov=src",
-        "--cov-report=xml",
-        "--cov-fail-under=80",
-        "-q",
-        "--tb=no",
+        "npm.cmd",
+        "--prefix",
+        "src-ts",
+        "run",
+        "test:coverage:phase4",
     ])
 
     desktop_bootstrap_code, desktop_bootstrap_output = run_cmd([
@@ -1190,36 +1426,8 @@ def main() -> int:
         "--tb=no",
     ])
 
-    prod_guard_code, prod_guard_output = run_cmd([
-        sys.executable,
-        "-c",
-        (
-            "from src.mcp.gateway import _resolve_reload_enabled, _resolve_cors_origins;"
-            "from src.config import init_config;"
-            "init_config(config_path='config/niko-studio.production.yaml', hot_reload=False);"
-            "assert _resolve_reload_enabled() is False;"
-            "origins = _resolve_cors_origins();"
-            "assert origins and all(o not in {'*','http://localhost:3000','http://127.0.0.1:3000'} for o in origins);"
-            "print('production guard ok')"
-        ),
-    ], env={
-        "NIKO_ENV": "production",
-        "NIKO_CORS_PROD_ORIGINS": "https://app.example.com,https://gray.example.com",
-    })
-
-    metrics_guard_code, metrics_guard_output = run_cmd([
-        sys.executable,
-        "-c",
-        (
-            "from src.config import init_config, get_config_value;"
-            "init_config(config_path='config/niko-studio.production.yaml', hot_reload=False);"
-            "assert bool(get_config_value('gateway.metrics_enabled', True)) is True;"
-            "print('metrics guard ok')"
-        ),
-    ], env={
-        "NIKO_ENV": "production",
-        "NIKO_GATEWAY_METRICS_ENABLED": "true",
-    })
+    prod_guard_code, prod_guard_output = _typescript_production_guard()
+    metrics_guard_code, metrics_guard_output = _typescript_metrics_guard()
 
     tasks_code, tasks_output = run_cmd([sys.executable, "scripts/check_tasks_completion.py"])
     tasks_payload, tasks_parse_error = parse_first_json_object(tasks_output)
@@ -1374,6 +1582,7 @@ def main() -> int:
             True,
             baseline_code,
             _format_detail_pairs([
+                ("command", "npm --prefix src-ts run test:coverage:phase4"),
                 ("status", baseline_status),
                 ("passed_count", baseline_passed),
             ]),
@@ -1414,6 +1623,7 @@ def main() -> int:
             prod_guard_code,
             _format_detail_pairs([
                 ("guard", "reload_cors_production"),
+                ("authority", "src-ts/mcp/config.ts"),
             ]),
         ),
         build_check_result(
@@ -1423,6 +1633,7 @@ def main() -> int:
             metrics_guard_code,
             _format_detail_pairs([
                 ("guard", "gateway_metrics_production"),
+                ("authority", "src-ts/mcp/endpoints/health.ts"),
             ]),
         ),
         build_check_result(

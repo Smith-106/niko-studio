@@ -11,12 +11,12 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def read_python_version() -> str:
-    init_file = PROJECT_ROOT / "src" / "__init__.py"
-    text = init_file.read_text(encoding="utf-8")
-    match = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+def read_typescript_app_version() -> str:
+    config_file = PROJECT_ROOT / "src-ts" / "config" / "index.ts"
+    text = config_file.read_text(encoding="utf-8")
+    match = re.search(r"const\s+APP_VERSION\s*=\s*['\"]([^'\"]+)['\"]", text)
     if not match:
-        raise RuntimeError(f"未在 {init_file} 找到 __version__")
+        raise RuntimeError(f"未在 {config_file} 找到 APP_VERSION")
     return match.group(1)
 
 
@@ -42,10 +42,11 @@ def read_yaml_version(path: Path) -> str:
 
 
 def main() -> int:
-    expected = read_python_version()
+    expected = read_typescript_app_version()
 
     checks = {
-        "python.__version__": expected,
+        "src-ts/config/index.ts:APP_VERSION": expected,
+        "src-ts/package.json": read_json_version(PROJECT_ROOT / "src-ts" / "package.json"),
         "config/niko-studio.yaml": read_yaml_version(PROJECT_ROOT / "config" / "niko-studio.yaml"),
         "config/niko-studio.production.yaml": read_yaml_version(PROJECT_ROOT / "config" / "niko-studio.production.yaml"),
         "desktop/package.json": read_json_version(PROJECT_ROOT / "desktop" / "package.json"),

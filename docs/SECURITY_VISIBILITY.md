@@ -4,42 +4,43 @@
 
 ## 1. 运行时守卫（reload / CORS / metrics）
 
-### reload 守卫
-- 生产环境强制关闭 reload：`src/mcp/gateway.py:99`、`src/mcp/gateway.py:100`
-- 启动脚本在 production 下忽略 `--reload`：`scripts/start_gateway.py:70`
+### reload 守卫（TypeScript authority）
+- 生产环境强制关闭 reload：`src-ts/mcp/config.ts` -> `resolveReloadEnabled()` 中 `if (isProductionEnv()) return false;`
+- 发布汇总门禁会直接检查该锚点：`scripts/release_check_summary.py` -> `_typescript_production_guard()`
 
-### CORS 守卫
-- CORS 来源解析与生产白名单过滤：`src/mcp/gateway.py:122`、`src/mcp/gateway.py:137`
-- 生产环境禁止 `*` 与 localhost；为空直接报错：`src/mcp/gateway.py:138`、`src/mcp/gateway.py:141`
-- 启动阶段生产白名单为空直接退出：`scripts/start_gateway.py:79`、`scripts/start_gateway.py:81`
+### CORS 守卫（TypeScript authority）
+- 生产环境 CORS 白名单解析：`src-ts/mcp/config.ts` -> `resolveCorsOrigins()`
+- 生产环境禁止 `*` / localhost：`src-ts/mcp/config.ts` -> `forbidden` 集合过滤
+- 生产环境白名单为空直接抛错：`src-ts/mcp/config.ts` -> `Production CORS origins are empty`
+- 发布汇总门禁会直接检查上述锚点：`scripts/release_check_summary.py` -> `_typescript_production_guard()`
 
-### metrics 守卫
-- 指标中间件与统计：`src/mcp/gateway.py:148`、`src/mcp/gateway.py:160`
-- `/metrics` 端点注册：`src/mcp/gateway.py:366`
+### metrics 守卫（TypeScript authority）
+- `/metrics` 端点守卫：`src-ts/mcp/endpoints/health.ts` -> `metricsEndpoint()`
+- `gateway.metrics_enabled` 禁用时返回 404：`src-ts/mcp/endpoints/health.ts`
+- `/metrics` 路由注册：`src-ts/gateway-server.ts`
+- 发布汇总门禁会直接检查上述锚点：`scripts/release_check_summary.py` -> `_typescript_metrics_guard()`
 
-## 2. 构建与依赖审计门禁
+## 2. 构建与验证门禁
 
-### 前端统一质量入口
-- 统一入口：`desktop/package.json:9`（`check = typecheck + build`）
-- 构建命令：`desktop/package.json:10`
+### TS / Desktop 质量入口
+- TS 官方验证面：`src-ts/package.json` -> `test:phase4` / `test:coverage:phase4`
+- Desktop 统一质量入口：`desktop/package.json` -> `check = typecheck + build`
+- Desktop sidecar 构建入口：`desktop/package.json` -> `build:sidecar`
 
-### CI 门禁（Integration Tests）
-- 安装依赖：`.github/workflows/integration-tests.yml:73`
-- 高危依赖审计：`.github/workflows/integration-tests.yml:77`
-- 前端统一检查入口（check）：`.github/workflows/integration-tests.yml:81`
-
-### 版本与交付语义门禁
-- 版本一致性：`scripts/check_versions.py:43`
-- 交付语义门禁：`scripts/delivery_gate.py:46`
+### 交付语义门禁
+- 交付语义脚本：`scripts/delivery_gate.py`
+- 门禁覆盖：
+  - 必须存在 TS/desktop 权威锚点（workflow hard gate、chat/metrics 路由、phase4 验证入口）
+  - 禁止回退到 legacy 假设（例如 `release_check_summary.py` 中 `from src.` / `--cov=src`）
 
 ## 3. fallback / rollback 入口
 
 ### Web fallback（deprecated）
-- `src-ts/web/app.ts` 根路径默认 `410`，仅在 `WEB_UI_FORWARD_URL` 存在时 `302` 转发：`src-ts/web/app.ts:154`、`src-ts/web/app.ts:163`
+- `src-ts/web/app.ts` 根路径默认 `410`，仅在 `WEB_UI_FORWARD_URL` 存在时 `302` 转发
 
 ### 回滚入口
-- 回滚手册：`docs/operations/ROLLBACK.md:1`
-- external 回滚补充（Desktop/Gateway/Chat/Streamlit 兼容链路）：`docs/operations/ROLLBACK.md:52`
+- 回滚手册：`docs/operations/ROLLBACK.md`
+- external 回滚补充（Desktop/Gateway/Chat/Streamlit 兼容链路）：`docs/operations/ROLLBACK.md`
 
 ## 4. 发布前检查清单（脚本与 CI 映射）
 
@@ -47,9 +48,10 @@
 1. 版本一致性：`python scripts/check_versions.py`
 2. 交付语义门禁：`python scripts/delivery_gate.py`
 3. 发布汇总：`python scripts/release_check_summary.py`
-4. 前端依赖安装：`npm --prefix desktop ci`
-5. 前端统一检查：`npm --prefix desktop run check`
-6. 前端依赖审计：`npm --prefix desktop audit --audit-level=high`
+4. TS 覆盖率基线：`npm --prefix src-ts run test:coverage:phase4`
+5. Desktop sidecar 构建：`npm --prefix desktop run build:sidecar`
+6. Desktop 统一检查：`npm --prefix desktop run check`
+7. 前端依赖审计：`npm --prefix desktop audit --audit-level=high`
 
 ### CI 观察点
 - Workflow：`Integration Tests`
@@ -61,4 +63,4 @@
 
 - `python scripts/release_check_summary.py`
 - 输出文件：`release-check-summary.md`
-- CI 事实来源：`scripts/release_check_summary.py:167`
+- 发布机读产物：`.workflow/evidence/release/release-readiness-artifact.json`
