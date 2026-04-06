@@ -7,6 +7,7 @@
 
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
+import { processWritingHelper as processLocalWritingHelper } from '../../services/writing-helper';
 
 // ---------------------------------------------------------------
 // Mode-specific prompt builders
@@ -286,15 +287,47 @@ export async function writingHelperProcessEndpoint(
   const mode = (body.mode as string) ?? 'polish'
   const instruction = typeof body.instruction === 'string' ? body.instruction : ''
   const detectionEvasion = body.detection_evasion_guard_enabled === true
+  const maxSentences = typeof body.max_sentences === 'number'
+    ? body.max_sentences
+    : typeof body.maxSentences === 'number'
+      ? body.maxSentences
+      : undefined
+  const maxItems = typeof body.max_items === 'number'
+    ? body.max_items
+    : typeof body.maxItems === 'number'
+      ? body.maxItems
+      : undefined
 
   const config = resolveProviderConfig(body)
   if (!config) {
-    // No LLM config available, return placeholder
-    return jsonResponse({
-      mode,
-      processed_text: `[Placeholder — no LLM provider configured for mode: ${mode}]`,
-      status: 'ok',
-    })
+    const normalizedMode = mode.trim().toLowerCase()
+    if (normalizedMode === 'generate') {
+      return jsonResponse({ error: 'No LLM provider configured' }, 400)
+    }
+
+    try {
+      const localResult = processLocalWritingHelper({
+        content,
+        mode: normalizedMode,
+        instruction,
+        maxSentences,
+        maxItems,
+      })
+
+      const normalizedLocalResult = { ...localResult } as Record<string, unknown>
+      if (!('processed_text' in normalizedLocalResult) && Array.isArray(normalizedLocalResult.outline)) {
+        normalizedLocalResult.processed_text = normalizedLocalResult.outline.join('\n')
+      }
+
+      return jsonResponse({
+        ...normalizedLocalResult,
+        status: 'ok',
+        provider: 'local',
+      })
+    } catch (exc) {
+      const message = exc instanceof Error ? exc.message : String(exc)
+      return jsonResponse({ error: message }, 400)
+    }
   }
 
   try {

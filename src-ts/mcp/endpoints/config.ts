@@ -16,6 +16,7 @@ const SECRET_FIELDS: string[] = [
   'agent.google_api_key',
   'agent.openai_api_key',
   'backup.webdav_password',
+  'backup.s3_secret_access_key',
 ];
 
 const MODIFIABLE_FIELDS: string[] = [
@@ -60,14 +61,28 @@ const MODIFIABLE_FIELDS: string[] = [
   'backup.s3_bucket',
   'backup.s3_prefix',
   'backup.s3_region',
+  'backup.s3_endpoint_url',
+  'backup.s3_access_key_id',
+  'backup.s3_force_path_style',
   'token.default_budget',
   'token.budget_warn_threshold',
   'obsidian.enabled',
   'obsidian.auto_discover',
   'obsidian.sync_on_startup',
   'obsidian.default_vault',
+  'gateway.localhost_only',
+  'gateway.localhost_only_exempt_paths',
+  'gateway.detection_evasion_guard',
   'gateway.metrics_enabled',
   'gateway.ui_bridge_enabled',
+  'integration.dbhub_governance_enabled',
+  'integration.search_route_mode',
+  'integration.search_elastic_timeout_ms',
+  'integration.redis_rate_limit',
+  'integration.redis_rate_limit_window_seconds',
+  'integration.langflow_enabled',
+  'integration.langflow_flow_name',
+  'integration.redis_cache_ttl_seconds',
 ];
 
 const MASKED_VALUE = '***MASKED***';

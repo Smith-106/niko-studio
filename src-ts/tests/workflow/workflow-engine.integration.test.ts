@@ -73,4 +73,15 @@ describe('WorkflowEngine integration', () => {
     const status = engine.getPlanStatus(planId);
     expect(status['runner_state']).toBe('running');
   });
+
+  it('supports explicit public plan-session binding', async () => {
+    const engine = new WorkflowEngine(workspace, 'phase4-binding');
+
+    const plan = await engine.plan('写一个带会话绑定的测试', 'L2');
+    const planId = String(plan['plan_id']);
+
+    const bound = engine.bindPlanSession(planId, 'manual-session-001');
+    expect(bound).toBe('manual-session-001');
+    expect(engine.getPlanSessionId(planId)).toBe('manual-session-001');
+  });
 });

@@ -14,6 +14,8 @@ import {
   generateSessionId,
   mergeControlsWithGenre,
 } from './types';
+import { WorkflowEngine } from '../workflow/workflow-engine';
+import { refreshProjectTechMetadata } from '../workflow/project-tech';
 
 // ============================================================
 // init command
@@ -70,6 +72,70 @@ const LEVEL_MAP: Record<string, string> = {
   '5': 'L5-Coordinator',
 };
 
+function toWorkflowLevel(level: string): string | undefined {
+  if (!level || level === 'auto') return undefined;
+  return LEVEL_MAP[level] ?? level;
+}
+
+function getBooleanArg(args: Record<string, unknown>, ...keys: string[]): boolean {
+  for (const key of keys) {
+    const raw = args[key];
+    if (typeof raw === 'boolean') return raw;
+  }
+  return false;
+}
+
+function asNumberArg(args: Record<string, unknown>, ...keys: string[]): number | undefined {
+  for (const key of keys) {
+    const raw = args[key];
+    if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim()) {
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return undefined;
+}
+
+function buildGenerationRecommendations(
+  controls: { style: string; length: string; constraints: string[] },
+): Array<{ action: string; target: string; params: Record<string, unknown> }> {
+  return [
+    {
+      action: 'set_generation_controls',
+      target: 'draft',
+      params: {
+        style: controls.style,
+        length: controls.length,
+        constraints: controls.constraints,
+      },
+    },
+  ];
+}
+
+function extractWorkflowContent(value: unknown): string {
+  if (typeof value !== 'object' || value === null) {
+    return '';
+  }
+
+  const record = value as Record<string, unknown>;
+  for (const key of ['final_output', 'draft_content', 'content', 'processed_text']) {
+    const candidate = record[key];
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  for (const key of ['last_step', 'final_status', 'result']) {
+    const nested = extractWorkflowContent(record[key]);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return '';
+}
+
 export const runCommand: Command = {
   name: 'run',
   description: 'Execute a writing workflow',
@@ -84,18 +150,53 @@ export const runCommand: Command = {
   async execute(ctx: CliContext, args: Record<string, unknown>): Promise<void> {
     const task = args.task as string;
     const level = args.level as string;
-    const dryRun = args.dryRun as boolean;
+    const sessionId = ((args.session as string) ?? '').trim();
+    const dryRun = getBooleanArg(args, 'dryRun', 'dry-run');
+    const namespace = ((args.namespace as string) ?? '').trim();
+    const workflowLevel = toWorkflowLevel(level);
+    const workspace = process.cwd();
+    const engine = new WorkflowEngine(workspace, namespace || undefined);
 
     ctx.console.log(`Executing workflow: ${task}`);
+    if (workflowLevel) {
+      ctx.console.log(`Workflow level: ${workflowLevel}`);
+    } else {
+      ctx.console.log('Workflow level: auto route');
+    }
 
-    if (dryRun) {
-      ctx.console.log('Dry run mode - execution skipped');
+    const plan = await engine.plan(task, workflowLevel);
+    const planId = String(plan.plan_id ?? '');
+    const steps = Array.isArray(plan.steps) ? plan.steps.length : 0;
+    if (planId && sessionId) {
+      engine.bindPlanSession(planId, sessionId);
+    }
+    ctx.console.log(`Plan created: ${planId} (${steps} steps)`);
+
+    if (dryRun || !planId) {
+      ctx.console.log('Dry run mode - plan generated only');
+      if (!planId) ctx.console.error('Plan creation failed: missing plan_id');
       return;
     }
 
-    // Placeholder for WorkflowEngine integration
-    ctx.console.log(`Workflow execution for level ${level} (placeholder)`);
-    void LEVEL_MAP;
+    const maxIterations = Math.max(steps + 5, 5);
+    let latest: Record<string, unknown> = {};
+    for (let i = 0; i < maxIterations; i++) {
+      latest = await engine.execute(planId);
+      const status = String(latest.status ?? '');
+      const planStatus = String(latest.plan_status ?? '');
+      if (status === 'completed' || planStatus === 'completed') break;
+      if (status === 'blocked' || status === 'waiting_confirmation' || status === 'preflight_blocked' || status === 'gate_blocked') {
+        break;
+      }
+      if (latest.error) break;
+    }
+
+    const finalStatus = engine.getPlanStatus(planId);
+    ctx.console.log(`Execution status: ${String(latest.status ?? latest.plan_status ?? 'unknown')}`);
+    ctx.console.log(`Plan progress: ${String(finalStatus.progress ?? 'unknown')}`);
+    if (latest.error) {
+      ctx.console.error(`Workflow execution failed: ${String(latest.error)}`);
+    }
   },
 };
 
@@ -113,13 +214,13 @@ export const chatCommand: Command = {
   ],
   async execute(ctx: CliContext, args: Record<string, unknown>): Promise<void> {
     const sessionId = (args.session as string) || generateSessionId('chat');
-    const level = args.level as string;
+    let level = args.level as string;
     const model = args.model as string;
+    const engine = new WorkflowEngine(process.cwd(), sessionId);
 
     ctx.console.log(`Chat session ${sessionId} started (Level L${level}, Model: ${model})`);
     ctx.console.log('Type /help for commands, /quit to exit');
 
-    // REPL loop
     const history: Array<{ role: string; content: string }> = [];
     const rl = createInterface({ input: process.stdin, output: process.stdout });
 
@@ -136,14 +237,45 @@ export const chatCommand: Command = {
         if (cmd === '/help') {
           ctx.console.log('Commands: /level N, /save, /export, /clear, /quit');
         } else if (cmd.startsWith('/level')) {
-          ctx.console.log(`Level: ${cmd}`);
+          const nextLevel = cmd.replace('/level', '').trim();
+          if (nextLevel && ['1', '2', '3', '4', '5'].includes(nextLevel)) {
+            level = nextLevel;
+            ctx.console.log(`Level set to L${level}`);
+          } else {
+            ctx.console.log(`Current level: L${level}`);
+          }
+        } else if (cmd === '/clear') {
+          history.length = 0;
+          ctx.console.clear();
+          ctx.console.log('Chat history cleared');
+        } else if (cmd === '/save') {
+          const outPath = join(process.cwd(), `.niko-chat-${sessionId}.json`);
+          writeFileSync(outPath, JSON.stringify(history, null, 2), 'utf-8');
+          ctx.console.log(`Chat saved to ${outPath}`);
+        } else if (cmd === '/export') {
+          const outPath = join(process.cwd(), `.niko-chat-${sessionId}.md`);
+          const markdown = history
+            .map(entry => `## ${entry.role === 'user' ? 'You' : 'Niko'}\n\n${entry.content}`)
+            .join('\n\n');
+          writeFileSync(outPath, markdown, 'utf-8');
+          ctx.console.log(`Chat exported to ${outPath}`);
         }
         continue;
       }
 
       history.push({ role: 'user', content: input });
-      history.push({ role: 'assistant', content: `[Placeholder response to: ${input}]` });
-      ctx.console.log('Niko: [Placeholder response]');
+
+      const workflowLevel = toWorkflowLevel(level) ?? 'L3-Standard';
+      const result = await engine.run(input, workflowLevel);
+
+      if (result && typeof result === 'object' && result.error) {
+        ctx.console.error(`Niko: ${String(result.error)}`);
+        continue;
+      }
+
+      const response = extractWorkflowContent(result) || `Workflow ${workflowLevel} completed for: ${input}`;
+      history.push({ role: 'assistant', content: response });
+      ctx.console.log(`Niko: ${response}`);
     }
 
     rl.close();
@@ -355,7 +487,9 @@ export const serveCommand: Command = {
   async execute(ctx: CliContext, args: Record<string, unknown>): Promise<void> {
     const host = (args.host as string) || '127.0.0.1';
     const port = (args.port as number) || 8000;
-    ctx.console.log(`Gateway would serve at ${host}:${port} (placeholder)`);
+    const { startGatewayServer } = await import('../gateway-server');
+    await startGatewayServer({ host, port });
+    ctx.console.log(`Gateway serving at ${host}:${port}`);
   },
 };
 
@@ -384,8 +518,12 @@ export const guidedDraftCommand: Command = {
     const style = (args.style as string) || 'neutral';
     const length = (args.length as string) || 'medium';
     const genre = (args.genre as string) || 'none';
+    const sessionId = ((args.session as string) ?? '').trim();
+    const namespace = ((args.namespace as string) ?? '').trim();
+    const maxSteps = asNumberArg(args, 'maxSteps', 'max-steps') ?? 20;
 
     if (!idea.trim()) throw new Error('idea cannot be empty');
+    if (maxSteps < 1) throw new Error('max-steps must be >= 1');
 
     const controls = mergeControlsWithGenre(
       { style, length, constraints: [] },
@@ -394,9 +532,55 @@ export const guidedDraftCommand: Command = {
 
     ctx.console.log(`Guided draft: ${idea.slice(0, 80)}...`);
     ctx.console.log(`Style: ${controls.style}, Length: ${controls.length}`);
+    const engine = new WorkflowEngine(process.cwd(), namespace || undefined);
+    const recommendations = buildGenerationRecommendations(controls);
 
-    // Placeholder for WorkflowEngine guided draft execution
-    ctx.console.log('Guided draft execution (placeholder)');
+    const routing = await engine.route(idea);
+    ctx.console.log(`Routed level: ${String(routing.level ?? 'L3-Standard')}`);
+
+    const plan = await engine.plan(idea, 'L3-Standard', recommendations);
+    const planId = String(plan.plan_id ?? '');
+    if (!planId) {
+      throw new Error('guided-draft failed: plan_id missing');
+    }
+    if (sessionId) {
+      engine.bindPlanSession(planId, sessionId);
+    }
+    ctx.console.log(`Plan created: ${planId}`);
+
+    const totalSteps = Number(plan.total_steps ?? (Array.isArray(plan.steps) ? plan.steps.length : 0));
+    const maxIterations = Math.min(Math.max(totalSteps + 5, 5), maxSteps);
+    let latest: Record<string, unknown> = {};
+    for (let i = 0; i < maxIterations; i++) {
+      latest = await engine.execute(planId, undefined, recommendations);
+      const status = String(latest.status ?? '');
+      const planStatus = String(latest.plan_status ?? '');
+      if (status === 'completed' || planStatus === 'completed') break;
+      if (status === 'blocked' || status === 'waiting_confirmation' || status === 'preflight_blocked' || status === 'gate_blocked') break;
+      if (latest.error) break;
+    }
+
+    if (latest.error) {
+      ctx.console.error(`Guided draft failed: ${String(latest.error)}`);
+      return;
+    }
+
+    const finalStatus = engine.getPlanStatus(planId);
+    const finalSteps = Array.isArray(finalStatus.steps) ? finalStatus.steps : [];
+    const contentStep = [...finalSteps]
+      .reverse()
+      .find(step => {
+        if (!step || typeof step !== 'object') return false;
+        const output = (step as Record<string, unknown>).output;
+        return typeof output === 'object' && output !== null;
+      }) as Record<string, unknown> | undefined;
+    const output = (contentStep?.output as Record<string, unknown> | undefined) ?? {};
+    const draft = String(output.draft_content ?? output.content ?? '').trim();
+
+    if (draft) {
+      ctx.console.log(`Draft preview: ${draft.slice(0, 280)}${draft.length > 280 ? '...' : ''}`);
+    }
+    ctx.console.log(`Guided draft completed. Progress: ${String(finalStatus.progress ?? 'unknown')}`);
   },
 };
 
@@ -413,9 +597,25 @@ export const projectTechRefreshCommand: Command = {
     { name: 'ttl-hours', type: 'number', default: 168, description: 'TTL in hours' },
   ],
   async execute(ctx: CliContext, args: Record<string, unknown>): Promise<void> {
-    ctx.console.log(`Refreshing project-tech for ${args.workspace}`);
-    // Placeholder for project-tech refresh
-    ctx.console.log('Project-tech refresh (placeholder)');
+    const workspace = String(args.workspace ?? '.');
+    const source = String(args.source ?? 'cli:manual');
+    const ttlHours = asNumberArg(args, 'ttlHours', 'ttl-hours') ?? 168;
+    const result = refreshProjectTechMetadata(workspace, { source, ttlHours });
+    const freshness = result.freshness;
+    const generatedAt = String(freshness.generated_at ?? '');
+    const schemaVersion = String(freshness.schema_version ?? '');
+    const outputPath = String(result.path ?? '');
+    ctx.console.log(`Project-tech refreshed: ${outputPath}`);
+    ctx.console.log(`Generated at: ${generatedAt}`);
+    ctx.console.log(`Source: ${String(freshness.source ?? '')}, schema: ${schemaVersion}, ttl_hours: ${String(freshness.ttl_hours ?? '')}`);
+    const langCounts = result.language_file_counts;
+    const countSummary = Object.entries(langCounts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([lang, count]) => `${lang}=${count}`)
+      .join(', ');
+    if (countSummary) {
+      ctx.console.log(`Language file counts: ${countSummary}`);
+    }
   },
 };
 

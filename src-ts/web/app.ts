@@ -9,6 +9,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { WorkflowEngine } from '../workflow/workflow-engine.js';
 
 // ---------------------------------------------------------------------------
 // Environment configuration
@@ -315,97 +316,132 @@ async function handleWsMessage(clientId: string, message: WebSocketMessage, ws: 
       message: `Starting workflow in ${mode} mode...`,
     }, ws);
 
-    // TODO: Integrate with WorkflowEngine when available
-    // The Python original runs: engine = WorkflowEngine()
-    //   async for event in engine.run_stream(task=user_idea, level=mode):
-    //     ... dispatch event ...
-    // For now, send a placeholder completion event.
-    manager.sendJson({
-      type: 'status',
-      status: 'completed',
-      message: 'Workflow engine not yet integrated in TypeScript port.',
-    }, ws);
+    await runWorkflowStream(ws, userIdea, mode);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Workflow engine integration (deferred)
+// Workflow engine integration
 // ---------------------------------------------------------------------------
 
 /**
  * Run a workflow stream and dispatch events to the WebSocket client.
  *
  * This is the TypeScript equivalent of the Python WorkflowEngine.run_stream loop.
- * It will be wired up once WorkflowEngine is ported to TypeScript.
  */
 async function runWorkflowStream(
   ws: WSWithMeta,
   userIdea: string,
   mode: string,
 ): Promise<void> {
-  // TODO: Integrate with WorkflowEngine when available
-  // Example of the event dispatch loop once engine is available:
-  //
-  // const engine = new WorkflowEngine();
-  // for await (const event of engine.runStream(userIdea, mode)) {
-  //   const eventType = event.type ?? 'unknown';
-  //
-  //   if (eventType === 'plan_created') {
-  //     manager.sendJson({
-  //       type: 'plan_created',
-  //       plan_id: event.plan_id,
-  //       message: 'Plan created successfully.',
-  //     }, ws);
-  //   } else if (eventType === 'step_start') {
-  //     manager.sendJson({
-  //       type: 'step_start',
-  //       step_id: event.step_id,
-  //       step_name: event.step_name,
-  //       message: `Starting step: ${event.step_name ?? 'unknown'}`,
-  //     }, ws);
-  //   } else if (eventType === 'step_complete') {
-  //     const stepResult = event.result ?? {};
-  //     manager.sendJson({
-  //       type: 'step_complete',
-  //       step_id: event.step_id,
-  //       step_name: event.step_name,
-  //       status: event.status,
-  //       data: serializeState(stepResult),
-  //     }, ws);
-  //
-  //     if ('draft_content' in stepResult) {
-  //       manager.sendJson({ type: 'draft_update', content: stepResult['draft_content'] }, ws);
-  //     }
-  //     if ('lock_analysis' in stepResult) {
-  //       manager.sendJson({ type: 'lock_update', data: stepResult['lock_analysis'] }, ws);
-  //     }
-  //     if ('scene_cards' in stepResult) {
-  //       manager.sendJson({ type: 'scenes_update', data: stepResult['scene_cards'] }, ws);
-  //     }
-  //   } else if (eventType === 'plan_complete') {
-  //     manager.sendJson({
-  //       type: 'status',
-  //       status: 'completed',
-  //       message: 'Workflow completed successfully.',
-  //       plan_id: event.plan_id,
-  //     }, ws);
-  //   } else if (eventType === 'plan_error' || eventType === 'error') {
-  //     manager.sendJson({
-  //       type: 'error',
-  //       message: event.error ?? 'Unknown error',
-  //     }, ws);
-  //   } else if (eventType === 'plan_blocked') {
-  //     manager.sendJson({
-  //       type: 'blocked',
-  //       status: event.status,
-  //       message: `Workflow blocked: ${event.status ?? 'unknown'}`,
-  //     }, ws);
-  //   }
-  // }
+  const engine = new WorkflowEngine();
+  const level = typeof mode === 'string' && mode.trim() ? mode.trim() : 'L3';
 
-  void userIdea;
-  void mode;
-  void ws;
+  const asRecord = (value: unknown): Record<string, unknown> =>
+    value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+
+  try {
+    for await (const rawEvent of engine.runStream(userIdea, level)) {
+      const event = rawEvent as WorkflowEvent & Record<string, unknown>;
+      const eventType = String(event.type ?? 'unknown');
+
+      if (eventType === 'plan_created') {
+        manager.sendJson(
+          {
+            type: 'plan_created',
+            plan_id: event.plan_id,
+            message: 'Plan created successfully.',
+          },
+          ws,
+        );
+        continue;
+      }
+
+      if (eventType === 'step_start') {
+        manager.sendJson(
+          {
+            type: 'step_start',
+            step_id: event.step_id,
+            step_name: event.step_name,
+            message: `Starting step: ${event.step_name ?? 'unknown'}`,
+          },
+          ws,
+        );
+        continue;
+      }
+
+      if (eventType === 'step_complete') {
+        const stepResult = asRecord(event.result);
+        manager.sendJson(
+          {
+            type: 'step_complete',
+            step_id: event.step_id,
+            step_name: event.step_name,
+            status: event.status,
+            data: serializeState(stepResult),
+          },
+          ws,
+        );
+
+        if ('draft_content' in stepResult) {
+          manager.sendJson({ type: 'draft_update', content: stepResult['draft_content'] }, ws);
+        }
+        if ('lock_analysis' in stepResult) {
+          manager.sendJson({ type: 'lock_update', data: stepResult['lock_analysis'] }, ws);
+        }
+        if ('scene_cards' in stepResult) {
+          manager.sendJson({ type: 'scenes_update', data: stepResult['scene_cards'] }, ws);
+        }
+        continue;
+      }
+
+      if (eventType === 'plan_complete') {
+        manager.sendJson(
+          {
+            type: 'status',
+            status: 'completed',
+            message: 'Workflow completed successfully.',
+            plan_id: event.plan_id,
+          },
+          ws,
+        );
+        continue;
+      }
+
+      if (eventType === 'plan_blocked') {
+        manager.sendJson(
+          {
+            type: 'blocked',
+            status: event.status,
+            message: `Workflow blocked: ${event.status ?? 'unknown'}`,
+            plan_id: event.plan_id,
+            data: serializeState(asRecord(event.last_step)),
+          },
+          ws,
+        );
+        continue;
+      }
+
+      if (eventType === 'plan_error' || eventType === 'error') {
+        manager.sendJson(
+          {
+            type: 'error',
+            message: event.error ?? 'Unknown error',
+            plan_id: event.plan_id,
+          },
+          ws,
+        );
+      }
+    }
+  } catch (error) {
+    manager.sendJson(
+      {
+        type: 'error',
+        message: String(error),
+      },
+      ws,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

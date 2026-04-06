@@ -444,6 +444,29 @@ export class WorkflowEngine {
     return this.planSessions.get(planId)!;
   }
 
+  bindPlanSession(planId: string, sessionId: string): string {
+    const normalizedPlanId = String(planId ?? '').trim();
+    if (!normalizedPlanId) {
+      throw new Error('planId is required');
+    }
+
+    const normalizedSessionId = String(sessionId ?? '').trim();
+    if (!normalizedSessionId) {
+      return this._sessionIdForPlan(normalizedPlanId);
+    }
+
+    this.planSessions.set(normalizedPlanId, normalizedSessionId);
+    return normalizedSessionId;
+  }
+
+  getPlanSessionId(planId: string): string {
+    const normalizedPlanId = String(planId ?? '').trim();
+    if (!normalizedPlanId) {
+      throw new Error('planId is required');
+    }
+    return this._sessionIdForPlan(normalizedPlanId);
+  }
+
   // ---- Public API ----
 
   async run(task: string, level?: string, recommendations?: unknown[]): Promise<Record<string, unknown>> {

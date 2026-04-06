@@ -6,6 +6,12 @@
  */
 
 import Database from 'better-sqlite3';
+import {
+  GetObjectCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { join, dirname, basename, resolve, relative } from 'node:path';
 import {
   mkdirSync,
@@ -65,6 +71,17 @@ export interface BackupResult {
 
 export type ProgressCallback = (progress: BackupProgress) => void;
 
+interface S3Config {
+  bucket?: string;
+  prefix?: string;
+  region?: string;
+  endpoint?: string;
+  endpoint_url?: string;
+  aws_access_key_id?: string;
+  aws_secret_access_key?: string;
+  force_path_style?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // BackupManager
 // ---------------------------------------------------------------------------
@@ -123,6 +140,10 @@ export class BackupManager {
 
       const db = this._getDb();
       const checksums: string[] = [];
+      db.prepare(
+        'INSERT INTO backups (id, name, source_path, backup_path, size_bytes, file_count, checksum, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ).run(backupId, name, source, backupDir, 0, 0, '', new Date().toISOString());
+
       const stmt = db.prepare(
         'INSERT INTO backup_files (backup_id, file_path, relative_path, size_bytes, checksum) VALUES (?, ?, ?, ?, ?)',
       );
@@ -160,8 +181,8 @@ export class BackupManager {
         .digest('hex');
 
       db.prepare(
-        'INSERT INTO backups (id, name, source_path, backup_path, size_bytes, file_count, checksum, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      ).run(backupId, name, source, backupDir, totalBytes, files.length, totalChecksum, new Date().toISOString());
+        'UPDATE backups SET size_bytes = ?, file_count = ?, checksum = ? WHERE id = ?',
+      ).run(totalBytes, files.length, totalChecksum, backupId);
 
       progress.status = 'completed';
       this._notifyProgress(progress);
@@ -176,6 +197,14 @@ export class BackupManager {
         backupPath: backupDir,
       };
     } catch (err) {
+      try {
+        const db = this._getDb();
+        db.prepare('DELETE FROM backup_files WHERE backup_id = ?').run(backupId);
+        db.prepare('DELETE FROM backups WHERE id = ?').run(backupId);
+      } catch {
+        // Ignore cleanup errors after a failed backup.
+      }
+
       // Cleanup on failure
       if (existsSync(backupDir)) {
         rmSync(backupDir, { recursive: true, force: true });
@@ -431,7 +460,7 @@ export class BackupManager {
       }
 
       const xmlBody = await res.text();
-      const downloadedFiles = this._parseWebdavResponse(xmlBody, url, remotePath, target, credentials);
+      const downloadedFiles = await this._parseWebdavResponse(xmlBody, url, remotePath, target, credentials);
 
       return {
         success: true,
@@ -450,25 +479,103 @@ export class BackupManager {
 
   async backupToS3(
     backupId: string,
-    _s3Config: Record<string, unknown>,
+    s3Config: Record<string, unknown>,
   ): Promise<BackupResult> {
-    // S3 requires the AWS SDK which is a heavyweight dependency.
-    // For now, return a descriptive error. Full implementation can be added later.
-    return {
-      success: false,
-      error: 'S3 backup not yet implemented in TypeScript. Use WebDAV backup or implement with AWS SDK.',
-    };
+    const backup = this.getBackup(backupId);
+    if (!backup) {
+      return { success: false, error: `Backup not found: ${backupId}` };
+    }
+    if (!existsSync(backup.backupPath)) {
+      return { success: false, error: 'Backup data missing' };
+    }
+
+    try {
+      const { client, bucket, prefix } = this._createS3Client(s3Config);
+      const keyPrefix = prefix ? `${prefix}/${backupId}` : backupId;
+      const localFiles = this._collectFiles(backup.backupPath);
+
+      for (const file of localFiles) {
+        const rel = relative(backup.backupPath, file).replace(/\\/g, '/');
+        const s3Key = `${keyPrefix}/${rel}`;
+        await client.send(new PutObjectCommand({
+          Bucket: bucket,
+          Key: s3Key,
+          Body: readFileSync(file),
+          ContentType: 'application/octet-stream',
+        }));
+      }
+
+      return {
+        success: true,
+        backupId,
+        bucket,
+        prefix: keyPrefix,
+        s3Key: keyPrefix,
+        fileCount: localFiles.length,
+      };
+    } catch (err) {
+      return { success: false, error: `S3 upload failed: ${(err as Error).message}` };
+    }
   }
 
   async restoreFromS3(
-    _s3Key: string,
-    _s3Config: Record<string, unknown>,
-    _targetPath?: string,
+    s3Key: string,
+    s3Config: Record<string, unknown>,
+    targetPath?: string,
   ): Promise<BackupResult> {
-    return {
-      success: false,
-      error: 'S3 restore not yet implemented in TypeScript. Use WebDAV restore or implement with AWS SDK.',
-    };
+    const normalizedKey = this._normalizeS3Key(s3Key);
+    if (!normalizedKey) {
+      return { success: false, error: 'S3 key prefix is required' };
+    }
+
+    const target = targetPath ?? join(this._backupDir, 'restored', basename(normalizedKey));
+    mkdirSync(target, { recursive: true });
+
+    try {
+      const { client, bucket } = this._createS3Client(s3Config);
+      const downloadedFiles: string[] = [];
+      let continuationToken: string | undefined;
+
+      do {
+        const page = await client.send(new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: normalizedKey,
+          ContinuationToken: continuationToken,
+        }));
+
+        for (const obj of page.Contents ?? []) {
+          const key = obj.Key ?? '';
+          if (!key || key.endsWith('/')) continue;
+
+          const rel = key.slice(normalizedKey.length).replace(/^\/+/, '');
+          if (!rel) continue;
+
+          const localFile = join(target, ...rel.split('/'));
+          mkdirSync(dirname(localFile), { recursive: true });
+
+          const response = await client.send(new GetObjectCommand({
+            Bucket: bucket,
+            Key: key,
+          }));
+          const content = await this._readS3Body(response.Body);
+          writeFileSync(localFile, content);
+          downloadedFiles.push(rel);
+        }
+
+        continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (continuationToken);
+
+      return {
+        success: true,
+        bucket,
+        prefix: normalizedKey,
+        s3Key: normalizedKey,
+        targetPath: target,
+        fileCount: downloadedFiles.length,
+      };
+    } catch (err) {
+      return { success: false, error: `S3 restore failed: ${(err as Error).message}` };
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -591,16 +698,229 @@ export class BackupManager {
     return 'WebDAV URL must use https (except localhost/127.0.0.1/::1 for local development)';
   }
 
-  private _parseWebdavResponse(
-    _xmlBody: string,
-    _baseUrl: string,
-    _remotePath: string,
-    _target: string,
-    _credentials: string,
-  ): number {
-    // Basic WebDAV PROPFIND response parsing would require an XML parser.
-    // For now, return 0 downloads. Full implementation can use fast-xml-parser.
-    return 0;
+  private async _parseWebdavResponse(
+    xmlBody: string,
+    baseUrl: string,
+    remotePath: string,
+    target: string,
+    credentials: string,
+  ): Promise<number> {
+    const remoteRootUrl = new URL(remotePath, `${baseUrl}/`);
+    const remoteBasePath = this._normalizeWebdavPath(remoteRootUrl.pathname);
+    const hrefs = this._extractWebdavHrefs(xmlBody);
+    let downloadedFiles = 0;
+
+    for (const href of hrefs) {
+      const fileUrl = new URL(href, remoteRootUrl);
+      const relativePath = this._relativeWebdavPath(
+        this._normalizeWebdavPath(fileUrl.pathname),
+        remoteBasePath,
+      );
+
+      if (!relativePath) {
+        continue;
+      }
+
+      const segments = this._sanitizeWebdavRelativePath(relativePath);
+      if (segments.length === 0) {
+        continue;
+      }
+
+      const localFile = join(target, ...segments);
+      mkdirSync(dirname(localFile), { recursive: true });
+
+      const response = await fetch(fileUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+        },
+        signal: AbortSignal.timeout(300_000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`GET ${fileUrl.toString()} returned ${response.status}`);
+      }
+
+      const content = await this._readHttpBody(response);
+      writeFileSync(localFile, content);
+      downloadedFiles += 1;
+    }
+
+    return downloadedFiles;
+  }
+
+  private _extractWebdavHrefs(xmlBody: string): string[] {
+    const hrefs = new Set<string>();
+    const responseRegex = /<(?:[\w.-]+:)?response\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?response>/gi;
+
+    for (const responseMatch of xmlBody.matchAll(responseRegex)) {
+      const responseBody = responseMatch[1] ?? '';
+      const hrefMatch = responseBody.match(/<(?:[\w.-]+:)?href\b[^>]*>([\s\S]*?)<\/(?:[\w.-]+:)?href>/i);
+      if (!hrefMatch) {
+        continue;
+      }
+
+      const href = this._decodeXmlEntities(hrefMatch[1] ?? '').trim();
+      const isCollection = /<(?:[\w.-]+:)?collection\b/i.test(responseBody);
+      if (!href || isCollection || href.endsWith('/')) {
+        continue;
+      }
+
+      hrefs.add(href);
+    }
+
+    return Array.from(hrefs);
+  }
+
+  private _decodeXmlEntities(value: string): string {
+    return value
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, '\'');
+  }
+
+  private _normalizeWebdavPath(value: string): string {
+    const normalized = value
+      .replace(/\\/g, '/')
+      .replace(/\/+/g, '/');
+
+    if (!normalized || normalized === '/') {
+      return '/';
+    }
+
+    const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    return withLeadingSlash.length > 1
+      ? withLeadingSlash.replace(/\/+$/, '')
+      : withLeadingSlash;
+  }
+
+  private _relativeWebdavPath(filePath: string, remoteBasePath: string): string | null {
+    if (filePath === remoteBasePath) {
+      return null;
+    }
+
+    const prefix = remoteBasePath === '/' ? '/' : `${remoteBasePath}/`;
+    if (!filePath.startsWith(prefix)) {
+      return null;
+    }
+
+    return filePath.slice(prefix.length);
+  }
+
+  private _sanitizeWebdavRelativePath(relativePath: string): string[] {
+    const segments = relativePath
+      .split('/')
+      .filter(Boolean)
+      .map((segment) => {
+        try {
+          return decodeURIComponent(segment);
+        } catch {
+          return segment;
+        }
+      });
+
+    if (segments.some((segment) => segment === '..')) {
+      throw new Error('Invalid WebDAV relative path traversal segment');
+    }
+
+    return segments.filter((segment) => segment !== '.');
+  }
+
+  private _createS3Client(rawConfig: Record<string, unknown>): {
+    client: S3Client;
+    bucket: string;
+    prefix: string;
+  } {
+    const s3Config = rawConfig as S3Config;
+    const bucket = String(s3Config.bucket ?? '').trim();
+    if (!bucket) {
+      throw new Error('S3 bucket is required');
+    }
+
+    const accessKeyId = String(s3Config.aws_access_key_id ?? '').trim();
+    const secretAccessKey = String(s3Config.aws_secret_access_key ?? '').trim();
+    if ((accessKeyId && !secretAccessKey) || (!accessKeyId && secretAccessKey)) {
+      throw new Error('S3 credentials require both aws_access_key_id and aws_secret_access_key');
+    }
+
+    const region = String(s3Config.region ?? 'us-east-1').trim() || 'us-east-1';
+    const endpoint = String(s3Config.endpoint_url ?? s3Config.endpoint ?? '').trim() || undefined;
+    const rawPrefix = s3Config.prefix === undefined ? 'backups' : String(s3Config.prefix ?? '');
+    const prefix = this._normalizeS3Key(rawPrefix);
+    const forcePathStyle = typeof s3Config.force_path_style === 'boolean'
+      ? s3Config.force_path_style
+      : Boolean(endpoint);
+
+    const client = new S3Client({
+      region,
+      endpoint,
+      forcePathStyle,
+      ...(accessKeyId && secretAccessKey
+        ? {
+          credentials: {
+            accessKeyId,
+            secretAccessKey,
+          },
+        }
+        : {}),
+    });
+
+    return { client, bucket, prefix };
+  }
+
+  private _normalizeS3Key(value: string): string {
+    return value
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '');
+  }
+
+  private async _readS3Body(body: unknown): Promise<Buffer> {
+    if (body == null) {
+      return Buffer.alloc(0);
+    }
+    if (Buffer.isBuffer(body)) {
+      return body;
+    }
+    if (body instanceof Uint8Array) {
+      return Buffer.from(body);
+    }
+    if (typeof body === 'string') {
+      return Buffer.from(body);
+    }
+
+    const s3Body = body as {
+      transformToByteArray?: () => Promise<Uint8Array>;
+      [Symbol.asyncIterator]?: () => AsyncIterator<unknown>;
+    };
+
+    if (typeof s3Body.transformToByteArray === 'function') {
+      return Buffer.from(await s3Body.transformToByteArray());
+    }
+
+    if (typeof s3Body[Symbol.asyncIterator] === 'function') {
+      const chunks: Buffer[] = [];
+      for await (const chunk of body as AsyncIterable<unknown>) {
+        if (Buffer.isBuffer(chunk)) {
+          chunks.push(chunk);
+        } else if (chunk instanceof Uint8Array) {
+          chunks.push(Buffer.from(chunk));
+        } else if (typeof chunk === 'string') {
+          chunks.push(Buffer.from(chunk));
+        } else {
+          throw new Error('Unsupported S3 response chunk type');
+        }
+      }
+      return Buffer.concat(chunks);
+    }
+
+    throw new Error('Unsupported S3 response body type');
+  }
+
+  private async _readHttpBody(response: Pick<Response, 'arrayBuffer'>): Promise<Buffer> {
+    return Buffer.from(await response.arrayBuffer());
   }
 }
 

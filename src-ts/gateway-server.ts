@@ -11,8 +11,33 @@
 
 import 'reflect-metadata';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { pathToFileURL } from 'node:url';
 import { resolveGatewayHostPort } from './mcp/config';
 import { getContainer } from './container/ServiceContainer';
+import { loadConfig as loadServicesConfig } from './knowledge/config';
+import {
+  ConfigManager,
+  getConfig as getAppConfig,
+  getConfigValue as getAppConfigValue,
+  setConfigValue as setAppConfigValue,
+} from './config';
+import { getMetricsSnapshot, utcNowIso } from './mcp/metrics';
+import {
+  MCP_SERVICE_CONFIGS,
+  MCP_SERVICE_HEALTH_CACHE,
+  RUNTIME_SERVER_ORDER,
+  refreshServiceHealthCache as refreshSharedServiceHealthCache,
+  serializeServiceConfig as serializeSharedServiceConfig,
+  serviceRuntimeStatus,
+} from './mcp/service-config';
+import {
+  RUNTIME_SESSION_ID,
+  buildRuntimeServers,
+  getObservabilitySnapshot,
+  toRuntimeConnectionState,
+  toRuntimeReconnectState,
+} from './mcp/runtime';
+import { ServiceTypes } from './container/types';
 
 // Endpoint imports
 import {
@@ -60,6 +85,157 @@ import {
   probeMcpServiceHealth,
   setMcpServiceState,
 } from './mcp/endpoints/mcp-admin';
+
+type GatewayDeps = Parameters<typeof setGatewayDeps>[0];
+type ConfigAccess = Parameters<typeof setConfigAccess>[0];
+type McpAdminConfig = {
+  id: string;
+  enabled: boolean;
+  builtin: boolean;
+  serviceId: string;
+  name: string;
+  path: string;
+  healthUrl: string | null;
+  transport: string;
+};
+
+function snakeToCamelSegment(segment: string): string {
+  return segment.replace(/_([a-z])/g, (_match, char: string) => char.toUpperCase());
+}
+
+function camelToSnakeSegment(segment: string): string {
+  return segment.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
+}
+
+function mapConfigKeyToSharedKey(key: string): string {
+  return key
+    .split('.')
+    .map((segment) => snakeToCamelSegment(segment))
+    .join('.');
+}
+
+function toSnakeCaseValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => toSnakeCaseValue(item));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, child]) => [
+        camelToSnakeSegment(key),
+        toSnakeCaseValue(child),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+function createMcpServiceConfigMap(): Map<string, McpAdminConfig> {
+  return new Map(
+    Object.entries(MCP_SERVICE_CONFIGS).map(([serviceId, config]) => [
+      serviceId,
+      {
+        id: serviceId,
+        enabled: config.enabled,
+        builtin: config.builtin,
+        serviceId: config.serviceId,
+        name: config.name,
+        path: config.path,
+        healthUrl: config.healthUrl,
+        transport: config.transport,
+      },
+    ]),
+  );
+}
+
+function createHealthCacheMap(): Map<string, string> {
+  return new Map(Object.entries(MCP_SERVICE_HEALTH_CACHE));
+}
+
+export function buildConfigAccess(): ConfigAccess {
+  return {
+    getConfig: () => toSnakeCaseValue(getAppConfig()) as Record<string, unknown>,
+    getConfigValue: (key: string) => getAppConfigValue(mapConfigKeyToSharedKey(key)),
+    setConfigValue: (key: string, value: unknown) => {
+      setAppConfigValue(mapConfigKeyToSharedKey(key), value);
+    },
+    reloadConfig: () => {
+      ConfigManager.getInstance().reload();
+    },
+  };
+}
+
+export function buildGatewayDeps(
+  container: ReturnType<typeof getContainer>,
+  state?: {
+    mcpConfigs?: Map<string, McpAdminConfig>;
+    healthCache?: Map<string, string>;
+  },
+): GatewayDeps {
+  const mcpConfigs = state?.mcpConfigs ?? createMcpServiceConfigMap();
+  const healthCache = state?.healthCache ?? createHealthCacheMap();
+
+  return {
+    version: '1.0.0',
+    getEngine: (name: string) => {
+      switch (name) {
+        case 'memory':
+          return container.memory as unknown as { healthCheck?: () => Promise<Record<string, unknown>> };
+        case 'graph':
+          return container.graph as unknown as { healthCheck?: () => Promise<Record<string, unknown>> };
+        case 'search':
+          return container.search as unknown as { healthCheck?: () => Promise<Record<string, unknown>> };
+        case 'workflow':
+          return container.workflow as unknown as { healthCheck?: () => Promise<Record<string, unknown>> };
+        case 'critic':
+          return container.critic as unknown as { healthCheck?: () => Promise<Record<string, unknown>> };
+        default:
+          return null;
+      }
+    },
+    getConfigValue: (key: string, defaultValue?: unknown) =>
+      getAppConfigValue(mapConfigKeyToSharedKey(key), defaultValue),
+    loadServicesConfig: () => loadServicesConfig(),
+    getMetricsSnapshot: () => getMetricsSnapshot(),
+    getObservabilitySnapshot,
+    runtimeSessionId: RUNTIME_SESSION_ID,
+    runtimeLastProbeAt: null,
+    runtimeReconnectAttempts: 0,
+    runtimeLastError: null,
+    mcpServiceConfigs: mcpConfigs,
+    runtimeServerOrder: RUNTIME_SERVER_ORDER,
+    refreshServiceHealthCache: (services: Record<string, string>) => {
+      refreshSharedServiceHealthCache(services);
+      for (const [serviceId, status] of Object.entries(services)) {
+        healthCache.set(serviceId, status);
+      }
+    },
+    serviceRuntimeStatus,
+    toRuntimeConnectionState,
+    toRuntimeReconnectState,
+    buildRuntimeServers,
+    serializeServiceConfig: (config: unknown, services?: Record<string, string> | null) => {
+      const candidate = config as Partial<McpAdminConfig> | null;
+      const serviceId = String(candidate?.serviceId ?? candidate?.id ?? '').trim().toLowerCase();
+      const sharedConfig = serviceId ? MCP_SERVICE_CONFIGS[serviceId] : undefined;
+      if (sharedConfig) {
+        return serializeSharedServiceConfig(sharedConfig, services ?? undefined);
+      }
+      return {
+        id: serviceId,
+        name: String(candidate?.name ?? serviceId),
+        path: String(candidate?.path ?? `/${serviceId}`),
+        enabled: Boolean(candidate?.enabled ?? true),
+        builtin: Boolean(candidate?.builtin ?? false),
+        transport: String(candidate?.transport ?? 'streamable-http'),
+        health_url: candidate?.healthUrl ?? null,
+        status: serviceId && services ? services[serviceId] ?? 'unknown' : 'unknown',
+      };
+    },
+    utcNowIso: () => utcNowIso(),
+  };
+}
 
 // Type for endpoint handlers
 type EndpointHandler = (request: import('./mcp/http-types').HttpRequest) => Promise<import('./mcp/http-types').HttpResponse>;
@@ -234,14 +410,20 @@ function addCorsHeaders(req: IncomingMessage, res: ServerResponse): void {
 // Server
 // ============================================================
 
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
+export interface GatewayServerStartOptions {
+  host?: string;
+  port?: number;
+}
+
+export async function startGatewayServer(options: GatewayServerStartOptions = {}): Promise<import('node:http').Server> {
   let portOverride: number | undefined;
   let hostOverride: string | undefined;
 
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--port' && args[i + 1]) portOverride = parseInt(args[i + 1], 10);
-    if (args[i] === '--host' && args[i + 1]) hostOverride = args[i + 1];
+  if (typeof options.port === 'number' && Number.isFinite(options.port)) {
+    portOverride = options.port;
+  }
+  if (typeof options.host === 'string' && options.host.trim()) {
+    hostOverride = options.host.trim();
   }
 
   const { host: defaultHost, port: defaultPort } = resolveGatewayHostPort();
@@ -251,46 +433,11 @@ async function main(): Promise<void> {
   // Wire up gateway dependencies
   const container = getContainer();
 
-  const mcpConfigs = new Map<string, { id: string; enabled: boolean; builtin: boolean; [key: string]: unknown }>();
-  const healthCache = new Map<string, string>();
+  const mcpConfigs = createMcpServiceConfigMap();
+  const healthCache = createHealthCacheMap();
 
-  setGatewayDeps({
-    version: '1.0.0',
-    getEngine: () => null,
-    getConfigValue: (key: string, defaultValue?: unknown) => {
-      const envKey = `NIKO_${key.toUpperCase().replace(/\./g, '_')}`;
-      return process.env[envKey] ?? defaultValue;
-    },
-    loadServicesConfig: () => ({}),
-    getMetricsSnapshot: () => ({}),
-    getObservabilitySnapshot: () => ({}),
-    runtimeSessionId: `gw-${Date.now()}`,
-    runtimeLastProbeAt: null,
-    runtimeReconnectAttempts: 0,
-    runtimeLastError: null,
-    mcpServiceConfigs: mcpConfigs,
-    runtimeServerOrder: [],
-    refreshServiceHealthCache: () => {},
-    serviceRuntimeStatus: () => 'stopped',
-    toRuntimeConnectionState: () => 'disconnected',
-    toRuntimeReconnectState: () => 'idle',
-    buildRuntimeServers: () => [],
-    serializeServiceConfig: () => ({}),
-    utcNowIso: () => new Date().toISOString(),
-  });
-
-  setConfigAccess({
-    getConfig: () => ({}),
-    getConfigValue: (key: string, defaultValue?: unknown) => {
-      const envKey = `NIKO_${key.toUpperCase().replace(/\./g, '_')}`;
-      return process.env[envKey] ?? defaultValue;
-    },
-    setConfigValue: (key: string, value: unknown) => {
-      const envKey = `NIKO_${key.toUpperCase().replace(/\./g, '_')}`;
-      process.env[envKey] = String(value);
-    },
-    reloadConfig: () => { /* no-op */ },
-  });
+  setGatewayDeps(buildGatewayDeps(container, { mcpConfigs, healthCache }));
+  setConfigAccess(buildConfigAccess());
 
   setMcpServiceState(mcpConfigs, healthCache);
 
@@ -362,23 +509,46 @@ async function main(): Promise<void> {
     }
   });
 
-  server.listen(port, host, () => {
-    console.log(`
+  await new Promise<void>((resolvePromise) => {
+    server.listen(port, host, () => {
+      console.log(`
     ╔═══════════════════════════════════════════════════════════════╗
     ║     NIKO Studio Gateway (Node.js)                           ║
     ║     http://${host}:${port}                                    ║
     ╚═══════════════════════════════════════════════════════════════╝
     `);
-    console.log(`  Health:  http://localhost:${port}/health`);
-    console.log(`  Memory:  http://localhost:${port}/memory/search`);
-    console.log(`  Graph:   http://localhost:${port}/graph/query`);
-    console.log(`  Skills:  http://localhost:${port}/skills/list`);
-    console.log(`  Workflow: http://localhost:${port}/workflow/route`);
-    console.log('');
+      console.log(`  Health:  http://localhost:${port}/health`);
+      console.log(`  Memory:  http://localhost:${port}/memory/search`);
+      console.log(`  Graph:   http://localhost:${port}/graph/query`);
+      console.log(`  Skills:  http://localhost:${port}/skills/list`);
+      console.log(`  Workflow: http://localhost:${port}/workflow/route`);
+      console.log('');
+      resolvePromise();
+    });
   });
+
+  return server;
 }
 
-main().catch((e) => {
-  console.error('Gateway failed to start:', e);
-  process.exit(1);
-});
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
+  let portOverride: number | undefined;
+  let hostOverride: string | undefined;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--port' && argv[i + 1]) portOverride = parseInt(argv[i + 1], 10);
+    if (argv[i] === '--host' && argv[i + 1]) hostOverride = argv[i + 1];
+  }
+  await startGatewayServer({ host: hostOverride, port: portOverride });
+}
+
+const runningAsMain = (() => {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  return import.meta.url === pathToFileURL(entry).href;
+})();
+
+if (runningAsMain) {
+  main().catch((e) => {
+    console.error('Gateway failed to start:', e);
+    process.exit(1);
+  });
+}

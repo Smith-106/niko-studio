@@ -9,6 +9,13 @@ const ENV_KEYS = [
   'INTEGRATION_ELASTICSEARCH_ENABLED',
   'INTEGRATION_NEO4J_ENABLED',
   'INTEGRATION_LANGFLOW_ENABLED',
+  'INTEGRATION_DBHUB_GOVERNANCE_ENABLED',
+  'NIKO_POSTGRES_ENABLED',
+  'NIKO_REDIS_CACHE_ENABLED',
+  'NIKO_ELASTICSEARCH_ENABLED',
+  'NIKO_NEO4J_ENABLED',
+  'NIKO_LANGFLOW_ENABLED',
+  'NIKO_DBHUB_GOVERNANCE_ENABLED',
 ] as const;
 
 const ORIGINAL_ENV = Object.fromEntries(
@@ -45,16 +52,18 @@ describe('integrations adapter factory', () => {
       elasticsearchEnabled: false,
       neo4jEnabled: false,
       langflowEnabled: false,
+      dbhubGovernanceEnabled: false,
     });
     expect(adapters.storageShadow).toBeInstanceOf(integrations.NoopStorageShadowAdapter);
     expect(adapters.cacheRateLimit).toBeInstanceOf(integrations.NoopCacheRateLimitAdapter);
     expect(adapters.search).toBeInstanceOf(integrations.NoopSearchAdapter);
     expect(adapters.graphProjection).toBeInstanceOf(integrations.NoopGraphProjectionAdapter);
-    expect(adapters.governance).toBeInstanceOf(integrations.StubDbhubGovernanceHook);
+    expect(adapters.governance).toBeInstanceOf(integrations.NoopGovernanceHookAdapter);
     expect(adapters.orchestration).toBeInstanceOf(integrations.NoopOrchestrationHookAdapter);
     await expect(adapters.storageShadow.shadowWriteMemory({ id: 'mem-1' })).resolves.toBe(false);
     await expect(adapters.cacheRateLimit.allowRequest('rate-limit', 10, 60)).resolves.toBe(true);
     await expect(adapters.search.search('hero', 'all', 5)).resolves.toEqual([]);
+    await expect(adapters.governance.onSchemaWorkflow('sync', {})).resolves.toBe(false);
     await expect(adapters.orchestration.run('sync', {})).resolves.toEqual({
       status: 'disabled',
       flow_name: 'sync',
@@ -67,6 +76,7 @@ describe('integrations adapter factory', () => {
     process.env['INTEGRATION_ELASTICSEARCH_ENABLED'] = 'true';
     process.env['INTEGRATION_NEO4J_ENABLED'] = '1';
     process.env['INTEGRATION_LANGFLOW_ENABLED'] = 'true';
+    process.env['INTEGRATION_DBHUB_GOVERNANCE_ENABLED'] = 'true';
 
     const adapters = integrations.createIntegrationAdapters();
 
@@ -76,6 +86,7 @@ describe('integrations adapter factory', () => {
       elasticsearchEnabled: true,
       neo4jEnabled: true,
       langflowEnabled: true,
+      dbhubGovernanceEnabled: true,
     });
     expect(adapters.storageShadow).toBeInstanceOf(integrations.StubPostgresShadowAdapter);
     expect(adapters.cacheRateLimit).toBeInstanceOf(integrations.StubRedisCacheRateLimitAdapter);
@@ -92,5 +103,31 @@ describe('integrations adapter factory', () => {
       flow_name: 'shadow-sync',
       provider: 'langflow',
     });
+  });
+
+  it('also honors migrated NIKO_* integration env names', async () => {
+    process.env['NIKO_POSTGRES_ENABLED'] = 'true';
+    process.env['NIKO_REDIS_CACHE_ENABLED'] = '1';
+    process.env['NIKO_ELASTICSEARCH_ENABLED'] = 'true';
+    process.env['NIKO_NEO4J_ENABLED'] = '1';
+    process.env['NIKO_LANGFLOW_ENABLED'] = 'true';
+    process.env['NIKO_DBHUB_GOVERNANCE_ENABLED'] = 'true';
+
+    const adapters = integrations.createIntegrationAdapters();
+
+    expect(adapters.flags).toEqual({
+      postgresEnabled: true,
+      redisCacheEnabled: true,
+      elasticsearchEnabled: true,
+      neo4jEnabled: true,
+      langflowEnabled: true,
+      dbhubGovernanceEnabled: true,
+    });
+    expect(adapters.storageShadow).toBeInstanceOf(integrations.StubPostgresShadowAdapter);
+    expect(adapters.cacheRateLimit).toBeInstanceOf(integrations.StubRedisCacheRateLimitAdapter);
+    expect(adapters.search).toBeInstanceOf(integrations.StubElasticsearchAdapter);
+    expect(adapters.graphProjection).toBeInstanceOf(integrations.StubNeo4jProjectionAdapter);
+    expect(adapters.governance).toBeInstanceOf(integrations.StubDbhubGovernanceHook);
+    expect(adapters.orchestration).toBeInstanceOf(integrations.StubLangflowOrchestrationHook);
   });
 });

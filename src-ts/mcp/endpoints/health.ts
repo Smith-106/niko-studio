@@ -7,13 +7,14 @@
 
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse } from '../http-types';
+import type { ServiceConfig } from '../../knowledge/models';
 
 // ---------------------------------------------------------------
 // Gateway imports (will be wired via dependency injection)
 // ---------------------------------------------------------------
 
 interface EngineGetter {
-  healthCheck(): Promise<Record<string, unknown>>;
+  healthCheck?: () => Promise<Record<string, unknown>>;
 }
 
 interface GatewayDeps {
@@ -40,7 +41,7 @@ interface GatewayDeps {
     services: Record<string, string>,
     connectionState: string,
     lastError: string | null
-  ): unknown[];
+  ): Record<string, Record<string, unknown>>;
   serializeServiceConfig(config: unknown, services?: Record<string, string> | null): unknown;
   utcNowIso(): string;
 }
@@ -222,8 +223,7 @@ export async function listModels(request: HttpRequest): Promise<HttpResponse> {
     return jsonResponse({ error: String(exc) }, 500);
   }
 
-  // Placeholder: full implementation requires ServicesConfig type traversal
-  const providerModels: Record<string, string[]> = {};
+  const providerModels = extractProviderModels(serviceConfig);
 
   if (providerFilter) {
     if (!(providerFilter in providerModels)) {
@@ -247,4 +247,31 @@ export async function listModels(request: HttpRequest): Promise<HttpResponse> {
     models: allModels,
     providers: providerModels,
   });
+}
+
+function extractProviderModels(serviceConfig: unknown): Record<string, string[]> {
+  if (!serviceConfig || typeof serviceConfig !== 'object') {
+    return {};
+  }
+
+  const config = serviceConfig as Partial<ServiceConfig>;
+  const providers = Array.isArray(config.providers) ? config.providers : [];
+  const providerModels: Record<string, string[]> = {};
+
+  for (const provider of providers) {
+    if (!provider || typeof provider !== 'object') continue;
+
+    const providerId = String((provider as { provider?: unknown }).provider ?? '').trim().toLowerCase();
+    if (!providerId) continue;
+
+    const modelMapping = (provider as { modelMapping?: Record<string, unknown> }).modelMapping ?? {};
+    const models = [modelMapping.fast, modelMapping.default, modelMapping.powerful]
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean);
+
+    if (models.length === 0) continue;
+    providerModels[providerId] = [...new Set(models)];
+  }
+
+  return providerModels;
 }

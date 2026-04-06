@@ -12,6 +12,10 @@
  * - File synchronization and document indexing
  */
 
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import type {
   KnowledgeService,
   KnowledgeEntity,
@@ -354,27 +358,51 @@ export class KnowledgeServiceImpl implements KnowledgeService {
   }> {
     this.ensureInitialized();
 
+    const resolvedPath = resolve(filePath);
+    if (!existsSync(resolvedPath)) {
+      return {
+        success: false,
+        action: 'error',
+        message: 'File not found',
+      };
+    }
+
     try {
-      // In browser/TypeScript context, we'd use File API
-      // For now, this is a placeholder that would be implemented
-      // with proper file system access in Node.js environment
-
-      // Generate doc_id from path
-      const docId = this.hashPath(filePath);
-
-      // Determine source type from path or options
+      const content = readFileSync(resolvedPath, 'utf-8');
+      const contentHash = createHash('sha256').update(content, 'utf-8').digest('hex');
+      const docId = this.hashPath(resolvedPath);
       const sourceType =
-        options?.sourceType ?? this.determineSourceType(filePath);
+        options?.sourceType ?? this.determineSourceType(resolvedPath);
 
-      // Placeholder: In actual implementation, would read file content
-      // and compute hash for change detection
+      const existing = this.documentChunks.get(docId);
+      if (
+        !options?.force &&
+        existing &&
+        existing.content === content &&
+        existing.sourceType === sourceType
+      ) {
+        return {
+          success: true,
+          action: 'skipped',
+          message: `File unchanged (${sourceType})`,
+          docId,
+          contentHash,
+        };
+      }
+
+      await this.addDocument(docId, content, {
+        sourceId: resolvedPath,
+        sourceType,
+        createdAt: existing?.createdAt ?? Date.now(),
+        updatedAt: Date.now(),
+      });
 
       return {
         success: true,
         action: 'synced',
         message: `Synced as ${sourceType}`,
         docId,
-        contentHash: undefined, // Would compute from actual content
+        contentHash,
       };
     } catch (error) {
       return {

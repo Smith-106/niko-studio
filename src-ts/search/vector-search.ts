@@ -4,20 +4,21 @@
  * TypeScript implementation migrated from src/search/vector_search.py.
  *
  * Features:
- * - Vector storage and search using SQLite (with optional sqlite-vec extension)
+ * - Vector storage and search using SQLite (better-sqlite3)
  * - Cosine similarity for vector search
  * - FTS5 full-text search for keyword matching
  * - Hybrid search with RRF (Reciprocal Rank Fusion)
  * - Integration with EmbeddingService
  */
 
+import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+
 import type { SearchInterface } from '../protocols/search';
 import type { EmbeddingService } from '../protocols/embedding';
 import type { SmartSearchResult, SearchResultMetadata, SearchResultLocation } from './smart-search';
 
-/**
- * HNSW index configuration (for future sqlite-vec extension support)
- */
 export interface HNSWConfig {
   dimension: number;
   efConstruction: number;
@@ -25,9 +26,6 @@ export interface HNSWConfig {
   m: number;
 }
 
-/**
- * VectorSearch configuration
- */
 export interface VectorSearchConfig {
   dbPath: string;
   dimension?: number;
@@ -36,21 +34,32 @@ export interface VectorSearchConfig {
   hnsw?: Partial<HNSWConfig>;
 }
 
-/**
- * Vector item stored in database
- */
-interface VectorItem {
+interface VectorItemRow {
   id: string;
   content: string;
-  metadata: string; // JSON string
+  metadata: string;
   embedding: Buffer | null;
   type: string;
-  createdAt: number;
+  created_at: number;
 }
 
-/**
- * VectorSearch Error Types
- */
+interface CountRow {
+  count: number;
+}
+
+interface TypeCountRow {
+  type: string;
+  count: number;
+}
+
+interface FtsRow {
+  id: string;
+  content: string;
+  metadata: string;
+  type: string;
+  rank: number;
+}
+
 export class VectorSearchError extends Error {
   constructor(message: string) {
     super(message);
@@ -72,9 +81,6 @@ export class EmbeddingError extends VectorSearchError {
   }
 }
 
-/**
- * Default HNSW configuration
- */
 const DEFAULT_HNSW_CONFIG: HNSWConfig = {
   dimension: 384,
   efConstruction: 200,
@@ -85,21 +91,13 @@ const DEFAULT_HNSW_CONFIG: HNSWConfig = {
 const DEFAULT_MODEL_NAME = 'BAAI/bge-small-en-v1.5';
 const SAMPLE_SEARCH_QUERY = 'search_result_sample_query';
 
-/**
- * VectorSearch Implementation
- *
- * Implements SearchInterface with SQLite-based vector storage and search.
- * Supports hybrid search combining vector similarity and keyword matching.
- */
 export class VectorSearch implements SearchInterface {
   private readonly dbPath: string;
   private readonly dimension: number;
   private readonly modelName: string;
   private readonly embeddingService: EmbeddingService;
   private readonly hnswConfig: HNSWConfig;
-
-  // Database connection (lazy initialization)
-  private db: unknown = null;
+  private db: Database.Database | null = null;
 
   constructor(config: VectorSearchConfig) {
     this.dbPath = config.dbPath;
@@ -108,26 +106,17 @@ export class VectorSearch implements SearchInterface {
     this.embeddingService = config.embeddingService;
     this.hnswConfig = { ...DEFAULT_HNSW_CONFIG, ...config.hnsw, dimension: this.dimension };
 
-    // Initialize database schema
     this.initializeDatabase();
   }
 
-  // ============================================================
-  // Database Operations
-  // ============================================================
-
-  /**
-   * Initialize SQLite database with schema
-   */
   private initializeDatabase(): void {
-    // This will be implemented with better-sqlite3
-    // For now, we prepare the schema definition
-    const schema = `
+    const db = this.getDatabase();
+    db.exec(`
       CREATE TABLE IF NOT EXISTS vector_items (
         id TEXT PRIMARY KEY,
         content TEXT NOT NULL,
         metadata TEXT DEFAULT '{}',
-        embedding BLOB,
+        embedding BLOB NOT NULL,
         type TEXT DEFAULT 'chunk',
         created_at REAL
       );
@@ -154,32 +143,23 @@ export class VectorSearch implements SearchInterface {
         INSERT INTO vector_items_fts(rowid, id, content, type)
         VALUES (new.rowid, new.id, new.content, new.type);
       END;
-    `;
 
-    // Schema will be executed when database is initialized
-    // This is a placeholder for better-sqlite3 integration
+      CREATE INDEX IF NOT EXISTS idx_vector_items_type ON vector_items(type);
+      CREATE INDEX IF NOT EXISTS idx_vector_items_created_at ON vector_items(created_at);
+    `);
   }
 
-  /**
-   * Get database connection (lazy initialization)
-   * Note: Will be implemented with better-sqlite3
-   */
-  private getDatabase(): unknown {
+  private getDatabase(): Database.Database {
     if (!this.db) {
-      // Database initialization will happen here
-      // For now, return null as placeholder
-      throw new DatabaseError('Database not initialized. better-sqlite3 integration required.');
+      if (this.dbPath !== ':memory:') {
+        mkdirSync(dirname(this.dbPath), { recursive: true });
+      }
+      this.db = new Database(this.dbPath);
+      this.db.pragma('journal_mode = WAL');
     }
     return this.db;
   }
 
-  // ============================================================
-  // SearchInterface Implementation
-  // ============================================================
-
-  /**
-   * Execute vector search
-   */
   async search(
     query: string,
     options?: {
@@ -189,12 +169,9 @@ export class VectorSearch implements SearchInterface {
     }
   ): Promise<Record<string, unknown>[]> {
     const results = await this.vectorSearch(query, options);
-    return results.map(r => this.searchResultToRecord(r));
+    return results.map((result) => this.searchResultToRecord(result));
   }
 
-  /**
-   * Index document with embedding
-   */
   async index(
     id: string,
     content: string,
@@ -206,20 +183,10 @@ export class VectorSearch implements SearchInterface {
     await this.add(id, content, options?.metadata, options?.type);
   }
 
-  /**
-   * Delete document by ID
-   */
   async delete(id: string): Promise<boolean> {
     return this.deleteById(id);
   }
 
-  // ============================================================
-  // Vector Operations
-  // ============================================================
-
-  /**
-   * Add item to vector index
-   */
   async add(
     id: string,
     content: string,
@@ -228,16 +195,23 @@ export class VectorSearch implements SearchInterface {
     embedding?: number[]
   ): Promise<void> {
     try {
-      // Generate embedding if not provided
-      const vector = embedding ?? (await this.embeddingService.embed(content));
+      const vector = embedding ?? (await this.embeddingService.embed(content, { model: this.modelName }));
+      this.assertVectorDimensions(vector);
       const vectorBuffer = this.vectorToBuffer(vector);
-
       const now = Date.now();
       const metadataJson = JSON.stringify(metadata ?? {});
 
-      // Database insertion will be implemented with better-sqlite3
-      // Placeholder for now
-      throw new DatabaseError('Database operations require better-sqlite3 integration');
+      const db = this.getDatabase();
+      db.prepare(`
+        INSERT INTO vector_items (id, content, metadata, embedding, type, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          content = excluded.content,
+          metadata = excluded.metadata,
+          embedding = excluded.embedding,
+          type = excluded.type,
+          created_at = excluded.created_at
+      `).run(id, content, metadataJson, vectorBuffer, type, now);
     } catch (error) {
       if (error instanceof VectorSearchError) {
         throw error;
@@ -246,9 +220,6 @@ export class VectorSearch implements SearchInterface {
     }
   }
 
-  /**
-   * Vector search with optional filters
-   */
   async vectorSearch(
     query: string,
     options?: {
@@ -262,12 +233,33 @@ export class VectorSearch implements SearchInterface {
     const typeFilter = options?.typeFilter;
 
     try {
-      // Generate query embedding
-      const queryVector = await this.embeddingService.embed(query);
+      const queryVector = await this.embeddingService.embed(query, { model: this.modelName });
+      this.assertVectorDimensions(queryVector);
 
-      // Perform vector search
-      // Will be implemented with better-sqlite3
-      throw new DatabaseError('Vector search requires better-sqlite3 integration');
+      const db = this.getDatabase();
+      const rows = this.queryRows(db, typeFilter);
+      const ranked = rows
+        .map((row) => {
+          const embeddingBuffer = row.embedding;
+          if (!embeddingBuffer) return null;
+          const score = this.cosineSimilarity(queryVector, this.bufferToVector(embeddingBuffer));
+          if (score < minScore) return null;
+          const parsedMetadata = this.parseMetadata(row.metadata);
+          return this.buildSearchResult(
+            row.id,
+            row.content,
+            score,
+            row.type,
+            'vector',
+            parsedMetadata,
+            this.normalizeLoc(parsedMetadata.loc as Record<string, unknown> | undefined)
+          );
+        })
+        .filter((row): row is SmartSearchResult => row !== null)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+
+      return ranked;
     } catch (error) {
       if (error instanceof VectorSearchError) {
         throw error;
@@ -276,13 +268,11 @@ export class VectorSearch implements SearchInterface {
     }
   }
 
-  /**
-   * Delete item by ID
-   */
   private async deleteById(id: string): Promise<boolean> {
     try {
-      // Database deletion will be implemented with better-sqlite3
-      throw new DatabaseError('Database operations require better-sqlite3 integration');
+      const db = this.getDatabase();
+      const result = db.prepare('DELETE FROM vector_items WHERE id = ?').run(id);
+      return result.changes > 0;
     } catch (error) {
       if (error instanceof VectorSearchError) {
         throw error;
@@ -291,13 +281,6 @@ export class VectorSearch implements SearchInterface {
     }
   }
 
-  // ============================================================
-  // Hybrid Search
-  // ============================================================
-
-  /**
-   * Hybrid search combining vector and keyword search with RRF
-   */
   async hybridSearch(
     query: string,
     options?: {
@@ -317,13 +300,11 @@ export class VectorSearch implements SearchInterface {
     const rrfK = options?.rrfK ?? 60;
 
     try {
-      // Perform both searches in parallel
       const [vectorResults, keywordResults] = await Promise.all([
         this.vectorSearch(query, { topK: topK * 2, minScore, typeFilter }),
         this.keywordSearch(query, { topK: topK * 2, typeFilter }),
       ]);
 
-      // Apply RRF fusion
       return this.reciprocalRankFusion(
         vectorResults,
         keywordResults,
@@ -333,15 +314,11 @@ export class VectorSearch implements SearchInterface {
         topK
       );
     } catch (error) {
-      // Fallback to vector search only if keyword search fails
       console.warn('Hybrid search failed, falling back to vector search:', error);
       return this.vectorSearch(query, { topK, minScore, typeFilter });
     }
   }
 
-  /**
-   * Keyword search using FTS5
-   */
   async keywordSearch(
     query: string,
     options?: {
@@ -353,18 +330,38 @@ export class VectorSearch implements SearchInterface {
     const typeFilter = options?.typeFilter;
 
     try {
-      // FTS5 search will be implemented with better-sqlite3
-      throw new DatabaseError('Keyword search requires better-sqlite3 integration');
+      const db = this.getDatabase();
+      const filters = this.buildTypeFilterSql(typeFilter);
+      const rows = db.prepare(`
+        SELECT v.id, v.content, v.metadata, v.type, bm25(vector_items_fts) AS rank
+        FROM vector_items_fts
+        JOIN vector_items v ON v.rowid = vector_items_fts.rowid
+        WHERE vector_items_fts MATCH ?
+        ${filters.clause}
+        ORDER BY rank
+        LIMIT ?
+      `).all(query, ...filters.params, topK) as FtsRow[];
+
+      return rows.map((row) => {
+        const parsedMetadata = this.parseMetadata(row.metadata);
+        const bm25Score = Math.abs(Number(row.rank ?? 0));
+        const normalizedScore = 1.0 / (1.0 + bm25Score);
+        return this.buildSearchResult(
+          row.id,
+          row.content,
+          normalizedScore,
+          row.type,
+          'fuzzy',
+          parsedMetadata,
+          this.normalizeLoc(parsedMetadata.loc as Record<string, unknown> | undefined)
+        );
+      });
     } catch (error) {
-      // Fallback to LIKE search
       console.warn('FTS5 search failed, using LIKE fallback:', error);
       return this.likeSearch(query, { topK, typeFilter });
     }
   }
 
-  /**
-   * Fallback LIKE-based keyword search
-   */
   private async likeSearch(
     query: string,
     options?: {
@@ -374,18 +371,38 @@ export class VectorSearch implements SearchInterface {
   ): Promise<SmartSearchResult[]> {
     const topK = options?.topK ?? 5;
     const typeFilter = options?.typeFilter;
+    const db = this.getDatabase();
+    const filters = this.buildTypeFilterSql(typeFilter);
+    const rows = db.prepare(`
+      SELECT id, content, metadata, type, created_at
+      FROM vector_items
+      WHERE LOWER(content) LIKE LOWER(?)
+      ${filters.clause}
+      ORDER BY created_at DESC
+      LIMIT ?
+    `).all(`%${query}%`, ...filters.params, topK) as VectorItemRow[];
 
-    // LIKE search will be implemented with better-sqlite3
-    throw new DatabaseError('LIKE search requires better-sqlite3 integration');
+    const loweredQuery = query.toLowerCase();
+    return rows.map((row, index) => {
+      const parsedMetadata = this.parseMetadata(row.metadata);
+      const loweredContent = row.content.toLowerCase();
+      const exactIndex = loweredContent.indexOf(loweredQuery);
+      const score = exactIndex >= 0
+        ? Math.max(0.1, 1 - exactIndex / Math.max(loweredContent.length, 1))
+        : Math.max(0.01, 1 / (index + 2));
+
+      return this.buildSearchResult(
+        row.id,
+        row.content,
+        score,
+        row.type,
+        'fuzzy',
+        parsedMetadata,
+        this.normalizeLoc(parsedMetadata.loc as Record<string, unknown> | undefined)
+      );
+    });
   }
 
-  // ============================================================
-  // Utility Methods
-  // ============================================================
-
-  /**
-   * Calculate cosine similarity between two vectors
-   */
   private cosineSimilarity(a: number[], b: number[]): number {
     if (a.length !== b.length) {
       throw new VectorSearchError('Vectors must have the same dimensions');
@@ -411,9 +428,6 @@ export class VectorSearch implements SearchInterface {
     return dotProduct / (normA * normB);
   }
 
-  /**
-   * Convert vector to Buffer for storage
-   */
   private vectorToBuffer(vector: number[]): Buffer {
     const buffer = Buffer.alloc(vector.length * 4);
     for (let i = 0; i < vector.length; i++) {
@@ -422,9 +436,6 @@ export class VectorSearch implements SearchInterface {
     return buffer;
   }
 
-  /**
-   * Convert Buffer to vector
-   */
   private bufferToVector(buffer: Buffer): number[] {
     const vector: number[] = [];
     for (let i = 0; i < buffer.length; i += 4) {
@@ -433,9 +444,6 @@ export class VectorSearch implements SearchInterface {
     return vector;
   }
 
-  /**
-   * Reciprocal Rank Fusion for hybrid search
-   */
   private reciprocalRankFusion(
     vectorResults: SmartSearchResult[],
     keywordResults: SmartSearchResult[],
@@ -446,7 +454,6 @@ export class VectorSearch implements SearchInterface {
   ): SmartSearchResult[] {
     const scores = new Map<string, { result: SmartSearchResult; score: number }>();
 
-    // Score vector results
     vectorResults.forEach((result, index) => {
       const rrfScore = vectorWeight / (rrfK + index + 1);
       const existing = scores.get(result.id);
@@ -457,7 +464,6 @@ export class VectorSearch implements SearchInterface {
       }
     });
 
-    // Score keyword results
     keywordResults.forEach((result, index) => {
       const rrfScore = keywordWeight / (rrfK + index + 1);
       const existing = scores.get(result.id);
@@ -468,23 +474,17 @@ export class VectorSearch implements SearchInterface {
       }
     });
 
-    // Sort by fused score
-    const sorted = Array.from(scores.values())
+    return Array.from(scores.values())
       .sort((a, b) => b.score - a.score)
-      .slice(0, topK);
-
-    // Update scores and sources
-    return sorted.map(item => ({
-      ...item.result,
-      score: item.score,
-      source: 'hybrid',
-      mode_used: 'hybrid',
-    }));
+      .slice(0, topK)
+      .map((item) => ({
+        ...item.result,
+        score: item.score,
+        source: 'hybrid',
+        mode_used: 'hybrid',
+      }));
   }
 
-  /**
-   * Build normalized search result
-   */
   private buildSearchResult(
     id: string,
     content: string,
@@ -497,7 +497,7 @@ export class VectorSearch implements SearchInterface {
     return {
       id,
       content,
-      score: Math.round(score * 10000) / 10000, // Round to 4 decimals
+      score: Math.round(score * 10000) / 10000,
       type,
       metadata: this.buildMetadata(metadata),
       source,
@@ -507,9 +507,6 @@ export class VectorSearch implements SearchInterface {
     };
   }
 
-  /**
-   * Build normalized metadata
-   */
   private buildMetadata(metadata?: Record<string, unknown>): SearchResultMetadata {
     const meta = metadata ?? {};
     return {
@@ -522,9 +519,6 @@ export class VectorSearch implements SearchInterface {
     };
   }
 
-  /**
-   * Normalize location
-   */
   private normalizeLoc(loc?: Record<string, unknown>): SearchResultLocation | undefined {
     if (!loc) return undefined;
 
@@ -539,9 +533,6 @@ export class VectorSearch implements SearchInterface {
     };
   }
 
-  /**
-   * Convert SmartSearchResult to Record for SearchInterface
-   */
   private searchResultToRecord(result: SmartSearchResult): Record<string, unknown> {
     return {
       id: result.id,
@@ -556,41 +547,74 @@ export class VectorSearch implements SearchInterface {
     };
   }
 
-  // ============================================================
-  // Statistics and Management
-  // ============================================================
-
-  /**
-   * Get index statistics
-   */
   async getStats(): Promise<{
     totalItems: number;
     byType: Record<string, number>;
     dimension: number;
     dbPath: string;
   }> {
-    // Will be implemented with better-sqlite3
-    throw new DatabaseError('Statistics require better-sqlite3 integration');
+    try {
+      const db = this.getDatabase();
+      const totalItems = (db.prepare('SELECT COUNT(*) as count FROM vector_items').get() as CountRow).count;
+      const byTypeRows = db.prepare(`
+        SELECT type, COUNT(*) as count
+        FROM vector_items
+        GROUP BY type
+      `).all() as TypeCountRow[];
+
+      return {
+        totalItems,
+        byType: Object.fromEntries(byTypeRows.map((row) => [row.type, row.count])),
+        dimension: this.dimension,
+        dbPath: this.dbPath,
+      };
+    } catch (error) {
+      throw new DatabaseError('Failed to collect vector search statistics', error as Error);
+    }
   }
 
-  /**
-   * Close database connection
-   */
   close(): void {
     if (this.db) {
-      // Database cleanup will be implemented with better-sqlite3
+      this.db.close();
       this.db = null;
     }
   }
+
+  private assertVectorDimensions(vector: number[]): void {
+    if (vector.length !== this.dimension) {
+      throw new VectorSearchError(`Vector dimension mismatch. Expected ${this.dimension}, got ${vector.length}`);
+    }
+  }
+
+  private parseMetadata(metadata: string): Record<string, unknown> {
+    try {
+      return JSON.parse(metadata || '{}') as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+
+  private buildTypeFilterSql(typeFilter?: string): { clause: string; params: unknown[] } {
+    if (!typeFilter) {
+      return { clause: '', params: [] };
+    }
+
+    return {
+      clause: 'AND type = ?',
+      params: [typeFilter],
+    };
+  }
+
+  private queryRows(db: Database.Database, typeFilter?: string): VectorItemRow[] {
+    const filters = this.buildTypeFilterSql(typeFilter);
+    return db.prepare(`
+      SELECT id, content, metadata, embedding, type, created_at
+      FROM vector_items
+      ${filters.clause ? `WHERE ${filters.clause.slice(4)}` : ''}
+    `).all(...filters.params) as VectorItemRow[];
+  }
 }
 
-// ============================================================
-// Factory Functions
-// ============================================================
-
-/**
- * Create VectorSearch instance with configuration
- */
 export function createVectorSearch(
   dbPath: string,
   embeddingService: EmbeddingService,

@@ -1,291 +1,155 @@
-/**
- * VectorSearch Unit Tests
- *
- * Tests for VectorSearch implementation covering:
- * - Initialization and configuration
- * - Error types
- * - Constructor behavior
- *
- * Note: The current implementation uses a stub SQLite layer (better-sqlite3 not connected).
- * DB-dependent operations throw DatabaseError. These tests validate constructor and error behavior.
- */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  VectorSearch,
-  VectorSearchError,
+  createVectorSearch,
   DatabaseError,
   EmbeddingError,
-  type VectorSearchConfig,
-  type HNSWConfig,
+  VectorSearch,
+  VectorSearchError,
 } from '../../search/vector-search';
 import type { EmbeddingService } from '../../protocols/embedding';
 
-/**
- * Mock EmbeddingService for testing
- */
 class MockEmbeddingService implements EmbeddingService {
-  async embed(
-    text: string,
-    options?: { model?: string }
-  ): Promise<number[]> {
-    return Array(384).fill(0.1);
+  async embed(text: string): Promise<number[]> {
+    const base = Array(384).fill(0);
+    if (text.toLowerCase().includes('alpha')) base[0] = 1;
+    if (text.toLowerCase().includes('beta')) base[1] = 1;
+    if (text.toLowerCase().includes('gamma')) base[2] = 1;
+    if (base.every((value) => value === 0)) base[3] = 1;
+    return base;
   }
 
-  async embedBatch(
-    texts: string[],
-    options?: { model?: string }
-  ): Promise<number[][]> {
-    return texts.map(() => Array(384).fill(0.1));
+  async embedBatch(texts: string[]): Promise<number[][]> {
+    return Promise.all(texts.map((text) => this.embed(text)));
   }
 
-  embedWithMetadata(request: unknown): Promise<unknown> {
-    return Promise.resolve({ embedding: Array(384).fill(0.1), model: 'test' });
+  async embedWithMetadata(request: { text: string; model?: string }): Promise<{ embedding: number[]; metadata: Record<string, unknown> }> {
+    const embedding = await this.embed(request.text);
+    return {
+      embedding,
+      metadata: {
+        model: request.model ?? 'test-model',
+        dimensions: embedding.length,
+      },
+    };
   }
 
-  similarity(embedding1: number[], embedding2: number[]): number {
-    return 0.95;
+  similarity(a: number[], b: number[]): number {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < a.length; i += 1) {
+      dotProduct += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
-  getDimensions(model?: string): number {
+  getDimensions(): number {
     return 384;
   }
 }
 
 describe('VectorSearch', () => {
   let vectorSearch: VectorSearch;
-  let mockEmbedding: MockEmbeddingService;
+  let embeddingService: MockEmbeddingService;
 
   beforeEach(() => {
-    mockEmbedding = new MockEmbeddingService();
+    vi.clearAllMocks();
+    embeddingService = new MockEmbeddingService();
+    vectorSearch = new VectorSearch({
+      dbPath: ':memory:',
+      embeddingService,
+      dimension: 384,
+      modelName: 'test-model',
+    });
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vectorSearch.close();
   });
 
-  // ============================================================
-  // Initialization Tests
-  // ============================================================
+  it('stores and retrieves indexed items through vector search', async () => {
+    await vectorSearch.add('alpha-1', 'alpha content', { path: '/alpha.md', extra: { chapter: 1 } }, 'chunk');
+    await vectorSearch.add('beta-1', 'beta content', { path: '/beta.md' }, 'memory');
 
-  describe('Initialization', () => {
-    it('should initialize with default configuration', () => {
-      const config: VectorSearchConfig = {
-        dbPath: ':memory:',
-        embeddingService: mockEmbedding,
-      };
-
-      vectorSearch = new VectorSearch(config);
-      expect(vectorSearch).toBeDefined();
-    });
-
-    it('should accept custom dimension', () => {
-      const config: VectorSearchConfig = {
-        dbPath: ':memory:',
-        embeddingService: mockEmbedding,
-        dimension: 768,
-      };
-
-      vectorSearch = new VectorSearch(config);
-      expect(vectorSearch).toBeDefined();
-    });
-
-    it('should accept custom model name', () => {
-      const config: VectorSearchConfig = {
-        dbPath: ':memory:',
-        embeddingService: mockEmbedding,
-        modelName: 'custom-model',
-      };
-
-      vectorSearch = new VectorSearch(config);
-      expect(vectorSearch).toBeDefined();
-    });
-
-    it('should accept custom HNSW configuration', () => {
-      const config: VectorSearchConfig = {
-        dbPath: ':memory:',
-        embeddingService: mockEmbedding,
-        hnsw: {
-          efConstruction: 300,
-          efSearch: 150,
-          m: 32,
-        },
-      };
-
-      vectorSearch = new VectorSearch(config);
-      expect(vectorSearch).toBeDefined();
-    });
+    const results = await vectorSearch.vectorSearch('alpha query', { topK: 5 });
+    expect(results[0]?.id).toBe('alpha-1');
+    expect(results[0]?.metadata.path).toBe('/alpha.md');
+    expect(results[0]?.metadata.extra).toEqual({ chapter: 1 });
   });
 
-  // ============================================================
-  // HNSW Configuration Tests (interface shape)
-  // ============================================================
+  it('supports SearchInterface search/index/delete lifecycle', async () => {
+    await vectorSearch.index('alpha-1', 'alpha content', { metadata: { path: '/alpha.md' }, type: 'chunk' });
+    let results = await vectorSearch.search('alpha', { topK: 5 });
+    expect(results.map((item) => item['id'])).toContain('alpha-1');
 
-  describe('HNSW Configuration', () => {
-    it('should define HNSWConfig interface with correct shape', () => {
-      const config: HNSWConfig = {
-        dimension: 384,
-        efConstruction: 200,
-        efSearch: 100,
-        m: 16,
-      };
-      expect(config.dimension).toBe(384);
-      expect(config.efConstruction).toBe(200);
-      expect(config.efSearch).toBe(100);
-      expect(config.m).toBe(16);
-    });
+    const deleted = await vectorSearch.delete('alpha-1');
+    expect(deleted).toBe(true);
 
-    it('should allow custom HNSWConfig values', () => {
-      const config: HNSWConfig = {
-        dimension: 768,
-        m: 32,
-        efConstruction: 300,
-        efSearch: 150,
-      };
-      expect(config.dimension).toBe(768);
-      expect(config.m).toBe(32);
-      expect(config.efConstruction).toBe(300);
-      expect(config.efSearch).toBe(150);
-    });
+    results = await vectorSearch.search('alpha', { topK: 5 });
+    expect(results.map((item) => item['id'])).not.toContain('alpha-1');
   });
 
-  // ============================================================
-  // Database Operations Tests (stub behavior)
-  // ============================================================
+  it('supports keyword and like fallback search', async () => {
+    await vectorSearch.add('doc-1', 'gamma phrase appears here', { path: '/gamma.md' }, 'chunk');
+    await vectorSearch.add('doc-2', 'unrelated content', { path: '/other.md' }, 'chunk');
 
-  describe('Database Operations', () => {
-    beforeEach(() => {
-      vectorSearch = new VectorSearch({
-        dbPath: ':memory:',
-        embeddingService: mockEmbedding,
-      });
-    });
+    const keywordResults = await vectorSearch.keywordSearch('gamma', { topK: 5 });
+    expect(keywordResults[0]?.id).toBe('doc-1');
 
-    it('should throw DatabaseError on add (no real DB connection)', async () => {
-      await expect(
-        vectorSearch.add('item-1', 'test content', undefined, 'chunk', Array(384).fill(0.1))
-      ).rejects.toThrow(DatabaseError);
-    });
-
-    it('should throw DatabaseError on search (no real DB connection)', async () => {
-      await expect(
-        vectorSearch.search('test query', { topK: 5 })
-      ).rejects.toThrow(DatabaseError);
-    });
-
-    it('should throw DatabaseError on delete (no real DB connection)', async () => {
-      await expect(
-        vectorSearch.delete('item-1')
-      ).rejects.toThrow(DatabaseError);
-    });
-
-    it('should throw DatabaseError on index (no real DB connection)', async () => {
-      await expect(
-        vectorSearch.index('item-1', 'test content')
-      ).rejects.toThrow(DatabaseError);
-    });
+    const likeResults = await (vectorSearch as any).likeSearch('unrelated', { topK: 5 });
+    expect(likeResults[0]?.id).toBe('doc-2');
   });
 
-  // ============================================================
-  // Error Types Tests
-  // ============================================================
+  it('supports hybrid search with fused results', async () => {
+    await vectorSearch.add('alpha-1', 'alpha keyword content', { path: '/alpha.md' }, 'chunk');
+    await vectorSearch.add('beta-1', 'beta keyword content', { path: '/beta.md' }, 'chunk');
 
-  describe('Error Types', () => {
-    it('should create VectorSearchError', () => {
-      const error = new VectorSearchError('test error');
-      expect(error).toBeInstanceOf(Error);
-      expect(error).toBeInstanceOf(VectorSearchError);
-      expect(error.name).toBe('VectorSearchError');
-      expect(error.message).toBe('test error');
-    });
-
-    it('should create DatabaseError', () => {
-      const error = new DatabaseError('db error');
-      expect(error).toBeInstanceOf(VectorSearchError);
-      expect(error).toBeInstanceOf(DatabaseError);
-      expect(error.name).toBe('DatabaseError');
-      expect(error.message).toBe('db error');
-    });
-
-    it('should create DatabaseError with cause', () => {
-      const cause = new Error('original error');
-      const error = new DatabaseError('db error', cause);
-      expect(error.cause).toBe(cause);
-    });
-
-    it('should create EmbeddingError', () => {
-      const error = new EmbeddingError('embed error');
-      expect(error).toBeInstanceOf(VectorSearchError);
-      expect(error).toBeInstanceOf(EmbeddingError);
-      expect(error.name).toBe('EmbeddingError');
-      expect(error.message).toBe('embed error');
-    });
-
-    it('should create EmbeddingError with cause', () => {
-      const cause = new Error('original error');
-      const error = new EmbeddingError('embed error', cause);
-      expect(error.cause).toBe(cause);
-    });
+    const results = await vectorSearch.hybridSearch('alpha keyword', { topK: 5 });
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0]?.source).toBe('hybrid');
+    expect(results[0]?.mode_used).toBe('hybrid');
   });
 
-  // ============================================================
-  // Error Handling Tests
-  // ============================================================
+  it('reports stats for indexed content', async () => {
+    await vectorSearch.add('alpha-1', 'alpha content', undefined, 'chunk');
+    await vectorSearch.add('beta-1', 'beta content', undefined, 'memory');
 
-  describe('Error Handling', () => {
-    beforeEach(() => {
-      vectorSearch = new VectorSearch({
-        dbPath: ':memory:',
-        embeddingService: mockEmbedding,
-      });
-    });
-
-    it('should handle embedding errors in add', async () => {
-      const errorEmbedding: EmbeddingService = {
-        embed: vi.fn().mockRejectedValue(new Error('Embedding failed')),
-        embedBatch: vi.fn(),
-        embedWithMetadata: vi.fn(),
-        similarity: vi.fn(),
-        getDimensions: vi.fn(),
-      };
-
-      const vsWithError = new VectorSearch({
-        dbPath: ':memory:',
-        embeddingService: errorEmbedding,
-      });
-
-      // Should throw DatabaseError (no DB) before even getting to embedding
-      await expect(
-        vsWithError.add('item-1', 'test content')
-      ).rejects.toThrow();
-    });
-
-    it('should throw DatabaseError for empty query search', async () => {
-      await expect(vectorSearch.search('', { topK: 5 })).rejects.toThrow(DatabaseError);
-    });
+    const stats = await vectorSearch.getStats();
+    expect(stats.totalItems).toBe(2);
+    expect(stats.byType).toEqual({ chunk: 1, memory: 1 });
+    expect(stats.dimension).toBe(384);
   });
 
-  // ============================================================
-  // Convenience Tests
-  // ============================================================
+  it('keeps vector utility helpers working', () => {
+    const vector = [1.5, 2.5, 3.5, 4.5];
+    const buffer = (vectorSearch as any).vectorToBuffer(vector);
+    const roundTrip = (vectorSearch as any).bufferToVector(buffer);
+    expect(roundTrip).toHaveLength(vector.length);
+    for (let i = 0; i < vector.length; i += 1) {
+      expect(roundTrip[i]).toBeCloseTo(vector[i], 5);
+    }
+  });
 
-  describe('Convenience', () => {
-    it('should create VectorSearch instance', () => {
-      const config: VectorSearchConfig = {
-        dbPath: ':memory:',
-        embeddingService: mockEmbedding,
-      };
+  it('throws VectorSearchError for mismatched vector dimensions', () => {
+    expect(() => (vectorSearch as any).cosineSimilarity([1, 2], [1, 2, 3])).toThrow(VectorSearchError);
+  });
 
-      const vs = new VectorSearch(config);
-      expect(vs).toBeInstanceOf(VectorSearch);
-    });
+  it('preserves explicit error causes', () => {
+    const dbError = new DatabaseError('db failed', new Error('cause'));
+    const embeddingError = new EmbeddingError('embed failed', new Error('cause'));
+    expect(dbError.cause).toBeInstanceOf(Error);
+    expect(embeddingError.cause).toBeInstanceOf(Error);
+  });
 
-    it('should close without error', () => {
-      const vs = new VectorSearch({
-        dbPath: ':memory:',
-        embeddingService: mockEmbedding,
-      });
-      expect(() => vs.close()).not.toThrow();
-    });
+  it('factory function creates usable VectorSearch instances', async () => {
+    const instance = createVectorSearch(':memory:', embeddingService, { dimension: 384 });
+    await instance.add('alpha-1', 'alpha content');
+    const results = await instance.search('alpha', { topK: 5 });
+    expect(results.length).toBeGreaterThan(0);
+    instance.close();
   });
 });

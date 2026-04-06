@@ -3,6 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { HttpRequest } from '../../mcp/http-types';
 
 const memoryAddMock = vi.fn();
+const mammothExtractRawTextMock = vi.fn();
+const pdfParseMock = vi.fn();
+const pdfDestroyMock = vi.fn();
 
 vi.mock('../../mcp/services/memory', () => ({
   memoryAdd: memoryAddMock,
@@ -10,10 +13,21 @@ vi.mock('../../mcp/services/memory', () => ({
   memoryGetTemporal: vi.fn(),
 }));
 
+vi.mock('mammoth', () => ({
+  extractRawText: mammothExtractRawTextMock,
+}));
+
+vi.mock('pdf-parse', () => ({
+  PDFParse: vi.fn().mockImplementation(() => ({
+    getText: pdfParseMock,
+    destroy: pdfDestroyMock,
+  })),
+}));
+
 function makeRequest(body: Record<string, unknown>): HttpRequest {
   return {
     method: 'POST',
-    url: '/memory/add',
+    url: '/memory',
     headers: {},
     body,
     query: {},
@@ -67,5 +81,136 @@ describe('memory endpoints', () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.body).toEqual({ id: 'mem-endpoint', status: 'created' });
+  });
+
+  it('returns validation error for invalid upload base64 payload', async () => {
+    const { memoryUploadEndpoint } = await import('../../mcp/endpoints/memory.js');
+
+    const response = await memoryUploadEndpoint(
+      makeRequest({
+        file_name: 'notes.txt',
+        file_content_base64: 'not_base64@@@',
+        session_id: 'sess-upload',
+      }),
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toEqual({ error: 'invalid file_content_base64' });
+  });
+
+  it('uploads txt content, chunks it, and injects memory records', async () => {
+    memoryAddMock.mockImplementation(async () => ({
+      id: `mem-upload-${memoryAddMock.mock.calls.length}`,
+      status: 'created',
+    }));
+
+    const longText = [
+      'Paragraph one for upload coverage.',
+      '',
+      'Paragraph two keeps content long enough to produce another chunk when chunk_size is small.',
+    ].join('\n');
+    const payload = Buffer.from(longText, 'utf-8').toString('base64');
+
+    const { memoryUploadEndpoint } = await import('../../mcp/endpoints/memory.js');
+    const response = await memoryUploadEndpoint(
+      makeRequest({
+        file_name: 'upload.md',
+        file_content_base64: payload,
+        session_id: 'sess-upload',
+        chunk_size: 40,
+        chunk_overlap: 5,
+        source: 'imported',
+        confidence: 0.85,
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      status: 'created',
+      file_name: 'upload.md',
+      session_id: 'sess-upload',
+    });
+    expect(Array.isArray((response.body as Record<string, unknown>).memory_ids)).toBe(true);
+    expect((response.body as Record<string, unknown>).chunks).toBeGreaterThan(0);
+
+    expect(memoryAddMock).toHaveBeenCalledTimes((response.body as Record<string, unknown>).chunks as number);
+    expect(memoryAddMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        layer: 'session',
+        dimension: 'context',
+        entityId: 'sess-upload',
+        source: 'imported',
+        confidence: 0.85,
+        importance: 0.6,
+      }),
+    );
+  });
+
+  it('uploads docx content through mammoth extraction and injects memory records', async () => {
+    memoryAddMock.mockImplementation(async () => ({
+      id: `mem-docx-${memoryAddMock.mock.calls.length}`,
+      status: 'created',
+    }));
+    mammothExtractRawTextMock.mockResolvedValue({
+      value: 'DOCX paragraph one.\n\nDOCX paragraph two.',
+    });
+
+    const payload = Buffer.from('fake-docx-binary').toString('base64');
+
+    const { memoryUploadEndpoint } = await import('../../mcp/endpoints/memory.js');
+    const response = await memoryUploadEndpoint(
+      makeRequest({
+        file_name: 'upload.docx',
+        file_content_base64: payload,
+        session_id: 'sess-docx',
+        chunk_size: 32,
+        chunk_overlap: 4,
+      }),
+    );
+
+    expect(mammothExtractRawTextMock).toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      status: 'created',
+      file_name: 'upload.docx',
+      session_id: 'sess-docx',
+    });
+    expect((response.body as Record<string, unknown>).chunks).toBeGreaterThan(0);
+    expect(memoryAddMock).toHaveBeenCalled();
+  });
+
+  it('uploads pdf content through pdf-parse extraction and injects memory records', async () => {
+    memoryAddMock.mockImplementation(async () => ({
+      id: `mem-pdf-${memoryAddMock.mock.calls.length}`,
+      status: 'created',
+    }));
+    pdfParseMock.mockResolvedValue({
+      text: 'PDF paragraph one.\n\nPDF paragraph two.',
+    });
+
+    const payload = Buffer.from('fake-pdf-binary').toString('base64');
+
+    const { memoryUploadEndpoint } = await import('../../mcp/endpoints/memory.js');
+    const response = await memoryUploadEndpoint(
+      makeRequest({
+        file_name: 'upload.pdf',
+        file_content_base64: payload,
+        session_id: 'sess-pdf',
+        chunk_size: 32,
+        chunk_overlap: 4,
+      }),
+    );
+
+    expect(pdfParseMock).toHaveBeenCalled();
+    expect(pdfDestroyMock).toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      status: 'created',
+      file_name: 'upload.pdf',
+      session_id: 'sess-pdf',
+    });
+    expect((response.body as Record<string, unknown>).chunks).toBeGreaterThan(0);
+    expect(memoryAddMock).toHaveBeenCalled();
   });
 });

@@ -5,6 +5,8 @@
  * systems while keeping local-first behavior as the default path.
  */
 
+import { getConfigValue as getAppConfigValue } from '../config';
+
 // ============================================================
 // Adapter Interfaces
 // ============================================================
@@ -47,6 +49,7 @@ export interface IntegrationFlags {
   elasticsearchEnabled: boolean;
   neo4jEnabled: boolean;
   langflowEnabled: boolean;
+  dbhubGovernanceEnabled: boolean;
 }
 
 // ============================================================
@@ -168,19 +171,52 @@ export interface IntegrationAdapterBundle {
 }
 
 function getIntegrationFlags(): IntegrationFlags {
-  const get = (key: string, fallback: boolean): boolean => {
-    const val = process.env[key]?.toLowerCase();
-    if (!val) return fallback;
-    return val === 'true' || val === '1';
+  const get = (legacyEnvKey: string, modernEnvKey: string, configKey: string, fallback: boolean): boolean => {
+    const legacyValue = process.env[legacyEnvKey];
+    if (legacyValue !== undefined) {
+      return parseBooleanFlag(legacyValue, fallback);
+    }
+
+    const modernValue = process.env[modernEnvKey];
+    if (modernValue !== undefined) {
+      return parseBooleanFlag(modernValue, fallback);
+    }
+
+    return parseBooleanFlag(getAppConfigValue(configKey, fallback), fallback);
   };
 
   return {
-    postgresEnabled: get('INTEGRATION_POSTGRES_ENABLED', false),
-    redisCacheEnabled: get('INTEGRATION_REDIS_CACHE_ENABLED', false),
-    elasticsearchEnabled: get('INTEGRATION_ELASTICSEARCH_ENABLED', false),
-    neo4jEnabled: get('INTEGRATION_NEO4J_ENABLED', false),
-    langflowEnabled: get('INTEGRATION_LANGFLOW_ENABLED', false),
+    postgresEnabled: get('INTEGRATION_POSTGRES_ENABLED', 'NIKO_POSTGRES_ENABLED', 'integration.postgresEnabled', false),
+    redisCacheEnabled: get('INTEGRATION_REDIS_CACHE_ENABLED', 'NIKO_REDIS_CACHE_ENABLED', 'integration.redisCacheEnabled', false),
+    elasticsearchEnabled: get('INTEGRATION_ELASTICSEARCH_ENABLED', 'NIKO_ELASTICSEARCH_ENABLED', 'integration.elasticsearchEnabled', false),
+    neo4jEnabled: get('INTEGRATION_NEO4J_ENABLED', 'NIKO_NEO4J_ENABLED', 'integration.neo4jEnabled', false),
+    langflowEnabled: get('INTEGRATION_LANGFLOW_ENABLED', 'NIKO_LANGFLOW_ENABLED', 'integration.langflowEnabled', false),
+    dbhubGovernanceEnabled: get('INTEGRATION_DBHUB_GOVERNANCE_ENABLED', 'NIKO_DBHUB_GOVERNANCE_ENABLED', 'integration.dbhubGovernanceEnabled', false),
   };
+}
+
+function parseBooleanFlag(rawValue: unknown, fallback: boolean): boolean {
+  if (typeof rawValue === 'boolean') {
+    return rawValue;
+  }
+
+  if (typeof rawValue === 'number') {
+    if (rawValue === 1) return true;
+    if (rawValue === 0) return false;
+    return fallback;
+  }
+
+  if (typeof rawValue === 'string') {
+    const normalized = rawValue.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') {
+      return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') {
+      return false;
+    }
+  }
+
+  return fallback;
 }
 
 export function createIntegrationAdapters(): IntegrationAdapterBundle {
@@ -190,7 +226,7 @@ export function createIntegrationAdapters(): IntegrationAdapterBundle {
     cacheRateLimit: flags.redisCacheEnabled ? new StubRedisCacheRateLimitAdapter() : new NoopCacheRateLimitAdapter(),
     search: flags.elasticsearchEnabled ? new StubElasticsearchAdapter() : new NoopSearchAdapter(),
     graphProjection: flags.neo4jEnabled ? new StubNeo4jProjectionAdapter() : new NoopGraphProjectionAdapter(),
-    governance: new StubDbhubGovernanceHook(),
+    governance: flags.dbhubGovernanceEnabled ? new StubDbhubGovernanceHook() : new NoopGovernanceHookAdapter(),
     orchestration: flags.langflowEnabled ? new StubLangflowOrchestrationHook() : new NoopOrchestrationHookAdapter(),
     flags,
   };

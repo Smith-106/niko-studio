@@ -4,6 +4,10 @@
  * Tests for the unified knowledge management layer.
  */
 
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   KnowledgeServiceImpl,
@@ -19,18 +23,21 @@ import type {
 
 describe('KnowledgeService', () => {
   let service: KnowledgeServiceImpl;
+  let tempRoot: string;
 
   const createConfig = (): KnowledgeServiceConfig => ({
     dbPath: ':memory:',
   });
 
   beforeEach(async () => {
+    tempRoot = mkdtempSync(join(tmpdir(), 'niko-knowledge-service-legacy-'));
     service = new KnowledgeServiceImpl(createConfig());
     await service.initialize();
   });
 
   afterEach(async () => {
     await service.shutdown();
+    rmSync(tempRoot, { recursive: true, force: true });
   });
 
   describe('Initialization', () => {
@@ -325,24 +332,40 @@ describe('KnowledgeService', () => {
   });
 
   describe('File Sync', () => {
-    it('should sync a file', async () => {
-      const result = await service.syncFile('/test/file.md');
+    it('should sync a real file', async () => {
+      const filePath = join(tempRoot, 'test', 'file.md');
+      mkdirSync(join(tempRoot, 'test'), { recursive: true });
+      writeFileSync(filePath, 'Knowledge sync body', 'utf-8');
+
+      const result = await service.syncFile(filePath);
 
       expect(result.success).toBe(true);
       expect(result.action).toBe('synced');
       expect(result.docId).toBeDefined();
+      expect(result.contentHash).toBeDefined();
     });
 
     it('should determine source type from path', async () => {
-      const citationResult = await service.syncFile('/citations/note.md');
+      const citationPath = join(tempRoot, 'citations', 'note.md');
+      const memoryPath = join(tempRoot, 'memories', 'story.md');
+      mkdirSync(join(tempRoot, 'citations'), { recursive: true });
+      mkdirSync(join(tempRoot, 'memories'), { recursive: true });
+      writeFileSync(citationPath, 'Citation note', 'utf-8');
+      writeFileSync(memoryPath, 'Memory note', 'utf-8');
+
+      const citationResult = await service.syncFile(citationPath);
       expect(citationResult.message).toContain('citation');
 
-      const memoryResult = await service.syncFile('/memories/story.md');
+      const memoryResult = await service.syncFile(memoryPath);
       expect(memoryResult.message).toContain('memory');
     });
 
     it('should allow custom source type', async () => {
-      const result = await service.syncFile('/test/file.md', {
+      const filePath = join(tempRoot, 'test', 'file.md');
+      mkdirSync(join(tempRoot, 'test'), { recursive: true });
+      writeFileSync(filePath, 'Manual source type', 'utf-8');
+
+      const result = await service.syncFile(filePath, {
         sourceType: 'citation',
       });
 

@@ -42,6 +42,28 @@ export class DocumentLoader {
     }
   }
 
+  static async loadFileAsync(fileBuffer: Buffer, fileName: string): Promise<string> {
+    const fileExt = fileName.split('.').pop()!.toLowerCase();
+
+    try {
+      if (fileExt === 'txt' || fileExt === 'md') {
+        return DocumentLoader.loadText(fileBuffer);
+      } else if (fileExt === 'pdf') {
+        return await DocumentLoader.loadPdfAsync(fileBuffer);
+      } else if (fileExt === 'docx' || fileExt === 'doc') {
+        if (fileExt === 'doc') {
+          throw new Error('Legacy .doc format is not supported. Please convert to .docx');
+        }
+        return await DocumentLoader.loadDocxAsync(fileBuffer);
+      } else {
+        throw new Error(`Unsupported file format: ${fileExt}`);
+      }
+    } catch (e) {
+      console.error(`Error loading file ${fileName}: ${e}`);
+      throw e;
+    }
+  }
+
   /**
    * Load text content from a buffer (txt/md files)
    */
@@ -57,16 +79,8 @@ export class DocumentLoader {
    * placeholder that throws if the library is not available.
    */
   private static loadPdf(fileBuffer: Buffer): string {
-    // PDF parsing requires an external library.
-    // Attempting dynamic require to avoid hard dependency.
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require('pdf-parse');
-      // pdf-parse is callback-based but also returns a promise
-      return pdfParse(fileBuffer).then((data: { text: string }) => data.text);
-    } catch {
-      throw new Error('pdf-parse is required for PDF support. Install with: npm install pdf-parse');
-    }
+    void fileBuffer;
+    throw new Error('PDF parsing is not available in the current TypeScript runtime. Use txt/md files for upload.');
   }
 
   /**
@@ -75,10 +89,54 @@ export class DocumentLoader {
    * Note: Requires a DOCX parsing library such as `mammoth` or `docx-parser`.
    */
   private static loadDocx(fileBuffer: Buffer): string {
+    void fileBuffer;
+    throw new Error('DOCX parsing is not available in the current TypeScript runtime. Use txt/md files for upload.');
+  }
+
+  private static async loadPdfAsync(fileBuffer: Buffer): Promise<string> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mammoth = require('mammoth');
-      return mammoth.extractRawText({ buffer: fileBuffer }).then((data: { value: string }) => data.value);
+      const pdfParseMod = await import('pdf-parse') as {
+        PDFParse?: new (options: { data: Buffer }) => {
+          getText: () => Promise<{ text?: string }>;
+          destroy?: () => Promise<void> | void;
+        };
+      };
+      const PDFParse = pdfParseMod.PDFParse;
+
+      if (typeof PDFParse !== 'function') {
+        throw new Error('pdf-parse PDFParse export is unavailable');
+      }
+
+      const parser = new PDFParse({ data: fileBuffer });
+      try {
+        const result = await parser.getText();
+        return result.text ?? '';
+      } finally {
+        await parser.destroy?.();
+      }
+    } catch {
+      throw new Error('pdf-parse is required for PDF support. Install with: npm install pdf-parse');
+    }
+  }
+
+  private static async loadDocxAsync(fileBuffer: Buffer): Promise<string> {
+    try {
+      const mammothMod = await import('mammoth') as {
+        extractRawText?: (options: { buffer: Buffer }) => Promise<{ value?: string }>;
+        default?: {
+          extractRawText?: (options: { buffer: Buffer }) => Promise<{ value?: string }>;
+        };
+      };
+      const extractRawText =
+        mammothMod.extractRawText ??
+        mammothMod.default?.extractRawText;
+
+      if (typeof extractRawText !== 'function') {
+        throw new Error('mammoth.extractRawText is unavailable');
+      }
+
+      const result = await extractRawText({ buffer: fileBuffer });
+      return result.value ?? '';
     } catch {
       throw new Error('mammoth is required for DOCX support. Install with: npm install mammoth');
     }

@@ -267,8 +267,11 @@ describe('graph/graph-engine', () => {
     const dataDir = join(tempRoot, 'data-root');
     const originalDataDir = process.env.DATA_DIR;
     const originalGraphDbPath = process.env.GRAPH_DB_PATH;
+    const originalNikoGraphDbPath = process.env.NIKO_GRAPH_DB_PATH;
+    const originalNikoNeo4jEnabled = process.env.NIKO_NEO4J_ENABLED;
 
     process.env.DATA_DIR = dataDir;
+    process.env.NIKO_NEO4J_ENABLED = 'true';
 
     const okPlugin = {
       name: 'ok-plugin',
@@ -329,6 +332,7 @@ describe('graph/graph-engine', () => {
         _parseProperties: (raw: unknown) => Record<string, unknown>;
       })._integrationAdapters;
 
+      expect(adapters.flags.neo4jEnabled).toBe(true);
       await adapters.graphProjection.projectEntity({ id: 'stub-entity' });
       await adapters.graphProjection.projectRelation({ id: 'stub-relation' });
 
@@ -462,6 +466,15 @@ describe('graph/graph-engine', () => {
         configured.close();
       }
 
+      delete process.env.GRAPH_DB_PATH;
+      process.env.NIKO_GRAPH_DB_PATH = join(tempRoot, 'configured-niko-graph.db');
+      const configuredFromNiko = GraphEngine.fromConfig([okPlugin]);
+      try {
+        expect(configuredFromNiko.dbPath).toBe(process.env.NIKO_GRAPH_DB_PATH);
+      } finally {
+        configuredFromNiko.close();
+      }
+
       engine.close();
       engineClosed = true;
 
@@ -487,6 +500,16 @@ describe('graph/graph-engine', () => {
         delete process.env.GRAPH_DB_PATH;
       } else {
         process.env.GRAPH_DB_PATH = originalGraphDbPath;
+      }
+      if (originalNikoGraphDbPath === undefined) {
+        delete process.env.NIKO_GRAPH_DB_PATH;
+      } else {
+        process.env.NIKO_GRAPH_DB_PATH = originalNikoGraphDbPath;
+      }
+      if (originalNikoNeo4jEnabled === undefined) {
+        delete process.env.NIKO_NEO4J_ENABLED;
+      } else {
+        process.env.NIKO_NEO4J_ENABLED = originalNikoNeo4jEnabled;
       }
       rmSync(tempRoot, { recursive: true, force: true });
     }

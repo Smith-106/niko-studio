@@ -12,6 +12,10 @@
  * - Statistics
  */
 
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   KnowledgeServiceImpl,
@@ -93,10 +97,12 @@ describe('KnowledgeService', () => {
   let service: KnowledgeServiceImpl;
   let mockLLM: MockLLMService;
   let mockEmbedding: MockEmbeddingService;
+  let tempRoot: string;
 
   beforeEach(() => {
     mockLLM = new MockLLMService();
     mockEmbedding = new MockEmbeddingService();
+    tempRoot = mkdtempSync(join(tmpdir(), 'niko-knowledge-service-'));
     service = new KnowledgeServiceImpl({
       dbPath: ':memory:',
       llmService: mockLLM,
@@ -107,6 +113,7 @@ describe('KnowledgeService', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    rmSync(tempRoot, { recursive: true, force: true });
   });
 
   // ============================================================
@@ -387,16 +394,53 @@ describe('KnowledgeService', () => {
       await service.initialize();
     });
 
-    it('should sync a file path (returns success even for nonexistent)', async () => {
-      const result = await service.syncFile('/nonexistent/file.md');
-      expect(result).toHaveProperty('success');
-      expect(result).toHaveProperty('action');
-      expect(result).toHaveProperty('message');
+    it('returns a bounded error when the source file is missing', async () => {
+      const result = await service.syncFile(join(tempRoot, 'missing.md'));
+      expect(result).toEqual({
+        success: false,
+        action: 'error',
+        message: 'File not found',
+      });
     });
 
-    it('should return result with docId', async () => {
-      const result = await service.syncFile('/some/file.md');
+    it('syncs a real file and stores the content in the document index', async () => {
+      const filePath = join(tempRoot, 'notes.md');
+      writeFileSync(filePath, 'Scene content for sync.', 'utf-8');
+
+      const result = await service.syncFile(filePath);
+
+      expect(result.success).toBe(true);
+      expect(result.action).toBe('synced');
       expect(result.docId).toBeDefined();
+      expect(result.contentHash).toBeDefined();
+
+      const document = service.getDocument(String(result.docId));
+      expect(document?.content).toBe('Scene content for sync.');
+      expect(document?.sourceId).toBe(filePath);
+      expect(document?.sourceType).toBe('document');
+    });
+
+    it('detects source type and skips unchanged files unless forced', async () => {
+      const filePath = join(tempRoot, 'citations', 'note.md');
+      mkdirSync(join(tempRoot, 'citations'), { recursive: true });
+      writeFileSync(filePath, 'Citation content.', 'utf-8');
+
+      const first = await service.syncFile(filePath);
+      const second = await service.syncFile(filePath);
+      const forced = await service.syncFile(filePath, { force: true });
+
+      expect(first.message).toContain('citation');
+      expect(second).toMatchObject({
+        success: true,
+        action: 'skipped',
+        docId: first.docId,
+        contentHash: first.contentHash,
+      });
+      expect(forced).toMatchObject({
+        success: true,
+        action: 'synced',
+        docId: first.docId,
+      });
     });
   });
 

@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 
-const http = require('node:http');
-const https = require('node:https');
+import fs from 'node:fs';
+import http from 'node:http';
+import https from 'node:https';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function trimTrailingSlash(value) {
   return value.replace(/\/+$/, '');
@@ -23,9 +31,84 @@ function getListenPort() {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 8000;
 }
 
-const upstreamBase = getBaseUrl();
-const upstreamUrl = new URL(upstreamBase);
-const upstreamClient = upstreamUrl.protocol === 'https:' ? https : http;
+function resolveRepoRoot() {
+  return path.resolve(__dirname, '..', '..', '..');
+}
+
+function resolveTypeScriptGateway() {
+  const overrideEntry = (process.env.NIKO_GATEWAY_TS_ENTRY || '').trim();
+  const repoRoot = resolveRepoRoot();
+  const projectDir = path.join(repoRoot, 'src-ts');
+  const entry = overrideEntry || path.join(projectDir, 'gateway-server.ts');
+
+  if (!fs.existsSync(entry)) {
+    return null;
+  }
+
+  try {
+    const loader = require.resolve('ts-node/esm', { paths: [projectDir] });
+    return {
+      entry,
+      loader,
+      cwd: projectDir,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function tryLaunchRealGateway() {
+  const realGateway = resolveTypeScriptGateway();
+  if (!realGateway) {
+    return null;
+  }
+
+  const child = spawn(
+    process.execPath,
+    [
+      '--loader',
+      pathToFileURL(realGateway.loader).href,
+      '--experimental-specifier-resolution=node',
+      `./${path.relative(realGateway.cwd, realGateway.entry).replace(/\\/g, '/')}`,
+      '--host',
+      getListenHost(),
+      '--port',
+      String(getListenPort()),
+    ],
+    {
+      cwd: realGateway.cwd,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        NIKO_GATEWAY_HOST: getListenHost(),
+        NIKO_GATEWAY_PORT: String(getListenPort()),
+      },
+    }
+  );
+
+  child.on('exit', (code, signal) => {
+    if (signal) {
+      process.kill(process.pid, signal);
+      return;
+    }
+    process.exit(code ?? 0);
+  });
+
+  child.on('error', (error) => {
+    console.error(`[niko-gateway-node] failed to launch TypeScript gateway: ${error.message}`);
+  });
+
+  const forwardSignal = (signal) => {
+    if (!child.killed) {
+      child.kill(signal);
+    }
+  };
+  process.on('SIGTERM', () => forwardSignal('SIGTERM'));
+  process.on('SIGINT', () => forwardSignal('SIGINT'));
+
+  console.log(`[niko-gateway-node] launched real TypeScript gateway on ${getListenHost()}:${getListenPort()}`);
+  return child;
+}
 
 function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
@@ -36,51 +119,108 @@ function writeJson(res, code, payload) {
   res.end(body);
 }
 
-const server = http.createServer((req, res) => {
-  if (req.url === '/health') {
-    writeJson(res, 200, {
-      status: 'healthy',
-      runtime: 'node-shadow',
-      upstream: upstreamBase,
-      timestamp: new Date().toISOString(),
-    });
-    return;
-  }
+function checkUpstreamHealth(upstreamBase) {
+  return new Promise((resolve) => {
+    const healthUrl = new URL('/health', `${upstreamBase}/`);
+    const client = healthUrl.protocol === 'https:' ? https : http;
+    const req = client.request(
+      {
+        protocol: healthUrl.protocol,
+        hostname: healthUrl.hostname,
+        port: healthUrl.port || (healthUrl.protocol === 'https:' ? 443 : 80),
+        method: 'GET',
+        path: `${healthUrl.pathname}${healthUrl.search}`,
+      },
+      (res) => {
+        resolve({
+          ok: (res.statusCode || 500) >= 200 && (res.statusCode || 500) < 300,
+          statusCode: res.statusCode || 500,
+        });
+        res.resume();
+      },
+    );
 
-  const targetUrl = new URL(req.url || '/', upstreamBase);
-  const proxyReq = upstreamClient.request(
-    {
-      protocol: targetUrl.protocol,
-      hostname: targetUrl.hostname,
-      port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
-      method: req.method,
-      path: `${targetUrl.pathname}${targetUrl.search}`,
-      headers: req.headers,
-    },
-    (proxyRes) => {
-      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
-      proxyRes.pipe(res);
-    },
-  );
-
-  proxyReq.on('error', (error) => {
-    writeJson(res, 502, {
-      error: 'Node shadow proxy failed',
-      detail: error.message,
-      upstream: upstreamBase,
+    req.on('error', (error) => {
+      resolve({
+        ok: false,
+        statusCode: 502,
+        error: error.message,
+      });
     });
+    req.setTimeout(1500, () => {
+      req.destroy(new Error('upstream health timeout'));
+    });
+    req.end();
   });
-
-  req.pipe(proxyReq);
-});
-
-server.listen(getListenPort(), getListenHost(), () => {
-  console.log(`[niko-gateway-node] listening on ${getListenHost()}:${getListenPort()} -> ${upstreamBase}`);
-});
-
-function shutdown() {
-  server.close(() => process.exit(0));
 }
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+function startShadowProxy() {
+  const upstreamBase = getBaseUrl();
+  const upstreamUrl = new URL(upstreamBase);
+  const upstreamClient = upstreamUrl.protocol === 'https:' ? https : http;
+
+  const server = http.createServer(async (req, res) => {
+    if (req.url === '/health') {
+      const health = await checkUpstreamHealth(upstreamBase);
+      if (health.ok) {
+        writeJson(res, 200, {
+          status: 'healthy',
+          runtime: 'node-shadow',
+          upstream: upstreamBase,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        writeJson(res, health.statusCode || 502, {
+          status: 'unhealthy',
+          runtime: 'node-shadow',
+          upstream: upstreamBase,
+          detail: health.error || 'upstream health check failed',
+          timestamp: new Date().toISOString(),
+        });
+      }
+      return;
+    }
+
+    const targetUrl = new URL(req.url || '/', upstreamBase);
+    const proxyReq = upstreamClient.request(
+      {
+        protocol: targetUrl.protocol,
+        hostname: targetUrl.hostname,
+        port: targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
+        method: req.method,
+        path: `${targetUrl.pathname}${targetUrl.search}`,
+        headers: req.headers,
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+        proxyRes.pipe(res);
+      },
+    );
+
+    proxyReq.on('error', (error) => {
+      writeJson(res, 502, {
+        error: 'Node shadow proxy failed',
+        detail: error.message,
+        upstream: upstreamBase,
+      });
+    });
+
+    req.pipe(proxyReq);
+  });
+
+  server.listen(getListenPort(), getListenHost(), () => {
+    console.log(`[niko-gateway-node] listening on ${getListenHost()}:${getListenPort()} -> ${upstreamBase}`);
+  });
+
+  function shutdown() {
+    server.close(() => process.exit(0));
+  }
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}
+
+const realGatewayChild = tryLaunchRealGateway();
+if (!realGatewayChild) {
+  startShadowProxy();
+}

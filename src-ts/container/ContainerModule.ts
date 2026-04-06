@@ -5,6 +5,7 @@
  */
 
 import { ContainerModule as InversifyContainerModule, interfaces } from 'inversify';
+import { createHash } from 'node:crypto';
 import {
   ServiceTypes,
   IMemoryEngine,
@@ -36,6 +37,53 @@ import {
   HybridSearch,
   VectorSearch,
 } from '../search';
+import type { EmbeddingService as VectorEmbeddingService } from '../protocols/embedding';
+
+function createLocalVectorEmbeddingService(dimension: number): VectorEmbeddingService {
+  const normalize = (text: string): number[] => {
+    const values = new Array<number>(dimension).fill(0);
+    for (let i = 0; i < dimension; i += 1) {
+      const hash = createHash('sha256').update(`${text}:${i}`).digest();
+      values[i] = hash.readUInt32LE(0) / 0xffffffff;
+    }
+    return values;
+  };
+
+  return {
+    async embed(text: string): Promise<number[]> {
+      return normalize(text);
+    },
+    async embedBatch(texts: string[]): Promise<number[][]> {
+      return texts.map((text) => normalize(text));
+    },
+    async embedWithMetadata(request: { text: string; model?: string }): Promise<{ embedding: number[]; metadata: Record<string, unknown> }> {
+      const embedding = normalize(request.text);
+      return {
+        embedding,
+        metadata: {
+          model: request.model ?? 'local-vector-fallback',
+          dimensions: dimension,
+          provider: 'local',
+        },
+      };
+    },
+    similarity(embedding1: number[], embedding2: number[]): number {
+      let dotProduct = 0;
+      let normA = 0;
+      let normB = 0;
+      for (let i = 0; i < embedding1.length; i += 1) {
+        dotProduct += embedding1[i] * embedding2[i];
+        normA += embedding1[i] * embedding1[i];
+        normB += embedding2[i] * embedding2[i];
+      }
+      if (normA === 0 || normB === 0) return 0;
+      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    },
+    getDimensions(): number {
+      return dimension;
+    },
+  };
+}
 
 /**
  * Create service instances with default configurations
@@ -79,13 +127,12 @@ function createHybridSearch(): IHybridSearch {
 }
 
 function createVectorSearch(): IVectorSearch {
-  // Create VectorSearch with default configuration
-  // Note: Requires embedding service in production
+  const dimension = 384;
   return new VectorSearch({
     dbPath: '.writing/vectors.db',
-    dimension: 384,
+    dimension,
     modelName: 'BAAI/bge-small-en-v1.5',
-    embeddingService: null as any, // Will be injected later
+    embeddingService: createLocalVectorEmbeddingService(dimension),
   });
 }
 

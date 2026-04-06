@@ -109,10 +109,13 @@ export interface GatewayConfig {
   host: string
   port: number
   reload: boolean
+  localhostOnly: boolean
+  localhostOnlyExemptPaths: string[]
   corsDevOrigins: string[]
   corsProdOrigins: string[]
   metricsEnabled: boolean
   uiBridgeEnabled: boolean
+  detectionEvasionGuard: boolean
 }
 
 export interface BackupConfig {
@@ -128,6 +131,10 @@ export interface BackupConfig {
   s3Bucket: string
   s3Prefix: string
   s3Region: string
+  s3EndpointUrl: string
+  s3AccessKeyId: string
+  s3SecretAccessKey: string
+  s3ForcePathStyle: boolean
 }
 
 export interface TokenConfig {
@@ -151,6 +158,13 @@ export interface IntegrationConfig {
   elasticsearchEnabled: boolean
   neo4jEnabled: boolean
   langflowEnabled: boolean
+  dbhubGovernanceEnabled: boolean
+  searchRouteMode: string
+  searchElasticTimeoutMs: number
+  redisRateLimit: number
+  redisRateLimitWindowSeconds: number
+  langflowFlowName: string
+  redisCacheTtlSeconds: number
 }
 
 // ---------------------------------------------------------------------------
@@ -249,10 +263,13 @@ function defaultGatewayConfig(): GatewayConfig {
     host: '0.0.0.0',
     port: 8000,
     reload: true,
+    localhostOnly: true,
+    localhostOnlyExemptPaths: [],
     corsDevOrigins: ['*'],
     corsProdOrigins: ['https://app.example.com', 'https://gray.example.com'],
     metricsEnabled: true,
     uiBridgeEnabled: false,
+    detectionEvasionGuard: true,
   }
 }
 
@@ -270,6 +287,10 @@ function defaultBackupConfig(): BackupConfig {
     s3Bucket: '',
     s3Prefix: 'backups',
     s3Region: 'us-east-1',
+    s3EndpointUrl: '',
+    s3AccessKeyId: '',
+    s3SecretAccessKey: '',
+    s3ForcePathStyle: false,
   }
 }
 
@@ -299,6 +320,13 @@ function defaultIntegrationConfig(): IntegrationConfig {
     elasticsearchEnabled: false,
     neo4jEnabled: false,
     langflowEnabled: false,
+    dbhubGovernanceEnabled: false,
+    searchRouteMode: 'legacy',
+    searchElasticTimeoutMs: 300,
+    redisRateLimit: 120,
+    redisRateLimitWindowSeconds: 60,
+    langflowFlowName: 'niko-search-pilot',
+    redisCacheTtlSeconds: 120,
   }
 }
 
@@ -573,10 +601,13 @@ export class ConfigManager extends EventEmitter {
     if (env.NIKO_GATEWAY_HOST) this.config.gateway.host = env.NIKO_GATEWAY_HOST
     if (env.NIKO_GATEWAY_PORT) this.config.gateway.port = parseInt(env.NIKO_GATEWAY_PORT, 10)
     if (env.NIKO_GATEWAY_RELOAD) this.config.gateway.reload = parseBool(env.NIKO_GATEWAY_RELOAD)
+    if (env.NIKO_GATEWAY_LOCALHOST_ONLY) this.config.gateway.localhostOnly = parseBool(env.NIKO_GATEWAY_LOCALHOST_ONLY)
+    if (env.NIKO_GATEWAY_LOCALHOST_ONLY_EXEMPT_PATHS) this.config.gateway.localhostOnlyExemptPaths = parseCsv(env.NIKO_GATEWAY_LOCALHOST_ONLY_EXEMPT_PATHS)
     if (env.NIKO_CORS_DEV_ORIGINS) this.config.gateway.corsDevOrigins = parseCsv(env.NIKO_CORS_DEV_ORIGINS)
     if (env.NIKO_CORS_PROD_ORIGINS) this.config.gateway.corsProdOrigins = parseCsv(env.NIKO_CORS_PROD_ORIGINS)
     if (env.NIKO_GATEWAY_METRICS_ENABLED) this.config.gateway.metricsEnabled = parseBool(env.NIKO_GATEWAY_METRICS_ENABLED)
     if (env.NIKO_UI_BRIDGE_ENABLED) this.config.gateway.uiBridgeEnabled = parseBool(env.NIKO_UI_BRIDGE_ENABLED)
+    if (env.NIKO_GATEWAY_DETECTION_EVASION_GUARD) this.config.gateway.detectionEvasionGuard = parseBool(env.NIKO_GATEWAY_DETECTION_EVASION_GUARD)
 
     // Integration feature flags
     if (env.NIKO_POSTGRES_ENABLED) this.config.integration.postgresEnabled = parseBool(env.NIKO_POSTGRES_ENABLED)
@@ -584,6 +615,13 @@ export class ConfigManager extends EventEmitter {
     if (env.NIKO_ELASTICSEARCH_ENABLED) this.config.integration.elasticsearchEnabled = parseBool(env.NIKO_ELASTICSEARCH_ENABLED)
     if (env.NIKO_NEO4J_ENABLED) this.config.integration.neo4jEnabled = parseBool(env.NIKO_NEO4J_ENABLED)
     if (env.NIKO_LANGFLOW_ENABLED) this.config.integration.langflowEnabled = parseBool(env.NIKO_LANGFLOW_ENABLED)
+    if (env.NIKO_DBHUB_GOVERNANCE_ENABLED) this.config.integration.dbhubGovernanceEnabled = parseBool(env.NIKO_DBHUB_GOVERNANCE_ENABLED)
+    if (env.NIKO_SEARCH_ROUTE_MODE) this.config.integration.searchRouteMode = env.NIKO_SEARCH_ROUTE_MODE
+    if (env.NIKO_SEARCH_ELASTIC_TIMEOUT_MS) this.config.integration.searchElasticTimeoutMs = parseInt(env.NIKO_SEARCH_ELASTIC_TIMEOUT_MS, 10)
+    if (env.NIKO_REDIS_RATE_LIMIT) this.config.integration.redisRateLimit = parseInt(env.NIKO_REDIS_RATE_LIMIT, 10)
+    if (env.NIKO_REDIS_RATE_LIMIT_WINDOW_SECONDS) this.config.integration.redisRateLimitWindowSeconds = parseInt(env.NIKO_REDIS_RATE_LIMIT_WINDOW_SECONDS, 10)
+    if (env.NIKO_LANGFLOW_FLOW_NAME) this.config.integration.langflowFlowName = env.NIKO_LANGFLOW_FLOW_NAME
+    if (env.NIKO_REDIS_CACHE_TTL_SECONDS) this.config.integration.redisCacheTtlSeconds = parseInt(env.NIKO_REDIS_CACHE_TTL_SECONDS, 10)
   }
 
   private loadFromFile(): void {
@@ -725,6 +763,8 @@ gateway:
   host: 0.0.0.0
   port: 8000
   reload: true
+  localhost_only: true
+  localhost_only_exempt_paths: []
   cors_dev_origins:
     - "*"
   cors_prod_origins:
@@ -732,6 +772,7 @@ gateway:
     - https://gray.example.com
   metrics_enabled: true
   ui_bridge_enabled: false
+  detection_evasion_guard: true
 
 integration:
   postgres_enabled: false
@@ -739,6 +780,13 @@ integration:
   elasticsearch_enabled: false
   neo4j_enabled: false
   langflow_enabled: false
+  dbhub_governance_enabled: false
+  search_route_mode: legacy
+  search_elastic_timeout_ms: 300
+  redis_rate_limit: 120
+  redis_rate_limit_window_seconds: 60
+  langflow_flow_name: niko-search-pilot
+  redis_cache_ttl_seconds: 120
 `
     fs.writeFileSync(this.configPath, content, 'utf-8')
   }

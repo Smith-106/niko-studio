@@ -61,8 +61,9 @@ impl GatewayRuntime {
 
 fn get_requested_gateway_runtime() -> GatewayRuntime {
     match std::env::var("NIKO_GATEWAY_RUNTIME") {
+        Ok(value) if value.trim().eq_ignore_ascii_case("python") => GatewayRuntime::Python,
         Ok(value) if value.trim().eq_ignore_ascii_case("node") => GatewayRuntime::Node,
-        _ => GatewayRuntime::Python,
+        _ => GatewayRuntime::Node,
     }
 }
 
@@ -223,7 +224,12 @@ impl GatewayState {
                 *self.local_base.lock().unwrap() = Some(base.clone());
 
                 // Wait until healthy.
-                let wait_result = self.wait_until_healthy(&base, Duration::from_secs(20)).await;
+                let health_timeout = if runtime == GatewayRuntime::Node {
+                    Duration::from_secs(5)
+                } else {
+                    Duration::from_secs(20)
+                };
+                let wait_result = self.wait_until_healthy(&base, health_timeout).await;
                 match wait_result {
                     Ok(()) => {
                         return Ok(base);

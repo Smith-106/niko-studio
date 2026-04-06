@@ -4,6 +4,9 @@ const ENV_KEYS = [
   'NIKO_GATEWAY_RELOAD',
   'NIKO_GATEWAY_PORT',
   'NIKO_GATEWAY_DETECTION_EVASION_GUARD',
+  'NIKO_SEARCH_ROUTE_MODE',
+  'NIKO_LANGFLOW_FLOW_NAME',
+  'NIKO_REDIS_CACHE_TTL_SECONDS',
   'NIKO_ENV',
 ] as const;
 
@@ -56,5 +59,27 @@ describe('mcp config resolvers', () => {
     const { resolveDetectionEvasionGuardEnabled: resolveDetectionEvasionGuardEnabledAgain } =
       await import('../../mcp/contract.js');
     expect(resolveDetectionEvasionGuardEnabledAgain()).toBe(false);
+  });
+
+  it('reads gateway and integration defaults through the shared config manager', async () => {
+    const { ConfigManager, setConfigValue } = await import('../../config/index.js');
+    setConfigValue('gateway.localhostOnly', false);
+    setConfigValue('integration.searchRouteMode', 'hybrid');
+    setConfigValue('integration.langflowFlowName', 'pilot-from-config');
+    setConfigValue('integration.redisCacheTtlSeconds', 345);
+
+    const {
+      resolveLocalhostOnlyEnabled,
+      resolveSearchRouteMode,
+      resolveLangflowFlowName,
+      resolveRedisCacheTtlSeconds,
+    } = await import('../../mcp/config.js');
+
+    expect(resolveLocalhostOnlyEnabled()).toBe(false);
+    expect(resolveSearchRouteMode()).toBe('hybrid');
+    expect(resolveLangflowFlowName()).toBe('pilot-from-config');
+    expect(resolveRedisCacheTtlSeconds()).toBe(345);
+
+    ConfigManager.resetInstance();
   });
 });

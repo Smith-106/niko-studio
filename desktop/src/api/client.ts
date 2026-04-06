@@ -1898,6 +1898,9 @@ export const MODIFIABLE_FIELDS: string[] = [
   'backup.s3_bucket',
   'backup.s3_prefix',
   'backup.s3_region',
+  'backup.s3_endpoint_url',
+  'backup.s3_access_key_id',
+  'backup.s3_force_path_style',
   // Token config
   'token.default_budget',
   'token.budget_warn_threshold',
@@ -1906,9 +1909,20 @@ export const MODIFIABLE_FIELDS: string[] = [
   'obsidian.auto_discover',
   'obsidian.sync_on_startup',
   'obsidian.default_vault',
+  'gateway.localhost_only',
+  'gateway.localhost_only_exempt_paths',
+  'gateway.detection_evasion_guard',
   // Gateway config (limited)
   'gateway.metrics_enabled',
   'gateway.ui_bridge_enabled',
+  'integration.dbhub_governance_enabled',
+  'integration.search_route_mode',
+  'integration.search_elastic_timeout_ms',
+  'integration.redis_rate_limit',
+  'integration.redis_rate_limit_window_seconds',
+  'integration.langflow_enabled',
+  'integration.langflow_flow_name',
+  'integration.redis_cache_ttl_seconds',
 ]
 
 // Secret fields (mirrors backend SECRET_FIELDS)
@@ -1916,6 +1930,7 @@ export const SECRET_FIELDS: string[] = [
   'agent.google_api_key',
   'agent.openai_api_key',
   'backup.webdav_password',
+  'backup.s3_secret_access_key',
 ]
 
 // Config section interfaces matching backend dataclasses
@@ -1977,10 +1992,13 @@ export interface GatewayConfig {
   host: string
   port: number
   reload: boolean
+  localhost_only: boolean
+  localhost_only_exempt_paths: string[]
   cors_dev_origins: string[]
   cors_prod_origins: string[]
   metrics_enabled: boolean
   ui_bridge_enabled: boolean
+  detection_evasion_guard: boolean
 }
 
 export interface BackupConfig {
@@ -1996,6 +2014,10 @@ export interface BackupConfig {
   s3_bucket: string
   s3_prefix: string
   s3_region: string
+  s3_endpoint_url: string
+  s3_access_key_id: string
+  s3_secret_access_key: string
+  s3_force_path_style: boolean
 }
 
 export interface TokenConfig {
@@ -2019,6 +2041,13 @@ export interface IntegrationConfig {
   elasticsearch_enabled: boolean
   neo4j_enabled: boolean
   langflow_enabled: boolean
+  dbhub_governance_enabled: boolean
+  search_route_mode: string
+  search_elastic_timeout_ms: number
+  redis_rate_limit: number
+  redis_rate_limit_window_seconds: number
+  langflow_flow_name: string
+  redis_cache_ttl_seconds: number
 }
 
 // Main config interface matching backend AppConfig

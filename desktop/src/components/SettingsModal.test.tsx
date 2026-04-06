@@ -88,6 +88,10 @@ const createBackendConfig = (): BackendConfig => ({
     s3_bucket: '',
     s3_prefix: '',
     s3_region: '',
+    s3_endpoint_url: '',
+    s3_access_key_id: '',
+    s3_secret_access_key: '',
+    s3_force_path_style: false,
   },
   token: {
     db_path: '/tmp/tokens.db',
@@ -106,10 +110,13 @@ const createBackendConfig = (): BackendConfig => ({
     host: '127.0.0.1',
     port: 8000,
     reload: false,
+    localhost_only: true,
+    localhost_only_exempt_paths: [],
     cors_dev_origins: ['http://localhost:5173'],
     cors_prod_origins: [],
     metrics_enabled: true,
     ui_bridge_enabled: false,
+    detection_evasion_guard: true,
   },
   integration: {
     postgres_enabled: false,
@@ -117,6 +124,13 @@ const createBackendConfig = (): BackendConfig => ({
     elasticsearch_enabled: false,
     neo4j_enabled: false,
     langflow_enabled: false,
+    dbhub_governance_enabled: false,
+    search_route_mode: 'legacy',
+    search_elastic_timeout_ms: 300,
+    redis_rate_limit: 120,
+    redis_rate_limit_window_seconds: 60,
+    langflow_flow_name: 'niko-search-pilot',
+    redis_cache_ttl_seconds: 120,
   },
 })
 

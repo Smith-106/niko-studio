@@ -17,6 +17,8 @@ import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
+import { getConfigValue as getAppConfigValue } from '../config';
+import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 
 // ---------------------------------------------------------------------------
 // Data classes
@@ -91,47 +93,25 @@ export interface EnginePlugin {
   healthCheck(): Promise<Record<string, unknown>>;
 }
 
-// ---------------------------------------------------------------------------
-// Integration adapter stubs (placeholder until full migration)
-// ---------------------------------------------------------------------------
+type IntegrationAdapters = Pick<IntegrationAdapterBundle, 'flags' | 'graphProjection'>;
 
-interface IntegrationFlags {
-  neo4jEnabled: boolean;
-}
+function resolveGraphConfigValue(key: 'dataDir' | 'graph.dbPath', defaultValue: string | null = null): string | null {
+  const envKeys = key === 'graph.dbPath'
+    ? ['GRAPH_DB_PATH', 'NIKO_GRAPH_DB_PATH']
+    : ['DATA_DIR', 'NIKO_DATA_DIR'];
 
-interface GraphProjection {
-  projectEntity(entity: Record<string, unknown>): Promise<void>;
-  projectRelation(relation: Record<string, unknown>): Promise<void>;
-}
-
-interface IntegrationAdapters {
-  flags: IntegrationFlags;
-  graphProjection: GraphProjection;
-}
-
-function createIntegrationAdapters(): IntegrationAdapters {
-  return {
-    flags: { neo4jEnabled: false },
-    graphProjection: {
-      projectEntity: async () => {},
-      projectRelation: async () => {},
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Config helper stub (placeholder until full config migration)
-// ---------------------------------------------------------------------------
-
-function getConfigValue(key: string, defaultValue: string | null = null): string | null {
-  // TODO: Wire to actual config module once migrated
-  if (typeof process !== 'undefined' && process.env) {
-    const envKey = key.toUpperCase().replace(/\./g, '_');
+  for (const envKey of envKeys) {
     const envVal = process.env[envKey];
-    if (envVal !== undefined) {
+    if (typeof envVal === 'string' && envVal.trim()) {
       return envVal;
     }
   }
+
+  const configValue = getAppConfigValue(key, defaultValue);
+  if (typeof configValue === 'string' && configValue.trim()) {
+    return configValue;
+  }
+
   return defaultValue;
 }
 
@@ -168,7 +148,7 @@ export class GraphEngine {
     // Resolve DB path
     let resolved = dbPath ?? null;
     if (resolved === null) {
-      const dataDir = getConfigValue('data_dir');
+      const dataDir = resolveGraphConfigValue('dataDir');
       if (dataDir) {
         resolved = join(dataDir, 'graph.db');
       }
@@ -251,9 +231,9 @@ export class GraphEngine {
 
   /** Create a GraphEngine from configuration values */
   static fromConfig(plugins?: Iterable<EnginePlugin> | null): GraphEngine {
-    let dbPath: string | null | undefined = getConfigValue('graph.db_path');
+    let dbPath: string | null | undefined = resolveGraphConfigValue('graph.dbPath');
     if (dbPath === null) {
-      const dataDir = getConfigValue('data_dir');
+      const dataDir = resolveGraphConfigValue('dataDir');
       if (dataDir) {
         dbPath = join(dataDir, 'graph.db');
       }

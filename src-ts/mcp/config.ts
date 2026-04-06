@@ -7,41 +7,18 @@
  * Migrated from src/mcp/config.py
  */
 
+import { getConfigValue as getAppConfigValue } from '../config';
+
 // ============================================================
 // Internal: Config Value Placeholder
 // ============================================================
 
-const CONFIG_DEFAULTS: Record<string, unknown> = {
-  'env': 'development',
-  'gateway.host': '0.0.0.0',
-  'gateway.port': 8000,
-  'gateway.reload': true,
-  'gateway.localhost_only': true,
-  'gateway.localhost_only_exempt_paths': [],
-  'gateway.ui_bridge_enabled': false,
-  'gateway.detection_evasion_guard': true,
-  'gateway.cors_prod_origins': [],
-  'gateway.cors_dev_origins': ['*'],
-  'integration.search_route_mode': 'legacy',
-  'integration.search_elastic_timeout_ms': 300,
-  'integration.redis_rate_limit': 120,
-  'integration.redis_rate_limit_window_seconds': 60,
-  'integration.langflow_flow_name': 'niko-search-pilot',
-  'integration.dbhub_governance_enabled': false,
-  'integration.redis_cache_ttl_seconds': 120,
-};
-
 /**
- * Read a config value from environment or config defaults.
- * Placeholder for Python's get_config_value().
+ * Read a config value from the shared config layer while preserving legacy
+ * snake_case key access used by the MCP migration surface.
  */
 export function getConfigValue<T>(key: string, fallback: T): T {
-  const envKey = key.toUpperCase().replace(/\./g, '_');
-  const envVal = process.env[`NIKO_${envKey}`];
-  if (envVal !== undefined) {
-    return coerceConfigValue(envVal, fallback);
-  }
-  return coerceConfigValue(CONFIG_DEFAULTS[key] ?? fallback, fallback);
+  return coerceConfigValue(getAppConfigValue(mapLegacyConfigKey(key), fallback), fallback);
 }
 
 /** Stub for Python's get_services(). */
@@ -109,6 +86,26 @@ function parseNumberValue(rawValue: unknown, fallback: number): number {
   }
 
   return fallback;
+}
+
+const LEGACY_CONFIG_KEY_MAP: Record<string, string> = {
+  'gateway.localhost_only': 'gateway.localhostOnly',
+  'gateway.localhost_only_exempt_paths': 'gateway.localhostOnlyExemptPaths',
+  'gateway.ui_bridge_enabled': 'gateway.uiBridgeEnabled',
+  'gateway.detection_evasion_guard': 'gateway.detectionEvasionGuard',
+  'gateway.cors_prod_origins': 'gateway.corsProdOrigins',
+  'gateway.cors_dev_origins': 'gateway.corsDevOrigins',
+  'integration.search_route_mode': 'integration.searchRouteMode',
+  'integration.search_elastic_timeout_ms': 'integration.searchElasticTimeoutMs',
+  'integration.redis_rate_limit': 'integration.redisRateLimit',
+  'integration.redis_rate_limit_window_seconds': 'integration.redisRateLimitWindowSeconds',
+  'integration.langflow_flow_name': 'integration.langflowFlowName',
+  'integration.dbhub_governance_enabled': 'integration.dbhubGovernanceEnabled',
+  'integration.redis_cache_ttl_seconds': 'integration.redisCacheTtlSeconds',
+};
+
+function mapLegacyConfigKey(key: string): string {
+  return LEGACY_CONFIG_KEY_MAP[key] ?? key;
 }
 
 // ============================================================
