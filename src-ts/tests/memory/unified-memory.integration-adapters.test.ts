@@ -167,6 +167,49 @@ describe('UnifiedMemoryEngine integration adapters', () => {
     }
   });
 
+  it('preserves the local write when the shadow-write adapter does not confirm success', async () => {
+    process.env[POSTGRES_ENV_KEY] = 'true';
+    const adapters = createIntegrationAdapters();
+    const shadowWriteSpy = vi
+      .spyOn(adapters.storageShadow, 'shadowWriteMemory')
+      .mockResolvedValueOnce(false);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { basePath, dbPath } = createDbPath('shadow-non-success');
+    const engine = new UnifiedMemoryEngine({
+      dbPath,
+      integrationAdapters: adapters,
+    });
+
+    try {
+      const added = await engine.add({
+        content: 'Nora keeps this memory local even when shadow write reports non-success.',
+        layer: MemoryLayer.SESSION,
+        dimension: MemoryDimension.CONTEXT,
+        entityId: 'nora-shadow-non-success',
+        importance: 0.62,
+        tags: ['phase4', 'shadow-non-success'],
+      });
+      const temporal = await engine.getTemporalFacts({
+        entityId: 'nora-shadow-non-success',
+      });
+
+      expect(added).toMatchObject({ status: 'created' });
+      expect(shadowWriteSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Postgres shadow write returned non-success, local-first path preserved',
+      );
+      expect(temporal).toHaveLength(1);
+      expect(temporal[0]).toMatchObject({
+        content:
+          'Nora keeps this memory local even when shadow write reports non-success.',
+        dimension: MemoryDimension.CONTEXT,
+      });
+    } finally {
+      engine.close();
+      rmSync(basePath, { recursive: true, force: true });
+    }
+  });
+
   it('uses environment-selected default adapters when no integration bundle is injected', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
     const shadowWriteSpy = vi.spyOn(StubPostgresShadowAdapter.prototype, 'shadowWriteMemory');
@@ -341,6 +384,91 @@ describe('UnifiedMemoryEngine integration adapters', () => {
         created_at: expect.any(String),
         updated_at: expect.any(String),
       }));
+    } finally {
+      engine.close();
+      rmSync(basePath, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves merge resolution when merge shadow-write throws after local merge is stored', async () => {
+    process.env[POSTGRES_ENV_KEY] = 'true';
+    const shadowWriteSpy = vi.spyOn(
+      StubPostgresShadowAdapter.prototype,
+      'shadowWriteMemory',
+    );
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { basePath, dbPath } = createDbPath('shadow-merge-failure');
+    const engine = new UnifiedMemoryEngine({ dbPath });
+
+    try {
+      const older = await engine.add({
+        content: 'Atlas notes keep Alice in the archive.',
+        layer: MemoryLayer.PROJECT,
+        dimension: MemoryDimension.CHARACTER,
+        entityId: 'alice-shadow-merge-failure',
+        validFrom: '2026-01-01T00:00:00Z',
+        validUntil: '2026-12-31T00:00:00Z',
+        importance: 0.55,
+        confidence: 0.71,
+        source: 'imported',
+        tags: ['atlas', 'legacy'],
+      });
+      const newer = await engine.add({
+        content: 'Recent update says Alice left the archive.',
+        layer: MemoryLayer.PROJECT,
+        dimension: null,
+        entityId: 'alice-shadow-merge-failure',
+        importance: 0.91,
+        confidence: 0.97,
+        source: 'user',
+        tags: ['atlas', 'update'],
+      });
+
+      const db = (
+        engine as unknown as {
+          _db: {
+            prepare: (
+              sql: string,
+            ) => {
+              run: (...params: unknown[]) => void;
+            };
+          };
+        }
+      )._db;
+
+      db.prepare('UPDATE memories SET superseded_by = NULL WHERE id IN (?, ?)').run(
+        older.id,
+        newer.id,
+      );
+      shadowWriteSpy.mockClear();
+      shadowWriteSpy.mockRejectedValueOnce(new Error('merge shadow failed'));
+
+      const resolution = await engine.resolveConflict({
+        memoryIdA: older.id as string,
+        memoryIdB: newer.id as string,
+        resolution: 'merge',
+      });
+      const temporal = await engine.getTemporalFacts({
+        entityId: 'alice-shadow-merge-failure',
+      });
+
+      expect(resolution).toMatchObject({
+        status: 'resolved',
+        kept: expect.any(String),
+      });
+      expect(shadowWriteSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Postgres shadow write failed, local-first path preserved: Error: merge shadow failed',
+        ),
+      );
+      expect(temporal).toEqual([
+        expect.objectContaining({
+          id: resolution.kept,
+          content:
+            'Atlas notes keep Alice in the archive.\n\n[Updated]: Recent update says Alice left the archive.',
+        }),
+      ]);
     } finally {
       engine.close();
       rmSync(basePath, { recursive: true, force: true });

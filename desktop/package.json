@@ -7,7 +7,7 @@
     "ensure-deps": "node -e \"const fs=require('fs');const cp=require('child_process');if(!fs.existsSync('node_modules/typescript/bin/tsc')){console.log('Dependencies missing, running npm ci...');cp.execSync('npm ci',{stdio:'inherit'});}\"",
     "check:node-sidecar": "node --check src-tauri/bin/niko-gateway-node",
     "validate:sidecar-contract": "node scripts/validate_sidecar_contract.cjs --strict",
-    "build:sidecar:python": "python ../../scripts/build_gateway_sidecar.py",
+    "build:sidecar:python": "python ../scripts/build_gateway_sidecar.py",
     "build:sidecar:node": "npm run check:node-sidecar && echo 'Node sidecar ready (no build required)'",
     "build:sidecar:choose": "node scripts/choose_sidecar.cjs",
     "build:sidecar": "npm run build:sidecar:choose",

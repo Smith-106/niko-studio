@@ -1,6 +1,7 @@
-"""Build Gateway sidecar executable using PyInstaller.
+"""Build legacy Python gateway sidecar executable using PyInstaller.
 
-This script is build-only (not used at runtime).
+This script is for explicit Python compatibility fallback only.
+The default runtime/build path is Node/TypeScript.
 
 Output layout (chosen to match Tauri bundle.externalBin conventions):
 - desktop/src-tauri/bin/
@@ -15,12 +16,15 @@ Notes:
 
 from __future__ import annotations
 
+import argparse
 import os
 import platform
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+DEFAULT_LEGACY_ENTRY = Path("src/mcp/sidecar_entry.py")
 
 
 def _project_root() -> Path:
@@ -47,16 +51,45 @@ def _target_triple() -> str:
     return ""
 
 
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Build legacy Python gateway sidecar (compatibility fallback mode).",
+    )
+    parser.add_argument(
+        "--legacy-entry",
+        default=os.getenv("NIKO_LEGACY_SIDECAR_ENTRY", str(DEFAULT_LEGACY_ENTRY)),
+        help=(
+            "Legacy Python entry script path "
+            "(default: src/mcp/sidecar_entry.py or NIKO_LEGACY_SIDECAR_ENTRY)"
+        ),
+    )
+    return parser
+
+
+def _resolve_legacy_entry(root: Path, entry_arg: str) -> Path:
+    candidate = Path(entry_arg)
+    if not candidate.is_absolute():
+        candidate = root / candidate
+    return candidate.resolve()
+
+
 def main() -> None:
+    args = _build_parser().parse_args()
     root = _project_root()
 
     # Ensure project root is importable for PyInstaller analysis.
     env = os.environ.copy()
     env["PYTHONPATH"] = str(root) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
 
-    entry = root / "src" / "mcp" / "sidecar_entry.py"
+    entry = _resolve_legacy_entry(root, args.legacy_entry)
     if not entry.exists():
-        raise SystemExit(f"sidecar entry not found: {entry}")
+        raise SystemExit(
+            "Legacy Python sidecar fallback is unavailable in this checkout.\n"
+            f"Missing legacy entry: {entry}\n"
+            "Use Node sidecar as default: npm --prefix desktop run build:sidecar\n"
+            "Python fallback is compatibility-only. If needed, restore legacy source "
+            "or pass --legacy-entry <path>."
+        )
 
     out_dir = root / "desktop" / "src-tauri" / "bin"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -67,7 +100,6 @@ def main() -> None:
     build_dir = root / ".build" / "pyinstaller" / name
     dist_dir = build_dir / "dist"
     work_dir = build_dir / "build"
-    spec_path = build_dir / f"{name}.spec"
 
     if build_dir.exists():
         shutil.rmtree(build_dir)

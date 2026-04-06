@@ -6,6 +6,20 @@ export default mergeConfig(
   baseConfig,
   defineConfig({
     test: {
+      pool: 'forks',
+      include: [
+        'tests/mcp/graph-service.test.ts',
+        'tests/graph/index.test.ts',
+        'tests/mcp/memory-service.test.ts',
+        'tests/memory/index.test.ts',
+        'tests/store/openkl-contract.test.ts',
+        'tests/store/index.test.ts',
+        'tests/graph/graph-manager.test.ts',
+        'tests/store/store-manager.test.ts',
+        'tests/integrations/adapters.test.ts',
+        'tests/memory/unified-memory.integration-adapters.test.ts',
+        'tests/graph/graph-engine.test.ts',
+      ],
       coverage: {
         provider: 'v8',
         reporter: ['text', 'json', 'html'],

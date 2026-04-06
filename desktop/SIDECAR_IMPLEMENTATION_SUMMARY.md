@@ -23,7 +23,7 @@
 
 **验证结果**:
 ```bash
-npm run build:sidecar  # 默认选择 Python sidecar + 契约验证
+npm run build:sidecar  # 默认选择 Node sidecar + 选定 runtime 契约验证
 ✅ All contracts validated successfully
 ```
 
@@ -34,13 +34,13 @@ npm run build:sidecar  # 默认选择 Python sidecar + 契约验证
 **实施内容**:
 1. **双轨构建选择器**: `desktop/scripts/choose_sidecar.cjs`
    - 通过 `NIKO_GATEWAY_RUNTIME` 环境变量选择运行时
-   - 构建默认：Python sidecar（便于保持已打包产物兼容）
-   - 可选：Node sidecar
+   - 构建默认：Node sidecar（与宿主运行时默认一致）
+   - 可选：Python sidecar（显式兼容回退）
 
 2. **构建脚本重构**:
    ```json
    {
-     "build:sidecar:python": "python ../../scripts/build_gateway_sidecar.py",
+     "build:sidecar:python": "python ../scripts/build_gateway_sidecar.py",
      "build:sidecar:node": "npm run check:node-sidecar && echo 'Node sidecar ready'",
      "build:sidecar:choose": "node scripts/choose_sidecar.cjs",
      "build:sidecar": "npm run build:sidecar:choose"
@@ -54,7 +54,7 @@ npm run build:sidecar  # 默认选择 Python sidecar + 契约验证
 **验证结果**:
 ```bash
 NIKO_GATEWAY_RUNTIME=node npm run build:sidecar  # 选择 Node sidecar
-npm run build:sidecar                              # 默认构建 Python sidecar
+npm run build:sidecar                              # 默认构建 Node sidecar
 ```
 
 ---
@@ -155,7 +155,7 @@ NIKO_GATEWAY_RUNTIME=python npm run tauri:dev
 ```bash
 # Integration Tests Workflow
 npm run build:sidecar              # 构建选定 sidecar
-npm run validate:sidecar-contract  # 验证契约（soft gate）
+npm run validate:sidecar-contract  # 验证当前选定 runtime 契约（soft gate）
 
 # Release Gate Workflow
 npm run build:sidecar              # 构建选定 sidecar
@@ -220,4 +220,4 @@ npm run validate:sidecar-contract  # 验证契约（soft gate）
 3. ✅ 前置构建（本地链闭环）
 4. ✅ CI 门禁（soft gate）
 
-系统现在支持通过 `NIKO_GATEWAY_RUNTIME` 环境变量在 Python 和 Node sidecar 之间切换；当前 Desktop 本地运行时默认优先 Node，打包链仍保留 Python 默认构建以维持兼容性和生产稳定性。
+系统现在支持通过 `NIKO_GATEWAY_RUNTIME` 环境变量在 Python 和 Node sidecar 之间切换；当前 Desktop 本地运行时和默认打包链都优先 Node，Python 路径保留为显式兼容回退。

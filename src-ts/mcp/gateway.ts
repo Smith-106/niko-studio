@@ -4,6 +4,8 @@
  * Migrated from src/mcp/.
  */
 
+import { getConfig } from '../config';
+
 // ============================================================
 // Types
 // ============================================================
@@ -356,9 +358,10 @@ export class McpGateway {
   }
 
   getHealth(): HealthResponse {
+    const version = String(getConfig().version ?? '1.0.0');
     return {
       status: this.runtime.connectionState === 'connected' ? 'ok' : 'degraded',
-      version: '1.0.0',
+      version,
       mcp_runtime: this.runtime.toJSON(),
       uptime_seconds: this.metrics.getMetrics().uptimeSeconds,
     };

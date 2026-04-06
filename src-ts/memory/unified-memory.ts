@@ -1052,7 +1052,13 @@ export class UnifiedMemoryEngine {
       updated_at: memory.updatedAt,
     };
     try {
-      await this._integrationAdapters.storageShadow.shadowWriteMemory(payload);
+      const shadowResult =
+        await this._integrationAdapters.storageShadow.shadowWriteMemory(payload);
+      if (shadowResult !== true) {
+        console.warn(
+          "Postgres shadow write returned non-success, local-first path preserved"
+        );
+      }
     } catch (exc) {
       console.warn(
         `Postgres shadow write failed, local-first path preserved: ${exc}`

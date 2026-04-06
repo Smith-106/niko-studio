@@ -1,121 +1,160 @@
 #!/usr/bin/env python
 """
-Niko-Studio MCP Gateway 启动脚本
+Niko-Studio MCP Gateway launcher.
 
-使用方法:
-    python scripts/start_gateway.py
-    python scripts/start_gateway.py --port 8000 --host 0.0.0.0
-    python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml
+Current default (migration-closure):
+- Start Node/TypeScript gateway runtime
+- Keep Python runtime as explicit legacy fallback only
 """
 
+from __future__ import annotations
+
 import argparse
-import sys
 import os
+import subprocess
+import sys
 from pathlib import Path
 
-# 添加项目根目录到 Python 路径
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+LEGACY_PY_GATEWAY = PROJECT_ROOT / "src" / "mcp" / "gateway.py"
+NODE_GATEWAY_LAUNCHER = PROJECT_ROOT / "desktop" / "src-tauri" / "bin" / "niko-gateway-node"
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Start Niko-Studio MCP Gateway")
-    parser.add_argument("--host", default=None, help="Host to bind (default: from config)")
-    parser.add_argument("--port", type=int, default=None, help="Port to bind (default: from config)")
-    parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
-    parser.add_argument("--log-level", default="info", help="Log level (default: info)")
+def _node_cmd() -> str:
+    return "node.exe" if sys.platform.startswith("win") else "node"
+
+
+def _resolve_runtime(runtime_arg: str) -> str:
+    if runtime_arg != "auto":
+        return runtime_arg
+    env_runtime = os.getenv("NIKO_GATEWAY_RUNTIME", "").strip().lower()
+    if env_runtime in {"node", "python"}:
+        return env_runtime
+    return "node"
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Start Niko-Studio MCP Gateway",
+        epilog=(
+            "Default runtime is Node/TypeScript. "
+            "Python runtime is explicit legacy compatibility mode and may be unavailable."
+        ),
+    )
+    parser.add_argument("--host", default=None, help="Host to bind (default: gateway default)")
+    parser.add_argument("--port", type=int, default=None, help="Port to bind (default: gateway default)")
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload (legacy python runtime only)")
+    parser.add_argument("--log-level", default="info", help="Log level (legacy python runtime only)")
     parser.add_argument("--env", choices=["development", "production"], default=None, help="Runtime env override")
     parser.add_argument("--config", default=None, help="Config file path override")
+    parser.add_argument(
+        "--runtime",
+        choices=["auto", "node", "python"],
+        default="auto",
+        help="Gateway runtime (default: auto -> node)",
+    )
+    return parser
 
-    args = parser.parse_args()
 
-    print("""
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║                                                               ║
-    ║     ███╗   ██╗██╗██╗  ██╗ ██████╗                            ║
-    ║     ████╗  ██║██║██║ ██╔╝██╔═══██╗                           ║
-    ║     ██╔██╗ ██║██║█████╔╝ ██║   ██║                           ║
-    ║     ██║╚██╗██║██║██╔═██╗ ██║   ██║                           ║
-    ║     ██║ ╚████║██║██║  ██╗╚██████╔╝                           ║
-    ║     ╚═╝  ╚═══╝╚═╝╚═╝  ╚═╝ ╚═════╝  Studio V8                ║
-    ║                                                               ║
-    ║     MCP Gateway - Multi-Model Parallel Access                ║
-    ║                                                               ║
-    ╚═══════════════════════════════════════════════════════════════╝
-    """)
+def _run_node_gateway(args: argparse.Namespace) -> int:
+    env = os.environ.copy()
+    if args.env:
+        env["NIKO_ENV"] = args.env
+    if args.config:
+        env["NIKO_CONFIG_PATH"] = args.config
+    if args.host:
+        env["NIKO_GATEWAY_HOST"] = str(args.host)
+    if args.port:
+        env["NIKO_GATEWAY_PORT"] = str(args.port)
+    env["NIKO_GATEWAY_RUNTIME"] = "node"
 
+    if args.reload:
+        print("WARN: Node runtime does not support --reload in this launcher; flag ignored.")
+    if args.log_level and args.log_level.lower() != "info":
+        print("WARN: Node runtime log-level is managed by the TS gateway; --log-level is ignored here.")
+
+    if not NODE_GATEWAY_LAUNCHER.exists():
+        print("ERROR: Node gateway launcher is unavailable in this checkout.")
+        print(f"   Missing: {NODE_GATEWAY_LAUNCHER}")
+        return 2
+
+    cmd = [_node_cmd(), str(NODE_GATEWAY_LAUNCHER)]
+
+    print("INFO: Starting Node/TypeScript gateway runtime")
+    print("   Command:", " ".join(cmd))
+    result = subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env, check=False)
+    return result.returncode
+
+
+def _run_legacy_python_gateway(args: argparse.Namespace) -> int:
+    if not LEGACY_PY_GATEWAY.exists():
+        print("ERROR: Legacy Python runtime is unavailable in this checkout.")
+        print(f"   Missing: {LEGACY_PY_GATEWAY}")
+        print("   This checkout is Node-first and does not include legacy Python gateway sources by default.")
+        print("   Use default Node runtime: python scripts/start_gateway.py [--host ... --port ...]")
+        print("   Keep '--runtime python' only for compatibility branches that restore legacy sources.")
+        return 2
+
+    # Import only when legacy path exists.
+    sys.path.insert(0, str(PROJECT_ROOT))
     try:
         import uvicorn
-        from src.config import init_config, ensure_environment, get_config_value
+        from src.config import ensure_environment, get_config_value, init_config
+    except ImportError as exc:
+        print(f"ERROR: Legacy Python runtime dependency missing: {exc}")
+        print("   For current migration baseline, use '--runtime node'.")
+        return 1
 
-        if args.env:
-            os.environ["NIKO_ENV"] = args.env
+    if args.env:
+        os.environ["NIKO_ENV"] = args.env
 
-        env_flag = str(os.getenv("NIKO_ENV", "")).lower()
-        is_production_flag = env_flag in {"prod", "production"}
-        default_prod_config = project_root / "config" / "niko-studio.production.yaml"
+    env_flag = str(os.getenv("NIKO_ENV", "")).lower()
+    is_production_flag = env_flag in {"prod", "production"}
+    default_prod_config = PROJECT_ROOT / "config" / "niko-studio.production.yaml"
 
-        config_path = args.config or os.getenv("NIKO_CONFIG_PATH")
-        if not config_path and is_production_flag and default_prod_config.exists():
-            config_path = str(default_prod_config)
+    config_path = args.config or os.getenv("NIKO_CONFIG_PATH")
+    if not config_path and is_production_flag and default_prod_config.exists():
+        config_path = str(default_prod_config)
 
-        init_config(config_path=config_path, hot_reload=False)
-        ensure_environment(strict=False)
+    init_config(config_path=config_path, hot_reload=False)
+    ensure_environment(strict=False)
 
-        host = str(args.host or get_config_value("gateway.host", "0.0.0.0"))
-        port = int(args.port or get_config_value("gateway.port", 8000))
+    host = str(args.host or get_config_value("gateway.host", "0.0.0.0"))
+    port = int(args.port or get_config_value("gateway.port", 8000))
 
-        env = str(get_config_value("env", "development")).lower()
-        is_production = env in {"prod", "production"}
+    env = str(get_config_value("env", "development")).lower()
+    is_production = env in {"prod", "production"}
 
-        if args.reload and is_production:
-            print("⚠️  Production 环境已忽略 --reload")
-        reload_enabled = bool(args.reload and not is_production)
+    if args.reload and is_production:
+        print("WARN: --reload is ignored in production.")
+    reload_enabled = bool(args.reload and not is_production)
 
-        if is_production:
-            cors_prod_origins = get_config_value("gateway.cors_prod_origins", [])
-            if isinstance(cors_prod_origins, str):
-                cors_prod_origins = [x.strip() for x in cors_prod_origins.split(",") if x.strip()]
-            forbidden = {"*", "http://localhost:3000", "http://127.0.0.1:3000"}
-            effective_origins = [origin for origin in cors_prod_origins if origin not in forbidden]
-            if not effective_origins:
-                print("❌ Error: production CORS whitelist is empty")
-                print("   Set NIKO_CORS_PROD_ORIGINS or gateway.cors_prod_origins with real domains")
-                sys.exit(1)
+    print("INFO: Starting legacy Python gateway runtime")
+    uvicorn.run(
+        "src.mcp.gateway:app",
+        host=host,
+        port=port,
+        reload=reload_enabled,
+        log_level=args.log_level,
+    )
+    return 0
 
-        if config_path:
-            print(f"🧩 Config file: {config_path}")
 
-        print(f"🚀 Starting MCP Gateway on http://{host}:{port}")
-        print()
-        print("📊 Available MCP Endpoints:")
-        print(f"   • http://localhost:{port}/memory   - 记忆服务")
-        print(f"   • http://localhost:{port}/graph    - 知识图谱")
-        print(f"   • http://localhost:{port}/skills   - 技能包")
-        print(f"   • http://localhost:{port}/search   - 搜索服务")
-        print(f"   • http://localhost:{port}/workflow - 工作流")
-        print(f"   • http://localhost:{port}/critic   - 评估服务")
-        print()
-        print("📋 Utility Endpoints:")
-        print(f"   • http://localhost:{port}/health   - 健康检查")
-        print(f"   • http://localhost:{port}/metrics  - 运行指标")
-        print(f"   • http://localhost:{port}/tools    - 工具列表")
-        print()
-        print("🔗 Client Configuration:")
-        print(f'   Claude Code: {{"type": "streamable-http", "url": "http://localhost:{port}/memory"}}')
-        print()
+def main() -> None:
+    parser = _build_parser()
+    args = parser.parse_args()
+    runtime = _resolve_runtime(args.runtime)
+    if runtime == "python" and args.runtime == "auto" and not LEGACY_PY_GATEWAY.exists():
+        print("WARN: auto runtime resolved to python via NIKO_GATEWAY_RUNTIME, but legacy Python source is missing.")
+        print("      Falling back to node runtime.")
+        runtime = "node"
 
-        uvicorn.run(
-            "src.mcp.gateway:app",
-            host=host,
-            port=port,
-            reload=reload_enabled,
-            log_level=args.log_level
-        )
-    except ImportError:
-        print("❌ Error: uvicorn not installed")
-        print("   Run: pip install uvicorn")
-        sys.exit(1)
+    if runtime == "python":
+        exit_code = _run_legacy_python_gateway(args)
+    else:
+        exit_code = _run_node_gateway(args)
+
+    raise SystemExit(exit_code)
 
 
 if __name__ == "__main__":

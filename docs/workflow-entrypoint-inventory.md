@@ -23,6 +23,16 @@ Goal: establish migration baseline for single-authority external workflow entry
 - Authoritative external workflow entry families: **3** (`CLI run`, `CLI guided_draft`, `MCP workflow_*`, `Web UI`, `Streamlit`), all on `WorkflowEngine`.
 - Legacy external compatibility entry families: **0** (all migrated to WorkflowEngine.run_stream).
 
+## IMPL-006 Compatibility Boundaries (2026-04-07)
+
+| Surface | Decision | Boundary |
+|---|---|---|
+| `src-ts/workflow/types.ts` legacy aliases (`contract_version`, `workflowLevel`, `level`, `decision_result`) | retain | Frozen as a bounded alias map for existing desktop/MCP-compatible payload shapes. |
+| `src-ts/workflow/types.ts` alias `level_slug -> workflow_level_slug` | remove | Removed from legacy field map because it had no active consumer and only created migration-era drift. |
+| `src-ts/workflow/types.ts` top-level legacy alias backfill | retain (bounded) | Backfill now applies only when alias value is defined, so compatibility fields no longer spread empty placeholders. |
+| `src-ts/web/app.ts` deprecated root (`GET /`) | retain | Default is intentional `410 Gone` with deprecation message. |
+| `src-ts/web/app.ts` forward shim (`WEB_UI_FORWARD_URL`) | retain (bounded) | Redirect enabled only for valid `http/https` URLs; invalid/unsupported values fall back to `410` instead of forwarding. |
+
 ## Migration Status
 
 ### Completed (2026-03-15)

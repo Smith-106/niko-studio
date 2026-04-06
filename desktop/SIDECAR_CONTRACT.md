@@ -65,8 +65,8 @@ NIKO_GATEWAY_RUNTIME=python npm run tauri:dev
 
 **Build-time note**:
 
-- `desktop/scripts/choose_sidecar.cjs` still defaults to building the Python sidecar when `NIKO_GATEWAY_RUNTIME` is unset.
-- Runtime preference and packaged build default are intentionally separate until the final packaged/runtime cutover is complete.
+- `desktop/scripts/choose_sidecar.cjs` defaults to building the Node sidecar when `NIKO_GATEWAY_RUNTIME` is unset.
+- `NIKO_GATEWAY_RUNTIME=python` remains available as an explicit compatibility fallback.
 
 ## Validation
 
@@ -76,9 +76,19 @@ npm run validate:sidecar-contract
 ```
 
 This checks:
-- All required files exist for the current platform
+- All required files exist for the selected runtime on the current platform
 - Bin directory exists
 - Strict mode exits with error on violations
+
+To validate the explicit Python compatibility fallback:
+```bash
+NIKO_GATEWAY_RUNTIME=python npm run validate:sidecar-contract
+```
+
+To validate both runtimes in one pass:
+```bash
+npm run validate:sidecar-contract -- --all-runtimes
+```
 
 ## Build Scripts
 
@@ -95,6 +105,7 @@ npm run build:sidecar:python
 ```
 - Runs PyInstaller to create binaries
 - Outputs to `desktop/src-tauri/bin/`
+- Fails fast with a clear message if the legacy Python entry is not present in the current checkout
 
 **Build all + validate**:
 ```bash

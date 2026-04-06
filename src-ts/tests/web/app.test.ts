@@ -67,6 +67,47 @@ describe('web/app compatibility path', () => {
     expect(state.body).toContain('Web UI has been deprecated');
   });
 
+  it('returns 302 with Location when WEB_UI_FORWARD_URL is a valid http/https URL', async () => {
+    process.env['WEB_UI_FORWARD_URL'] = 'https://gateway.example.com/landing/';
+
+    const { createApp } = await import('../../web/app.js');
+    const { handleRequest } = createApp();
+    const { res, state } = createResponseDouble();
+
+    handleRequest(
+      {
+        method: 'GET',
+        url: '/',
+        headers: {},
+      } as never,
+      res as never,
+    );
+
+    expect(state.statusCode).toBe(302);
+    expect(state.headers['Location']).toBe('https://gateway.example.com/landing');
+    expect(state.body).toContain('Redirecting to Gateway');
+  });
+
+  it('falls back to 410 when WEB_UI_FORWARD_URL uses unsupported protocol', async () => {
+    process.env['WEB_UI_FORWARD_URL'] = 'javascript:alert(1)';
+
+    const { createApp } = await import('../../web/app.js');
+    const { handleRequest } = createApp();
+    const { res, state } = createResponseDouble();
+
+    handleRequest(
+      {
+        method: 'GET',
+        url: '/',
+        headers: {},
+      } as never,
+      res as never,
+    );
+
+    expect(state.statusCode).toBe(410);
+    expect(state.body).toContain('Web UI has been deprecated');
+  });
+
   it('emits workflow_disabled when websocket workflow gate is off', async () => {
     const { handleWsMessage } = await import('../../web/app.js');
     const ws = { send: vi.fn() };

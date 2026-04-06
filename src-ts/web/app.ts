@@ -16,11 +16,15 @@ import { WorkflowEngine } from '../workflow/workflow-engine.js';
 // ---------------------------------------------------------------------------
 
 const WEB_WORKFLOW_ENABLED_ENV = 'WEB_WORKFLOW_ENABLED';
+const WEB_UI_FORWARD_URL_ENV = 'WEB_UI_FORWARD_URL';
 const WEB_WORKFLOW_DISABLED_MESSAGE =
   'Web workflow is disabled by default. Set WEB_WORKFLOW_ENABLED=true to enable it.';
 const WEB_WORKFLOW_RISK_MESSAGE =
   'Web workflow is an experimental compatibility path with operational and security risks. ' +
   'Prefer Desktop client or MCP Gateway.';
+const WEB_UI_DEPRECATED_MESSAGE =
+  'Web UI has been deprecated. Please use the Desktop client or MCP Gateway.';
+const WEB_UI_FORWARD_ALLOWED_PROTOCOLS = new Set(['http:', 'https:']);
 
 /** Trusted origins for CORS/CSWSH protection */
 const ORIGINS: string[] = [
@@ -149,23 +153,49 @@ const manager = new ConnectionManager();
  * HTTP request handler for the root route.
  *
  * Returns 410 (Gone) by default since the web UI is deprecated.
- * If WEB_UI_FORWARD_URL is set, returns an HTML redirect.
+ * If WEB_UI_FORWARD_URL is set to a trusted http/https URL, returns an HTML redirect.
  */
 function handleRootRequest(_req: IncomingMessage, res: ServerResponse): void {
-  const forwardUrl = (process.env['WEB_UI_FORWARD_URL'] ?? '').trim();
-  if (forwardUrl) {
-    const target = forwardUrl.replace(/\/$/, '');
-    const content =
-      '<html>' +
-      `<head><meta http-equiv="refresh" content="0; url=${target}"/></head>` +
-      '<body>Redirecting to Gateway...</body>' +
-      '</html>';
-    res.writeHead(302, { 'Content-Type': 'text/html' });
-    res.end(content);
-    return;
+  const rawForwardUrl = (process.env[WEB_UI_FORWARD_URL_ENV] ?? '').trim();
+  if (rawForwardUrl) {
+    const target = normalizeForwardTarget(rawForwardUrl);
+    if (!target) {
+      console.log('[audit] web_root_forward_rejected reason=invalid_url_or_protocol');
+    } else {
+      const escapedTarget = target
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;');
+      const content =
+        '<html>' +
+        `<head><meta http-equiv="refresh" content="0; url=${escapedTarget}"/></head>` +
+        '<body>Redirecting to Gateway...</body>' +
+        '</html>';
+      res.writeHead(302, {
+        'Content-Type': 'text/html; charset=utf-8',
+        Location: target,
+      });
+      res.end(content);
+      return;
+    }
   }
-  res.writeHead(410, { 'Content-Type': 'text/plain' });
-  res.end('Web UI has been deprecated. Please use the Desktop client or MCP Gateway.');
+  res.writeHead(410, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.end(WEB_UI_DEPRECATED_MESSAGE);
+}
+
+/**
+ * Normalize optional forwarding target for deprecated web root.
+ * Only explicit http/https URLs are accepted.
+ */
+function normalizeForwardTarget(rawForwardUrl: string): string | null {
+  try {
+    const parsed = new URL(rawForwardUrl);
+    if (!WEB_UI_FORWARD_ALLOWED_PROTOCOLS.has(parsed.protocol)) {
+      return null;
+    }
+    return parsed.href.replace(/\/$/, '');
+  } catch {
+    return null;
+  }
 }
 
 /**

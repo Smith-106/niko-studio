@@ -157,9 +157,10 @@ export function buildGatewayDeps(
 ): GatewayDeps {
   const mcpConfigs = state?.mcpConfigs ?? createMcpServiceConfigMap();
   const healthCache = state?.healthCache ?? createHealthCacheMap();
+  const gatewayVersion = String(getAppConfig().version ?? '1.0.0');
 
   return {
-    version: '1.0.0',
+    version: gatewayVersion,
     getEngine: (name: string) => {
       switch (name) {
         case 'memory':

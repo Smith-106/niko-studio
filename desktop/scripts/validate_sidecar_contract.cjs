@@ -14,10 +14,11 @@
  *    - Unix: niko-gateway-node
  *
  * Usage:
- *   node scripts/validate_sidecar_contract.js [--strict]
+ *   node scripts/validate_sidecar_contract.js [--strict] [--all-runtimes]
  *
  * Options:
- *   --strict  Exit with error if any contract violation (default: warn only)
+ *   --strict        Exit with error if any contract violation (default: warn only)
+ *   --all-runtimes  Validate both node and python contracts regardless of selected runtime
  */
 
 const fs = require('fs');
@@ -30,6 +31,9 @@ const BIN_DIR = path.join(DESKTOP_DIR, 'src-tauri', 'bin');
 
 const IS_WINDOWS = process.platform === 'win32';
 const STRICT_MODE = process.argv.includes('--strict');
+const VALIDATE_ALL_RUNTIMES = process.argv.includes('--all-runtimes');
+const rawRuntime = (process.env.NIKO_GATEWAY_RUNTIME || '').trim().toLowerCase();
+const SELECTED_RUNTIME = ['node', 'python'].includes(rawRuntime) ? rawRuntime : 'node';
 
 // Contract definitions
 const CONTRACTS = {
@@ -108,6 +112,9 @@ function main() {
   console.log(`   Bin directory: ${BIN_DIR}`);
   console.log(`   Platform: ${IS_WINDOWS ? 'Windows' : 'Unix'}`);
   console.log(`   Mode: ${STRICT_MODE ? 'STRICT' : 'WARN'}`);
+  console.log(
+    `   Validation scope: ${VALIDATE_ALL_RUNTIMES ? 'all runtimes' : `${SELECTED_RUNTIME} runtime`}`,
+  );
 
   if (!fs.existsSync(BIN_DIR)) {
     console.error(`\n❌ Bin directory not found: ${BIN_DIR}`);
@@ -117,7 +124,11 @@ function main() {
   const allResults = [];
   let hasFailures = false;
 
-  for (const [name, contract] of Object.entries(CONTRACTS)) {
+  const selectedContracts = VALIDATE_ALL_RUNTIMES
+    ? Object.entries(CONTRACTS)
+    : [[SELECTED_RUNTIME, CONTRACTS[SELECTED_RUNTIME]]];
+
+  for (const [name, contract] of selectedContracts) {
     const results = validateContract(name, contract);
     allResults.push(results);
     printResults(results);

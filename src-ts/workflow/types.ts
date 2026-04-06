@@ -19,15 +19,18 @@ export enum WorkflowDecision {
 // Constants
 export const ANALYSIS_SCHEMA_VERSION = '2026-02';
 
-export const LEGACY_CONTRACT_FIELD_MAP: Record<string, string> = {
+/**
+ * Bounded migration-era compatibility aliases retained for existing clients.
+ * Keep this surface minimal and explicitly tested.
+ */
+export const LEGACY_CONTRACT_FIELD_MAP: Readonly<Record<string, string>> = Object.freeze({
   contract_version: 'analysis_schema_version',
   workflowLevel: 'workflow_level',
   level: 'workflow_level',
-  level_slug: 'workflow_level_slug',
   decision_result: 'decision',
-};
+});
 
-export const LEGACY_DECISION_MAP: Record<string, string> = {
+export const LEGACY_DECISION_MAP: Readonly<Record<string, string>> = Object.freeze({
   approved: WorkflowDecision.GO,
   pass: WorkflowDecision.GO,
   go: WorkflowDecision.GO,
@@ -36,7 +39,7 @@ export const LEGACY_DECISION_MAP: Record<string, string> = {
   rewrite: WorkflowDecision.NO_GO,
   human_review: WorkflowDecision.NO_GO,
   no_go: WorkflowDecision.NO_GO,
-};
+});
 
 export const CONTRACT_NULLABLE_DEFAULTS: Record<string, unknown> = {
   compatibility: {},
@@ -360,7 +363,9 @@ export function applyContractDefaults(payload: Record<string, unknown>): Record<
   }
   normalized.legacy_contract_fields = buildLegacyContractFields(normalized);
   for (const [lk, lv] of Object.entries(normalized.legacy_contract_fields as Record<string, unknown>)) {
-    normalized[lk] ??= lv;
+    if (lv !== undefined) {
+      normalized[lk] ??= lv;
+    }
   }
   return normalized;
 }

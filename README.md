@@ -1,6 +1,6 @@
 # AI Agent Platform
 
-> **Version**: 8.0.0 (Platform Edition)
+> **Version**: 8.2.0 (Platform Edition)
 > **Architecture**: Multi-Agent Collaboration + OpenKL Memory + CCW Workflow  
 > **Positioning**: Cherry Studio / Claude-Code-Workflow style AI Agent Platform
 
@@ -69,8 +69,8 @@ uv sync
 
 当前 Web 交付模型以 **Desktop + MCP Gateway** 为主路径：
 
-- 主交付路径：Desktop 客户端 + Tauri 宿主管理的本地 Gateway。当前桌面运行时默认优先 Node/TypeScript Gateway，并保留显式 Python override/fallback。
-- 兼容启动路径：`scripts/start_gateway.py` 仍可单独拉起 Python Gateway，用于兼容验证、独立调试和回退场景。
+- 主交付路径：Desktop 客户端 + Tauri 宿主管理的本地 Gateway。当前桌面运行时与默认构建都优先 Node/TypeScript Gateway。
+- 兼容启动路径：`scripts/start_gateway.py` 默认（`--runtime auto`）启动 Node/TypeScript Gateway；`--runtime python` 仅用于兼容分支。若 legacy Python 源缺失，auto 会回落 Node。
 - Deprecated 路径：`src-ts/web/app.ts` 的 `GET /` 默认返回 `410`；仅在设置 `WEB_UI_FORWARD_URL` 时临时 `302` 转发。
 - Streamlit 路径：用于原型与兼容性验证，不作为主交付入口。
 
@@ -119,21 +119,32 @@ unset CLAUDECODE && ./scripts/aha-loop/orchestrator.sh
 ### Initialize Database
 
 ```bash
-# Initialize Kùzu database and create schema
-python -c "from src.graph.graph_manager import init_schema; init_schema()"
+# Gateway runtime 会在首次启动时初始化所需存储
+# 如需手动验证 TypeScript 运行面
+npm --prefix src-ts run typecheck
+```
+
+### 构建 Desktop Sidecar
+
+```bash
+# 默认：Node sidecar（Node-first）
+npm --prefix desktop run build:sidecar
+
+# 显式 Python 兼容构建（仅 legacy entry 存在时可用）
+python scripts/build_gateway_sidecar.py --legacy-entry src/mcp/sidecar_entry.py
 ```
 
 ### 运行 Gateway
 
 ```bash
-# 开发环境（允许 reload）
-python scripts/start_gateway.py --host 0.0.0.0 --port 8000 --reload
+# 默认（auto）：启动 Node/TypeScript Gateway
+python scripts/start_gateway.py --host 0.0.0.0 --port 8000
 
-# 生产环境（默认关闭 reload，并启用生产 CORS 白名单）
+# 生产环境（按配置启动）
 python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml --host 0.0.0.0 --port 8000
 
-# 若需环境变量覆盖
-NIKO_CORS_PROD_ORIGINS="https://app.example.com,https://gray.example.com" python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml
+# 显式 Python 兼容回退（仅 legacy src/mcp/gateway.py 存在时可用）
+python scripts/start_gateway.py --runtime python --host 0.0.0.0 --port 8000
 ```
 
 可用运维端点：
@@ -161,14 +172,15 @@ niko-studio/
 ├── docs/
 │   ├── sdd/             # System design specs (modular)
 │   └── TASKS_V10_OPTIMIZED.md # Development Task List (V10)
-├── src/
+├── src-ts/
 │   ├── agents/             # Core Agents (Commander, Architect, Writer, Critic)
-│   ├── memory/             # Memory Layer (MemoryManager, CitationManager)
-│   ├── workflow/           # Workflow System (Levels, Sessions)
-│   ├── search/             # Search Services (SmartSearch, VectorSearch)
-│   ├── store/              # Document Store (StoreManager)
-│   ├── graph/              # Knowledge Graph (GraphManager)
+│   ├── memory/             # Memory Layer
+│   ├── workflow/           # Workflow System
+│   ├── search/             # Search Services
+│   ├── store/              # Document Store
+│   ├── graph/              # Knowledge Graph
 │   └── services/           # Platform Services
+├── src/                    # Optional legacy Python runtime surface (compat branches only)
 ├── tests/
 │   ├── unit/               # Unit Tests
 │   └── integration/        # Integration Tests
@@ -236,4 +248,4 @@ Built on concepts from:
 
 ---
 
-*Version 8.0.0 Platform Edition | Updated: 2026-02-12*
+*Version 8.2.0 Platform Edition | Updated: 2026-04-07*
