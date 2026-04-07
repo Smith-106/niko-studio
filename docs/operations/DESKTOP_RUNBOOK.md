@@ -95,6 +95,7 @@ python scripts/run_targeted_pytest.py tests/unit/mcp/test_gateway_endpoints.py -
 
 ```bash
 # P2 selected hard gate contracts (local targeted run)
+python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q
 python scripts/run_targeted_pytest.py tests/unit/workflow/test_workflow_engine.py -k "decision" -q
 python scripts/run_targeted_pytest.py tests/unit/mcp/test_gateway_stream.py -k "contract" -q
 python scripts/run_targeted_pytest.py tests/unit/test_ci_gate_workflows.py -q

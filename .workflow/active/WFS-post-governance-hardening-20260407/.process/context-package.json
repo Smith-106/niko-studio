@@ -1,0 +1,72 @@
+{
+  "critical_files": [
+    ".github/workflows/integration-tests.yml",
+    "desktop/scripts/choose_sidecar.cjs",
+    "scripts/start_gateway.py",
+    "desktop/SIDECAR_IMPLEMENTATION_SUMMARY.md",
+    "README.md",
+    "docs/INDEX.md",
+    "docs/TASKS_V10_OPTIMIZED.md",
+    "docs/ui_design_guide.md",
+    "docs/workflow-entrypoint-inventory.md",
+    "scripts/release_check_summary.py"
+  ],
+  "patterns": [
+    "Node-first authoritative runtime with explicit Python compatibility fallback",
+    "Wave-based execution planning with non-overlapping scopes",
+    "High-visibility docs using authority notes to bound historical material",
+    "CI governance split across blocking checks and soft advisory checks"
+  ],
+  "dependencies": [
+    "Current release authority depends on desktop + src-ts validation",
+    "Wave 2 automation depends on clarified CI/runtime/docs boundaries from Wave 1",
+    "Final verification depends on alignment checks produced in Wave 2"
+  ],
+  "integration_points": [
+    {
+      "module": "ci-governance",
+      "paths": [
+        ".github/workflows/integration-tests.yml",
+        "docs/release/RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "module": "runtime-governance",
+      "paths": [
+        "desktop/scripts/choose_sidecar.cjs",
+        "scripts/start_gateway.py",
+        "desktop/SIDECAR_IMPLEMENTATION_SUMMARY.md"
+      ]
+    },
+    {
+      "module": "authority-docs",
+      "paths": [
+        "README.md",
+        "docs/INDEX.md",
+        "docs/TASKS_V10_OPTIMIZED.md",
+        "docs/ui_design_guide.md",
+        "docs/workflow-entrypoint-inventory.md"
+      ]
+    },
+    {
+      "module": "alignment-automation",
+      "paths": [
+        "scripts/release_check_summary.py",
+        "scripts/check_authority_alignment.py"
+      ]
+    }
+  ],
+  "conflict_risk": "medium",
+  "conflict_areas": [
+    ".github/workflows/integration-tests.yml",
+    "README.md",
+    "scripts/start_gateway.py",
+    "scripts/release_check_summary.py"
+  ],
+  "constraints": [
+    "Do not reopen completed migration closure work",
+    "Preserve current GO-capable release path",
+    "Keep Python fallback explicit and bounded rather than removing it blindly",
+    "Keep same-wave scopes non-overlapping"
+  ]
+}

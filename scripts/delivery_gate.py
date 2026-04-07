@@ -76,6 +76,36 @@ RULES: tuple[GateRule, ...] = (
         reason="baseline 覆盖率仍绑定 legacy src 树，未切换到 Phase4 TS 面。",
         must_exist=False,
     ),
+    GateRule(
+        file_path=".github/workflows/external-release-gate.yml",
+        needle="python scripts/check_authority_alignment.py",
+        reason="external release gate 未执行 authority alignment 检查，workflow/runtime/docs 口径可能漂移。",
+    ),
+    GateRule(
+        file_path="docs/release/RELEASE_NOTES.md",
+        needle="权威对齐检查通过",
+        reason="release notes 未把 authority alignment 作为 external Go/No-Go 条件。",
+    ),
+    GateRule(
+        file_path="docs/release/RELEASE_NOTES.md",
+        needle="用于内部验证；main 分支仍保留 authority alignment 与选定契约的阻断门禁",
+        reason="release notes 的 internal 矩阵行未体现 main 分支仍有阻断门禁。",
+    ),
+    GateRule(
+        file_path="docs/SECURITY_VISIBILITY.md",
+        needle="权威对齐检查：`python scripts/check_authority_alignment.py`",
+        reason="安全可见化清单未暴露 authority alignment 本地检查入口。",
+    ),
+    GateRule(
+        file_path="docs/SECURITY_VISIBILITY.md",
+        needle="workflow / runtime / docs authority alignment 锚点",
+        reason="安全可见化清单未将 authority alignment 归入交付语义门禁覆盖范围。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"authority_alignment_signal\",\n            \"P0\",\n            True,",
+        reason="release summary 未将 authority_alignment_signal 视为 P0 blocking 信号。",
+    ),
 )
 
 

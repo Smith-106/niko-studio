@@ -3,10 +3,10 @@
  * Sidecar Build Selector
  *
  * Chooses which sidecar to build based on NIKO_GATEWAY_RUNTIME environment variable.
- * - NIKO_GATEWAY_RUNTIME=node (or unset) → Build Node sidecar
- * - NIKO_GATEWAY_RUNTIME=python → Build Python sidecar
+ * - NIKO_GATEWAY_RUNTIME=node (or unset) -> Build Node sidecar
+ * - NIKO_GATEWAY_RUNTIME=python -> Build Python sidecar
  *
- * This provides dual-track fallback during migration closure:
+ * This provides a Node-first authority model with an explicit compatibility fallback:
  * - Default: Node sidecar (authoritative runtime path)
  * - Optional: Python sidecar (explicit compatibility fallback)
  */
@@ -16,7 +16,11 @@ const path = require('path');
 
 const rawRuntime = process.env.NIKO_GATEWAY_RUNTIME;
 const normalizedRuntime = (rawRuntime || '').trim().toLowerCase();
-const RUNTIME = normalizedRuntime || 'node';
+const AUTHORITATIVE_RUNTIME = 'node';
+const SUPPORTED_RUNTIMES = ['node', 'python'];
+const RUNTIME = SUPPORTED_RUNTIMES.includes(normalizedRuntime)
+  ? normalizedRuntime
+  : AUTHORITATIVE_RUNTIME;
 const SCRIPTS_DIR = path.resolve(__dirname);
 const DESKTOP_DIR = path.resolve(SCRIPTS_DIR, '..');
 
@@ -68,8 +72,14 @@ function validateContract() {
 function main() {
   log(`Runtime selection: NIKO_GATEWAY_RUNTIME=${RUNTIME}`);
 
-  if (!['node', 'python'].includes(RUNTIME)) {
-    log(`Unknown runtime "${rawRuntime}", falling back to node`);
+  if (normalizedRuntime && !SUPPORTED_RUNTIMES.includes(normalizedRuntime)) {
+    log(`Unknown runtime "${rawRuntime}", falling back to authoritative node runtime`);
+  }
+
+  if (RUNTIME === 'python') {
+    log('Compatibility override active: Python sidecar is not the authoritative default runtime');
+  } else {
+    log('Authoritative runtime active: Node-first sidecar path');
   }
 
   if (RUNTIME === 'python') {

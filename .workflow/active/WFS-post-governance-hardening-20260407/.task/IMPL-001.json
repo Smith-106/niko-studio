@@ -1,0 +1,54 @@
+{
+  "id": "IMPL-001",
+  "title": "Graduate remaining internal soft gates into explicit governance rules",
+  "description": "Refine the internal integration workflow so runtime- and sidecar-related soft gates have clearer graduation semantics, preserving useful signal while reducing ambiguous observation-only behavior.",
+  "status": "completed",
+  "type": "ops",
+  "scope": ".github/workflows/integration-tests.yml",
+  "action": "Implement",
+  "depends_on": [],
+  "focus_paths": [
+    ".github/workflows/integration-tests.yml",
+    "docs/release/RELEASE_NOTES.md",
+    "release-check-summary.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "Internal workflow makes soft versus hard intent explicit for remaining runtime and sidecar checks",
+      "Selected runtime and desktop contract checks are not left as ambiguous observation-only duplicates",
+      "All referenced commands and paths remain valid"
+    ],
+    "verification": "Review the workflow and verify that referenced paths exist, continue-on-error usage is intentional, and selected hard-fail jobs still cover the authoritative path.",
+    "definition_of_done": "The internal CI workflow expresses a clear governance model for remaining soft gates without weakening the current validation surface."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Audit remaining soft-fail jobs",
+      "description": "Identify which jobs are still advisory only and whether they should stay advisory or graduate."
+    },
+    {
+      "step": 2,
+      "title": "Clarify graduation semantics",
+      "description": "Refactor the workflow so the remaining soft and hard checks communicate explicit governance intent."
+    },
+    {
+      "step": 3,
+      "title": "Validate command and path integrity",
+      "description": "Confirm every referenced validation command still matches the current repo layout."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-post-governance-hardening-20260407/.process/context-package.json",
+  "meta": {
+    "type": "governance",
+    "agent": "@code-developer",
+    "execution_group": "wave-1-ci-governance",
+    "module": "internal-ci",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

@@ -1,5 +1,7 @@
 # Workflow Entrypoint Inventory Baseline (S-1 / QUE-20260304175803)
 
+> **状态说明（2026-04-07）**: 本文档记录 Python/legacy workflow 入口迁移时的基线与兼容边界，主要用于历史追溯与迁移说明，不代表当前 `desktop + src-ts` 运行/发布权威入口。当前权威口径请以 `README.md`、`docs/INDEX.md`、`docs/release/RELEASE_NOTES.md` 与实际 `desktop/`、`src-ts/` 代码为准。
+
 Date: 2026-03-15 (Updated: Streaming API Migration)
 Scope: `WorkflowEngine` / `src.workflow.graph` / `NovelAdapter` call graph inventory
 Goal: establish migration baseline for single-authority external workflow entry

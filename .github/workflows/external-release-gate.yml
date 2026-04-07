@@ -49,6 +49,16 @@ jobs:
         run: |
           python scripts/delivery_gate.py
 
+      - name: Run governance script regression tests (${{ inputs.gate_label }})
+        run: |
+          python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q --junitxml=governance-scripts.junit.xml
+
+      - name: Upload governance script regression report
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-scripts-report-${{ inputs.gate_label }}
+          path: governance-scripts.junit.xml
+
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -125,6 +135,16 @@ jobs:
           npm run validate:sidecar-contract
           echo "desktop sidecar readiness ok"
         working-directory: desktop
+
+      - name: Run authority alignment check (${{ inputs.gate_label }})
+        run: |
+          python scripts/check_authority_alignment.py > authority-alignment.json
+
+      - name: Upload authority alignment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: authority-alignment-report-${{ inputs.gate_label }}
+          path: authority-alignment.json
 
       - name: Resolve Codecov strict mode
         id: codecov_mode

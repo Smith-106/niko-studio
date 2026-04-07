@@ -2,7 +2,7 @@
 
 ## 概述
 
-成功完成 Node sidecar 可被 Tauri externalBin 正确打包的执行链，实现双运行时支持（Python + Node）。
+成功完成 Node sidecar 可被 Tauri externalBin 正确打包的执行链，并建立 Node-first 默认运行时与显式 Python 兼容回退的治理边界。
 
 ## 已完成的 Phase
 
@@ -47,9 +47,9 @@ npm run build:sidecar  # 默认选择 Node sidecar + 选定 runtime 契约验证
    }
    ```
 
-3. **双运行时支持**:
-   - ✅ Python sidecar: `niko-gateway.exe`, `niko-gateway-x86_64-pc-windows-msvc.exe`
-   - ✅ Node sidecar: `niko-gateway-node`, `niko-gateway-node.cmd`
+3. **运行时边界**:
+   - ✅ Node sidecar: `niko-gateway-node`, `niko-gateway-node.cmd`（默认权威路径）
+   - ✅ Python sidecar: `niko-gateway.exe`, `niko-gateway-x86_64-pc-windows-msvc.exe`（显式兼容回退）
 
 **验证结果**:
 ```bash
@@ -82,7 +82,7 @@ npm run build:sidecar                              # 默认构建 Node sidecar
 3. **运行时切换机制**:
    - Rust 代码已支持 `NIKO_GATEWAY_RUNTIME` 环境变量
    - Desktop 本地运行时现已默认优先 Node sidecar
-   - 设置 `NIKO_GATEWAY_RUNTIME=python` 可强制切换到 Python sidecar
+   - 设置 `NIKO_GATEWAY_RUNTIME=python` 才会显式切换到 Python sidecar
    - 当 Node 路径不可用时，Rust 侧仍保留 Python fallback
 
 **验证结果**:
@@ -102,27 +102,33 @@ npm run build:sidecar                              # 默认构建 Node sidecar
      run: npm run build:sidecar
      working-directory: desktop
 
-   - name: Verify desktop sidecar contract artifact (soft gate)
-     continue-on-error: true  # 软门禁（观察期）
+   - name: Verify desktop sidecar contract artifact (advisory lane)
+     continue-on-error: true  # 观察/遥测通道
      id: sidecar-contract
+     run: npm run validate:sidecar-contract
+     working-directory: desktop
+
+   # main 分支额外启用 blocking promotion lane
+   - name: Validate desktop sidecar contract (main hard gate)
      run: npm run validate:sidecar-contract
      working-directory: desktop
    ```
 
 2. **Release Gate Workflow** (`.github/workflows/external-release-gate.yml`):
    ```yaml
-   - name: Check desktop sidecar readiness (soft)
+   - name: Check desktop sidecar readiness
      id: sidecar-readiness
      run: |
-       npm run build:sidecar || { echo "::warning::desktop sidecar build failed (soft gate)"; exit 0; }
-       npm run validate:sidecar-contract || { echo "::warning::desktop sidecar contract validation failed (soft gate)"; exit 0; }
+       npm run build:sidecar
+       npm run validate:sidecar-contract
        echo "desktop sidecar readiness ok"
      working-directory: desktop
    ```
 
 3. **门禁策略**:
-   - ✅ **Soft Gate**（当前）: 警告但继续执行，收集稳定性数据
-   - 🔜 **Hard Gate**（未来）: 观察期后升级为阻断门禁
+   - ✅ **Advisory Lane**（internal）: 保留观察通道，便于收集稳定性与平台差异信号
+   - ✅ **Main Hard Gate**（internal）: main 分支对 sidecar 契约启用阻断验证
+   - ✅ **Hard Gate**（external）: release gate 中 sidecar readiness 已是阻断门禁
 
 ---
 
@@ -155,11 +161,11 @@ NIKO_GATEWAY_RUNTIME=python npm run tauri:dev
 ```bash
 # Integration Tests Workflow
 npm run build:sidecar              # 构建选定 sidecar
-npm run validate:sidecar-contract  # 验证当前选定 runtime 契约（soft gate）
+npm run validate:sidecar-contract  # advisory lane；main 分支另有 blocking promotion lane
 
 # Release Gate Workflow
 npm run build:sidecar              # 构建选定 sidecar
-npm run validate:sidecar-contract  # 验证契约（soft gate）
+npm run validate:sidecar-contract  # 验证契约（blocking gate）
 ```
 
 ---
@@ -177,19 +183,19 @@ npm run validate:sidecar-contract  # 验证契约（soft gate）
 ### CI 验证
 - [x] Integration workflow 包含 sidecar 构建
 - [x] Release workflow 包含 sidecar readiness 检查
-- [x] Soft gate 配置正确（continue-on-error: true）
+- [x] Advisory lane 与 main hard gate 语义已拆分清晰
 
 ---
 
 ## 下一步工作
 
 ### 短期（观察期）
-1. **监控 CI 稳定性**: 观察 soft gate 的执行情况
+1. **监控 CI 稳定性**: 观察 advisory lane 与 main hard gate 的执行情况
 2. **收集反馈**: 检查是否有平台特定问题
 3. **文档完善**: 更新开发者文档，说明运行时切换
 
 ### 中期（门禁升级）
-1. **升级为 Hard Gate**: 观察期后移除 `continue-on-error`
+1. **收窄 advisory lane**: 对稳定的 sidecar / runtime 校验逐步减少重复观察型 job
 2. **平台测试**: 在 macOS/Linux 上验证
 3. **自动化测试**: 添加 sidecar 启动健康检查
 
@@ -206,7 +212,7 @@ npm run validate:sidecar-contract  # 验证契约（soft gate）
 |------|----------|
 | Tauri externalBin 命名不匹配 | 契约验证脚本检查平台特定命名 |
 | Node sidecar 启动语义不一致 | Rust 健康检查逻辑已统一（`/health` 端点） |
-| CI 平台差异 | Soft gate 观察，稳定后升级 |
+| CI 平台差异 | advisory lane 观察 + main hard gate 收敛 |
 | 迁移期双轨复杂度 | 环境变量切换，逐步收敛 |
 
 ---

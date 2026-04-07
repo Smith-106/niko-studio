@@ -26,11 +26,14 @@ Niko-Studio 文档目录
 
 ## 当前有效发布口径
 
-- 内部验证使用 `internal` 口径：允许跳过 e2e 冒烟，质量信号以告警为主。
+- 当前运行时 / 构建权威：`desktop + src-ts`
+- 内部验证使用 `internal` 口径：允许跳过 e2e 冒烟，但 main 分支仍保留 authority alignment 与选定契约的阻断门禁。
 - 对外交付使用 `external` 口径：e2e 冒烟与质量信号完整性为强制门禁。
+- internal / external 都要求 workflow / runtime / docs 权威口径保持一致。
 - 当前发布判断以 [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md)、[operations/ROLLBACK.md](operations/ROLLBACK.md)、`python scripts/release_check_summary.py` 为准。
 - 当前 internal CI 权威入口：`.github/workflows/integration-tests.yml`
 - `TASKS_V10_OPTIMIZED.md` 保留为历史架构任务文档，不作为当前 release readiness 的唯一真源。
+- `ui_design_guide.md` 与 `workflow-entrypoint-inventory.md` 保留为迁移/历史参考，不作为当前运行权威说明。
 
 ## 规格文档
 

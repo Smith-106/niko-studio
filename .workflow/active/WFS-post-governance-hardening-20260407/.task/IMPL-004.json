@@ -1,0 +1,61 @@
+{
+  "id": "IMPL-004",
+  "title": "Add automated authority alignment checks",
+  "description": "Create or extend tooling that detects drift between workflow authority, runtime selector behavior, and high-visibility docs claims so governance regressions become mechanically visible.",
+  "status": "completed",
+  "type": "automation",
+  "scope": "scripts/release_check_summary.py;scripts/check_authority_alignment.py",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-001",
+    "IMPL-002",
+    "IMPL-003"
+  ],
+  "focus_paths": [
+    "scripts/release_check_summary.py",
+    ".github/workflows/integration-tests.yml",
+    "desktop/scripts/choose_sidecar.cjs",
+    "scripts/start_gateway.py",
+    "README.md",
+    "docs/INDEX.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "A callable check exists for authority drift between workflows, runtime selectors, and docs",
+      "Current aligned repository state passes the new check cleanly",
+      "Mismatch results are actionable rather than opaque"
+    ],
+    "verification": "Run the new or extended authority-alignment check locally and confirm it reports the current repository as aligned after Waves 1 outputs are applied.",
+    "definition_of_done": "Authority drift is automatically detectable instead of relying only on human memory."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Define machine-checkable authority rules",
+      "description": "Translate the clarified Wave 1 rules into explicit checks."
+    },
+    {
+      "step": 2,
+      "title": "Implement the check",
+      "description": "Create a new script or extend release summary tooling with authority drift detection."
+    },
+    {
+      "step": 3,
+      "title": "Validate current state",
+      "description": "Run the check against the current repo and ensure the output is actionable."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-post-governance-hardening-20260407/.process/context-package.json",
+  "meta": {
+    "type": "automation",
+    "agent": "@code-developer",
+    "execution_group": "wave-2-alignment-automation",
+    "module": "authority-checks",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

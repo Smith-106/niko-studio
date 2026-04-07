@@ -4,8 +4,13 @@
 
 | 级别 | 用途 | e2e 冒烟 | Codecov 上传失败 | 结论 |
 |---|---|---|---|---|
-| internal | 内部 dry-run / 日常集成验证 | 可跳过 | 告警，不阻断 | 用于内部验证 |
+| internal | 内部 dry-run / 日常集成验证 | 可跳过 | 告警，不阻断 | 用于内部验证；main 分支仍保留 authority alignment 与选定契约的阻断门禁 |
 | external | 对外交付 / 正式发布 | 必须通过 | 有 `CODECOV_TOKEN` 时阻断；无 token 时告警并登记风险 | 满足 Go/No-Go 条件后放行 |
+
+补充说明：
+
+- internal 口径允许跳过 external e2e 冒烟，但不代表内部完全无阻断门禁；main 分支仍保留 authority alignment 与选定高风险契约的 blocking checks。
+- external 口径在 internal 基础上再叠加 external smoke、quality signal completeness 与 release-specific blocking 条件。
 
 ## External 发布准入条件（Go/No-Go）
 
@@ -47,15 +52,21 @@ npm --prefix desktop run build:sidecar
 npm --prefix desktop run validate:sidecar-contract
 ```
 
-7. 生产安全配置与可观测守卫通过：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位，`reload` 必须关闭，且 `gateway.metrics_enabled=true`。
+7. 权威对齐检查通过：workflow / runtime / docs 的当前权威描述必须一致。
+
+```bash
+python scripts/check_authority_alignment.py
+```
+
+8. 生产安全配置与可观测守卫通过：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位，`reload` 必须关闭，且 `gateway.metrics_enabled=true`。
 
 ```bash
 npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default
 ```
 
-8. 回退预案已确认：`docs/operations/ROLLBACK.md` 中 external 回退触发与验证项均可执行。
+9. 回退预案已确认：`docs/operations/ROLLBACK.md` 中 external 回退触发与验证项均可执行。
 
-9. 发布检查汇总完成：
+10. 发布检查汇总完成：
 
 ```bash
 python scripts/release_check_summary.py
@@ -83,24 +94,29 @@ external 对外“100% 完成度”仅指核心可达链路：
 - production guard 日志：`npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default`
 - Desktop sidecar 构建日志：`npm --prefix desktop run build:sidecar`
 - Desktop sidecar 契约日志：`npm --prefix desktop run validate:sidecar-contract`
+- 治理脚本回归日志：`python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q`
+- 权威对齐日志：`python scripts/check_authority_alignment.py`
 - 发布汇总输出：`python scripts/release_check_summary.py`
 
 ### internal（dry-run）
 
 1. 确认工作区干净并记录当前 commit。
-2. 执行版本一致性、交付语义门禁、TypeScript Phase 4 基线与 Desktop sidecar 检查。
-3. 记录产物版本与测试结果。
+2. 执行版本一致性、交付语义门禁、权威对齐检查、TypeScript Phase 4 基线与 Desktop sidecar 检查。
+3. main 分支需同时观察 internal CI 中的 authority alignment 与 selected contract hard gates。
+4. 记录产物版本与测试结果。
 
 ### external（正式交付）
 
 1. 执行 internal 全部步骤。
 2. 执行 e2e 冒烟。
-3. 确认质量信号完整（覆盖率 + CI 关键信号）。
+3. 执行治理脚本回归测试，确认 authority / delivery / summary 关键语义未被破坏。
+4. 运行权威对齐检查，确认 workflow / runtime / docs 当前口径一致。
+5. 确认质量信号完整（覆盖率 + CI 关键信号）。
    - 若已配置 `CODECOV_TOKEN`，按 strict 模式执行并将上传失败判定为 No-Go。
    - 若缺失 `CODECOV_TOKEN`，允许降级为告警，但必须在发布验收记录中注明该风险。
-4. 验证 production guard（CORS / reload / metrics）通过。
-5. 核对回退预案与回滚验证路径。
-6. 评审 Go/No-Go 并登记结果。
+6. 验证 production guard（CORS / reload / metrics）通过。
+7. 核对回退预案与回滚验证路径。
+8. 评审 Go/No-Go 并登记结果。
 
 ## 验收记录模板
 
@@ -111,6 +127,8 @@ external 对外“100% 完成度”仅指核心可达链路：
 - 交付语义门禁：通过 / 失败
 - 基线测试与覆盖率：
 - e2e 冒烟（external 必填）：通过 / 失败 / 跳过（internal）
+- 治理脚本回归：通过 / 失败
+- 权威对齐检查：通过 / 失败
 - 质量信号完整性（覆盖率上传、CI 关键步骤）：完整 / 不完整
 - 生产守卫（CORS / reload / metrics）：通过 / 失败
 - 回退预案确认：是 / 否

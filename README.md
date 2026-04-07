@@ -95,6 +95,14 @@ python scripts/release_check_summary.py
 - 当前 internal CI 权威入口：`.github/workflows/integration-tests.yml`
 - `docs/TASKS_V10_OPTIMIZED.md` 保留为历史架构路线图，不作为当前发布完成度的唯一依据。
 
+### 当前权威地图
+
+- 运行时 / 构建默认权威：`desktop/` + `src-ts/` 代码与对应脚本。
+- 发布策略权威：`docs/release/RELEASE_NOTES.md`
+- 本地发布快照权威：`python scripts/release_check_summary.py`
+- internal CI 权威：`.github/workflows/integration-tests.yml`（包含 advisory lanes，以及 main 分支的 authority alignment / selected contract hard gates）
+- 历史参考文档：`docs/TASKS_V10_OPTIMIZED.md`、`docs/ui_design_guide.md`、`docs/workflow-entrypoint-inventory.md`
+
 ## 前端工程约束（统一口径）
 
 - 本地质量入口：`npm --prefix desktop run check`

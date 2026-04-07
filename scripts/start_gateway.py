@@ -2,9 +2,9 @@
 """
 Niko-Studio MCP Gateway launcher.
 
-Current default (migration-closure):
-- Start Node/TypeScript gateway runtime
-- Keep Python runtime as explicit legacy fallback only
+Current authority model:
+- Start the authoritative Node/TypeScript gateway runtime by default
+- Keep Python runtime as explicit legacy compatibility fallback only
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Start Niko-Studio MCP Gateway",
         epilog=(
-            "Default runtime is Node/TypeScript. "
+            "Default runtime is the authoritative Node/TypeScript path. "
             "Python runtime is explicit legacy compatibility mode and may be unavailable."
         ),
     )
@@ -51,7 +51,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--runtime",
         choices=["auto", "node", "python"],
         default="auto",
-        help="Gateway runtime (default: auto -> node)",
+        help="Gateway runtime (default: auto -> node; python = compatibility-only override)",
     )
     return parser
 
@@ -80,7 +80,7 @@ def _run_node_gateway(args: argparse.Namespace) -> int:
 
     cmd = [_node_cmd(), str(NODE_GATEWAY_LAUNCHER)]
 
-    print("INFO: Starting Node/TypeScript gateway runtime")
+    print("INFO: Starting authoritative Node/TypeScript gateway runtime")
     print("   Command:", " ".join(cmd))
     result = subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env, check=False)
     return result.returncode
@@ -129,7 +129,8 @@ def _run_legacy_python_gateway(args: argparse.Namespace) -> int:
         print("WARN: --reload is ignored in production.")
     reload_enabled = bool(args.reload and not is_production)
 
-    print("INFO: Starting legacy Python gateway runtime")
+    print("WARN: Starting legacy Python gateway compatibility runtime")
+    print("      This path is not the authoritative default in this checkout.")
     uvicorn.run(
         "src.mcp.gateway:app",
         host=host,

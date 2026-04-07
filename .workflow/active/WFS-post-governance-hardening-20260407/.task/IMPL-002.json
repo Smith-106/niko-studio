@@ -1,0 +1,55 @@
+{
+  "id": "IMPL-002",
+  "title": "Tighten Node-first runtime compatibility boundary",
+  "description": "Align runtime/build selectors and operator-facing runtime notes so Node-first remains the only default authority while Python fallback is retained only as an explicit compatibility path.",
+  "status": "completed",
+  "type": "refactor",
+  "scope": "desktop/scripts/choose_sidecar.cjs;scripts/start_gateway.py;desktop/SIDECAR_IMPLEMENTATION_SUMMARY.md",
+  "action": "Implement",
+  "depends_on": [],
+  "focus_paths": [
+    "desktop/scripts/choose_sidecar.cjs",
+    "scripts/start_gateway.py",
+    "desktop/SIDECAR_IMPLEMENTATION_SUMMARY.md",
+    "README.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "Unset runtime behavior still resolves to Node-first in the touched tooling",
+      "Python fallback wording is explicit, bounded, and non-authoritative",
+      "Operator-facing runtime messaging is consistent across touched files"
+    ],
+    "verification": "Review the touched runtime selector and launcher flows, confirm default path behavior, and check that compatibility-only wording remains explicit.",
+    "definition_of_done": "Runtime and build governance no longer sounds dual-authoritative in the touched tooling and operator notes."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Audit runtime selector messaging",
+      "description": "Find remaining wording or control flow that still reads as split authority."
+    },
+    {
+      "step": 2,
+      "title": "Bound compatibility semantics",
+      "description": "Keep explicit override support while making compatibility status unambiguous."
+    },
+    {
+      "step": 3,
+      "title": "Reconcile operator notes",
+      "description": "Update the implementation summary to match the actual selector and launcher behavior."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-post-governance-hardening-20260407/.process/context-package.json",
+  "meta": {
+    "type": "governance",
+    "agent": "@code-developer",
+    "execution_group": "wave-1-runtime-governance",
+    "module": "runtime-boundary",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

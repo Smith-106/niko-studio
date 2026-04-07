@@ -10,6 +10,7 @@ on:
     branches: [main]
 
 jobs:
+  # Core validation lane: always blocking for the current desktop + src-ts authority surface.
   tests:
     runs-on: ubuntu-latest
 
@@ -35,6 +36,10 @@ jobs:
       - name: Run delivery semantic gate
         run: |
           python scripts/delivery_gate.py
+
+      - name: Run governance script regression tests
+        run: |
+          python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
@@ -81,6 +86,7 @@ jobs:
           files: ./src-ts/coverage/cobertura-coverage.xml
           fail_ci_if_error: false
 
+  # Desktop observation lane: keep broad desktop signal visible on every run.
   desktop-build:
     runs-on: ubuntu-latest
 
@@ -116,7 +122,7 @@ jobs:
         run: npm run build:sidecar
         working-directory: desktop
 
-      - name: Verify desktop sidecar contract artifact (soft gate)
+      - name: Verify desktop sidecar contract artifact (advisory lane)
         continue-on-error: true
         id: sidecar-contract
         run: npm run validate:sidecar-contract
@@ -141,6 +147,85 @@ jobs:
         run: |
           python scripts/check_i18n_keys.py
 
+  authority-alignment-advisory:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run authority alignment check (advisory)
+        run: |
+          python scripts/check_authority_alignment.py > authority-alignment.json
+
+      - name: Upload authority alignment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: authority-alignment-report
+          path: authority-alignment.json
+
+  authority-alignment-hard-fail:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    needs: [authority-alignment-advisory]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run authority alignment check (main hard gate)
+        run: |
+          python scripts/check_authority_alignment.py
+
+  # Promotion lane: once the sidecar artifact is built successfully, main must keep
+  # the contract valid as a blocking condition instead of relying only on advisory telemetry.
+  desktop-sidecar-hard-fail:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    needs: [desktop-build]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Rebuild desktop sidecar artifact (main hard gate)
+        run: npm run build:sidecar
+        working-directory: desktop
+
+      - name: Validate desktop sidecar contract (main hard gate)
+        run: npm run validate:sidecar-contract
+        working-directory: desktop
+
+  # Advisory governance lanes: keep drift visible while the equivalent blocking lanes exist elsewhere.
   tasks-completion-soft-warn:
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -238,6 +323,7 @@ jobs:
         run: |
           npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx src/components/KnowledgeModal.test.tsx
 
+  # Selected enforcement lane: high-risk runtime and desktop contracts remain blocking.
   p2-selected-hard-fail:
     runs-on: ubuntu-latest
     needs: [tests, desktop-build, i18n-check, p2-baseline-soft-warn, p2-high-risk-soft-fail]

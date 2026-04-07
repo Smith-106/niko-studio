@@ -31,6 +31,7 @@
 - 交付语义脚本：`scripts/delivery_gate.py`
 - 门禁覆盖：
   - 必须存在 TS/desktop 权威锚点（workflow hard gate、chat/metrics 路由、phase4 验证入口）
+  - 必须存在 workflow / runtime / docs authority alignment 锚点（external release gate 执行、release summary P0 blocking、authority checker 本地入口）
   - 禁止回退到 legacy 假设（例如 `release_check_summary.py` 中 `from src.` / `--cov=src`）
 
 ## 3. fallback / rollback 入口
@@ -47,16 +48,21 @@
 ### 本地检查
 1. 版本一致性：`python scripts/check_versions.py`
 2. 交付语义门禁：`python scripts/delivery_gate.py`
-3. 发布汇总：`python scripts/release_check_summary.py`
-4. TS 覆盖率基线：`npm --prefix src-ts run test:coverage:phase4`
-5. Desktop sidecar 构建：`npm --prefix desktop run build:sidecar`
-6. Desktop sidecar 契约校验：`npm --prefix desktop run validate:sidecar-contract`
-7. Desktop 统一检查：`npm --prefix desktop run check`
-8. 前端依赖审计：`npm --prefix desktop audit --audit-level=high`
+3. 治理脚本回归：`python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q`
+4. 发布汇总：`python scripts/release_check_summary.py`
+5. 权威对齐检查：`python scripts/check_authority_alignment.py`
+6. TS 覆盖率基线：`npm --prefix src-ts run test:coverage:phase4`
+7. Desktop sidecar 构建：`npm --prefix desktop run build:sidecar`
+8. Desktop sidecar 契约校验：`npm --prefix desktop run validate:sidecar-contract`
+9. Desktop 统一检查：`npm --prefix desktop run check`
+10. 前端依赖审计：`npm --prefix desktop audit --audit-level=high`
 
 ### CI 观察点
 - External authority workflow：`.github/workflows/external-release-gate.yml`
-- `gate` job：version + delivery gate + TS coverage baseline + production guard + external smoke + desktop sidecar readiness
+- `gate` job：version + delivery gate + TS coverage baseline + external smoke + desktop sidecar readiness + authority alignment + production guard
+- `authority-alignment-advisory` job：workflow/runtime/docs 权威漂移观察信号与 `authority-alignment-report` artifact
+- `authority-alignment-hard-fail` job：main 分支对 authority alignment 的阻断验证
+- `governance-scripts-report-*` artifact：治理脚本回归测试的 junit 结果
 - `coverage-xml` artifact：始终由 external release workflow 上传；Codecov 上传是否执行仅影响外部上传，不影响本地 artifact 留档
 - `desktop-build` / 其他 CI：作为补充观察点，不替代 external release authority
 
