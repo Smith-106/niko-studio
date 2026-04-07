@@ -1,0 +1,41 @@
+{
+  "conflict_risk": "high",
+  "resolved_at": "2026-04-07T00:35:00+08:00",
+  "strategy": "Wave-based scoped closure with runtime authority decided first, data-layer closure second, gate migration third, and final acceptance last.",
+  "conflicts": [
+    {
+      "area": "runtime_build_authority_split",
+      "severity": "high",
+      "description": "Desktop runtime already prefers Node, but build-time default still routes to Python when NIKO_GATEWAY_RUNTIME is unset.",
+      "strategy": "Make Node the authoritative default in desktop build scripts before touching release gates.",
+      "impact": "desktop scripts, packaging docs, sidecar validation flow"
+    },
+    {
+      "area": "broken_python_default_path",
+      "severity": "high",
+      "description": "Python utility scripts and README still point to missing src runtime modules, causing release and delivery commands to fail in the current checkout.",
+      "strategy": "Either restore a bounded Python fallback path or explicitly retire those references and replace them with TypeScript authority.",
+      "impact": "build scripts, operational docs, local release commands"
+    },
+    {
+      "area": "phase4_test_command_instability",
+      "severity": "medium",
+      "description": "Focused Phase 4 suites pass, but the official aggregate test:phase4 command still exits non-zero.",
+      "strategy": "Close the remaining data-layer tail first, then stabilize the official aggregate command and coverage path.",
+      "impact": "migration verification confidence, CI and release quality signal"
+    },
+    {
+      "area": "open_ended_compatibility_shims",
+      "severity": "medium",
+      "description": "Some compatibility layers were intentionally kept during migration, but they need explicit retention or removal decisions before closure.",
+      "strategy": "Treat desktop and MCP contract consumers as hard boundaries, then prune or document the remaining shims.",
+      "impact": "contract clarity, future maintenance cost"
+    }
+  ],
+  "accepted_resolutions": [
+    "Use four dependency waves with low-overlap scopes.",
+    "Move release and delivery gate migration after build authority and Phase 4 baseline stabilization.",
+    "Keep external adapter expansion and non-core product polish out of scope for this closure plan.",
+    "Produce both workflow-plan artifacts and a CSV wave session so execution can start without re-planning."
+  ]
+}

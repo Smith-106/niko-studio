@@ -1,0 +1,79 @@
+{
+  "summary": "Final closure plan for the Python-to-TypeScript migration after Phase 2 and Phase 3 completion and Phase 4 near-completion.",
+  "approach": "Use a four-wave CSV execution plan that first settles runtime authority and the remaining Phase 4 tail, then repairs Python fallback paths, stabilizes official validation, migrates release gates, and ends with one authoritative closure handoff.",
+  "task_ids": [
+    "IMPL-001",
+    "IMPL-002",
+    "IMPL-003",
+    "IMPL-004",
+    "IMPL-005",
+    "IMPL-006",
+    "IMPL-007"
+  ],
+  "task_count": 7,
+  "complexity": "High",
+  "estimated_time": "4 focused waves with verification after each wave",
+  "recommended_execution": "Wave-based CSV pipeline with conservative concurrency",
+  "recommended_concurrency": 2,
+  "shared_context": {
+    "current_state": {
+      "phase_2": "complete",
+      "phase_3": "complete",
+      "phase_4": "near-complete with multi-store semantics tail",
+      "phase_5": "not complete; runtime and build authority plus gates still split"
+    },
+    "constraints": [
+      "Desktop compatibility remains a hard boundary",
+      "Release and delivery gates must remain meaningful",
+      "Keep optional external adapter expansion out of scope",
+      "Minimize overlapping write scopes across waves"
+    ],
+    "critical_files": [
+      "desktop/scripts/choose_sidecar.cjs",
+      "desktop/package.json",
+      "scripts/build_gateway_sidecar.py",
+      "scripts/start_gateway.py",
+      "scripts/delivery_gate.py",
+      "scripts/release_check_summary.py",
+      "src-ts/package.json",
+      "src-ts/vitest.phase4.config.ts",
+      "src-ts/memory/unified-memory.ts",
+      "src-ts/workflow/types.ts",
+      "src-ts/web/app.ts"
+    ],
+    "deferred_out_of_scope": [
+      "Broader optional external adapter productization",
+      "Non-core orchestration and admin-registry polish",
+      "General product-level UX polish outside migration closure"
+    ]
+  },
+  "csv_wave_plan": {
+    "session_id": "cwp-core-migration-final-closure-20260407",
+    "tasks_csv_path": ".workflow/.csv-wave/cwp-core-migration-final-closure-20260407/tasks.csv",
+    "wave_count": 4,
+    "wave_map": {
+      "1": [
+        "IMPL-001",
+        "IMPL-003"
+      ],
+      "2": [
+        "IMPL-002",
+        "IMPL-004",
+        "IMPL-006"
+      ],
+      "3": [
+        "IMPL-005"
+      ],
+      "4": [
+        "IMPL-007"
+      ]
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-04-07T00:40:00+08:00",
+    "source": "workflow-plan",
+    "plan_type": "migration-closure",
+    "schema_version": "2.0",
+    "session_id": "WFS-core-migration-final-closure-20260407"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "id": "IMPL-004",
+  "title": "Remove residual Python-era public authority from docs",
+  "description": "Clean the remaining high-visibility docs so they no longer present Python-era src paths or root tests as the current primary authority in this checkout, while preserving explicit compatibility notes where necessary.",
+  "status": "completed",
+  "type": "documentation",
+  "scope": "README.md;docs/INDEX.md;docs/operations/ROLLBACK.md;docs/API_REFERENCE.md",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-001"
+  ],
+  "focus_paths": [
+    "README.md",
+    "docs/INDEX.md",
+    "docs/operations/ROLLBACK.md",
+    "docs/API_REFERENCE.md",
+    "docs/release/RELEASE_NOTES.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "No touched high-visibility doc presents src/* or root tests/* as the current primary authority",
+      "Legacy Python references that remain are clearly bounded as compatibility or historical notes",
+      "The docs index continues to point readers at the current release authority surfaces"
+    ],
+    "verification": "Search the touched docs for from src., python -m src, tests/integration, and --cov=src, then confirm any retained reference is explicitly bounded and does not read as the active primary path.",
+    "definition_of_done": "Public readers no longer encounter stale Python-era authority claims on the main release-facing docs."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Audit residual public-doc mismatches",
+      "description": "Identify where the remaining docs still read as if src or pytest-era layouts are the current primary authority."
+    },
+    {
+      "step": 2,
+      "title": "Bound or replace legacy examples",
+      "description": "Convert primary-path guidance to the current desktop plus src-ts authority and keep any Python compatibility note explicit."
+    },
+    {
+      "step": 3,
+      "title": "Preserve current release routing",
+      "description": "Keep the docs index and top-level references pointing at the intended current release notes and summary entrypoints."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-final-closure-consistency-20260407/.process/context-package.json",
+  "meta": {
+    "type": "closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-2-public-docs",
+    "module": "public-docs",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

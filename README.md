@@ -55,7 +55,11 @@ A local-first, extensible AI Agent platform that provides unified memory managem
 ### Prerequisites
 
 ```bash
-# Python 3.11+
+# Node.js 20+ and npm
+node --version
+npm --version
+
+# Python 3.11+ (release helpers and compatibility scripts)
 python --version
 
 # Install dependencies
@@ -64,6 +68,8 @@ pip install -r requirements.txt
 # Or use uv (recommended)
 uv sync
 ```
+
+当前默认构建与运行权威面是 `desktop + src-ts`。Python 主要保留给发布辅助脚本和显式兼容路径。
 
 ## Web 交付模型
 
@@ -82,10 +88,19 @@ python scripts/release_check_summary.py
 
 该命令会汇总版本一致性、baseline/e2e、production 守卫（reload/CORS/metrics）以及 CI 观察点。
 
+### 当前状态权威来源
+
+- 当前运行与发布口径：以 `docs/release/RELEASE_NOTES.md` 为准。
+- 当前本地闭环判断：以 `python scripts/release_check_summary.py` 输出为准。
+- 当前 internal CI 权威入口：`.github/workflows/integration-tests.yml`
+- `docs/TASKS_V10_OPTIMIZED.md` 保留为历史架构路线图，不作为当前发布完成度的唯一依据。
+
 ## 前端工程约束（统一口径）
 
 - 本地质量入口：`npm --prefix desktop run check`
-- CI（Integration Tests / `desktop-build`）入口：`npm run check`
+- 后端 / 发布 CI 权威入口：`.github/workflows/external-release-gate.yml`
+- internal CI 权威入口：`.github/workflows/integration-tests.yml`
+- Desktop CI 构建入口：`npm run check`
 - 依赖审计：`npm audit --audit-level=high`
 
 ## 阶段 4：执行（自主运行）
@@ -131,6 +146,7 @@ npm --prefix src-ts run typecheck
 npm --prefix desktop run build:sidecar
 
 # 显式 Python 兼容构建（仅 legacy entry 存在时可用）
+# 当前 checkout 默认不包含该 legacy entry
 python scripts/build_gateway_sidecar.py --legacy-entry src/mcp/sidecar_entry.py
 ```
 
@@ -171,7 +187,7 @@ python dev_run.py
 niko-studio/
 ├── docs/
 │   ├── sdd/             # System design specs (modular)
-│   └── TASKS_V10_OPTIMIZED.md # Development Task List (V10)
+│   └── TASKS_V10_OPTIMIZED.md # Historical architecture roadmap (not the current release source of truth)
 ├── src-ts/
 │   ├── agents/             # Core Agents (Commander, Architect, Writer, Critic)
 │   ├── memory/             # Memory Layer
@@ -179,11 +195,10 @@ niko-studio/
 │   ├── search/             # Search Services
 │   ├── store/              # Document Store
 │   ├── graph/              # Knowledge Graph
-│   └── services/           # Platform Services
-├── src/                    # Optional legacy Python runtime surface (compat branches only)
-├── tests/
-│   ├── unit/               # Unit Tests
-│   └── integration/        # Integration Tests
+│   ├── services/           # Platform Services
+│   └── tests/              # Current backend validation surface
+├── desktop/                # Desktop shell, sidecar contract, and frontend checks
+├── src/                    # Optional legacy Python compatibility surface (normally absent in the current checkout)
 ├── .niko/                  # Runtime Data (Project Workspace)
 │   ├── sessions/           # Active/Archived sessions
 │   ├── memory/             # Long-term memories
@@ -226,13 +241,14 @@ niko-studio/
 This project is designed for **Jules** automated development. See:
 
 - [TASKS_V10_OPTIMIZED.md](docs/TASKS_V10_OPTIMIZED.md) - Complete task checklist
+- `docs/TASKS_V10_OPTIMIZED.md` is retained as a historical architecture roadmap and does not override current release-readiness artifacts.
 - [JULES.md](.github/JULES.md) - Development guidelines for Jules
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
 
 ## 📚 Documentation
 
 - [System Design](docs/sdd/01_System_Architecture.md) - Architecture & API specifications
-- [Task List (V10 Optimized)](docs/TASKS_V10_OPTIMIZED.md) - Development roadmap
+- [Task List (V10 Optimized)](docs/TASKS_V10_OPTIMIZED.md) - Historical architecture roadmap
 - [OpenKL Design](openkl/rfcs/0000-openkl-design.md) - Memory layer design
 
 ## 📄 License

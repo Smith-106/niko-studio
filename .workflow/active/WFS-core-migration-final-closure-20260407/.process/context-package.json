@@ -1,0 +1,96 @@
+{
+  "critical_files": [
+    "desktop/scripts/choose_sidecar.cjs",
+    "desktop/package.json",
+    "desktop/SIDECAR_CONTRACT.md",
+    "desktop/src-tauri/src/main.rs",
+    "scripts/build_gateway_sidecar.py",
+    "scripts/start_gateway.py",
+    "scripts/delivery_gate.py",
+    "scripts/release_check_summary.py",
+    "README.md",
+    "src-ts/package.json",
+    "src-ts/vitest.phase4.config.ts",
+    "src-ts/memory/unified-memory.ts",
+    "src-ts/integrations/adapters.ts",
+    "src-ts/workflow/types.ts",
+    "src-ts/web/app.ts"
+  ],
+  "patterns": [
+    "Node-first desktop runtime but Python-first sidecar build default",
+    "TypeScript is the main implementation surface, but Python release and utility scripts still claim authority",
+    "Phase 4 public-contract coverage is strong, but multi-store semantics remain explicitly unverified",
+    "Compatibility-safe wrappers and legacy contract fields were retained during migration to preserve desktop and MCP clients"
+  ],
+  "dependencies": [
+    "Release and delivery gate migration depends on choosing a final runtime and build authority first",
+    "Phase 4 test command stability depends on the remaining data-layer tail and official vitest baseline staying aligned",
+    "Compatibility pruning depends on preserving current desktop and MCP client contracts while removing stale migration leftovers",
+    "Final acceptance must run after build cutover, gate repair, and Phase 4 closure work"
+  ],
+  "integration_points": [
+    {
+      "module": "desktop-runtime",
+      "files": [
+        "desktop/scripts/choose_sidecar.cjs",
+        "desktop/package.json",
+        "desktop/src-tauri/src/main.rs",
+        "desktop/SIDECAR_CONTRACT.md"
+      ],
+      "note": "This is where runtime default and build default currently diverge."
+    },
+    {
+      "module": "python-fallback-and-ops",
+      "files": [
+        "scripts/build_gateway_sidecar.py",
+        "scripts/start_gateway.py",
+        "README.md"
+      ],
+      "note": "These still point at Python src paths that are not present in the current checkout."
+    },
+    {
+      "module": "release-gates",
+      "files": [
+        "scripts/delivery_gate.py",
+        "scripts/release_check_summary.py",
+        "docs/SECURITY_VISIBILITY.md"
+      ],
+      "note": "These need to match the actual TypeScript authority after the cutover decision."
+    },
+    {
+      "module": "phase-4-tail",
+      "files": [
+        "src-ts/memory/unified-memory.ts",
+        "src-ts/integrations/adapters.ts",
+        "src-ts/package.json",
+        "src-ts/vitest.phase4.config.ts"
+      ],
+      "note": "This is the remaining core migration tail before full closure."
+    },
+    {
+      "module": "compatibility-boundary",
+      "files": [
+        "src-ts/workflow/types.ts",
+        "src-ts/web/app.ts",
+        "desktop/src/api/client.ts",
+        "docs/workflow-entrypoint-inventory.md"
+      ],
+      "note": "These define how much legacy shaping is still intentionally retained."
+    }
+  ],
+  "conflict_risk": "high",
+  "conflict_areas": [
+    "runtime_build_authority_split",
+    "broken_python_default_path",
+    "phase4_test_command_instability",
+    "release_gate_staleness",
+    "open_ended_compatibility_shims"
+  ],
+  "constraints": [
+    "Preserve desktop compatibility while making runtime authority explicit",
+    "Do not weaken delivery and release gates just to make them pass",
+    "Keep Phase 4 closure bounded to core migration semantics, not optional product adapters",
+    "Prefer wave ordering that minimizes overlapping write scopes",
+    "Prepare artifacts directly consumable by a later CSV wave execution session"
+  ]
+}

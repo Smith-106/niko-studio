@@ -1,0 +1,59 @@
+{
+  "id": "IMPL-006",
+  "title": "Prune or explicitly bound legacy compatibility shims",
+  "description": "Audit the remaining migration-era compatibility shims and either remove them or mark them as intentional, bounded contract surfaces for desktop and MCP consumers.",
+  "status": "pending",
+  "type": "refactor",
+  "scope": "src-ts/workflow/types.ts;src-ts/web/app.ts;src-ts/tests/web/app.test.ts;docs/workflow-entrypoint-inventory.md",
+  "action": "Simplify",
+  "depends_on": [
+    "IMPL-001",
+    "IMPL-003"
+  ],
+  "focus_paths": [
+    "src-ts/workflow/types.ts",
+    "src-ts/web/app.ts",
+    "src-ts/tests/web/app.test.ts",
+    "docs/workflow-entrypoint-inventory.md",
+    "desktop/src/api/client.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "Remaining compatibility surfaces have explicit retain or remove decisions",
+      "Deprecated paths fail intentionally instead of drifting as open-ended migration leftovers",
+      "Focused contract tests continue to protect desktop and MCP consumers"
+    ],
+    "verification": "npm.cmd --prefix src-ts exec vitest run tests/web/app.test.ts tests/workflow/workflow-types.test.ts && npm.cmd --prefix src-ts run typecheck",
+    "definition_of_done": "The remaining shims are bounded, documented, and no longer ambiguous migration debt."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Inventory current compatibility shaping",
+      "description": "List what is still preserved for client compatibility and what is just legacy drift."
+    },
+    {
+      "step": 2,
+      "title": "Prune or bound the shims",
+      "description": "Remove the unnecessary leftovers and document any intentionally retained contract shaping."
+    },
+    {
+      "step": 3,
+      "title": "Refresh focused contract evidence",
+      "description": "Use targeted tests and entrypoint inventory updates to make the retained boundary explicit."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-core-migration-final-closure-20260407/.process/context-package.json",
+  "meta": {
+    "type": "closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-2-compatibility",
+    "module": "compatibility-boundary",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

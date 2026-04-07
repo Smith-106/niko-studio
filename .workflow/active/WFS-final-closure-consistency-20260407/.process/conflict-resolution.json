@@ -1,0 +1,33 @@
+{
+  "risk": "high",
+  "resolved_at": "2026-04-07T16:26:59+08:00",
+  "strategy": "conflict-safe-baseline",
+  "conflicts": [
+    {
+      "area": "dirty authority files",
+      "severity": "high",
+      "description": "The remaining closure work targets files that already have tracked local edits.",
+      "strategy": "Treat the current worktree contents as the baseline. Each execution task must inspect targeted git diff output before editing and stop if unrelated ownership is present.",
+      "impact": "Prevents csv-wave execution from overwriting the active alignment patch."
+    },
+    {
+      "area": "policy versus generated evidence drift",
+      "severity": "high",
+      "description": "The published external policy and the generated release summary still express different blocking semantics.",
+      "strategy": "Align policy-facing CI and generator logic before regenerating markdown or JSON evidence artifacts.",
+      "impact": "Avoids producing another GO snapshot from stale semantics."
+    },
+    {
+      "area": "metadata chronology quality",
+      "severity": "medium",
+      "description": "Some active workflow metadata has impossible created/completed ordering.",
+      "strategy": "Normalize chronology and formatting without changing the underlying completion narrative of the already-finished sessions.",
+      "impact": "Improves auditability without reopening completed execution history."
+    }
+  ],
+  "planning_constraints": [
+    "No task may overwrite unrelated uncommitted hunks in scoped files.",
+    "Final evidence regeneration must wait until policy, CI linkage, docs, and metadata are aligned.",
+    "Completed 2026-04-07 closure sessions remain completed history."
+  ]
+}

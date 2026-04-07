@@ -50,14 +50,15 @@
 3. 发布汇总：`python scripts/release_check_summary.py`
 4. TS 覆盖率基线：`npm --prefix src-ts run test:coverage:phase4`
 5. Desktop sidecar 构建：`npm --prefix desktop run build:sidecar`
-6. Desktop 统一检查：`npm --prefix desktop run check`
-7. 前端依赖审计：`npm --prefix desktop audit --audit-level=high`
+6. Desktop sidecar 契约校验：`npm --prefix desktop run validate:sidecar-contract`
+7. Desktop 统一检查：`npm --prefix desktop run check`
+8. 前端依赖审计：`npm --prefix desktop audit --audit-level=high`
 
 ### CI 观察点
-- Workflow：`Integration Tests`
-- `tests` job：version + delivery gate
-- `desktop-build` job：install + audit(high+) + check
-- `external-*` gate：external 发布附加门禁
+- External authority workflow：`.github/workflows/external-release-gate.yml`
+- `gate` job：version + delivery gate + TS coverage baseline + production guard + external smoke + desktop sidecar readiness
+- `coverage-xml` artifact：始终由 external release workflow 上传；Codecov 上传是否执行仅影响外部上传，不影响本地 artifact 留档
+- `desktop-build` / 其他 CI：作为补充观察点，不替代 external release authority
 
 ## 5. 单命令可见化入口
 

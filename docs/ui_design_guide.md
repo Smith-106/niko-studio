@@ -4,6 +4,8 @@
 **日期**: 2026-01-27  
 **参考项目**: Claude-Code-Workflow Dashboard + AionUi WebUI + Cherry Studio + 现有 Streamlit 原型
 
+> **状态说明（2026-04-07）**: 本文档保留为历史 UI 迁移设想与 Streamlit 时代设计参考，不代表当前 `desktop + src-ts` 交付路径的权威实现说明。当前交付口径请以 `README.md`、`docs/release/RELEASE_NOTES.md` 与实际 `desktop/`、`src-ts/` 代码为准。
+
 ---
 
 ## 一、技术选型建议

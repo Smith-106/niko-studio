@@ -1,0 +1,59 @@
+{
+  "id": "IMPL-006",
+  "title": "Regenerate aligned release evidence and publish final handoff",
+  "description": "After the policy, generator, docs, and metadata surfaces are aligned, rerun the final verification sweep, regenerate the release summary and machine-readable artifact, and leave one final handoff for the residual closure state.",
+  "status": "completed",
+  "type": "verification",
+  "scope": "release-check-summary.md;.workflow/evidence/release/**;.workflow/active/WFS-final-closure-consistency-20260407/**;.workflow/.csv-wave/cwp-final-closure-consistency-20260407/**",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-005"
+  ],
+  "focus_paths": [
+    "scripts/release_check_summary.py",
+    "release-check-summary.md",
+    ".workflow/evidence/release/release-readiness-artifact.json",
+    ".workflow/active/WFS-final-closure-consistency-20260407/IMPL_PLAN.md",
+    ".workflow/active/WFS-final-closure-consistency-20260407/TODO_LIST.md",
+    ".workflow/.csv-wave/cwp-final-closure-consistency-20260407/tasks.csv"
+  ],
+  "convergence": {
+    "criteria": [
+      "The regenerated release summary and machine-readable artifact reflect the updated external semantics and authority links",
+      "The new session artifacts capture the final closure status and next operator entrypoint",
+      "No remaining task in this session is blocked by stale pre-alignment policy or metadata state"
+    ],
+    "verification": "Run python scripts/check_versions.py, python scripts/delivery_gate.py, and python scripts/release_check_summary.py, then inspect release-check-summary.md and the release-readiness artifact for policy and source-of-truth consistency.",
+    "definition_of_done": "One final aligned closure handoff remains for future operators, and it is backed by regenerated current-state evidence."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Run the final aligned verification sweep",
+      "description": "Execute the version, delivery, and release summary checks only after the upstream semantics and docs tasks are done."
+    },
+    {
+      "step": 2,
+      "title": "Regenerate the release evidence",
+      "description": "Produce release-check-summary.md and the release-readiness artifact from the corrected authority surfaces."
+    },
+    {
+      "step": 3,
+      "title": "Publish the final handoff",
+      "description": "Update the new session artifacts so the next operator sees one authoritative post-closure entrypoint."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-final-closure-consistency-20260407/.process/context-package.json",
+  "meta": {
+    "type": "closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-4-handoff",
+    "module": "final-closure-verification",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

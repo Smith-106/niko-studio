@@ -2,6 +2,9 @@
 
 **版本**: 2.7  
 **更新日期**: 2026-01-26
+**状态**: 历史 Python API 参考（compatibility-only）
+
+> 状态说明（2026-04-07）：本文档保留为历史 Python `src/*` API 示例，不是当前 `desktop + src-ts` 运行或发布权威。当前权威口径请以 `README.md`、`docs/release/RELEASE_NOTES.md` 与 `python scripts/release_check_summary.py` 的结果为准。
 
 ---
 

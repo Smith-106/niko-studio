@@ -1,0 +1,60 @@
+{
+  "id": "IMPL-005",
+  "title": "Migrate release and delivery gates to TypeScript authority",
+  "description": "Replace stale Python src-based release-gate assumptions with checks that reflect the current TypeScript and desktop runtime authority while preserving meaningful delivery signal.",
+  "status": "pending",
+  "type": "refactor",
+  "scope": "scripts/delivery_gate.py;scripts/release_check_summary.py;docs/SECURITY_VISIBILITY.md;release-check-summary.md",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-001",
+    "IMPL-002",
+    "IMPL-004"
+  ],
+  "focus_paths": [
+    "scripts/delivery_gate.py",
+    "scripts/release_check_summary.py",
+    "docs/SECURITY_VISIBILITY.md",
+    "src-ts/gateway-server.ts",
+    "src-ts/workflow/workflow-engine.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "Delivery gate no longer fails just because src is missing",
+      "Release summary runs against real repository authority",
+      "Security and release docs describe the new gate truth without weakening checks"
+    ],
+    "verification": "python scripts/delivery_gate.py && python scripts/release_check_summary.py",
+    "definition_of_done": "Operational gates match the current TypeScript migration end state and still provide meaningful pass and fail signal."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Translate gate assumptions",
+      "description": "Map the current failing Python src checks to the real TypeScript and desktop runtime surfaces."
+    },
+    {
+      "step": 2,
+      "title": "Preserve useful signal",
+      "description": "Retain semantic gate intent instead of deleting failing logic outright."
+    },
+    {
+      "step": 3,
+      "title": "Refresh supporting docs",
+      "description": "Align the security and release-visibility docs with the new gate authority."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-core-migration-final-closure-20260407/.process/context-package.json",
+  "meta": {
+    "type": "closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-3-gates",
+    "module": "release-gates",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

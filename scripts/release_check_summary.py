@@ -1379,6 +1379,11 @@ def main() -> int:
         "src-ts",
         "run",
         "test:coverage:phase4",
+        "--",
+        "--coverage.reporter=text",
+        "--coverage.reporter=json",
+        "--coverage.reporter=html",
+        "--coverage.reporter=cobertura",
     ])
 
     desktop_bootstrap_code, desktop_bootstrap_output = run_cmd([
@@ -1394,6 +1399,13 @@ def main() -> int:
         "desktop",
         "run",
         "build:sidecar",
+    ])
+    desktop_sidecar_validate_code, desktop_sidecar_validate_output = run_cmd([
+        "npm.cmd",
+        "--prefix",
+        "desktop",
+        "run",
+        "validate:sidecar-contract",
     ])
     desktop_check_code, desktop_check_output = run_cmd([
         "npm.cmd",
@@ -1412,18 +1424,28 @@ def main() -> int:
         for part in [desktop_bootstrap_output, desktop_sidecar_build_output, desktop_check_output]
         if part
     )
+    desktop_sidecar_readiness_code = (
+        desktop_sidecar_build_code
+        if desktop_sidecar_build_code != 0
+        else desktop_sidecar_validate_code
+    )
+    desktop_sidecar_readiness_output = "\n\n".join(
+        part
+        for part in [desktop_sidecar_build_output, desktop_sidecar_validate_output]
+        if part
+    )
 
     e2e_code, e2e_output = run_cmd([
-        sys.executable,
-        "-m",
-        "pytest",
-        "-o",
-        "addopts=",
-        "-m",
-        "e2e",
-        "tests/integration/test_e2e_workflow.py",
-        "-q",
-        "--tb=no",
+        "npm.cmd",
+        "--prefix",
+        "src-ts",
+        "exec",
+        "--",
+        "vitest",
+        "run",
+        "tests/mcp/workflow-endpoints.integration.test.ts",
+        "tests/mcp/workflow-critic-smoke.integration.test.ts",
+        "--reporter=basic",
     ])
 
     prod_guard_code, prod_guard_output = _typescript_production_guard()
@@ -1546,8 +1568,11 @@ def main() -> int:
     )
     runtime_policy_conformance_status, runtime_policy_conformance_exit, runtime_policy_conformance_detail = runtime_policy_conformance_signal()
 
-    coverage_xml = PROJECT_ROOT / "coverage.xml"
-    coverage_exists = coverage_xml.exists()
+    coverage_candidates = (
+        PROJECT_ROOT / "coverage.xml",
+        PROJECT_ROOT / "src-ts" / "coverage" / "cobertura-coverage.xml",
+    )
+    coverage_exists = any(path.exists() for path in coverage_candidates)
     codecov_token_present = bool(os.environ.get("CODECOV_TOKEN", "").strip())
     codecov_status, codecov_exit, codecov_detail, codecov_strict_mode = codecov_signal(
         coverage_exists,
@@ -1600,16 +1625,16 @@ def main() -> int:
             "desktop_sidecar_readiness",
             "P0",
             True,
-            desktop_sidecar_build_code,
+            desktop_sidecar_readiness_code,
             _format_detail_pairs([
-                ("command", "npm --prefix desktop run build:sidecar"),
+                ("command", "npm --prefix desktop run build:sidecar && npm --prefix desktop run validate:sidecar-contract"),
                 ("artifact", "desktop/src-tauri/bin/niko-gateway"),
             ]),
         ),
         build_check_result(
             "external_e2e_smoke",
-            "P1",
-            False,
+            "P0",
+            True,
             e2e_code,
             _format_detail_pairs([
                 ("status", e2e_status),
@@ -1618,8 +1643,8 @@ def main() -> int:
         ),
         build_check_result(
             "production_guard",
-            "P1",
-            False,
+            "P0",
+            True,
             prod_guard_code,
             _format_detail_pairs([
                 ("guard", "reload_cors_production"),
@@ -1628,8 +1653,8 @@ def main() -> int:
         ),
         build_check_result(
             "metrics_guard",
-            "P1",
-            False,
+            "P0",
+            True,
             metrics_guard_code,
             _format_detail_pairs([
                 ("guard", "gateway_metrics_production"),
@@ -1638,8 +1663,8 @@ def main() -> int:
         ),
         build_check_result(
             "codecov_signal",
-            "P1",
-            False,
+            "P0" if codecov_strict_mode else "P1",
+            codecov_strict_mode,
             codecov_exit,
             codecov_detail,
             status_override=codecov_status,
@@ -1884,7 +1909,7 @@ def main() -> int:
     report = f"""# Release Check Summary
 
 - Decision: {decision}
-- Go/No-Go rule: any P0 FAIL => NO_GO
+- Go/No-Go rule: any blocking FAIL => NO_GO
 - Codecov strict mode: {'enabled' if codecov_strict_mode else 'disabled'}
 
 ## Deterministic Check Results
@@ -1927,6 +1952,12 @@ def main() -> int:
 {desktop_output}
 ```
 
+#### desktop_sidecar_readiness output
+
+```text
+{desktop_sidecar_readiness_output}
+```
+
 #### external_e2e_smoke output
 
 ```text
@@ -1945,11 +1976,12 @@ def main() -> int:
 {metrics_guard_output}
 ```
 
-### 18) CI Integration Tests latest
+### 18) External Release Authority
 
 - policy: do not write back dynamic run_id / run_url to repository files.
-- source_of_truth: GitHub Actions `Integration Tests` latest result.
-- workflow_url: https://github.com/Smith-106/niko-studio/actions/workflows/integration-tests.yml
+- source_of_truth: repository contract in `.github/workflows/external-release-gate.yml` plus the local snapshot generated by this script.
+- workflow_path: `.github/workflows/external-release-gate.yml`
+- policy_doc: `docs/release/RELEASE_NOTES.md`
 """
 
     REPORT_PATH.write_text(report, encoding="utf-8")

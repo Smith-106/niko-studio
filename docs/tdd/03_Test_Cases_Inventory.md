@@ -3,6 +3,8 @@
 > **版本**: 2.0  
 > **框架**: pytest + LLM-as-a-Judge  
 > **状态**: 正式规范
+>
+> **状态说明（2026-04-07）**: 本文档保留为历史 Python/pytest 用例库参考，不代表当前 `desktop + src-ts` 的主验证入口。当前发布与回归权威请以 `docs/release/RELEASE_NOTES.md`、`.github/workflows/external-release-gate.yml`、`.github/workflows/integration-tests.yml` 与 `python scripts/release_check_summary.py` 为准。
 
 ---
 

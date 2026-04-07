@@ -36,56 +36,95 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run production runtime guards (${{ inputs.gate_label }})
-        if: ${{ inputs.run_metrics_guard }}
-        env:
-          NIKO_ENV: production
-          NIKO_CORS_PROD_ORIGINS: https://app.example.com,https://gray.example.com
-          NIKO_GATEWAY_METRICS_ENABLED: "true"
+      - name: Run version consistency check
         run: |
-          python -c "from src.mcp.gateway import _resolve_reload_enabled, _resolve_cors_origins; from src.config import init_config, get_config_value; init_config(config_path='config/niko-studio.production.yaml', hot_reload=False); assert _resolve_reload_enabled() is False; origins = _resolve_cors_origins(); assert origins and all(o not in {'*','http://localhost:3000','http://127.0.0.1:3000'} for o in origins); assert bool(get_config_value('gateway.metrics_enabled', True)) is True; print('external production guards ok')"
+          python scripts/check_versions.py
 
-      - name: Run e2e smoke (${{ inputs.gate_label }})
-        if: ${{ inputs.run_e2e }}
+      - name: Run delivery semantic gate
         run: |
-          pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=short --junitxml=pytest-e2e.xml
-
-      - name: Upload e2e report artifact
-        if: ${{ inputs.run_e2e }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-e2e-report-${{ inputs.gate_label }}
-          path: pytest-e2e.xml
+          python scripts/delivery_gate.py
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: |
+            desktop/package-lock.json
+            src-ts/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: src-ts
 
       - name: Install desktop dependencies
         run: npm ci
         working-directory: desktop
 
-      - name: Check desktop sidecar readiness (soft)
-        id: sidecar-readiness
+      - name: Resolve effective gate semantics
+        id: gate_mode
         run: |
-          npm run build:sidecar || { echo "::warning::desktop sidecar build failed (soft gate)"; exit 0; }
-          npm run validate:sidecar-contract || { echo "::warning::desktop sidecar contract validation failed (soft gate)"; exit 0; }
-          echo "desktop sidecar readiness ok"
-        working-directory: desktop
+          if [ "${{ inputs.gate_label }}" = "external" ]; then
+            echo "run_metrics_guard=true" >> "$GITHUB_OUTPUT"
+            echo "run_e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_metrics_guard=${{ inputs.run_metrics_guard }}" >> "$GITHUB_OUTPUT"
+            echo "run_e2e=${{ inputs.run_e2e }}" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Download coverage artifact
-        if: ${{ inputs.run_codecov }}
-        uses: actions/download-artifact@v4
+      - name: Run backend Phase 4 coverage baseline (${{ inputs.gate_label }})
+        run: |
+          npm run test:coverage:phase4 -- --coverage.reporter=text --coverage.reporter=json --coverage.reporter=html --coverage.reporter=cobertura
+        working-directory: src-ts
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
+          path: src-ts/coverage/cobertura-coverage.xml
+
+      - name: Run production runtime guards (${{ inputs.gate_label }})
+        if: ${{ steps.gate_mode.outputs.run_metrics_guard == 'true' }}
+        env:
+          NIKO_ENV: production
+          NIKO_CORS_PROD_ORIGINS: https://app.example.com,https://gray.example.com
+          NIKO_GATEWAY_METRICS_ENABLED: "true"
+        run: |
+          npm exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default --reporter=junit --outputFile.junit=../vitest-production-guard.xml
+        working-directory: src-ts
+
+      - name: Upload production guard report artifact
+        if: ${{ steps.gate_mode.outputs.run_metrics_guard == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-production-guard-${{ inputs.gate_label }}
+          path: vitest-production-guard.xml
+
+      - name: Run external smoke (${{ inputs.gate_label }})
+        if: ${{ steps.gate_mode.outputs.run_e2e == 'true' }}
+        run: |
+          npm exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default --reporter=junit --outputFile.junit=../vitest-e2e.xml
+        working-directory: src-ts
+
+      - name: Upload e2e report artifact
+        if: ${{ steps.gate_mode.outputs.run_e2e == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-e2e-report-${{ inputs.gate_label }}
+          path: vitest-e2e.xml
+
+      - name: Check desktop sidecar readiness
+        id: sidecar-readiness
+        run: |
+          npm run build:sidecar
+          npm run validate:sidecar-contract
+          echo "desktop sidecar readiness ok"
+        working-directory: desktop
 
       - name: Resolve Codecov strict mode
         id: codecov_mode
@@ -106,6 +145,6 @@ jobs:
         if: ${{ inputs.run_codecov }}
         uses: codecov/codecov-action@v4
         with:
-          files: ./coverage.xml
+          files: ./src-ts/coverage/cobertura-coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: ${{ steps.codecov_mode.outputs.fail_ci_if_error }}

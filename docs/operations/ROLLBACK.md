@@ -21,15 +21,14 @@
 1. 版本检查：
 
 ```bash
-python -m src.cli.main --version
-python -c "import src; print(src.__version__)"
 python scripts/check_versions.py
+python scripts/delivery_gate.py
 ```
 
-2. 健康检查与配置预检：
+2. 健康检查与生产守卫：
 
 ```bash
-python -c "from src.config import init_config, ensure_environment; init_config(hot_reload=False); ensure_environment(strict=False); print('config ok')"
+npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default
 ```
 
 3. 端点验证：
@@ -41,10 +40,17 @@ python -c "from src.config import init_config, ensure_environment; init_config(h
 4. 最小测试回归：
 
 ```bash
-pytest
+npm --prefix src-ts run test:coverage:phase4 -- --coverage.reporter=text
+npm --prefix desktop run build:sidecar
+npm --prefix desktop run validate:sidecar-contract
 ```
 
 5. external 场景附加验证：
+
+```bash
+npm --prefix src-ts exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default
+python scripts/release_check_summary.py
+```
 
 - e2e 冒烟可重新执行并通过。
 - 覆盖率与关键质量信号完整可见。
@@ -63,7 +69,7 @@ pytest
 1. 回退到上一个稳定 commit/tag。
 2. 启动后先做核心链路验证：
    - Desktop：Sidebar 三入口可打开并关闭。
-   - Gateway：确认本地运行时可恢复，必要时验证 Python fallback。
+  - Gateway：确认 Node-first 本地运行时可恢复，必要时再验证显式 Python compatibility fallback。
    - Chat：发送一条消息，确认至少非流式路径可用。
    - Streamlit：仅在当前候选包含兼容路径时，验证 tab4/tab5 可正常展示场景看板。
 3. 再执行本 runbook 的通用健康检查与测试回归。

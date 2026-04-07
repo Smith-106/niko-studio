@@ -1,0 +1,54 @@
+{
+  "id": "IMPL-001",
+  "title": "Align external release gate to current authority surfaces",
+  "description": "Update the external GitHub Actions release workflow so it validates the current desktop plus TypeScript delivery path instead of missing Python-era runtime and root tests assumptions.",
+  "status": "completed",
+  "type": "ops",
+  "scope": ".github/workflows/external-release-gate.yml",
+  "action": "Implement",
+  "depends_on": [],
+  "focus_paths": [
+    ".github/workflows/external-release-gate.yml",
+    "README.md",
+    "release-check-summary.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "The external workflow no longer references missing Python src-based runtime imports or root tests/integration paths",
+      "Workflow steps map to real current desktop and src-ts commands",
+      "Blocking versus soft gate semantics remain explicit"
+    ],
+    "verification": "Review the workflow, confirm every referenced path exists, and validate that the external gate still expresses its blocking and soft-check intent clearly.",
+    "definition_of_done": "The external release workflow matches the current repository authority surface without silently weakening release validation."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Audit stale workflow assumptions",
+      "description": "Identify Python-era runtime and test references that no longer exist in the repository."
+    },
+    {
+      "step": 2,
+      "title": "Translate the workflow to current authority",
+      "description": "Replace stale steps with real desktop and src-ts validation surfaces while preserving gate intent."
+    },
+    {
+      "step": 3,
+      "title": "Validate gate semantics",
+      "description": "Confirm the workflow still distinguishes blocking release checks from soft advisory checks."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-release-docs-workflow-alignment-20260407/.process/context-package.json",
+  "meta": {
+    "type": "alignment",
+    "agent": "@code-developer",
+    "execution_group": "wave-1-external-ci",
+    "module": "external-release-ci",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

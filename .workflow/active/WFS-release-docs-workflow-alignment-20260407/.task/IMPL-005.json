@@ -1,0 +1,57 @@
+{
+  "id": "IMPL-005",
+  "title": "Run final alignment verification and publish handoff",
+  "description": "After CI, docs, workflow bookkeeping, and evidence are aligned, run the final verification sweep and record a single authoritative handoff for the post-closure alignment state.",
+  "status": "completed",
+  "type": "verification",
+  "scope": ".workflow/active/WFS-release-docs-workflow-alignment-20260407/**;.workflow/.csv-wave/cwp-release-docs-workflow-alignment-20260407/**;release-check-summary.md;.workflow/evidence/release/**",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-004"
+  ],
+  "focus_paths": [
+    ".workflow/active/WFS-release-docs-workflow-alignment-20260407/IMPL_PLAN.md",
+    ".workflow/active/WFS-release-docs-workflow-alignment-20260407/TODO_LIST.md",
+    ".workflow/.csv-wave/cwp-release-docs-workflow-alignment-20260407/tasks.csv",
+    "release-check-summary.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "The alignment session has one coherent final status summary or handoff note",
+      "Release summary and evidence artifacts point to the updated authority surfaces",
+      "No remaining task in this session is blocked by stale pre-2026-04-07 bookkeeping"
+    ],
+    "verification": "Run the final updated verification flow, then inspect the alignment session artifacts and release summary for consistency.",
+    "definition_of_done": "One authoritative post-closure alignment handoff remains for future operators and csv-wave continuation."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Verify downstream agreement",
+      "description": "Check that Wave 1 and Wave 2 outputs no longer contradict each other."
+    },
+    {
+      "step": 2,
+      "title": "Record the final status",
+      "description": "Update the alignment session artifacts so the next operator sees one authoritative closeout path."
+    },
+    {
+      "step": 3,
+      "title": "Leave the CSV queue authoritative",
+      "description": "Ensure the new CSV wave session remains the canonical execution queue for this remaining alignment work."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-release-docs-workflow-alignment-20260407/.process/context-package.json",
+  "meta": {
+    "type": "alignment",
+    "agent": "@code-developer",
+    "execution_group": "wave-3-handoff",
+    "module": "alignment-handoff",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}

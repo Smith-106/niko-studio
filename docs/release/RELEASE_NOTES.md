@@ -17,39 +17,41 @@
 python scripts/check_versions.py
 ```
 
-2. 配置预检通过：
+2. 交付语义门禁通过：
 
 ```bash
-python -c "from src.config import init_config, ensure_environment; init_config(hot_reload=False); ensure_environment(strict=False); print('config ok')"
+python scripts/delivery_gate.py
 ```
 
-3. 测试门禁通过：
+3. TypeScript Phase 4 基线与覆盖率门禁通过：
 
 ```bash
-# 交付基线（单元 + 集成，排除 e2e）
-pytest -o addopts="" tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80
-
-# 本地定点调试（默认绕开 pytest.ini addopts 与全局覆盖率门槛）
-python scripts/run_targeted_pytest.py tests/unit/test_ci_gate_workflows.py -q
+npm --prefix src-ts run test:coverage:phase4 -- --coverage.reporter=text --coverage.reporter=json --coverage.reporter=html --coverage.reporter=cobertura
 ```
 
-4. e2e 冒烟通过（external 必选）：
+4. external 冒烟通过（external 必选）：
 
 ```bash
-# 覆盖 pytest.ini 的默认 addopts，按 e2e marker 执行 external 冒烟
-pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=short
+npm --prefix src-ts exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default
 ```
 
-> 约定：external 冒烟用例需显式标注 `@pytest.mark.e2e`，以保证门禁与测试分类一致。
+> 约定：external 冒烟以当前 `src-ts` MCP workflow/critic integration tests 为主，而不是缺失的 legacy Python `tests/integration/test_e2e_workflow.py`。
 
-5. 质量信号完整：覆盖率报告生成并上传成功，并且 CI 产出 `coverage-xml`、`pytest-baseline-report`、`pytest-e2e-report-*` 工件可追溯。
+5. 质量信号完整：覆盖率报告生成并上传成功，并且 CI 产出 `coverage-xml`、`vitest-production-guard-*`、`vitest-e2e-report-*` 工件可追溯。
    - external 场景下：当已配置 `CODECOV_TOKEN` 且 `codecov_fail_ci_if_error=true` 时，Codecov 上传失败为 No-Go；当缺失 token 时允许降级并输出告警，必须在发布记录中登记风险。
 
-6. 生产安全配置有效：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位，且 `reload` 必须关闭。
-   - 推荐使用 `config/niko-studio.production.yaml` 启动 external。
-   - 启动命令：`python scripts/start_gateway.py --env production --config config/niko-studio.production.yaml`
+6. Desktop sidecar readiness 通过：
 
-7. 生产可观测性守卫通过：`gateway.metrics_enabled=true`，并通过 external workflow 的 runtime guard。
+```bash
+npm --prefix desktop run build:sidecar
+npm --prefix desktop run validate:sidecar-contract
+```
+
+7. 生产安全配置与可观测守卫通过：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位，`reload` 必须关闭，且 `gateway.metrics_enabled=true`。
+
+```bash
+npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default
+```
 
 8. 回退预案已确认：`docs/operations/ROLLBACK.md` 中 external 回退触发与验证项均可执行。
 
@@ -76,17 +78,17 @@ external 对外“100% 完成度”仅指核心可达链路：
 
 证据链建议在同一次发布中保留：
 
-- Desktop 构建日志：`npm --prefix "D:/工作目录/niko-studio/desktop" run build`
-- Python 测试日志：
-  - `pytest -o addopts="" tests/unit tests/integration -m "not e2e" --cov=src --cov-report=term-missing --cov-fail-under=80`
-  - `pytest -o addopts="" -m "e2e" tests/integration/test_e2e_workflow.py -q --tb=short`
-- 本地定点调试（非发布门禁）：`python scripts/run_targeted_pytest.py tests/unit/test_ci_gate_workflows.py -q`
+- TypeScript Phase 4 基线日志：`npm --prefix src-ts run test:coverage:phase4 -- --coverage.reporter=text --coverage.reporter=json --coverage.reporter=html --coverage.reporter=cobertura`
+- external 冒烟日志：`npm --prefix src-ts exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default`
+- production guard 日志：`npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default`
+- Desktop sidecar 构建日志：`npm --prefix desktop run build:sidecar`
+- Desktop sidecar 契约日志：`npm --prefix desktop run validate:sidecar-contract`
 - 发布汇总输出：`python scripts/release_check_summary.py`
 
 ### internal（dry-run）
 
 1. 确认工作区干净并记录当前 commit。
-2. 执行版本一致性、配置预检、交付基线测试。
+2. 执行版本一致性、交付语义门禁、TypeScript Phase 4 基线与 Desktop sidecar 检查。
 3. 记录产物版本与测试结果。
 
 ### external（正式交付）
@@ -96,7 +98,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 3. 确认质量信号完整（覆盖率 + CI 关键信号）。
    - 若已配置 `CODECOV_TOKEN`，按 strict 模式执行并将上传失败判定为 No-Go。
    - 若缺失 `CODECOV_TOKEN`，允许降级为告警，但必须在发布验收记录中注明该风险。
-4. 验证生产守卫（CORS / reload / metrics）通过。
+4. 验证 production guard（CORS / reload / metrics）通过。
 5. 核对回退预案与回滚验证路径。
 6. 评审 Go/No-Go 并登记结果。
 
@@ -106,7 +108,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 - 发布版本：
 - 对应 commit：
 - 版本一致性检查：通过 / 失败
-- 配置预检：通过 / 失败
+- 交付语义门禁：通过 / 失败
 - 基线测试与覆盖率：
 - e2e 冒烟（external 必填）：通过 / 失败 / 跳过（internal）
 - 质量信号完整性（覆盖率上传、CI 关键步骤）：完整 / 不完整

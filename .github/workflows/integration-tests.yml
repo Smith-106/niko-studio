@@ -36,161 +36,49 @@ jobs:
         run: |
           python scripts/delivery_gate.py
 
-      - name: Print test tool versions
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            desktop/package-lock.json
+            src-ts/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: src-ts
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Run TypeScript Phase 4 coverage baseline
         run: |
-          pytest --version
-          python -c "import pytest_asyncio; print(f'pytest-asyncio {pytest_asyncio.__version__}')"
+          npm run test:coverage:phase4 -- --coverage.reporter=text --coverage.reporter=json --coverage.reporter=html --coverage.reporter=cobertura
+        working-directory: src-ts
 
-      - name: Select diff coverage base
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Run current workflow integration smoke
         run: |
-          echo "DIFF_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
-
-      - name: Fetch PR base commit
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          git fetch --no-tags --prune --depth=1 origin "${{ github.event.pull_request.base.sha }}" \
-            || git fetch --no-tags --prune --depth=1 origin "refs/heads/${{ github.base_ref }}"
-
-      - name: Build changed python file list
-        id: changed_files
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          python - <<'PY'
-          import os
-          import pathlib
-          import subprocess
-
-          def norm_path(p: str) -> str:
-              p = (p or "").strip().replace("\\", "/")
-              while p.startswith("./"):
-                  p = p[2:]
-              return p
-
-          base = os.environ.get("DIFF_BASE", "")
-          changed = subprocess.check_output([
-              "git", "diff", "--name-only", "--diff-filter=ACMR", f"{base}...HEAD"
-          ], text=True).splitlines()
-
-          py_files = []
-          for raw in changed:
-              p = norm_path(raw)
-              if p.endswith(".py") and p.startswith("src/"):
-                  py_files.append(p)
-
-          out = pathlib.Path(".github") / "changed_python_files.txt"
-          out.parent.mkdir(parents=True, exist_ok=True)
-          out.write_text("\n".join(py_files), encoding="utf-8")
-          print(f"changed_python_files={len(py_files)}")
-          for p in py_files:
-              print(p)
-
-          output_path = os.environ.get("GITHUB_OUTPUT")
-          if output_path:
-              with open(output_path, "a", encoding="utf-8") as f:
-                  f.write(f"has_src_changes={'true' if py_files else 'false'}\\n")
-          PY
-
-      - name: Skip PR diff coverage gate (no changed src/*.py)
-        if: ${{ github.event_name == 'pull_request' && steps.changed_files.outputs.has_src_changes == 'false' }}
-        run: |
-          echo "No changed src/*.py files in PR, skip diff coverage gate"
-
-      - name: Run architecture boundary unit suite
-        run: |
-          pytest tests/unit/workflow/test_workflow_engine.py -k "architecture_boundary" -q --no-cov
-
-      - name: Run architecture boundary integration suite
-        run: |
-          pytest tests/integration/test_workflow_integration.py -k "boundary" -q --no-cov
-
-      - name: Run PR diff coverage gate (changed src/*.py)
-        if: ${{ github.event_name == 'pull_request' && steps.changed_files.outputs.has_src_changes == 'true' }}
-        run: |
-          mapfile -t CHANGED_FILES < .github/changed_python_files.txt
-          PYTEST_TARGETS=(tests/unit tests/integration)
-
-          pytest "${PYTEST_TARGETS[@]}" -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=80 --junitxml=pytest-baseline.xml
-
-          python - <<'PY'
-          import sys
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-
-          threshold = 80.0
-          changed_file = Path('.github/changed_python_files.txt')
-          cov_xml = Path('coverage.xml')
-
-          changed = [line.strip() for line in changed_file.read_text(encoding='utf-8').splitlines() if line.strip()]
-          if not changed:
-              print('No changed python files, skip diff coverage check')
-              sys.exit(0)
-
-          tree = ET.parse(cov_xml)
-          root = tree.getroot()
-
-          by_file = {}
-          for cls in root.findall('.//class'):
-              filename = cls.get('filename')
-              if not filename:
-                  continue
-              lines = cls.find('lines')
-              if lines is None:
-                  continue
-              total = 0
-              covered = 0
-              for ln in lines.findall('line'):
-                  hits = int(ln.get('hits', '0'))
-                  total += 1
-                  if hits > 0:
-                      covered += 1
-              by_file[filename] = (covered, total)
-
-          normalized = {p.replace('\\\\', '/'): p for p in by_file.keys()}
-
-          failures = []
-          for target in changed:
-              key = target.replace('\\\\', '/')
-              if key not in normalized:
-                  failures.append((target, 0.0, 'missing-in-coverage.xml'))
-                  continue
-              src_key = normalized[key]
-              covered, total = by_file[src_key]
-              pct = (covered / total * 100.0) if total else 0.0
-              print(f'{target}: {pct:.2f}% ({covered}/{total})')
-              if pct < threshold:
-                  failures.append((target, pct, f'{covered}/{total}'))
-
-          if failures:
-              print('\nDiff coverage gate failed:')
-              for f, pct, detail in failures:
-                  print(f' - {f}: {pct:.2f}% ({detail}) < {threshold:.0f}%')
-              sys.exit(1)
-
-          print(f'\nDiff coverage gate passed (threshold {threshold:.0f}%)')
-          PY
-
-      - name: Run main/develop + schedule strict gate
-        if: ${{ github.event_name != 'pull_request' }}
-        run: |
-          pytest tests/unit tests/integration -m "not e2e" --cov=src --cov-report=xml --cov-fail-under=100 --junitxml=pytest-baseline.xml
+          npm exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default --reporter=junit --outputFile.junit=../vitest-integration.xml
+        working-directory: src-ts
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
-          path: coverage.xml
+          path: src-ts/coverage/cobertura-coverage.xml
 
-      - name: Upload baseline test report artifact
+      - name: Upload integration report artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-baseline-report
-          path: pytest-baseline.xml
+          name: vitest-integration-report
+          path: vitest-integration.xml
 
       - name: Upload coverage to Codecov (internal)
         uses: codecov/codecov-action@v4
         with:
-          files: ./coverage.xml
+          files: ./src-ts/coverage/cobertura-coverage.xml
           fail_ci_if_error: false
 
   desktop-build:
@@ -300,14 +188,21 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: src-ts/package-lock.json
 
-      - name: Run workflow decision contract baseline (soft warn)
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: src-ts
+
+      - name: Run workflow integration baseline (soft warn)
         run: |
-          pytest tests/unit/workflow/test_workflow_engine.py -k "decision" -q --no-cov
+          npm exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts --reporter=default
+        working-directory: src-ts
 
   p2-high-risk-soft-fail:
     runs-on: ubuntu-latest
@@ -317,30 +212,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: |
+            desktop/package-lock.json
+            src-ts/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: src-ts
 
       - name: Install desktop dependencies
         run: npm ci
         working-directory: desktop
 
-      - name: Run gateway stream contract (high-risk soft fail)
+      - name: Run runtime guard contracts (high-risk soft fail)
         run: |
-          pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q --no-cov
+          npm exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default
+        working-directory: src-ts
 
       - name: Run desktop parser + evaluation apply/undo contracts (high-risk soft fail)
         run: |
@@ -353,32 +245,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: |
+            desktop/package-lock.json
+            src-ts/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: src-ts
 
       - name: Install desktop dependencies
         run: npm ci
         working-directory: desktop
 
-      - name: Run P2 selected hard gate contracts
+      - name: Run current src-ts hard gate contracts
         run: |
-          pytest tests/unit/workflow/test_workflow_engine.py -k "decision" -q --no-cov
-          pytest tests/unit/mcp/test_gateway_stream.py -k "contract" -q --no-cov
-          pytest tests/unit/test_ci_gate_workflows.py -q --no-cov
-          pytest tests/unit/mcp/test_gateway_endpoints.py -k "cors_preflight_allows_put" -q --no-cov
+          npm exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default
+        working-directory: src-ts
+
+      - name: Run desktop selected hard gate contracts
+        run: |
           npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx src/components/KnowledgeModal.test.tsx
 

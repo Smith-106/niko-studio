@@ -1,0 +1,56 @@
+{
+  "id": "IMPL-003",
+  "title": "Close remaining Phase 4 multi-store semantics and adapter gaps",
+  "description": "Finish the remaining core data-layer tail in UnifiedMemoryEngine and related integration adapters so Phase 4 no longer depends on explicitly unverified multi-store semantics.",
+  "status": "pending",
+  "type": "feature",
+  "scope": "src-ts/memory/**;src-ts/integrations/**;src-ts/tests/memory/**;src-ts/tests/integrations/**",
+  "action": "Implement",
+  "depends_on": [],
+  "focus_paths": [
+    "src-ts/memory/unified-memory.ts",
+    "src-ts/integrations/adapters.ts",
+    "src-ts/tests/memory/index.test.ts",
+    "src-ts/tests/memory/unified-memory.integration-adapters.test.ts",
+    ".workflow/active/WFS-phase-4-data-layer-entry-20260404/TODO_LIST.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "The remaining core multi-store semantics are explicitly tested",
+      "Local-first plus injected adapter behavior stays deterministic",
+      "The active Phase 4 TODO no longer needs the unverified multi-store note for core memory flows"
+    ],
+    "verification": "npm.cmd --prefix src-ts exec vitest run tests/memory/index.test.ts tests/memory/unified-memory.integration-adapters.test.ts tests/integrations/adapters.test.ts && npm.cmd --prefix src-ts run typecheck",
+    "definition_of_done": "The last named Phase 4 core-tail gap is closed with direct regression evidence."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Enumerate uncovered semantics",
+      "description": "Translate the active Phase 4 TODO note into concrete runtime and test expectations."
+    },
+    {
+      "step": 2,
+      "title": "Patch memory and adapter behavior",
+      "description": "Close the bounded runtime gaps without widening into optional external-adapter product work."
+    },
+    {
+      "step": 3,
+      "title": "Extend direct regressions",
+      "description": "Lock the intended multi-store behavior through focused memory and adapter tests."
+    }
+  ],
+  "artifacts": [],
+  "inherited": {},
+  "context_package_path": ".workflow/active/WFS-core-migration-final-closure-20260407/.process/context-package.json",
+  "meta": {
+    "type": "closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-1-phase4-tail",
+    "module": "data-layer",
+    "execution_config": {
+      "method": "csv-wave",
+      "enable_resume": true
+    }
+  }
+}
