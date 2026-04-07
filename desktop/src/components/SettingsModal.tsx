@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload, Settings } from 'lucide-react'
 import { BackendConfig } from '../api/client'
+import { isTauriRuntime, syncGatewayBaseOverride } from '../api/transport'
 import { useSettingsStore, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useI18n } from '../i18n'
@@ -246,14 +246,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       updateProvider(provider.id, provider)
     })
 
-    if ('__TAURI__' in window) {
+    if (isTauriRuntime()) {
       try {
-        await invoke('set_gateway_base_override', {
-          base:
-            localSettings.apiBaseUrl && localSettings.apiBaseUrl.trim()
-              ? localSettings.apiBaseUrl.trim()
-              : null,
-        })
+        await syncGatewayBaseOverride(
+          localSettings.apiBaseUrl && localSettings.apiBaseUrl.trim()
+            ? localSettings.apiBaseUrl.trim()
+            : null,
+        )
       } catch {
         // ignore override sync failures
       }

@@ -55,9 +55,19 @@ RULES: tuple[GateRule, ...] = (
         reason="缺少 test:coverage:phase4 官方覆盖率验证入口。",
     ),
     GateRule(
+        file_path="src-ts/package.json",
+        needle="\"check:local\"",
+        reason="缺少 src-ts 本地基线入口 check:local，无法在本地复现当前 JS/TS 高信号校验链路。",
+    ),
+    GateRule(
         file_path="desktop/package.json",
         needle="\"build:sidecar\"",
         reason="缺少 desktop sidecar 构建入口。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle="\"check:local\"",
+        reason="缺少 desktop 本地基线入口 check:local，桌面端无法在本地复现当前质量校验链路。",
     ),
     GateRule(
         file_path="desktop/package.json",

@@ -1,0 +1,87 @@
+{
+  "id": "IMPL-002",
+  "title": "Establish the repo-local JS/TS engineering baseline",
+  "description": "Create 2-3 shared repo-level quality config files, add `lint`, `format`, `format:check`, and `check:local` commands to both active product packages, and refresh the 2 lockfiles so the local developer loop matches the current `desktop + src-ts` authority path. Keep the first-pass lint/format boundary limited to active package source/config surfaces and do not widen it into repo-wide cleanup.",
+  "status": "completed",
+  "type": "maintenance",
+  "scope": "desktop/package.json;desktop/package-lock.json;src-ts/package.json;src-ts/package-lock.json;eslint.config.mjs;prettier.config.mjs;.prettierignore",
+  "action": "Implement",
+  "depends_on": [],
+  "focus_paths": [
+    "desktop/package.json",
+    "desktop/package-lock.json",
+    "src-ts/package.json",
+    "src-ts/package-lock.json",
+    "eslint.config.mjs",
+    "prettier.config.mjs",
+    ".prettierignore"
+  ],
+  "convergence": {
+    "criteria": [
+      "2 package manifests expose `lint`, `format`, `format:check`, and `check:local` or an equivalent authoritative local-baseline command.",
+      "2-3 repo-level quality config files exist and target only the active `desktop` and `src-ts` source or config surfaces while excluding build output, generated artifacts, and workflow directories.",
+      "The new local baseline keeps desktop validation and src-ts high-signal checks in the local developer loop instead of leaving them CI-only.",
+      "0 first-pass autofix scope is spent on docs, `.workflow`, generated artifacts, or historical compatibility surfaces outside the active `desktop` and `src-ts` source/config boundary."
+    ],
+    "verification": "npm --prefix src-ts run lint && npm --prefix src-ts run format:check && npm --prefix src-ts run check:local && npm --prefix desktop run lint && npm --prefix desktop run format:check && npm --prefix desktop run check:local",
+    "definition_of_done": "Both active product packages share one repo-level lint and format baseline and expose a reproducible local validation command that later execution can call directly."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Define shared repo-level quality config",
+      "description": "Add the minimal shared lint and format config files plus ignore rules required to cover `desktop` and `src-ts` without sweeping docs, workflow artifacts, generated files, or historical compatibility surfaces into the first baseline pass."
+    },
+    {
+      "step": 2,
+      "title": "Wire package scripts and dependencies",
+      "description": "Add baseline scripts and matching tool dependencies to `desktop/package.json` and `src-ts/package.json`, then refresh the 2 lockfiles so the commands are runnable on a clean checkout."
+    },
+    {
+      "step": 3,
+      "title": "Promote one authoritative local baseline per package",
+      "description": "Compose lint, format check, typecheck, and the current high-signal test or build steps into one clear local developer-loop command for each package."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/planning-notes.md",
+      "role": "session-constraints"
+    },
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/module-plans/B-local-engineering-baseline.json",
+      "role": "module-plan"
+    },
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "role": "analysis-source"
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "role": "completed-governance-boundary"
+    }
+  ],
+  "inherited": {
+    "from_sessions": [
+      "UAN-project-status-2026-04-07",
+      "WFS-post-governance-hardening-20260407"
+    ],
+    "notes": [
+      "Keep the local engineering baseline aligned with the authoritative `desktop + src-ts` path.",
+      "Treat the first pass as a bounded baseline for active package source/config files, not a repo-wide formatting cleanup.",
+      "Do not reopen CI, workflow, or authority hardening already completed in the governance session."
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/context-package.json",
+  "meta": {
+    "type": "engineering-baseline",
+    "agent": "@code-developer",
+    "execution_group": "wave-1-foundation",
+    "module": "local-engineering-baseline",
+    "priority": "high",
+    "execution_config": {
+      "method": "workflow-plan",
+      "enable_resume": true
+    }
+  }
+}

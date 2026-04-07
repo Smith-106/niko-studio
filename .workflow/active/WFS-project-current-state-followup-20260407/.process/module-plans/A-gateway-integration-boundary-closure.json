@@ -1,0 +1,103 @@
+{
+  "module": "gateway-integration-boundary-closure",
+  "summary": "Close the remaining gateway structural debt in 2 execution slices: first collapse duplicated container and integration adapter ownership, then fence the deprecated web compatibility surface so Desktop plus MCP Gateway remains the only primary runtime path.",
+  "tasks": [
+    {
+      "temp_id": "A1",
+      "title": "Collapse duplicated integration adapter ownership",
+      "description": "Refactor the gateway seam so ServiceContainer, container adapters, and UnifiedMemoryEngine all consume one explicit integration adapter bundle from src-ts/integrations/adapters.ts instead of carrying placeholder factories or duplicated mini-adapter surfaces.",
+      "scope": "Touch 4 scoped source files to remove duplicate boundary logic across ServiceContainer factory placeholders, adapter-side implicit bundle creation, integration stub or noop selection, and UnifiedMemoryEngine's reduced adapter shim.",
+      "focus_paths": [
+        "src-ts/container/ServiceContainer.ts",
+        "src-ts/container/adapters.ts",
+        "src-ts/integrations/adapters.ts",
+        "src-ts/memory/unified-memory.ts"
+      ],
+      "depends_on": [],
+      "convergence": {
+        "criteria": [
+          "1 shared integration adapter ownership path exists in src-ts/integrations/adapters.ts and is consumed by 3 gateway callers: src-ts/container/ServiceContainer.ts, src-ts/container/adapters.ts, and src-ts/memory/unified-memory.ts",
+          "0 duplicate IntegrationFlags or createNoOpAdapters seams remain in src-ts/memory/unified-memory.ts",
+          "2 behavior modes are explicit for each optional boundary: local-first default and enabled integration path, with no ambiguous placeholder factory comment block left in src-ts/container/ServiceContainer.ts"
+        ],
+        "verification": "cd src-ts && npm.cmd run test -- tests/integrations/adapters.test.ts tests/memory/unified-memory.integration-adapters.test.ts tests/container/search-engine-adapter.default-constructor.test.ts tests/container/ServiceContainer.test.ts && npm.cmd run typecheck",
+        "definition_of_done": "The adapter boundary is owned once, the container no longer presents core runtime factories as placeholders, UnifiedMemoryEngine no longer mirrors the integration bundle, and the listed tests plus typecheck pass."
+      },
+      "implementation": [
+        {
+          "step": 1,
+          "title": "Inventory current adapter ownership and call sites",
+          "description": "Map how ServiceContainer, SearchEngineAdapter, and UnifiedMemoryEngine currently create or infer integration adapters, and separate placeholder naming from behavior that affects runtime registration."
+        },
+        {
+          "step": 2,
+          "title": "Move boundary ownership to a single bundle contract",
+          "description": "Adjust the integration factory and its consumers so adapter bundle creation and configuration is explicit and reusable instead of recreated or partially mirrored across container and memory layers."
+        },
+        {
+          "step": 3,
+          "title": "Rebaseline coverage on the closed seam",
+          "description": "Update the existing integration, memory, and container tests so they assert the new single-boundary behavior and catch regressions in both default local-first and enabled integration modes."
+        }
+      ],
+      "type": "refactor",
+      "execution_group": "wave-A-1",
+      "agent": "@code-developer",
+      "priority": "high"
+    },
+    {
+      "temp_id": "A2",
+      "title": "Fence the deprecated web gateway compatibility surface",
+      "description": "After the adapter seam is closed, reduce the residual web compatibility path to an explicitly bounded fallback so GET / forwarding and websocket workflow behavior remain opt-in compatibility logic rather than a parallel primary surface.",
+      "scope": "Touch 1 scoped source file, plus its existing tests, to keep src-ts/web/app.ts aligned with the post-refactor gateway boundary and the current Desktop plus MCP Gateway authority model.",
+      "focus_paths": [
+        "src-ts/web/app.ts"
+      ],
+      "depends_on": [
+        "A1"
+      ],
+      "convergence": {
+        "criteria": [
+          "1 deprecated HTTP root policy remains in src-ts/web/app.ts: default 410 response with validated forwarding only when WEB_UI_FORWARD_URL is explicitly set",
+          "1 websocket compatibility policy remains opt-in and continues to advertise Desktop client or MCP Gateway as the primary path",
+          "0 new runtime dependencies from src-ts/web/app.ts back into the core gateway integration bundle are introduced"
+        ],
+        "verification": "cd src-ts && npm.cmd run test -- tests/web/app.test.ts && npm.cmd run typecheck",
+        "definition_of_done": "The deprecated web surface is explicitly bounded, aligns with the closed gateway integration boundary from A1, and the web compatibility tests plus typecheck pass."
+      },
+      "implementation": [
+        {
+          "step": 1,
+          "title": "Align compatibility behavior with the primary runtime boundary",
+          "description": "Review root-route forwarding, websocket gating, and user-facing deprecation messaging in src-ts/web/app.ts against the Desktop plus MCP Gateway authority path established by the gateway module."
+        },
+        {
+          "step": 2,
+          "title": "Remove residual ambiguity from the web fallback surface",
+          "description": "Tighten the implementation so compatibility-only behavior stays explicit, does not imply a first-class web runtime, and does not reopen the broader compatibility seam closed in A1."
+        },
+        {
+          "step": 3,
+          "title": "Lock the bounded behavior with existing tests",
+          "description": "Refresh src-ts/tests/web/app.test.ts assertions to cover the final 410, validated forwarding, and websocket gating behavior expected after the module closure."
+        }
+      ],
+      "type": "maintenance",
+      "execution_group": "wave-A-2",
+      "agent": "@code-developer",
+      "priority": "medium"
+    }
+  ],
+  "cross_module_dependencies": [],
+  "risks": [
+    "SearchEngineAdapter and UnifiedMemoryEngine already have behavior tests tied to current noop and stub semantics, so changing adapter ownership can break runtime assumptions unless tests are updated in the same slice.",
+    "src-ts/web/app.ts is already documented as a bounded deprecated surface; removing it outright instead of fencing it would conflict with current migration and security documents.",
+    "ServiceContainer has broad singleton and mock-injection coverage, so careless DI refactoring can regress initialization order or testing hooks beyond the integration seam."
+  ],
+  "out_of_scope": [
+    "Any authority or governance hardening already completed in WFS-post-governance-hardening-20260407",
+    "Desktop API client or Tauri contract splitting outside the scoped gateway files",
+    "Repo-wide lint, format, or local baseline work",
+    "Knowledge surface or Story Bible product-surface closure work"
+  ]
+}

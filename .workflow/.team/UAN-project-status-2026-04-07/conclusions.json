@@ -1,0 +1,180 @@
+{
+  "session_id": "UAN-project-status-2026-04-07",
+  "topic": "项目现状分析",
+  "completed": "2026-04-07T21:20:48.0145134+08:00",
+  "summary": "项目当前处于迁移收口后的可发布阶段。权威交付路径已经清晰收敛为 React/Vite 桌面前端 + Tauri/Rust 宿主 + Node/TypeScript MCP Gateway，且 2026-04-07 的发布治理与验证证据仍为绿色。主要问题不在“能否交付”，而在“是否已完成内部收敛”：gateway 内部仍保留 placeholder、adapter 和 Node/Python/Web 兼容包袱，日常本地质量基线弱于 CI/发布门禁，产品叙事仍宽于当前以写作为中心的单工作台真实可见面，知识库非技能项交互和 Story Bible 持久化边界尚未完全收口。",
+  "key_conclusions": [
+    {
+      "point": "当前权威运行时和交付路径已经真实收敛到 `desktop + src-ts`，而不是历史 Python/Web 路线。",
+      "evidence": "exploration-001 summary; exploration-002 summary; exploration-003 summary; analysis-001 strongest conclusion on layered runtime; analysis-003 confirmed fact on authority convergence (`README.md`, `docs/INDEX.md`, `docs/API_REFERENCE.md`).",
+      "confidence": "high"
+    },
+    {
+      "point": "项目在 2026-04-07 处于证据充分的可发布状态，发布治理是真实可执行的，不只是文档声明。",
+      "evidence": "analysis-002 strongest conclusion on executable release governance; command results in exploration-002 (`check_versions.py`, `delivery_gate.py`, `check_authority_alignment.py`, both TS typechecks => pass); analysis-003 and exploration-003 both cite release-readiness and 2026-04-07 closure artifacts.",
+      "confidence": "high"
+    },
+    {
+      "point": "当前最大的结构性风险集中在 TypeScript gateway 和兼容包袱，而不是外层桌面运行时分层。",
+      "evidence": "analysis-001 strongest conclusions and key insights: explicit React -> Tauri -> gateway layering, but placeholder registrations, adapter-owned concrete instantiation, stubbed integrations, and active Node/Python/Web compatibility paths remain in `src-ts/container/*`, `src-ts/integrations/adapters.ts`, `scripts/start_gateway.py`, and `src-ts/web/app.ts`.",
+      "confidence": "high"
+    },
+    {
+      "point": "工程质量控制呈现明显不对称：CI/发布门禁成熟，但本地默认开发基线偏弱。",
+      "evidence": "analysis-002 strongest conclusion on asymmetric quality controls; exploration-002 inventory signals found no repo-wide eslint/prettier/ruff baseline, `desktop` local `check` omits tests, and `pytest.ini` still targets legacy `src` coverage defaults.",
+      "confidence": "high"
+    },
+    {
+      "point": "当前真实产品是以写作为中心的单工作台 Desktop 产品，明显窄于“多域 AI Agent Platform”的对外叙事。",
+      "evidence": "exploration-003 summary and confirmed facts on single-workbench shell, writing canvas, chat, knowledge, evaluation, writing helper, optimizer, and settings; analysis-003 summary and confirmed facts on no visible router-driven multi-page surface; analysis-003 inference on writing-centric reality vs broader README narrative.",
+      "confidence": "high"
+    },
+    {
+      "point": "用户可见面的主要未收口点集中在知识库非技能项创建/详情流和 Story Bible 的持久化边界。",
+      "evidence": "analysis-003 confirmed facts on empty knowledge item click handling and inactive add buttons in `KnowledgeModal.tsx`, `CharacterTab.tsx`, `LocationTab.tsx`, and `PlotTab.tsx`; analysis-003 and exploration-003 both note `StoryBiblePanel.tsx` relies mainly on `localStorage`.",
+      "confidence": "high"
+    }
+  ],
+  "recommendations": [
+    {
+      "action": "把顶层产品口径进一步收敛为“写作优先的 Desktop 工作台 + 本地 Gateway”，把平台/多域能力明确标记为底座能力或后续扩展，而不是当前等价承诺。",
+      "rationale": "这能直接解决文档叙事与当前真实产品面之间的认知落差，减少对外和对内的目标漂移。",
+      "priority": "high"
+    },
+    {
+      "action": "继续压缩兼容包袱：将 Node/TypeScript 设为唯一自动 sidecar 路径，把 Python 兼容运行时改为显式 opt-in，并给 Web forwarding、历史兼容入口和过渡性 authority surface 建立退役/保留清单。",
+      "rationale": "当前权威路径已明确，继续保留自动回退和兼容入口只会放大变更面并稀释 authority discipline。",
+      "priority": "high"
+    },
+    {
+      "action": "替换或清理 `src-ts` 中的 placeholder/stub 注册，要求每个能力边界要么提供真实实现，要么返回显式 unsupported，而不是长期停留在模糊适配层。",
+      "rationale": "这是当前最直接的内部结构债务来源，也是后续扩展成本和行为不确定性的主要放大器。",
+      "priority": "high"
+    },
+    {
+      "action": "建立仓库级本地质量基线：补齐 lint/format，提供一个更贴近发布关键路径的统一本地检查命令，并同步重整或退役遗留 `pytest.ini` 默认姿态。",
+      "rationale": "项目已经具备强发布治理，但本地默认路径仍容易让问题后移到 CI 或 release gate 才暴露。",
+      "priority": "high"
+    },
+    {
+      "action": "拆分 `desktop/src/api/client.ts` 并补一层共享契约定义，用于 Tauri commands 和 gateway payload/schema 的显式约束。",
+      "rationale": "当前 UI 编排和 transport client 聚合度过高，会在功能继续增长时加重跨模块耦合。",
+      "priority": "medium"
+    },
+    {
+      "action": "将知识库角色/地点/情节的新增与详情流收口为真实可用交互；若短期不做，就在 UI 中移除或禁用这些入口。",
+      "rationale": "这些入口已成为当前最明显的用户面未完成信号，会削弱“已收口可发布”的整体感知。",
+      "priority": "medium"
+    },
+    {
+      "action": "为 Story Bible 明确持久化策略，并把该边界写入 UI 与文档：要么接入项目级存储/Gateway，要么明确标注 local-only 与备份恢复策略。",
+      "rationale": "当前 localStorage 为主的状态边界容易与“项目知识”预期发生混淆，也影响后续协作与数据安全判断。",
+      "priority": "medium"
+    },
+    {
+      "action": "定义并文档化目标部署/安全基线，至少覆盖 Tauri CSP 姿态、可重复打包方式，以及当前 release evidence 中仍属人工判断的部分。",
+      "rationale": "现有交付更像本地优先的可发布产品，但长期运维与安全姿态仍未完全产品化或自动化。",
+      "priority": "medium"
+    }
+  ],
+  "open_questions": [
+    "README 中保留的多域平台叙事，哪些属于近期真实产品计划，哪些只是底座愿景而非当前交付承诺？",
+    "哪些 Python/Web compatibility surface 仍有真实依赖方，哪些已经可以进入下一轮退役计划？",
+    "知识库非技能项的新增按钮和详情交互是未完成开发、被上层流程拦截，还是刻意保留的视觉占位？",
+    "Story Bible 的 localStorage 数据是否已经被现有导入导出、备份或恢复流程覆盖；若没有，这是否是被接受的产品边界？",
+    "项目面向正式发布时，是否需要把当前缺失的 repo-wide lint/format、Tauri CSP 和可重复部署基线提升为阻塞性要求？"
+  ],
+  "decision_trail": [
+    {
+      "round": 0,
+      "decision": "Use a standard multi-perspective analysis pipeline without interactive discussion rounds.",
+      "context": "Recorded in `wisdom/.msg/meta.json` because the request was for a one-shot current-state assessment."
+    }
+  ],
+  "cross_perspective_synthesis": {
+    "convergent_themes": [
+      {
+        "theme": "Authority convergence is real: the project now centers on `desktop + src-ts` with Tauri mediating the runtime contract.",
+        "confirmed_by": [
+          "architectural",
+          "technical",
+          "business"
+        ],
+        "support": "All three explorations and all three analyses describe the same default runtime and explicitly demote Python/Web to compatibility or historical status."
+      },
+      {
+        "theme": "The project is release-ready but still carrying post-migration consolidation debt.",
+        "confirmed_by": [
+          "architectural",
+          "technical",
+          "business"
+        ],
+        "support": "Analysis-001 highlights internal consolidation debt; analysis-002 shows green release evidence; analysis-003 places the product in post-closure release context with remaining UX edges."
+      },
+      {
+        "theme": "Quality rigor is stronger in release governance than in daily local development.",
+        "confirmed_by": [
+          "technical",
+          "architectural"
+        ],
+        "support": "Technical analysis directly calls out the asymmetry, while architectural analysis shows change-surface concentration in a few large modules that make stronger local safeguards more necessary."
+      },
+      {
+        "theme": "Current product value is writing-centric, while surrounding platform narrative and compatibility surfaces remain broader than the visible product reality.",
+        "confirmed_by": [
+          "business",
+          "architectural",
+          "technical"
+        ],
+        "support": "Business analysis maps the concrete writing workbench; architectural and technical analyses both note retained compatibility surfaces and authority-hardening history."
+      }
+    ],
+    "conflicts_resolved": [
+      {
+        "conflict": "The repository describes a broad multi-domain AI platform, but the visible desktop product is a writing-first single workbench.",
+        "perspectives": [
+          "business",
+          "architectural"
+        ],
+        "resolution": "Treat the platform language as substrate or roadmap, not as an accurate description of the current user-facing product."
+      },
+      {
+        "conflict": "The project is demonstrably release-ready, yet it still has unfinished architectural and UX seams.",
+        "perspectives": [
+          "technical",
+          "architectural",
+          "business"
+        ],
+        "resolution": "Interpret the current state as shippable but not fully consolidated; the remaining work is mostly about narrowing authority, reducing debt, and closing experience gaps rather than rescuing the delivery path."
+      },
+      {
+        "conflict": "Compatibility paths remain active even though the authoritative runtime is already singular.",
+        "perspectives": [
+          "architectural",
+          "technical"
+        ],
+        "resolution": "Compatibility can remain temporarily, but it should be explicit, opt-in, and tracked as debt rather than kept as an equal automatic path."
+      }
+    ],
+    "unique_contributions": [
+      {
+        "perspective": "architectural",
+        "contribution": "Clarified that the outer runtime boundary is well layered, while the main internal debt sits inside gateway DI, adapters, placeholder services, and aggregated client/orchestration modules."
+      },
+      {
+        "perspective": "technical",
+        "contribution": "Established that release governance is green and executable as of 2026-04-07, but local lint/test/security baselines still lag behind release expectations."
+      },
+      {
+        "perspective": "business",
+        "contribution": "Mapped the actual shipped product to a writing-centric workbench and surfaced the most concrete user-facing gaps in knowledge flows, Story Bible persistence, and narrative scope."
+      }
+    ]
+  },
+  "_metadata": {
+    "explorations": 3,
+    "analyses": 3,
+    "discussions": 0,
+    "strategy": "standard"
+  }
+}

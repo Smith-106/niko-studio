@@ -1,0 +1,86 @@
+{
+  "id": "IMPL-003",
+  "title": "Extract the desktop transport contract from the live desktop invoke surface",
+  "description": "Split the 5 live Tauri commands `[get_gateway_base, set_gateway_base_override, start_backend, check_backend_health, call_api]`, 1 generic request envelope, and the runtime-base resolution path out of the current desktop invoke surface into a dedicated transport contract layer while preserving the existing Rust host behavior in `desktop/src-tauri/src/main.rs`.",
+  "status": "completed",
+  "type": "refactor",
+  "scope": "desktop/src/api/client.ts;desktop/src/api/transport.ts;desktop/src/api/tauri-contract.ts;desktop/src/hooks/useAppBackendBootstrap.ts;desktop/src/components/SettingsModal.tsx;desktop/src-tauri/src/main.rs;desktop/src/api/client.test.ts",
+  "action": "Implement",
+  "depends_on": [],
+  "focus_paths": [
+    "desktop/src/api/client.ts",
+    "desktop/src/api/transport.ts",
+    "desktop/src/api/tauri-contract.ts",
+    "desktop/src/hooks/useAppBackendBootstrap.ts",
+    "desktop/src/components/SettingsModal.tsx",
+    "desktop/src-tauri/src/main.rs",
+    "desktop/src/api/client.test.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "`desktop/src/api/client.ts` no longer owns the Tauri command-name literals or the generic invoke or fetch transport envelope.",
+      "1 desktop transport contract layer exists and is the single source for the 5 live Tauri commands, HTTP method types, request envelope, and base normalization or runtime-base helpers.",
+      "0 raw command-name string usages remain outside the transport contract across `desktop/src/api/client.ts`, `desktop/src/hooks/useAppBackendBootstrap.ts`, and `desktop/src/components/SettingsModal.tsx`.",
+      "`desktop/src-tauri/src/main.rs` still exposes the same 5 commands and matches the extracted contract naming without adding new runtime branches."
+    ],
+    "verification": "npm --prefix desktop run typecheck && npm --prefix desktop run test -- src/api/client.test.ts && cargo check --manifest-path desktop/src-tauri/Cargo.toml",
+    "definition_of_done": "The desktop frontend-to-host transport seam is explicit, importable, and behavior-preserving, and future client work can depend on the extracted transport layer instead of editing inline Tauri literals in `client.ts`."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Inventory the current transport seam",
+      "description": "Map the current base-resolution helpers, cached runtime-base logic, generic `callApi` bridge, and the 5 live Tauri command usages inside `desktop/src/api/client.ts`, `desktop/src/hooks/useAppBackendBootstrap.ts`, `desktop/src/components/SettingsModal.tsx`, and `desktop/src-tauri/src/main.rs`."
+    },
+    {
+      "step": 2,
+      "title": "Create the desktop transport contract layer",
+      "description": "Extract shared command constants, request-envelope types, and transport helpers into dedicated desktop API files, then update `client.ts` and the other live invoke call sites to consume them instead of defining command names inline."
+    },
+    {
+      "step": 3,
+      "title": "Align the Rust host with the extracted contract",
+      "description": "Keep `main.rs` command registration behavior unchanged while aligning its command documentation and handler signatures with the extracted transport contract so the seam is explicit on both sides."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/planning-notes.md",
+      "role": "session-constraints"
+    },
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/module-plans/C-desktop-api-contract-split.json",
+      "role": "module-plan"
+    },
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "role": "analysis-source"
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "role": "completed-governance-boundary"
+    }
+  ],
+  "inherited": {
+    "from_sessions": [
+      "UAN-project-status-2026-04-07",
+      "WFS-post-governance-hardening-20260407"
+    ],
+    "notes": [
+      "Keep the desktop runtime path stable while splitting the transport seam out of `client.ts`.",
+      "Do not change gateway behavior, sidecar packaging, or command names in this task."
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/context-package.json",
+  "meta": {
+    "type": "desktop-contract",
+    "agent": "@code-developer",
+    "execution_group": "wave-1-foundation",
+    "module": "desktop-api-contract-split",
+    "priority": "high",
+    "execution_config": {
+      "method": "workflow-plan",
+      "enable_resume": true
+    }
+  }
+}

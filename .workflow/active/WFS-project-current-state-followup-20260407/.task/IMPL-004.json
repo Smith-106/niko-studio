@@ -1,0 +1,81 @@
+{
+  "id": "IMPL-004",
+  "title": "Fence the deprecated web gateway compatibility surface",
+  "description": "After the gateway adapter seam is closed, reduce the residual web compatibility path in `src-ts/web/app.ts` to an explicitly bounded fallback so HTTP root forwarding and websocket workflow behavior remain opt-in compatibility logic rather than a parallel primary surface.",
+  "status": "completed",
+  "type": "maintenance",
+  "scope": "src-ts/web/app.ts;src-ts/tests/web/app.test.ts",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-001"
+  ],
+  "focus_paths": [
+    "src-ts/web/app.ts",
+    "src-ts/tests/web/app.test.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "1 deprecated HTTP root policy remains in `src-ts/web/app.ts`: default `410` response with validated forwarding only when `WEB_UI_FORWARD_URL` is explicitly set.",
+      "1 websocket compatibility policy remains opt-in and continues to advertise Desktop client or MCP Gateway as the primary path.",
+      "0 new runtime dependencies from `src-ts/web/app.ts` back into the core gateway integration bundle are introduced."
+    ],
+    "verification": "npm --prefix src-ts run test -- tests/web/app.test.ts && npm --prefix src-ts run typecheck",
+    "definition_of_done": "The deprecated web surface is explicitly bounded, aligns with the closed gateway integration boundary from `IMPL-001`, and the web compatibility tests plus typecheck pass."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Align compatibility behavior with the primary runtime boundary",
+      "description": "Review root-route forwarding, websocket gating, and user-facing deprecation messaging in `src-ts/web/app.ts` against the Desktop plus MCP Gateway authority path established by the gateway module."
+    },
+    {
+      "step": 2,
+      "title": "Remove residual ambiguity from the web fallback surface",
+      "description": "Tighten the implementation so compatibility-only behavior stays explicit, does not imply a first-class web runtime, and does not reopen the broader compatibility seam closed in `IMPL-001`."
+    },
+    {
+      "step": 3,
+      "title": "Lock the bounded behavior with existing tests",
+      "description": "Refresh `src-ts/tests/web/app.test.ts` assertions to cover the final `410`, validated forwarding, and websocket gating behavior expected after the module closure."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/planning-notes.md",
+      "role": "session-constraints"
+    },
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/module-plans/A-gateway-integration-boundary-closure.json",
+      "role": "module-plan"
+    },
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "role": "analysis-source"
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "role": "completed-governance-boundary"
+    }
+  ],
+  "inherited": {
+    "from_tasks": [
+      "IMPL-001"
+    ],
+    "notes": [
+      "This task starts only after the gateway adapter boundary is explicit.",
+      "Keep the web surface as bounded compatibility only; do not reopen broader authority or runtime debates."
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/context-package.json",
+  "meta": {
+    "type": "engineering-closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-2-boundary-completion",
+    "module": "gateway-integration-boundary-closure",
+    "priority": "medium",
+    "execution_config": {
+      "method": "workflow-plan",
+      "enable_resume": true
+    }
+  }
+}

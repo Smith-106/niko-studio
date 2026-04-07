@@ -27,7 +27,7 @@ import type {
   SyncResult,
 } from './types';
 import { AgentType } from './types';
-import { createIntegrationAdapters } from '../integrations';
+import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 import { UnifiedMemoryEngine } from '../memory/unified-memory';
 import { GraphEngine } from '../graph/graph-engine';
 import { createIterativeRetriever, type IterativeRetriever } from '../search';
@@ -50,8 +50,11 @@ import { ObsidianService } from '../services/obsidian-service';
 export class MemoryEngineAdapter implements IMemoryEngine {
   private engine: UnifiedMemoryEngine;
 
-  constructor() {
-    this.engine = new UnifiedMemoryEngine({ dbPath: '.writing/memory.db' });
+  constructor(integrationAdapters?: Pick<IntegrationAdapterBundle, 'flags' | 'storageShadow'>) {
+    this.engine = new UnifiedMemoryEngine({
+      dbPath: '.writing/memory.db',
+      integrationAdapters,
+    });
   }
 
   async initialize(): Promise<void> {
@@ -244,13 +247,16 @@ export class SearchEngineAdapter implements ISearchEngine {
   private readonly retriever: SearchRetriever;
   private readonly indexedDocuments = new Map<string, { id: string; content: string; metadata?: Record<string, unknown> }>();
 
-  constructor(retriever?: SearchRetriever) {
+  constructor(
+    retriever?: SearchRetriever,
+    integrationAdapters?: IntegrationAdapterBundle,
+  ) {
     if (retriever) {
       this.retriever = retriever;
       return;
     }
 
-    const adapters = createIntegrationAdapters();
+    const adapters = integrationAdapters ?? createIntegrationAdapters();
     this.retriever = createIterativeRetriever({
       projectRoot: process.cwd(),
       elasticAdapter: adapters.search,

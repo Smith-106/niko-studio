@@ -1,0 +1,166 @@
+{
+  "id": "ANALYZE-001",
+  "title": "Analyze architectural maturity and structural risks",
+  "perspective": "architectural",
+  "topic": "项目现状分析",
+  "dimensions": [
+    "modularity",
+    "coupling",
+    "layering",
+    "migration_seams",
+    "contract_boundaries",
+    "extensibility"
+  ],
+  "is_direction_fix": false,
+  "summary": "The project has reached a credible mid-stage architectural maturity: the default runtime path is now clearly layered as React shell -> Tauri/Rust host -> TypeScript gateway, and key contracts are explicit. The main structural drag is inside the gateway and compatibility envelope, where migration-era placeholder services, stub/no-op integration boundaries, large transport/client aggregation, and retained Node/Python/web compatibility paths widen the change surface and make authority harder to keep singular.",
+  "strongest_conclusions": [
+    {
+      "conclusion": "Runtime layering is real and evidence-backed rather than aspirational: UI startup, host mediation, and gateway bootstrap are cleanly separated.",
+      "confidence": "high",
+      "evidence": "desktop/src/main.tsx:1-10; desktop/src/App.tsx:11-29; desktop/src/hooks/useAppStartup.ts:1-6; desktop/src/hooks/useAppBackendBootstrap.ts:5-18; desktop/src-tauri/src/main.rs:301-414"
+    },
+    {
+      "conclusion": "Architectural maturity drops inside the TypeScript gateway because DI contracts coexist with placeholder registrations, adapter-owned concrete instantiation, and stubbed external integrations.",
+      "confidence": "high",
+      "evidence": "src-ts/container/ServiceContainer.ts:128-217; src-ts/container/ServiceContainer.ts:474-515; src-ts/container/adapters.ts:1-259; src-ts/integrations/adapters.ts:120-233"
+    },
+    {
+      "conclusion": "The repository is still carrying consolidation debt from migration and authority-hardening work completed on 2026-04-07, so extensibility exists but is not yet low-friction.",
+      "confidence": "medium",
+      "evidence": ".workflow/active/WFS-post-governance-hardening-20260407/workflow-session.json:1-41; README.md:72-80; scripts/start_gateway.py:1-110; src-ts/web/app.ts:1-159"
+    }
+  ],
+  "key_insights": [
+    {
+      "insight": "The outer system boundary is disciplined. React only mounts the shell and triggers startup hooks; Rust owns process lifecycle, health checks, and proxying; the gateway owns endpoint routing and service wiring.",
+      "confidence": "high",
+      "evidence": "desktop/src/App.tsx:11-29; desktop/src/hooks/useAppStartup.ts:4-6; desktop/src/api/client.ts:220-279; desktop/src-tauri/src/main.rs:301-414; src-ts/gateway-server.ts:412-434"
+    },
+    {
+      "insight": "The UI is modular at the shell edge, but orchestration is concentrated in a few composite hooks and a single large API client, which increases coupling between feature growth and shared infrastructure.",
+      "confidence": "high",
+      "evidence": "desktop/src/hooks/useAppViewModel.ts:1-46; desktop/src/hooks/useAppShellViewModel.ts:1-155; desktop/src/api/client.ts:1-549"
+    },
+    {
+      "insight": "Gateway module boundaries are intentionally organized by endpoint families and service registries, which is a good extensibility seam for MCP-oriented capabilities.",
+      "confidence": "high",
+      "evidence": "src-ts/gateway-server.ts:1-239; src-ts/gateway-server.ts:240-338; src-ts/mcp/service-config.ts:1-223"
+    },
+    {
+      "insight": "The DI container exposes stable service interfaces and test seams, but several registered services are still labeled as placeholders and are backed by adapters that directly construct concrete engines and file paths.",
+      "confidence": "high",
+      "evidence": "src-ts/container/types.ts:1-170; src-ts/container/ServiceContainer.ts:128-217; src-ts/container/ServiceContainer.ts:540-641; src-ts/container/adapters.ts:1-186; src-ts/tests/container/ServiceContainer.test.ts:1-219"
+    },
+    {
+      "insight": "Compatibility paths remain active in the runtime envelope: the Tauri host can fall back from Node to Python, the desktop client still calls a legacy route alias, and the web backend remains present as a deprecated compatibility surface.",
+      "confidence": "high",
+      "evidence": "desktop/src-tauri/src/main.rs:166-249; desktop/src/api/client.ts:478-481; src-ts/gateway-server.ts:296-301; scripts/start_gateway.py:1-110; src-ts/web/app.ts:1-159"
+    }
+  ],
+  "key_findings": [
+    {
+      "finding": "Modularity is strongest at the runtime boundary. The desktop shell, Tauri contract, and gateway bootstrap each have a distinct responsibility and can evolve with relatively low cross-layer leakage.",
+      "file_ref": "desktop/src/App.tsx:11-29; desktop/src/hooks/useAppBackendBootstrap.ts:5-18; desktop/src-tauri/src/main.rs:301-414; src-ts/gateway-server.ts:412-434",
+      "impact": "positive"
+    },
+    {
+      "finding": "Coupling is highest in shared orchestration modules. `useAppViewModel` and `useAppShellViewModel` aggregate many concerns, and `desktop/src/api/client.ts` centralizes transport, DTOs, fallback logic, and domain-specific calls in one file.",
+      "file_ref": "desktop/src/hooks/useAppViewModel.ts:1-46; desktop/src/hooks/useAppShellViewModel.ts:1-155; desktop/src/api/client.ts:1-549",
+      "impact": "medium"
+    },
+    {
+      "finding": "The gateway's internal layering is only partially mature. The DI layer exists, but several contracts are still migration scaffolding, and adapters hide concrete engine creation plus storage decisions behind interface boundaries.",
+      "file_ref": "src-ts/container/ServiceContainer.ts:128-217; src-ts/container/adapters.ts:1-186; src-ts/container/ServiceContainer.ts:540-641",
+      "impact": "high"
+    },
+    {
+      "finding": "Extensibility is explicit but not fully trustworthy. Optional integration flags select stub or no-op adapters, and some enabled stubs report success without real side effects, which weakens extension contracts.",
+      "file_ref": "src-ts/integrations/adapters.ts:1-233",
+      "impact": "high"
+    },
+    {
+      "finding": "Migration seams are still part of the authoritative runtime story. Automatic runtime fallback and deprecated compatibility endpoints enlarge the supported surface and increase authority-drift risk even after recent governance hardening.",
+      "file_ref": "README.md:72-80; scripts/start_gateway.py:1-110; desktop/src-tauri/src/main.rs:166-249; src-ts/web/app.ts:1-159; .workflow/active/WFS-post-governance-hardening-20260407/workflow-session.json:1-41",
+      "impact": "high"
+    }
+  ],
+  "major_risks": [
+    {
+      "risk": "The gateway container can present a stable interface while still hiding placeholder implementations and stubbed behaviors, making architectural readiness appear higher than actual runtime depth.",
+      "severity": "high",
+      "evidence": "src-ts/container/ServiceContainer.ts:128-217; src-ts/integrations/adapters.ts:120-233"
+    },
+    {
+      "risk": "A single oversized desktop client module and shared shell view-model orchestration create broad blast radius for frontend changes, especially when transport contracts evolve.",
+      "severity": "medium",
+      "evidence": "desktop/src/api/client.ts:1-549; desktop/src/hooks/useAppViewModel.ts:1-46; desktop/src/hooks/useAppShellViewModel.ts:1-155"
+    },
+    {
+      "risk": "Retained compatibility flows across Node, Python, legacy web, and route aliases increase operational permutations and documentation drift.",
+      "severity": "high",
+      "evidence": "desktop/src-tauri/src/main.rs:166-249; scripts/start_gateway.py:1-110; src-ts/web/app.ts:1-159; src-ts/gateway-server.ts:296-301"
+    }
+  ],
+  "discussion_points": [
+    "Should the Tauri host still auto-fallback from Node to Python, or should Python move to an explicit troubleshooting-only path to reduce operational surface?",
+    "Is `desktop/src/api/client.ts` intended to remain a single hand-written integration layer, or is the team willing to split it by domain or move to shared schemas/generated clients?",
+    "For optional integrations, should the contract be 'feature absent and explicit' rather than 'stubbed success', so extension boundaries fail loudly instead of looking implemented?"
+  ],
+  "open_questions": [
+    "Which placeholder services in `src-ts/container/ServiceContainer.ts` are still expected to be replaced, and which are now intended to be permanent adapter boundaries?",
+    "Is there a documented contract/versioning strategy for Tauri command names and gateway routes beyond source-level coupling?",
+    "Are any production deployments still depending on `src-ts/web/app.ts` forwarding or Python compatibility runtime, or can those surfaces be retired in the next consolidation wave?"
+  ],
+  "recommendations": [
+    {
+      "action": "Make Node/TypeScript the only automatic desktop sidecar path and require an explicit opt-in for Python compatibility mode.",
+      "rationale": "This removes a major migration seam from the default runtime and narrows the operational contract the desktop host must support.",
+      "priority": "high"
+    },
+    {
+      "action": "Break `desktop/src/api/client.ts` into domain-focused modules or shared contract packages, with a thinner transport core beneath them.",
+      "rationale": "This reduces frontend coupling, lowers review surface for API changes, and makes route deprecations easier to manage.",
+      "priority": "high"
+    },
+    {
+      "action": "Replace placeholder/stub registrations with capability-specific modules that either provide real implementations or explicit 'unsupported' failures.",
+      "rationale": "This will align DI structure with actual runtime maturity and prevent false confidence from no-op or always-success adapters.",
+      "priority": "high"
+    },
+    {
+      "action": "Introduce a shared contract layer for Tauri commands and gateway route payloads, even if it starts as typed constants and schemas rather than full code generation.",
+      "rationale": "The current contract surface is explicit but stringly typed across layers, which makes refactors riskier than necessary.",
+      "priority": "medium"
+    },
+    {
+      "action": "Continue the governance-hardening effort with an authority map that identifies which compatibility surfaces are temporary, deprecated, or release-blocking.",
+      "rationale": "Recent governance work already improved clarity; the next architectural gain comes from turning that clarity into surface-area reduction.",
+      "priority": "medium"
+    }
+  ],
+  "_metadata": {
+    "cli_tool": "codex",
+    "cli_rule": "analysis-review-architecture",
+    "perspective": "architectural",
+    "timestamp": "2026-04-07T21:04:35.0329263+08:00",
+    "validated_sources": [
+      "desktop/src/App.tsx",
+      "desktop/src/hooks/useAppStartup.ts",
+      "desktop/src/hooks/useAppBackendBootstrap.ts",
+      "desktop/src/hooks/useAppViewModel.ts",
+      "desktop/src/hooks/useAppShellViewModel.ts",
+      "desktop/src/api/client.ts",
+      "desktop/src-tauri/src/main.rs",
+      "src-ts/gateway-server.ts",
+      "src-ts/container/ServiceContainer.ts",
+      "src-ts/container/types.ts",
+      "src-ts/container/adapters.ts",
+      "src-ts/integrations/adapters.ts",
+      "src-ts/mcp/service-config.ts",
+      "src-ts/web/app.ts",
+      "scripts/start_gateway.py",
+      "src-ts/tests/container/ServiceContainer.test.ts",
+      ".workflow/active/WFS-post-governance-hardening-20260407/workflow-session.json"
+    ]
+  }
+}

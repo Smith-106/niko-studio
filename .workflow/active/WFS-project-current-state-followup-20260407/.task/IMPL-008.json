@@ -1,0 +1,84 @@
+{
+  "id": "IMPL-008",
+  "title": "Add behavior coverage for the knowledge-surface closure",
+  "description": "Expand the existing `KnowledgeModal.test.tsx` file from accessibility and label coverage into behavior-focused regression coverage for the closed non-skill path: tab loading, item selection, detail rendering, and inactive create affordances.",
+  "status": "completed",
+  "type": "test",
+  "scope": "desktop/src/components/KnowledgeModal.test.tsx",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-007"
+  ],
+  "focus_paths": [
+    "desktop/src/components/KnowledgeModal.test.tsx",
+    "desktop/src/components/KnowledgeModal.tsx",
+    "desktop/src/components/knowledge/CharacterTab.tsx",
+    "desktop/src/components/knowledge/LocationTab.tsx",
+    "desktop/src/components/knowledge/PlotTab.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "1 existing modal test file covers 3 non-skill tabs instead of label-only rendering.",
+      "3 click-to-detail behaviors are asserted: character, location, and plot selection each reveals stable read-only detail output.",
+      "3 empty-state affordances are asserted as intentionally inactive or explicitly unavailable, so regressions cannot reintroduce dead buttons."
+    ],
+    "verification": "npm --prefix desktop run test -- src/components/KnowledgeModal.test.tsx",
+    "definition_of_done": "The knowledge modal has automated coverage for the exact closure behavior added in `IMPL-007`, and the test suite fails if future changes restore no-op clicks or dead empty-state actions on the non-skill tabs."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Extend mocks and fixtures for 3 non-skill datasets",
+      "description": "Provide representative character, location, and plot payloads through the existing mocked graph and memory client APIs."
+    },
+    {
+      "step": 2,
+      "title": "Assert item selection and detail rendering",
+      "description": "Add user-event coverage that switches tabs, waits for data load, clicks a rendered item, and verifies the modal shows the expected read-only details."
+    },
+    {
+      "step": 3,
+      "title": "Assert inactive empty-state create affordances",
+      "description": "Cover the empty-state case for the 3 non-skill tabs and verify the UI now communicates unavailable creation rather than exposing a live no-op button."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/planning-notes.md",
+      "role": "session-constraints"
+    },
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/module-plans/D-knowledge-surface-closure.json",
+      "role": "module-plan"
+    },
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "role": "analysis-source"
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "role": "completed-governance-boundary"
+    }
+  ],
+  "inherited": {
+    "from_tasks": [
+      "IMPL-007"
+    ],
+    "notes": [
+      "This task locks the user-surface behavior introduced by `IMPL-007`.",
+      "Keep coverage in the existing modal test surface unless implementation forces a helper extraction."
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/context-package.json",
+  "meta": {
+    "type": "product-closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-4-assurance-and-clarity",
+    "module": "knowledge-surface-closure",
+    "priority": "medium",
+    "execution_config": {
+      "method": "workflow-plan",
+      "enable_resume": true
+    }
+  }
+}

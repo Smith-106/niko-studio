@@ -1,0 +1,83 @@
+{
+  "id": "IMPL-007",
+  "title": "Close non-skill knowledge tab dead ends in KnowledgeModal",
+  "description": "Implement the minimum user-facing closure for the 3 non-skill knowledge tabs by adding a real read-only selection and detail path for existing items and converting the current empty-state add buttons into explicit unavailable states instead of dead CTAs.",
+  "status": "completed",
+  "type": "feature",
+  "scope": "desktop/src/components/KnowledgeModal.tsx;desktop/src/components/knowledge/CharacterTab.tsx;desktop/src/components/knowledge/LocationTab.tsx;desktop/src/components/knowledge/PlotTab.tsx",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-006"
+  ],
+  "focus_paths": [
+    "desktop/src/components/KnowledgeModal.tsx",
+    "desktop/src/components/knowledge/CharacterTab.tsx",
+    "desktop/src/components/knowledge/LocationTab.tsx",
+    "desktop/src/components/knowledge/PlotTab.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "1 shared non-skill selection state is added in `KnowledgeModal.tsx` for 3 tabs: characters, locations, and plots.",
+      "3 item-list flows expose deterministic read-only detail content when a user clicks a character, location, or plot card.",
+      "3 empty-state add CTAs are removed from the dead-action path by rendering an explicit unavailable state: disabled button, static message, or equivalent non-clickable affordance."
+    ],
+    "verification": "npm --prefix desktop run typecheck && manual smoke-check the knowledge modal for character, location, and plot selection/detail rendering plus inactive empty-state affordances",
+    "definition_of_done": "A user can open the knowledge modal, switch to any of the 3 non-skill tabs, select an existing item to inspect it inside the modal, and no longer encounter a clickable create affordance that does nothing."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Add shared non-skill selection and detail state",
+      "description": "Introduce modal state for the selected non-skill knowledge item and render a compact read-only detail surface using the data already loaded by each tab."
+    },
+    {
+      "step": 2,
+      "title": "Wire card clicks for all 3 tabs",
+      "description": "Connect `CharacterTab`, `LocationTab`, and `PlotTab` card clicks to the modal selection flow while keeping the skill-tab behavior unchanged."
+    },
+    {
+      "step": 3,
+      "title": "Retire dead empty-state create affordances",
+      "description": "Replace the current add buttons in the 3 empty states with intentionally disabled or non-clickable UI that communicates the read-only boundary until a future creation workflow exists."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/planning-notes.md",
+      "role": "session-constraints"
+    },
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/module-plans/D-knowledge-surface-closure.json",
+      "role": "module-plan"
+    },
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "role": "analysis-source"
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "role": "completed-governance-boundary"
+    }
+  ],
+  "inherited": {
+    "from_tasks": [
+      "IMPL-006"
+    ],
+    "notes": [
+      "Start user-surface closure only after the desktop API seam has been split and thinned.",
+      "Keep the scope read-only for characters, locations, and plots; do not add new mutation contracts in this queue."
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/context-package.json",
+  "meta": {
+    "type": "product-closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-3-knowledge-closure",
+    "module": "knowledge-surface-closure",
+    "priority": "medium",
+    "execution_config": {
+      "method": "workflow-plan",
+      "enable_resume": true
+    }
+  }
+}

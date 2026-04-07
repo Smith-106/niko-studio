@@ -23,8 +23,20 @@ const WEB_WORKFLOW_RISK_MESSAGE =
   'Web workflow is an experimental compatibility path with operational and security risks. ' +
   'Prefer Desktop client or MCP Gateway.';
 const WEB_UI_DEPRECATED_MESSAGE =
-  'Web UI has been deprecated. Please use the Desktop client or MCP Gateway.';
+  'Web UI has been deprecated as a primary surface. Use the Desktop client or MCP Gateway; this route is compatibility-only.';
 const WEB_UI_FORWARD_ALLOWED_PROTOCOLS = new Set(['http:', 'https:']);
+const WEB_COMPATIBILITY_HEADER = 'X-Niko-Web-Compatibility';
+const WEB_PRIMARY_PATH_HEADER = 'X-Niko-Primary-Path';
+const WEB_PRIMARY_PATH_VALUE = 'desktop+mcp-gateway';
+
+function compatibilityHeaders(headers: Record<string, string> = {}): Record<string, string> {
+  return {
+    'Cache-Control': 'no-store',
+    [WEB_COMPATIBILITY_HEADER]: 'compatibility-only',
+    [WEB_PRIMARY_PATH_HEADER]: WEB_PRIMARY_PATH_VALUE,
+    ...headers,
+  };
+}
 
 /** Trusted origins for CORS/CSWSH protection */
 const ORIGINS: string[] = [
@@ -171,14 +183,16 @@ function handleRootRequest(_req: IncomingMessage, res: ServerResponse): void {
         '<body>Redirecting to Gateway...</body>' +
         '</html>';
       res.writeHead(302, {
-        'Content-Type': 'text/html; charset=utf-8',
         Location: target,
+        ...compatibilityHeaders({
+          'Content-Type': 'text/html; charset=utf-8',
+        }),
       });
       res.end(content);
       return;
     }
   }
-  res.writeHead(410, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.writeHead(410, compatibilityHeaders({ 'Content-Type': 'text/plain; charset=utf-8' }));
   res.end(WEB_UI_DEPRECATED_MESSAGE);
 }
 
@@ -243,8 +257,8 @@ function createApp(): {
 
     // Static files would be served here in a full Express setup.
     // For the compatibility layer, just 404.
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
+    res.writeHead(404, compatibilityHeaders({ 'Content-Type': 'text/plain; charset=utf-8' }));
+    res.end('Compatibility web surface only. Not Found.');
   }
 
   return { handleRequest, manager };
@@ -487,4 +501,7 @@ export {
   handleWsMessage,
   runWorkflowStream,
   ORIGINS,
+  WEB_COMPATIBILITY_HEADER,
+  WEB_PRIMARY_PATH_HEADER,
+  WEB_PRIMARY_PATH_VALUE,
 };

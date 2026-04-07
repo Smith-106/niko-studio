@@ -1,0 +1,85 @@
+{
+  "id": "IMPL-006",
+  "title": "Extract shared desktop gateway schemas and thin the endpoint facade",
+  "description": "Move 3 shared schema families out of `desktop/src/api/client.ts` into an explicit desktop-side contract layer, then keep `client.ts` as a thinner endpoint facade that reuses the extracted transport contract from `IMPL-003` and the settled gateway boundary from `IMPL-001`.",
+  "status": "completed",
+  "type": "refactor",
+  "scope": "desktop/src/api/client.ts;desktop/src/api/contracts.ts;desktop/src/api/transport.ts;desktop/src/api/client.test.ts",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-001",
+    "IMPL-003"
+  ],
+  "focus_paths": [
+    "desktop/src/api/client.ts",
+    "desktop/src/api/client.test.ts",
+    "desktop/src/api/contracts.ts",
+    "desktop/src/api/transport.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "The 3 shared schema families `[GatewayHealth/runtime, GatewayServiceConfig admin, WritingHelper request-response]` live outside `desktop/src/api/client.ts` and are imported from 1 desktop-side schema file or folder.",
+      "`desktop/src/api/client.ts` remains the public endpoint facade, but its inline type surface is reduced to endpoint-local types instead of transport and shared contracts.",
+      "`desktop/src/api/client.test.ts` or successor focused tests cover the extracted transport and schema split without reducing existing desktop API regression coverage."
+    ],
+    "verification": "npm --prefix desktop run typecheck && npm --prefix desktop run test -- src/api/client.test.ts",
+    "definition_of_done": "Cross-cutting desktop API schemas are owned by an explicit shared contract layer, `client.ts` is materially smaller and transport-agnostic, and the split is locked by desktop tests."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Select the shared schema families",
+      "description": "Identify the reused DTO groups in `client.ts` that cross multiple panels, tests, or runtime helpers, starting with gateway health or runtime, service-config admin, and writing-helper request or response types."
+    },
+    {
+      "step": 2,
+      "title": "Extract the shared contract file",
+      "description": "Move the selected DTO families into a dedicated desktop schema file or folder and update `client.ts` exports so current callers can keep importing through stable paths."
+    },
+    {
+      "step": 3,
+      "title": "Rebaseline desktop API tests",
+      "description": "Update `client.test.ts` to validate the new import boundaries and preserve regression coverage for base resolution, transport fallback, and representative shared-schema endpoints."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/planning-notes.md",
+      "role": "session-constraints"
+    },
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/module-plans/C-desktop-api-contract-split.json",
+      "role": "module-plan"
+    },
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "role": "analysis-source"
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "role": "completed-governance-boundary"
+    }
+  ],
+  "inherited": {
+    "from_tasks": [
+      "IMPL-001",
+      "IMPL-003"
+    ],
+    "notes": [
+      "Complete the desktop schema split only after the gateway adapter boundary and transport contract are both explicit.",
+      "Keep endpoint behavior, route inventory, and wire format stable while reducing `client.ts` coupling."
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/context-package.json",
+  "meta": {
+    "type": "desktop-contract",
+    "agent": "@code-developer",
+    "execution_group": "wave-2-boundary-completion",
+    "module": "desktop-api-contract-split",
+    "priority": "medium",
+    "execution_config": {
+      "method": "workflow-plan",
+      "enable_resume": true
+    }
+  }
+}

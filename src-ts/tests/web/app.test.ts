@@ -65,6 +65,8 @@ describe('web/app compatibility path', () => {
 
     expect(state.statusCode).toBe(410);
     expect(state.body).toContain('Web UI has been deprecated');
+    expect(state.headers['X-Niko-Web-Compatibility']).toBe('compatibility-only');
+    expect(state.headers['X-Niko-Primary-Path']).toBe('desktop+mcp-gateway');
   });
 
   it('returns 302 with Location when WEB_UI_FORWARD_URL is a valid http/https URL', async () => {
@@ -85,6 +87,8 @@ describe('web/app compatibility path', () => {
 
     expect(state.statusCode).toBe(302);
     expect(state.headers['Location']).toBe('https://gateway.example.com/landing');
+    expect(state.headers['X-Niko-Web-Compatibility']).toBe('compatibility-only');
+    expect(state.headers['X-Niko-Primary-Path']).toBe('desktop+mcp-gateway');
     expect(state.body).toContain('Redirecting to Gateway');
   });
 

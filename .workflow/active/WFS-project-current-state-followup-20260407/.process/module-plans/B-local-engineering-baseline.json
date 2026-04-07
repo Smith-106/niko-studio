@@ -1,0 +1,108 @@
+{
+  "module": "local-engineering-baseline",
+  "summary": "Tighten the repo-local developer loop around the current `desktop + src-ts` authority path by adding shared JS/TS lint-format entrypoints, then removing the stale `pytest.ini` legacy coverage default and realigning `scripts/delivery_gate.py` only where it must observe the new local baseline.",
+  "tasks": [
+    {
+      "temp_id": "B1",
+      "title": "Add shared JS/TS quality config and package-level local baseline commands",
+      "description": "Create 2-3 repo-level quality config files for the current TypeScript product surface, add `lint`, `format`, `format:check`, and one local baseline command to both `desktop` and `src-ts`, and update the 2 package lockfiles so the baseline is reproducible from a clean checkout without adding a new root package manager surface.",
+      "scope": "Update 2 package manifests (`desktop/package.json`, `src-ts/package.json`), refresh 2 lockfiles, and add 2-3 repo-level quality config files such as `eslint.config.*`, `prettier.config.*`, and ignore rules scoped to `desktop` and `src-ts`.",
+      "focus_paths": [
+        "desktop/package.json",
+        "desktop/package-lock.json",
+        "src-ts/package.json",
+        "src-ts/package-lock.json",
+        "eslint.config.mjs",
+        "prettier.config.mjs",
+        ".prettierignore"
+      ],
+      "depends_on": [],
+      "convergence": {
+        "criteria": [
+          "2 package manifests expose `lint`, `format`, `format:check`, and `check:local` or an equivalently named authoritative local-baseline command.",
+          "2-3 repo-level quality config files exist and target only the active `desktop` and `src-ts` source/config surfaces while excluding build output, generated artifacts, and workflow directories.",
+          "The new local baseline keeps `desktop` sidecar validation and `src-ts` phase-4 tests in the developer loop instead of relying on CI-only quality enforcement."
+        ],
+        "verification": "Run `npm --prefix src-ts run lint && npm --prefix src-ts run format:check && npm --prefix src-ts run check:local && npm --prefix desktop run lint && npm --prefix desktop run format:check && npm --prefix desktop run check:local`.",
+        "definition_of_done": "Both active product packages share one repo-level lint/format baseline and expose a reproducible local validation command that a later execution workflow can call directly."
+      },
+      "implementation": [
+        {
+          "step": 1,
+          "title": "Define shared repo-level quality config",
+          "description": "Add the minimal shared lint/format config files and ignore rules required to cover `desktop` and `src-ts` without sweeping historical or generated surfaces into the first baseline pass."
+        },
+        {
+          "step": 2,
+          "title": "Wire package scripts and dependencies",
+          "description": "Add the baseline scripts and matching tool dependencies to `desktop/package.json` and `src-ts/package.json`, then refresh the 2 lockfiles so the commands are runnable on a clean checkout."
+        },
+        {
+          "step": 3,
+          "title": "Promote one authoritative local baseline per package",
+          "description": "Make the new package commands the clear developer-loop entrypoints by composing lint, format check, existing validation, typecheck, and the current high-signal test/build steps already relevant to `desktop + src-ts`."
+        }
+      ],
+      "type": "maintenance",
+      "execution_group": "wave-B-1",
+      "agent": "@code-developer",
+      "priority": "high"
+    },
+    {
+      "temp_id": "B2",
+      "title": "Retire legacy pytest defaults and align delivery gate anchors with the local baseline",
+      "description": "Remove the stale `pytest.ini` default coverage posture bound to `src`, preserve a targeted Python regression path for remaining script tests, and update `scripts/delivery_gate.py` only where its baseline anchors must follow the new package-level local validation commands from B1 rather than the older assumptions.",
+      "scope": "Update 2 legacy baseline files (`pytest.ini`, `scripts/delivery_gate.py`) so Python test defaults stop asserting coverage over the retired `src` authority path and the delivery gate observes the new local developer-loop anchors without expanding governance scope.",
+      "focus_paths": [
+        "pytest.ini",
+        "scripts/delivery_gate.py",
+        "desktop/package.json",
+        "src-ts/package.json"
+      ],
+      "depends_on": [
+        "B1"
+      ],
+      "convergence": {
+        "criteria": [
+          "`pytest.ini` no longer defaults to `--cov=src` or `--cov-fail-under=100`, and the default pytest invocation remains valid for the residual script-test surface.",
+          "`scripts/delivery_gate.py` checks the new local baseline anchors introduced in B1 only where those anchors replace the previous package-script assumptions.",
+          "The task does not modify `.github` workflows, `scripts/check_authority_alignment.py`, or `scripts/release_check_summary.py`; it only keeps the local semantic gate consistent with the updated developer baseline."
+        ],
+        "verification": "Run `python -m pytest tests/unit/scripts/test_governance_scripts.py -q && python scripts/delivery_gate.py` after the B1 package-script changes are in place.",
+        "definition_of_done": "Legacy Python defaults no longer point at the removed `src` coverage target, and the delivery gate reflects the new local baseline without reopening completed governance hardening."
+      },
+      "implementation": [
+        {
+          "step": 1,
+          "title": "Reset pytest defaults to the surviving Python surface",
+          "description": "Trim `pytest.ini` so the default addopts no longer encode obsolete `src` coverage assumptions while keeping markers and developer-friendly output for the remaining script tests."
+        },
+        {
+          "step": 2,
+          "title": "Map delivery-gate anchors to the new package baseline",
+          "description": "Review the existing `desktop/package.json` and `src-ts/package.json` anchors in `scripts/delivery_gate.py` and update only the checks that must follow the new local baseline commands introduced by B1."
+        },
+        {
+          "step": 3,
+          "title": "Confirm non-governance scope remains unchanged",
+          "description": "Verify the semantic gate still limits itself to local baseline consistency and does not add fresh authority-alignment or CI-hardening requirements already closed by the 2026-04-07 governance session."
+        }
+      ],
+      "type": "maintenance",
+      "execution_group": "wave-B-2",
+      "agent": "@code-developer",
+      "priority": "high"
+    }
+  ],
+  "cross_module_dependencies": [],
+  "risks": [
+    "A repo-wide lint rollout can explode into noisy edits if implementation does not restrict the first pass to the current `desktop` and `src-ts` authority surfaces plus explicit ignore rules.",
+    "Changing the meaning of `desktop` or `src-ts` check scripts can break existing operator habits; implementation should prefer a new authoritative local-baseline alias over silently widening an old script in place.",
+    "Some residual Python test tooling may still assume the current `pytest.ini` addopts; removing `--cov=src` must preserve the targeted governance-script regression path instead of disabling Python checks entirely."
+  ],
+  "out_of_scope": [
+    "Reopening `.github` workflow hardening, `scripts/check_authority_alignment.py`, or `scripts/release_check_summary.py` from `WFS-post-governance-hardening-20260407`.",
+    "Refactoring `desktop/src/api/client.ts`, `desktop/src-tauri/src/main.rs`, or `src-ts/container/*` as part of this baseline module.",
+    "A full repo-wide Python lint/format adoption pass across every legacy script or archived surface."
+  ]
+}

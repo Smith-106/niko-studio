@@ -454,12 +454,31 @@ Story Bible 常驻在主编辑器下方，它不是弹窗，也不是正文替�
 - `outline`
 - `style`
 
-这些通过 localStorage 保存。
+这些通过 localStorage 保存，并且当前版本只保存在本地设备：
+
+- `braindump`
+- `genres`
+- `synopsis`
+- `outline`
+- `style`
+
+当前工作流已经提供 **local-only** 的恢复路径：
+
+- 导出这 5 个字段到本地 JSON
+- 从本地 JSON 导回这 5 个字段
+- 重置这 5 个 localStorage key
 
 #### 图谱数据
 
 - 角色查询：`desktop/src/components/StoryBiblePanel.tsx:132`
 - 地点查询：`desktop/src/components/StoryBiblePanel.tsx:133`
+
+这两块当前是 **graph-backed read**，不是 Story Bible 本地草稿 payload 的一部分：
+
+- `characters`
+- `locations`
+
+所以当前 Story Bible 的恢复/迁移能力只覆盖本地草稿，不覆盖图谱读取结果。
 
 ### 当前作用
 
@@ -9037,5 +9056,3 @@ AppRightPanels
 ### 这一步的定位
 
 **当前 Niko-Studio 的正文、编辑器内 AI、右侧 AI 工具不是彼此替代，而是通过 editor handle 和 shell 编排形成同一条写作主线上的分层协作系统。**
-
-

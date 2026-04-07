@@ -42,6 +42,7 @@ import {
   VectorSearch,
 } from '../search';
 import type { EmbeddingService as VectorEmbeddingService } from '../protocols/embedding';
+import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 
 function createLocalVectorEmbeddingService(dimension: number): VectorEmbeddingService {
   const normalize = (text: string): number[] => {
@@ -115,9 +116,11 @@ export class ServiceContainer {
   private mocks: Map<symbol, unknown> = new Map();
   private initialized: boolean = false;
   private initPromises: Map<symbol, Promise<void>> = new Map();
+  private readonly integrationAdapters: IntegrationAdapterBundle;
 
   constructor() {
     this.container = new Container();
+    this.integrationAdapters = createIntegrationAdapters();
     this.registerServices();
   }
 
@@ -163,7 +166,7 @@ export class ServiceContainer {
       return this.createVectorSearch();
     }).inSingletonScope();
 
-    // ============ Placeholder Services (To Be Migrated) ============
+    // ============ Core Runtime Services (Adapted implementations) ============
 
     // Memory Engine
     this.container.bind<IMemoryEngine>(ServiceTypes.MemoryEngine).toDynamicValue(() => {
@@ -574,10 +577,13 @@ export class ServiceContainer {
     });
   }
 
-  // Placeholder Service Factories (Adapted to implementations)
+  // Core Runtime Service Factories (Adapted implementations)
 
   private createMemoryEngine(): IMemoryEngine {
-    return new MemoryEngineAdapter();
+    return new MemoryEngineAdapter({
+      flags: this.integrationAdapters.flags,
+      storageShadow: this.integrationAdapters.storageShadow,
+    });
   }
 
   private createGraphEngine(): IGraphEngine {
@@ -585,7 +591,7 @@ export class ServiceContainer {
   }
 
   private createSearchEngine(): ISearchEngine {
-    return new SearchEngineAdapter();
+    return new SearchEngineAdapter(undefined, this.integrationAdapters);
   }
 
   private createWorkflowEngine(): IWorkflowEngine {

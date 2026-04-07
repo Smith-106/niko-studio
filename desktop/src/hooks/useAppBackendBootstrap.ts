@@ -1,19 +1,20 @@
 import { useEffect } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+
+import { isTauriRuntime, startTauriBackend, syncGatewayBaseOverride } from '../api/transport'
 import { useSettingsStore } from '../stores/settingsStore'
 
 export function useAppBackendBootstrap() {
   useEffect(() => {
-    if (!('__TAURI__' in window)) {
+    if (!isTauriRuntime()) {
       return
     }
 
     const settings = useSettingsStore.getState().settings
 
-    void invoke('set_gateway_base_override', {
-      base: settings.apiBaseUrl && settings.apiBaseUrl.trim() ? settings.apiBaseUrl.trim() : null,
-    })
+    void syncGatewayBaseOverride(
+      settings.apiBaseUrl && settings.apiBaseUrl.trim() ? settings.apiBaseUrl.trim() : null,
+    )
 
-    void invoke('start_backend')
+    void startTauriBackend()
   }, [])
 }

@@ -1,0 +1,83 @@
+{
+  "id": "IMPL-009",
+  "title": "Make the Story Bible persistence contract explicit",
+  "description": "Codify Story Bible as a local-only draft surface in UI, copy, docs, and tests: 5 authoring fields stay in localStorage, 2 list sections stay graph-backed reads, and no gateway- or Tauri-backed project persistence is added in this task. Create the focused `StoryBiblePanel` test surface if it does not already exist.",
+  "status": "completed",
+  "type": "maintenance",
+  "scope": "desktop/src/components/StoryBiblePanel.tsx;desktop/src/i18n/translations.ts;desktop/src/components/StoryBiblePanel.test.tsx;docs/niko-studio-writing-workflow.md",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-007"
+  ],
+  "focus_paths": [
+    "desktop/src/components/StoryBiblePanel.tsx",
+    "desktop/src/i18n/translations.ts",
+    "desktop/src/components/StoryBiblePanel.test.tsx",
+    "docs/niko-studio-writing-workflow.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "1 persistence contract is rendered in the panel and states that 5 draft fields are local-only: `[braindump, genres, synopsis, outline, style]`.",
+      "1 documentation update explains that 2 list sections are graph-backed reads: `[characters, locations]`, and are not part of the local draft payload.",
+      "1 new or updated dedicated desktop component test covers local draft restore or fallback semantics and verifies the boundary copy is visible."
+    ],
+    "verification": "npm --prefix desktop run test -- src/components/StoryBiblePanel.test.tsx && npm --prefix desktop run typecheck",
+    "definition_of_done": "Users can tell from the panel and docs that Story Bible is currently a local draft aid with graph enrichment, not project-synced persistence, and the behavior is locked by a focused test."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Extract the current persistence contract",
+      "description": "List the exact localStorage keys and the graph-backed sections already used by `StoryBiblePanel` so the execution task works from a concrete contract."
+    },
+    {
+      "step": 2,
+      "title": "Expose the contract in UI and translations",
+      "description": "Add boundary copy and any supporting labels in `StoryBiblePanel` and translations so the local-only behavior is visible in-product."
+    },
+    {
+      "step": 3,
+      "title": "Synchronize docs and create the focused test surface",
+      "description": "Update the writing workflow documentation and create or extend `StoryBiblePanel` test coverage for restore, fallback, and boundary messaging."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/planning-notes.md",
+      "role": "session-constraints"
+    },
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/module-plans/E-story-bible-persistence-clarification.json",
+      "role": "module-plan"
+    },
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "role": "analysis-source"
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "role": "completed-governance-boundary"
+    }
+  ],
+  "inherited": {
+    "from_tasks": [
+      "IMPL-007"
+    ],
+    "notes": [
+      "Keep Story Bible copy aligned with the closed read-only knowledge surface.",
+      "This task clarifies local-only persistence; it does not add gateway writes or project-backed storage."
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/context-package.json",
+  "meta": {
+    "type": "product-closure",
+    "agent": "@code-developer",
+    "execution_group": "wave-4-assurance-and-clarity",
+    "module": "story-bible-persistence-clarification",
+    "priority": "high",
+    "execution_config": {
+      "method": "workflow-plan",
+      "enable_resume": true
+    }
+  }
+}

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { ChevronDown, BookOpen, Users, Map, FileText, Tag, Sparkles, PenLine, Wand2, SlidersHorizontal } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { ChevronDown, BookOpen, Users, Map, FileText, Tag, Sparkles, PenLine, Wand2, SlidersHorizontal, Download, RotateCcw, Upload } from 'lucide-react'
 import { queryGraph } from '../api/client'
 import { toGraphItems } from '../components/knowledge/knowledgeUtils'
 import { useI18n } from '../i18n'
@@ -67,6 +67,14 @@ function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: string 
 }
 
 const GENRE_PRESETS_ZH = ['奇幻', '言情', '悬疑', '科幻', '恐怖', '历史', '武侠', '都市', '青春', '冒险', '宫斗', '末世', '仙侠', '推理', '轻小说']
+const STORY_BIBLE_DRAFT_VERSION = '1.0'
+const STORY_BIBLE_STORAGE_KEYS = {
+  braindump: 'niko.sb-braindump-v1',
+  genres: 'niko.sb-genres-v1',
+  synopsis: 'niko.sb-synopsis-v1',
+  outline: 'niko.sb-outline-v1',
+  style: 'niko.sb-style-v1',
+} as const
 
 function loadFromStorage(key: string): string {
   try { return localStorage.getItem(key) || '' } catch { return '' }
@@ -76,33 +84,62 @@ function saveToStorage(key: string, value: string) {
   try { localStorage.setItem(key, value) } catch { /* ignore */ }
 }
 
+function removeFromStorage(key: string) {
+  try { localStorage.removeItem(key) } catch { /* ignore */ }
+}
+
 type StyleId = 'tried' | 'matchMy' | 'soundsLike' | 'custom'
+type StoryBibleMessage = { type: 'success' | 'error'; text: string } | null
+
+interface StoryBibleDraftPayload {
+  version: string
+  kind: 'story-bible-local-draft'
+  exportedAt: string
+  draft: {
+    braindump: string
+    genres: string[]
+    synopsis: string
+    outline: string
+    style: StyleId
+  }
+}
+
+function isStyleId(value: string): value is StyleId {
+  return ['tried', 'matchMy', 'soundsLike', 'custom'].includes(value)
+}
 
 export function StoryBiblePanel() {
   const { t } = useI18n()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [characters, setCharacters] = useState<GraphItem[]>([])
   const [locations, setLocations] = useState<GraphItem[]>([])
-  const [braindump, setBraindump] = useState(() => loadFromStorage('niko.sb-braindump-v1'))
+  const [braindump, setBraindump] = useState(() => loadFromStorage(STORY_BIBLE_STORAGE_KEYS.braindump))
   const [genres, setGenres] = useState<string[]>(() => {
-    const raw = loadFromStorage('niko.sb-genres-v1')
+    const raw = loadFromStorage(STORY_BIBLE_STORAGE_KEYS.genres)
     return raw ? raw.split(',').filter(Boolean) : []
   })
   const [genreInput, setGenreInput] = useState('')
-  const [synopsis, setSynopsis] = useState(() => loadFromStorage('niko.sb-synopsis-v1'))
-  const [outline, setOutline] = useState(() => loadFromStorage('niko.sb-outline-v1'))
+  const [synopsis, setSynopsis] = useState(() => loadFromStorage(STORY_BIBLE_STORAGE_KEYS.synopsis))
+  const [outline, setOutline] = useState(() => loadFromStorage(STORY_BIBLE_STORAGE_KEYS.outline))
   const [selectedStyle, setSelectedStyle] = useState<StyleId>(() =>
-    (loadFromStorage('niko.sb-style-v1') as StyleId) || 'tried'
+    (loadFromStorage(STORY_BIBLE_STORAGE_KEYS.style) as StyleId) || 'tried'
   )
+  const [draftMessage, setDraftMessage] = useState<StoryBibleMessage>(null)
   const [loading, setLoading] = useState(true)
 
-  const saveBraindump = useCallback((v: string) => { setBraindump(v); saveToStorage('niko.sb-braindump-v1', v) }, [])
-  const saveSynopsis = useCallback((v: string) => { setSynopsis(v); saveToStorage('niko.sb-synopsis-v1', v) }, [])
-  const saveOutline = useCallback((v: string) => { setOutline(v); saveToStorage('niko.sb-outline-v1', v) }, [])
+  const showDraftMessage = useCallback((type: 'success' | 'error', text: string) => {
+    setDraftMessage({ type, text })
+    window.setTimeout(() => setDraftMessage(null), 3000)
+  }, [])
+
+  const saveBraindump = useCallback((v: string) => { setBraindump(v); saveToStorage(STORY_BIBLE_STORAGE_KEYS.braindump, v) }, [])
+  const saveSynopsis = useCallback((v: string) => { setSynopsis(v); saveToStorage(STORY_BIBLE_STORAGE_KEYS.synopsis, v) }, [])
+  const saveOutline = useCallback((v: string) => { setOutline(v); saveToStorage(STORY_BIBLE_STORAGE_KEYS.outline, v) }, [])
 
   const toggleGenre = useCallback((genre: string) => {
     setGenres(prev => {
       const next = prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]
-      saveToStorage('niko.sb-genres-v1', next.join(','))
+      saveToStorage(STORY_BIBLE_STORAGE_KEYS.genres, next.join(','))
       return next
     })
   }, [])
@@ -112,7 +149,7 @@ export function StoryBiblePanel() {
     if (trimmed && !genres.includes(trimmed)) {
       setGenres(prev => {
         const next = [...prev, trimmed]
-        saveToStorage('niko.sb-genres-v1', next.join(','))
+        saveToStorage(STORY_BIBLE_STORAGE_KEYS.genres, next.join(','))
         return next
       })
       setGenreInput('')
@@ -121,8 +158,119 @@ export function StoryBiblePanel() {
 
   const handleStyleChange = useCallback((style: StyleId) => {
     setSelectedStyle(style)
-    saveToStorage('niko.sb-style-v1', style)
+    saveToStorage(STORY_BIBLE_STORAGE_KEYS.style, style)
   }, [])
+
+  const buildDraftPayload = useCallback(
+    (): StoryBibleDraftPayload => ({
+      version: STORY_BIBLE_DRAFT_VERSION,
+      kind: 'story-bible-local-draft',
+      exportedAt: new Date().toISOString(),
+      draft: {
+        braindump,
+        genres,
+        synopsis,
+        outline,
+        style: selectedStyle,
+      },
+    }),
+    [braindump, genres, outline, selectedStyle, synopsis],
+  )
+
+  const applyDraftPayload = useCallback((payload: StoryBibleDraftPayload) => {
+    const nextStyle = isStyleId(payload.draft.style) ? payload.draft.style : 'tried'
+    const nextGenres = Array.isArray(payload.draft.genres)
+      ? payload.draft.genres.filter((genre): genre is string => typeof genre === 'string' && genre.trim().length > 0)
+      : []
+
+    setBraindump(payload.draft.braindump)
+    setGenres(nextGenres)
+    setGenreInput('')
+    setSynopsis(payload.draft.synopsis)
+    setOutline(payload.draft.outline)
+    setSelectedStyle(nextStyle)
+
+    saveToStorage(STORY_BIBLE_STORAGE_KEYS.braindump, payload.draft.braindump)
+    saveToStorage(STORY_BIBLE_STORAGE_KEYS.genres, nextGenres.join(','))
+    saveToStorage(STORY_BIBLE_STORAGE_KEYS.synopsis, payload.draft.synopsis)
+    saveToStorage(STORY_BIBLE_STORAGE_KEYS.outline, payload.draft.outline)
+    saveToStorage(STORY_BIBLE_STORAGE_KEYS.style, nextStyle)
+  }, [])
+
+  const handleExportDraft = useCallback(() => {
+    const payload = buildDraftPayload()
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `niko-story-bible-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(url)
+    showDraftMessage('success', t.storyBibleDraftExported)
+  }, [buildDraftPayload, showDraftMessage, t.storyBibleDraftExported])
+
+  const handleImportDraft = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (loadEvent) => {
+      try {
+        const raw = String(loadEvent.target?.result ?? '')
+        const payload = JSON.parse(raw) as Partial<StoryBibleDraftPayload>
+        if (
+          payload.kind !== 'story-bible-local-draft' ||
+          !payload.draft ||
+          typeof payload.draft.braindump !== 'string' ||
+          typeof payload.draft.synopsis !== 'string' ||
+          typeof payload.draft.outline !== 'string' ||
+          !Array.isArray(payload.draft.genres) ||
+          typeof payload.draft.style !== 'string'
+        ) {
+          throw new Error(t.storyBibleDraftImportInvalid)
+        }
+
+        applyDraftPayload({
+          version: typeof payload.version === 'string' ? payload.version : STORY_BIBLE_DRAFT_VERSION,
+          kind: 'story-bible-local-draft',
+          exportedAt: typeof payload.exportedAt === 'string' ? payload.exportedAt : new Date().toISOString(),
+          draft: {
+            braindump: payload.draft.braindump,
+            genres: payload.draft.genres as string[],
+            synopsis: payload.draft.synopsis,
+            outline: payload.draft.outline,
+            style: isStyleId(payload.draft.style) ? payload.draft.style : 'tried',
+          },
+        })
+        showDraftMessage('success', t.storyBibleDraftImported)
+      } catch {
+        showDraftMessage('error', t.storyBibleDraftImportInvalid)
+      }
+    }
+    reader.readAsText(file)
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }, [applyDraftPayload, showDraftMessage, t.storyBibleDraftImportInvalid, t.storyBibleDraftImported])
+
+  const handleResetDraft = useCallback(() => {
+    setBraindump('')
+    setGenres([])
+    setGenreInput('')
+    setSynopsis('')
+    setOutline('')
+    setSelectedStyle('tried')
+
+    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.braindump)
+    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.genres)
+    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.synopsis)
+    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.outline)
+    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.style)
+    showDraftMessage('success', t.storyBibleDraftReset)
+  }, [showDraftMessage, t.storyBibleDraftReset])
 
   useEffect(() => {
     let cancelled = false
@@ -270,6 +418,7 @@ export function StoryBiblePanel() {
             <button
               key={style.id}
               onClick={() => handleStyleChange(style.id)}
+              aria-pressed={selectedStyle === style.id}
               className={`flex items-start gap-2.5 p-3 rounded-[var(--radius-sm)] border text-left transition-all ${
                 selectedStyle === style.id
                   ? 'bg-[var(--primary-cta)]/10 border-[var(--primary-cta)]/40 ring-1 ring-[var(--primary-cta)]/30'
@@ -311,6 +460,53 @@ export function StoryBiblePanel() {
         <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">{t.storyBibleTitle}</h3>
       </div>
       <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-3">{t.storyBibleDesc}</p>
+      <div className="mb-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+        <div className="font-semibold text-[var(--text-primary)]">{t.storyBiblePersistenceTitle}</div>
+        <p className="mt-2">{t.storyBiblePersistenceLocalOnly}</p>
+        <p className="mt-2">{t.storyBiblePersistenceGraphRead}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportDraft}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-sunken)]"
+            title={t.storyBibleExportDraft}
+          >
+            <Download size={14} />
+            {t.storyBibleExportDraft}
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-sunken)]"
+            title={t.storyBibleImportDraft}
+          >
+            <Upload size={14} />
+            {t.storyBibleImportDraft}
+          </button>
+          <button
+            type="button"
+            onClick={handleResetDraft}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-sunken)]"
+            title={t.storyBibleResetDraft}
+          >
+            <RotateCcw size={14} />
+            {t.storyBibleResetDraft}
+          </button>
+          <input
+            ref={fileInputRef}
+            data-testid="story-bible-import-input"
+            type="file"
+            accept=".json"
+            onChange={handleImportDraft}
+            className="hidden"
+          />
+        </div>
+        {draftMessage && (
+          <div className={`mt-2 text-xs font-medium ${draftMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+            {draftMessage.text}
+          </div>
+        )}
+      </div>
       {sections.map((section, i) => (
         <CollapsibleSection key={i} {...section} />
       ))}

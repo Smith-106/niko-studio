@@ -1,0 +1,395 @@
+{
+  "id": "EXPLORE-003",
+  "status": "completed",
+  "role": "explorer",
+  "perspective": "business",
+  "title": "Explore product surface, documentation, and delivery context",
+  "topic": "项目现状分析",
+  "generated_at": "2026-04-07T20:52:10.4434745+08:00",
+  "project_root": "D:/工作目录/niko-studio",
+  "summary": "当前可确认的主交付是 Desktop + MCP Gateway 的本地工作台。实际可见产品面主要围绕写作工作流展开：文档编辑、聊天协作、知识/记忆、评估、写作辅助、文本优化、MCP 运行态与广泛设置。文档口径在 2026-04-07 已被显式整理，历史 Python/Web/Streamlit 材料被保留为兼容或参考，而不是当前主交付说明。",
+  "confirmed_facts": [
+    {
+      "finding": "README、文档索引和发布说明都把当前权威口径收敛到 `desktop + src-ts`，并把 Desktop + MCP Gateway 说明为主交付路径。",
+      "evidence": [
+        "README.md",
+        "docs/INDEX.md",
+        "docs/release/RELEASE_NOTES.md"
+      ]
+    },
+    {
+      "finding": "桌面前端的顶层壳层由 `Sidebar`、`AppMainContent`、`ChatSidebar`、`AppRightPanels` 和 Toast 组成，说明当前主产品是单工作台壳层，而不是多个独立页面入口。",
+      "evidence": [
+        "desktop/src/App.tsx",
+        "desktop/src/components/AppMainContent.tsx",
+        "desktop/src/components/ChatSidebar.tsx",
+        "desktop/src/components/AppRightPanels.tsx"
+      ]
+    },
+    {
+      "finding": "主画布是写作文档工作台：顶部 Header 带 AI Toolbar、上下文占用和检查点菜单，中间是 TipTap 编辑器，底部有字词统计和 Markdown/HTML 导出，正文下方还有 Story Bible 面板。",
+      "evidence": [
+        "desktop/src/components/AppHeader.tsx",
+        "desktop/src/components/DocumentEditor.tsx",
+        "desktop/src/components/NikoEditor.tsx",
+        "desktop/src/components/StoryBiblePanel.tsx",
+        "desktop/src/hooks/useEditorAI.ts"
+      ]
+    },
+    {
+      "finding": "聊天侧栏不是简单消息列表，而是带流式聊天、agent 模式、工作流等级、模型对比、模板库、恢复/回滚和文件上传到 memory 的协作面。",
+      "evidence": [
+        "desktop/src/components/ChatArea.tsx",
+        "desktop/src/hooks/useMemoryUpload.ts",
+        "desktop/src/api/client.ts"
+      ]
+    },
+    {
+      "finding": "右侧功能面板已接入知识库、评估、MCP 状态、写作辅助、文本优化和设置等用户可见能力。",
+      "evidence": [
+        "desktop/src/components/AppRightPanels.tsx",
+        "desktop/src/components/KnowledgeModal.tsx",
+        "desktop/src/components/EvaluationPanel.tsx",
+        "desktop/src/components/McpStatusPanel.tsx",
+        "desktop/src/components/WritingHelperPanel.tsx",
+        "desktop/src/components/AiTextOptimizer.tsx",
+        "desktop/src/components/SettingsModal.tsx"
+      ]
+    },
+    {
+      "finding": "知识库面板已经连接真实数据能力：角色/地点来自图查询，情节来自 memory 搜索，技能支持列表、详情、匹配和链路查询，且底部有记忆写入、时间事实、角色详情和伏笔查询表单。",
+      "evidence": [
+        "desktop/src/components/KnowledgeModal.tsx",
+        "desktop/src/components/knowledge/CharacterTab.tsx",
+        "desktop/src/components/knowledge/SkillTab.tsx",
+        "desktop/src/components/knowledge/MemoryForm.tsx",
+        "desktop/src/api/client.ts"
+      ]
+    },
+    {
+      "finding": "Web UI 不是当前产品入口；`src-ts/web/app.ts` 默认对 `GET /` 返回 `410`，仅允许在显式转发地址下做兼容转发。",
+      "evidence": [
+        "README.md",
+        "src-ts/web/app.ts",
+        "src-ts/tests/web/app.test.ts"
+      ]
+    },
+    {
+      "finding": "2026-04-07 的发布与收口制品显示当前交付上下文已达到 `GO`，并且 release/docs/workflow 的口径已经做过一次对齐清理。",
+      "evidence": [
+        ".workflow/evidence/release/release-readiness-artifact.json",
+        ".workflow/active/WFS-release-docs-workflow-alignment-20260407/HANDOFF.md",
+        ".workflow/active/WFS-final-closure-consistency-20260407/HANDOFF.md"
+      ]
+    }
+  ],
+  "inferences": [
+    {
+      "finding": "虽然 README 仍把产品描述为支持 novel/code/knowledge 等多域的 AI Agent Platform，但当前我实际看到的桌面 UI 明显以小说/写作为中心，代码开发或通用知识管理并没有同等清晰的前端工作面。",
+      "confidence": "medium-high",
+      "basis": [
+        "README.md",
+        "desktop/src/components/Sidebar.tsx",
+        "desktop/src/components/DocumentEditor.tsx",
+        "desktop/src/components/StoryBiblePanel.tsx",
+        "desktop/src/components/WritingHelperPanel.tsx",
+        "desktop/src/components/AiTextOptimizer.tsx"
+      ]
+    },
+    {
+      "finding": "当前桌面 UX 更像单工作台产品而不是路由驱动的多页应用；我在已检查的入口和壳层代码中没有发现路由器或页面切换定义。",
+      "confidence": "medium",
+      "basis": [
+        "desktop/src/main.tsx",
+        "desktop/src/App.tsx",
+        "desktop/src/hooks/useAppShellViewModel.ts",
+        "desktop/src/hooks/useAppPanelOrchestration.ts"
+      ]
+    },
+    {
+      "finding": "知识面板的读能力和查询能力较完整，但角色/地点/情节的新增和深度详情交互还不像完全收口的成品体验。",
+      "confidence": "high",
+      "basis": [
+        "desktop/src/components/knowledge/CharacterTab.tsx",
+        "desktop/src/components/knowledge/LocationTab.tsx",
+        "desktop/src/components/knowledge/PlotTab.tsx",
+        "desktop/src/components/KnowledgeModal.tsx"
+      ]
+    },
+    {
+      "finding": "Story Bible 更偏向创作策划草稿板，而不是强一致持久化模块，因为其核心文本和体裁偏好主要写入 localStorage，只有角色/地点列表来自图数据。",
+      "confidence": "high",
+      "basis": [
+        "desktop/src/components/StoryBiblePanel.tsx"
+      ]
+    }
+  ],
+  "patterns": [
+    {
+      "name": "单工作台壳层编排",
+      "description": "左侧入口、中间正文、右侧工具、旁侧聊天和全局 Toast 由壳层统一编排。",
+      "files": [
+        "desktop/src/App.tsx",
+        "desktop/src/hooks/useAppViewModel.ts",
+        "desktop/src/hooks/useAppShellViewModel.ts"
+      ]
+    },
+    {
+      "name": "Tauri 到 Gateway 的运行时适配层",
+      "description": "前端 API client 在 Tauri 环境下通过 Rust 命令解析 Gateway 基址，并把用户功能映射到 Gateway HTTP 端点。",
+      "files": [
+        "desktop/src/api/client.ts",
+        "desktop/src-tauri/src/main.rs",
+        "src-ts/gateway-server.ts"
+      ]
+    },
+    {
+      "name": "写作中心的 AI 往返闭环",
+      "description": "正文编辑器、右侧 AI 面板和聊天协作区共享上下文，但分别承担生成、诊断、优化、回写和记忆注入职责。",
+      "files": [
+        "desktop/src/components/DocumentEditor.tsx",
+        "desktop/src/components/NikoEditor.tsx",
+        "desktop/src/components/WritingHelperPanel.tsx",
+        "desktop/src/components/AiTextOptimizer.tsx",
+        "desktop/src/components/ChatArea.tsx"
+      ]
+    },
+    {
+      "name": "历史/兼容路径显式降级",
+      "description": "Web/Streamlit/Python-era 文档和入口被保留，但被明确标注为 deprecated、compatibility 或 historical。",
+      "files": [
+        "README.md",
+        "docs/INDEX.md",
+        "docs/ui_design_guide.md",
+        "src-ts/web/app.ts"
+      ]
+    }
+  ],
+  "module_map": [
+    {
+      "surface": "主工作台",
+      "scope": "文档编辑、AI 工具栏、检查点、上下文预算、导出、Story Bible",
+      "files": [
+        "desktop/src/components/AppHeader.tsx",
+        "desktop/src/components/DocumentEditor.tsx",
+        "desktop/src/components/NikoEditor.tsx",
+        "desktop/src/components/StoryBiblePanel.tsx"
+      ]
+    },
+    {
+      "surface": "聊天协作",
+      "scope": "流式聊天、agent 动作、工作流等级、模板库、恢复/回滚、文件上传",
+      "files": [
+        "desktop/src/components/ChatArea.tsx",
+        "desktop/src/hooks/useChatStreaming.ts",
+        "desktop/src/hooks/useMemoryUpload.ts"
+      ]
+    },
+    {
+      "surface": "知识与记忆",
+      "scope": "角色/地点/情节/技能浏览和记忆写入、时间事实、伏笔查询",
+      "files": [
+        "desktop/src/components/KnowledgeModal.tsx",
+        "desktop/src/components/knowledge/CharacterTab.tsx",
+        "desktop/src/components/knowledge/LocationTab.tsx",
+        "desktop/src/components/knowledge/PlotTab.tsx",
+        "desktop/src/components/knowledge/SkillTab.tsx",
+        "desktop/src/components/knowledge/MemoryForm.tsx"
+      ]
+    },
+    {
+      "surface": "质量与运维",
+      "scope": "评估、工作流桥接、检查点、MCP 运行态、服务配置、全局设置和诊断",
+      "files": [
+        "desktop/src/components/EvaluationPanel.tsx",
+        "desktop/src/components/McpStatusPanel.tsx",
+        "desktop/src/components/SettingsModal.tsx"
+      ]
+    }
+  ],
+  "recent_workflow_context": [
+    {
+      "source": ".workflow/active/WFS-release-docs-workflow-alignment-20260407/HANDOFF.md",
+      "relevance": "high",
+      "notes": "确认 README、release notes、docs index 和历史路线图已经被整理为“当前权威 vs 历史参考”的清晰边界。"
+    },
+    {
+      "source": ".workflow/active/WFS-final-closure-consistency-20260407/HANDOFF.md",
+      "relevance": "high",
+      "notes": "确认发布收口后，external release、release summary、integration-tests 和权威口径已经指向当前 `src-ts` + `desktop` 现实。"
+    },
+    {
+      "source": ".workflow/evidence/release/release-readiness-artifact.json",
+      "relevance": "high",
+      "notes": "记录当前 release readiness 为 `GO`，并给出 desktop sidecar readiness、external smoke、production guard、authority alignment 等通过证据。"
+    },
+    {
+      "source": ".workflow/.review-module/reports/project-progress-analysis-2026-04-07.md",
+      "relevance": "medium-high",
+      "notes": "给出了“主产品路径接近完成，但文档/流程口径曾有滞后”的项目级判断；其中 release/docs 对齐问题已被当日 handoff 明确收口。"
+    },
+    {
+      "source": ".workflow/.analysis/ANL-旧版nikostudio迁移后功能缺失-2026-04-06/conclusions.json",
+      "relevance": "medium",
+      "notes": "这是前一天的迁移缺口分析，其中“Python Gateway 仍是主链”的结论已被 2026-04-07 的 README、handoff 和 release artifact 所覆盖，不应继续当作当前交付现状。"
+    }
+  ],
+  "key_findings": [
+    {
+      "type": "product-surface",
+      "severity": "info",
+      "statement": "当前真正成型的产品是桌面写作工作台，而不是泛化的多页 Web 平台。"
+    },
+    {
+      "type": "documentation",
+      "severity": "info",
+      "statement": "当前文档已经能较清楚地区分主交付路径与历史/兼容材料，这降低了误读风险。"
+    },
+    {
+      "type": "delivery-context",
+      "severity": "info",
+      "statement": "从 release artifact 和 2026-04-07 handoff 看，当前交付上下文偏向“已可发布/已收口”，而不是早期迁移中。"
+    },
+    {
+      "type": "ux-gap",
+      "severity": "medium",
+      "statement": "知识页的浏览和查询较完整，但新增入口和非技能项详情交互仍有明显半成品痕迹。"
+    },
+    {
+      "type": "narrative-mismatch",
+      "severity": "medium",
+      "statement": "README 的平台化叙事大于当前前端可见面；对外描述若不限定“当前主要是写作工作台”，容易高估产品面。"
+    },
+    {
+      "type": "compatibility-boundary",
+      "severity": "low",
+      "statement": "Web/Streamlit/Python 仍存在于仓库与文档中，但当前已经被明确降为兼容或历史路径。"
+    }
+  ],
+  "questions_for_analysis": [
+    "产品对外叙事是否应该从“多域 AI Agent Platform”进一步收敛为“以写作为主的桌面工作台 + Gateway 平台底座”，避免用户期待和可见界面错位？",
+    "知识库中的新增按钮、角色/地点/情节详情交互是否应被视为收口前的 P1 UX 缺口？",
+    "Story Bible 的 localStorage 草稿能力是否需要纳入正式持久化/同步语义，还是明确保持为轻量前端策划缓存？",
+    "代码开发和知识管理这两个 README 中提到的 domain adapter，目前是否有面向终端用户的实际入口，还是仍主要停留在平台底层能力层？"
+  ],
+  "relevant_files": [
+    {
+      "path": "README.md",
+      "relevance": "high",
+      "summary": "当前交付模型、权威地图、历史文档边界和平台叙事。"
+    },
+    {
+      "path": "docs/INDEX.md",
+      "relevance": "high",
+      "summary": "文档权威口径和历史/兼容文档说明。"
+    },
+    {
+      "path": "docs/release/RELEASE_NOTES.md",
+      "relevance": "high",
+      "summary": "external/internal 发布口径与 Desktop 主入口要求。"
+    },
+    {
+      "path": "desktop/src/App.tsx",
+      "relevance": "high",
+      "summary": "桌面主壳层结构。"
+    },
+    {
+      "path": "desktop/src/components/Sidebar.tsx",
+      "relevance": "high",
+      "summary": "文档列表、skill packs、模板库、知识库、设置、MCP 状态和评估入口。"
+    },
+    {
+      "path": "desktop/src/components/AppHeader.tsx",
+      "relevance": "medium-high",
+      "summary": "AI Toolbar、连接状态、上下文预算和检查点入口。"
+    },
+    {
+      "path": "desktop/src/components/DocumentEditor.tsx",
+      "relevance": "high",
+      "summary": "写作主画布、导出和状态栏。"
+    },
+    {
+      "path": "desktop/src/components/NikoEditor.tsx",
+      "relevance": "medium-high",
+      "summary": "TipTap 富文本编辑器、slash/bubble AI 入口和编辑器桥接。"
+    },
+    {
+      "path": "desktop/src/components/StoryBiblePanel.tsx",
+      "relevance": "medium-high",
+      "summary": "世界观/体裁/大纲/风格规划面。"
+    },
+    {
+      "path": "desktop/src/components/ChatArea.tsx",
+      "relevance": "high",
+      "summary": "聊天协作、工作流控制、模板库、文件上传和恢复链路。"
+    },
+    {
+      "path": "desktop/src/components/KnowledgeModal.tsx",
+      "relevance": "high",
+      "summary": "知识与记忆总入口。"
+    },
+    {
+      "path": "desktop/src/components/knowledge/SkillTab.tsx",
+      "relevance": "medium-high",
+      "summary": "技能列表、详情、匹配与链路，同时存在硬编码回退技能。"
+    },
+    {
+      "path": "desktop/src/components/knowledge/MemoryForm.tsx",
+      "relevance": "medium-high",
+      "summary": "记忆写入、时间事实、角色详情、伏笔查询表单。"
+    },
+    {
+      "path": "desktop/src/components/WritingHelperPanel.tsx",
+      "relevance": "medium-high",
+      "summary": "过程型写作辅助与风格控制。"
+    },
+    {
+      "path": "desktop/src/components/AiTextOptimizer.tsx",
+      "relevance": "medium-high",
+      "summary": "结果型文本优化和多预设改写。"
+    },
+    {
+      "path": "desktop/src/components/EvaluationPanel.tsx",
+      "relevance": "medium-high",
+      "summary": "质量评估、工作流桥接、推荐应用和检查点。"
+    },
+    {
+      "path": "desktop/src/components/McpStatusPanel.tsx",
+      "relevance": "medium-high",
+      "summary": "Gateway 健康、metrics、tools、服务配置与探测。"
+    },
+    {
+      "path": "desktop/src/components/SettingsModal.tsx",
+      "relevance": "medium-high",
+      "summary": "后端、workflow、retrieval、templates、models、UI、diagnostics 全局设置。"
+    },
+    {
+      "path": "desktop/src/api/client.ts",
+      "relevance": "high",
+      "summary": "前端如何映射到 Gateway API。"
+    },
+    {
+      "path": "src-ts/web/app.ts",
+      "relevance": "medium-high",
+      "summary": "Web 兼容入口已废弃。"
+    },
+    {
+      "path": ".workflow/evidence/release/release-readiness-artifact.json",
+      "relevance": "high",
+      "summary": "当前交付 readiness 的机器证据。"
+    }
+  ],
+  "_metadata": {
+    "perspective": "business",
+    "search_queries": [
+      "Locate the main user-facing product surface in this project. Find README, docs, routes, pages, feature modules, navigation, landing page, dashboard, settings, upload flows, and any files that describe implemented features or user journeys. Focus on evidence of what the product currently does.",
+      "Find desktop frontend navigation, sidebar items, main panels, modals, and user actions that define the visible product surface. Look for files such as Sidebar, AppHeader, DocumentEditor, ChatSidebar, settings, knowledge, evaluation, writing helper, optimizer, and any state/view-model hooks.",
+      "Find what the right-side panels and chat/editor features actually do in the desktop app. Focus on KnowledgeModal, EvaluationPanel, McpStatusPanel, WritingHelperPanel, AiTextOptimizer, ChatArea, NikoEditor, StoryBiblePanel, and whether they call real APIs or use placeholders.",
+      "Find evidence of stubbed, placeholder, deprecated, or compatibility-only user-facing paths in the current product surface. Look for TODO comments, placeholder responses, disabled routes, compatibility notes, historical docs, and UI features that are explicitly not the primary delivery path.",
+      "Check whether the desktop frontend uses a router or multiple pages/views, or if it is a single-workbench shell. Search for react-router, route definitions, page components, and view switching."
+    ],
+    "timestamp": "2026-04-07T20:52:10.4434745+08:00",
+    "file_count": 29,
+    "finding_count": 10
+  }
+}

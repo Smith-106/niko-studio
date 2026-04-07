@@ -1,0 +1,8 @@
+.workflow
+.writing
+node_modules
+coverage
+test-results
+desktop/dist
+desktop/src-tauri/target
+src-ts/dist

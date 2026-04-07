@@ -19,18 +19,16 @@ import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 
-import { createIntegrationAdapters as createDefaultIntegrationAdapters } from "../integrations";
+import {
+  createIntegrationAdapters,
+  type IntegrationAdapterBundle,
+  type IntegrationFlags as SharedIntegrationFlags,
+  type StorageShadowAdapter as SharedStorageShadowAdapter,
+} from "../integrations";
 
 type DatabaseType = InstanceType<typeof BetterSqlite3>;
 
-interface StorageShadowAdapter {
-  shadowWriteMemory(payload: Record<string, unknown>): Promise<boolean>;
-}
-
-interface IntegrationAdapterBundle {
-  flags: IntegrationFlags;
-  storageShadow: StorageShadowAdapter;
-}
+type MemoryIntegrationAdapterBundle = Pick<IntegrationAdapterBundle, "flags" | "storageShadow">;
 
 export interface MemoryScopeFilters {
   userId?: string | null;
@@ -652,30 +650,11 @@ export class EmbeddingEngine {
   }
 }
 
-// ============================================================
-// Integration adapters (minimal placeholder)
-// ============================================================
+export type IntegrationFlags = SharedIntegrationFlags;
 
-export interface IntegrationFlags {
-  postgresEnabled: boolean;
-  redisCacheEnabled: boolean;
-  elasticsearchEnabled: boolean;
-  neo4jEnabled: boolean;
-  langflowEnabled: boolean;
-}
+export type StorageShadowWriter = SharedStorageShadowAdapter;
 
-export type StorageShadowWriter = StorageShadowAdapter;
-
-export type IntegrationAdapters = Pick<IntegrationAdapterBundle, "flags" | "storageShadow">;
-
-/** Minimal no-op integration adapters */
-function createNoOpAdapters(): IntegrationAdapters {
-  const adapters = createDefaultIntegrationAdapters();
-  return {
-    flags: adapters.flags,
-    storageShadow: adapters.storageShadow,
-  };
-}
+export type IntegrationAdapters = MemoryIntegrationAdapterBundle;
 
 // ============================================================
 // EnginePlugin protocol
@@ -752,7 +731,7 @@ export class UnifiedMemoryEngine {
       this._createDbAdapter()
     );
     this._integrationAdapters =
-      params.integrationAdapters ?? createNoOpAdapters();
+      params.integrationAdapters ?? createIntegrationAdapters();
 
     this._initSchema();
     console.log(`Memory engine initialized: ${this.dbPath}`);

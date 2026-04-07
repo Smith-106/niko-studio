@@ -5,6 +5,10 @@ import { KnowledgeModal } from './KnowledgeModal'
 import { translations } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
 
+const knowledgeTabScenario = vi.hoisted(() => ({
+  value: 'empty' as 'empty' | 'filled',
+}))
+
 vi.mock('../api/client', () => ({
   searchMemory: vi.fn(),
   queryGraph: vi.fn(),
@@ -12,26 +16,76 @@ vi.mock('../api/client', () => ({
   loadSkill: vi.fn(),
   matchSkills: vi.fn(),
   getSkillChain: vi.fn(),
+  getTemporalFacts: vi.fn(),
+  getCharacter: vi.fn(),
+  getForeshadows: vi.fn(),
+  addMemory: vi.fn(),
 }))
 
-import { listSkills, queryGraph, searchMemory } from '../api/client'
+vi.mock('./knowledge/CharacterTab', () => ({
+  CharacterTab: ({ onItemClick }: { onItemClick: (item: Record<string, unknown>) => void }) =>
+    knowledgeTabScenario.value === 'filled'
+      ? (
+          <button
+            type="button"
+            onClick={() => onItemClick({ id: 'char-1', name: 'Alice', description: '主角' })}
+          >
+            Alice
+          </button>
+        )
+      : (
+          <button type="button" title="添加角色" aria-label="添加角色" disabled>
+            添加角色
+          </button>
+        ),
+}))
 
-const mockedListSkills = vi.mocked(listSkills)
-const mockedQueryGraph = vi.mocked(queryGraph)
-const mockedSearchMemory = vi.mocked(searchMemory)
+vi.mock('./knowledge/LocationTab', () => ({
+  LocationTab: ({ onItemClick }: { onItemClick: (item: Record<string, unknown>) => void }) =>
+    knowledgeTabScenario.value === 'filled'
+      ? (
+          <button
+            type="button"
+            onClick={() => onItemClick({ id: 'loc-1', name: 'Harbor', description: '港口' })}
+          >
+            Harbor
+          </button>
+        )
+      : (
+          <button type="button" title="添加地点" aria-label="添加地点" disabled>
+            添加地点
+          </button>
+        ),
+}))
+
+vi.mock('./knowledge/PlotTab', () => ({
+  PlotTab: ({ onItemClick }: { onItemClick: (item: Record<string, unknown>) => void }) =>
+    knowledgeTabScenario.value === 'filled'
+      ? (
+          <button
+            type="button"
+            onClick={() =>
+              onItemClick({ id: 'plot-1', title: 'Bridge Alarm', content: 'Act 1 turning point' })
+            }
+          >
+            Bridge Alarm
+          </button>
+        )
+      : (
+          <button type="button" title="添加剧情" aria-label="添加剧情" disabled>
+            添加剧情
+          </button>
+        ),
+}))
+
 const zh = translations.zh
 const en = translations.en
 
 describe('KnowledgeModal accessibility and labels', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    knowledgeTabScenario.value = 'empty'
     useSettingsStore.getState().updateSettings({ language: 'zh' })
-    mockedQueryGraph.mockResolvedValue({ success: true, data: [] } as never)
-    mockedSearchMemory.mockResolvedValue({ success: true, data: [] } as never)
-    mockedListSkills.mockResolvedValue({
-      success: true,
-      data: [{ id: 'dialogue-system', name: 'dialogue-system' }],
-    } as never)
   })
 
   it('renders as named dialog and supports escape close', async () => {
@@ -109,5 +163,37 @@ describe('KnowledgeModal accessibility and labels', () => {
     expect(screen.getByLabelText(en.knowledgeMemoryTagsPlaceholder)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: en.knowledgeMemoryAction })).toBeInTheDocument()
   })
-})
 
+  it('shows read-only details for character, location, and plot selections', async () => {
+    knowledgeTabScenario.value = 'filled'
+
+    const user = userEvent.setup()
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    await user.click(screen.getByRole('button', { name: 'Alice' }))
+    expect(screen.getAllByText('主角').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: zh.knowledgeTabLocations }))
+    await user.click(screen.getByRole('button', { name: 'Harbor' }))
+    expect(screen.getAllByText('港口').length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: zh.knowledgeTabPlots }))
+    await user.click(screen.getByRole('button', { name: 'Bridge Alarm' }))
+    expect(screen.getAllByText('Act 1 turning point').length).toBeGreaterThan(0)
+  })
+
+  it('renders disabled create affordances for empty non-skill tabs', async () => {
+    knowledgeTabScenario.value = 'empty'
+
+    const user = userEvent.setup()
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    expect(screen.getByTitle(zh.knowledgeAddPrefix + zh.knowledgeTabCharacters)).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: zh.knowledgeTabLocations }))
+    expect(screen.getByTitle(zh.knowledgeAddPrefix + zh.knowledgeTabLocations)).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: zh.knowledgeTabPlots }))
+    expect(screen.getByTitle(zh.knowledgeAddPrefix + zh.knowledgeTabPlots)).toBeDisabled()
+  })
+})

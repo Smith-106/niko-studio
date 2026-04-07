@@ -1,0 +1,83 @@
+{
+  "id": "IMPL-005",
+  "title": "Retire legacy pytest defaults and align delivery-gate local anchors",
+  "description": "Remove the stale `pytest.ini` default coverage posture tied to the retired `src` path, preserve the targeted Python regression surface that still matters, and update `scripts/delivery_gate.py` only where it must follow the new package-level local baseline commands from `IMPL-002`.",
+  "status": "completed",
+  "type": "maintenance",
+  "scope": "pytest.ini;scripts/delivery_gate.py",
+  "action": "Implement",
+  "depends_on": [
+    "IMPL-002"
+  ],
+  "focus_paths": [
+    "pytest.ini",
+    "scripts/delivery_gate.py",
+    "desktop/package.json",
+    "src-ts/package.json"
+  ],
+  "convergence": {
+    "criteria": [
+      "`pytest.ini` no longer defaults to `--cov=src` or `--cov-fail-under=100`, and the default pytest invocation remains valid for the residual script-test surface.",
+      "`scripts/delivery_gate.py` checks the new local baseline anchors introduced in `IMPL-002` only where those anchors replace the previous package-script assumptions.",
+      "The task does not modify `.github` workflows, `scripts/check_authority_alignment.py`, or `scripts/release_check_summary.py`; it only keeps the local semantic gate consistent with the updated developer baseline."
+    ],
+    "verification": "python -m pytest tests/unit/scripts/test_governance_scripts.py -q && python scripts/delivery_gate.py",
+    "definition_of_done": "Legacy Python defaults no longer point at the removed `src` coverage target, and the delivery gate reflects the new local baseline without reopening completed governance hardening."
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "title": "Reset pytest defaults to the surviving Python surface",
+      "description": "Trim `pytest.ini` so the default addopts no longer encode obsolete `src` coverage assumptions while keeping markers and developer-friendly output for the remaining script tests."
+    },
+    {
+      "step": 2,
+      "title": "Map delivery-gate anchors to the new package baseline",
+      "description": "Review the existing `desktop/package.json` and `src-ts/package.json` anchors in `scripts/delivery_gate.py` and update only the checks that must follow the new local baseline commands introduced by `IMPL-002`."
+    },
+    {
+      "step": 3,
+      "title": "Confirm non-governance scope remains unchanged",
+      "description": "Verify the semantic gate still limits itself to local baseline consistency and does not add fresh authority-alignment or CI-hardening requirements already closed by the `2026-04-07` governance session."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/planning-notes.md",
+      "role": "session-constraints"
+    },
+    {
+      "path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/module-plans/B-local-engineering-baseline.json",
+      "role": "module-plan"
+    },
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "role": "analysis-source"
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "role": "completed-governance-boundary"
+    }
+  ],
+  "inherited": {
+    "from_tasks": [
+      "IMPL-002"
+    ],
+    "notes": [
+      "Use the package-level local baseline introduced in `IMPL-002` as the new local anchor.",
+      "Keep this task outside completed governance and authority hardening scope."
+    ]
+  },
+  "context_package_path": ".workflow/active/WFS-project-current-state-followup-20260407/.process/context-package.json",
+  "meta": {
+    "type": "engineering-baseline",
+    "agent": "@code-developer",
+    "execution_group": "wave-2-boundary-completion",
+    "module": "local-engineering-baseline",
+    "priority": "high",
+    "execution_config": {
+      "method": "workflow-plan",
+      "enable_resume": true
+    }
+  }
+}

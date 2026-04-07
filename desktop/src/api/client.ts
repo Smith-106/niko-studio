@@ -1,14 +1,46 @@
-/**
- * Niko-Studio API Client
- * Communicates with Gateway backend via Tauri invoke
- */
-
-import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '@/stores/settingsStore'
+
+import {
+  callTauriApi,
+  checkTauriBackendHealth,
+  getRuntimeGatewayBase,
+  isTauriRuntime,
+  normalizeGatewayBaseUrl,
+  startTauriBackend,
+} from './transport'
+import type { GatewayRequestMethod } from './tauri-contract'
+import type {
+  GatewayConnectionState,
+  GatewayHealth,
+  GatewayMetrics,
+  GatewayRuntimeView,
+  GatewayServiceConfig,
+  GatewayServiceConfigInput,
+  GatewayServiceProbeResult,
+  StreamWritingHelperRequest,
+  WritingHelperRequest,
+  WritingHelperResponse,
+} from './contracts'
+
+export type {
+  GatewayConnectionState,
+  GatewayHealth,
+  GatewayMetrics,
+  GatewayReconnectState,
+  GatewayRuntime,
+  GatewayRuntimeServerState,
+  GatewayRuntimeView,
+  GatewayServiceConfig,
+  GatewayServiceConfigInput,
+  GatewayServiceProbeResult,
+  StreamWritingHelperRequest,
+  WritingHelperMode,
+  WritingHelperRequest,
+  WritingHelperResponse,
+} from './contracts'
 
 const DEFAULT_API_BASE = 'http://127.0.0.1:8000'
 const GENERIC_API_ERROR_MESSAGE = 'Request failed. Please try again.'
-const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, '')
 
 const getErrorName = (error: unknown): string => (error instanceof Error ? error.name : 'UnknownError')
 
@@ -16,12 +48,12 @@ const resolveApiBase = (): string => {
   const env = import.meta.env as Record<string, string | undefined>
   const envBase = env.NIKO_GATEWAY_URL ?? env.VITE_NIKO_GATEWAY_URL
   if (envBase && envBase.trim()) {
-    return normalizeBaseUrl(envBase.trim())
+    return normalizeGatewayBaseUrl(envBase.trim())
   }
 
   const storeBase = useSettingsStore.getState().settings.apiBaseUrl
   if (storeBase && storeBase.trim()) {
-    return normalizeBaseUrl(storeBase.trim())
+    return normalizeGatewayBaseUrl(storeBase.trim())
   }
 
   return DEFAULT_API_BASE
@@ -33,43 +65,11 @@ const resolveApiBase = (): string => {
 
 export const getResolvedApiBase = (): string => resolveApiBase()
 
-// 是否在 Tauri 环境中运行
-const isTauri = '__TAURI__' in window
-
-let cachedRuntimeGatewayBase: string | null = null
-let cachedRuntimeGatewayBaseAt: number | null = null
-
-const getRuntimeGatewayBase = async (): Promise<string> => {
-  if (!isTauri) {
-    return getResolvedApiBase()
-  }
-
-  const now = Date.now()
-  if (cachedRuntimeGatewayBase && cachedRuntimeGatewayBaseAt && now - cachedRuntimeGatewayBaseAt < 5000) {
-    return cachedRuntimeGatewayBase
-  }
-
-  const base = await invoke<string>('get_gateway_base')
-  cachedRuntimeGatewayBase = normalizeBaseUrl(base)
-  cachedRuntimeGatewayBaseAt = now
-  return cachedRuntimeGatewayBase
-}
-
 interface ApiResponse<T> {
   success: boolean
   data?: T
   error?: string
 }
-
-export interface GatewayMetrics {
-  requests_total: number
-  requests_failed_total: number
-  requests_success_total: number
-  latency_ms_avg: number
-  latency_ms_max: number
-}
-
-export type WritingHelperMode = 'polish' | 'summarize' | 'outline' | 'rewrite' | 'expand'
 
 export type LegacyPolishType = 'standard' | 'academic' | 'business' | 'creative'
 
@@ -91,97 +91,7 @@ export interface LegacyPolishResponse {
   error?: string
 }
 
-export interface WritingHelperRequest {
-  content: string
-  mode?: WritingHelperMode
-  max_sentences?: number
-  max_items?: number
-  instruction?: string
-  detection_evasion_guard_enabled?: boolean
-  api_key?: string
-  base_url?: string
-  model?: string
-  provider?: string
-}
-
-export interface WritingHelperResponse {
-  mode: WritingHelperMode
-  processed_text?: string
-  outline?: string[]
-  stats?: Record<string, number>
-}
-
 export type GatewayTools = Record<string, string[]>
-
-export type GatewayConnectionState = 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
-export type GatewayReconnectState = 'idle' | 'probing' | 'backoff' | 'retrying' | 'recovered' | 'failed'
-
-export interface GatewayRuntimeServerState {
-  state: GatewayConnectionState
-  loading: boolean
-  last_error?: string | null
-}
-
-export interface GatewayRuntime {
-  session_id?: string
-  connection_state?: GatewayConnectionState
-  reconnect_state?: GatewayReconnectState
-  last_probe_at?: string
-  reconnect_attempts?: number
-  last_error?: string | null
-  servers?: Record<string, GatewayRuntimeServerState>
-  service_configs?: GatewayServiceConfig[]
-}
-
-export interface GatewayRuntimeView {
-  connectionState: GatewayConnectionState
-  reconnectState: GatewayReconnectState
-  sessionId: string | null
-  reconnectAttempts: number
-  lastError: string | null
-  lastProbeAt: string | null
-  servers: Record<string, GatewayRuntimeServerState>
-}
-
-export interface GatewayServiceConfig {
-  id: string
-  name: string
-  path: string
-  enabled: boolean
-  builtin: boolean
-  transport: string
-  health_url?: string | null
-  status?: string
-}
-
-export interface GatewayServiceConfigInput {
-  id?: string
-  service_id?: string
-  name?: string
-  path?: string
-  enabled?: boolean
-  transport?: string
-  health_url?: string | null
-}
-
-export interface GatewayServiceProbeResult {
-  service: {
-    id: string
-    status: string
-    enabled: boolean
-    checked_at: string
-  }
-}
-
-export interface GatewayHealth {
-  status: string
-  version: string
-  services: Record<string, string>
-  engine_health?: Record<string, { status: string; error?: string }>
-  agents?: string[]
-  skills_count?: number
-  mcp_runtime?: GatewayRuntime
-}
 
 function fallbackConnectionState(backendHealthy: boolean, services?: Record<string, string>): GatewayConnectionState {
   if (!backendHealthy) {
@@ -224,15 +134,14 @@ export interface ModelFetchResult {
  */
 async function callApi<T>(
   endpoint: string,
-  method: 'GET' | 'POST' | 'PUT' = 'GET',
+  method: GatewayRequestMethod = 'GET',
   body?: Record<string, unknown>
 ): Promise<ApiResponse<T>> {
   try {
     let data: T
 
-    if (isTauri) {
-      // 通过 Tauri Rust 后端代理请求
-      const response = await invoke<string>('call_api', {
+    if (isTauriRuntime()) {
+      const response = await callTauriApi({
         endpoint,
         method,
         body: body ? JSON.stringify(body) : null,
@@ -373,7 +282,7 @@ export async function fetchProviderModels(
     console.error(`Gateway models fallback failed (${gatewayReason})`)
   }
 
-  const normalizedBase = normalizeBaseUrl(baseUrl.trim())
+  const normalizedBase = normalizeGatewayBaseUrl(baseUrl.trim())
   const trimmedApiKey = apiKey.trim()
   let payload: unknown
 
@@ -441,11 +350,11 @@ export async function fetchProviderModels(
 // ============ Backend Control (Tauri Only) ============
 
 export async function startBackend(): Promise<ApiResponse<string>> {
-  if (!isTauri) {
+  if (!isTauriRuntime()) {
     return { success: false, error: 'Not in Tauri environment' }
   }
   try {
-    const result = await invoke<string>('start_backend')
+    const result = await startTauriBackend()
     return { success: true, data: result }
   } catch (error) {
     return { success: false, error: String(error) }
@@ -453,9 +362,9 @@ export async function startBackend(): Promise<ApiResponse<string>> {
 }
 
 export async function checkBackendHealth(): Promise<boolean> {
-  if (isTauri) {
+  if (isTauriRuntime()) {
     try {
-      return await invoke<boolean>('check_backend_health')
+      return await checkTauriBackendHealth()
     } catch {
       return false
     }
@@ -487,16 +396,6 @@ export async function processWritingHelper(
   return callApi('/writing-helper/process', 'POST', payload as unknown as Record<string, unknown>)
 }
 
-export interface StreamWritingHelperRequest {
-  content: string
-  mode?: string
-  instruction?: string
-  model?: string
-  provider?: string
-  api_key?: string
-  base_url?: string
-}
-
 export async function streamWritingHelper(
   payload: StreamWritingHelperRequest,
   callbacks: {
@@ -506,7 +405,9 @@ export async function streamWritingHelper(
   },
   options?: { signal?: AbortSignal }
 ): Promise<void> {
-  const base = isTauri ? await getRuntimeGatewayBase() : getResolvedApiBase()
+  const base = isTauriRuntime()
+    ? await getRuntimeGatewayBase(getResolvedApiBase)
+    : getResolvedApiBase()
   const url = `${base}/writing/stream`
 
   try {
@@ -1672,7 +1573,9 @@ export async function chatStream(
   callbacks: StreamCallbacks,
   options?: StreamOptions
 ): Promise<void> {
-  const base = isTauri ? await getRuntimeGatewayBase() : getResolvedApiBase()
+  const base = isTauriRuntime()
+    ? await getRuntimeGatewayBase(getResolvedApiBase)
+    : getResolvedApiBase()
   const url = `${base}/chat/stream`
 
   // 内容缓冲区，用于批量更新

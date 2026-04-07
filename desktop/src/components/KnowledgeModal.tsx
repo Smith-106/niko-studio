@@ -23,6 +23,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   const [loading, setLoading] = useState(false)
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null)
   const [selectedSkillId, setSelectedSkillId] = useState<string>('')
+  const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null)
 
   useDialogFocusTrap({
     containerRef: dialogRef,
@@ -33,6 +34,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   // Reset items when tab changes
   useEffect(() => {
     setItems([])
+    setSelectedItem(null)
   }, [activeTab])
 
   const handleStatusChange = (status: OperationStatus | null) => {
@@ -47,8 +49,69 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     setLoading(isLoading)
   }
 
-  const handleItemClick = (_item: KnowledgeItem) => {
-    // Generic click handler - skill tab uses this differently
+  const handleItemClick = (item: KnowledgeItem) => {
+    setSelectedItem(item)
+  }
+
+  const selectedItemId =
+    selectedItem && typeof selectedItem === 'object'
+      ? String(selectedItem.id ?? selectedItem.name ?? '')
+      : ''
+
+  const renderSelectedItemDetails = () => {
+    if (activeTab === 'skills' || !selectedItem) return null
+
+    const title =
+      (selectedItem.name as string) ||
+      (selectedItem.title as string) ||
+      (selectedItem.id as string) ||
+      t.knowledgeNoDescription
+
+    const summary =
+      (selectedItem.description as string) ||
+      (selectedItem.content as string) ||
+      (selectedItem.type as string) ||
+      t.knowledgeNoDescription
+
+    const detailEntries = Object.entries(selectedItem).filter(([, value]) => {
+      if (value === null || value === undefined || value === '') {
+        return false
+      }
+      return true
+    })
+
+    return (
+      <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/70 p-4 shadow-sm dark:border-blue-500/30 dark:bg-blue-900/10">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-sm font-semibold text-slate-900 dark:text-dark-text">{title}</div>
+            <div className="mt-1 text-xs text-slate-600 dark:text-dark-text-secondary">{summary}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedItem(null)}
+            className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900/20"
+          >
+            {t.knowledgeClose}
+          </button>
+        </div>
+        <div className="mt-3 grid gap-2">
+          {detailEntries.map(([key, value]) => (
+            <div
+              key={key}
+              className="rounded-lg border border-blue-100 bg-white/80 px-3 py-2 text-xs dark:border-blue-500/20 dark:bg-dark-surface"
+            >
+              <div className="font-medium uppercase tracking-wide text-slate-500 dark:text-dark-text-secondary">
+                {key}
+              </div>
+              <div className="mt-1 whitespace-pre-wrap break-words text-slate-800 dark:text-dark-text">
+                {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (!isOpen) return null
@@ -70,6 +133,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             loading={loading}
             onLoadingChange={handleLoadingChange}
             onItemClick={handleItemClick}
+            selectedItemId={selectedItemId}
             searchQuery={searchQuery}
           />
         )
@@ -81,6 +145,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             loading={loading}
             onLoadingChange={handleLoadingChange}
             onItemClick={handleItemClick}
+            selectedItemId={selectedItemId}
             searchQuery={searchQuery}
           />
         )
@@ -92,6 +157,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             loading={loading}
             onLoadingChange={handleLoadingChange}
             onItemClick={handleItemClick}
+            selectedItemId={selectedItemId}
             searchQuery={searchQuery}
           />
         )
@@ -197,8 +263,10 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
           </div>
         )}
       </div>
-
-      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50 dark:bg-dark-bg">{renderTabContent()}</div>
+      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50 dark:bg-dark-bg">
+        {renderSelectedItemDetails()}
+        {renderTabContent()}
+      </div>
     </div>
   )
 }

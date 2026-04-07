@@ -11,10 +11,11 @@ interface CharacterTabProps {
   loading: boolean
   onLoadingChange: (loading: boolean) => void
   onItemClick: (item: KnowledgeItem) => void
+  selectedItemId: string
   searchQuery: string
 }
 
-export function CharacterTab({ items, onItemsChange, loading, onLoadingChange, onItemClick, searchQuery }: CharacterTabProps) {
+export function CharacterTab({ items, onItemsChange, loading, onLoadingChange, onItemClick, selectedItemId, searchQuery }: CharacterTabProps) {
   const { t, translate } = useI18n()
 
   const loadCharacters = useCallback(async () => {
@@ -47,10 +48,11 @@ export function CharacterTab({ items, onItemsChange, loading, onLoadingChange, o
         <Folder size={48} className="mb-2" />
         <p>{t.knowledgeEmpty}</p>
         <button
-          className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="mt-4 flex items-center gap-2 rounded-lg bg-slate-300 px-4 py-2 text-slate-600 opacity-70 cursor-not-allowed"
           aria-label={`${t.knowledgeAddPrefix}${t.knowledgeTabCharacters}`}
           title={`${t.knowledgeAddPrefix}${t.knowledgeTabCharacters}`}
           type="button"
+          disabled
         >
           <Plus size={16} />
           {t.knowledgeAddPrefix}{t.knowledgeTabCharacters}
@@ -65,7 +67,11 @@ export function CharacterTab({ items, onItemsChange, loading, onLoadingChange, o
         <div
           key={index}
           onClick={() => onItemClick(item)}
-          className="p-4 border border-gray-200 dark:border-dark-border rounded-lg hover:border-blue-500 hover:shadow-md cursor-pointer transition-all"
+          className={`p-4 border rounded-lg cursor-pointer transition-all ${
+            String(item.id ?? item.name ?? '') === selectedItemId
+              ? 'border-blue-500 shadow-md bg-blue-50/60 dark:border-blue-400 dark:bg-blue-900/10'
+              : 'border-gray-200 dark:border-dark-border hover:border-blue-500 hover:shadow-md'
+          }`}
         >
           <div className="flex items-start gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">

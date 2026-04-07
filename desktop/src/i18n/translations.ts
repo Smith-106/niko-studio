@@ -278,6 +278,16 @@ export interface Translations {
   storyBibleGenerate: string
   storyBibleEmpty: string
   storyBibleLoading: string
+  storyBiblePersistenceTitle: string
+  storyBiblePersistenceLocalOnly: string
+  storyBiblePersistenceGraphRead: string
+  storyBibleExportDraft: string
+  storyBibleImportDraft: string
+  storyBibleResetDraft: string
+  storyBibleDraftExported: string
+  storyBibleDraftImported: string
+  storyBibleDraftReset: string
+  storyBibleDraftImportInvalid: string
   aiToolWrite: string
   aiToolRewrite: string
   aiToolDescribe: string
@@ -1024,6 +1034,16 @@ export const translations: Record<Language, Translations> = {
     storyBibleGenerate: '生成',
     storyBibleEmpty: '暂无内容',
     storyBibleLoading: '加载中...',
+    storyBiblePersistenceTitle: '当前持久化边界',
+    storyBiblePersistenceLocalOnly: 'local-only 草稿字段：braindump、genres、synopsis、outline、style 仅保存在当前设备的 localStorage 中。',
+    storyBiblePersistenceGraphRead: 'graph-backed 只读列表：characters、locations 来自图谱查询，不包含在本地草稿 payload 中。',
+    storyBibleExportDraft: '导出本地草稿',
+    storyBibleImportDraft: '导入本地草稿',
+    storyBibleResetDraft: '重置本地草稿',
+    storyBibleDraftExported: 'Story Bible 本地草稿已导出。',
+    storyBibleDraftImported: 'Story Bible 本地草稿已导入。',
+    storyBibleDraftReset: 'Story Bible 本地草稿已重置。',
+    storyBibleDraftImportInvalid: '导入的 Story Bible 草稿文件无效。',
     aiToolWrite: '写作',
     aiToolRewrite: '改写',
     aiToolDescribe: '描写',
@@ -1765,6 +1785,16 @@ export const translations: Record<Language, Translations> = {
     storyBibleGenerate: 'Generate',
     storyBibleEmpty: 'No items yet',
     storyBibleLoading: 'Loading...',
+    storyBiblePersistenceTitle: 'Current persistence boundary',
+    storyBiblePersistenceLocalOnly: 'Local-only draft fields: braindump, genres, synopsis, outline, and style are stored only in this device/browser localStorage.',
+    storyBiblePersistenceGraphRead: 'Graph-backed read lists: characters and locations come from graph queries and are not part of the local draft payload.',
+    storyBibleExportDraft: 'Export local draft',
+    storyBibleImportDraft: 'Import local draft',
+    storyBibleResetDraft: 'Reset local draft',
+    storyBibleDraftExported: 'Story Bible local draft exported.',
+    storyBibleDraftImported: 'Story Bible local draft imported.',
+    storyBibleDraftReset: 'Story Bible local draft reset.',
+    storyBibleDraftImportInvalid: 'Invalid Story Bible draft file.',
     aiToolWrite: 'Write',
     aiToolRewrite: 'Rewrite',
     aiToolDescribe: 'Describe',

@@ -1,0 +1,355 @@
+{
+  "critical_files": [
+    {
+      "path": ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+      "reason": "Primary 2026-04-07 analysis source. It defines the remaining work as gateway structure debt, local engineering baseline gaps, and user-facing closure work."
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+      "reason": "Confirms governance hardening is complete, authority alignment is PASS, and this follow-up queue must not reopen those finished authority tasks."
+    },
+    {
+      "path": ".workflow/active/WFS-post-governance-hardening-20260407/workflow-session.json",
+      "reason": "Marks the governance session as completed and shows IMPL-001 through IMPL-005 are already closed with no pending governance tasks."
+    },
+    {
+      "path": "src-ts/container/ServiceContainer.ts",
+      "reason": "Main gateway structural-debt hub. It still registers many core services under a placeholder 'To Be Migrated' section."
+    },
+    {
+      "path": "src-ts/container/adapters.ts",
+      "reason": "Bridges container contracts to concrete implementations and consumes integration adapters, so cleanup here changes real runtime behavior."
+    },
+    {
+      "path": "src-ts/integrations/adapters.ts",
+      "reason": "Central stub/noop adapter factory. This is the clearest follow-up target for replacing ambiguous integrations with real implementations or explicit unsupported boundaries."
+    },
+    {
+      "path": "src-ts/memory/unified-memory.ts",
+      "reason": "Still carries a reduced placeholder integration seam, which duplicates part of the adapter boundary already present in src-ts/integrations."
+    },
+    {
+      "path": "src-ts/web/app.ts",
+      "reason": "Deprecated compatibility-forwarding path still kept on disk. It remains part of the structural debt and compatibility-surface inventory."
+    },
+    {
+      "path": "desktop/src/api/client.ts",
+      "reason": "Single large transport facade that mixes Tauri invoke, fetch fallback, runtime base resolution, and many feature endpoints. It is the main desktop coupling hotspot."
+    },
+    {
+      "path": "desktop/src-tauri/src/main.rs",
+      "reason": "Owns get_gateway_base and call_api, which are the real runtime commands consumed by the desktop client."
+    },
+    {
+      "path": "desktop/src/components/KnowledgeModal.tsx",
+      "reason": "Coordinates the non-skill knowledge tabs but leaves item click handling empty, so the unfinished user-facing flow is anchored here."
+    },
+    {
+      "path": "desktop/src/components/StoryBiblePanel.tsx",
+      "reason": "Stores core Story Bible state in localStorage while also reading graph data, leaving persistence and recovery behavior implicit and user-visible."
+    },
+    {
+      "path": "desktop/package.json",
+      "reason": "Desktop local check runs typecheck plus build only, which exposes the gap between strong CI checks and the default local developer loop."
+    },
+    {
+      "path": "src-ts/package.json",
+      "reason": "Backend package has build, typecheck, and test scripts but no lint or formatting baseline and no repo-level local entrypoint."
+    },
+    {
+      "path": "pytest.ini",
+      "reason": "Still defaults to --cov=src and 100 percent coverage, reflecting legacy Python layout assumptions rather than the current desktop plus src-ts authority path."
+    }
+  ],
+  "patterns": [
+    {
+      "name": "completed-governance-hardening",
+      "summary": "Governance and authority follow-up from 2026-04-07 is already closed. GO remains green, authority alignment passes, and new work should not reopen those surfaces.",
+      "files": [
+        ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+        ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+        ".workflow/active/WFS-post-governance-hardening-20260407/workflow-session.json"
+      ]
+    },
+    {
+      "name": "gateway-placeholder-adapter-seam",
+      "summary": "The TypeScript gateway still combines placeholder service bindings, stub/noop integration adapters, and retained compatibility paths. Follow-up work should collapse ambiguous seams instead of layering more compatibility logic on top.",
+      "files": [
+        "src-ts/container/ServiceContainer.ts",
+        "src-ts/container/adapters.ts",
+        "src-ts/integrations/adapters.ts",
+        "src-ts/memory/unified-memory.ts",
+        "src-ts/web/app.ts"
+      ]
+    },
+    {
+      "name": "desktop-transport-facade",
+      "summary": "Desktop panels converge on one API client that hides Tauri invoke, fetch fallback, and runtime base selection. Persistence and user-surface changes will bottleneck here unless the seam is split first.",
+      "files": [
+        "desktop/src/api/client.ts",
+        "desktop/src-tauri/src/main.rs"
+      ]
+    },
+    {
+      "name": "read-only-knowledge-tabs",
+      "summary": "Character, location, and plot tabs load data from graph or memory search and render cards or empty-state CTAs, but item click and create flows are not implemented.",
+      "files": [
+        "desktop/src/components/KnowledgeModal.tsx",
+        "desktop/src/components/knowledge/CharacterTab.tsx",
+        "desktop/src/components/knowledge/LocationTab.tsx",
+        "desktop/src/components/knowledge/PlotTab.tsx",
+        "desktop/src/components/KnowledgeModal.test.tsx"
+      ]
+    },
+    {
+      "name": "story-bible-local-first",
+      "summary": "Story Bible treats graph reads as enrichment but persists braindump, genres, synopsis, outline, and style selection in localStorage, so project persistence and recovery are still undefined.",
+      "files": [
+        "desktop/src/components/StoryBiblePanel.tsx",
+        "desktop/src/api/client.ts"
+      ]
+    },
+    {
+      "name": "ci-strong-local-weak",
+      "summary": "CI now validates current authority surfaces well, but local entrypoints remain package-scoped and there is no repo-wide lint or formatting baseline aligned with the current product.",
+      "files": [
+        ".github/workflows/integration-tests.yml",
+        "desktop/package.json",
+        "src-ts/package.json",
+        "pytest.ini"
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "src-ts/container/ServiceContainer.ts",
+      "to": "src-ts/container/adapters.ts",
+      "why": "Placeholder service registrations resolve through adapter classes here, so gateway structural debt cannot be closed without touching both files."
+    },
+    {
+      "from": "src-ts/container/adapters.ts",
+      "to": "src-ts/integrations/adapters.ts",
+      "why": "SearchEngineAdapter and related runtime pieces call createIntegrationAdapters, making the integration factory the shared seam for real versus noop behavior."
+    },
+    {
+      "from": "src-ts/memory/unified-memory.ts",
+      "to": "src-ts/integrations/adapters.ts",
+      "why": "Unified memory still keeps a reduced adapter surface that mirrors the main integration bundle, so cleanup should prevent duplicate boundary logic."
+    },
+    {
+      "from": "desktop/src/components/KnowledgeModal.tsx",
+      "to": "desktop/src/components/knowledge/CharacterTab.tsx",
+      "why": "The modal owns tab orchestration and passes the currently empty item-click behavior into the character tab."
+    },
+    {
+      "from": "desktop/src/components/KnowledgeModal.tsx",
+      "to": "desktop/src/components/knowledge/LocationTab.tsx",
+      "why": "The modal owns tab orchestration and passes the same unfinished item-click behavior into the location tab."
+    },
+    {
+      "from": "desktop/src/components/KnowledgeModal.tsx",
+      "to": "desktop/src/components/knowledge/PlotTab.tsx",
+      "why": "The modal owns tab orchestration while the plot tab remains read-only through searchMemory."
+    },
+    {
+      "from": "desktop/src/components/knowledge/CharacterTab.tsx",
+      "to": "desktop/src/api/client.ts",
+      "why": "Character data is loaded through queryGraph in the shared desktop API client."
+    },
+    {
+      "from": "desktop/src/components/knowledge/LocationTab.tsx",
+      "to": "desktop/src/api/client.ts",
+      "why": "Location data is loaded through queryGraph in the shared desktop API client."
+    },
+    {
+      "from": "desktop/src/components/knowledge/PlotTab.tsx",
+      "to": "desktop/src/api/client.ts",
+      "why": "Plot data is loaded through searchMemory in the shared desktop API client."
+    },
+    {
+      "from": "desktop/src/components/StoryBiblePanel.tsx",
+      "to": "desktop/src/api/client.ts",
+      "why": "Story Bible enriches itself with graph reads through queryGraph and will need the same client seam for any project-backed persistence."
+    },
+    {
+      "from": "desktop/src/api/client.ts",
+      "to": "desktop/src-tauri/src/main.rs",
+      "why": "The client invokes get_gateway_base and call_api, so any client split or contract change must preserve these Tauri command boundaries."
+    },
+    {
+      "from": "pytest.ini",
+      "to": ".github/workflows/integration-tests.yml",
+      "why": "Local Python defaults still target legacy src coverage while CI now validates current src-ts and desktop surfaces, so baseline work must reconcile local behavior without reopening CI governance."
+    }
+  ],
+  "integration_points": [
+    {
+      "module": "governance-completion-reference",
+      "paths": [
+        ".workflow/.team/UAN-project-status-2026-04-07/conclusions.json",
+        ".workflow/active/WFS-post-governance-hardening-20260407/HANDOFF.md",
+        ".workflow/active/WFS-post-governance-hardening-20260407/workflow-session.json"
+      ],
+      "reason": "These files define what is already done on 2026-04-07 and are the exclusion boundary for the new issue queue."
+    },
+    {
+      "module": "gateway-structure-debt",
+      "paths": [
+        "src-ts/container/ServiceContainer.ts",
+        "src-ts/container/adapters.ts",
+        "src-ts/integrations/adapters.ts",
+        "src-ts/memory/unified-memory.ts",
+        "src-ts/web/app.ts"
+      ],
+      "reason": "This is the real convergence point for placeholder services, stub/noop integrations, duplicated adapter seams, and compatibility paths still left after governance hardening."
+    },
+    {
+      "module": "desktop-runtime-transport",
+      "paths": [
+        "desktop/src/api/client.ts",
+        "desktop/src-tauri/src/main.rs"
+      ],
+      "reason": "Every desktop feature endpoint converges on this client-runtime seam, so structural and persistence work will bottleneck here unless it is split first."
+    },
+    {
+      "module": "knowledge-non-skill-surface",
+      "paths": [
+        "desktop/src/components/KnowledgeModal.tsx",
+        "desktop/src/components/knowledge/CharacterTab.tsx",
+        "desktop/src/components/knowledge/LocationTab.tsx",
+        "desktop/src/components/knowledge/PlotTab.tsx",
+        "desktop/src/components/KnowledgeModal.test.tsx"
+      ],
+      "reason": "The user-facing gap is here: data loads, but add and detail interactions are unfinished and current tests only cover accessibility and i18n."
+    },
+    {
+      "module": "story-bible-persistence-boundary",
+      "paths": [
+        "desktop/src/components/StoryBiblePanel.tsx",
+        "desktop/src/api/client.ts"
+      ],
+      "reason": "Story Bible mixes localStorage state with gateway-backed graph reads, so persistence behavior is user-visible but not explicitly productized."
+    },
+    {
+      "module": "local-engineering-baseline",
+      "paths": [
+        "desktop/package.json",
+        "src-ts/package.json",
+        "pytest.ini"
+      ],
+      "reason": "These are the real local developer entrypoints and config files that need alignment without reopening completed CI or authority governance work."
+    }
+  ],
+  "conflict_risk": "low",
+  "conflict_areas": [
+    {
+      "area": "desktop API seam",
+      "reason": "Multiple pending follow-up themes converge on the same oversized client-runtime boundary even though the current source worktree is clean.",
+      "files": [
+        "desktop/src/api/client.ts",
+        "desktop/src-tauri/src/main.rs"
+      ]
+    },
+    {
+      "area": "src-ts container and integration hub",
+      "reason": "Placeholder cleanup, adapter clarification, and compatibility retirement all touch the same gateway core.",
+      "files": [
+        "src-ts/container/ServiceContainer.ts",
+        "src-ts/container/adapters.ts",
+        "src-ts/integrations/adapters.ts",
+        "src-ts/memory/unified-memory.ts"
+      ]
+    },
+    {
+      "area": "knowledge and Story Bible desktop surfaces",
+      "reason": "User-facing follow-up spans adjacent desktop components and should be split after the API seam is stabilized to avoid unnecessary overlap.",
+      "files": [
+        "desktop/src/components/KnowledgeModal.tsx",
+        "desktop/src/components/knowledge/CharacterTab.tsx",
+        "desktop/src/components/knowledge/LocationTab.tsx",
+        "desktop/src/components/knowledge/PlotTab.tsx",
+        "desktop/src/components/StoryBiblePanel.tsx"
+      ]
+    },
+    {
+      "area": "local validation entrypoints",
+      "reason": "Engineering-baseline work is low risk to the current repo state but centralized in a small set of config files with broad downstream impact.",
+      "files": [
+        "desktop/package.json",
+        "src-ts/package.json",
+        "pytest.ini"
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not reopen governance or authority tasks already completed in WFS-post-governance-hardening-20260407. Treat .github workflows, authority-map docs, scripts/check_authority_alignment.py, and scripts/release_check_summary.py as reference-only unless a later implementation proves a direct dependency.",
+    "Preserve the current authoritative desktop plus src-ts product path and explicit Python compatibility override semantics. Structural cleanup should narrow ambiguity, not reintroduce dual authority.",
+    "Use current on-disk code as the planning baseline. The current git status shows only untracked workflow artifacts, not active source conflicts.",
+    "Favor issue scopes that avoid same-wave overlap on desktop/src/api/client.ts and src-ts/container/*.",
+    "For knowledge and Story Bible follow-up, either complete the user-visible flow or explicitly disable dead entrypoints. Do not leave placeholder CTA behavior in place.",
+    "Local engineering baseline work should prioritize developer-loop entrypoints and config alignment, not another governance-only CI hardening round."
+  ],
+  "recommended_modules": [
+    {
+      "name": "gateway-integration-boundary-closure",
+      "goal": "Replace or retire placeholder service bindings, duplicated integration seams, and ambiguous compatibility-only adapters inside src-ts so every remaining extension boundary is either real or explicitly unsupported.",
+      "candidate_scope": [
+        "src-ts/container/ServiceContainer.ts",
+        "src-ts/container/adapters.ts",
+        "src-ts/integrations/adapters.ts",
+        "src-ts/memory/unified-memory.ts",
+        "src-ts/web/app.ts",
+        "src-ts/tests/container",
+        "src-ts/tests/integrations",
+        "src-ts/tests/memory"
+      ]
+    },
+    {
+      "name": "local-engineering-baseline",
+      "goal": "Create a repo-local validation baseline aligned with the current desktop plus src-ts product by fixing legacy pytest defaults and adding lint, format, or one unified local check entrypoint without reopening governance CI work.",
+      "candidate_scope": [
+        "desktop/package.json",
+        "src-ts/package.json",
+        "pytest.ini",
+        "desktop/package-lock.json",
+        "src-ts/package-lock.json"
+      ]
+    },
+    {
+      "name": "desktop-api-contract-split",
+      "goal": "Break desktop/src/api/client.ts into transport, runtime, and feature contracts so later UI and persistence work can land with lower coupling and less file contention.",
+      "candidate_scope": [
+        "desktop/src/api/client.ts",
+        "desktop/src/api/client.test.ts",
+        "desktop/src-tauri/src/main.rs",
+        "desktop/src/api"
+      ]
+    },
+    {
+      "name": "knowledge-surface-closure",
+      "goal": "Close the character, location, and plot knowledge gaps by implementing real add and detail flows or disabling the dead entrypoints, with behavior tests instead of accessibility-only coverage.",
+      "candidate_scope": [
+        "desktop/src/components/KnowledgeModal.tsx",
+        "desktop/src/components/KnowledgeModal.test.tsx",
+        "desktop/src/components/knowledge/CharacterTab.tsx",
+        "desktop/src/components/knowledge/LocationTab.tsx",
+        "desktop/src/components/knowledge/PlotTab.tsx",
+        "desktop/src/api/client.ts"
+      ]
+    },
+    {
+      "name": "story-bible-persistence-clarification",
+      "goal": "Make Story Bible persistence explicit by choosing local-only versus project-backed behavior and aligning UI state, recovery expectations, and any required gateway calls with that decision.",
+      "candidate_scope": [
+        "desktop/src/components/StoryBiblePanel.tsx",
+        "desktop/src/api/client.ts",
+        "desktop/src/components"
+      ]
+    }
+  ],
+  "planning_direction": {
+    "queue_goal": "Convert the 2026-04-07 current-state analysis into an execution-ready queue that finishes post-GO internal convergence: reduce gateway structure debt, add a real local engineering baseline, and close the most visible desktop user-surface gaps without reopening completed governance work.",
+    "recommended_execution": "wave-based",
+    "why": "Wave 1 can run gateway structure cleanup and local engineering baseline in parallel because they touch different files. Wave 2 should split the desktop API seam before user-surface work. Wave 3 can then execute knowledge-surface closure and Story Bible persistence clarification with lower conflict and clearer contracts."
+  }
+}
