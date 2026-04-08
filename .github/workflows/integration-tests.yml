@@ -225,6 +225,65 @@ jobs:
         run: npm run validate:sidecar-contract
         working-directory: desktop
 
+  desktop-packaging-advisory:
+    runs-on: windows-latest
+    continue-on-error: true
+    needs: [desktop-build]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Run desktop packaging dry-run (advisory lane)
+        run: npm run validate:package:dry-run
+        working-directory: desktop
+
+      - name: Upload desktop packaging dry-run artifact (advisory lane)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-packaging-dry-run
+          path: desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe
+
+  desktop-packaging-hard-fail:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: windows-latest
+    needs: [desktop-packaging-advisory]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Run desktop packaging dry-run (main hard gate)
+        run: npm run validate:package:dry-run
+        working-directory: desktop
+
   # Advisory governance lanes: keep drift visible while the equivalent blocking lanes exist elsewhere.
   tasks-completion-soft-warn:
     runs-on: ubuntu-latest

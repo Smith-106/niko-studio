@@ -133,7 +133,7 @@ export class GraphEngine {
     'Scene',
   ];
 
-  static readonly MAX_CYPHER_LENGTH = 4096;
+  static readonly MAX_CYPHER_LENGTH = 65536;
   static readonly MAX_NAME_PATTERN_LENGTH = 256;
 
   isPrimaryEngine = true;
@@ -303,13 +303,251 @@ export class GraphEngine {
       return [{ error: 'Query too long' }];
     }
 
-    // Only MATCH queries allowed
-    if (!cypher.toUpperCase().startsWith('MATCH')) {
-      console.warn('Blocked non-MATCH graph query');
-      return [{ error: 'Only MATCH queries are allowed' }];
+    if (cypher.toUpperCase().startsWith('MATCH')) {
+      return this._executeMatch(cypher);
     }
 
-    return this._executeMatch(cypher);
+    if (cypher.toUpperCase().startsWith('MERGE')) {
+      return this._executeMergeMutation(cypher);
+    }
+
+    console.warn('Blocked graph query outside MATCH/MERGE subset');
+    return [{ error: 'Only MATCH queries and scoped MERGE mutations are allowed' }];
+  }
+
+  private async _executeMergeMutation(cypher: string): Promise<Record<string, unknown>[]> {
+    const merge = this._parseMergeMutation(cypher);
+    if (!merge) {
+      return [{ error: 'Invalid MERGE mutation syntax' }];
+    }
+
+    const { alias, entityType, matchProps, setProps } = merge;
+    if (!(GraphEngine.ENTITY_TYPES as readonly string[]).includes(entityType)) {
+      return [{ error: `Invalid entity type: ${entityType}` }];
+    }
+
+    const row = this._findEntityForMerge(entityType, matchProps);
+    const createdAt = typeof row?.created_at === 'string' ? row.created_at : new Date().toISOString();
+    const updatedAt = new Date().toISOString();
+    const nextName = this._resolveMergedEntityName(row, matchProps, setProps);
+
+    if (!nextName) {
+      return [{ error: 'MERGE mutation requires a name field' }];
+    }
+
+    const nextProperties = this._resolveMergedEntityProperties(row, matchProps, setProps);
+
+    if (row) {
+      this.db
+        .prepare('UPDATE entities SET name = ?, properties = ?, updated_at = ? WHERE id = ?')
+        .run(nextName, JSON.stringify(nextProperties), updatedAt, row.id);
+
+      return [this._wrapEntityResult(alias, {
+        ...row,
+        name: nextName,
+        properties: JSON.stringify(nextProperties),
+        updated_at: updatedAt,
+      })];
+    }
+
+    const entityId = typeof matchProps.id === 'string' && matchProps.id.trim()
+      ? matchProps.id.trim()
+      : randomUUID();
+
+    this.db
+      .prepare(
+        `INSERT INTO entities (id, type, name, properties, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(entityId, entityType, nextName, JSON.stringify(nextProperties), createdAt, updatedAt);
+
+    await this._runNeo4jEntityProjection({
+      id: entityId,
+      type: entityType,
+      name: nextName,
+      properties: nextProperties,
+      created_at: createdAt,
+      updated_at: updatedAt,
+    });
+
+    return [this._wrapEntityResult(alias, {
+      id: entityId,
+      type: entityType,
+      name: nextName,
+      properties: JSON.stringify(nextProperties),
+      created_at: createdAt,
+      updated_at: updatedAt,
+    })];
+  }
+
+  private _parseMergeMutation(cypher: string): {
+    alias: string;
+    entityType: string;
+    matchProps: Record<string, unknown>;
+    setProps: Record<string, unknown>;
+  } | null {
+    const header = /^MERGE\s*\((\w+):(\w+)\s*/i.exec(cypher);
+    if (!header) return null;
+
+    const alias = header[1];
+    const entityType = header[2];
+    let cursor = header[0].length;
+
+    const matchObject = this._extractBalancedJsonObject(cypher, cursor);
+    if (!matchObject) return null;
+    cursor = matchObject.endIndex;
+
+    while (cursor < cypher.length && /\s/.test(cypher[cursor]!)) {
+      cursor += 1;
+    }
+    if (cypher[cursor] !== ')') return null;
+    cursor += 1;
+
+    const setPrefix = /\s*SET\s*/iy;
+    setPrefix.lastIndex = cursor;
+    const setMatch = setPrefix.exec(cypher);
+    if (!setMatch) return null;
+    cursor = setPrefix.lastIndex;
+
+    const setObject = this._extractBalancedJsonObject(cypher, cursor);
+    if (!setObject) return null;
+    cursor = setObject.endIndex;
+
+    const returnSuffix = new RegExp(`^\\s*RETURN\\s+${alias}\\s*$`, 'i');
+    if (!returnSuffix.test(cypher.slice(cursor))) {
+      return null;
+    }
+
+    try {
+      const matchProps = JSON.parse(matchObject.json);
+      const setProps = JSON.parse(setObject.json);
+      if (!matchProps || typeof matchProps !== 'object' || Array.isArray(matchProps)) {
+        return null;
+      }
+      if (!setProps || typeof setProps !== 'object' || Array.isArray(setProps)) {
+        return null;
+      }
+
+      return {
+        alias,
+        entityType,
+        matchProps: matchProps as Record<string, unknown>,
+        setProps: setProps as Record<string, unknown>,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private _extractBalancedJsonObject(
+    text: string,
+    startIndex: number,
+  ): { json: string; endIndex: number } | null {
+    while (startIndex < text.length && /\s/.test(text[startIndex]!)) {
+      startIndex += 1;
+    }
+    if (text[startIndex] !== '{') return null;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let index = startIndex; index < text.length; index += 1) {
+      const char = text[index]!;
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+
+      if (char === '{') depth += 1;
+      if (char === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          return {
+            json: text.slice(startIndex, index + 1),
+            endIndex: index + 1,
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private _findEntityForMerge(
+    entityType: string,
+    matchProps: Record<string, unknown>,
+  ): Record<string, unknown> | null {
+    if (typeof matchProps.id === 'string' && matchProps.id.trim()) {
+      const row = this.db
+        .prepare('SELECT * FROM entities WHERE id = ? AND type = ?')
+        .get(matchProps.id.trim(), entityType) as Record<string, unknown> | undefined;
+      return row ?? null;
+    }
+
+    const name = typeof matchProps.name === 'string' ? matchProps.name.trim() : '';
+    let rows: Record<string, unknown>[];
+
+    if (name) {
+      rows = this.db
+        .prepare('SELECT * FROM entities WHERE type = ? AND name = ?')
+        .all(entityType, name) as Record<string, unknown>[];
+    } else {
+      rows = this.db
+        .prepare('SELECT * FROM entities WHERE type = ?')
+        .all(entityType) as Record<string, unknown>[];
+    }
+
+    return rows.find((row) => {
+      const properties = this._parseProperties(row.properties);
+      return Object.entries(matchProps).every(([key, value]) => {
+        if (key === 'id') return row.id === value;
+        if (key === 'name') return row.name === value;
+        return properties[key] === value;
+      });
+    }) ?? null;
+  }
+
+  private _resolveMergedEntityName(
+    row: Record<string, unknown> | null,
+    matchProps: Record<string, unknown>,
+    setProps: Record<string, unknown>,
+  ): string {
+    return (
+      (typeof setProps.name === 'string' && setProps.name.trim())
+      || (typeof row?.name === 'string' && row.name.trim())
+      || (typeof matchProps.name === 'string' && matchProps.name.trim())
+      || ''
+    );
+  }
+
+  private _resolveMergedEntityProperties(
+    row: Record<string, unknown> | null,
+    matchProps: Record<string, unknown>,
+    setProps: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const existing = row ? this._parseProperties(row.properties) : {};
+    const merged = {
+      ...existing,
+      ...Object.fromEntries(Object.entries(matchProps).filter(([key]) => key !== 'id' && key !== 'name')),
+      ...Object.fromEntries(Object.entries(setProps).filter(([key]) => key !== 'id' && key !== 'name')),
+    };
+
+    if (row && typeof row.created_at === 'string') {
+      merged.created_at = row.created_at;
+    }
+    merged.updated_at = new Date().toISOString();
+
+    return merged;
   }
 
   /** Parse and execute a MATCH query */

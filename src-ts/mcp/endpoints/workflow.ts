@@ -7,6 +7,7 @@
 
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
+import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
 import {
   workflowRoute,
   workflowPlan,
@@ -22,51 +23,67 @@ import {
 // Workflow endpoints
 // ---------------------------------------------------------------
 
+function resolveWorkspaceRoot(): string {
+  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+}
+
+function resolveWorkspace(body: Record<string, unknown>) {
+  return normalizeProjectWorkspaceContext(body, {
+    workspaceRoot: resolveWorkspaceRoot(),
+  });
+}
+
 export async function workflowRouteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
   const result = await workflowRoute((body.task as string) ?? '');
-  return jsonResponse(result);
+  return jsonResponse({ ...result, workspace });
 }
 
 export async function workflowPlanEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
   const result = await workflowPlan({
     task: (body.task as string) ?? '',
     level: body.level as string | undefined,
     recommendations: body.recommendations as unknown[] | undefined,
     genre: body.genre as string | undefined,
+    workspace,
   });
-  return jsonResponse(result);
+  return jsonResponse({ ...result, workspace });
 }
 
 export async function workflowExecuteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
   const result = await workflowExecute({
     planId: (body.plan_id as string) ?? '',
     stepId: body.step_id as string | undefined,
     recommendations: body.recommendations as unknown[] | undefined,
     confirmToken: body.confirm_token as string | undefined,
   });
-  return jsonResponse(result);
+  return jsonResponse({ ...result, workspace });
 }
 
 export async function workflowLifecycleEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
   const result = await workflowLifecycle(
     (body.plan_id as string) ?? '',
     (body.action as string) ?? 'status'
   );
-  return jsonResponse(result);
+  return jsonResponse({ ...result, workspace });
 }
 
 export async function workflowQuickRollbackEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
   const result = await workflowQuickRollback({
     planId: (body.plan_id as string) ?? '',
     checkpointId: (body.checkpoint_id as string) ?? '',
     reason: (body.reason as string) ?? '',
   });
-  return jsonResponse(result);
+  return jsonResponse({ ...result, workspace });
 }
 
 // ---------------------------------------------------------------

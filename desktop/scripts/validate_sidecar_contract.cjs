@@ -28,12 +28,19 @@ const path = require('path');
 const SCRIPT_DIR = __dirname;
 const DESKTOP_DIR = path.resolve(SCRIPT_DIR, '..');
 const BIN_DIR = path.join(DESKTOP_DIR, 'src-tauri', 'bin');
+const TAURI_CONFIG_PATH = path.join(DESKTOP_DIR, 'src-tauri', 'tauri.conf.json');
+const CAPABILITY_PATH = path.join(DESKTOP_DIR, 'src-tauri', 'capabilities', 'main-desktop.json');
 
 const IS_WINDOWS = process.platform === 'win32';
 const STRICT_MODE = process.argv.includes('--strict');
 const VALIDATE_ALL_RUNTIMES = process.argv.includes('--all-runtimes');
 const rawRuntime = (process.env.NIKO_GATEWAY_RUNTIME || '').trim().toLowerCase();
 const SELECTED_RUNTIME = ['node', 'python'].includes(rawRuntime) ? rawRuntime : 'node';
+const EXPECTED_WINDOW_LABEL = 'main';
+const EXPECTED_CAPABILITY_ID = 'main-desktop';
+const EXPECTED_EXTERNAL_BIN = 'bin/niko-gateway';
+const AUTHORITATIVE_RUNTIME = 'node';
+const PACKAGED_COMPAT_RUNTIME = 'python';
 
 // Contract definitions
 const CONTRACTS = {
@@ -66,6 +73,41 @@ const CONTRACTS = {
 function checkFileExists(filename) {
   const filepath = path.join(BIN_DIR, filename);
   return fs.existsSync(filepath);
+}
+
+function readJson(filepath) {
+  return JSON.parse(fs.readFileSync(filepath, 'utf8'));
+}
+
+function resolveCurrentTargetTriple() {
+  if (process.platform === 'win32' && process.arch === 'x64') {
+    return 'x86_64-pc-windows-msvc';
+  }
+  if (process.platform === 'win32' && process.arch === 'arm64') {
+    return 'aarch64-pc-windows-msvc';
+  }
+  if (process.platform === 'darwin' && process.arch === 'x64') {
+    return 'x86_64-apple-darwin';
+  }
+  if (process.platform === 'darwin' && process.arch === 'arm64') {
+    return 'aarch64-apple-darwin';
+  }
+  if (process.platform === 'linux' && process.arch === 'x64') {
+    return 'x86_64-unknown-linux-gnu';
+  }
+  if (process.platform === 'linux' && process.arch === 'arm64') {
+    return 'aarch64-unknown-linux-gnu';
+  }
+  return null;
+}
+
+function resolvePackagedArtifact(baseName, targetTriple) {
+  if (!targetTriple) {
+    return null;
+  }
+  return process.platform === 'win32'
+    ? `${baseName}-${targetTriple}.exe`
+    : `${baseName}-${targetTriple}`;
 }
 
 function validateContract(name, contract) {
@@ -107,6 +149,157 @@ function printResults(results) {
   }
 }
 
+function validateSecurityBoundary() {
+  const tauriConfig = readJson(TAURI_CONFIG_PATH);
+  const security = tauriConfig?.app?.security ?? {};
+  const windowLabels = Array.isArray(tauriConfig?.app?.windows)
+    ? tauriConfig.app.windows.map((windowConfig) => windowConfig?.label).filter(Boolean)
+    : [];
+  const capability = readJson(CAPABILITY_PATH);
+
+  const releaseCsp = typeof security.csp === 'string' ? security.csp : '';
+  const devCsp = typeof security.devCsp === 'string' ? security.devCsp : '';
+  const configuredCapabilities = Array.isArray(security.capabilities) ? security.capabilities : [];
+  const capabilityPermissions = Array.isArray(capability.permissions) ? capability.permissions : [];
+  const capabilityWindows = Array.isArray(capability.windows) ? capability.windows : [];
+
+  const checks = [
+    {
+      label: 'main window label is explicit',
+      pass: windowLabels.includes(EXPECTED_WINDOW_LABEL),
+      detail: `labels=${windowLabels.join(', ') || '(none)'}`,
+    },
+    {
+      label: 'security.capabilities pins the frontend boundary',
+      pass:
+        configuredCapabilities.length === 1 &&
+        configuredCapabilities[0] === EXPECTED_CAPABILITY_ID,
+      detail: `capabilities=${configuredCapabilities.join(', ') || '(none)'}`,
+    },
+    {
+      label: 'release CSP constrains runtime fetches and asset loading',
+      pass:
+        releaseCsp.includes("default-src 'self'") &&
+        releaseCsp.includes("connect-src 'self'") &&
+        releaseCsp.includes('https:') &&
+        releaseCsp.includes('http://127.0.0.1:*') &&
+        !releaseCsp.includes("'unsafe-eval'"),
+      detail: releaseCsp || '(missing)',
+    },
+    {
+      label: 'dev CSP keeps Vite localhost access explicit',
+      pass:
+        devCsp.includes("script-src 'self'") &&
+        devCsp.includes("'unsafe-eval'") &&
+        devCsp.includes('http://localhost:*') &&
+        devCsp.includes('ws://localhost:*'),
+      detail: devCsp || '(missing)',
+    },
+    {
+      label: 'freezePrototype hardening is enabled',
+      pass: security.freezePrototype === true,
+      detail: `freezePrototype=${security.freezePrototype}`,
+    },
+    {
+      label: 'capability file exists for the main window only',
+      pass:
+        capability.identifier === EXPECTED_CAPABILITY_ID &&
+        capabilityWindows.length === 1 &&
+        capabilityWindows[0] === EXPECTED_WINDOW_LABEL,
+      detail: `identifier=${capability.identifier}; windows=${capabilityWindows.join(', ') || '(none)'}`,
+    },
+    {
+      label: 'frontend capability is limited to core invoke access',
+      pass:
+        capabilityPermissions.length === 1 &&
+        capabilityPermissions[0] === 'core:default',
+      detail: `permissions=${capabilityPermissions.join(', ') || '(none)'}`,
+    },
+  ];
+
+  return {
+    checks,
+    hasFailures: checks.some((check) => !check.pass),
+  };
+}
+
+function printSecurityBoundary(results) {
+  console.log('\n🔐 Desktop security boundary');
+  for (const check of results.checks) {
+    console.log(`   ${check.pass ? '✅' : '❌'} ${check.label}`);
+    if (!check.pass) {
+      console.log(`      ${check.detail}`);
+    }
+  }
+}
+
+function validatePackagingBoundary() {
+  const tauriConfig = readJson(TAURI_CONFIG_PATH);
+  const externalBins = Array.isArray(tauriConfig?.bundle?.externalBin)
+    ? tauriConfig.bundle.externalBin
+    : [];
+  const targetTriple = resolveCurrentTargetTriple();
+  const packagedPythonArtifact = resolvePackagedArtifact('niko-gateway', targetTriple);
+  const packagedNodeArtifact = resolvePackagedArtifact('niko-gateway-node', targetTriple);
+  const packagedPythonExists = packagedPythonArtifact
+    ? checkFileExists(packagedPythonArtifact)
+    : false;
+  const packagedNodeExists = packagedNodeArtifact
+    ? checkFileExists(packagedNodeArtifact)
+    : false;
+
+  const checks = [
+    {
+      label: 'authoritative local runtime remains node-first',
+      pass: AUTHORITATIVE_RUNTIME === 'node' && checkFileExists('niko-gateway-node') && checkFileExists('niko-gateway-node.cmd'),
+      detail: 'expected repo-local node launcher files',
+    },
+    {
+      label: 'packaged externalBin stays on the python compatibility sidecar',
+      pass:
+        externalBins.length === 1 &&
+        externalBins[0] === EXPECTED_EXTERNAL_BIN,
+      detail: `externalBin=${externalBins.join(', ') || '(none)'}`,
+    },
+    {
+      label: 'current target has a packaged python sidecar artifact',
+      pass: Boolean(packagedPythonArtifact && packagedPythonExists),
+      detail: packagedPythonArtifact
+        ? `${packagedPythonArtifact} => ${packagedPythonExists ? 'present' : 'missing'}`
+        : 'current platform/arch is not mapped to a packaged target triple',
+    },
+    {
+      label: 'node sidecar is repo-local only and not claimed as a packaged binary',
+      pass: !externalBins.includes('bin/niko-gateway-node') && !packagedNodeExists,
+      detail: packagedNodeArtifact
+        ? `${packagedNodeArtifact} => ${packagedNodeExists ? 'present' : 'missing'}`
+        : 'current platform/arch is not mapped to a packaged target triple',
+    },
+  ];
+
+  return {
+    targetTriple,
+    checks,
+    packagedRuntime: PACKAGED_COMPAT_RUNTIME,
+    hasFailures: checks.some((check) => !check.pass),
+  };
+}
+
+function printPackagingBoundary(results) {
+  console.log('\n🧭 Runtime / packaging matrix');
+  console.log(`   Authoritative local runtime: ${AUTHORITATIVE_RUNTIME}`);
+  console.log(`   Packaged compatibility runtime: ${results.packagedRuntime}`);
+  console.log(`   Current target triple: ${results.targetTriple || 'unmapped'}`);
+  console.log('   Note: packaged desktop builds currently bundle the Python sidecar; the Node launcher remains a repo-local path and packaged execution falls back to Python.');
+
+  for (const check of results.checks) {
+    console.log(`   ${check.pass ? '✅' : '❌'} ${check.label}`);
+    if (!check.pass) {
+      console.log(`      ${check.detail}`);
+    }
+  }
+}
+
 function main() {
   console.log('🔍 Sidecar Contract Validator');
   console.log(`   Bin directory: ${BIN_DIR}`);
@@ -136,6 +329,18 @@ function main() {
     if (!results.allExist) {
       hasFailures = true;
     }
+  }
+
+  const securityBoundary = validateSecurityBoundary();
+  printSecurityBoundary(securityBoundary);
+  if (securityBoundary.hasFailures) {
+    hasFailures = true;
+  }
+
+  const packagingBoundary = validatePackagingBoundary();
+  printPackagingBoundary(packagingBoundary);
+  if (packagingBoundary.hasFailures) {
+    hasFailures = true;
   }
 
   console.log('\n' + '='.repeat(60));

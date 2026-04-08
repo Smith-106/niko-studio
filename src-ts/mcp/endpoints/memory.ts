@@ -8,20 +8,36 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { memorySearch, memoryAdd, memoryGetTemporal } from '../services/memory';
+import {
+  normalizeProjectWorkspaceContext,
+  projectWorkspaceToMemoryScope,
+} from '../../project/workspace-model.js';
 import { DocumentLoader } from '../../services/document-loader';
 import { recursiveCharacterSplit } from '../../ui/file-utils';
+
+function resolveWorkspaceRoot(): string {
+  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+}
+
+function resolveMemoryScope(body: Record<string, unknown>) {
+  const workspace = normalizeProjectWorkspaceContext(body, {
+    workspaceRoot: resolveWorkspaceRoot(),
+  });
+  return projectWorkspaceToMemoryScope(workspace);
+}
 
 /** POST /memory/search */
 export async function memorySearchEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const scope = resolveMemoryScope(body);
   const result = await memorySearch({
     query: (body.query as string) ?? '',
     layer: body.layer as string | undefined,
     dimensions: body.dimensions as string[] | undefined,
-    entityId: body.entity_id as string | undefined,
+    entityId: (body.entity_id as string | undefined) ?? scope.entityId,
     userId: body.user_id as string | undefined,
-    projectId: body.project_id as string | undefined,
-    sessionId: body.session_id as string | undefined,
+    projectId: (body.project_id as string | undefined) ?? scope.projectId,
+    sessionId: (body.session_id as string | undefined) ?? scope.sessionId,
     atTime: body.at_time as string | undefined,
     limit: (body.limit as number) ?? 10,
   });
@@ -31,16 +47,17 @@ export async function memorySearchEndpoint(request: HttpRequest): Promise<HttpRe
 /** POST /memory/add */
 export async function memoryAddEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const scope = resolveMemoryScope(body);
   const result = await memoryAdd({
     content: (body.content as string) ?? '',
     layer: (body.layer as string) ?? 'session',
     dimension: body.dimension as string | undefined,
-    entityId: body.entity_id as string | undefined,
+    entityId: (body.entity_id as string | undefined) ?? scope.entityId,
     validFrom: body.valid_from as string | undefined,
     validUntil: body.valid_until as string | undefined,
     userId: body.user_id as string | undefined,
-    projectId: body.project_id as string | undefined,
-    sessionId: body.session_id as string | undefined,
+    projectId: (body.project_id as string | undefined) ?? scope.projectId,
+    sessionId: (body.session_id as string | undefined) ?? scope.sessionId,
     importance: (body.importance as number) ?? 0.5,
     tags: (body.tags as string[]) ?? [],
     source: body.source as string | undefined,
@@ -52,10 +69,11 @@ export async function memoryAddEndpoint(request: HttpRequest): Promise<HttpRespo
 /** POST /memory/upload - uploads and chunks file content */
 export async function memoryUploadEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const scope = resolveMemoryScope(body);
 
   const fileName = body.file_name as string | undefined;
   const fileContentBase64 = body.file_content_base64 as string | undefined;
-  const sessionId = body.session_id as string | undefined;
+  const sessionId = (body.session_id as string | undefined) ?? scope.sessionId;
   const chunkSizeRaw = body.chunk_size as number | undefined;
   const chunkOverlapRaw = body.chunk_overlap as number | undefined;
 
@@ -160,13 +178,14 @@ export async function memoryUploadEndpoint(request: HttpRequest): Promise<HttpRe
 /** POST /memory/temporal */
 export async function memoryTemporalEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const scope = resolveMemoryScope(body);
   const result = await memoryGetTemporal(
     (body.entity_id as string) ?? '',
     body.at_time as string | undefined,
     {
       userId: body.user_id as string | undefined,
-      projectId: body.project_id as string | undefined,
-      sessionId: body.session_id as string | undefined,
+      projectId: (body.project_id as string | undefined) ?? scope.projectId,
+      sessionId: (body.session_id as string | undefined) ?? scope.sessionId,
     }
   );
   return jsonResponse(result);

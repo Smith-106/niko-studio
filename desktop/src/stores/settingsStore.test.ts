@@ -70,6 +70,20 @@ describe('settingsStore prompt template library', () => {
     localStorage.clear()
     const store = useSettingsStore.getState()
 
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        backendConfig: {
+          config: null,
+          modifiableFields: ['agent.default_model'],
+          syncStatus: 'error',
+          lastSync: '2026-04-08T00:00:00.000Z',
+          error: 'stale config error',
+        },
+      },
+    }))
+
     store.updateSettings({ apiKey: 'top-secret-key' })
     store.updateProvider('anthropic', { apiKey: 'provider-secret-key' })
 
@@ -88,7 +102,46 @@ describe('settingsStore prompt template library', () => {
     expect(persisted.state?.settings?.apiKey).toBe('')
     const anthropic = persisted.state?.settings?.llmProviders?.find((provider) => provider.id === 'anthropic')
     expect(anthropic?.apiKey).toBe('')
+    expect(persisted.state?.settings).not.toHaveProperty('backendConfig')
+    expect(persisted.state?.settings).not.toHaveProperty('sidebarCollapsed')
     expect(persistedRaw).not.toContain('top-secret-key')
     expect(persistedRaw).not.toContain('provider-secret-key')
+  })
+
+  it('drops legacy workflow ui and backend runtime state during rehydrate', async () => {
+    localStorage.clear()
+    useSettingsStore.getState().resetSettings()
+
+    localStorage.setItem('niko-settings', JSON.stringify({
+      state: {
+        settings: {
+          language: 'en',
+          theme: 'aurora',
+          sidebarCollapsed: true,
+          backendConfig: {
+            config: { agent: { default_model: 'stale-model' } },
+            modifiableFields: ['agent.default_model'],
+            syncStatus: 'error',
+            lastSync: '2026-04-08T00:00:00.000Z',
+            error: 'stale config error',
+          },
+        },
+      },
+      version: 0,
+    }))
+
+    await useSettingsStore.persist.rehydrate()
+
+    const { settings } = useSettingsStore.getState()
+    expect(settings.language).toBe('en')
+    expect(settings.theme).toBe('aurora')
+    expect(settings.backendConfig).toEqual({
+      config: null,
+      modifiableFields: [],
+      syncStatus: 'idle',
+      lastSync: null,
+      error: null,
+    })
+    expect('sidebarCollapsed' in settings).toBe(false)
   })
 })

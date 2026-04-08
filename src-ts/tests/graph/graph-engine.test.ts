@@ -144,7 +144,7 @@ describe('graph/graph-engine', () => {
       expect(invalidInput).toEqual([{ error: 'Invalid query input' }]);
       expect(emptyQuery).toEqual([{ error: 'Query cannot be empty' }]);
       expect(oversizedQuery).toEqual([{ error: 'Query too long' }]);
-      expect(blockedCreate).toEqual([{ error: 'Only MATCH queries are allowed' }]);
+      expect(blockedCreate).toEqual([{ error: 'Only MATCH queries and scoped MERGE mutations are allowed' }]);
       expect(allEvents).toHaveLength(2);
       expect(
         allEvents.map((event) => (event.n as { name: string }).name),
@@ -258,6 +258,86 @@ describe('graph/graph-engine', () => {
       );
     } finally {
       engine.close();
+      rmSync(join(dbPath, '..'), { recursive: true, force: true });
+    }
+  });
+
+  it('supports scoped MERGE mutations for persisted authoring and survives reloads', async () => {
+    const dbPath = createDbPath();
+    const engine = new GraphEngine(dbPath);
+
+    try {
+      const createResult = await engine.executeCypher(
+        `MERGE (n:Character ${JSON.stringify({ name: 'Alice', workspaceId: 'atlas-workspace' })}) SET ${JSON.stringify({
+          name: 'Alice',
+          description: 'Archive captain',
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          itemKind: 'character',
+        })} RETURN n`,
+      );
+
+      const updateResult = await engine.executeCypher(
+        `MERGE (n:Character ${JSON.stringify({ name: 'Alice', workspaceId: 'atlas-workspace' })}) SET ${JSON.stringify({
+          name: 'Alicia',
+          description: 'Updated archive captain',
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          itemKind: 'character',
+        })} RETURN n`,
+      );
+
+      expect(createResult).toEqual([
+        expect.objectContaining({
+          n: expect.objectContaining({
+            name: 'Alice',
+            type: 'Character',
+            properties: expect.objectContaining({
+              description: 'Archive captain',
+              workspaceId: 'atlas-workspace',
+              projectId: 'atlas-project',
+              itemKind: 'character',
+            }),
+          }),
+        }),
+      ]);
+
+      expect(updateResult).toEqual([
+        expect.objectContaining({
+          n: expect.objectContaining({
+            name: 'Alicia',
+            type: 'Character',
+            properties: expect.objectContaining({
+              description: 'Updated archive captain',
+              workspaceId: 'atlas-workspace',
+              projectId: 'atlas-project',
+              itemKind: 'character',
+            }),
+          }),
+        }),
+      ]);
+
+      engine.close();
+      const reopened = new GraphEngine(dbPath);
+      try {
+        const persistedRows = await reopened.executeCypher('MATCH (n:Character) RETURN n');
+        expect(persistedRows).toEqual([
+          expect.objectContaining({
+            n: expect.objectContaining({
+              name: 'Alicia',
+              type: 'Character',
+              properties: expect.objectContaining({
+                description: 'Updated archive captain',
+                workspaceId: 'atlas-workspace',
+                projectId: 'atlas-project',
+              }),
+            }),
+          }),
+        ]);
+      } finally {
+        reopened.close();
+      }
+    } finally {
       rmSync(join(dbPath, '..'), { recursive: true, force: true });
     }
   });

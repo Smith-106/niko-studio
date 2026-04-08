@@ -1,10 +1,11 @@
 param(
   [switch]$Strict,
   [int]$Port = 8000,
-  [string]$Host = "127.0.0.1"
+  [Alias('Host')]
+  [string]$GatewayHost = "127.0.0.1"
 )
 
-$uri = "http://$Host:$Port/writing-helper/process"
+$uri = "http://${GatewayHost}:$Port/writing-helper/process"
 $failedFile = Join-Path (Get-Location) "failed-writing-helper-cases.json"
 
 function Test-StrictPolish {
@@ -13,12 +14,7 @@ function Test-StrictPolish {
     [object]$response
   )
   if (-not $response.processed_text) { return $false }
-
-  $inputHasParagraphGap = $inputContent -match "(\r?\n){2,}"
-  if ($inputHasParagraphGap) {
-    return ($response.processed_text -match "(\r?\n){2,}")
-  }
-  return $true
+  return ($response.processed_text -eq "第一句。 第二句。")
 }
 
 function Test-StrictExpand {
@@ -77,12 +73,12 @@ $cases = @(
       ($r.mode -eq "expand") -and
       ($r.processed_text -match "进一步展开：第一句。")
     }
-    expect = "mode=expand；包含“进一步展开：第一句。”"
+    expect = 'mode=expand；包含“进一步展开：第一句。”'
     strictAssert = {
       param($inputBody, $r)
       Test-StrictExpand -inputContent $inputBody.content -response $r
     }
-    strictExpect = "Strict: expand 恰好新增 1 个“进一步展开：”段"
+    strictExpect = 'Strict: expand 恰好新增 1 个“进一步展开：”段'
   },
   @{
     name = "summarize"
@@ -114,16 +110,17 @@ $cases = @(
     expect = "mode=outline；outline 两项"
   },
   @{
-    name = "action-alias"
+    name = "default-mode"
     body = @{
       content = "第一句。"
       action  = "rewrite"
     }
     assert = {
       param($r)
-      ($r.mode -eq "rewrite")
+      ($r.mode -eq "polish") -and
+      ($r.processed_text -eq "第一句。")
     }
-    expect = "仅 action=rewrite 时返回 mode=rewrite"
+    expect = "缺省 mode 时回退到 polish；legacy action 字段不改变本地 helper 合同"
   },
   @{
     name = "mode-priority"
@@ -252,3 +249,7 @@ if ($failedCases.Count -gt 0) {
 
 Write-Host ""
 $results | Format-Table -AutoSize case, status, mode
+
+if ($failed -gt 0) {
+  exit 1
+}

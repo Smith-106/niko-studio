@@ -9,6 +9,10 @@ import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
 import { toWorkflowLabel, toWorkflowSlug } from '../../workflow/types.js';
+import {
+  normalizeProjectWorkspaceContext,
+  projectWorkspaceToLegacyChatContext,
+} from '../../project/workspace-model.js';
 
 // ---------------------------------------------------------------
 // Constants
@@ -148,6 +152,7 @@ interface ChatBody {
   workflowLevel?: string | number;
   skills?: string[];
   context?: Record<string, unknown>;
+  workspace?: Record<string, unknown>;
   allowLlmFallback?: boolean;
   comparison?: {
     enabled?: boolean;
@@ -186,6 +191,12 @@ function resolveWorkflowWorkspace(): string {
 
 function createWorkflowEngine(sessionNamespace: string): WorkflowEngineRuntime {
   return new WorkflowEngineRuntime(resolveWorkflowWorkspace(), sessionNamespace);
+}
+
+function resolveWorkspaceContext(body: ChatBody) {
+  return normalizeProjectWorkspaceContext(body as Record<string, unknown>, {
+    workspaceRoot: resolveWorkflowWorkspace(),
+  });
 }
 
 function getLatestUserMessage(messages: ChatMessage[]): string {
@@ -309,6 +320,7 @@ export async function chatEndpoint(request: HttpRequest): Promise<HttpResponse> 
     }
 
     const skills = body.skills ?? [];
+    const workspace = resolveWorkspaceContext(body);
     const engine = createWorkflowEngine('mcp-chat');
     const routed = await engine.route(userMessage);
     const workflowLevel = resolveWorkflowLevel(body.workflowLevel, routed['level']);
@@ -336,7 +348,9 @@ export async function chatEndpoint(request: HttpRequest): Promise<HttpResponse> 
       content: responseContent,
       skills_used: skills.slice(0, 5),
       comparison: comparisonPayload,
-      writer_metadata: null,
+      writer_metadata: {
+        workspace_context: workspace,
+      },
       workflow_info: {
         level: workflowLevel,
         level_slug: workflowLevelSlug,
@@ -347,6 +361,8 @@ export async function chatEndpoint(request: HttpRequest): Promise<HttpResponse> 
       workflow_level: workflowLevel,
       workflow_level_slug: workflowLevelSlug,
       evaluation: evaluationResult,
+      context: projectWorkspaceToLegacyChatContext(workspace),
+      workspace,
     }));
   } catch (e) {
     return jsonResponse({ error: String(e) }, 500);
@@ -371,6 +387,7 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
     }
 
     const skills = body.skills ?? [];
+    const workspace = resolveWorkspaceContext(body);
     const engine = createWorkflowEngine('mcp-chat-stream');
     const routed = await engine.route(userMessage);
     const workflowLevel = resolveWorkflowLevel(body.workflowLevel, routed['level']);
@@ -448,6 +465,10 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
           },
           workflow_level: workflowLevel,
           workflow_level_slug: workflowLevelSlug,
+          writer_metadata: {
+            workspace_context: workspace,
+          },
+          workspace,
         })));
         return {
           statusCode: 200,
@@ -468,6 +489,10 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
             ...DEFAULT_DIAGNOSTICS,
             failure_reason: String(eventRecord['error'] ?? 'Stream error'),
           },
+          writer_metadata: {
+            workspace_context: workspace,
+          },
+          workspace,
         })));
         return {
           statusCode: 200,
@@ -515,7 +540,10 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
           diagnostics: { ...DEFAULT_DIAGNOSTICS },
           workflow_level: workflowLevel,
           workflow_level_slug: workflowLevelSlug,
-          writer_metadata: null,
+          writer_metadata: {
+            workspace_context: workspace,
+          },
+          workspace,
         })));
       }
     }

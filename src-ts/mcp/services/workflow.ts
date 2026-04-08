@@ -6,6 +6,7 @@
  */
 
 import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
+import type { ProjectWorkspaceContext } from '../../project/workspace-model.js';
 
 // ---------------------------------------------------------------
 // Engine accessor
@@ -38,6 +39,7 @@ interface WorkflowEngine {
     params?: { confirmToken?: string | null }
   ): Promise<Record<string, unknown>>;
   listCheckpoints(limit: number): Promise<unknown[]>;
+  bindPlanSession(planId: string, sessionId: string): string;
 }
 
 let workflowEngineInstance: WorkflowEngine | null = null;
@@ -84,6 +86,9 @@ function getEngine(): WorkflowEngine | null {
       listCheckpoints(limit: number) {
         return engine.listCheckpoints(limit);
       },
+      bindPlanSession(planId: string, sessionId: string) {
+        return engine.bindPlanSession(planId, sessionId);
+      },
     };
   }
   return workflowEngineInstance;
@@ -104,13 +109,20 @@ export async function workflowPlan(params: {
   level?: string | null;
   recommendations?: unknown[] | null;
   genre?: string | null;
+  workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
   // Merge genre-specific recommendations if applicable
   let mergedRecommendations = params.recommendations ?? [];
 
   const engine = getEngine();
   if (!engine) return { error: 'Workflow engine unavailable' };
-  return engine.plan(params.task, params.level, { recommendations: mergedRecommendations });
+  const result = await engine.plan(params.task, params.level, { recommendations: mergedRecommendations });
+  const planId = result['plan_id'];
+  const sessionId = params.workspace?.workflow.sessionId;
+  if (typeof planId === 'string' && planId && typeof sessionId === 'string' && sessionId.trim()) {
+    engine.bindPlanSession(planId, sessionId.trim());
+  }
+  return result;
 }
 
 export async function workflowExecute(params: {

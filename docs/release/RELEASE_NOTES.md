@@ -12,6 +12,25 @@
 - internal 口径允许跳过 external e2e 冒烟，但不代表内部完全无阻断门禁；main 分支仍保留 authority alignment 与选定高风险契约的 blocking checks。
 - external 口径在 internal 基础上再叠加 external smoke、quality signal completeness 与 release-specific blocking 条件。
 
+## 当前交付契约（与 README / desktop README 一致）
+
+- `Supported runtime`: `desktop/` + Tauri host + local `src-ts/` Node/TypeScript gateway. This is the shipped product, default build, and default runtime path.
+- `Supported launcher`: `python scripts/start_gateway.py` remains an operator-facing entrypoint, but in the current checkout it starts the Node/TypeScript gateway by default.
+- `Advisory compatibility surfaces`: explicit `--runtime python` legacy override, legacy `src/mcp/**` sources, and Streamlit validation flows only when a release candidate explicitly includes them.
+- `Deprecated surface`: browser-first web entry (`src-ts/web/app.ts`) and any `WEB_UI_FORWARD_URL` forward are not shipped primary UI paths.
+
+## Desktop security and packaging boundary
+
+- Desktop release CSP is now explicit instead of `null`: release builds are limited to self/customprotocol/assets, loopback gateway traffic, and retained HTTPS provider calls that the settings UI can issue directly for model discovery.
+- Desktop dev CSP keeps the same release baseline but adds only the Vite localhost + websocket allowances needed for `tauri dev`.
+- The Tauri capability scope is explicit: only the `main` window receives `core:default`, so frontend code can call app `invoke` commands but does not receive shell/fs/dialog/http/notification plugin APIs.
+- The current runtime matrix is intentional:
+  - `Supported local runtime`: Node-first launcher + local `src-ts/` gateway.
+  - `Packaged compatibility runtime`: Python sidecar bundled through `bundle.externalBin`.
+  - `Explicit boundary`: the repo-local Node launcher is not a packaged externalBin artifact today, so packaged desktop execution falls back to the bundled Python sidecar unless a future target-triple Node binary is added.
+- Current documented dry-run packaging target is Windows x64: `npm --prefix desktop run validate:package:dry-run` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`).
+- Signing prerequisites remain external to the repository: `desktop/src-tauri/tauri.conf.json` keeps `certificateThumbprint: null` and `timestampUrl: ""` for unsigned local proof; signed external bundles require release-private override material before `npm --prefix desktop run tauri:build`.
+
 ## External 发布准入条件（Go/No-Go）
 
 满足以下全部条件方可 Go：
@@ -52,40 +71,49 @@ npm --prefix desktop run build:sidecar
 npm --prefix desktop run validate:sidecar-contract
 ```
 
-7. 权威对齐检查通过：workflow / runtime / docs 的当前权威描述必须一致。
+7. Desktop packaging dry-run validation通过（当前支持矩阵：Windows x64 + bundled Python compatibility sidecar）：
+
+```bash
+npm --prefix desktop run validate:package:dry-run
+```
+
+8. 权威对齐检查通过：workflow / runtime / docs 的当前权威描述必须一致。
 
 ```bash
 python scripts/check_authority_alignment.py
 ```
 
-8. 生产安全配置与可观测守卫通过：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位，`reload` 必须关闭，且 `gateway.metrics_enabled=true`。
+9. 生产安全配置与可观测守卫通过：`env=production` 时 CORS 白名单必须为真实域名，禁止 `*` 与 localhost 占位，`reload` 必须关闭，且 `gateway.metrics_enabled=true`。
 
 ```bash
 npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default
 ```
 
-9. 回退预案已确认：`docs/operations/ROLLBACK.md` 中 external 回退触发与验证项均可执行。
+10. 回退预案已确认：`docs/operations/ROLLBACK.md` 中 external 回退触发与验证项均可执行。
 
-10. 发布检查汇总完成：
+11. 发布检查汇总完成：
 
 ```bash
 python scripts/release_check_summary.py
 ```
 
 > 说明：`release-check-summary.md` 属于本地检查快照；external 是否放行以 CI workflow 结果为准。
+> 本地人工签收顺序、Windows packaging dry-run、writing-helper acceptance，以及签名先决条件见 `docs/release/SIGN_OFF.md`。
+> `python scripts/release_check_summary.py` 现在同时覆盖 authority alignment 与 desktop packaging dry-run；若仍返回 `NO_GO`，应按报告中的 blocking checks 处理，而不是回退 Wave 1 的权威契约结论。
 
 ## external 口径对齐说明（新增）
 
 external 对外“100% 完成度”仅指核心可达链路：
 
-1. Desktop 主入口可达：`Knowledge` / `Settings` / `Evaluation`，且本地 Gateway 运行态可恢复。
-2. Chat 默认流式：优先 `/chat/stream`，失败自动降级 `/chat`。
-3. Streamlit 仅作为兼容验证路径：若当前发布候选包含该路径，tab4/tab5 仍需保持组件渲染（`scene_dashboard`），但它不是主交付入口。
+1. `Supported`: Desktop 主入口可达：`Knowledge` / `Settings` / `Evaluation`，且本地 Gateway 运行态可恢复。
+2. `Supported`: Chat 默认流式：优先 `/chat/stream`，失败自动降级 `/chat`。
+3. `Advisory`: Streamlit 仅作为兼容验证路径：若当前发布候选包含该路径，tab4/tab5 仍需保持组件渲染（`scene_dashboard`），但它不是主交付入口。
 
 补充说明：
 
-- Desktop 运行时当前默认优先 Node/TypeScript Gateway，并保留显式 Python override/fallback。
-- sidecar 打包链与运行时选择不是同一层语义：构建/打包仍可按 `NIKO_GATEWAY_RUNTIME` 选择 Python 或 Node 产物。
+- `Supported runtime`: Desktop 运行时当前默认优先 Node/TypeScript Gateway。
+- `Advisory compatibility surfaces`: sidecar 打包链与运行时选择不是同一层语义；构建/打包仍可按 `NIKO_GATEWAY_RUNTIME` 选择 Python 或 Node 产物，但这不改变 shipped runtime contract。
+- `Deprecated surface`: browser-first web forward 不属于 external 的 primary UI / runtime 验收面。
 
 证据链建议在同一次发布中保留：
 
@@ -94,6 +122,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 - production guard 日志：`npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default`
 - Desktop sidecar 构建日志：`npm --prefix desktop run build:sidecar`
 - Desktop sidecar 契约日志：`npm --prefix desktop run validate:sidecar-contract`
+- Desktop packaging dry-run 日志：`npm --prefix desktop run validate:package:dry-run`
 - 治理脚本回归日志：`python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q`
 - 权威对齐日志：`python scripts/check_authority_alignment.py`
 - 发布汇总输出：`python scripts/release_check_summary.py`

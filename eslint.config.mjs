@@ -3,6 +3,18 @@ import { createRequire } from "node:module";
 const requireFromCwd = createRequire(`${process.cwd()}/`);
 const tsPlugin = requireFromCwd("@typescript-eslint/eslint-plugin");
 const tsParser = requireFromCwd("@typescript-eslint/parser");
+const sharedBugRules = {
+  "no-constant-binary-expression": "warn",
+  "no-debugger": "error",
+  "no-irregular-whitespace": "error",
+  "no-self-compare": "error",
+  "no-sparse-arrays": "error",
+  "no-template-curly-in-string": "error",
+  "no-unsafe-optional-chaining": "error",
+  "no-unreachable": "error",
+  "use-isnan": "error",
+  "valid-typeof": "error",
+};
 
 export default [
   {
@@ -16,6 +28,9 @@ export default [
       "**/target/**",
       "**/*.d.ts",
     ],
+    linterOptions: {
+      reportUnusedDisableDirectives: "off",
+    },
   },
   {
     files: ["**/*.{ts,tsx,mts,js,mjs}"],
@@ -32,7 +47,7 @@ export default [
     plugins: {
       "@typescript-eslint": tsPlugin,
     },
-    rules: {},
+    rules: sharedBugRules,
   },
   {
     files: ["**/*.{cjs,cts}"],
@@ -46,6 +61,6 @@ export default [
     plugins: {
       "@typescript-eslint": tsPlugin,
     },
-    rules: {},
+    rules: sharedBugRules,
   },
 ];

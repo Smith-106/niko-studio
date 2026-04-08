@@ -19,6 +19,7 @@ import { useChatRecovery } from '../hooks/useChatRecovery'
 import { useMemoryUpload } from '../hooks/useMemoryUpload'
 import { useInlineActions } from '../hooks/useInlineActions'
 import { useScrollPosition } from '../hooks/useScrollPosition'
+import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 
 interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
@@ -84,7 +85,13 @@ export function ChatArea({
   const [quickRollbackReason, setQuickRollbackReason] = useState('')
   const [showQuickRollbackAdvanced, setShowQuickRollbackAdvanced] = useState(false)
   const [quickRollbackStatus, setQuickRollbackStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
-  const { t, translate } = useI18n()
+  const { t, translate, language } = useI18n()
+  const writerWorkspaceSummary = useWriterWorkspaceSummary()
+  const isZh = language === 'zh'
+  const writerContextTitle = isZh ? '当前写作上下文' : 'Current writing context'
+  const writerContextHint = isZh
+    ? '聊天、模板和评估会优先沿用这组项目范围。需要路由、对比或回滚时，展开“更多”。'
+    : 'Chat, templates, and review flows will stay anchored to this project scope. Open "More" for routing, comparison, or rollback.'
   const {
     recoverableCheckpointId,
     setRecoverableCheckpointId,
@@ -215,6 +222,7 @@ export function ChatArea({
     allowLlmFallback,
     qualityGoals,
     retrieval: settings.retrieval,
+    workspace: writerWorkspaceSummary.meaningfulWorkspace,
   })
 
   const makeRecoverError = (message: string, detail?: string): RecoverStatus => ({
@@ -780,6 +788,18 @@ export function ChatArea({
             <p className="text-sm text-gray-500 dark:text-dark-text-secondary max-w-md text-center leading-relaxed mb-8">
               {t.startWritingDesc}
             </p>
+            {writerWorkspaceSummary.hasMeaningfulScope && (
+              <div className="mb-6 flex flex-wrap items-center justify-center gap-2 max-w-2xl">
+                {writerWorkspaceSummary.scopeChips.map((chip) => (
+                  <span
+                    key={`empty-scope-${chip}`}
+                    className="rounded-full border border-primary-100 bg-white px-3 py-1 text-xs text-gray-600 shadow-sm dark:border-primary-500/20 dark:bg-dark-surface dark:text-dark-text-secondary"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex flex-wrap items-center justify-center gap-3 max-w-2xl">
               {modePresets.map((preset) => (
                 <button
@@ -954,6 +974,27 @@ export function ChatArea({
             onRun={runInlineAction}
             onClear={resetInlineState}
           />
+        )}
+
+        {writerWorkspaceSummary.hasMeaningfulScope && (
+          <div className="mb-4 rounded-2xl border border-primary-100 bg-white/90 p-4 shadow-sm dark:border-primary-500/20 dark:bg-dark-surface/80">
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">
+              {writerContextTitle}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {writerWorkspaceSummary.scopeChips.map((chip) => (
+                <span
+                  key={`writer-scope-${chip}`}
+                  className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
+              {writerContextHint}
+            </p>
+          </div>
         )}
 
         <ChatAreaModeControls

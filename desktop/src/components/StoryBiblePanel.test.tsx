@@ -5,15 +5,106 @@ import userEvent from '@testing-library/user-event'
 import { StoryBiblePanel } from './StoryBiblePanel'
 import { translations } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
+import { queryGraph } from '../api/client'
+
+type PersistedEntity = {
+  id: string
+  type: string
+  name: string
+  properties: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+const persistedState = vi.hoisted(() => ({
+  storyBible: null as PersistedEntity | null,
+  characters: [] as PersistedEntity[],
+  locations: [] as PersistedEntity[],
+}))
+
+function extractMergePayload(cypher: string): Record<string, unknown> {
+  const setStart = cypher.indexOf(' SET ')
+  const returnStart = cypher.lastIndexOf(' RETURN n')
+  return JSON.parse(cypher.slice(setStart + 5, returnStart))
+}
 
 vi.mock('../api/client', () => ({
-  queryGraph: vi.fn().mockResolvedValue({ success: true, data: [] }),
+  queryGraph: vi.fn(async (cypher: string) => {
+    if (cypher.startsWith('MERGE (n:Item')) {
+      const payload = extractMergePayload(cypher)
+      const timestamp = new Date().toISOString()
+      persistedState.storyBible = {
+        id: 'story-bible-1',
+        type: 'Item',
+        name: String(payload.name ?? 'story-bible'),
+        properties: payload,
+        created_at: persistedState.storyBible?.created_at ?? timestamp,
+        updated_at: timestamp,
+      }
+      return { success: true, data: [{ n: persistedState.storyBible }] }
+    }
+
+    if (cypher.includes('MATCH (n:Item)')) {
+      return {
+        success: true,
+        data: persistedState.storyBible ? [{ n: persistedState.storyBible }] : [],
+      }
+    }
+
+    if (cypher.includes('MATCH (c:Character)')) {
+      return {
+        success: true,
+        data: persistedState.characters.map((character) => ({ c: character })),
+      }
+    }
+
+    if (cypher.includes('MATCH (l:Location)')) {
+      return {
+        success: true,
+        data: persistedState.locations.map((location) => ({ l: location })),
+      }
+    }
+
+    return { success: true, data: [] }
+  }),
 }))
 
 const zh = translations.zh
 
 describe('StoryBiblePanel', () => {
   beforeEach(() => {
+    persistedState.storyBible = null
+    persistedState.characters = [
+      {
+        id: 'char-1',
+        type: 'Character',
+        name: 'Alice',
+        properties: {
+          description: '主角',
+          workspaceId: 'default-project',
+          projectId: 'default-project',
+          itemKind: 'character',
+        },
+        created_at: '2026-04-08T00:00:00.000Z',
+        updated_at: '2026-04-08T00:00:00.000Z',
+      },
+    ]
+    persistedState.locations = [
+      {
+        id: 'loc-1',
+        type: 'Location',
+        name: 'Harbor',
+        properties: {
+          description: '港口',
+          workspaceId: 'default-project',
+          projectId: 'default-project',
+          itemKind: 'location',
+        },
+        created_at: '2026-04-08T00:00:00.000Z',
+        updated_at: '2026-04-08T00:00:00.000Z',
+      },
+    ]
+
     localStorage.clear()
     useSettingsStore.getState().updateSettings({ language: 'zh' })
     Object.defineProperty(URL, 'createObjectURL', {
@@ -25,9 +116,10 @@ describe('StoryBiblePanel', () => {
       value: vi.fn(),
     })
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    vi.clearAllMocks()
   })
 
-  it('restores local draft fields and shows the persistence boundary copy', async () => {
+  it('migrates the legacy local draft into persisted workspace authority and restores it after reload', async () => {
     localStorage.setItem('niko.sb-braindump-v1', '本地灵感')
     localStorage.setItem('niko.sb-genres-v1', '奇幻,悬疑')
     localStorage.setItem('niko.sb-synopsis-v1', '本地概要')
@@ -35,15 +127,20 @@ describe('StoryBiblePanel', () => {
     localStorage.setItem('niko.sb-style-v1', 'matchMy')
 
     const user = userEvent.setup()
-    render(<StoryBiblePanel />)
+    const { unmount } = render(<StoryBiblePanel />)
 
-    expect(screen.getByText(zh.storyBiblePersistenceTitle)).toBeInTheDocument()
-    expect(screen.getByText(zh.storyBiblePersistenceLocalOnly)).toBeInTheDocument()
-    expect(screen.getByText(zh.storyBiblePersistenceGraphRead)).toBeInTheDocument()
-
+    expect(await screen.findByText(zh.storyBiblePersistenceTitle)).toBeInTheDocument()
+    expect(screen.getByText(/权威模型/)).toBeInTheDocument()
+    expect(screen.getByText(/导入 \/ 导出/)).toBeInTheDocument()
     expect(screen.getByDisplayValue('本地灵感')).toBeInTheDocument()
     expect(screen.getAllByText('奇幻').length).toBeGreaterThan(0)
     expect(screen.getAllByText('悬疑').length).toBeGreaterThan(0)
+    await waitFor(() => {
+      expect(queryGraph).toHaveBeenCalledWith(expect.stringContaining('MERGE (n:Item'), expect.anything())
+    })
+    await waitFor(() => {
+      expect(localStorage.getItem('niko.sb-braindump-v1')).toBeNull()
+    })
 
     await user.click(screen.getByRole('button', { name: zh.storyBibleSynopsis }))
     expect(screen.getByDisplayValue('本地概要')).toBeInTheDocument()
@@ -53,13 +150,20 @@ describe('StoryBiblePanel', () => {
 
     await user.click(screen.getByRole('button', { name: zh.storyBibleStyleTitle }))
     expect(screen.getByRole('button', { name: new RegExp(`^${zh.storyBibleStyleMatchMy}`) })).toHaveAttribute('aria-pressed', 'true')
-  })
 
-  it('exports, imports, and resets only the local draft payload', async () => {
-    const user = userEvent.setup()
+    unmount()
     render(<StoryBiblePanel />)
 
-    await user.click(screen.getByTitle(zh.storyBibleExportDraft))
+    expect(await screen.findByDisplayValue('本地灵感')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: zh.storyBibleSynopsis }))
+    expect(screen.getByDisplayValue('本地概要')).toBeInTheDocument()
+  })
+
+  it('exports compatibility drafts, imports persisted content, and keeps reset state after reload', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<StoryBiblePanel />)
+
+    await user.click(await screen.findByTitle(zh.storyBibleExportDraft))
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
     expect(screen.getByText(zh.storyBibleDraftExported)).toBeInTheDocument()
 
@@ -80,26 +184,36 @@ describe('StoryBiblePanel', () => {
     const file = new File([JSON.stringify(importPayload)], 'story-bible.json', { type: 'application/json' })
     await user.upload(input, file)
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('导入灵感')).toBeInTheDocument()
-    })
+    expect(await screen.findByDisplayValue('导入灵感')).toBeInTheDocument()
     expect(screen.getAllByText('科幻').length).toBeGreaterThan(0)
     expect(screen.getByText(zh.storyBibleDraftImported)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: zh.storyBibleSynopsis }))
-    expect(screen.getByDisplayValue('导入概要')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(persistedState.storyBible?.properties.braindump).toBe('导入灵感')
+    })
 
-    await user.click(screen.getByRole('button', { name: zh.storyBibleOutline }))
-    expect(screen.getByDisplayValue('导入大纲')).toBeInTheDocument()
+    unmount()
+    render(<StoryBiblePanel />)
 
+    expect(await screen.findByDisplayValue('导入灵感')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: zh.storyBibleStyleTitle }))
     expect(screen.getByRole('button', { name: new RegExp(`^${zh.storyBibleStyleCustom}`) })).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(screen.getByTitle(zh.storyBibleResetDraft))
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(zh.storyBibleBraindumpHint)).toHaveValue('')
+      const braindumpInputs = screen.getAllByPlaceholderText(zh.storyBibleBraindumpHint)
+      expect(braindumpInputs[braindumpInputs.length - 1]).toHaveValue('')
     })
     expect(screen.getByText(zh.storyBibleDraftReset)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(persistedState.storyBible?.properties.braindump).toBe('')
+    })
+
+    unmount()
+    render(<StoryBiblePanel />)
+
+    const reloadedBraindumpInputs = await screen.findAllByPlaceholderText(zh.storyBibleBraindumpHint)
+    expect(reloadedBraindumpInputs[reloadedBraindumpInputs.length - 1]).toHaveValue('')
     expect(localStorage.getItem('niko.sb-braindump-v1')).toBeNull()
     expect(localStorage.getItem('niko.sb-genres-v1')).toBeNull()
     expect(localStorage.getItem('niko.sb-synopsis-v1')).toBeNull()

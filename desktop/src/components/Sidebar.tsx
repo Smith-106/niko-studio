@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo } from 'react'
 import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Library } from 'lucide-react'
+
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
 import { useI18n } from '../i18n'
+import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 
 interface SidebarProps {
   collapsed: boolean
@@ -33,7 +35,18 @@ export const Sidebar = React.memo(function Sidebar({
     toggleSkill,
     refreshAvailableSkills,
   } = useAppStore()
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+  const workspaceSummary = useWriterWorkspaceSummary()
+  const isZh = language === 'zh'
+  const writerWorkspaceTitle = isZh ? '当前写作项目' : 'Current writing project'
+  const writerWorkspaceHint = isZh
+    ? '聊天、评估和知识整理会优先围绕这组上下文。'
+    : 'Chat, review, and knowledge flows stay anchored to this scope.'
+  const writerReviewLabel = isZh ? '审阅当前草稿' : 'Review draft'
+  const writerStoryBibleLabel = isZh ? '打开故事设定' : 'Open story bible'
+  const writerChapterLabel = isZh ? '章节' : 'Chapter'
+  const writerStoryBibleMetaLabel = isZh ? '设定稿' : 'Story bible'
+  const writerWorkspaceLabel = isZh ? '工作区' : 'Workspace'
 
   // ── 技能 ID → 中文显示名 / 描述映射 ──────────────────────────
   const SKILL_DISPLAY_MAP: Record<string, { name: string; desc: string }> = useMemo(() => ({
@@ -126,6 +139,58 @@ export const Sidebar = React.memo(function Sidebar({
           {!collapsed && <span className="font-medium text-sm">{t.sidebarNewDocument}</span>}
         </button>
       </div>
+
+      {!collapsed && workspaceSummary.hasMeaningfulScope && (
+        <div className="px-3 pb-3 shrink-0">
+          <div className="rounded-2xl border border-dark-border bg-dark-surface/70 p-3 shadow-sm">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-400">
+              {writerWorkspaceTitle}
+            </div>
+            <div className="mt-2 text-sm font-semibold text-dark-text">
+              {workspaceSummary.projectLabel ?? workspaceSummary.chapterLabel ?? workspaceSummary.workspaceLabel}
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-dark-text-secondary">
+              {writerWorkspaceHint}
+            </p>
+            <div className="mt-3 space-y-1.5 text-[11px] text-dark-text-secondary">
+              {workspaceSummary.chapterLabel && (
+                <div>
+                  <span className="text-dark-text-muted">{writerChapterLabel}: </span>
+                  <span className="text-dark-text">{workspaceSummary.chapterLabel}</span>
+                </div>
+              )}
+              {workspaceSummary.storyBibleLabel && (
+                <div>
+                  <span className="text-dark-text-muted">{writerStoryBibleMetaLabel}: </span>
+                  <span className="text-dark-text">{workspaceSummary.storyBibleLabel}</span>
+                </div>
+              )}
+              {workspaceSummary.workspaceLabel && (
+                <div>
+                  <span className="text-dark-text-muted">{writerWorkspaceLabel}: </span>
+                  <span className="text-dark-text">{workspaceSummary.workspaceLabel}</span>
+                </div>
+              )}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                onClick={onOpenEvaluation}
+                type="button"
+                className="rounded-xl bg-primary-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-primary-500"
+              >
+                {writerReviewLabel}
+              </button>
+              <button
+                onClick={onOpenKnowledge}
+                type="button"
+                className="rounded-xl border border-dark-border2 bg-dark-bg px-3 py-2 text-xs font-medium text-dark-text transition-colors hover:bg-dark-surface2"
+              >
+                {writerStoryBibleLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Document List */}
       <div className="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">

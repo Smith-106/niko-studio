@@ -30,18 +30,18 @@ RULES: tuple[GateRule, ...] = (
         reason="缺少 confirm_required 强制确认锚点，高风险路径可能被绕过。",
     ),
     GateRule(
-        file_path="src-ts/gateway-server.ts",
-        needle="pattern: /^\\/chat\\/stream$/",
+        file_path="src-ts/mcp/routes/content.ts",
+        needle=r"pattern: /^\/chat\/stream$/",
         reason="缺少 /chat/stream 路由锚点，主交付流式链路不完整。",
     ),
     GateRule(
-        file_path="src-ts/gateway-server.ts",
-        needle="pattern: /^\\/chat$/",
+        file_path="src-ts/mcp/routes/content.ts",
+        needle=r"pattern: /^\/chat$/",
         reason="缺少 /chat 路由锚点，流式失败后的降级链路不完整。",
     ),
     GateRule(
-        file_path="src-ts/gateway-server.ts",
-        needle="pattern: /^\\/metrics$/",
+        file_path="src-ts/mcp/routes/platform.ts",
+        needle=r"pattern: /^\/metrics$/, handler: metricsEndpoint",
         reason="缺少 /metrics 路由锚点，生产可观测守卫不可验证。",
     ),
     GateRule(
@@ -75,6 +75,11 @@ RULES: tuple[GateRule, ...] = (
         reason="缺少 desktop 统一质量入口 check。",
     ),
     GateRule(
+        file_path="desktop/package.json",
+        needle="\"validate:package:dry-run\"",
+        reason="缺少 desktop packaging dry-run 入口。",
+    ),
+    GateRule(
         file_path="scripts/release_check_summary.py",
         needle="from src.",
         reason="release summary 仍依赖 legacy Python src 模块，权威路径回退。",
@@ -90,6 +95,31 @@ RULES: tuple[GateRule, ...] = (
         file_path=".github/workflows/external-release-gate.yml",
         needle="python scripts/check_authority_alignment.py",
         reason="external release gate 未执行 authority alignment 检查，workflow/runtime/docs 口径可能漂移。",
+    ),
+    GateRule(
+        file_path=".github/workflows/external-release-gate.yml",
+        needle="npm run validate:package:dry-run",
+        reason="external release gate 未执行 desktop packaging dry-run。",
+    ),
+    GateRule(
+        file_path=".github/workflows/external-release-gate.yml",
+        needle="uses: ./.github/workflows/writing-helper-acceptance.yml",
+        reason="external release gate 未复用 writing-helper acceptance 工作流。",
+    ),
+    GateRule(
+        file_path=".github/workflows/writing-helper-acceptance.yml",
+        needle="workflow_call:",
+        reason="writing-helper acceptance 工作流未暴露为可复用 release gate。",
+    ),
+    GateRule(
+        file_path=".github/workflows/writing-helper-acceptance.yml",
+        needle="uses: actions/setup-node@v4",
+        reason="writing-helper acceptance 未显式准备 Node authoritative runtime。",
+    ),
+    GateRule(
+        file_path=".github/workflows/writing-helper-acceptance.yml",
+        needle="working-directory: src-ts",
+        reason="writing-helper acceptance 未显式安装 src-ts 依赖，Node-first gateway 无法稳定启动。",
     ),
     GateRule(
         file_path="docs/release/RELEASE_NOTES.md",
@@ -115,6 +145,21 @@ RULES: tuple[GateRule, ...] = (
         file_path="scripts/release_check_summary.py",
         needle="\"authority_alignment_signal\",\n            \"P0\",\n            True,",
         reason="release summary 未将 authority_alignment_signal 视为 P0 blocking 信号。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"desktop_packaging_dry_run\"",
+        reason="release summary 未将 desktop packaging dry-run 视为 P0 blocking 信号。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="certificateThumbprint",
+        reason="release sign-off 文档未显式记录签名先决条件。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1",
+        reason="release sign-off 文档未暴露 writing-helper acceptance 本地执行命令。",
     ),
 )
 

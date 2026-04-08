@@ -57,6 +57,17 @@ impl GatewayRuntime {
             GatewayRuntime::Node => "node",
         }
     }
+
+    fn contract_note(self) -> &'static str {
+        match self {
+            GatewayRuntime::Python => {
+                "Python is the packaged compatibility sidecar that Tauri bundles today."
+            }
+            GatewayRuntime::Node => {
+                "Node is the authoritative local runtime, but the current launcher stays repo-local and packaged builds fall back to the bundled Python sidecar."
+            }
+        }
+    }
 }
 
 fn get_requested_gateway_runtime() -> GatewayRuntime {
@@ -186,8 +197,9 @@ impl GatewayState {
                     Ok(cmd) => cmd,
                     Err(e) => {
                         last_error = Some(format!(
-                            "Failed to create {} sidecar command: {e}",
-                            runtime.as_env()
+                            "Failed to create {} sidecar command: {e}. {}",
+                            runtime.as_env(),
+                            runtime.contract_note()
                         ));
                         break;
                     }
@@ -207,8 +219,9 @@ impl GatewayState {
                     Ok(result) => result,
                     Err(e) => {
                         last_error = Some(format!(
-                            "Failed to spawn {} sidecar (attempt {attempt}): {e}",
-                            runtime.as_env()
+                            "Failed to spawn {} sidecar (attempt {attempt}): {e}. {}",
+                            runtime.as_env(),
+                            runtime.contract_note()
                         ));
                         if attempt == MAX_ATTEMPTS {
                             break;
@@ -237,8 +250,9 @@ impl GatewayState {
                     Err(err) => {
                         self.stop_child_best_effort();
                         last_error = Some(format!(
-                            "{} sidecar failed health check (attempt {attempt}): {err}",
-                            runtime.as_env()
+                            "{} sidecar failed health check (attempt {attempt}): {err}. {}",
+                            runtime.as_env(),
+                            runtime.contract_note()
                         ));
                         if attempt == MAX_ATTEMPTS {
                             break;

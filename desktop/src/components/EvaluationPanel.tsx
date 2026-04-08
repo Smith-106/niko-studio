@@ -12,6 +12,7 @@ import { useEvaluationCheckpoints } from '../hooks/useEvaluationCheckpoints'
 import { useEvaluationQualityCheck } from '../hooks/useEvaluationQualityCheck'
 import { useEvaluationData } from '../hooks/useEvaluationData'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
+import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 
 interface EvaluationPanelProps {
   content: string
@@ -96,9 +97,19 @@ const getWorkflowActionLabel = (action: WorkflowAction, t: Translations): string
 }
 
 export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
-  const { t, translate } = useI18n()
+  const { t, translate, language } = useI18n()
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
+  const workspaceSummary = useWriterWorkspaceSummary()
+  const isZh = language === 'zh'
+  const writerWorkflowTitle = isZh ? '下一步写作流程' : 'Next writing workflow'
+  const writerWorkflowHint = isZh
+    ? '先用面向作者的操作决定接下来要做什么。需要 plan_id、step_id 或生命周期控制时，再使用下方高级控制。'
+    : 'Start with writer-facing actions to decide the next step. Use the advanced controls below when you need plan_id, step_id, or lifecycle commands.'
+  const writerAdvancedTitle = isZh ? '高级控制' : 'Advanced controls'
+  const writerAdvancedHint = isZh
+    ? '保留完整流程能力，但把底层控制和确认令牌集中在这里。'
+    : 'Full workflow power stays available here, with low-level controls and confirmation tokens kept out of the main path.'
   const {
     workflowTask,
     workflowLevel,
@@ -125,6 +136,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   } = useEvaluationWorkflow({
     content,
     defaultLevel: 'L3',
+    workspace: workspaceSummary.meaningfulWorkspace,
     t: {
       evaluationWorkflowLoading: t.evaluationWorkflowLoading,
       evaluationWorkflowError: t.evaluationWorkflowError,
@@ -254,6 +266,52 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
 
   const decisionStyle = getDecisionStyle(result.decision)
   const DecisionIcon = decisionStyle.icon
+  const scopeSubject = workspaceSummary.chapterLabel
+    ?? workspaceSummary.projectLabel
+    ?? (isZh ? '当前草稿' : 'the current draft')
+  const writerWorkflowPresets = [
+    {
+      id: 'next-step',
+      title: isZh ? '找出下一步写作重点' : 'Find the next writing move',
+      description: isZh
+        ? '让系统基于当前项目范围，为这一段内容推荐最合适的写作流程。'
+        : 'Route this draft through the workflow that best fits the current project scope.',
+      action: () => handleWorkflowRoute({
+        task: isZh
+          ? `围绕${scopeSubject}判断下一步最合适的写作流程，并说明为什么。`
+          : `Choose the best next writing workflow for ${scopeSubject} and explain why.`,
+        level: 'L3',
+      }),
+    },
+    {
+      id: 'revision-plan',
+      title: isZh ? '制定修订计划' : 'Plan a revision pass',
+      description: isZh
+        ? '按当前章节与设定整理下一轮修订清单，优先处理连贯性、角色动机和节奏。'
+        : 'Build the next revision pass for this draft with continuity, character motivation, and pacing at the top.',
+      action: () => handleWorkflowPlan({
+        task: isZh
+          ? `为${scopeSubject}制定下一轮修订计划，优先检查连贯性、角色动机和节奏。`
+          : `Create the next revision plan for ${scopeSubject}, focusing on continuity, motivation, and pacing.`,
+        level: 'L3',
+      }),
+    },
+    {
+      id: 'continue-plan',
+      title: isZh ? '继续当前流程' : 'Continue the current workflow',
+      description: isZh
+        ? '如果已经有计划，就继续执行；如果还没有，就先生成一个可执行计划。'
+        : 'Resume the active plan when one exists, or create an executable plan first.',
+      action: () => workflowPlanId.trim()
+        ? handleWorkflowExecute({ planId: workflowPlanId })
+        : handleWorkflowPlan({
+          task: isZh
+            ? `继续推进${scopeSubject}的写作流程，并给出当前最安全的下一步。`
+            : `Continue the workflow for ${scopeSubject} and surface the safest next writing step.`,
+          level: 'L3',
+        }),
+    },
+  ]
 
   return (
     <div
@@ -429,135 +487,188 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
         )}
 
         <div className="mt-6 border-t border-gray-200 dark:border-dark-border pt-4">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.evaluationWorkflowTitle}</h3>
-          <div className="space-y-2">
-            <input
-              value={workflowTask}
-              onChange={(e) => setWorkflowTask(e.target.value)}
-              placeholder={t.evaluationWorkflowTaskPlaceholder}
-              aria-label={t.evaluationWorkflowTaskPlaceholder}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-            />
-            <input
-              value={workflowLevel}
-              onChange={(e) => setWorkflowLevel(e.target.value)}
-              placeholder={t.evaluationWorkflowLevelPlaceholder}
-              aria-label={t.evaluationWorkflowLevelPlaceholder}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-            />
-            <input
-              value={workflowPlanId}
-              onChange={(e) => setWorkflowPlanId(e.target.value)}
-              placeholder={t.evaluationWorkflowPlanIdPlaceholder}
-              aria-label={t.evaluationWorkflowPlanIdPlaceholder}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-            />
-            <input
-              value={workflowStepId}
-              onChange={(e) => setWorkflowStepId(e.target.value)}
-              placeholder={t.evaluationWorkflowStepIdPlaceholder}
-              aria-label={t.evaluationWorkflowStepIdPlaceholder}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-            />
-            <select
-              value={workflowLifecycleAction}
-              onChange={(e) => setWorkflowLifecycleAction(e.target.value as WorkflowLifecycleAction)}
-              aria-label={t.evaluationWorkflowLifecycleActionLabel}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
-            >
-              <option value="status">{t.evaluationWorkflowLifecycleStatus}</option>
-              <option value="start">{t.evaluationWorkflowLifecycleStart}</option>
-              <option value="pause">{t.evaluationWorkflowLifecyclePause}</option>
-              <option value="resume">{t.evaluationWorkflowLifecycleResume}</option>
-              <option value="stop">{t.evaluationWorkflowLifecycleStop}</option>
-            </select>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              onClick={handleWorkflowRoute}
-              disabled={workflowStates.route.status === 'loading'}
-              className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
-            >
-              {t.evaluationWorkflowRoute}
-            </button>
-            <button
-              onClick={handleWorkflowPlan}
-              disabled={workflowStates.plan.status === 'loading'}
-              className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
-            >
-              {t.evaluationWorkflowPlan}
-            </button>
-            <button
-              onClick={handleWorkflowExecute}
-              disabled={workflowStates.execute.status === 'loading'}
-              className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
-            >
-              {t.evaluationWorkflowExecute}
-            </button>
-            <button
-              onClick={handleWorkflowLifecycle}
-              disabled={workflowStates.lifecycle.status === 'loading'}
-              className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
-            >
-              {t.evaluationWorkflowLifecycle}
-            </button>
-          </div>
-
-          {workflowWaitingConfirmation && (
-            <div className="mt-3 rounded border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10 p-2 text-xs">
-              <div className="font-medium text-amber-700 dark:text-amber-200">{t.evaluationWorkflowWaitingConfirmation}</div>
-              {workflowGateReason && (
-                <div className="mt-1 text-amber-700/80 dark:text-amber-200/80">{t.evaluationWorkflowGateReason}: {workflowGateReason}</div>
-              )}
-              <div className="mt-2 flex gap-2">
-                <input
-                  value={workflowConfirmToken}
-                  onChange={(e) => setWorkflowConfirmToken(e.target.value)}
-                  placeholder={t.evaluationWorkflowConfirmTokenPlaceholder}
-                  aria-label={t.evaluationWorkflowConfirmTokenPlaceholder}
-                  className="flex-1 px-2 py-1 text-xs border border-amber-200 dark:border-amber-700 dark:bg-dark-bg dark:text-dark-text rounded"
-                />
-                <button
-                  onClick={handleWorkflowConfirmAndContinue}
-                  disabled={workflowStates.execute.status === 'loading'}
-                  className="px-2 py-1 text-xs bg-amber-600 text-white rounded disabled:opacity-50"
+          <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text">{writerWorkflowTitle}</h3>
+          <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
+            {writerWorkflowHint}
+          </p>
+          {workspaceSummary.hasMeaningfulScope && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {workspaceSummary.scopeChips.map((chip) => (
+                <span
+                  key={`evaluation-scope-${chip}`}
+                  className="rounded-full bg-primary-50 px-3 py-1 text-[11px] font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
                 >
-                  {t.evaluationWorkflowConfirmAndContinue}
-                </button>
-              </div>
+                  {chip}
+                </span>
+              ))}
             </div>
           )}
-
-          <div className="mt-3 space-y-2 text-xs">
-            {(['route', 'plan', 'execute', 'lifecycle'] as WorkflowAction[]).map((action) => {
-              const state = workflowStates[action]
-              if (state.status === 'idle' || !state.message) {
-                return null
-              }
-              return (
-                <div key={action} className="flex items-center justify-between gap-2">
-                  <span className={state.status === 'error' ? 'text-red-500' : state.status === 'success' ? 'text-green-600' : 'text-gray-500'}>
-                    {getWorkflowActionLabel(action, t)}: {state.message}
-                  </span>
-                  {state.status === 'error' && (
-                    <button
-                      onClick={() => retryWorkflowAction(action)}
-                      className="px-2 py-1 bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
-                    >
-                      {t.evaluationWorkflowRetry}
-                    </button>
-                  )}
+          <div className="mt-3 space-y-2">
+            {writerWorkflowPresets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => {
+                  void preset.action()
+                }}
+                className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-3 text-left shadow-sm transition-colors hover:border-primary-200 hover:bg-primary-50/60 dark:border-dark-border dark:bg-dark-bg dark:hover:border-primary-500/30 dark:hover:bg-dark-surface"
+              >
+                <div className="text-sm font-medium text-gray-800 dark:text-dark-text">{preset.title}</div>
+                <div className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
+                  {preset.description}
                 </div>
-              )
-            })}
+              </button>
+            ))}
           </div>
 
-          {workflowResult && (
-            <pre className="mt-3 p-2 rounded border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-[11px] text-gray-700 dark:text-dark-text-secondary overflow-x-auto whitespace-pre-wrap">
-              {workflowResult}
-            </pre>
-          )}
+          <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 p-3 dark:border-dark-border dark:bg-dark-bg/70">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-dark-text-muted">
+              {writerAdvancedTitle}
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
+              {writerAdvancedHint}
+            </p>
+            <div className="mt-3 space-y-2">
+              <input
+                value={workflowTask}
+                onChange={(e) => setWorkflowTask(e.target.value)}
+                placeholder={t.evaluationWorkflowTaskPlaceholder}
+                aria-label={t.evaluationWorkflowTaskPlaceholder}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+              />
+              <input
+                value={workflowLevel}
+                onChange={(e) => setWorkflowLevel(e.target.value)}
+                placeholder={t.evaluationWorkflowLevelPlaceholder}
+                aria-label={t.evaluationWorkflowLevelPlaceholder}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+              />
+              <input
+                value={workflowPlanId}
+                onChange={(e) => setWorkflowPlanId(e.target.value)}
+                placeholder={t.evaluationWorkflowPlanIdPlaceholder}
+                aria-label={t.evaluationWorkflowPlanIdPlaceholder}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+              />
+              <input
+                value={workflowStepId}
+                onChange={(e) => setWorkflowStepId(e.target.value)}
+                placeholder={t.evaluationWorkflowStepIdPlaceholder}
+                aria-label={t.evaluationWorkflowStepIdPlaceholder}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+              />
+              <select
+                value={workflowLifecycleAction}
+                onChange={(e) => setWorkflowLifecycleAction(e.target.value as WorkflowLifecycleAction)}
+                aria-label={t.evaluationWorkflowLifecycleActionLabel}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+              >
+                <option value="status">{t.evaluationWorkflowLifecycleStatus}</option>
+                <option value="start">{t.evaluationWorkflowLifecycleStart}</option>
+                <option value="pause">{t.evaluationWorkflowLifecyclePause}</option>
+                <option value="resume">{t.evaluationWorkflowLifecycleResume}</option>
+                <option value="stop">{t.evaluationWorkflowLifecycleStop}</option>
+              </select>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  void handleWorkflowRoute()
+                }}
+                disabled={workflowStates.route.status === 'loading'}
+                className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+              >
+                {t.evaluationWorkflowRoute}
+              </button>
+              <button
+                onClick={() => {
+                  void handleWorkflowPlan()
+                }}
+                disabled={workflowStates.plan.status === 'loading'}
+                className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+              >
+                {t.evaluationWorkflowPlan}
+              </button>
+              <button
+                onClick={() => {
+                  void handleWorkflowExecute()
+                }}
+                disabled={workflowStates.execute.status === 'loading'}
+                className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+              >
+                {t.evaluationWorkflowExecute}
+              </button>
+              <button
+                onClick={() => {
+                  void handleWorkflowLifecycle()
+                }}
+                disabled={workflowStates.lifecycle.status === 'loading'}
+                className="px-2 py-1 text-xs bg-blue-600 text-white rounded disabled:opacity-50"
+              >
+                {t.evaluationWorkflowLifecycle}
+              </button>
+            </div>
+
+            {workflowWaitingConfirmation && (
+              <div className="mt-3 rounded border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10 p-2 text-xs">
+                <div className="font-medium text-amber-700 dark:text-amber-200">{t.evaluationWorkflowWaitingConfirmation}</div>
+                {workflowGateReason && (
+                  <div className="mt-1 text-amber-700/80 dark:text-amber-200/80">{t.evaluationWorkflowGateReason}: {workflowGateReason}</div>
+                )}
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={workflowConfirmToken}
+                    onChange={(e) => setWorkflowConfirmToken(e.target.value)}
+                    placeholder={t.evaluationWorkflowConfirmTokenPlaceholder}
+                    aria-label={t.evaluationWorkflowConfirmTokenPlaceholder}
+                    className="flex-1 px-2 py-1 text-xs border border-amber-200 dark:border-amber-700 dark:bg-dark-bg dark:text-dark-text rounded"
+                  />
+                  <button
+                    onClick={() => {
+                      void handleWorkflowConfirmAndContinue()
+                    }}
+                    disabled={workflowStates.execute.status === 'loading'}
+                    className="px-2 py-1 text-xs bg-amber-600 text-white rounded disabled:opacity-50"
+                  >
+                    {t.evaluationWorkflowConfirmAndContinue}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-3 space-y-2 text-xs">
+              {(['route', 'plan', 'execute', 'lifecycle'] as WorkflowAction[]).map((action) => {
+                const state = workflowStates[action]
+                if (state.status === 'idle' || !state.message) {
+                  return null
+                }
+                return (
+                  <div key={action} className="flex items-center justify-between gap-2">
+                    <span className={state.status === 'error' ? 'text-red-500' : state.status === 'success' ? 'text-green-600' : 'text-gray-500'}>
+                      {getWorkflowActionLabel(action, t)}: {state.message}
+                    </span>
+                    {state.status === 'error' && (
+                      <button
+                        onClick={() => {
+                          void retryWorkflowAction(action)
+                        }}
+                        className="px-2 py-1 bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                      >
+                        {t.evaluationWorkflowRetry}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {workflowResult && (
+              <pre className="mt-3 p-2 rounded border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-[11px] text-gray-700 dark:text-dark-text-secondary overflow-x-auto whitespace-pre-wrap">
+                {workflowResult}
+              </pre>
+            )}
+          </div>
         </div>
 
         <div className="mt-6 border-t border-gray-200 dark:border-dark-border pt-4">

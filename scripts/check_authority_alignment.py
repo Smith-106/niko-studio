@@ -19,7 +19,60 @@ class AuthorityRule:
     required: bool = True
 
 
-RULES: tuple[AuthorityRule, ...] = (
+DELIVERY_CONTRACT_HEADINGS: dict[str, str] = {
+    "README.md": r"## Writer-First Desktop Delivery Contract",
+    "desktop/README.md": r"## 当前交付契约",
+    "docs/release/RELEASE_NOTES.md": r"## 当前交付契约（与 README / desktop README 一致）",
+    "docs/operations/DESKTOP_RUNBOOK.md": r"## Delivery Contract",
+    "docs/operations/ROLLBACK.md": r"## 回退目标契约",
+}
+
+DELIVERY_CONTRACT_FILE_LABELS: dict[str, str] = {
+    "README.md": "README",
+    "desktop/README.md": "Desktop README",
+    "docs/release/RELEASE_NOTES.md": "Release notes",
+    "docs/operations/DESKTOP_RUNBOOK.md": "Desktop runbook",
+    "docs/operations/ROLLBACK.md": "Rollback runbook",
+}
+
+DELIVERY_CONTRACT_PATTERNS: tuple[tuple[str, str], ...] = (
+    (
+        r"`Supported runtime`: `desktop/` \+ Tauri host \+ local `src-ts/` Node/TypeScript gateway",
+        "must declare the supported desktop runtime contract.",
+    ),
+    (
+        r"`Supported launcher`: `python scripts/start_gateway.py`.*Node/TypeScript gateway by default\.",
+        "must declare the supported launcher semantics.",
+    ),
+    (
+        r"`Advisory compatibility surfaces`: explicit `--runtime python` legacy override, legacy `src/mcp/\*\*` sources, and Streamlit validation flows",
+        "must bound compatibility surfaces as advisory only.",
+    ),
+    (
+        r"`Deprecated surface`: browser-first web entry \(`src-ts/web/app\.ts`\).*WEB_UI_FORWARD_URL.*not shipped primary UI paths\.",
+        "must label the browser-first web path as deprecated.",
+    ),
+)
+
+DELIVERY_CONTRACT_RULES: tuple[AuthorityRule, ...] = tuple(
+    AuthorityRule(
+        file_path=file_path,
+        pattern=heading_pattern,
+        reason=f"{DELIVERY_CONTRACT_FILE_LABELS[file_path]} must include the aligned delivery-contract section.",
+    )
+    for file_path, heading_pattern in DELIVERY_CONTRACT_HEADINGS.items()
+) + tuple(
+    AuthorityRule(
+        file_path=file_path,
+        pattern=pattern,
+        reason=f"{DELIVERY_CONTRACT_FILE_LABELS[file_path]} {reason}",
+    )
+    for file_path in DELIVERY_CONTRACT_FILE_LABELS
+    for pattern, reason in DELIVERY_CONTRACT_PATTERNS
+)
+
+
+BASE_RULES: tuple[AuthorityRule, ...] = (
     AuthorityRule(
         file_path="README.md",
         pattern=r"### 当前权威地图",
@@ -141,6 +194,8 @@ RULES: tuple[AuthorityRule, ...] = (
         reason="Release notes must describe internal main-branch blocking semantics clearly.",
     ),
 )
+
+RULES: tuple[AuthorityRule, ...] = BASE_RULES + DELIVERY_CONTRACT_RULES
 
 
 def main() -> int:

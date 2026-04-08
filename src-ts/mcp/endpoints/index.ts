@@ -44,6 +44,10 @@ export {
 } from './graph';
 
 export {
+  workspaceContextEndpoint,
+} from './workspace';
+
+export {
   memorySearchEndpoint,
   memoryAddEndpoint,
   memoryUploadEndpoint,
@@ -76,6 +80,7 @@ export {
 export {
   novelQualityCheckEndpoint,
   writingHelperProcessEndpoint,
+  writingStreamEndpoint,
 } from './writing';
 
 export {

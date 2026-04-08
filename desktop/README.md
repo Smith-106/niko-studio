@@ -1,15 +1,23 @@
-# Niko-Studio Desktop
+# Niko Studio Desktop
 
-AI 辅助写作桌面应用，基于 Tauri + React + Python 构建。
+Writer-first 桌面产品，基于 Tauri + React 构建，并通过本地 Node/TypeScript gateway 交付核心运行时。Python 仅保留给发布辅助脚本、治理脚本和显式兼容 override。
 
-Desktop 客户端是当前主交付入口；Web/FastAPI 页面与 Streamlit 路径仅保留为兼容与原型验证用途。
+Desktop 客户端是当前主交付入口；本 README 与根 README 的 `Writer-First Desktop Delivery Contract` 以及 `docs/release/RELEASE_NOTES.md` 共享同一交付契约。
+
+## 当前交付契约
+
+- `Supported runtime`: `desktop/` + Tauri host + local `src-ts/` Node/TypeScript gateway. This is the shipped product, default build, and default runtime path.
+- `Supported launcher`: `python scripts/start_gateway.py` remains an operator-facing entrypoint, but in the current checkout it starts the Node/TypeScript gateway by default.
+- `Advisory compatibility surfaces`: explicit `--runtime python` legacy override, legacy `src/mcp/**` sources, and Streamlit validation flows only when a release candidate explicitly includes them.
+- `Deprecated surface`: browser-first web entry (`src-ts/web/app.ts`) and any `WEB_UI_FORWARD_URL` forward are not shipped primary UI paths.
 
 ## 技术栈
 
 - **前端**: React 18 + TypeScript + Tailwind CSS
 - **桌面框架**: Tauri 2.0 (Rust)
 - **状态管理**: Zustand
-- **后端**: Python + FastAPI (MCP Gateway)
+- **本地 Gateway**: Node.js + TypeScript (`src-ts/`)
+- **兼容 / 治理脚本**: Python 3.11+ (`scripts/start_gateway.py`, release helpers, governance scripts)
 
 ## 项目结构
 
@@ -48,9 +56,9 @@ desktop/
 
 ### 前置条件
 
-1. Node.js >= 18
+1. Node.js >= 20
 2. Rust (rustup)
-3. Python >= 3.10
+3. Python >= 3.11（发布辅助脚本、治理脚本、兼容 launcher）
 
 ### 安装依赖
 
@@ -64,13 +72,16 @@ npm install
 ### 开发模式
 
 ```bash
-# 1. 启动 Python 后端
+# 1. 启动当前受支持的 Gateway 入口（默认 Node/TypeScript）
 cd ..
-python -m uvicorn src.mcp.gateway:app --host 127.0.0.1 --port 8000
+python scripts/start_gateway.py --host 127.0.0.1 --port 8000
 
-# 2. 启动桌面应用 (新终端)
+# 2. 返回 desktop/ 并启动桌面应用 (新终端)
+cd desktop
 npm run tauri:dev
 ```
+
+如仅需调试前端壳层，可运行 `npm run dev`；该命令只启动 Vite shell，不代表完整交付运行面。
 
 ### 构建发布
 

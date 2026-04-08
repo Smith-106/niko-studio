@@ -5,6 +5,24 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  workflow_call:
+    inputs:
+      strict:
+        required: false
+        default: true
+        type: boolean
+      log_level:
+        required: false
+        default: warning
+        type: string
+      port:
+        required: false
+        default: "18080"
+        type: string
+      host:
+        required: false
+        default: 127.0.0.1
+        type: string
   workflow_dispatch:
     inputs:
       strict:
@@ -40,6 +58,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: src-ts/package-lock.json
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -50,8 +75,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: src-ts
+
       - name: Start gateway in background
         shell: pwsh
+        env:
+          NIKO_GATEWAY_RUNTIME: node
         run: |
           $proc = Start-Process -FilePath python -ArgumentList "scripts/start_gateway.py --host ${{ inputs.host }} --port ${{ inputs.port }} --log-level ${{ inputs.log_level }}" -PassThru -RedirectStandardOutput gateway.log -RedirectStandardError gateway.err
           "GATEWAY_PID=$($proc.Id)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

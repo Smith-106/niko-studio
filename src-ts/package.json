@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "lint": "eslint --config ../eslint.config.mjs \"**/*.{ts,tsx,mts}\"",
+    "lint": "eslint --config ../eslint.config.mjs \"**/*.{ts,tsx,mts}\" --max-warnings 1",
     "format": "prettier --config ../prettier.config.mjs --ignore-path ../.prettierignore --write \"package.json\" \"../eslint.config.mjs\" \"../prettier.config.mjs\"",
     "format:check": "prettier --config ../prettier.config.mjs --ignore-path ../.prettierignore --check \"package.json\" \"../eslint.config.mjs\" \"../prettier.config.mjs\"",
     "test": "vitest run",
@@ -15,9 +15,12 @@
     "test:phase3": "vitest run tests/workflow/level5-coordinator.test.ts tests/workflow/novel-adapter.test.ts tests/workflow/workflow-types.test.ts tests/workflow/project-tech.test.ts tests/workflow/graph-factory.test.ts tests/workflow/resume-strategy.test.ts tests/workflow/revision-loop.test.ts tests/workflow/level4-brainstorm.test.ts tests/workflow/graph.test.ts tests/workflow/plan-act.test.ts tests/workflow/level1-rapid.test.ts tests/workflow/level2-lite.test.ts tests/workflow/level3-standard.test.ts tests/workflow/code-adapter.test.ts tests/workflow/state.test.ts tests/workflow/novel-quality.test.ts tests/workflow/session-manager.test.ts tests/workflow/base-workflow.test.ts tests/workflow/novel-state.test.ts tests/workflow/base-adapter.test.ts tests/workflow/base-level.test.ts tests/workflow/index.test.ts tests/agents/base.test.ts tests/agents/architect.test.ts tests/agents/commander.test.ts tests/agents/critic.test.ts tests/agents/writer.test.ts tests/agents/skill-router.test.ts tests/agents/sequential-thinking.test.ts tests/agents/factory.test.ts tests/agents/plot.test.ts tests/agents/character.test.ts tests/agents/worldbuilding.test.ts tests/agents/index.test.ts tests/container/search-engine-adapter.test.ts tests/container/search-engine-integration.test.ts tests/container/critic-engine-adapter.test.ts tests/workflow/workflow-engine.integration.test.ts tests/container/workflow-engine-adapter.test.ts tests/mcp/workflow-service.test.ts tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/critic-service.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts tests/narrative/critic-engine.quickscan.test.ts tests/narrative/foreshadowing.test.ts tests/narrative/scene-coherence.test.ts tests/narrative/conflict-analyzer.test.ts tests/narrative/character-manager.test.ts tests/narrative/character-state-analyzer.test.ts tests/narrative/tension-curve-analyzer.test.ts tests/narrative/sensory-analyzer.test.ts tests/narrative/suspense-analyzer.test.ts tests/narrative/style-system.test.ts tests/narrative/narrative-voice.test.ts tests/narrative/premise-validator.test.ts tests/narrative/types.test.ts tests/narrative/analyzers-index.test.ts tests/narrative/evaluators-index.test.ts tests/narrative/index.test.ts tests/narrative/fictional-dream-index.test.ts tests/narrative/character-depth.test.ts tests/narrative/fictional-dream-sympathy.test.ts tests/narrative/fictional-dream-engine.test.ts tests/narrative/fictional-dream-evaluator.test.ts tests/narrative/fictional-dream-identification.test.ts tests/narrative/fictional-dream-empathy.test.ts tests/narrative/fictional-dream-immersion.test.ts tests/narrative/dream-evaluator.test.ts tests/narrative/suspense-evaluator.test.ts tests/narrative/deadly-sins-checker.test.ts tests/narrative/cliche-detector.test.ts tests/narrative/four-selves-evaluator.test.ts tests/narrative/subtext-evaluator.test.ts tests/narrative/evaluator-base.test.ts tests/narrative/pyramid-evaluator.test.ts tests/narrative/critic-engine.test.ts tests/narrative/analyzers-base.test.ts tests/narrative/character-evaluator.test.ts tests/narrative/premise-evaluator.test.ts tests/narrative/voice-evaluator.test.ts",
     "test:coverage:phase3": "vitest run --config vitest.phase3.config.ts --coverage",
     "test:phase4": "vitest run --config vitest.phase4.config.ts",
-    "test:coverage:phase4": "vitest run --config vitest.phase4.config.ts --coverage",
+    "test:coverage:phase4": "node -e \"require('fs').mkdirSync('coverage/.tmp',{recursive:true})\" && vitest run --config vitest.phase4.config.ts --coverage",
+    "test:release": "vitest run --config vitest.release.config.ts",
     "typecheck": "tsc --noEmit",
-    "check:local": "npm run lint && npm run format:check && npm run typecheck && npm run test:phase4",
+    "check:quick": "npm run lint && npm run format:check && npm run typecheck && npm run test:phase4",
+    "check:release": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage:phase4 -- --coverage.reporter=text && npm run test:release",
+    "check:local": "npm run check:release",
     "dev": "ts-node --esm src/index.ts"
   },
   "dependencies": {

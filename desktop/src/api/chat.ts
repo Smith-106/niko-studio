@@ -1,0 +1,372 @@
+import { type ApiResponse, callApi, getResolvedApiBase, getRuntimeGatewayBase, isTauriRuntime } from './core'
+import { appendLegacyChatWorkspacePayload, type ProjectWorkspaceContext } from './workspace'
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export type WorkflowLevel = 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
+
+export interface ChatModelComparisonRequest {
+  enabled: boolean
+  controlModel: string
+  primaryModel?: string
+}
+
+export interface QualityGoalsPayload {
+  naturalness?: number
+  readability?: number
+  coherence?: number
+  style_consistency?: number
+  humanization_preset?: 'human_writing' | 'ai_edit_guidance' | 'custom'
+  custom_humanization_instruction?: string
+  sentence_entropy_target?: number
+  rhythm_variability_target?: number
+}
+
+export interface ChatRequest {
+  messages: ChatMessage[]
+  workflowLevel: WorkflowLevel
+  skills: string[]
+  allowLlmFallback: boolean
+  qualityGoals?: QualityGoalsPayload
+  context?: {
+    projectId?: string
+    chapterId?: string
+  }
+  workspace?: ProjectWorkspaceContext
+  comparison?: ChatModelComparisonRequest
+  knowledge_retrieval?: boolean
+  search_mode?: 'hybrid' | 'iterative' | 'context'
+  profile?: string
+  min_score?: number
+  budget_tokens?: number
+  rerank?: boolean
+  max_iterations?: number
+  confidence_threshold?: number
+}
+
+export interface ChatModelComparisonResultItem {
+  model: string
+  content: string
+}
+
+export interface ChatModelComparisonResult {
+  enabled: boolean
+  primary: ChatModelComparisonResultItem
+  control: ChatModelComparisonResultItem
+}
+
+export interface WriterMetadata {
+  warnings?: string[]
+  knowledge_retrieved?: {
+    entities_count: number
+    relations_count: number
+    memories_count: number
+  }
+  workspace_context?: ProjectWorkspaceContext
+  [key: string]: unknown
+}
+
+export interface ChatResponse {
+  content: string
+  skills_used: string[]
+  comparison?: ChatModelComparisonResult
+  writer_metadata?: WriterMetadata
+  workspace?: ProjectWorkspaceContext
+  workflow_info?: {
+    level: string
+    level_slug?: string
+    steps_completed: number
+    total_steps: number
+  }
+  evaluation?: {
+    score: number
+    feedback: string
+  }
+}
+
+export async function chat(request: ChatRequest): Promise<ApiResponse<ChatResponse>> {
+  return callApi<ChatResponse>(
+    '/chat',
+    'POST',
+    appendLegacyChatWorkspacePayload(request as unknown as Record<string, unknown>, request.workspace),
+  )
+}
+
+// ============ SSE Streaming Chat ============
+
+export interface StreamEvent {
+  type: 'start' | 'routing' | 'progress' | 'content' | 'evaluation' | 'done' | 'error'
+  data: Record<string, unknown>
+}
+
+export type StreamTerminal = 'done' | 'error' | 'interrupted' | 'recovered'
+
+interface StreamDiagnostics {
+  fallback_reason?: string | null
+  failure_reason?: string | null
+  error_type?: string | null
+}
+
+interface StreamTerminalPayload {
+  status?: string
+  terminal?: StreamTerminal
+  diagnostics?: StreamDiagnostics
+}
+
+export interface StreamDonePayload extends StreamTerminalPayload {
+  skills_used?: string[]
+  decision?: 'go' | 'soft_go' | 'no_go'
+  writer_metadata?: WriterMetadata
+}
+
+function normalizeTerminalValue(raw: unknown): StreamTerminal | undefined {
+  if (raw === 'done' || raw === 'error' || raw === 'interrupted' || raw === 'recovered') {
+    return raw
+  }
+  if (raw === 'aborted') {
+    return 'interrupted'
+  }
+  return undefined
+}
+
+function parseLegacyTerminal(data: Record<string, unknown>): StreamTerminal | undefined {
+  const legacy = data.legacy_contract_fields
+  if (!legacy || typeof legacy !== 'object') {
+    return undefined
+  }
+
+  const legacyRecord = legacy as Record<string, unknown>
+  const keys = ['terminal', 'terminal_state', 'status']
+  for (const key of keys) {
+    const value = legacyRecord[key]
+    const normalized = normalizeTerminalValue(value)
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return undefined
+}
+
+function parseLegacyDecision(data: Record<string, unknown>): 'go' | 'soft_go' | 'no_go' | undefined {
+  const decision = data.decision
+  if (decision === 'go' || decision === 'soft_go' || decision === 'no_go') {
+    return decision
+  }
+
+  const legacy = data.legacy_contract_fields
+  if (!legacy || typeof legacy !== 'object') {
+    return undefined
+  }
+
+  const legacyDecision = (legacy as Record<string, unknown>).decision
+  if (legacyDecision === 'go' || legacyDecision === 'soft_go' || legacyDecision === 'no_go') {
+    return legacyDecision
+  }
+
+  return undefined
+}
+
+export interface StreamCallbacks {
+  onStart?: () => void
+  onRouting?: (data: { level: string; scene_type: string; skills: string[] }) => void
+  onProgress?: (data: { step: number; total: number; message: string }) => void
+  onContent?: (chunk: string, index: number) => void
+  onEvaluation?: (data: { score: number; feedback: string }) => void
+  onDone?: (data: StreamDonePayload) => void
+  onError?: (error: string, payload?: StreamTerminalPayload) => void
+}
+
+export interface StreamOptions {
+  signal?: AbortSignal
+}
+
+/**
+ * SSE 流式聊天 - 优化版本
+ *
+ * 优化策略:
+ * - 使用 ReadableStream + getReader 进行流式读取
+ * - requestAnimationFrame 批量 DOM 更新，减少重绘
+ * - 高效的 TextDecoder 流式解码
+ */
+export async function chatStream(
+  request: ChatRequest,
+  callbacks: StreamCallbacks,
+  options?: StreamOptions
+): Promise<void> {
+  const base = isTauriRuntime()
+    ? await getRuntimeGatewayBase(getResolvedApiBase)
+    : getResolvedApiBase()
+  const url = `${base}/chat/stream`
+
+  // 内容缓冲区，用于批量更新
+  let contentBuffer: Array<{ chunk: string; index: number }> = []
+  let rafScheduled = false
+
+  // 使用 requestAnimationFrame 批量处理内容更新
+  const flushContentBuffer = () => {
+    if (contentBuffer.length === 0) return
+
+    // 批量触发回调
+    for (const { chunk, index } of contentBuffer) {
+      callbacks.onContent?.(chunk, index)
+    }
+    contentBuffer = []
+    rafScheduled = false
+  }
+
+  const scheduleContentUpdate = (chunk: string, index: number) => {
+    contentBuffer.push({ chunk, index })
+
+    if (!rafScheduled) {
+      rafScheduled = true
+      requestAnimationFrame(flushContentBuffer)
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify(
+        appendLegacyChatWorkspacePayload(request as unknown as Record<string, unknown>, request.workspace),
+      ),
+      signal: options?.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('No response body')
+    }
+
+    // 使用流式 TextDecoder
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) {
+        // 流结束，刷新剩余内容
+        flushContentBuffer()
+        break
+      }
+
+      // 流式解码，保留部分字符
+      buffer += decoder.decode(value, { stream: true })
+
+      // 解析 SSE 事件
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      let currentEvent = ''
+      let currentData = ''
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim()
+        } else if (line.startsWith('data: ')) {
+          currentData = line.slice(6).trim()
+        } else if (line === '' && currentEvent && currentData) {
+          // 完整事件，触发回调
+          try {
+            const data = JSON.parse(currentData)
+            handleStreamEventOptimized(currentEvent, data, callbacks, scheduleContentUpdate)
+          } catch (e) {
+            console.error('Failed to parse SSE data:', e)
+          }
+          currentEvent = ''
+          currentData = ''
+        }
+      }
+    }
+  } catch (error) {
+    // 确保刷新任何待处理的内容
+    flushContentBuffer()
+    console.error('Stream error:', error)
+    const message = String(error)
+    const aborted = options?.signal?.aborted || message.toLowerCase().includes('abort')
+    callbacks.onError?.(
+      message,
+      aborted ? { terminal: 'interrupted', status: 'aborted' } : { terminal: 'error', status: 'failed' }
+    )
+  }
+}
+
+function toStreamTerminalPayload(data: Record<string, unknown>): StreamTerminalPayload {
+  const terminal = normalizeTerminalValue(data.terminal)
+    ?? parseLegacyTerminal(data)
+    ?? (() => {
+      if (data.status === 'aborted') return 'interrupted'
+      if (data.status === 'restored') return 'recovered'
+      return undefined
+    })()
+
+  return {
+    status: typeof data.status === 'string' ? data.status : undefined,
+    terminal,
+    diagnostics: typeof data.diagnostics === 'object' && data.diagnostics !== null
+      ? (data.diagnostics as StreamDiagnostics)
+      : undefined,
+  }
+}
+
+function handleStreamEventOptimized(
+  eventType: string,
+  data: Record<string, unknown>,
+  callbacks: StreamCallbacks,
+  scheduleContentUpdate: (chunk: string, index: number) => void
+): void {
+  switch (eventType) {
+    case 'start':
+      callbacks.onStart?.()
+      break
+    case 'routing':
+      callbacks.onRouting?.(data as { level: string; scene_type: string; skills: string[] })
+      break
+    case 'progress':
+      callbacks.onProgress?.(data as { step: number; total: number; message: string })
+      break
+    case 'content':
+      // 使用 requestAnimationFrame 批量更新
+      scheduleContentUpdate(data.chunk as string, data.index as number)
+      break
+    case 'evaluation':
+      callbacks.onEvaluation?.(data as { score: number; feedback: string })
+      break
+    case 'done': {
+      const terminalPayload = toStreamTerminalPayload(data)
+      callbacks.onDone?.({
+        ...terminalPayload,
+        terminal: terminalPayload.terminal === 'recovered' ? 'done' : terminalPayload.terminal,
+        skills_used: Array.isArray(data.skills_used) ? (data.skills_used as string[]) : [],
+        decision: parseLegacyDecision(data),
+        writer_metadata: typeof data.writer_metadata === 'object' && data.writer_metadata !== null
+          ? (data.writer_metadata as WriterMetadata)
+          : undefined,
+      })
+      break
+    }
+    case 'error': {
+      const terminalPayload = toStreamTerminalPayload(data)
+      callbacks.onError?.(
+        String(data.error ?? 'Stream error'),
+        {
+          ...terminalPayload,
+          terminal: terminalPayload.terminal === 'recovered' ? 'error' : terminalPayload.terminal,
+        }
+      )
+      break
+    }
+  }
+}

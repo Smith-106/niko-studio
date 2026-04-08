@@ -1,5 +1,7 @@
 import { useCallback } from 'react'
+
 import type { ChatRequest } from '../api/client'
+import type { ProjectWorkspaceContext } from '@/types/workspace'
 import type { QualityGoalsSettings, RetrievalSettings } from '../stores/settingsStore'
 
 const DEFAULT_HISTORY_BUDGET_CHARS = 96_000
@@ -89,6 +91,7 @@ interface UseChatRequestBuilderOptions {
   allowLlmFallback: boolean
   qualityGoals: QualityGoalsSettings
   retrieval: RetrievalSettings
+  workspace?: ProjectWorkspaceContext | null
 }
 
 interface BuildChatRequestInput {
@@ -139,8 +142,12 @@ export function useChatRequestBuilder(options: UseChatRequestBuilderOptions) {
       }
     }
 
+    if (options.workspace) {
+      request.workspace = options.workspace
+    }
+
     return request
-  }, [options.allowLlmFallback, options.qualityGoals, options.retrieval])
+  }, [options.allowLlmFallback, options.qualityGoals, options.retrieval, options.workspace])
 
   return { buildChatRequest }
 }

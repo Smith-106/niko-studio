@@ -54,8 +54,38 @@ def test_delivery_gate_rules_cover_authority_alignment_contract() -> None:
         True,
     ) in rule_map
     assert (
+        ".github/workflows/external-release-gate.yml",
+        "npm run validate:package:dry-run",
+        True,
+    ) in rule_map
+    assert (
+        ".github/workflows/external-release-gate.yml",
+        "uses: ./.github/workflows/writing-helper-acceptance.yml",
+        True,
+    ) in rule_map
+    assert (
+        "src-ts/mcp/routes/content.ts",
+        r"pattern: /^\/chat\/stream$/",
+        True,
+    ) in rule_map
+    assert (
+        "src-ts/mcp/routes/platform.ts",
+        r"pattern: /^\/metrics$/, handler: metricsEndpoint",
+        True,
+    ) in rule_map
+    assert (
+        ".github/workflows/writing-helper-acceptance.yml",
+        "workflow_call:",
+        True,
+    ) in rule_map
+    assert (
         "docs/release/RELEASE_NOTES.md",
         "用于内部验证；main 分支仍保留 authority alignment 与选定契约的阻断门禁",
+        True,
+    ) in rule_map
+    assert (
+        "docs/release/SIGN_OFF.md",
+        "certificateThumbprint",
         True,
     ) in rule_map
     assert (
@@ -66,6 +96,12 @@ def test_delivery_gate_rules_cover_authority_alignment_contract() -> None:
     assert any(
         file_path == "scripts/release_check_summary.py"
         and '"authority_alignment_signal"' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '"desktop_packaging_dry_run"' in needle
         and must_exist
         for file_path, needle, must_exist in rule_map
     )

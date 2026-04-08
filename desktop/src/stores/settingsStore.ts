@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { BackendConfig, SecretsResponse } from '@/api/client'
+import { PERSISTED_SETTINGS_KEYS } from '@/types/settingsOwnership'
 
 // LLM 提供商配置
 export interface LLMProvider {
@@ -155,9 +156,11 @@ interface Settings {
   theme: 'system' | 'sorbet' | 'slate' | 'amber' | 'forest' | 'charcoal' | 'cauldron' | 'aurora' | 'moonbeam' | 'sepia' | 'forest' | 'charcoal' | 'cauldron' | 'aurora' | 'moonbeam' | 'sepia'
   fontSize: 'small' | 'medium' | 'large'
   language: 'zh' | 'en'
-  sidebarCollapsed: boolean
   sendShortcut: SendShortcut
 }
+
+type PersistedSettings = Pick<Settings, (typeof PERSISTED_SETTINGS_KEYS)[number]>
+type SettingsInput = Partial<Settings> & { sidebarCollapsed?: boolean }
 
 const defaultProviders: LLMProvider[] = [
   {
@@ -377,7 +380,6 @@ const defaultSettings: Settings = {
   theme: 'slate',
   fontSize: 'medium',
   language: 'zh',
-  sidebarCollapsed: false,
   sendShortcut: 'enter',
 }
 
@@ -491,6 +493,20 @@ const normalizeSendShortcut = (value: unknown): SendShortcut => {
   return 'enter'
 }
 
+const normalizeFontSize = (value: unknown): Settings['fontSize'] => {
+  if (value === 'small' || value === 'large') {
+    return value
+  }
+  return 'medium'
+}
+
+const normalizeLanguage = (value: unknown): Settings['language'] => {
+  if (value === 'en') {
+    return 'en'
+  }
+  return 'zh'
+}
+
 const VALID_THEMES = ['system', 'sorbet', 'slate', 'amber', 'forest', 'charcoal', 'cauldron', 'aurora', 'moonbeam', 'sepia'] as const
 type ValidTheme = typeof VALID_THEMES[number]
 
@@ -502,20 +518,70 @@ const normalizeTheme = (value: unknown): ValidTheme => {
   return 'slate'
 }
 
-const normalizeSettings = (settings: Partial<Settings>): Settings => {
+const pickPersistedSettings = (
+  settings: Partial<Record<string, unknown>>
+): Partial<PersistedSettings> => {
+  const persisted: Partial<PersistedSettings> = {}
+
+  for (const key of PERSISTED_SETTINGS_KEYS) {
+    const value = settings[key]
+    if (value !== undefined) {
+      ;(persisted as Record<string, unknown>)[key] = value
+    }
+  }
+
+  return persisted
+}
+
+const normalizeBackendConfigState = (
+  backendConfig: Partial<BackendConfigState> | undefined
+): BackendConfigState => {
+  const fallback = defaultBackendConfigState()
+
+  if (!backendConfig) {
+    return fallback
+  }
+
+  return {
+    config: backendConfig.config ?? fallback.config,
+    modifiableFields: Array.isArray(backendConfig.modifiableFields)
+      ? backendConfig.modifiableFields.filter((field): field is string => typeof field === 'string')
+      : fallback.modifiableFields,
+    syncStatus:
+      backendConfig.syncStatus === 'loading'
+      || backendConfig.syncStatus === 'syncing'
+      || backendConfig.syncStatus === 'error'
+        ? backendConfig.syncStatus
+        : fallback.syncStatus,
+    lastSync: typeof backendConfig.lastSync === 'string' ? backendConfig.lastSync : fallback.lastSync,
+    error: typeof backendConfig.error === 'string' ? backendConfig.error : fallback.error,
+  }
+}
+
+const normalizeSettings = (
+  settings: SettingsInput = {},
+  options: { includeRuntimeState?: boolean } = {}
+): Settings => {
+  const persisted = pickPersistedSettings(settings as Partial<Record<string, unknown>>)
+  const includeRuntimeState = options.includeRuntimeState ?? true
   const merged: Settings = {
     ...defaultSettings,
-    ...settings,
-    llmProviders: settings.llmProviders ?? defaultSettings.llmProviders,
-    promptTemplateLibrary: settings.promptTemplateLibrary,
+    ...persisted,
+    llmProviders: persisted.llmProviders ?? defaultSettings.llmProviders,
+    promptTemplateLibrary: persisted.promptTemplateLibrary,
     qualityGoals: {
       ...defaultQualityGoals(),
-      ...(settings.qualityGoals ?? {}),
+      ...(persisted.qualityGoals ?? {}),
     },
-    retrieval: normalizeRetrievalSettings(settings.retrieval),
-    contextTypes: normalizeContextTypes(settings.contextTypes),
-    sendShortcut: normalizeSendShortcut(settings.sendShortcut),
-    theme: normalizeTheme(settings.theme),
+    retrieval: normalizeRetrievalSettings(persisted.retrieval),
+    contextTypes: normalizeContextTypes(persisted.contextTypes),
+    backendConfig: includeRuntimeState
+      ? normalizeBackendConfigState(settings.backendConfig)
+      : defaultBackendConfigState(),
+    sendShortcut: normalizeSendShortcut(persisted.sendShortcut),
+    fontSize: normalizeFontSize(persisted.fontSize),
+    language: normalizeLanguage(persisted.language),
+    theme: normalizeTheme(persisted.theme),
   }
 
   return {
@@ -525,14 +591,18 @@ const normalizeSettings = (settings: Partial<Settings>): Settings => {
   }
 }
 
-const sanitizeSettingsForPersist = (settings: Settings): Settings => ({
-  ...settings,
-  apiKey: '',
-  llmProviders: settings.llmProviders.map((provider) => ({
-    ...provider,
+const sanitizeSettingsForPersist = (settings: Settings): PersistedSettings => {
+  const persisted = pickPersistedSettings(settings as unknown as Partial<Record<string, unknown>>) as PersistedSettings
+
+  return {
+    ...persisted,
     apiKey: '',
-  })),
-})
+    llmProviders: settings.llmProviders.map((provider) => ({
+      ...provider,
+      apiKey: '',
+    })),
+  }
+}
 
 interface SettingsStore {
   settings: Settings
@@ -936,6 +1006,15 @@ export const useSettingsStore = create<SettingsStore>()(
         ...state,
         settings: sanitizeSettingsForPersist(state.settings),
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<SettingsStore> | undefined
+
+        return {
+          ...currentState,
+          ...persisted,
+          settings: normalizeSettings((persisted?.settings ?? {}) as SettingsInput, { includeRuntimeState: false }),
+        }
+      },
     }
   )
 )

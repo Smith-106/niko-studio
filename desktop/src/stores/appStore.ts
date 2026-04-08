@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 import { checkBackendHealth, listSkills, type WriterMetadata } from '@/api/client'
+import {
+  createDefaultProjectWorkspaceContext,
+  mergeProjectWorkspaceContext,
+  normalizeProjectWorkspaceContext,
+  type ProjectWorkspaceContext,
+} from '@/types/workspace'
 
 /** Generate a conversation title from the first user message content */
 function generateTitle(content: string): string {
@@ -31,6 +37,7 @@ export interface Message {
   skills?: string[]
   comparison?: MessageComparison
   writerMetadata?: WriterMetadata
+  workspaceContext?: ProjectWorkspaceContext
 }
 
 export interface Conversation {
@@ -39,12 +46,18 @@ export interface Conversation {
   messages: Message[]
   createdAt: Date
   updatedAt: Date
+  workspace?: ProjectWorkspaceContext
 }
 
 interface AppState {
   // Backend status
   backendStatus: boolean
   checkBackend: () => Promise<void>
+
+  // Project/workspace authority
+  currentWorkspace: ProjectWorkspaceContext
+  setCurrentWorkspace: (workspace: ProjectWorkspaceContext | Record<string, unknown>) => void
+  syncConversationWorkspace: (conversationId: string, workspace: ProjectWorkspaceContext | Record<string, unknown>) => void
 
   // Conversations - normalized structure
   conversationsById: Record<string, Conversation>
@@ -78,6 +91,11 @@ interface AppState {
   isLoading: (id: string) => boolean
 }
 
+function resolveWorkspaceFromWriterMetadata(writerMetadata?: WriterMetadata): ProjectWorkspaceContext | null {
+  const candidate = writerMetadata?.workspace_context
+  return candidate ? normalizeProjectWorkspaceContext(candidate) : null
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   // Backend status
   backendStatus: false,
@@ -90,18 +108,47 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  // Project/workspace authority
+  currentWorkspace: createDefaultProjectWorkspaceContext(),
+  setCurrentWorkspace: (workspace) => {
+    set((state) => ({
+      currentWorkspace: mergeProjectWorkspaceContext(state.currentWorkspace, workspace),
+    }))
+  },
+  syncConversationWorkspace: (conversationId, workspace) => {
+    set((state) => {
+      const conversation = state.conversationsById[conversationId]
+      if (!conversation) return state
+      const baseWorkspace = conversation.workspace ?? state.currentWorkspace
+      const nextWorkspace = mergeProjectWorkspaceContext(baseWorkspace, workspace)
+      return {
+        currentWorkspace: state.currentConversationId === conversationId ? nextWorkspace : state.currentWorkspace,
+        conversationsById: {
+          ...state.conversationsById,
+          [conversationId]: {
+            ...conversation,
+            workspace: nextWorkspace,
+            updatedAt: new Date(),
+          },
+        },
+      }
+    })
+  },
+
   // Conversations - normalized structure
   conversationsById: {},
   allConversationIds: [],
   currentConversationId: null,
 
   createConversation: () => {
+    const workspace = normalizeProjectWorkspaceContext(get().currentWorkspace)
     const newConversation: Conversation = {
       id: Date.now().toString(),
       title: '新对话',
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
+      workspace,
     }
     set((state) => ({
       conversationsById: {
@@ -114,15 +161,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   selectConversation: (id: string) => {
-    set({ currentConversationId: id })
+    const conversation = get().conversationsById[id]
+    set((state) => ({
+      currentConversationId: id,
+      currentWorkspace: conversation?.workspace
+        ? normalizeProjectWorkspaceContext(conversation.workspace)
+        : state.currentWorkspace,
+    }))
   },
 
   addMessage: (role, content, skills, comparison, writerMetadata) => {
-    const { currentConversationId, conversationsById } = get()
+    const { currentConversationId, conversationsById, currentWorkspace } = get()
     if (!currentConversationId) return
 
     const conversation = conversationsById[currentConversationId]
     if (!conversation) return
+    const baseWorkspace = conversation.workspace ?? currentWorkspace
+    const writerWorkspace = resolveWorkspaceFromWriterMetadata(writerMetadata)
+    const nextWorkspace = writerWorkspace
+      ? mergeProjectWorkspaceContext(baseWorkspace, writerWorkspace)
+      : normalizeProjectWorkspaceContext(baseWorkspace)
 
     const message: Message = {
       id: Date.now().toString(),
@@ -132,14 +190,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       skills,
       comparison,
       writerMetadata,
+      workspaceContext: nextWorkspace,
     }
 
     // Direct update to specific conversation - avoids re-rendering unrelated conversations
     set({
+      currentWorkspace: nextWorkspace,
       conversationsById: {
         ...conversationsById,
         [currentConversationId]: {
           ...conversation,
+          workspace: nextWorkspace,
           messages: [...conversation.messages, message],
           updatedAt: new Date(),
           title: conversation.messages.length === 0 && role === 'user'

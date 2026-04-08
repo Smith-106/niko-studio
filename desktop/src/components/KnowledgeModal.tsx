@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, User, MapPin, BookOpen, Sparkles, X } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
+import { useAppStore } from '../stores/appStore'
 import type { TabType, KnowledgeItem, OperationStatus, TabConfig } from './knowledge/KnowledgeTypes'
 import { CharacterTab } from './knowledge/CharacterTab'
 import { LocationTab } from './knowledge/LocationTab'
@@ -16,6 +17,7 @@ interface KnowledgeModalProps {
 
 export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   const { t } = useI18n()
+  const setCurrentWorkspace = useAppStore((state) => state.setCurrentWorkspace)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('characters')
   const [searchQuery, setSearchQuery] = useState('')
@@ -51,6 +53,11 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
 
   const handleItemClick = (item: KnowledgeItem) => {
     setSelectedItem(item)
+    setCurrentWorkspace({
+      knowledge: {
+        focusEntityId: String(item.id ?? item.name ?? ''),
+      },
+    })
   }
 
   const selectedItemId =
@@ -134,7 +141,9 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             onLoadingChange={handleLoadingChange}
             onItemClick={handleItemClick}
             selectedItemId={selectedItemId}
+            selectedItem={selectedItem}
             searchQuery={searchQuery}
+            onStatusChange={handleStatusChange}
           />
         )
       case 'locations':
@@ -146,7 +155,9 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             onLoadingChange={handleLoadingChange}
             onItemClick={handleItemClick}
             selectedItemId={selectedItemId}
+            selectedItem={selectedItem}
             searchQuery={searchQuery}
+            onStatusChange={handleStatusChange}
           />
         )
       case 'plots':
@@ -158,7 +169,9 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             onLoadingChange={handleLoadingChange}
             onItemClick={handleItemClick}
             selectedItemId={selectedItemId}
+            selectedItem={selectedItem}
             searchQuery={searchQuery}
+            onStatusChange={handleStatusChange}
           />
         )
       case 'skills': {

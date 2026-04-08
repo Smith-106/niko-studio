@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
+
+import type { ProjectWorkspaceContext } from '@/types/workspace'
+
 import { createPlan, executePlan, routeWorkflow, workflowLifecycle } from '../api/client'
+import { useAppStore } from '../stores/appStore'
 
 export type WorkflowAction = 'route' | 'plan' | 'execute' | 'lifecycle'
 export type WorkflowLifecycleAction = 'start' | 'pause' | 'resume' | 'stop' | 'status'
@@ -39,6 +43,7 @@ const readStringField = (payload: unknown, key: 'plan_id' | 'step_id'): string |
 interface UseEvaluationWorkflowOptions {
   content: string
   defaultLevel: string
+  workspace?: ProjectWorkspaceContext | null
   t: {
     evaluationWorkflowLoading: string
     evaluationWorkflowError: string
@@ -48,7 +53,16 @@ interface UseEvaluationWorkflowOptions {
   }
 }
 
-export function useEvaluationWorkflow({ content, defaultLevel, t }: UseEvaluationWorkflowOptions) {
+interface WorkflowActionOverrides {
+  task?: string
+  level?: string
+  planId?: string
+  stepId?: string
+  lifecycleAction?: WorkflowLifecycleAction
+  confirmToken?: string
+}
+
+export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: UseEvaluationWorkflowOptions) {
   const [workflowTask, setWorkflowTask] = useState(content)
   const [workflowLevel, setWorkflowLevel] = useState(defaultLevel)
   const [workflowPlanId, setWorkflowPlanId] = useState('')
@@ -59,6 +73,7 @@ export function useEvaluationWorkflow({ content, defaultLevel, t }: UseEvaluatio
   const [workflowConfirmToken, setWorkflowConfirmToken] = useState('')
   const [workflowGateReason, setWorkflowGateReason] = useState<string | null>(null)
   const [workflowWaitingConfirmation, setWorkflowWaitingConfirmation] = useState(false)
+  const syncCurrentWorkspace = useAppStore((state) => state.setCurrentWorkspace)
 
   useEffect(() => {
     setWorkflowTask(content)
@@ -102,9 +117,38 @@ export function useEvaluationWorkflow({ content, defaultLevel, t }: UseEvaluatio
     setWorkflowGateReason(null)
   }
 
+  const syncWorkflowWorkspaceFromPayload = (payload: unknown, levelHint?: string) => {
+    if (typeof syncCurrentWorkspace !== 'function') {
+      return
+    }
+
+    const record = readRecord(payload)
+    if (record.workspace && typeof record.workspace === 'object') {
+      syncCurrentWorkspace(record.workspace as Record<string, unknown>)
+      return
+    }
+
+    const planId = readStringField(payload, 'plan_id')
+    const level = typeof record.level === 'string' && record.level.trim()
+      ? record.level.trim()
+      : levelHint?.trim() || null
+
+    if (!planId && !level) return
+
+    syncCurrentWorkspace({
+      workflow: {
+        planId: planId ?? undefined,
+        level: level ?? undefined,
+      },
+    })
+  }
+
   const executeWorkflowAction = async (
     action: WorkflowAction,
-    run: () => Promise<{ success: boolean; data?: unknown; error?: string }>
+    run: () => Promise<{ success: boolean; data?: unknown; error?: string }>,
+    options?: {
+      onSuccess?: (payload: unknown) => void
+    },
   ) => {
     setWorkflowState(action, { status: 'loading', message: t.evaluationWorkflowLoading })
     try {
@@ -118,6 +162,7 @@ export function useEvaluationWorkflow({ content, defaultLevel, t }: UseEvaluatio
       }
       syncWorkflowIdsFromPayload(response.data)
       syncWorkflowConfirmationFromPayload(response.data)
+      options?.onSuccess?.(response.data)
       setWorkflowResult(stringifyWorkflowPayload(response.data))
       setWorkflowState(action, { status: 'success', message: t.evaluationWorkflowSuccess })
     } catch (error) {
@@ -128,42 +173,113 @@ export function useEvaluationWorkflow({ content, defaultLevel, t }: UseEvaluatio
     }
   }
 
-  const handleWorkflowRoute = async () => {
-    await executeWorkflowAction('route', () => routeWorkflow(workflowTask, workflowLevel))
+  const syncRequestedOverrides = (overrides?: WorkflowActionOverrides) => {
+    if (!overrides) return
+    if (typeof overrides.task === 'string') setWorkflowTask(overrides.task)
+    if (typeof overrides.level === 'string') setWorkflowLevel(overrides.level)
+    if (typeof overrides.planId === 'string') setWorkflowPlanId(overrides.planId)
+    if (typeof overrides.stepId === 'string') setWorkflowStepId(overrides.stepId)
+    if (typeof overrides.confirmToken === 'string') setWorkflowConfirmToken(overrides.confirmToken)
+    if (overrides.lifecycleAction) setWorkflowLifecycleAction(overrides.lifecycleAction)
   }
 
-  const handleWorkflowPlan = async () => {
-    await executeWorkflowAction('plan', () => createPlan(workflowTask, workflowLevel))
-  }
-
-  const handleWorkflowExecute = async () => {
-    if (!workflowPlanId.trim()) {
-      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
-      return
-    }
-    await executeWorkflowAction('execute', () => executePlan(workflowPlanId, workflowStepId || undefined))
-  }
-
-  const handleWorkflowConfirmAndContinue = async () => {
-    if (!workflowPlanId.trim()) {
-      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
-      return
-    }
-    if (!workflowConfirmToken.trim()) {
-      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowConfirmTokenRequired })
-      return
-    }
-    await executeWorkflowAction('execute', () =>
-      executePlan(workflowPlanId, workflowStepId || undefined, undefined, undefined, workflowConfirmToken.trim())
+  const handleWorkflowRoute = async (overrides?: WorkflowActionOverrides) => {
+    const nextTask = overrides?.task ?? workflowTask
+    const nextLevel = overrides?.level ?? workflowLevel
+    syncRequestedOverrides(overrides)
+    await executeWorkflowAction(
+      'route',
+      () => workspace
+        ? routeWorkflow(nextTask, nextLevel, workspace)
+        : routeWorkflow(nextTask, nextLevel),
+      {
+        onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, nextLevel),
+      },
     )
   }
 
-  const handleWorkflowLifecycle = async () => {
-    if (!workflowPlanId.trim()) {
+  const handleWorkflowPlan = async (overrides?: WorkflowActionOverrides) => {
+    const nextTask = overrides?.task ?? workflowTask
+    const nextLevel = overrides?.level ?? workflowLevel
+    syncRequestedOverrides(overrides)
+    await executeWorkflowAction(
+      'plan',
+      () => workspace
+        ? createPlan(nextTask, nextLevel, undefined, undefined, workspace)
+        : createPlan(nextTask, nextLevel),
+      {
+        onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, nextLevel),
+      },
+    )
+  }
+
+  const handleWorkflowExecute = async (overrides?: WorkflowActionOverrides) => {
+    const nextPlanId = overrides?.planId ?? workflowPlanId
+    const nextStepId = overrides?.stepId ?? workflowStepId
+    syncRequestedOverrides(overrides)
+    if (!nextPlanId.trim()) {
+      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
+      return
+    }
+    await executeWorkflowAction(
+      'execute',
+      () => workspace
+        ? executePlan(nextPlanId, nextStepId || undefined, undefined, undefined, undefined, workspace)
+        : executePlan(nextPlanId, nextStepId || undefined),
+      {
+        onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),
+      },
+    )
+  }
+
+  const handleWorkflowConfirmAndContinue = async (overrides?: WorkflowActionOverrides) => {
+    const nextPlanId = overrides?.planId ?? workflowPlanId
+    const nextStepId = overrides?.stepId ?? workflowStepId
+    const nextConfirmToken = overrides?.confirmToken ?? workflowConfirmToken
+    syncRequestedOverrides(overrides)
+    if (!nextPlanId.trim()) {
+      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
+      return
+    }
+    if (!nextConfirmToken.trim()) {
+      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowConfirmTokenRequired })
+      return
+    }
+    await executeWorkflowAction(
+      'execute',
+      () => workspace
+        ? executePlan(
+          nextPlanId,
+          nextStepId || undefined,
+          undefined,
+          undefined,
+          nextConfirmToken.trim(),
+          workspace,
+        )
+        : executePlan(nextPlanId, nextStepId || undefined, undefined, undefined, nextConfirmToken.trim()),
+      {
+        onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),
+      },
+    )
+  }
+
+  const handleWorkflowLifecycle = async (overrides?: WorkflowActionOverrides) => {
+    const nextPlanId = overrides?.planId ?? workflowPlanId
+    const nextLifecycleAction = overrides?.lifecycleAction ?? workflowLifecycleAction
+    syncRequestedOverrides(overrides)
+    if (!nextPlanId.trim()) {
       setWorkflowState('lifecycle', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
       return
     }
-    await executeWorkflowAction('lifecycle', () => workflowLifecycle(workflowPlanId, workflowLifecycleAction))
+    await executeWorkflowAction(
+      'lifecycle',
+      () => workspace
+        ? workflowLifecycle(nextPlanId, nextLifecycleAction, undefined, workspace)
+        : workflowLifecycle(nextPlanId, nextLifecycleAction),
+      {
+        onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),
+      },
+    )
   }
 
   const retryWorkflowAction = async (action: WorkflowAction) => {

@@ -1,3 +1,5 @@
+import type { ProjectWorkspaceContext } from '@/types/workspace'
+
 export interface GatewayMetrics {
   requests_total: number
   requests_failed_total: number
@@ -19,6 +21,7 @@ export interface WritingHelperRequest {
   max_sentences?: number
   max_items?: number
   instruction?: string
+  workspace?: ProjectWorkspaceContext
   detection_evasion_guard_enabled?: boolean
   api_key?: string
   base_url?: string
@@ -37,6 +40,7 @@ export interface StreamWritingHelperRequest {
   content: string
   mode?: string
   instruction?: string
+  workspace?: ProjectWorkspaceContext
   model?: string
   provider?: string
   api_key?: string

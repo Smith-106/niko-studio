@@ -1,54 +1,37 @@
-# AI Agent Platform
+# Niko Studio
 
 > **Version**: 8.2.0 (Platform Edition)
-> **Architecture**: Multi-Agent Collaboration + OpenKL Memory + CCW Workflow  
-> **Positioning**: Cherry Studio / Claude-Code-Workflow style AI Agent Platform
+> **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
+> **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
 ---
 
-## 🎯 Platform Overview
+## 🎯 Product Overview
 
-A local-first, extensible AI Agent platform that provides unified memory management, session orchestration, and multi-CLI integration. Designed to support multiple domain adapters including novel writing, code development, and knowledge management.
+Niko Studio ships as a writer-first desktop product. The delivered runtime is the Tauri desktop shell in `desktop/`, backed by the local Node/TypeScript gateway in `src-ts/`. Repository governance helpers, release scripts, and compatibility surfaces remain in the tree, but they do not redefine the supported product/runtime contract.
 
+```text
+Supported product path
+Desktop UI (`desktop/`)
+  -> Tauri host
+  -> local Node/TypeScript gateway (`src-ts/`)
+  -> manuscript, Story Bible, chat drafting, workflow execution, evaluation, knowledge browsing
+
+Compatibility and migration surfaces
+  -> `scripts/start_gateway.py` launcher (defaults to Node/TypeScript)
+  -> explicit legacy Python override when compatibility sources exist
+  -> Streamlit validation flows when a candidate still ships them
+
+Deprecated release surface
+  -> browser-first web entry (`src-ts/web/app.ts`)
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                     AI Agent Platform                             │
-├──────────────────────────────────────────────────────────────────┤
-│                  Platform Core Layer                              │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────────┐ │
-│  │ Memory     │ │ Session    │ │ Multi-CLI  │ │ Knowledge      │ │
-│  │ (OpenKL)   │ │ (CCW)      │ │ Orchestr.  │ │ Graph (Kùzu)   │ │
-│  └────────────┘ └────────────┘ └────────────┘ └────────────────┘ │
-├──────────────────────────────────────────────────────────────────┤
-│                  Domain Adapter Layer                             │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────────────┐  │
-│  │ Novel    │ │ Code     │ │ Knowled. │ │ Custom Domains...  │  │
-│  └──────────┘ └──────────┘ └──────────┘ └────────────────────┘  │
-└──────────────────────────────────────────────────────────────────┘
-```
 
-## ✨ Key Features
+## ✨ Writer-Facing Capabilities
 
-### 🧠 Memory Layer (OpenKL)
-- **File System Contract**: Grep-friendly file storage + Graph-derived indexing
-- **Temporal Organization**: `memories/by_date/YYYY-MM/DD/<id>.md`
-- **Topic Symlinks**: `memories/topics/<slug>/` for cross-referencing
-- **Vector Search**: Kùzu HNSW indexes with 384-dim FastEmbed
-
-### 📝 Session Management (CCW)
-- **5-Level Workflow**: Rapid → Lite → Standard → Brainstorm → Coordinator
-- **Resume Strategy**: Native / Prompt-Concat / Hybrid modes
-- **Smart Search**: Fuzzy (FTS + ripgrep) + Semantic (Embedding + RRF)
-
-### 🔗 Citation System (OpenKL)
-- **Transient Citations**: Returned by search, not persisted
-- **Persisted Citations**: SHA256 verification + GC cleanup
-- **Distillation**: 6 prompt templates with DerivedFrom relationships
-
-### 📊 Knowledge Graph (Kùzu DB)
-- **Platform Nodes**: MemoryNote, Doc, Chunk, Entity, Topic
-- **Domain Nodes**: Character, Scene, Foreshadowing (Novel Adapter)
-- **Cross-Domain Relations**: CHARACTER_MENTIONED_IN, SCENE_DERIVED_FROM
+- Desktop authoring: manuscript editing, chat drafting, evaluation, settings, and knowledge browsing.
+- Local gateway authority: current build/runtime truth is `desktop + src-ts`, with release automation and CI validating that default path.
+- Governance and release helpers: Python remains for scripts, release checks, and explicit compatibility-only overrides.
+- Compatibility surfaces: Streamlit and legacy Python runtime paths stay visible only as labeled compatibility surfaces, not as the primary shipped UI/runtime.
 
 ## 🚀 Quick Start
 
@@ -59,26 +42,26 @@ A local-first, extensible AI Agent platform that provides unified memory managem
 node --version
 npm --version
 
-# Python 3.11+ (release helpers and compatibility scripts)
+# Python 3.11+ (release helpers, governance scripts, compatibility launcher)
 python --version
 
-# Install dependencies
+# Install Python helper dependencies
 pip install -r requirements.txt
 
 # Or use uv (recommended)
 uv sync
 ```
 
-当前默认构建与运行权威面是 `desktop + src-ts`。Python 主要保留给发布辅助脚本和显式兼容路径。
+当前默认构建与运行权威面是 `desktop + src-ts`。Python 主要保留给发布辅助脚本、治理脚本和显式兼容路径。
 
-## Web 交付模型
+## Writer-First Desktop Delivery Contract
 
-当前 Web 交付模型以 **Desktop + MCP Gateway** 为主路径：
+以下四条标签构成当前唯一的运行时 / 发布交付地图；`desktop/README.md`、`docs/release/RELEASE_NOTES.md` 与 `docs/operations/*.md` 仅复用这四条标签，不扩展新的运行时承诺。
 
-- 主交付路径：Desktop 客户端 + Tauri 宿主管理的本地 Gateway。当前桌面运行时与默认构建都优先 Node/TypeScript Gateway。
-- 兼容启动路径：`scripts/start_gateway.py` 默认（`--runtime auto`）启动 Node/TypeScript Gateway；`--runtime python` 仅用于兼容分支。若 legacy Python 源缺失，auto 会回落 Node。
-- Deprecated 路径：`src-ts/web/app.ts` 的 `GET /` 默认返回 `410`；仅在设置 `WEB_UI_FORWARD_URL` 时临时 `302` 转发。
-- Streamlit 路径：用于原型与兼容性验证，不作为主交付入口。
+- `Supported runtime`: `desktop/` + Tauri host + local `src-ts/` Node/TypeScript gateway. This is the shipped product, default build, and default runtime path.
+- `Supported launcher`: `python scripts/start_gateway.py` remains an operator-facing entrypoint, but in the current checkout it starts the Node/TypeScript gateway by default.
+- `Advisory compatibility surfaces`: explicit `--runtime python` legacy override, legacy `src/mcp/**` sources, and Streamlit validation flows only when a release candidate explicitly includes them.
+- `Deprecated surface`: browser-first web entry (`src-ts/web/app.ts`) and any `WEB_UI_FORWARD_URL` forward are not shipped primary UI paths.
 
 ### 单命令验收入口
 
@@ -86,11 +69,11 @@ uv sync
 python scripts/release_check_summary.py
 ```
 
-该命令会汇总版本一致性、baseline/e2e、production 守卫（reload/CORS/metrics）以及 CI 观察点。
+该命令会汇总版本一致性、baseline/e2e、production 守卫（reload/CORS/metrics）、authority alignment，以及当前交付契约观察点。
 
 ### 当前状态权威来源
 
-- 当前运行与发布口径：以 `docs/release/RELEASE_NOTES.md` 为准。
+- 当前产品 / 运行时交付契约：以本节与 `docs/release/RELEASE_NOTES.md` 为准。
 - 当前本地闭环判断：以 `python scripts/release_check_summary.py` 输出为准。
 - 当前 internal CI 权威入口：`.github/workflows/integration-tests.yml`
 - `docs/TASKS_V10_OPTIMIZED.md` 保留为历史架构路线图，不作为当前发布完成度的唯一依据。
@@ -98,6 +81,7 @@ python scripts/release_check_summary.py
 ### 当前权威地图
 
 - 运行时 / 构建默认权威：`desktop/` + `src-ts/` 代码与对应脚本。
+- 交付契约权威：本节 `Writer-First Desktop Delivery Contract` + `docs/release/RELEASE_NOTES.md`
 - 发布策略权威：`docs/release/RELEASE_NOTES.md`
 - 本地发布快照权威：`python scripts/release_check_summary.py`
 - internal CI 权威：`.github/workflows/integration-tests.yml`（包含 advisory lanes，以及 main 分支的 authority alignment / selected contract hard gates）
@@ -182,10 +166,10 @@ python scripts/start_gateway.py --runtime python --host 0.0.0.0 --port 8000
   - `warnings?: string[]`（当前包含 Writer 的非阻断告警代码前缀，如 `knowledge_retrieval_failed`、`openai_proxy_fallback_failed`）
   - `knowledge_retrieved?: { entities_count: number, relations_count: number, memories_count: number }`
 
-### Run Development Server
+### Run Development Server (Advisory Compatibility)
 
 ```bash
-# Start the development server
+# Legacy compatibility/dev helper, not the default desktop delivery path
 python dev_run.py
 ```
 

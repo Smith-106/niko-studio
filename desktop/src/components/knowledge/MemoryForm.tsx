@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { getTemporalFacts, getCharacter, getForeshadows, addMemory } from '../../api/client'
 import { useI18n } from '../../i18n'
+import { useAppStore } from '../../stores/appStore'
 import type { OperationStatus, KnowledgeItem } from './KnowledgeTypes'
 
 interface MemoryFormProps {
@@ -10,6 +11,7 @@ interface MemoryFormProps {
 
 export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
   const { t } = useI18n()
+  const currentWorkspace = useAppStore((state) => state.currentWorkspace)
   const [temporalEntityId, setTemporalEntityId] = useState('')
   const [temporalAtTime, setTemporalAtTime] = useState('')
   const [characterName, setCharacterName] = useState('')
@@ -28,7 +30,7 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
       return
     }
 
-    const response = await getTemporalFacts(entityId, temporalAtTime.trim() || undefined)
+    const response = await getTemporalFacts(entityId, temporalAtTime.trim() || undefined, currentWorkspace)
     if (response.success && Array.isArray(response.data)) {
       const temporalItems = response.data.map((fact) => ({
         id: fact.id,
@@ -50,7 +52,7 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
       return
     }
 
-    const response = await getCharacter(name, true)
+    const response = await getCharacter(name, true, { workspace: currentWorkspace })
     if (response.success && response.data) {
       const relationships = response.data.relationships
         ? Object.entries(response.data.relationships).map(([target, relation]) => `${target}: ${relation}`).join('；')
@@ -72,7 +74,9 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
   const loadForeshadows = async () => {
     const chapter = Number(foreshadowChapter)
     const chapterValue = Number.isFinite(chapter) && chapter > 0 ? chapter : undefined
-    const response = await getForeshadows(foreshadowStatus || undefined, chapterValue)
+    const response = await getForeshadows(foreshadowStatus || undefined, chapterValue, {
+      workspace: currentWorkspace,
+    })
     if (response.success && Array.isArray(response.data)) {
       onItemsChange(
         response.data.map((item) => ({
@@ -105,6 +109,7 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
       dimension: memoryDimension,
       entity_id: memoryEntityId.trim() || undefined,
       tags,
+      workspace: currentWorkspace,
     })
 
     if (response.success) {

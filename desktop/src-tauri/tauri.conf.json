@@ -13,6 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "Niko-Studio",
         "width": 1200,
         "height": 800,
@@ -25,7 +26,10 @@
       }
     ],
     "security": {
-      "csp": null
+      "capabilities": ["main-desktop"],
+      "freezePrototype": true,
+      "csp": "default-src 'self' customprotocol: asset: http://ipc.localhost https://ipc.localhost; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost http://127.0.0.1:* http://localhost:* https:; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+      "devCsp": "default-src 'self' customprotocol: asset: http://ipc.localhost https://ipc.localhost http://127.0.0.1:* http://localhost:*; script-src 'self' customprotocol: asset: http://127.0.0.1:* http://localhost:* 'unsafe-eval'; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https:; img-src 'self' asset: http://asset.localhost https://asset.localhost data: blob: http://127.0.0.1:* http://localhost:* https:; style-src 'self' 'unsafe-inline' http://127.0.0.1:* http://localhost:*; font-src 'self' data: http://127.0.0.1:* http://localhost:*; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     },
     "trayIcon": {
       "iconPath": "icons/icon.png",

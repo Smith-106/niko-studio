@@ -19,7 +19,9 @@ import {
   processWritingHelper,
   polishContent,
   polishContentCompat,
+  resolveWorkspaceContext,
   routeWorkflow,
+  searchMemory,
   setGatewayServiceEnabled,
   updateGatewayServiceConfig,
   workflowLifecycle,
@@ -617,6 +619,79 @@ describe('workflow bridge and quality-check APIs', () => {
       expect.objectContaining({ method: 'POST' })
     )
   })
+
+  it('attaches authoritative workspace context to workflow plan payloads', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'ok', plan_id: 'plan-workspace' }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await createPlan(
+      'task-workspace',
+      'L3',
+      ['建议'],
+      'standard',
+      {
+        schemaVersion: '2026-04-08',
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'atlas-project',
+          workspaceRoot: '/tmp/atlas',
+        },
+        manuscript: {
+          manuscriptId: null,
+          title: null,
+          chapterId: 'chapter-8',
+          chapterTitle: null,
+          chapterNumber: 8,
+        },
+        storyBible: {
+          storyBibleId: null,
+          draftId: 'draft-8',
+          version: null,
+          storage: 'local-draft',
+        },
+        knowledge: {
+          focusEntityId: 'hero-8',
+          graphEntityIds: ['hero-8'],
+          memoryEntryIds: [],
+        },
+        workflow: {
+          sessionId: 'workflow-session-8',
+          planId: null,
+          level: 'L3',
+        },
+        chat: {
+          conversationId: 'conversation-8',
+          comparisonEnabled: false,
+        },
+        compatibility: {
+          additiveContract: true,
+          migratedLegacyFields: [],
+          notes: [],
+        },
+      },
+    )
+
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/workflow/plan')
+    expect(init.method).toBe('POST')
+    const body = JSON.parse(String(init.body))
+    expect(body).toMatchObject({
+      task: 'task-workspace',
+      workspace: {
+        identity: {
+          projectId: 'atlas-project',
+        },
+        workflow: {
+          sessionId: 'workflow-session-8',
+        },
+      },
+    })
+  })
 })
 
 describe('writing helper API', () => {
@@ -819,6 +894,175 @@ describe('chat request payload', () => {
         }),
       })
     )
+  })
+
+  it('sends canonical workspace payload and legacy chat context together', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: 'ok', skills_used: [] }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await chat({
+      messages: [{ role: 'user', content: 'hello workspace' }],
+      workflowLevel: 'L3',
+      skills: [],
+      allowLlmFallback: true,
+      workspace: {
+        schemaVersion: '2026-04-08',
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'atlas-project',
+          workspaceRoot: '/tmp/atlas',
+        },
+        manuscript: {
+          manuscriptId: null,
+          title: null,
+          chapterId: 'chapter-11',
+          chapterTitle: null,
+          chapterNumber: 11,
+        },
+        storyBible: {
+          storyBibleId: null,
+          draftId: 'draft-11',
+          version: null,
+          storage: 'local-draft',
+        },
+        knowledge: {
+          focusEntityId: 'hero-11',
+          graphEntityIds: ['hero-11'],
+          memoryEntryIds: [],
+        },
+        workflow: {
+          sessionId: 'workflow-session-11',
+          planId: null,
+          level: 'L3',
+        },
+        chat: {
+          conversationId: 'conversation-11',
+          comparisonEnabled: false,
+        },
+        compatibility: {
+          additiveContract: true,
+          migratedLegacyFields: [],
+          notes: [],
+        },
+      },
+    })
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(String(init.body))
+    expect(body.context).toEqual({
+      projectId: 'atlas-project',
+      chapterId: 'chapter-11',
+    })
+    expect(body.workspace.workflow.sessionId).toBe('workflow-session-11')
+  })
+})
+
+describe('workspace api surface', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('resolves canonical workspace context through the dedicated endpoint', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        workspace: {
+          identity: {
+            projectId: 'atlas-project',
+          },
+        },
+        summary: {
+          projectId: 'atlas-project',
+        },
+        compatibility: {
+          additiveContract: true,
+          migratedLegacyFields: ['project_id'],
+        },
+      }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await resolveWorkspaceContext({
+      project_id: 'atlas-project',
+      session_id: 'session-12',
+      context: {
+        chapterId: 'chapter-12',
+      },
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/workspace/context'),
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    )
+    expect(response.success).toBe(true)
+    expect(response.data?.workspace.identity.projectId).toBe('atlas-project')
+  })
+
+  it('derives legacy memory scope when searchMemory receives workspace context', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ([]),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await searchMemory('plot outline', {
+      workspace: {
+        schemaVersion: '2026-04-08',
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'atlas-project',
+          workspaceRoot: '/tmp/atlas',
+        },
+        manuscript: {
+          manuscriptId: null,
+          title: null,
+          chapterId: 'chapter-13',
+          chapterTitle: null,
+          chapterNumber: 13,
+        },
+        storyBible: {
+          storyBibleId: null,
+          draftId: 'draft-13',
+          version: null,
+          storage: 'local-draft',
+        },
+        knowledge: {
+          focusEntityId: 'hero-13',
+          graphEntityIds: ['hero-13'],
+          memoryEntryIds: [],
+        },
+        workflow: {
+          sessionId: 'workflow-session-13',
+          planId: null,
+          level: 'L3',
+        },
+        chat: {
+          conversationId: 'conversation-13',
+          comparisonEnabled: false,
+        },
+        compatibility: {
+          additiveContract: true,
+          migratedLegacyFields: [],
+          notes: [],
+        },
+      },
+    })
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(String(init.body))
+    expect(body.project_id).toBe('atlas-project')
+    expect(body.session_id).toBe('workflow-session-13')
+    expect(body.entity_id).toBe('hero-13')
   })
 })
 

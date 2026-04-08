@@ -1,8 +1,32 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { ChevronDown, BookOpen, Users, Map, FileText, Tag, Sparkles, PenLine, Wand2, SlidersHorizontal, Download, RotateCcw, Upload } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react'
+import {
+  ChevronDown,
+  BookOpen,
+  Users,
+  Map,
+  FileText,
+  Tag,
+  Sparkles,
+  PenLine,
+  Wand2,
+  SlidersHorizontal,
+  Download,
+  RotateCcw,
+  Upload,
+} from 'lucide-react'
+
 import { queryGraph } from '../api/client'
-import { toGraphItems } from '../components/knowledge/knowledgeUtils'
+import {
+  buildGraphMergeMutation,
+  buildStoryBibleGraphName,
+  buildWorkspaceNotice,
+  filterWorkspaceKnowledgeItems,
+  readGraphMutationError,
+  toGraphItems,
+  WORKSPACE_KNOWLEDGE_CHANGED_EVENT,
+} from './knowledge/knowledgeUtils'
 import { useI18n } from '../i18n'
+import { useAppStore } from '../stores/appStore'
 
 interface StoryBibleSection {
   title: string
@@ -47,13 +71,13 @@ function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: string 
   }
   return (
     <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-      {items.map((item, i) => (
+      {items.map((item, index) => (
         <div
-          key={item.id ?? i}
+          key={item.id ?? index}
           className="px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--surface-sunken)] border border-[var(--border-subtle)]"
         >
           <div className="text-sm font-medium text-[var(--text-primary)]">
-            {item.name || item.title || item.id || `条目 ${i + 1}`}
+            {item.name || item.title || item.id || `条目 ${index + 1}`}
           </div>
           {(item.description || item.content) && (
             <div className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2">
@@ -76,20 +100,9 @@ const STORY_BIBLE_STORAGE_KEYS = {
   style: 'niko.sb-style-v1',
 } as const
 
-function loadFromStorage(key: string): string {
-  try { return localStorage.getItem(key) || '' } catch { return '' }
-}
-
-function saveToStorage(key: string, value: string) {
-  try { localStorage.setItem(key, value) } catch { /* ignore */ }
-}
-
-function removeFromStorage(key: string) {
-  try { localStorage.removeItem(key) } catch { /* ignore */ }
-}
-
 type StyleId = 'tried' | 'matchMy' | 'soundsLike' | 'custom'
 type StoryBibleMessage = { type: 'success' | 'error'; text: string } | null
+type StoryBibleSyncState = 'loading' | 'idle' | 'saving' | 'saved' | 'error'
 
 interface StoryBibleDraftPayload {
   version: string
@@ -104,61 +117,166 @@ interface StoryBibleDraftPayload {
   }
 }
 
+function loadFromStorage(key: string): string {
+  try {
+    return localStorage.getItem(key) || ''
+  } catch {
+    return ''
+  }
+}
+
+function removeFromStorage(key: string) {
+  try {
+    localStorage.removeItem(key)
+  } catch {
+    // ignore
+  }
+}
+
+function readString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
 function isStyleId(value: string): value is StyleId {
   return ['tried', 'matchMy', 'soundsLike', 'custom'].includes(value)
 }
 
+function clearLegacyStoryBibleDraft() {
+  Object.values(STORY_BIBLE_STORAGE_KEYS).forEach(removeFromStorage)
+}
+
+function buildLegacyDraftPayload(): StoryBibleDraftPayload | null {
+  const braindump = loadFromStorage(STORY_BIBLE_STORAGE_KEYS.braindump)
+  const genres = loadFromStorage(STORY_BIBLE_STORAGE_KEYS.genres)
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+  const synopsis = loadFromStorage(STORY_BIBLE_STORAGE_KEYS.synopsis)
+  const outline = loadFromStorage(STORY_BIBLE_STORAGE_KEYS.outline)
+  const style = loadFromStorage(STORY_BIBLE_STORAGE_KEYS.style)
+
+  if (!braindump && genres.length === 0 && !synopsis && !outline && !style) {
+    return null
+  }
+
+  return {
+    version: STORY_BIBLE_DRAFT_VERSION,
+    kind: 'story-bible-local-draft',
+    exportedAt: new Date().toISOString(),
+    draft: {
+      braindump,
+      genres,
+      synopsis,
+      outline,
+      style: isStyleId(style) ? style : 'tried',
+    },
+  }
+}
+
+function readSyncCopy(language: 'zh' | 'en', state: StoryBibleSyncState): string {
+  if (language === 'zh') {
+    switch (state) {
+      case 'loading':
+        return '正在加载工作区 Story Bible...'
+      case 'saving':
+        return '正在同步到当前工作区...'
+      case 'saved':
+        return '已同步到当前工作区'
+      case 'error':
+        return '同步失败，请稍后重试'
+      default:
+        return '等待新的工作区改动'
+    }
+  }
+
+  switch (state) {
+    case 'loading':
+      return 'Loading workspace Story Bible...'
+    case 'saving':
+      return 'Syncing to the active workspace...'
+    case 'saved':
+      return 'Synced to the active workspace'
+    case 'error':
+      return 'Sync failed. Please try again.'
+    default:
+      return 'Waiting for workspace edits'
+  }
+}
+
+function parseGenres(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+  }
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) {
+        return parsed.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+      }
+    } catch {
+      return value.split(',').map((entry) => entry.trim()).filter(Boolean)
+    }
+  }
+  return []
+}
+
 export function StoryBiblePanel() {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+  const currentWorkspace = useAppStore((state) => state.currentWorkspace)
+  const setCurrentWorkspace = useAppStore((state) => state.setCurrentWorkspace)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const lastSavedSignatureRef = useRef<string | null>(null)
+
   const [characters, setCharacters] = useState<GraphItem[]>([])
   const [locations, setLocations] = useState<GraphItem[]>([])
-  const [braindump, setBraindump] = useState(() => loadFromStorage(STORY_BIBLE_STORAGE_KEYS.braindump))
-  const [genres, setGenres] = useState<string[]>(() => {
-    const raw = loadFromStorage(STORY_BIBLE_STORAGE_KEYS.genres)
-    return raw ? raw.split(',').filter(Boolean) : []
-  })
+  const [braindump, setBraindump] = useState('')
+  const [genres, setGenres] = useState<string[]>([])
   const [genreInput, setGenreInput] = useState('')
-  const [synopsis, setSynopsis] = useState(() => loadFromStorage(STORY_BIBLE_STORAGE_KEYS.synopsis))
-  const [outline, setOutline] = useState(() => loadFromStorage(STORY_BIBLE_STORAGE_KEYS.outline))
-  const [selectedStyle, setSelectedStyle] = useState<StyleId>(() =>
-    (loadFromStorage(STORY_BIBLE_STORAGE_KEYS.style) as StyleId) || 'tried'
-  )
+  const [synopsis, setSynopsis] = useState('')
+  const [outline, setOutline] = useState('')
+  const [selectedStyle, setSelectedStyle] = useState<StyleId>('tried')
   const [draftMessage, setDraftMessage] = useState<StoryBibleMessage>(null)
   const [loading, setLoading] = useState(true)
+  const [syncState, setSyncState] = useState<StoryBibleSyncState>('loading')
+
+  const storyBibleName = buildStoryBibleGraphName(currentWorkspace)
+  const workspaceNotice = buildWorkspaceNotice(language)
+  const syncCopy = readSyncCopy(language, syncState)
 
   const showDraftMessage = useCallback((type: 'success' | 'error', text: string) => {
     setDraftMessage({ type, text })
     window.setTimeout(() => setDraftMessage(null), 3000)
   }, [])
 
-  const saveBraindump = useCallback((v: string) => { setBraindump(v); saveToStorage(STORY_BIBLE_STORAGE_KEYS.braindump, v) }, [])
-  const saveSynopsis = useCallback((v: string) => { setSynopsis(v); saveToStorage(STORY_BIBLE_STORAGE_KEYS.synopsis, v) }, [])
-  const saveOutline = useCallback((v: string) => { setOutline(v); saveToStorage(STORY_BIBLE_STORAGE_KEYS.outline, v) }, [])
-
-  const toggleGenre = useCallback((genre: string) => {
-    setGenres(prev => {
-      const next = prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]
-      saveToStorage(STORY_BIBLE_STORAGE_KEYS.genres, next.join(','))
-      return next
-    })
-  }, [])
-
-  const addCustomGenre = useCallback(() => {
-    const trimmed = genreInput.trim()
-    if (trimmed && !genres.includes(trimmed)) {
-      setGenres(prev => {
-        const next = [...prev, trimmed]
-        saveToStorage(STORY_BIBLE_STORAGE_KEYS.genres, next.join(','))
-        return next
-      })
-      setGenreInput('')
+  const syncWorkspaceStoryBible = useCallback((next: {
+    storyBibleId: string
+    draftId: string
+    version: string
+    storage: 'local-draft' | 'workspace' | 'graph' | 'memory'
+  }) => {
+    const currentStoryBible = currentWorkspace.storyBible
+    if (
+      currentStoryBible.storyBibleId === next.storyBibleId
+      && currentStoryBible.draftId === next.draftId
+      && currentStoryBible.version === next.version
+      && currentStoryBible.storage === next.storage
+    ) {
+      return
     }
-  }, [genreInput, genres])
 
-  const handleStyleChange = useCallback((style: StyleId) => {
-    setSelectedStyle(style)
-    saveToStorage(STORY_BIBLE_STORAGE_KEYS.style, style)
+    setCurrentWorkspace({
+      storyBible: next,
+    })
+  }, [currentWorkspace.storyBible, setCurrentWorkspace])
+
+  const applyDraftPayload = useCallback((payload: StoryBibleDraftPayload) => {
+    const nextStyle = isStyleId(payload.draft.style) ? payload.draft.style : 'tried'
+    setBraindump(payload.draft.braindump)
+    setGenres(payload.draft.genres.filter((genre) => typeof genre === 'string' && genre.trim().length > 0))
+    setGenreInput('')
+    setSynopsis(payload.draft.synopsis)
+    setOutline(payload.draft.outline)
+    setSelectedStyle(nextStyle)
   }, [])
 
   const buildDraftPayload = useCallback(
@@ -177,25 +295,227 @@ export function StoryBiblePanel() {
     [braindump, genres, outline, selectedStyle, synopsis],
   )
 
-  const applyDraftPayload = useCallback((payload: StoryBibleDraftPayload) => {
-    const nextStyle = isStyleId(payload.draft.style) ? payload.draft.style : 'tried'
-    const nextGenres = Array.isArray(payload.draft.genres)
-      ? payload.draft.genres.filter((genre): genre is string => typeof genre === 'string' && genre.trim().length > 0)
-      : []
+  const refreshKnowledgeLists = useCallback(async () => {
+    try {
+      const [characterResult, locationResult] = await Promise.all([
+        queryGraph('MATCH (c:Character) RETURN c LIMIT 100', { workspace: currentWorkspace }),
+        queryGraph('MATCH (l:Location) RETURN l LIMIT 100', { workspace: currentWorkspace }),
+      ])
 
-    setBraindump(payload.draft.braindump)
-    setGenres(nextGenres)
-    setGenreInput('')
-    setSynopsis(payload.draft.synopsis)
-    setOutline(payload.draft.outline)
-    setSelectedStyle(nextStyle)
+      if (characterResult.success) {
+        setCharacters(
+          filterWorkspaceKnowledgeItems(toGraphItems(characterResult.data, 'c'), currentWorkspace, {
+            itemKind: 'character',
+          }),
+        )
+      }
 
-    saveToStorage(STORY_BIBLE_STORAGE_KEYS.braindump, payload.draft.braindump)
-    saveToStorage(STORY_BIBLE_STORAGE_KEYS.genres, nextGenres.join(','))
-    saveToStorage(STORY_BIBLE_STORAGE_KEYS.synopsis, payload.draft.synopsis)
-    saveToStorage(STORY_BIBLE_STORAGE_KEYS.outline, payload.draft.outline)
-    saveToStorage(STORY_BIBLE_STORAGE_KEYS.style, nextStyle)
+      if (locationResult.success) {
+        setLocations(
+          filterWorkspaceKnowledgeItems(toGraphItems(locationResult.data, 'l'), currentWorkspace, {
+            itemKind: 'location',
+          }),
+        )
+      }
+    } catch (error) {
+      console.error('Failed to refresh Story Bible knowledge lists:', error)
+    }
+  }, [currentWorkspace])
+
+  const loadWorkspaceStoryBible = useCallback(async () => {
+    setLoading(true)
+    setSyncState('loading')
+
+    try {
+      const [storyBibleResult] = await Promise.all([
+        queryGraph(`MATCH (n:Item) WHERE n.name = ${JSON.stringify(storyBibleName)} RETURN n`, {
+          workspace: currentWorkspace,
+        }),
+        refreshKnowledgeLists(),
+      ])
+
+      if (storyBibleResult.success) {
+        const graphError = readGraphMutationError(storyBibleResult.data)
+        if (graphError) {
+          throw new Error(graphError)
+        }
+
+        const persistedItem = toGraphItems(storyBibleResult.data, 'n')[0]
+        if (persistedItem) {
+          setBraindump(readString(persistedItem.braindump))
+          setGenres(parseGenres(persistedItem.genres))
+          setGenreInput('')
+          setSynopsis(readString(persistedItem.synopsis))
+          setOutline(readString(persistedItem.outline))
+          setSelectedStyle(
+            isStyleId(readString(persistedItem.style)) ? (persistedItem.style as StyleId) : 'tried',
+          )
+
+          lastSavedSignatureRef.current = JSON.stringify({
+            name: storyBibleName,
+            braindump: readString(persistedItem.braindump),
+            genres: parseGenres(persistedItem.genres),
+            synopsis: readString(persistedItem.synopsis),
+            outline: readString(persistedItem.outline),
+            style: isStyleId(readString(persistedItem.style)) ? persistedItem.style : 'tried',
+          })
+
+          syncWorkspaceStoryBible({
+            storyBibleId: readString(persistedItem.id) || storyBibleName,
+            draftId: storyBibleName,
+            version: readString(persistedItem.version) || STORY_BIBLE_DRAFT_VERSION,
+            storage: 'graph',
+          })
+          clearLegacyStoryBibleDraft()
+          setSyncState('saved')
+          return
+        }
+      }
+
+      const legacyDraft = buildLegacyDraftPayload()
+      if (legacyDraft) {
+        applyDraftPayload(legacyDraft)
+        lastSavedSignatureRef.current = null
+      } else {
+        setBraindump('')
+        setGenres([])
+        setGenreInput('')
+        setSynopsis('')
+        setOutline('')
+        setSelectedStyle('tried')
+        lastSavedSignatureRef.current = null
+      }
+
+      setSyncState('idle')
+    } catch (error) {
+      console.error('Failed to load Story Bible:', error)
+      setSyncState('error')
+      showDraftMessage(
+        'error',
+        language === 'zh' ? '加载 Story Bible 失败，请稍后重试。' : 'Failed to load the Story Bible. Please try again.',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }, [
+    applyDraftPayload,
+    currentWorkspace,
+    language,
+    refreshKnowledgeLists,
+    syncWorkspaceStoryBible,
+    showDraftMessage,
+    storyBibleName,
+  ])
+
+  useEffect(() => {
+    loadWorkspaceStoryBible()
+  }, [loadWorkspaceStoryBible])
+
+  useEffect(() => {
+    const handleKnowledgeChange = () => {
+      void refreshKnowledgeLists()
+    }
+
+    window.addEventListener(WORKSPACE_KNOWLEDGE_CHANGED_EVENT, handleKnowledgeChange)
+    return () => window.removeEventListener(WORKSPACE_KNOWLEDGE_CHANGED_EVENT, handleKnowledgeChange)
+  }, [refreshKnowledgeLists])
+
+  const storyBibleSignature = JSON.stringify({
+    name: storyBibleName,
+    braindump,
+    genres,
+    synopsis,
+    outline,
+    style: selectedStyle,
+  })
+
+  useEffect(() => {
+    if (loading) return
+    if (storyBibleSignature === lastSavedSignatureRef.current) return
+
+    const isEmpty =
+      !braindump.trim()
+      && genres.length === 0
+      && !synopsis.trim()
+      && !outline.trim()
+      && selectedStyle === 'tried'
+
+    if (isEmpty && lastSavedSignatureRef.current === null) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      setSyncState('saving')
+      try {
+        const response = await queryGraph(
+          buildGraphMergeMutation(
+            'Item',
+            { name: storyBibleName },
+            {
+              name: storyBibleName,
+              itemKind: 'story-bible',
+              workspaceId: currentWorkspace.identity.workspaceId,
+              projectId: currentWorkspace.identity.projectId,
+              workspaceRoot: currentWorkspace.identity.workspaceRoot,
+              version: STORY_BIBLE_DRAFT_VERSION,
+              braindump,
+              genres: JSON.stringify(genres),
+              synopsis,
+              outline,
+              style: selectedStyle,
+            },
+          ),
+          { workspace: currentWorkspace },
+        )
+
+        const graphError = readGraphMutationError(response.data)
+        if (!response.success || graphError) {
+          throw new Error(response.error || graphError || 'Story Bible save failed')
+        }
+
+        const savedItem = toGraphItems(response.data, 'n')[0]
+        lastSavedSignatureRef.current = storyBibleSignature
+        syncWorkspaceStoryBible({
+          storyBibleId: readString(savedItem?.id) || storyBibleName,
+          draftId: storyBibleName,
+          version: STORY_BIBLE_DRAFT_VERSION,
+          storage: 'graph',
+        })
+        clearLegacyStoryBibleDraft()
+        setSyncState('saved')
+      } catch (error) {
+        console.error('Failed to persist Story Bible:', error)
+        setSyncState('error')
+      }
+    }, 350)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    braindump,
+    currentWorkspace,
+    genres,
+    loading,
+    outline,
+    selectedStyle,
+    syncWorkspaceStoryBible,
+    storyBibleName,
+    storyBibleSignature,
+    synopsis,
+  ])
+
+  const toggleGenre = useCallback((genre: string) => {
+    setGenres((previous) => (
+      previous.includes(genre) ? previous.filter((entry) => entry !== genre) : [...previous, genre]
+    ))
   }, [])
+
+  const addCustomGenre = useCallback(() => {
+    const trimmed = genreInput.trim()
+    if (trimmed && !genres.includes(trimmed)) {
+      setGenres((previous) => [...previous, trimmed])
+      setGenreInput('')
+    }
+  }, [genreInput, genres])
 
   const handleExportDraft = useCallback(() => {
     const payload = buildDraftPayload()
@@ -211,7 +531,7 @@ export function StoryBiblePanel() {
     showDraftMessage('success', t.storyBibleDraftExported)
   }, [buildDraftPayload, showDraftMessage, t.storyBibleDraftExported])
 
-  const handleImportDraft = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportDraft = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -221,39 +541,40 @@ export function StoryBiblePanel() {
         const raw = String(loadEvent.target?.result ?? '')
         const payload = JSON.parse(raw) as Partial<StoryBibleDraftPayload>
         if (
-          payload.kind !== 'story-bible-local-draft' ||
-          !payload.draft ||
-          typeof payload.draft.braindump !== 'string' ||
-          typeof payload.draft.synopsis !== 'string' ||
-          typeof payload.draft.outline !== 'string' ||
-          !Array.isArray(payload.draft.genres) ||
-          typeof payload.draft.style !== 'string'
+          payload.kind !== 'story-bible-local-draft'
+          || !payload.draft
+          || typeof payload.draft.braindump !== 'string'
+          || !Array.isArray(payload.draft.genres)
+          || typeof payload.draft.synopsis !== 'string'
+          || typeof payload.draft.outline !== 'string'
+          || typeof payload.draft.style !== 'string'
         ) {
           throw new Error(t.storyBibleDraftImportInvalid)
         }
 
         applyDraftPayload({
-          version: typeof payload.version === 'string' ? payload.version : STORY_BIBLE_DRAFT_VERSION,
+          version: readString(payload.version) || STORY_BIBLE_DRAFT_VERSION,
           kind: 'story-bible-local-draft',
-          exportedAt: typeof payload.exportedAt === 'string' ? payload.exportedAt : new Date().toISOString(),
+          exportedAt: readString(payload.exportedAt) || new Date().toISOString(),
           draft: {
             braindump: payload.draft.braindump,
-            genres: payload.draft.genres as string[],
+            genres: payload.draft.genres.filter((genre): genre is string => typeof genre === 'string'),
             synopsis: payload.draft.synopsis,
             outline: payload.draft.outline,
             style: isStyleId(payload.draft.style) ? payload.draft.style : 'tried',
           },
         })
+        lastSavedSignatureRef.current = null
         showDraftMessage('success', t.storyBibleDraftImported)
       } catch {
         showDraftMessage('error', t.storyBibleDraftImportInvalid)
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
       }
     }
     reader.readAsText(file)
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
   }, [applyDraftPayload, showDraftMessage, t.storyBibleDraftImportInvalid, t.storyBibleDraftImported])
 
   const handleResetDraft = useCallback(() => {
@@ -263,50 +584,21 @@ export function StoryBiblePanel() {
     setSynopsis('')
     setOutline('')
     setSelectedStyle('tried')
-
-    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.braindump)
-    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.genres)
-    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.synopsis)
-    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.outline)
-    removeFromStorage(STORY_BIBLE_STORAGE_KEYS.style)
+    clearLegacyStoryBibleDraft()
+    lastSavedSignatureRef.current = '__reset__'
     showDraftMessage('success', t.storyBibleDraftReset)
   }, [showDraftMessage, t.storyBibleDraftReset])
 
-  useEffect(() => {
-    let cancelled = false
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        const [charResult, locResult] = await Promise.allSettled([
-          queryGraph('MATCH (c:Character) RETURN c LIMIT 50'),
-          queryGraph('MATCH (l:Location) RETURN l LIMIT 50'),
-        ])
-        if (cancelled) return
+  const genrePresets = language === 'zh'
+    ? GENRE_PRESETS_ZH
+    : ['Fantasy', 'Romance', 'Mystery', 'Sci-Fi', 'Horror', 'Historical', 'Martial Arts', 'Urban', 'Coming-of-Age', 'Adventure', 'Court Drama', 'Post-Apocalyptic', 'Xianxia', 'Detective', 'Light Novel']
 
-        if (charResult.status === 'fulfilled' && charResult.value.data) {
-          setCharacters(toGraphItems(charResult.value.data, 'c'))
-        }
-        if (locResult.status === 'fulfilled' && locResult.value.data) {
-          setLocations(toGraphItems(locResult.value.data, 'l'))
-        }
-      } catch {
-        // Graceful degradation
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    fetchData()
-    return () => { cancelled = true }
-  }, [])
-
-  const genrePresets = GENRE_PRESETS_ZH
-
-  const styles: { id: StyleId; icon: React.ReactNode; label: string; desc: string }[] = [
+  const styles = [
     { id: 'tried', icon: <Sparkles size={16} />, label: t.storyBibleStyleTried, desc: t.storyBibleStyleTriedDesc },
     { id: 'matchMy', icon: <PenLine size={16} />, label: t.storyBibleStyleMatchMy, desc: t.storyBibleStyleMatchMyDesc },
     { id: 'soundsLike', icon: <Wand2 size={16} />, label: t.storyBibleStyleSoundsLike, desc: t.storyBibleStyleSoundsLikeDesc },
     { id: 'custom', icon: <SlidersHorizontal size={16} />, label: t.storyBibleStyleCustom, desc: t.storyBibleStyleCustomDesc },
-  ]
+  ] as const
 
   const sections: StoryBibleSection[] = [
     {
@@ -318,7 +610,7 @@ export function StoryBiblePanel() {
           <p className="text-xs text-[var(--text-secondary)]">{t.storyBibleBraindumpHint}</p>
           <textarea
             value={braindump}
-            onChange={(e) => saveBraindump(e.target.value)}
+            onChange={(event) => setBraindump(event.target.value)}
             placeholder={t.storyBibleBraindumpHint}
             className="w-full min-h-32 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
           />
@@ -349,8 +641,8 @@ export function StoryBiblePanel() {
           <div className="flex gap-2">
             <input
               value={genreInput}
-              onChange={(e) => setGenreInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addCustomGenre()}
+              onChange={(event) => setGenreInput(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && addCustomGenre()}
               placeholder={t.storyBibleGenrePlaceholder}
               className="flex-1 text-sm bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] px-3 py-1.5 outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
             />
@@ -389,7 +681,7 @@ export function StoryBiblePanel() {
       content: (
         <textarea
           value={synopsis}
-          onChange={(e) => saveSynopsis(e.target.value)}
+          onChange={(event) => setSynopsis(event.target.value)}
           placeholder={t.storyBibleSynopsisPlaceholder}
           className="w-full min-h-28 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
         />
@@ -417,7 +709,7 @@ export function StoryBiblePanel() {
           {styles.map((style) => (
             <button
               key={style.id}
-              onClick={() => handleStyleChange(style.id)}
+              onClick={() => setSelectedStyle(style.id)}
               aria-pressed={selectedStyle === style.id}
               className={`flex items-start gap-2.5 p-3 rounded-[var(--radius-sm)] border text-left transition-all ${
                 selectedStyle === style.id
@@ -428,12 +720,10 @@ export function StoryBiblePanel() {
               <span className={`mt-0.5 ${selectedStyle === style.id ? 'text-[var(--primary-cta)]' : 'text-[var(--text-muted)]'}`}>
                 {style.icon}
               </span>
-              <div>
-                <div className={`text-xs font-medium ${selectedStyle === style.id ? 'text-[var(--primary-cta)]' : 'text-[var(--text-primary)]'}`}>
-                  {style.label}
-                </div>
-                <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{style.desc}</div>
-              </div>
+              <span className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-[var(--text-primary)]">{style.label}</div>
+                <div className="text-xs text-[var(--text-secondary)] mt-0.5">{style.desc}</div>
+              </span>
             </button>
           ))}
         </div>
@@ -441,79 +731,90 @@ export function StoryBiblePanel() {
     },
     {
       title: t.storyBibleOutline,
-      icon: <FileText size={16} />,
+      icon: <BookOpen size={16} />,
       content: (
         <textarea
           value={outline}
-          onChange={(e) => saveOutline(e.target.value)}
-          placeholder="故事大纲、章节计划、关键情节..."
-          className="w-full min-h-32 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+          onChange={(event) => setOutline(event.target.value)}
+          placeholder={t.storyBibleSynopsisPlaceholder}
+          className="w-full min-h-40 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
         />
       ),
     },
   ]
 
   return (
-    <div className="w-full max-w-[680px] mx-auto space-y-2 pb-6">
-      <div className="flex items-center gap-2 mb-1">
-        <BookOpen size={14} className="text-[var(--primary-cta)]" />
-        <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">{t.storyBibleTitle}</h3>
+    <div className="h-full flex flex-col">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--primary-cta)]/12 flex items-center justify-center">
+          <BookOpen size={16} className="text-[var(--primary-cta)]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">{t.storyBibleTitle}</h3>
+          <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{syncCopy}</div>
+        </div>
       </div>
       <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-3">{t.storyBibleDesc}</p>
-      <div className="mb-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+      <div className="mb-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-4 py-3 text-xs text-[var(--text-secondary)]">
         <div className="font-semibold text-[var(--text-primary)]">{t.storyBiblePersistenceTitle}</div>
-        <p className="mt-2">{t.storyBiblePersistenceLocalOnly}</p>
-        <p className="mt-2">{t.storyBiblePersistenceGraphRead}</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExportDraft}
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-sunken)]"
-            title={t.storyBibleExportDraft}
-          >
-            <Download size={14} />
-            {t.storyBibleExportDraft}
-          </button>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-sunken)]"
-            title={t.storyBibleImportDraft}
-          >
-            <Upload size={14} />
-            {t.storyBibleImportDraft}
-          </button>
-          <button
-            type="button"
-            onClick={handleResetDraft}
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-sunken)]"
-            title={t.storyBibleResetDraft}
-          >
-            <RotateCcw size={14} />
-            {t.storyBibleResetDraft}
-          </button>
-          <input
-            ref={fileInputRef}
-            data-testid="story-bible-import-input"
-            type="file"
-            accept=".json"
-            onChange={handleImportDraft}
-            className="hidden"
-          />
-        </div>
-        {draftMessage && (
-          <div className={`mt-2 text-xs font-medium ${draftMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-            {draftMessage.text}
-          </div>
-        )}
+        {workspaceNotice.map((line) => (
+          <p key={line} className="mt-2">{line}</p>
+        ))}
       </div>
-      {sections.map((section, i) => (
-        <CollapsibleSection key={i} {...section} />
-      ))}
-      <button
-        className="w-full flex items-center justify-center gap-2 py-2.5 mt-2 text-sm font-medium text-white bg-[var(--primary-cta)] hover:bg-[var(--primary-cta-hover)] active:bg-[var(--primary-cta-active)] rounded-[var(--radius-md)] shadow-[var(--shadow-tiny)] transition-all active:scale-[0.99]"
-      >
-        <Sparkles size={14} />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handleExportDraft}
+          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] transition-colors"
+          title={t.storyBibleExportDraft}
+        >
+          <Download size={14} />
+          {t.storyBibleExportDraft}
+        </button>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] transition-colors"
+          title={t.storyBibleImportDraft}
+        >
+          <Upload size={14} />
+          {t.storyBibleImportDraft}
+        </button>
+        <button
+          type="button"
+          onClick={handleResetDraft}
+          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-red-400/40 hover:text-red-500 transition-colors"
+          title={t.storyBibleResetDraft}
+        >
+          <RotateCcw size={14} />
+          {t.storyBibleResetDraft}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          className="hidden"
+          onChange={handleImportDraft}
+          data-testid="story-bible-import-input"
+        />
+      </div>
+      {draftMessage && (
+        <div className={`mb-3 text-xs font-medium ${draftMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+          {draftMessage.text}
+        </div>
+      )}
+      <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+        {sections.map((section) => (
+          <CollapsibleSection
+            key={section.title}
+            title={section.title}
+            icon={section.icon}
+            content={section.content}
+            defaultOpen={section.defaultOpen}
+          />
+        ))}
+      </div>
+      <button className="mt-4 w-full rounded-[var(--radius-sm)] bg-[var(--primary-cta)] text-white py-2 text-sm font-medium hover:bg-[var(--primary-cta-hover)] transition-colors">
         {t.storyBibleGenerate}
       </button>
     </div>
