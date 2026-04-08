@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 8.2.0 (Platform Edition)
+> **Version**: 9.0.1 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -89,10 +89,10 @@ python scripts/release_check_summary.py
 
 ## 前端工程约束（统一口径）
 
-- 本地质量入口：`npm --prefix desktop run check`
+- 本地质量入口（权威）：`npm --prefix desktop run check:local`
 - 后端 / 发布 CI 权威入口：`.github/workflows/external-release-gate.yml`
 - internal CI 权威入口：`.github/workflows/integration-tests.yml`
-- Desktop CI 构建入口：`npm run check`
+- Desktop CI 构建入口（build / smoke）：`npm --prefix desktop run check`
 - 依赖审计：`npm audit --audit-level=high`
 
 ## 阶段 4：执行（自主运行）
@@ -256,4 +256,4 @@ Built on concepts from:
 
 ---
 
-*Version 8.2.0 Platform Edition | Updated: 2026-04-07*
+*Version 9.0.1 Platform Edition | Updated: 2026-04-08*

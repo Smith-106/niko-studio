@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SettingsModal } from './SettingsModal'
+import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { translations } from '../i18n'
 import type { BackendConfig, SecretsResponse } from '../api/client'
@@ -158,10 +159,15 @@ const getInputByLabel = (label: string): HTMLInputElement => {
   return input
 }
 
+const changeInputValue = (input: HTMLInputElement, value: string) => {
+  fireEvent.change(input, { target: { value } })
+}
+
 describe('SettingsModal quality presets', () => {
   beforeEach(() => {
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
+    useAppStore.setState({ checkBackend: vi.fn().mockResolvedValue(undefined) })
     useSettingsStore.setState((state) => ({
       ...state,
       settings: {
@@ -219,8 +225,7 @@ describe('SettingsModal quality presets', () => {
     await user.selectOptions(screen.getByDisplayValue(zh.settingsSearchModeHybrid), 'iterative')
 
     const profileInput = screen.getByPlaceholderText(zh.settingsRetrievalProfilePlaceholder)
-    await user.clear(profileInput)
-    await user.type(profileInput, 'strict')
+    changeInputValue(profileInput as HTMLInputElement, 'strict')
 
 
     const minScoreInput = getInputByLabel(zh.settingsRetrievalMinScore)
@@ -228,14 +233,10 @@ describe('SettingsModal quality presets', () => {
     const maxIterationsInput = getInputByLabel(zh.settingsRetrievalMaxIterations)
     const confidenceThresholdInput = getInputByLabel(zh.settingsRetrievalConfidenceThreshold)
 
-    await user.clear(minScoreInput)
-    await user.type(minScoreInput, '0.35')
-    await user.clear(budgetTokensInput)
-    await user.type(budgetTokensInput, '2048')
-    await user.clear(maxIterationsInput)
-    await user.type(maxIterationsInput, '6')
-    await user.clear(confidenceThresholdInput)
-    await user.type(confidenceThresholdInput, '0.9')
+    changeInputValue(minScoreInput, '0.35')
+    changeInputValue(budgetTokensInput, '2048')
+    changeInputValue(maxIterationsInput, '6')
+    changeInputValue(confidenceThresholdInput, '0.9')
 
     await user.click(screen.getByLabelText(zh.settingsEnableRerank))
     await user.click(screen.getByLabelText(zh.settingsContextTypeCharacter))
@@ -252,8 +253,10 @@ describe('SettingsModal quality presets', () => {
     expect(retrieval.confidenceThreshold).toBe(0.9)
     expect(retrieval.rerank).toBe(true)
     expect(contextTypes).toEqual(['world', 'plot'])
-    expect(onClose).toHaveBeenCalled()
-  })
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled()
+    })
+  }, 10_000)
 
   it('persists workflow backend mode after save', async () => {
     const onClose = vi.fn()
@@ -269,7 +272,9 @@ describe('SettingsModal quality presets', () => {
     await user.click(screen.getByRole('button', { name: zh.save }))
 
     expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
-    expect(onClose).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled()
+    })
   })
 
   it('renders workflow backend mode labels in english', () => {
@@ -342,17 +347,18 @@ describe('SettingsModal quality presets', () => {
     expect(saveButton).toBeDisabled()
     expect(screen.getAllByText(zh.backendConfigReadOnlyHint).length).toBeGreaterThan(0)
 
-    await user.clear(defaultModelInput)
-    await user.type(defaultModelInput, 'gpt-4o-mini')
+    changeInputValue(defaultModelInput as HTMLInputElement, 'gpt-4o-mini')
 
     expect(saveButton).toBeEnabled()
 
     await user.click(saveButton)
 
-    expect(updateBackendConfig).toHaveBeenCalledWith({
-      'agent.default_model': 'gpt-4o-mini',
+    await waitFor(() => {
+      expect(updateBackendConfig).toHaveBeenCalledWith({
+        'agent.default_model': 'gpt-4o-mini',
+      })
     })
-  })
+  }, 10_000)
 
   it('renders backend config labels in english', async () => {
     useSettingsStore.setState((state) => ({

@@ -437,10 +437,22 @@ describe('writer workflow experience', () => {
       expect(mockedCreatePlan).toHaveBeenCalledTimes(2)
     })
     const legacyPlanCall = mockedCreatePlan.mock.calls[1]
-    expect(legacyPlanCall).toHaveLength(2)
+    const legacyWorkspace = legacyPlanCall[4] as ReturnType<typeof buildWorkspace>
+
+    expect(legacyPlanCall).toHaveLength(5)
     expect(legacyPlanCall[1]).toBe('L3')
+    expect(legacyPlanCall[2]).toBeUndefined()
+    expect(legacyPlanCall[3]).toBeUndefined()
     expect(legacyPlanCall[0]).toContain('default-project')
     expect(legacyPlanCall[0]).not.toContain('星港计划')
     expect(legacyPlanCall[0]).not.toContain('第七章 暗潮')
+    expect(legacyWorkspace.identity.projectId).toBe('default-project')
+    expect(legacyWorkspace.identity.projectName).not.toBe('星港计划')
+    expect(legacyWorkspace.manuscript.chapterId).not.toBe('chapter-7')
+    expect(legacyWorkspace.workflow.sessionId).toBe(legacyConversationId)
+    expect(legacyWorkspace.workflow.sessionId).not.toBe('workflow-session-9')
+    expect(legacyWorkspace.workflow.planId).not.toBe('plan-9')
+    expect(legacyWorkspace.chat.conversationId).toBe(legacyConversationId)
+    expect(legacyWorkspace.chat.conversationId).not.toBe('chat-9')
   })
 })

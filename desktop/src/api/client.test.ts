@@ -963,6 +963,48 @@ describe('chat request payload', () => {
 })
 
 describe('workspace api surface', () => {
+  const memoryWorkspace: NonNullable<NonNullable<Parameters<typeof searchMemory>[1]>['workspace']> = {
+    schemaVersion: '2026-04-08',
+    identity: {
+      workspaceId: 'atlas-workspace',
+      projectId: 'atlas-project',
+      projectName: 'atlas-project',
+      workspaceRoot: '/tmp/atlas',
+    },
+    manuscript: {
+      manuscriptId: null,
+      title: null,
+      chapterId: 'chapter-13',
+      chapterTitle: null,
+      chapterNumber: 13,
+    },
+    storyBible: {
+      storyBibleId: null,
+      draftId: 'draft-13',
+      version: null,
+      storage: 'local-draft',
+    },
+    knowledge: {
+      focusEntityId: 'hero-13',
+      graphEntityIds: ['hero-13'],
+      memoryEntryIds: [],
+    },
+    workflow: {
+      sessionId: 'workflow-session-13',
+      planId: null,
+      level: 'L3',
+    },
+    chat: {
+      conversationId: 'conversation-13',
+      comparisonEnabled: false,
+    },
+    compatibility: {
+      additiveContract: true,
+      migratedLegacyFields: [],
+      notes: [],
+    },
+  }
+
   beforeEach(() => {
     vi.restoreAllMocks()
   })
@@ -1006,7 +1048,7 @@ describe('workspace api surface', () => {
     expect(response.data?.workspace.identity.projectId).toBe('atlas-project')
   })
 
-  it('derives legacy memory scope when searchMemory receives workspace context', async () => {
+  it('keeps memory scope generic when searchMemory receives workspace context', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ([]),
@@ -1015,47 +1057,27 @@ describe('workspace api surface', () => {
     vi.stubGlobal('fetch', fetchSpy)
 
     await searchMemory('plot outline', {
-      workspace: {
-        schemaVersion: '2026-04-08',
-        identity: {
-          workspaceId: 'atlas-workspace',
-          projectId: 'atlas-project',
-          projectName: 'atlas-project',
-          workspaceRoot: '/tmp/atlas',
-        },
-        manuscript: {
-          manuscriptId: null,
-          title: null,
-          chapterId: 'chapter-13',
-          chapterTitle: null,
-          chapterNumber: 13,
-        },
-        storyBible: {
-          storyBibleId: null,
-          draftId: 'draft-13',
-          version: null,
-          storage: 'local-draft',
-        },
-        knowledge: {
-          focusEntityId: 'hero-13',
-          graphEntityIds: ['hero-13'],
-          memoryEntryIds: [],
-        },
-        workflow: {
-          sessionId: 'workflow-session-13',
-          planId: null,
-          level: 'L3',
-        },
-        chat: {
-          conversationId: 'conversation-13',
-          comparisonEnabled: false,
-        },
-        compatibility: {
-          additiveContract: true,
-          migratedLegacyFields: [],
-          notes: [],
-        },
-      },
+      workspace: memoryWorkspace,
+    })
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(String(init.body))
+    expect(body.project_id).toBe('atlas-project')
+    expect(body.session_id).toBe('workflow-session-13')
+    expect(body.entity_id).toBeUndefined()
+  })
+
+  it('preserves explicit entity scoping when searchMemory requests it', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ([]),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await searchMemory('plot outline', {
+      entity_id: 'hero-13',
+      workspace: memoryWorkspace,
     })
 
     const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]

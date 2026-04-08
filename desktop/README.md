@@ -83,6 +83,12 @@ npm run tauri:dev
 
 如仅需调试前端壳层，可运行 `npm run dev`；该命令只启动 Vite shell，不代表完整交付运行面。
 
+### 质量门禁
+
+- `npm run check:quick`: 日常开发中的快速校验，当前执行 `lint`、`format:check`、`typecheck`、`check:node-sidecar`、`validate:sidecar-contract` 和 `test`，不包含构建步骤。
+- `npm run check`: 较轻的构建型校验入口，当前只执行 `typecheck && build`，适合确认桌面前端可以完成编译，但不等同于完整本地验收。
+- `npm run check:local`: 当前权威的本地验证路径；它映射到 `check:release`，会串行执行 `lint`、`format:check`、`test`、`build:sidecar`、`validate:sidecar-contract` 和 `build`，应作为本地交付前的标准质量门禁。
+
 ### 构建发布
 
 ```bash

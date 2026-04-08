@@ -5,6 +5,98 @@ import { EvaluationPanel } from './EvaluationPanel'
 import { useSettingsStore } from '../stores/settingsStore'
 import { translations } from '../i18n'
 
+const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
+  const createMockWorkspace = () => ({
+    workflow: {
+      level: 'L3',
+      planId: '',
+      sessionId: null,
+    },
+    chat: {
+      conversationId: null,
+    },
+  })
+
+  const state: {
+    currentConversationId: string | null
+    currentWorkspace: ReturnType<typeof createMockWorkspace>
+    conversationsById: Record<string, { workspace?: ReturnType<typeof createMockWorkspace> }>
+    addMessage: ReturnType<typeof vi.fn>
+    setCurrentWorkspace: ReturnType<typeof vi.fn>
+    syncConversationWorkspace: ReturnType<typeof vi.fn>
+  } = {
+    currentConversationId: null,
+    currentWorkspace: createMockWorkspace(),
+    conversationsById: {},
+    addMessage: vi.fn(),
+    setCurrentWorkspace: vi.fn(),
+    syncConversationWorkspace: vi.fn(),
+  }
+
+  const mergeWorkspacePatch = (
+    currentWorkspace: ReturnType<typeof createMockWorkspace>,
+    workspacePatch: Record<string, unknown>,
+  ) => ({
+    ...currentWorkspace,
+    ...workspacePatch,
+    workflow: {
+      ...currentWorkspace.workflow,
+      ...(workspacePatch.workflow as Record<string, unknown> | undefined),
+    },
+    chat: {
+      ...currentWorkspace.chat,
+      ...(workspacePatch.chat as Record<string, unknown> | undefined),
+    },
+  })
+
+  const resetMockAppStore = () => {
+    state.currentConversationId = null
+    state.currentWorkspace = createMockWorkspace()
+    state.conversationsById = {}
+    state.addMessage = vi.fn()
+    state.setCurrentWorkspace = vi.fn((workspacePatch: Record<string, unknown>) => {
+      state.currentWorkspace = mergeWorkspacePatch(state.currentWorkspace, workspacePatch)
+    })
+    state.syncConversationWorkspace = vi.fn((conversationId: string, workspacePatch: Record<string, unknown>) => {
+      const currentConversation = state.conversationsById[conversationId]
+      state.conversationsById[conversationId] = {
+        ...currentConversation,
+        workspace: mergeWorkspacePatch(
+          currentConversation?.workspace ?? createMockWorkspace(),
+          workspacePatch,
+        ),
+      }
+    })
+  }
+
+  resetMockAppStore()
+
+  const useAppStoreMock = Object.assign(
+    <T,>(selector?: (storeState: typeof state) => T) => (
+      selector ? selector(state) : (state as T)
+    ),
+    {
+      getState: () => state,
+      setState: (
+        partial:
+          | Partial<typeof state>
+          | ((currentState: typeof state) => Partial<typeof state>),
+      ) => {
+        Object.assign(state, typeof partial === 'function' ? partial(state) : partial)
+      },
+    },
+  )
+
+  return {
+    resetMockAppStore,
+    useAppStoreMock,
+  }
+})
+
+vi.mock('@/types/settingsOwnership', () => ({
+  PERSISTED_SETTINGS_KEYS: [],
+}))
+
 vi.mock('../api/client', () => ({
   evaluateContent: vi.fn(),
   novelQualityCheck: vi.fn(),
@@ -21,9 +113,7 @@ vi.mock('../api/client', () => ({
 }))
 
 vi.mock('../stores/appStore', () => ({
-  useAppStore: () => ({
-    addMessage: vi.fn(),
-  }),
+  useAppStore: useAppStoreMock,
 }))
 
 import {
@@ -59,6 +149,14 @@ const mockedWorkflowLifecycle = vi.mocked(workflowLifecycle)
 const zh = translations.zh
 const evaluationWorkflowSuccessRoute = `${zh.evaluationWorkflowRoute}: ${zh.evaluationWorkflowSuccess}`
 const evaluationWorkflowSuccessLifecycle = `${zh.evaluationWorkflowLifecycle}: ${zh.evaluationWorkflowSuccess}`
+const expectWorkflowRequestWorkspace = () => expect.objectContaining({
+  workflow: expect.objectContaining({
+    level: 'L3',
+  }),
+  chat: expect.objectContaining({
+    conversationId: null,
+  }),
+})
 
 const defaultPlanResponse: WorkflowPlanStatusResponse = {
   plan_id: 'plan-1',
@@ -112,6 +210,7 @@ const defaultLifecycleResponse: WorkflowLifecycleResponse = {
 describe('EvaluationPanel actions', () => {
   beforeEach(() => {
     localStorage.clear()
+    resetMockAppStore()
     useSettingsStore.getState().resetSettings()
     vi.clearAllMocks()
 
@@ -255,25 +354,47 @@ describe('EvaluationPanel actions', () => {
 
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowRoute }))
     await waitFor(() => {
-      expect(mockedRouteWorkflow).toHaveBeenCalledWith('测试内容', 'L3')
+      expect(mockedRouteWorkflow).toHaveBeenCalledWith(
+        '测试内容',
+        'L3',
+        expectWorkflowRequestWorkspace()
+      )
       expect(screen.getByText(evaluationWorkflowSuccessRoute)).toBeInTheDocument()
     })
 
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowPlan }))
     await waitFor(() => {
-      expect(mockedCreatePlan).toHaveBeenCalledWith('测试内容', 'L3')
+      expect(mockedCreatePlan).toHaveBeenCalledWith(
+        '测试内容',
+        'L3',
+        undefined,
+        undefined,
+        expectWorkflowRequestWorkspace()
+      )
       expect((screen.getByLabelText(zh.evaluationWorkflowPlanIdPlaceholder) as HTMLInputElement).value).toBe('plan-1')
     })
 
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowExecute }))
     await waitFor(() => {
-      expect(mockedExecutePlan).toHaveBeenCalledWith('plan-1', undefined)
+      expect(mockedExecutePlan).toHaveBeenCalledWith(
+        'plan-1',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        expectWorkflowRequestWorkspace()
+      )
       expect((screen.getByLabelText(zh.evaluationWorkflowStepIdPlaceholder) as HTMLInputElement).value).toBe('step-1')
     })
 
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowLifecycle }))
     await waitFor(() => {
-      expect(mockedWorkflowLifecycle).toHaveBeenCalledWith('plan-1', 'status')
+      expect(mockedWorkflowLifecycle).toHaveBeenCalledWith(
+        'plan-1',
+        'status',
+        undefined,
+        expectWorkflowRequestWorkspace()
+      )
       expect(screen.getByText(evaluationWorkflowSuccessLifecycle)).toBeInTheDocument()
     })
   })
