@@ -73,11 +73,48 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
   const [workflowConfirmToken, setWorkflowConfirmToken] = useState('')
   const [workflowGateReason, setWorkflowGateReason] = useState<string | null>(null)
   const [workflowWaitingConfirmation, setWorkflowWaitingConfirmation] = useState(false)
+  const currentConversationId = useAppStore((state) => state.currentConversationId)
+  const currentWorkspace = useAppStore((state) => state.currentWorkspace)
   const syncCurrentWorkspace = useAppStore((state) => state.setCurrentWorkspace)
+  const syncConversationWorkspace = useAppStore((state) => state.syncConversationWorkspace)
 
   useEffect(() => {
     setWorkflowTask(content)
   }, [content])
+
+  useEffect(() => {
+    const conversationWorkspace = currentConversationId
+      ? useAppStore.getState().conversationsById[currentConversationId]?.workspace
+      : null
+
+    setWorkflowLevel(conversationWorkspace?.workflow.level ?? defaultLevel)
+    setWorkflowPlanId(conversationWorkspace?.workflow.planId ?? '')
+    setWorkflowStepId('')
+    setWorkflowLifecycleAction('status')
+    setWorkflowStates(defaultWorkflowActionStates())
+    setWorkflowResult('')
+    setWorkflowConfirmToken('')
+    setWorkflowGateReason(null)
+    setWorkflowWaitingConfirmation(false)
+  }, [currentConversationId, defaultLevel])
+
+  const resolveWorkflowRequestWorkspace = (): ProjectWorkspaceContext | null => {
+    const baseWorkspace = workspace ?? currentWorkspace ?? null
+    if (!baseWorkspace) return null
+    if (!currentConversationId) return baseWorkspace
+
+    return {
+      ...baseWorkspace,
+      workflow: {
+        ...baseWorkspace.workflow,
+        sessionId: baseWorkspace.workflow.sessionId ?? currentConversationId,
+      },
+      chat: {
+        ...baseWorkspace.chat,
+        conversationId: baseWorkspace.chat.conversationId ?? currentConversationId,
+      },
+    }
+  }
 
   const setWorkflowState = (action: WorkflowAction, next: WorkflowActionState) => {
     setWorkflowStates((prev) => ({
@@ -122,25 +159,58 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
       return
     }
 
-    const record = readRecord(payload)
-    if (record.workspace && typeof record.workspace === 'object') {
-      syncCurrentWorkspace(record.workspace as Record<string, unknown>)
-      return
+    const syncWorkspacePatch = (workspacePatch: Record<string, unknown>) => {
+      const activeConversationId = useAppStore.getState().currentConversationId
+      const activeConversation = activeConversationId
+        ? useAppStore.getState().conversationsById[activeConversationId]
+        : null
+
+      if (activeConversationId && activeConversation) {
+        syncConversationWorkspace(activeConversationId, workspacePatch)
+        return
+      }
+
+      syncCurrentWorkspace(workspacePatch)
     }
 
+    const record = readRecord(payload)
+    const workspacePatch: Record<string, unknown> = record.workspace && typeof record.workspace === 'object'
+      ? { ...(record.workspace as Record<string, unknown>) }
+      : {}
     const planId = readStringField(payload, 'plan_id')
     const level = typeof record.level === 'string' && record.level.trim()
       ? record.level.trim()
       : levelHint?.trim() || null
 
-    if (!planId && !level) return
+    const workflowPatch: Record<string, unknown> = workspacePatch.workflow && typeof workspacePatch.workflow === 'object'
+      ? { ...(workspacePatch.workflow as Record<string, unknown>) }
+      : {}
 
-    syncCurrentWorkspace({
-      workflow: {
-        planId: planId ?? undefined,
-        level: level ?? undefined,
-      },
-    })
+    if (planId) workflowPatch.planId = planId
+    if (level) workflowPatch.level = level
+    if (
+      currentConversationId
+      && (typeof workflowPatch.sessionId !== 'string' || !workflowPatch.sessionId.trim())
+    ) {
+      workflowPatch.sessionId = currentConversationId
+    }
+
+    if (Object.keys(workflowPatch).length > 0) {
+      workspacePatch.workflow = workflowPatch
+    }
+
+    if (currentConversationId) {
+      const chatPatch: Record<string, unknown> = workspacePatch.chat && typeof workspacePatch.chat === 'object'
+        ? { ...(workspacePatch.chat as Record<string, unknown>) }
+        : {}
+      if (typeof chatPatch.conversationId !== 'string' || !chatPatch.conversationId.trim()) {
+        chatPatch.conversationId = currentConversationId
+      }
+      workspacePatch.chat = chatPatch
+    }
+
+    if (Object.keys(workspacePatch).length === 0) return
+    syncWorkspacePatch(workspacePatch)
   }
 
   const executeWorkflowAction = async (
@@ -186,11 +256,12 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
   const handleWorkflowRoute = async (overrides?: WorkflowActionOverrides) => {
     const nextTask = overrides?.task ?? workflowTask
     const nextLevel = overrides?.level ?? workflowLevel
+    const requestWorkspace = resolveWorkflowRequestWorkspace()
     syncRequestedOverrides(overrides)
     await executeWorkflowAction(
       'route',
-      () => workspace
-        ? routeWorkflow(nextTask, nextLevel, workspace)
+      () => requestWorkspace
+        ? routeWorkflow(nextTask, nextLevel, requestWorkspace)
         : routeWorkflow(nextTask, nextLevel),
       {
         onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, nextLevel),
@@ -201,11 +272,12 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
   const handleWorkflowPlan = async (overrides?: WorkflowActionOverrides) => {
     const nextTask = overrides?.task ?? workflowTask
     const nextLevel = overrides?.level ?? workflowLevel
+    const requestWorkspace = resolveWorkflowRequestWorkspace()
     syncRequestedOverrides(overrides)
     await executeWorkflowAction(
       'plan',
-      () => workspace
-        ? createPlan(nextTask, nextLevel, undefined, undefined, workspace)
+      () => requestWorkspace
+        ? createPlan(nextTask, nextLevel, undefined, undefined, requestWorkspace)
         : createPlan(nextTask, nextLevel),
       {
         onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, nextLevel),
@@ -216,6 +288,7 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
   const handleWorkflowExecute = async (overrides?: WorkflowActionOverrides) => {
     const nextPlanId = overrides?.planId ?? workflowPlanId
     const nextStepId = overrides?.stepId ?? workflowStepId
+    const requestWorkspace = resolveWorkflowRequestWorkspace()
     syncRequestedOverrides(overrides)
     if (!nextPlanId.trim()) {
       setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
@@ -223,8 +296,8 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
     }
     await executeWorkflowAction(
       'execute',
-      () => workspace
-        ? executePlan(nextPlanId, nextStepId || undefined, undefined, undefined, undefined, workspace)
+      () => requestWorkspace
+        ? executePlan(nextPlanId, nextStepId || undefined, undefined, undefined, undefined, requestWorkspace)
         : executePlan(nextPlanId, nextStepId || undefined),
       {
         onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),
@@ -236,6 +309,7 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
     const nextPlanId = overrides?.planId ?? workflowPlanId
     const nextStepId = overrides?.stepId ?? workflowStepId
     const nextConfirmToken = overrides?.confirmToken ?? workflowConfirmToken
+    const requestWorkspace = resolveWorkflowRequestWorkspace()
     syncRequestedOverrides(overrides)
     if (!nextPlanId.trim()) {
       setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
@@ -247,14 +321,14 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
     }
     await executeWorkflowAction(
       'execute',
-      () => workspace
+      () => requestWorkspace
         ? executePlan(
           nextPlanId,
           nextStepId || undefined,
           undefined,
           undefined,
           nextConfirmToken.trim(),
-          workspace,
+          requestWorkspace,
         )
         : executePlan(nextPlanId, nextStepId || undefined, undefined, undefined, nextConfirmToken.trim()),
       {
@@ -266,6 +340,7 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
   const handleWorkflowLifecycle = async (overrides?: WorkflowActionOverrides) => {
     const nextPlanId = overrides?.planId ?? workflowPlanId
     const nextLifecycleAction = overrides?.lifecycleAction ?? workflowLifecycleAction
+    const requestWorkspace = resolveWorkflowRequestWorkspace()
     syncRequestedOverrides(overrides)
     if (!nextPlanId.trim()) {
       setWorkflowState('lifecycle', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
@@ -273,8 +348,8 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
     }
     await executeWorkflowAction(
       'lifecycle',
-      () => workspace
-        ? workflowLifecycle(nextPlanId, nextLifecycleAction, undefined, workspace)
+      () => requestWorkspace
+        ? workflowLifecycle(nextPlanId, nextLifecycleAction, undefined, requestWorkspace)
         : workflowLifecycle(nextPlanId, nextLifecycleAction),
       {
         onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),

@@ -171,3 +171,29 @@ def test_authority_alignment_signal_helper_returns_pass_for_clean_payload() -> N
     assert "checked_rules=20" in detail
     assert "failed_rules=0" in detail
     assert "checked_files=2" in detail
+
+
+def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_desktop_gate_contract",
+    )
+
+    sign_off_text = (PROJECT_ROOT / "docs/release/SIGN_OFF.md").read_text(encoding="utf-8")
+    summary_source = (PROJECT_ROOT / "scripts/release_check_summary.py").read_text(encoding="utf-8")
+    package_json = json.loads((PROJECT_ROOT / "desktop/package.json").read_text(encoding="utf-8"))
+
+    assert module.DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND == "npm --prefix desktop run check:local"
+    assert module.DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS == [
+        "npm.cmd",
+        "--prefix",
+        "desktop",
+        "run",
+        "check:local",
+    ]
+    assert "The authoritative desktop local gate is `npm --prefix desktop run check:local`." in sign_off_text
+    assert "`python scripts/release_check_summary.py` reruns this exact command" in sign_off_text
+    assert package_json["scripts"]["check:local"] == "npm run check:release"
+    assert "run_cmd(DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS)" in summary_source
+    assert '("command", DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND)' in summary_source
+    assert "desktop_authoritative_local_gate" in summary_source

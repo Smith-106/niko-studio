@@ -38,6 +38,8 @@ npm --prefix src-ts run check:local
 npm --prefix desktop run check:local
 ```
 
+The authoritative desktop local gate is `npm --prefix desktop run check:local`. In `desktop/package.json` this currently resolves to `check:release`, and `python scripts/release_check_summary.py` reruns this exact command before it can report `Decision: GO`.
+
 ### 3. Runtime, smoke, and packaging proof
 
 ```bash

@@ -6,13 +6,17 @@
  */
 
 import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
-import type { ProjectWorkspaceContext } from '../../project/workspace-model.js';
+import {
+  projectWorkspaceToMemoryScope,
+  type ProjectWorkspaceContext,
+} from '../../project/workspace-model.js';
 
 // ---------------------------------------------------------------
 // Engine accessor
 // ---------------------------------------------------------------
 
 interface WorkflowEngine {
+  bindPlanAuthority?(planId: string, authority: WorkflowAuthority): WorkflowAuthority;
   route(task: string): Promise<Record<string, unknown>>;
   plan(
     task: string,
@@ -22,14 +26,19 @@ interface WorkflowEngine {
   execute(
     planId: string,
     stepId?: string | null,
-    params?: { recommendations?: unknown[] | null; confirmToken?: string | null }
+    params?: { recommendations?: unknown[] | null; confirmToken?: string | null },
+    authority?: WorkflowAuthority | null,
   ): Promise<Record<string, unknown>>;
   quickRollback(params: {
     planId: string;
     checkpointId: string;
     reason: string;
-  }): Promise<Record<string, unknown>>;
-  lifecycle(planId: string, action: string): Promise<Record<string, unknown>>;
+  }, authority?: WorkflowAuthority | null): Promise<Record<string, unknown>>;
+  lifecycle(
+    planId: string,
+    action: string,
+    authority?: WorkflowAuthority | null,
+  ): Promise<Record<string, unknown>>;
   createCheckpoint(
     description: string,
     autoCommit: boolean
@@ -44,15 +53,56 @@ interface WorkflowEngine {
 
 let workflowEngineInstance: WorkflowEngine | null = null;
 
+interface WorkflowAuthority {
+  sessionId: string | null;
+  workspaceId: string | null;
+  projectId: string | null;
+}
+
 function resolveWorkflowWorkspace(): string {
   const override = String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim();
   return override || process.cwd();
 }
 
+function resolveWorkflowAuthority(
+  workspace?: ProjectWorkspaceContext | null,
+): WorkflowAuthority | null {
+  if (!workspace) return null;
+  const scope = projectWorkspaceToMemoryScope(workspace);
+  const sessionId =
+    typeof scope.sessionId === 'string' && scope.sessionId.trim()
+      ? scope.sessionId.trim()
+      : null;
+  const workspaceId = workspace.identity.workspaceId?.trim() || null;
+  const projectId = workspace.identity.projectId?.trim() || null;
+
+  if (!sessionId && !workspaceId && !projectId) {
+    return null;
+  }
+
+  return {
+    sessionId,
+    workspaceId,
+    projectId,
+  };
+}
+
 function getEngine(): WorkflowEngine | null {
   if (!workflowEngineInstance) {
     const engine = new WorkflowEngineRuntime(resolveWorkflowWorkspace(), 'mcp-workflow');
+    const engineWithAuthority = engine as WorkflowEngineRuntime & {
+      bindPlanAuthority?: (planId: string, authority: WorkflowAuthority) => WorkflowAuthority;
+    };
     workflowEngineInstance = {
+      bindPlanAuthority(planId: string, authority: WorkflowAuthority) {
+        if (typeof engineWithAuthority.bindPlanAuthority === 'function') {
+          return engineWithAuthority.bindPlanAuthority(planId, authority);
+        }
+        if (authority.sessionId) {
+          engine.bindPlanSession(planId, authority.sessionId);
+        }
+        return authority;
+      },
       route(task: string) {
         return engine.route(task);
       },
@@ -63,7 +113,17 @@ function getEngine(): WorkflowEngine | null {
         planId: string,
         stepId?: string | null,
         params?: { recommendations?: unknown[] | null; confirmToken?: string | null },
+        authority?: WorkflowAuthority | null,
       ) {
+        if (authority) {
+          return engine.execute(
+            planId,
+            stepId ?? undefined,
+            params?.recommendations ?? undefined,
+            params?.confirmToken ?? undefined,
+            authority,
+          );
+        }
         return engine.execute(
           planId,
           stepId ?? undefined,
@@ -71,10 +131,24 @@ function getEngine(): WorkflowEngine | null {
           params?.confirmToken ?? undefined,
         );
       },
-      quickRollback(params: { planId: string; checkpointId: string; reason: string }) {
+      quickRollback(
+        params: { planId: string; checkpointId: string; reason: string },
+        authority?: WorkflowAuthority | null,
+      ) {
+        if (authority) {
+          return engine.quickRollback(
+            params.planId,
+            params.checkpointId,
+            params.reason,
+            authority,
+          );
+        }
         return engine.quickRollback(params.planId, params.checkpointId, params.reason);
       },
-      lifecycle(planId: string, action: string) {
+      lifecycle(planId: string, action: string, authority?: WorkflowAuthority | null) {
+        if (authority) {
+          return engine.lifecycle(planId, action, undefined, authority);
+        }
         return engine.lifecycle(planId, action);
       },
       createCheckpoint(description: string, autoCommit: boolean) {
@@ -118,9 +192,13 @@ export async function workflowPlan(params: {
   if (!engine) return { error: 'Workflow engine unavailable' };
   const result = await engine.plan(params.task, params.level, { recommendations: mergedRecommendations });
   const planId = result['plan_id'];
-  const sessionId = params.workspace?.workflow.sessionId;
-  if (typeof planId === 'string' && planId && typeof sessionId === 'string' && sessionId.trim()) {
-    engine.bindPlanSession(planId, sessionId.trim());
+  const authority = resolveWorkflowAuthority(params.workspace);
+  if (typeof planId === 'string' && planId && authority) {
+    if (engine.bindPlanAuthority) {
+      engine.bindPlanAuthority(planId, authority);
+    } else if (authority.sessionId) {
+      engine.bindPlanSession(planId, authority.sessionId);
+    }
   }
   return result;
 }
@@ -130,36 +208,42 @@ export async function workflowExecute(params: {
   stepId?: string | null;
   recommendations?: unknown[] | null;
   confirmToken?: string | null;
+  workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
   const engine = getEngine();
   if (!engine) return { error: 'Workflow engine unavailable' };
+  const authority = resolveWorkflowAuthority(params.workspace);
   return engine.execute(params.planId, params.stepId ?? null, {
     recommendations: params.recommendations ?? null,
     confirmToken: params.confirmToken ?? null,
-  });
+  }, authority);
 }
 
 export async function workflowQuickRollback(params: {
   planId: string;
   checkpointId: string;
   reason?: string;
+  workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
   const engine = getEngine();
   if (!engine) return { error: 'Workflow engine unavailable' };
+  const authority = resolveWorkflowAuthority(params.workspace);
   return engine.quickRollback({
     planId: params.planId,
     checkpointId: params.checkpointId,
     reason: params.reason ?? '',
-  });
+  }, authority);
 }
 
 export async function workflowLifecycle(
   planId: string,
-  action = 'status'
+  action = 'status',
+  workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
   const engine = getEngine();
   if (!engine) return { error: 'Workflow engine unavailable' };
-  return engine.lifecycle(planId, action);
+  const authority = resolveWorkflowAuthority(workspace);
+  return engine.lifecycle(planId, action, authority);
 }
 
 export async function checkpointCreate(

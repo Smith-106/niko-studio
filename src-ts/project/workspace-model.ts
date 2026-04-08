@@ -392,13 +392,19 @@ export function projectWorkspaceToLegacyChatContext(
   };
 }
 
+interface ProjectWorkspaceToMemoryScopeOptions {
+  includeFocusEntity?: boolean;
+}
+
 export function projectWorkspaceToMemoryScope(
   workspace: ProjectWorkspaceContext,
+  options: ProjectWorkspaceToMemoryScopeOptions = {},
 ): { projectId?: string; sessionId?: string; entityId?: string } {
+  const includeFocusEntity = options.includeFocusEntity ?? true;
   return {
     projectId: workspace.identity.projectId || undefined,
     sessionId: workspace.workflow.sessionId || workspace.chat.conversationId || undefined,
-    entityId: workspace.knowledge.focusEntityId || undefined,
+    entityId: includeFocusEntity ? workspace.knowledge.focusEntityId || undefined : undefined,
   };
 }
 

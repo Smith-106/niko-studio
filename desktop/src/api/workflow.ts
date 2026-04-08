@@ -600,13 +600,18 @@ export interface WorkflowQuickRollbackResult {
 export async function quickRollbackWorkflow(
   planId: string,
   checkpointId: string,
-  reason?: string
+  reason?: string,
+  workspace?: ProjectWorkspaceContext,
 ): Promise<ApiResponse<WorkflowQuickRollbackResult>> {
-  return callApi('/workflow/quick-rollback', 'POST', {
-    plan_id: planId,
-    checkpoint_id: checkpointId,
-    reason,
-  })
+  return callApi(
+    '/workflow/quick-rollback',
+    'POST',
+    appendWorkspacePayload({
+      plan_id: planId,
+      checkpoint_id: checkpointId,
+      reason,
+    }, workspace),
+  )
 }
 
 export async function createCheckpoint(

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('../api/client', () => ({
@@ -115,6 +115,81 @@ function seedMeaningfulWorkspace() {
       focusEntityId: 'captain-lin',
     },
   })
+}
+
+function seedConversationFixtures() {
+  const scopedWorkspace = createDefaultProjectWorkspaceContext({
+    fallbackProjectId: 'atlas-project',
+    workspaceRoot: '/tmp/atlas-project',
+  })
+
+  const currentConversationId = 'conversation-current'
+  const legacyConversationId = 'conversation-legacy'
+  useAppStore.setState((state) => ({
+    ...state,
+    currentWorkspace: {
+      ...state.currentWorkspace,
+      workflow: {
+        sessionId: 'workflow-session-9',
+        planId: 'plan-9',
+        level: 'L4',
+      },
+      chat: {
+        conversationId: 'chat-9',
+        comparisonEnabled: true,
+      },
+    },
+    conversationsById: {
+      [currentConversationId]: {
+        id: currentConversationId,
+        title: 'Current conversation',
+        messages: [],
+        createdAt: new Date('2026-04-08T00:00:00Z'),
+        updatedAt: new Date('2026-04-08T00:00:00Z'),
+        workspace: {
+          ...scopedWorkspace,
+          identity: {
+            ...scopedWorkspace.identity,
+            projectName: '星港计划',
+          },
+          manuscript: {
+            ...scopedWorkspace.manuscript,
+            chapterId: 'chapter-7',
+            chapterTitle: '第七章 暗潮',
+            chapterNumber: 7,
+          },
+          storyBible: {
+            ...scopedWorkspace.storyBible,
+            draftId: 'story-bible-v3',
+          },
+          knowledge: {
+            ...scopedWorkspace.knowledge,
+            focusEntityId: 'captain-lin',
+          },
+          workflow: {
+            sessionId: 'workflow-session-9',
+            planId: 'plan-9',
+            level: 'L4',
+          },
+          chat: {
+            conversationId: 'chat-9',
+            comparisonEnabled: true,
+          },
+        },
+      },
+      [legacyConversationId]: {
+        id: legacyConversationId,
+        title: 'Legacy conversation',
+        messages: [],
+        createdAt: new Date('2026-04-08T00:00:00Z'),
+        updatedAt: new Date('2026-04-08T00:00:00Z'),
+      },
+    },
+    allConversationIds: [legacyConversationId, currentConversationId],
+    currentConversationId,
+  }))
+
+  return { currentConversationId, legacyConversationId }
 }
 
 beforeEach(() => {
@@ -280,6 +355,27 @@ describe('writer workflow experience', () => {
     })
   })
 
+  it('drops stale chat scope when switching to a legacy conversation without workspace state', async () => {
+    const { legacyConversationId } = seedConversationFixtures()
+
+    act(() => {
+      useAppStore.getState().selectConversation(legacyConversationId)
+    })
+
+    render(<ChatArea />)
+
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '切到旧对话后继续写{enter}')
+
+    await waitFor(() => {
+      expect(mockedChatStream).toHaveBeenCalled()
+    })
+
+    const lastCall = mockedChatStream.mock.calls[mockedChatStream.mock.calls.length - 1]
+    const request = lastCall?.[0]
+    expect(request?.workspace).toBeUndefined()
+  })
+
   it('adds writer presets while keeping advanced workflow controls available in evaluation', async () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
@@ -310,5 +406,41 @@ describe('writer workflow experience', () => {
         }),
       )
     })
+  })
+
+  it('clears stale workflow identifiers when switching to a legacy conversation', async () => {
+    const { legacyConversationId } = seedConversationFixtures()
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await waitFor(() => {
+      expect(mockedEvaluateContent).toHaveBeenCalled()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: /制定修订计划/ }))
+
+    await waitFor(() => {
+      expect(mockedCreatePlan).toHaveBeenCalledTimes(1)
+    })
+
+    act(() => {
+      useAppStore.getState().selectConversation(legacyConversationId)
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowExecute }))
+
+    expect(mockedExecutePlan).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: /制定修订计划/ }))
+
+    await waitFor(() => {
+      expect(mockedCreatePlan).toHaveBeenCalledTimes(2)
+    })
+    const legacyPlanCall = mockedCreatePlan.mock.calls[1]
+    expect(legacyPlanCall).toHaveLength(2)
+    expect(legacyPlanCall[1]).toBe('L3')
+    expect(legacyPlanCall[0]).toContain('default-project')
+    expect(legacyPlanCall[0]).not.toContain('星港计划')
+    expect(legacyPlanCall[0]).not.toContain('第七章 暗潮')
   })
 })

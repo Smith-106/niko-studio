@@ -117,6 +117,11 @@ export interface WorkflowStateMetadata {
   triage_state?: string;
   fix_status?: string;
   fix_owner?: string;
+  workspace_authority?: {
+    session_id: string | null;
+    workspace_id: string | null;
+    project_id: string | null;
+  };
 }
 
 export interface WorkflowStateArtifacts {
@@ -124,6 +129,12 @@ export interface WorkflowStateArtifacts {
   handoff: string;
   audit: string;
   snapshot_index: string;
+}
+
+interface WorkflowAuthority {
+  sessionId: string | null;
+  workspaceId: string | null;
+  projectId: string | null;
 }
 
 export interface WorkflowStateSnapshot {
@@ -414,6 +425,7 @@ export class WorkflowEngine {
   private plans: Map<string, WorkflowPlan> = new Map();
   private checkpoints: Map<string, Checkpoint> = new Map();
   private planSessions: Map<string, string> = new Map();
+  private planAuthorities: Map<string, WorkflowAuthority> = new Map();
   private router: LevelRouter;
   private sessionManager: SessionManager;
   private _sessionNamespace: string;
@@ -456,6 +468,20 @@ export class WorkflowEngine {
     }
 
     this.planSessions.set(normalizedPlanId, normalizedSessionId);
+    const currentAuthority = this.planAuthorities.get(normalizedPlanId);
+    this.planAuthorities.set(normalizedPlanId, {
+      sessionId: normalizedSessionId,
+      workspaceId: currentAuthority?.workspaceId ?? null,
+      projectId: currentAuthority?.projectId ?? null,
+    });
+    const plan = this.plans.get(normalizedPlanId);
+    if (plan) {
+      this._persistPlanState(
+        plan,
+        String(plan.template_meta['current_phase'] ?? plan.status),
+        String(plan.template_meta['last_checkpoint_id'] ?? ''),
+      );
+    }
     return normalizedSessionId;
   }
 
@@ -465,6 +491,167 @@ export class WorkflowEngine {
       throw new Error('planId is required');
     }
     return this._sessionIdForPlan(normalizedPlanId);
+  }
+
+  bindPlanAuthority(planId: string, authority: WorkflowAuthority): WorkflowAuthority {
+    const normalizedPlanId = String(planId ?? '').trim();
+    if (!normalizedPlanId) {
+      throw new Error('planId is required');
+    }
+
+    const normalizedAuthority = this._normalizeAuthority(authority);
+    const currentAuthority = this.planAuthorities.get(normalizedPlanId);
+    const mergedAuthority: WorkflowAuthority = {
+      sessionId:
+        normalizedAuthority?.sessionId
+        ?? currentAuthority?.sessionId
+        ?? this._sessionIdForPlan(normalizedPlanId),
+      workspaceId:
+        normalizedAuthority?.workspaceId
+        ?? currentAuthority?.workspaceId
+        ?? null,
+      projectId:
+        normalizedAuthority?.projectId
+        ?? currentAuthority?.projectId
+        ?? null,
+    };
+
+    this.planAuthorities.set(normalizedPlanId, mergedAuthority);
+    if (mergedAuthority.sessionId) {
+      this.planSessions.set(normalizedPlanId, mergedAuthority.sessionId);
+    }
+    const plan = this.plans.get(normalizedPlanId);
+    if (plan) {
+      this._persistPlanState(
+        plan,
+        String(plan.template_meta['current_phase'] ?? plan.status),
+        String(plan.template_meta['last_checkpoint_id'] ?? ''),
+      );
+    }
+    return { ...mergedAuthority };
+  }
+
+  getPlanAuthority(planId: string): WorkflowAuthority {
+    const normalizedPlanId = String(planId ?? '').trim();
+    if (!normalizedPlanId) {
+      throw new Error('planId is required');
+    }
+
+    const storedAuthority = this.planAuthorities.get(normalizedPlanId);
+    if (storedAuthority) {
+      return { ...storedAuthority };
+    }
+
+    return {
+      sessionId: this._sessionIdForPlan(normalizedPlanId),
+      workspaceId: null,
+      projectId: null,
+    };
+  }
+
+  private _normalizeAuthority(authority?: Partial<WorkflowAuthority> | null): WorkflowAuthority | null {
+    if (!authority) return null;
+
+    const sessionId =
+      typeof authority.sessionId === 'string' && authority.sessionId.trim()
+        ? authority.sessionId.trim()
+        : null;
+    const workspaceId =
+      typeof authority.workspaceId === 'string' && authority.workspaceId.trim()
+        ? authority.workspaceId.trim()
+        : null;
+    const projectId =
+      typeof authority.projectId === 'string' && authority.projectId.trim()
+        ? authority.projectId.trim()
+        : null;
+
+    if (!sessionId && !workspaceId && !projectId) {
+      return null;
+    }
+
+    return {
+      sessionId,
+      workspaceId,
+      projectId,
+    };
+  }
+
+  private _authorityMismatchError(
+    planId: string,
+    dimension: 'workflow session' | 'workspace' | 'project',
+    expected: string,
+    received: string,
+  ): string {
+    return `Plan '${planId}' is bound to ${dimension} '${expected}' and cannot be used with '${received}'`;
+  }
+
+  private _resolvePlanAuthority(
+    planId: string,
+    requestAuthority?: Partial<WorkflowAuthority> | null,
+  ): { authority: WorkflowAuthority; error?: never } | { authority: null; error: string } {
+    const normalizedPlanId = String(planId ?? '').trim();
+    if (!normalizedPlanId) {
+      return { authority: null, error: 'planId is required' };
+    }
+
+    const storedAuthority = this.getPlanAuthority(normalizedPlanId);
+    const normalizedRequest = this._normalizeAuthority(requestAuthority);
+
+    if (
+      storedAuthority.sessionId
+      && normalizedRequest?.sessionId
+      && storedAuthority.sessionId !== normalizedRequest.sessionId
+    ) {
+      return {
+        authority: null,
+        error: this._authorityMismatchError(
+          normalizedPlanId,
+          'workflow session',
+          storedAuthority.sessionId,
+          normalizedRequest.sessionId,
+        ),
+      };
+    }
+
+    if (
+      storedAuthority.workspaceId
+      && normalizedRequest?.workspaceId
+      && storedAuthority.workspaceId !== normalizedRequest.workspaceId
+    ) {
+      return {
+        authority: null,
+        error: this._authorityMismatchError(
+          normalizedPlanId,
+          'workspace',
+          storedAuthority.workspaceId,
+          normalizedRequest.workspaceId,
+        ),
+      };
+    }
+
+    if (
+      storedAuthority.projectId
+      && normalizedRequest?.projectId
+      && storedAuthority.projectId !== normalizedRequest.projectId
+    ) {
+      return {
+        authority: null,
+        error: this._authorityMismatchError(
+          normalizedPlanId,
+          'project',
+          storedAuthority.projectId,
+          normalizedRequest.projectId,
+        ),
+      };
+    }
+
+    return {
+      authority: this.bindPlanAuthority(normalizedPlanId, {
+        sessionId: normalizedRequest?.sessionId ?? storedAuthority.sessionId,
+        workspaceId: normalizedRequest?.workspaceId ?? storedAuthority.workspaceId,
+        projectId: normalizedRequest?.projectId ?? storedAuthority.projectId,
+      }),
+    };
   }
 
   // ---- Public API ----
@@ -672,9 +859,19 @@ export class WorkflowEngine {
 
   // ---- Execution ----
 
-  async execute(planId: string, stepId?: string, recommendations?: unknown[], confirmToken?: string): Promise<Record<string, unknown>> {
+  async execute(
+    planId: string,
+    stepId?: string,
+    recommendations?: unknown[],
+    confirmToken?: string,
+    authority?: WorkflowAuthority | null,
+  ): Promise<Record<string, unknown>> {
     const plan = this.plans.get(planId);
     if (!plan) return { error: `Plan '${planId}' not found` };
+    const authorityResolution = this._resolvePlanAuthority(planId, authority);
+    if (authorityResolution.error) {
+      return { error: authorityResolution.error, plan_id: planId };
+    }
     if (plan.runner_state === 'stopped') return { error: 'Loop runner is stopped' };
     if (plan.runner_state === 'paused') return { error: 'Loop runner is paused' };
     if (plan.runner_state === 'pending') this._setRunnerState(plan, 'running');
@@ -775,12 +972,26 @@ export class WorkflowEngine {
 
   // ---- Lifecycle ----
 
-  async lifecycle(planId: string, action: string, triageState?: string): Promise<Record<string, unknown>> {
+  async lifecycle(
+    planId: string,
+    action: string,
+    triageState?: string,
+    authority?: WorkflowAuthority | null,
+  ): Promise<Record<string, unknown>> {
     const plan = this.plans.get(planId);
     if (!plan) return { error: `Plan '${planId}' not found` };
+    const authorityResolution = this._resolvePlanAuthority(planId, authority);
+    if (authorityResolution.error) {
+      return { error: authorityResolution.error, plan_id: planId };
+    }
 
     const normalizedAction = (action ?? '').trim().toLowerCase();
     if (normalizedAction === 'status') {
+      this._persistPlanState(
+        plan,
+        String(plan.template_meta['current_phase'] ?? plan.status),
+        String(plan.template_meta['last_checkpoint_id'] ?? ''),
+      );
       const observability = this._refreshObservability(plan);
       const budgetGuardrail = this._refreshBudgetGuardrail(plan);
       const executionMode = this._resolveExecutionMode(plan, observability['mode'] as string);
@@ -790,7 +1001,9 @@ export class WorkflowEngine {
         triage_state: plan.triage_state, fix_status: plan.fix_status, fix_owner: plan.fix_owner,
         plan_status: plan.status, lane: plan.lane, quality_metrics: plan.quality_metrics,
         execution_mode: executionMode, observability_metrics: observability['aggregate'],
-        budget_guardrail: budgetGuardrail, handoff_package: plan.handoff_package,
+        budget_guardrail: budgetGuardrail,
+        handoff_package: plan.handoff_package,
+        session_status: plan.template_meta['session_status'] ?? null,
       });
     }
 
@@ -809,8 +1022,14 @@ export class WorkflowEngine {
       checkpointId = checkpoint['checkpoint_id'] as string;
     }
 
+    let sessionLifecycle: Record<string, unknown> = {};
     try {
-      this._setRunnerState(plan, targetByAction[normalizedAction], checkpointId, `lifecycle:${normalizedAction}`);
+      sessionLifecycle = this._setRunnerState(
+        plan,
+        targetByAction[normalizedAction],
+        checkpointId,
+        `lifecycle:${normalizedAction}`,
+      );
       if (triageState) {
         this._setTriageState(plan, triageState.trim().toLowerCase(), `lifecycle:${normalizedAction}`);
       }
@@ -834,6 +1053,7 @@ export class WorkflowEngine {
       quality_metrics: plan.quality_metrics, execution_mode: executionMode,
       observability_metrics: observability['aggregate'], budget_guardrail: budgetGuardrail,
       handoff_package: plan.handoff_package,
+      session_status: sessionLifecycle['status'] ?? plan.template_meta['session_status'] ?? null,
     });
   }
 
@@ -904,11 +1124,25 @@ export class WorkflowEngine {
     return { error: 'No commit hash available for this checkpoint', plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult };
   }
 
-  async quickRollback(planId: string, checkpointId: string, reason: string = ''): Promise<Record<string, unknown>> {
+  async quickRollback(
+    planId: string,
+    checkpointId: string,
+    reason: string = '',
+    authority?: WorkflowAuthority | null,
+  ): Promise<Record<string, unknown>> {
     const plan = this.plans.get(planId);
     if (!plan) return { error: `Plan '${planId}' not found` };
+    const authorityResolution = this._resolvePlanAuthority(planId, authority);
+    if (authorityResolution.error) {
+      return { error: authorityResolution.error, plan_id: planId, checkpoint_id: checkpointId };
+    }
 
     const restoreResult = await this.restoreCheckpoint(checkpointId, AUTO_ROLLBACK_CONFIRM_TOKEN);
+    this._persistPlanState(
+      plan,
+      String(plan.template_meta['current_phase'] ?? plan.status),
+      checkpointId,
+    );
     return { plan_id: planId, checkpoint_id: checkpointId, restored: restoreResult['status'] === 'restored', restore: restoreResult };
   }
 
@@ -1153,7 +1387,14 @@ export class WorkflowEngine {
     plan.runner_state = targetState;
     if (targetState === 'running' && plan.status === 'created') plan.status = 'running';
     if (targetState === 'stopped' && !['completed', 'failed'].includes(plan.status)) plan.status = 'failed';
-    return {};
+    if (transitionReason) {
+      plan.template_meta['runner_transition_reason'] = transitionReason;
+    }
+    return this._persistPlanState(
+      plan,
+      String(plan.template_meta['current_phase'] ?? plan.status),
+      checkpointId,
+    );
   }
 
   private _setTriageState(plan: WorkflowPlan, targetState: string, transitionReason: string = '', actor: string = 'workflow_engine'): void {
@@ -1272,22 +1513,133 @@ export class WorkflowEngine {
 
   // ---- State Persistence ----
 
-  private _persistPlanState(plan: WorkflowPlan, currentPhase?: string | null, checkpointId?: string): void {
-    // In TypeScript version, state persistence is simplified to in-memory tracking.
-    // For production use, integrate with SessionManager or a database.
+  private _persistPlanState(
+    plan: WorkflowPlan,
+    currentPhase?: string | null,
+    checkpointId?: string,
+  ): Record<string, unknown> {
     const phase = currentPhase ?? 'planned';
     plan.template_meta['current_phase'] = phase;
-    if (checkpointId) plan.template_meta['last_checkpoint_id'] = checkpointId;
+    const lastCheckpointId =
+      checkpointId
+      ?? (typeof plan.template_meta['last_checkpoint_id'] === 'string'
+        ? String(plan.template_meta['last_checkpoint_id']).trim()
+        : '');
+    if (lastCheckpointId) {
+      plan.template_meta['last_checkpoint_id'] = lastCheckpointId;
+    }
+
+    const authority = this.getPlanAuthority(plan.id);
+    const sessionId = authority.sessionId ?? this.getPlanSessionId(plan.id);
+    const sessionLifecycle = this.sessionManager.syncLifecycle(
+      sessionId,
+      plan.runner_state,
+      lastCheckpointId || undefined,
+    );
+    plan.template_meta['session_id'] = sessionId;
+    plan.template_meta['session_status'] = sessionLifecycle['status'] ?? null;
+
+    const sessionBase =
+      String(sessionLifecycle['status'] ?? '') === 'archived'
+        ? this.sessionManager.archivedPath
+        : this.sessionManager.activePath;
+    const sessionRoot = path.join(sessionBase, sessionId);
+
+    const checkpointTrace = Array.from(this.checkpoints.values())
+      .filter((checkpoint) => checkpoint.plan_id === plan.id)
+      .sort((left, right) => left.created_at.localeCompare(right.created_at))
+      .map((checkpoint) => ({
+        checkpoint_id: checkpoint.id,
+        step_id: checkpoint.step_id,
+        description: checkpoint.description,
+        created_at: checkpoint.created_at,
+      }));
+
+    const snapshot: WorkflowStateSnapshot = {
+      schema_version: WORKFLOW_STATE_SCHEMA_VERSION,
+      schema_policy: WORKFLOW_STATE_SCHEMA_POLICY,
+      plan_id: plan.id,
+      task: plan.task,
+      level: plan.level,
+      plan_status: plan.status,
+      runner_state: plan.runner_state,
+      current_phase: phase,
+      last_checkpoint_id: lastCheckpointId,
+      state_trace_id: sessionId,
+      updated_at: new Date().toISOString(),
+      metadata: {
+        lane: plan.lane,
+        execution_mode: String(plan.template_meta['execution_mode'] ?? ''),
+        quality_metrics: structuredClone(plan.quality_metrics),
+        template_meta: structuredClone(plan.template_meta),
+        recommendations_frozen: plan.recommendations_frozen,
+        plan_hash: plan.plan_hash,
+        triage_state: plan.triage_state,
+        fix_status: plan.fix_status,
+        fix_owner: plan.fix_owner,
+        workspace_authority: {
+          session_id: sessionId,
+          workspace_id: authority.workspaceId,
+          project_id: authority.projectId,
+        },
+      },
+      artifacts: {
+        state: path.join(sessionRoot, '.data', 'state.json'),
+        handoff: path.join(sessionRoot, 'HANDOFF.md'),
+        audit: path.join(sessionRoot, '.data', 'audit.jsonl'),
+        snapshot_index: path.join(sessionRoot, '.data', 'snapshot-index.json'),
+      },
+      observability: structuredClone(plan.observability),
+      budget_guardrail: structuredClone(plan.budget_guardrail),
+      handoff_package: structuredClone(plan.handoff_package),
+      steps: plan.steps.map((step) => ({
+        id: step.id,
+        name: step.name,
+        status: this._canonicalStepStatus(step.status),
+        started_at: step.started_at,
+        completed_at: step.completed_at,
+      })),
+      checkpoint_trace: checkpointTrace,
+    };
+
+    this.sessionManager.write(
+      sessionId,
+      ContentType.STATE,
+      JSON.stringify(snapshot, null, 2),
+    );
+    this.sessionManager.appendAudit(sessionId, {
+      event: 'workflow_state_persisted',
+      plan_id: plan.id,
+      runner_state: plan.runner_state,
+      current_phase: phase,
+      checkpoint_id: lastCheckpointId || null,
+      session_status: sessionLifecycle['status'] ?? null,
+      workspace_authority: {
+        session_id: sessionId,
+        workspace_id: authority.workspaceId,
+        project_id: authority.projectId,
+      },
+      recorded_at: snapshot.updated_at,
+    });
+    return sessionLifecycle;
   }
 
   private _stateResumeMetadata(plan: WorkflowPlan): Record<string, unknown> {
+    const authority = this.getPlanAuthority(plan.id);
+    const sessionId = authority.sessionId ?? this.getPlanSessionId(plan.id);
     return {
       current_phase: plan.template_meta['current_phase'] ?? plan.status,
-      state_trace_id: '',
+      state_trace_id: sessionId,
       can_resume_from_checkpoint: !!plan.template_meta['last_checkpoint_id'],
       observability: plan.observability,
       budget_guardrail: plan.budget_guardrail,
       handoff_package: plan.handoff_package,
+      session_status: plan.template_meta['session_status'] ?? null,
+      workspace_authority: {
+        session_id: sessionId,
+        workspace_id: authority.workspaceId,
+        project_id: authority.projectId,
+      },
     };
   }
 

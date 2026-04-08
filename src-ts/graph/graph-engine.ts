@@ -115,6 +115,27 @@ function resolveGraphConfigValue(key: 'dataDir' | 'graph.dbPath', defaultValue: 
   return defaultValue;
 }
 
+export interface GraphReadScope {
+  workspaceId?: string | null;
+  projectId?: string | null;
+  allowLegacy?: boolean;
+}
+
+interface NormalizedGraphReadScope {
+  workspaceId: string | null;
+  projectId: string | null;
+  allowLegacy: boolean;
+}
+
+function readOptionalString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 // ---------------------------------------------------------------------------
 // GraphEngine
 // ---------------------------------------------------------------------------
@@ -280,6 +301,54 @@ export class GraphEngine {
   // Cypher execution
   // -----------------------------------------------------------------------
 
+  private _normalizeReadScope(scope?: GraphReadScope | null): NormalizedGraphReadScope | null {
+    const workspaceId = readOptionalString(scope?.workspaceId);
+    const projectId = readOptionalString(scope?.projectId);
+    const allowLegacy = scope?.allowLegacy !== false;
+
+    if (!workspaceId && !projectId) {
+      return null;
+    }
+
+    return {
+      workspaceId,
+      projectId,
+      allowLegacy,
+    };
+  }
+
+  private _buildScopedEntityPredicate(
+    alias: string,
+    scope: NormalizedGraphReadScope
+  ): { clause: string; params: unknown[] } {
+    const workspaceExpr = `json_extract(${alias}.properties, '$.workspaceId')`;
+    const projectExpr = `json_extract(${alias}.properties, '$.projectId')`;
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+
+    if (scope.workspaceId) {
+      clauses.push(`${workspaceExpr} = ?`);
+      params.push(scope.workspaceId);
+
+      if (scope.projectId) {
+        clauses.push(`(${workspaceExpr} IS NULL AND ${projectExpr} = ?)`);
+        params.push(scope.projectId);
+      }
+    } else if (scope.projectId) {
+      clauses.push(`${projectExpr} = ?`);
+      params.push(scope.projectId);
+    }
+
+    if (scope.allowLegacy) {
+      clauses.push(`(${workspaceExpr} IS NULL AND ${projectExpr} IS NULL)`);
+    }
+
+    return {
+      clause: `(${clauses.join(' OR ')})`,
+      params,
+    };
+  }
+
   /**
    * Execute a Cypher query (simplified SQL translation)
    *
@@ -287,7 +356,10 @@ export class GraphEngine {
    * - MATCH (n:Type) WHERE n.name = 'xxx' RETURN n
    * - MATCH (a)-[r:REL]->(b) RETURN a, r, b
    */
-  async executeCypher(cypher: string): Promise<Record<string, unknown>[]> {
+  async executeCypher(
+    cypher: string,
+    scope?: GraphReadScope | null
+  ): Promise<Record<string, unknown>[]> {
     if (typeof cypher !== 'string') {
       console.warn('Blocked non-string graph query input');
       return [{ error: 'Invalid query input' }];
@@ -304,7 +376,7 @@ export class GraphEngine {
     }
 
     if (cypher.toUpperCase().startsWith('MATCH')) {
-      return this._executeMatch(cypher);
+      return this._executeMatch(cypher, scope);
     }
 
     if (cypher.toUpperCase().startsWith('MERGE')) {
@@ -551,7 +623,12 @@ export class GraphEngine {
   }
 
   /** Parse and execute a MATCH query */
-  private async _executeMatch(cypher: string): Promise<Record<string, unknown>[]> {
+  private async _executeMatch(
+    cypher: string,
+    scope?: GraphReadScope | null
+  ): Promise<Record<string, unknown>[]> {
+    const normalizedScope = this._normalizeReadScope(scope);
+
     const traversalMatch = cypher.match(
       /^MATCH\s*\((\w+)\)\s*-\[(\w+)\*1\.\.(\d+)\]-\((\w+)\)\s*WHERE\s*\1\.name\s+CONTAINS\s+['"](.+?)['"]\s*RETURN\s*\4\s*,\s*\2(?:\s+LIMIT\s+(\d+))?\s*$/i
     );
@@ -559,7 +636,8 @@ export class GraphEngine {
       return this._executeTraversalMatch(
         traversalMatch[3],
         traversalMatch[5],
-        traversalMatch[6]
+        traversalMatch[6],
+        normalizedScope
       );
     }
 
@@ -571,7 +649,8 @@ export class GraphEngine {
         relationshipMatch[2] ?? null,
         relationshipMatch[4] ?? null,
         relationshipMatch[6] ?? null,
-        relationshipMatch[7]
+        relationshipMatch[7],
+        normalizedScope
       );
     }
 
@@ -581,36 +660,49 @@ export class GraphEngine {
       const nodeAlias = nodeMatch[1];
       const entityType = nodeMatch[2];
       const resultKey = this._resolveNodeResultKey(cypher, nodeAlias);
+      const limit = this._normalizeCypherLimit(cypher.match(/\bLIMIT\s+(\d+)\s*$/i)?.[1]);
 
       // Parse WHERE condition
       const whereMatch = cypher.match(
         /WHERE\s+\w+\.(\w+)\s*=\s*['"](.+?)['"]/i
       );
 
+      let sql = 'SELECT * FROM entities WHERE type = ?';
+      const params: unknown[] = [entityType];
+
+      if (normalizedScope) {
+        const scoped = this._buildScopedEntityPredicate('entities', normalizedScope);
+        sql += ` AND ${scoped.clause}`;
+        params.push(...scoped.params);
+      }
+
       if (whereMatch) {
         const field = whereMatch[1];
         const value = whereMatch[2];
 
-        let rows: Record<string, unknown>[];
         if (field === 'name') {
-          rows = this.db
-            .prepare('SELECT * FROM entities WHERE type = ? AND name = ?')
-            .all(entityType, value) as Record<string, unknown>[];
+          sql += ' AND name = ?';
+          params.push(value);
         } else {
-          // Search in properties JSON
-          rows = this.db
-            .prepare(
-              "SELECT * FROM entities WHERE type = ? AND json_extract(properties, ?) = ?"
-            )
-            .all(entityType, `$.${field}`, value) as Record<string, unknown>[];
+          sql += ' AND json_extract(properties, ?) = ?';
+          params.push(`$.${field}`, value);
         }
 
+        if (limit !== null) {
+          sql += ' LIMIT ?';
+          params.push(limit);
+        }
+
+        const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
         return rows.map((row) => this._wrapEntityResult(resultKey, row));
       }
 
-      const rows = this.db
-        .prepare('SELECT * FROM entities WHERE type = ?')
-        .all(entityType) as Record<string, unknown>[];
+      if (limit !== null) {
+        sql += ' LIMIT ?';
+        params.push(limit);
+      }
+
+      const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
       return rows.map((row) => this._wrapEntityResult(resultKey, row));
     }
 
@@ -621,7 +713,8 @@ export class GraphEngine {
     sourceType: string | null,
     relationType: string | null,
     targetType: string | null,
-    limitValue?: string
+    limitValue?: string,
+    scope?: NormalizedGraphReadScope | null
   ): Record<string, unknown>[] {
     let sql = `
       SELECT
@@ -659,6 +752,15 @@ export class GraphEngine {
     if (targetType) {
       sql += ' AND e2.type = ?';
       params.push(targetType);
+    }
+    if (scope) {
+      const sourceScope = this._buildScopedEntityPredicate('e1', scope);
+      sql += ` AND ${sourceScope.clause}`;
+      params.push(...sourceScope.params);
+
+      const targetScope = this._buildScopedEntityPredicate('e2', scope);
+      sql += ` AND ${targetScope.clause}`;
+      params.push(...targetScope.params);
     }
 
     sql += ' ORDER BY e1.name, e2.name';
@@ -700,13 +802,20 @@ export class GraphEngine {
   private _executeTraversalMatch(
     depthValue: string,
     startNameFragment: string,
-    limitValue?: string
+    limitValue?: string,
+    scope?: NormalizedGraphReadScope | null
   ): Record<string, unknown>[] {
     const maxDepth = Math.max(1, Math.min(parseInt(depthValue, 10) || 1, 10));
     const limit = this._normalizeCypherLimit(limitValue);
-    const startRows = this.db
-      .prepare('SELECT * FROM entities WHERE name LIKE ? ORDER BY name')
-      .all(`%${startNameFragment}%`) as Record<string, unknown>[];
+    let startSql = 'SELECT * FROM entities WHERE name LIKE ?';
+    const startParams: unknown[] = [`%${startNameFragment}%`];
+    if (scope) {
+      const scoped = this._buildScopedEntityPredicate('entities', scope);
+      startSql += ` AND ${scoped.clause}`;
+      startParams.push(...scoped.params);
+    }
+    startSql += ' ORDER BY name';
+    const startRows = this.db.prepare(startSql).all(...startParams) as Record<string, unknown>[];
 
     if (!startRows.length) {
       return [];
@@ -729,7 +838,7 @@ export class GraphEngine {
         continue;
       }
 
-      const adjacencyRows = this.db.prepare(`
+      let adjacencySql = `
         SELECT
           r.id as relation_id,
           r.type as relation_type,
@@ -753,7 +862,20 @@ export class GraphEngine {
         JOIN entities e1 ON r.from_id = e1.id
         JOIN entities e2 ON r.to_id = e2.id
         WHERE r.from_id = ? OR r.to_id = ?
-      `).all(current.entityId, current.entityId) as Record<string, unknown>[];
+      `;
+      const adjacencyParams: unknown[] = [current.entityId, current.entityId];
+      if (scope) {
+        const sourceScope = this._buildScopedEntityPredicate('e1', scope);
+        adjacencySql += ` AND ${sourceScope.clause}`;
+        adjacencyParams.push(...sourceScope.params);
+
+        const targetScope = this._buildScopedEntityPredicate('e2', scope);
+        adjacencySql += ` AND ${targetScope.clause}`;
+        adjacencyParams.push(...targetScope.params);
+      }
+      const adjacencyRows = this.db
+        .prepare(adjacencySql)
+        .all(...adjacencyParams) as Record<string, unknown>[];
 
       for (const row of adjacencyRows) {
         const nextIsTarget = row.from_id === current.entityId;
@@ -927,11 +1049,21 @@ export class GraphEngine {
   async getCharacter(
     name: string,
     includeRelations = true,
-    includeTimeline = false
+    includeTimeline = false,
+    scope?: GraphReadScope | null
   ): Promise<Record<string, unknown>> {
+    let sql = "SELECT * FROM entities WHERE type = 'Character' AND name = ?";
+    const params: unknown[] = [name];
+    const normalizedScope = this._normalizeReadScope(scope);
+    if (normalizedScope) {
+      const scoped = this._buildScopedEntityPredicate('entities', normalizedScope);
+      sql += ` AND ${scoped.clause}`;
+      params.push(...scoped.params);
+    }
+
     const row = this.db
-      .prepare("SELECT * FROM entities WHERE type = 'Character' AND name = ?")
-      .get(name) as Record<string, unknown> | undefined;
+      .prepare(sql)
+      .get(...params) as Record<string, unknown> | undefined;
 
     if (!row) {
       return { error: `Character '${name}' not found` };
@@ -947,11 +1079,11 @@ export class GraphEngine {
     };
 
     if (includeRelations) {
-      character['relations'] = await this.getRelationships(name);
+      character['relations'] = await this.getRelationships(name, null, 1, scope);
     }
 
     if (includeTimeline) {
-      character['timeline'] = await this._getCharacterTimeline(row.id as string);
+      character['timeline'] = await this._getCharacterTimeline(row.id as string, normalizedScope);
     }
 
     return character;
@@ -961,12 +1093,22 @@ export class GraphEngine {
   async getRelationships(
     character: string,
     relationshipType?: string | null,
-    _depth: number = 1
+    _depth: number = 1,
+    scope?: GraphReadScope | null
   ): Promise<Record<string, unknown>[]> {
     // Get character ID first
+    let entitySql = 'SELECT id FROM entities WHERE name = ?';
+    const entityParams: unknown[] = [character];
+    const normalizedScope = this._normalizeReadScope(scope);
+    if (normalizedScope) {
+      const scoped = this._buildScopedEntityPredicate('entities', normalizedScope);
+      entitySql += ` AND ${scoped.clause}`;
+      entityParams.push(...scoped.params);
+    }
+
     const row = this.db
-      .prepare('SELECT id FROM entities WHERE name = ?')
-      .get(character) as Record<string, string> | undefined;
+      .prepare(entitySql)
+      .get(...entityParams) as Record<string, string> | undefined;
 
     if (!row) {
       return [];
@@ -989,6 +1131,15 @@ export class GraphEngine {
       sql += ' AND r.type = ?';
       params.push(relationshipType);
     }
+    if (normalizedScope) {
+      const sourceScope = this._buildScopedEntityPredicate('e1', normalizedScope);
+      sql += ` AND ${sourceScope.clause}`;
+      params.push(...sourceScope.params);
+
+      const targetScope = this._buildScopedEntityPredicate('e2', normalizedScope);
+      sql += ` AND ${targetScope.clause}`;
+      params.push(...targetScope.params);
+    }
 
     const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
 
@@ -1002,18 +1153,25 @@ export class GraphEngine {
   }
 
   /** Get character timeline */
-  private async _getCharacterTimeline(characterId: string): Promise<Record<string, unknown>[]> {
-    const rows = this.db
-      .prepare(
-        `
-        SELECT e.name, e.properties, r.type as relation
-        FROM relations r
-        JOIN entities e ON r.to_id = e.id
-        WHERE r.from_id = ? AND e.type = 'Event'
-        ORDER BY json_extract(e.properties, '$.time')
-        `
-      )
-      .all(characterId) as Record<string, unknown>[];
+  private async _getCharacterTimeline(
+    characterId: string,
+    scope?: NormalizedGraphReadScope | null
+  ): Promise<Record<string, unknown>[]> {
+    let sql = `
+      SELECT e.name, e.properties, r.type as relation
+      FROM relations r
+      JOIN entities e ON r.to_id = e.id
+      WHERE r.from_id = ? AND e.type = 'Event'
+    `;
+    const params: unknown[] = [characterId];
+    if (scope) {
+      const scoped = this._buildScopedEntityPredicate('e', scope);
+      sql += ` AND ${scoped.clause}`;
+      params.push(...scoped.params);
+    }
+    sql += " ORDER BY json_extract(e.properties, '$.time')";
+
+    const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
 
     return rows.map((row) => ({
       event: row.name,
@@ -1029,10 +1187,18 @@ export class GraphEngine {
   /** Get foreshadow status */
   async getForeshadows(
     status: string = 'pending',
-    chapter?: number | null
+    chapter?: number | null,
+    scope?: GraphReadScope | null
   ): Promise<Record<string, unknown>[]> {
     let sql = "SELECT * FROM entities WHERE type = 'Foreshadow'";
     const params: unknown[] = [];
+    const normalizedScope = this._normalizeReadScope(scope);
+
+    if (normalizedScope) {
+      const scoped = this._buildScopedEntityPredicate('entities', normalizedScope);
+      sql += ` AND ${scoped.clause}`;
+      params.push(...scoped.params);
+    }
 
     if (status) {
       sql += " AND json_extract(properties, '$.status') = ?";

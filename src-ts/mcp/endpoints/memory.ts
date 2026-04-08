@@ -19,26 +19,44 @@ function resolveWorkspaceRoot(): string {
   return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
 }
 
-function resolveMemoryScope(body: Record<string, unknown>) {
+function readOptionalString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function shouldUseFocusEntity(body: Record<string, unknown>): boolean {
+  return body.use_focus_entity === true;
+}
+
+function resolveMemoryScope(
+  body: Record<string, unknown>,
+  options: { includeFocusEntity?: boolean } = {},
+) {
   const workspace = normalizeProjectWorkspaceContext(body, {
     workspaceRoot: resolveWorkspaceRoot(),
   });
-  return projectWorkspaceToMemoryScope(workspace);
+  return projectWorkspaceToMemoryScope(workspace, {
+    includeFocusEntity: options.includeFocusEntity,
+  });
 }
 
 /** POST /memory/search */
 export async function memorySearchEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
-  const scope = resolveMemoryScope(body);
+  const explicitEntityId = readOptionalString(body.entity_id);
+  const scope = resolveMemoryScope(body, {
+    includeFocusEntity: explicitEntityId === undefined && shouldUseFocusEntity(body),
+  });
   const result = await memorySearch({
     query: (body.query as string) ?? '',
     layer: body.layer as string | undefined,
     dimensions: body.dimensions as string[] | undefined,
-    entityId: (body.entity_id as string | undefined) ?? scope.entityId,
-    userId: body.user_id as string | undefined,
-    projectId: (body.project_id as string | undefined) ?? scope.projectId,
-    sessionId: (body.session_id as string | undefined) ?? scope.sessionId,
-    atTime: body.at_time as string | undefined,
+    entityId: explicitEntityId ?? scope.entityId,
+    userId: readOptionalString(body.user_id),
+    projectId: readOptionalString(body.project_id) ?? scope.projectId,
+    sessionId: readOptionalString(body.session_id) ?? scope.sessionId,
+    atTime: readOptionalString(body.at_time),
     limit: (body.limit as number) ?? 10,
   });
   return jsonResponse(result);
@@ -47,20 +65,23 @@ export async function memorySearchEndpoint(request: HttpRequest): Promise<HttpRe
 /** POST /memory/add */
 export async function memoryAddEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
-  const scope = resolveMemoryScope(body);
+  const explicitEntityId = readOptionalString(body.entity_id);
+  const scope = resolveMemoryScope(body, {
+    includeFocusEntity: explicitEntityId === undefined && shouldUseFocusEntity(body),
+  });
   const result = await memoryAdd({
     content: (body.content as string) ?? '',
     layer: (body.layer as string) ?? 'session',
     dimension: body.dimension as string | undefined,
-    entityId: (body.entity_id as string | undefined) ?? scope.entityId,
-    validFrom: body.valid_from as string | undefined,
-    validUntil: body.valid_until as string | undefined,
-    userId: body.user_id as string | undefined,
-    projectId: (body.project_id as string | undefined) ?? scope.projectId,
-    sessionId: (body.session_id as string | undefined) ?? scope.sessionId,
+    entityId: explicitEntityId ?? scope.entityId,
+    validFrom: readOptionalString(body.valid_from),
+    validUntil: readOptionalString(body.valid_until),
+    userId: readOptionalString(body.user_id),
+    projectId: readOptionalString(body.project_id) ?? scope.projectId,
+    sessionId: readOptionalString(body.session_id) ?? scope.sessionId,
     importance: (body.importance as number) ?? 0.5,
     tags: (body.tags as string[]) ?? [],
-    source: body.source as string | undefined,
+    source: readOptionalString(body.source),
     confidence: body.confidence as number | undefined,
   });
   return jsonResponse(result);
@@ -71,9 +92,9 @@ export async function memoryUploadEndpoint(request: HttpRequest): Promise<HttpRe
   const body = parseBody(request) as Record<string, unknown>;
   const scope = resolveMemoryScope(body);
 
-  const fileName = body.file_name as string | undefined;
-  const fileContentBase64 = body.file_content_base64 as string | undefined;
-  const sessionId = (body.session_id as string | undefined) ?? scope.sessionId;
+  const fileName = readOptionalString(body.file_name);
+  const fileContentBase64 = readOptionalString(body.file_content_base64);
+  const sessionId = readOptionalString(body.session_id) ?? scope.sessionId;
   const chunkSizeRaw = body.chunk_size as number | undefined;
   const chunkOverlapRaw = body.chunk_overlap as number | undefined;
 
@@ -179,13 +200,14 @@ export async function memoryUploadEndpoint(request: HttpRequest): Promise<HttpRe
 export async function memoryTemporalEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const scope = resolveMemoryScope(body);
+  const entityId = readOptionalString(body.entity_id) ?? '';
   const result = await memoryGetTemporal(
-    (body.entity_id as string) ?? '',
-    body.at_time as string | undefined,
+    entityId,
+    readOptionalString(body.at_time),
     {
-      userId: body.user_id as string | undefined,
-      projectId: (body.project_id as string | undefined) ?? scope.projectId,
-      sessionId: (body.session_id as string | undefined) ?? scope.sessionId,
+      userId: readOptionalString(body.user_id),
+      projectId: readOptionalString(body.project_id) ?? scope.projectId,
+      sessionId: readOptionalString(body.session_id) ?? scope.sessionId,
     }
   );
   return jsonResponse(result);

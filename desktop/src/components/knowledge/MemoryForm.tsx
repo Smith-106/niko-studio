@@ -12,6 +12,7 @@ interface MemoryFormProps {
 export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
   const { t } = useI18n()
   const currentWorkspace = useAppStore((state) => state.currentWorkspace)
+  const currentFocusEntityId = currentWorkspace.knowledge.focusEntityId?.trim() || ''
   const [temporalEntityId, setTemporalEntityId] = useState('')
   const [temporalAtTime, setTemporalAtTime] = useState('')
   const [characterName, setCharacterName] = useState('')
@@ -94,6 +95,7 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
 
   const handleAddMemory = async () => {
     const content = memoryContent.trim()
+    const explicitEntityId = memoryEntityId.trim()
     if (!content) {
       onStatusChange({ type: 'error', message: t.knowledgeMemoryContentRequired })
       return
@@ -107,7 +109,8 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
     const response = await addMemory(content, {
       layer: memoryLayer,
       dimension: memoryDimension,
-      entity_id: memoryEntityId.trim() || undefined,
+      entity_id: explicitEntityId || undefined,
+      use_focus_entity: false,
       tags,
       workspace: currentWorkspace,
     })
@@ -228,6 +231,16 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
             aria-label={t.knowledgeMemoryEntityPlaceholder}
             className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
           />
+          {currentFocusEntityId ? (
+            <button
+              type="button"
+              onClick={() => setMemoryEntityId(currentFocusEntityId)}
+              aria-label={`${t.knowledgeMemoryEntityPlaceholder}: ${currentFocusEntityId}`}
+              className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+            >
+              {currentFocusEntityId}
+            </button>
+          ) : null}
           <input
             value={memoryTags}
             onChange={(event) => setMemoryTags(event.target.value)}

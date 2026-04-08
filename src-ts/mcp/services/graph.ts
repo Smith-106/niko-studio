@@ -11,19 +11,31 @@ import { getGraphEngine } from '../engine';
 // Engine accessor
 // ---------------------------------------------------------------
 
+export interface GraphReadScope {
+  workspaceId?: string | null;
+  projectId?: string | null;
+  allowLegacy?: boolean;
+}
+
 interface GraphEngine {
-  executeCypher(cypher: string): Promise<unknown[]>;
+  executeCypher(cypher: string, scope?: GraphReadScope | null): Promise<unknown[]>;
   getCharacter(
     name: string,
     includeRelations: boolean,
-    includeTimeline: boolean
+    includeTimeline: boolean,
+    scope?: GraphReadScope | null
   ): Promise<Record<string, unknown>>;
   getRelationships(
     character: string,
     relationshipType?: string | null,
-    depth?: number
+    depth?: number,
+    scope?: GraphReadScope | null
   ): Promise<unknown[]>;
-  getForeshadows(status: string, chapter?: number | null): Promise<unknown[]>;
+  getForeshadows(
+    status: string,
+    chapter?: number | null,
+    scope?: GraphReadScope | null
+  ): Promise<unknown[]>;
   createEntity(
     entityType: string,
     name: string,
@@ -59,39 +71,49 @@ function getEngine(): GraphEngine | null {
 // Tool implementations
 // ---------------------------------------------------------------
 
-export async function graphQuery(cypher: string): Promise<unknown[]> {
+export async function graphQuery(
+  cypher: string,
+  scope?: GraphReadScope | null
+): Promise<unknown[]> {
   const engine = getEngine();
   if (!engine) return [];
-  return engine.executeCypher(cypher);
+  return scope ? engine.executeCypher(cypher, scope) : engine.executeCypher(cypher);
 }
 
 export async function graphGetCharacter(
   name: string,
   includeRelations = true,
-  includeTimeline = false
+  includeTimeline = false,
+  scope?: GraphReadScope | null
 ): Promise<Record<string, unknown>> {
   const engine = getEngine();
   if (!engine) return {};
-  return engine.getCharacter(name, includeRelations, includeTimeline);
+  return scope
+    ? engine.getCharacter(name, includeRelations, includeTimeline, scope)
+    : engine.getCharacter(name, includeRelations, includeTimeline);
 }
 
 export async function graphGetRelationships(
   character: string,
   relationshipType?: string | null,
-  depth = 1
+  depth = 1,
+  scope?: GraphReadScope | null
 ): Promise<unknown[]> {
   const engine = getEngine();
   if (!engine) return [];
-  return engine.getRelationships(character, relationshipType, depth);
+  return scope
+    ? engine.getRelationships(character, relationshipType, depth, scope)
+    : engine.getRelationships(character, relationshipType, depth);
 }
 
 export async function graphGetForeshadows(
   status = 'pending',
-  chapter?: number | null
+  chapter?: number | null,
+  scope?: GraphReadScope | null
 ): Promise<unknown[]> {
   const engine = getEngine();
   if (!engine) return [];
-  return engine.getForeshadows(status, chapter);
+  return scope ? engine.getForeshadows(status, chapter, scope) : engine.getForeshadows(status, chapter);
 }
 
 export async function graphAddEntity(

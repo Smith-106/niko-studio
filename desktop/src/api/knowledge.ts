@@ -1,6 +1,24 @@
 import { type ApiResponse, callApi } from './core'
-import { appendLegacyMemoryWorkspacePayload, appendWorkspacePayload, type ProjectWorkspaceContext } from './workspace'
+import { appendWorkspacePayload, normalizeWorkspaceInput, type ProjectWorkspaceContext } from './workspace'
 // ============ Memory API ============
+
+function appendMemoryWorkspacePayload<T extends Record<string, unknown>>(
+  payload: T,
+  workspace?: ProjectWorkspaceContext | Record<string, unknown> | null,
+): T & {
+  workspace?: ProjectWorkspaceContext
+  project_id?: string
+  session_id?: string
+} {
+  const normalizedWorkspace = normalizeWorkspaceInput(workspace)
+  if (!normalizedWorkspace) return payload
+  return {
+    project_id: normalizedWorkspace.identity.projectId || undefined,
+    session_id: normalizedWorkspace.workflow.sessionId || normalizedWorkspace.chat.conversationId || undefined,
+    ...payload,
+    workspace: normalizedWorkspace,
+  }
+}
 
 export async function searchMemory(
   query: string,
@@ -8,13 +26,15 @@ export async function searchMemory(
     layer?: string
     dimensions?: string[]
     limit?: number
+    entity_id?: string
+    use_focus_entity?: boolean
     workspace?: ProjectWorkspaceContext
   }
 ): Promise<ApiResponse<Array<{ id: string; content: string; score: number }>>> {
   return callApi(
     '/memory/search',
     'POST',
-    appendLegacyMemoryWorkspacePayload({ query, ...options }, options?.workspace),
+    appendMemoryWorkspacePayload({ query, ...options }, options?.workspace),
   )
 }
 
@@ -24,6 +44,7 @@ export async function addMemory(
     layer?: string
     dimension?: string
     entity_id?: string
+    use_focus_entity?: boolean
     importance?: number
     tags?: string[]
     workspace?: ProjectWorkspaceContext
@@ -32,7 +53,7 @@ export async function addMemory(
   return callApi(
     '/memory/add',
     'POST',
-    appendLegacyMemoryWorkspacePayload({ content, ...options }, options?.workspace),
+    appendMemoryWorkspacePayload({ content, ...options }, options?.workspace),
   )
 }
 
@@ -54,7 +75,7 @@ export async function uploadMemoryFile(
     workspace?: ProjectWorkspaceContext
   }
 ): Promise<ApiResponse<MemoryUploadResponse>> {
-  return callApi('/memory/upload', 'POST', appendLegacyMemoryWorkspacePayload(payload, payload.workspace))
+  return callApi('/memory/upload', 'POST', appendMemoryWorkspacePayload(payload, payload.workspace))
 }
 
 export async function getTemporalFacts(
@@ -65,7 +86,7 @@ export async function getTemporalFacts(
   return callApi(
     '/memory/temporal',
     'POST',
-    appendLegacyMemoryWorkspacePayload({ entity_id: entityId, at_time: atTime }, workspace),
+    appendMemoryWorkspacePayload({ entity_id: entityId, at_time: atTime }, workspace),
   )
 }
 

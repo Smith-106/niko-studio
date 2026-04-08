@@ -96,6 +96,26 @@ function resolveWorkspaceFromWriterMetadata(writerMetadata?: WriterMetadata): Pr
   return candidate ? normalizeProjectWorkspaceContext(candidate) : null
 }
 
+function createSafeDefaultWorkspace(): ProjectWorkspaceContext {
+  return createDefaultProjectWorkspaceContext()
+}
+
+function createConversationWorkspaceSeed(workspace: ProjectWorkspaceContext): ProjectWorkspaceContext {
+  const normalizedWorkspace = normalizeProjectWorkspaceContext(workspace)
+  const defaultWorkspace = createSafeDefaultWorkspace()
+
+  return mergeProjectWorkspaceContext(normalizedWorkspace, {
+    workflow: defaultWorkspace.workflow,
+    chat: defaultWorkspace.chat,
+  })
+}
+
+function resolveSelectedConversationWorkspace(conversation?: Conversation): ProjectWorkspaceContext {
+  return conversation?.workspace
+    ? normalizeProjectWorkspaceContext(conversation.workspace)
+    : createSafeDefaultWorkspace()
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   // Backend status
   backendStatus: false,
@@ -119,7 +139,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => {
       const conversation = state.conversationsById[conversationId]
       if (!conversation) return state
-      const baseWorkspace = conversation.workspace ?? state.currentWorkspace
+      const baseWorkspace = conversation.workspace
+        ? normalizeProjectWorkspaceContext(conversation.workspace)
+        : state.currentConversationId === conversationId
+          ? state.currentWorkspace
+          : createSafeDefaultWorkspace()
       const nextWorkspace = mergeProjectWorkspaceContext(baseWorkspace, workspace)
       return {
         currentWorkspace: state.currentConversationId === conversationId ? nextWorkspace : state.currentWorkspace,
@@ -141,7 +165,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentConversationId: null,
 
   createConversation: () => {
-    const workspace = normalizeProjectWorkspaceContext(get().currentWorkspace)
+    const workspace = createConversationWorkspaceSeed(get().currentWorkspace)
     const newConversation: Conversation = {
       id: Date.now().toString(),
       title: '新对话',
@@ -151,6 +175,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       workspace,
     }
     set((state) => ({
+      currentWorkspace: workspace,
       conversationsById: {
         ...state.conversationsById,
         [newConversation.id]: newConversation,
@@ -162,11 +187,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   selectConversation: (id: string) => {
     const conversation = get().conversationsById[id]
-    set((state) => ({
+    set(() => ({
       currentConversationId: id,
-      currentWorkspace: conversation?.workspace
-        ? normalizeProjectWorkspaceContext(conversation.workspace)
-        : state.currentWorkspace,
+      currentWorkspace: resolveSelectedConversationWorkspace(conversation),
     }))
   },
 

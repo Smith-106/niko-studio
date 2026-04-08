@@ -4,6 +4,19 @@ import { type WriterMetadata } from '@/api/client'
 import { createDefaultProjectWorkspaceContext } from '@/types/workspace'
 import { useAppStore } from '@/stores/appStore'
 
+function buildMeaningfulWorkspace() {
+  return {
+    identity: {
+      projectId: 'atlas-project',
+      projectName: 'Atlas Project',
+      workspaceRoot: '/tmp/atlas-project',
+    },
+    manuscript: {
+      chapterId: 'chapter-1',
+    },
+  }
+}
+
 function resetStore() {
   useAppStore.setState({
     backendStatus: false,
@@ -23,14 +36,7 @@ describe('workspace store integration', () => {
   })
 
   it('seeds new conversations from the current workspace and restores it on selection', () => {
-    useAppStore.getState().setCurrentWorkspace({
-      identity: {
-        projectId: 'atlas-project',
-      },
-      manuscript: {
-        chapterId: 'chapter-1',
-      },
-    })
+    useAppStore.getState().setCurrentWorkspace(buildMeaningfulWorkspace())
 
     useAppStore.getState().createConversation()
     const created = useAppStore.getState().conversationsById[useAppStore.getState().currentConversationId ?? '']
@@ -41,6 +47,12 @@ describe('workspace store integration', () => {
       },
       manuscript: {
         chapterId: 'chapter-1',
+      },
+      workflow: {
+        planId: null,
+      },
+      chat: {
+        conversationId: null,
       },
     })
 
@@ -57,6 +69,105 @@ describe('workspace store integration', () => {
       },
       manuscript: {
         chapterId: 'chapter-1',
+      },
+    })
+  })
+
+  it('resets legacy conversations without stored workspace to a safe default', () => {
+    useAppStore.getState().setCurrentWorkspace({
+      ...buildMeaningfulWorkspace(),
+      workflow: {
+        sessionId: 'workflow-session-9',
+        planId: 'plan-9',
+        level: 'L4',
+      },
+      chat: {
+        conversationId: 'chat-9',
+        comparisonEnabled: true,
+      },
+    })
+
+    const legacyConversationId = 'legacy-conversation'
+    useAppStore.setState((state) => ({
+      ...state,
+      conversationsById: {
+        [legacyConversationId]: {
+          id: legacyConversationId,
+          title: 'Legacy conversation',
+          messages: [],
+          createdAt: new Date('2026-04-08T00:00:00Z'),
+          updatedAt: new Date('2026-04-08T00:00:00Z'),
+        },
+      },
+      allConversationIds: [legacyConversationId],
+    }))
+
+    useAppStore.getState().selectConversation(legacyConversationId)
+
+    expect(useAppStore.getState().currentWorkspace).toMatchObject({
+      identity: {
+        projectId: 'default-project',
+        workspaceId: 'default-project',
+      },
+      manuscript: {
+        chapterId: null,
+      },
+      workflow: {
+        sessionId: null,
+        planId: null,
+        level: null,
+      },
+      chat: {
+        conversationId: null,
+        comparisonEnabled: null,
+      },
+    })
+  })
+
+  it('drops workflow and chat identifiers when creating a new conversation', () => {
+    useAppStore.getState().setCurrentWorkspace({
+      ...buildMeaningfulWorkspace(),
+      workflow: {
+        sessionId: 'workflow-session-9',
+        planId: 'plan-9',
+        level: 'L4',
+      },
+      chat: {
+        conversationId: 'chat-9',
+        comparisonEnabled: true,
+      },
+    })
+
+    useAppStore.getState().createConversation()
+    const state = useAppStore.getState()
+    const created = state.conversationsById[state.currentConversationId ?? '']
+
+    expect(created?.workspace).toMatchObject({
+      identity: {
+        projectId: 'atlas-project',
+      },
+      manuscript: {
+        chapterId: 'chapter-1',
+      },
+      workflow: {
+        sessionId: null,
+        planId: null,
+        level: null,
+      },
+      chat: {
+        conversationId: null,
+        comparisonEnabled: null,
+      },
+    })
+    expect(state.currentWorkspace).toMatchObject({
+      workflow: {
+        sessionId: null,
+        planId: null,
+        level: null,
+      },
+      chat: {
+        conversationId: null,
+        comparisonEnabled: null,
       },
     })
   })

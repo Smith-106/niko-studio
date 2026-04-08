@@ -61,6 +61,7 @@ export async function workflowExecuteEndpoint(request: HttpRequest): Promise<Htt
     stepId: body.step_id as string | undefined,
     recommendations: body.recommendations as unknown[] | undefined,
     confirmToken: body.confirm_token as string | undefined,
+    workspace,
   });
   return jsonResponse({ ...result, workspace });
 }
@@ -70,7 +71,8 @@ export async function workflowLifecycleEndpoint(request: HttpRequest): Promise<H
   const workspace = resolveWorkspace(body);
   const result = await workflowLifecycle(
     (body.plan_id as string) ?? '',
-    (body.action as string) ?? 'status'
+    (body.action as string) ?? 'status',
+    workspace,
   );
   return jsonResponse({ ...result, workspace });
 }
@@ -82,6 +84,7 @@ export async function workflowQuickRollbackEndpoint(request: HttpRequest): Promi
     planId: (body.plan_id as string) ?? '',
     checkpointId: (body.checkpoint_id as string) ?? '',
     reason: (body.reason as string) ?? '',
+    workspace,
   });
   return jsonResponse({ ...result, workspace });
 }

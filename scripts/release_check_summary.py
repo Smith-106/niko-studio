@@ -16,6 +16,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = PROJECT_ROOT / "release-check-summary.md"
 RELEASE_EVIDENCE_DIR = PROJECT_ROOT / ".workflow" / "evidence" / "release"
 RELEASE_READINESS_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "release-readiness-artifact.json"
+DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND = "npm --prefix desktop run check:local"
+DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS = ["npm.cmd", "--prefix", "desktop", "run", "check:local"]
+DESKTOP_PACKAGING_DRY_RUN_COMMAND = "npm --prefix desktop run validate:package:dry-run"
 
 
 @dataclass(frozen=True)
@@ -1455,21 +1458,15 @@ def main() -> int:
         "run",
         "validate:package:dry-run",
     ])
-    desktop_check_code, desktop_check_output = run_cmd([
-        "npm.cmd",
-        "--prefix",
-        "desktop",
-        "run",
-        "check",
-    ])
+    desktop_check_code, desktop_check_output = run_cmd(DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS)
     desktop_code = (
         desktop_bootstrap_code
         if desktop_bootstrap_code != 0
-        else (desktop_sidecar_build_code if desktop_sidecar_build_code != 0 else desktop_check_code)
+        else desktop_check_code
     )
     desktop_output = "\n\n".join(
         part
-        for part in [desktop_bootstrap_output, desktop_sidecar_build_output, desktop_check_output]
+        for part in [desktop_bootstrap_output, desktop_check_output]
         if part
     )
     desktop_sidecar_readiness_code = (
@@ -1673,7 +1670,8 @@ def main() -> int:
             True,
             desktop_code,
             _format_detail_pairs([
-                ("command", "npm --prefix desktop run build:sidecar && npm --prefix desktop run check"),
+                ("command", DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND),
+                ("package_script", "desktop/package.json -> scripts.check:local"),
             ]),
         ),
         build_check_result(
@@ -1692,7 +1690,7 @@ def main() -> int:
             True,
             desktop_packaging_code,
             _format_detail_pairs([
-                ("command", "npm --prefix desktop run validate:package:dry-run"),
+                ("command", DESKTOP_PACKAGING_DRY_RUN_COMMAND),
                 ("target", "x86_64-pc-windows-msvc"),
                 ("signing", "unsigned_local_dry_run"),
             ]),
@@ -2073,7 +2071,8 @@ def main() -> int:
 - contract_docs: `README.md`, `desktop/README.md`, `docs/release/RELEASE_NOTES.md`, `docs/operations/DESKTOP_RUNBOOK.md`, `docs/operations/ROLLBACK.md`
 - contract_labels: `Supported runtime`, `Supported launcher`, `Advisory compatibility surfaces`, `Deprecated surface`
 - authority_alignment_checker: `scripts/check_authority_alignment.py`
-- packaging_dry_run: `npm --prefix desktop run validate:package:dry-run` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`)
+- desktop_authoritative_local_gate: `{DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND}` (from `desktop/package.json` `check:local`, which currently resolves to `check:release`)
+- packaging_dry_run: `{DESKTOP_PACKAGING_DRY_RUN_COMMAND}` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`)
 - signing_prerequisite: `desktop/src-tauri/tauri.conf.json` keeps `certificateThumbprint=null` and `timestampUrl=""` for unsigned local proof; signed external bundles require release-private override material outside git.
 """
 
