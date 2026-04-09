@@ -4,6 +4,7 @@ import type { HttpRequest } from '../../mcp/http-types';
 import {
   getConfig,
   getSecrets,
+  reloadConfig,
   setConfigAccess,
   updateConfig,
   updateSecrets,
@@ -135,5 +136,32 @@ describe('config endpoints backup parity', () => {
     expect(setConfigValueMock).toHaveBeenCalledWith('integration.dbhub_governance_enabled', true);
     expect(setConfigValueMock).toHaveBeenCalledWith('integration.langflow_flow_name', 'pilot-v2');
     expect(setConfigValueMock).toHaveBeenCalledWith('backup.s3_secret_access_key', 'minio-secret');
+  });
+
+  it('reloads configuration through the shared config access contract', async () => {
+    const reloadConfigMock = vi.fn();
+
+    setConfigAccess({
+      getConfig: () => ({}),
+      getConfigValue: vi.fn(),
+      setConfigValue: vi.fn(),
+      reloadConfig: reloadConfigMock,
+    });
+
+    const response = await reloadConfig({
+      method: 'POST',
+      url: '/config/reload',
+      headers: {},
+      body: {},
+      query: {},
+      params: {},
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      status: 'ok',
+      message: 'Configuration reloaded successfully',
+    });
+    expect(reloadConfigMock).toHaveBeenCalledTimes(1);
   });
 });

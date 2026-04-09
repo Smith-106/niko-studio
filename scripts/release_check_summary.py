@@ -480,6 +480,7 @@ def _runtime_policy_contract() -> dict[str, object]:
     novel_quality_text = _read_project_text("src-ts/workflow/novel-quality.ts") or ""
     contract_text = _read_project_text("src-ts/mcp/contract.ts") or ""
     workflow_engine_text = _read_project_text("src-ts/workflow/workflow-engine.ts") or ""
+    workflow_risk_text = _read_project_text("src-ts/workflow/engine/risk.ts") or ""
 
     pass_score = _extract_first_float(r"export const NOVEL_PASS_SCORE = (\d+(?:\.\d+)?)", novel_state_text)
     human_review_score = _extract_first_float(
@@ -498,8 +499,8 @@ def _runtime_policy_contract() -> dict[str, object]:
         )
     )
     workflow_hard_gate_present = (
-        "WorkflowDecision.NO_GO" in workflow_engine_text
-        and "confirm_required: true" in workflow_engine_text
+        ("WorkflowDecision.NO_GO" in workflow_engine_text or "WorkflowDecision.NO_GO" in workflow_risk_text)
+        and "confirm_required: true" in workflow_risk_text
     )
 
     return {

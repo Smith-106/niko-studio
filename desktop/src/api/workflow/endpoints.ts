@@ -5,6 +5,6 @@ export function resolveWorkflowEndpoint(
   mode?: 'standard' | 'uiBridge',
 ): string {
   const backendMode = mode ?? useSettingsStore.getState().settings.workflowBackendMode
-  const prefix = backendMode === 'uiBridge' ? '/ui/workflow' : '/workflow'
+  const prefix = backendMode === 'uiBridge' ? '/ui-bridge/workflow' : '/workflow'
   return `${prefix}${path}`
 }

@@ -25,7 +25,7 @@ RULES: tuple[GateRule, ...] = (
         reason="缺少 NO_GO 决策锚点，无法保证高风险写入的硬门禁。",
     ),
     GateRule(
-        file_path="src-ts/workflow/workflow-engine.ts",
+        file_path="src-ts/workflow/engine/risk.ts",
         needle="confirm_required: true",
         reason="缺少 confirm_required 强制确认锚点，高风险路径可能被绕过。",
     ),

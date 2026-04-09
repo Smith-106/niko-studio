@@ -11,7 +11,7 @@ export async function quickRollbackWorkflow(
   workspace?: ProjectWorkspaceContext,
 ): Promise<ApiResponse<WorkflowQuickRollbackResult>> {
   return callApi(
-    '/workflow/quick-rollback',
+    '/workflow/rollback',
     'POST',
     appendWorkspacePayload({
       plan_id: planId,
@@ -25,7 +25,7 @@ export async function createCheckpoint(
   description?: string,
   autoCommit?: boolean,
 ): Promise<ApiResponse<{ checkpoint_id: string; commit_hash?: string }>> {
-  return callApi('/workflow/checkpoint/create', 'POST', {
+  return callApi('/checkpoint/create', 'POST', {
     description,
     auto_commit: autoCommit,
   })
@@ -34,11 +34,11 @@ export async function createCheckpoint(
 export async function restoreCheckpoint(
   checkpointId: string,
 ): Promise<ApiResponse<{ status: string }>> {
-  return callApi('/workflow/checkpoint/restore', 'POST', { checkpoint_id: checkpointId })
+  return callApi('/checkpoint/restore', 'POST', { checkpoint_id: checkpointId })
 }
 
 export async function listCheckpoints(
   limit?: number,
 ): Promise<ApiResponse<Array<{ id: string; description: string; created_at: string }>>> {
-  return callApi('/workflow/checkpoint/list', 'POST', { limit })
+  return callApi('/checkpoint/list', 'POST', { limit })
 }

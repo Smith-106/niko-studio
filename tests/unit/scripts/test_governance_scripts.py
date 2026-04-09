@@ -93,6 +93,11 @@ def test_delivery_gate_rules_cover_authority_alignment_contract() -> None:
         "workflow / runtime / docs authority alignment 锚点",
         True,
     ) in rule_map
+    assert (
+        "src-ts/workflow/engine/risk.ts",
+        "confirm_required: true",
+        True,
+    ) in rule_map
     assert any(
         file_path == "scripts/release_check_summary.py"
         and '"authority_alignment_signal"' in needle

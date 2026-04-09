@@ -365,7 +365,7 @@ describe('workflow workspace authority integration', () => {
           reason: 'test rollback',
           workspace: workspaceB,
         },
-        '/workflow/quick-rollback',
+        '/workflow/rollback',
       ),
     );
 

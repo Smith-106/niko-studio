@@ -6,6 +6,7 @@ import {
   chat,
   chatStream,
   createGatewayServiceConfig,
+  createCheckpoint,
   createPlan,
   deriveGatewayRuntimeState,
   evaluateContent,
@@ -19,11 +20,14 @@ import {
   processWritingHelper,
   polishContent,
   polishContentCompat,
+  quickRollbackWorkflow,
   resolveWorkspaceContext,
+  restoreCheckpoint,
   routeWorkflow,
   searchMemory,
   setGatewayServiceEnabled,
   updateGatewayServiceConfig,
+  listCheckpoints,
   workflowLifecycle,
   type ChatRequest,
   type GatewayHealth,
@@ -389,7 +393,7 @@ describe('gateway service config APIs', () => {
     await updateGatewayServiceConfig('search', { name: 'Search v2', enabled: true })
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/mcp/services/search'),
+      expect.stringContaining('/admin/mcp/services/search'),
       expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ name: 'Search v2', enabled: true }),
@@ -425,12 +429,12 @@ describe('gateway service config APIs', () => {
 
     expect(fetchSpy).toHaveBeenNthCalledWith(
       1,
-      expect.stringContaining('/mcp/services'),
+      expect.stringContaining('/admin/mcp/services'),
       expect.objectContaining({ method: 'GET' })
     )
     expect(fetchSpy).toHaveBeenNthCalledWith(
       2,
-      expect.stringContaining('/mcp/services'),
+      expect.stringContaining('/admin/mcp/services'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ id: 'search2', name: 'Search 2', path: '/search2', enabled: true }),
@@ -438,7 +442,7 @@ describe('gateway service config APIs', () => {
     )
     expect(fetchSpy).toHaveBeenNthCalledWith(
       3,
-      expect.stringContaining('/mcp/services/search2/enabled'),
+      expect.stringContaining('/admin/mcp/services/search2/enabled'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ enabled: false }),
@@ -446,7 +450,7 @@ describe('gateway service config APIs', () => {
     )
     expect(fetchSpy).toHaveBeenNthCalledWith(
       4,
-      expect.stringContaining('/mcp/services/search2/health'),
+      expect.stringContaining('/admin/mcp/services/search2/probe'),
       expect.objectContaining({ method: 'POST' })
     )
   })
@@ -604,22 +608,70 @@ describe('workflow bridge and quality-check APIs', () => {
 
     expect(fetchSpy).toHaveBeenNthCalledWith(
       5,
-      expect.stringContaining('/ui/workflow/route'),
+      expect.stringContaining('/ui-bridge/workflow/route'),
       expect.objectContaining({ method: 'POST' })
     )
     expect(fetchSpy).toHaveBeenNthCalledWith(
       6,
-      expect.stringContaining('/ui/workflow/plan'),
+      expect.stringContaining('/ui-bridge/workflow/plan'),
       expect.objectContaining({ method: 'POST' })
     )
     expect(fetchSpy).toHaveBeenNthCalledWith(
       7,
-      expect.stringContaining('/ui/workflow/execute'),
+      expect.stringContaining('/ui-bridge/workflow/execute'),
       expect.objectContaining({ method: 'POST' })
     )
     expect(fetchSpy).toHaveBeenNthCalledWith(
       8,
-      expect.stringContaining('/ui/workflow/lifecycle'),
+      expect.stringContaining('/ui-bridge/workflow/lifecycle'),
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
+  it('uses the current rollback and checkpoint endpoints', async () => {
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok', plan_id: 'plan-1', checkpoint_id: 'cp-1' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ checkpoint_id: 'cp-1', commit_hash: 'abc123' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ([{ id: 'cp-1', description: 'Initial checkpoint', created_at: '2026-04-09T00:00:00Z' }]),
+      })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await quickRollbackWorkflow('plan-1', 'cp-1', 'undo risky step')
+    await createCheckpoint('Initial checkpoint', true)
+    await restoreCheckpoint('cp-1')
+    await listCheckpoints(5)
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/workflow/rollback'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/checkpoint/create'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('/checkpoint/restore'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('/checkpoint/list'),
       expect.objectContaining({ method: 'POST' })
     )
   })

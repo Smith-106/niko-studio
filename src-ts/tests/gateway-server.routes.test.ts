@@ -9,6 +9,8 @@ describe('gateway route registry', () => {
     expect(routePatterns).toEqual(
       expect.arrayContaining([
         'GET:^\\/health$',
+        'PUT:^\\/config$',
+        'POST:^\\/config\\/reload$',
         'POST:^\\/chat$',
         'POST:^\\/workflow\\/execute$',
         'POST:^\\/ui-bridge\\/workflow\\/route$',
@@ -23,5 +25,11 @@ describe('gateway route registry', () => {
 
     expect(match).not.toBeNull();
     expect(match?.params).toEqual({ service_id: 'shadow-admin' });
+  });
+
+  it('maps config reload through the shared platform route family', () => {
+    const match = matchGatewayRoute('POST', '/config/reload');
+
+    expect(match).not.toBeNull();
   });
 });
