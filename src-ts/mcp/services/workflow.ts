@@ -7,7 +7,7 @@
 
 import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
 import {
-  projectWorkspaceToMemoryScope,
+  projectWorkspaceToWorkflowAuthority,
   type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
 
@@ -68,13 +68,19 @@ function resolveWorkflowAuthority(
   workspace?: ProjectWorkspaceContext | null,
 ): WorkflowAuthority | null {
   if (!workspace) return null;
-  const scope = projectWorkspaceToMemoryScope(workspace);
+  const scope = projectWorkspaceToWorkflowAuthority(workspace);
   const sessionId =
     typeof scope.sessionId === 'string' && scope.sessionId.trim()
       ? scope.sessionId.trim()
       : null;
-  const workspaceId = workspace.identity.workspaceId?.trim() || null;
-  const projectId = workspace.identity.projectId?.trim() || null;
+  const workspaceId =
+    typeof scope.workspaceId === 'string' && scope.workspaceId.trim()
+      ? scope.workspaceId.trim()
+      : null;
+  const projectId =
+    typeof scope.projectId === 'string' && scope.projectId.trim()
+      ? scope.projectId.trim()
+      : null;
 
   if (!sessionId && !workspaceId && !projectId) {
     return null;

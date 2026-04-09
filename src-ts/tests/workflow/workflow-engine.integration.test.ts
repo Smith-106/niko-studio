@@ -74,6 +74,26 @@ describe('WorkflowEngine integration', () => {
     expect(status['runner_state']).toBe('running');
   });
 
+  it('reports lifecycle status through the shared runtime context after pausing', async () => {
+    const engine = new WorkflowEngine(workspace, 'phase3-lifecycle-status');
+
+    const plan = await engine.plan('写一章并逐步完善冲突与细节', 'L3');
+    const planId = String(plan['plan_id']);
+
+    await engine.lifecycle(planId, 'pause');
+
+    const status = await engine.lifecycle(planId, 'status');
+    expect(status).toMatchObject({
+      plan_id: planId,
+      action: 'status',
+      runner_state: 'paused',
+      session_status: 'checkpointed',
+    });
+    expect(status['observability_metrics']).toBeTruthy();
+    expect(status['budget_guardrail']).toBeTruthy();
+    expect(status['handoff_package']).toBeTruthy();
+  });
+
   it('supports explicit public plan-session binding', async () => {
     const engine = new WorkflowEngine(workspace, 'phase4-binding');
 

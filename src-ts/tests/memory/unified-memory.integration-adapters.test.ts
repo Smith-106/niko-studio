@@ -3,7 +3,7 @@ import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createIntegrationAdapters, StubPostgresShadowAdapter } from '../../integrations';
 import {
@@ -31,9 +31,18 @@ function createDbPath(label: string): { basePath: string; dbPath: string } {
 }
 
 describe('UnifiedMemoryEngine integration adapters', () => {
+  beforeEach(() => {
+    vi.stubGlobal('console', {
+      ...console,
+      log: vi.fn(),
+      warn: vi.fn(),
+    });
+  });
+
   afterEach(() => {
     resetUnifiedMemoryEngine();
     restorePostgresEnv();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -133,7 +142,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
     const shadowWriteSpy = vi
       .spyOn(adapters.storageShadow, 'shadowWriteMemory')
       .mockRejectedValueOnce(new Error('shadow failed'));
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.mocked(console.warn);
     const { basePath, dbPath } = createDbPath('shadow-failure');
     const engine = new UnifiedMemoryEngine({
       dbPath,
@@ -173,7 +182,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
     const shadowWriteSpy = vi
       .spyOn(adapters.storageShadow, 'shadowWriteMemory')
       .mockResolvedValueOnce(false);
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.mocked(console.warn);
     const { basePath, dbPath } = createDbPath('shadow-non-success');
     const engine = new UnifiedMemoryEngine({
       dbPath,
@@ -396,7 +405,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
       StubPostgresShadowAdapter.prototype,
       'shadowWriteMemory',
     );
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.mocked(console.warn);
     const { basePath, dbPath } = createDbPath('shadow-merge-failure');
     const engine = new UnifiedMemoryEngine({ dbPath });
 

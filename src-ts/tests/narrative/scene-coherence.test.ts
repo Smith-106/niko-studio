@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   ContradictionType,
@@ -95,5 +95,50 @@ describe('SceneCoherenceDetector', () => {
     expect(report.criticalCount).toBeGreaterThanOrEqual(1);
     expect(report.coherenceScore).toBeLessThan(100);
     expect(report.summary.length).toBeGreaterThan(0);
+  });
+
+  it('returns the mock deep-analysis envelope when llm is unavailable', async () => {
+    const detector = new SceneCoherenceDetector();
+
+    const result = await detector.deepAnalysis();
+
+    expect(result).toMatchObject({
+      contradictions_found: 2,
+      timeline_issues: expect.any(Array),
+      location_issues: expect.any(Array),
+      state_issues: expect.any(Array),
+      suggestions: expect.any(Array),
+    });
+  });
+
+  it('delegates deep-analysis to llm when a client is configured', async () => {
+    const llmClient = {
+      generateJson: vi.fn().mockResolvedValue({
+        contradictions_found: 1,
+        timeline_issues: ['scene-2 jumps from night to morning without transition'],
+        suggestions: ['insert a transition scene'],
+      }),
+    };
+    const detector = new SceneCoherenceDetector(llmClient as never);
+
+    detector.createScene(
+      'scene-1',
+      'Night watch',
+      '深夜的钟声刚响，林岚仍在档案室翻找线索。',
+      1,
+      { timeOfDay: 'night' },
+      { name: '档案室', type: 'room' },
+      ['林岚'],
+    );
+
+    const result = await detector.deepAnalysis(['scene-1']);
+
+    expect(llmClient.generateJson).toHaveBeenCalledTimes(1);
+    expect(llmClient.generateJson.mock.calls[0]?.[0]).toContain('场景1: Night watch');
+    expect(result).toMatchObject({
+      contradictions_found: 1,
+      timeline_issues: ['scene-2 jumps from night to morning without transition'],
+      suggestions: ['insert a transition scene'],
+    });
   });
 });

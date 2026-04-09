@@ -6,6 +6,7 @@ import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToLegacyChatContext,
   projectWorkspaceToMemoryScope,
+  projectWorkspaceToWorkflowAuthority,
 } from './workspace-model.js';
 
 describe('project workspace model', () => {
@@ -84,6 +85,11 @@ describe('project workspace model', () => {
       projectId: 'atlas-project',
       sessionId: 'workflow-session-7',
       entityId: 'hero-7',
+    });
+    expect(projectWorkspaceToWorkflowAuthority(workspace)).toEqual({
+      sessionId: 'workflow-session-7',
+      workspaceId: 'atlas-project',
+      projectId: 'atlas-project',
     });
   });
 });

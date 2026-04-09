@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   IdentificationBuilder,
@@ -41,5 +41,33 @@ describe('narrative/fictional_dream/identification', () => {
       ),
     ).toBe(true);
     expect(Array.isArray(result.suggestions)).toBe(true);
+  });
+
+  it('hydrates godfather technique details from llm analysis when available', async () => {
+    const llm = {
+      generateJson: vi.fn(async () => ({
+        is_detected: true,
+        moral_flaw: '她曾参与走私',
+        noble_goal: '保护妹妹并揭露真相',
+        sympathy_transfer_path: '通过妹妹的依赖让读者先站在她这一边',
+        effectiveness: 0.82,
+      })),
+    };
+    const builder = new IdentificationBuilder(llm);
+
+    const result = await builder.analyze(
+      '她决心保护妹妹，为了正义不惜冒险。即使背负污点，也一定要查出真相。',
+      { role: 'morally gray detective' },
+      65,
+    );
+
+    expect(llm.generateJson).toHaveBeenCalledTimes(1);
+    expect(result.godfatherTechnique).toMatchObject({
+      isDetected: true,
+      moralFlaw: '她曾参与走私',
+      nobleGoal: '保护妹妹并揭露真相',
+      sympathyTransferPath: '通过妹妹的依赖让读者先站在她这一边',
+      effectiveness: 0.82,
+    });
   });
 });

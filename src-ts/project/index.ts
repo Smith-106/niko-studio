@@ -5,6 +5,7 @@ export {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToLegacyChatContext,
   projectWorkspaceToMemoryScope,
+  projectWorkspaceToWorkflowAuthority,
   summarizeProjectWorkspaceContext,
 } from './workspace-model.js';
 
@@ -16,5 +17,6 @@ export type {
   ProjectWorkspaceKnowledge,
   ProjectWorkspaceManuscript,
   ProjectWorkspaceStoryBible,
+  ProjectWorkspaceWorkflowAuthority,
   ProjectWorkspaceWorkflow,
 } from './workspace-model.js';

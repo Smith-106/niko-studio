@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload, Settings } from 'lucide-react'
-import { BackendConfig } from '../api/client'
+import type { BackendConfig } from '../api/config'
 import { isTauriRuntime, syncGatewayBaseOverride } from '../api/transport'
 import { useSettingsStore, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'

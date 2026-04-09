@@ -1,12 +1,20 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vitest/config';
 
+const srcTsRoot = fileURLToPath(new URL('./', import.meta.url));
+
 export default defineConfig({
+  root: srcTsRoot,
   resolve: {
     extensions: ['.ts', '.tsx', '.mts', '.js', '.jsx', '.mjs', '.json'],
   },
   test: {
     globals: true,
     environment: 'node',
+    exclude: [
+      '**/.claude/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

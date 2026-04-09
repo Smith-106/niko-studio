@@ -17,6 +17,8 @@
     "format:check": "prettier --config ../prettier.config.mjs --ignore-path ../.prettierignore --check \"package.json\" \"../eslint.config.mjs\" \"../prettier.config.mjs\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:stable": "vitest run --maxWorkers=4",
+    "test:serial": "vitest run --maxWorkers=1 --fileParallelism=false",
     "test:watch": "vitest",
     "test:ci": "node -e \"require('fs').mkdirSync('test-results',{recursive:true})\" && vitest run --reporter=default --reporter=junit --outputFile.junit=test-results/vitest.junit.xml",
     "check:quick": "npm run lint && npm run format:check && npm run typecheck && npm run check:node-sidecar && npm run validate:sidecar-contract && npm run test",

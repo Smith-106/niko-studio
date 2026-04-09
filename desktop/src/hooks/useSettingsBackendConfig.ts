@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getSecrets, type BackendConfig, type SecretsResponse, SECRET_FIELDS } from '../api/client'
+import { getSecrets, type BackendConfig, type SecretsResponse, SECRET_FIELDS } from '../api/config'
 import { useSettingsStore } from '../stores/settingsStore'
 
 export const MASKED_SECRET_VALUE = '***MASKED***'

@@ -212,8 +212,8 @@ ${JSON.stringify(characterInfo)}
 
 返回JSON格式。`;
 
-    await this.llm.generateJson(prompt);
-    return this.emptyGodfather();
+    const response = await this.llm.generateJson<unknown>(prompt);
+    return this.mergeGodfatherTechnique(response);
   }
 
   private emptyGodfather(): GodfatherTechnique {
@@ -224,6 +224,58 @@ ${JSON.stringify(characterInfo)}
       sympathyTransferPath: null,
       effectiveness: 0,
     };
+  }
+
+  private mergeGodfatherTechnique(response: unknown): GodfatherTechnique {
+    const fallback = this.emptyGodfather();
+    if (typeof response !== 'object' || response === null) {
+      return fallback;
+    }
+
+    const record = response as Record<string, unknown>;
+    const moralFlaw = this.readNullableString(
+      record.moralFlaw ?? record.moral_flaw,
+    );
+    const nobleGoal = this.readNullableString(
+      record.nobleGoal ?? record.noble_goal,
+    );
+    const sympathyTransferPath = this.readNullableString(
+      record.sympathyTransferPath ?? record.sympathy_transfer_path,
+    );
+    const effectiveness = this.readNormalizedScore(
+      record.effectiveness ?? record.score,
+      fallback.effectiveness,
+    );
+    const explicitDetection = record.isDetected ?? record.is_detected ?? record.detected;
+
+    return {
+      isDetected:
+        explicitDetection === true
+        || effectiveness >= 0.5
+        || moralFlaw !== null
+        || nobleGoal !== null
+        || sympathyTransferPath !== null,
+      moralFlaw,
+      nobleGoal,
+      sympathyTransferPath,
+      effectiveness,
+    };
+  }
+
+  private readNullableString(value: unknown): string | null {
+    if (typeof value !== 'string') {
+      return null;
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+
+  private readNormalizedScore(value: unknown, fallback: number): number {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) {
+      return fallback;
+    }
+    return Math.max(0, Math.min(1, numeric));
   }
 
   private async evaluateGoalClarity(content: string): Promise<number> {

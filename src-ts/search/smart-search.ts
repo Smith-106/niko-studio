@@ -11,8 +11,32 @@
  * - Auto mode: intelligent mode selection based on query
  */
 
+import { execFile } from 'node:child_process';
+
 import type { SearchInterface } from '../protocols/search';
 import type { EmbeddingService } from '../protocols/embedding';
+
+function execFileAsync(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, (error, stdout, stderr) => {
+      if (error) {
+        const candidate = error as NodeJS.ErrnoException & {
+          stdout?: string;
+          stderr?: string;
+        };
+        candidate.stdout = stdout;
+        candidate.stderr = stderr;
+        reject(candidate);
+        return;
+      }
+
+      resolve({
+        stdout,
+        stderr,
+      });
+    });
+  });
+}
 
 /**
  * Search mode enumeration
@@ -129,6 +153,7 @@ export class SmartSearch implements SearchInterface {
   private readonly fuzzyWeight: number;
   private readonly ripgrepPaths: string[];
   private ripgrepAvailable: boolean;
+  private ripgrepChecked: boolean;
 
   constructor(config: SmartSearchConfig = {}) {
     this.vectorIndex = config.vectorIndex;
@@ -139,6 +164,7 @@ export class SmartSearch implements SearchInterface {
     this.fuzzyWeight = config.fuzzyWeight ?? 0.4;
     this.ripgrepPaths = config.ripgrepPaths ?? [];
     this.ripgrepAvailable = false; // Will be checked on first use
+    this.ripgrepChecked = false;
   }
 
   /**
@@ -239,12 +265,11 @@ export class SmartSearch implements SearchInterface {
 
     // FTS5 search on database
     const ftsResults = await this.fts5Search(query, { topK, typeFilter });
-
-    // TODO: Add ripgrep search when needed (requires process execution)
+    const ripgrepResults = await this.ripgrepSearch(query, { topK, typeFilter });
 
     // Deduplicate by ID, keeping highest score
     const seen = new Map<string, SmartSearchResult>();
-    for (const r of ftsResults) {
+    for (const r of [...ftsResults, ...ripgrepResults]) {
       if (!seen.has(r.id) || r.score > seen.get(r.id)!.score) {
         seen.set(r.id, r);
       }
@@ -515,6 +540,156 @@ export class SmartSearch implements SearchInterface {
     }
 
     return [];
+  }
+
+  /**
+   * Ripgrep-based fuzzy search over configured filesystem paths
+   */
+  private async ripgrepSearch(
+    query: string,
+    options?: { topK?: number; typeFilter?: string }
+  ): Promise<SmartSearchResult[]> {
+    if (this.ripgrepPaths.length === 0) {
+      return [];
+    }
+
+    const ripgrepAvailable = await this.ensureRipgrepAvailable();
+    if (!ripgrepAvailable) {
+      return [];
+    }
+
+    const topK = options?.topK ?? 10;
+    const tokens = query.split(/\s+/).filter(t => t.trim());
+    if (tokens.length === 0) {
+      return [];
+    }
+
+    const args = [
+      '--json',
+      '--line-number',
+      '--color',
+      'never',
+      '--no-config',
+      '--fixed-strings',
+    ];
+
+    for (const token of tokens) {
+      args.push('-e', token);
+    }
+
+    args.push(...this.ripgrepPaths);
+
+    try {
+      const { stdout } = await execFileAsync('rg', args);
+      const results: SmartSearchResult[] = [];
+      const queryTokenCount = tokens.length;
+
+      for (const rawLine of stdout.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line) continue;
+
+        let event: Record<string, unknown>;
+        try {
+          event = JSON.parse(line) as Record<string, unknown>;
+        } catch {
+          continue;
+        }
+
+        if (event['type'] !== 'match') {
+          continue;
+        }
+
+        const data = event['data'] as Record<string, unknown> | undefined;
+        const pathRecord = data?.['path'] as Record<string, unknown> | undefined;
+        const linesRecord = data?.['lines'] as Record<string, unknown> | undefined;
+        const submatches = Array.isArray(data?.['submatches'])
+          ? (data?.['submatches'] as Array<Record<string, unknown>>)
+          : [];
+
+        const path = typeof pathRecord?.['text'] === 'string'
+          ? pathRecord['text']
+          : undefined;
+        const content = typeof linesRecord?.['text'] === 'string'
+          ? linesRecord['text'].replace(/\r?\n$/, '')
+          : '';
+        const lineNumber = typeof data?.['line_number'] === 'number'
+          ? data['line_number']
+          : Number(data?.['line_number'] ?? 0);
+
+        if (!path || !content || !Number.isFinite(lineNumber) || lineNumber <= 0) {
+          continue;
+        }
+
+        const contentLower = content.toLowerCase();
+        const matchedTokenCount = tokens.filter(token => contentLower.includes(token.toLowerCase())).length;
+        const submatchBonus = Math.min(submatches.length / Math.max(queryTokenCount, 1), 1);
+        const score = Math.min(
+          1,
+          matchedTokenCount / queryTokenCount + submatchBonus * 0.1,
+        );
+
+        results.push({
+          id: `ripgrep:${path}:${lineNumber}`,
+          content,
+          score,
+          type: options?.typeFilter ?? 'file',
+          metadata: {
+            path,
+            loc: {
+              kind: 'line',
+              start: lineNumber,
+              end: lineNumber,
+            },
+            extra: {
+              submatch_count: submatches.length,
+            },
+          },
+          source: 'ripgrep',
+          mode_used: 'fuzzy',
+          loc: {
+            kind: 'line',
+            start: lineNumber,
+            end: lineNumber,
+          },
+          snapshot_query: query,
+        });
+      }
+
+      results.sort((a, b) => b.score - a.score);
+      return results.slice(0, topK);
+    } catch (error) {
+      const candidate = error as NodeJS.ErrnoException & { code?: string | number };
+      const errorCode = String(candidate?.code ?? '');
+      if (errorCode === '1') {
+        return [];
+      }
+      if (errorCode === 'ENOENT') {
+        this.ripgrepAvailable = false;
+        this.ripgrepChecked = true;
+        return [];
+      }
+      return [];
+    }
+  }
+
+  /**
+   * Detect ripgrep availability once and cache the result
+   */
+  private async ensureRipgrepAvailable(): Promise<boolean> {
+    if (this.ripgrepChecked) {
+      return this.ripgrepAvailable;
+    }
+
+    this.ripgrepChecked = true;
+
+    try {
+      await execFileAsync('rg', ['--version']);
+      this.ripgrepAvailable = true;
+    } catch {
+      this.ripgrepAvailable = false;
+    }
+
+    return this.ripgrepAvailable;
   }
 
   /**

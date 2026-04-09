@@ -3,13 +3,17 @@ import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as graph from '../../graph';
 import { GraphEngine as DirectGraphEngine, Relation as DirectRelation } from '../../graph/graph-engine';
 import { CypherParser as DirectCypherParser, GraphManager as DirectGraphManager } from '../../graph/graph-manager';
 
 describe('graph/index barrel', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
   it('re-exports representative graph classes, helpers, and types through the public entrypoint', () => {
     expect(graph.GraphEngine).toBe(DirectGraphEngine);
     expect(graph.CypherParser).toBe(DirectCypherParser);

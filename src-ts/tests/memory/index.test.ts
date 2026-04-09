@@ -3,7 +3,7 @@ import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { StubPostgresShadowAdapter } from '../../integrations';
 import * as memory from '../../memory';
@@ -26,10 +26,19 @@ function restorePostgresEnv(): void {
 }
 
 describe('memory/index barrel', () => {
+  beforeEach(() => {
+    vi.stubGlobal('console', {
+      ...console,
+      log: vi.fn(),
+      warn: vi.fn(),
+    });
+  });
+
   afterEach(() => {
     memory.resetUnifiedMemoryEngine();
     restorePostgresEnv();
     memory.setConfigProvider((_key, defaultValue) => defaultValue);
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 

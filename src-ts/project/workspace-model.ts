@@ -64,6 +64,12 @@ export interface ProjectWorkspaceContext {
   compatibility: ProjectWorkspaceCompatibility;
 }
 
+export interface ProjectWorkspaceWorkflowAuthority {
+  sessionId?: string;
+  workspaceId?: string;
+  projectId?: string;
+}
+
 interface NormalizeWorkspaceOptions {
   workspaceRoot?: string | null;
   fallbackProjectId?: string | null;
@@ -405,6 +411,16 @@ export function projectWorkspaceToMemoryScope(
     projectId: workspace.identity.projectId || undefined,
     sessionId: workspace.workflow.sessionId || workspace.chat.conversationId || undefined,
     entityId: includeFocusEntity ? workspace.knowledge.focusEntityId || undefined : undefined,
+  };
+}
+
+export function projectWorkspaceToWorkflowAuthority(
+  workspace: ProjectWorkspaceContext,
+): ProjectWorkspaceWorkflowAuthority {
+  return {
+    sessionId: workspace.workflow.sessionId || workspace.chat.conversationId || undefined,
+    workspaceId: workspace.identity.workspaceId || undefined,
+    projectId: workspace.identity.projectId || undefined,
   };
 }
 

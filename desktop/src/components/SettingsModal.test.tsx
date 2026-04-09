@@ -5,11 +5,11 @@ import { SettingsModal } from './SettingsModal'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { translations } from '../i18n'
-import type { BackendConfig, SecretsResponse } from '../api/client'
-import * as apiClient from '../api/client'
+import type { BackendConfig, SecretsResponse } from '../api/config'
+import * as apiConfig from '../api/config'
 
-vi.mock('../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+vi.mock('../api/config', async () => {
+  const actual = await vi.importActual<typeof import('../api/config')>('../api/config')
   return {
     ...actual,
     getSecrets: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock('../api/client', async () => {
 
 const zh = translations.zh
 const en = translations.en
-const mockedGetSecrets = vi.mocked(apiClient.getSecrets)
+const mockedGetSecrets = vi.mocked(apiConfig.getSecrets)
 
 const createBackendConfig = (): BackendConfig => ({
   app_name: 'Niko Studio',

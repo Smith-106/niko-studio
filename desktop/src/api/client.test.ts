@@ -129,6 +129,7 @@ describe('fetchProviderModels', () => {
   })
 
   it('returns combined gateway/direct reason when gateway 404 and direct fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce({
         ok: false,
@@ -145,6 +146,7 @@ describe('fetchProviderModels', () => {
 
     expect(result.success).toBe(false)
     expect(result.error).toBe('gateway=provider_not_found; direct=HTTP error: 401')
+    consoleErrorSpy.mockRestore()
   })
 
   it('falls back to direct source when gateway returns empty models', async () => {
@@ -535,6 +537,7 @@ describe('workflow bridge and quality-check APIs', () => {
   })
 
   it('maps fetch rejection for novelQualityCheck', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.stubGlobal('fetch', vi.fn(async () => {
       throw new Error('network down')
     }))
@@ -543,6 +546,7 @@ describe('workflow bridge and quality-check APIs', () => {
 
     expect(response.success).toBe(false)
     expect(response.error).toBe('Request failed. Please try again.')
+    consoleErrorSpy.mockRestore()
   })
 
   it('routes workflow calls by workflowBackendMode', async () => {
@@ -1077,6 +1081,26 @@ describe('workspace api surface', () => {
 
     await searchMemory('plot outline', {
       entity_id: 'hero-13',
+      workspace: memoryWorkspace,
+    })
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(String(init.body))
+    expect(body.project_id).toBe('atlas-project')
+    expect(body.session_id).toBe('workflow-session-13')
+    expect(body.entity_id).toBe('hero-13')
+  })
+
+  it('includes the focused entity only when searchMemory explicitly requests it', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ([]),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await searchMemory('plot outline', {
+      use_focus_entity: true,
       workspace: memoryWorkspace,
     })
 

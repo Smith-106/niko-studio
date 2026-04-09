@@ -9,7 +9,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   DocumentMapping,
@@ -28,6 +28,10 @@ function createSourceFile(basePath: string, name: string, content: string): stri
 }
 
 describe('store/openkl-contract', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
   it('derives the expected OpenKL directory structure and mapping shape', () => {
     const paths = new OpenKLPaths('workspace');
     const mapping = new DocumentMapping({

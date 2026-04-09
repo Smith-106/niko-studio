@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   CharacterManager,
@@ -163,5 +163,58 @@ describe('CharacterManager', () => {
     expect(fiveDimensions).toHaveProperty('overall');
     expect(consistency.valid).toBe(false);
     expect((consistency.issues as string[]).length).toBeGreaterThan(0);
+  });
+
+  it('returns llm-backed analysis payloads for character analysis helpers', async () => {
+    const llm = {
+      generateJson: vi.fn()
+        .mockResolvedValueOnce({
+          consistency_score: 0.82,
+          summary: '角色状态整体稳定，但压力下会出现偏执倾向。',
+        })
+        .mockResolvedValueOnce({
+          next_stage: '让季宁学会向同伴求助',
+          suggestions: ['增加一次主动示弱的场景'],
+        })
+        .mockResolvedValueOnce({
+          dimensions: {
+            dynamic_emotion: 8,
+            competence: 7,
+            eccentricity: 6,
+            environment_contrast: 8,
+            dual_personality: 9,
+          },
+          overall: 7.6,
+        }),
+    };
+    const manager = new CharacterManager(llm as never);
+    const character = manager.createCharacter('季宁', 'protagonist');
+
+    const analysis = await manager.analyzeCharacter(character.id, '角色在压力下仍努力维持冷静。');
+    const development = await manager.suggestDevelopment(character.id);
+    const fiveDimensions = await manager.analyzeFiveDimensions(
+      character.id,
+      '角色在危机中展现能力，也暴露出更强烈的双重人格冲突。',
+    );
+
+    expect(llm.generateJson).toHaveBeenCalledTimes(3);
+    expect(analysis).toMatchObject({
+      consistency_score: 0.82,
+      summary: '角色状态整体稳定，但压力下会出现偏执倾向。',
+    });
+    expect(development).toMatchObject({
+      next_stage: '让季宁学会向同伴求助',
+      suggestions: ['增加一次主动示弱的场景'],
+    });
+    expect(fiveDimensions).toMatchObject({
+      dimensions: {
+        dynamic_emotion: 8,
+        competence: 7,
+        eccentricity: 6,
+        environment_contrast: 8,
+        dual_personality: 9,
+      },
+      overall: 7.6,
+    });
   });
 });

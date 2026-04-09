@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   CypherParser,
@@ -23,6 +23,10 @@ afterEach(() => {
 });
 
 describe('graph/graph-manager', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
   it('supports bounded CRUD, query, stats, and shortest-path behavior', () => {
     const dbPath = createDbPath();
     const manager = new GraphManager(dbPath);
@@ -365,6 +369,7 @@ describe('graph/graph-manager', () => {
   it('covers parser type detection and raw SQL fallback behavior', () => {
     const dbPath = createDbPath();
     const manager = new GraphManager(dbPath);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
       manager.createEntity(new Entity({
@@ -398,6 +403,9 @@ describe('graph/graph-manager', () => {
       expect(sqlError[0]).toMatchObject({
         error: expect.stringContaining('missing_graph_table'),
       });
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Cypher execution error:'),
+      );
     } finally {
       manager.close();
       rmSync(join(dbPath, '..'), { recursive: true, force: true });

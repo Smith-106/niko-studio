@@ -523,8 +523,13 @@ export class VectorSearch implements SearchInterface {
     if (!loc) return undefined;
 
     const kind = (loc.kind as string) ?? 'char';
-    const start = Number(loc.start) ?? 0;
-    const end = loc.end != null ? Number(loc.end) : undefined;
+    const parsedStart = Number(loc.start);
+    const start = Number.isFinite(parsedStart) ? parsedStart : 0;
+    const parsedEnd = loc.end != null ? Number(loc.end) : undefined;
+    const end =
+      parsedEnd !== undefined && Number.isFinite(parsedEnd)
+        ? parsedEnd
+        : undefined;
 
     return {
       kind: kind as 'line' | 'char' | 'range',

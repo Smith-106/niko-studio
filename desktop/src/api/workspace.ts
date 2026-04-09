@@ -57,11 +57,14 @@ export function appendLegacyChatWorkspacePayload<T extends Record<string, unknow
 export function appendLegacyMemoryWorkspacePayload<T extends Record<string, unknown>>(
   payload: T,
   workspace?: ProjectWorkspaceContext | Record<string, unknown> | null,
+  options: { includeFocusEntity?: boolean } = {},
 ): T & { workspace?: ProjectWorkspaceContext } {
   const normalizedWorkspace = normalizeWorkspaceInput(workspace)
   if (!normalizedWorkspace) return payload
   return {
-    ...projectWorkspaceToMemoryScope(normalizedWorkspace),
+    ...projectWorkspaceToMemoryScope(normalizedWorkspace, {
+      includeFocusEntity: options.includeFocusEntity ?? false,
+    }),
     ...payload,
     workspace: normalizedWorkspace,
   }

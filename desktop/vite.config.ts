@@ -19,10 +19,24 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-markdown': ['react-markdown'],
-          'vendor-virtual': ['@tanstack/react-virtual'],
-          'vendor-lucide': ['lucide-react'],
+        manualChunks(id) {
+          const normalizedId = id.replace(/\\/g, '/')
+          if (normalizedId.includes('/node_modules/@tiptap/pm/')) {
+            return 'vendor-editor-pm'
+          }
+          if (normalizedId.includes('/node_modules/@tiptap/') || normalizedId.includes('/node_modules/tippy.js/')) {
+            return 'vendor-editor'
+          }
+          if (normalizedId.includes('/node_modules/react-markdown/')) {
+            return 'vendor-markdown'
+          }
+          if (normalizedId.includes('/node_modules/@tanstack/react-virtual/')) {
+            return 'vendor-virtual'
+          }
+          if (normalizedId.includes('/node_modules/lucide-react/')) {
+            return 'vendor-lucide'
+          }
+          return undefined
         },
       },
     },

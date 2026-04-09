@@ -26,13 +26,18 @@ export function VirtualList<T>({
 }: VirtualListProps<T>) {
   const internalRef = useRef<HTMLDivElement>(null)
   const containerRef = externalContainerRef ?? internalRef
-  const [fallback, setFallback] = useState(false)
+  const isJsdomEnvironment =
+    typeof window !== 'undefined'
+    && typeof window.navigator?.userAgent === 'string'
+    && window.navigator.userAgent.toLowerCase().includes('jsdom')
+  const [fallback, setFallback] = useState(isJsdomEnvironment)
 
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => containerRef.current,
     estimateSize,
     overscan,
+    enabled: !isJsdomEnvironment && !fallback,
   })
 
   const virtualItems = virtualizer.getVirtualItems()

@@ -194,7 +194,108 @@ export class EmpathyDeepener {
       }
     }
 
-    return details;
+    if (!this.llm || details.length === 0) {
+      return details;
+    }
+
+    const prompt = `分析以下文本中的感官细节，并为每条细节补充情绪与身体植入效果评分。\n\n文本内容：\n${content.slice(0, 2000)}\n\n请返回 JSON，包含 sensory_details 数组，每项字段：\n- sense_type: visual/auditory/tactile/olfactory/gustatory/kinesthetic\n- content: 原文片段\n- emotion_evoked: 激发的情绪\n- body_plant_effect: 0-1\n- text_location: 位置说明`;
+
+    try {
+      const response = await this.llm.generateJson<unknown>(prompt);
+      return this.mergeLlmSensoryDetails(details, response);
+    } catch {
+      return details;
+    }
+  }
+
+  private mergeLlmSensoryDetails(
+    details: SensoryDetail[],
+    response: unknown,
+  ): SensoryDetail[] {
+    const responseRecord =
+      typeof response === 'object' && response !== null
+        ? (response as Record<string, unknown>)
+        : {};
+    const llmDetails = Array.isArray(responseRecord.sensory_details)
+      ? responseRecord.sensory_details
+      : Array.isArray(response)
+        ? response
+        : [];
+
+    if (llmDetails.length === 0) {
+      return details;
+    }
+
+    const usedIndexes = new Set<number>();
+    return details.map((detail) => {
+      const matchIndex = llmDetails.findIndex((candidate, index) => {
+        if (usedIndexes.has(index)) return false;
+        return this.isMatchingSensoryCandidate(
+          detail,
+          candidate as Record<string, unknown>,
+        );
+      });
+
+      if (matchIndex < 0) {
+        return detail;
+      }
+
+      usedIndexes.add(matchIndex);
+      const candidate = llmDetails[matchIndex] as Record<string, unknown>;
+      return {
+        ...detail,
+        emotionEvoked: this.readStringValue(
+          candidate.emotionEvoked ?? candidate.emotion_evoked,
+          detail.emotionEvoked,
+        ),
+        bodyPlantEffect: this.readNormalizedScore(
+          candidate.bodyPlantEffect ?? candidate.body_plant_effect,
+          detail.bodyPlantEffect,
+        ),
+        textLocation: this.readStringValue(
+          candidate.textLocation ?? candidate.text_location,
+          detail.textLocation,
+        ),
+      };
+    });
+  }
+
+  private isMatchingSensoryCandidate(
+    detail: SensoryDetail,
+    candidate: Record<string, unknown>,
+  ): boolean {
+    const senseType = String(
+      candidate.senseType
+      ?? candidate.sense_type
+      ?? candidate.type
+      ?? '',
+    ).trim();
+    if (senseType) {
+      return senseType === detail.senseType;
+    }
+
+    const content = String(candidate.content ?? '').trim();
+    if (!content) {
+      return false;
+    }
+
+    return detail.content.includes(content) || content.includes(detail.content);
+  }
+
+  private readStringValue(value: unknown, fallback: string): string {
+    if (typeof value !== 'string') {
+      return fallback;
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : fallback;
+  }
+
+  private readNormalizedScore(value: unknown, fallback: number): number {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) {
+      return fallback;
+    }
+    return Math.max(0, Math.min(1, numeric));
   }
 
   private calculateCoverage(details: SensoryDetail[]): Record<SenseType, number> {

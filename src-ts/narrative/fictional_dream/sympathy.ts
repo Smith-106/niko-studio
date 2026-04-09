@@ -189,9 +189,106 @@ ${triggerList}
 
 返回JSON格式。`;
 
-    await this.llm!.generateJson(prompt);
-    // TODO: merge LLM response into triggers
-    return triggers;
+    const response = await this.llm!.generateJson<unknown>(prompt);
+    return this.mergeLlmTriggerScores(triggers, response, content);
+  }
+
+  private mergeLlmTriggerScores(
+    triggers: SympathyEvidence[],
+    response: unknown,
+    content: string,
+  ): SympathyEvidence[] {
+    const responseRecord =
+      typeof response === 'object' && response !== null
+        ? (response as Record<string, unknown>)
+        : {};
+
+    const rawTriggers = Array.isArray(responseRecord.triggers)
+      ? responseRecord.triggers
+      : Array.isArray(responseRecord.results)
+        ? responseRecord.results
+        : Array.isArray(response)
+          ? response
+          : [];
+
+    if (rawTriggers.length === 0) {
+      return triggers;
+    }
+
+    const usedIndexes = new Set<number>();
+    return triggers.map((trigger) => {
+      const matchIndex = rawTriggers.findIndex((candidate, index) => {
+        if (usedIndexes.has(index)) return false;
+        return this.isMatchingTriggerCandidate(
+          trigger,
+          candidate as Record<string, unknown>,
+          content,
+        );
+      });
+
+      if (matchIndex < 0) {
+        return trigger;
+      }
+
+      usedIndexes.add(matchIndex);
+      const candidate = rawTriggers[matchIndex] as Record<string, unknown>;
+      return {
+        ...trigger,
+        effectiveness: this.readNormalizedScore(
+          candidate.effectiveness ?? candidate.score,
+          trigger.effectiveness,
+        ),
+        vulnerabilityLevel: this.readNormalizedScore(
+          candidate.vulnerabilityLevel ?? candidate.vulnerability_level,
+          trigger.vulnerabilityLevel,
+        ),
+        universality: this.readNormalizedScore(
+          candidate.universality ?? candidate.universal_score,
+          trigger.universality,
+        ),
+      };
+    });
+  }
+
+  private isMatchingTriggerCandidate(
+    trigger: SympathyEvidence,
+    candidate: Record<string, unknown>,
+    content: string,
+  ): boolean {
+    const triggerType = String(
+      candidate.triggerType
+      ?? candidate.trigger_type
+      ?? candidate.type
+      ?? '',
+    ).trim();
+    if (triggerType) {
+      return triggerType === trigger.triggerType;
+    }
+
+    const excerpt = String(
+      candidate.textExcerpt
+      ?? candidate.text_excerpt
+      ?? candidate.excerpt
+      ?? '',
+    ).trim();
+    if (!excerpt) {
+      return false;
+    }
+
+    return (
+      excerpt === trigger.textExcerpt
+      || trigger.textExcerpt.includes(excerpt)
+      || excerpt.includes(trigger.textExcerpt)
+      || content.includes(excerpt)
+    );
+  }
+
+  private readNormalizedScore(value: unknown, fallback: number): number {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) {
+      return fallback;
+    }
+    return Math.max(0, Math.min(1, numeric));
   }
 
   private async evaluateVulnerability(

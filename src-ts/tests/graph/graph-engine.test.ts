@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   Entity as GraphEntity,
@@ -16,6 +16,10 @@ function createDbPath(): string {
 }
 
 describe('graph/graph-engine', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
   it('supports the remaining search, relationship, foreshadow, and mutation tail behavior', async () => {
     const dbPath = createDbPath();
     const engine = new GraphEngine(dbPath);
@@ -119,6 +123,7 @@ describe('graph/graph-engine', () => {
   it('applies executeCypher guards and bounded typed-node query semantics', async () => {
     const dbPath = createDbPath();
     const engine = new GraphEngine(dbPath);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     try {
       await engine.createEntity('Event', 'Bridge Alarm', {
@@ -160,6 +165,9 @@ describe('graph/graph-engine', () => {
           }),
         }),
       ]);
+      expect(warnSpy).toHaveBeenCalledWith('Blocked non-string graph query input');
+      expect(warnSpy).toHaveBeenCalledWith('Blocked oversized graph query');
+      expect(warnSpy).toHaveBeenCalledWith('Blocked graph query outside MATCH/MERGE subset');
     } finally {
       engine.close();
       rmSync(join(dbPath, '..'), { recursive: true, force: true });
@@ -349,6 +357,8 @@ describe('graph/graph-engine', () => {
     const originalGraphDbPath = process.env.GRAPH_DB_PATH;
     const originalNikoGraphDbPath = process.env.NIKO_GRAPH_DB_PATH;
     const originalNikoNeo4jEnabled = process.env.NIKO_NEO4J_ENABLED;
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     process.env.DATA_DIR = dataDir;
     process.env.NIKO_NEO4J_ENABLED = 'true';
@@ -420,6 +430,9 @@ describe('graph/graph-engine', () => {
 
       expect(okPlugin.load).toHaveBeenCalledTimes(1);
       expect(badPlugin.load).toHaveBeenCalledTimes(1);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Graph plugin load failed: bad-plugin:'),
+      );
 
       const healthWhileOpen = await engine.healthCheck();
       expect(healthWhileOpen).toMatchObject({
@@ -567,6 +580,13 @@ describe('graph/graph-engine', () => {
         },
       });
       expect(String(healthAfterClose.error)).toContain('database connection is not open');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Neo4j entity projection failed, local-first path preserved:'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Neo4j relation projection failed, local-first path preserved:'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith('Blocked oversized entity name pattern');
     } finally {
       if (!engineClosed) {
         engine.close();

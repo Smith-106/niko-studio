@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   CharacterDepthSystem,
@@ -82,5 +82,70 @@ describe('narrative/character-depth', () => {
     expect(tracked.evolution).toEqual(['恐惧', '勇气']);
     expect(full.characterName).toBe('林岚');
     expect(['UNFORGETTABLE', 'DEEP', 'MODERATE', 'FLAT']).toContain(full.depthLevel);
+  });
+
+  it('propagates llm-backed depth scoring through evaluateFull', async () => {
+    const llm = {
+      generateJson: vi.fn()
+        .mockResolvedValueOnce({
+          score: 9,
+          evidence: ['角色拥有反差鲜明的职业细节'],
+          issues: [],
+          suggestions: ['继续强化独特技能'],
+        })
+        .mockResolvedValueOnce({
+          score: 8,
+          evidence: ['她坚持在钟声响起时记录线索'],
+          issues: [],
+          suggestions: ['保留这一怪癖'],
+        })
+        .mockResolvedValueOnce({
+          has_dual_personality: true,
+          score: 9,
+          primary_persona: {
+            name: '理性林岚',
+            traits: ['冷静'],
+            behavior_patterns: ['先观察后行动'],
+          },
+          shadow_persona: {
+            name: '偏执林岚',
+            traits: ['执拗'],
+            behavior_patterns: ['先追索再思考'],
+          },
+          internal_conflict: '真相与代价冲突',
+          switch_triggers: ['压力'],
+          dramatic_potential: '人格切换能放大剧情张力',
+          suggestions: ['增加触发切换的高压场景'],
+        })
+        .mockResolvedValueOnce({
+          score: 8,
+          evidence: ['角色与废弃剧院形成强烈反差'],
+          suggestions: ['进一步利用空间压迫感'],
+        }),
+    };
+    const system = new CharacterDepthSystem(llm);
+
+    const result = await system.evaluateFull(
+      { name: '林岚' },
+      { setting: '废弃剧院' },
+      '她总能从旧表上找到线索，也习惯在钟声响起时记笔记。她在冷静与偏执之间来回切换，闯进废弃剧院追查真相。',
+    );
+
+    expect(llm.generateJson).toHaveBeenCalledTimes(4);
+    expect(result.interestScore.score).toBe(9);
+    expect(result.eccentricityScore.score).toBe(8);
+    expect(result.dualPersonalityScore.score).toBe(9);
+    expect(result.environmentContrastScore.score).toBe(8);
+    expect(result.dualPersonality).toMatchObject({
+      primaryPersona: {
+        name: '理性林岚',
+      },
+      shadowPersona: {
+        name: '偏执林岚',
+      },
+      internalConflict: '真相与代价冲突',
+      switchTriggers: ['压力'],
+    });
+    expect(['UNFORGETTABLE', 'DEEP', 'MODERATE', 'FLAT']).toContain(result.depthLevel);
   });
 });

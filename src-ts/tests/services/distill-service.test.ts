@@ -165,6 +165,7 @@ describe('DistillationService', () => {
     });
 
     it('should handle LLM errors gracefully', async () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const failingLLM: LLMService = {
         generate: vi.fn().mockRejectedValue(new Error('LLM error')),
         generateWithMetadata: vi.fn(),
@@ -180,6 +181,7 @@ describe('DistillationService', () => {
       // Should fallback to simple distillation
       expect(result.content).toBeDefined();
       expect(result.content.length).toBeGreaterThan(0);
+      expect(errorSpy).toHaveBeenCalledWith('LLM call failed:', expect.any(Error));
     });
   });
 
@@ -198,6 +200,22 @@ describe('DistillationService', () => {
       expect(result.entities).toEqual([]);
       expect(result.relations).toEqual([]);
       expect(result.summary).toBeDefined();
+    });
+
+    it('should support distill_chapter() through the llm path', async () => {
+      service.setLLMClient(mockLLM);
+      const content = 'Chapter content through llm.';
+
+      const result = await service.distillChapter(content);
+
+      expect(result).toMatchObject({
+        entities: [],
+        relations: [],
+        summary: 'Mocked LLM response',
+        events: [],
+        character_arcs: [],
+        plot_points: [],
+      });
     });
 
     it('should support apply_to_graph()', () => {

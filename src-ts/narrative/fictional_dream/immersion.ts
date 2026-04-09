@@ -186,7 +186,122 @@ export class ImmersionCatalyst {
       }
     }
 
-    return conflicts;
+    if (!this.llm || conflicts.length === 0) {
+      return conflicts;
+    }
+
+    const prompt = `分析以下文本中的内部冲突，并补充冲突双方、代价与强度。\n\n文本内容：\n${content.slice(0, 2000)}\n\n请返回 JSON，包含 conflicts 数组，每项字段：\n- dilemma: 冲突句子或核心困境\n- option_a: 选择A\n- option_b: 选择B\n- stakes: 代价\n- honor_involved: 是否涉及尊严/荣誉\n- dilemma_type: moral/duty_conflict/value_choice/emotional/trust\n- intensity: 0-1`;
+
+    try {
+      const response = await this.llm.generateJson<unknown>(prompt);
+      return this.mergeLlmConflicts(conflicts, response);
+    } catch {
+      return conflicts;
+    }
+  }
+
+  private mergeLlmConflicts(
+    conflicts: InternalConflict[],
+    response: unknown,
+  ): InternalConflict[] {
+    const responseRecord =
+      typeof response === 'object' && response !== null
+        ? (response as Record<string, unknown>)
+        : {};
+    const llmConflicts = Array.isArray(responseRecord.conflicts)
+      ? responseRecord.conflicts
+      : Array.isArray(response)
+        ? response
+        : [];
+
+    if (llmConflicts.length === 0) {
+      return conflicts;
+    }
+
+    const usedIndexes = new Set<number>();
+    return conflicts.map((conflict) => {
+      const matchIndex = llmConflicts.findIndex((candidate, index) => {
+        if (usedIndexes.has(index)) return false;
+        return this.isMatchingConflictCandidate(
+          conflict,
+          candidate as Record<string, unknown>,
+        );
+      });
+
+      if (matchIndex < 0) {
+        return conflict;
+      }
+
+      usedIndexes.add(matchIndex);
+      const candidate = llmConflicts[matchIndex] as Record<string, unknown>;
+      return {
+        ...conflict,
+        dilemma: this.readStringValue(candidate.dilemma, conflict.dilemma),
+        optionA: this.readStringValue(
+          candidate.optionA ?? candidate.option_a,
+          conflict.optionA,
+        ),
+        optionB: this.readStringValue(
+          candidate.optionB ?? candidate.option_b,
+          conflict.optionB,
+        ),
+        stakes: this.readStringValue(candidate.stakes, conflict.stakes),
+        honorInvolved: this.readBooleanValue(
+          candidate.honorInvolved ?? candidate.honor_involved,
+          conflict.honorInvolved,
+        ),
+        dilemmaType: this.readDilemmaType(
+          candidate.dilemmaType ?? candidate.dilemma_type,
+          conflict.dilemmaType,
+        ),
+        intensity: this.readNormalizedScore(candidate.intensity, conflict.intensity),
+      };
+    });
+  }
+
+  private isMatchingConflictCandidate(
+    conflict: InternalConflict,
+    candidate: Record<string, unknown>,
+  ): boolean {
+    const dilemma = String(candidate.dilemma ?? '').trim();
+    if (!dilemma) {
+      return false;
+    }
+    return (
+      dilemma === conflict.dilemma
+      || conflict.dilemma.includes(dilemma)
+      || dilemma.includes(conflict.dilemma)
+    );
+  }
+
+  private readStringValue(value: unknown, fallback: string): string {
+    if (typeof value !== 'string') {
+      return fallback;
+    }
+    const trimmed = value.trim();
+    return trimmed ? trimmed : fallback;
+  }
+
+  private readBooleanValue(value: unknown, fallback: boolean): boolean {
+    return typeof value === 'boolean' ? value : fallback;
+  }
+
+  private readDilemmaType(value: unknown, fallback: DilemmaType): DilemmaType {
+    if (typeof value !== 'string') {
+      return fallback;
+    }
+    const normalized = value.trim();
+    return (Object.values(DilemmaType) as string[]).includes(normalized)
+      ? (normalized as DilemmaType)
+      : fallback;
+  }
+
+  private readNormalizedScore(value: unknown, fallback: number): number {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) {
+      return fallback;
+    }
+    return Math.max(0, Math.min(1, numeric));
   }
 
   private async analyzeCarrieTechnique(content: string): Promise<CarrieWaitingScene> {

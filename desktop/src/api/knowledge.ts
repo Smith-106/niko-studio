@@ -1,24 +1,10 @@
 import { type ApiResponse, callApi } from './core'
-import { appendWorkspacePayload, normalizeWorkspaceInput, type ProjectWorkspaceContext } from './workspace'
+import {
+  appendLegacyMemoryWorkspacePayload,
+  appendWorkspacePayload,
+  type ProjectWorkspaceContext,
+} from './workspace'
 // ============ Memory API ============
-
-function appendMemoryWorkspacePayload<T extends Record<string, unknown>>(
-  payload: T,
-  workspace?: ProjectWorkspaceContext | Record<string, unknown> | null,
-): T & {
-  workspace?: ProjectWorkspaceContext
-  project_id?: string
-  session_id?: string
-} {
-  const normalizedWorkspace = normalizeWorkspaceInput(workspace)
-  if (!normalizedWorkspace) return payload
-  return {
-    project_id: normalizedWorkspace.identity.projectId || undefined,
-    session_id: normalizedWorkspace.workflow.sessionId || normalizedWorkspace.chat.conversationId || undefined,
-    ...payload,
-    workspace: normalizedWorkspace,
-  }
-}
 
 export async function searchMemory(
   query: string,
@@ -34,7 +20,11 @@ export async function searchMemory(
   return callApi(
     '/memory/search',
     'POST',
-    appendMemoryWorkspacePayload({ query, ...options }, options?.workspace),
+    appendLegacyMemoryWorkspacePayload(
+      { query, ...options },
+      options?.workspace,
+      { includeFocusEntity: options?.use_focus_entity === true && !options?.entity_id },
+    ),
   )
 }
 
@@ -53,7 +43,11 @@ export async function addMemory(
   return callApi(
     '/memory/add',
     'POST',
-    appendMemoryWorkspacePayload({ content, ...options }, options?.workspace),
+    appendLegacyMemoryWorkspacePayload(
+      { content, ...options },
+      options?.workspace,
+      { includeFocusEntity: options?.use_focus_entity === true && !options?.entity_id },
+    ),
   )
 }
 
@@ -75,7 +69,11 @@ export async function uploadMemoryFile(
     workspace?: ProjectWorkspaceContext
   }
 ): Promise<ApiResponse<MemoryUploadResponse>> {
-  return callApi('/memory/upload', 'POST', appendMemoryWorkspacePayload(payload, payload.workspace))
+  return callApi(
+    '/memory/upload',
+    'POST',
+    appendLegacyMemoryWorkspacePayload(payload, payload.workspace),
+  )
 }
 
 export async function getTemporalFacts(
@@ -86,7 +84,7 @@ export async function getTemporalFacts(
   return callApi(
     '/memory/temporal',
     'POST',
-    appendMemoryWorkspacePayload({ entity_id: entityId, at_time: atTime }, workspace),
+    appendLegacyMemoryWorkspacePayload({ entity_id: entityId, at_time: atTime }, workspace),
   )
 }
 

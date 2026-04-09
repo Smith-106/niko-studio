@@ -3,68 +3,36 @@ import { checkBackendHealth, listSkills, type WriterMetadata } from '@/api/clien
 import {
   createDefaultProjectWorkspaceContext,
   mergeProjectWorkspaceContext,
-  normalizeProjectWorkspaceContext,
   type ProjectWorkspaceContext,
 } from '@/types/workspace'
 
-/** Generate a conversation title from the first user message content */
-function generateTitle(content: string): string {
-  // Strip leading slashes (commands), whitespace, and newlines
-  const cleaned = content.replace(/^\/\w+\s*/, '').trim()
-  // Take first line only
-  const firstLine = cleaned.split('\n')[0]
-  // Truncate to 30 chars with ellipsis
-  if (firstLine.length <= 30) return firstLine
-  return firstLine.slice(0, 30) + '...'
-}
+import {
+  createConversationWorkspaceSeed,
+  createSafeDefaultWorkspace,
+  generateTitle,
+  mergeConversationWorkspace,
+  resolveSelectedConversationWorkspace,
+  resolveWorkspaceFromWriterMetadata,
+  type Conversation,
+  type MessageComparison,
+} from './app/shared'
 
-export interface MessageComparisonItem {
-  model: string
-  content: string
-}
-
-export interface MessageComparison {
-  enabled: boolean
-  primary: MessageComparisonItem
-  control: MessageComparisonItem
-}
-
-export interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-  skills?: string[]
-  comparison?: MessageComparison
-  writerMetadata?: WriterMetadata
-  workspaceContext?: ProjectWorkspaceContext
-}
-
-export interface Conversation {
-  id: string
-  title: string
-  messages: Message[]
-  createdAt: Date
-  updatedAt: Date
-  workspace?: ProjectWorkspaceContext
-}
+export type {
+  Conversation,
+  Message,
+  MessageComparison,
+  MessageComparisonItem,
+} from './app/shared'
 
 interface AppState {
-  // Backend status
   backendStatus: boolean
   checkBackend: () => Promise<void>
-
-  // Project/workspace authority
   currentWorkspace: ProjectWorkspaceContext
   setCurrentWorkspace: (workspace: ProjectWorkspaceContext | Record<string, unknown>) => void
   syncConversationWorkspace: (conversationId: string, workspace: ProjectWorkspaceContext | Record<string, unknown>) => void
-
-  // Conversations - normalized structure
   conversationsById: Record<string, Conversation>
   allConversationIds: string[]
   currentConversationId: string | null
-
-  // Actions
   createConversation: () => void
   selectConversation: (id: string) => void
   addMessage: (
@@ -72,52 +40,22 @@ interface AppState {
     content: string,
     skills?: string[],
     comparison?: MessageComparison,
-    writerMetadata?: WriterMetadata
+    writerMetadata?: WriterMetadata,
   ) => void
   deleteMessage: (messageId: string) => void
   editMessage: (messageId: string, content: string) => void
   getConversationById: (id: string) => Conversation | undefined
-
-  // Skills
   availableSkills: string[]
   selectedSkills: string[]
   toggleSkill: (skill: string) => void
   refreshAvailableSkills: () => Promise<void>
-
-  // Centralized loading state
   loadingMap: Record<string, boolean>
   startLoading: (id: string) => void
   finishLoading: (id: string) => void
   isLoading: (id: string) => boolean
 }
 
-function resolveWorkspaceFromWriterMetadata(writerMetadata?: WriterMetadata): ProjectWorkspaceContext | null {
-  const candidate = writerMetadata?.workspace_context
-  return candidate ? normalizeProjectWorkspaceContext(candidate) : null
-}
-
-function createSafeDefaultWorkspace(): ProjectWorkspaceContext {
-  return createDefaultProjectWorkspaceContext()
-}
-
-function createConversationWorkspaceSeed(workspace: ProjectWorkspaceContext): ProjectWorkspaceContext {
-  const normalizedWorkspace = normalizeProjectWorkspaceContext(workspace)
-  const defaultWorkspace = createSafeDefaultWorkspace()
-
-  return mergeProjectWorkspaceContext(normalizedWorkspace, {
-    workflow: defaultWorkspace.workflow,
-    chat: defaultWorkspace.chat,
-  })
-}
-
-function resolveSelectedConversationWorkspace(conversation?: Conversation): ProjectWorkspaceContext {
-  return conversation?.workspace
-    ? normalizeProjectWorkspaceContext(conversation.workspace)
-    : createSafeDefaultWorkspace()
-}
-
 export const useAppStore = create<AppState>((set, get) => ({
-  // Backend status
   backendStatus: false,
   checkBackend: async () => {
     try {
@@ -128,7 +66,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  // Project/workspace authority
   currentWorkspace: createDefaultProjectWorkspaceContext(),
   setCurrentWorkspace: (workspace) => {
     set((state) => ({
@@ -140,11 +77,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       const conversation = state.conversationsById[conversationId]
       if (!conversation) return state
       const baseWorkspace = conversation.workspace
-        ? normalizeProjectWorkspaceContext(conversation.workspace)
+        ? conversation.workspace
         : state.currentConversationId === conversationId
           ? state.currentWorkspace
           : createSafeDefaultWorkspace()
-      const nextWorkspace = mergeProjectWorkspaceContext(baseWorkspace, workspace)
+      const nextWorkspace = mergeConversationWorkspace(baseWorkspace, workspace)
       return {
         currentWorkspace: state.currentConversationId === conversationId ? nextWorkspace : state.currentWorkspace,
         conversationsById: {
@@ -159,53 +96,54 @@ export const useAppStore = create<AppState>((set, get) => ({
     })
   },
 
-  // Conversations - normalized structure
   conversationsById: {},
   allConversationIds: [],
   currentConversationId: null,
 
   createConversation: () => {
-    const workspace = createConversationWorkspaceSeed(get().currentWorkspace)
-    const newConversation: Conversation = {
-      id: Date.now().toString(),
+    const id = Date.now().toString()
+    const seedWorkspace = createConversationWorkspaceSeed(get().currentWorkspace)
+    const conversation: Conversation = {
+      id,
       title: '新对话',
       messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
-      workspace,
+      workspace: seedWorkspace,
     }
     set((state) => ({
-      currentWorkspace: workspace,
-      conversationsById: {
-        ...state.conversationsById,
-        [newConversation.id]: newConversation,
-      },
-      allConversationIds: [newConversation.id, ...state.allConversationIds],
-      currentConversationId: newConversation.id,
+      conversationsById: { ...state.conversationsById, [id]: conversation },
+      allConversationIds: [id, ...state.allConversationIds],
+      currentConversationId: id,
+      currentWorkspace: seedWorkspace,
     }))
   },
 
   selectConversation: (id: string) => {
     const conversation = get().conversationsById[id]
-    set(() => ({
+    if (!conversation) return
+    set({
       currentConversationId: id,
       currentWorkspace: resolveSelectedConversationWorkspace(conversation),
-    }))
+    })
   },
 
   addMessage: (role, content, skills, comparison, writerMetadata) => {
     const { currentConversationId, conversationsById, currentWorkspace } = get()
-    if (!currentConversationId) return
+    if (!currentConversationId) {
+      get().createConversation()
+      return get().addMessage(role, content, skills, comparison, writerMetadata)
+    }
 
     const conversation = conversationsById[currentConversationId]
     if (!conversation) return
-    const baseWorkspace = conversation.workspace ?? currentWorkspace
-    const writerWorkspace = resolveWorkspaceFromWriterMetadata(writerMetadata)
-    const nextWorkspace = writerWorkspace
-      ? mergeProjectWorkspaceContext(baseWorkspace, writerWorkspace)
-      : normalizeProjectWorkspaceContext(baseWorkspace)
 
-    const message: Message = {
+    const messageWorkspace = resolveWorkspaceFromWriterMetadata(writerMetadata)
+    const nextWorkspace = messageWorkspace
+      ? mergeConversationWorkspace(currentWorkspace, messageWorkspace)
+      : currentWorkspace
+
+    const message = {
       id: Date.now().toString(),
       role,
       content,
@@ -213,10 +151,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       skills,
       comparison,
       writerMetadata,
-      workspaceContext: nextWorkspace,
+      workspaceContext: messageWorkspace ?? undefined,
     }
 
-    // Direct update to specific conversation - avoids re-rendering unrelated conversations
     set({
       currentWorkspace: nextWorkspace,
       conversationsById: {
@@ -244,7 +181,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...conversationsById,
         [currentConversationId]: {
           ...conversation,
-          messages: conversation.messages.filter((m) => m.id !== messageId),
+          messages: conversation.messages.filter((message) => message.id !== messageId),
           updatedAt: new Date(),
         },
       },
@@ -261,8 +198,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         ...conversationsById,
         [currentConversationId]: {
           ...conversation,
-          messages: conversation.messages.map((m) =>
-            m.id === messageId ? { ...m, content, timestamp: new Date() } : m,
+          messages: conversation.messages.map((message) =>
+            message.id === messageId ? { ...message, content, timestamp: new Date() } : message,
           ),
           updatedAt: new Date(),
         },
@@ -274,7 +211,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     return get().conversationsById[id]
   },
 
-  // Skills
   availableSkills: [
     'character-forge',
     'suspense-craft',
@@ -289,7 +225,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleSkill: (skill: string) => {
     set((state) => ({
       selectedSkills: state.selectedSkills.includes(skill)
-        ? state.selectedSkills.filter((s) => s !== skill)
+        ? state.selectedSkills.filter((selected) => selected !== skill)
         : [...state.selectedSkills, skill],
     }))
   },
@@ -313,11 +249,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       })
     } catch {
-      // 忽略动态拉取失败，保留静态兜底列表
+      // Ignore dynamic fetch failures and keep the static fallback list.
     }
   },
 
-  // Centralized loading state
   loadingMap: {},
   startLoading: (id: string) => {
     set((state) => ({ loadingMap: { ...state.loadingMap, [id]: true } }))
