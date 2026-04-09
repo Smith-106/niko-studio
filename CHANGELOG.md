@@ -1,5 +1,11 @@
 # Changelog
 
+## [9.0.2] - 2026-04-09
+
+### Changed
+- 同步 backend、desktop、config 与 Tauri 的发布版本号到 `9.0.2`。
+- 为当前 control-plane 拆分提交准备一致的 release/tag 基线，保持版本校验可通过。
+
 ## [9.0.1] - 2026-04-08
 
 ### Changed
