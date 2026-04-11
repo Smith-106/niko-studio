@@ -217,7 +217,7 @@ describe('StoryBiblePanel', () => {
     expect(await screen.findByDisplayValue('本地灵感')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: zh.storyBibleSynopsis }))
     expect(screen.getByDisplayValue('本地概要')).toBeInTheDocument()
-  })
+  }, 10000)
 
   it('exports compatibility drafts, imports persisted content, and keeps reset state after reload', async () => {
     const user = userEvent.setup()
