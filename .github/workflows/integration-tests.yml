@@ -227,7 +227,6 @@ jobs:
 
   desktop-packaging-advisory:
     runs-on: windows-latest
-    continue-on-error: true
     needs: [desktop-build]
 
     steps:
@@ -249,15 +248,19 @@ jobs:
 
       - name: Run desktop packaging dry-run (advisory lane)
         id: packaging-advisory
+        continue-on-error: true
         shell: pwsh
         working-directory: desktop
         run: |
           $logPath = Join-Path $PWD 'desktop-packaging-advisory.log'
           & npm run validate:package:dry-run 2>&1 | Tee-Object -FilePath $logPath
-          $exitCode = $LASTEXITCODE
-          "exit_code=$exitCode" >> $env:GITHUB_OUTPUT
 
-          if ($exitCode -eq 0) {
+      - name: Summarize desktop packaging advisory outcome
+        if: always()
+        shell: pwsh
+        working-directory: desktop
+        run: |
+          if ('${{ steps.packaging-advisory.outcome }}' -eq 'success') {
             Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "desktop-packaging-advisory: packaging dry-run passed."
             return
           }
