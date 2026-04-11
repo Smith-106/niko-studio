@@ -92,7 +92,7 @@ python scripts/release_check_summary.py
   - Windows packaging advisory lane on every run
   - Windows packaging hard-fail lane on `main`
 - `.github/workflows/external-release-gate.yml`
-  - Blocking release gate for governance, backend smoke, authority alignment, Codecov policy, Windows packaging dry-run, and Windows writing-helper acceptance
+  - Blocking release gate for governance, backend smoke, authority alignment, Codecov policy, Windows packaging dry-run, and Windows writing-helper acceptance. The workflow is reusable and now also supports manual `workflow_dispatch` runs for final release confirmation.
 - `.github/workflows/writing-helper-acceptance.yml`
   - Reusable/manual Windows acceptance workflow for `/writing-helper/process`
 

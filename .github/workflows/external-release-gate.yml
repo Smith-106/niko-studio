@@ -23,6 +23,33 @@ on:
         required: false
         type: boolean
         default: true
+  workflow_dispatch:
+    inputs:
+      run_codecov:
+        description: Upload coverage to Codecov when a token is available.
+        required: false
+        type: boolean
+        default: true
+      codecov_fail_ci_if_error:
+        description: Treat Codecov upload failures as blocking when a token is configured.
+        required: false
+        type: boolean
+        default: true
+      gate_label:
+        description: Gate label recorded in artifact names and summaries.
+        required: false
+        type: string
+        default: external
+      run_metrics_guard:
+        description: Run production guard checks when gate_label is not external.
+        required: false
+        type: boolean
+        default: true
+      run_e2e:
+        description: Run workflow smoke tests when gate_label is not external.
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   gate:
