@@ -5,7 +5,12 @@ import userEvent from '@testing-library/user-event'
 import { StoryBiblePanel } from './StoryBiblePanel'
 import { translations } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
-import { queryGraph } from '../api/client'
+import {
+  listProjectWikiCanonPagesApi,
+  promoteProjectWikiCanonApi,
+  queryGraph,
+  readProjectWikiCanonPageApi,
+} from '../api/client'
 
 type PersistedEntity = {
   id: string
@@ -20,6 +25,12 @@ const persistedState = vi.hoisted(() => ({
   storyBible: null as PersistedEntity | null,
   characters: [] as PersistedEntity[],
   locations: [] as PersistedEntity[],
+}))
+
+const canonApiState = vi.hoisted(() => ({
+  list: vi.fn(),
+  promote: vi.fn(),
+  read: vi.fn(),
 }))
 
 function extractMergePayload(cypher: string): Record<string, unknown> {
@@ -67,6 +78,9 @@ vi.mock('../api/client', () => ({
 
     return { success: true, data: [] }
   }),
+  listProjectWikiCanonPagesApi: canonApiState.list,
+  promoteProjectWikiCanonApi: canonApiState.promote,
+  readProjectWikiCanonPageApi: canonApiState.read,
 }))
 
 const zh = translations.zh
@@ -104,6 +118,52 @@ describe('StoryBiblePanel', () => {
         updated_at: '2026-04-08T00:00:00.000Z',
       },
     ]
+
+    vi.mocked(listProjectWikiCanonPagesApi).mockResolvedValue({
+      success: true,
+      data: {
+        available: true,
+        reason: null,
+        workspace_id: 'default-project',
+        total_pages: 0,
+        pages: [],
+      },
+    })
+    vi.mocked(promoteProjectWikiCanonApi).mockResolvedValue({
+      success: true,
+      data: {
+        available: true,
+        reason: null,
+        workspace_id: 'default-project',
+        page: {
+          id: 'canon-1',
+          slug: 'story-bible/default-project-synopsis',
+          title: 'default-project Story Bible Synopsis',
+          status: 'curated',
+          path: '/tmp/canon.md',
+          markdown: '# Canon',
+          promoted_from: 'story-bible',
+        },
+        raw_evidence_path: '/tmp/raw.md',
+        log_entry: { type: 'promotion' },
+      },
+    })
+    vi.mocked(readProjectWikiCanonPageApi).mockResolvedValue({
+      success: true,
+      data: {
+        available: true,
+        reason: null,
+        workspace_id: 'default-project',
+        page: {
+          id: 'canon-1',
+          slug: 'story-bible/default-project-synopsis',
+          title: 'default-project Story Bible Synopsis',
+          status: 'curated',
+          file_path: 'story-bible/default-project-synopsis.md',
+          markdown: '# Canon',
+        },
+      },
+    })
 
     localStorage.clear()
     useSettingsStore.getState().updateSettings({ language: 'zh' })
@@ -219,5 +279,89 @@ describe('StoryBiblePanel', () => {
     expect(localStorage.getItem('niko.sb-synopsis-v1')).toBeNull()
     expect(localStorage.getItem('niko.sb-outline-v1')).toBeNull()
     expect(localStorage.getItem('niko.sb-style-v1')).toBeNull()
+  })
+
+  it('promotes synopsis into canon and shows the canon review preview', async () => {
+    const user = userEvent.setup()
+    vi.mocked(listProjectWikiCanonPagesApi)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          available: true,
+          reason: null,
+          workspace_id: 'default-project',
+          total_pages: 0,
+          pages: [],
+        },
+      })
+      .mockResolvedValue({
+        success: true,
+        data: {
+          available: true,
+          reason: null,
+          workspace_id: 'default-project',
+          total_pages: 1,
+          pages: [
+            {
+              id: 'canon-1',
+              slug: 'story-bible/default-project-synopsis',
+              title: 'default-project Story Bible Synopsis',
+              status: 'curated',
+              file_path: 'story-bible/default-project-synopsis.md',
+            },
+          ],
+        },
+      })
+    vi.mocked(readProjectWikiCanonPageApi).mockResolvedValue({
+      success: true,
+      data: {
+        available: true,
+        reason: null,
+        workspace_id: 'default-project',
+        page: {
+          id: 'canon-1',
+          slug: 'story-bible/default-project-synopsis',
+          title: 'default-project Story Bible Synopsis',
+          status: 'curated',
+          file_path: 'story-bible/default-project-synopsis.md',
+          markdown: '# Canon\n\n导入概要',
+        },
+      },
+    })
+
+    render(<StoryBiblePanel />)
+
+    await user.click(await screen.findByRole('button', { name: zh.storyBibleSynopsis }))
+    const synopsisInput = screen.getByPlaceholderText(zh.storyBibleSynopsisPlaceholder)
+    await user.type(synopsisInput, '导入概要')
+
+    await user.click(screen.getByRole('button', { name: '提升概要到 Canon' }))
+
+    await waitFor(() => {
+      expect(promoteProjectWikiCanonApi).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'default-project Story Bible Synopsis',
+        body: '导入概要',
+        slug: 'story-bible/default-project-synopsis',
+        promotedFrom: 'story-bible',
+        sourceRef: 'story-bible.synopsis',
+      }), expect.anything())
+    })
+    expect(await screen.findByText('已将概要提升到 Canon。')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(readProjectWikiCanonPageApi).toHaveBeenCalledWith(
+        'story-bible/default-project-synopsis',
+        expect.anything(),
+      )
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Canon Review' }))
+    expect(
+      screen.getByRole('button', {
+        name: /default-project Story Bible Synopsis story-bible\/default-project-synopsis/,
+      }),
+    ).toBeInTheDocument()
+    expect(document.body).toHaveTextContent('story-bible/default-project-synopsis.md')
+    expect(document.body).toHaveTextContent('# Canon')
+    expect(document.body).toHaveTextContent('导入概要')
   })
 })

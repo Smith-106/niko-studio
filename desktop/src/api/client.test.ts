@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSettingsStore } from '@/stores/settingsStore'
 import {
   applyRecommendation,
+  agentWrite,
   batchApplyRecommendations,
   chat,
   chatStream,
@@ -747,6 +748,120 @@ describe('workflow bridge and quality-check APIs', () => {
         },
       },
     })
+  })
+})
+
+describe('agent api surface', () => {
+  const agentWorkspace: NonNullable<Parameters<typeof agentWrite>[4]> = {
+    schemaVersion: '2026-04-08',
+    identity: {
+      workspaceId: 'atlas-workspace',
+      projectId: 'atlas-project',
+      projectName: 'atlas-project',
+      workspaceRoot: '/tmp/atlas',
+    },
+    manuscript: {
+      manuscriptId: null,
+      title: null,
+      chapterId: 'chapter-12',
+      chapterTitle: null,
+      chapterNumber: 12,
+    },
+    storyBible: {
+      storyBibleId: null,
+      draftId: 'draft-12',
+      version: null,
+      storage: 'local-draft',
+    },
+    knowledge: {
+      focusEntityId: 'hero-12',
+      graphEntityIds: ['hero-12'],
+      memoryEntryIds: [],
+    },
+    workflow: {
+      sessionId: 'workflow-session-12',
+      planId: null,
+      level: 'L3',
+    },
+    chat: {
+      conversationId: 'conversation-12',
+      comparisonEnabled: false,
+    },
+    compatibility: {
+      additiveContract: true,
+      migratedLegacyFields: [],
+      notes: [],
+    },
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('posts canonical workspace payload to /agent/write when provided', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: 'generated', wordcount: 321 }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await agentWrite(
+      { scene_id: 'scene-12', task: 'write this scene' },
+      ['writer'],
+      1200,
+      { coherence: 85 },
+      agentWorkspace,
+    )
+
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/agent/write')
+    expect(init.method).toBe('POST')
+
+    const body = JSON.parse(String(init.body))
+    expect(body).toMatchObject({
+      scene_card: {
+        scene_id: 'scene-12',
+        task: 'write this scene',
+      },
+      skills: ['writer'],
+      word_target: 1200,
+      quality_goals: { coherence: 85 },
+      workspace: {
+        identity: {
+          projectId: 'atlas-project',
+        },
+        manuscript: {
+          chapterId: 'chapter-12',
+        },
+        workflow: {
+          sessionId: 'workflow-session-12',
+        },
+      },
+    })
+  })
+
+  it('keeps /agent/write payload additive when workspace is absent', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: 'generated', wordcount: 21 }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await agentWrite({ scene_id: 'scene-plain', task: 'plain write' }, ['writer'])
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    const body = JSON.parse(String(init.body))
+
+    expect(body).toMatchObject({
+      scene_card: {
+        scene_id: 'scene-plain',
+        task: 'plain write',
+      },
+      skills: ['writer'],
+    })
+    expect(body).not.toHaveProperty('workspace')
   })
 })
 

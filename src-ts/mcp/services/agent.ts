@@ -11,11 +11,15 @@ import {
   type IAgent,
   type IMemoryEngine,
   type IGraphEngine,
+  type ILLMService,
 } from '../../container/types';
-import type { IAgentGraphEngine, IAgentMemoryEngine } from '../../agents/base';
+import type { IAgentGraphEngine, IAgentLLMService, IAgentMemoryEngine } from '../../agents/base';
+import { WriterAgent, createWriterInput } from '../../agents/writer';
 import { WorldbuildingAgent } from '../../agents/worldbuilding';
 import { CharacterAgent } from '../../agents/character';
 import { PlotAgent } from '../../agents/plot';
+import type { ProjectWorkspaceContext } from '../../project/workspace-model.js';
+import { createProjectWikiKnowledgeLayer } from '../../project/wiki-knowledge-layer.js';
 import { toWorkflowLabel, toWorkflowSlug } from '../../workflow/types';
 
 // ---------------------------------------------------------------
@@ -66,6 +70,7 @@ export interface AgentWriteParams {
   word_target?: number;
   allow_llm_fallback?: boolean;
   quality_goals?: Record<string, unknown>;
+  workspace?: ProjectWorkspaceContext | null;
 }
 
 export interface AgentWriteResult {
@@ -74,9 +79,15 @@ export interface AgentWriteResult {
   sensory_types: string[];
   forbidden_words_found: string[];
   sections_needing_review: string[];
+  writer_metadata?: Record<string, unknown>;
 }
 
 export async function agentWrite(params: AgentWriteParams): Promise<AgentWriteResult> {
+  if (params.workspace) {
+    const output = await executeWorkspaceAwareWrite(params.workspace, params);
+    return toAgentWriteResult(asRecord(output), params.workspace);
+  }
+
   const result = await getWriterAgent().execute('', {
     mode: 'write',
     scene_card: params.scene_card,
@@ -85,15 +96,7 @@ export async function agentWrite(params: AgentWriteParams): Promise<AgentWriteRe
     allow_llm_fallback: params.allow_llm_fallback ?? true,
     quality_goals: params.quality_goals,
   });
-  const output = asRecord(result);
-
-  return {
-    content: typeof output['content'] === 'string' ? output['content'] : '',
-    wordcount: typeof output['wordcount'] === 'number' ? output['wordcount'] : 0,
-    sensory_types: toStringArray(output['sensory_types_used'] ?? output['sensory_types']),
-    forbidden_words_found: toStringArray(output['forbidden_words_found']),
-    sections_needing_review: toStringArray(output['sections_needing_review']),
-  };
+  return toAgentWriteResult(asRecord(result));
 }
 
 export interface AgentReviseParams {
@@ -180,6 +183,74 @@ function resolveWorkflowLevel(value: unknown): number {
   return typeof value === 'number' ? value : 3;
 }
 
+function adaptAgentLlmService(llm: ILLMService): IAgentLLMService {
+  return {
+    generate: (prompt, options) => llm.generate(prompt, options),
+    generateJson: async <T>(prompt: string, options?: { systemPrompt?: string; temperature?: number }) =>
+      (await llm.generateJson(prompt, options)) as T,
+  };
+}
+
+async function executeWorkspaceAwareWrite(
+  workspace: ProjectWorkspaceContext,
+  params: AgentWriteParams,
+): Promise<unknown> {
+  const container = getContainer();
+  const writerAgent = new WriterAgent({
+    llmService: adaptAgentLlmService(container.llm),
+    knowledgeLayer: createProjectWikiKnowledgeLayer(workspace),
+  });
+
+  return writerAgent.writeWithKnowledge(
+    createWriterInput(resolveWriterInput(params)),
+    params.allow_llm_fallback ?? true,
+  );
+}
+
+function resolveWriterInput(
+  params: AgentWriteParams,
+): Partial<ReturnType<typeof createWriterInput>> & { scene_card?: Record<string, unknown> } {
+  const sceneCard = asRecord(params.scene_card);
+  const skills = toStringArray(params.skills);
+  const worldSettingsBase = asRecord(sceneCard['world_settings']);
+  const worldSettings =
+    skills.length > 0
+      ? { ...worldSettingsBase, recommended_skills: skills }
+      : worldSettingsBase;
+
+  return {
+    scene_card: sceneCard,
+    scene_id: typeof sceneCard['scene_id'] === 'string' ? String(sceneCard['scene_id']) : undefined,
+    chapter_num:
+      typeof sceneCard['chapter_num'] === 'number' ? (sceneCard['chapter_num'] as number) : undefined,
+    pov_character:
+      typeof sceneCard['pov_character'] === 'string' ? String(sceneCard['pov_character']) : undefined,
+    objective: typeof sceneCard['objective'] === 'string' ? String(sceneCard['objective']) : undefined,
+    conflict: typeof sceneCard['conflict'] === 'string' ? String(sceneCard['conflict']) : undefined,
+    outcome: typeof sceneCard['outcome'] === 'string' ? String(sceneCard['outcome']) : undefined,
+    plot_beat: typeof sceneCard['plot_beat'] === 'string' ? String(sceneCard['plot_beat']) : undefined,
+    emotional_arc:
+      typeof sceneCard['emotional_arc'] === 'string'
+        ? String(sceneCard['emotional_arc'])
+        : undefined,
+    sensory_guidance:
+      typeof sceneCard['sensory_guidance'] === 'object' && sceneCard['sensory_guidance'] !== null
+        ? (sceneCard['sensory_guidance'] as Record<string, string>)
+        : undefined,
+    character_profiles: Array.isArray(sceneCard['character_profiles'])
+      ? (sceneCard['character_profiles'] as Record<string, unknown>[])
+      : [],
+    world_settings: worldSettings,
+    foreshadows_to_plant: Array.isArray(sceneCard['foreshadows_to_plant'])
+      ? (sceneCard['foreshadows_to_plant'] as string[])
+      : [],
+    foreshadows_to_harvest: Array.isArray(sceneCard['foreshadows_to_harvest'])
+      ? (sceneCard['foreshadows_to_harvest'] as string[])
+      : [],
+    word_target: params.word_target,
+  };
+}
+
 function getPrimarySceneType(taskAssignments: unknown[]): string {
   for (const assignment of taskAssignments) {
     if (typeof assignment !== 'object' || assignment === null) {
@@ -216,6 +287,29 @@ function collectDispatchedSkills(taskAssignments: unknown[]): string[] {
   }
 
   return [...seen];
+}
+
+function toAgentWriteResult(
+  output: Record<string, unknown>,
+  workspace?: ProjectWorkspaceContext | null,
+): AgentWriteResult {
+  const result: AgentWriteResult = {
+    content: typeof output['content'] === 'string' ? output['content'] : '',
+    wordcount: typeof output['wordcount'] === 'number' ? output['wordcount'] : 0,
+    sensory_types: toStringArray(output['sensory_types_used'] ?? output['sensory_types']),
+    forbidden_words_found: toStringArray(output['forbidden_words_found']),
+    sections_needing_review: toStringArray(output['sections_needing_review']),
+  };
+
+  const metadata = asRecord(output['metadata']);
+  if (metadata && (Object.keys(metadata).length > 0 || Boolean(workspace))) {
+    result.writer_metadata = {
+      ...metadata,
+      ...(workspace ? { workspace_context: workspace } : {}),
+    };
+  }
+
+  return result;
 }
 
 function toStringArray(value: unknown): string[] {

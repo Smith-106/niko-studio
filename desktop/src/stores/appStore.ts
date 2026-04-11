@@ -7,12 +7,12 @@ import {
 } from '@/types/workspace'
 
 import {
+  createConversationRecord,
   createConversationWorkspaceSeed,
-  createSafeDefaultWorkspace,
-  generateTitle,
-  mergeConversationWorkspace,
+  resolveConversationStateForMessage,
+  resolveConversationWorkspaceForSync,
   resolveSelectedConversationWorkspace,
-  resolveWorkspaceFromWriterMetadata,
+  updateConversationMessages,
   type Conversation,
   type MessageComparison,
 } from './app/shared'
@@ -74,21 +74,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   syncConversationWorkspace: (conversationId, workspace) => {
     set((state) => {
-      const conversation = state.conversationsById[conversationId]
-      if (!conversation) return state
-      const baseWorkspace = conversation.workspace
-        ? conversation.workspace
-        : state.currentConversationId === conversationId
-          ? state.currentWorkspace
-          : createSafeDefaultWorkspace()
-      const nextWorkspace = mergeConversationWorkspace(baseWorkspace, workspace)
+      const resolved = resolveConversationWorkspaceForSync({
+        conversation: state.conversationsById[conversationId],
+        conversationId,
+        currentConversationId: state.currentConversationId,
+        currentWorkspace: state.currentWorkspace,
+        patch: workspace,
+      })
+      if (!resolved) return state
+
       return {
-        currentWorkspace: state.currentConversationId === conversationId ? nextWorkspace : state.currentWorkspace,
+        currentWorkspace: resolved.currentWorkspace,
         conversationsById: {
           ...state.conversationsById,
           [conversationId]: {
-            ...conversation,
-            workspace: nextWorkspace,
+            ...state.conversationsById[conversationId],
+            workspace: resolved.conversationWorkspace,
             updatedAt: new Date(),
           },
         },
@@ -103,14 +104,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   createConversation: () => {
     const id = Date.now().toString()
     const seedWorkspace = createConversationWorkspaceSeed(get().currentWorkspace)
-    const conversation: Conversation = {
-      id,
-      title: '新对话',
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      workspace: seedWorkspace,
-    }
+    const conversation = createConversationRecord({ id, workspace: seedWorkspace })
     set((state) => ({
       conversationsById: { ...state.conversationsById, [id]: conversation },
       allConversationIds: [id, ...state.allConversationIds],
@@ -138,35 +132,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     const conversation = conversationsById[currentConversationId]
     if (!conversation) return
 
-    const messageWorkspace = resolveWorkspaceFromWriterMetadata(writerMetadata)
-    const nextWorkspace = messageWorkspace
-      ? mergeConversationWorkspace(currentWorkspace, messageWorkspace)
-      : currentWorkspace
-
-    const message = {
-      id: Date.now().toString(),
+    const { nextWorkspace, nextConversation } = resolveConversationStateForMessage({
+      conversation,
+      currentWorkspace,
       role,
       content,
-      timestamp: new Date(),
       skills,
       comparison,
       writerMetadata,
-      workspaceContext: messageWorkspace ?? undefined,
-    }
+    })
 
     set({
       currentWorkspace: nextWorkspace,
       conversationsById: {
         ...conversationsById,
-        [currentConversationId]: {
-          ...conversation,
-          workspace: nextWorkspace,
-          messages: [...conversation.messages, message],
-          updatedAt: new Date(),
-          title: conversation.messages.length === 0 && role === 'user'
-            ? generateTitle(content)
-            : conversation.title,
-        },
+        [currentConversationId]: nextConversation,
       },
     })
   },
@@ -179,11 +159,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       conversationsById: {
         ...conversationsById,
-        [currentConversationId]: {
-          ...conversation,
-          messages: conversation.messages.filter((message) => message.id !== messageId),
-          updatedAt: new Date(),
-        },
+        [currentConversationId]: updateConversationMessages(
+          conversation,
+          (messages) => messages.filter((message) => message.id !== messageId),
+        ),
       },
     })
   },
@@ -196,13 +175,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       conversationsById: {
         ...conversationsById,
-        [currentConversationId]: {
-          ...conversation,
-          messages: conversation.messages.map((message) =>
+        [currentConversationId]: updateConversationMessages(
+          conversation,
+          (messages) => messages.map((message) =>
             message.id === messageId ? { ...message, content, timestamp: new Date() } : message,
           ),
-          updatedAt: new Date(),
-        },
+        ),
       },
     })
   },

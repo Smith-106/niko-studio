@@ -15,7 +15,12 @@ import {
   Upload,
 } from 'lucide-react'
 
-import { queryGraph } from '../api/client'
+import {
+  listProjectWikiCanonPagesApi,
+  promoteProjectWikiCanonApi,
+  queryGraph,
+  readProjectWikiCanonPageApi,
+} from '../api/client'
 import {
   buildGraphMergeMutation,
   buildStoryBibleGraphName,
@@ -27,6 +32,10 @@ import {
 } from './knowledge/knowledgeUtils'
 import { useI18n } from '../i18n'
 import { useAppStore } from '../stores/appStore'
+import type {
+  ProjectWikiCanonPageRecord,
+  ProjectWikiCanonPageSummary,
+} from '../api/wiki'
 
 interface StoryBibleSection {
   title: string
@@ -203,6 +212,40 @@ function readSyncCopy(language: 'zh' | 'en', state: StoryBibleSyncState): string
   }
 }
 
+function readCanonCopy(language: 'zh' | 'en') {
+  if (language === 'zh') {
+    return {
+      promoteSynopsis: '提升概要到 Canon',
+      promoteSuccess: '已将概要提升到 Canon。',
+      promoteFailed: '提升概要到 Canon 失败。',
+      synopsisRequired: '请先填写概要后再提升到 Canon。',
+      reviewTitle: 'Canon Review',
+      reviewHint: '显式提升后的 canon 页面会出现在这里，并保持为只读检查视图。',
+      reviewRefresh: '刷新 Canon',
+      reviewLoading: '正在加载 canon…',
+      reviewEmpty: '当前还没有 canon 页面。',
+      reviewSelectHint: '选择一个 canon 页面以查看内容。',
+      reviewReadFailed: '读取 canon 页面失败。',
+      reviewLoadFailed: '刷新 canon 列表失败。',
+    } as const
+  }
+
+  return {
+    promoteSynopsis: 'Promote Synopsis to Canon',
+    promoteSuccess: 'Synopsis promoted to canon.',
+    promoteFailed: 'Failed to promote synopsis to canon.',
+    synopsisRequired: 'Add a synopsis before promoting it to canon.',
+    reviewTitle: 'Canon Review',
+    reviewHint: 'Promoted canon pages appear here as an inspectable read-only view.',
+    reviewRefresh: 'Refresh Canon',
+    reviewLoading: 'Loading canon…',
+    reviewEmpty: 'No canon pages exist yet.',
+    reviewSelectHint: 'Select a canon page to inspect its content.',
+    reviewReadFailed: 'Failed to read the selected canon page.',
+    reviewLoadFailed: 'Failed to refresh canon pages.',
+  } as const
+}
+
 function parseGenres(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
@@ -226,6 +269,8 @@ export function StoryBiblePanel() {
   const setCurrentWorkspace = useAppStore((state) => state.setCurrentWorkspace)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const lastSavedSignatureRef = useRef<string | null>(null)
+  const draftMessageTimeoutRef = useRef<number | null>(null)
+  const canonMessageTimeoutRef = useRef<number | null>(null)
 
   const [characters, setCharacters] = useState<GraphItem[]>([])
   const [locations, setLocations] = useState<GraphItem[]>([])
@@ -236,16 +281,41 @@ export function StoryBiblePanel() {
   const [outline, setOutline] = useState('')
   const [selectedStyle, setSelectedStyle] = useState<StyleId>('tried')
   const [draftMessage, setDraftMessage] = useState<StoryBibleMessage>(null)
+  const [canonMessage, setCanonMessage] = useState<StoryBibleMessage>(null)
+  const [canonPages, setCanonPages] = useState<ProjectWikiCanonPageSummary[]>([])
+  const [selectedCanonSlug, setSelectedCanonSlug] = useState<string | null>(null)
+  const [selectedCanonPage, setSelectedCanonPage] = useState<ProjectWikiCanonPageRecord | null>(null)
+  const [canonLoading, setCanonLoading] = useState(false)
+  const [canonLoadingSlug, setCanonLoadingSlug] = useState<string | null>(null)
+  const [canonPromoting, setCanonPromoting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [syncState, setSyncState] = useState<StoryBibleSyncState>('loading')
 
   const storyBibleName = buildStoryBibleGraphName(currentWorkspace)
   const workspaceNotice = buildWorkspaceNotice(language)
   const syncCopy = readSyncCopy(language, syncState)
+  const canonCopy = readCanonCopy(language)
 
   const showDraftMessage = useCallback((type: 'success' | 'error', text: string) => {
+    if (draftMessageTimeoutRef.current !== null) {
+      window.clearTimeout(draftMessageTimeoutRef.current)
+    }
     setDraftMessage({ type, text })
-    window.setTimeout(() => setDraftMessage(null), 3000)
+    draftMessageTimeoutRef.current = window.setTimeout(() => {
+      setDraftMessage(null)
+      draftMessageTimeoutRef.current = null
+    }, 3000)
+  }, [])
+
+  const showCanonMessage = useCallback((type: 'success' | 'error', text: string) => {
+    if (canonMessageTimeoutRef.current !== null) {
+      window.clearTimeout(canonMessageTimeoutRef.current)
+    }
+    setCanonMessage({ type, text })
+    canonMessageTimeoutRef.current = window.setTimeout(() => {
+      setCanonMessage(null)
+      canonMessageTimeoutRef.current = null
+    }, 3000)
   }, [])
 
   const syncWorkspaceStoryBible = useCallback((next: {
@@ -321,6 +391,52 @@ export function StoryBiblePanel() {
       console.error('Failed to refresh Story Bible knowledge lists:', error)
     }
   }, [currentWorkspace])
+
+  const refreshCanonPages = useCallback(async (preferredSlug?: string | null) => {
+    setCanonLoading(true)
+    try {
+      const response = await listProjectWikiCanonPagesApi(currentWorkspace, {
+        status: 'curated',
+        limit: 20,
+      })
+
+      if (!response.success || !response.data?.available) {
+        throw new Error(response.error || response.data?.reason || 'Canon list failed')
+      }
+
+      const pages = response.data.pages
+      setCanonPages(pages)
+
+      const nextSelectedSlug = preferredSlug ?? selectedCanonSlug
+      if (nextSelectedSlug && !pages.some((page) => page.slug === nextSelectedSlug)) {
+        setSelectedCanonSlug(null)
+        setSelectedCanonPage(null)
+      }
+    } catch (error) {
+      console.error('Failed to refresh canon pages:', error)
+      showCanonMessage('error', canonCopy.reviewLoadFailed)
+    } finally {
+      setCanonLoading(false)
+    }
+  }, [canonCopy.reviewLoadFailed, currentWorkspace, selectedCanonSlug, showCanonMessage])
+
+  const loadCanonPage = useCallback(async (slug: string) => {
+    setCanonLoadingSlug(slug)
+    try {
+      const response = await readProjectWikiCanonPageApi(slug, currentWorkspace)
+      if (!response.success || !response.data?.page) {
+        throw new Error(response.error || response.data?.reason || 'Canon page read failed')
+      }
+
+      setSelectedCanonSlug(slug)
+      setSelectedCanonPage(response.data.page)
+    } catch (error) {
+      console.error('Failed to read canon page:', error)
+      showCanonMessage('error', canonCopy.reviewReadFailed)
+    } finally {
+      setCanonLoadingSlug(null)
+    }
+  }, [canonCopy.reviewReadFailed, currentWorkspace, showCanonMessage])
 
   const loadWorkspaceStoryBible = useCallback(async () => {
     setLoading(true)
@@ -419,6 +535,19 @@ export function StoryBiblePanel() {
     window.addEventListener(WORKSPACE_KNOWLEDGE_CHANGED_EVENT, handleKnowledgeChange)
     return () => window.removeEventListener(WORKSPACE_KNOWLEDGE_CHANGED_EVENT, handleKnowledgeChange)
   }, [refreshKnowledgeLists])
+
+  useEffect(() => {
+    void refreshCanonPages()
+  }, [refreshCanonPages])
+
+  useEffect(() => () => {
+    if (draftMessageTimeoutRef.current !== null) {
+      window.clearTimeout(draftMessageTimeoutRef.current)
+    }
+    if (canonMessageTimeoutRef.current !== null) {
+      window.clearTimeout(canonMessageTimeoutRef.current)
+    }
+  }, [])
 
   const storyBibleSignature = JSON.stringify({
     name: storyBibleName,
@@ -589,6 +718,62 @@ export function StoryBiblePanel() {
     showDraftMessage('success', t.storyBibleDraftReset)
   }, [showDraftMessage, t.storyBibleDraftReset])
 
+  const handlePromoteSynopsis = useCallback(async () => {
+    const trimmedSynopsis = synopsis.trim()
+    if (!trimmedSynopsis) {
+      showCanonMessage('error', canonCopy.synopsisRequired)
+      return
+    }
+
+    setCanonPromoting(true)
+    try {
+      const workspaceLabel = currentWorkspace.identity.projectName || currentWorkspace.identity.workspaceId
+      const synopsisSlug = `story-bible/${currentWorkspace.identity.workspaceId}-synopsis`
+      const response = await promoteProjectWikiCanonApi({
+        title: `${workspaceLabel} Story Bible Synopsis`,
+        body: trimmedSynopsis,
+        slug: synopsisSlug,
+        idSeed: `${currentWorkspace.identity.workspaceId}:story-bible:synopsis`,
+        promotedFrom: 'story-bible',
+        sourceId: `${currentWorkspace.identity.workspaceId}-synopsis`,
+        sourceRef: 'story-bible.synopsis',
+        rawEvidence: {
+          relativePath: `imports/story-bible/${currentWorkspace.identity.workspaceId}-synopsis.md`,
+          content: trimmedSynopsis,
+        },
+        metadata: {
+          section: 'synopsis',
+          story_bible_name: storyBibleName,
+          story_bible_id: currentWorkspace.storyBible.storyBibleId,
+          draft_id: currentWorkspace.storyBible.draftId,
+        },
+      }, currentWorkspace)
+
+      if (!response.success || !response.data?.available || !response.data.page) {
+        throw new Error(response.error || response.data?.reason || 'Canon promotion failed')
+      }
+
+      showCanonMessage('success', canonCopy.promoteSuccess)
+      await refreshCanonPages(response.data.page.slug)
+      await loadCanonPage(response.data.page.slug)
+    } catch (error) {
+      console.error('Failed to promote Story Bible synopsis to canon:', error)
+      showCanonMessage('error', canonCopy.promoteFailed)
+    } finally {
+      setCanonPromoting(false)
+    }
+  }, [
+    canonCopy.promoteFailed,
+    canonCopy.promoteSuccess,
+    canonCopy.synopsisRequired,
+    currentWorkspace,
+    loadCanonPage,
+    refreshCanonPages,
+    showCanonMessage,
+    storyBibleName,
+    synopsis,
+  ])
+
   const genrePresets = language === 'zh'
     ? GENRE_PRESETS_ZH
     : ['Fantasy', 'Romance', 'Mystery', 'Sci-Fi', 'Horror', 'Historical', 'Martial Arts', 'Urban', 'Coming-of-Age', 'Adventure', 'Court Drama', 'Post-Apocalyptic', 'Xianxia', 'Detective', 'Light Novel']
@@ -679,12 +864,83 @@ export function StoryBiblePanel() {
       title: t.storyBibleSynopsis,
       icon: <FileText size={16} />,
       content: (
-        <textarea
-          value={synopsis}
-          onChange={(event) => setSynopsis(event.target.value)}
-          placeholder={t.storyBibleSynopsisPlaceholder}
-          className="w-full min-h-28 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
-        />
+        <div className="space-y-3">
+          <textarea
+            value={synopsis}
+            onChange={(event) => setSynopsis(event.target.value)}
+            placeholder={t.storyBibleSynopsisPlaceholder}
+            className="w-full min-h-28 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+          />
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-[var(--text-secondary)]">
+              {canonCopy.reviewHint}
+            </p>
+            <button
+              type="button"
+              onClick={() => void handlePromoteSynopsis()}
+              disabled={canonPromoting}
+              className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--primary-cta)]/30 bg-[var(--primary-cta)]/10 px-3 py-1.5 text-xs font-medium text-[var(--primary-cta)] hover:bg-[var(--primary-cta)]/15 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            >
+              <BookOpen size={14} />
+              {canonPromoting ? canonCopy.reviewLoading : canonCopy.promoteSynopsis}
+            </button>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: canonCopy.reviewTitle,
+      icon: <BookOpen size={16} />,
+      content: (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-[var(--text-secondary)]">{canonCopy.reviewHint}</p>
+            <button
+              type="button"
+              onClick={() => void refreshCanonPages()}
+              disabled={canonLoading}
+              className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            >
+              <RotateCcw size={14} />
+              {canonLoading ? canonCopy.reviewLoading : canonCopy.reviewRefresh}
+            </button>
+          </div>
+          {canonPages.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] italic">
+              {canonLoading ? canonCopy.reviewLoading : canonCopy.reviewEmpty}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {canonPages.map((page) => (
+                <button
+                  key={page.id}
+                  type="button"
+                  onClick={() => void loadCanonPage(page.slug)}
+                  className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-left transition-colors ${
+                    selectedCanonSlug === page.slug
+                      ? 'border-[var(--primary-cta)]/40 bg-[var(--primary-cta)]/10'
+                      : 'border-[var(--border-subtle)] bg-[var(--surface-sunken)] hover:border-[var(--primary-cta)]/30'
+                  }`}
+                >
+                  <div className="text-sm font-medium text-[var(--text-primary)]">{page.title}</div>
+                  <div className="mt-1 text-[11px] text-[var(--text-muted)]">{page.slug}</div>
+                  {canonLoadingSlug === page.slug && (
+                    <div className="mt-1 text-[11px] text-[var(--primary-cta)]">{canonCopy.reviewLoading}</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          {selectedCanonPage ? (
+            <div className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-3">
+              <div className="text-sm font-semibold text-[var(--text-primary)]">{selectedCanonPage.title}</div>
+              <div className="mt-1 text-[11px] text-[var(--text-muted)]">{selectedCanonPage.file_path}</div>
+              <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-relaxed text-[var(--text-secondary)]">{selectedCanonPage.markdown}</pre>
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">{canonCopy.reviewSelectHint}</p>
+          )}
+        </div>
       ),
     },
     {
@@ -801,6 +1057,11 @@ export function StoryBiblePanel() {
       {draftMessage && (
         <div className={`mb-3 text-xs font-medium ${draftMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
           {draftMessage.text}
+        </div>
+      )}
+      {canonMessage && (
+        <div className={`mb-3 text-xs font-medium ${canonMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+          {canonMessage.text}
         </div>
       )}
       <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">

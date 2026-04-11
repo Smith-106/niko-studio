@@ -59,6 +59,29 @@ export interface ChatModelComparisonResult {
 }
 
 export interface WriterMetadata {
+  canon_context?: {
+    available: boolean
+    reason: string | null
+    total_pages: number
+    match_count: number
+    injected: boolean
+    matches: Array<{
+      page_id: string
+      slug: string
+      title: string
+      score: number
+      excerpt: string
+      authority: {
+        workspaceId: string
+        scopeAuthority: 'workspace'
+        canonAuthority: 'canon-page'
+        projectionAuthority: 'derived'
+        promotion: 'manual'
+        promotedFrom: 'story-bible' | 'chat' | 'research' | 'manual'
+        status: 'curated' | 'draft'
+      }
+    }>
+  }
   warnings?: string[]
   knowledge_retrieved?: {
     entities_count: number

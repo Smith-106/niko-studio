@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { KnowledgeModal } from './KnowledgeModal'
+import { promoteProjectWikiCanonApi } from '../api/client'
 import { translations } from '../i18n'
+import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 
 const knowledgeTabScenario = vi.hoisted(() => ({
@@ -20,6 +22,7 @@ vi.mock('../api/client', () => ({
   getCharacter: vi.fn(),
   getForeshadows: vi.fn(),
   addMemory: vi.fn(),
+  promoteProjectWikiCanonApi: vi.fn(),
 }))
 
 vi.mock('./knowledge/CharacterTab', () => ({
@@ -86,6 +89,49 @@ describe('KnowledgeModal accessibility and labels', () => {
     vi.clearAllMocks()
     knowledgeTabScenario.value = 'empty'
     useSettingsStore.getState().updateSettings({ language: 'zh' })
+    useAppStore.setState({
+      currentWorkspace: {
+        schemaVersion: '2026-04-08',
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'Atlas',
+          workspaceRoot: '/tmp/atlas',
+        },
+        manuscript: {
+          manuscriptId: null,
+          title: null,
+          chapterId: 'chapter-2',
+          chapterTitle: null,
+          chapterNumber: 2,
+        },
+        storyBible: {
+          storyBibleId: null,
+          draftId: 'draft-2',
+          version: null,
+          storage: 'workspace',
+        },
+        knowledge: {
+          focusEntityId: null,
+          graphEntityIds: [],
+          memoryEntryIds: [],
+        },
+        workflow: {
+          sessionId: 'workflow-session-2',
+          planId: null,
+          level: 'L3',
+        },
+        chat: {
+          conversationId: 'conversation-2',
+          comparisonEnabled: false,
+        },
+        compatibility: {
+          additiveContract: true,
+          migratedLegacyFields: [],
+          notes: [],
+        },
+      },
+    })
   })
 
   it('renders as named dialog and supports escape close', async () => {
@@ -180,6 +226,64 @@ describe('KnowledgeModal accessibility and labels', () => {
     await user.click(screen.getByRole('button', { name: zh.knowledgeTabPlots }))
     await user.click(screen.getByRole('button', { name: 'Bridge Alarm' }))
     expect(screen.getAllByText('Act 1 turning point').length).toBeGreaterThan(0)
+  })
+
+  it('promotes a selected knowledge item into canon', async () => {
+    knowledgeTabScenario.value = 'filled'
+    vi.mocked(promoteProjectWikiCanonApi).mockResolvedValue({
+      success: true,
+      data: {
+        available: true,
+        reason: null,
+        workspace_id: 'atlas-workspace',
+        page: {
+          id: 'canon-knowledge-1',
+          slug: 'characters/atlas-workspace-char-1',
+          title: 'Alice',
+          status: 'curated',
+          path: '/tmp/alice.md',
+          markdown: '# Alice',
+          promoted_from: 'manual',
+        },
+        raw_evidence_path: '/tmp/alice.json',
+        log_entry: { type: 'promotion' },
+      },
+    })
+
+    const user = userEvent.setup()
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    await user.click(await screen.findByRole('button', { name: 'Alice' }))
+    await user.click(screen.getByRole('button', { name: zh.knowledgePromoteCanon }))
+
+    await waitFor(() => {
+      expect(promoteProjectWikiCanonApi).toHaveBeenCalledTimes(1)
+    })
+    const [payload, workspace] = vi.mocked(promoteProjectWikiCanonApi).mock.calls[0] ?? []
+    expect(payload).toMatchObject({
+      title: 'Alice',
+      slug: 'characters/atlas-workspace-char-1',
+      promotedFrom: 'manual',
+      sourceId: 'char-1',
+      sourceRef: 'knowledge.characters.char-1',
+      rawEvidence: {
+        relativePath: 'imports/knowledge/characters/atlas-workspace-char-1.json',
+        content: JSON.stringify({ id: 'char-1', name: 'Alice', description: '主角' }, null, 2),
+      },
+      metadata: {
+        source_surface: 'knowledge-modal',
+        knowledge_tab: 'characters',
+        item_id: 'char-1',
+        workflow_session_id: 'workflow-session-2',
+        chapter_id: 'chapter-2',
+      },
+    })
+    expect(workspace).toMatchObject({
+      identity: {
+        workspaceId: 'atlas-workspace',
+      },
+    })
+    expect(screen.getByText(zh.knowledgePromoteCanonSuccess)).toBeInTheDocument()
   })
 
   it('renders disabled create affordances for empty non-skill tabs', async () => {

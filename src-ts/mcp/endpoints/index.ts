@@ -84,6 +84,12 @@ export {
 } from './writing';
 
 export {
+  wikiListEndpoint,
+  wikiPromoteEndpoint,
+  wikiReadPageEndpoint,
+} from './wiki';
+
+export {
   listMcpServices,
   createMcpService,
   updateMcpService,

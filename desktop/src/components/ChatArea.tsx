@@ -5,7 +5,7 @@ import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
 import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, quickRollbackWorkflow } from '../api/client'
-import type { ChatRequest, StreamDonePayload } from '../api/client'
+import type { ChatRequest, StreamDonePayload, WriterMetadata } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { PromptTemplatePanel, type ApplyTemplatePayload } from './PromptTemplatePanel'
 import { ChatAreaInlineActions } from './ChatAreaInlineActions'
@@ -465,7 +465,8 @@ export function ChatArea({
           },
           selectedSkills,
           undefined,
-          buildReviseQualityGoals()
+          buildReviseQualityGoals(),
+          writerWorkspaceSummary.meaningfulWorkspace,
         )
 
         if (writeResult.success && writeResult.data?.content) {
@@ -524,8 +525,8 @@ export function ChatArea({
   }): Promise<boolean> => {
     let handled = false
 
-    const commitAgentActionSuccess = (content: string) => {
-      addMessage('assistant', content, payloadForSend.selectedSkills)
+    const commitAgentActionSuccess = (content: string, writerMetadata?: WriterMetadata) => {
+      addMessage('assistant', content, payloadForSend.selectedSkills, undefined, writerMetadata)
       setRecoverableCheckpointId(null)
       handled = true
     }
@@ -542,10 +543,11 @@ export function ChatArea({
           },
           payloadForSend.selectedSkills,
           undefined,
-          buildWriteQualityGoals()
+          buildWriteQualityGoals(),
+          writerWorkspaceSummary.meaningfulWorkspace,
         )
         if (writeResult.success && writeResult.data?.content) {
-          commitAgentActionSuccess(writeResult.data.content)
+          commitAgentActionSuccess(writeResult.data.content, writeResult.data.writer_metadata)
         }
       }
     } else if (payloadForSend.agentAction === 'revise') {
