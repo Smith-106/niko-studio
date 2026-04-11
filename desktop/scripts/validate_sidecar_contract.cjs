@@ -43,6 +43,7 @@ const EXPECTED_CAPABILITY_ID = 'main-desktop';
 const EXPECTED_EXTERNAL_BIN = 'bin/niko-gateway';
 const AUTHORITATIVE_RUNTIME = 'node';
 const PACKAGED_COMPAT_RUNTIME = 'python';
+const REQUIRE_PACKAGED_COMPAT_ARTIFACT = process.platform === 'win32';
 
 // Contract definitions
 const CONTRACTS = {
@@ -118,6 +119,9 @@ function packagedPythonArtifactDetail(packagedPythonArtifact, packagedPythonExis
   }
   if (packagedPythonExists) {
     return `${packagedPythonArtifact} => present`;
+  }
+  if (!REQUIRE_PACKAGED_COMPAT_ARTIFACT) {
+    return `${packagedPythonArtifact} => missing; packaged Python compatibility artifact is only a blocking prerequisite for the supported Windows packaging target.`;
   }
   if (!fs.existsSync(LEGACY_PY_SIDECAR_ENTRY)) {
     return `${packagedPythonArtifact} => missing; current checkout does not include ${path.relative(PROJECT_ROOT, LEGACY_PY_SIDECAR_ENTRY)}. Hydrate the release-prepared Python compatibility sidecar artifact before strict desktop packaging validation.`;
@@ -278,7 +282,7 @@ function validatePackagingBoundary() {
     },
     {
       label: 'current target has a packaged python sidecar artifact',
-      pass: Boolean(packagedPythonArtifact && packagedPythonExists),
+      pass: !REQUIRE_PACKAGED_COMPAT_ARTIFACT || Boolean(packagedPythonArtifact && packagedPythonExists),
       detail: packagedPythonArtifactDetail(packagedPythonArtifact, packagedPythonExists),
     },
     {
@@ -304,6 +308,9 @@ function printPackagingBoundary(results) {
   console.log(`   Packaged compatibility runtime: ${results.packagedRuntime}`);
   console.log(`   Current target triple: ${results.targetTriple || 'unmapped'}`);
   console.log('   Note: packaged desktop builds currently expect a Python compatibility sidecar artifact; the Node launcher remains a repo-local path and packaged execution falls back to Python.');
+  if (!REQUIRE_PACKAGED_COMPAT_ARTIFACT) {
+    console.log('   Current platform note: packaged Python compatibility artifact is advisory here; the blocking packaged target remains Windows x64.');
+  }
 
   for (const check of results.checks) {
     console.log(`   ${check.pass ? '✅' : '❌'} ${check.label}`);
