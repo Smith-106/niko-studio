@@ -139,6 +139,7 @@ npm --prefix desktop run build:sidecar
 
 # 显式 Python 兼容构建（仅 legacy entry 存在时可用）
 # 当前 checkout 默认不包含该 legacy entry
+# 正式 release 如需走 packaged fallback，需预先准备 `desktop/src-tauri/bin/niko-gateway*.exe`
 python scripts/build_gateway_sidecar.py --legacy-entry src/mcp/sidecar_entry.py
 ```
 

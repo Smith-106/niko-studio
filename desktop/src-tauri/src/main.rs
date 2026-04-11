@@ -61,10 +61,10 @@ impl GatewayRuntime {
     fn contract_note(self) -> &'static str {
         match self {
             GatewayRuntime::Python => {
-                "Python is the packaged compatibility sidecar that Tauri bundles today."
+                "Python is the packaged compatibility sidecar artifact that Tauri expects today."
             }
             GatewayRuntime::Node => {
-                "Node is the authoritative local runtime, but the current launcher stays repo-local and packaged builds fall back to the bundled Python sidecar."
+                "Node is the authoritative local runtime, but the current launcher stays repo-local and packaged builds fall back to the pre-staged Python compatibility artifact."
             }
         }
     }
