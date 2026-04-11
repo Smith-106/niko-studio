@@ -22,7 +22,7 @@ This is configured in `tauri.conf.json`:
 
 ### Python Sidecar (Fallback / Packaged Runtime)
 
-Produced by PyInstaller via `scripts/build_gateway_sidecar.py`.
+Current packaged compatibility runtime artifact. In the current node-first checkout, this artifact is release-prepared and validated, but not rebuildable from the default source tree because the legacy Python gateway sources are no longer included.
 
 **Windows**:
 - `niko-gateway.exe` - Primary executable (plain name)
@@ -67,6 +67,7 @@ NIKO_GATEWAY_RUNTIME=python npm run tauri:dev
 
 - `desktop/scripts/choose_sidecar.cjs` defaults to building the Node sidecar when `NIKO_GATEWAY_RUNTIME` is unset.
 - `NIKO_GATEWAY_RUNTIME=python` remains available as an explicit compatibility fallback.
+- Strict packaging validation still requires the packaged Python compatibility artifact to already be present in `desktop/src-tauri/bin/`.
 
 ## Validation
 
@@ -103,9 +104,9 @@ npm run build:sidecar:node
 ```bash
 npm run build:sidecar:python
 ```
-- Runs PyInstaller to create binaries
+- Runs PyInstaller to create binaries only when a compatibility branch or explicit `--legacy-entry` provides the retired Python gateway entrypoint
 - Outputs to `desktop/src-tauri/bin/`
-- Fails fast with a clear message if the legacy Python entry is not present in the current checkout
+- Fails fast in the default node-first checkout because the legacy Python gateway entry is not shipped there
 
 **Build all + validate**:
 ```bash
@@ -143,6 +144,7 @@ The contract validator should run in CI:
 1. Run `npm run validate:sidecar-contract`
 2. Verify files exist in `desktop/src-tauri/bin/`
 3. Check platform-specific naming matches Tauri expectations
+4. If the missing file is `niko-gateway-x86_64-pc-windows-msvc.exe` in the current node-first checkout, hydrate the release-prepared Python compatibility artifact before re-running strict validation
 
 **Issue**: `Permission denied` (Unix)
 
@@ -155,5 +157,5 @@ chmod +x desktop/src-tauri/bin/niko-gateway-node
 ## Future Work
 
 - [ ] Add CI gate for sidecar contract validation
-- [ ] Document Python sidecar build requirements (PyInstaller, etc.)
+- [ ] Replace the pre-staged Python compatibility artifact requirement with a source-rebuildable packaged fallback
 - [ ] Add integration tests for sidecar startup and health checks

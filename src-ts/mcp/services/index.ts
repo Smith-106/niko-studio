@@ -67,3 +67,17 @@ export {
   checkpointRestore,
   checkpointList,
 } from './workflow';
+
+export {
+  listProjectWikiCanonPages,
+  promoteProjectWikiCanon,
+  readProjectWikiCanonPage,
+  type ListProjectWikiCanonPagesParams,
+  type ListProjectWikiCanonPagesResult,
+  type ProjectWikiCanonPageRecord,
+  type ProjectWikiCanonPageSummary,
+  type PromoteProjectWikiCanonParams,
+  type PromoteProjectWikiCanonResult,
+  type ReadProjectWikiCanonPageParams,
+  type ReadProjectWikiCanonPageResult,
+} from './wiki';

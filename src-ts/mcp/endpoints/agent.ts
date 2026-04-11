@@ -7,12 +7,59 @@
 
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
+import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
 import {
   agentRoute,
   agentWrite,
   agentRevise,
   agentGetContext,
 } from '../services/agent';
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function readString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function resolveWorkspaceRoot(): string {
+  return String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd();
+}
+
+function resolveAgentWriteWorkspace(body: Record<string, unknown>) {
+  const workspace = asRecord(body.workspace);
+  const identity = asRecord(workspace?.identity);
+  const context = asRecord(body.context);
+  const workspaceId =
+    readString(identity?.workspaceId)
+    ?? readString(body.workspace_id)
+    ?? readString(body.workspaceId);
+  const projectId =
+    readString(identity?.projectId)
+    ?? readString(body.project_id)
+    ?? readString(body.projectId)
+    ?? readString(context?.projectId);
+
+  if (!workspace && !workspaceId && !projectId) {
+    return undefined;
+  }
+
+  return normalizeProjectWorkspaceContext({
+    workspace: workspace ?? undefined,
+    workspace_id: workspaceId ?? undefined,
+    workspaceId: workspaceId ?? undefined,
+    project_id: projectId ?? undefined,
+    projectId: projectId ?? undefined,
+    context: context ?? undefined,
+  }, {
+    workspaceRoot: resolveWorkspaceRoot(),
+  });
+}
 
 export async function agentRouteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as { task?: string };
@@ -22,6 +69,7 @@ export async function agentRouteEndpoint(request: HttpRequest): Promise<HttpResp
 
 export async function agentWriteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveAgentWriteWorkspace(body);
   const qualityGoals = (body.quality_goals ?? body.qualityGoals) as
     | Record<string, unknown>
     | undefined;
@@ -32,6 +80,7 @@ export async function agentWriteEndpoint(request: HttpRequest): Promise<HttpResp
     word_target: (body.word_target as number) ?? 2000,
     allow_llm_fallback: (body.allow_llm_fallback as boolean) ?? true,
     quality_goals: qualityGoals,
+    workspace,
   });
 
   return jsonResponse(result);

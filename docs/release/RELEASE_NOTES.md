@@ -162,3 +162,52 @@ external 对外“100% 完成度”仅指核心可达链路：
 - 生产守卫（CORS / reload / metrics）：通过 / 失败
 - 回退预案确认：是 / 否
 - 结论：Go / No-Go
+
+## v9.0.4 验收记录（2026-04-11）
+
+- 发布级别：external
+- 发布版本：`9.0.4`
+- 对应 tag / commit：`v9.0.4` / `183146c550fc839b53d7d89f5d1ee3752412ab5f`
+- 版本一致性检查：通过
+- 交付语义门禁：通过
+- 基线测试与覆盖率：通过
+  - `npm --prefix src-ts run check:local`
+- e2e 冒烟（external 必填）：通过
+  - `npm --prefix src-ts run check:local`
+  - `release-check-summary.md` 中 `external_e2e_smoke = PASS`
+- 治理脚本回归：通过
+  - `python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q`
+  - `6 passed in 0.23s`
+- 权威对齐检查：通过
+  - `python scripts/check_authority_alignment.py`
+- Desktop 本地门禁：通过
+  - `npm --prefix desktop run check:local`
+- Desktop packaging dry-run：通过
+  - `npm --prefix desktop run validate:package:dry-run`
+- writing-helper acceptance：通过
+  - `scripts/check-writing-helper.ps1 -Strict`
+  - `7 / 7 PASS`
+- 质量信号完整性（覆盖率上传、CI 关键步骤）：本地快照完整；Codecov strict mode disabled
+- 生产守卫（CORS / reload / metrics）：通过
+  - `release-check-summary.md` 中 `production_guard = PASS`
+  - `release-check-summary.md` 中 `metrics_guard = PASS`
+- 回退预案确认：是
+  - `docs/operations/ROLLBACK.md` 在当前 authority alignment 检查范围内保持通过
+- 结论：Go
+
+### 产物指纹
+
+- Windows packaged compatibility sidecar:
+  - `desktop/src-tauri/bin/niko-gateway.exe`
+  - `SHA256 = 37C5A533162BE8A24985F61CC293952E9E2F1B6348986B224D0B9CD2C24DA21E`
+- Windows packaged compatibility sidecar target triple:
+  - `desktop/src-tauri/bin/niko-gateway-x86_64-pc-windows-msvc.exe`
+  - `SHA256 = 37C5A533162BE8A24985F61CC293952E9E2F1B6348986B224D0B9CD2C24DA21E`
+- Windows desktop dry-run executable:
+  - `desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe`
+  - `SHA256 = CAC071E71E34AF2035CAFCB691E3624FE529A9F4EDBC41A301B502DD65264CA8`
+
+### 已知前提
+
+- 当前 node-first checkout 不包含可从源码重建 packaged Python compatibility sidecar 的 legacy Python gateway 源码。
+- 本次 external 验收基于预先准备并校验通过的 `desktop/src-tauri/bin/niko-gateway*.exe` artifact。

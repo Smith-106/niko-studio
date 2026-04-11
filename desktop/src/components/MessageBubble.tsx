@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
+import { promoteProjectWikiCanonApi } from '../api/client'
 import type { Message } from '../stores/appStore'
 import { useI18n } from '../i18n'
 
@@ -61,10 +62,45 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
     if (prevKnowledge.memories_count !== nextKnowledge.memories_count) return false
   }
 
+  if (canonContextSignature(prevMsg) !== canonContextSignature(nextMsg)) return false
+
   return true
 }
 
 const MAX_USER_LINES = 8
+
+function canonContextSignature(message: Message): string {
+  return JSON.stringify(message.writerMetadata?.canon_context ?? null)
+}
+
+function shouldRenderCanonContext(message: Message): boolean {
+  const canonContext = message.writerMetadata?.canon_context
+  return Boolean(canonContext && (canonContext.injected || !canonContext.available))
+}
+
+function slugifySegment(value: string | null | undefined): string {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return normalized || 'reply'
+}
+
+function deriveReplyTitle(message: Message): string {
+  const firstContentLine = message.content
+    .split('\n')
+    .map((line) => line.replace(/^[#>*\-\s`]+/, '').trim())
+    .find(Boolean)
+
+  if (firstContentLine) {
+    return firstContentLine.slice(0, 80)
+  }
+
+  const workspace = message.workspaceContext
+  const workspaceLabel = workspace?.identity.projectName || workspace?.identity.projectId || 'Workspace'
+  return `${workspaceLabel} Chat Reply`
+}
 
 const markdownComponents: Components = {
   code({ className, children }) {
@@ -81,12 +117,17 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
   const { t } = useI18n()
   const isUser = message.role === 'user'
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isPromotingCanon, setIsPromotingCanon] = useState(false)
+  const [canonPromotionStatus, setCanonPromotionStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const primaryDiffLines = message.comparison?.enabled
     ? getUniqueComparisonLines(message.comparison.primary.content, message.comparison.control.content)
     : []
   const controlDiffLines = message.comparison?.enabled
     ? getUniqueComparisonLines(message.comparison.control.content, message.comparison.primary.content)
     : []
+  const canonContext = message.writerMetadata?.canon_context
+  const workspaceContext = message.workspaceContext
+  const canPromoteReplyToCanon = !isUser && Boolean(workspaceContext) && Boolean(message.content.trim())
 
   const handleMouseUp = () => {
     if (isUser || !onAssistantSelection) return
@@ -94,6 +135,49 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
     const text = selection?.toString().trim() || ''
     if (!text) return
     onAssistantSelection({ messageId: message.id, selectedText: text })
+  }
+
+  const handlePromoteReplyToCanon = async () => {
+    if (!workspaceContext || !message.content.trim() || isPromotingCanon) return
+
+    setIsPromotingCanon(true)
+    setCanonPromotionStatus(null)
+
+    try {
+      const conversationId = slugifySegment(workspaceContext.chat.conversationId)
+      const workspaceId = slugifySegment(workspaceContext.identity.workspaceId)
+      const messageId = slugifySegment(message.id)
+      const title = deriveReplyTitle(message)
+      const response = await promoteProjectWikiCanonApi({
+        title,
+        body: message.content.trim(),
+        slug: `chat/${workspaceId}-${conversationId}-${messageId}`,
+        idSeed: `${workspaceId}:${conversationId}:${message.id}`,
+        promotedFrom: 'chat',
+        sourceId: message.id,
+        sourceRef: `chat.${conversationId}.${message.id}`,
+        rawEvidence: {
+          relativePath: `imports/chat/${workspaceId}/${conversationId}/${messageId}.md`,
+          content: message.content.trim(),
+        },
+        metadata: {
+          conversation_id: workspaceContext.chat.conversationId,
+          workflow_session_id: workspaceContext.workflow.sessionId,
+          chapter_id: workspaceContext.manuscript.chapterId,
+          source: 'assistant-message',
+        },
+      }, workspaceContext)
+
+      if (!response.success || !response.data?.available || !response.data.page) {
+        throw new Error(response.error || response.data?.reason || 'canon-promotion-failed')
+      }
+
+      setCanonPromotionStatus({ type: 'success', text: t.messageBubblePromoteCanonSuccess })
+    } catch {
+      setCanonPromotionStatus({ type: 'error', text: t.messageBubblePromoteCanonFailure })
+    } finally {
+      setIsPromotingCanon(false)
+    }
   }
 
   return (
@@ -127,6 +211,65 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
               .replace('{entities}', String(message.writerMetadata.knowledge_retrieved.entities_count))
               .replace('{relations}', String(message.writerMetadata.knowledge_retrieved.relations_count))
               .replace('{memories}', String(message.writerMetadata.knowledge_retrieved.memories_count))}
+          </div>
+        )}
+
+        {!isUser && canonContext && shouldRenderCanonContext(message) && (
+          <div className="mb-3 rounded-xl border border-primary-500/20 bg-primary-500/5 px-3 py-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary-300">
+              <span className={`h-1.5 w-1.5 rounded-full ${canonContext.injected ? 'bg-primary-400' : 'bg-warning-500'}`}></span>
+              {t.messageBubbleCanonContextTitle}
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-dark-text-muted">
+              {canonContext.injected
+                ? t.messageBubbleCanonContextApplied
+                  .replace('{matches}', String(canonContext.match_count))
+                  .replace('{pages}', String(canonContext.total_pages))
+                : t.messageBubbleCanonContextUnavailable
+                  .replace('{reason}', canonContext.reason ?? 'unknown')}
+            </p>
+            {canonContext.injected && canonContext.matches.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {canonContext.matches.map((match) => (
+                  <div
+                    key={`${message.id}-${match.page_id}`}
+                    className="rounded-lg border border-dark-border/60 bg-dark-bg/60 px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-dark-text">{match.title}</span>
+                      <span className="rounded-full border border-primary-500/20 bg-primary-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary-300">
+                        {match.authority.promotedFrom}
+                      </span>
+                      <span className="rounded-full border border-dark-border2 bg-dark-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wider text-dark-text-secondary">
+                        {match.authority.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-dark-text-muted">{match.slug}</div>
+                    <p className="mt-2 text-xs leading-relaxed text-dark-text-secondary">{match.excerpt}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {canPromoteReplyToCanon && (
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handlePromoteReplyToCanon()}
+              disabled={isPromotingCanon}
+              className="inline-flex items-center gap-2 rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1.5 text-xs font-medium text-primary-300 transition-colors hover:bg-primary-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isPromotingCanon ? t.messageBubblePromotingCanon : t.messageBubblePromoteCanon}
+            </button>
+            {canonPromotionStatus && (
+              <span
+                className={`text-xs ${canonPromotionStatus.type === 'success' ? 'text-success-400' : 'text-danger-400'}`}
+              >
+                {canonPromotionStatus.text}
+              </span>
+            )}
           </div>
         )}
 

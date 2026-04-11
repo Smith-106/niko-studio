@@ -126,6 +126,10 @@ export interface Translations {
   knowledgeAddPrefix: string
   knowledgeNoDescription: string
   knowledgeItemFallback: string
+  knowledgePromoteCanon: string
+  knowledgePromotingCanon: string
+  knowledgePromoteCanonSuccess: string
+  knowledgePromoteCanonFailure: string
   knowledgeSkillDetailsLoadFailed: string
   knowledgeTemporalTitle: string
   knowledgeTemporalEntityPlaceholder: string
@@ -243,6 +247,13 @@ export interface Translations {
   messageBubbleAcceptPrimary: string
   messageBubbleAcceptControl: string
   messageBubbleRetrievalStatus: string
+  messageBubbleCanonContextTitle: string
+  messageBubbleCanonContextApplied: string
+  messageBubbleCanonContextUnavailable: string
+  messageBubblePromoteCanon: string
+  messageBubblePromotingCanon: string
+  messageBubblePromoteCanonSuccess: string
+  messageBubblePromoteCanonFailure: string
   chatAgentActionWrite: string
   chatAgentActionRevise: string
   chatAgentActionContext: string
@@ -882,6 +893,10 @@ export const translations: Record<Language, Translations> = {
     knowledgeAddPrefix: '添加',
     knowledgeNoDescription: '暂无描述',
     knowledgeItemFallback: '条目 {index}',
+    knowledgePromoteCanon: '提升到 Canon',
+    knowledgePromotingCanon: '正在提升到 Canon…',
+    knowledgePromoteCanonSuccess: '已将条目提升到 Canon。',
+    knowledgePromoteCanonFailure: '提升条目到 Canon 失败。',
     knowledgeSkillDetailsLoadFailed: '加载技能详情失败',
     knowledgeTemporalTitle: '时间事实',
     knowledgeTemporalEntityPlaceholder: '实体ID',
@@ -999,6 +1014,13 @@ export const translations: Record<Language, Translations> = {
     messageBubbleAcceptPrimary: '采纳主模型',
     messageBubbleAcceptControl: '采纳对照模型',
     messageBubbleRetrievalStatus: '检索状态： 实体 {entities} / 关系 {relations} / 记忆 {memories}',
+    messageBubbleCanonContextTitle: 'Canon 来源',
+    messageBubbleCanonContextApplied: '本次回复引用了 {matches} 条 canon 命中，来源于 {pages} 个已索引页面。',
+    messageBubbleCanonContextUnavailable: '当前无法读取 canon 上下文：{reason}',
+    messageBubblePromoteCanon: '提升回复到 Canon',
+    messageBubblePromotingCanon: '正在提升到 Canon…',
+    messageBubblePromoteCanonSuccess: '已将回复提升到 Canon。',
+    messageBubblePromoteCanonFailure: '提升回复到 Canon 失败。',
     chatAgentActionWrite: '写作',
     chatAgentActionRevise: '润色/重写',
     chatAgentActionContext: '取上下文',
@@ -1633,6 +1655,10 @@ export const translations: Record<Language, Translations> = {
     knowledgeAddPrefix: 'Add',
     knowledgeNoDescription: 'No description',
     knowledgeItemFallback: 'Item {index}',
+    knowledgePromoteCanon: 'Promote to Canon',
+    knowledgePromotingCanon: 'Promoting to canon…',
+    knowledgePromoteCanonSuccess: 'Item promoted to canon.',
+    knowledgePromoteCanonFailure: 'Failed to promote item to canon.',
     knowledgeSkillDetailsLoadFailed: 'Failed to load skill details',
     knowledgeTemporalTitle: 'Temporal Facts',
     knowledgeTemporalEntityPlaceholder: 'entity_id',
@@ -1750,6 +1776,13 @@ export const translations: Record<Language, Translations> = {
     messageBubbleAcceptPrimary: 'Accept primary',
     messageBubbleAcceptControl: 'Accept control',
     messageBubbleRetrievalStatus: 'Retrieval: Entities {entities} / Relations {relations} / Memories {memories}',
+    messageBubbleCanonContextTitle: 'Canon Context',
+    messageBubbleCanonContextApplied: 'This reply used {matches} canon matches from {pages} indexed pages.',
+    messageBubbleCanonContextUnavailable: 'Canon context is unavailable: {reason}',
+    messageBubblePromoteCanon: 'Promote Reply to Canon',
+    messageBubblePromotingCanon: 'Promoting to canon…',
+    messageBubblePromoteCanonSuccess: 'Reply promoted to canon.',
+    messageBubblePromoteCanonFailure: 'Failed to promote reply to canon.',
     chatAgentActionWrite: 'Write',
     chatAgentActionRevise: 'Polish/Rewrite',
     chatAgentActionContext: 'Get Context',

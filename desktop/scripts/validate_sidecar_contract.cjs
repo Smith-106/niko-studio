@@ -27,9 +27,11 @@ const path = require('path');
 // Script is in desktop/scripts/, project root is parent of desktop/
 const SCRIPT_DIR = __dirname;
 const DESKTOP_DIR = path.resolve(SCRIPT_DIR, '..');
+const PROJECT_ROOT = path.resolve(DESKTOP_DIR, '..');
 const BIN_DIR = path.join(DESKTOP_DIR, 'src-tauri', 'bin');
 const TAURI_CONFIG_PATH = path.join(DESKTOP_DIR, 'src-tauri', 'tauri.conf.json');
 const CAPABILITY_PATH = path.join(DESKTOP_DIR, 'src-tauri', 'capabilities', 'main-desktop.json');
+const LEGACY_PY_SIDECAR_ENTRY = path.join(PROJECT_ROOT, 'src', 'mcp', 'sidecar_entry.py');
 
 const IS_WINDOWS = process.platform === 'win32';
 const STRICT_MODE = process.argv.includes('--strict');
@@ -41,6 +43,7 @@ const EXPECTED_CAPABILITY_ID = 'main-desktop';
 const EXPECTED_EXTERNAL_BIN = 'bin/niko-gateway';
 const AUTHORITATIVE_RUNTIME = 'node';
 const PACKAGED_COMPAT_RUNTIME = 'python';
+const REQUIRE_PACKAGED_COMPAT_ARTIFACT = process.platform === 'win32';
 
 // Contract definitions
 const CONTRACTS = {
@@ -108,6 +111,22 @@ function resolvePackagedArtifact(baseName, targetTriple) {
   return process.platform === 'win32'
     ? `${baseName}-${targetTriple}.exe`
     : `${baseName}-${targetTriple}`;
+}
+
+function packagedPythonArtifactDetail(packagedPythonArtifact, packagedPythonExists) {
+  if (!packagedPythonArtifact) {
+    return 'current platform/arch is not mapped to a packaged target triple';
+  }
+  if (packagedPythonExists) {
+    return `${packagedPythonArtifact} => present`;
+  }
+  if (!REQUIRE_PACKAGED_COMPAT_ARTIFACT) {
+    return `${packagedPythonArtifact} => missing; packaged Python compatibility artifact is only a blocking prerequisite for the supported Windows packaging target.`;
+  }
+  if (!fs.existsSync(LEGACY_PY_SIDECAR_ENTRY)) {
+    return `${packagedPythonArtifact} => missing; current checkout does not include ${path.relative(PROJECT_ROOT, LEGACY_PY_SIDECAR_ENTRY)}. Hydrate the release-prepared Python compatibility sidecar artifact before strict desktop packaging validation.`;
+  }
+  return `${packagedPythonArtifact} => missing; run npm --prefix desktop run build:sidecar:python to regenerate the packaged compatibility artifact.`;
 }
 
 function validateContract(name, contract) {
@@ -263,10 +282,8 @@ function validatePackagingBoundary() {
     },
     {
       label: 'current target has a packaged python sidecar artifact',
-      pass: Boolean(packagedPythonArtifact && packagedPythonExists),
-      detail: packagedPythonArtifact
-        ? `${packagedPythonArtifact} => ${packagedPythonExists ? 'present' : 'missing'}`
-        : 'current platform/arch is not mapped to a packaged target triple',
+      pass: !REQUIRE_PACKAGED_COMPAT_ARTIFACT || Boolean(packagedPythonArtifact && packagedPythonExists),
+      detail: packagedPythonArtifactDetail(packagedPythonArtifact, packagedPythonExists),
     },
     {
       label: 'node sidecar is repo-local only and not claimed as a packaged binary',
@@ -290,7 +307,10 @@ function printPackagingBoundary(results) {
   console.log(`   Authoritative local runtime: ${AUTHORITATIVE_RUNTIME}`);
   console.log(`   Packaged compatibility runtime: ${results.packagedRuntime}`);
   console.log(`   Current target triple: ${results.targetTriple || 'unmapped'}`);
-  console.log('   Note: packaged desktop builds currently bundle the Python sidecar; the Node launcher remains a repo-local path and packaged execution falls back to Python.');
+  console.log('   Note: packaged desktop builds currently expect a Python compatibility sidecar artifact; the Node launcher remains a repo-local path and packaged execution falls back to Python.');
+  if (!REQUIRE_PACKAGED_COMPAT_ARTIFACT) {
+    console.log('   Current platform note: packaged Python compatibility artifact is advisory here; the blocking packaged target remains Windows x64.');
+  }
 
   for (const check of results.checks) {
     console.log(`   ${check.pass ? '✅' : '❌'} ${check.label}`);

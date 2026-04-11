@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 9.0.2 (Platform Edition)
+> **Version**: 9.0.4 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -139,6 +139,7 @@ npm --prefix desktop run build:sidecar
 
 # 显式 Python 兼容构建（仅 legacy entry 存在时可用）
 # 当前 checkout 默认不包含该 legacy entry
+# 正式 release 如需走 packaged fallback，需预先准备 `desktop/src-tauri/bin/niko-gateway*.exe`
 python scripts/build_gateway_sidecar.py --legacy-entry src/mcp/sidecar_entry.py
 ```
 
@@ -256,4 +257,4 @@ Built on concepts from:
 
 ---
 
-*Version 9.0.2 Platform Edition | Updated: 2026-04-09*
+*Version 9.0.4 Platform Edition | Updated: 2026-04-11*

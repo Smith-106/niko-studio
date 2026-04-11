@@ -81,3 +81,112 @@ export function mergeConversationWorkspace(
 ): ProjectWorkspaceContext {
   return mergeProjectWorkspaceContext(baseWorkspace, patch)
 }
+
+export function resolveConversationWorkspaceForSync(params: {
+  conversation?: Conversation
+  conversationId: string
+  currentConversationId: string | null
+  currentWorkspace: ProjectWorkspaceContext
+  patch: ProjectWorkspaceContext | Record<string, unknown>
+}): {
+  conversationWorkspace: ProjectWorkspaceContext
+  currentWorkspace: ProjectWorkspaceContext
+} | null {
+  const { conversation, conversationId, currentConversationId, currentWorkspace, patch } = params
+  if (!conversation) return null
+
+  const baseWorkspace = conversation.workspace
+    ? conversation.workspace
+    : currentConversationId === conversationId
+      ? currentWorkspace
+      : createSafeDefaultWorkspace()
+  const nextWorkspace = mergeConversationWorkspace(baseWorkspace, patch)
+
+  return {
+    conversationWorkspace: nextWorkspace,
+    currentWorkspace: currentConversationId === conversationId ? nextWorkspace : currentWorkspace,
+  }
+}
+
+export function createConversationRecord(params: {
+  id: string
+  workspace: ProjectWorkspaceContext
+  title?: string
+}): Conversation {
+  return {
+    id: params.id,
+    title: params.title ?? '新对话',
+    messages: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    workspace: params.workspace,
+  }
+}
+
+export function buildConversationMessage(params: {
+  role: 'user' | 'assistant'
+  content: string
+  skills?: string[]
+  comparison?: MessageComparison
+  writerMetadata?: WriterMetadata
+}): {
+  message: Message
+  messageWorkspace: ProjectWorkspaceContext | null
+} {
+  const messageWorkspace = resolveWorkspaceFromWriterMetadata(params.writerMetadata)
+  return {
+    messageWorkspace,
+    message: {
+      id: Date.now().toString(),
+      role: params.role,
+      content: params.content,
+      timestamp: new Date(),
+      skills: params.skills,
+      comparison: params.comparison,
+      writerMetadata: params.writerMetadata,
+      workspaceContext: messageWorkspace ?? undefined,
+    },
+  }
+}
+
+export function resolveConversationStateForMessage(params: {
+  conversation: Conversation
+  currentWorkspace: ProjectWorkspaceContext
+  role: 'user' | 'assistant'
+  content: string
+  skills?: string[]
+  comparison?: MessageComparison
+  writerMetadata?: WriterMetadata
+}): {
+  nextWorkspace: ProjectWorkspaceContext
+  nextConversation: Conversation
+} {
+  const { message, messageWorkspace } = buildConversationMessage(params)
+  const nextWorkspace = messageWorkspace
+    ? mergeConversationWorkspace(params.currentWorkspace, messageWorkspace)
+    : params.currentWorkspace
+
+  return {
+    nextWorkspace,
+    nextConversation: {
+      ...params.conversation,
+      workspace: nextWorkspace,
+      messages: [...params.conversation.messages, message],
+      updatedAt: new Date(),
+      title: params.conversation.messages.length === 0 && params.role === 'user'
+        ? generateTitle(params.content)
+        : params.conversation.title,
+    },
+  }
+}
+
+export function updateConversationMessages(
+  conversation: Conversation,
+  updater: (messages: Message[]) => Message[],
+): Conversation {
+  return {
+    ...conversation,
+    messages: updater(conversation.messages),
+    updatedAt: new Date(),
+  }
+}

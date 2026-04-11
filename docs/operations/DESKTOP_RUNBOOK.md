@@ -37,8 +37,9 @@ Desktop dev mode still uses the Vite shell on port `5173`, but `npm run dev` alo
 - The frontend webview is pinned to the `main-desktop` capability and only receives `core:default`; frontend code does not get direct shell/fs/dialog/http/notification plugin permissions.
 - Runtime matrix:
   - `Supported local runtime`: Node-first launcher + local `src-ts/` gateway.
-  - `Packaged compatibility runtime`: bundled Python sidecar.
-  - `Explicit fallback`: packaged builds do not currently bundle a target-triple Node sidecar binary, so packaged execution falls back to the bundled Python sidecar when the repo-local Node launcher is unavailable.
+  - `Packaged compatibility runtime`: pre-staged Python sidecar artifact.
+  - `Explicit fallback`: packaged builds do not currently bundle a target-triple Node sidecar binary, so packaged execution falls back to the Python compatibility artifact when the repo-local Node launcher is unavailable.
+  - `Current limitation`: the default node-first checkout does not ship the retired Python gateway sources, so strict packaging validation expects the packaged Python artifact to be hydrated before release sign-off.
 - Current dry-run packaging validation target: Windows x64 (`x86_64-pc-windows-msvc`).
 - `npm --prefix desktop run validate:package:dry-run` is an unsigned `--no-bundle` proof run; signed external bundles require release-private `certificateThumbprint` and `timestampUrl` values outside git before `npm --prefix desktop run tauri:build`.
 
@@ -137,6 +138,8 @@ npm --prefix desktop run validate:sidecar-contract
 # Validate the supported dry-run packaging path (Windows x64, no bundle)
 npm --prefix desktop run validate:package:dry-run
 ```
+
+For the current migration baseline, these commands validate the repo-local Node launcher plus the pre-staged packaged Python compatibility artifact; they do not rebuild the retired Python fallback from source.
 
 ### Release sign-off
 

@@ -13,6 +13,10 @@ import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToLegacyChatContext,
 } from '../../project/workspace-model.js';
+import {
+  queryProjectWikiCanon,
+  type ProjectWikiQueryAuthorityMetadata,
+} from '../../project/wiki-query.js';
 
 // ---------------------------------------------------------------
 // Constants
@@ -161,6 +165,24 @@ interface ChatBody {
   };
 }
 
+interface ChatCanonContextMatch {
+  page_id: string;
+  slug: string;
+  title: string;
+  score: number;
+  excerpt: string;
+  authority: ProjectWikiQueryAuthorityMetadata;
+}
+
+interface ChatCanonContextPayload {
+  available: boolean;
+  reason: string | null;
+  total_pages: number;
+  match_count: number;
+  injected: boolean;
+  matches: ChatCanonContextMatch[];
+}
+
 export interface StreamEvent {
   event: string;
   data: Record<string, unknown>;
@@ -298,6 +320,92 @@ function buildComparisonPayload(
   };
 }
 
+function buildWriterMetadata(
+  workspace: ReturnType<typeof resolveWorkspaceContext>,
+  canonContext: ChatCanonContextPayload,
+): Record<string, unknown> {
+  return {
+    workspace_context: workspace,
+    canon_context: canonContext,
+  };
+}
+
+function buildChatCanonPrompt(
+  userMessage: string,
+  matches: ChatCanonContextMatch[],
+): string {
+  if (matches.length === 0) return userMessage;
+
+  return [
+    '## Workspace Canon Context',
+    'Use the following canon excerpts as authoritative workspace knowledge when relevant.',
+    ...matches.map((match, index) => (
+      `${index + 1}. ${match.title} [${match.slug}] score=${match.score}\n${match.excerpt}`
+    )),
+    '',
+    '## User Request',
+    userMessage,
+  ].join('\n');
+}
+
+function buildChatCanonAppendix(matches: ChatCanonContextMatch[]): string {
+  if (matches.length === 0) return '';
+
+  return [
+    '## Canon Context',
+    ...matches.map((match, index) => (
+      `${index + 1}. ${match.title} [${match.slug}]\n${match.excerpt}`
+    )),
+  ].join('\n');
+}
+
+async function resolveChatCanonContext(
+  workspace: ReturnType<typeof resolveWorkspaceContext>,
+  userMessage: string,
+): Promise<{ prompt: string; metadata: ChatCanonContextPayload }> {
+  try {
+    const result = await queryProjectWikiCanon(workspace, userMessage, {
+      limit: 3,
+      excerptLength: 160,
+    });
+    const matches = result.available
+      ? result.matches.map((match) => ({
+          page_id: match.pageId,
+          slug: match.slug,
+          title: match.title,
+          score: match.score,
+          excerpt: match.excerpt,
+          authority: match.authority,
+        }))
+      : [];
+    const injected = matches.length > 0;
+
+    return {
+      prompt: injected ? buildChatCanonPrompt(userMessage, matches) : userMessage,
+      metadata: {
+        available: result.available,
+        reason: result.available ? null : result.reason,
+        total_pages: result.totalPages,
+        match_count: matches.length,
+        injected,
+        matches,
+      },
+    };
+  } catch {
+    return {
+      prompt: userMessage,
+      metadata: {
+        available: false,
+        reason: 'query-error',
+        total_pages: 0,
+        match_count: 0,
+        injected: false,
+        matches: [],
+      },
+    };
+  }
+}
+
 function formatSseEvent(event: string, data: Record<string, unknown>): string {
   return `event: ${event}\ndata: ${JSON.stringify(serializeValue(data))}\n\n`;
 }
@@ -321,11 +429,17 @@ export async function chatEndpoint(request: HttpRequest): Promise<HttpResponse> 
 
     const skills = body.skills ?? [];
     const workspace = resolveWorkspaceContext(body);
+    const canonContext = await resolveChatCanonContext(workspace, userMessage);
     const engine = createWorkflowEngine('mcp-chat');
     const routed = await engine.route(userMessage);
     const workflowLevel = resolveWorkflowLevel(body.workflowLevel, routed['level']);
     const workflowLevelSlug = toWorkflowSlug(workflowLevel);
-    const runResult = await engine.run(userMessage, workflowLevel);
+    const runResult = await engine.runWithExecutionContext(
+      userMessage,
+      canonContext.metadata.injected ? { chat_canon_prompt: canonContext.prompt } : undefined,
+      workflowLevel,
+      undefined,
+    );
 
     if ('error' in runResult) {
       return jsonResponse({ error: String(runResult['error']) }, 500);
@@ -334,8 +448,10 @@ export async function chatEndpoint(request: HttpRequest): Promise<HttpResponse> 
     const responseContent =
       extractPrimaryContent(runResult) ||
       `Workflow completed for: "${userMessage.slice(0, 50)}..."`;
+    const canonAppendix = canonContext.metadata.injected ? buildChatCanonAppendix(canonContext.metadata.matches) : '';
+    const finalContent = canonAppendix ? `${responseContent}\n\n${canonAppendix}` : responseContent;
     const evaluationResult = extractEvaluation(runResult) ?? { score: 0, feedback: '' };
-    const comparisonPayload = buildComparisonPayload(body.comparison, responseContent);
+    const comparisonPayload = buildComparisonPayload(body.comparison, finalContent);
     const planRecord = asRecord(runResult['plan']);
     const totalSteps =
       typeof planRecord?.['total_steps'] === 'number'
@@ -345,12 +461,10 @@ export async function chatEndpoint(request: HttpRequest): Promise<HttpResponse> 
           : 1;
 
     return jsonResponse(withContract({
-      content: responseContent,
+      content: finalContent,
       skills_used: skills.slice(0, 5),
       comparison: comparisonPayload,
-      writer_metadata: {
-        workspace_context: workspace,
-      },
+      writer_metadata: buildWriterMetadata(workspace, canonContext.metadata),
       workflow_info: {
         level: workflowLevel,
         level_slug: workflowLevelSlug,
@@ -388,6 +502,7 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
 
     const skills = body.skills ?? [];
     const workspace = resolveWorkspaceContext(body);
+    const canonContext = await resolveChatCanonContext(workspace, userMessage);
     const engine = createWorkflowEngine('mcp-chat-stream');
     const routed = await engine.route(userMessage);
     const workflowLevel = resolveWorkflowLevel(body.workflowLevel, routed['level']);
@@ -410,7 +525,12 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
       skills: skills.slice(0, 5),
     }));
 
-    for await (const workflowEvent of engine.runStream(userMessage, workflowLevel)) {
+    for await (const workflowEvent of engine.runStreamWithExecutionContext(
+      userMessage,
+      canonContext.metadata.injected ? { chat_canon_prompt: canonContext.prompt } : undefined,
+      workflowLevel,
+      undefined,
+    )) {
       const eventRecord = asRecord(workflowEvent) ?? {};
       const eventType = String(eventRecord['type'] ?? 'unknown');
 
@@ -465,9 +585,7 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
           },
           workflow_level: workflowLevel,
           workflow_level_slug: workflowLevelSlug,
-          writer_metadata: {
-            workspace_context: workspace,
-          },
+          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata),
           workspace,
         })));
         return {
@@ -489,9 +607,7 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
             ...DEFAULT_DIAGNOSTICS,
             failure_reason: String(eventRecord['error'] ?? 'Stream error'),
           },
-          writer_metadata: {
-            workspace_context: workspace,
-          },
+          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata),
           workspace,
         })));
         return {
@@ -522,6 +638,13 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
           }
         }
 
+        if (canonContext.metadata.injected) {
+          const canonAppendix = buildChatCanonAppendix(canonContext.metadata.matches);
+          for (const chunk of adaptiveChunkContent(canonAppendix, 500, 50)) {
+            sseEvents.push(formatSseEvent('content', { chunk, index: contentIndex++ }));
+          }
+        }
+
         const evaluation = extractEvaluation(eventRecord);
         if (evaluation) {
           sseEvents.push(formatSseEvent('evaluation', evaluation));
@@ -540,9 +663,7 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
           diagnostics: { ...DEFAULT_DIAGNOSTICS },
           workflow_level: workflowLevel,
           workflow_level_slug: workflowLevelSlug,
-          writer_metadata: {
-            workspace_context: workspace,
-          },
+          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata),
           workspace,
         })));
       }

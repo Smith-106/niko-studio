@@ -1,5 +1,6 @@
 import { type ApiResponse, callApi } from './core'
-import type { QualityGoalsPayload } from './chat'
+import type { QualityGoalsPayload, WriterMetadata } from './chat'
+import { appendWorkspacePayload, type ProjectWorkspaceContext } from './workspace'
 
 // ============ Agent API ============
 
@@ -24,14 +25,19 @@ export async function agentWrite(
   sceneCard: Record<string, unknown>,
   skills?: string[],
   wordTarget?: number,
-  qualityGoals?: QualityGoalsPayload
-): Promise<ApiResponse<{ content: string; wordcount: number }>> {
-  return callApi('/agent/write', 'POST', {
-    scene_card: sceneCard,
-    skills,
-    word_target: wordTarget,
-    quality_goals: qualityGoals,
-  })
+  qualityGoals?: QualityGoalsPayload,
+  workspace?: ProjectWorkspaceContext | null,
+): Promise<ApiResponse<{ content: string; wordcount: number; writer_metadata?: WriterMetadata }>> {
+  return callApi(
+    '/agent/write',
+    'POST',
+    appendWorkspacePayload({
+      scene_card: sceneCard,
+      skills,
+      word_target: wordTarget,
+      quality_goals: qualityGoals,
+    }, workspace),
+  )
 }
 
 export async function agentRevise(

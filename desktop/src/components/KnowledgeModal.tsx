@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, User, MapPin, BookOpen, Sparkles, X } from 'lucide-react'
+import { promoteProjectWikiCanonApi } from '../api/client'
 import { useI18n } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { useAppStore } from '../stores/appStore'
@@ -15,8 +16,41 @@ interface KnowledgeModalProps {
   onClose: () => void
 }
 
+function slugifySegment(value: unknown): string {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return normalized || 'item'
+}
+
+function formatKnowledgeValue(value: unknown): string {
+  return typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)
+}
+
+function buildKnowledgeCanonBody(title: string, summary: string, detailEntries: Array<[string, unknown]>): string {
+  const sections = [`# ${title}`]
+
+  if (summary) {
+    sections.push('', summary)
+  }
+
+  if (detailEntries.length > 0) {
+    sections.push('', '## Details')
+    for (const [key, value] of detailEntries) {
+      sections.push('', `### ${key}`)
+      sections.push(formatKnowledgeValue(value))
+    }
+  }
+
+  return sections.join('\n')
+}
+
 export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   const { t } = useI18n()
+  const currentWorkspace = useAppStore((state) => state.currentWorkspace)
   const setCurrentWorkspace = useAppStore((state) => state.setCurrentWorkspace)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('characters')
@@ -24,6 +58,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   const [items, setItems] = useState<KnowledgeItem[]>([])
   const [loading, setLoading] = useState(false)
   const [operationStatus, setOperationStatus] = useState<OperationStatus | null>(null)
+  const [promotingItem, setPromotingItem] = useState(false)
   const [selectedSkillId, setSelectedSkillId] = useState<string>('')
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null)
 
@@ -87,6 +122,55 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
       return true
     })
 
+    const handlePromoteSelectedItem = async () => {
+      if (promotingItem) return
+
+      setPromotingItem(true)
+      try {
+        const workspaceId = slugifySegment(currentWorkspace.identity.workspaceId)
+        const itemId = slugifySegment(selectedItem.id ?? selectedItem.name ?? selectedItem.title)
+        const slugPrefix = activeTab === 'characters'
+          ? 'characters'
+          : activeTab === 'locations'
+            ? 'locations'
+            : 'plots'
+        const body = buildKnowledgeCanonBody(title, summary, detailEntries)
+        const rawEvidenceContent = JSON.stringify(selectedItem, null, 2)
+
+        const response = await promoteProjectWikiCanonApi({
+          title,
+          body,
+          slug: `${slugPrefix}/${workspaceId}-${itemId}`,
+          idSeed: `${workspaceId}:${activeTab}:${itemId}`,
+          promotedFrom: 'manual',
+          sourceId: selectedItemId || itemId,
+          sourceRef: `knowledge.${activeTab}.${selectedItemId || itemId}`,
+          rawEvidence: {
+            relativePath: `imports/knowledge/${slugPrefix}/${workspaceId}-${itemId}.json`,
+            content: rawEvidenceContent,
+          },
+          metadata: {
+            source_surface: 'knowledge-modal',
+            knowledge_tab: activeTab,
+            item_id: selectedItemId || itemId,
+            item_title: title,
+            workflow_session_id: currentWorkspace.workflow.sessionId,
+            chapter_id: currentWorkspace.manuscript.chapterId,
+          },
+        }, currentWorkspace)
+
+        if (!response.success || !response.data?.available || !response.data.page) {
+          throw new Error(response.error || response.data?.reason || 'knowledge-canon-promotion-failed')
+        }
+
+        setOperationStatus({ type: 'success', message: t.knowledgePromoteCanonSuccess })
+      } catch {
+        setOperationStatus({ type: 'error', message: t.knowledgePromoteCanonFailure })
+      } finally {
+        setPromotingItem(false)
+      }
+    }
+
     return (
       <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/70 p-4 shadow-sm dark:border-blue-500/30 dark:bg-blue-900/10">
         <div className="flex items-start justify-between gap-4">
@@ -94,13 +178,23 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             <div className="text-sm font-semibold text-slate-900 dark:text-dark-text">{title}</div>
             <div className="mt-1 text-xs text-slate-600 dark:text-dark-text-secondary">{summary}</div>
           </div>
-          <button
-            type="button"
-            onClick={() => setSelectedItem(null)}
-            className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900/20"
-          >
-            {t.knowledgeClose}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handlePromoteSelectedItem()}
+              disabled={promotingItem}
+              className="rounded-md border border-blue-300/70 px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-500/30 dark:text-blue-300 dark:hover:bg-blue-900/20"
+            >
+              {promotingItem ? t.knowledgePromotingCanon : t.knowledgePromoteCanon}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedItem(null)}
+              className="rounded-md px-2 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900/20"
+            >
+              {t.knowledgeClose}
+            </button>
+          </div>
         </div>
         <div className="mt-3 grid gap-2">
           {detailEntries.map(([key, value]) => (

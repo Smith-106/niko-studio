@@ -14,6 +14,9 @@ This document is the repeatable local and CI sign-off path for the shipped Niko 
 - Windows host for `npm --prefix desktop run validate:package:dry-run` and local `check-writing-helper.ps1`
 - Node.js 20+, npm 10+, Python 3.11+, Rust stable with the MSVC Windows target
 - `npm ci` completed in `src-ts/` and `desktop/`
+- Pre-stage the packaged Python compatibility sidecar artifact in `desktop/src-tauri/bin/`:
+  - Windows: `niko-gateway.exe` and `niko-gateway-x86_64-pc-windows-msvc.exe`
+  - The current node-first checkout does not include the retired legacy Python gateway sources needed to rebuild these binaries from source.
 - Local packaging proof is intentionally unsigned:
   - `desktop/src-tauri/tauri.conf.json` keeps `bundle.windows.certificateThumbprint: null`
   - `desktop/src-tauri/tauri.conf.json` keeps `bundle.windows.timestampUrl: ""`
@@ -39,6 +42,7 @@ npm --prefix desktop run check:local
 ```
 
 The authoritative desktop local gate is `npm --prefix desktop run check:local`. In `desktop/package.json` this currently resolves to `check:release`, and `python scripts/release_check_summary.py` reruns this exact command before it can report `Decision: GO`.
+If the packaged Python compatibility sidecar artifact is not present, this gate is expected to fail before formal release sign-off.
 
 ### 3. Runtime, smoke, and packaging proof
 
@@ -48,6 +52,8 @@ npm --prefix src-ts exec -- vitest run tests/mcp/workflow-endpoints.integration.
 npm --prefix desktop run validate:sidecar-contract
 npm --prefix desktop run validate:package:dry-run
 ```
+
+For the current migration baseline, `validate:sidecar-contract` and `validate:package:dry-run` validate a pre-staged packaged Python compatibility artifact plus the repo-local Node launcher. They do not rebuild the retired Python gateway sources.
 
 ### 4. Writing-helper acceptance
 
@@ -99,3 +105,4 @@ python scripts/release_check_summary.py
 - `vitest-e2e*.xml`
 - `governance-scripts.junit.xml`
 - Windows packaging dry-run artifact from CI or the local `desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe`
+- The exact packaged Python compatibility sidecar artifact used for the release sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` on Windows)

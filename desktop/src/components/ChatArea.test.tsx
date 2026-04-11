@@ -14,26 +14,33 @@ vi.mock('../api/client', () => ({
   agentWrite: vi.fn(),
   agentRevise: vi.fn(),
   agentGetContext: vi.fn(),
+  promoteProjectWikiCanonApi: vi.fn(),
   createCheckpoint: vi.fn(),
   restoreCheckpoint: vi.fn(),
   uploadMemoryFile: vi.fn(),
 }))
 
 import {
+  agentRoute,
+  agentWrite,
   chat,
   chatStream,
   createCheckpoint,
   restoreCheckpoint,
   uploadMemoryFile,
   agentGetContext,
+  promoteProjectWikiCanonApi,
 } from '../api/client'
 
 const mockedChat = vi.mocked(chat)
 const mockedChatStream = vi.mocked(chatStream)
+const mockedAgentRoute = vi.mocked(agentRoute)
+const mockedAgentWrite = vi.mocked(agentWrite)
 const mockedCreateCheckpoint = vi.mocked(createCheckpoint)
 const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
 const mockedUploadMemoryFile = vi.mocked(uploadMemoryFile)
 const mockedAgentGetContext = vi.mocked(agentGetContext)
+const mockedPromoteProjectWikiCanonApi = vi.mocked(promoteProjectWikiCanonApi)
 const zh = translations.zh
 
 function resetStores(): void {
@@ -93,6 +100,36 @@ describe('ChatArea P0 flows', () => {
     mockedCreateCheckpoint.mockResolvedValue({ success: true, data: { checkpoint_id: 'cp-1' } })
     mockedRestoreCheckpoint.mockResolvedValue({ success: true, data: { status: 'ok' } })
     mockedChat.mockResolvedValue({ success: true, data: { content: 'fallback', skills_used: [] } })
+    mockedAgentRoute.mockResolvedValue({
+      success: true,
+      data: {
+        workflow_level: 'L3',
+        workflow_level_slug: 'plan-and-execute',
+        scene_type: 'dialogue',
+        dispatched_skills: [],
+        task_assignments: [],
+      },
+    })
+    mockedAgentWrite.mockResolvedValue({ success: true, data: { content: 'agent write', wordcount: 10 } })
+    mockedPromoteProjectWikiCanonApi.mockResolvedValue({
+      success: true,
+      data: {
+        available: true,
+        reason: null,
+        workspace_id: 'default-project',
+        page: {
+          id: 'canon-chat-1',
+          slug: 'chat/default-project-conversation-1-reply-1',
+          title: 'Chat Reply',
+          status: 'curated',
+          path: '/tmp/chat.md',
+          markdown: '# Chat Reply',
+          promoted_from: 'chat',
+        },
+        raw_evidence_path: '/tmp/raw.md',
+        log_entry: { type: 'promotion' },
+      },
+    })
     mockedUploadMemoryFile.mockResolvedValue({
       success: true,
       data: {
@@ -276,6 +313,198 @@ describe('ChatArea P0 flows', () => {
             .replace('{entities}', '2')
             .replace('{relations}', '1')
             .replace('{memories}', '4')
+        )
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('renders canon traceability when stream done includes canon context', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('带 canon 来源', 0)
+      callbacks.onDone?.({
+        status: 'completed',
+        skills_used: [],
+        writer_metadata: {
+          canon_context: {
+            available: true,
+            reason: null,
+            total_pages: 3,
+            match_count: 1,
+            injected: true,
+            matches: [
+              {
+                page_id: 'wpg_harbor_1',
+                slug: 'locations/atlas-harbor',
+                title: 'Atlas Harbor Canon',
+                score: 77,
+                excerpt: 'Atlas Harbor is the canonical smuggler hub for the project.',
+                authority: {
+                  workspaceId: 'atlas-project',
+                  scopeAuthority: 'workspace',
+                  canonAuthority: 'canon-page',
+                  projectionAuthority: 'derived',
+                  promotion: 'manual',
+                  promotedFrom: 'story-bible',
+                  status: 'curated',
+                },
+              },
+            ],
+          },
+        },
+      })
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '渲染 canon 来源{enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText(zh.messageBubbleCanonContextTitle)).toBeInTheDocument()
+    })
+    expect(
+      screen.getByText(
+        zh.messageBubbleCanonContextApplied
+          .replace('{matches}', '1')
+          .replace('{pages}', '3')
+      )
+    ).toBeInTheDocument()
+    expect(screen.getByText('Atlas Harbor Canon')).toBeInTheDocument()
+    expect(screen.getByText('locations/atlas-harbor')).toBeInTheDocument()
+  })
+
+  it('promotes streamed assistant replies into canon from message actions', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('Chat reply body', 0)
+      callbacks.onDone?.({
+        status: 'completed',
+        skills_used: [],
+        writer_metadata: {
+          workspace_context: {
+            schemaVersion: '2026-04-08',
+            identity: {
+              workspaceId: 'default-project',
+              projectId: 'default-project',
+              projectName: 'Default Project',
+              workspaceRoot: '/tmp/default-project',
+            },
+            manuscript: {
+              manuscriptId: null,
+              title: null,
+              chapterId: 'chapter-1',
+              chapterTitle: null,
+              chapterNumber: 1,
+            },
+            storyBible: {
+              storyBibleId: null,
+              draftId: 'draft-1',
+              version: null,
+              storage: 'workspace',
+            },
+            knowledge: {
+              focusEntityId: null,
+              graphEntityIds: [],
+              memoryEntryIds: [],
+            },
+            workflow: {
+              sessionId: 'workflow-session-1',
+              planId: null,
+              level: 'L3',
+            },
+            chat: {
+              conversationId: 'conversation-1',
+              comparisonEnabled: false,
+            },
+            compatibility: {
+              additiveContract: true,
+              migratedLegacyFields: [],
+              notes: [],
+            },
+          },
+        },
+      })
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '提升聊天回复{enter}')
+
+    await userEvent.click(await screen.findByRole('button', { name: zh.messageBubblePromoteCanon }))
+
+    await waitFor(() => {
+      expect(mockedPromoteProjectWikiCanonApi).toHaveBeenCalled()
+    })
+    expect(screen.getByText(zh.messageBubblePromoteCanonSuccess)).toBeInTheDocument()
+  })
+
+  it('renders retrieval status for agent write responses with writer metadata', async () => {
+    mockedAgentWrite.mockResolvedValue({
+      success: true,
+      data: {
+        content: 'agent 带检索状态',
+        wordcount: 280,
+        writer_metadata: {
+          knowledge_retrieved: {
+            entities_count: 2,
+            relations_count: 2,
+            memories_count: 1,
+          },
+          workspace_context: {
+            schemaVersion: '2026-04-08',
+            identity: {
+              workspaceId: 'atlas-project',
+              projectId: 'atlas-project',
+              projectName: 'Atlas',
+              workspaceRoot: '/tmp/atlas',
+            },
+            manuscript: {
+              manuscriptId: null,
+              title: null,
+              chapterId: 'chapter-3',
+              chapterTitle: null,
+              chapterNumber: 3,
+            },
+            storyBible: {
+              storyBibleId: null,
+              draftId: 'draft-3',
+              version: null,
+              storage: 'workspace',
+            },
+            knowledge: {
+              focusEntityId: null,
+              graphEntityIds: [],
+              memoryEntryIds: [],
+            },
+            workflow: {
+              sessionId: 'workflow-session-3',
+              planId: null,
+              level: 'L3',
+            },
+            chat: {
+              conversationId: 'conversation-3',
+              comparisonEnabled: false,
+            },
+            compatibility: {
+              additiveContract: true,
+              migratedLegacyFields: [],
+              notes: [],
+            },
+          },
+        },
+      },
+    })
+
+    render(<ChatArea />)
+    await userEvent.click(screen.getByRole('button', { name: zh.chatModeAgent }))
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, 'agent 写作检索状态{enter}')
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          zh.messageBubbleRetrievalStatus
+            .replace('{entities}', '2')
+            .replace('{relations}', '2')
+            .replace('{memories}', '1')
         )
       ).toBeInTheDocument()
     })
