@@ -25,12 +25,12 @@
     "check:release": "npm run lint && npm run format:check && npm run test && npm run build:sidecar && npm run validate:sidecar-contract && npm run build",
     "check:local": "npm run check:release",
     "check": "npm run typecheck && npm run build",
-    "validate:package:dry-run": "node scripts/validate_sidecar_contract.cjs --strict && tauri build --debug --no-bundle --target x86_64-pc-windows-msvc",
+    "validate:package:dry-run": "node scripts/validate_sidecar_contract.cjs --strict && npm run tauri -- build --debug --no-bundle --target x86_64-pc-windows-msvc",
     "build": "npm run ensure-deps && tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "tauri:dev": "npm run build:sidecar && tauri dev",
-    "tauri:build": "npm run build:sidecar && tauri build"
+    "tauri": "node ./node_modules/@tauri-apps/cli/tauri.js",
+    "tauri:dev": "npm run build:sidecar && npm run tauri -- dev",
+    "tauri:build": "npm run build:sidecar && npm run tauri -- build"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.13.23",
