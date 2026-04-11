@@ -248,15 +248,37 @@ jobs:
         working-directory: desktop
 
       - name: Run desktop packaging dry-run (advisory lane)
-        run: npm run validate:package:dry-run
+        id: packaging-advisory
+        shell: pwsh
         working-directory: desktop
+        run: |
+          $logPath = Join-Path $PWD 'desktop-packaging-advisory.log'
+          & npm run validate:package:dry-run 2>&1 | Tee-Object -FilePath $logPath
+          $exitCode = $LASTEXITCODE
+          "exit_code=$exitCode" >> $env:GITHUB_OUTPUT
+
+          if ($exitCode -eq 0) {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "desktop-packaging-advisory: packaging dry-run passed."
+            return
+          }
+
+          $warning = 'desktop-packaging-advisory observed a non-blocking Windows packaging failure. Review the advisory log artifact before release sign-off.'
+          Write-Host "::warning::$warning"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "desktop-packaging-advisory: packaging dry-run failed in advisory mode and was downgraded to a warning. Review the uploaded advisory log artifact before release sign-off."
 
       - name: Upload desktop packaging dry-run artifact (advisory lane)
-        if: success()
+        if: ${{ hashFiles('desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: desktop-packaging-dry-run
           path: desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe
+
+      - name: Upload desktop packaging advisory log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-packaging-advisory-log
+          path: desktop/desktop-packaging-advisory.log
 
   desktop-packaging-hard-fail:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
