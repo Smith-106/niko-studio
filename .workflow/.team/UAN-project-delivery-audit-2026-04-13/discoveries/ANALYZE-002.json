@@ -1,9 +1,0 @@
-{
-  "id": "ANALYZE-002",
-  "status": "completed",
-  "role": "analyst",
-  "findings": "Standard-mode delivery is substantially aligned, but two seams remain. uiBridge is exposed in customer-facing settings/config yet runtime enablement is still env-only. More importantly, checkpoint create/list/restore bypass workspace authority and can restore gateway-global checkpoints from customer-visible UI surfaces. Treat checkpoint restore as pre-delivery blocking unless scoped or hidden.",
-  "artifact": "D:/工作目录/niko-studio/.workflow/.team/UAN-project-delivery-audit-2026-04-13/analyses/analysis-002.json",
-  "files_modified": [],
-  "error": ""
-}
