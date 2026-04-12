@@ -56,17 +56,17 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: src-ts/package-lock.json
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -118,14 +118,14 @@ jobs:
 
       - name: Upload failed cases artifact
         if: failure() && hashFiles('failed-writing-helper-cases.json') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: failed-writing-helper-cases
           path: failed-writing-helper-cases.json
 
       - name: Upload gateway logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: writing-helper-gateway-logs
           path: |
