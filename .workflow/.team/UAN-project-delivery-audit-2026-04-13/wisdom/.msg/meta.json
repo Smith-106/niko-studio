@@ -1,0 +1,52 @@
+{
+  "session_id": "UAN-project-delivery-audit-2026-04-13",
+  "created_at": "2026-04-13T00:00:00+08:00",
+  "explorer": {
+    "architectural": {
+      "perspective": "architectural",
+      "file_count": 21,
+      "finding_count": 7
+    },
+    "business": {
+      "perspective": "business",
+      "file_count": 22,
+      "finding_count": 6,
+      "artifact": ".workflow/.team/UAN-project-delivery-audit-2026-04-13/explorations/exploration-003.json",
+      "updated_at": "2026-04-13T01:30:00+08:00",
+      "status": "GO_with_caveats"
+    },
+    "technical": {
+      "perspective": "technical",
+      "file_count": 18,
+      "finding_count": 6,
+      "artifact": ".workflow/.team/UAN-project-delivery-audit-2026-04-13/explorations/exploration-001.json",
+      "updated_at": "2026-04-13T01:28:02.1324806+08:00"
+    }
+  },
+  "analyst": {
+    "business": {
+      "perspective": "business",
+      "insight_count": 3,
+      "finding_count": 5,
+      "is_direction_fix": false,
+      "artifact": ".workflow/.team/UAN-project-delivery-audit-2026-04-13/analyses/analysis-003.json",
+      "updated_at": "2026-04-13T01:43:51.8510604+08:00",
+      "verdict_tendency": "GO_with_blocking_followups"
+    }
+  },
+  "discussant": {
+    "round": 1,
+    "type": "initial",
+    "new_insight_count": 3,
+    "corrected_count": 3,
+    "artifact": ".workflow/.team/UAN-project-delivery-audit-2026-04-13/discussions/discussion-round-001.json",
+    "updated_at": "2026-04-13T01:47:20.6660383+08:00"
+  },
+  "synthesizer": {
+    "conclusion_count": 5,
+    "recommendation_count": 5,
+    "open_question_count": 3,
+    "artifact": ".workflow/.team/UAN-project-delivery-audit-2026-04-13/conclusions.json",
+    "updated_at": "2026-04-13T01:50:42.9576966+08:00"
+  }
+}

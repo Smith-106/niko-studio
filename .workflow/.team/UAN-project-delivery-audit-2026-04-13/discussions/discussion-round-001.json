@@ -1,0 +1,35 @@
+{
+  "round": 1,
+  "type": "initial",
+  "user_feedback": "(Initial discussion round)",
+  "updated_understanding": {
+    "confirmed": [
+      "The default standard workflow path remains materially aligned across desktop UI, gateway routes, and backend workflow endpoints.",
+      "Current release, authority, and local build/test gates support a late-stage build-candidate judgment rather than an unfinished-product judgment.",
+      "uiBridge config-source drift is real, but it is scoped to a non-default optional mode.",
+      "Checkpoint create/list/restore are not scoped by the same workspace authority model that governs the rest of the workflow control plane.",
+      "The repository snapshot and advertised delivery package do not show the full SIGN_OFF.md authority/XML evidence-retention set."
+    ],
+    "corrected": [
+      "Earlier GO_now style conclusions should not be read as proof of polished customer-experience completeness for the current checkout.",
+      "Earlier GO_now style conclusions should not be read as proof that the formal client handoff package is complete.",
+      "Passing release gates do not prove every visible desktop action still maps to a live backend route, because some frontend assertions are mock-driven and can preserve stale contracts."
+    ],
+    "new_insights": [
+      "A two-level verdict is now the most coherent framing: build candidate readiness is stronger than formal handoff completeness.",
+      "The Evaluation quality-check route mismatch is the strongest likely customer-visible defect in the current session evidence.",
+      "Checkpoint authority severity is conditional on whether restore/recovery surfaces are shipped to customers."
+    ]
+  },
+  "new_findings": [
+    "Evaluation quality-check still appears wired to /api/novel/quality-check while the gateway route exposed in-repo is /writing/quality, and current tests reinforce the stale path.",
+    "The project should not be described as a broad UI/API mismatch; most workflow/config/admin contracts are aligned and covered by current tests.",
+    "The remaining delivery debate is mainly about isolated seams and evidence-package completeness, not about core workflow readiness."
+  ],
+  "new_questions": [
+    "Does any compatibility alias for /api/novel/quality-check exist outside this repository or runtime profile?",
+    "Will the customer build expose uiBridge controls or checkpoint restore/recovery surfaces?",
+    "Are the missing authority/XML sign-off artifacts retained outside git, and if so, does that satisfy the intended formal handoff policy?"
+  ],
+  "timestamp": "2026-04-13T01:47:20.6660383+08:00"
+}

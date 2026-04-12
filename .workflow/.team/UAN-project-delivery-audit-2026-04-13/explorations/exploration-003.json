@@ -1,0 +1,230 @@
+{
+  "id": "EXPLORE-003",
+  "task_id": "EXPLORE-003",
+  "role": "explorer",
+  "perspective": "business",
+  "completed_at": "2026-04-13T01:30:00+08:00",
+  "summary": "The current repository still presents a coherent, near-complete customer delivery surface for the desktop product, backed by fresh GO release evidence and passing live contract checks. The remaining meaningful customer-facing gap is a likely Evaluation panel endpoint drift for the novel quality check action, plus a process-level gap in preserving the full sign-off evidence pack inside the repo.",
+  "final_assessment": {
+    "status": "GO_with_caveats",
+    "customer_deliverable_now": true,
+    "experience_complete": "mostly_complete",
+    "formal_handoff_package_complete": false,
+    "confidence": "high",
+    "judgment": "核心桌面交付面已经完整到可交付客户的程度，但还不是零瑕疵的 handoff。主流程、文档口径、打包线索、关键 UI/API 契约和工作流门禁都闭合且现时验证通过；不过 Evaluation 面板里仍有一个很可能真实可见的旧接口调用缺口，另外正式签收要求保留的 XML/authority 工件没有在当前仓库快照内一起留存。"
+  },
+  "product_surface_signals": [
+    {
+      "signal": "Single supported runtime and release contract",
+      "assessment": "strong",
+      "detail": "Root README, desktop README, and release notes all describe the same shipped surface: desktop UI + Tauri + local src-ts gateway.",
+      "evidence": [
+        "README.md:57-87",
+        "desktop/README.md:7-12",
+        "docs/release/RELEASE_NOTES.md:10-31"
+      ]
+    },
+    {
+      "signal": "Concrete packaging and desktop delivery cues",
+      "assessment": "strong",
+      "detail": "Tauri config, versioned package metadata, staged sidecar binaries, and a fresh Windows debug executable exist in the checkout.",
+      "evidence": [
+        "desktop/package.json:1-45",
+        "desktop/src-tauri/tauri.conf.json:1-62",
+        "desktop/src-tauri/bin/*",
+        "desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe"
+      ]
+    },
+    {
+      "signal": "Customer-facing shell is real and feature-complete enough to demo",
+      "assessment": "strong",
+      "detail": "The main app shell contains a document canvas, chat drafting, settings, knowledge, evaluation, MCP status, checkpoint/recovery, and runtime health presentation.",
+      "evidence": [
+        "desktop/src/App.tsx:11-30",
+        "desktop/src/components/Sidebar.tsx",
+        "desktop/src/components/AppMainContent.tsx:17-47",
+        "desktop/src/components/AppRightPanels.tsx:21-67",
+        "desktop/src/components/ChatArea.tsx:782-847",
+        "desktop/src/components/AppHeader.tsx:1-145"
+      ]
+    },
+    {
+      "signal": "Release evidence is fresh and live checks still pass",
+      "assessment": "strong",
+      "detail": "The release snapshot was regenerated at 2026-04-12T16:32:53Z (2026-04-13 00:32:53 HKT). This exploration also reran delivery/authority checks and targeted UI/API tests successfully.",
+      "evidence": [
+        "release-check-summary.md:1-47",
+        ".workflow/evidence/release/release-readiness-artifact.json:1-120"
+      ]
+    }
+  ],
+  "relevant_files": [
+    {
+      "path": "README.md",
+      "why": "Top-level customer/runtime contract and quality-gate entrypoints."
+    },
+    {
+      "path": "desktop/README.md",
+      "why": "Desktop-specific delivery contract and feature inventory."
+    },
+    {
+      "path": "docs/release/RELEASE_NOTES.md",
+      "why": "Formal delivery contract, GO/NO-GO criteria, and external release scope."
+    },
+    {
+      "path": "docs/release/SIGN_OFF.md",
+      "why": "Defines what proof must be preserved for formal sign-off."
+    },
+    {
+      "path": "release-check-summary.md",
+      "why": "Fresh machine-readable local release snapshot."
+    },
+    {
+      "path": ".workflow/evidence/release/release-readiness-artifact.json",
+      "why": "Structured release-readiness evidence artifact."
+    },
+    {
+      "path": "desktop/src/App.tsx",
+      "why": "Top-level customer shell composition."
+    },
+    {
+      "path": "desktop/src/components/ChatArea.tsx",
+      "why": "First-run empty state and core chat experience."
+    },
+    {
+      "path": "desktop/src/components/KnowledgeModal.tsx",
+      "why": "Knowledge browsing and manual canon promotion surface."
+    },
+    {
+      "path": "desktop/src/components/EvaluationPanel.tsx",
+      "why": "Evaluation, recommendation, workflow, checkpoint, and quality-check surface."
+    },
+    {
+      "path": "desktop/src/components/McpStatusPanel.tsx",
+      "why": "Runtime diagnostics and service control surface."
+    },
+    {
+      "path": "desktop/src/api/evaluation.ts",
+      "why": "Frontend evaluation endpoint contracts."
+    },
+    {
+      "path": "desktop/src/api/gateway/services.ts",
+      "why": "Frontend admin-service endpoint contracts."
+    },
+    {
+      "path": "desktop/src/api/workflow/plans.ts",
+      "why": "Frontend workflow route/plan/execute/lifecycle contracts."
+    },
+    {
+      "path": "desktop/src/api/wiki.ts",
+      "why": "Frontend wiki promotion/list/read contracts."
+    },
+    {
+      "path": "desktop/src/api/transport.ts",
+      "why": "Desktop-to-Tauri transport seam."
+    },
+    {
+      "path": "desktop/src-tauri/src/main.rs",
+      "why": "Tauri command bridge and local gateway control."
+    },
+    {
+      "path": "src-ts/mcp/routes/content.ts",
+      "why": "Chat, memory, wiki, writing, and quality route registry."
+    },
+    {
+      "path": "src-ts/mcp/routes/platform.ts",
+      "why": "Health, metrics, tools, and config routes."
+    },
+    {
+      "path": "src-ts/mcp/routes/admin.ts",
+      "why": "Admin MCP service routes used by the desktop diagnostics panel."
+    },
+    {
+      "path": "src-ts/mcp/routes/workflow.ts",
+      "why": "Workflow and checkpoint route registry."
+    },
+    {
+      "path": "src-ts/workflow/engine/risk.ts",
+      "why": "Hard-gate enforcement for destructive workflow actions."
+    }
+  ],
+  "ux_completeness_findings": [
+    {
+      "title": "Writer-first shell feels materially complete",
+      "severity": "info",
+      "detail": "The desktop surface is composed as a product shell rather than a dev scaffold, with empty-state guidance, runtime status, checkpoint controls, error boundary, editor export actions, and modular right-side tool panels."
+    },
+    {
+      "title": "UI and backend are aligned for the core promised customer journeys",
+      "severity": "info",
+      "detail": "Chat, knowledge, settings/runtime diagnostics, wiki promotion, workflow routing/execution, and MCP admin services all map to real backend routes and now have matching targeted tests."
+    },
+    {
+      "title": "Workflow control includes visible and tested guardrails",
+      "severity": "info",
+      "detail": "Destructive workflow execution requires a confirmation token in backend risk-gate logic, and integration tests verify the waiting-confirmation path before execution proceeds."
+    },
+    {
+      "title": "No dedicated onboarding wizard, but first-run guidance is adequate",
+      "severity": "low",
+      "detail": "There is no multi-step onboarding flow. Instead, the first-run experience relies on the chat empty state, quick mode buttons, workspace chips, runtime status, and settings access. This is acceptable for a desktop tool aimed at writer/operators, but not premium-polish onboarding."
+    },
+    {
+      "title": "Novel quality check action likely points at a dead endpoint",
+      "severity": "high",
+      "detail": "This is an inference from source alignment: the Evaluation panel exposes a visible quality-check action via useEvaluationQualityCheck -> novelQualityCheck(), but the frontend posts to /api/novel/quality-check while the gateway route registry exposes /writing/quality. Unless another compatibility server provides the old path at runtime, the button is likely broken."
+    },
+    {
+      "title": "Formal proof pack is incomplete inside the checkout",
+      "severity": "medium",
+      "detail": "The current repo includes the fresh release summary and release-readiness artifact, but not the standalone authority-alignment JSON or the XML reports listed by SIGN_OFF.md as artifacts to keep. This is a handoff-traceability gap rather than a core product-surface blocker."
+    }
+  ],
+  "customer_handoff_risks": [
+    {
+      "risk": "Visible Evaluation panel feature may fail at runtime",
+      "severity": "medium",
+      "blocking": false,
+      "why": "Only one visible sub-flow appears drifted; the main release contract and core flows remain intact."
+    },
+    {
+      "risk": "Proof bundle for external sign-off is not fully preserved in-repo",
+      "severity": "medium",
+      "blocking": false,
+      "why": "A customer handoff can still proceed with the fresh summary plus rerunnable gates, but formal auditability is weaker unless CI/local artifacts are exported together with the build."
+    }
+  ],
+  "verification": {
+    "live_checks": [
+      {
+        "command": "python scripts/delivery_gate.py",
+        "status": "PASS"
+      },
+      {
+        "command": "python scripts/check_authority_alignment.py",
+        "status": "PASS",
+        "detail": "49/49 rules passed"
+      },
+      {
+        "command": "npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx src/components/KnowledgeModal.test.tsx",
+        "status": "PASS",
+        "detail": "3 files, 54 tests"
+      },
+      {
+        "command": "npm --prefix src-ts exec -- vitest run tests/gateway-server.routes.test.ts tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/mcp-admin.test.ts tests/mcp/wiki-endpoints.test.ts --reporter=default",
+        "status": "PASS",
+        "detail": "4 files, 14 tests"
+      }
+    ]
+  },
+  "questions_for_analysis": [
+    "Is the Evaluation panel novel-quality-check action part of the customer-promised scope for this delivery, or can it be downgraded to a known caveat?",
+    "Will the final handoff package include the CI-generated XML and authority artifacts listed in SIGN_OFF.md, or should the repo-local proof set be refreshed and exported first?"
+  ],
+  "_metadata": {
+    "artifact": ".workflow/.team/UAN-project-delivery-audit-2026-04-13/artifacts/EXPLORE-003-customer-delivery-report.md",
+    "search_strategy": "ACE-first plus targeted file reads and live lightweight verification",
+    "relevant_file_count": 22,
+    "finding_count": 6
+  }
+}

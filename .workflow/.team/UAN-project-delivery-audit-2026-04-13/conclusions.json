@@ -1,0 +1,143 @@
+{
+  "session_id": "UAN-project-delivery-audit-2026-04-13",
+  "topic": "检查当前项目的开发进度、代码完成度、前端 UI 与后端接口及工作流程控制的吻合度，并判断是否体验完整、是否可交付客户。",
+  "completed": "2026-04-13T01:50:42.9576966+08:00",
+  "summary": "当前仓库已达到 late-stage build-candidate 水平：standard workflow 主链、桌面交付壳层、release/local gates 与大部分前后端契约均有现时证据支撑，说明项目不是未完成品。但它还不满足“可自信直接交付客户”的标准。最明确的客户可见阻塞是 Evaluation 面板 quality-check 动作疑似调用陈旧路径；其次，checkpoint create/list/restore 未纳入与其余 workflow 操作一致的 workspace authority 约束；再者，当前仓库/交付包证据不满足 SIGN_OFF.md 要求的完整签收留存。因此，本轮最终结论应区分两层：build candidate readiness 偏 GO，formal client delivery readiness 现状为 NO_GO。",
+  "key_conclusions": [
+    {
+      "point": "开发进度已处于后期，核心产品主链基本完成，不属于半成品或结构性未闭合状态。",
+      "evidence": "3 份 exploration 与 3 份 analysis 一致确认 release gate、authority alignment、desktop/backend local checks、workflow route/integration tests 均为绿色，且桌面壳层、workflow/config/admin 主要路径有代码与测试支撑。",
+      "confidence": "high"
+    },
+    {
+      "point": "前端 UI、后端接口与工作流控制在默认 standard 模式下整体吻合，风险是局部而非系统性失配。",
+      "evidence": "architectural 与 business 视角均确认 `/workflow/*`、config control plane、MCP admin service、desktop bootstrap 链路对齐；discussion round 也明确不应将项目描述为广泛 UI/API 失配。",
+      "confidence": "high"
+    },
+    {
+      "point": "Evaluation quality-check 路由失配是当前最强的客户可见代码级阻塞。",
+      "evidence": "technical 与 business analysis 同时指出 `desktop/src/api/evaluation.ts` 仍指向 `/api/novel/quality-check`，而网关公开路径是 `/writing/quality`，且前端测试仍固化旧路径，导致现有绿测无法暴露真实缺陷。",
+      "confidence": "high"
+    },
+    {
+      "point": "checkpoint create/list/restore 的 authority 覆盖弱于其余 workflow 控制面，是否构成交付阻塞取决于 restore/recovery UI 是否面向客户开放。",
+      "evidence": "architectural analysis 确认 checkpoint API 未传入与 execute/lifecycle/quick rollback 同等级的 workspace authority；discussion 明确该问题真实存在，但严重度与客户构建是否暴露这些入口有关。",
+      "confidence": "high"
+    },
+    {
+      "point": "正式客户签收包当前不完整，即使 release readiness 证据偏绿，也不能等同于 formal sign-off readiness。",
+      "evidence": "technical、business 与 discussion 均指出仓库快照和已展示交付包未包含 SIGN_OFF.md 要求的 authority/XML 留存工件；因此 formal handoff 证据链未闭合。",
+      "confidence": "high"
+    }
+  ],
+  "recommendations": [
+    {
+      "action": "先修复或明确下线 Evaluation quality-check 动作，再重新执行一次真实 desktop-to-gateway 点击验证与回归测试。",
+      "rationale": "这是当前最可信、最直接的客户可见缺陷来源；不处理就无法对“体验完整”给出正向结论。",
+      "priority": "high"
+    },
+    {
+      "action": "在客户构建中处理 checkpoint restore/recovery：要么补齐 workspace authority 约束，要么在交付 profile 中隐藏/禁用这些入口。",
+      "rationale": "authority seam 已被多视角确认；若 restore UI 面向客户，则它应被视为 pre-delivery blocker。",
+      "priority": "high"
+    },
+    {
+      "action": "确认 `uiBridge` 是否属于客户支持范围；若不是，应从客户可见设置或交付文档中移除/降级该模式。",
+      "rationale": "该模式存在 config-source drift，但属于非默认可选路径；明确范围能避免把 caveat 误判为主链 blocker。",
+      "priority": "medium"
+    },
+    {
+      "action": "补齐并归档 SIGN_OFF.md 要求的 authority/XML 等签收证据，或明确更新签收政策。",
+      "rationale": "当前 release summary 不能替代 formal handoff evidence pack，缺失会直接阻断客户正式签收。",
+      "priority": "high"
+    },
+    {
+      "action": "完成一次面向客户 release profile 的端到端验收清单，覆盖 Evaluation、workflow execute/lifecycle、settings config、MCP status、checkpoint/recovery 暴露面。",
+      "rationale": "当前主要证据仍以源码对齐和测试为主，需用真实交付 profile 缩小剩余不确定性。",
+      "priority": "medium"
+    }
+  ],
+  "open_questions": [
+    "运行时或仓库外是否存在 `/api/novel/quality-check` 的兼容别名或 rewrite。",
+    "客户构建是否会暴露 `uiBridge` 相关设置，以及 checkpoint restore/chat recovery 等恢复入口。",
+    "缺失的 authority/XML sign-off 工件是否已在仓库外保存，且是否满足当前客户签收政策。"
+  ],
+  "decision_trail": [
+    {
+      "round": 1,
+      "decision": "将结论改写为两层 verdict：build candidate readiness 强于 formal handoff readiness。",
+      "context": "初始讨论确认 earlier GO_now 结论过宽，且 release gates 不能替代 customer-experience completeness 与 formal sign-off completeness。"
+    },
+    {
+      "round": 1,
+      "decision": "将 Evaluation quality-check 路由失配列为最高优先级阻塞。",
+      "context": "technical 与 business analysis 都将该问题标记为高置信度、客户可见且被测试固化的真实缺陷。"
+    },
+    {
+      "round": 1,
+      "decision": "将 checkpoint authority 问题定性为 confirmed seam，并按是否暴露给客户决定 blocker 级别。",
+      "context": "architectural analysis 认定问题真实且影响 restore surface；discussion 进一步把严重度与 release profile 绑定。"
+    }
+  ],
+  "cross_perspective_synthesis": {
+    "convergent_themes": [
+      {
+        "theme": "项目已接近完成，主链总体健康",
+        "support_count": 4,
+        "detail": "technical exploration、architectural exploration、business exploration 与 discussion 都认定仓库是 late-stage build candidate，而非 unfinished rewrite。"
+      },
+      {
+        "theme": "默认 standard workflow 路径整体对齐",
+        "support_count": 4,
+        "detail": "多视角一致确认 workflow/config/admin/bootstrap 在默认模式下前后端契约基本闭合。"
+      },
+      {
+        "theme": "Evaluation quality-check 是最明确的客户可见缺陷",
+        "support_count": 3,
+        "detail": "technical analysis、business analysis 与 discussion 都将其视为 strongest likely blocker。"
+      },
+      {
+        "theme": "formal handoff completeness 弱于 build readiness",
+        "support_count": 4,
+        "detail": "所有汇总结论都将 release evidence 与 sign-off evidence 明确区分。"
+      }
+    ],
+    "conflicts_resolved": [
+      {
+        "issue": "项目是否已经可以直接交付客户",
+        "resolution": "拆分为 build candidate 与 formal client handoff 两级判断。",
+        "tradeoff": "这样既保留当前主链已完成的正面事实，也不掩盖客户体验与签收证据尚未闭合的阻塞。"
+      },
+      {
+        "issue": "checkpoint authority 缺口是否是绝对 blocker",
+        "resolution": "确认该问题真实存在，但最终 blocker 级别取决于 restore/recovery 是否出现在客户交付面。",
+        "tradeoff": "若对客户隐藏，则为有界风险；若保留可见入口，则应视作 pre-delivery blocker。"
+      },
+      {
+        "issue": "`uiBridge` drift 的严重度",
+        "resolution": "认定其为真实问题，但限定在非默认可选模式，不作为当前默认主链 blocker。",
+        "tradeoff": "只有当客户可见并被宣称支持时，它才会升级为交付阻塞。"
+      }
+    ],
+    "unique_contributions": [
+      {
+        "perspective": "technical",
+        "contribution": "明确区分了绿色门禁与真实 UI/API 契约覆盖之间的证据边界，并锁定 Evaluation 路由失配。"
+      },
+      {
+        "perspective": "architectural",
+        "contribution": "识别了 uiBridge config-source drift 和 checkpoint authority seam 的控制面性质与范围。"
+      },
+      {
+        "perspective": "business",
+        "contribution": "把 build candidate、customer experience completeness、formal handoff package 完整度拆开评估，使结论可直接用于客户交付判断。"
+      }
+    ]
+  },
+  "_metadata": {
+    "explorations": 3,
+    "analyses": 3,
+    "discussions": 1,
+    "strategy": "standard"
+  }
+}
