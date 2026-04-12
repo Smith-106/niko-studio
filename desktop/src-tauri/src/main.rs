@@ -356,7 +356,15 @@ async fn call_api(
     };
 
     match response {
-        Ok(resp) => resp.text().await.map_err(|e| e.to_string()),
+        Ok(resp) => {
+            let status_code = resp.status().as_u16();
+            let body = resp.text().await.map_err(|e| e.to_string())?;
+            Ok(serde_json::json!({
+                "statusCode": status_code,
+                "body": body,
+            })
+            .to_string())
+        }
         Err(e) => Err(e.to_string()),
     }
 }

@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import {
   TAURI_GATEWAY_COMMANDS,
   type TauriGatewayApiRequest,
+  type TauriGatewayApiResponse,
 } from './tauri-contract'
 
 const RUNTIME_GATEWAY_BASE_TTL_MS = 5000
@@ -57,6 +58,6 @@ export async function checkTauriBackendHealth(): Promise<boolean> {
 
 export async function callTauriApi(
   request: TauriGatewayApiRequest,
-): Promise<string> {
-  return invoke<string>(TAURI_GATEWAY_COMMANDS.callApi, request)
+): Promise<TauriGatewayApiResponse> {
+  return invoke<TauriGatewayApiResponse>(TAURI_GATEWAY_COMMANDS.callApi, request)
 }

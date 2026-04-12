@@ -13,3 +13,8 @@ export interface TauriGatewayApiRequest extends Record<string, unknown> {
   method: GatewayRequestMethod
   body: string | null
 }
+
+export interface TauriGatewayApiResponse extends Record<string, unknown> {
+  statusCode: number
+  body: string
+}

@@ -40,6 +40,11 @@ const readStringField = (payload: unknown, key: 'plan_id' | 'step_id'): string |
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
+const readPayloadError = (payload: unknown): string | null => {
+  const value = readRecord(payload).error
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
 interface UseEvaluationWorkflowOptions {
   content: string
   defaultLevel: string
@@ -227,6 +232,15 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
         setWorkflowState(action, {
           status: 'error',
           message: response.error || t.evaluationWorkflowError,
+        })
+        return
+      }
+      const payloadError = readPayloadError(response.data)
+      if (payloadError) {
+        setWorkflowResult(stringifyWorkflowPayload(response.data))
+        setWorkflowState(action, {
+          status: 'error',
+          message: payloadError,
         })
         return
       }

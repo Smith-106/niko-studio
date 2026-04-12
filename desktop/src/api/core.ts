@@ -22,6 +22,38 @@ export interface ApiResponse<T> {
 export const getErrorName = (error: unknown): string =>
   error instanceof Error ? error.name : 'UnknownError'
 
+const parseResponseText = (body: string): unknown => {
+  const normalized = body.trim()
+  if (!normalized) {
+    return undefined
+  }
+  try {
+    return JSON.parse(normalized)
+  } catch {
+    return body
+  }
+}
+
+const readErrorMessage = (statusCode: number, payload: unknown): string => {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    typeof (payload as { error?: unknown }).error === 'string' &&
+    (payload as { error: string }).error.trim().length > 0
+  ) {
+    return (payload as { error: string }).error
+  }
+
+  if (typeof payload === 'string' && payload.trim()) {
+    return payload.trim()
+  }
+
+  return `HTTP error: ${statusCode}`
+}
+
+const isSuccessfulStatusCode = (statusCode: number): boolean =>
+  statusCode >= 200 && statusCode < 300
+
 const resolveApiBase = (): string => {
   const env = import.meta.env as Record<string, string | undefined>
   const envBase = env.NIKO_GATEWAY_URL ?? env.VITE_NIKO_GATEWAY_URL
@@ -60,7 +92,11 @@ export async function callApi<T>(
         method,
         body: body ? JSON.stringify(body) : null,
       })
-      data = JSON.parse(response)
+      const payload = parseResponseText(response.body)
+      if (!isSuccessfulStatusCode(response.statusCode)) {
+        return { success: false, error: readErrorMessage(response.statusCode, payload) }
+      }
+      data = payload as T
     } else {
       const options: RequestInit = {
         method,
@@ -78,14 +114,7 @@ export async function callApi<T>(
       }
 
       if (!response.ok) {
-        const errorMessage =
-          payload &&
-          typeof payload === 'object' &&
-          typeof (payload as { error?: unknown }).error === 'string' &&
-          (payload as { error: string }).error.trim().length > 0
-            ? (payload as { error: string }).error
-            : `HTTP error: ${response.status}`
-        return { success: false, error: errorMessage }
+        return { success: false, error: readErrorMessage(response.status, payload) }
       }
 
       data = payload as T

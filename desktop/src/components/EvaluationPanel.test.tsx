@@ -420,6 +420,22 @@ describe('EvaluationPanel actions', () => {
     })
   })
 
+  it('shows workflow error state when response payload contains top-level error', async () => {
+    mockedRouteWorkflow.mockResolvedValueOnce({
+      success: true,
+      data: { error: 'route failed', status: 'failed' },
+    })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowRoute }))
+    await waitFor(() => {
+      expect(screen.getByText(`${zh.evaluationWorkflowRoute}: route failed`)).toBeInTheDocument()
+    })
+  })
+
   it('supports batch apply and batch undo flow', async () => {
     mockedBatchApplyRecommendations.mockResolvedValue({
       success: true,
