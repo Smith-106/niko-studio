@@ -1,5 +1,8 @@
 name: Writing Helper Acceptance
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 concurrency:
   group: writing-helper-acceptance-${{ github.ref }}
   cancel-in-progress: true
