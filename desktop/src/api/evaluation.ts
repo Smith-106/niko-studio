@@ -44,7 +44,7 @@ export async function novelQualityCheck(
   dimensions?: string[],
   qualityGoals?: QualityGoalsPayload
 ): Promise<ApiResponse<NovelQualityCheckResult>> {
-  return callApi('/api/novel/quality-check', 'POST', {
+  return callApi('/writing/quality', 'POST', {
     content,
     scene_card: sceneCard,
     dimensions,

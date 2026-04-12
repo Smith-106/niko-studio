@@ -18,6 +18,16 @@ const restoreCheckpointMock = vi.fn();
 const listCheckpointsMock = vi.fn();
 const bindPlanSessionMock = vi.fn();
 const bindPlanAuthorityMock = vi.fn();
+const getPlanAuthorityMock = vi.fn();
+const checkpointRecordsMock = new Map<string, {
+  id: string;
+  description: string;
+  commit_hash: string | null;
+  created_at: string;
+  plan_id: string | null;
+  step_id: string | null;
+  replay_payload: Record<string, unknown>;
+}>();
 
 function mockWorkflowEngineRuntime() {
   vi.doMock('../workflow/workflow-engine.js', () => ({
@@ -32,6 +42,8 @@ function mockWorkflowEngineRuntime() {
       listCheckpoints: listCheckpointsMock,
       bindPlanSession: bindPlanSessionMock,
       bindPlanAuthority: bindPlanAuthorityMock,
+      getPlanAuthority: getPlanAuthorityMock,
+      checkpoints: checkpointRecordsMock,
     })),
   }));
 }
@@ -101,6 +113,7 @@ describe('workflow service workspace binding', () => {
     vi.doUnmock('../workflow/workflow-engine.js');
     vi.resetModules();
     vi.clearAllMocks();
+    checkpointRecordsMock.clear();
   });
 
   it('binds workspace authority when authoritative workspace context provides one', async () => {
@@ -187,6 +200,52 @@ describe('workflow service workspace binding', () => {
     );
     expect(lifecycleMock).toHaveBeenCalledWith('plan-3', 'pause', undefined, authority);
     expect(quickRollbackMock).toHaveBeenCalledWith('plan-3', 'cp-3', 'rollback', authority);
+  });
+
+  it('binds anonymous checkpoints to workspace authority for list and restore calls', async () => {
+    mockWorkflowEngineRuntime();
+    const createdAt = '2026-04-13T02:00:00.000Z';
+    const checkpointSummary = {
+      id: 'cp-local',
+      description: 'manual checkpoint',
+      created_at: createdAt,
+    };
+    createCheckpointMock.mockImplementationOnce(async () => {
+      checkpointRecordsMock.set('cp-local', {
+        id: 'cp-local',
+        description: 'manual checkpoint',
+        commit_hash: null,
+        created_at: createdAt,
+        plan_id: null,
+        step_id: null,
+        replay_payload: {},
+      });
+      return {
+        checkpoint_id: 'cp-local',
+        description: 'manual checkpoint',
+        created_at: createdAt,
+      };
+    });
+    listCheckpointsMock.mockResolvedValue([checkpointSummary]);
+    restoreCheckpointMock.mockResolvedValue({ status: 'restored', checkpoint_id: 'cp-local' });
+
+    const { checkpointCreate, checkpointList, checkpointRestore } = await import('./services/workflow.js');
+    const workspaceA = buildWorkspace('workflow-session-4', 'atlas-workspace', 'atlas-project');
+    const workspaceB = buildWorkspace('workflow-session-5', 'beacon-workspace', 'beacon-project');
+
+    await checkpointCreate('manual checkpoint', false, workspaceA);
+
+    await expect(checkpointList(10, workspaceA)).resolves.toEqual([checkpointSummary]);
+    await expect(checkpointList(10, workspaceB)).resolves.toEqual([]);
+
+    const blockedRestore = await checkpointRestore('cp-local', undefined, workspaceB);
+    expect(blockedRestore['error']).toContain("workflow session 'workflow-session-4'");
+    expect(restoreCheckpointMock).not.toHaveBeenCalled();
+
+    const allowedRestore = await checkpointRestore('cp-local', undefined, workspaceA);
+    expect(allowedRestore).toEqual({ status: 'restored', checkpoint_id: 'cp-local' });
+    expect(restoreCheckpointMock).toHaveBeenCalledTimes(1);
+    expect(restoreCheckpointMock).toHaveBeenCalledWith('cp-local', undefined);
   });
 });
 

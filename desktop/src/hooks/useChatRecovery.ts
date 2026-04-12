@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createCheckpoint, restoreCheckpoint } from '../api/client'
+import { useAppStore } from '../stores/appStore'
 
 type ConnectionState = 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
 
@@ -21,10 +22,24 @@ interface UseChatRecoveryOptions {
 }
 
 export function useChatRecovery({ connectionState, t }: UseChatRecoveryOptions) {
+  const currentConversationId = useAppStore((state) => state.currentConversationId)
+  const currentWorkspace = useAppStore((state) => state.currentWorkspace)
   const [recoverableCheckpointId, setRecoverableCheckpointId] = useState<string | null>(null)
   const [recoverStatus, setRecoverStatus] = useState<RecoverStatus | null>(null)
 
   const previousConnectionStateRef = useRef<ConnectionState | null>(null)
+
+  const resolveCheckpointWorkspace = useCallback(() => ({
+    ...currentWorkspace,
+    workflow: {
+      ...currentWorkspace.workflow,
+      sessionId: currentWorkspace.workflow.sessionId ?? currentConversationId,
+    },
+    chat: {
+      ...currentWorkspace.chat,
+      conversationId: currentWorkspace.chat.conversationId ?? currentConversationId,
+    },
+  }), [currentConversationId, currentWorkspace])
 
   useEffect(() => {
     const previous = previousConnectionStateRef.current
@@ -44,7 +59,7 @@ export function useChatRecovery({ connectionState, t }: UseChatRecoveryOptions) 
   }, [connectionState, t])
 
   const createBeforeSendCheckpoint = useCallback(async (label: string) => {
-    const checkpointResponse = await createCheckpoint(label)
+    const checkpointResponse = await createCheckpoint(label, undefined, resolveCheckpointWorkspace())
     const checkpointId = checkpointResponse.success && checkpointResponse.data?.checkpoint_id
       ? checkpointResponse.data.checkpoint_id
       : null
@@ -52,13 +67,13 @@ export function useChatRecovery({ connectionState, t }: UseChatRecoveryOptions) 
       setRecoverableCheckpointId(checkpointId)
     }
     return checkpointId
-  }, [])
+  }, [resolveCheckpointWorkspace])
 
   const restoreToCheckpoint = useCallback(async () => {
     if (!recoverableCheckpointId) return
 
     try {
-      const response = await restoreCheckpoint(recoverableCheckpointId)
+      const response = await restoreCheckpoint(recoverableCheckpointId, resolveCheckpointWorkspace())
       if (response.success) {
         setRecoverStatus({ type: 'success', message: t.streamRestoreBeforeSendSuccess })
         setRecoverableCheckpointId(null)
@@ -68,7 +83,7 @@ export function useChatRecovery({ connectionState, t }: UseChatRecoveryOptions) 
     } catch {
       setRecoverStatus({ type: 'error', message: t.restoreFailed })
     }
-  }, [recoverableCheckpointId, t])
+  }, [recoverableCheckpointId, resolveCheckpointWorkspace, t])
 
   return {
     recoverableCheckpointId,

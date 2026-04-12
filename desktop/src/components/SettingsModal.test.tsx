@@ -360,6 +360,49 @@ describe('SettingsModal quality presets', () => {
     })
   }, 10_000)
 
+  it('saves the backend ui bridge toggle through the shared config contract', async () => {
+    const updateBackendConfig = vi.fn().mockResolvedValue(['gateway.ui_bridge_enabled'])
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        backendConfig: {
+          config: createBackendConfig(),
+          modifiableFields: ['gateway.ui_bridge_enabled'],
+          syncStatus: 'idle',
+          lastSync: null,
+          error: null,
+        },
+      },
+      updateBackendConfig,
+    }))
+
+    const user = userEvent.setup()
+    render(<SettingsModal isOpen onClose={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: zh.backendService }))
+
+    const uiBridgeToggle = await screen.findByLabelText('ui bridge enabled')
+    const saveButton = screen.getByRole('button', { name: zh.backendConfigSave })
+
+    expect(uiBridgeToggle).toBeEnabled()
+    expect(uiBridgeToggle).not.toBeChecked()
+    expect(saveButton).toBeDisabled()
+
+    await user.click(uiBridgeToggle)
+
+    expect(uiBridgeToggle).toBeChecked()
+    expect(saveButton).toBeEnabled()
+
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(updateBackendConfig).toHaveBeenCalledWith({
+        'gateway.ui_bridge_enabled': true,
+      })
+    })
+  })
+
   it('renders backend config labels in english', async () => {
     useSettingsStore.setState((state) => ({
       ...state,

@@ -14,6 +14,7 @@ describe('gateway route registry', () => {
         'POST:^\\/chat$',
         'POST:^\\/workflow\\/execute$',
         'POST:^\\/ui-bridge\\/workflow\\/route$',
+        'POST:^\\/writing\\/quality$',
         'POST:^\\/writing-helper\\/process$',
         'DELETE:^\\/admin\\/mcp\\/services\\/([^/]+)$',
       ]),
@@ -31,5 +32,13 @@ describe('gateway route registry', () => {
     const match = matchGatewayRoute('POST', '/config/reload');
 
     expect(match).not.toBeNull();
+  });
+
+  it('maps writing quality and rejects the stale novel alias', () => {
+    const match = matchGatewayRoute('POST', '/writing/quality');
+
+    expect(match).not.toBeNull();
+    expect(match?.route.pattern.source).toBe('^\\/writing\\/quality$');
+    expect(matchGatewayRoute('POST', '/api/novel/quality-check')).toBeNull();
   });
 });

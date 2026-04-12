@@ -16,6 +16,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = PROJECT_ROOT / "release-check-summary.md"
 RELEASE_EVIDENCE_DIR = PROJECT_ROOT / ".workflow" / "evidence" / "release"
 RELEASE_READINESS_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "release-readiness-artifact.json"
+AUTHORITY_ALIGNMENT_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "authority-alignment.json"
+GOVERNANCE_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "governance-scripts.junit.xml"
+PRODUCTION_GUARD_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-production-guard.xml"
+E2E_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-e2e.xml"
 DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND = "npm --prefix desktop run check:local"
 DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS = ["npm.cmd", "--prefix", "desktop", "run", "check:local"]
 DESKTOP_PACKAGING_DRY_RUN_COMMAND = "npm --prefix desktop run validate:package:dry-run"
@@ -256,6 +260,66 @@ def _write_release_readiness_artifact(
         encoding="utf-8",
     )
     return RELEASE_READINESS_ARTIFACT_PATH
+
+
+def _write_json_artifact(path: Path, payload: dict[str, object]) -> Path:
+    RELEASE_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_authority_alignment_artifact(
+    payload: dict[str, object] | None,
+    parse_error: str | None,
+    raw_output: str,
+) -> Path:
+    artifact_payload: dict[str, object]
+    if payload is None:
+        artifact_payload = {
+            "status": "FAIL",
+            "parse_error": parse_error or "unknown",
+            "raw_output": raw_output,
+        }
+    else:
+        artifact_payload = payload
+    return _write_json_artifact(AUTHORITY_ALIGNMENT_ARTIFACT_PATH, artifact_payload)
+
+
+def _run_governance_scripts_regression(junit_output_path: Path) -> tuple[int, str]:
+    return run_cmd([
+        sys.executable,
+        "scripts/run_targeted_pytest.py",
+        "tests/unit/scripts/test_governance_scripts.py",
+        "-q",
+        f"--junitxml={junit_output_path.resolve()}",
+    ])
+
+
+def _run_release_runtime_guard(junit_output_path: Path) -> tuple[int, str]:
+    return run_cmd(
+        [
+            "npm.cmd",
+            "--prefix",
+            "src-ts",
+            "exec",
+            "--",
+            "vitest",
+            "run",
+            "tests/gateway-server.runtime.test.ts",
+            "tests/mcp/health-endpoints.test.ts",
+            "--reporter=basic",
+            "--reporter=junit",
+            f"--outputFile.junit={junit_output_path.resolve()}",
+        ],
+        env={
+            "NIKO_ENV": "production",
+            "NIKO_CORS_PROD_ORIGINS": "https://app.example.com,https://gray.example.com",
+            "NIKO_GATEWAY_METRICS_ENABLED": "true",
+        },
+    )
 
 
 def _extract_policy_contract_from_docs(quality_doc: Path, pdd_doc: Path) -> dict[str, object]:
@@ -1417,6 +1481,10 @@ def chapter_gate_evidence_linkage_signal(sessions_root: Path) -> tuple[str, int,
 def main() -> int:
     version_code, version_output = run_cmd([sys.executable, "scripts/check_versions.py"])
     delivery_code, delivery_output = run_cmd([sys.executable, "scripts/delivery_gate.py"])
+    RELEASE_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+
+    governance_code, governance_output = _run_governance_scripts_regression(GOVERNANCE_JUNIT_PATH)
+    governance_status, governance_passed = parse_pytest_counts(governance_output)
 
     baseline_code, baseline_output = run_cmd([
         "npm.cmd",
@@ -1492,10 +1560,14 @@ def main() -> int:
         "tests/mcp/workflow-endpoints.integration.test.ts",
         "tests/mcp/workflow-critic-smoke.integration.test.ts",
         "--reporter=basic",
+        "--reporter=junit",
+        f"--outputFile.junit={E2E_JUNIT_PATH.resolve()}",
     ])
 
-    prod_guard_code, prod_guard_output = _typescript_production_guard()
-    metrics_guard_code, metrics_guard_output = _typescript_metrics_guard()
+    prod_guard_code, prod_guard_output = _run_release_runtime_guard(PRODUCTION_GUARD_JUNIT_PATH)
+    prod_guard_status, prod_guard_passed = parse_pytest_counts(prod_guard_output)
+    metrics_guard_code = prod_guard_code
+    metrics_guard_output = prod_guard_output
 
     tasks_code, tasks_output = run_cmd([sys.executable, "scripts/check_tasks_completion.py"])
     tasks_payload, tasks_parse_error = parse_first_json_object(tasks_output)
@@ -1655,6 +1727,18 @@ def main() -> int:
             ]),
         ),
         build_check_result(
+            "governance_scripts_regression",
+            "P0",
+            True,
+            governance_code,
+            _format_detail_pairs([
+                ("script", "scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q"),
+                ("status", governance_status),
+                ("passed_count", governance_passed),
+                ("junitxml", _trace_path(GOVERNANCE_JUNIT_PATH)),
+            ]),
+        ),
+        build_check_result(
             "baseline_tests_and_coverage",
             "P0",
             True,
@@ -1712,8 +1796,10 @@ def main() -> int:
             True,
             prod_guard_code,
             _format_detail_pairs([
-                ("guard", "reload_cors_production"),
-                ("authority", "src-ts/mcp/config.ts"),
+                ("command", "npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts"),
+                ("status", prod_guard_status),
+                ("passed_count", prod_guard_passed),
+                ("junitxml", _trace_path(PRODUCTION_GUARD_JUNIT_PATH)),
             ]),
         ),
         build_check_result(
@@ -1722,8 +1808,10 @@ def main() -> int:
             True,
             metrics_guard_code,
             _format_detail_pairs([
-                ("guard", "gateway_metrics_production"),
-                ("authority", "src-ts/mcp/endpoints/health.ts"),
+                ("command", "npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts"),
+                ("status", prod_guard_status),
+                ("passed_count", prod_guard_passed),
+                ("junitxml", _trace_path(PRODUCTION_GUARD_JUNIT_PATH)),
             ]),
         ),
         build_check_result(
@@ -2013,6 +2101,12 @@ def main() -> int:
 {delivery_output}
 ```
 
+#### governance_scripts_regression output
+
+```text
+{governance_output}
+```
+
 #### baseline_tests_and_coverage output
 
 ```text
@@ -2074,6 +2168,11 @@ def main() -> int:
 - authority_alignment_checker: `scripts/check_authority_alignment.py`
 - desktop_authoritative_local_gate: `{DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND}` (from `desktop/package.json` `check:local`, which currently resolves to `check:release`)
 - packaging_dry_run: `{DESKTOP_PACKAGING_DRY_RUN_COMMAND}` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`)
+- formal_evidence_dir: `{_trace_path(RELEASE_EVIDENCE_DIR)}`
+- authority_alignment_artifact: `{_trace_path(AUTHORITY_ALIGNMENT_ARTIFACT_PATH)}`
+- governance_junit: `{_trace_path(GOVERNANCE_JUNIT_PATH)}`
+- production_guard_junit: `{_trace_path(PRODUCTION_GUARD_JUNIT_PATH)}`
+- external_smoke_junit: `{_trace_path(E2E_JUNIT_PATH)}`
 - signing_prerequisite: `desktop/src-tauri/tauri.conf.json` keeps `certificateThumbprint=null` and `timestampUrl=""` for unsigned local proof; signed external bundles require release-private override material outside git.
 """
 
@@ -2085,8 +2184,14 @@ def main() -> int:
         checks=checks,
         report_path=REPORT_PATH,
     )
+    authority_artifact_path = _write_authority_alignment_artifact(
+        payload=authority_alignment_payload,
+        parse_error=authority_alignment_parse_error,
+        raw_output=authority_alignment_output,
+    )
     print(f"Report generated: {REPORT_PATH}")
     print(f"Release readiness artifact generated: {artifact_path}")
+    print(f"Authority alignment artifact generated: {authority_artifact_path}")
     return 0 if decision == "GO" else 1
 
 

@@ -7,9 +7,11 @@
 
 import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
 import {
+  normalizeProjectWorkspaceContext,
   projectWorkspaceToWorkflowAuthority,
   type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
+import { normalizeWorkflowAuthority } from '../../workflow/engine/authority.js';
 
 // ---------------------------------------------------------------
 // Engine accessor
@@ -17,6 +19,8 @@ import {
 
 interface WorkflowEngine {
   bindPlanAuthority?(planId: string, authority: WorkflowAuthority): WorkflowAuthority;
+  getPlanAuthority?(planId: string): WorkflowAuthority;
+  getCheckpoint?(checkpointId: string): WorkflowCheckpointRecord | null;
   route(task: string): Promise<Record<string, unknown>>;
   plan(
     task: string,
@@ -52,11 +56,31 @@ interface WorkflowEngine {
 }
 
 let workflowEngineInstance: WorkflowEngine | null = null;
+const checkpointAuthorityBindings = new Map<string, WorkflowAuthority>();
 
 interface WorkflowAuthority {
   sessionId: string | null;
   workspaceId: string | null;
   projectId: string | null;
+}
+
+interface WorkflowCheckpointSummary {
+  id: string;
+  description: string;
+  commit_hash?: string | null;
+  created_at: string;
+}
+
+interface WorkflowCheckpointRecord extends WorkflowCheckpointSummary {
+  plan_id: string | null;
+  step_id: string | null;
+  replay_payload: Record<string, unknown>;
+}
+
+interface WorkflowEngineAuthorityBridge {
+  bindPlanAuthority?: (planId: string, authority: WorkflowAuthority) => WorkflowAuthority;
+  getPlanAuthority?: (planId: string) => WorkflowAuthority;
+  checkpoints?: Map<string, WorkflowCheckpointRecord>;
 }
 
 function resolveWorkflowWorkspace(): string {
@@ -93,12 +117,120 @@ function resolveWorkflowAuthority(
   };
 }
 
+function cloneWorkflowAuthority(
+  authority?: Partial<WorkflowAuthority> | null,
+): WorkflowAuthority | null {
+  const normalized = normalizeWorkflowAuthority(authority);
+  return normalized ? { ...normalized } : null;
+}
+
+function resolveCheckpointAuthority(
+  workspace?: ProjectWorkspaceContext | null,
+): WorkflowAuthority | null {
+  return resolveWorkflowAuthority(
+    workspace
+    ?? normalizeProjectWorkspaceContext({}, { workspaceRoot: resolveWorkflowWorkspace() }),
+  );
+}
+
+function checkpointAuthorityMismatchError(
+  checkpointId: string,
+  dimension: 'workflow session' | 'workspace' | 'project',
+  expected: string,
+  received: string,
+): string {
+  return `Checkpoint '${checkpointId}' is bound to ${dimension} '${expected}' and cannot be used with '${received}'`;
+}
+
+function resolveCheckpointRequestAuthority(params: {
+  checkpoint: WorkflowCheckpointRecord;
+  storedAuthority: WorkflowAuthority | null;
+  requestAuthority?: WorkflowAuthority | null;
+}): { authority: WorkflowAuthority | null; error?: string } {
+  const normalizedRequest = cloneWorkflowAuthority(params.requestAuthority);
+  const storedAuthority = cloneWorkflowAuthority(params.storedAuthority);
+
+  if (!storedAuthority) {
+    if (!normalizedRequest) {
+      return { authority: null };
+    }
+    return {
+      authority: null,
+      error: `Checkpoint '${params.checkpoint.id}' is not bound to workspace authority and cannot be restored from a different scope`,
+    };
+  }
+
+  if (
+    storedAuthority.sessionId
+    && normalizedRequest?.sessionId
+    && storedAuthority.sessionId !== normalizedRequest.sessionId
+  ) {
+    return {
+      authority: null,
+      error: checkpointAuthorityMismatchError(
+        params.checkpoint.id,
+        'workflow session',
+        storedAuthority.sessionId,
+        normalizedRequest.sessionId,
+      ),
+    };
+  }
+
+  if (
+    storedAuthority.workspaceId
+    && normalizedRequest?.workspaceId
+    && storedAuthority.workspaceId !== normalizedRequest.workspaceId
+  ) {
+    return {
+      authority: null,
+      error: checkpointAuthorityMismatchError(
+        params.checkpoint.id,
+        'workspace',
+        storedAuthority.workspaceId,
+        normalizedRequest.workspaceId,
+      ),
+    };
+  }
+
+  if (
+    storedAuthority.projectId
+    && normalizedRequest?.projectId
+    && storedAuthority.projectId !== normalizedRequest.projectId
+  ) {
+    return {
+      authority: null,
+      error: checkpointAuthorityMismatchError(
+        params.checkpoint.id,
+        'project',
+        storedAuthority.projectId,
+        normalizedRequest.projectId,
+      ),
+    };
+  }
+
+  return {
+    authority: {
+      sessionId: normalizedRequest?.sessionId ?? storedAuthority.sessionId,
+      workspaceId: normalizedRequest?.workspaceId ?? storedAuthority.workspaceId,
+      projectId: normalizedRequest?.projectId ?? storedAuthority.projectId,
+    },
+  };
+}
+
+function resolveStoredCheckpointAuthority(
+  engine: WorkflowEngine,
+  checkpoint: WorkflowCheckpointRecord,
+): WorkflowAuthority | null {
+  if (checkpoint.plan_id && typeof engine.getPlanAuthority === 'function') {
+    return cloneWorkflowAuthority(engine.getPlanAuthority(checkpoint.plan_id));
+  }
+  return cloneWorkflowAuthority(checkpointAuthorityBindings.get(checkpoint.id));
+}
+
 function getEngine(): WorkflowEngine | null {
   if (!workflowEngineInstance) {
     const engine = new WorkflowEngineRuntime(resolveWorkflowWorkspace(), 'mcp-workflow');
-    const engineWithAuthority = engine as WorkflowEngineRuntime & {
-      bindPlanAuthority?: (planId: string, authority: WorkflowAuthority) => WorkflowAuthority;
-    };
+    const engineWithAuthority = engine as unknown as WorkflowEngineAuthorityBridge;
     workflowEngineInstance = {
       bindPlanAuthority(planId: string, authority: WorkflowAuthority) {
         if (typeof engineWithAuthority.bindPlanAuthority === 'function') {
@@ -108,6 +240,31 @@ function getEngine(): WorkflowEngine | null {
           engine.bindPlanSession(planId, authority.sessionId);
         }
         return authority;
+      },
+      getPlanAuthority(planId: string) {
+        if (typeof engineWithAuthority.getPlanAuthority === 'function') {
+          return engineWithAuthority.getPlanAuthority(planId);
+        }
+        return {
+          sessionId: null,
+          workspaceId: null,
+          projectId: null,
+        };
+      },
+      getCheckpoint(checkpointId: string) {
+        const checkpoint = engineWithAuthority.checkpoints?.get(checkpointId);
+        if (!checkpoint) {
+          return null;
+        }
+        return {
+          id: checkpoint.id,
+          description: checkpoint.description,
+          commit_hash: checkpoint.commit_hash ?? null,
+          created_at: checkpoint.created_at,
+          plan_id: checkpoint.plan_id ?? null,
+          step_id: checkpoint.step_id ?? null,
+          replay_payload: checkpoint.replay_payload ?? {},
+        };
       },
       route(task: string) {
         return engine.route(task);
@@ -254,24 +411,62 @@ export async function workflowLifecycle(
 
 export async function checkpointCreate(
   description = '',
-  autoCommit = true
+  autoCommit = true,
+  workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
   const engine = getEngine();
   if (!engine) return { error: 'Workflow engine unavailable' };
-  return engine.createCheckpoint(description, autoCommit);
+  const result = await engine.createCheckpoint(description, autoCommit);
+  const checkpointId = typeof result['checkpoint_id'] === 'string' ? result['checkpoint_id'] : null;
+  const authority = resolveCheckpointAuthority(workspace);
+  if (checkpointId && authority) {
+    checkpointAuthorityBindings.set(checkpointId, authority);
+  }
+  return result;
 }
 
 export async function checkpointRestore(
   checkpointId: string,
-  confirmToken?: string | null
+  confirmToken?: string | null,
+  workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
   const engine = getEngine();
   if (!engine) return { error: 'Workflow engine unavailable' };
+  const checkpoint = engine.getCheckpoint?.(checkpointId) ?? null;
+  if (!checkpoint) {
+    return { error: `Checkpoint '${checkpointId}' not found` };
+  }
+  const storedAuthority = resolveStoredCheckpointAuthority(engine, checkpoint);
+  const authority = resolveCheckpointAuthority(workspace);
+  const resolvedAuthority = resolveCheckpointRequestAuthority({
+    checkpoint,
+    storedAuthority,
+    requestAuthority: authority,
+  });
+  if (resolvedAuthority.error) {
+    return { error: resolvedAuthority.error };
+  }
   return engine.restoreCheckpoint(checkpointId, { confirmToken: confirmToken ?? null });
 }
 
-export async function checkpointList(limit = 10): Promise<unknown[]> {
+export async function checkpointList(
+  limit = 10,
+  workspace?: ProjectWorkspaceContext,
+): Promise<WorkflowCheckpointSummary[]> {
   const engine = getEngine();
   if (!engine) return [];
-  return engine.listCheckpoints(limit);
+  const authority = resolveCheckpointAuthority(workspace);
+  const checkpoints = await engine.listCheckpoints(limit) as WorkflowCheckpointSummary[];
+  return checkpoints.filter((summary) => {
+    const checkpoint = engine.getCheckpoint?.(summary.id) ?? null;
+    if (!checkpoint) {
+      return false;
+    }
+    const storedAuthority = resolveStoredCheckpointAuthority(engine, checkpoint);
+    return !resolveCheckpointRequestAuthority({
+      checkpoint,
+      storedAuthority,
+      requestAuthority: authority,
+    }).error;
+  });
 }

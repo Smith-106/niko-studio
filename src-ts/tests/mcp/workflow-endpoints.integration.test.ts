@@ -16,6 +16,55 @@ function makeRequest(body: Record<string, unknown>): HttpRequest {
   };
 }
 
+function buildWorkspace(
+  sessionId: string | null,
+  workspaceId = 'atlas-workspace',
+  projectId = 'atlas-project',
+  conversationId: string | null = sessionId,
+) {
+  return {
+    schemaVersion: '2026-04-08',
+    identity: {
+      workspaceId,
+      projectId,
+      projectName: projectId,
+      workspaceRoot: `/tmp/${workspaceId}`,
+    },
+    manuscript: {
+      manuscriptId: null,
+      title: null,
+      chapterId: 'chapter-2',
+      chapterTitle: null,
+      chapterNumber: 2,
+    },
+    storyBible: {
+      storyBibleId: null,
+      draftId: 'draft-1',
+      version: null,
+      storage: 'local-draft',
+    },
+    knowledge: {
+      focusEntityId: 'hero-1',
+      graphEntityIds: ['hero-1'],
+      memoryEntryIds: [],
+    },
+    workflow: {
+      sessionId,
+      planId: null,
+      level: 'L3',
+    },
+    chat: {
+      conversationId,
+      comparisonEnabled: false,
+    },
+    compatibility: {
+      additiveContract: true,
+      migratedLegacyFields: [],
+      notes: [],
+    },
+  };
+}
+
 describe('workflow endpoints integration', () => {
   const originalWorkspace = process.env['NIKO_WORKFLOW_WORKSPACE'];
   let workspace = '';
@@ -179,5 +228,92 @@ describe('workflow endpoints integration', () => {
     expect((rollbackResponse.body as Record<string, unknown>)['plan_id']).toBe(planId);
     expect((rollbackResponse.body as Record<string, unknown>)['checkpoint_id']).toBe(checkpointId);
     expect((rollbackResponse.body as Record<string, unknown>)['restore']).toBeTruthy();
+  });
+
+  it('scopes checkpoint create/list and restore to the request workspace authority', async () => {
+    const {
+      workflowPlanEndpoint,
+      workflowLifecycleEndpoint,
+      checkpointCreateEndpoint,
+      checkpointListEndpoint,
+      checkpointRestoreEndpoint,
+    } = await import('../../mcp/endpoints/workflow.js');
+
+    const workspaceA = buildWorkspace('workflow-session-a', 'atlas-workspace', 'atlas-project');
+    const workspaceB = buildWorkspace('workflow-session-b', 'beacon-workspace', 'beacon-project');
+
+    const planResponse = await workflowPlanEndpoint(
+      makeRequest({
+        task: '写一章并逐步完善冲突与细节',
+        level: 'L3',
+        workspace: workspaceA,
+      }),
+    );
+    const planId = String((planResponse.body as Record<string, unknown>)['plan_id']);
+
+    const pauseResponse = await workflowLifecycleEndpoint(
+      makeRequest({
+        plan_id: planId,
+        action: 'pause',
+        workspace: workspaceA,
+      }),
+    );
+    const planCheckpointId = String((pauseResponse.body as Record<string, unknown>)['checkpoint_id']);
+    expect(planCheckpointId).toBeTruthy();
+
+    const createResponse = await checkpointCreateEndpoint(
+      makeRequest({
+        description: 'manual checkpoint',
+        auto_commit: false,
+        workspace: workspaceA,
+      }),
+    );
+    expect(createResponse.statusCode).toBe(200);
+    const manualCheckpointId = String((createResponse.body as Record<string, unknown>)['checkpoint_id']);
+    expect(manualCheckpointId).toBeTruthy();
+
+    const visibleList = await checkpointListEndpoint(
+      makeRequest({ limit: 10, workspace: workspaceA }),
+    );
+    expect(visibleList.statusCode).toBe(200);
+    expect(Array.isArray(visibleList.body)).toBe(true);
+    expect(
+      (visibleList.body as Array<Record<string, unknown>>).some((item) => item['id'] === planCheckpointId),
+    ).toBe(true);
+    expect(
+      (visibleList.body as Array<Record<string, unknown>>).some((item) => item['id'] === manualCheckpointId),
+    ).toBe(true);
+
+    const hiddenList = await checkpointListEndpoint(
+      makeRequest({ limit: 10, workspace: workspaceB }),
+    );
+    expect(hiddenList.statusCode).toBe(200);
+    expect(
+      (hiddenList.body as Array<Record<string, unknown>>).some((item) => item['id'] === planCheckpointId),
+    ).toBe(false);
+    expect(
+      (hiddenList.body as Array<Record<string, unknown>>).some((item) => item['id'] === manualCheckpointId),
+    ).toBe(false);
+
+    const mismatchedPlanRestore = await checkpointRestoreEndpoint(
+      makeRequest({ checkpoint_id: planCheckpointId, workspace: workspaceB }),
+    );
+    expect((mismatchedPlanRestore.body as Record<string, unknown>)['error']).toContain(
+      "workflow session 'workflow-session-a'",
+    );
+
+    const mismatchedManualRestore = await checkpointRestoreEndpoint(
+      makeRequest({ checkpoint_id: manualCheckpointId, workspace: workspaceB }),
+    );
+    expect((mismatchedManualRestore.body as Record<string, unknown>)['error']).toContain(
+      "workflow session 'workflow-session-a'",
+    );
+
+    const matchingManualRestore = await checkpointRestoreEndpoint(
+      makeRequest({ checkpoint_id: manualCheckpointId, workspace: workspaceA }),
+    );
+    expect((matchingManualRestore.body as Record<string, unknown>)['error']).toBe(
+      'No commit hash available for this checkpoint',
+    );
   });
 });

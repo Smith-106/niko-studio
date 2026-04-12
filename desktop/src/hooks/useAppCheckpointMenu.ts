@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { listCheckpoints, restoreCheckpoint } from '../api/client'
+import { useAppStore } from '../stores/appStore'
 
 interface CheckpointItem {
   id: string
@@ -18,11 +19,25 @@ interface UseAppCheckpointMenuOptions {
 }
 
 export function useAppCheckpointMenu({ restoreFailedText, restoreSuccessText }: UseAppCheckpointMenuOptions) {
+  const currentConversationId = useAppStore((state) => state.currentConversationId)
+  const currentWorkspace = useAppStore((state) => state.currentWorkspace)
   const [checkpointMenuOpen, setCheckpointMenuOpen] = useState(false)
   const checkpointMenuContainerRef = useRef<HTMLDivElement | null>(null)
   const [checkpointsLoading, setCheckpointsLoading] = useState(false)
   const [checkpoints, setCheckpoints] = useState<CheckpointItem[]>([])
   const [restoreStatus, setRestoreStatus] = useState<RestoreStatus | null>(null)
+
+  const resolveCheckpointWorkspace = () => ({
+    ...currentWorkspace,
+    workflow: {
+      ...currentWorkspace.workflow,
+      sessionId: currentWorkspace.workflow.sessionId ?? currentConversationId,
+    },
+    chat: {
+      ...currentWorkspace.chat,
+      conversationId: currentWorkspace.chat.conversationId ?? currentConversationId,
+    },
+  })
 
   useEffect(() => {
     if (!restoreStatus) return
@@ -59,7 +74,7 @@ export function useAppCheckpointMenu({ restoreFailedText, restoreSuccessText }: 
   const refreshCheckpoints = async () => {
     setCheckpointsLoading(true)
     try {
-      const response = await listCheckpoints(10)
+      const response = await listCheckpoints(10, resolveCheckpointWorkspace())
       if (response.success && Array.isArray(response.data)) {
         setCheckpoints(response.data)
       } else {
@@ -84,7 +99,7 @@ export function useAppCheckpointMenu({ restoreFailedText, restoreSuccessText }: 
 
   const handleRestoreCheckpoint = async (checkpointId: string) => {
     try {
-      const response = await restoreCheckpoint(checkpointId)
+      const response = await restoreCheckpoint(checkpointId, resolveCheckpointWorkspace())
       if (response.success) {
         setRestoreStatus({ type: 'success', message: restoreSuccessText })
         setCheckpointMenuOpen(false)

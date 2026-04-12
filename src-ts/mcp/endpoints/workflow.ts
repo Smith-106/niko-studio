@@ -129,24 +129,29 @@ export async function uiBridgeWorkflowLifecycleEndpoint(request: HttpRequest): P
 
 export async function checkpointCreateEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
   const result = await checkpointCreate(
     (body.description as string) ?? '',
-    (body.auto_commit as boolean) ?? true
+    (body.auto_commit as boolean) ?? true,
+    workspace,
   );
   return jsonResponse(result);
 }
 
 export async function checkpointRestoreEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
   const result = await checkpointRestore(
     (body.checkpoint_id as string) ?? '',
-    body.confirm_token as string | undefined
+    body.confirm_token as string | undefined,
+    workspace,
   );
   return jsonResponse(result);
 }
 
 export async function checkpointListEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
-  const result = await checkpointList((body.limit as number) ?? 10);
+  const workspace = resolveWorkspace(body);
+  const result = await checkpointList((body.limit as number) ?? 10, workspace);
   return jsonResponse(result);
 }

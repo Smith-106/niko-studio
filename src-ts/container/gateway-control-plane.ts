@@ -1,4 +1,6 @@
+import { ConfigManager } from '../config';
 import { setConfigAccess } from '../mcp/endpoints/config';
+import { resolveUiBridgeEnabled } from '../mcp/config';
 import { setGatewayDeps } from '../mcp/endpoints/health';
 import { setMcpServiceState } from '../mcp/endpoints/mcp-admin';
 import { setUiBridgeEnabled } from '../mcp/endpoints/workflow';
@@ -14,6 +16,43 @@ export interface GatewayControlPlaneState extends GatewayRuntimeState {
   container: ServiceContainer;
 }
 
+const uiBridgeConfigListeners = new WeakMap<ConfigManager, () => void>();
+const patchedUiBridgeReloadManagers = new WeakSet<ConfigManager>();
+let activeUiBridgeConfigManager: ConfigManager | null = null;
+
+function syncUiBridgeRuntime(): void {
+  setUiBridgeEnabled(resolveUiBridgeEnabled());
+}
+
+function bindUiBridgeConfigRuntime(configManager: ConfigManager): void {
+  if (activeUiBridgeConfigManager && activeUiBridgeConfigManager !== configManager) {
+    const previousListener = uiBridgeConfigListeners.get(activeUiBridgeConfigManager);
+    if (previousListener) {
+      activeUiBridgeConfigManager.offChange(previousListener);
+    }
+  }
+
+  if (!uiBridgeConfigListeners.has(configManager)) {
+    const listener = () => {
+      syncUiBridgeRuntime();
+    };
+    configManager.onChange(listener);
+    uiBridgeConfigListeners.set(configManager, listener);
+  }
+
+  if (!patchedUiBridgeReloadManagers.has(configManager)) {
+    const reload = configManager.reload.bind(configManager);
+    configManager.reload = () => {
+      reload();
+      syncUiBridgeRuntime();
+    };
+    patchedUiBridgeReloadManagers.add(configManager);
+  }
+
+  activeUiBridgeConfigManager = configManager;
+  syncUiBridgeRuntime();
+}
+
 export function initializeGatewayControlPlane(
   container: ServiceContainer = getContainer(),
 ): GatewayControlPlaneState {
@@ -22,7 +61,7 @@ export function initializeGatewayControlPlane(
   setGatewayDeps(buildGatewayDeps(container, state));
   setConfigAccess(buildConfigAccess());
   setMcpServiceState(state.mcpConfigs, state.healthCache);
-  setUiBridgeEnabled(process.env.NIKO_UI_BRIDGE_ENABLED === 'true');
+  bindUiBridgeConfigRuntime(ConfigManager.getInstance());
 
   return {
     container,

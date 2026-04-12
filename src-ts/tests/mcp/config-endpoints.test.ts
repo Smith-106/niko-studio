@@ -10,6 +10,9 @@ import {
   updateSecrets,
 } from '../../mcp/endpoints/config';
 
+const UI_BRIDGE_ENV_KEY = 'NIKO_UI_BRIDGE_ENABLED';
+const ORIGINAL_UI_BRIDGE_ENV = process.env[UI_BRIDGE_ENV_KEY];
+
 function makeRequest(body: Record<string, unknown>): HttpRequest {
   return {
     method: 'POST',
@@ -21,8 +24,17 @@ function makeRequest(body: Record<string, unknown>): HttpRequest {
   };
 }
 
-afterEach(() => {
+afterEach(async () => {
+  const { ConfigManager } = await import('../../config/index.js');
+  ConfigManager.resetInstance();
+  if (ORIGINAL_UI_BRIDGE_ENV === undefined) {
+    delete process.env[UI_BRIDGE_ENV_KEY];
+  } else {
+    process.env[UI_BRIDGE_ENV_KEY] = ORIGINAL_UI_BRIDGE_ENV;
+  }
+  vi.doUnmock('../../mcp/endpoints/workflow');
   vi.restoreAllMocks();
+  vi.resetModules();
 });
 
 describe('config endpoints backup parity', () => {
@@ -163,5 +175,48 @@ describe('config endpoints backup parity', () => {
       message: 'Configuration reloaded successfully',
     });
     expect(reloadConfigMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('gateway control plane ui bridge runtime sync', () => {
+  it('initializes the ui bridge runtime from shared config when no env override is present', async () => {
+    delete process.env[UI_BRIDGE_ENV_KEY];
+
+    const setUiBridgeEnabledMock = vi.fn();
+    vi.doMock('../../mcp/endpoints/workflow', () => ({
+      setUiBridgeEnabled: setUiBridgeEnabledMock,
+    }));
+
+    const { setConfigValue } = await import('../../config/index.js');
+    setConfigValue('gateway.uiBridgeEnabled', true);
+
+    const { initializeGatewayControlPlane } = await import('../../container/gateway-control-plane.js');
+    initializeGatewayControlPlane({} as Parameters<typeof initializeGatewayControlPlane>[0]);
+
+    expect(setUiBridgeEnabledMock).toHaveBeenLastCalledWith(true);
+  });
+
+  it('resyncs the ui bridge runtime on config updates and explicit reloads', async () => {
+    delete process.env[UI_BRIDGE_ENV_KEY];
+
+    const setUiBridgeEnabledMock = vi.fn();
+    vi.doMock('../../mcp/endpoints/workflow', () => ({
+      setUiBridgeEnabled: setUiBridgeEnabledMock,
+    }));
+
+    const { ConfigManager, setConfigValue } = await import('../../config/index.js');
+    const { initializeGatewayControlPlane } = await import('../../container/gateway-control-plane.js');
+
+    initializeGatewayControlPlane({} as Parameters<typeof initializeGatewayControlPlane>[0]);
+    expect(setUiBridgeEnabledMock).toHaveBeenLastCalledWith(false);
+
+    setConfigValue('gateway.uiBridgeEnabled', true);
+    expect(setUiBridgeEnabledMock).toHaveBeenLastCalledWith(true);
+
+    setUiBridgeEnabledMock.mockClear();
+    ConfigManager.getInstance().reload();
+
+    expect(setUiBridgeEnabledMock).toHaveBeenCalledTimes(1);
+    expect(setUiBridgeEnabledMock).toHaveBeenLastCalledWith(true);
   });
 });

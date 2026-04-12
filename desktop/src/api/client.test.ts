@@ -487,7 +487,7 @@ describe('workflow bridge and quality-check APIs', () => {
     expect(response.success).toBe(true)
   })
 
-  it('posts payload to /api/novel/quality-check', async () => {
+  it('posts payload to /writing/quality and not the stale novel alias', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ decision: 'REVISE', total_score: 72, actionable_feedback: 'improve pacing' }),
@@ -497,9 +497,11 @@ describe('workflow bridge and quality-check APIs', () => {
 
     const response = await novelQualityCheck('章节内容', { scene_id: 's1' }, ['logic'], { coherence: 80 })
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/api/novel/quality-check'),
-      expect.objectContaining({
+    const [requestUrl, requestInit] = fetchSpy.mock.calls[0] ?? []
+
+    expect(requestUrl).toBe(`${getResolvedApiBase()}/writing/quality`)
+    expect(requestUrl).not.toContain('/api/novel/quality-check')
+    expect(requestInit).toEqual(expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
           content: '章节内容',
@@ -507,8 +509,7 @@ describe('workflow bridge and quality-check APIs', () => {
           dimensions: ['logic'],
           quality_goals: { coherence: 80 },
         }),
-      })
-    )
+      }))
     expect(response).toEqual({
       success: true,
       data: { decision: 'REVISE', total_score: 72, actionable_feedback: 'improve pacing' },

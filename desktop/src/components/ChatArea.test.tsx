@@ -81,6 +81,22 @@ function setConversationWithAssistant(content: string): void {
   })
 }
 
+function resolveExpectedCheckpointWorkspace() {
+  const { currentConversationId, currentWorkspace } = useAppStore.getState()
+
+  return {
+    ...currentWorkspace,
+    workflow: {
+      ...currentWorkspace.workflow,
+      sessionId: currentWorkspace.workflow.sessionId ?? currentConversationId,
+    },
+    chat: {
+      ...currentWorkspace.chat,
+      conversationId: currentWorkspace.chat.conversationId ?? currentConversationId,
+    },
+  }
+}
+
 function ControlledTemplateChatArea() {
   const [isTemplatePanelOpen, setIsTemplatePanelOpen] = useState(false)
 
@@ -688,11 +704,17 @@ describe('ChatArea P0 flows', () => {
     const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '触发恢复{enter}')
 
+    const conversationId = useAppStore.getState().currentConversationId
+    expect(conversationId).toBeTruthy()
+    const expectedWorkspace = resolveExpectedCheckpointWorkspace()
+    expect(expectedWorkspace.workflow.sessionId).toBe(conversationId)
+    expect(expectedWorkspace.chat.conversationId).toBe(conversationId)
+
     const restoreButton = await screen.findByRole('button', { name: zh.streamRestoreToBeforeSend })
     await userEvent.click(restoreButton)
 
     await waitFor(() => {
-      expect(mockedRestoreCheckpoint).toHaveBeenCalledWith('cp-1')
+      expect(mockedRestoreCheckpoint).toHaveBeenCalledWith('cp-1', expectedWorkspace)
       expect(screen.getByText(zh.streamRestoreBeforeSendSuccess)).toBeInTheDocument()
     })
     expect(screen.queryByRole('button', { name: zh.streamRestoreToBeforeSend })).not.toBeInTheDocument()

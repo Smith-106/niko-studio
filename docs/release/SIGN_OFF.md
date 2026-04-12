@@ -84,6 +84,7 @@ python scripts/release_check_summary.py
 ```
 
 `release-check-summary.md` must end in `Decision: GO`.
+This command also refreshes the formal sign-off artifacts under `.workflow/evidence/release/`, including the retained authority-alignment JSON plus the governance and Vitest JUnit/XML reports used by the release bundle manifest.
 
 ## CI Mapping
 
@@ -100,9 +101,10 @@ python scripts/release_check_summary.py
 
 - `release-check-summary.md`
 - `.workflow/evidence/release/release-readiness-artifact.json`
-- `authority-alignment.json`
-- `vitest-production-guard*.xml`
-- `vitest-e2e*.xml`
-- `governance-scripts.junit.xml`
+- `.workflow/evidence/release/authority-alignment.json`
+- `.workflow/evidence/release/vitest-production-guard.xml`
+- `.workflow/evidence/release/vitest-e2e.xml`
+- `.workflow/evidence/release/governance-scripts.junit.xml`
 - Windows packaging dry-run artifact from CI or the local `desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe`
 - The exact packaged Python compatibility sidecar artifact used for the release sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` on Windows)
+- The delivery manifest and package README that enumerate the exact retained proof set for the release bundle
