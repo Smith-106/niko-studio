@@ -113,7 +113,7 @@ RULES: tuple[GateRule, ...] = (
     ),
     GateRule(
         file_path=".github/workflows/writing-helper-acceptance.yml",
-        needle="uses: actions/setup-node@v4",
+        needle="uses: actions/setup-node@",
         reason="writing-helper acceptance 未显式准备 Node authoritative runtime。",
     ),
     GateRule(
