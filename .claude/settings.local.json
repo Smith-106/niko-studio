@@ -84,7 +84,10 @@
       "mcp__chrome-devtools__select_page",
       "mcp__chrome-devtools__type_text",
       "mcp__chrome-devtools__press_key",
-      "WebFetch(domain:ccw-command-explorer.vercel.app)"
+      "WebFetch(domain:ccw-command-explorer.vercel.app)",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__fill",
+      "mcp__chrome-devtools__upload_file"
     ]
   },
   "hooks": {
