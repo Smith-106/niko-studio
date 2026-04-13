@@ -5,16 +5,18 @@
 > - `docs/TASKS_V10_OPTIMIZED.md`
 > - `docs/sdd/01_System_Architecture.md`
 
+> **状态说明（2026-04-14）**: 本文档保留为历史产品定义与验收规划参考，内部大量锚点仍指向 Python `src/*` / `tests/unit/*` 时代的实现与测试路径，不代表当前 `desktop + src-ts` 运行或发布权威。当前交付口径请以 `README.md`、`desktop/README.md`、`docs/release/RELEASE_NOTES.md`、`docs/operations/DESKTOP_RUNBOOK.md` 以及实际 `desktop/`、`src-ts/` 代码为准。
+
 ## 0. 文档元信息（新增）
 
 | 字段 | 值 |
 |---|---|
 | doc_name | Niko Studio 产品定义文档（PDD） |
 | doc_version | v1.11.4 |
-| status | active |
+| status | historical_reference |
 | owner | 你本人 |
 | last_updated | 2026-02-26 |
-| source_of_truth | `src/workflow/state.py`（阈值与决策） |
+| source_of_truth | 历史版本引用 `src/workflow/state.py`；当前运行时权威已迁移至 `src-ts/workflow/novel-state.ts` 与相关 TypeScript 运行面 |
 | related_docs | `docs/quality/QUALITY_CRITERIA.md`, `docs/TASKS_V10_OPTIMIZED.md`, `docs/sdd/01_System_Architecture.md` |
 
 ### 0.1 变更记录（新增）

@@ -3,7 +3,9 @@
 > **版本**: 3.0  
 > **模式**: LLM-as-a-Judge + 业务逻辑测试  
 > **评估模型**: Gemini Pro / Claude  
-> **状态**: 正式规范
+> **状态**: 历史规范参考
+>
+> **状态说明（2026-04-14）**: 本文档保留为历史评估规范参考，不代表当前 `desktop + src-ts` 主验证入口。若文中出现 Python/pytest 或旧工作流假设，请以 `docs/release/RELEASE_NOTES.md`、`.github/workflows/external-release-gate.yml`、`.github/workflows/integration-tests.yml` 与 `python scripts/release_check_summary.py` 为当前权威。
 
 ---
 

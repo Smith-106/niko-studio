@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.0.6] - 2026-04-14
+
+### Changed
+- 刷新根 README、Desktop README 与索引/运维/发布文档，使说明口径与当前 `desktop + src-ts` 交付路径一致。
+- 修正文档中的失效引用、过时验证命令与不存在文件路径，并将多份历史架构/规划文档明确标记为 historical reference。
+- 同步 backend、desktop、Tauri 与配置版本号到 `9.0.6`，为本次文档发布建立一致的版本基线。
+
 ## [9.0.4] - 2026-04-11
 
 ### Changed

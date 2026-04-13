@@ -109,23 +109,20 @@ npm --prefix desktop run test
 npm --prefix desktop run test -- src/api/client.test.ts
 ```
 
-### Gateway CORS Contract
+### Gateway Route / CORS Contract
 
 ```bash
-# Verify CORS preflight allows PUT
-python scripts/run_targeted_pytest.py tests/unit/mcp/test_gateway_endpoints.py -k "cors_preflight_allows_put" -q
+# Verify route registry and preflight handling on the current TypeScript gateway
+npm --prefix src-ts exec -- vitest run tests/gateway-server.routes.test.ts tests/gateway-server.request-handler.test.ts --reporter=default
 ```
 
 ### Full Contract Suite (CI Hard Gate)
 
 ```bash
-# P2 selected hard gate contracts (local targeted run)
+# Current local targeted contract run
 python scripts/check_authority_alignment.py
 python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q
-python scripts/run_targeted_pytest.py tests/unit/workflow/test_workflow_engine.py -k "decision" -q
-python scripts/run_targeted_pytest.py tests/unit/mcp/test_gateway_stream.py -k "contract" -q
-python scripts/run_targeted_pytest.py tests/unit/test_ci_gate_workflows.py -q
-python scripts/run_targeted_pytest.py tests/unit/mcp/test_gateway_endpoints.py -k "cors_preflight_allows_put" -q
+npm --prefix src-ts exec -- vitest run tests/workflow/workflow-engine.integration.test.ts tests/mcp/workflow-service.test.ts tests/gateway-server.routes.test.ts tests/gateway-server.request-handler.test.ts --reporter=default
 npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx src/components/KnowledgeModal.test.tsx
 ```
 

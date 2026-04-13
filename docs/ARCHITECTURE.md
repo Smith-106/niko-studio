@@ -3,6 +3,8 @@
 **版本**: 2.7 (Platform Edition)  
 **更新日期**: 2026-01-26
 
+> **状态说明（2026-04-14）**: 本文档保留为历史平台架构设计参考，包含大量 Python `src/*` / OpenKL 时代的结构示意，不代表当前 `desktop + src-ts` 交付路径的权威实现说明。当前运行与发布口径请以 `README.md`、`desktop/README.md`、`docs/release/RELEASE_NOTES.md` 与实际 `desktop/`、`src-ts/` 代码为准。
+
 ---
 
 ## 1. 系统定位

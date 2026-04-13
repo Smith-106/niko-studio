@@ -2,7 +2,7 @@
 
 > 架构优化：核心引擎 + 技能包分离
 >
-> 状态说明（2026-04-07）：本文档保留为历史架构路线图与任务沉淀，不作为当前 `desktop + src-ts` 发布完成度或 release readiness 的唯一权威来源。当前发布口径请以 `README.md`、`docs/release/RELEASE_NOTES.md` 与 `python scripts/release_check_summary.py` 的结果为准。
+> 状态说明（2026-04-14）：本文档保留为历史架构路线图与任务沉淀，不作为当前 `desktop + src-ts` 发布完成度或 release readiness 的唯一权威来源。文中大量 `src/*`、Python 与旧技能分层路径属于历史设计/迁移阶段锚点，不表示这些路径在当前 checkout 中仍然存在。当前发布口径请以 `README.md`、`desktop/README.md`、`docs/release/RELEASE_NOTES.md` 与 `python scripts/release_check_summary.py` 的结果为准。
 
 ## 🎯 架构优化原则
 

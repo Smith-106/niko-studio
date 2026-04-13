@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 9.0.4 (Platform Edition)
+> **Version**: 9.0.6 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -167,86 +167,70 @@ python scripts/start_gateway.py --runtime python --host 0.0.0.0 --port 8000
   - `warnings?: string[]`（当前包含 Writer 的非阻断告警代码前缀，如 `knowledge_retrieval_failed`、`openai_proxy_fallback_failed`）
   - `knowledge_retrieved?: { entities_count: number, relations_count: number, memories_count: number }`
 
-### Run Development Server (Advisory Compatibility)
+### Run Frontend Shell Only (Advisory Compatibility)
 
 ```bash
-# Legacy compatibility/dev helper, not the default desktop delivery path
-python dev_run.py
+# 仅启动 Vite 前端壳层，不包含完整桌面运行时
+npm --prefix desktop run dev
 ```
+
+完整桌面链路仍以 `python scripts/start_gateway.py` + `npm --prefix desktop run tauri:dev` 为准。
 
 ## 📁 Project Structure
 
-```
+```text
 niko-studio/
-├── docs/
-│   ├── sdd/             # System design specs (modular)
-│   └── TASKS_V10_OPTIMIZED.md # Historical architecture roadmap (not the current release source of truth)
-├── src-ts/
-│   ├── agents/             # Core Agents (Commander, Architect, Writer, Critic)
-│   ├── memory/             # Memory Layer
-│   ├── workflow/           # Workflow System
-│   ├── search/             # Search Services
-│   ├── store/              # Document Store
-│   ├── graph/              # Knowledge Graph
-│   ├── services/           # Platform Services
-│   └── tests/              # Current backend validation surface
-├── desktop/                # Desktop shell, sidecar contract, and frontend checks
-├── src/                    # Optional legacy Python compatibility surface (normally absent in the current checkout)
-├── .niko/                  # Runtime Data (Project Workspace)
-│   ├── sessions/           # Active/Archived sessions
-│   ├── memory/             # Long-term memories
-│   ├── config/             # Project configuration
-│   ├── drafts/             # Draft versions
-│   └── exports/            # Export output
+├── desktop/                    # 当前桌面产品入口（React + Tauri）
+│   ├── src/                    # 前端 UI、hooks、stores、API client 与组件测试
+│   └── src-tauri/              # Tauri/Rust 宿主、sidecar 启动与打包产物
+├── src-ts/                     # 当前本地 Node/TypeScript gateway 与核心服务
+│   ├── agents/                 # 写作与编排 agents
+│   ├── mcp/                    # MCP / HTTP endpoints 与服务接线
+│   ├── workflow/               # 工作流编排与状态流转
+│   ├── narrative/              # 叙事分析与评估逻辑
+│   ├── memory/                 # 记忆与知识相关能力
+│   ├── search/ graph/ store/   # 检索、图谱与存储能力
+│   └── tests/                  # TypeScript 后端测试
+├── scripts/                    # 启动器、版本校验、authority alignment、release summary
+├── config/                     # 本地/生产 YAML 配置
+├── tests/                      # Python 单元测试（当前主要覆盖治理/脚本）
+├── docs/                       # 发布契约、runbook、架构与历史参考
+├── release-check-summary.md    # 最近一次本地发布检查快照
 └── README.md
 ```
 
 ## 🛠️ Technology Stack
 
-| Component | Choice | Source |
-|-----------|--------|--------|
-| Vector Storage | **Kùzu HNSW** | OpenKL |
-| File Storage | **OpenKL File Contract** | OpenKL |
-| Graph Database | **Kùzu DB (Embedded)** | OpenKL |
-| Session Management | **Session Manager** | CCW |
-| Resume Strategy | **Native/Hybrid** | CCW |
-| Citation System | **CitationManager** | OpenKL |
-| Embedding | **FastEmbed (384-dim)** | - |
-| MCP Services | **Sequential Thinking** | Cherry |
+| Area | Current choice |
+|------|----------------|
+| Desktop UI | React 18 + TypeScript + Vite + Tailwind CSS + Zustand |
+| Desktop host | Tauri 2 (Rust) |
+| Local gateway | Node.js + TypeScript (`src-ts/`) |
+| Runtime / parsing | `better-sqlite3`, `fastembed`, `mammoth`, `pdf-parse` |
+| Release / governance | Python 3.11+ scripts in `scripts/` |
+| Test stack | Vitest (`desktop/`, `src-ts/`) + targeted pytest (`tests/`) |
 
-## 📋 Development Phases
+## ✅ Current Validation Entrypoints
 
-| Phase | Status | Modules | Lines |
-|-------|--------|---------|-------|
-| P1: Core Agents | ✅ 100% | Commander, Architect, Writer, Critic + 6 others | 5,061 |
-| P2: Workflow Levels | ✅ 100% | L1-L5 (Rapid → Coordinator) + ResumeStrategy | 8,354 |
-| P3: Memory Layer | ✅ 100% | 12 components (MemoryManager, Citation, Temporal, 6D, etc.) | 8,845 |
-| P4: Citation & Distill | ✅ 100% | CitationManager, DistillationManager (6 templates) | (incl. P3) |
-| P5: Session & Search | ✅ 100% | SessionManager, SmartSearch, VectorSearch, IterativeRetriever | 2,652 |
-| P6: Knowledge Layer | ✅ 100% | StoreManager, GraphManager (Cypher), OpenKL Contract | 3,296 |
-| P7-9: Services | ✅ 100% | BackupManager, TokenService, ObsidianService, Reranker (4 strategies) | 5,156 |
-| P10: Testing | ✅ 100% | 74 test files (unit, integration, performance) | 18,183 |
-
-**Total Codebase**: 166 source files, 62,163 lines | 74 test files, 18,183 lines
-
-## 🤖 Jules Auto-Development
-
-This project is designed for **Jules** automated development. See:
-
-- [TASKS_V10_OPTIMIZED.md](docs/TASKS_V10_OPTIMIZED.md) - Complete task checklist
-- `docs/TASKS_V10_OPTIMIZED.md` is retained as a historical architecture roadmap and does not override current release-readiness artifacts.
-- [JULES.md](.github/JULES.md) - Development guidelines for Jules
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- Desktop 本地验收：`npm --prefix desktop run check:local`
+- Gateway 本地验收：`npm --prefix src-ts run check:local`
+- 发布汇总快照：`python scripts/release_check_summary.py`
+- 权威对齐检查：`python scripts/check_authority_alignment.py`
+- 发布契约：`docs/release/RELEASE_NOTES.md`
+- Desktop 运维手册：`docs/operations/DESKTOP_RUNBOOK.md`
 
 ## 📚 Documentation
 
-- [System Design](docs/sdd/01_System_Architecture.md) - Architecture & API specifications
-- [Task List (V10 Optimized)](docs/TASKS_V10_OPTIMIZED.md) - Historical architecture roadmap
-- [OpenKL Design](openkl/rfcs/0000-openkl-design.md) - Memory layer design
+- [文档索引](docs/INDEX.md) - 文档导航与当前发布口径
+- [System Design](docs/sdd/01_System_Architecture.md) - 系统设计与模块规格
+- [Release Notes](docs/release/RELEASE_NOTES.md) - 发布矩阵与 Go/No-Go 条件
+- [Desktop Runbook](docs/operations/DESKTOP_RUNBOOK.md) - Desktop 运行、验收与排障
+- [Rollback Runbook](docs/operations/ROLLBACK.md) - 回滚手册
+- [Task List (V10 Optimized)](docs/TASKS_V10_OPTIMIZED.md) - 历史架构路线图
 
 ## 📄 License
 
-Apache License 2.0
+当前仓库根目录未提供独立 `LICENSE` 文件；如需对外分发，请先明确许可策略。
 
 ## 🙏 Acknowledgments
 
@@ -257,4 +241,4 @@ Built on concepts from:
 
 ---
 
-*Version 9.0.4 Platform Edition | Updated: 2026-04-11*
+*Version 9.0.6 Platform Edition | Updated: 2026-04-14*

@@ -8,6 +8,8 @@ Goal: establish migration baseline for single-authority external workflow entry
 
 ## Inventory
 
+> 说明：下表中的 `src/*` Python 路径为迁移期基线锚点，仅用于历史追溯，不表示这些入口在当前 checkout 中仍然存在。当前权威入口请以 `desktop/`、`src-ts/` 与发布文档为准。
+
 | Entrypoint Type | Entrypoint Symbol | Caller (Path:Line) | Usage Tag | Notes |
 |---|---|---|---|---|
 | engine | `WorkflowEngine.plan/execute/run/run_stream` | `src/cli/commands/run.py:235` / `src/cli/commands/run.py:274` | external | Primary CLI runtime path |

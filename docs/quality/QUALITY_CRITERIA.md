@@ -29,7 +29,8 @@ This document defines quality evaluation rules for PDD KPI measurement.
 
 ## 7. Runtime Decision Alignment
 - Runtime publish gate for novel finalization should use strict threshold aligned with PDD acceptance (target >= 99%).
-- Heuristic endpoint (`src/workflow/novel_quality.py`) is precheck only and must not override final acceptance decision.
+- Heuristic endpoint (`src-ts/workflow/novel-quality.ts`) is precheck only and must not override final acceptance decision.
+- Threshold authority is now carried by the TypeScript runtime state and critic surfaces, including `src-ts/workflow/novel-state.ts` and `src-ts/agents/critic.ts`.
 
 ## 8. Definition of Done (Excellent Long Novel)
 - Chapter DoD:

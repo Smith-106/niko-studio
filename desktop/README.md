@@ -13,43 +13,26 @@ Desktop 客户端是当前主交付入口；本 README 与根 README 的 `Writer
 
 ## 技术栈
 
-- **前端**: React 18 + TypeScript + Tailwind CSS
+- **前端**: React 18 + TypeScript + Vite + Tailwind CSS
 - **桌面框架**: Tauri 2.0 (Rust)
 - **状态管理**: Zustand
-- **本地 Gateway**: Node.js + TypeScript (`src-ts/`)
-- **兼容 / 治理脚本**: Python 3.11+ (`scripts/start_gateway.py`, release helpers, governance scripts)
+- **本地 Gateway**: Node.js + TypeScript (`../src-ts/`)
+- **兼容 / 治理脚本**: Python 3.11+（`../scripts/start_gateway.py`、release helpers、governance scripts）
 
 ## 项目结构
 
-```
+```text
 desktop/
-├── src-tauri/           # Tauri (Rust)
-│   ├── src/main.rs      # 主进程
-│   ├── Cargo.toml       # Rust 依赖
-│   └── tauri.conf.json  # 配置
-│
-├── src/                 # React 前端
-│   ├── components/      # UI 组件
-│   │   ├── Sidebar.tsx
-│   │   ├── ChatArea.tsx
-│   │   ├── MessageBubble.tsx
-│   │   ├── SettingsModal.tsx
-│   │   ├── KnowledgeModal.tsx
-│   │   └── EvaluationPanel.tsx
-│   ├── stores/          # 状态管理
-│   │   ├── appStore.ts
-│   │   └── settingsStore.ts
-│   ├── api/             # API 客户端
-│   │   └── client.ts
-│   ├── styles/
-│   │   └── globals.css
-│   ├── App.tsx
-│   └── main.tsx
-│
-├── package.json
-├── vite.config.ts
-├── tailwind.config.js
-└── tsconfig.json
+├── src/                      # React 前端、hooks、stores、API client、组件测试
+├── src-tauri/                # Tauri/Rust 宿主、sidecar 启动与打包配置
+│   ├── src/main.rs           # 主进程入口
+│   ├── bin/                  # sidecar / launcher 相关产物
+│   └── tauri.conf.json       # Tauri 配置
+├── scripts/                  # desktop 侧 sidecar/contract 校验脚本
+├── package.json              # 开发、构建、测试、sidecar 脚本入口
+├── vite.config.ts            # Vite 配置
+├── tailwind.config.js        # Tailwind 配置
+└── tsconfig.json             # TypeScript 配置
 ```
 
 ## 开发
@@ -63,10 +46,7 @@ desktop/
 ### 安装依赖
 
 ```bash
-# 前端依赖
 npm install
-
-# Rust 依赖 (自动)
 ```
 
 ### 开发模式
@@ -76,7 +56,7 @@ npm install
 cd ..
 python scripts/start_gateway.py --host 127.0.0.1 --port 8000
 
-# 2. 返回 desktop/ 并启动桌面应用 (新终端)
+# 2. 返回 desktop/ 并启动桌面应用（新终端）
 cd desktop
 npm run tauri:dev
 ```

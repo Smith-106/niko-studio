@@ -19,8 +19,8 @@ Niko-Studio 文档目录
 
 | 文档 | 说明 |
 |------|------|
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | 贡献指南 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
+| [desktop/README.md](../desktop/README.md) | Desktop 子项目说明、开发方式与质量门禁 |
 | [niko-studio-writing-workflow.md](niko-studio-writing-workflow.md) | Niko-Studio Writing Workflow Explorer（工作台导览） |
 | [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md) | 发布流程、发布级别矩阵（internal / external）与 Go/No-Go 条件 |
 | [operations/ROLLBACK.md](operations/ROLLBACK.md) | 回退触发条件、external 回退验证与操作手册 |
@@ -53,8 +53,8 @@ Niko-Studio 文档目录
 
 | 文档 | 说明 |
 |------|------|
-| [reference/](reference/) | 外部参考 |
+| [reference/golden_dataset.json](reference/golden_dataset.json) | 当前保留的参考数据集样例 |
 
 ---
 
-*更新时间: 2026-04-07*
+*更新时间: 2026-04-14*
