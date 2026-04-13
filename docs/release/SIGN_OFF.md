@@ -86,6 +86,38 @@ python scripts/release_check_summary.py
 `release-check-summary.md` must end in `Decision: GO`.
 This command also refreshes the formal sign-off artifacts under `.workflow/evidence/release/`, including the retained authority-alignment JSON plus the governance and Vitest JUnit/XML reports used by the release bundle manifest.
 
+## Customer Handoff Bundle
+
+Use one concise bundle for internal delivery or customer-facing demo preparation.
+
+### Include
+
+- `release-check-summary.md`
+- `.workflow/evidence/release/release-readiness-artifact.json`
+- `.workflow/evidence/release/authority-alignment.json`
+- `.workflow/evidence/release/vitest-production-guard.xml`
+- `.workflow/evidence/release/vitest-e2e.xml`
+- `.workflow/evidence/release/governance-scripts.junit.xml`
+- `docs/release/SIGN_OFF.md`
+- The exact desktop executable or package artifact produced from the validated path
+- The exact packaged Python compatibility sidecar artifact used for sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` on Windows)
+
+### Exclude
+
+- `.workflow/active/**`
+- `.workflow/archives/**`
+- `.workflow/.csv-wave/**`
+- local debug logs such as `writing-helper-gateway*.log`
+- ad hoc screenshots not explicitly referenced by the retained proof set
+- intermediate `desktop/src-tauri/target/**` trees except the exact retained executable/package artifact used as release proof
+
+### Operator Notes
+
+- Treat the current worktree plus the regenerated 2026-04-13 GO evidence as the authoritative handoff baseline.
+- Prefer a single authoritative handoff bundle over duplicate release summaries or copied historical session conclusions.
+- If a signed external bundle is required, add the release-private certificate thumbprint and timestamp URL material outside git before running `npm --prefix desktop run tauri:build`.
+- If the package is for customer demo rather than external shipment, keep the same proof set and explicitly mark the package as an unsigned local validation build when applicable.
+
 ## CI Mapping
 
 - `.github/workflows/integration-tests.yml`

@@ -1,0 +1,72 @@
+{
+  "summary": "Customer-delivery handoff plan derived from the current delivery-readiness analysis. The repository is already technically deliverable, so this CSV plan focuses on freezing one auditable baseline, defining a clean customer package boundary, manually smoke-checking the real writer UI golden path, assembling the customer-facing handoff bundle, and making one final GO/GO-with-notes/HOLD decision.",
+  "approach": "Use a three-wave CSV execution plan that first locks the validated baseline and clean package boundary, then performs one real UI golden-path smoke plus handoff bundle preparation, and finally runs one final verification and delivery decision sweep.",
+  "task_ids": [
+    "IMPL-1",
+    "IMPL-2",
+    "IMPL-3",
+    "IMPL-4",
+    "IMPL-5"
+  ],
+  "task_count": 5,
+  "complexity": "Medium",
+  "estimated_time": "3 focused waves with one final decision sweep",
+  "recommended_execution": "Wave-based CSV pipeline with low-conflict parallelism",
+  "recommended_concurrency": 2,
+  "shared_context": {
+    "current_state": {
+      "delivery_readiness": "GO-backed and currently green on desktop/backend local gates",
+      "ui_api_workflow_alignment": "main writer workflow is aligned across desktop UI, workspace contract, and backend workflow endpoints",
+      "customer_handoff_gap": "formal handoff baseline, package boundary definition, and real UI smoke confirmation should be made explicit before external delivery"
+    },
+    "constraints": [
+      "Do not reopen broad feature or architecture work",
+      "Preserve the current authoritative desktop + gateway delivery contract",
+      "Prefer one authoritative handoff bundle over duplicate summaries",
+      "Keep wave scopes non-overlapping and decision oriented"
+    ],
+    "critical_files": [
+      "release-check-summary.md",
+      "docs/release/SIGN_OFF.md",
+      "docs/operations/DESKTOP_RUNBOOK.md",
+      ".workflow/evidence/release/release-readiness-artifact.json",
+      "desktop/package.json",
+      "desktop/src/App.tsx",
+      "src-ts/mcp/endpoints/workflow.ts",
+      "src-ts/mcp/endpoints/workspace.ts",
+      "scripts/check_authority_alignment.py",
+      "scripts/delivery_gate.py",
+      "scripts/release_check_summary.py"
+    ],
+    "deferred_out_of_scope": [
+      "New feature implementation",
+      "Large-scale refactors of settingsStore/appStore/workflow-engine",
+      "Broad documentation modernization beyond customer handoff artifacts",
+      "Re-designing the UI instead of smoke-validating the current product"
+    ]
+  },
+  "csv_wave_plan": {
+    "session_id": "cwp-client-delivery-handoff-20260413",
+    "tasks_csv_path": ".workflow/.csv-wave/cwp-client-delivery-handoff-20260413/tasks.csv",
+    "wave_count": 3,
+    "wave_map": {
+      "1": [
+        "IMPL-1",
+        "IMPL-2"
+      ],
+      "2": [
+        "IMPL-3",
+        "IMPL-4"
+      ],
+      "3": [
+        "IMPL-5"
+      ]
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-04-13T04:10:00+08:00",
+    "source": "ccw-plan",
+    "plan_type": "customer-delivery-handoff",
+    "schema_version": "2.0"
+  }
+}
