@@ -193,6 +193,221 @@ BASE_RULES: tuple[AuthorityRule, ...] = (
         pattern=r"main 分支仍保留 authority alignment 与选定高风险契约的 blocking checks",
         reason="Release notes must describe internal main-branch blocking semantics clearly.",
     ),
+    AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:start"',
+        reason="Desktop package manifest must expose the local:start launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:start:force"',
+        reason="Desktop package manifest must expose the local:start:force launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:start:binary"',
+        reason="Desktop package manifest must expose the local:start:binary launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:start:binary:force"',
+        reason="Desktop package manifest must expose the local:start:binary:force launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:gateway"',
+        reason="Desktop package manifest must expose the local:gateway launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:status"',
+        reason="Desktop package manifest must expose the local:status launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:stop"',
+        reason="Desktop package manifest must expose the local:stop launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:selftest"',
+        reason="Desktop package manifest must expose the local:selftest launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"\./scripts/start_desktop_local\.ps1",
+        reason="README must document the local desktop launcher start entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"\./scripts/status_desktop_local\.ps1",
+        reason="README must document the local desktop launcher status entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"\./scripts/stop_desktop_local\.ps1",
+        reason="README must document the local desktop launcher stop entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"\./scripts/selftest_desktop_local\.ps1",
+        reason="README must document the local desktop launcher selftest entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"npm --prefix desktop run local:start",
+        reason="README must document the npm-based local desktop launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"local:start:binary:force",
+        reason="README must document the npm-based binary-force local desktop launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"local:gateway",
+        reason="README must document the npm-based gateway-only local launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"scripts\\start_desktop_local\.cmd",
+        reason="README must document the cmd-based local desktop launcher start entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"scripts\\stop_desktop_local\.cmd",
+        reason="README must document the cmd-based local desktop launcher stop entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"scripts\\status_desktop_local\.cmd",
+        reason="README must document the cmd-based local desktop launcher status entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"scripts\\selftest_desktop_local\.cmd",
+        reason="README must document the cmd-based local desktop launcher selftest entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="README.md",
+        pattern=r"-ForceDesktop",
+        reason="README must document the ForceDesktop duplicate-window override.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"\./scripts/start_desktop_local\.ps1",
+        reason="Desktop README must document the local desktop launcher start entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"\./scripts/status_desktop_local\.ps1",
+        reason="Desktop README must document the local desktop launcher status entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"\./scripts/stop_desktop_local\.ps1",
+        reason="Desktop README must document the local desktop launcher stop entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"\./scripts/selftest_desktop_local\.ps1",
+        reason="Desktop README must document the local desktop launcher selftest entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"npm run local:start",
+        reason="Desktop README must document the npm-based local desktop launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"local:start:binary:force",
+        reason="Desktop README must document the npm-based binary-force local desktop launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"local:gateway",
+        reason="Desktop README must document the npm-based gateway-only local launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"scripts\\start_desktop_local\.cmd",
+        reason="Desktop README must document the cmd-based local desktop launcher start entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"scripts\\stop_desktop_local\.cmd",
+        reason="Desktop README must document the cmd-based local desktop launcher stop entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"scripts\\status_desktop_local\.cmd",
+        reason="Desktop README must document the cmd-based local desktop launcher status entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"scripts\\selftest_desktop_local\.cmd",
+        reason="Desktop README must document the cmd-based local desktop launcher selftest entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="desktop/README.md",
+        pattern=r"-ForceDesktop",
+        reason="Desktop README must document the ForceDesktop duplicate-window override.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"\./scripts/start_desktop_local\.ps1",
+        reason="Desktop runbook must document the local desktop launcher start entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"\./scripts/status_desktop_local\.ps1",
+        reason="Desktop runbook must document the local desktop launcher status entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"\./scripts/stop_desktop_local\.ps1",
+        reason="Desktop runbook must document the local desktop launcher stop entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"\./scripts/selftest_desktop_local\.ps1",
+        reason="Desktop runbook must document the local desktop launcher selftest entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"npm --prefix desktop run local:start\|local:start:force\|local:start:binary\|local:start:binary:force\|local:gateway\|local:status\|local:stop\|local:selftest",
+        reason="Desktop runbook must document the npm-based local desktop launcher entrypoints.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"local:gateway",
+        reason="Desktop runbook must document the npm-based gateway-only local launcher entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"scripts\\\\start_desktop_local\.cmd",
+        reason="Desktop runbook must document the cmd-based local desktop launcher start entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"scripts\\\\stop_desktop_local\.cmd",
+        reason="Desktop runbook must document the cmd-based local desktop launcher stop entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"scripts\\\\status_desktop_local\.cmd",
+        reason="Desktop runbook must document the cmd-based local desktop launcher status entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"scripts\\\\selftest_desktop_local\.cmd",
+        reason="Desktop runbook must document the cmd-based local desktop launcher selftest entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        pattern=r"-ForceDesktop",
+        reason="Desktop runbook must document the ForceDesktop duplicate-window override.",
+    ),
 )
 
 RULES: tuple[AuthorityRule, ...] = BASE_RULES + DELIVERY_CONTRACT_RULES

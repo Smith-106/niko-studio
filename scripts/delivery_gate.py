@@ -80,6 +80,221 @@ RULES: tuple[GateRule, ...] = (
         reason="缺少 desktop packaging dry-run 入口。",
     ),
     GateRule(
+        file_path="desktop/package.json",
+        needle="\"local:start\"",
+        reason="缺少 desktop 本地启动器入口 local:start。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle="\"local:start:force\"",
+        reason="缺少 desktop 本地启动器入口 local:start:force。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle="\"local:start:binary\"",
+        reason="缺少 desktop 本地启动器入口 local:start:binary。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle="\"local:start:binary:force\"",
+        reason="缺少 desktop 本地启动器入口 local:start:binary:force。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle="\"local:gateway\"",
+        reason="缺少 desktop 本地启动器入口 local:gateway。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle="\"local:status\"",
+        reason="缺少 desktop 本地启动器入口 local:status。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle="\"local:stop\"",
+        reason="缺少 desktop 本地启动器入口 local:stop。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle="\"local:selftest\"",
+        reason="缺少 desktop 本地启动器入口 local:selftest。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="./scripts/start_desktop_local.ps1",
+        reason="README 未暴露本地桌面启动器 start 入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="./scripts/status_desktop_local.ps1",
+        reason="README 未暴露本地桌面启动器 status 入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="./scripts/stop_desktop_local.ps1",
+        reason="README 未暴露本地桌面启动器 stop 入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="./scripts/selftest_desktop_local.ps1",
+        reason="README 未暴露本地桌面启动器 selftest 入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="npm --prefix desktop run local:start",
+        reason="README 未暴露 npm 本地桌面启动入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="local:start:binary:force",
+        reason="README 未暴露 npm 二进制强制启动入口 local:start:binary:force。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="local:gateway",
+        reason="README 未暴露 npm gateway-only 启动入口 local:gateway。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="scripts\\start_desktop_local.cmd",
+        reason="README 未暴露 cmd 本地桌面启动器 start 入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="scripts\\stop_desktop_local.cmd",
+        reason="README 未暴露 cmd 本地桌面启动器 stop 入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="scripts\\status_desktop_local.cmd",
+        reason="README 未暴露 cmd 本地桌面启动器 status 入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="scripts\\selftest_desktop_local.cmd",
+        reason="README 未暴露 cmd 本地桌面启动器 selftest 入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="-ForceDesktop",
+        reason="README 未说明 ForceDesktop 多实例 override。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="./scripts/start_desktop_local.ps1",
+        reason="desktop README 未暴露本地桌面启动器 start 入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="./scripts/status_desktop_local.ps1",
+        reason="desktop README 未暴露本地桌面启动器 status 入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="./scripts/stop_desktop_local.ps1",
+        reason="desktop README 未暴露本地桌面启动器 stop 入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="./scripts/selftest_desktop_local.ps1",
+        reason="desktop README 未暴露本地桌面启动器 selftest 入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="npm run local:start",
+        reason="desktop README 未暴露 npm 本地桌面启动入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="local:start:binary:force",
+        reason="desktop README 未暴露 npm 二进制强制启动入口 local:start:binary:force。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="local:gateway",
+        reason="desktop README 未暴露 npm gateway-only 启动入口 local:gateway。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="scripts\\start_desktop_local.cmd",
+        reason="desktop README 未暴露 cmd 本地桌面启动器 start 入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="scripts\\stop_desktop_local.cmd",
+        reason="desktop README 未暴露 cmd 本地桌面启动器 stop 入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="scripts\\status_desktop_local.cmd",
+        reason="desktop README 未暴露 cmd 本地桌面启动器 status 入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="scripts\\selftest_desktop_local.cmd",
+        reason="desktop README 未暴露 cmd 本地桌面启动器 selftest 入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="-ForceDesktop",
+        reason="desktop README 未说明 ForceDesktop 多实例 override。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="./scripts/start_desktop_local.ps1",
+        reason="desktop runbook 未暴露本地桌面启动器 start 入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="./scripts/status_desktop_local.ps1",
+        reason="desktop runbook 未暴露本地桌面启动器 status 入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="./scripts/stop_desktop_local.ps1",
+        reason="desktop runbook 未暴露本地桌面启动器 stop 入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="./scripts/selftest_desktop_local.ps1",
+        reason="desktop runbook 未暴露本地桌面启动器 selftest 入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="npm --prefix desktop run local:start|local:start:force|local:start:binary|local:start:binary:force|local:gateway|local:status|local:stop|local:selftest",
+        reason="desktop runbook 未暴露 npm 本地桌面启动入口集合。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="local:gateway",
+        reason="desktop runbook 未说明 npm gateway-only 启动入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="scripts\\\\start_desktop_local.cmd",
+        reason="desktop runbook 未暴露 cmd 本地桌面启动器 start 入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="scripts\\\\stop_desktop_local.cmd",
+        reason="desktop runbook 未暴露 cmd 本地桌面启动器 stop 入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="scripts\\\\status_desktop_local.cmd",
+        reason="desktop runbook 未暴露 cmd 本地桌面启动器 status 入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="scripts\\\\selftest_desktop_local.cmd",
+        reason="desktop runbook 未暴露 cmd 本地桌面启动器 selftest 入口。",
+    ),
+    GateRule(
+        file_path="docs/operations/DESKTOP_RUNBOOK.md",
+        needle="-ForceDesktop",
+        reason="desktop runbook 未说明 ForceDesktop 多实例 override。",
+    ),
+    GateRule(
         file_path="scripts/release_check_summary.py",
         needle="from src.",
         reason="release summary 仍依赖 legacy Python src 模块，权威路径回退。",

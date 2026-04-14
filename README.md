@@ -156,6 +156,42 @@ python scripts/start_gateway.py --env production --config config/niko-studio.pro
 python scripts/start_gateway.py --runtime python --host 0.0.0.0 --port 8000
 ```
 
+Windows 本地如果常见 `8000` 端口占用，可优先使用仓库内启动器。它会自动复用已有健康 gateway，或回退到 `8010` / 空闲端口，并把桌面进程显式指向该地址：
+
+```powershell
+./scripts/start_desktop_local.ps1
+```
+
+若使用 `cmd.exe`，可直接运行 `scripts\start_desktop_local.cmd`、`scripts\stop_desktop_local.cmd`、`scripts\status_desktop_local.cmd`、`scripts\selftest_desktop_local.cmd`。
+若从现有 desktop npm 入口使用，也可执行 `npm --prefix desktop run local:start`、`local:start:force`、`local:start:binary`、`local:start:binary:force`、`local:gateway`、`local:status`、`local:stop`、`local:selftest`。
+
+常用参数：
+
+- `-BinaryDesktop`: 直接启动已编译桌面二进制
+- `-NoDesktop`: 只拉起 / 复用 gateway
+- `-ForceDesktop`: 即使已有桌面窗口也强制新开实例
+- `-PreferredPort` / `-FallbackPort`: 覆盖默认的 `8000` / `8010`
+
+若只想拉起 / 复用 gateway 而不打开桌面窗口，可直接执行 `npm --prefix desktop run local:gateway`。
+
+停止由本地启动器新拉起的进程：
+
+```powershell
+./scripts/stop_desktop_local.ps1
+```
+
+查看当前本地启动器状态：
+
+```powershell
+./scripts/status_desktop_local.ps1
+```
+
+验证本地启动链路：
+
+```powershell
+./scripts/selftest_desktop_local.ps1
+```
+
 可用运维端点：
 - `GET /health`
 - `GET /metrics`
@@ -175,6 +211,7 @@ npm --prefix desktop run dev
 ```
 
 完整桌面链路仍以 `python scripts/start_gateway.py` + `npm --prefix desktop run tauri:dev` 为准。
+Windows 上如需自动处理 gateway 端口冲突，可直接使用 `./scripts/start_desktop_local.ps1`。
 
 ## 📁 Project Structure
 

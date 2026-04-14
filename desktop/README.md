@@ -63,6 +63,29 @@ npm run tauri:dev
 
 如仅需调试前端壳层，可运行 `npm run dev`；该命令只启动 Vite shell，不代表完整交付运行面。
 
+Windows 本地若常见 `8000` 端口占用，可使用仓库内启动器自动复用已有健康 gateway，或回退到 `8010` / 空闲端口，并把桌面进程显式指向该地址：
+
+```powershell
+./scripts/start_desktop_local.ps1
+```
+
+若使用 `cmd.exe`，可改用 `scripts\start_desktop_local.cmd`、`scripts\stop_desktop_local.cmd`、`scripts\status_desktop_local.cmd`、`scripts\selftest_desktop_local.cmd`。
+若你更习惯沿用 `package.json` 入口，也可在 `desktop/` 下运行 `npm run local:start`、`local:start:force`、`local:start:binary`、`local:start:binary:force`、`local:gateway`、`local:status`、`local:stop`、`local:selftest`。
+
+可选参数：
+
+- `-BinaryDesktop`: 直接启动已编译的 `desktop/src-tauri/target/debug/niko-studio-desktop.exe`
+- `-NoDesktop`: 只拉起 / 复用 gateway，便于单独调试接口
+- `-ForceDesktop`: 即使已存在 `Niko-Studio` 窗口，也强制再开一个新窗口
+- `-PreferredPort` / `-FallbackPort`: 覆盖默认的 `8000` / `8010`
+
+若只需拉起 / 复用 gateway 而不打开桌面窗口，可直接运行 `npm run local:gateway`。
+
+日志默认写入仓库根目录 `.codex-run/`。
+若需关闭由该启动器新拉起的本地进程，可运行 `./scripts/stop_desktop_local.ps1`。
+若需查看当前本地启动器状态，可运行 `./scripts/status_desktop_local.ps1`。
+若需自检本地启动链路，可运行 `./scripts/selftest_desktop_local.ps1`。
+
 ### 质量门禁
 
 - `npm run check:quick`: 日常开发中的快速校验，当前执行 `lint`、`format:check`、`typecheck`、`check:node-sidecar`、`validate:sidecar-contract` 和 `test`，不包含构建步骤。

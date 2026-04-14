@@ -18,6 +18,23 @@ This runbook follows the same four delivery labels as the root README and `docs/
 
 ### Starting the Authoritative Desktop Path
 
+On Windows, prefer the local launcher when `8000` may already be occupied:
+
+```powershell
+./scripts/start_desktop_local.ps1
+```
+
+It reuses an already healthy gateway when available, otherwise starts one on `8010` or another free loopback port, then launches the desktop process against that explicit gateway base.
+If a `Niko-Studio` window is already running, the launcher reuses that window by default instead of opening duplicates; pass `-ForceDesktop` only when you intentionally want a second instance.
+To stop any gateway / desktop processes that the launcher started itself, run `./scripts/stop_desktop_local.ps1`.
+To inspect the current tracked gateway / desktop state without changing anything, run `./scripts/status_desktop_local.ps1`.
+To smoke-test the local launcher lifecycle itself, run `./scripts/selftest_desktop_local.ps1`.
+For `cmd.exe`, use `scripts\\start_desktop_local.cmd`, `scripts\\stop_desktop_local.cmd`, `scripts\\status_desktop_local.cmd`, and `scripts\\selftest_desktop_local.cmd`.
+If you prefer package scripts, the same helpers are exposed as `npm --prefix desktop run local:start|local:start:force|local:start:binary|local:start:binary:force|local:gateway|local:status|local:stop|local:selftest`.
+Use `npm --prefix desktop run local:gateway` when you want the launcher to reuse or start only the gateway without opening another desktop window.
+
+For manual two-terminal startup, use:
+
 ```bash
 # From project root
 python scripts/start_gateway.py --host 127.0.0.1 --port 8000

@@ -110,6 +110,53 @@ def test_delivery_gate_rules_cover_authority_alignment_contract() -> None:
         and must_exist
         for file_path, needle, must_exist in rule_map
     )
+    assert ("desktop/package.json", '"local:start"', True) in rule_map
+    assert ("desktop/package.json", '"local:start:force"', True) in rule_map
+    assert ("desktop/package.json", '"local:start:binary"', True) in rule_map
+    assert ("desktop/package.json", '"local:start:binary:force"', True) in rule_map
+    assert ("desktop/package.json", '"local:gateway"', True) in rule_map
+    assert ("desktop/package.json", '"local:status"', True) in rule_map
+    assert ("desktop/package.json", '"local:stop"', True) in rule_map
+    assert ("desktop/package.json", '"local:selftest"', True) in rule_map
+    assert ("README.md", "./scripts/start_desktop_local.ps1", True) in rule_map
+    assert ("README.md", "./scripts/status_desktop_local.ps1", True) in rule_map
+    assert ("README.md", "./scripts/stop_desktop_local.ps1", True) in rule_map
+    assert ("README.md", "./scripts/selftest_desktop_local.ps1", True) in rule_map
+    assert ("README.md", "npm --prefix desktop run local:start", True) in rule_map
+    assert ("README.md", "local:start:binary:force", True) in rule_map
+    assert ("README.md", "local:gateway", True) in rule_map
+    assert ("README.md", "scripts\\start_desktop_local.cmd", True) in rule_map
+    assert ("README.md", "scripts\\stop_desktop_local.cmd", True) in rule_map
+    assert ("README.md", "scripts\\status_desktop_local.cmd", True) in rule_map
+    assert ("README.md", "scripts\\selftest_desktop_local.cmd", True) in rule_map
+    assert ("README.md", "-ForceDesktop", True) in rule_map
+    assert ("desktop/README.md", "./scripts/start_desktop_local.ps1", True) in rule_map
+    assert ("desktop/README.md", "./scripts/status_desktop_local.ps1", True) in rule_map
+    assert ("desktop/README.md", "./scripts/stop_desktop_local.ps1", True) in rule_map
+    assert ("desktop/README.md", "./scripts/selftest_desktop_local.ps1", True) in rule_map
+    assert ("desktop/README.md", "npm run local:start", True) in rule_map
+    assert ("desktop/README.md", "local:start:binary:force", True) in rule_map
+    assert ("desktop/README.md", "local:gateway", True) in rule_map
+    assert ("desktop/README.md", "scripts\\start_desktop_local.cmd", True) in rule_map
+    assert ("desktop/README.md", "scripts\\stop_desktop_local.cmd", True) in rule_map
+    assert ("desktop/README.md", "scripts\\status_desktop_local.cmd", True) in rule_map
+    assert ("desktop/README.md", "scripts\\selftest_desktop_local.cmd", True) in rule_map
+    assert ("desktop/README.md", "-ForceDesktop", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "./scripts/start_desktop_local.ps1", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "./scripts/status_desktop_local.ps1", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "./scripts/stop_desktop_local.ps1", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "./scripts/selftest_desktop_local.ps1", True) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        "npm --prefix desktop run local:start|local:start:force|local:start:binary|local:start:binary:force|local:gateway|local:status|local:stop|local:selftest",
+        True,
+    ) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "local:gateway", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "scripts\\\\start_desktop_local.cmd", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "scripts\\\\stop_desktop_local.cmd", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "scripts\\\\status_desktop_local.cmd", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "scripts\\\\selftest_desktop_local.cmd", True) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", "-ForceDesktop", True) in rule_map
 
 
 def test_delivery_gate_passes_current_repo() -> None:
@@ -126,6 +173,239 @@ def test_delivery_gate_passes_current_repo() -> None:
 
     assert exit_code == 0
     assert "delivery gate: ok" in output
+
+
+def test_desktop_local_launcher_scripts_are_exposed_via_package_json() -> None:
+    package_json = json.loads((PROJECT_ROOT / "desktop" / "package.json").read_text(encoding="utf-8"))
+    scripts = package_json["scripts"]
+
+    assert scripts["local:start"] == (
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1"
+    )
+    assert scripts["local:start:force"] == (
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1 -ForceDesktop"
+    )
+    assert scripts["local:start:binary"] == (
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1 -BinaryDesktop"
+    )
+    assert scripts["local:start:binary:force"] == (
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1 -BinaryDesktop -ForceDesktop"
+    )
+    assert scripts["local:gateway"] == (
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1 -NoDesktop"
+    )
+    assert scripts["local:status"] == (
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/status_desktop_local.ps1"
+    )
+    assert scripts["local:stop"] == (
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/stop_desktop_local.ps1"
+    )
+    assert scripts["local:selftest"] == (
+        "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/selftest_desktop_local.ps1"
+    )
+
+
+def test_desktop_local_launcher_wrapper_scripts_forward_to_matching_powershell_files() -> None:
+    expected_wrappers = {
+        "start_desktop_local": "start_desktop_local.ps1",
+        "stop_desktop_local": "stop_desktop_local.ps1",
+        "status_desktop_local": "status_desktop_local.ps1",
+        "selftest_desktop_local": "selftest_desktop_local.ps1",
+    }
+
+    for stem, powershell_name in expected_wrappers.items():
+        powershell_script = PROJECT_ROOT / "scripts" / powershell_name
+        cmd_wrapper = PROJECT_ROOT / "scripts" / f"{stem}.cmd"
+
+        assert powershell_script.exists(), f"Missing launcher script: {powershell_script}"
+        assert cmd_wrapper.exists(), f"Missing wrapper script: {cmd_wrapper}"
+
+        wrapper_text = cmd_wrapper.read_text(encoding="utf-8").replace("\r\n", "\n")
+        assert wrapper_text == (
+            "@echo off\n"
+            "setlocal\n"
+            f'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0{powershell_name}" %*\n'
+        )
+
+
+def test_desktop_local_powershell_scripts_preserve_public_parameter_contract() -> None:
+    start_script = (PROJECT_ROOT / "scripts" / "start_desktop_local.ps1").read_text(encoding="utf-8")
+    selftest_script = (PROJECT_ROOT / "scripts" / "selftest_desktop_local.ps1").read_text(encoding="utf-8")
+    status_script = (PROJECT_ROOT / "scripts" / "status_desktop_local.ps1").read_text(encoding="utf-8")
+    stop_script = (PROJECT_ROOT / "scripts" / "stop_desktop_local.ps1").read_text(encoding="utf-8")
+
+    assert "[Alias('Host')]" in start_script
+    assert "[string]$GatewayHost = '127.0.0.1'" in start_script
+    assert "[int]$PreferredPort = 8000" in start_script
+    assert "[int]$FallbackPort = 8010" in start_script
+    assert "[switch]$BinaryDesktop" in start_script
+    assert "[switch]$NoDesktop" in start_script
+    assert "[switch]$NoReuseGateway" in start_script
+    assert "[switch]$ForceDesktop" in start_script
+    assert "$desktopExe = Join-Path $desktopDir 'src-tauri\\target\\debug\\niko-studio-desktop.exe'" in start_script
+    assert "$statePath = Join-Path $logDir 'desktop-local-state.json'" in start_script
+
+    assert "[Alias('Host')]" in selftest_script
+    assert "[string]$GatewayHost = '127.0.0.1'" in selftest_script
+    assert "[int]$PreferredPort = 18100" in selftest_script
+    assert "[int]$FallbackPort = 18101" in selftest_script
+    assert (
+        "& (Join-Path $PSScriptRoot 'start_desktop_local.ps1') -NoDesktop -NoReuseGateway "
+        "-GatewayHost $GatewayHost -PreferredPort $PreferredPort -FallbackPort $FallbackPort | Out-Host"
+    ) in selftest_script
+    assert "& (Join-Path $PSScriptRoot 'status_desktop_local.ps1') | Out-Host" in selftest_script
+    assert "& (Join-Path $PSScriptRoot 'stop_desktop_local.ps1') | Out-Host" in selftest_script
+
+    assert "$statePath = Join-Path $projectRoot '.codex-run\\desktop-local-state.json'" in status_script
+    assert "foreach ($candidatePort in @(8000, 8010))" in status_script
+    assert "Write-Host 'Niko Studio local status' -ForegroundColor Cyan" in status_script
+
+    assert "$statePath = Join-Path $projectRoot '.codex-run\\desktop-local-state.json'" in stop_script
+    assert 'Write-Host "State file not found: $statePath"' in stop_script
+    assert "Stop-ListenerOnPort -Port $state.gateway.port -Managed ([bool]$state.gateway.managed)" in stop_script
+    assert 'Write-Host "Removed state file: $statePath"' in stop_script
+
+
+def test_desktop_local_launcher_docs_share_same_entrypoints() -> None:
+    root_readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    desktop_readme = (PROJECT_ROOT / "desktop" / "README.md").read_text(encoding="utf-8")
+    runbook = (PROJECT_ROOT / "docs" / "operations" / "DESKTOP_RUNBOOK.md").read_text(encoding="utf-8")
+
+    assert "./scripts/start_desktop_local.ps1" in root_readme
+    assert "./scripts/status_desktop_local.ps1" in root_readme
+    assert "./scripts/stop_desktop_local.ps1" in root_readme
+    assert "./scripts/selftest_desktop_local.ps1" in root_readme
+    assert "npm --prefix desktop run local:start" in root_readme
+    assert "local:start:force" in root_readme
+    assert "local:start:binary" in root_readme
+    assert "local:start:binary:force" in root_readme
+    assert "local:gateway" in root_readme
+    assert "local:status" in root_readme
+    assert "local:stop" in root_readme
+    assert "local:selftest" in root_readme
+    assert "scripts\\start_desktop_local.cmd" in root_readme
+    assert "scripts\\stop_desktop_local.cmd" in root_readme
+    assert "scripts\\status_desktop_local.cmd" in root_readme
+    assert "scripts\\selftest_desktop_local.cmd" in root_readme
+
+    assert "./scripts/start_desktop_local.ps1" in desktop_readme
+    assert "./scripts/stop_desktop_local.ps1" in desktop_readme
+    assert "./scripts/status_desktop_local.ps1" in desktop_readme
+    assert "./scripts/selftest_desktop_local.ps1" in desktop_readme
+    assert "npm run local:start" in desktop_readme
+    assert "local:start:force" in desktop_readme
+    assert "local:start:binary" in desktop_readme
+    assert "local:start:binary:force" in desktop_readme
+    assert "local:gateway" in desktop_readme
+    assert "local:status" in desktop_readme
+    assert "local:stop" in desktop_readme
+    assert "local:selftest" in desktop_readme
+    assert "scripts\\start_desktop_local.cmd" in desktop_readme
+    assert "scripts\\stop_desktop_local.cmd" in desktop_readme
+    assert "scripts\\status_desktop_local.cmd" in desktop_readme
+    assert "scripts\\selftest_desktop_local.cmd" in desktop_readme
+    assert "-ForceDesktop" in desktop_readme
+
+    assert "./scripts/start_desktop_local.ps1" in runbook
+    assert "./scripts/status_desktop_local.ps1" in runbook
+    assert "./scripts/stop_desktop_local.ps1" in runbook
+    assert "./scripts/selftest_desktop_local.ps1" in runbook
+    assert "npm --prefix desktop run local:start|local:start:force|local:start:binary|local:start:binary:force|local:gateway|local:status|local:stop|local:selftest" in runbook
+    assert "local:gateway" in runbook
+    assert "scripts\\\\start_desktop_local.cmd" in runbook
+    assert "scripts\\\\stop_desktop_local.cmd" in runbook
+    assert "scripts\\\\status_desktop_local.cmd" in runbook
+    assert "scripts\\\\selftest_desktop_local.cmd" in runbook
+    assert "-ForceDesktop" in runbook
+
+
+def test_authority_alignment_rules_cover_local_desktop_launcher_contract() -> None:
+    module = load_script_module(
+        "scripts/check_authority_alignment.py",
+        "test_check_authority_alignment_local_desktop_launcher_contract",
+    )
+
+    rule_map = {(rule.file_path, rule.pattern, rule.required) for rule in module.RULES}
+
+    assert ("desktop/package.json", r'"local:start"', True) in rule_map
+    assert ("desktop/package.json", r'"local:start:force"', True) in rule_map
+    assert ("desktop/package.json", r'"local:start:binary"', True) in rule_map
+    assert ("desktop/package.json", r'"local:start:binary:force"', True) in rule_map
+    assert ("desktop/package.json", r'"local:gateway"', True) in rule_map
+    assert ("desktop/package.json", r'"local:status"', True) in rule_map
+    assert ("desktop/package.json", r'"local:stop"', True) in rule_map
+    assert ("desktop/package.json", r'"local:selftest"', True) in rule_map
+    assert ("README.md", r"\./scripts/start_desktop_local\.ps1", True) in rule_map
+    assert ("README.md", r"\./scripts/status_desktop_local\.ps1", True) in rule_map
+    assert ("README.md", r"\./scripts/stop_desktop_local\.ps1", True) in rule_map
+    assert ("README.md", r"\./scripts/selftest_desktop_local\.ps1", True) in rule_map
+    assert ("README.md", r"npm --prefix desktop run local:start", True) in rule_map
+    assert ("README.md", r"local:start:binary:force", True) in rule_map
+    assert ("README.md", r"local:gateway", True) in rule_map
+    assert ("README.md", r"scripts\\start_desktop_local\.cmd", True) in rule_map
+    assert ("README.md", r"scripts\\stop_desktop_local\.cmd", True) in rule_map
+    assert ("README.md", r"scripts\\status_desktop_local\.cmd", True) in rule_map
+    assert ("README.md", r"scripts\\selftest_desktop_local\.cmd", True) in rule_map
+    assert ("README.md", r"-ForceDesktop", True) in rule_map
+    assert ("desktop/README.md", r"\./scripts/start_desktop_local\.ps1", True) in rule_map
+    assert ("desktop/README.md", r"\./scripts/status_desktop_local\.ps1", True) in rule_map
+    assert ("desktop/README.md", r"\./scripts/stop_desktop_local\.ps1", True) in rule_map
+    assert ("desktop/README.md", r"\./scripts/selftest_desktop_local\.ps1", True) in rule_map
+    assert ("desktop/README.md", r"npm run local:start", True) in rule_map
+    assert ("desktop/README.md", r"local:start:binary:force", True) in rule_map
+    assert ("desktop/README.md", r"local:gateway", True) in rule_map
+    assert ("desktop/README.md", r"scripts\\start_desktop_local\.cmd", True) in rule_map
+    assert ("desktop/README.md", r"scripts\\stop_desktop_local\.cmd", True) in rule_map
+    assert ("desktop/README.md", r"scripts\\status_desktop_local\.cmd", True) in rule_map
+    assert ("desktop/README.md", r"scripts\\selftest_desktop_local\.cmd", True) in rule_map
+    assert ("desktop/README.md", r"-ForceDesktop", True) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"\./scripts/start_desktop_local\.ps1",
+        True,
+    ) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"\./scripts/status_desktop_local\.ps1",
+        True,
+    ) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"\./scripts/stop_desktop_local\.ps1",
+        True,
+    ) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"\./scripts/selftest_desktop_local\.ps1",
+        True,
+    ) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"npm --prefix desktop run local:start\|local:start:force\|local:start:binary\|local:start:binary:force\|local:gateway\|local:status\|local:stop\|local:selftest",
+        True,
+    ) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", r"local:gateway", True) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"scripts\\\\start_desktop_local\.cmd",
+        True,
+    ) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"scripts\\\\stop_desktop_local\.cmd",
+        True,
+    ) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"scripts\\\\status_desktop_local\.cmd",
+        True,
+    ) in rule_map
+    assert (
+        "docs/operations/DESKTOP_RUNBOOK.md",
+        r"scripts\\\\selftest_desktop_local\.cmd",
+        True,
+    ) in rule_map
+    assert ("docs/operations/DESKTOP_RUNBOOK.md", r"-ForceDesktop", True) in rule_map
 
 
 def test_authority_alignment_signal_helper_returns_fail_for_nonzero_exit() -> None:
