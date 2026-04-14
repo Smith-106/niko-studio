@@ -253,12 +253,14 @@ niko-studio/
 - Gateway 本地验收：`npm --prefix src-ts run check:local`
 - 发布汇总快照：`python scripts/release_check_summary.py`
 - 权威对齐检查：`python scripts/check_authority_alignment.py`
+- 测试分级执行矩阵：`docs/testing/TEST_TIER_MATRIX.md`
 - 发布契约：`docs/release/RELEASE_NOTES.md`
 - Desktop 运维手册：`docs/operations/DESKTOP_RUNBOOK.md`
 
 ## 📚 Documentation
 
 - [文档索引](docs/INDEX.md) - 文档导航与当前发布口径
+- [Test Tier Matrix](docs/testing/TEST_TIER_MATRIX.md) - 当前有效的 L1-L4 测试分级与执行建议
 - [System Design](docs/sdd/01_System_Architecture.md) - 系统设计与模块规格
 - [Release Notes](docs/release/RELEASE_NOTES.md) - 发布矩阵与 Go/No-Go 条件
 - [Desktop Runbook](docs/operations/DESKTOP_RUNBOOK.md) - Desktop 运行、验收与排障

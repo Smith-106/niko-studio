@@ -21,6 +21,7 @@ Niko-Studio 文档目录
 |------|------|
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
 | [desktop/README.md](../desktop/README.md) | Desktop 子项目说明、开发方式与质量门禁 |
+| [testing/TEST_TIER_MATRIX.md](testing/TEST_TIER_MATRIX.md) | 当前有效的测试分级矩阵（L1-L4）与执行建议 |
 | [niko-studio-writing-workflow.md](niko-studio-writing-workflow.md) | Niko-Studio Writing Workflow Explorer（工作台导览） |
 | [release/RELEASE_NOTES.md](release/RELEASE_NOTES.md) | 发布流程、发布级别矩阵（internal / external）与 Go/No-Go 条件 |
 | [operations/ROLLBACK.md](operations/ROLLBACK.md) | 回退触发条件、external 回退验证与操作手册 |
@@ -45,6 +46,7 @@ Niko-Studio 文档目录
 - [04_Workflow_Orchestration.md](sdd/04_Workflow_Orchestration.md)
 
 ### TDD (测试驱动规范)
+- [testing/TEST_TIER_MATRIX.md](testing/TEST_TIER_MATRIX.md) - 当前 `desktop + src-ts` 产品面的测试分级执行矩阵
 - [01_Unit_Tests_Plan.md](tdd/01_Unit_Tests_Plan.md) - 历史 Python/pytest 测试规划参考
 - [02_Evaluation_Criteria.md](tdd/02_Evaluation_Criteria.md)
 - [03_Test_Cases_Inventory.md](tdd/03_Test_Cases_Inventory.md) - 历史 Python/pytest 用例库参考
@@ -57,4 +59,4 @@ Niko-Studio 文档目录
 
 ---
 
-*更新时间: 2026-04-14*
+*更新时间: 2026-04-15*
