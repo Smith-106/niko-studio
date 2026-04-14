@@ -90,6 +90,21 @@ This command also refreshes the formal sign-off artifacts under `.workflow/evide
 
 Use one concise bundle for internal delivery or customer-facing demo preparation.
 
+### Latest validated packaging snapshot
+
+- Validation date: `2026-04-14`
+- Commit: `ffaead63b22b67cb0ba259439af9fdcf7503e6a1`
+- Packaging proof completed:
+  - `npm --prefix desktop run validate:package:dry-run`
+  - `npm --prefix desktop run tauri:build`
+- Retained unsigned package artifacts:
+  - `desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.0.6_x64-setup.exe`
+  - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.6_x64_en-US.msi`
+  - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.6_x64_zh-CN.msi`
+- Signing state:
+  - local proof only; `certificateThumbprint = null`
+  - local proof only; `timestampUrl = ""`
+
 ### Include
 
 - `release-check-summary.md`
@@ -113,7 +128,7 @@ Use one concise bundle for internal delivery or customer-facing demo preparation
 
 ### Operator Notes
 
-- Treat the current worktree plus the regenerated 2026-04-13 GO evidence as the authoritative handoff baseline.
+- Treat the current worktree plus the regenerated 2026-04-14 packaging proof and retained GO evidence as the authoritative handoff baseline.
 - Prefer a single authoritative handoff bundle over duplicate release summaries or copied historical session conclusions.
 - If a signed external bundle is required, add the release-private certificate thumbprint and timestamp URL material outside git before running `npm --prefix desktop run tauri:build`.
 - If the package is for customer demo rather than external shipment, keep the same proof set and explicitly mark the package as an unsigned local validation build when applicable.
@@ -138,5 +153,9 @@ Use one concise bundle for internal delivery or customer-facing demo preparation
 - `.workflow/evidence/release/vitest-e2e.xml`
 - `.workflow/evidence/release/governance-scripts.junit.xml`
 - Windows packaging dry-run artifact from CI or the local `desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe`
+- Windows release package artifacts retained from the validated `2026-04-14` local build:
+  - `desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.0.6_x64-setup.exe`
+  - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.6_x64_en-US.msi`
+  - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.6_x64_zh-CN.msi`
 - The exact packaged Python compatibility sidecar artifact used for the release sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` on Windows)
 - The delivery manifest and package README that enumerate the exact retained proof set for the release bundle

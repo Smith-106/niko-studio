@@ -6,6 +6,8 @@
 - 刷新根 README、Desktop README 与索引/运维/发布文档，使说明口径与当前 `desktop + src-ts` 交付路径一致。
 - 修正文档中的失效引用、过时验证命令与不存在文件路径，并将多份历史架构/规划文档明确标记为 historical reference。
 - 同步 backend、desktop、Tauri 与配置版本号到 `9.0.6`，为本次文档发布建立一致的版本基线。
+- 新增 Windows 本地桌面启动器工作流：提供 `ps1` / `.cmd` / npm 入口，支持自动复用健康 gateway、端口回退、状态检查、自检和 gateway-only 调试路径。
+- 实际完成 `9.0.6` Windows 桌面打包，产出 unsigned NSIS / MSI 安装包，并将产物与签收信息补充到 release 文档。
 
 ## [9.0.4] - 2026-04-11
 

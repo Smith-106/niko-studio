@@ -165,6 +165,54 @@ external 对外“100% 完成度”仅指核心可达链路：
 - 回退预案确认：是 / 否
 - 结论：Go / No-Go
 
+## v9.0.6 验收记录（2026-04-14）
+
+- 发布级别：internal packaging proof
+- 发布版本：`9.0.6`
+- 对应 tag / commit：`main` / `ffaead63b22b67cb0ba259439af9fdcf7503e6a1`
+- 版本一致性检查：通过
+- 交付语义门禁：通过
+- 基线测试与覆盖率：已保持当前 GO 基线；本次补充验证聚焦桌面启动器治理回归与打包链
+  - `python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q`
+  - `11 passed in 0.35s`
+- e2e 冒烟（external 必填）：未在本次补充打包记录中重跑，沿用当前 release summary / CI 证据
+- 治理脚本回归：通过
+  - `python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q`
+- 权威对齐检查：通过
+  - `python scripts/check_authority_alignment.py`
+  - `92 rules checked / 0 mismatches`
+- Desktop 本地门禁：本次未重跑完整 `check:local`；桌面本地启动器链路已额外验证
+  - `npm --prefix desktop run local:selftest -- -PreferredPort 18140 -FallbackPort 18141`
+  - `scripts\\selftest_desktop_local.cmd -PreferredPort 18150 -FallbackPort 18151`
+- Desktop packaging dry-run：通过
+  - `npm --prefix desktop run validate:package:dry-run`
+- Desktop release bundle：通过
+  - `npm --prefix desktop run tauri:build`
+- writing-helper acceptance：沿用当前 CI / release sign-off 证据，本次未重跑
+- 质量信号完整性（覆盖率上传、CI 关键步骤）：本地桌面打包信号完整；签名材料仍在仓库外
+- 生产守卫（CORS / reload / metrics）：沿用当前 release summary 中的通过结论
+- 回退预案确认：是
+  - `docs/operations/ROLLBACK.md` 仍处于当前 authority alignment 检查范围内
+- 结论：Go（unsigned local packaging proof）
+
+### 产物指纹
+
+- Windows NSIS setup:
+  - `desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.0.6_x64-setup.exe`
+  - `SHA256 = 1D0DEBFB4F6E13391EBA05D560ABC479D9D4ABF8DF7E0EE57109AE498E897C40`
+- Windows MSI (en-US):
+  - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.6_x64_en-US.msi`
+  - `SHA256 = 070E534627EFCDAABEFBF8D6FA8350AA186FB5CE56F3240CF078212DF255967E`
+- Windows MSI (zh-CN):
+  - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.6_x64_zh-CN.msi`
+  - `SHA256 = 8FAAF0149B5C1DADA7AD2B3C5EF57652C555D79BD52BECA3AAC2EBDE4A3B61D9`
+
+### 已知前提
+
+- 当前产物是基于仓库内 `tauri.conf.json` 生成的 unsigned local build；`certificateThumbprint = null` 且 `timestampUrl = ""`。
+- 打包链路继续遵循 “本地 Node-first，打包 Python compatibility sidecar” 的当前边界。
+- 若要形成正式对外签名包，仍需在仓库外注入 release-private 签名材料后重新运行 `npm --prefix desktop run tauri:build`。
+
 ## v9.0.4 验收记录（2026-04-11）
 
 - 发布级别：external
