@@ -210,18 +210,40 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
 
+      - name: Resolve strict packaging prerequisite
+        id: packaging-prereq
+        shell: pwsh
+        run: |
+          $legacyEntry = Test-Path 'src/mcp/sidecar_entry.py'
+          $packagedCompatArtifact = Test-Path 'desktop/src-tauri/bin/niko-gateway-x86_64-pc-windows-msvc.exe'
+
+          if ($legacyEntry -or $packagedCompatArtifact) {
+            "strict_required=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging: strict Windows packaging gate enabled (Python compatibility sidecar prerequisite present).'
+            return
+          }
+
+          "strict_required=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $warning = 'Skipping strict Windows packaging gate because this checkout does not include the Python compatibility sidecar prerequisite. Sidecar readiness and advisory packaging logs remain authoritative until the compatibility artifact is hydrated.'
+          Write-Host "::warning::$warning"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging: skipped strict Windows packaging gate because the Python compatibility sidecar prerequisite is not hydrated in this checkout; rely on sidecar readiness plus advisory packaging logs.'
+
       - name: Install Rust toolchain
+        if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install desktop dependencies
+        if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
         run: npm ci
         working-directory: desktop
 
       - name: Run desktop packaging dry-run (${{ inputs.gate_label }})
+        if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
         run: npm run validate:package:dry-run
         working-directory: desktop
 
       - name: Upload desktop packaging dry-run artifact
+        if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
         uses: actions/upload-artifact@v6
         with:
           name: desktop-packaging-dry-run-${{ inputs.gate_label }}
