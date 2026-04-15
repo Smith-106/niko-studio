@@ -1,6 +1,6 @@
 {
   "name": "niko-studio-desktop",
-  "version": "9.0.7",
+  "version": "9.0.8",
   "description": "Niko-Studio Desktop - AI Writing Assistant",
   "type": "module",
   "scripts": {

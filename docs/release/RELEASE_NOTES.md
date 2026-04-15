@@ -165,6 +165,64 @@ external 对外“100% 完成度”仅指核心可达链路：
 - 回退预案确认：是 / 否
 - 结论：Go / No-Go
 
+## v9.0.8 验收记录（2026-04-16）
+
+- 发布级别：internal packaging proof
+- 发布版本：`9.0.8`
+- 对应 tag / commit：待本次 release commit / tag；sign-off 证据以 `.workflow/evidence/release/` 下最新 artifact 为准
+- 版本一致性检查：通过
+- 交付语义门禁：通过
+- 基线测试与覆盖率：通过
+  - `npm --prefix src-ts run test:coverage:phase4 -- --coverage.reporter=text --coverage.reporter=json --coverage.reporter=html --coverage.reporter=cobertura`
+  - `11 passed`
+  - coverage：statements / lines `94.87%`，branches `80.80%`，functions `99.47%`
+- e2e 冒烟（external 必填）：通过
+  - `npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default`
+  - `npm --prefix src-ts exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default`
+- 治理脚本回归：通过
+  - `python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q`
+  - `14 passed`
+- 权威对齐检查：通过
+  - `python scripts/check_authority_alignment.py`
+  - `92 rules checked / 0 mismatches`
+- Desktop 本地门禁：通过
+  - `npm --prefix desktop run check:local`
+- Desktop sidecar readiness：通过
+  - `npm --prefix desktop run build:sidecar`
+  - `npm --prefix desktop run validate:sidecar-contract`
+- Desktop packaging dry-run：通过
+  - `npm --prefix desktop run validate:package:dry-run`
+- Desktop release bundle：通过
+  - `npm --prefix desktop run tauri:build`
+- writing-helper acceptance：通过
+  - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1`
+  - `7 / 7 PASS`
+- 质量信号完整性（覆盖率上传、CI 关键步骤）：完整；`release-check-summary.md` = `Decision: GO`，签名材料仍在仓库外
+- 生产守卫（CORS / reload / metrics）：通过
+  - `release-check-summary.md` 中 `production_guard = PASS`
+  - `release-check-summary.md` 中 `metrics_guard = PASS`
+- 回退预案确认：是
+  - `docs/operations/ROLLBACK.md` 仍处于当前 authority alignment 检查范围内
+- 结论：Go（unsigned local packaging proof）
+
+### 产物指纹
+
+- Windows NSIS setup:
+  - `desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.0.8_x64-setup.exe`
+  - `SHA256 = 4970D06D3FFBAB5BFF28EB2A55EC85C55AB093E6D2D14CEF1178E051CE82110C`
+- Windows MSI (en-US):
+  - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.8_x64_en-US.msi`
+  - `SHA256 = 719274459ADE9263846F2D2823F092B4326C39711085702C8DA9E98463688057`
+- Windows MSI (zh-CN):
+  - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.8_x64_zh-CN.msi`
+  - `SHA256 = ED7CE978FE6DAFED40E4DC6CD318B84465F5DBA46DB6F6AC6B6DA4CDEDE31544`
+
+### 已知前提
+
+- 当前产物是基于仓库内 `tauri.conf.json` 生成的 unsigned local build；`certificateThumbprint = null` 且 `timestampUrl = ""`。
+- 打包链路继续遵循 “本地 Node-first，打包 Python compatibility sidecar” 的当前边界。
+- 若要形成正式对外签名包，仍需在仓库外注入 release-private 签名材料后重新运行 `npm --prefix desktop run tauri:build`。
+
 ## v9.0.7 验收记录（2026-04-15）
 
 - 发布级别：internal packaging proof

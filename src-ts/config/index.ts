@@ -19,7 +19,7 @@ import { EventEmitter } from 'events'
 // Version - matches Python __version__
 // ---------------------------------------------------------------------------
 
-const APP_VERSION = '9.0.7'
+const APP_VERSION = '9.0.8'
 
 // ---------------------------------------------------------------------------
 // Enum & helper types
