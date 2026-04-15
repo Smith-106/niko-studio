@@ -1,0 +1,15 @@
+{
+  "id": "MARSHAL-001",
+  "status": "completed",
+  "role": "integrator",
+  "findings": "Created a sequential release-blocker queue: ISS-20260414-001 goes first as the approval-grade shared-file fix, and ISS-20260414-002 now explicitly depends on it because both plans edit the PowerShell acceptance script and workflow. The second issue also carries a mandatory governance follow-up for malformed JSON and missing required keys in the writing_helper_acceptance_signal path.",
+  "artifact": "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/queue/execution-queue.json",
+  "files_modified": [
+    "D:/工作目录/niko-studio/.workflow/issues/queue/execution-queue.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/queue/execution-queue.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/discoveries/MARSHAL-001.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/wisdom/.msg/meta.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/tasks.json"
+  ],
+  "error": ""
+}

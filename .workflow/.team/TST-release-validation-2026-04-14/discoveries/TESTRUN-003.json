@@ -1,0 +1,20 @@
+{
+  "id": "TESTRUN-003",
+  "status": "completed",
+  "role": "executor",
+  "findings": "Governance fast-fail lane passed at current HEAD. `python scripts/delivery_gate.py`, `python scripts/check_authority_alignment.py`, and `python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q` all exited 0. Authority alignment reported PASS with 92 checked rules and 0 mismatches. Targeted pytest reported 11 passed in 0.30s. Total recorded lane duration: 6170 ms.",
+  "artifact": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/TESTRUN-003-governance-fast-fail.json",
+  "files_modified": [
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/TESTRUN-003-governance-fast-fail.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/delivery_gate.stdout.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/delivery_gate.stderr.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/authority_alignment.stdout.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/authority_alignment.stderr.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/governance_pytest.stdout.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/governance_pytest.stderr.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/wisdom/.msg/meta.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/discoveries/TESTRUN-003.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/tasks.json"
+  ],
+  "error": ""
+}

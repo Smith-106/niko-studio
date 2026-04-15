@@ -1,0 +1,20 @@
+{
+  "id": "TESTRUN-002",
+  "status": "completed",
+  "role": "executor",
+  "findings": "Desktop release validation lane passed at current HEAD. `npm --prefix desktop run check:local`, `npm --prefix desktop run local:selftest`, and `npm --prefix desktop run validate:sidecar-contract` all exited 0. The self-test reported PASS and the strict sidecar contract validator reported PASS. Total recorded lane duration: 100662 ms.",
+  "artifact": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/TESTRUN-002-desktop-release-validation.json",
+  "files_modified": [
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/TESTRUN-002-desktop-release-validation.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/desktop_check_local.stdout.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/desktop_check_local.stderr.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/desktop_local_selftest.stdout.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/desktop_local_selftest.stderr.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/desktop_sidecar_contract.stdout.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/desktop_sidecar_contract.stderr.log",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/wisdom/.msg/meta.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/discoveries/TESTRUN-002.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/tasks.json"
+  ],
+  "error": ""
+}

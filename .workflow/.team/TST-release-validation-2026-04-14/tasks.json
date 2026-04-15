@@ -1,0 +1,59 @@
+{
+  "session_id": "TST-release-validation-2026-04-14",
+  "session_folder": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14",
+  "project_root": "D:/工作目录/niko-studio",
+  "pipeline": "comprehensive",
+  "topic": "Run release-grade validation for current HEAD",
+  "status": "active",
+  "active_agents": {},
+  "tasks": {
+    "STRATEGY-001": {
+      "title": "Assess current HEAD and define release-grade test plan",
+      "role": "strategist",
+      "deps": [],
+      "status": "completed",
+      "findings": "Use existing repo gates only. Strict Windows packaging applies in this checkout because the packaged compatibility sidecar artifact is present. Execution order: governance fast-fail, src-ts check:local, desktop check:local plus local:selftest, packaging dry-run, then writing-helper acceptance and release summary evidence refresh.",
+      "error": ""
+    },
+    "TESTRUN-001": {
+      "title": "Execute src-ts release validation lane",
+      "role": "executor",
+      "deps": ["STRATEGY-001"],
+      "status": "completed",
+      "findings": "src-ts release validation lane passed. `npm --prefix src-ts run check:local` exited 0 in 50.688s and reported lint, format, typecheck, phase4 coverage 94.87% statements / 80.8% branches, plus release vitest 4 files and 10 tests passed. The targeted runtime pair exited 0 in 10.545s with 2 files and 4 tests passed. The workflow integration pair exited 0 in 8.928s with 2 files and 6 tests passed. Total lane duration: 70161 ms.",
+      "error": ""
+    },
+    "TESTRUN-002": {
+      "title": "Execute desktop release validation lane",
+      "role": "executor",
+      "deps": ["STRATEGY-001"],
+      "status": "completed",
+      "findings": "Desktop release validation lane passed. `npm --prefix desktop run check:local` exited 0 in 79.407s and completed lint, format check, Vitest, sidecar build/contract validation, and desktop build. `npm --prefix desktop run local:selftest` exited 0 in 20.428s and reported Self-test: PASS. `npm --prefix desktop run validate:sidecar-contract` exited 0 in 0.827s with strict PASS. Total lane duration: 100662 ms.",
+      "error": ""
+    },
+    "TESTRUN-003": {
+      "title": "Execute governance fast-fail lane",
+      "role": "executor",
+      "deps": ["STRATEGY-001"],
+      "status": "completed",
+      "findings": "Governance fast-fail lane passed. `delivery_gate.py` and `check_authority_alignment.py` exited 0; authority alignment reported PASS with 92/92 rules and no mismatches. Targeted pytest exited 0 with 11 passed in 0.30s. Total lane duration: 6170 ms. Logs and structured results written under session/results.",
+      "error": ""
+    },
+    "TESTRUN-004": {
+      "title": "Execute final release proof lane",
+      "role": "executor",
+      "deps": ["TESTRUN-001", "TESTRUN-002", "TESTRUN-003"],
+      "status": "completed",
+      "findings": "Final release proof lane failed. `npm --prefix desktop run validate:package:dry-run` exited 0 in 54.497s and `python scripts/release_check_summary.py` exited 0 in 170.252s with `Decision: GO`, but `./scripts/check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1` exited 1 immediately because the script has a PowerShell parse error from garbled text. Managed gateway PID 57212 was stopped; a pre-existing node.exe PID 45200 remained on port 18080 and was left untouched. Total lane duration: 247413 ms.",
+      "error": "writing_helper_acceptance_strict failed: PowerShell parse error in scripts/check-writing-helper.ps1"
+    },
+    "TESTANA-001": {
+      "title": "Aggregate release validation results",
+      "role": "analyst",
+      "deps": ["TESTRUN-004"],
+      "status": "completed",
+      "findings": "Current HEAD is NO_GO for release from this session. Governance, src-ts, and desktop lanes passed, but the strategy-defined strict writing-helper acceptance gate failed immediately because scripts/check-writing-helper.ps1 contains garbled text that triggers a PowerShell parse error. Packaging dry-run and release_check_summary.py both passed, but that GO evidence is incomplete relative to the blocking gate set.",
+      "error": ""
+    }
+  }
+}

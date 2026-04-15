@@ -1,0 +1,42 @@
+{
+  "session_id": "TISL-release-blockers-2026-04-15",
+  "team": "issue",
+  "status": "active",
+  "project_root": "D:/工作目录/niko-studio",
+  "explorer": {
+    "issue_id": "ISS-20260414-002",
+    "task_id": "EXPLORE-002",
+    "complexity": "High",
+    "impact_scope": "high",
+    "file_count": 15,
+    "artifact": "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/explorations/context-ISS-20260414-002.json",
+    "updated_at": "2026-04-15T00:00:00+08:00"
+  },
+  "planner": {
+    "issue_id": "ISS-20260414-002",
+    "solution_id": "SOL-ISS-20260414-002",
+    "task_count": 3,
+    "is_revision": false,
+    "artifact": "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/solutions/solution-ISS-20260414-002.json",
+    "updated_at": "2026-04-15T00:00:00+08:00"
+  },
+  "reviewer": {
+    "overall_verdict": "concerns",
+    "review_count": 2,
+    "scores": {
+      "ISS-20260414-001": 91,
+      "ISS-20260414-002": 79
+    },
+    "artifact": "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/audits/audit-report.json",
+    "updated_at": "2026-04-15T00:00:00+08:00"
+  },
+  "integrator": {
+    "task_id": "MARSHAL-001",
+    "queue_size": 2,
+    "parallel_groups": 0,
+    "conflict_count": 1,
+    "artifact": "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/queue/execution-queue.json",
+    "published_queue": "D:/工作目录/niko-studio/.workflow/issues/queue/execution-queue.json",
+    "updated_at": "2026-04-15T00:53:20.6805259+08:00"
+  }
+}

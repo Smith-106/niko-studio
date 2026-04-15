@@ -1,0 +1,46 @@
+{
+  "task_id": "TESTRUN-003",
+  "lane": "governance_fast_fail",
+  "started_at": "2026-04-14T23:32:56.7544903+08:00",
+  "project_root": "D:/工作目录/niko-studio",
+  "commands": [
+    {
+      "name": "delivery_gate",
+      "command": "python scripts/delivery_gate.py",
+      "exit_code": 0,
+      "duration_ms": 1069,
+      "stdout_log": "D:\\工作目录\\niko-studio\\.workflow\\.team\\TST-release-validation-2026-04-14\\results\\delivery_gate.stdout.log",
+      "stderr_log": "D:\\工作目录\\niko-studio\\.workflow\\.team\\TST-release-validation-2026-04-14\\results\\delivery_gate.stderr.log",
+      "stdout_preview": "delivery gate: start\ndelivery gate: ok",
+      "stderr_preview": "",
+      "status": "passed"
+    },
+    {
+      "name": "authority_alignment",
+      "command": "python scripts/check_authority_alignment.py",
+      "exit_code": 0,
+      "duration_ms": 1046,
+      "stdout_log": "D:\\工作目录\\niko-studio\\.workflow\\.team\\TST-release-validation-2026-04-14\\results\\authority_alignment.stdout.log",
+      "stderr_log": "D:\\工作目录\\niko-studio\\.workflow\\.team\\TST-release-validation-2026-04-14\\results\\authority_alignment.stderr.log",
+      "stdout_preview": "{\n  \"status\": \"PASS\",\n  \"checked_rules\": 92,\n  \"passed_rules\": 92,\n  \"failed_rules\": 0,\n  \"checked_files\": [\n    \".github/workflows/external-release-gate.yml\",\n    \".github/workflows/integration-tests.yml\",\n    \"README.md\",\n    \"desktop/README.md\",\n... [truncated] ...\n    \"docs/INDEX.md\",\n    \"docs/SECURITY_VISIBILITY.md\",\n    \"docs/operations/DESKTOP_RUNBOOK.md\",\n    \"docs/operations/ROLLBACK.md\",\n    \"docs/release/RELEASE_NOTES.md\",\n    \"docs/workflow-entrypoint-inventory.md\",\n    \"scripts/start_gateway.py\"\n  ],\n  \"mismatches\": []\n}",
+      "stderr_preview": "",
+      "status": "passed"
+    },
+    {
+      "name": "governance_pytest",
+      "command": "python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q",
+      "exit_code": 0,
+      "duration_ms": 4055,
+      "stdout_log": "D:\\工作目录\\niko-studio\\.workflow\\.team\\TST-release-validation-2026-04-14\\results\\governance_pytest.stdout.log",
+      "stderr_log": "D:\\工作目录\\niko-studio\\.workflow\\.team\\TST-release-validation-2026-04-14\\results\\governance_pytest.stderr.log",
+      "stdout_preview": "...........                                                              [100%]\n11 passed in 0.30s",
+      "stderr_preview": "",
+      "status": "passed"
+    }
+  ],
+  "verdict": "passed",
+  "stopping_reason": "",
+  "completed_at": "2026-04-14T23:33:03.0202384+08:00",
+  "executed_commands": 3,
+  "planned_commands": 3
+}

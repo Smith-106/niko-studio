@@ -1,0 +1,9 @@
+{
+  "session_id": "TISL-release-blockers-2026-04-15",
+  "topic": "Queue release validation blocker issues for resolution",
+  "mode": "full",
+  "execution_deferred": true,
+  "issue_ids": ["ISS-20260414-001", "ISS-20260414-002"],
+  "created_at": "2026-04-15T00:00:00+08:00",
+  "status": "active"
+}

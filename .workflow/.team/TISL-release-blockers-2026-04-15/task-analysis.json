@@ -1,0 +1,7 @@
+{
+  "mode": "full",
+  "issue_count": 2,
+  "high_priority": true,
+  "execution_method": "deferred",
+  "reasoning": "Two high-priority release blockers require queue formation with review gate before implementation."
+}

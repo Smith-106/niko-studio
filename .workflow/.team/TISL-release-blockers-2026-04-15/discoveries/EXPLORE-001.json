@@ -1,0 +1,15 @@
+{
+  "id": "EXPLORE-001",
+  "status": "completed",
+  "role": "explorer",
+  "findings": "Reproduced ISS-20260414-001 on revision 6345c1bc with Windows PowerShell: scripts/check-writing-helper.ps1 is UTF-8 without BOM, contains non-ASCII literals, and fails to parse before any request assertions. The same file parses under pwsh, so the fix scope is shell/encoding compatibility plus preserving the existing writing-helper endpoint contract and release-proof wiring.",
+  "artifact": "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/explorations/context-ISS-20260414-001.json",
+  "files_modified": [
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/explorations/context-ISS-20260414-001.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/discoveries/EXPLORE-001.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/wisdom/.msg/meta.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/wisdom/learnings.md",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/tasks.json"
+  ],
+  "error": ""
+}

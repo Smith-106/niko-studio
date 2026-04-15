@@ -1,0 +1,105 @@
+{
+  "session_id": "UAN-full-test-scope-2026-04-14",
+  "topic": "当前 niko-studio 需要全量测试吗",
+  "completed": "2026-04-14T23:59:00+08:00",
+  "summary": "结论是条件性否定：对 2026-04-14 当前仓库状态的例行本地开发，不需要立刻补跑一次全量回归；但如果要基于 2026-04-14 的当前 HEAD 做正式 release、handoff 或 sign-off，则必须重新执行 L4 级别发布验证。核心原因不是产品运行时发生了大范围新变更，而是最新 GO 证据停留在 2026-04-13，之后已有 7 个提交，且 Windows packaging gate 的 CI 语义发生了条件分支变化，当前 HEAD 不能直接复用旧的精确放行证据。",
+  "key_conclusions": [
+    {
+      "point": "例行开发场景下，现在不需要立即跑全量测试。",
+      "evidence": "docs/testing/TEST_TIER_MATRIX.md 将 L4 定义为 release/handoff 级别活动；analysis-001 也明确 routine work 不需要立刻全量回归。",
+      "confidence": "high"
+    },
+    {
+      "point": "如果要对 2026-04-14 当前 HEAD 做 release、handoff 或正式 sign-off，则必须重新跑完整 L4 发布验证。",
+      "evidence": "2026-04-13 的 release-readiness GO 证据不是当前 HEAD 的精确证明；exploration-002 记录其后已有 7 个提交。",
+      "confidence": "high"
+    },
+    {
+      "point": "当前最主要的新风险来自 release/CI packaging 语义，而不是广泛的产品运行时改动。",
+      "evidence": "exploration-002 将 conditional Windows packaging branch 标为最高风险热点；运行时代码改动基本限于版本元数据与本地 launcher 配套。",
+      "confidence": "high"
+    },
+    {
+      "point": "launcher 与治理脚本改动本身不足以单独触发整仓全量回归。",
+      "evidence": "exploration-002 和 analysis-001 都指出其改动面集中、具备 targeted governance tests 和本地 self-test 支撑。",
+      "confidence": "medium-high"
+    }
+  ],
+  "recommendations": [
+    {
+      "action": "当前若只是例行本地开发，继续沿用 L1/L2 级别检查，不额外触发 blanket full regression。",
+      "rationale": "现有自动化矩阵就是按场景分层设计，且 2026-04-13 仍有新鲜 GO 基线可作为近端参考。",
+      "priority": "high"
+    },
+    {
+      "action": "在任何基于当前 HEAD 的 release、handoff 或 sign-off 前，重新执行 L4：authority alignment、delivery gate、governance pytest、`src-ts check:local`、`desktop check:local`、`validate:package:dry-run`、`release_check_summary.py`。",
+      "rationale": "旧 GO 证据早于当前 HEAD，且 packaging gate 语义已在 2026-04-14 发生变化。",
+      "priority": "high"
+    },
+    {
+      "action": "补一个针对 packaging prerequisite conditional branch 的定向验证，最好在干净 checkout 上执行。",
+      "rationale": "这是当前增量里最缺少直接自动化覆盖的部分，也是是否需要重新建立放行证据的关键风险点。",
+      "priority": "high"
+    },
+    {
+      "action": "若后续出现广泛 runtime、workflow endpoint、desktop state 或 build path 变更，立即把测试层级从 L1/L2 升到 L3/L4。",
+      "rationale": "本次可不立刻全量回归的前提，是当前可执行改动面仍然狭窄且集中在 release-adjacent 语义。",
+      "priority": "medium"
+    }
+  ],
+  "open_questions": [
+    "下一个 release sign-off 前，是否要显式验证缺少 compatibility artifact 的干净 checkout 分支行为？",
+    "团队是否计划直接从 2026-04-14 当前 HEAD 产出 Windows package 或做正式外部交付？"
+  ],
+  "decision_trail": [
+    {
+      "round": 1,
+      "decision": "保留 2026-04-13 GO 证据作为当前判断基线，但不把它当作 2026-04-14 HEAD 的精确放行证明。",
+      "context": "release-readiness artifact 仍然新鲜且覆盖范围广，但 exploration-002 已确认其后有 7 个提交。"
+    },
+    {
+      "round": 2,
+      "decision": "把“现在要不要全量测”拆成两个操作问题：例行开发 vs. 基于当前 HEAD 的 release/handoff。",
+      "context": "这样可以消解“已有新鲜 GO 证据”与“当前 HEAD 仍需重新验证”之间的表面矛盾。"
+    },
+    {
+      "round": 3,
+      "decision": "将 packaging gate conditional branch 视为当前最需要补证据的风险点。",
+      "context": "分析一致认为主要风险来自 release/CI 语义变化，而非广泛 runtime churn。"
+    }
+  ],
+  "cross_perspective_synthesis": {
+    "convergent_themes": [
+      "现有测试体系是分层矩阵，不存在“任何时候都必须全量跑一次”的默认规则。",
+      "2026-04-13 的 GO 证据足以支持 routine development 不立刻重跑全量回归，但不足以直接放行 2026-04-14 当前 HEAD。",
+      "当前增量的主要风险是 release/CI packaging 分支语义，而不是产品核心运行时行为。",
+      "launcher 与治理契约变更已有较强定向覆盖，因此不是立即触发整仓回归的主要理由。"
+    ],
+    "conflicts_resolved": [
+      {
+        "issue": "既然已有新鲜 GO 证据，为什么还说当前 HEAD 做发布前必须重跑？",
+        "resolution": "因为判断对象不同：routine work 可以依赖近端基线，而 release/handoff 需要 exact-head 级别证明；2026-04-13 到 2026-04-14 之间已有 7 个提交。"
+      }
+    ],
+    "unique_contributions": [
+      {
+        "source": "exploration-001",
+        "contribution": "建立了 L1-L4 测试矩阵、覆盖边界和最近 PASS 证据的全貌。"
+      },
+      {
+        "source": "exploration-002",
+        "contribution": "确认 post-evidence delta 的真实风险分布，指出 packaging branch 语义是当前最高风险热点。"
+      },
+      {
+        "source": "analysis-001",
+        "contribution": "把问题收敛为条件性结论，并给出何时必须升级到 L4 的明确触发条件。"
+      }
+    ]
+  },
+  "_metadata": {
+    "explorations": 2,
+    "analyses": 1,
+    "discussions": 0,
+    "strategy": "simple"
+  }
+}

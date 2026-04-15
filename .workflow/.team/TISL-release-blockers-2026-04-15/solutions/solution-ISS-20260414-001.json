@@ -1,0 +1,87 @@
+{
+  "issue_id": "ISS-20260414-001",
+  "solution_id": "SOL-ISS-20260414-001-R1",
+  "issue_title": "Fix writing-helper strict acceptance parse error",
+  "status": "ready",
+  "is_revision": false,
+  "created_at": "2026-04-15T00:00:00+08:00",
+  "approach": {
+    "summary": "Fix the release blocker at the PowerShell source-compatibility layer, not in the writing-helper endpoint. Re-save scripts/check-writing-helper.ps1 in a Windows PowerShell-safe encoding, keep its request/assertion semantics intact, and make the regression gate execute the same acceptance path under powershell.exe.",
+    "rationale": [
+      "Explorer evidence shows the failure happens before any HTTP assertion executes in Windows PowerShell, while pwsh reaches the request path.",
+      "Existing src-ts/tests/mcp/writing-endpoints.test.ts already covers the writing-helper endpoint contract and local fallback semantics.",
+      "The minimal safe fix therefore targets script decoding plus shell-specific regression coverage, not endpoint behavior changes."
+    ],
+    "non_goals": [
+      "Do not change POST /writing-helper/process behavior unless the script, once it parses, exposes a separate contract failure.",
+      "Do not broaden release-summary or unrelated release-gate logic in this issue."
+    ],
+    "risk_controls": [
+      "Use the existing acceptance payloads and strict assertions unchanged so the fix remains isolated to shell compatibility.",
+      "Add a regression guard that specifically exercises Windows PowerShell, because pwsh alone cannot catch this class of breakage."
+    ]
+  },
+  "tasks": [
+    {
+      "id": "ISS-20260414-001-T1",
+      "title": "Harden check-writing-helper.ps1 for Windows PowerShell decoding",
+      "description": "Re-save scripts/check-writing-helper.ps1 as UTF-8 with BOM and keep the current request bodies, strict assertions, and output contract unchanged. If a warning comment is added, keep it ASCII-only and limited to editor/encoding guidance.",
+      "target_files": [
+        "D:/工作目录/niko-studio/scripts/check-writing-helper.ps1"
+      ],
+      "acceptance": [
+        "powershell.exe can parse the script without mojibake/parser failure.",
+        "The script still posts to /writing-helper/process with the same cases and strict checks."
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "ISS-20260414-001-T2",
+      "title": "Run the blocking acceptance path under Windows PowerShell in release wiring",
+      "description": "Update the reusable writing-helper acceptance workflow to invoke the script through Windows PowerShell instead of relying only on pwsh. Align docs/release/SIGN_OFF.md with the exact powershell.exe invocation used for release proof so local and CI sign-off follow the same shell path.",
+      "target_files": [
+        "D:/工作目录/niko-studio/.github/workflows/writing-helper-acceptance.yml",
+        "D:/工作目录/niko-studio/docs/release/SIGN_OFF.md"
+      ],
+      "acceptance": [
+        "The blocking CI/local release path uses powershell.exe for check-writing-helper execution.",
+        "Gateway startup, failed-case artifact upload, and cleanup behavior remain unchanged."
+      ],
+      "depends_on": [
+        "ISS-20260414-001-T1"
+      ]
+    },
+    {
+      "id": "ISS-20260414-001-T3",
+      "title": "Pin the shell contract in existing regression tests",
+      "description": "Extend the existing governance/script regression surface to verify the sign-off and workflow shell contract for writing-helper acceptance, and add a lightweight byte-level assertion that scripts/check-writing-helper.ps1 keeps the required UTF-8 BOM. Reuse tests/unit/scripts/test_governance_scripts.py rather than creating a new harness.",
+      "target_files": [
+        "D:/工作目录/niko-studio/tests/unit/scripts/test_governance_scripts.py"
+      ],
+      "acceptance": [
+        "A targeted automated test fails if the workflow/docs drift away from the Windows PowerShell execution path.",
+        "A targeted automated test fails if scripts/check-writing-helper.ps1 loses the BOM required for Windows PowerShell compatibility."
+      ],
+      "depends_on": [
+        "ISS-20260414-001-T1",
+        "ISS-20260414-001-T2"
+      ]
+    }
+  ],
+  "estimated_files": [
+    "D:/工作目录/niko-studio/scripts/check-writing-helper.ps1",
+    "D:/工作目录/niko-studio/.github/workflows/writing-helper-acceptance.yml",
+    "D:/工作目录/niko-studio/docs/release/SIGN_OFF.md",
+    "D:/工作目录/niko-studio/tests/unit/scripts/test_governance_scripts.py"
+  ],
+  "dependencies": [
+    "Windows PowerShell 5.1 BOM-sensitive decoding of UTF-8 source files containing non-ASCII literals.",
+    "Existing writing-helper endpoint contract covered by src-ts/tests/mcp/writing-endpoints.test.ts.",
+    "Release sign-off flow documented in docs/release/SIGN_OFF.md and enforced through .github/workflows/writing-helper-acceptance.yml."
+  ],
+  "validation_commands": [
+    "python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q",
+    "npm --prefix src-ts exec -- vitest run tests/mcp/writing-endpoints.test.ts --reporter=default",
+    "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1"
+  ]
+}

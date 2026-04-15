@@ -1,0 +1,116 @@
+{
+  "id": "QUE-TISL-release-blockers-2026-04-15",
+  "status": "pending",
+  "session_id": "TISL-release-blockers-2026-04-15",
+  "source_task_id": "MARSHAL-001",
+  "issue_ids": [
+    "ISS-20260414-001",
+    "ISS-20260414-002"
+  ],
+  "solutions": [
+    {
+      "item_id": "S-1",
+      "issue_id": "ISS-20260414-001",
+      "solution_id": "SOL-ISS-20260414-001-R1",
+      "status": "pending",
+      "execution_order": 1,
+      "execution_group": "S1",
+      "depends_on": [],
+      "semantic_priority": 1.0,
+      "files_touched": [
+        "scripts/check-writing-helper.ps1",
+        ".github/workflows/writing-helper-acceptance.yml",
+        "docs/release/SIGN_OFF.md",
+        "tests/unit/scripts/test_governance_scripts.py"
+      ],
+      "task_count": 3,
+      "approval_grade": true,
+      "review_verdict": "approved",
+      "execution_notes": [
+        "Approval-grade release blocker. Execute first.",
+        "Keep the writing-helper endpoint contract unchanged while fixing the Windows PowerShell compatibility path."
+      ]
+    },
+    {
+      "item_id": "S-2",
+      "issue_id": "ISS-20260414-002",
+      "solution_id": "SOL-ISS-20260414-002",
+      "status": "pending",
+      "execution_order": 2,
+      "execution_group": "S2",
+      "depends_on": [
+        "S-1"
+      ],
+      "semantic_priority": 0.8,
+      "files_touched": [
+        "scripts/check-writing-helper.ps1",
+        ".github/workflows/writing-helper-acceptance.yml",
+        "scripts/release_check_summary.py",
+        "docs/release/SIGN_OFF.md",
+        "scripts/delivery_gate.py",
+        "tests/unit/scripts/test_governance_scripts.py",
+        ".workflow/evidence/release/writing-helper-acceptance.json",
+        "release-check-summary.md",
+        ".workflow/evidence/release/release-readiness-artifact.json"
+      ],
+      "task_count": 3,
+      "review_verdict": "concerns",
+      "execution_notes": [
+        "Queue after ISS-20260414-001 because both solutions edit scripts/check-writing-helper.ps1 and .github/workflows/writing-helper-acceptance.yml.",
+        "Do not mark complete without targeted governance tests for malformed JSON and missing required keys in the writing_helper_acceptance_signal path.",
+        "Positive GO validation remains blocked until the strict writing-helper acceptance path from ISS-20260414-001 is fixed on the same HEAD."
+      ]
+    }
+  ],
+  "conflicts": [
+    {
+      "type": "shared_files",
+      "file": null,
+      "files": [
+        "scripts/check-writing-helper.ps1",
+        ".github/workflows/writing-helper-acceptance.yml",
+        "docs/release/SIGN_OFF.md",
+        "tests/unit/scripts/test_governance_scripts.py"
+      ],
+      "solutions": [
+        "S-1",
+        "S-2"
+      ],
+      "resolution": "sequential_dependency",
+      "resolution_order": [
+        "S-1",
+        "S-2"
+      ],
+      "rationale": "Audit constraints require ISS-20260414-001 to land before ISS-20260414-002 because both plans modify the same PowerShell acceptance script and workflow wiring, and the second issue's real GO-path validation depends on the first issue restoring strict acceptance on the current HEAD."
+    }
+  ],
+  "execution_groups": [
+    {
+      "id": "S1",
+      "type": "sequential",
+      "solutions": [
+        "S-1"
+      ],
+      "solution_count": 1
+    },
+    {
+      "id": "S2",
+      "type": "sequential",
+      "solutions": [
+        "S-2"
+      ],
+      "solution_count": 1
+    }
+  ],
+  "parallel_groups": [],
+  "created_at": "2026-04-15T00:53:20.6805259+08:00",
+  "_metadata": {
+    "version": "2.1",
+    "total_tasks": 2,
+    "pending_count": 2,
+    "executing_count": 0,
+    "completed_count": 0,
+    "failed_count": 0,
+    "updated_at": "2026-04-15T00:53:20.6805259+08:00"
+  }
+}

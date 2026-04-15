@@ -1,0 +1,46 @@
+{
+  "task_id": "TESTRUN-001",
+  "lane": "src_ts_authoritative",
+  "started_at": "2026-04-14T23:36:29.9923602+08:00",
+  "project_root": "D:/工作目录/niko-studio",
+  "commands": [
+    {
+      "name": "src_ts_check_local",
+      "command": "npm --prefix src-ts run check:local",
+      "exit_code": 0,
+      "duration_ms": 50688,
+      "stdout_log": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/src_ts_check_local.stdout.log",
+      "stderr_log": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/src_ts_check_local.stderr.log",
+      "stdout_preview": "check:local -> check:release completed successfully. Lint, Prettier format check, and typecheck passed. Phase4 vitest coverage reported 64 tests passed with 94.87% statements, 80.8% branches, 99.47% functions, 94.87% lines. Release vitest then reported 4 files and 10 tests passed.",
+      "stderr_preview": "",
+      "status": "passed"
+    },
+    {
+      "name": "src_ts_runtime_pair",
+      "command": "npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default",
+      "exit_code": 0,
+      "duration_ms": 10545,
+      "stdout_log": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/src_ts_runtime_pair.stdout.log",
+      "stderr_log": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/src_ts_runtime_pair.stderr.log",
+      "stdout_preview": "Vitest runtime pair passed: gateway-server.runtime and mcp health endpoints. 2 files passed, 4 tests passed, reported duration 6.08s.",
+      "stderr_preview": "",
+      "status": "passed"
+    },
+    {
+      "name": "src_ts_workflow_pair",
+      "command": "npm --prefix src-ts exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default",
+      "exit_code": 0,
+      "duration_ms": 8928,
+      "stdout_log": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/src_ts_workflow_pair.stdout.log",
+      "stderr_log": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/src_ts_workflow_pair.stderr.log",
+      "stdout_preview": "Vitest workflow integration pair passed: workflow-endpoints and workflow-critic-smoke. 2 files passed, 6 tests passed, reported duration 4.51s.",
+      "stderr_preview": "",
+      "status": "passed"
+    }
+  ],
+  "verdict": "passed",
+  "stopping_reason": "",
+  "completed_at": "2026-04-14T23:37:57.1054479+08:00",
+  "executed_commands": 3,
+  "planned_commands": 3
+}

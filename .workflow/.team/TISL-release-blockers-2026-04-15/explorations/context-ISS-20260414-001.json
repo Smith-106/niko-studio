@@ -1,0 +1,125 @@
+{
+  "issue_id": "ISS-20260414-001",
+  "issue": {
+    "id": "ISS-20260414-001",
+    "title": "Fix writing-helper strict acceptance parse error",
+    "priority": 5,
+    "status": "registered",
+    "labels": [],
+    "feedback": ""
+  },
+  "complexity_assessment": "High",
+  "impact_scope": "high",
+  "reproduction": [
+    {
+      "date": "2026-04-14",
+      "revision": "6345c1bc33812fb8f449bef4ec501a9dcda0ae01",
+      "command": "./scripts/check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1",
+      "environment": "Windows final release proof lane in TST-release-validation-2026-04-14",
+      "result": "PowerShell parser error before any HTTP request-level assertions executed",
+      "evidence": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/writing_helper_acceptance.stderr.log"
+    },
+    {
+      "date": "2026-04-15",
+      "revision": "6345c1bc33812fb8f449bef4ec501a9dcda0ae01",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/check-writing-helper.ps1 -Port 18080 -Host 127.0.0.1",
+      "environment": "Windows PowerShell",
+      "result": "Reproduces the same parser error with mojibake at lines 27, 36, and 43"
+    },
+    {
+      "date": "2026-04-15",
+      "revision": "6345c1bc33812fb8f449bef4ec501a9dcda0ae01",
+      "command": "pwsh -NoProfile -File scripts/check-writing-helper.ps1 -Port 18080 -Host 127.0.0.1",
+      "environment": "PowerShell 7",
+      "result": "Script parses and executes; run reached HTTP request path and failed later with 404 because no managed gateway was started"
+    }
+  ],
+  "relevant_files": [
+    {
+      "path": "D:/工作目录/niko-studio/scripts/check-writing-helper.ps1",
+      "relevance": "Primary failure site. The file is UTF-8 without BOM, contains Chinese string literals, and is the only repo script/*.ps1 file with non-ASCII source text. Windows PowerShell misdecodes it and fails before assertions run."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/.github/workflows/writing-helper-acceptance.yml",
+      "relevance": "Reusable CI acceptance workflow. Starts the gateway, waits for /health, and invokes check-writing-helper with pwsh. This is the CI equivalent of the local sign-off step."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/docs/release/SIGN_OFF.md",
+      "relevance": "Operator-facing local sign-off instructions. It tells users to run the acceptance suite in another PowerShell session, which is consistent with the Windows PowerShell reproduction path."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/src-ts/mcp/routes/content.ts",
+      "relevance": "Registers POST /writing-helper/process and POST /writing/helper. Acceptance depends on this route being present after the gateway starts."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/src-ts/mcp/endpoints/writing.ts",
+      "relevance": "Implements writingHelperProcessEndpoint, including local fallback behavior and response shape expected by the acceptance script."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/src-ts/services/writing-helper.ts",
+      "relevance": "Defines the local helper contract for polish/rewrite/expand/summarize/outline. The strict assertions in the PowerShell script mirror these mode semantics."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/src-ts/tests/mcp/writing-endpoints.test.ts",
+      "relevance": "Current automated coverage for endpoint parity and local fallback. No test currently covers Windows PowerShell parsing or script encoding behavior."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/analysis/quality-report.md",
+      "relevance": "Release blocker evidence. Records that strict writing-helper acceptance executed 0% of request-level assertions because of the parse failure."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/results/TESTRUN-004-final-release-proof.json",
+      "relevance": "Captures the exact release-proof command order: packaging dry-run, gateway start, strict acceptance, gateway stop, then release summary refresh."
+    },
+    {
+      "path": "D:/工作目录/niko-studio/.workflow/.team/TST-release-validation-2026-04-14/strategy/test-strategy.md",
+      "relevance": "Marks the strict writing-helper command as a blocking L3 release proof step that must pass before refreshed evidence is trustworthy."
+    }
+  ],
+  "dependencies": [
+    "Windows PowerShell file-decoding behavior for BOM-less UTF-8 source. Current script bytes begin with 70 61 72 61 6D 28 0A 20 and do not contain a UTF-8 BOM.",
+    "The acceptance contract of POST /writing-helper/process in src-ts/mcp/endpoints/writing.ts and src-ts/services/writing-helper.ts.",
+    "Gateway startup path used by the acceptance workflow and local sign-off instructions: python scripts/start_gateway.py --host <host> --port <port> --log-level <level>.",
+    "Release-proof orchestration in TST-release-validation-2026-04-14 and docs/release/SIGN_OFF.md, because the acceptance step is a blocking predecessor to release summary refresh."
+  ],
+  "existing_patterns": [
+    "Other scripts/*.ps1 files are ASCII-only; check-writing-helper.ps1 is the outlier that combines PowerShell source with non-ASCII literals.",
+    "The repo already keeps writing-helper behavioral parity in TypeScript tests, so the fix should preserve the acceptance contract rather than alter endpoint semantics.",
+    "CI uses pwsh for acceptance, while local operator docs say PowerShell generically. The issue is therefore shell/runtime-specific rather than route-logic-specific."
+  ],
+  "related_changes": [
+    {
+      "commit": "df1aa02",
+      "summary": "chore(scripts): add writing-helper acceptance checker with strict mode"
+    },
+    {
+      "commit": "2f7666f",
+      "summary": "ci(writing-helper): make acceptance port configurable"
+    },
+    {
+      "commit": "7945ecf",
+      "summary": "ci(writing-helper): add configurable host for acceptance run"
+    },
+    {
+      "commit": "4825f51",
+      "summary": "Finalize desktop delivery readiness"
+    }
+  ],
+  "recent_session_context": [
+    {
+      "session": "UAN-nikostudio-formal-delivery-2026-04-09",
+      "summary": "Earlier release-readiness exploration already identified .github/workflows/writing-helper-acceptance.yml as a formal delivery gate in the authoritative sign-off chain."
+    },
+    {
+      "session": "TST-release-validation-2026-04-14",
+      "summary": "Release validation on 2026-04-14 marked the issue as a NO_GO blocker because strict acceptance did not reach request-level assertions."
+    }
+  ],
+  "key_findings": [
+    "The failure is reproducible on the current 6345c1bc33812fb8f449bef4ec501a9dcda0ae01 revision with Windows PowerShell, so the blocker is real and still present for local Windows sign-off.",
+    "The same file parses under pwsh, which isolates the problem to source encoding and shell compatibility rather than endpoint business logic.",
+    "Because docs/release/SIGN_OFF.md instructs operators to run the suite in another PowerShell session, the issue affects the documented release procedure even though the CI workflow uses pwsh.",
+    "No existing automated test protects against this class of regression. Current tests verify endpoint payload behavior but not Windows PowerShell script load/parse behavior.",
+    "A safe fix must keep the acceptance assertions aligned with src-ts/services/writing-helper.ts while making the script parse consistently in Windows PowerShell."
+  ]
+}

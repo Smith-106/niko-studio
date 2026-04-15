@@ -1,0 +1,15 @@
+{
+  "id": "SOLVE-001",
+  "status": "completed",
+  "role": "planner",
+  "findings": "Planned a minimal fix for ISS-20260414-001: keep the writing-helper endpoint unchanged, re-save scripts/check-writing-helper.ps1 in Windows PowerShell-safe UTF-8 with BOM, run the blocking acceptance path under powershell.exe, and pin the shell/encoding contract in existing governance script tests.",
+  "artifact": "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/solutions/solution-ISS-20260414-001.json",
+  "files_modified": [
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/solutions/solution-ISS-20260414-001.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/discoveries/SOLVE-001.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/wisdom/.msg/meta.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TISL-release-blockers-2026-04-15/tasks.json",
+    "D:/工作目录/niko-studio/.workflow/issues/issues.jsonl"
+  ],
+  "error": ""
+}
