@@ -1,4 +1,4 @@
-import { useSettingsStore } from '@/stores/settingsStore'
+import { readRuntimePreferences } from '@/runtime/preferences'
 
 import type { ApiResponse } from '../core'
 import type {
@@ -15,6 +15,8 @@ import {
 } from './contracts'
 import { createPlan, executePlan } from './plans'
 
+const readWorkflowBackendMode = () => readRuntimePreferences().workflowBackendMode
+
 export async function applyRecommendation(
   task: string,
   recommendation: RecommendationInput,
@@ -28,7 +30,7 @@ export async function applyRecommendation(
     }
   }
 
-  const mode = useSettingsStore.getState().settings.workflowBackendMode
+  const mode = readWorkflowBackendMode()
   const planResponse = await createPlan(task, level, normalized, mode)
   if (!planResponse.success) {
     return {
@@ -93,7 +95,7 @@ export async function undoRecommendation(
     }
   }
 
-  const mode = useSettingsStore.getState().settings.workflowBackendMode
+  const mode = readWorkflowBackendMode()
   const planResponse = await createPlan(task, level, normalized, mode)
   if (!planResponse.success) {
     return {

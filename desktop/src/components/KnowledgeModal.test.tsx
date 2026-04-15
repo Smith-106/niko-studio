@@ -8,7 +8,8 @@ import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 
 const knowledgeTabScenario = vi.hoisted(() => ({
-  value: 'empty' as 'empty' | 'filled',
+  value: 'empty' as 'empty' | 'filled' | 'effect',
+  characterLoadEffectRuns: 0,
 }))
 
 vi.mock('../api/client', () => ({
@@ -25,23 +26,56 @@ vi.mock('../api/client', () => ({
   promoteProjectWikiCanonApi: vi.fn(),
 }))
 
-vi.mock('./knowledge/CharacterTab', () => ({
-  CharacterTab: ({ onItemClick }: { onItemClick: (item: Record<string, unknown>) => void }) =>
-    knowledgeTabScenario.value === 'filled'
-      ? (
-          <button
-            type="button"
-            onClick={() => onItemClick({ id: 'char-1', name: 'Alice', description: '主角' })}
-          >
-            Alice
-          </button>
-        )
-      : (
-          <button type="button" title="添加角色" aria-label="添加角色" disabled>
-            添加角色
-          </button>
-        ),
-}))
+vi.mock('./knowledge/CharacterTab', async () => {
+  const React = await import('react')
+
+  return {
+    CharacterTab: ({
+      onItemClick,
+      onItemsChange,
+      onLoadingChange,
+      onStatusChange,
+    }: {
+      onItemClick: (item: Record<string, unknown>) => void
+      onItemsChange: (items: Array<Record<string, unknown>>) => void
+      onLoadingChange: (loading: boolean) => void
+      onStatusChange: (status: unknown) => void
+    }) => {
+      React.useEffect(() => {
+        if (knowledgeTabScenario.value !== 'effect') return
+
+        knowledgeTabScenario.characterLoadEffectRuns += 1
+        if (knowledgeTabScenario.characterLoadEffectRuns > 1) {
+          throw new Error('knowledge load effect retriggered')
+        }
+
+        onLoadingChange(true)
+        onStatusChange(null)
+        onItemsChange([{ id: 'char-1', name: 'Alice', description: '主角' }])
+        onLoadingChange(false)
+      }, [onItemsChange, onLoadingChange, onStatusChange])
+
+      if (knowledgeTabScenario.value === 'effect') {
+        return <div>Alice</div>
+      }
+
+      return knowledgeTabScenario.value === 'filled'
+        ? (
+            <button
+              type="button"
+              onClick={() => onItemClick({ id: 'char-1', name: 'Alice', description: '主角' })}
+            >
+              Alice
+            </button>
+          )
+        : (
+            <button type="button" title="添加角色" aria-label="添加角色" disabled>
+              添加角色
+            </button>
+          )
+    },
+  }
+})
 
 vi.mock('./knowledge/LocationTab', () => ({
   LocationTab: ({ onItemClick }: { onItemClick: (item: Record<string, unknown>) => void }) =>
@@ -88,6 +122,7 @@ describe('KnowledgeModal accessibility and labels', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     knowledgeTabScenario.value = 'empty'
+    knowledgeTabScenario.characterLoadEffectRuns = 0
     useSettingsStore.getState().updateSettings({ language: 'zh' })
     useAppStore.setState({
       currentWorkspace: {
@@ -142,6 +177,16 @@ describe('KnowledgeModal accessibility and labels', () => {
 
     await userEvent.keyboard('{Escape}')
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps child load callbacks stable across modal rerenders', async () => {
+    knowledgeTabScenario.value = 'effect'
+
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    expect(await screen.findByRole('dialog', { name: zh.knowledgeTitle })).toBeInTheDocument()
+    expect(await screen.findByText('Alice')).toBeInTheDocument()
+    expect(knowledgeTabScenario.characterLoadEffectRuns).toBe(1)
   })
 
   it('renders i18n tab labels and search control', async () => {

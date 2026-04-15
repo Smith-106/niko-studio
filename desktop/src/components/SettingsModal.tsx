@@ -373,8 +373,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.backendService}</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.backendUrl}</label>
+                      <label htmlFor="settings-backend-url" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.backendUrl}</label>
                       <input
+                        id="settings-backend-url"
+                        name="settings-backend-url"
                         type="text"
                         value={localSettings.apiBaseUrl}
                         onChange={(e) => setLocalSettings({ ...localSettings, apiBaseUrl: e.target.value })}
@@ -602,8 +604,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <h3 className="text-sm font-bold text-gray-800 dark:text-dark-text mb-4 uppercase tracking-wider">{t.writingSettings}</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultWorkflow}</label>
+                      <label htmlFor="settings-default-workflow" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultWorkflow}</label>
                       <select
+                        id="settings-default-workflow"
+                        name="settings-default-workflow"
                         value={localSettings.defaultWorkflowLevel}
                         onChange={(e) => setLocalSettings({ ...localSettings, defaultWorkflowLevel: e.target.value as 'L1' | 'L2' | 'L3' | 'L4' | 'L5' })}
                         className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
@@ -617,8 +621,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.workflowBackendMode}</label>
+                      <label htmlFor="settings-workflow-backend-mode" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.workflowBackendMode}</label>
                       <select
+                        id="settings-workflow-backend-mode"
+                        name="settings-workflow-backend-mode"
                         value={localSettings.workflowBackendMode}
                         onChange={(e) => setLocalSettings({ ...localSettings, workflowBackendMode: e.target.value as WorkflowBackendMode })}
                         className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
@@ -630,8 +636,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.targetWords}</label>
+                        <label htmlFor="settings-target-words-per-chapter" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.targetWords}</label>
                         <input
+                          id="settings-target-words-per-chapter"
+                          name="settings-target-words-per-chapter"
                           type="number"
                           value={localSettings.targetWordsPerChapter}
                           onChange={(e) => setLocalSettings({ ...localSettings, targetWordsPerChapter: parseInt(e.target.value) })}
@@ -656,8 +664,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-2">{t.qualityGoalsTitle}</div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalPreset}</label>
+                          <label htmlFor="settings-quality-goal-preset" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalPreset}</label>
                           <select
+                            id="settings-quality-goal-preset"
+                            name="settings-quality-goal-preset"
                             value={localSettings.qualityGoals.humanizationPreset}
                             onChange={(e) => applyQualityPreset(e.target.value as QualityPresetId)}
                             className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
@@ -668,33 +678,41 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             <option value="custom">{t.qualityPresetCustom}</option>
                           </select>
                         </div>
-                        {QUALITY_GOAL_METRIC_FIELDS.map((field) => (
-                          <div key={field.key}>
-                            <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t[field.labelKey]}</label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              step="1"
-                              value={localSettings.qualityGoals[field.key]}
-                              onChange={(e) => {
-                                const nextValue = parseInt(e.target.value)
-                                setLocalSettings((prev) => ({
-                                  ...prev,
-                                  qualityGoals: {
-                                    ...prev.qualityGoals,
-                                    [field.key]: nextValue,
-                                    humanizationPreset: 'custom',
-                                  },
-                                }))
-                              }}
-                              className="w-full"
-                            />
-                          </div>
-                        ))}
+                        {QUALITY_GOAL_METRIC_FIELDS.map((field) => {
+                          const inputId = `settings-quality-${field.key}`
+
+                          return (
+                            <div key={field.key}>
+                              <label htmlFor={inputId} className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t[field.labelKey]}</label>
+                              <input
+                                id={inputId}
+                                name={inputId}
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={localSettings.qualityGoals[field.key]}
+                                onChange={(e) => {
+                                  const nextValue = parseInt(e.target.value)
+                                  setLocalSettings((prev) => ({
+                                    ...prev,
+                                    qualityGoals: {
+                                      ...prev.qualityGoals,
+                                      [field.key]: nextValue,
+                                      humanizationPreset: 'custom',
+                                    },
+                                  }))
+                                }}
+                                className="w-full"
+                              />
+                            </div>
+                          )
+                        })}
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalSentenceEntropy}</label>
+                          <label htmlFor="settings-quality-sentence-entropy-target" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalSentenceEntropy}</label>
                           <input
+                            id="settings-quality-sentence-entropy-target"
+                            name="settings-quality-sentence-entropy-target"
                             type="range"
                             min="0"
                             max="100"
@@ -712,8 +730,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalRhythmVariability}</label>
+                          <label htmlFor="settings-quality-rhythm-variability-target" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalRhythmVariability}</label>
                           <input
+                            id="settings-quality-rhythm-variability-target"
+                            name="settings-quality-rhythm-variability-target"
                             type="range"
                             min="0"
                             max="100"
@@ -731,8 +751,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           />
                         </div>
                         <div className="col-span-2">
-                          <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalCustomInstruction}</label>
+                          <label htmlFor="settings-quality-custom-humanization-instruction" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.qualityGoalCustomInstruction}</label>
                           <textarea
+                            id="settings-quality-custom-humanization-instruction"
+                            name="settings-quality-custom-humanization-instruction"
                             rows={2}
                             value={localSettings.qualityGoals.customHumanizationInstruction}
                             onChange={(e) => setLocalSettings((prev) => ({
@@ -779,8 +801,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsSearchMode}</label>
+                      <label htmlFor="settings-retrieval-search-mode" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsSearchMode}</label>
                       <select
+                        id="settings-retrieval-search-mode"
+                        name="settings-retrieval-search-mode"
                         value={localSettings.retrieval.searchMode}
                         onChange={(e) => setLocalSettings((prev) => ({
                           ...prev,
@@ -797,8 +821,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProfile}</label>
+                      <label htmlFor="settings-retrieval-profile" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProfile}</label>
                       <input
+                        id="settings-retrieval-profile"
+                        name="settings-retrieval-profile"
                         type="text"
                         value={localSettings.retrieval.profile}
                         onChange={(e) => setLocalSettings((prev) => ({
@@ -813,8 +839,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMinScore}</label>
+                      <label htmlFor="settings-retrieval-min-score" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMinScore}</label>
                       <input
+                        id="settings-retrieval-min-score"
+                        name="settings-retrieval-min-score"
                         type="number"
                         step="0.01"
                         value={localSettings.retrieval.minScore ?? ''}
@@ -823,8 +851,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalBudgetTokens}</label>
+                      <label htmlFor="settings-retrieval-budget-tokens" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalBudgetTokens}</label>
                       <input
+                        id="settings-retrieval-budget-tokens"
+                        name="settings-retrieval-budget-tokens"
                         type="number"
                         value={localSettings.retrieval.budgetTokens ?? ''}
                         onChange={(e) => updateNumericRetrievalField('budgetTokens', e.target.value)}
@@ -832,8 +862,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMaxIterations}</label>
+                      <label htmlFor="settings-retrieval-max-iterations" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalMaxIterations}</label>
                       <input
+                        id="settings-retrieval-max-iterations"
+                        name="settings-retrieval-max-iterations"
                         type="number"
                         min="1"
                         value={localSettings.retrieval.maxIterations ?? ''}
@@ -842,8 +874,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalConfidenceThreshold}</label>
+                      <label htmlFor="settings-retrieval-confidence-threshold" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalConfidenceThreshold}</label>
                       <input
+                        id="settings-retrieval-confidence-threshold"
+                        name="settings-retrieval-confidence-threshold"
                         type="number"
                         min="0"
                         max="1"
@@ -877,17 +911,23 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <div>
                     <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsAgentContextTypes}</label>
                     <div className="flex flex-wrap gap-4">
-                      {contextTypeOptions.map((option) => (
-                        <label key={option.value} className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-text-secondary">
-                          <input
-                            type="checkbox"
-                            checked={localSettings.contextTypes.includes(option.value)}
-                            onChange={(e) => toggleContextType(option.value, e.target.checked)}
-                            className="rounded"
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      ))}
+                      {contextTypeOptions.map((option) => {
+                        const inputId = `settings-context-type-${option.value}`
+
+                        return (
+                          <label key={option.value} htmlFor={inputId} className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-text-secondary">
+                            <input
+                              id={inputId}
+                              name={inputId}
+                              type="checkbox"
+                              checked={localSettings.contextTypes.includes(option.value)}
+                              onChange={(e) => toggleContextType(option.value, e.target.checked)}
+                              className="rounded"
+                            />
+                            <span>{option.label}</span>
+                          </label>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
@@ -909,6 +949,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <div className="flex items-center gap-4">
                       <label className="flex items-center gap-2 text-sm">
                         <input
+                          id="settings-allow-llm-fallback"
+                          name="settings-allow-llm-fallback"
                           type="checkbox"
                           checked={localSettings.allowLlmFallback}
                           onChange={(e) => setLocalSettings({ ...localSettings, allowLlmFallback: e.target.checked })}
@@ -918,6 +960,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       </label>
                       <label className="flex items-center gap-2 text-sm">
                         <input
+                          id="settings-use-multi-model"
+                          name="settings-use-multi-model"
                           type="checkbox"
                           checked={localSettings.useMultiModel}
                           onChange={(e) => setLocalSettings({ ...localSettings, useMultiModel: e.target.checked })}
@@ -927,6 +971,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       </label>
                       <label className="flex items-center gap-2 text-sm">
                         <input
+                          id="settings-detection-evasion-guard"
+                          name="settings-detection-evasion-guard"
                           type="checkbox"
                           checked={localSettings.detectionEvasionGuardEnabled}
                           onChange={(e) => setLocalSettings({ ...localSettings, detectionEvasionGuardEnabled: e.target.checked })}
@@ -936,6 +982,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       </label>
                       <label className="flex items-center gap-2 text-sm">
                         <input
+                          id="settings-writing-helper-legacy-polish"
+                          name="settings-writing-helper-legacy-polish"
                           type="checkbox"
                           checked={localSettings.writingHelperUseLegacyPolish}
                           onChange={(e) => setLocalSettings({ ...localSettings, writingHelperUseLegacyPolish: e.target.checked })}
@@ -948,8 +996,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProviderModel}</label>
+                      <label htmlFor="settings-provider-search" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.settingsRetrievalProviderModel}</label>
                       <input
+                        id="settings-provider-search"
+                        name="settings-provider-search"
                         type="text"
                         value={providerSearch}
                         onChange={(e) => setProviderSearch(e.target.value)}
@@ -959,6 +1009,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </div>
 
                     {filteredProviders.map((provider) => {
+                      const providerEnabledId = `settings-provider-${provider.id}-enabled`
+                      const providerApiKeyId = `settings-provider-${provider.id}-api-key`
+                      const providerBaseUrlId = `settings-provider-${provider.id}-base-url`
+                      const providerDefaultModelId = `settings-provider-${provider.id}-default-model`
+                      const providerCustomModelId = `settings-provider-${provider.id}-custom-model`
+                      const providerPrimaryId = `settings-provider-${provider.id}-primary`
+
                       return (
                         <div
                           key={provider.id}
@@ -969,12 +1026,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                               <input
+                                id={providerEnabledId}
+                                name={providerEnabledId}
                                 type="checkbox"
                                 checked={provider.enabled}
                                 onChange={(e) => updateLocalProvider(provider.id, { enabled: e.target.checked })}
                                 className="rounded"
                               />
-                              <span className="font-medium text-gray-800 dark:text-dark-text">{provider.name}</span>
+                              <label htmlFor={providerEnabledId} className="font-medium text-gray-800 dark:text-dark-text">{provider.name}</label>
                               {provider.id === localSettings.primaryProvider && provider.enabled && (
                                 <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">{t.primary}</span>
                               )}
@@ -999,9 +1058,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           {provider.enabled && (
                             <div className="space-y-3 ml-6">
                               <div>
-                                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.apiKey}</label>
+                                <label htmlFor={providerApiKeyId} className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.apiKey}</label>
                                 <div className="relative">
                                   <input
+                                    id={providerApiKeyId}
+                                    name={providerApiKeyId}
                                     type={showApiKeys[provider.id] ? 'text' : 'password'}
                                     value={provider.apiKey}
                                     onChange={(e) => updateLocalProvider(provider.id, { apiKey: e.target.value })}
@@ -1020,8 +1081,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.baseUrl}</label>
+                                  <label htmlFor={providerBaseUrlId} className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.baseUrl}</label>
                                   <input
+                                    id={providerBaseUrlId}
+                                    name={providerBaseUrlId}
                                     type="text"
                                     value={provider.baseUrl}
                                     onChange={(e) => updateLocalProvider(provider.id, { baseUrl: e.target.value })}
@@ -1029,8 +1092,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultModel}</label>
+                                  <label htmlFor={providerDefaultModelId} className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.defaultModel}</label>
                                   <select
+                                    id={providerDefaultModelId}
+                                    name={providerDefaultModelId}
                                     value={provider.defaultModel}
                                     onChange={(e) => updateLocalProvider(provider.id, { defaultModel: e.target.value, modelSelectionMode: 'list' })}
                                     className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm text-sm"
@@ -1083,9 +1148,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                               </div>
 
                               <div className="space-y-2">
-                                <label className="block text-xs text-gray-500 dark:text-dark-text-secondary">{t.settingsCustomModel}</label>
+                                <label htmlFor={providerCustomModelId} className="block text-xs text-gray-500 dark:text-dark-text-secondary">{t.settingsCustomModel}</label>
                                 <div className="flex items-center gap-2">
                                   <input
+                                    id={providerCustomModelId}
+                                    name={providerCustomModelId}
                                     type="text"
                                     value={customModelInputs[provider.id] ?? ''}
                                     onChange={(e) => setCustomModelInputs((prev) => ({ ...prev, [provider.id]: e.target.value }))}
@@ -1105,13 +1172,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                               {provider.enabled && (
                                 <div className="flex items-center gap-2">
                                   <input
+                                    id={providerPrimaryId}
                                     type="radio"
                                     name="primaryProvider"
+                                    value={provider.id}
                                     checked={localSettings.primaryProvider === provider.id}
                                     onChange={() => setLocalSettings({ ...localSettings, primaryProvider: provider.id })}
                                     className="text-blue-600"
                                   />
-                                  <label className="text-xs text-gray-600 dark:text-dark-text-secondary">{t.setPrimary}</label>
+                                  <label htmlFor={providerPrimaryId} className="text-xs text-gray-600 dark:text-dark-text-secondary">{t.setPrimary}</label>
                                 </div>
                               )}
                             </div>
@@ -1160,8 +1229,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.fontSize}</label>
+                    <label htmlFor="settings-font-size" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.fontSize}</label>
                     <select
+                      id="settings-font-size"
+                      name="settings-font-size"
                       value={localSettings.fontSize}
                       onChange={(e) => setLocalSettings({ ...localSettings, fontSize: e.target.value as 'small' | 'medium' | 'large' })}
                       className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
@@ -1172,8 +1243,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.language}</label>
+                    <label htmlFor="settings-language" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.language}</label>
                     <select
+                      id="settings-language"
+                      name="settings-language"
                       value={localSettings.language}
                       onChange={(e) => setLocalSettings({ ...localSettings, language: e.target.value as 'zh' | 'en' })}
                       className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
@@ -1183,8 +1256,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.sendShortcutLabel}</label>
+                    <label htmlFor="settings-send-shortcut" className="block text-xs text-gray-500 dark:text-dark-text-secondary mb-1">{t.sendShortcutLabel}</label>
                     <select
+                      id="settings-send-shortcut"
+                      name="settings-send-shortcut"
                       value={localSettings.sendShortcut}
                       onChange={(e) => setLocalSettings({ ...localSettings, sendShortcut: e.target.value as SendShortcut })}
                       className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
@@ -1278,8 +1353,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </button>
             <input
               ref={fileInputRef}
+              id="settings-import-file"
+              name="settings-import-file"
               type="file"
               accept=".json"
+              aria-label={t.importSettings}
               onChange={handleImport}
               className="hidden"
             />

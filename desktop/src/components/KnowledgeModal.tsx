@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Search, User, MapPin, BookOpen, Sparkles, X } from 'lucide-react'
 import { promoteProjectWikiCanonApi } from '../api/client'
 import { useI18n } from '../i18n'
@@ -74,17 +74,17 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     setSelectedItem(null)
   }, [activeTab])
 
-  const handleStatusChange = (status: OperationStatus | null) => {
+  const handleStatusChange = useCallback((status: OperationStatus | null) => {
     setOperationStatus(status)
-  }
+  }, [])
 
-  const handleItemsChange = (newItems: KnowledgeItem[]) => {
+  const handleItemsChange = useCallback((newItems: KnowledgeItem[]) => {
     setItems(newItems)
-  }
+  }, [])
 
-  const handleLoadingChange = (isLoading: boolean) => {
+  const handleLoadingChange = useCallback((isLoading: boolean) => {
     setLoading(isLoading)
-  }
+  }, [])
 
   const handleItemClick = (item: KnowledgeItem) => {
     setSelectedItem(item)

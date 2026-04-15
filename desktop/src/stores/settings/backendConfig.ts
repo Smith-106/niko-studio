@@ -3,9 +3,8 @@ import {
   reloadConfig as reloadConfigApi,
   updateConfig,
   updateSecrets as updateSecretsApi,
-  type ConfigResponse,
-  type SecretsResponse,
 } from '@/api/config'
+import type { ConfigResponse, SecretsResponse } from '@/contracts/backendConfig'
 
 import { nowIso } from './state'
 import type { Settings } from './types'

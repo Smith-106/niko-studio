@@ -146,19 +146,6 @@ const createSecretsResponse = (): SecretsResponse['secrets'] => ({
   },
 })
 
-const getInputByLabel = (label: string): HTMLInputElement => {
-  const labelNode = screen.getByText(label)
-  const container = labelNode.parentElement
-  if (!container) {
-    throw new Error(`cannot find container for label: ${label}`)
-  }
-  const input = container.querySelector('input')
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error(`cannot find input for label: ${label}`)
-  }
-  return input
-}
-
 const changeInputValue = (input: HTMLInputElement, value: string) => {
   fireEvent.change(input, { target: { value } })
 }
@@ -194,25 +181,23 @@ describe('SettingsModal quality presets', () => {
   it('updates quality goal sliders when preset changes', async () => {
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
-    expect(getInputByLabel(zh.qualityGoalNaturalness).value).toBe('85')
-    expect(getInputByLabel(zh.qualityGoalReadability).value).toBe('80')
-    expect(getInputByLabel(zh.qualityGoalCoherence).value).toBe('80')
-    expect(getInputByLabel(zh.qualityGoalStyleConsistency).value).toBe('78')
-    expect(getInputByLabel(zh.qualityGoalSentenceEntropy).value).toBe('60')
-    expect(getInputByLabel(zh.qualityGoalRhythmVariability).value).toBe('60')
+    expect((screen.getByLabelText(zh.qualityGoalNaturalness) as HTMLInputElement).value).toBe('85')
+    expect((screen.getByLabelText(zh.qualityGoalReadability) as HTMLInputElement).value).toBe('80')
+    expect((screen.getByLabelText(zh.qualityGoalCoherence) as HTMLInputElement).value).toBe('80')
+    expect((screen.getByLabelText(zh.qualityGoalStyleConsistency) as HTMLInputElement).value).toBe('78')
+    expect((screen.getByLabelText(zh.qualityGoalSentenceEntropy) as HTMLInputElement).value).toBe('60')
+    expect((screen.getByLabelText(zh.qualityGoalRhythmVariability) as HTMLInputElement).value).toBe('60')
 
-    const presetLabel = screen.getByText(zh.qualityGoalPreset)
-    const presetSelect = presetLabel.parentElement?.querySelector('select')
-    expect(presetSelect).toBeInstanceOf(HTMLSelectElement)
+    const presetSelect = screen.getByLabelText(zh.qualityGoalPreset) as HTMLSelectElement
 
-    await userEvent.selectOptions(presetSelect as HTMLSelectElement, 'ai_edit_guidance')
+    await userEvent.selectOptions(presetSelect, 'ai_edit_guidance')
 
-    expect(getInputByLabel(zh.qualityGoalNaturalness).value).toBe('80')
-    expect(getInputByLabel(zh.qualityGoalReadability).value).toBe('88')
-    expect(getInputByLabel(zh.qualityGoalCoherence).value).toBe('86')
-    expect(getInputByLabel(zh.qualityGoalStyleConsistency).value).toBe('84')
-    expect(getInputByLabel(zh.qualityGoalSentenceEntropy).value).toBe('52')
-    expect(getInputByLabel(zh.qualityGoalRhythmVariability).value).toBe('50')
+    expect((screen.getByLabelText(zh.qualityGoalNaturalness) as HTMLInputElement).value).toBe('80')
+    expect((screen.getByLabelText(zh.qualityGoalReadability) as HTMLInputElement).value).toBe('88')
+    expect((screen.getByLabelText(zh.qualityGoalCoherence) as HTMLInputElement).value).toBe('86')
+    expect((screen.getByLabelText(zh.qualityGoalStyleConsistency) as HTMLInputElement).value).toBe('84')
+    expect((screen.getByLabelText(zh.qualityGoalSentenceEntropy) as HTMLInputElement).value).toBe('52')
+    expect((screen.getByLabelText(zh.qualityGoalRhythmVariability) as HTMLInputElement).value).toBe('50')
   })
 
   it('persists retrieval and context type settings after save', async () => {
@@ -222,16 +207,14 @@ describe('SettingsModal quality presets', () => {
     const user = userEvent.setup()
 
     await user.click(screen.getByLabelText(zh.settingsEnableKnowledgeRetrieval))
-    await user.selectOptions(screen.getByDisplayValue(zh.settingsSearchModeHybrid), 'iterative')
+    await user.selectOptions(screen.getByLabelText(zh.settingsSearchMode) as HTMLSelectElement, 'iterative')
 
-    const profileInput = screen.getByPlaceholderText(zh.settingsRetrievalProfilePlaceholder)
-    changeInputValue(profileInput as HTMLInputElement, 'strict')
+    changeInputValue(screen.getByLabelText(zh.settingsRetrievalProfile) as HTMLInputElement, 'strict')
 
-
-    const minScoreInput = getInputByLabel(zh.settingsRetrievalMinScore)
-    const budgetTokensInput = getInputByLabel(zh.settingsRetrievalBudgetTokens)
-    const maxIterationsInput = getInputByLabel(zh.settingsRetrievalMaxIterations)
-    const confidenceThresholdInput = getInputByLabel(zh.settingsRetrievalConfidenceThreshold)
+    const minScoreInput = screen.getByLabelText(zh.settingsRetrievalMinScore) as HTMLInputElement
+    const budgetTokensInput = screen.getByLabelText(zh.settingsRetrievalBudgetTokens) as HTMLInputElement
+    const maxIterationsInput = screen.getByLabelText(zh.settingsRetrievalMaxIterations) as HTMLInputElement
+    const confidenceThresholdInput = screen.getByLabelText(zh.settingsRetrievalConfidenceThreshold) as HTMLInputElement
 
     changeInputValue(minScoreInput, '0.35')
     changeInputValue(budgetTokensInput, '2048')
@@ -264,11 +247,9 @@ describe('SettingsModal quality presets', () => {
 
     const user = userEvent.setup()
 
-    const modeLabel = screen.getByText(zh.workflowBackendMode)
-    const modeSelect = modeLabel.parentElement?.querySelector('select')
-    expect(modeSelect).toBeInstanceOf(HTMLSelectElement)
+    const modeSelect = screen.getByLabelText(zh.workflowBackendMode) as HTMLSelectElement
 
-    await user.selectOptions(modeSelect as HTMLSelectElement, 'uiBridge')
+    await user.selectOptions(modeSelect, 'uiBridge')
     await user.click(screen.getByRole('button', { name: zh.save }))
 
     expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
@@ -291,6 +272,32 @@ describe('SettingsModal quality presets', () => {
     expect(screen.getByText(en.workflowBackendMode)).toBeInTheDocument()
     expect(screen.getByRole('option', { name: en.workflowBackendModeStandard })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: en.workflowBackendModeUiBridge })).toBeInTheDocument()
+  })
+
+  it('adds deterministic id and name attributes to representative labeled fields', async () => {
+    const user = userEvent.setup()
+    render(<SettingsModal isOpen onClose={vi.fn()} />)
+
+    expect(screen.getByLabelText(zh.workflowBackendMode)).toHaveAttribute('id', 'settings-workflow-backend-mode')
+    expect(screen.getByLabelText(zh.workflowBackendMode)).toHaveAttribute('name', 'settings-workflow-backend-mode')
+    expect(screen.getByLabelText(zh.qualityGoalPreset)).toHaveAttribute('id', 'settings-quality-goal-preset')
+    expect(screen.getByLabelText(zh.qualityGoalPreset)).toHaveAttribute('name', 'settings-quality-goal-preset')
+
+    await user.click(screen.getByRole('button', { name: zh.settingsRetrieval }))
+    expect(screen.getByLabelText(zh.settingsRetrievalMinScore)).toHaveAttribute('id', 'settings-retrieval-min-score')
+    expect(screen.getByLabelText(zh.settingsRetrievalMinScore)).toHaveAttribute('name', 'settings-retrieval-min-score')
+    expect(screen.getByLabelText(zh.settingsContextTypeCharacter)).toHaveAttribute('id', 'settings-context-type-character')
+    expect(screen.getByLabelText(zh.settingsContextTypeCharacter)).toHaveAttribute('name', 'settings-context-type-character')
+
+    await user.click(screen.getByRole('button', { name: zh.llmConfig }))
+    expect(screen.getByLabelText(zh.settingsRetrievalProviderModel)).toHaveAttribute('id', 'settings-provider-search')
+    expect(screen.getByLabelText(zh.settingsRetrievalProviderModel)).toHaveAttribute('name', 'settings-provider-search')
+
+    await user.click(screen.getByRole('button', { name: zh.uiSettings }))
+    expect(screen.getByLabelText(zh.fontSize)).toHaveAttribute('id', 'settings-font-size')
+    expect(screen.getByLabelText(zh.fontSize)).toHaveAttribute('name', 'settings-font-size')
+    expect(screen.getByLabelText(zh.importSettings)).toHaveAttribute('id', 'settings-import-file')
+    expect(screen.getByLabelText(zh.importSettings)).toHaveAttribute('name', 'settings-import-file')
   })
 
   it('loads backend config when opening backend section without cached config', async () => {

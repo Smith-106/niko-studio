@@ -1,4 +1,4 @@
-import { useSettingsStore } from '@/stores/settingsStore'
+import { readRuntimePreferences } from '@/runtime/preferences'
 
 import {
   callTauriApi,
@@ -61,7 +61,7 @@ const resolveApiBase = (): string => {
     return normalizeGatewayBaseUrl(envBase.trim())
   }
 
-  const storeBase = useSettingsStore.getState().settings.apiBaseUrl
+  const storeBase = readRuntimePreferences().apiBaseUrl
   if (storeBase && storeBase.trim()) {
     return normalizeGatewayBaseUrl(storeBase.trim())
   }

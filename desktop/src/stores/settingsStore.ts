@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { SecretsResponse } from '@/api/config'
+import type { SecretsResponse } from '@/contracts/backendConfig'
+import { setRuntimePreferences } from '@/runtime/preferences'
 
 import {
   defaultSettings,
@@ -56,6 +57,13 @@ interface SettingsStore {
   updateBackendConfig: (fields: Record<string, unknown>) => Promise<string[]>
   updateSecrets: (secrets: SecretsResponse['secrets']) => Promise<void>
   reloadBackendConfig: () => Promise<void>
+}
+
+function projectRuntimePreferences(settings: Settings) {
+  setRuntimePreferences({
+    apiBaseUrl: settings.apiBaseUrl,
+    workflowBackendMode: settings.workflowBackendMode,
+  })
 }
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -246,3 +254,16 @@ export const useSettingsStore = create<SettingsStore>()(
     },
   ),
 )
+
+projectRuntimePreferences(useSettingsStore.getState().settings)
+
+useSettingsStore.subscribe((state, previousState) => {
+  if (
+    state.settings.apiBaseUrl === previousState.settings.apiBaseUrl &&
+    state.settings.workflowBackendMode === previousState.settings.workflowBackendMode
+  ) {
+    return
+  }
+
+  projectRuntimePreferences(state.settings)
+})

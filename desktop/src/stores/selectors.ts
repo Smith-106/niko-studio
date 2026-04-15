@@ -1,6 +1,6 @@
 import { useAppStore, Conversation, Message } from './appStore'
 import { useSettingsStore } from './settingsStore'
-import { shallow } from 'zustand/shallow'
+import { useShallow } from 'zustand/react/shallow'
 
 /**
  * Selector for current conversation ID only
@@ -59,8 +59,9 @@ export function useLatestAssistantMessageContent(): string {
  */
 export function useConversationList(): Conversation[] {
   return useAppStore(
-    (state) => state.allConversationIds.map((id) => state.conversationsById[id]).filter(Boolean) as Conversation[],
-    shallow
+    useShallow(
+      (state) => state.allConversationIds.map((id) => state.conversationsById[id]).filter(Boolean) as Conversation[]
+    )
   )
 }
 
@@ -90,5 +91,5 @@ export function useQualityGoals() {
  * Uses shallow comparison for array
  */
 export function useSelectedSkills(): string[] {
-  return useAppStore((state) => state.selectedSkills, shallow)
+  return useAppStore(useShallow((state) => state.selectedSkills))
 }

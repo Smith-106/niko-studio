@@ -307,6 +307,20 @@ describe('EvaluationPanel actions', () => {
     })
   })
 
+  it('uses the right panel shell offset and closes from the header button', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(<EvaluationPanel content="测试内容" onClose={onClose} />)
+
+    const dialog = await screen.findByRole('dialog', { name: zh.evaluationTitle })
+    expect(dialog.className).toContain('top-14')
+    expect(dialog.className).toContain('z-30')
+
+    await user.click(screen.getByRole('button', { name: zh.evaluationClose }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('runs novel quality check and renders result fields', async () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 

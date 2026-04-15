@@ -9,7 +9,6 @@ import { useState, useCallback, useRef, useEffect, useImperativeHandle, forwardR
 import { useEditor, EditorContent, type JSONContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import Underline from '@tiptap/extension-underline'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Typography from '@tiptap/extension-typography'
 import { SlashCommandMenu, type SlashMenuItem } from './editor/SlashCommandMenu'
@@ -69,7 +68,6 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       Placeholder.configure({
         placeholder: t.editorPlaceholder,
       }),
-      Underline,
       TextStyle,
       Typography,
     ],

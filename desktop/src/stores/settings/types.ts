@@ -1,4 +1,7 @@
-import type { BackendConfig } from '@/api/config'
+import type { BackendConfig } from '@/contracts/backendConfig'
+import type { WorkflowBackendMode } from '@/contracts/runtimePreferences'
+
+export type { WorkflowBackendMode } from '@/contracts/runtimePreferences'
 
 export interface LLMProvider {
   id: string
@@ -17,7 +20,6 @@ export interface LLMProvider {
 export type PromptTemplateCategory = 'brainstorm' | 'outline' | 'character' | 'rewrite' | 'analysis' | 'custom'
 export type ContextType = 'world' | 'character' | 'plot'
 export type RetrievalSearchMode = 'hybrid' | 'iterative' | 'context'
-export type WorkflowBackendMode = 'standard' | 'uiBridge'
 export type SendShortcut = 'enter' | 'ctrlEnter'
 
 export interface RetrievalSettings {

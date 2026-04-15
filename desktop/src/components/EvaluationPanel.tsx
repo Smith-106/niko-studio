@@ -96,6 +96,9 @@ const getWorkflowActionLabel = (action: WorkflowAction, t: Translations): string
   return t.evaluationWorkflowLifecycle
 }
 
+const panelShellClassName =
+  'fixed right-0 top-14 bottom-0 w-80 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg z-30'
+
 export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   const { t, translate, language } = useI18n()
   const dialogRef = useRef<HTMLDivElement | null>(null)
@@ -248,7 +251,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
 
   if (loading) {
     return (
-      <div className="fixed right-0 top-12 bottom-0 w-80 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg p-4">
+      <div className={`${panelShellClassName} p-4`}>
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
@@ -258,7 +261,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
 
   if (!result) {
     return (
-      <div className="fixed right-0 top-12 bottom-0 w-80 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg p-4">
+      <div className={`${panelShellClassName} p-4`}>
         <div className="text-center text-gray-400 dark:text-dark-text-secondary">{t.evaluationFailed}</div>
       </div>
     )
@@ -317,7 +320,7 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed right-0 top-12 bottom-0 w-80 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-dark-border shadow-lg flex flex-col"
+      className={`${panelShellClassName} flex flex-col`}
       role="dialog"
       aria-modal="true"
       aria-label={t.evaluationTitle}

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BackendConfig, SecretsResponse } from '@/api/config'
+import { readRuntimePreferences } from '@/runtime/preferences'
 import { backendConfigRuntimeApi } from './settings/backendConfig'
 import { useSettingsStore, type PromptTemplate } from './settingsStore'
 
@@ -133,6 +134,42 @@ beforeEach(() => {
   localStorage.clear()
   vi.restoreAllMocks()
   useSettingsStore.getState().resetSettings()
+})
+
+describe('settingsStore runtime preference projection', () => {
+  it('projects apiBaseUrl and workflowBackendMode into the runtime adapter', () => {
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        apiBaseUrl: 'http://settings.example.com/',
+        workflowBackendMode: 'uiBridge',
+      },
+    }))
+
+    expect(readRuntimePreferences()).toEqual({
+      apiBaseUrl: 'http://settings.example.com/',
+      workflowBackendMode: 'uiBridge',
+    })
+  })
+
+  it('restores runtime adapter defaults when settings reset', () => {
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        apiBaseUrl: 'http://settings.example.com/',
+        workflowBackendMode: 'uiBridge',
+      },
+    }))
+
+    useSettingsStore.getState().resetSettings()
+
+    expect(readRuntimePreferences()).toMatchObject({
+      apiBaseUrl: 'http://127.0.0.1:8000',
+      workflowBackendMode: 'standard',
+    })
+  })
 })
 
 describe('settingsStore prompt template library', () => {
