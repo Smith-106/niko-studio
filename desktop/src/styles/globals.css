@@ -5,12 +5,18 @@
 :root {
   --sidebar-width: 260px;
   --header-height: 48px;
+  --shell-font-label: 0.75rem;
+  --shell-font-compact: 0.8125rem;
+  --shell-font-ui: 0.875rem;
+  --shell-line-compact: 1.4;
+  --shell-line-ui: 1.5;
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
   --color-text: #0f172a;
   --color-border: #e2e8f0;
   --color-primary: #4f46e5;
-  --focus-ring: 0 0 0 2px rgba(79, 70, 229, 0.45);
+  --focus-outline: #312e81;
+  --focus-outline-soft: rgba(99, 102, 241, 0.22);
 
   /* Design Tokens — Light (Sorbet) */
   --primary-cta: #4808d1;
@@ -30,7 +36,7 @@
   --document-background: #ffffff;
   --document-canvas: #f8fafc;
   --border-default: #e2e8f0;
-  --border-subtle: #f1f5f9;
+  --border-subtle: #cbd5e1;
   --shadow-tiny: 0 1px 2px rgba(0,0,0,0.04);
   --shadow-default: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-card: 0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
@@ -47,11 +53,13 @@
   --color-surface: #1e293b;
   --color-text: #f8fafc;
   --color-border: #334155;
+  --focus-outline: #c4b5fd;
+  --focus-outline-soft: rgba(196, 181, 253, 0.24);
 
   /* Design Tokens — Dark (Aurora/Charcoal) */
-  --primary-cta: #6366f1;
-  --primary-cta-hover: #818cf8;
-  --primary-cta-active: #4808d1;
+  --primary-cta: #4f46e5;
+  --primary-cta-hover: #6366f1;
+  --primary-cta-active: #4338ca;
   --grey-0: #0f172a;
   --grey-1: #1e293b;
   --grey-2: #334155;
@@ -66,7 +74,7 @@
   --document-background: #1a1a1a;
   --document-canvas: #0f0f0f;
   --border-default: #334155;
-  --border-subtle: #1e293b;
+  --border-subtle: #475569;
   --shadow-tiny: 0 1px 2px rgba(0,0,0,0.2);
   --shadow-default: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
   --shadow-card: 0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
@@ -98,9 +106,82 @@ body {
 }
 
 *:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
+  outline: 2px solid var(--focus-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-outline-soft);
   border-radius: 6px;
+}
+
+[data-font-size='small'] {
+  --shell-font-label: 0.6875rem;
+  --shell-font-compact: 0.75rem;
+  --shell-font-ui: 0.8125rem;
+  --shell-line-compact: 1.35;
+  --shell-line-ui: 1.45;
+}
+
+[data-font-size='medium'] {
+  --shell-font-label: 0.75rem;
+  --shell-font-compact: 0.8125rem;
+  --shell-font-ui: 0.875rem;
+  --shell-line-compact: 1.4;
+  --shell-line-ui: 1.5;
+}
+
+[data-font-size='large'] {
+  --shell-font-label: 0.8125rem;
+  --shell-font-compact: 0.875rem;
+  --shell-font-ui: 0.9375rem;
+  --shell-line-compact: 1.45;
+  --shell-line-ui: 1.55;
+}
+
+.a11y-focus-ring:focus,
+.a11y-focus-ring:focus-visible,
+.focus\:ring-primary-500\/30:focus-visible,
+.focus-visible\:ring-primary-500\/40:focus-visible {
+  outline: 2px solid var(--focus-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--focus-outline-soft);
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  left: 1rem;
+  z-index: 60;
+  transform: translateY(-200%);
+  border-radius: 9999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+.shell-text-label {
+  font-size: var(--shell-font-label);
+  line-height: 1.45;
+}
+
+.shell-text-compact {
+  font-size: var(--shell-font-compact);
+  line-height: var(--shell-line-compact);
+}
+
+.shell-text-ui {
+  font-size: var(--shell-font-ui);
+  line-height: var(--shell-line-ui);
 }
 
 button:disabled,

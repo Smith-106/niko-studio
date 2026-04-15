@@ -22,6 +22,7 @@ export interface Translations {
   skillPacks: string
   knowledgeBase: string
   settings: string
+  skipToMainContent: string
 
   // Chat
   startWriting: string
@@ -790,6 +791,7 @@ export const translations: Record<Language, Translations> = {
     skillPacks: '技能包',
     knowledgeBase: '知识库',
     settings: '设置',
+    skipToMainContent: '跳到主内容',
 
     // Chat
     startWriting: '开始创作你的故事',
@@ -1553,6 +1555,7 @@ export const translations: Record<Language, Translations> = {
     skillPacks: 'Skills',
     knowledgeBase: 'Knowledge Base',
     settings: 'Settings',
+    skipToMainContent: 'Skip to main content',
 
     // Chat
     startWriting: 'Start Writing Your Story',

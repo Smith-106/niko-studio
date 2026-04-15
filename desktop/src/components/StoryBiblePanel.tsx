@@ -60,7 +60,7 @@ function CollapsibleSection({ title, icon, content, defaultOpen = false }: Story
           className={`text-[var(--text-muted)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
-      {open && <div className="px-4 py-3 border-t border-[var(--border-subtle)]">{content}</div>}
+      {open && <div className="px-4 py-3 border-t border-[var(--border-default)]">{content}</div>}
     </div>
   )
 }
@@ -83,7 +83,7 @@ function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: string 
       {items.map((item, index) => (
         <div
           key={item.id ?? index}
-          className="px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--surface-sunken)] border border-[var(--border-subtle)]"
+          className="px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--surface-sunken)] border border-[var(--border-default)]"
         >
           <div className="text-sm font-medium text-[var(--text-primary)]">
             {item.name || item.title || item.id || `条目 ${index + 1}`}
@@ -797,7 +797,7 @@ export function StoryBiblePanel() {
             value={braindump}
             onChange={(event) => setBraindump(event.target.value)}
             placeholder={t.storyBibleBraindumpHint}
-            className="w-full min-h-32 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+            className="w-full min-h-32 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
           />
         </div>
       ),
@@ -816,7 +816,7 @@ export function StoryBiblePanel() {
                 className={`px-2.5 py-1 text-xs rounded-full border transition-all ${
                   genres.includes(genre)
                     ? 'bg-[var(--primary-cta)] text-white border-[var(--primary-cta)]'
-                    : 'bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--primary-cta)]/50'
+                    : 'bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50'
                 }`}
               >
                 {genre}
@@ -829,7 +829,7 @@ export function StoryBiblePanel() {
               onChange={(event) => setGenreInput(event.target.value)}
               onKeyDown={(event) => event.key === 'Enter' && addCustomGenre()}
               placeholder={t.storyBibleGenrePlaceholder}
-              className="flex-1 text-sm bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] px-3 py-1.5 outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
+              className="flex-1 text-sm bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-sm)] px-3 py-1.5 outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
             />
             <button
               onClick={addCustomGenre}
@@ -869,7 +869,7 @@ export function StoryBiblePanel() {
             value={synopsis}
             onChange={(event) => setSynopsis(event.target.value)}
             placeholder={t.storyBibleSynopsisPlaceholder}
-            className="w-full min-h-28 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+            className="w-full min-h-28 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
           />
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-[var(--text-secondary)]">
@@ -899,7 +899,7 @@ export function StoryBiblePanel() {
               type="button"
               onClick={() => void refreshCanonPages()}
               disabled={canonLoading}
-              className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               <RotateCcw size={14} />
               {canonLoading ? canonCopy.reviewLoading : canonCopy.reviewRefresh}
@@ -919,7 +919,7 @@ export function StoryBiblePanel() {
                   className={`w-full rounded-[var(--radius-sm)] border px-3 py-2 text-left transition-colors ${
                     selectedCanonSlug === page.slug
                       ? 'border-[var(--primary-cta)]/40 bg-[var(--primary-cta)]/10'
-                      : 'border-[var(--border-subtle)] bg-[var(--surface-sunken)] hover:border-[var(--primary-cta)]/30'
+                      : 'border-[var(--border-default)] bg-[var(--surface-sunken)] hover:border-[var(--primary-cta)]/30'
                   }`}
                 >
                   <div className="text-sm font-medium text-[var(--text-primary)]">{page.title}</div>
@@ -932,7 +932,7 @@ export function StoryBiblePanel() {
             </div>
           )}
           {selectedCanonPage ? (
-            <div className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-3">
+            <div className="rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] p-3">
               <div className="text-sm font-semibold text-[var(--text-primary)]">{selectedCanonPage.title}</div>
               <div className="mt-1 text-[11px] text-[var(--text-muted)]">{selectedCanonPage.file_path}</div>
               <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-relaxed text-[var(--text-secondary)]">{selectedCanonPage.markdown}</pre>
@@ -970,7 +970,7 @@ export function StoryBiblePanel() {
               className={`flex items-start gap-2.5 p-3 rounded-[var(--radius-sm)] border text-left transition-all ${
                 selectedStyle === style.id
                   ? 'bg-[var(--primary-cta)]/10 border-[var(--primary-cta)]/40 ring-1 ring-[var(--primary-cta)]/30'
-                  : 'bg-[var(--surface-sunken)] border-[var(--border-subtle)] hover:border-[var(--primary-cta)]/20'
+                  : 'bg-[var(--surface-sunken)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/20'
               }`}
             >
               <span className={`mt-0.5 ${selectedStyle === style.id ? 'text-[var(--primary-cta)]' : 'text-[var(--text-muted)]'}`}>
@@ -993,7 +993,7 @@ export function StoryBiblePanel() {
           value={outline}
           onChange={(event) => setOutline(event.target.value)}
           placeholder={t.storyBibleSynopsisPlaceholder}
-          className="w-full min-h-40 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+          className="w-full min-h-40 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
         />
       ),
     },
@@ -1011,7 +1011,7 @@ export function StoryBiblePanel() {
         </div>
       </div>
       <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-3">{t.storyBibleDesc}</p>
-      <div className="mb-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-4 py-3 text-xs text-[var(--text-secondary)]">
+      <div className="mb-4 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-4 py-3 text-xs text-[var(--text-secondary)]">
         <div className="font-semibold text-[var(--text-primary)]">{t.storyBiblePersistenceTitle}</div>
         {workspaceNotice.map((line) => (
           <p key={line} className="mt-2">{line}</p>
@@ -1021,7 +1021,7 @@ export function StoryBiblePanel() {
         <button
           type="button"
           onClick={handleExportDraft}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] transition-colors"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] transition-colors"
           title={t.storyBibleExportDraft}
         >
           <Download size={14} />
@@ -1030,7 +1030,7 @@ export function StoryBiblePanel() {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] transition-colors"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] transition-colors"
           title={t.storyBibleImportDraft}
         >
           <Upload size={14} />
@@ -1039,7 +1039,7 @@ export function StoryBiblePanel() {
         <button
           type="button"
           onClick={handleResetDraft}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-red-400/40 hover:text-red-500 transition-colors"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-red-400/40 hover:text-red-500 transition-colors"
           title={t.storyBibleResetDraft}
         >
           <RotateCcw size={14} />

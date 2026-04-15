@@ -438,7 +438,7 @@ export function PromptTemplatePanel({
                     className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                       applyMode === "replace"
                         ? "bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-sm text-gray-900 dark:text-white"
-                        : "text-gray-500 dark:text-dark-text-muted hover:text-gray-700 dark:hover:text-dark-text"
+                        : "text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text"
                     }`}
                   >
                     {t.templateApplyReplace}
@@ -449,7 +449,7 @@ export function PromptTemplatePanel({
                     className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                       applyMode === "append"
                         ? "bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border shadow-sm text-gray-900 dark:text-white"
-                        : "text-gray-500 dark:text-dark-text-muted hover:text-gray-700 dark:hover:text-dark-text"
+                        : "text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text"
                     }`}
                   >
                     {t.templateApplyAppend}

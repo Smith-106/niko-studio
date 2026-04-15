@@ -1,3 +1,5 @@
+import type { MouseEvent } from 'react'
+
 import { Sidebar } from './components/Sidebar'
 import { AppRightPanels } from './components/AppRightPanels'
 import { AppMainContent } from './components/AppMainContent'
@@ -7,16 +9,41 @@ import { ToastContainer } from './components/ToastContainer'
 import { useAppViewModel } from './hooks/useAppViewModel'
 import { useAppStartup } from './hooks/useAppStartup'
 import { useToast } from './hooks/useToast'
+import { useI18n } from './i18n'
+import { useSettingsStore } from './stores/settingsStore'
 
 function App() {
   const { sidebarProps, appRightPanelsProps, appMainContentProps, chatSidebarProps } = useAppViewModel()
   const { toasts, removeToast } = useToast()
+  const { t } = useI18n()
+  const fontSize = useSettingsStore((state) => state.settings.fontSize)
 
   useAppStartup()
 
+  const handleSkipToMainContent = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    const mainContent = document.getElementById('app-main-content')
+    if (!(mainContent instanceof HTMLElement)) {
+      return
+    }
+
+    window.history.replaceState(null, '', '#app-main-content')
+    mainContent.focus()
+  }
+
   return (
     <ErrorBoundary>
-      <div className="flex h-screen bg-slate-50 dark:bg-dark-bg text-slate-900 dark:text-dark-text font-sans antialiased overflow-hidden">
+      <a
+        href="#app-main-content"
+        className="skip-link"
+        onClick={handleSkipToMainContent}
+      >
+        {t.skipToMainContent}
+      </a>
+      <div
+        className="flex h-screen bg-slate-50 dark:bg-dark-bg text-slate-900 dark:text-dark-text font-sans antialiased overflow-hidden"
+        data-font-size={fontSize}
+      >
         <Sidebar {...sidebarProps} />
 
         <AppMainContent {...appMainContentProps} />

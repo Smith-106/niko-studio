@@ -235,19 +235,19 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
   })
 
   const getScoreColor = (score: number) => {
-    if (score >= 8) return 'text-green-600 bg-green-100 dark:bg-green-900/20 dark:text-green-400'
-    if (score >= 6) return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400'
-    return 'text-red-600 bg-red-100 dark:bg-red-900/20 dark:text-red-400'
+    if (score >= 8) return 'text-green-700 bg-green-100 dark:bg-green-900/20 dark:text-green-400'
+    if (score >= 6) return 'text-amber-800 bg-amber-100 dark:bg-amber-900/20 dark:text-amber-300'
+    return 'text-red-700 bg-red-100 dark:bg-red-900/20 dark:text-red-400'
   }
 
   const getDecisionStyle = (decision: string) => {
     switch (decision) {
       case 'APPROVED':
-        return { icon: CheckCircle, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', label: t.evaluationPassed }
+        return { icon: CheckCircle, color: 'text-green-700 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/20', label: t.evaluationPassed }
       case 'REVISE':
-        return { icon: AlertCircle, color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20', label: t.evaluationNeedRevise }
+        return { icon: AlertCircle, color: 'text-amber-800 dark:text-amber-300', bg: 'bg-amber-100 dark:bg-amber-900/20', label: t.evaluationNeedRevise }
       case 'REWRITE':
-        return { icon: AlertCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', label: t.evaluationNeedRewrite }
+        return { icon: AlertCircle, color: 'text-red-700 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/20', label: t.evaluationNeedRewrite }
       default:
         return { icon: AlertCircle, color: 'text-gray-600 dark:text-dark-text-secondary', bg: 'bg-gray-50 dark:bg-dark-bg', label: t.evaluationUnknown }
     }
@@ -394,13 +394,13 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
             <div key={index} className="p-3 bg-gray-50 dark:bg-dark-bg rounded-lg border border-gray-200 dark:border-dark-border">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700 dark:text-dark-text">{dim.name}</span>
-                <span className={`text-sm font-medium ${dim.score >= 7 ? 'text-green-600' : dim.score >= 5 ? 'text-yellow-600' : 'text-red-600'}`}>
+                <span className={`text-sm font-medium ${dim.score >= 7 ? 'text-green-700 dark:text-green-400' : dim.score >= 5 ? 'text-amber-800 dark:text-amber-300' : 'text-red-700 dark:text-red-400'}`}>
                   {dim.score}/10
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-dark-border rounded-full h-2 mb-2">
+              <div className="w-full bg-gray-300 dark:bg-dark-border2 rounded-full h-2 mb-2">
                 <div
-                  className={`h-2 rounded-full ${dim.score >= 7 ? 'bg-green-500' : dim.score >= 5 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                  className={`h-2 rounded-full ${dim.score >= 7 ? 'bg-green-600 dark:bg-green-500' : dim.score >= 5 ? 'bg-amber-700 dark:bg-amber-500' : 'bg-red-600 dark:bg-red-500'}`}
                   style={{ width: `${dim.score * 10}%` }}
                 />
               </div>

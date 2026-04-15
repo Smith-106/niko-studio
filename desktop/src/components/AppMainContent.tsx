@@ -25,11 +25,15 @@ export function AppMainContent({
   const isZh = language === 'zh'
 
   return (
-    <main className="flex-1 flex flex-col relative min-w-0 bg-slate-50 dark:bg-[#0f0f0f] shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] z-20">
+    <main
+      id="app-main-content"
+      tabIndex={-1}
+      className="flex-1 flex flex-col relative min-w-0 bg-slate-50 dark:bg-[#0f0f0f] shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] z-20"
+    >
       <AppHeader {...headerProps} />
 
       {workspaceSummary.hasMeaningfulScope && (
-        <div className="border-b border-gray-100 bg-white/80 px-4 py-2 text-[11px] text-gray-600 shadow-sm dark:border-dark-border dark:bg-dark-surface/70 dark:text-dark-text-secondary">
+        <div className="shell-text-compact border-b border-gray-100 bg-white/80 px-4 py-2 text-gray-600 shadow-sm dark:border-dark-border dark:bg-dark-surface/70 dark:text-dark-text-secondary">
           <span className="font-semibold text-gray-800 dark:text-dark-text">
             {isZh ? '当前写作上下文' : 'Current writing context'}
           </span>

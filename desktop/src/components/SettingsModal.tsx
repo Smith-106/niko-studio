@@ -1270,8 +1270,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           onClick={() => setLocalSettings({ ...localSettings, theme: option.value })}
                           className={`flex flex-col items-center gap-1.5 px-2 py-2.5 text-[11px] font-medium rounded-lg border transition-all ${
                             localSettings.theme === option.value
-                              ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 shadow-sm'
-                              : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface text-gray-600 dark:text-dark-text-secondary hover:border-gray-300 dark:hover:border-dark-border2'
+                              ? 'border-primary-600 bg-primary-50 dark:bg-primary-500/15 text-primary-700 dark:text-primary-300 shadow-sm ring-1 ring-primary-500/20'
+                              : 'border-gray-300 dark:border-dark-border2 bg-gray-50 dark:bg-dark-surface text-gray-700 dark:text-dark-text-secondary hover:border-gray-400 dark:hover:border-primary-500/40'
                           }`}
                         >
                           <span className="w-4 h-4 rounded-full inline-block shrink-0 ring-1 ring-black/10" style={{ backgroundColor: option.dot }} />

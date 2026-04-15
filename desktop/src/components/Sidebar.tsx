@@ -143,16 +143,16 @@ export const Sidebar = React.memo(function Sidebar({
       {!collapsed && workspaceSummary.hasMeaningfulScope && (
         <div className="px-3 pb-3 shrink-0">
           <div className="rounded-2xl border border-dark-border bg-dark-surface/70 p-3 shadow-sm">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-400">
+            <div className="shell-text-label font-semibold uppercase tracking-[0.18em] text-primary-400">
               {writerWorkspaceTitle}
             </div>
             <div className="mt-2 text-sm font-semibold text-dark-text">
               {workspaceSummary.projectLabel ?? workspaceSummary.chapterLabel ?? workspaceSummary.workspaceLabel}
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-dark-text-secondary">
+            <p className="shell-text-compact mt-1 text-dark-text-secondary">
               {writerWorkspaceHint}
             </p>
-            <div className="mt-3 space-y-1.5 text-[11px] text-dark-text-secondary">
+            <div className="shell-text-compact mt-3 space-y-1.5 text-dark-text-secondary">
               {workspaceSummary.chapterLabel && (
                 <div>
                   <span className="text-dark-text-muted">{writerChapterLabel}: </span>
@@ -195,7 +195,7 @@ export const Sidebar = React.memo(function Sidebar({
       {/* Document List */}
       <div className="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">
         {!collapsed && (
-          <div className="text-xs font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-3 mt-1">{t.sidebarDocuments}</div>
+          <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-3 mt-1">{t.sidebarDocuments}</div>
         )}
         {conversations.map((conv) => (
           <button
@@ -229,17 +229,17 @@ export const Sidebar = React.memo(function Sidebar({
       {/* Skills Section */}
       {!collapsed && (
         <div className="border-t border-dark-border p-3 shrink-0">
-          <div className="text-xs font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2 flex items-center gap-1.5 mb-1">
+          <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2 flex items-center gap-1.5 mb-1">
             <Sparkles size={12} className="text-primary-500" />
             {t.skillPacks}
           </div>
           <div className="space-y-3 max-h-[30vh] overflow-y-auto custom-scrollbar pr-1">
             {groupedSkills.map((group) => (
               <div key={group.key} className="space-y-1">
-                <div className="px-2 text-[10px] uppercase tracking-wider text-dark-text-muted">{group.label}</div>
+                <div className="shell-text-label px-2 uppercase tracking-wider text-dark-text-muted">{group.label}</div>
                 <div className="space-y-0.5">
                   {group.skills.length === 0 ? (
-                    <div className="px-3 py-1.5 text-[11px] text-dark-text-muted italic">{t.skillGroupEmpty}</div>
+                    <div className="shell-text-compact px-3 py-1.5 text-dark-text-muted italic">{t.skillGroupEmpty}</div>
                   ) : (
                     group.skills.map((skill) => {
                       const display = getSkillDisplay(skill)

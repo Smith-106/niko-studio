@@ -74,7 +74,7 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
       </div>
 
       {/* Status Bar */}
-      <div className="flex items-center justify-between h-7 px-4 border-t border-gray-100 dark:border-dark-border bg-gray-50/80 dark:bg-dark-surface2/20 text-[11px] text-gray-400 dark:text-dark-text-muted shrink-0">
+      <div className="shell-text-compact flex items-center justify-between h-7 px-4 border-t border-gray-100 dark:border-dark-border bg-gray-50/80 dark:bg-dark-surface2/20 text-gray-400 dark:text-dark-text-muted shrink-0">
         <div className="flex items-center gap-4">
           {aiGenerating && (
             <span className="flex items-center gap-1.5 text-primary-500 dark:text-primary-400">

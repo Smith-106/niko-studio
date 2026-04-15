@@ -26,7 +26,7 @@ const sorbetTokens: Record<string, string> = {
   '--document-background': '#ffffff',
   '--document-canvas': '#f8f7fc',
   '--border-default': '#ece9f5',
-  '--border-subtle': '#f3f1f8',
+  '--border-subtle': '#d7d0e5',
   '--shadow-tiny': '0 1px 2px rgba(72,8,209,0.04)',
   '--shadow-default': '0 1px 3px rgba(72,8,209,0.06), 0 1px 2px rgba(72,8,209,0.04)',
   '--shadow-card': '0 4px 12px rgba(72,8,209,0.06), 0 1px 3px rgba(72,8,209,0.04)',
@@ -36,9 +36,9 @@ const sorbetTokens: Record<string, string> = {
 }
 
 const slateTokens: Record<string, string> = {
-  '--primary-cta': '#6366f1',
-  '--primary-cta-hover': '#818cf8',
-  '--primary-cta-active': '#4f46e5',
+  '--primary-cta': '#4f46e5',
+  '--primary-cta-hover': '#6366f1',
+  '--primary-cta-active': '#4338ca',
   '--grey-0': '#0f172a',
   '--grey-1': '#1e293b',
   '--grey-2': '#334155',
@@ -53,7 +53,7 @@ const slateTokens: Record<string, string> = {
   '--document-background': '#1a1a1a',
   '--document-canvas': '#0f0f0f',
   '--border-default': '#334155',
-  '--border-subtle': '#1e293b',
+  '--border-subtle': '#475569',
   '--shadow-tiny': '0 1px 2px rgba(0,0,0,0.2)',
   '--shadow-default': '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
   '--shadow-card': '0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2)',

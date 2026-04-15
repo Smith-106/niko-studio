@@ -1,4 +1,4 @@
-import type { MutableRefObject } from 'react'
+import { useEffect, useId, useRef, type MutableRefObject } from 'react'
 import { PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { AiToolbar } from './AiToolbar'
@@ -67,6 +67,22 @@ export function AppHeader({
   onOpenTextOptimizer,
 }: AppHeaderProps) {
   const { t } = useI18n()
+  const checkpointMenuId = useId()
+  const checkpointPanelRef = useRef<HTMLDivElement | null>(null)
+  const firstRestoreButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    if (!checkpointMenuOpen) {
+      return
+    }
+
+    const nextFocusTarget =
+      checkpointsLoading || checkpoints.length === 0
+        ? checkpointPanelRef.current
+        : firstRestoreButtonRef.current
+
+    nextFocusTarget?.focus()
+  }, [checkpointMenuOpen, checkpointsLoading, checkpoints.length])
   return (
     <header className="h-14 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-10 relative">
       <div className="flex items-center gap-3">
@@ -92,10 +108,10 @@ export function AppHeader({
         </button>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-dark-surface2 shadow-inner border border-gray-200 dark:border-dark-border2">
           <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} />
-          <span className="text-[11px] font-medium text-gray-600 dark:text-dark-text">{headerConnectionText}</span>
+          <span className="shell-text-compact font-medium text-gray-600 dark:text-dark-text">{headerConnectionText}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-500 dark:text-dark-text-secondary">
+          <span className="shell-text-compact font-medium text-gray-500 dark:text-dark-text-secondary">
             {contextUsageLabel} <span className="text-gray-700 dark:text-dark-text">{contextUsageText}</span>
           </span>
           <div className="w-16 h-1.5 bg-gray-200 dark:bg-dark-border2 rounded-full overflow-hidden">
@@ -106,29 +122,46 @@ export function AppHeader({
           </div>
         </div>
         <button
+          type="button"
           onClick={onToggleCheckpointMenu}
-          className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border2 text-gray-700 dark:text-dark-text rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all active:scale-[0.98]"
+          className="shell-text-compact px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border2 text-gray-700 dark:text-dark-text rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all active:scale-[0.98]"
+          aria-expanded={checkpointMenuOpen}
+          aria-controls={checkpointMenuId}
+          aria-haspopup="dialog"
         >
           {checkpointLabel}
         </button>
 
         {checkpointMenuOpen && (
-          <div className="absolute right-0 top-10 w-72 p-2 rounded border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-lg z-20">
+          <div
+            id={checkpointMenuId}
+            ref={(node) => {
+              checkpointPanelRef.current = node
+              checkpointMenuContainerRef.current = node
+            }}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="false"
+            aria-label={checkpointLabel}
+            className="absolute right-0 top-10 w-72 p-2 rounded border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-lg z-20"
+          >
             {checkpointsLoading ? (
-              <div className="text-xs text-gray-500 dark:text-dark-text-secondary p-2">{loadingCheckpointsLabel}</div>
+              <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2">{loadingCheckpointsLabel}</div>
             ) : checkpoints.length === 0 ? (
-              <div className="text-xs text-gray-500 dark:text-dark-text-secondary p-2">{noCheckpointsLabel}</div>
+              <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2">{noCheckpointsLabel}</div>
             ) : (
               <div className="space-y-2 max-h-56 overflow-y-auto">
-                {checkpoints.map((checkpoint) => (
+                {checkpoints.map((checkpoint, index) => (
                   <div key={checkpoint.id} className="p-2 border border-gray-200 dark:border-dark-border rounded">
-                    <div className="text-xs text-gray-700 dark:text-dark-text truncate" title={checkpoint.description || checkpoint.id}>
+                    <div className="shell-text-compact text-gray-700 dark:text-dark-text truncate" title={checkpoint.description || checkpoint.id}>
                       {checkpoint.description || checkpoint.id}
                     </div>
-                    <div className="text-[11px] text-gray-500 dark:text-dark-text-secondary">{checkpoint.created_at}</div>
+                    <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary">{checkpoint.created_at}</div>
                     <button
+                      ref={index === 0 ? firstRestoreButtonRef : undefined}
+                      type="button"
                       onClick={() => onRestoreCheckpoint(checkpoint.id)}
-                      className="mt-1 px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                      className="shell-text-compact mt-1 px-2 py-1 bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
                     >
                       {restoreLabel}
                     </button>
