@@ -63,10 +63,10 @@ Start the authoritative gateway in one PowerShell session:
 $proc = Start-Process -FilePath python -ArgumentList "scripts/start_gateway.py --host 127.0.0.1 --port 18080 --log-level warning" -PassThru
 ```
 
-Run the acceptance suite in another PowerShell session:
+Run the acceptance suite in another Windows PowerShell session:
 
 ```powershell
-./scripts/check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1
 ```
 
 Stop the gateway after the suite finishes:

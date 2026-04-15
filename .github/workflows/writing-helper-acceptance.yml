@@ -108,12 +108,12 @@ jobs:
           }
 
       - name: Run writing-helper acceptance
-        shell: pwsh
+        shell: powershell
         run: |
           if ('${{ inputs.strict }}' -eq 'true') {
-            ./scripts/check-writing-helper.ps1 -Strict -Port ${{ inputs.port }} -Host ${{ inputs.host }}
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-writing-helper.ps1 -Strict -Port ${{ inputs.port }} -Host ${{ inputs.host }}
           } else {
-            ./scripts/check-writing-helper.ps1 -Port ${{ inputs.port }} -Host ${{ inputs.host }}
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-writing-helper.ps1 -Port ${{ inputs.port }} -Host ${{ inputs.host }}
           }
 
       - name: Upload failed cases artifact

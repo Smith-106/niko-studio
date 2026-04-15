@@ -266,6 +266,29 @@ def test_desktop_local_powershell_scripts_preserve_public_parameter_contract() -
     assert 'Write-Host "Removed state file: $statePath"' in stop_script
 
 
+def test_writing_helper_acceptance_contract_uses_windows_powershell_and_bom_script() -> None:
+    workflow_text = (
+        PROJECT_ROOT / ".github/workflows/writing-helper-acceptance.yml"
+    ).read_text(encoding="utf-8").replace("\r\n", "\n")
+    sign_off_text = (PROJECT_ROOT / "docs/release/SIGN_OFF.md").read_text(encoding="utf-8")
+    script_path = PROJECT_ROOT / "scripts" / "check-writing-helper.ps1"
+    script_bytes = script_path.read_bytes()
+    script_text = script_bytes.decode("utf-8-sig")
+
+    assert script_bytes.startswith(b"\xef\xbb\xbf")
+    assert "shell: powershell" in workflow_text
+    assert (
+        r"powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-writing-helper.ps1"
+        in workflow_text
+    )
+    assert (
+        r"powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1"
+        in sign_off_text
+    )
+    assert "[Alias('Host')]" in script_text
+    assert "failed-writing-helper-cases.json" in script_text
+
+
 def test_desktop_local_launcher_docs_share_same_entrypoints() -> None:
     root_readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
     desktop_readme = (PROJECT_ROOT / "desktop" / "README.md").read_text(encoding="utf-8")

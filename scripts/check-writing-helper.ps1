@@ -1,4 +1,4 @@
-param(
+﻿param(
   [switch]$Strict,
   [int]$Port = 8000,
   [Alias('Host')]
@@ -7,6 +7,49 @@ param(
 
 $uri = "http://${GatewayHost}:$Port/writing-helper/process"
 $failedFile = Join-Path (Get-Location) "failed-writing-helper-cases.json"
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+if (-not ("System.Net.Http.HttpClient" -as [type])) {
+  Add-Type -AssemblyName System.Net.Http
+}
+
+function Invoke-Utf8JsonPost {
+  param(
+    [string]$TargetUri,
+    [object]$Payload
+  )
+
+  $requestJson = $Payload | ConvertTo-Json -Depth 10 -Compress
+  $client = [System.Net.Http.HttpClient]::new()
+  $content = $null
+
+  try {
+    $content = [System.Net.Http.StringContent]::new($requestJson, $utf8NoBom, "application/json")
+    $response = $client.PostAsync($TargetUri, $content).GetAwaiter().GetResult()
+    $responseBytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+    $responseText = $utf8NoBom.GetString($responseBytes)
+
+    if (-not $response.IsSuccessStatusCode) {
+      $message = "HTTP {0} {1}" -f [int]$response.StatusCode, $response.ReasonPhrase
+      $exception = [System.Exception]::new($message)
+      if (-not [string]::IsNullOrWhiteSpace($responseText)) {
+        $exception.Data["Body"] = $responseText
+      }
+      throw $exception
+    }
+
+    if ([string]::IsNullOrWhiteSpace($responseText)) {
+      return $null
+    }
+
+    return $responseText | ConvertFrom-Json
+  }
+  finally {
+    if ($null -ne $content) {
+      $content.Dispose()
+    }
+    $client.Dispose()
+  }
+}
 
 function Test-StrictPolish {
   param(
@@ -147,10 +190,8 @@ foreach ($c in $cases) {
   Write-Host ""
   Write-Host "=== $($c.name) ===" -ForegroundColor Cyan
 
-  $reqJson = $c.body | ConvertTo-Json -Depth 10 -Compress
-
   try {
-    $resp = Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/json" -Body $reqJson
+    $resp = Invoke-Utf8JsonPost -TargetUri $uri -Payload $c.body
     $baseOk = & $c.assert $resp
     $strictOk = $true
 
@@ -194,7 +235,13 @@ foreach ($c in $cases) {
   catch {
     $failed++
     $errMsg = $_.Exception.Message
-    $errBody = if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $null }
+    $errBody = if ($_.Exception.Data.Contains("Body")) {
+      [string]$_.Exception.Data["Body"]
+    } elseif ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+      $_.ErrorDetails.Message
+    } else {
+      $null
+    }
 
     Write-Host "FAIL: request error" -ForegroundColor Red
     Write-Host $errMsg -ForegroundColor Yellow
