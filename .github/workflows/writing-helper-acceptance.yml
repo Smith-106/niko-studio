@@ -123,6 +123,13 @@ jobs:
           name: failed-writing-helper-cases
           path: failed-writing-helper-cases.json
 
+      - name: Upload writing-helper acceptance evidence
+        if: always() && hashFiles('.workflow/evidence/release/writing-helper-acceptance.json') != ''
+        uses: actions/upload-artifact@v6
+        with:
+          name: writing-helper-acceptance-evidence
+          path: .workflow/evidence/release/writing-helper-acceptance.json
+
       - name: Upload gateway logs
         if: failure()
         uses: actions/upload-artifact@v6

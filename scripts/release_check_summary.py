@@ -17,6 +17,7 @@ REPORT_PATH = PROJECT_ROOT / "release-check-summary.md"
 RELEASE_EVIDENCE_DIR = PROJECT_ROOT / ".workflow" / "evidence" / "release"
 RELEASE_READINESS_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "release-readiness-artifact.json"
 AUTHORITY_ALIGNMENT_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "authority-alignment.json"
+WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "writing-helper-acceptance.json"
 GOVERNANCE_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "governance-scripts.junit.xml"
 PRODUCTION_GUARD_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-production-guard.xml"
 E2E_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-e2e.xml"
@@ -286,6 +287,29 @@ def _write_authority_alignment_artifact(
     else:
         artifact_payload = payload
     return _write_json_artifact(AUTHORITY_ALIGNMENT_ARTIFACT_PATH, artifact_payload)
+
+
+def _read_json_artifact(path: Path) -> tuple[dict[str, object] | None, str | None]:
+    if not path.exists():
+        return None, None
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
+    except json.JSONDecodeError as exc:
+        return None, str(exc)
+
+    if not isinstance(payload, dict):
+        return None, "json payload is not an object"
+
+    return payload, None
+
+
+def _current_head_sha() -> str | None:
+    code, output = run_cmd(["git", "rev-parse", "HEAD"])
+    if code != 0:
+        return None
+    head_sha = output.strip()
+    return head_sha or None
 
 
 def _run_governance_scripts_regression(junit_output_path: Path) -> tuple[int, str]:
@@ -1138,6 +1162,101 @@ def authority_alignment_signal(
     ])
 
 
+def writing_helper_acceptance_signal(
+    artifact_exists: bool,
+    artifact_payload: dict[str, object] | None,
+    current_head_sha: str | None,
+    artifact_parse_error: str | None,
+) -> tuple[str, int, str]:
+    if not artifact_exists:
+        return "FAIL", 1, _format_detail_pairs([
+            ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
+            ("strict", "missing"),
+            ("head_sha", "missing"),
+            ("current_head_sha", current_head_sha or "unknown"),
+            ("missing_keys", "artifact"),
+            ("json_parse_error", artifact_parse_error or "none"),
+            ("decision", "no_go"),
+        ])
+
+    if artifact_parse_error:
+        return "FAIL", 1, _format_detail_pairs([
+            ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
+            ("strict", "unknown"),
+            ("head_sha", "unknown"),
+            ("current_head_sha", current_head_sha or "unknown"),
+            ("missing_keys", "n/a"),
+            ("json_parse_error", artifact_parse_error),
+            ("decision", "no_go"),
+        ])
+
+    if artifact_payload is None:
+        return "FAIL", 1, _format_detail_pairs([
+            ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
+            ("strict", "unknown"),
+            ("head_sha", "unknown"),
+            ("current_head_sha", current_head_sha or "unknown"),
+            ("missing_keys", "payload"),
+            ("json_parse_error", "unknown"),
+            ("decision", "no_go"),
+        ])
+
+    required_keys = [
+        "status",
+        "strict",
+        "generated_at",
+        "head_sha",
+        "total_cases",
+        "passed_cases",
+        "failed_cases",
+    ]
+    missing_keys = [key for key in required_keys if key not in artifact_payload]
+
+    status_value = str(artifact_payload.get("status") or "").upper()
+    strict_value = artifact_payload.get("strict")
+    head_sha = str(artifact_payload.get("head_sha") or "").strip()
+    generated_at = str(artifact_payload.get("generated_at") or "").strip()
+    total_cases = artifact_payload.get("total_cases")
+    passed_cases = artifact_payload.get("passed_cases")
+    failed_cases = artifact_payload.get("failed_cases")
+    failed_cases_path = artifact_payload.get("failed_cases_path")
+
+    has_blocker = bool(missing_keys)
+    if strict_value is not True:
+        has_blocker = True
+    if status_value != "PASS":
+        has_blocker = True
+    if not generated_at:
+        has_blocker = True
+    if not head_sha or not current_head_sha or head_sha != current_head_sha:
+        has_blocker = True
+    if not isinstance(total_cases, int) or total_cases <= 0:
+        has_blocker = True
+    if not isinstance(passed_cases, int) or not isinstance(failed_cases, int):
+        has_blocker = True
+    elif passed_cases + failed_cases != total_cases or failed_cases != 0:
+        has_blocker = True
+
+    status = "FAIL" if has_blocker else "PASS"
+    exit_code = 1 if has_blocker else 0
+
+    return status, exit_code, _format_detail_pairs([
+        ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
+        ("strict", strict_value if strict_value is not None else "missing"),
+        ("status", status_value or "missing"),
+        ("head_sha", head_sha or "missing"),
+        ("current_head_sha", current_head_sha or "unknown"),
+        ("generated_at", generated_at or "missing"),
+        ("total_cases", total_cases if total_cases is not None else "missing"),
+        ("passed_cases", passed_cases if passed_cases is not None else "missing"),
+        ("failed_cases", failed_cases if failed_cases is not None else "missing"),
+        ("failed_cases_path", failed_cases_path if failed_cases_path else "none"),
+        ("missing_keys", _format_csv(missing_keys)),
+        ("json_parse_error", artifact_parse_error or "none"),
+        ("decision", "no_go" if has_blocker else "go"),
+    ])
+
+
 def evidence_coverage_signal(quality_non_template: int, weekly_non_template: int) -> tuple[str, int, str]:
     status = "PASS" if quality_non_template >= 1 and weekly_non_template >= 2 else "WARN"
     return status, 0, _format_detail_pairs([
@@ -1667,6 +1786,18 @@ def main() -> int:
         tasks_payload,
         tasks_parse_error,
     )
+    current_head_sha = _current_head_sha()
+    writing_helper_acceptance_payload, writing_helper_acceptance_parse_error = _read_json_artifact(
+        WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH
+    )
+    writing_helper_acceptance_status, writing_helper_acceptance_exit, writing_helper_acceptance_detail = (
+        writing_helper_acceptance_signal(
+            WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH.exists(),
+            writing_helper_acceptance_payload,
+            current_head_sha,
+            writing_helper_acceptance_parse_error,
+        )
+    )
     authority_alignment_status, authority_alignment_exit, authority_alignment_detail = authority_alignment_signal(
         authority_alignment_code,
         authority_alignment_payload,
@@ -1779,6 +1910,14 @@ def main() -> int:
                 ("target", "x86_64-pc-windows-msvc"),
                 ("signing", "unsigned_local_dry_run"),
             ]),
+        ),
+        build_check_result(
+            "writing_helper_acceptance_signal",
+            "P0",
+            True,
+            writing_helper_acceptance_exit,
+            writing_helper_acceptance_detail,
+            status_override=writing_helper_acceptance_status,
         ),
         build_check_result(
             "external_e2e_smoke",
@@ -2131,6 +2270,12 @@ def main() -> int:
 {desktop_packaging_output}
 ```
 
+#### writing_helper_acceptance_signal output
+
+```text
+{json.dumps(writing_helper_acceptance_payload, ensure_ascii=False, indent=2) if writing_helper_acceptance_payload else (writing_helper_acceptance_parse_error or 'artifact missing')}
+```
+
 #### external_e2e_smoke output
 
 ```text
@@ -2170,6 +2315,7 @@ def main() -> int:
 - packaging_dry_run: `{DESKTOP_PACKAGING_DRY_RUN_COMMAND}` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`)
 - formal_evidence_dir: `{_trace_path(RELEASE_EVIDENCE_DIR)}`
 - authority_alignment_artifact: `{_trace_path(AUTHORITY_ALIGNMENT_ARTIFACT_PATH)}`
+- writing_helper_acceptance_artifact: `{_trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)}`
 - governance_junit: `{_trace_path(GOVERNANCE_JUNIT_PATH)}`
 - production_guard_junit: `{_trace_path(PRODUCTION_GUARD_JUNIT_PATH)}`
 - external_smoke_junit: `{_trace_path(E2E_JUNIT_PATH)}`

@@ -76,6 +76,7 @@ Stop-Process -Id $proc.Id -Force
 ```
 
 The reusable CI equivalent is `.github/workflows/writing-helper-acceptance.yml`.
+Each strict run must also refresh `.workflow/evidence/release/writing-helper-acceptance.json` for the same `git rev-parse HEAD`.
 
 ### 5. Consolidated release snapshot
 
@@ -84,7 +85,8 @@ python scripts/release_check_summary.py
 ```
 
 `release-check-summary.md` must end in `Decision: GO`.
-This command also refreshes the formal sign-off artifacts under `.workflow/evidence/release/`, including the retained authority-alignment JSON plus the governance and Vitest JUnit/XML reports used by the release bundle manifest.
+This command also refreshes the formal sign-off artifacts under `.workflow/evidence/release/`, including the retained authority-alignment JSON, `.workflow/evidence/release/writing-helper-acceptance.json`, and the governance and Vitest JUnit/XML reports used by the release bundle manifest.
+The consolidated snapshot is only valid when the retained writing-helper acceptance artifact is `strict: true` and matches the current HEAD SHA.
 
 ## Customer Handoff Bundle
 
@@ -110,6 +112,7 @@ Use one concise bundle for internal delivery or customer-facing demo preparation
 - `release-check-summary.md`
 - `.workflow/evidence/release/release-readiness-artifact.json`
 - `.workflow/evidence/release/authority-alignment.json`
+- `.workflow/evidence/release/writing-helper-acceptance.json`
 - `.workflow/evidence/release/vitest-production-guard.xml`
 - `.workflow/evidence/release/vitest-e2e.xml`
 - `.workflow/evidence/release/governance-scripts.junit.xml`

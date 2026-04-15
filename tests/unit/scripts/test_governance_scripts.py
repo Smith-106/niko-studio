@@ -110,6 +110,22 @@ def test_delivery_gate_rules_cover_authority_alignment_contract() -> None:
         and must_exist
         for file_path, needle, must_exist in rule_map
     )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '"writing_helper_acceptance_signal"' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert (
+        "docs/release/SIGN_OFF.md",
+        ".workflow/evidence/release/writing-helper-acceptance.json",
+        True,
+    ) in rule_map
+    assert (
+        ".github/workflows/writing-helper-acceptance.yml",
+        "writing-helper-acceptance.json",
+        True,
+    ) in rule_map
     assert ("desktop/package.json", '"local:start"', True) in rule_map
     assert ("desktop/package.json", '"local:start:force"', True) in rule_map
     assert ("desktop/package.json", '"local:start:binary"', True) in rule_map
@@ -281,6 +297,7 @@ def test_writing_helper_acceptance_contract_uses_windows_powershell_and_bom_scri
         r"powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-writing-helper.ps1"
         in workflow_text
     )
+    assert "writing-helper-acceptance.json" in workflow_text
     assert (
         r"powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1"
         in sign_off_text
@@ -481,6 +498,48 @@ def test_authority_alignment_signal_helper_returns_pass_for_clean_payload() -> N
     assert "checked_files=2" in detail
 
 
+def test_writing_helper_acceptance_signal_returns_fail_for_parse_error() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_writing_helper_parse_error",
+    )
+
+    status, exit_code, detail = module.writing_helper_acceptance_signal(
+        True,
+        None,
+        "6066c334d6954d29a126af413f6d53af6d39d99f",
+        "Expecting value: line 1 column 1 (char 0)",
+    )
+
+    assert status == "FAIL"
+    assert exit_code == 1
+    assert "json_parse_error=Expecting value: line 1 column 1 (char 0)" in detail
+    assert "decision=no_go" in detail
+
+
+def test_writing_helper_acceptance_signal_returns_fail_for_missing_required_keys() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_writing_helper_missing_keys",
+    )
+
+    status, exit_code, detail = module.writing_helper_acceptance_signal(
+        True,
+        {
+            "status": "PASS",
+            "strict": True,
+            "head_sha": "6066c334d6954d29a126af413f6d53af6d39d99f",
+        },
+        "6066c334d6954d29a126af413f6d53af6d39d99f",
+        None,
+    )
+
+    assert status == "FAIL"
+    assert exit_code == 1
+    assert "missing_keys=generated_at,total_cases,passed_cases,failed_cases" in detail
+    assert "decision=no_go" in detail
+
+
 def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None:
     module = load_script_module(
         "scripts/release_check_summary.py",
@@ -505,3 +564,6 @@ def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None
     assert "run_cmd(DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS)" in summary_source
     assert '("command", DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND)' in summary_source
     assert "desktop_authoritative_local_gate" in summary_source
+    assert "writing_helper_acceptance_signal" in summary_source
+    assert "WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH" in summary_source
+    assert ".workflow/evidence/release/writing-helper-acceptance.json" in sign_off_text

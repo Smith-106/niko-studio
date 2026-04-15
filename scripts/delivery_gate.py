@@ -367,6 +367,11 @@ RULES: tuple[GateRule, ...] = (
         reason="release summary 未将 desktop packaging dry-run 视为 P0 blocking 信号。",
     ),
     GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"writing_helper_acceptance_signal\"",
+        reason="release summary 未将 writing-helper acceptance 视为 P0 blocking 信号。",
+    ),
+    GateRule(
         file_path="docs/release/SIGN_OFF.md",
         needle="certificateThumbprint",
         reason="release sign-off 文档未显式记录签名先决条件。",
@@ -375,6 +380,16 @@ RULES: tuple[GateRule, ...] = (
         file_path="docs/release/SIGN_OFF.md",
         needle="check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1",
         reason="release sign-off 文档未暴露 writing-helper acceptance 本地执行命令。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle=".workflow/evidence/release/writing-helper-acceptance.json",
+        reason="release sign-off 文档未声明 retained writing-helper acceptance artifact。",
+    ),
+    GateRule(
+        file_path=".github/workflows/writing-helper-acceptance.yml",
+        needle="writing-helper-acceptance.json",
+        reason="writing-helper acceptance 工作流未保留 acceptance evidence artifact。",
     ),
 )
 

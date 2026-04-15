@@ -6,10 +6,26 @@
 )
 
 $uri = "http://${GatewayHost}:$Port/writing-helper/process"
+$projectRoot = Split-Path -Parent $PSScriptRoot
 $failedFile = Join-Path (Get-Location) "failed-writing-helper-cases.json"
+$releaseEvidenceDir = Join-Path $projectRoot ".workflow\evidence\release"
+$acceptanceArtifact = Join-Path $releaseEvidenceDir "writing-helper-acceptance.json"
 $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 if (-not ("System.Net.Http.HttpClient" -as [type])) {
   Add-Type -AssemblyName System.Net.Http
+}
+
+function Get-CurrentHeadSha {
+  try {
+    $head = & git -C $projectRoot rev-parse HEAD 2>$null
+    if ($LASTEXITCODE -eq 0 -and $null -ne $head) {
+      return ($head | Select-Object -First 1).Trim()
+    }
+  }
+  catch {
+  }
+
+  return $null
 }
 
 function Invoke-Utf8JsonPost {
@@ -281,12 +297,32 @@ if ($failedCases.Count -gt 0) {
   Remove-Item $failedFile -Force
 }
 
+New-Item -ItemType Directory -Force -Path $releaseEvidenceDir | Out-Null
+$acceptancePayload = [ordered]@{
+  status            = if ($failed -gt 0) { "FAIL" } else { "PASS" }
+  strict            = [bool]$Strict
+  generated_at      = [DateTimeOffset]::UtcNow.ToString("o")
+  head_sha          = Get-CurrentHeadSha
+  host              = $GatewayHost
+  port              = $Port
+  total_cases       = $total
+  passed_cases      = $passed
+  failed_cases      = $failed
+  failed_cases_path = if ($failedCases.Count -gt 0) { "failed-writing-helper-cases.json" } else { $null }
+}
+[System.IO.File]::WriteAllText(
+  $acceptanceArtifact,
+  (($acceptancePayload | ConvertTo-Json -Depth 20) + "`n"),
+  $utf8NoBom
+)
+
 Write-Host ""
 Write-Host "===== SUMMARY =====" -ForegroundColor Magenta
 Write-Host "Strict Mode: $Strict" -ForegroundColor Cyan
 Write-Host "Passed: $passed / $total" -ForegroundColor Green
 Write-Host "Failed: $failed / $total" -ForegroundColor Red
 Write-Host "Pass Rate: $rate%" -ForegroundColor Cyan
+Write-Host "Acceptance artifact: $acceptanceArtifact" -ForegroundColor Cyan
 
 if ($failedCases.Count -gt 0) {
   Write-Host "Failed cases exported: $failedFile" -ForegroundColor Yellow
