@@ -152,10 +152,14 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
     loading,
     result,
     suggestionsRefreshing,
+    suggestionsRefreshError,
     refreshSuggestions,
   } = useEvaluationData({
     content,
     qualityGoals,
+    t: {
+      evaluationSuggestionsRefreshFailed: t.evaluationSuggestionsRefreshFailed,
+    },
     translateSuggestions: (rawSuggestions) => normalizeSuggestionPayloads(rawSuggestions, translate),
     buildViewModel: (data) => ({
       score: Number((data.total_score / 10).toFixed(1)),
@@ -440,6 +444,11 @@ export function EvaluationPanel({ content, onClose }: EvaluationPanelProps) {
                 {t.evaluationBatchUndo}
               </button>
             </div>
+            {suggestionsRefreshError && (
+              <p className="mb-3 text-xs text-red-500" role="alert">
+                {suggestionsRefreshError}
+              </p>
+            )}
             {batchState.message && (
               <p className={`mb-3 text-xs ${batchState.status === 'error' ? 'text-red-500' : 'text-green-600'}`}>
                 {batchState.message}

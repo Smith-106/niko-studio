@@ -99,6 +99,7 @@ vi.mock('@/types/settingsOwnership', () => ({
 
 vi.mock('../api/client', () => ({
   evaluateContent: vi.fn(),
+  getImprovementSuggestions: vi.fn(),
   novelQualityCheck: vi.fn(),
   createCheckpoint: vi.fn(),
   listCheckpoints: vi.fn(),
@@ -123,6 +124,7 @@ import {
   createPlan,
   evaluateContent,
   executePlan,
+  getImprovementSuggestions,
   listCheckpoints,
   novelQualityCheck,
   restoreCheckpoint,
@@ -135,6 +137,7 @@ import {
 } from '../api/client'
 
 const mockedEvaluateContent = vi.mocked(evaluateContent)
+const mockedGetImprovementSuggestions = vi.mocked(getImprovementSuggestions)
 const mockedNovelQualityCheck = vi.mocked(novelQualityCheck)
 const mockedListCheckpoints = vi.mocked(listCheckpoints)
 const mockedCreateCheckpoint = vi.mocked(createCheckpoint)
@@ -231,6 +234,12 @@ describe('EvaluationPanel actions', () => {
     })
 
     mockedListCheckpoints.mockResolvedValue({ success: true, data: [] })
+    mockedGetImprovementSuggestions.mockResolvedValue({
+      success: true,
+      data: [
+        { issue: '意象薄弱', suggestion: '强化意象', priority: 'high' },
+      ],
+    })
     mockedNovelQualityCheck.mockResolvedValue({
       success: true,
       data: {
@@ -358,6 +367,22 @@ describe('EvaluationPanel actions', () => {
 
     await waitFor(() => {
       expect(screen.getByText('service unavailable')).toBeInTheDocument()
+    })
+  })
+
+  it('shows a visible error message when refreshing suggestions fails', async () => {
+    mockedGetImprovementSuggestions.mockResolvedValueOnce({
+      success: false,
+      error: 'refresh failed',
+    })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationSuggestionsRefresh }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('refresh failed')
     })
   })
 

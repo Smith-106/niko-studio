@@ -20,6 +20,9 @@ interface UseEvaluationDataOptions {
     coherence: number
     styleConsistency: number
   }
+  t: {
+    evaluationSuggestionsRefreshFailed: string
+  }
   translateSuggestions: (rawSuggestions: unknown) => RecommendationPayload[]
   buildViewModel: (payload: {
     total_score: number
@@ -32,12 +35,14 @@ interface UseEvaluationDataOptions {
 export function useEvaluationData({
   content,
   qualityGoals,
+  t,
   translateSuggestions,
   buildViewModel,
 }: UseEvaluationDataOptions) {
   const [loading, setLoading] = useState(true)
   const [result, setResult] = useState<EvaluationViewModel | null>(null)
   const [suggestionsRefreshing, setSuggestionsRefreshing] = useState(false)
+  const [suggestionsRefreshError, setSuggestionsRefreshError] = useState<string | null>(null)
 
   const runEvaluation = async () => {
     setLoading(true)
@@ -64,6 +69,7 @@ export function useEvaluationData({
 
   const refreshSuggestions = async () => {
     setSuggestionsRefreshing(true)
+    setSuggestionsRefreshError(null)
     try {
       const issues = result?.suggestions.map((item) => item.title).filter(Boolean)
       const response = await getImprovementSuggestions(content, issues, 8)
@@ -73,13 +79,19 @@ export function useEvaluationData({
           ...result,
           suggestions,
         })
+        return
       }
+      setSuggestionsRefreshError(response.error || t.evaluationSuggestionsRefreshFailed)
+    } catch (error) {
+      console.error('Refreshing suggestions failed:', error)
+      setSuggestionsRefreshError(t.evaluationSuggestionsRefreshFailed)
     } finally {
       setSuggestionsRefreshing(false)
     }
   }
 
   useEffect(() => {
+    setSuggestionsRefreshError(null)
     runEvaluation()
   }, [content])
 
@@ -87,6 +99,7 @@ export function useEvaluationData({
     loading,
     result,
     suggestionsRefreshing,
+    suggestionsRefreshError,
     runEvaluation,
     refreshSuggestions,
   }

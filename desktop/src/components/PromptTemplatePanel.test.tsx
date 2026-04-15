@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { PromptTemplate } from '../stores/settingsStore'
 import { PromptTemplatePanel } from './PromptTemplatePanel'
@@ -70,6 +70,59 @@ describe('PromptTemplatePanel', () => {
     expect(onToggleFavorite).toHaveBeenCalledWith('tpl-1')
   })
 
+  it('exposes pressed state for category and favorite filters', async () => {
+    render(
+      <PromptTemplatePanel
+        templates={baseTemplates}
+        variablePresets={{}}
+        onToggleFavorite={() => {}}
+        onApplyTemplate={() => {}}
+        onClose={() => {}}
+      />
+    )
+
+    const outlineFilter = screen.getByRole('button', { name: zh.templateCategoryOutline })
+    expect(outlineFilter).toHaveAttribute('aria-pressed', 'false')
+
+    await userEvent.click(outlineFilter)
+    expect(outlineFilter).toHaveAttribute('aria-pressed', 'true')
+
+    const favoriteToggle = screen.getByRole('button', { name: zh.templateFavoriteOnlyOff })
+    expect(favoriteToggle).toHaveAttribute('aria-pressed', 'false')
+
+    await userEvent.click(favoriteToggle)
+    expect(screen.getByRole('button', { name: zh.templateFavoriteOnlyOn })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('uses separate row select and favorite buttons for template cards', async () => {
+    const onToggleFavorite = vi.fn()
+
+    render(
+      <PromptTemplatePanel
+        templates={baseTemplates}
+        variablePresets={{}}
+        onToggleFavorite={onToggleFavorite}
+        onApplyTemplate={() => {}}
+        onClose={() => {}}
+      />
+    )
+
+    const rows = within(screen.getByRole('list')).getAllByRole('listitem')
+    const outlineRow = rows[1]
+    const [rowButton, favoriteButton] = within(outlineRow).getAllByRole('button')
+
+    expect(rowButton).toHaveAccessibleName(/章节大纲/)
+    expect(rowButton).not.toHaveAttribute('aria-current')
+    expect(favoriteButton).toHaveAccessibleName(zh.templateUnfavorite)
+
+    await userEvent.click(rowButton)
+    expect(rowButton).toHaveAttribute('aria-current', 'true')
+
+    await userEvent.click(favoriteButton)
+    expect(onToggleFavorite).toHaveBeenCalledWith('tpl-2')
+    expect(rowButton).toHaveAttribute('aria-current', 'true')
+  })
+
   it('validates required variables before apply', async () => {
     const onApplyTemplate = vi.fn()
 
@@ -87,6 +140,54 @@ describe('PromptTemplatePanel', () => {
 
     expect(screen.getByText(zh.templateRequiredHint)).toBeInTheDocument()
     expect(onApplyTemplate).not.toHaveBeenCalled()
+  })
+
+  it('focuses the first invalid input and exposes field-level error semantics', async () => {
+    render(
+      <PromptTemplatePanel
+        templates={baseTemplates}
+        variablePresets={{}}
+        onToggleFavorite={() => {}}
+        onApplyTemplate={() => {}}
+        onClose={() => {}}
+      />
+    )
+
+    const topicInput = screen.getByLabelText('主题 *')
+    const countInput = screen.getByLabelText('数量 *')
+
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
+
+    await waitFor(() => {
+      expect(topicInput).toHaveFocus()
+    })
+    expect(topicInput).toHaveAttribute('aria-invalid', 'true')
+    expect(topicInput).toHaveAttribute('aria-describedby', 'template-var-error-topic')
+    expect(countInput).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByRole('alert')).toHaveAttribute('id', 'template-var-error-topic')
+  })
+
+  it('clears invalid field semantics after the user edits that field', async () => {
+    render(
+      <PromptTemplatePanel
+        templates={baseTemplates}
+        variablePresets={{}}
+        onToggleFavorite={() => {}}
+        onApplyTemplate={() => {}}
+        onClose={() => {}}
+      />
+    )
+
+    const topicInput = screen.getByLabelText('主题 *')
+
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
+    await screen.findByRole('alert')
+
+    await userEvent.type(topicInput, '悬疑')
+
+    expect(topicInput).not.toHaveAttribute('aria-invalid')
+    expect(topicInput).not.toHaveAttribute('aria-describedby')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('applies template payload with append mode', async () => {

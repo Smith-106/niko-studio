@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Search, Star, X } from "lucide-react";
 import type {
   PromptTemplate,
@@ -79,7 +79,11 @@ export function PromptTemplatePanel({
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
+  const [pendingFocusVariableId, setPendingFocusVariableId] = useState<
+    string | null
+  >(null);
   const titleId = "prompt-template-panel-title";
+  const templateListId = "prompt-template-list";
 
   useDialogFocusTrap({
     containerRef: dialogRef,
@@ -87,6 +91,24 @@ export function PromptTemplatePanel({
     initialFocusRef: searchInputRef,
     restoreFocusRef,
   });
+
+  useEffect(() => {
+    if (
+      pendingFocusVariableId === null ||
+      validationErrors[pendingFocusVariableId] === undefined
+    ) {
+      return;
+    }
+
+    const input = document.getElementById(
+      `template-var-${pendingFocusVariableId}`,
+    );
+    if (input instanceof HTMLInputElement) {
+      input.focus();
+    }
+
+    setPendingFocusVariableId(null);
+  }, [pendingFocusVariableId, validationErrors]);
 
   const filteredTemplates = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -133,25 +155,37 @@ export function PromptTemplatePanel({
     return variable?.defaultValue ?? "";
   };
 
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    setValidationErrors({});
+    setPendingFocusVariableId(null);
+  };
+
   const handleApply = () => {
     if (!selectedTemplate) return;
 
     const nextValues: Record<string, string> = {};
     const nextErrors: Record<string, string> = {};
+    let firstInvalidVariableId: string | null = null;
 
     for (const variable of selectedTemplate.variables) {
       const value = resolveVariableValue(selectedTemplate, variable.id).trim();
       if (variable.required && !value) {
         nextErrors[variable.id] = t.templateRequiredHint;
+        if (firstInvalidVariableId === null) {
+          firstInvalidVariableId = variable.id;
+        }
       }
       nextValues[variable.id] = value;
     }
 
     setValidationErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
+      setPendingFocusVariableId(firstInvalidVariableId);
       return;
     }
 
+    setPendingFocusVariableId(null);
     const text = renderTemplateContent(selectedTemplate, nextValues);
     onApplyTemplate({
       text,
@@ -197,7 +231,7 @@ export function PromptTemplatePanel({
         <button
           type="button"
           onClick={() => onClose("close-button")}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none rounded-md p-1 hover:bg-gray-200 dark:hover:bg-dark-surface2 transition-colors"
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-surface rounded-md p-1 hover:bg-gray-200 dark:hover:bg-dark-surface2 transition-colors"
           aria-label={t.templateClosePanel}
         >
           <X size={18} />
@@ -220,6 +254,9 @@ export function PromptTemplatePanel({
             return (
               <button
                 key={category}
+                type="button"
+                aria-pressed={selectedCategory === category}
+                aria-controls={templateListId}
                 onClick={() => setSelectedCategory(category)}
                 className={`px-3 py-1.5 text-[11px] font-medium uppercase tracking-wider rounded-full transition-all active:scale-95 ${
                   selectedCategory === category
@@ -235,6 +272,9 @@ export function PromptTemplatePanel({
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            aria-pressed={favoriteOnly}
+            aria-controls={templateListId}
             onClick={() => setFavoriteOnly((prev) => !prev)}
             className={`px-3 py-1.5 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 active:scale-95 shadow-sm ${
               favoriteOnly
@@ -269,61 +309,50 @@ export function PromptTemplatePanel({
               {t.templateNoMatch}
             </div>
           ) : (
-            <ul className="p-2 space-y-1.5">
+            <ul id={templateListId} className="p-2 space-y-1.5">
               {filteredTemplates.map((template) => {
                 const selected = selectedTemplate?.id === template.id;
                 return (
                   <li key={template.id}>
                     <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        setSelectedTemplateId(template.id);
-                        setValidationErrors({});
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setSelectedTemplateId(template.id);
-                          setValidationErrors({});
-                        }
-                      }}
-                      className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer shadow-sm hover:shadow-md ${
+                      className={`flex items-start gap-2 rounded-xl border p-3 transition-all shadow-sm hover:shadow-md ${
                         selected
                           ? "border-primary-500 bg-primary-50/50 dark:bg-primary-900/10"
                           : "border-transparent hover:border-gray-200 dark:hover:border-dark-border bg-white dark:bg-dark-surface"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        aria-current={selected ? "true" : undefined}
+                        onClick={() => handleTemplateSelect(template.id)}
+                        className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+                      >
                         <span
-                          className={`text-[13px] font-semibold tracking-wide truncate ${selected ? "text-primary-700 dark:text-primary-400" : "text-gray-800 dark:text-dark-text"}`}
+                          className={`block truncate text-[13px] font-semibold tracking-wide ${selected ? "text-primary-700 dark:text-primary-400" : "text-gray-800 dark:text-dark-text"}`}
                         >
                           {template.title}
                         </span>
-                        <button
-                          type="button"
-                          aria-label={
-                            template.isFavorite
-                              ? t.templateUnfavorite
-                              : t.templateFavorite
-                          }
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onToggleFavorite(template.id);
-                          }}
-                          className={`cursor-pointer shrink-0 transition-colors p-1 -m-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 ${template.isFavorite ? "text-amber-500" : "text-gray-300 dark:text-gray-600 hover:text-amber-400"}`}
+                        <p
+                          className={`mt-1.5 text-[11px] line-clamp-2 leading-relaxed ${selected ? "text-primary-600/80 dark:text-primary-400/80" : "text-gray-500 dark:text-dark-text-secondary"}`}
                         >
-                          <Star
-                            size={14}
-                            fill={template.isFavorite ? "currentColor" : "none"}
-                          />
-                        </button>
-                      </div>
-                      <p
-                        className={`mt-1.5 text-[11px] line-clamp-2 leading-relaxed ${selected ? "text-primary-600/80 dark:text-primary-400/80" : "text-gray-500 dark:text-dark-text-secondary"}`}
+                          {template.content}
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={
+                          template.isFavorite
+                            ? t.templateUnfavorite
+                            : t.templateFavorite
+                        }
+                        onClick={() => onToggleFavorite(template.id)}
+                        className={`cursor-pointer shrink-0 self-start transition-colors p-1 -m-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 ${template.isFavorite ? "text-amber-500" : "text-gray-300 dark:text-gray-600 hover:text-amber-400"}`}
                       >
-                        {template.content}
-                      </p>
+                        <Star
+                          size={14}
+                          fill={template.isFavorite ? "currentColor" : "none"}
+                        />
+                      </button>
                     </div>
                   </li>
                 );
@@ -349,26 +378,34 @@ export function PromptTemplatePanel({
                     selectedTemplate,
                     variable.id,
                   );
+                  const inputId = `template-var-${variable.id}`;
+                  const errorId = `template-var-error-${variable.id}`;
+                  const error = validationErrors[variable.id];
                   return (
                     <div
                       key={variable.id}
                       className="bg-white dark:bg-dark-surface p-3 rounded-xl border border-gray-100 dark:border-dark-border/50 shadow-sm"
                     >
                       <label
-                        htmlFor={`template-var-${variable.id}`}
+                        htmlFor={inputId}
                         className="block text-[11px] font-semibold text-gray-600 dark:text-dark-text-secondary uppercase tracking-wider mb-2"
                       >
                         {variable.label}
                         {variable.required ? " *" : ""}
                       </label>
                       <input
-                        id={`template-var-${variable.id}`}
+                        id={inputId}
                         value={value}
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={error ? errorId : undefined}
                         onChange={(event) => {
                           setVariableValues((prev) => ({
                             ...prev,
                             [variable.id]: event.target.value,
                           }));
+                          setPendingFocusVariableId((prev) =>
+                            prev === variable.id ? null : prev,
+                          );
                           setValidationErrors((prev) => {
                             const { [variable.id]: _ignored, ...rest } = prev;
                             return rest;
@@ -379,9 +416,13 @@ export function PromptTemplatePanel({
                         }
                         className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-md focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all"
                       />
-                      {validationErrors[variable.id] && (
-                        <p className="mt-2 text-xs font-medium text-danger-500">
-                          {validationErrors[variable.id]}
+                      {error && (
+                        <p
+                          id={errorId}
+                          role="alert"
+                          className="mt-2 text-xs font-medium text-danger-500"
+                        >
+                          {error}
                         </p>
                       )}
                     </div>
@@ -392,6 +433,7 @@ export function PromptTemplatePanel({
               <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
                 <div className="flex items-center gap-3 mb-4 bg-gray-100/50 dark:bg-dark-surface/50 p-1 rounded-lg w-fit">
                   <button
+                    type="button"
                     onClick={() => setApplyMode("replace")}
                     className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                       applyMode === "replace"
@@ -402,6 +444,7 @@ export function PromptTemplatePanel({
                     {t.templateApplyReplace}
                   </button>
                   <button
+                    type="button"
                     onClick={() => setApplyMode("append")}
                     className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                       applyMode === "append"
@@ -414,6 +457,7 @@ export function PromptTemplatePanel({
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleApply}
                   className="w-full px-4 py-2.5 text-sm font-bold tracking-wide rounded-xl bg-primary-600 text-white shadow-md hover:bg-primary-500 hover:shadow-lg active:scale-[0.98] transition-all flex justify-center items-center gap-2"
                 >

@@ -193,6 +193,7 @@ export interface Translations {
   evaluationRefresh: string
   evaluationSuggestionsRefresh: string
   evaluationSuggestionsRefreshing: string
+  evaluationSuggestionsRefreshFailed: string
   evaluationQualityCheckTitle: string
   evaluationQualityCheckRun: string
   evaluationQualityCheckRunning: string
@@ -960,6 +961,7 @@ export const translations: Record<Language, Translations> = {
     evaluationRefresh: '刷新',
     evaluationSuggestionsRefresh: '刷新建议',
     evaluationSuggestionsRefreshing: '刷新建议中...',
+    evaluationSuggestionsRefreshFailed: '刷新建议失败，请稍后重试。',
     evaluationQualityCheckTitle: '小说质量检查',
     evaluationQualityCheckRun: '执行质量检查',
     evaluationQualityCheckRunning: '质量检查中...',
@@ -1722,6 +1724,7 @@ export const translations: Record<Language, Translations> = {
     evaluationRefresh: 'Refresh',
     evaluationSuggestionsRefresh: 'Refresh suggestions',
     evaluationSuggestionsRefreshing: 'Refreshing suggestions...',
+    evaluationSuggestionsRefreshFailed: 'Failed to refresh suggestions. Please try again later.',
     evaluationQualityCheckTitle: 'Novel Quality Check',
     evaluationQualityCheckRun: 'Run quality check',
     evaluationQualityCheckRunning: 'Running quality check...',
