@@ -169,7 +169,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 
 - 发布级别：internal packaging proof
 - 发布版本：`9.0.7`
-- 对应 tag / commit：待本次 release commit；当前 retained evidence HEAD = `5b2707bd3dfb2031a53d8b77434717a95db22fd6`
+- 对应 tag / commit：见本次 release commit / tag；sign-off 证据以 `.workflow/evidence/release/` 下最新 artifact 为准
 - 版本一致性检查：通过
 - 交付语义门禁：通过
 - 基线测试与覆盖率：通过

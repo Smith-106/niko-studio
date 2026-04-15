@@ -95,7 +95,7 @@ Use one concise bundle for internal delivery or customer-facing demo preparation
 ### Latest validated packaging snapshot
 
 - Validation date: `2026-04-15`
-- Retained evidence HEAD stamp: `5b2707bd3dfb2031a53d8b77434717a95db22fd6`
+- Retained evidence HEAD stamp: see `.workflow/evidence/release/writing-helper-acceptance.json`
 - Packaging proof completed:
   - `npm --prefix desktop run validate:package:dry-run`
   - `npm --prefix desktop run tauri:build`
