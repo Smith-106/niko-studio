@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload, Settings } from 'lucide-react'
 import type { BackendConfig } from '../api/config'
 import { isTauriRuntime, syncGatewayBaseOverride } from '../api/transport'
@@ -8,6 +8,7 @@ import { useI18n } from '../i18n'
 import { MASKED_SECRET_VALUE, formatBackendFieldValue, useSettingsBackendConfig } from '../hooks/useSettingsBackendConfig'
 import { useSettingsProviderModels } from '../hooks/useSettingsProviderModels'
 import { useSettingsDiagnostics } from '../hooks/useSettingsDiagnostics'
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -48,6 +49,9 @@ function formatBackendFieldLabel(field: string) {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const backdropPointerDownRef = useRef(false)
   const {
     settings,
     updateSettings,
@@ -58,6 +62,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [localSettings, setLocalSettings] = useState(settings)
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const wasOpenRef = useRef(false)
   const { t } = useI18n()
 
   const sections: SettingsSection[] = [
@@ -174,6 +179,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           : backendConfigState.lastSync
             ? `${t.backendConfigSyncSuccess} · ${new Date(backendConfigState.lastSync).toLocaleString()}`
             : null
+
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      setLocalSettings(settings)
+    }
+    wasOpenRef.current = isOpen
+  }, [isOpen, settings])
+
+  useDialogFocusTrap({
+    containerRef: dialogRef,
+    onClose,
+    isActive: isOpen,
+    initialFocusRef: headingRef,
+  })
 
   if (!isOpen) return null
 
@@ -321,18 +340,51 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   }
 
+  const handleBackdropMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    backdropPointerDownRef.current = event.target === event.currentTarget
+  }
+
+  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!backdropPointerDownRef.current || event.target !== event.currentTarget) {
+      backdropPointerDownRef.current = false
+      return
+    }
+
+    backdropPointerDownRef.current = false
+    onClose()
+  }
+
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white dark:bg-dark-bg rounded-2xl w-full max-w-5xl h-[85vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-dark-border flex flex-col transform transition-all">
+    <div
+      className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+      onMouseDown={handleBackdropMouseDown}
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
+        className="bg-white dark:bg-dark-bg rounded-2xl w-full max-w-5xl h-[85vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-dark-border flex flex-col transform transition-all"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-dark-border bg-slate-50 dark:bg-dark-surface/80 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center shadow-sm">
               <Settings className="text-white" size={18} />
             </div>
-            <h2 className="text-lg font-bold text-gray-800 dark:text-dark-text tracking-wide">{t.settingsTitle}</h2>
+            <h2
+              ref={headingRef}
+              id="settings-modal-title"
+              tabIndex={-1}
+              className="text-lg font-bold text-gray-800 dark:text-dark-text tracking-wide"
+            >
+              {t.settingsTitle}
+            </h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label={t.settingsClose}
             title={t.settingsClose}

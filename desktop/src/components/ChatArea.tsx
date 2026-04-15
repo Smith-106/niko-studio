@@ -63,6 +63,8 @@ export function ChatArea({
   isTemplatePanelOpen = false,
   onTemplatePanelOpenChange,
 }: ChatAreaProps) {
+  const composerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const templatePanelRestoreFocusRef = useRef<HTMLElement | null>(null)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')
@@ -255,6 +257,11 @@ export function ChatArea({
   const handleComparisonAccept = useCallback((content: string) => {
     setInput(content)
   }, [])
+
+  const handleOpenTemplateLibrary = useCallback(() => {
+    templatePanelRestoreFocusRef.current = null
+    onTemplatePanelOpenChange?.(true)
+  }, [onTemplatePanelOpenChange])
 
   const commitAssistantResponse = (response: Awaited<ReturnType<typeof chat>>) => {
     if (!response.success || !response.data) return
@@ -759,6 +766,7 @@ export function ChatArea({
     for (const [variableId, value] of Object.entries(variableValues)) {
       setTemplateVariablePreset(templateId, variableId, value)
     }
+    templatePanelRestoreFocusRef.current = composerInputRef.current
     onTemplatePanelOpenChange?.(false)
   }
 
@@ -815,7 +823,7 @@ export function ChatArea({
               ))}
               <button
                 type="button"
-                onClick={() => onTemplatePanelOpenChange?.(true)}
+                onClick={handleOpenTemplateLibrary}
                 className="px-4 py-2 text-sm font-medium rounded-full bg-white dark:bg-dark-surface text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 border border-gray-200 dark:border-dark-border shadow-sm transition-all active:scale-[0.98]"
               >
                 {t.templateLibraryEntry}
@@ -1028,7 +1036,7 @@ export function ChatArea({
           modePresets={modePresets}
           onSetChatMode={setChatMode}
           onToggleModelComparison={() => setEnableModelComparison((prev) => !prev)}
-          onOpenTemplateLibrary={() => onTemplatePanelOpenChange?.(true)}
+          onOpenTemplateLibrary={handleOpenTemplateLibrary}
           onSetComparisonModel={setComparisonModel}
           onSetAgentAction={setAgentAction}
           onSetWorkflowLevel={setWorkflowLevel}
@@ -1047,6 +1055,7 @@ export function ChatArea({
           sendShortcutLabel={t.sendShortcutLabel}
           sendShortcutHint={settings.sendShortcut === 'ctrlEnter' ? t.sendShortcutCtrlEnter : t.sendShortcutEnter}
           fileInputRef={fileInputRef}
+          inputRef={composerInputRef}
           onInputChange={setInput}
           onKeyDown={handleKeyDown}
           onFileUpload={handleFileUpload}
@@ -1061,6 +1070,7 @@ export function ChatArea({
           variablePresets={promptTemplateLibrary.variablePresets}
           onToggleFavorite={toggleTemplateFavorite}
           onApplyTemplate={handleApplyTemplate}
+          restoreFocusRef={templatePanelRestoreFocusRef}
           onClose={() => onTemplatePanelOpenChange?.(false)}
         />
       )}

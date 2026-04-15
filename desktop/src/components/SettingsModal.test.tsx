@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SettingsModal } from './SettingsModal'
 import { useAppStore } from '../stores/appStore'
@@ -254,6 +255,103 @@ describe('SettingsModal quality presets', () => {
 
     expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
     await waitFor(() => {
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  it('renders as a dialog, focuses the title on open, and restores focus on escape', async () => {
+    const user = userEvent.setup()
+
+    function ControlledSettingsModal() {
+      const [open, setOpen] = useState(false)
+
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Open settings
+          </button>
+          <SettingsModal isOpen={open} onClose={() => setOpen(false)} />
+        </>
+      )
+    }
+
+    render(<ControlledSettingsModal />)
+
+    const trigger = screen.getByRole('button', { name: 'Open settings' })
+    trigger.focus()
+    await user.click(trigger)
+
+    expect(await screen.findByRole('dialog', { name: zh.settingsTitle })).toHaveAttribute('aria-modal', 'true')
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: zh.settingsTitle })).toHaveFocus()
+    })
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: zh.settingsTitle })).not.toBeInTheDocument()
+    })
+    expect(trigger).toHaveFocus()
+  })
+
+  it('keeps open drafts local but reloads latest store settings on reopen', async () => {
+    const onClose = vi.fn()
+    const user = userEvent.setup()
+    const { rerender } = render(<SettingsModal isOpen onClose={onClose} />)
+
+    await user.click(screen.getByRole('button', { name: zh.settingsRetrieval }))
+
+    const profileInput = screen.getByLabelText(zh.settingsRetrievalProfile) as HTMLInputElement
+    changeInputValue(profileInput, 'draft-open')
+    expect(profileInput.value).toBe('draft-open')
+
+    act(() => {
+      useSettingsStore.setState((state) => ({
+        ...state,
+        settings: {
+          ...state.settings,
+          retrieval: {
+            ...state.settings.retrieval,
+            profile: 'store-while-open',
+          },
+        },
+      }))
+    })
+
+    expect((screen.getByLabelText(zh.settingsRetrievalProfile) as HTMLInputElement).value).toBe('draft-open')
+
+    act(() => {
+      rerender(<SettingsModal isOpen={false} onClose={onClose} />)
+    })
+
+    act(() => {
+      useSettingsStore.setState((state) => ({
+        ...state,
+        settings: {
+          ...state.settings,
+          retrieval: {
+            ...state.settings.retrieval,
+            profile: 'store-on-reopen',
+            minScore: 0.42,
+          },
+        },
+      }))
+    })
+
+    act(() => {
+      rerender(<SettingsModal isOpen onClose={onClose} />)
+    })
+
+    await user.click(screen.getByRole('button', { name: zh.settingsRetrieval }))
+
+    expect((screen.getByLabelText(zh.settingsRetrievalProfile) as HTMLInputElement).value).toBe('store-on-reopen')
+    expect((screen.getByLabelText(zh.settingsRetrievalMinScore) as HTMLInputElement).value).toBe('0.42')
+
+    await user.click(screen.getByRole('button', { name: zh.save }))
+
+    await waitFor(() => {
+      expect(useSettingsStore.getState().settings.retrieval.profile).toBe('store-on-reopen')
+      expect(useSettingsStore.getState().settings.retrieval.minScore).toBe(0.42)
       expect(onClose).toHaveBeenCalled()
     })
   })

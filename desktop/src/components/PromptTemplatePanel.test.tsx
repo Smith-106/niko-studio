@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { PromptTemplate } from '../stores/settingsStore'
 import { PromptTemplatePanel } from './PromptTemplatePanel'
@@ -119,6 +119,50 @@ describe('PromptTemplatePanel', () => {
         count: '7',
       },
     })
+  })
+
+  it('focuses search on open and loops shift-tab from close back to apply', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <PromptTemplatePanel
+        templates={baseTemplates}
+        variablePresets={{}}
+        onToggleFavorite={() => {}}
+        onApplyTemplate={() => {}}
+        onClose={() => {}}
+      />
+    )
+
+    const searchInput = screen.getByRole('textbox', { name: zh.templateSearchPlaceholder })
+    await waitFor(() => {
+      expect(searchInput).toHaveFocus()
+    })
+
+    const closeButton = screen.getByRole('button', { name: zh.templateClosePanel })
+    closeButton.focus()
+    await user.tab({ shift: true })
+
+    expect(screen.getByRole('button', { name: zh.templateApplyAction })).toHaveFocus()
+  })
+
+  it('closes with backdrop reason when the scrim is clicked', () => {
+    const onClose = vi.fn()
+    const { container } = render(
+      <PromptTemplatePanel
+        templates={baseTemplates}
+        variablePresets={{}}
+        onToggleFavorite={() => {}}
+        onApplyTemplate={() => {}}
+        onClose={onClose}
+      />
+    )
+
+    const scrim = container.querySelector('[aria-hidden="true"]') as HTMLElement
+    fireEvent.mouseDown(scrim)
+    fireEvent.click(scrim)
+
+    expect(onClose).toHaveBeenCalledWith('backdrop')
   })
 })
 

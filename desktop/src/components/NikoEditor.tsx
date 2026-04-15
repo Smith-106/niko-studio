@@ -267,6 +267,17 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
     handleRef.current.isGenerating = ai.isGenerating
   }, [ai.isGenerating])
 
+  useEffect(() => {
+    if (!ai.errorMessage) return
+    const timeoutId = window.setTimeout(() => {
+      ai.clearError()
+    }, 3000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [ai.clearError, ai.errorMessage])
+
   return (
     <div ref={editorRef} className="relative">
       <EditorContent editor={editor} />
@@ -307,6 +318,18 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
           >
             {t.editorAiCancel}
           </button>
+        </div>
+      )}
+
+      {!ai.isGenerating && ai.errorMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          title={ai.errorMessage}
+          className="absolute top-2 right-2 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 shadow-sm"
+        >
+          <div className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="text-[11px] font-medium text-red-600 dark:text-red-300">{t.inlineActionFailed}</span>
         </div>
       )}
     </div>

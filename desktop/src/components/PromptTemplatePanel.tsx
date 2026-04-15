@@ -1,10 +1,14 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { Search, Star, X } from "lucide-react";
 import type {
   PromptTemplate,
   PromptTemplateCategory,
 } from "../stores/settingsStore";
 import { useI18n } from "../i18n";
+import {
+  useDialogFocusTrap,
+  type DialogCloseReason,
+} from "../hooks/useDialogFocusTrap";
 
 export interface ApplyTemplatePayload {
   text: string;
@@ -18,7 +22,8 @@ interface PromptTemplatePanelProps {
   variablePresets: Record<string, Record<string, string>>;
   onToggleFavorite: (templateId: string) => void;
   onApplyTemplate: (payload: ApplyTemplatePayload) => void;
-  onClose: () => void;
+  onClose: (reason?: DialogCloseReason) => void;
+  restoreFocusRef?: RefObject<HTMLElement | null>;
 }
 
 const categoryOrder: Array<"all" | PromptTemplateCategory> = [
@@ -53,8 +58,12 @@ export function PromptTemplatePanel({
   onToggleFavorite,
   onApplyTemplate,
   onClose,
+  restoreFocusRef,
 }: PromptTemplatePanelProps) {
   const { t } = useI18n();
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const scrimPointerDownRef = useRef(false);
   const [selectedCategory, setSelectedCategory] = useState<
     "all" | PromptTemplateCategory
   >("all");
@@ -70,6 +79,14 @@ export function PromptTemplatePanel({
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
+  const titleId = "prompt-template-panel-title";
+
+  useDialogFocusTrap({
+    containerRef: dialogRef,
+    onClose,
+    initialFocusRef: searchInputRef,
+    restoreFocusRef,
+  });
 
   const filteredTemplates = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -144,19 +161,42 @@ export function PromptTemplatePanel({
     });
   };
 
+  const handleScrimMouseDown = () => {
+    scrimPointerDownRef.current = true;
+  };
+
+  const handleScrimClick = () => {
+    if (!scrimPointerDownRef.current) {
+      return;
+    }
+
+    scrimPointerDownRef.current = false;
+    onClose("backdrop");
+  };
+
   return (
-    <div
-      className="fixed right-0 top-14 bottom-0 w-[420px] bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col z-30 transform transition-transform"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t.templateLibraryTitle}
-    >
+    <div className="fixed inset-x-0 top-14 bottom-0 z-30 flex justify-end">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-slate-900/20"
+        onMouseDown={handleScrimMouseDown}
+        onClick={handleScrimClick}
+      />
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="relative flex h-full w-[420px] flex-col border-l border-gray-200 bg-slate-50 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] transform transition-transform dark:border-dark-border dark:bg-dark-bg"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md">
-        <div className="font-semibold text-gray-800 dark:text-dark-text tracking-wide">
+        <h2 id={titleId} className="font-semibold text-gray-800 dark:text-dark-text tracking-wide">
           {t.templateLibraryTitle}
-        </div>
+        </h2>
         <button
-          onClick={onClose}
+          type="button"
+          onClick={() => onClose("close-button")}
           className="text-gray-400 hover:text-gray-600 dark:hover:text-dark-text focus:outline-none rounded-md p-1 hover:bg-gray-200 dark:hover:bg-dark-surface2 transition-colors"
           aria-label={t.templateClosePanel}
         >
@@ -212,6 +252,8 @@ export function PromptTemplatePanel({
         <div className="relative pt-1">
           <Search size={16} className="absolute left-3 top-3.5 text-gray-400" />
           <input
+            ref={searchInputRef}
+            aria-label={t.templateSearchPlaceholder}
             value={searchKeyword}
             onChange={(event) => setSearchKeyword(event.target.value)}
             placeholder={t.templateSearchPlaceholder}
@@ -382,6 +424,7 @@ export function PromptTemplatePanel({
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

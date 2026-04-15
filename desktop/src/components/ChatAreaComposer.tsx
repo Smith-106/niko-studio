@@ -13,6 +13,7 @@ interface ChatAreaComposerProps {
   sendShortcutLabel: string
   sendShortcutHint: string
   fileInputRef: RefObject<HTMLInputElement>
+  inputRef: RefObject<HTMLTextAreaElement>
   onInputChange: (value: string) => void
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void
   onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void
@@ -33,6 +34,7 @@ export function ChatAreaComposer({
   sendShortcutLabel,
   sendShortcutHint,
   fileInputRef,
+  inputRef,
   onInputChange,
   onKeyDown,
   onFileUpload,
@@ -45,6 +47,7 @@ export function ChatAreaComposer({
       <div className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all">
         <div className="relative">
           <textarea
+            ref={inputRef}
             value={input}
             onChange={(event) => onInputChange(event.target.value)}
             onKeyDown={onKeyDown}

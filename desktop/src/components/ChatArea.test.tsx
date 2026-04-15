@@ -827,5 +827,37 @@ describe('ChatArea P0 flows', () => {
     expect(input.value).toContain('主题「科幻」')
     expect(input.value).toContain('\n\n')
   })
+
+  it('restores focus to the trigger on escape and to the composer after apply', async () => {
+    render(<ControlledTemplateChatArea />)
+
+    const trigger = screen.getByLabelText(zh.templateLibraryEntry)
+    trigger.focus()
+    await userEvent.click(trigger)
+
+    expect(await screen.findByRole('dialog', { name: zh.templateLibraryTitle })).toBeInTheDocument()
+
+    const searchInput = screen.getByRole('textbox', { name: zh.templateSearchPlaceholder })
+    await waitFor(() => {
+      expect(searchInput).toHaveFocus()
+    })
+
+    await userEvent.keyboard('{Escape}')
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: zh.templateLibraryTitle })).not.toBeInTheDocument()
+    })
+    expect(trigger).toHaveFocus()
+
+    await userEvent.click(trigger)
+    expect(await screen.findByRole('dialog', { name: zh.templateLibraryTitle })).toBeInTheDocument()
+    await userEvent.type(screen.getAllByLabelText(/.+ \*$/)[0], '回焦测试')
+    await userEvent.click(screen.getByRole('button', { name: zh.templateApplyAction }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: zh.templateLibraryTitle })).not.toBeInTheDocument()
+    })
+    expect(screen.getByPlaceholderText(zh.inputPlaceholder)).toHaveFocus()
+  })
 })
 

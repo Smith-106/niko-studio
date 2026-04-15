@@ -21,8 +21,16 @@ export interface UseEditorAIOptions {
   getStyleInstruction?: () => string
 }
 
+interface StreamRecoveryOptions {
+  replaceFrom?: number
+  replaceTo?: number
+  fallbackText?: string
+}
+
 export interface UseEditorAIReturn {
   isGenerating: boolean
+  errorMessage: string | null
+  clearError: () => void
   generateAtCursor: (instruction: string) => Promise<void>
   rewriteSelection: (instruction: string) => Promise<void>
   continueWriting: () => Promise<void>
@@ -31,6 +39,7 @@ export interface UseEditorAIReturn {
 
 export function useEditorAI({ editor, getStyleInstruction }: UseEditorAIOptions): UseEditorAIReturn {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const getProviderConfig = useCallback(() => {
@@ -41,62 +50,83 @@ export function useEditorAI({ editor, getStyleInstruction }: UseEditorAIOptions)
     return provider ?? null
   }, [])
 
+  const clearError = useCallback(() => {
+    setErrorMessage(null)
+  }, [])
+
   const callStream = useCallback(
-    async (prompt: string) => {
+    async (prompt: string, recovery?: StreamRecoveryOptions) => {
       if (!editor) return
 
       const controller = new AbortController()
       abortRef.current = controller
       setIsGenerating(true)
+      setErrorMessage(null)
 
       // Insert "..." placeholder
       const pos = insertLoadingIndicator(editor)
       if (pos === null) {
         setIsGenerating(false)
+        abortRef.current = null
         return
       }
       const placeholderLen = 3
       const streamer = streamTextIntoEditor(editor, pos, placeholderLen)
 
       const provider = getProviderConfig()
+      let streamError: string | null = null
+      let hasStreamedContent = false
 
-      try {
-        await streamWritingHelper(
-          {
-            content: prompt,
-            mode: 'generate',
-            instruction: getStyleInstruction?.() ?? '',
-            model: provider?.defaultModel ?? '',
-            provider: provider?.id ?? '',
-            api_key: provider?.apiKey ?? '',
-            base_url: provider?.baseUrl ?? '',
+      await streamWritingHelper(
+        {
+          content: prompt,
+          mode: 'generate',
+          instruction: getStyleInstruction?.() ?? '',
+          model: provider?.defaultModel ?? '',
+          provider: provider?.id ?? '',
+          api_key: provider?.apiKey ?? '',
+          base_url: provider?.baseUrl ?? '',
+        },
+        {
+          onContent: (chunk) => {
+            if (chunk.length > 0) {
+              hasStreamedContent = true
+            }
+            streamer.append(chunk)
           },
-          {
-            onContent: (chunk) => {
-              streamer.append(chunk)
-            },
-            onDone: () => {
-              streamer.finish()
-            },
-            onError: (err) => {
-              console.error('AI stream error:', err)
-            },
+          onDone: () => {
+            streamer.finish()
           },
-          { signal: controller.signal },
-        )
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          console.error('AI generation failed:', err)
-        }
-        // Clean up placeholder on error/abort
-        const totalLen = streamer.finish()
-        if (totalLen <= placeholderLen) {
+          onError: (err) => {
+            streamError = err
+            console.error('AI stream error:', err)
+          },
+        },
+        { signal: controller.signal },
+      )
+
+      const totalLen = streamer.finish()
+      const shouldRestoreRewrite = Boolean(
+        recovery?.fallbackText !== undefined && recovery.replaceFrom !== undefined && !hasStreamedContent,
+      )
+
+      if (streamError) {
+        if (shouldRestoreRewrite) {
+          replaceRange(editor, recovery?.replaceFrom ?? pos, totalLen, recovery?.fallbackText ?? '')
+        } else if (!hasStreamedContent && totalLen <= placeholderLen) {
           replaceRange(editor, pos, totalLen, '')
         }
-      } finally {
-        setIsGenerating(false)
-        abortRef.current = null
+        setErrorMessage(streamError)
+      } else if (controller.signal.aborted) {
+        if (shouldRestoreRewrite) {
+          replaceRange(editor, recovery?.replaceFrom ?? pos, totalLen, recovery?.fallbackText ?? '')
+        } else if (!hasStreamedContent && totalLen <= placeholderLen) {
+          replaceRange(editor, pos, totalLen, '')
+        }
       }
+
+      setIsGenerating(false)
+      abortRef.current = null
     },
     [editor, getProviderConfig, getStyleInstruction],
   )
@@ -123,11 +153,15 @@ export function useEditorAI({ editor, getStyleInstruction }: UseEditorAIOptions)
       const selectedText = editor.state.doc.textBetween(from, to, '\n')
       if (!selectedText.trim()) return
 
-      // Delete selected text so stream replaces it
+      // Delete selected text so stream replaces it.
       editor.chain().focus().deleteSelection().run()
 
       const prompt = `请根据以下指令改写文本：\n\n指令：${instruction}\n\n原文：\n${selectedText}`
-      await callStream(prompt)
+      await callStream(prompt, {
+        replaceFrom: from,
+        replaceTo: to,
+        fallbackText: selectedText,
+      })
     },
     [editor, callStream],
   )
@@ -151,6 +185,8 @@ export function useEditorAI({ editor, getStyleInstruction }: UseEditorAIOptions)
 
   return {
     isGenerating,
+    errorMessage,
+    clearError,
     generateAtCursor,
     rewriteSelection,
     continueWriting,
