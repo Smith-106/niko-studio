@@ -4,7 +4,7 @@ import { processWritingHelper, polishContent, type WritingHelperMode } from '../
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n, type Translations } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
-import { getEditorHandle } from '../utils/editorHandle'
+import { getEditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
 import {
   type WritingStyle,
   type ToneOption,
@@ -33,6 +33,14 @@ interface WritingHelperPanelProps {
   onClearDraft?: () => void
 }
 
+interface WritingHelperResult {
+  processedText?: string
+  outline?: string[]
+  mode?: string
+  sourceText?: string
+  selectionSnapshot?: EditorSelectionSnapshot | null
+}
+
 // ── Style types imported from WritingStyle module ────────────────
 // WritingStyle, loadStyle, saveStyle are imported from './editor/WritingStyle'
 
@@ -58,6 +66,40 @@ const MODE_OPTIONS: Array<{ value: WritingHelperMode; labelKey: keyof Translatio
   { value: 'summarize', labelKey: 'writingHelperModeSummarize' },
   { value: 'outline', labelKey: 'writingHelperModeOutline' },
 ]
+
+function getRevisionCopy(language: 'zh' | 'en') {
+  if (language === 'zh') {
+    return {
+      previewTitle: '修改预览',
+      originalLabel: '原文',
+      candidateLabel: '建议版本',
+      replaceLabel: '替换选区',
+      alternativeLabel: '作为备选插入',
+      undoLabel: '撤销上次应用',
+      replacedMessage: '已替换当前选区。',
+      alternativeMessage: '已作为备选插入到原文后。',
+      insertedMessage: '已插入到编辑器。',
+      selectionChangedMessage: '当前选区已变化，请重新选择后再试。',
+      undoSuccessMessage: '已撤销上次应用。',
+      undoFailedMessage: '没有可撤销的最近应用。',
+    }
+  }
+
+  return {
+    previewTitle: 'Revision preview',
+    originalLabel: 'Original',
+    candidateLabel: 'Candidate',
+    replaceLabel: 'Replace selection',
+    alternativeLabel: 'Insert as alternative',
+    undoLabel: 'Undo last apply',
+    replacedMessage: 'Replaced the current selection.',
+    alternativeMessage: 'Inserted the candidate below the original selection.',
+    insertedMessage: 'Inserted into the editor.',
+    selectionChangedMessage: 'The current selection changed. Re-select the text and try again.',
+    undoSuccessMessage: 'Undid the last apply action.',
+    undoFailedMessage: 'There is no recent apply action to undo.',
+  }
+}
 
 // ── Sub-components ─────────────────────────────────────────────
 
@@ -181,11 +223,19 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   const [maxItems, setMaxItems] = useState(draftState?.maxItems ?? 6)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ processedText?: string; outline?: string[]; mode?: string } | null>(null)
+  const [result, setResult] = useState<WritingHelperResult | null>(null)
+  const [applyMessage, setApplyMessage] = useState<string | null>(null)
   const [styleOpen, setStyleOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [style, setStyle] = useState<WritingStyle>(loadStyle)
   const buttonDisabled = useMemo(() => loading || content.trim().length === 0, [loading, content])
+  const revisionCopy = useMemo(() => getRevisionCopy(language), [language])
+  const hasRevisionPreview = Boolean(
+    result?.processedText &&
+    result?.sourceText &&
+    result.selectionSnapshot &&
+    result.sourceText.trim().length > 0,
+  )
 
   const updateStyle = useCallback((patch: Partial<WritingStyle>) => {
     setStyle(prev => {
@@ -218,7 +268,13 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   const handleSubmit = async () => {
     setLoading(true)
     setError(null)
+    setApplyMessage(null)
     setResult(null)
+    const editorHandle = getEditorHandle()
+    const selectionSnapshot = editorHandle?.captureSelectionSnapshot() ?? null
+    const matchedSelectionSnapshot = selectionSnapshot && selectionSnapshot.text.trim() === content.trim()
+      ? selectionSnapshot
+      : null
 
     try {
       if (mode === 'polish' && useLegacyPolish) {
@@ -236,6 +292,8 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
         setResult({
           mode: 'polish',
           processedText: legacyResponse.polishedText,
+          sourceText: content,
+          selectionSnapshot: matchedSelectionSnapshot,
         })
         return
       }
@@ -260,6 +318,8 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
         mode: response.data.mode,
         processedText: response.data.processed_text,
         outline: Array.isArray(response.data.outline) ? response.data.outline : undefined,
+        sourceText: content,
+        selectionSnapshot: matchedSelectionSnapshot,
       })
     } catch (submitError) {
       setError(String(submitError))
@@ -274,8 +334,59 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
     setMaxSentences(3)
     setMaxItems(6)
     setError(null)
+    setApplyMessage(null)
     setResult(null)
     onClearDraft?.()
+  }
+
+  const handleReplaceSelection = () => {
+    if (!result?.processedText) {
+      return
+    }
+
+    const handle = getEditorHandle()
+    if (!handle) {
+      return
+    }
+
+    if (result.selectionSnapshot) {
+      const replaced = handle.replaceSelectionSnapshot(result.selectionSnapshot, result.processedText)
+      setApplyMessage(replaced ? revisionCopy.replacedMessage : revisionCopy.selectionChangedMessage)
+      return
+    }
+
+    handle.insertText(result.processedText)
+    setApplyMessage(revisionCopy.insertedMessage)
+  }
+
+  const handleInsertAlternative = () => {
+    if (!result?.processedText) {
+      return
+    }
+
+    const handle = getEditorHandle()
+    if (!handle) {
+      return
+    }
+
+    if (result.selectionSnapshot) {
+      const inserted = handle.insertBelowSelectionSnapshot(result.selectionSnapshot, result.processedText)
+      setApplyMessage(inserted ? revisionCopy.alternativeMessage : revisionCopy.selectionChangedMessage)
+      return
+    }
+
+    handle.insertText(result.processedText)
+    setApplyMessage(revisionCopy.insertedMessage)
+  }
+
+  const handleUndoLastApply = () => {
+    const handle = getEditorHandle()
+    if (!handle) {
+      return
+    }
+
+    const undone = handle.undoLastRevisionApply()
+    setApplyMessage(undone ? revisionCopy.undoSuccessMessage : revisionCopy.undoFailedMessage)
   }
 
   return (
@@ -680,23 +791,66 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse-subtle"></span>
                   {translate('writingHelperModePrefix', { mode: result.mode ?? '' })}
                 </div>
+                {hasRevisionPreview && (
+                  <div className="mb-4 rounded-lg border border-primary-100 dark:border-primary-500/20 bg-white/70 dark:bg-dark-bg/40 p-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-text-secondary mb-3">
+                      {revisionCopy.previewTitle}
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="rounded-md border border-gray-200 dark:border-dark-border/60 bg-slate-50 dark:bg-dark-surface px-3 py-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-text-secondary mb-2">
+                          {revisionCopy.originalLabel}
+                        </div>
+                        <div className="text-sm text-gray-800 dark:text-dark-text font-serif leading-relaxed whitespace-pre-wrap">
+                          {result.sourceText}
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-primary-200 dark:border-primary-500/20 bg-primary-50/70 dark:bg-primary-900/10 px-3 py-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 mb-2">
+                          {revisionCopy.candidateLabel}
+                        </div>
+                        <div className="text-sm text-gray-800 dark:text-dark-text font-serif leading-relaxed whitespace-pre-wrap">
+                          {result.processedText}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {result.processedText && (
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-dark-text font-serif leading-relaxed">
                     {result.processedText}
                   </div>
                 )}
                 {result.processedText && (
-                  <div className="mt-3 flex justify-end">
+                  <div className="mt-3 flex flex-wrap justify-end gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        const handle = getEditorHandle()
-                        if (handle) handle.insertText(result.processedText || '')
-                      }}
+                      onClick={handleReplaceSelection}
                       className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-primary-600 text-white hover:bg-primary-500 active:scale-95 transition-all shadow-sm"
                     >
-                      {t.writingHelperInsertToEditor}
+                      {result.selectionSnapshot ? revisionCopy.replaceLabel : t.writingHelperInsertToEditor}
                     </button>
+                    {result.selectionSnapshot && (
+                      <button
+                        type="button"
+                        onClick={handleInsertAlternative}
+                        className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 active:scale-95 transition-all shadow-sm"
+                      >
+                        {revisionCopy.alternativeLabel}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleUndoLastApply}
+                      className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 active:scale-95 transition-all shadow-sm"
+                    >
+                      {revisionCopy.undoLabel}
+                    </button>
+                  </div>
+                )}
+                {applyMessage && (
+                  <div className="mt-3 text-[12px] font-medium text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-500/20 rounded-md px-3 py-2">
+                    {applyMessage}
                   </div>
                 )}
                 {result.outline && result.outline.length > 0 && (

@@ -15,7 +15,7 @@ import { SlashCommandMenu, type SlashMenuItem } from './editor/SlashCommandMenu'
 import { BubbleToolbar, REWRITE_OPTIONS } from './editor/BubbleToolbar'
 import { useEditorAI } from '../hooks/useEditorAI'
 import { useI18n } from '../i18n'
-import { setEditorHandle, type EditorHandle } from '../utils/editorHandle'
+import { setEditorHandle, type EditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
 
 export interface NikoEditorHandle {
   insertText: (text: string) => void
@@ -39,6 +39,12 @@ interface SlashState {
 interface BubbleState {
   active: boolean
   position: { x: number; y: number } | null
+}
+
+interface RevisionApplyRecord {
+  from: number
+  oldText: string
+  newText: string
 }
 
 const EMPTY_SLASH: SlashState = { active: false, query: '', position: null, range: null }
@@ -162,14 +168,22 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
     insertText: () => {},
     getSelectedText: () => '',
     getJSON: () => ({ type: 'doc', content: [] }),
+    captureSelectionSnapshot: () => null,
+    replaceSelectionSnapshot: () => false,
+    insertBelowSelectionSnapshot: () => false,
+    undoLastRevisionApply: () => false,
     isGenerating: false,
   })
+  const lastRevisionApplyRef = useRef<RevisionApplyRecord | null>(null)
 
   useImperativeHandle(ref, () => handleRef.current, [])
 
   // Update handle methods when editor changes
   useEffect(() => {
     if (!editor) return
+    const matchesSnapshot = (snapshot: EditorSelectionSnapshot) =>
+      editor.state.doc.textBetween(snapshot.from, snapshot.to, '\n') === snapshot.text
+
     handleRef.current.insertText = (text: string) => {
       editor.chain().focus().insertContent(text).run()
     }
@@ -178,8 +192,77 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       return editor.state.doc.textBetween(from, to, '\n')
     }
     handleRef.current.getJSON = () => editor.getJSON()
+    handleRef.current.captureSelectionSnapshot = () => {
+      const { from, to } = editor.state.selection
+      if (from === to) {
+        return null
+      }
+
+      return {
+        from,
+        to,
+        text: editor.state.doc.textBetween(from, to, '\n'),
+      }
+    }
+    handleRef.current.replaceSelectionSnapshot = (snapshot, text) => {
+      if (!matchesSnapshot(snapshot)) {
+        return false
+      }
+
+      editor.chain().focus().setTextSelection({ from: snapshot.from, to: snapshot.to }).insertContent(text).run()
+      lastRevisionApplyRef.current = {
+        from: snapshot.from,
+        oldText: snapshot.text,
+        newText: text,
+      }
+      return true
+    }
+    handleRef.current.insertBelowSelectionSnapshot = (snapshot, text) => {
+      if (!matchesSnapshot(snapshot)) {
+        return false
+      }
+
+      const insertionText = `\n\n${text}`
+      editor.chain().focus().setTextSelection({ from: snapshot.to, to: snapshot.to }).insertContent(insertionText).run()
+      lastRevisionApplyRef.current = {
+        from: snapshot.to,
+        oldText: '',
+        newText: insertionText,
+      }
+      return true
+    }
+    handleRef.current.undoLastRevisionApply = () => {
+      const lastApply = lastRevisionApplyRef.current
+      if (!lastApply) {
+        return false
+      }
+
+      const currentText = editor.state.doc.textBetween(
+        lastApply.from,
+        lastApply.from + lastApply.newText.length,
+        '\n',
+      )
+      if (currentText !== lastApply.newText) {
+        return false
+      }
+
+      editor
+        .chain()
+        .focus()
+        .setTextSelection({
+          from: lastApply.from,
+          to: lastApply.from + lastApply.newText.length,
+        })
+        .insertContent(lastApply.oldText)
+        .run()
+      lastRevisionApplyRef.current = null
+      return true
+    }
     setEditorHandle(handleRef.current)
-    return () => { setEditorHandle(null) }
+    return () => {
+      lastRevisionApplyRef.current = null
+      setEditorHandle(null)
+    }
   }, [editor])
 
   const ai = useEditorAI({
