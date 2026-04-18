@@ -1,0 +1,142 @@
+{
+  "artifact_type": "customer_delivery_baseline",
+  "schema_version": "customer_delivery_baseline.v1",
+  "session_id": "PEX-2026-04-18-client-delivery-remaining-work",
+  "task_id": "EXEC-002",
+  "issue_id": "ISS-20260418-002",
+  "generated_at": "2026-04-18T19:01:38.0485321+08:00",
+  "freeze_mode": "reuse_retained_release_proof",
+  "summary": "Freeze customer delivery on the retained GO baseline `4d63e03 / 9.0.8` and explicitly reuse the retained release proof set without rerunning authority evidence on a different SHA.",
+  "baseline_decision_artifact": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json",
+  "baseline": {
+    "label": "retained_release_go_baseline",
+    "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+    "short_sha": "4d63e03",
+    "version": "9.0.8",
+    "commit_timestamp": "2026-04-16T21:06:44+08:00",
+    "delivery_mode": {
+      "status": "pending",
+      "planned_decision_task": "EXEC-004",
+      "note": "EXEC-002 freezes build identity only. Signed external shipment versus unsigned internal/demo handoff remains a downstream decision."
+    },
+    "package_artifacts": [
+      {
+        "kind": "desktop_debug_build",
+        "filename": "niko-studio-desktop.exe",
+        "path": "desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe",
+        "source": "release-check-summary.md"
+      },
+      {
+        "kind": "python_sidecar",
+        "filename": "niko-gateway.exe",
+        "path": "desktop/src-tauri/bin/niko-gateway.exe",
+        "source": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json"
+      },
+      {
+        "kind": "python_sidecar_target_copy",
+        "filename": "niko-gateway-x86_64-pc-windows-msvc.exe",
+        "path": "desktop/src-tauri/bin/niko-gateway-x86_64-pc-windows-msvc.exe",
+        "source": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json"
+      }
+    ]
+  },
+  "retained_release_proof": {
+    "decision": "reused_without_rerun",
+    "rationale": [
+      "The selected customer-delivery baseline remains the retained GO proof `4d63e03 / 9.0.8` from EXEC-001.",
+      "The retained release-readiness artifact already records `release_evidence.status = fresh_current` for the same `head_sha` and version.",
+      "Rerunning release proof from the current dirty workspace would create a parallel proof chain on a different SHA, which this issue must not do."
+    ],
+    "go_summary": {
+      "path": "release-check-summary.md",
+      "decision": "GO",
+      "generated_at": "2026-04-17T17:01:29.203350+00:00",
+      "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+      "version": "9.0.8"
+    },
+    "release_readiness_artifact": {
+      "path": ".workflow/evidence/release/release-readiness-artifact.json",
+      "decision": "GO",
+      "generated_at": "2026-04-17T17:01:29.203350+00:00",
+      "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+      "version": "9.0.8",
+      "release_evidence_status": "fresh_current",
+      "freshness_window_hours": 48
+    },
+    "reused_evidence_bindings": [
+      {
+        "source_id": "authority_alignment",
+        "artifact_path": ".workflow/evidence/release/authority-alignment.json",
+        "binding_source": ".workflow/evidence/release/release-readiness-artifact.json",
+        "status": "PASS",
+        "generated_at": "2026-04-17T17:01:29.203350+00:00",
+        "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+        "version": "9.0.8",
+        "evidence_state": "fresh_current"
+      },
+      {
+        "source_id": "writing_helper_acceptance",
+        "artifact_path": ".workflow/evidence/release/writing-helper-acceptance.json",
+        "binding_source": ".workflow/evidence/release/release-readiness-artifact.json",
+        "status": "PASS",
+        "generated_at": "2026-04-17T15:18:44.1126474+00:00",
+        "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+        "artifact_version": "unknown",
+        "bound_version": "9.0.8",
+        "evidence_state": "fresh_current",
+        "strict": true
+      },
+      {
+        "source_id": "governance_scripts_regression",
+        "artifact_path": ".workflow/evidence/release/governance-scripts.junit.xml",
+        "binding_source": ".workflow/evidence/release/release-readiness-artifact.json",
+        "status": "PASS",
+        "generated_at": "2026-04-17T17:01:29.203350+00:00",
+        "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+        "version": "9.0.8",
+        "evidence_state": "fresh_current"
+      },
+      {
+        "source_id": "production_guard",
+        "artifact_path": ".workflow/evidence/release/vitest-production-guard.xml",
+        "binding_source": ".workflow/evidence/release/release-readiness-artifact.json",
+        "status": "PASS",
+        "generated_at": "2026-04-17T17:01:29.203350+00:00",
+        "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+        "version": "9.0.8",
+        "evidence_state": "fresh_current"
+      },
+      {
+        "source_id": "external_e2e_smoke",
+        "artifact_path": ".workflow/evidence/release/vitest-e2e.xml",
+        "binding_source": ".workflow/evidence/release/release-readiness-artifact.json",
+        "status": "PASS",
+        "generated_at": "2026-04-17T17:01:29.203350+00:00",
+        "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+        "version": "9.0.8",
+        "evidence_state": "fresh_current"
+      }
+    ]
+  },
+  "downstream_contract": {
+    "authoritative_baseline_artifact": ".workflow/evidence/release/customer-delivery-baseline.json",
+    "authoritative_decision_artifact": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json",
+    "authoritative_retained_proof_artifact": ".workflow/evidence/release/release-readiness-artifact.json",
+    "required_head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+    "required_version": "9.0.8",
+    "reused_proof_paths": [
+      "release-check-summary.md",
+      ".workflow/evidence/release/release-readiness-artifact.json",
+      ".workflow/evidence/release/authority-alignment.json",
+      ".workflow/evidence/release/writing-helper-acceptance.json",
+      ".workflow/evidence/release/governance-scripts.junit.xml",
+      ".workflow/evidence/release/vitest-production-guard.xml",
+      ".workflow/evidence/release/vitest-e2e.xml"
+    ],
+    "notes": [
+      "No release-proof rerun was performed in EXEC-002 because the retained proof set already binds to the selected baseline.",
+      "Downstream EXEC tasks must cite this artifact plus `release-readiness-artifact.json` when referring to the frozen customer-delivery proof set.",
+      "The dirty workspace HEAD `802c7771720adfafc6e0ba682835273d2c6bb082` remains outside customer-delivery authority until a later task explicitly revalidates it."
+    ]
+  }
+}
