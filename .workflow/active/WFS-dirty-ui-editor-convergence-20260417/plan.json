@@ -1,0 +1,27 @@
+{
+  "session_id": "WFS-dirty-ui-editor-convergence-20260417",
+  "status": "completed",
+  "task_ids": [
+    "IMPL-1",
+    "IMPL-2",
+    "IMPL-3",
+    "IMPL-4"
+  ],
+  "recommended_execution": "phased",
+  "complexity": "high",
+  "shared_context": [
+    ".workflow/.team/PEX-next-work-plan-2026-04-17/artifacts/PLAN-001-implementation-plan.md",
+    ".workflow/.team/PEX-next-work-plan-2026-04-17/tasks.json",
+    ".workflow/.team/ux-improve-20260415-031000/artifacts/diagnosis.md",
+    ".workflow/active/WFS-nikoeditor-locale-handoff-20260417/.review/plan.json",
+    ".workflow/.team/QA-project-passability-2026-04-17/artifacts/QARUN-001-execution.md"
+  ],
+  "final_entrypoint": ".workflow/active/WFS-dirty-ui-editor-convergence-20260417/HANDOFF.md",
+  "final_release_decision": "GO",
+  "guardrails": [
+    "Treat the current dirty desktop worktree as the authorized baseline; do not revert unrelated in-flight UI/editor work.",
+    "Keep changes slice-local and contract-first; avoid broad refactors across shell, editor, chat, and settings at the same time.",
+    "Run desktop Vitest from desktop/ or via npm --prefix desktop so repo-root collection does not pick up unrelated worktrees.",
+    "Require bounded slice-level tests after each IMPL task, then rerun a wider desktop passability sweep at the end."
+  ]
+}

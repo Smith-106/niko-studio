@@ -1,0 +1,12 @@
+{
+  "id": "IMPL-1",
+  "title": "Editor rewrite safety and revision loop reliability",
+  "description": "Stabilize the editor-side destructive rewrite path so async rewrite failures no longer erase user text, recovery becomes user-visible, and revision-loop helpers/tests match the real stream failure contract.",
+  "status": "completed",
+  "depends_on": [],
+  "convergence": "single_task",
+  "meta": {
+    "type": "implementation",
+    "agent": "worker"
+  }
+}

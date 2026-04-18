@@ -1,0 +1,14 @@
+{
+  "id": "IMPL-3",
+  "title": "Chat / evaluation / message surface contract stabilization",
+  "description": "Align chat mode controls, message source summaries, evaluation-facing data hooks, and nearby tests with the current explicit source-provider and workflow experience contracts without broad redesign.",
+  "status": "completed",
+  "depends_on": [
+    "IMPL-2"
+  ],
+  "convergence": "single_task",
+  "meta": {
+    "type": "implementation",
+    "agent": "worker"
+  }
+}
