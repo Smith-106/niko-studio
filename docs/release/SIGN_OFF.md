@@ -43,6 +43,8 @@ npm --prefix desktop run check:local
 
 The authoritative desktop local gate is `npm --prefix desktop run check:local`. In `desktop/package.json` this currently resolves to `check:release`, and `python scripts/release_check_summary.py` reruns this exact command before it can report `Decision: GO`.
 If the packaged Python compatibility sidecar artifact is not present, this gate is expected to fail before formal release sign-off.
+`npm --prefix desktop run local:selftest` is the authoritative launcher smoke-test. It is mandatory whenever the retained release evidence for `release_summary_report`, `authority_alignment`, `writing_helper_acceptance`, and `governance_scripts_regression` is not already `fresh_current` for the current HEAD.
+If those retained release-evidence sources are already same-HEAD `fresh_current`, `local:selftest` is optional for that sign-off pass.
 
 ### 3. Runtime, smoke, and packaging proof
 
@@ -86,7 +88,10 @@ python scripts/release_check_summary.py
 
 `release-check-summary.md` must end in `Decision: GO`.
 This command also refreshes the formal sign-off artifacts under `.workflow/evidence/release/`, including the retained authority-alignment JSON, `.workflow/evidence/release/writing-helper-acceptance.json`, and the governance and Vitest JUnit/XML reports used by the release bundle manifest.
-The consolidated snapshot is only valid when the retained writing-helper acceptance artifact is `strict: true` and matches the current HEAD SHA.
+The consolidated snapshot is only valid when the retained writing-helper acceptance artifact is `strict: true`, `freshness_status: fresh`, and `supersession_status: current`.
+The release readiness artifact at `.workflow/evidence/release/release-readiness-artifact.json` now records `head_sha`, `version`, `generated_at`, `freshness_window_hours: 48`, and the retained `evidence_sources` list used by the sign-off decision.
+Any retained evidence labeled `stale_*` or `*_superseded` is non-green and must not be reused for a `Decision: GO`, even if the file still exists on disk.
+The release summary now exposes this as a blocking `local_selftest_enforcement` signal: missing, stale, or superseded retained proof for the bound release-sign-off sources means rerun `npm --prefix desktop run local:selftest` before claiming `Decision: GO`.
 
 ## Customer Handoff Bundle
 

@@ -23,7 +23,16 @@ PRODUCTION_GUARD_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-production-guard.xm
 E2E_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-e2e.xml"
 DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND = "npm --prefix desktop run check:local"
 DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS = ["npm.cmd", "--prefix", "desktop", "run", "check:local"]
+DESKTOP_LOCAL_SELFTEST_COMMAND = "npm --prefix desktop run local:selftest"
 DESKTOP_PACKAGING_DRY_RUN_COMMAND = "npm --prefix desktop run validate:package:dry-run"
+RELEASE_EVIDENCE_SCHEMA_VERSION = "evidence.v2"
+RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS = 48
+LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES = (
+    "release_summary_report",
+    "authority_alignment",
+    "writing_helper_acceptance",
+    "governance_scripts_regression",
+)
 
 
 @dataclass(frozen=True)
@@ -137,6 +146,15 @@ def build_check_result(
     }
 
 
+def normalize_release_evidence_status(status: str) -> str:
+    normalized = str(status or "").strip().upper()
+    if normalized == "PASSED":
+        return "PASS"
+    if normalized == "FAILED":
+        return "FAIL"
+    return normalized or "UNKNOWN"
+
+
 def _count_non_template_markdown(directory: Path) -> int:
     if not directory.exists():
         return 0
@@ -209,6 +227,40 @@ def _build_check_detail_summary_section(checks: list[dict[str, object]]) -> str:
     return "\n".join(lines)
 
 
+def _build_release_evidence_summary_section(release_evidence: dict[str, object]) -> str:
+    evidence_sources = release_evidence.get("evidence_sources")
+    source_rows = (
+        evidence_sources
+        if isinstance(evidence_sources, list)
+        else []
+    )
+    lines = [
+        "## Retained Release Evidence",
+        "",
+        f"- current_head_sha: {release_evidence.get('head_sha', 'unknown')}",
+        f"- current_version: {release_evidence.get('version', 'unknown')}",
+        f"- release_evidence_generated_at: {release_evidence.get('generated_at', 'unknown')}",
+        f"- freshness_window_hours: {release_evidence.get('freshness_window_hours', 'unknown')}",
+        f"- release_evidence_status: {release_evidence.get('status', 'unknown')}",
+        f"- blocking_sources: {_format_csv(release_evidence.get('blocking_sources', [])) or 'none'}",
+        "",
+        "| source_id | status | freshness_status | supersession_status | evidence_state |",
+        "|---|---|---|---|---|",
+    ]
+    lines.extend(
+        "| {source_id} | {status} | {freshness_status} | {supersession_status} | {evidence_state} |".format(
+            source_id=row.get("source_id", "unknown"),
+            status=row.get("status", "unknown"),
+            freshness_status=row.get("freshness_status", "unknown"),
+            supersession_status=row.get("supersession_status", "unknown"),
+            evidence_state=row.get("evidence_state", "unknown"),
+        )
+        for row in source_rows
+        if isinstance(row, dict)
+    )
+    return "\n".join(lines)
+
+
 def _trace_path(path: Path) -> str:
     try:
         relative_path = path.relative_to(PROJECT_ROOT)
@@ -217,20 +269,125 @@ def _trace_path(path: Path) -> str:
         return path.resolve().as_posix()
 
 
+def _read_json_version(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    version = payload.get("version")
+    if isinstance(version, str):
+        return version.strip() or None
+    return None
+
+
+def _current_release_version() -> str | None:
+    return _read_json_version(PROJECT_ROOT / "desktop" / "package.json")
+
+
+def _parse_iso_datetime(raw_value: str) -> tuple[datetime | None, str | None]:
+    value = raw_value.strip()
+    if not value:
+        return None, "missing"
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        return None, str(exc)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc), None
+
+
+def _evaluate_retained_evidence(
+    generated_at: str,
+    head_sha: str,
+    current_head_sha: str | None,
+    *,
+    freshness_window_hours: int,
+    now: datetime | None = None,
+    version: str | None = None,
+    current_version: str | None = None,
+) -> dict[str, object]:
+    now_dt = now.astimezone(timezone.utc) if now is not None else datetime.now(timezone.utc)
+    parsed_generated_at, generated_at_parse_error = _parse_iso_datetime(generated_at)
+
+    freshness_status = "unknown"
+    freshness_age_hours: float | str = "unknown"
+    if parsed_generated_at is not None:
+        age_seconds = max(0.0, (now_dt - parsed_generated_at).total_seconds())
+        freshness_age_hours = round(age_seconds / 3600, 2)
+        freshness_status = (
+            "fresh"
+            if age_seconds <= freshness_window_hours * 3600
+            else "stale"
+        )
+
+    supersession_reasons: list[str] = []
+    supersession_status = "unknown"
+    if head_sha and current_head_sha:
+        supersession_status = "current"
+        if head_sha != current_head_sha:
+            supersession_status = "superseded"
+            supersession_reasons.append("head_mismatch")
+    elif head_sha:
+        supersession_reasons.append("current_head_unknown")
+    else:
+        supersession_reasons.append("head_sha_missing")
+
+    if version and current_version and version != current_version:
+        supersession_status = "superseded"
+        supersession_reasons.append("version_mismatch")
+
+    evidence_state = "unknown"
+    if freshness_status == "fresh" and supersession_status == "current":
+        evidence_state = "fresh_current"
+    elif freshness_status == "stale" and supersession_status == "current":
+        evidence_state = "stale_current"
+    elif freshness_status == "fresh" and supersession_status == "superseded":
+        evidence_state = "fresh_superseded"
+    elif freshness_status == "stale" and supersession_status == "superseded":
+        evidence_state = "stale_superseded"
+    elif freshness_status == "unknown" and supersession_status == "current":
+        evidence_state = "unknown_current"
+    elif freshness_status == "unknown" and supersession_status == "superseded":
+        evidence_state = "unknown_superseded"
+
+    return {
+        "freshness_window_hours": freshness_window_hours,
+        "freshness_status": freshness_status,
+        "freshness_age_hours": freshness_age_hours,
+        "supersession_status": supersession_status,
+        "supersession_reasons": supersession_reasons,
+        "evidence_state": evidence_state,
+        "generated_at_parse_error": None if generated_at_parse_error == "missing" else generated_at_parse_error,
+        "is_fresh": freshness_status == "fresh",
+        "is_current": supersession_status == "current",
+    }
+
+
 def _build_release_readiness_artifact(
     decision: str,
     go_no_go_reasons: list[str],
     generated_at: str,
+    head_sha: str | None,
+    version: str | None,
     checks: list[dict[str, object]],
+    release_evidence: dict[str, object],
     report_path: Path,
 ) -> dict[str, object]:
     return {
         "artifact_type": "release_readiness",
-        "schema_version": "evidence.v1",
+        "schema_version": RELEASE_EVIDENCE_SCHEMA_VERSION,
         "decision": decision,
         "go_no_go_reasons": go_no_go_reasons,
         "generated_at": generated_at,
+        "head_sha": head_sha,
+        "version": version,
+        "freshness_window_hours": RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS,
         "checks": checks,
+        "release_evidence": release_evidence,
         "trace": {
             "trace_id": f"release-readiness-{generated_at}",
             "session_id": "release-summary",
@@ -245,7 +402,10 @@ def _write_release_readiness_artifact(
     decision: str,
     go_no_go_reasons: list[str],
     generated_at: str,
+    head_sha: str | None,
+    version: str | None,
     checks: list[dict[str, object]],
+    release_evidence: dict[str, object],
     report_path: Path,
 ) -> Path:
     RELEASE_EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
@@ -253,7 +413,10 @@ def _write_release_readiness_artifact(
         decision=decision,
         go_no_go_reasons=go_no_go_reasons,
         generated_at=generated_at,
+        head_sha=head_sha,
+        version=version,
         checks=checks,
+        release_evidence=release_evidence,
         report_path=report_path,
     )
     RELEASE_READINESS_ARTIFACT_PATH.write_text(
@@ -310,6 +473,48 @@ def _current_head_sha() -> str | None:
         return None
     head_sha = output.strip()
     return head_sha or None
+
+
+def _build_release_evidence_source(
+    source_id: str,
+    artifact_path: Path,
+    status: str,
+    generated_at: str,
+    head_sha: str | None,
+    current_head_sha: str | None,
+    *,
+    source_type: str,
+    now: datetime | None = None,
+    version: str | None = None,
+    current_version: str | None = None,
+) -> dict[str, object]:
+    retained_evidence = _evaluate_retained_evidence(
+        generated_at,
+        head_sha or "",
+        current_head_sha,
+        freshness_window_hours=RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS,
+        now=now,
+        version=version,
+        current_version=current_version,
+    )
+    return {
+        "source_id": source_id,
+        "source_type": source_type,
+        "artifact_path": _trace_path(artifact_path),
+        "status": status,
+        "generated_at": generated_at or "missing",
+        "head_sha": head_sha or "missing",
+        "version": version or "unknown",
+        "freshness_window_hours": retained_evidence["freshness_window_hours"],
+        "freshness_status": retained_evidence["freshness_status"],
+        "freshness_age_hours": retained_evidence["freshness_age_hours"],
+        "supersession_status": retained_evidence["supersession_status"],
+        "supersession_reasons": retained_evidence["supersession_reasons"],
+        "evidence_state": retained_evidence["evidence_state"],
+        "is_fresh": retained_evidence["is_fresh"],
+        "is_current": retained_evidence["is_current"],
+        "generated_at_parse_error": retained_evidence["generated_at_parse_error"] or "none",
+    }
 
 
 def _run_governance_scripts_regression(junit_output_path: Path) -> tuple[int, str]:
@@ -1167,6 +1372,8 @@ def writing_helper_acceptance_signal(
     artifact_payload: dict[str, object] | None,
     current_head_sha: str | None,
     artifact_parse_error: str | None,
+    current_version: str | None = None,
+    now: datetime | None = None,
 ) -> tuple[str, int, str]:
     if not artifact_exists:
         return "FAIL", 1, _format_detail_pairs([
@@ -1174,6 +1381,10 @@ def writing_helper_acceptance_signal(
             ("strict", "missing"),
             ("head_sha", "missing"),
             ("current_head_sha", current_head_sha or "unknown"),
+            ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+            ("freshness_status", "missing"),
+            ("supersession_status", "missing"),
+            ("evidence_state", "missing"),
             ("missing_keys", "artifact"),
             ("json_parse_error", artifact_parse_error or "none"),
             ("decision", "no_go"),
@@ -1185,6 +1396,10 @@ def writing_helper_acceptance_signal(
             ("strict", "unknown"),
             ("head_sha", "unknown"),
             ("current_head_sha", current_head_sha or "unknown"),
+            ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+            ("freshness_status", "unknown"),
+            ("supersession_status", "unknown"),
+            ("evidence_state", "unknown"),
             ("missing_keys", "n/a"),
             ("json_parse_error", artifact_parse_error),
             ("decision", "no_go"),
@@ -1196,6 +1411,10 @@ def writing_helper_acceptance_signal(
             ("strict", "unknown"),
             ("head_sha", "unknown"),
             ("current_head_sha", current_head_sha or "unknown"),
+            ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+            ("freshness_status", "unknown"),
+            ("supersession_status", "unknown"),
+            ("evidence_state", "unknown"),
             ("missing_keys", "payload"),
             ("json_parse_error", "unknown"),
             ("decision", "no_go"),
@@ -1216,10 +1435,20 @@ def writing_helper_acceptance_signal(
     strict_value = artifact_payload.get("strict")
     head_sha = str(artifact_payload.get("head_sha") or "").strip()
     generated_at = str(artifact_payload.get("generated_at") or "").strip()
+    version = str(artifact_payload.get("version") or "").strip()
     total_cases = artifact_payload.get("total_cases")
     passed_cases = artifact_payload.get("passed_cases")
     failed_cases = artifact_payload.get("failed_cases")
     failed_cases_path = artifact_payload.get("failed_cases_path")
+    retained_evidence = _evaluate_retained_evidence(
+        generated_at,
+        head_sha,
+        current_head_sha,
+        freshness_window_hours=RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS,
+        now=now,
+        version=version or None,
+        current_version=current_version,
+    )
 
     has_blocker = bool(missing_keys)
     if strict_value is not True:
@@ -1229,6 +1458,8 @@ def writing_helper_acceptance_signal(
     if not generated_at:
         has_blocker = True
     if not head_sha or not current_head_sha or head_sha != current_head_sha:
+        has_blocker = True
+    if not retained_evidence["is_fresh"] or not retained_evidence["is_current"]:
         has_blocker = True
     if not isinstance(total_cases, int) or total_cases <= 0:
         has_blocker = True
@@ -1246,7 +1477,16 @@ def writing_helper_acceptance_signal(
         ("status", status_value or "missing"),
         ("head_sha", head_sha or "missing"),
         ("current_head_sha", current_head_sha or "unknown"),
+        ("version", version or "missing"),
+        ("current_version", current_version or "unknown"),
         ("generated_at", generated_at or "missing"),
+        ("freshness_window_hours", retained_evidence["freshness_window_hours"]),
+        ("freshness_status", retained_evidence["freshness_status"]),
+        ("freshness_age_hours", retained_evidence["freshness_age_hours"]),
+        ("supersession_status", retained_evidence["supersession_status"]),
+        ("supersession_reasons", _format_csv(retained_evidence["supersession_reasons"])),
+        ("evidence_state", retained_evidence["evidence_state"]),
+        ("generated_at_parse_error", retained_evidence["generated_at_parse_error"] or "none"),
         ("total_cases", total_cases if total_cases is not None else "missing"),
         ("passed_cases", passed_cases if passed_cases is not None else "missing"),
         ("failed_cases", failed_cases if failed_cases is not None else "missing"),
@@ -1255,6 +1495,63 @@ def writing_helper_acceptance_signal(
         ("json_parse_error", artifact_parse_error or "none"),
         ("decision", "no_go" if has_blocker else "go"),
     ])
+
+
+def local_selftest_enforcement_signal(
+    release_evidence: dict[str, object],
+) -> tuple[str, int, str]:
+    evidence_sources = release_evidence.get("evidence_sources")
+    source_rows = evidence_sources if isinstance(evidence_sources, list) else []
+    source_map: dict[str, dict[str, object]] = {}
+    for row in source_rows:
+        if not isinstance(row, dict):
+            continue
+        source_id = str(row.get("source_id") or "").strip()
+        if source_id:
+            source_map[source_id] = row
+
+    blocking_sources: list[str] = []
+    for source_id in LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES:
+        source = source_map.get(source_id)
+        if source is None:
+            blocking_sources.append(f"{source_id}:missing")
+            continue
+        if source.get("status") != "PASS":
+            blocking_sources.append(f"{source_id}:status={source.get('status', 'unknown')}")
+            continue
+        if not bool(source.get("is_fresh")):
+            blocking_sources.append(
+                f"{source_id}:freshness={source.get('freshness_status', 'unknown')}"
+            )
+            continue
+        if not bool(source.get("is_current")):
+            blocking_sources.append(
+                f"{source_id}:supersession={source.get('supersession_status', 'unknown')}"
+            )
+
+    has_blocker = bool(blocking_sources)
+    return (
+        "FAIL" if has_blocker else "PASS",
+        1 if has_blocker else 0,
+        _format_detail_pairs([
+            ("command", DESKTOP_LOCAL_SELFTEST_COMMAND),
+            (
+                "required_when",
+                "retained_release_evidence_for_release_sign_off_is_not_fresh_current",
+            ),
+            ("proof_binding", "same_head_fresh_current_release_evidence"),
+            ("release_evidence_status", str(release_evidence.get("status") or "unknown")),
+            ("bound_sources", _format_csv(list(LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES))),
+            ("blocking_sources", _format_csv(blocking_sources) or "none"),
+            ("proof_state", "missing_or_non_green" if has_blocker else "fresh_current"),
+            (
+                "decision",
+                "run_local_selftest_before_go"
+                if has_blocker
+                else "optional_with_fresh_current_evidence",
+            ),
+        ]),
+    )
 
 
 def evidence_coverage_signal(quality_non_template: int, weekly_non_template: int) -> tuple[str, int, str]:
@@ -1647,11 +1944,6 @@ def main() -> int:
         "validate:package:dry-run",
     ])
     desktop_check_code, desktop_check_output = run_cmd(DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS)
-    desktop_code = (
-        desktop_bootstrap_code
-        if desktop_bootstrap_code != 0
-        else desktop_check_code
-    )
     desktop_output = "\n\n".join(
         part
         for part in [desktop_bootstrap_output, desktop_check_output]
@@ -1787,6 +2079,7 @@ def main() -> int:
         tasks_parse_error,
     )
     current_head_sha = _current_head_sha()
+    current_release_version = _current_release_version()
     writing_helper_acceptance_payload, writing_helper_acceptance_parse_error = _read_json_artifact(
         WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH
     )
@@ -1796,6 +2089,7 @@ def main() -> int:
             writing_helper_acceptance_payload,
             current_head_sha,
             writing_helper_acceptance_parse_error,
+            current_version=current_release_version,
         )
     )
     authority_alignment_status, authority_alignment_exit, authority_alignment_detail = authority_alignment_signal(
@@ -1884,7 +2178,7 @@ def main() -> int:
             "desktop_check",
             "P0",
             True,
-            desktop_code,
+            desktop_check_code,
             _format_detail_pairs([
                 ("command", DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND),
                 ("package_script", "desktop/package.json -> scripts.check:local"),
@@ -2179,19 +2473,140 @@ def main() -> int:
         ),
     ]
 
+    machine_payload_generated_at = datetime.now(timezone.utc).isoformat()
+    preliminary_no_go_reasons = [
+        check["check_id"]
+        for check in checks
+        if check["blocking"] and check["status"] == "FAIL"
+    ]
+    preliminary_decision = "GO" if not preliminary_no_go_reasons else "NO_GO"
+    writing_helper_generated_at = (
+        str(writing_helper_acceptance_payload.get("generated_at") or "").strip()
+        if writing_helper_acceptance_payload
+        else ""
+    )
+    writing_helper_head_sha = (
+        str(writing_helper_acceptance_payload.get("head_sha") or "").strip()
+        if writing_helper_acceptance_payload
+        else ""
+    )
+    writing_helper_version = (
+        str(writing_helper_acceptance_payload.get("version") or "").strip()
+        if writing_helper_acceptance_payload
+        else ""
+    )
+    evidence_sources = [
+        _build_release_evidence_source(
+            "release_summary_report",
+            REPORT_PATH,
+            "PASS" if preliminary_decision == "GO" else "FAIL",
+            machine_payload_generated_at,
+            current_head_sha,
+            current_head_sha,
+            source_type="report",
+            version=current_release_version,
+            current_version=current_release_version,
+        ),
+        _build_release_evidence_source(
+            "authority_alignment",
+            AUTHORITY_ALIGNMENT_ARTIFACT_PATH,
+            normalize_release_evidence_status(authority_alignment_status),
+            machine_payload_generated_at,
+            current_head_sha,
+            current_head_sha,
+            source_type="retained_artifact",
+            version=current_release_version,
+            current_version=current_release_version,
+        ),
+        _build_release_evidence_source(
+            "writing_helper_acceptance",
+            WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH,
+            normalize_release_evidence_status(writing_helper_acceptance_status),
+            writing_helper_generated_at,
+            writing_helper_head_sha,
+            current_head_sha,
+            source_type="retained_artifact",
+            version=writing_helper_version or None,
+            current_version=current_release_version,
+        ),
+        _build_release_evidence_source(
+            "governance_scripts_regression",
+            GOVERNANCE_JUNIT_PATH,
+            normalize_release_evidence_status(governance_status),
+            machine_payload_generated_at,
+            current_head_sha,
+            current_head_sha,
+            source_type="junit",
+            version=current_release_version,
+            current_version=current_release_version,
+        ),
+        _build_release_evidence_source(
+            "production_guard",
+            PRODUCTION_GUARD_JUNIT_PATH,
+            normalize_release_evidence_status(prod_guard_status),
+            machine_payload_generated_at,
+            current_head_sha,
+            current_head_sha,
+            source_type="junit",
+            version=current_release_version,
+            current_version=current_release_version,
+        ),
+        _build_release_evidence_source(
+            "external_e2e_smoke",
+            E2E_JUNIT_PATH,
+            normalize_release_evidence_status(e2e_status),
+            machine_payload_generated_at,
+            current_head_sha,
+            current_head_sha,
+            source_type="junit",
+            version=current_release_version,
+            current_version=current_release_version,
+        ),
+    ]
+    release_evidence_blocking_sources = [
+        str(source.get("source_id"))
+        for source in evidence_sources
+        if source.get("status") != "PASS"
+        or not bool(source.get("is_fresh"))
+        or not bool(source.get("is_current"))
+    ]
+    release_evidence = {
+        "status": "fresh_current" if not release_evidence_blocking_sources else "non_green",
+        "blocking_sources": release_evidence_blocking_sources,
+        "head_sha": current_head_sha or "unknown",
+        "version": current_release_version or "unknown",
+        "generated_at": machine_payload_generated_at,
+        "freshness_window_hours": RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS,
+        "evidence_sources": evidence_sources,
+    }
+    local_selftest_status, local_selftest_exit, local_selftest_detail = (
+        local_selftest_enforcement_signal(release_evidence)
+    )
+    checks.append(
+        build_check_result(
+            "local_selftest_enforcement",
+            "P0",
+            True,
+            local_selftest_exit,
+            local_selftest_detail,
+            status_override=local_selftest_status,
+        )
+    )
     no_go_reasons = [
         check["check_id"]
         for check in checks
         if check["blocking"] and check["status"] == "FAIL"
     ]
     decision = "GO" if not no_go_reasons else "NO_GO"
-
-    machine_payload_generated_at = datetime.now(timezone.utc).isoformat()
     machine_payload = {
         "decision": decision,
         "go_no_go_reasons": no_go_reasons,
         "generated_at": machine_payload_generated_at,
+        "head_sha": current_head_sha,
+        "version": current_release_version,
+        "freshness_window_hours": RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS,
         "checks": checks,
+        "release_evidence": release_evidence,
     }
 
     table_lines = [
@@ -2205,6 +2620,7 @@ def main() -> int:
     table = "\n".join(table_lines)
 
     check_details_block = _build_check_detail_summary_section(checks)
+    release_evidence_block = _build_release_evidence_summary_section(release_evidence)
 
     report = f"""# Release Check Summary
 
@@ -2221,6 +2637,8 @@ def main() -> int:
 ```json
 {json.dumps(machine_payload, ensure_ascii=False, indent=2)}
 ```
+
+{release_evidence_block}
 
 ## Details
 
@@ -2312,6 +2730,7 @@ def main() -> int:
 - contract_labels: `Supported runtime`, `Supported launcher`, `Advisory compatibility surfaces`, `Deprecated surface`
 - authority_alignment_checker: `scripts/check_authority_alignment.py`
 - desktop_authoritative_local_gate: `{DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND}` (from `desktop/package.json` `check:local`, which currently resolves to `check:release`)
+- desktop_local_selftest: `{DESKTOP_LOCAL_SELFTEST_COMMAND}` (required whenever retained release evidence for `release_summary_report`, `authority_alignment`, `writing_helper_acceptance`, or `governance_scripts_regression` is not already `fresh_current` for the current HEAD)
 - packaging_dry_run: `{DESKTOP_PACKAGING_DRY_RUN_COMMAND}` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`)
 - formal_evidence_dir: `{_trace_path(RELEASE_EVIDENCE_DIR)}`
 - authority_alignment_artifact: `{_trace_path(AUTHORITY_ALIGNMENT_ARTIFACT_PATH)}`
@@ -2327,7 +2746,10 @@ def main() -> int:
         decision=decision,
         go_no_go_reasons=no_go_reasons,
         generated_at=machine_payload_generated_at,
+        head_sha=current_head_sha,
+        version=current_release_version,
         checks=checks,
+        release_evidence=release_evidence,
         report_path=REPORT_PATH,
     )
     authority_artifact_path = _write_authority_alignment_artifact(

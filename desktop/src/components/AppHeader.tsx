@@ -12,11 +12,14 @@ interface CheckpointItem {
 interface AppHeaderProps {
   appTitle: string
   contextUsageLabel: string
+  contextUsageVisible: boolean
   contextUsageText: string
   contextUsageBarClass: string
   contextUsageWidthPercent: number
+  headerConnectionState: 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
   headerDotClass: string
   headerConnectionText: string
+  onOpenDiagnostics: () => void
   checkpointLabel: string
   loadingCheckpointsLabel: string
   noCheckpointsLabel: string
@@ -41,11 +44,14 @@ interface AppHeaderProps {
 export function AppHeader({
   appTitle,
   contextUsageLabel,
+  contextUsageVisible,
   contextUsageText,
   contextUsageBarClass,
   contextUsageWidthPercent,
+  headerConnectionState,
   headerDotClass,
   headerConnectionText,
+  onOpenDiagnostics,
   checkpointLabel,
   loadingCheckpointsLabel,
   noCheckpointsLabel,
@@ -110,17 +116,30 @@ export function AppHeader({
           <div className={`w-2 h-2 rounded-full shadow-sm ${headerDotClass}`} />
           <span className="shell-text-compact font-medium text-gray-600 dark:text-dark-text">{headerConnectionText}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="shell-text-compact font-medium text-gray-500 dark:text-dark-text-secondary">
-            {contextUsageLabel} <span className="text-gray-700 dark:text-dark-text">{contextUsageText}</span>
-          </span>
-          <div className="w-16 h-1.5 bg-gray-200 dark:bg-dark-border2 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${contextUsageBarClass}`}
-              style={{ width: `${contextUsageWidthPercent}%` }}
-            />
+        {headerConnectionState !== 'connected' && (
+          <button
+            type="button"
+            onClick={onOpenDiagnostics}
+            className="shell-text-compact rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-200 dark:hover:bg-amber-900/20"
+            aria-label={t.settingsCheckConnection}
+            title={t.settingsCheckConnection}
+          >
+            {t.settingsCheckConnection}
+          </button>
+        )}
+        {contextUsageVisible && (
+          <div className="flex items-center gap-2">
+            <span className="shell-text-compact font-medium text-gray-500 dark:text-dark-text-secondary">
+              {contextUsageLabel} <span className="text-gray-700 dark:text-dark-text">{contextUsageText}</span>
+            </span>
+            <div className="w-16 h-1.5 bg-gray-200 dark:bg-dark-border2 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${contextUsageBarClass}`}
+                style={{ width: `${contextUsageWidthPercent}%` }}
+              />
+            </div>
           </div>
-        </div>
+        )}
         <button
           type="button"
           onClick={onToggleCheckpointMenu}

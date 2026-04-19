@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload, Settings } from 'lucide-react'
+import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload, Settings, ChevronDown, ChevronRight } from 'lucide-react'
 import type { BackendConfig } from '../api/config'
 import { isTauriRuntime, syncGatewayBaseOverride } from '../api/transport'
 import { useSettingsStore, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
@@ -9,13 +9,14 @@ import { MASKED_SECRET_VALUE, formatBackendFieldValue, useSettingsBackendConfig 
 import { useSettingsProviderModels } from '../hooks/useSettingsProviderModels'
 import { useSettingsDiagnostics } from '../hooks/useSettingsDiagnostics'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
+import type { SettingsSectionId } from '../hooks/useAppPanelOrchestration'
 
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
+  requestedSection?: SettingsSectionId
+  onOpenDetailedDiagnostics?: () => void
 }
-
-type SettingsSectionId = 'backend' | 'workflow' | 'retrieval' | 'templates' | 'models' | 'ui' | 'diagnostics'
 
 type SettingsSection = {
   id: SettingsSectionId
@@ -26,6 +27,19 @@ type BackendSectionKey = keyof Pick<
   BackendConfig,
   'agent' | 'memory' | 'workflow' | 'graph' | 'writing' | 'gateway' | 'backup' | 'token' | 'obsidian' | 'integration'
 >
+
+type SettingsSaveStageKey = 'persisted' | 'runtime' | 'validation'
+type SettingsSaveStageStatus = 'success' | 'failed' | 'skipped'
+
+interface SettingsSaveStageResult {
+  status: SettingsSaveStageStatus
+  detail?: string
+}
+
+interface SettingsSaveResult {
+  status: 'success' | 'partial' | 'failed'
+  stages: Record<SettingsSaveStageKey, SettingsSaveStageResult>
+}
 
 const BACKEND_SECTION_KEYS: BackendSectionKey[] = [
   'agent',
@@ -48,7 +62,12 @@ function formatBackendFieldLabel(field: string) {
   return field.replace(/_/g, ' ')
 }
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export function SettingsModal({
+  isOpen,
+  onClose,
+  requestedSection = 'workflow',
+  onOpenDetailedDiagnostics,
+}: SettingsModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const backdropPointerDownRef = useRef(false)
@@ -61,21 +80,27 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { checkBackend } = useAppStore()
   const [localSettings, setLocalSettings] = useState(settings)
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null)
+  const [savingSettings, setSavingSettings] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const wasOpenRef = useRef(false)
-  const { t } = useI18n()
+  const { t, translate } = useI18n()
 
   const sections: SettingsSection[] = [
-    { id: 'backend', label: t.backendService },
     { id: 'workflow', label: t.writingSettings },
     { id: 'retrieval', label: t.settingsRetrieval },
     { id: 'templates', label: t.templateLibraryTitle },
     { id: 'models', label: t.llmConfig },
     { id: 'ui', label: t.uiSettings },
+    { id: 'backend', label: t.backendService },
     { id: 'diagnostics', label: t.settingsDiagnostics },
   ]
+  const primarySections = sections.filter((section) => section.id !== 'backend' && section.id !== 'diagnostics')
+  const supportSections = sections.filter((section) => section.id === 'backend' || section.id === 'diagnostics')
+  const isAdvancedSection = (sectionId: SettingsSectionId) => sectionId === 'backend' || sectionId === 'diagnostics'
 
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('workflow')
+  const [showAdvancedSupport, setShowAdvancedSupport] = useState(false)
   const {
     backendConfigState,
     backendConfigDraft,
@@ -151,8 +176,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const {
     diagnosticsLoading,
     diagnosticsError,
-    gatewayMetrics,
-    gatewayTools,
     refreshDiagnostics,
   } = useSettingsDiagnostics({
     settingsDiagnosticsFetchFailed: t.settingsDiagnosticsFetchFailed,
@@ -180,9 +203,55 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             ? `${t.backendConfigSyncSuccess} · ${new Date(backendConfigState.lastSync).toLocaleString()}`
             : null
 
+  const getSaveStageLabel = (stage: SettingsSaveStageKey) => {
+    if (stage === 'persisted') return t.settingsSaveStagePersisted
+    if (stage === 'runtime') return t.settingsSaveStageRuntime
+    return t.settingsSaveStageValidation
+  }
+
+  const getSaveStageSummary = (result: SettingsSaveResult) => (
+    (Object.entries(result.stages) as Array<[SettingsSaveStageKey, SettingsSaveStageResult]>)
+      .filter(([, stage]) => stage.status === 'failed')
+      .map(([stage]) => getSaveStageLabel(stage))
+      .join(' / ')
+  )
+
+  const buildSaveMessage = (result: SettingsSaveResult) => {
+    const stages = getSaveStageSummary(result)
+    if (result.status === 'success') {
+      return {
+        type: 'success' as const,
+        text: t.settingsSaveSuccess,
+      }
+    }
+    if (result.status === 'partial') {
+      return {
+        type: 'warning' as const,
+        text: translate('settingsSavePartialFailure', { stages }),
+      }
+    }
+    return {
+      type: 'error' as const,
+      text: translate('settingsSaveFailed', { stages }),
+    }
+  }
+
+  const focusFailedSaveStage = (result: SettingsSaveResult) => {
+    if (result.stages.validation.status === 'failed') {
+      setShowAdvancedSupport(true)
+      setActiveSection('diagnostics')
+      return
+    }
+    if (result.stages.runtime.status === 'failed') {
+      setShowAdvancedSupport(true)
+      setActiveSection('backend')
+    }
+  }
+
   useEffect(() => {
     if (isOpen && !wasOpenRef.current) {
       setLocalSettings(settings)
+      setSaveMessage(null)
     }
     wasOpenRef.current = isOpen
   }, [isOpen, settings])
@@ -193,6 +262,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     isActive: isOpen,
     initialFocusRef: headingRef,
   })
+
+  useEffect(() => {
+    if (!isOpen) return
+    setActiveSection(requestedSection)
+    setShowAdvancedSupport(isAdvancedSection(requestedSection))
+  }, [isOpen, requestedSection])
 
   if (!isOpen) return null
 
@@ -259,26 +334,67 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   }
 
   const handleSave = async () => {
-    updateSettings(localSettings)
-    // 同步更新各个 provider
-    localSettings.llmProviders.forEach((provider) => {
-      updateProvider(provider.id, provider)
-    })
+    setSavingSettings(true)
+    setSaveMessage(null)
 
-    if (isTauriRuntime()) {
-      try {
-        await syncGatewayBaseOverride(
-          localSettings.apiBaseUrl && localSettings.apiBaseUrl.trim()
-            ? localSettings.apiBaseUrl.trim()
-            : null,
-        )
-      } catch {
-        // ignore override sync failures
-      }
+    const result: SettingsSaveResult = {
+      status: 'success',
+      stages: {
+        persisted: { status: 'success' },
+        runtime: { status: 'skipped' },
+        validation: { status: 'skipped' },
+      },
     }
 
-    await checkBackend()
-    onClose()
+    try {
+      try {
+        updateSettings(localSettings)
+        localSettings.llmProviders.forEach((provider) => {
+          updateProvider(provider.id, provider)
+        })
+      } catch (error) {
+        result.stages.persisted = {
+          status: 'failed',
+          detail: error instanceof Error ? error.message : t.settingsUnknownError,
+        }
+        result.status = 'failed'
+        setSaveMessage(buildSaveMessage(result))
+        return
+      }
+
+      if (isTauriRuntime()) {
+        try {
+          await syncGatewayBaseOverride(
+            localSettings.apiBaseUrl && localSettings.apiBaseUrl.trim()
+              ? localSettings.apiBaseUrl.trim()
+              : null,
+          )
+          result.stages.runtime = { status: 'success' }
+        } catch (error) {
+          result.stages.runtime = {
+            status: 'failed',
+            detail: error instanceof Error ? error.message : t.settingsUnknownError,
+          }
+        }
+      }
+
+      await checkBackend()
+      result.stages.validation = useAppStore.getState().backendStatus
+        ? { status: 'success' }
+        : { status: 'failed', detail: t.settingsSaveValidationFailed }
+
+      const hasFailedStage = Object.values(result.stages).some((stage) => stage.status === 'failed')
+      if (hasFailedStage) {
+        result.status = result.stages.persisted.status === 'failed' ? 'failed' : 'partial'
+        setSaveMessage(buildSaveMessage(result))
+        focusFailedSaveStage(result)
+        return
+      }
+
+      onClose()
+    } finally {
+      setSavingSettings(false)
+    }
   }
 
   const handleReset = () => {
@@ -399,7 +515,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* Secondary navigation */}
           <nav className="w-60 border-r border-gray-200 dark:border-dark-border bg-slate-50 dark:bg-dark-bg overflow-y-auto custom-scrollbar shrink-0">
             <div className="p-4 space-y-1">
-              {sections.map((section) => (
+              {primarySections.map((section) => (
                 <button
                   key={section.id}
                   type="button"
@@ -414,6 +530,51 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   {section.label}
                 </button>
               ))}
+
+              <div className="pt-3 mt-3 border-t border-gray-200 dark:border-dark-border">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedSupport((prev) => !prev)}
+                  className={classNames(
+                    'w-full rounded-xl border px-4 py-3 text-left transition-all',
+                    showAdvancedSupport || isAdvancedSection(activeSection)
+                      ? 'border-gray-300 bg-white text-gray-800 dark:border-dark-border2 dark:bg-dark-surface dark:text-dark-text'
+                      : 'border-transparent text-gray-600 hover:bg-gray-100 dark:text-dark-text-secondary dark:hover:bg-dark-surface2',
+                  )}
+                  aria-expanded={showAdvancedSupport}
+                  aria-label={t.settingsAdvancedSupport}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium">{t.settingsAdvancedSupport}</div>
+                      <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
+                        {t.settingsAdvancedSupportHint}
+                      </p>
+                    </div>
+                    {showAdvancedSupport ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </div>
+                </button>
+
+                {showAdvancedSupport && (
+                  <div className="mt-2 space-y-1 pl-2">
+                    {supportSections.map((section) => (
+                      <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => setActiveSection(section.id)}
+                        className={classNames(
+                          'w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98]',
+                          activeSection === section.id
+                            ? 'bg-primary-600 text-white shadow-md'
+                            : 'hover:bg-gray-100 dark:hover:bg-dark-surface2 text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text',
+                        )}
+                      >
+                        {section.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </nav>
 
@@ -1342,37 +1503,23 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 )}
 
                 <div className="space-y-3">
-                  <div className="border dark:border-dark-border rounded-lg p-3">
-                    <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsGatewayMetrics}</div>
-                    {gatewayMetrics ? (
-                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-dark-text">
-                        <div>{t.mcpRequestsTotal.replace('{value}', String(gatewayMetrics.requests_total))}</div>
-                        <div>{t.mcpRequestsFailed.replace('{value}', String(gatewayMetrics.requests_failed_total))}</div>
-                        <div>{t.mcpLatencyAvg.replace('{value}', String(gatewayMetrics.latency_ms_avg))}</div>
-                        <div>{t.mcpLatencyMax.replace('{value}', String(gatewayMetrics.latency_ms_max))}</div>
+                  {onOpenDetailedDiagnostics && (
+                    <div className="border dark:border-dark-border rounded-lg p-3 bg-gray-50 dark:bg-dark-bg/60">
+                      <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.mcpPanelTitle}</div>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                          {t.settingsDetailedDiagnosticsHint}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={onOpenDetailedDiagnostics}
+                          className="shrink-0 text-xs px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all shadow-sm active:scale-95"
+                        >
+                          {t.settingsOpenDetailedDiagnostics}
+                        </button>
                       </div>
-                    ) : (
-                      <div className="text-xs text-gray-400 dark:text-dark-text-secondary">{t.settingsNoMetricsData}</div>
-                    )}
-                  </div>
-
-                  <div className="border dark:border-dark-border rounded-lg p-3">
-                    <div className="text-xs text-gray-500 dark:text-dark-text-secondary mb-2">{t.settingsToolList}</div>
-                    {gatewayTools && Object.keys(gatewayTools).length > 0 ? (
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {Object.entries(gatewayTools).map(([service, tools]) => (
-                          <div key={service}>
-                            <div className="text-xs font-medium text-gray-700 dark:text-dark-text">{service}</div>
-                            <div className="text-xs text-gray-500 dark:text-dark-text-secondary break-all">
-                              {tools.join(', ')}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-gray-400 dark:text-dark-text-secondary">{t.settingsNoToolsData}</div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
@@ -1418,6 +1565,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 {importMessage.text}
               </span>
             )}
+            {saveMessage && (
+              <span
+                className={`text-xs ${
+                  saveMessage.type === 'success'
+                    ? 'text-green-600'
+                    : saveMessage.type === 'warning'
+                      ? 'text-amber-600'
+                      : 'text-red-600'
+                }`}
+              >
+                {saveMessage.text}
+              </span>
+            )}
           </div>
           <div className="flex gap-2">
             <button
@@ -1428,7 +1588,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-500 shadow-md active:scale-95 transition-all"
+              disabled={savingSettings}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-500 shadow-md active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save size={16} />
               {t.save}

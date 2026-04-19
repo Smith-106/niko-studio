@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { novelQualityCheck } from '../api/client'
+import { buildFailurePresentation } from '../utils/failurePresentation'
 
 export interface NovelQualityViewModel {
   decision: string
@@ -21,6 +22,14 @@ interface UseEvaluationQualityCheckOptions {
   t: {
     evaluationQualityCheckFailed: string
     evaluationNoFeedback: string
+    failureCategoryGeneration: string
+    failureCategoryEvaluation: string
+    failureCategoryRetrieval: string
+    failureCategoryConnection: string
+    failureMessageGeneration: string
+    failureMessageEvaluation: string
+    failureMessageRetrieval: string
+    failureMessageConnection: string
   }
 }
 
@@ -41,7 +50,13 @@ export function useEvaluationQualityCheck({ content, qualityGoals, t }: UseEvalu
       })
       if (!response.success || !response.data) {
         setQualityCheckResult(null)
-        setQualityCheckError(response.error || t.evaluationQualityCheckFailed)
+        const failure = buildFailurePresentation({
+          t,
+          source: 'evaluation',
+          error: response.error,
+          fallbackMessage: t.evaluationQualityCheckFailed,
+        })
+        setQualityCheckError(`${failure.label}：${failure.message}`)
         return
       }
 
@@ -56,7 +71,13 @@ export function useEvaluationQualityCheck({ content, qualityGoals, t }: UseEvalu
       })
     } catch (error) {
       setQualityCheckResult(null)
-      setQualityCheckError(String(error))
+      const failure = buildFailurePresentation({
+        t,
+        source: 'evaluation',
+        error,
+        fallbackMessage: t.evaluationQualityCheckFailed,
+      })
+      setQualityCheckError(`${failure.label}：${failure.message}`)
     } finally {
       setQualityChecking(false)
     }

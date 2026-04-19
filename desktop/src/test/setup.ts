@@ -1,10 +1,12 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
-Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
-  value: () => {},
-  writable: true,
-})
+if (typeof window !== 'undefined' && typeof window.HTMLElement !== 'undefined') {
+  Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
+    value: () => {},
+    writable: true,
+  })
+}
 
 const originalWarn = console.warn.bind(console)
 vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {

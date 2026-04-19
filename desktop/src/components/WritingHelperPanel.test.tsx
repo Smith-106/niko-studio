@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WritingHelperPanel } from './WritingHelperPanel'
 import { translations } from '../i18n'
@@ -41,6 +41,7 @@ describe('WritingHelperPanel clear draft', () => {
           mode: 'outline',
           maxSentences: 9,
           maxItems: 11,
+          guidance: '保留这段交接说明。',
         }}
         onClearDraft={onClearDraft}
       />
@@ -65,6 +66,7 @@ describe('WritingHelperPanel clear draft', () => {
     expect(modeSelect.value).toBe('polish')
     expect(maxSentencesInput.value).toBe('3')
     expect(maxItemsInput.value).toBe('6')
+    expect(screen.queryByText('保留这段交接说明。')).not.toBeInTheDocument()
   })
 })
 
@@ -111,6 +113,263 @@ describe('WritingHelperPanel mode options and payload', () => {
     )
     expect(mockProcessWritingHelper).not.toHaveBeenCalled()
     expect(screen.getByText('兼容润色结果。')).toBeInTheDocument()
+  })
+
+  it('shows handoff guidance from draft state and appends it to the request instruction', async () => {
+    const user = userEvent.setup()
+
+    mockProcessWritingHelper.mockResolvedValue({
+      success: true,
+      data: {
+        mode: 'rewrite',
+        processed_text: '继续改写后的结果。',
+      },
+    })
+
+    render(
+      <WritingHelperPanel
+        onClose={() => {}}
+        onOpenSettings={() => {}}
+        draftState={{
+          content: '已有草稿内容',
+          mode: 'rewrite',
+          maxSentences: 3,
+          maxItems: 6,
+          guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力\n\n本次改写请优先这样处理：\n1. 更早亮出人物之间的对立目标或阻力。',
+          handoff: {
+            source: 'evaluation',
+            suggestionTitle: '增加冲突',
+            suggestionReason: '提升张力',
+            guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力\n\n本次改写请优先这样处理：\n1. 更早亮出人物之间的对立目标或阻力。',
+            carriedContent: 'revision-preview',
+            preset: {
+              mode: 'rewrite',
+              maxSentences: 4,
+              maxItems: 6,
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(screen.getByText('评估接力预设')).toBeInTheDocument()
+    expect(screen.getByText('接力来源')).toBeInTheDocument()
+    expect(screen.getByText('建议：增加冲突')).toBeInTheDocument()
+    expect(screen.getByText('携带：修改预览')).toBeInTheDocument()
+    expect(screen.getByText('原因：提升张力')).toBeInTheDocument()
+    expect(screen.getByText('推荐：改写')).toBeInTheDocument()
+    expect(screen.getByText('推荐：4 句')).toBeInTheDocument()
+    expect(screen.getByText('推荐：6 条')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '改写（推荐）' })).toBeInTheDocument()
+    expect(screen.getByText('当前正在使用推荐模式：改写')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '展开预设详情' })).toBeInTheDocument()
+    expect(screen.queryByText('模式：改写')).not.toBeInTheDocument()
+    expect(screen.queryByText('交接说明')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '展开预设详情' }))
+
+    expect(screen.getByRole('button', { name: '收起预设详情' })).toBeInTheDocument()
+    expect(screen.getByText('模式：改写')).toBeInTheDocument()
+    expect(screen.getByText('句数：3')).toBeInTheDocument()
+    expect(screen.getByText('条目：6')).toBeInTheDocument()
+    expect(screen.getByText('交接说明')).toBeInTheDocument()
+    expect(screen.getByText(/优先处理这条评估建议：增加冲突/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '展开说明' })).toBeInTheDocument()
+    expect(screen.queryByText(/1\. 更早亮出人物之间的对立目标或阻力。/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '展开说明' }))
+
+    expect(screen.getByRole('button', { name: '收起说明' })).toBeInTheDocument()
+    expect(screen.getByText(/1\. 更早亮出人物之间的对立目标或阻力。/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: zh.writingHelperRun }))
+
+    expect(mockProcessWritingHelper).toHaveBeenCalledWith(expect.objectContaining({
+      content: '已有草稿内容',
+      mode: 'rewrite',
+      instruction: expect.stringContaining('优先处理这条评估建议：增加冲突'),
+    }))
+  })
+
+  it('restores the captured handoff preset after the user changes parameters', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <WritingHelperPanel
+        onClose={() => {}}
+        onOpenSettings={() => {}}
+        draftState={{
+          content: '已有草稿内容',
+          mode: 'rewrite',
+          maxSentences: 3,
+          maxItems: 6,
+          guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力',
+          handoff: {
+            source: 'evaluation',
+            suggestionTitle: '增加冲突',
+            suggestionReason: '提升张力',
+            guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力',
+            carriedContent: 'original-reply',
+            preset: {
+              mode: 'rewrite',
+              maxSentences: 3,
+              maxItems: 6,
+            },
+          },
+        }}
+      />,
+    )
+
+    const modeSelect = screen.getByLabelText(zh.writingHelperMode) as HTMLSelectElement
+    const maxSentencesInput = screen.getByLabelText(zh.writingHelperMaxSentences) as HTMLInputElement
+    const maxItemsInput = screen.getByLabelText(zh.writingHelperMaxItems) as HTMLInputElement
+
+    await user.selectOptions(modeSelect, 'expand')
+    fireEvent.change(maxSentencesInput, { target: { value: '8' } })
+    fireEvent.change(maxItemsInput, { target: { value: '10' } })
+
+    expect(screen.getByText('已偏离推荐参数')).toBeInTheDocument()
+    expect(screen.getByText('你已经改动了推荐模式或参数；如需回到评估给出的起始设置，可使用“恢复推荐参数”。')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '展开预设详情' }))
+
+    expect(screen.getByText('模式已改动')).toBeInTheDocument()
+    expect(screen.getByText('句数已改动')).toBeInTheDocument()
+    expect(screen.getByText('条目已改动')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '清除说明' }))
+
+    expect(screen.getByText('交接说明已清除，你仍可恢复推荐参数。')).toBeInTheDocument()
+    expect(screen.getByText('说明已改动')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '恢复推荐参数' })).toBeInTheDocument()
+    expect(screen.getByText('建议：增加冲突')).toBeInTheDocument()
+    expect(screen.getByText('携带：原始回复')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '恢复推荐参数' }))
+
+    expect(modeSelect.value).toBe('rewrite')
+    expect(maxSentencesInput.value).toBe('3')
+    expect(maxItemsInput.value).toBe('6')
+
+    await user.click(screen.getByRole('button', { name: '展开预设详情' }))
+
+    expect(screen.getByText(/优先处理这条评估建议：增加冲突/)).toBeInTheDocument()
+  })
+
+  it('restores only the selected preset field and keeps other manual changes', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <WritingHelperPanel
+        onClose={() => {}}
+        onOpenSettings={() => {}}
+        draftState={{
+          content: '已有草稿内容',
+          mode: 'rewrite',
+          maxSentences: 3,
+          maxItems: 6,
+          guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力',
+        }}
+      />,
+    )
+
+    const modeSelect = screen.getByLabelText(zh.writingHelperMode) as HTMLSelectElement
+    const maxSentencesInput = screen.getByLabelText(zh.writingHelperMaxSentences) as HTMLInputElement
+    const maxItemsInput = screen.getByLabelText(zh.writingHelperMaxItems) as HTMLInputElement
+
+    await user.selectOptions(modeSelect, 'expand')
+    fireEvent.change(maxSentencesInput, { target: { value: '8' } })
+    fireEvent.change(maxItemsInput, { target: { value: '10' } })
+
+    await user.click(screen.getByRole('button', { name: '展开预设详情' }))
+
+    await user.click(screen.getByRole('button', { name: '清除说明' }))
+
+    await user.click(screen.getByRole('button', { name: '恢复模式推荐' }))
+
+    expect(modeSelect.value).toBe('rewrite')
+    expect(maxSentencesInput.value).toBe('8')
+    expect(maxItemsInput.value).toBe('10')
+    expect(screen.queryByText('模式已改动')).not.toBeInTheDocument()
+    expect(screen.getByText('句数已改动')).toBeInTheDocument()
+    expect(screen.getByText('条目已改动')).toBeInTheDocument()
+    expect(screen.getByText('说明已改动')).toBeInTheDocument()
+    expect(screen.getByText('交接说明已清除，你仍可恢复推荐参数。')).toBeInTheDocument()
+  })
+
+  it('shows control-level recommendation hints and restores from the control area', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <WritingHelperPanel
+        onClose={() => {}}
+        onOpenSettings={() => {}}
+        draftState={{
+          content: '已有草稿内容',
+          mode: 'rewrite',
+          maxSentences: 3,
+          maxItems: 6,
+          guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力',
+        }}
+      />,
+    )
+
+    const modeSelect = screen.getByLabelText(zh.writingHelperMode) as HTMLSelectElement
+    const maxSentencesInput = screen.getByLabelText(zh.writingHelperMaxSentences) as HTMLInputElement
+    const maxItemsInput = screen.getByLabelText(zh.writingHelperMaxItems) as HTMLInputElement
+
+    expect(screen.getByText('推荐：改写')).toBeInTheDocument()
+    expect(screen.getByText('推荐：3 句')).toBeInTheDocument()
+    expect(screen.getByText('推荐：6 条')).toBeInTheDocument()
+
+    await user.selectOptions(modeSelect, 'expand')
+    fireEvent.change(maxSentencesInput, { target: { value: '8' } })
+    fireEvent.change(maxItemsInput, { target: { value: '10' } })
+
+    expect(screen.getByRole('button', { name: '在模式控件中恢复推荐' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '在句数控件中恢复推荐' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '在条目控件中恢复推荐' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '在句数控件中恢复推荐' }))
+
+    expect(modeSelect.value).toBe('expand')
+    expect(maxSentencesInput.value).toBe('3')
+    expect(maxItemsInput.value).toBe('10')
+    expect(screen.getByText('当前：扩写 · 推荐：改写')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '在句数控件中恢复推荐' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '在模式控件中恢复推荐' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '在条目控件中恢复推荐' })).toBeInTheDocument()
+  })
+
+  it('restores guidance from the guidance section after clearing it', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <WritingHelperPanel
+        onClose={() => {}}
+        onOpenSettings={() => {}}
+        draftState={{
+          content: '已有草稿内容',
+          mode: 'rewrite',
+          maxSentences: 3,
+          maxItems: 6,
+          guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力\n\n本次改写请优先这样处理：\n1. 更早亮出人物之间的对立目标或阻力。',
+        }}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '展开预设详情' }))
+
+    await user.click(screen.getByRole('button', { name: '清除说明' }))
+
+    expect(screen.getByText('交接说明已清除，你仍可恢复推荐参数。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '在说明区恢复推荐说明' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '在说明区恢复推荐说明' }))
+
+    expect(screen.getByRole('button', { name: '展开说明' })).toBeInTheDocument()
+    expect(screen.queryByText(/1\. 更早亮出人物之间的对立目标或阻力。/)).not.toBeInTheDocument()
+    expect(screen.getByText(/优先处理这条评估建议：增加冲突/)).toBeInTheDocument()
   })
 
   it('uses revision-safe replace/alternative/undo actions when the current input matches an editor selection snapshot', async () => {

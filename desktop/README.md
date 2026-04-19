@@ -80,6 +80,7 @@ Windows 本地若常见 `8000` 端口占用，可使用仓库内启动器自动�
 - `-PreferredPort` / `-FallbackPort`: 覆盖默认的 `8000` / `8010`
 
 若只需拉起 / 复用 gateway 而不打开桌面窗口，可直接运行 `npm run local:gateway`。
+若要只跑 Vite 前端壳、但沿用本地启动器记录的健康 gateway 地址，可先运行 `npm run local:gateway`，再运行 `npm run local:shell`。
 
 日志默认写入仓库根目录 `.codex-run/`。
 若需关闭由该启动器新拉起的本地进程，可运行 `./scripts/stop_desktop_local.ps1`。

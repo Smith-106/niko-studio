@@ -47,10 +47,13 @@ export function ChatAreaComposer({
       <div className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all">
         <div className="relative">
           <textarea
+            id="chat-composer-input"
+            name="chat-composer-input"
             ref={inputRef}
             value={input}
             onChange={(event) => onInputChange(event.target.value)}
             onKeyDown={onKeyDown}
+            aria-label={inputPlaceholder}
             placeholder={inputPlaceholder}
             className="w-full resize-none border-0 bg-transparent py-1 pr-24 text-[15px] leading-relaxed text-gray-900 focus:outline-none focus:ring-0 dark:text-dark-text custom-scrollbar"
             rows={Math.min(8, Math.max(1, input.split('\n').length))}
@@ -58,10 +61,13 @@ export function ChatAreaComposer({
           />
           <div className="absolute right-0 bottom-0 flex items-center gap-1 bg-white dark:bg-dark-surface">
             <input
+              id="chat-composer-upload-input"
+              name="chat-composer-upload-input"
               ref={fileInputRef}
               type="file"
               accept=".txt,.md,.pdf,.docx"
               multiple
+              aria-label={uploadLabel}
               onChange={onFileUpload}
               className="hidden"
             />

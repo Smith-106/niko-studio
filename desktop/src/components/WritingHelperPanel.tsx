@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, X } from 'lucide-react'
 import { processWritingHelper, polishContent, type WritingHelperMode } from '../api/client'
+import type { WritingHelperDraftState, WritingHelperEvaluationHandoff } from '../hooks/useAppUiPersistence'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n, type Translations } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
+import { RevisionPreviewCard } from './RevisionPreviewCard'
 import { getEditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
+import {
+  applyRevisionCandidateToEditor,
+  captureMatchedSelectionSnapshot,
+  getRevisionCopy,
+  insertRevisionAlternativeToEditor,
+  undoLastRevisionApplyInEditor,
+} from '../utils/revisionLoop'
 import {
   type WritingStyle,
   type ToneOption,
@@ -18,18 +27,11 @@ import {
   removeTag,
 } from './editor/WritingStyle'
 
-interface WritingHelperPanelDraftState {
-  content: string
-  mode: WritingHelperMode
-  maxSentences: number
-  maxItems: number
-}
-
 interface WritingHelperPanelProps {
   onClose: () => void
   onOpenSettings: () => void
-  draftState?: WritingHelperPanelDraftState
-  onDraftStateChange?: (draft: WritingHelperPanelDraftState) => void
+  draftState?: WritingHelperDraftState
+  onDraftStateChange?: (draft: WritingHelperDraftState) => void
   onClearDraft?: () => void
 }
 
@@ -39,6 +41,35 @@ interface WritingHelperResult {
   mode?: string
   sourceText?: string
   selectionSnapshot?: EditorSelectionSnapshot | null
+}
+
+type PresetFieldKey = 'mode' | 'maxSentences' | 'maxItems' | 'guidance'
+
+interface PresetControlAssist {
+  field: PresetFieldKey
+  recommendedText: string
+  changed: boolean
+  restoreLabel: string
+}
+
+const GUIDANCE_PREVIEW_MAX_LINES = 2
+const GUIDANCE_PREVIEW_MAX_CHARS = 120
+
+function buildGuidancePreview(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  const lines = trimmed.split('\n')
+  const previewBase = lines.slice(0, GUIDANCE_PREVIEW_MAX_LINES).join('\n').trim()
+  const shortenedByLines = lines.length > GUIDANCE_PREVIEW_MAX_LINES
+  const shortenedByChars = previewBase.length > GUIDANCE_PREVIEW_MAX_CHARS
+  const clipped = shortenedByChars
+    ? previewBase.slice(0, GUIDANCE_PREVIEW_MAX_CHARS).trimEnd()
+    : previewBase
+
+  return shortenedByLines || shortenedByChars ? `${clipped}…` : clipped
 }
 
 // ── Style types imported from WritingStyle module ────────────────
@@ -66,40 +97,6 @@ const MODE_OPTIONS: Array<{ value: WritingHelperMode; labelKey: keyof Translatio
   { value: 'summarize', labelKey: 'writingHelperModeSummarize' },
   { value: 'outline', labelKey: 'writingHelperModeOutline' },
 ]
-
-function getRevisionCopy(language: 'zh' | 'en') {
-  if (language === 'zh') {
-    return {
-      previewTitle: '修改预览',
-      originalLabel: '原文',
-      candidateLabel: '建议版本',
-      replaceLabel: '替换选区',
-      alternativeLabel: '作为备选插入',
-      undoLabel: '撤销上次应用',
-      replacedMessage: '已替换当前选区。',
-      alternativeMessage: '已作为备选插入到原文后。',
-      insertedMessage: '已插入到编辑器。',
-      selectionChangedMessage: '当前选区已变化，请重新选择后再试。',
-      undoSuccessMessage: '已撤销上次应用。',
-      undoFailedMessage: '没有可撤销的最近应用。',
-    }
-  }
-
-  return {
-    previewTitle: 'Revision preview',
-    originalLabel: 'Original',
-    candidateLabel: 'Candidate',
-    replaceLabel: 'Replace selection',
-    alternativeLabel: 'Insert as alternative',
-    undoLabel: 'Undo last apply',
-    replacedMessage: 'Replaced the current selection.',
-    alternativeMessage: 'Inserted the candidate below the original selection.',
-    insertedMessage: 'Inserted into the editor.',
-    selectionChangedMessage: 'The current selection changed. Re-select the text and try again.',
-    undoSuccessMessage: 'Undid the last apply action.',
-    undoFailedMessage: 'There is no recent apply action to undo.',
-  }
-}
 
 // ── Sub-components ─────────────────────────────────────────────
 
@@ -198,6 +195,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   const useLegacyPolish = useSettingsStore((state) => state.settings.writingHelperUseLegacyPolish)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
   const { t, translate, language } = useI18n()
+  const isZh = language === 'zh'
 
   const getProviderFields = useCallback(() => {
     const { settings } = useSettingsStore.getState()
@@ -221,6 +219,8 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   const [mode, setMode] = useState<WritingHelperMode>(draftState?.mode ?? 'polish')
   const [maxSentences, setMaxSentences] = useState(draftState?.maxSentences ?? 3)
   const [maxItems, setMaxItems] = useState(draftState?.maxItems ?? 6)
+  const [guidance, setGuidance] = useState(draftState?.guidance ?? '')
+  const [handoff, setHandoff] = useState<WritingHelperEvaluationHandoff | null>(draftState?.handoff ?? null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<WritingHelperResult | null>(null)
@@ -228,8 +228,154 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   const [styleOpen, setStyleOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [style, setStyle] = useState<WritingStyle>(loadStyle)
+  const [guidanceExpanded, setGuidanceExpanded] = useState(false)
+  const [presetCardExpanded, setPresetCardExpanded] = useState(false)
+  const initialPresetRef = useRef({
+    mode: draftState?.handoff?.preset.mode ?? draftState?.mode ?? 'polish' as WritingHelperMode,
+    maxSentences: draftState?.handoff?.preset.maxSentences ?? draftState?.maxSentences ?? 3,
+    maxItems: draftState?.handoff?.preset.maxItems ?? draftState?.maxItems ?? 6,
+    guidance: draftState?.handoff?.guidance ?? draftState?.guidance ?? '',
+  })
   const buttonDisabled = useMemo(() => loading || content.trim().length === 0, [loading, content])
   const revisionCopy = useMemo(() => getRevisionCopy(language), [language])
+  const modeLabelMap: Record<WritingHelperMode, string> = {
+    polish: t.writingHelperModePolish,
+    rewrite: t.writingHelperModeRewrite,
+    expand: t.writingHelperModeExpand,
+    summarize: t.writingHelperModeSummarize,
+    outline: t.writingHelperModeOutline,
+  }
+  const hasInitialPreset = initialPresetRef.current.guidance.trim().length > 0 || handoff !== null
+  const presetGuidance = guidance.trim() ? guidance : initialPresetRef.current.guidance
+  const isEvaluationHandoff = handoff?.source === 'evaluation'
+    || presetGuidance.startsWith(isZh ? '优先处理这条评估建议：' : 'Prioritize this evaluation guidance:')
+  const presetTitle = isEvaluationHandoff
+    ? (isZh ? '评估接力预设' : 'Evaluation handoff preset')
+    : (isZh ? '当前处理预设' : 'Active processing preset')
+  const presetHint = isZh
+    ? '这组模式和参数已经按接力上下文预选好，你可以直接运行，也可以先手动调整。'
+    : 'This mode and parameter set was preselected from the current handoff. Run it as-is or adjust it first.'
+  const presetModeText = isZh
+    ? `模式：${modeLabelMap[mode]}`
+    : `Mode: ${modeLabelMap[mode]}`
+  const presetSentenceText = isZh
+    ? `句数：${maxSentences}`
+    : `Sentences: ${maxSentences}`
+  const presetItemsText = isZh
+    ? `条目：${maxItems}`
+    : `Items: ${maxItems}`
+  const handoffSourceTitle = isZh ? '接力来源' : 'Handoff source'
+  const handoffSuggestionText = handoff
+    ? (isZh ? `建议：${handoff.suggestionTitle}` : `Suggestion: ${handoff.suggestionTitle}`)
+    : ''
+  const handoffReasonText = handoff
+    ? (isZh ? `原因：${handoff.suggestionReason}` : `Reason: ${handoff.suggestionReason}`)
+    : ''
+  const handoffCarryText = handoff
+    ? (isZh
+      ? `携带：${handoff.carriedContent === 'revision-preview' ? '修改预览' : '原始回复'}`
+      : `Carries: ${handoff.carriedContent === 'revision-preview' ? 'revision preview' : 'original reply'}`)
+    : ''
+  const guidanceTitle = isZh ? '交接说明' : 'Handoff guidance'
+  const guidanceHint = isZh
+    ? '这段说明会作为本次处理的附加指令，你可以保留它，也可以清除后按自己的思路继续。'
+    : 'This note will be added to the current request as extra guidance. Keep it or clear it before continuing.'
+  const clearGuidanceLabel = isZh ? '清除说明' : 'Clear guidance'
+  const expandGuidanceLabel = isZh ? '展开说明' : 'Expand guidance'
+  const collapseGuidanceLabel = isZh ? '收起说明' : 'Collapse guidance'
+  const restoreGuidanceInlineLabel = isZh ? '恢复说明' : 'Restore guidance'
+  const expandPresetDetailsLabel = isZh ? '展开预设详情' : 'Expand preset details'
+  const collapsePresetDetailsLabel = isZh ? '收起预设详情' : 'Collapse preset details'
+  const restorePresetLabel = isZh ? '恢复推荐参数' : 'Restore recommended preset'
+  const presetClearedHint = isZh ? '交接说明已清除，你仍可恢复推荐参数。' : 'Handoff guidance was cleared. You can still restore the recommended preset.'
+  const presetAlignedLabel = isZh ? '当前与推荐一致' : 'Matches recommendation'
+  const presetChangedLabel = isZh ? '已偏离推荐参数' : 'Preset changed'
+  const presetChangedHint = isZh
+    ? '你已经改动了推荐模式或参数；如需回到评估给出的起始设置，可使用“恢复推荐参数”。'
+    : 'You changed the recommended mode or parameters. Use “Restore recommended preset” to go back to the original handoff state.'
+  const restoreSinglePresetFieldLabel = isZh ? '恢复此项' : 'Restore'
+  const controlRestoreLabel = isZh ? '恢复' : 'Restore'
+  const controlAlignedLabel = isZh ? '当前即推荐' : 'Using recommended value'
+  const modeRecommendedOptionSuffix = isZh ? '（推荐）' : ' (Recommended)'
+  const presetModeChanged = mode !== initialPresetRef.current.mode
+  const presetSentencesChanged = maxSentences !== initialPresetRef.current.maxSentences
+  const presetItemsChanged = maxItems !== initialPresetRef.current.maxItems
+  const presetGuidanceChanged = guidance !== initialPresetRef.current.guidance
+  const hasPresetChanges = (
+    presetModeChanged ||
+    presetSentencesChanged ||
+    presetItemsChanged ||
+    presetGuidanceChanged
+  )
+  const presetDiffLabels = [
+    presetModeChanged
+      ? {
+          key: 'mode' as const,
+          label: isZh ? '模式已改动' : 'Mode changed',
+          restoreLabel: isZh ? '恢复模式推荐' : 'Restore recommended mode',
+        }
+      : null,
+    presetSentencesChanged
+      ? {
+          key: 'maxSentences' as const,
+          label: isZh ? '句数已改动' : 'Sentence limit changed',
+          restoreLabel: isZh ? '恢复推荐句数' : 'Restore recommended sentence limit',
+        }
+      : null,
+    presetItemsChanged
+      ? {
+          key: 'maxItems' as const,
+          label: isZh ? '条目已改动' : 'Item limit changed',
+          restoreLabel: isZh ? '恢复推荐条目数' : 'Restore recommended item limit',
+        }
+      : null,
+    presetGuidanceChanged
+      ? {
+          key: 'guidance' as const,
+          label: isZh ? '说明已改动' : 'Guidance changed',
+          restoreLabel: isZh ? '恢复推荐说明' : 'Restore recommended guidance',
+        }
+      : null,
+  ].filter((item): item is { key: PresetFieldKey; label: string; restoreLabel: string } => Boolean(item))
+  const presetModeAssist: PresetControlAssist = {
+    field: 'mode',
+    recommendedText: isZh
+      ? `推荐：${modeLabelMap[initialPresetRef.current.mode]}`
+      : `Recommended: ${modeLabelMap[initialPresetRef.current.mode]}`,
+    changed: presetModeChanged,
+    restoreLabel: isZh ? '在模式控件中恢复推荐' : 'Restore recommendation in mode control',
+  }
+  const modeControlStatusText = hasInitialPreset
+    ? (presetModeChanged
+      ? (isZh
+        ? `当前：${modeLabelMap[mode]} · 推荐：${modeLabelMap[initialPresetRef.current.mode]}`
+        : `Current: ${modeLabelMap[mode]} · Recommended: ${modeLabelMap[initialPresetRef.current.mode]}`)
+      : (isZh
+        ? `当前正在使用推荐模式：${modeLabelMap[initialPresetRef.current.mode]}`
+        : `Currently using recommended mode: ${modeLabelMap[initialPresetRef.current.mode]}`))
+    : null
+  const presetSentencesAssist: PresetControlAssist = {
+    field: 'maxSentences',
+    recommendedText: isZh
+      ? `推荐：${initialPresetRef.current.maxSentences} 句`
+      : `Recommended: ${initialPresetRef.current.maxSentences} sentences`,
+    changed: presetSentencesChanged,
+    restoreLabel: isZh ? '在句数控件中恢复推荐' : 'Restore recommendation in sentence limit control',
+  }
+  const presetItemsAssist: PresetControlAssist = {
+    field: 'maxItems',
+    recommendedText: isZh
+      ? `推荐：${initialPresetRef.current.maxItems} 条`
+      : `Recommended: ${initialPresetRef.current.maxItems} items`,
+    changed: presetItemsChanged,
+    restoreLabel: isZh ? '在条目控件中恢复推荐' : 'Restore recommendation in item limit control',
+  }
+  const presetSummaryText = isZh
+    ? `${modeLabelMap[mode]} · ${maxSentences} 句 · ${maxItems} 条${guidance.trim() ? ' · 含交接说明' : ''}${hasPresetChanges ? ` · 已改动 ${presetDiffLabels.length} 项` : ''}`
+    : `${modeLabelMap[mode]} · ${maxSentences} sentences · ${maxItems} items${guidance.trim() ? ' · guidance included' : ''}${hasPresetChanges ? ` · ${presetDiffLabels.length} changes` : ''}`
+  const guidancePreview = buildGuidancePreview(guidance)
+  const hasCollapsedGuidancePreview = guidance.trim().length > 0 && guidancePreview !== guidance.trim()
+  const displayedGuidance = guidanceExpanded || !hasCollapsedGuidancePreview ? guidance : guidancePreview
   const hasRevisionPreview = Boolean(
     result?.processedText &&
     result?.sourceText &&
@@ -257,8 +403,8 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   }, [])
 
   useEffect(() => {
-    onDraftStateChange?.({ content, mode, maxSentences, maxItems })
-  }, [content, mode, maxSentences, maxItems, onDraftStateChange])
+    onDraftStateChange?.({ content, mode, maxSentences, maxItems, guidance, handoff })
+  }, [content, mode, maxSentences, maxItems, guidance, handoff, onDraftStateChange])
 
   useDialogFocusTrap({
     containerRef: dialogRef,
@@ -270,11 +416,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
     setError(null)
     setApplyMessage(null)
     setResult(null)
-    const editorHandle = getEditorHandle()
-    const selectionSnapshot = editorHandle?.captureSelectionSnapshot() ?? null
-    const matchedSelectionSnapshot = selectionSnapshot && selectionSnapshot.text.trim() === content.trim()
-      ? selectionSnapshot
-      : null
+    const matchedSelectionSnapshot = captureMatchedSelectionSnapshot(content)
 
     try {
       if (mode === 'polish' && useLegacyPolish) {
@@ -298,13 +440,21 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
         return
       }
 
-      const styleInstruction = buildStyleInstruction(style, language === 'zh')
+      const styleInstruction = buildStyleInstruction(style, isZh)
+      const combinedInstruction = [
+        guidance.trim()
+          ? (isZh
+            ? `优先遵循以下交接说明：\n${guidance.trim()}`
+            : `Prioritize the following handoff guidance:\n${guidance.trim()}`)
+          : '',
+        styleInstruction.trim(),
+      ].filter(Boolean).join('\n\n')
       const response = await processWritingHelper({
         content,
         mode,
         max_sentences: maxSentences,
         max_items: maxItems,
-        instruction: styleInstruction,
+        instruction: combinedInstruction || undefined,
         detection_evasion_guard_enabled: detectionEvasionGuardEnabled,
         ...getProviderFields(),
       })
@@ -333,10 +483,50 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
     setMode('polish')
     setMaxSentences(3)
     setMaxItems(6)
+    setGuidance('')
+    setHandoff(null)
+    setGuidanceExpanded(false)
+    setPresetCardExpanded(false)
     setError(null)
     setApplyMessage(null)
     setResult(null)
     onClearDraft?.()
+  }
+
+  const resetTransientState = () => {
+    setError(null)
+    setApplyMessage(null)
+    setResult(null)
+  }
+
+  const restorePresetFieldValue = (field: PresetFieldKey) => {
+    if (field === 'mode') {
+      setMode(initialPresetRef.current.mode)
+    } else if (field === 'maxSentences') {
+      setMaxSentences(initialPresetRef.current.maxSentences)
+    } else if (field === 'maxItems') {
+      setMaxItems(initialPresetRef.current.maxItems)
+    } else {
+      setGuidance(initialPresetRef.current.guidance)
+    }
+  }
+
+  const handleRestorePresetField = (field: PresetFieldKey) => {
+    restorePresetFieldValue(field)
+    if (field === 'guidance') {
+      setGuidanceExpanded(false)
+    }
+    resetTransientState()
+  }
+
+  const handleRestorePreset = () => {
+    restorePresetFieldValue('mode')
+    restorePresetFieldValue('maxSentences')
+    restorePresetFieldValue('maxItems')
+    restorePresetFieldValue('guidance')
+    setGuidanceExpanded(false)
+    setPresetCardExpanded(false)
+    resetTransientState()
   }
 
   const handleReplaceSelection = () => {
@@ -344,19 +534,14 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
       return
     }
 
-    const handle = getEditorHandle()
-    if (!handle) {
-      return
+    const message = applyRevisionCandidateToEditor({
+      sourceText: result.sourceText ?? '',
+      candidateText: result.processedText,
+      selectionSnapshot: result.selectionSnapshot ?? null,
+    }, revisionCopy)
+    if (message) {
+      setApplyMessage(message)
     }
-
-    if (result.selectionSnapshot) {
-      const replaced = handle.replaceSelectionSnapshot(result.selectionSnapshot, result.processedText)
-      setApplyMessage(replaced ? revisionCopy.replacedMessage : revisionCopy.selectionChangedMessage)
-      return
-    }
-
-    handle.insertText(result.processedText)
-    setApplyMessage(revisionCopy.insertedMessage)
   }
 
   const handleInsertAlternative = () => {
@@ -364,29 +549,68 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
       return
     }
 
-    const handle = getEditorHandle()
-    if (!handle) {
-      return
+    const message = insertRevisionAlternativeToEditor({
+      sourceText: result.sourceText ?? '',
+      candidateText: result.processedText,
+      selectionSnapshot: result.selectionSnapshot ?? null,
+    }, revisionCopy)
+    if (message) {
+      setApplyMessage(message)
     }
-
-    if (result.selectionSnapshot) {
-      const inserted = handle.insertBelowSelectionSnapshot(result.selectionSnapshot, result.processedText)
-      setApplyMessage(inserted ? revisionCopy.alternativeMessage : revisionCopy.selectionChangedMessage)
-      return
-    }
-
-    handle.insertText(result.processedText)
-    setApplyMessage(revisionCopy.insertedMessage)
   }
 
   const handleUndoLastApply = () => {
-    const handle = getEditorHandle()
-    if (!handle) {
-      return
+    const message = undoLastRevisionApplyInEditor(revisionCopy)
+    if (message) {
+      setApplyMessage(message)
+    }
+  }
+
+  const handleClearGuidance = () => {
+    setGuidance('')
+    setGuidanceExpanded(false)
+  }
+
+  const getModeOptionLabel = (option: { value: WritingHelperMode; labelKey: keyof Translations }) => {
+    const label = t[option.labelKey]
+    if (!hasInitialPreset || option.value !== initialPresetRef.current.mode) {
+      return label
     }
 
-    const undone = handle.undoLastRevisionApply()
-    setApplyMessage(undone ? revisionCopy.undoSuccessMessage : revisionCopy.undoFailedMessage)
+    return `${label}${modeRecommendedOptionSuffix}`
+  }
+
+  const renderPresetControlAssist = (assist: PresetControlAssist) => {
+    if (!hasInitialPreset) {
+      return null
+    }
+
+    return (
+      <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] font-medium">
+        <span className={`rounded-full px-2 py-0.5 ${
+          assist.changed
+            ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200'
+            : 'bg-gray-100 text-gray-600 dark:bg-dark-surface2 dark:text-dark-text-secondary'
+        }`}>
+          {assist.recommendedText}
+        </span>
+        {assist.changed ? (
+          <button
+            type="button"
+            onClick={() => handleRestorePresetField(assist.field)}
+            aria-label={assist.restoreLabel}
+            title={assist.restoreLabel}
+            className="rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-500/30 dark:bg-dark-surface dark:text-amber-200 dark:hover:bg-amber-900/20"
+          >
+            {controlRestoreLabel}
+          </button>
+        ) : (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+            {controlAlignedLabel}
+          </span>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -450,42 +674,219 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
           </div>
 
           <div className="px-6 space-y-4 pb-6">
+            {hasInitialPreset && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 shadow-sm dark:border-amber-500/20 dark:bg-amber-900/10">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                        {presetTitle}
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                          hasPresetChanges
+                            ? 'bg-amber-200/80 text-amber-900 dark:bg-amber-500/20 dark:text-amber-100'
+                            : 'bg-white/80 text-amber-700 dark:bg-dark-surface dark:text-amber-100'
+                        }`}
+                      >
+                        {hasPresetChanges ? presetChangedLabel : presetAlignedLabel}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-700/90 dark:text-amber-200/80">
+                      {hasPresetChanges ? presetChangedHint : presetHint}
+                    </p>
+                    <p className="mt-2 text-[11px] font-medium leading-relaxed text-amber-800 dark:text-amber-100">
+                      {presetSummaryText}
+                    </p>
+                    {handoff?.source === 'evaluation' && (
+                      <div className="mt-3 rounded-lg border border-amber-200/80 bg-white/80 px-3 py-2 dark:border-amber-500/20 dark:bg-dark-surface">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                          {handoffSourceTitle}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-amber-100/80 px-2.5 py-1 text-[11px] font-medium text-amber-900 dark:bg-amber-500/15 dark:text-amber-100">
+                            {handoffSuggestionText}
+                          </span>
+                          <span className="rounded-full bg-amber-100/80 px-2.5 py-1 text-[11px] font-medium text-amber-900 dark:bg-amber-500/15 dark:text-amber-100">
+                            {handoffCarryText}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-[11px] leading-relaxed text-amber-800 dark:text-amber-100">
+                          {handoffReasonText}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                    {hasPresetChanges && (
+                      <button
+                        type="button"
+                        onClick={handleRestorePreset}
+                        className="rounded-md border border-amber-200 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-500/30 dark:bg-dark-surface dark:text-amber-200 dark:hover:bg-amber-900/20"
+                      >
+                        {restorePresetLabel}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPresetCardExpanded((value) => !value)}
+                      className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-500/30 dark:bg-dark-surface dark:text-amber-200 dark:hover:bg-amber-900/20"
+                    >
+                      <ChevronDown size={12} className={`transition-transform ${presetCardExpanded ? 'rotate-180' : ''}`} />
+                      {presetCardExpanded ? collapsePresetDetailsLabel : expandPresetDetailsLabel}
+                    </button>
+                  </div>
+                </div>
+                {presetCardExpanded && (
+                  <>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {[presetModeText, presetSentenceText, presetItemsText].map((item) => (
+                        <span
+                          key={item}
+                          className="rounded-full border border-amber-200/80 bg-white/80 px-3 py-1 text-[11px] font-medium text-amber-800 dark:border-amber-500/20 dark:bg-dark-surface dark:text-amber-100"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                    {hasPresetChanges && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {presetDiffLabels.map((item) => (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => handleRestorePresetField(item.key)}
+                            aria-label={item.restoreLabel}
+                            title={item.restoreLabel}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-amber-200/80 px-3 py-1 text-[11px] font-semibold text-amber-900 transition-colors hover:bg-amber-300/80 dark:bg-amber-500/20 dark:text-amber-100 dark:hover:bg-amber-500/30"
+                          >
+                            <span>{item.label}</span>
+                            <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-dark-surface dark:text-amber-200">
+                              {restoreSinglePresetFieldLabel}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                          {guidanceTitle}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {guidance.trim() && (
+                            <button
+                              type="button"
+                              onClick={handleClearGuidance}
+                              className="rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-500/30 dark:bg-dark-surface dark:text-amber-200 dark:hover:bg-amber-900/20"
+                            >
+                              {clearGuidanceLabel}
+                            </button>
+                          )}
+                          {hasCollapsedGuidancePreview && (
+                            <button
+                              type="button"
+                              onClick={() => setGuidanceExpanded((value) => !value)}
+                              className="rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-500/30 dark:bg-dark-surface dark:text-amber-200 dark:hover:bg-amber-900/20"
+                            >
+                              {guidanceExpanded ? collapseGuidanceLabel : expandGuidanceLabel}
+                            </button>
+                          )}
+                          {presetGuidanceChanged && (
+                            <button
+                              type="button"
+                              onClick={() => handleRestorePresetField('guidance')}
+                              aria-label={isZh ? '在说明区恢复推荐说明' : 'Restore recommended guidance in guidance section'}
+                              className="rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-500/30 dark:bg-dark-surface dark:text-amber-200 dark:hover:bg-amber-900/20"
+                            >
+                              {restoreGuidanceInlineLabel}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-amber-700/90 dark:text-amber-200/80">
+                        {guidance.trim() ? guidanceHint : presetClearedHint}
+                      </p>
+                      {guidance.trim() ? (
+                        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-amber-900 dark:text-amber-100">
+                          {displayedGuidance}
+                        </p>
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Mode controls */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 dark:bg-dark-bg p-4 rounded-xl border border-gray-100 dark:border-dark-border/50">
               <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
-                {t.writingHelperMode}
+                <div>
+                  <div>{t.writingHelperMode}</div>
+                  {renderPresetControlAssist(presetModeAssist)}
+                </div>
                 <select
+                  aria-label={t.writingHelperMode}
                   value={mode}
                   onChange={(event) => setMode(event.target.value as WritingHelperMode)}
-                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
+                  className={`px-3 py-2 rounded-md border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all ${
+                    hasInitialPreset && presetModeChanged
+                      ? 'border-amber-300 dark:border-amber-500/40'
+                      : 'border-gray-200 dark:border-dark-border'
+                  }`}
                 >
                   {MODE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {t[option.labelKey]}
+                      {getModeOptionLabel(option)}
                     </option>
                   ))}
                 </select>
+                {modeControlStatusText ? (
+                  <p className={`text-[10px] leading-relaxed ${
+                    presetModeChanged
+                      ? 'text-amber-700 dark:text-amber-200'
+                      : 'text-gray-500 dark:text-dark-text-secondary'
+                  }`}>
+                    {modeControlStatusText}
+                  </p>
+                ) : null}
               </label>
 
               <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
-                {t.writingHelperMaxSentences}
+                <div>
+                  <div>{t.writingHelperMaxSentences}</div>
+                  {renderPresetControlAssist(presetSentencesAssist)}
+                </div>
                 <input
+                  aria-label={t.writingHelperMaxSentences}
                   type="number"
                   min={1}
                   value={maxSentences}
                   onChange={(event) => setMaxSentences(Number(event.target.value) || 1)}
-                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
+                  className={`px-3 py-2 rounded-md border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all ${
+                    hasInitialPreset && presetSentencesChanged
+                      ? 'border-amber-300 dark:border-amber-500/40'
+                      : 'border-gray-200 dark:border-dark-border'
+                  }`}
                 />
               </label>
 
               <label className="text-xs font-semibold text-gray-700 dark:text-dark-text flex flex-col gap-1.5">
-                {t.writingHelperMaxItems}
+                <div>
+                  <div>{t.writingHelperMaxItems}</div>
+                  {renderPresetControlAssist(presetItemsAssist)}
+                </div>
                 <input
+                  aria-label={t.writingHelperMaxItems}
                   type="number"
                   min={1}
                   value={maxItems}
                   onChange={(event) => setMaxItems(Number(event.target.value) || 1)}
-                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all"
+                  className={`px-3 py-2 rounded-md border bg-white dark:bg-dark-surface text-sm text-gray-800 dark:text-dark-text focus:ring-1 focus:ring-primary-500/50 outline-none shadow-sm transition-all ${
+                    hasInitialPreset && presetItemsChanged
+                      ? 'border-amber-300 dark:border-amber-500/40'
+                      : 'border-gray-200 dark:border-dark-border'
+                  }`}
                 />
               </label>
             </div>
@@ -792,53 +1193,38 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
                   {translate('writingHelperModePrefix', { mode: result.mode ?? '' })}
                 </div>
                 {hasRevisionPreview && (
-                  <div className="mb-4 rounded-lg border border-primary-100 dark:border-primary-500/20 bg-white/70 dark:bg-dark-bg/40 p-3">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-text-secondary mb-3">
-                      {revisionCopy.previewTitle}
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="rounded-md border border-gray-200 dark:border-dark-border/60 bg-slate-50 dark:bg-dark-surface px-3 py-2">
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-text-secondary mb-2">
-                          {revisionCopy.originalLabel}
-                        </div>
-                        <div className="text-sm text-gray-800 dark:text-dark-text font-serif leading-relaxed whitespace-pre-wrap">
-                          {result.sourceText}
-                        </div>
-                      </div>
-                      <div className="rounded-md border border-primary-200 dark:border-primary-500/20 bg-primary-50/70 dark:bg-primary-900/10 px-3 py-2">
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 mb-2">
-                          {revisionCopy.candidateLabel}
-                        </div>
-                        <div className="text-sm text-gray-800 dark:text-dark-text font-serif leading-relaxed whitespace-pre-wrap">
-                          {result.processedText}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <RevisionPreviewCard
+                    previewTitle={revisionCopy.previewTitle}
+                    originalLabel={revisionCopy.originalLabel}
+                    candidateLabel={revisionCopy.candidateLabel}
+                    sourceText={result.sourceText ?? ''}
+                    candidateText={result.processedText ?? ''}
+                    primaryActionLabel={result.selectionSnapshot ? revisionCopy.replaceLabel : t.writingHelperInsertToEditor}
+                    secondaryActionLabel={result.selectionSnapshot ? revisionCopy.alternativeLabel : undefined}
+                    undoActionLabel={revisionCopy.undoLabel}
+                    onPrimaryAction={handleReplaceSelection}
+                    onSecondaryAction={result.selectionSnapshot ? handleInsertAlternative : undefined}
+                    onUndoAction={handleUndoLastApply}
+                    className="mb-4 rounded-lg border border-primary-100 bg-white/70 p-3 dark:border-primary-500/20 dark:bg-dark-bg/40"
+                    sourceTextClassName="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-dark-text font-serif leading-relaxed"
+                    candidateTextClassName="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-dark-text font-serif leading-relaxed"
+                    actionsClassName="mt-3 flex flex-wrap justify-end gap-2"
+                  />
                 )}
                 {result.processedText && (
                   <div className="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-dark-text font-serif leading-relaxed">
                     {result.processedText}
                   </div>
                 )}
-                {result.processedText && (
+                {!hasRevisionPreview && result.processedText && (
                   <div className="mt-3 flex flex-wrap justify-end gap-2">
                     <button
                       type="button"
                       onClick={handleReplaceSelection}
                       className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-primary-600 text-white hover:bg-primary-500 active:scale-95 transition-all shadow-sm"
                     >
-                      {result.selectionSnapshot ? revisionCopy.replaceLabel : t.writingHelperInsertToEditor}
+                      {t.writingHelperInsertToEditor}
                     </button>
-                    {result.selectionSnapshot && (
-                      <button
-                        type="button"
-                        onClick={handleInsertAlternative}
-                        className="px-3 py-1.5 text-[11px] font-medium rounded-md bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2 active:scale-95 transition-all shadow-sm"
-                      >
-                        {revisionCopy.alternativeLabel}
-                      </button>
-                    )}
                     <button
                       type="button"
                       onClick={handleUndoLastApply}

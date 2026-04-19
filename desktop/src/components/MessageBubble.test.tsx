@@ -96,12 +96,10 @@ describe('MessageBubble selection', () => {
       />
     )
 
+    expect(screen.getByText(zh.messageBubbleSourceSummaryTitle)).toBeInTheDocument()
     expect(
       screen.getByText(
-        zh.messageBubbleRetrievalStatus
-          .replace('{entities}', '3')
-          .replace('{relations}', '2')
-          .replace('{memories}', '5')
+        zh.messageBubbleSourceSummaryUsed.replace('{summary}', '角色与要素、关联线索、历史记忆')
       )
     ).toBeInTheDocument()
   })
@@ -145,18 +143,14 @@ describe('MessageBubble selection', () => {
       />
     )
 
-    expect(screen.getByText(zh.messageBubbleCanonContextTitle)).toBeInTheDocument()
+    expect(screen.getByText(zh.messageBubbleSourceSummaryTitle)).toBeInTheDocument()
     expect(
       screen.getByText(
-        zh.messageBubbleCanonContextApplied
-          .replace('{matches}', '1')
-          .replace('{pages}', '4')
+        zh.messageBubbleSourceSummaryUsed.replace('{summary}', '项目设定')
       )
     ).toBeInTheDocument()
+    expect(screen.getByText(zh.messageBubbleSourcePrimary)).toBeInTheDocument()
     expect(screen.getByText('Atlas Hero Profile')).toBeInTheDocument()
-    expect(screen.getByText('characters/atlas-hero-profile')).toBeInTheDocument()
-    expect(screen.getByText('story-bible')).toBeInTheDocument()
-    expect(screen.getByText('curated')).toBeInTheDocument()
     expect(
       screen.getByText('Atlas guards the city archive and protects the atlas sigil.')
     ).toBeInTheDocument()

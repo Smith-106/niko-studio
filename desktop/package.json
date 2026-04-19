@@ -30,6 +30,7 @@
     "local:start:binary": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1 -BinaryDesktop",
     "local:start:binary:force": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1 -BinaryDesktop -ForceDesktop",
     "local:gateway": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1 -NoDesktop",
+    "local:shell": "node scripts/run_local_vite_shell.cjs",
     "local:status": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/status_desktop_local.ps1",
     "local:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/stop_desktop_local.ps1",
     "local:selftest": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/selftest_desktop_local.ps1",

@@ -32,3 +32,7 @@ export function setEditorHandle(handle: EditorHandle | null): void {
 export function getEditorHandle(): EditorHandle | null {
   return currentHandle
 }
+
+export function getCurrentEditorSelectionText(): string {
+  return getEditorHandle()?.getSelectedText().trim() ?? ''
+}

@@ -35,6 +35,7 @@ interface AppState {
   currentConversationId: string | null
   createConversation: () => void
   selectConversation: (id: string) => void
+  updateConversationTitle: (conversationId: string, title: string) => void
   addMessage: (
     role: 'user' | 'assistant',
     content: string,
@@ -119,6 +120,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       currentConversationId: id,
       currentWorkspace: resolveSelectedConversationWorkspace(conversation),
+    })
+  },
+  updateConversationTitle: (conversationId, title) => {
+    set((state) => {
+      const conversation = state.conversationsById[conversationId]
+      if (!conversation) return state
+      if (conversation.title === title) return state
+
+      return {
+        conversationsById: {
+          ...state.conversationsById,
+          [conversationId]: {
+            ...conversation,
+            title,
+            updatedAt: new Date(),
+          },
+        },
+      }
     })
   },
 

@@ -32,6 +32,7 @@ To smoke-test the local launcher lifecycle itself, run `./scripts/selftest_deskt
 For `cmd.exe`, use `scripts\\start_desktop_local.cmd`, `scripts\\stop_desktop_local.cmd`, `scripts\\status_desktop_local.cmd`, and `scripts\\selftest_desktop_local.cmd`.
 If you prefer package scripts, the same helpers are exposed as `npm --prefix desktop run local:start|local:start:force|local:start:binary|local:start:binary:force|local:gateway|local:status|local:stop|local:selftest`.
 Use `npm --prefix desktop run local:gateway` when you want the launcher to reuse or start only the gateway without opening another desktop window.
+Use `npm --prefix desktop run local:shell` after `npm --prefix desktop run local:gateway` when you need a browser-only Vite shell that still follows the tracked healthy gateway base from `.codex-run/desktop-local-state.json`.
 
 For manual two-terminal startup, use:
 

@@ -57,6 +57,7 @@ interface WorkflowEngine {
 
 let workflowEngineInstance: WorkflowEngine | null = null;
 const checkpointAuthorityBindings = new Map<string, WorkflowAuthority>();
+const schedulerEntries = new Map<string, WorkflowSchedulerTaskRecord>();
 
 interface WorkflowAuthority {
   sessionId: string | null;
@@ -81,6 +82,50 @@ interface WorkflowEngineAuthorityBridge {
   bindPlanAuthority?: (planId: string, authority: WorkflowAuthority) => WorkflowAuthority;
   getPlanAuthority?: (planId: string) => WorkflowAuthority;
   checkpoints?: Map<string, WorkflowCheckpointRecord>;
+}
+
+type WorkflowExecutionStatus = 'completed' | 'waiting_confirmation' | 'gate_blocked';
+type WorkflowSchedulerStatus = 'active' | 'paused';
+
+interface WorkflowSchedulerTaskDefinition {
+  task_id: string;
+  title: string;
+  task: string;
+  level?: string | null;
+  schedule_rule?: Record<string, unknown>;
+  trigger_rule: Record<string, unknown>;
+  backend_mode_policy: Record<string, unknown>;
+  progression_policy: Record<string, unknown>;
+}
+
+interface WorkflowSchedulerTaskRecord extends WorkflowSchedulerTaskDefinition {
+  status: WorkflowSchedulerStatus;
+  created_at: string;
+  updated_at: string;
+  authority: WorkflowAuthority | null;
+  last_run_id?: string | null;
+  last_plan_id?: string | null;
+  last_trigger?: 'cron' | 'event' | 'manual_run_now' | null;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function readString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function readBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
+}
+
+function utcNowIso(): string {
+  return new Date().toISOString();
 }
 
 function resolveWorkflowWorkspace(): string {
@@ -225,6 +270,165 @@ function resolveStoredCheckpointAuthority(
     return cloneWorkflowAuthority(engine.getPlanAuthority(checkpoint.plan_id));
   }
   return cloneWorkflowAuthority(checkpointAuthorityBindings.get(checkpoint.id));
+}
+
+function normalizeSchedulerTrigger(value: unknown): 'cron' | 'event' | 'manual_run_now' | null {
+  if (value === 'cron' || value === 'event' || value === 'manual_run_now') {
+    return value;
+  }
+  return null;
+}
+
+function schedulerAuthorityMismatchError(
+  taskId: string,
+  dimension: 'workflow session' | 'workspace' | 'project',
+  expected: string,
+  received: string,
+): string {
+  return `Scheduler task '${taskId}' is bound to ${dimension} '${expected}' and cannot be used with '${received}'`;
+}
+
+function resolveSchedulerRequestAuthority(params: {
+  taskId: string;
+  storedAuthority: WorkflowAuthority | null;
+  requestAuthority?: WorkflowAuthority | null;
+}): { authority: WorkflowAuthority | null; error?: string } {
+  const normalizedRequest = cloneWorkflowAuthority(params.requestAuthority);
+  const storedAuthority = cloneWorkflowAuthority(params.storedAuthority);
+
+  if (!storedAuthority) {
+    if (!normalizedRequest) {
+      return { authority: null };
+    }
+    return {
+      authority: null,
+      error: `Scheduler task '${params.taskId}' is not bound to workspace authority and cannot be used from a different scope`,
+    };
+  }
+
+  if (
+    storedAuthority.sessionId
+    && normalizedRequest?.sessionId
+    && storedAuthority.sessionId !== normalizedRequest.sessionId
+  ) {
+    return {
+      authority: null,
+      error: schedulerAuthorityMismatchError(
+        params.taskId,
+        'workflow session',
+        storedAuthority.sessionId,
+        normalizedRequest.sessionId,
+      ),
+    };
+  }
+
+  if (
+    storedAuthority.workspaceId
+    && normalizedRequest?.workspaceId
+    && storedAuthority.workspaceId !== normalizedRequest.workspaceId
+  ) {
+    return {
+      authority: null,
+      error: schedulerAuthorityMismatchError(
+        params.taskId,
+        'workspace',
+        storedAuthority.workspaceId,
+        normalizedRequest.workspaceId,
+      ),
+    };
+  }
+
+  if (
+    storedAuthority.projectId
+    && normalizedRequest?.projectId
+    && storedAuthority.projectId !== normalizedRequest.projectId
+  ) {
+    return {
+      authority: null,
+      error: schedulerAuthorityMismatchError(
+        params.taskId,
+        'project',
+        storedAuthority.projectId,
+        normalizedRequest.projectId,
+      ),
+    };
+  }
+
+  return {
+    authority: {
+      sessionId: normalizedRequest?.sessionId ?? storedAuthority.sessionId,
+      workspaceId: normalizedRequest?.workspaceId ?? storedAuthority.workspaceId,
+      projectId: normalizedRequest?.projectId ?? storedAuthority.projectId,
+    },
+  };
+}
+
+function schedulerTaskMatchesAuthority(
+  taskRecord: WorkflowSchedulerTaskRecord,
+  requestAuthority: WorkflowAuthority | null,
+): boolean {
+  const resolved = resolveSchedulerRequestAuthority({
+    taskId: taskRecord.task_id,
+    storedAuthority: taskRecord.authority,
+    requestAuthority,
+  });
+  return !resolved.error;
+}
+
+function ensureSchedulerTaskAccess(params: {
+  taskId: string;
+  requestAuthority: WorkflowAuthority | null;
+}): { task: WorkflowSchedulerTaskRecord; authority: WorkflowAuthority | null } | { error: string } {
+  const task = schedulerEntries.get(params.taskId);
+  if (!task) {
+    return { error: `Scheduler task '${params.taskId}' not found` };
+  }
+
+  const resolved = resolveSchedulerRequestAuthority({
+    taskId: params.taskId,
+    storedAuthority: task.authority,
+    requestAuthority: params.requestAuthority,
+  });
+
+  if (resolved.error) {
+    return { error: resolved.error };
+  }
+
+  return {
+    task,
+    authority: resolved.authority,
+  };
+}
+
+function parseSchedulerTaskDefinition(input: unknown): WorkflowSchedulerTaskDefinition | null {
+  const record = asRecord(input);
+  if (!record) return null;
+
+  const taskId = readString(record.task_id);
+  const title = readString(record.title);
+  const task = readString(record.task);
+
+  const triggerRule = asRecord(record.trigger_rule);
+  const backendModePolicy = asRecord(record.backend_mode_policy);
+  const progressionPolicy = asRecord(record.progression_policy);
+
+  if (!taskId || !title || !task || !triggerRule || !backendModePolicy || !progressionPolicy) {
+    return null;
+  }
+
+  const scheduleRule = asRecord(record.schedule_rule);
+  const level = readString(record.level);
+
+  return {
+    task_id: taskId,
+    title,
+    task,
+    level,
+    schedule_rule: scheduleRule ?? undefined,
+    trigger_rule: { ...triggerRule },
+    backend_mode_policy: { ...backendModePolicy },
+    progression_policy: { ...progressionPolicy },
+  };
 }
 
 function getEngine(): WorkflowEngine | null {
@@ -407,6 +611,195 @@ export async function workflowLifecycle(
   if (!engine) return { error: 'Workflow engine unavailable' };
   const authority = resolveWorkflowAuthority(workspace);
   return engine.lifecycle(planId, action, authority);
+}
+
+export async function workflowSchedulerRegister(params: {
+  definition?: unknown;
+  enabled?: boolean | null;
+  workspace?: ProjectWorkspaceContext;
+}): Promise<Record<string, unknown>> {
+  const definition = parseSchedulerTaskDefinition(params.definition);
+  if (!definition) {
+    return { error: 'Invalid scheduler task definition' };
+  }
+
+  const now = utcNowIso();
+  const existing = schedulerEntries.get(definition.task_id);
+  const authority = resolveWorkflowAuthority(params.workspace);
+
+  if (existing) {
+    const resolved = resolveSchedulerRequestAuthority({
+      taskId: existing.task_id,
+      storedAuthority: existing.authority,
+      requestAuthority: authority,
+    });
+    if (resolved.error) {
+      return { error: resolved.error };
+    }
+  }
+
+  const triggerRule = asRecord(definition.trigger_rule);
+  const scheduleRule = asRecord(definition.schedule_rule);
+  const triggerFromDefinition = normalizeSchedulerTrigger(
+    triggerRule?.type ?? scheduleRule?.cadence,
+  );
+
+  const status: WorkflowSchedulerStatus = readBoolean(params.enabled) === false ? 'paused' : 'active';
+  const taskRecord: WorkflowSchedulerTaskRecord = {
+    ...definition,
+    status,
+    created_at: existing?.created_at ?? now,
+    updated_at: now,
+    authority,
+    last_run_id: existing?.last_run_id ?? null,
+    last_plan_id: existing?.last_plan_id ?? null,
+    last_trigger: existing?.last_trigger ?? triggerFromDefinition,
+  };
+
+  schedulerEntries.set(taskRecord.task_id, taskRecord);
+
+  return {
+    status: existing ? 'updated' : 'registered',
+    task: taskRecord,
+  };
+}
+
+export async function workflowSchedulerList(params: {
+  limit?: number;
+  workspace?: ProjectWorkspaceContext;
+}): Promise<Record<string, unknown>> {
+  const authority = resolveWorkflowAuthority(params.workspace);
+  const entries = [...schedulerEntries.values()]
+    .filter((item) => schedulerTaskMatchesAuthority(item, authority))
+    .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
+
+  const limit = typeof params.limit === 'number' && Number.isFinite(params.limit)
+    ? Math.max(0, Math.floor(params.limit))
+    : 50;
+
+  return {
+    total: entries.length,
+    tasks: entries.slice(0, limit),
+  };
+}
+
+export async function workflowSchedulerPause(params: {
+  taskId: string;
+  workspace?: ProjectWorkspaceContext;
+}): Promise<Record<string, unknown>> {
+  const authority = resolveWorkflowAuthority(params.workspace);
+  const accessible = ensureSchedulerTaskAccess({
+    taskId: params.taskId,
+    requestAuthority: authority,
+  });
+  if ('error' in accessible) {
+    return { error: accessible.error };
+  }
+
+  const updated: WorkflowSchedulerTaskRecord = {
+    ...accessible.task,
+    status: 'paused',
+    updated_at: utcNowIso(),
+    authority: accessible.authority,
+  };
+  schedulerEntries.set(updated.task_id, updated);
+
+  return {
+    status: 'paused',
+    task: updated,
+  };
+}
+
+export async function workflowSchedulerResume(params: {
+  taskId: string;
+  workspace?: ProjectWorkspaceContext;
+}): Promise<Record<string, unknown>> {
+  const authority = resolveWorkflowAuthority(params.workspace);
+  const accessible = ensureSchedulerTaskAccess({
+    taskId: params.taskId,
+    requestAuthority: authority,
+  });
+  if ('error' in accessible) {
+    return { error: accessible.error };
+  }
+
+  const updated: WorkflowSchedulerTaskRecord = {
+    ...accessible.task,
+    status: 'active',
+    updated_at: utcNowIso(),
+    authority: accessible.authority,
+  };
+  schedulerEntries.set(updated.task_id, updated);
+
+  return {
+    status: 'active',
+    task: updated,
+  };
+}
+
+export async function workflowSchedulerRunNow(params: {
+  taskId: string;
+  confirmToken?: string | null;
+  recommendations?: unknown[] | null;
+  workspace?: ProjectWorkspaceContext;
+}): Promise<Record<string, unknown>> {
+  const authority = resolveWorkflowAuthority(params.workspace);
+  const accessible = ensureSchedulerTaskAccess({
+    taskId: params.taskId,
+    requestAuthority: authority,
+  });
+  if ('error' in accessible) {
+    return { error: accessible.error };
+  }
+
+  const taskRecord = accessible.task;
+  if (taskRecord.status !== 'active') {
+    return { error: `Scheduler task '${taskRecord.task_id}' is paused` };
+  }
+
+  const planResult = await workflowPlan({
+    task: taskRecord.task,
+    level: taskRecord.level ?? null,
+    workspace: params.workspace,
+    recommendations: params.recommendations ?? null,
+  });
+
+  const planId = readString(planResult['plan_id']);
+  if (!planId) {
+    return {
+      error: readString(planResult['error']) ?? 'Failed to create workflow plan from scheduler task',
+      task: taskRecord,
+      plan: planResult,
+    };
+  }
+
+  const executeResult = await workflowExecute({
+    planId,
+    confirmToken: params.confirmToken ?? null,
+    recommendations: params.recommendations ?? null,
+    workspace: params.workspace,
+  });
+
+  const executionStatus = readString(executeResult['status']) as WorkflowExecutionStatus | null;
+  const runId = `scheduler-run-${taskRecord.task_id}-${Date.now()}`;
+  const updatedTask: WorkflowSchedulerTaskRecord = {
+    ...taskRecord,
+    updated_at: utcNowIso(),
+    authority: accessible.authority,
+    last_plan_id: planId,
+    last_run_id: runId,
+    last_trigger: 'manual_run_now',
+  };
+  schedulerEntries.set(updatedTask.task_id, updatedTask);
+
+  return {
+    status: executionStatus ?? 'completed',
+    trigger: 'manual_run_now',
+    run_id: runId,
+    plan_id: planId,
+    task: updatedTask,
+    execute: executeResult,
+  };
 }
 
 export async function checkpointCreate(

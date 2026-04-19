@@ -1,5 +1,5 @@
 import { useAppStore } from '../stores/appStore'
-import { useLatestAssistantMessageContent } from '../stores/selectors'
+import { type EvaluationSourceDescriptor, useLatestAssistantMessageContent } from '../stores/selectors'
 import { useAppRuntimeHealth } from './useAppRuntimeHealth'
 import { useAppUiPersistence } from './useAppUiPersistence'
 import { useAppCheckpointMenu } from './useAppCheckpointMenu'
@@ -8,6 +8,7 @@ import { useAppHeaderViewModel } from './useAppHeaderViewModel'
 import { useAppContextUsage } from './useAppContextUsage'
 import { useAppShellViewModel } from './useAppShellViewModel'
 import { useI18n } from '../i18n'
+import { getCurrentEditorSelectionText } from '../utils/editorHandle'
 
 export function useAppViewModel() {
   const { backendStatus, checkBackend } = useAppStore()
@@ -15,7 +16,35 @@ export function useAppViewModel() {
   const latestAssistantContent = useLatestAssistantMessageContent()
   const contextUsageView = useAppContextUsage()
   const runtimeView = useAppRuntimeHealth({ backendStatus, checkBackend })
-  const { t } = useI18n()
+  const { t, language } = useI18n()
+  const editorSelectionContent = getCurrentEditorSelectionText()
+  const currentDraftContent = uiPersistence.writingHelperDraft.content.trim()
+  const isZh = language === 'zh'
+  const evaluationSources: EvaluationSourceDescriptor[] = []
+
+  if (latestAssistantContent.trim()) {
+    evaluationSources.push({
+      kind: 'latestAssistantReply',
+      label: isZh ? '最近一次助手回复' : 'Latest assistant reply',
+      content: latestAssistantContent.trim(),
+    })
+  }
+
+  if (editorSelectionContent) {
+    evaluationSources.push({
+      kind: 'editorSelection',
+      label: isZh ? '当前编辑器选区' : 'Current editor selection',
+      content: editorSelectionContent,
+    })
+  }
+
+  if (currentDraftContent) {
+    evaluationSources.push({
+      kind: 'currentDraft',
+      label: isZh ? '当前写作草稿' : 'Current draft',
+      content: currentDraftContent,
+    })
+  }
 
   const panelOrchestration = useAppPanelOrchestration({
     setActiveRightPanel: uiPersistence.setActiveRightPanel,
@@ -36,7 +65,7 @@ export function useAppViewModel() {
   return useAppShellViewModel({
     uiPersistence,
     panelOrchestration,
-    latestAssistantContent,
+    evaluationSources,
     t,
     headerViewModel,
     checkpointMenu,

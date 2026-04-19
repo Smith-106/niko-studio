@@ -150,6 +150,9 @@ const mockedCreatePlan = vi.mocked(createPlan)
 const mockedExecutePlan = vi.mocked(executePlan)
 const mockedWorkflowLifecycle = vi.mocked(workflowLifecycle)
 const zh = translations.zh
+const evaluationAdvancedControlsLabel = '高级控制'
+const evaluationDetailedReviewLabel = '详细评估'
+const evaluationSupportToolsLabel = '更多工具'
 const evaluationWorkflowSuccessRoute = `${zh.evaluationWorkflowRoute}: ${zh.evaluationWorkflowSuccess}`
 const evaluationWorkflowSuccessLifecycle = `${zh.evaluationWorkflowLifecycle}: ${zh.evaluationWorkflowSuccess}`
 const expectWorkflowRequestWorkspace = () => expect.objectContaining({
@@ -259,6 +262,98 @@ describe('EvaluationPanel actions', () => {
     mockedWorkflowLifecycle.mockResolvedValue({ success: true, data: defaultLifecycleResponse })
   })
 
+  it('shows an empty state instead of failing when there is no content to evaluate', async () => {
+    render(<EvaluationPanel content="" onClose={() => {}} />)
+
+    expect(await screen.findByText(zh.evaluationNoContent)).toBeInTheDocument()
+    expect(mockedEvaluateContent).not.toHaveBeenCalled()
+  })
+
+  it('lets the user switch evaluation sources explicitly', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <EvaluationPanel
+        evaluationSources={[
+          {
+            kind: 'latestAssistantReply',
+            label: '最近一次助手回复',
+            content: '助手回复',
+          },
+          {
+            kind: 'currentDraft',
+            label: '当前写作草稿',
+            content: '草稿正文',
+          },
+        ]}
+        onClose={() => {}}
+      />,
+    )
+
+    await screen.findByText(zh.evaluationSuggestions)
+
+    expect(mockedEvaluateContent).toHaveBeenCalledWith(
+      '助手回复',
+      undefined,
+      undefined,
+      expect.any(Object),
+    )
+    expect(screen.getByRole('button', { name: '最近一次助手回复' })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(screen.getByRole('button', { name: '当前写作草稿' }))
+
+    await waitFor(() => {
+      expect(mockedEvaluateContent).toHaveBeenCalledWith(
+        '草稿正文',
+        undefined,
+        undefined,
+        expect.any(Object),
+      )
+      expect(screen.getByRole('button', { name: '当前写作草稿' })).toHaveAttribute('aria-pressed', 'true')
+    })
+  })
+
+  it('keeps detailed review and extra tools collapsed by default', async () => {
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    expect(screen.queryByRole('button', { name: zh.evaluationBatchApply })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: zh.evaluationQualityCheckRun })).not.toBeInTheDocument()
+    expect(screen.queryByText(zh.evaluationDimensionAnalysis)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: evaluationDetailedReviewLabel })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: evaluationSupportToolsLabel })).toBeInTheDocument()
+  })
+
+  it('makes the writing helper CTA explicit about carrying the original reply and shows the matched preset inline', async () => {
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: true,
+      data: {
+        decision: 'REVISE',
+        total_score: 72,
+        lock_score: 24,
+        style_score: 24,
+        logic_score: 24,
+        actionable_feedback: '补强冲突推进',
+        suggestions: [
+          { id: 'rec-01', title: '增加冲突', reason: '提升张力', action: 'apply' },
+        ],
+      },
+    })
+
+    render(
+      <EvaluationPanel
+        content="测试内容"
+        onClose={() => {}}
+        onOpenWritingHelper={() => {}}
+      />,
+    )
+
+    await screen.findByText(zh.evaluationSuggestions)
+
+    expect(screen.getByRole('button', { name: '带着原始回复继续到写作助手' })).toBeInTheDocument()
+    expect(screen.getByText('写作助手预设：改写 · 4 句 · 6 条')).toBeInTheDocument()
+  })
+
   it('supports apply and undo flow for a single suggestion', async () => {
     mockedApplyRecommendation.mockResolvedValue({
       success: true,
@@ -293,6 +388,7 @@ describe('EvaluationPanel actions', () => {
       })
     )
 
+    await userEvent.click(screen.getByRole('button', { name: evaluationDetailedReviewLabel }))
     const applyButtons = await screen.findAllByRole('button', { name: zh.evaluationApply })
     await userEvent.click(applyButtons[0])
 
@@ -334,6 +430,7 @@ describe('EvaluationPanel actions', () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationQualityCheckRun }))
 
     await waitFor(() => {
@@ -363,10 +460,11 @@ describe('EvaluationPanel actions', () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationQualityCheckRun }))
 
     await waitFor(() => {
-      expect(screen.getByText('service unavailable')).toBeInTheDocument()
+      expect(screen.getByText(`${zh.failureCategoryEvaluation}：${zh.failureMessageEvaluation}`)).toBeInTheDocument()
     })
   })
 
@@ -379,10 +477,56 @@ describe('EvaluationPanel actions', () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationDetailedReviewLabel }))
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationSuggestionsRefresh }))
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('refresh failed')
+      expect(screen.getByRole('alert')).toHaveTextContent(`${zh.failureCategoryEvaluation}：${zh.failureMessageEvaluation}`)
+    })
+  })
+
+  it('shows a classified failure state when the initial evaluation request fails', async () => {
+    mockedEvaluateContent.mockResolvedValueOnce({
+      success: false,
+      error: 'Request failed',
+    })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    expect(await screen.findByText(zh.failureCategoryEvaluation)).toBeInTheDocument()
+    expect(screen.getByText(zh.failureMessageEvaluation)).toBeInTheDocument()
+    expect(screen.getByText('Request failed')).toBeInTheDocument()
+  })
+
+  it('allows retrying after the initial evaluation fails', async () => {
+    mockedEvaluateContent
+      .mockResolvedValueOnce({
+        success: false,
+        error: 'Request failed',
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          decision: 'REVISE',
+          total_score: 72,
+          lock_score: 24,
+          style_score: 24,
+          logic_score: 24,
+          actionable_feedback: '补强冲突推进',
+          suggestions: [
+            { id: 'rec-01', title: '增加冲突', reason: '提升张力', action: 'apply' },
+          ],
+        },
+      })
+
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    expect(await screen.findByText(zh.failureCategoryEvaluation)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationRefresh }))
+
+    await waitFor(() => {
+      expect(mockedEvaluateContent).toHaveBeenCalledTimes(2)
+      expect(screen.getByText(zh.evaluationSuggestions)).toBeInTheDocument()
     })
   })
 
@@ -390,6 +534,8 @@ describe('EvaluationPanel actions', () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
+    await userEvent.click(screen.getByRole('button', { name: evaluationAdvancedControlsLabel }))
 
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowRoute }))
     await waitFor(() => {
@@ -446,6 +592,8 @@ describe('EvaluationPanel actions', () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
+    await userEvent.click(screen.getByRole('button', { name: evaluationAdvancedControlsLabel }))
 
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowRoute }))
     await waitFor(() => {
@@ -468,6 +616,8 @@ describe('EvaluationPanel actions', () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
+    await userEvent.click(screen.getByRole('button', { name: evaluationAdvancedControlsLabel }))
 
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowRoute }))
     await waitFor(() => {
@@ -510,6 +660,7 @@ describe('EvaluationPanel actions', () => {
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationDetailedReviewLabel }))
 
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationBatchApply }))
 

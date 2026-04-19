@@ -204,6 +204,122 @@ export interface WorkflowPlanStatusResponse {
   [key: string]: unknown
 }
 
+export type WorkflowExecutionStatus = WorkflowExecuteResponseBase['status']
+
+export interface AutomationScheduleRule {
+  cadence: 'cron'
+  cron: string
+  timezone?: string
+  enabled?: boolean
+}
+
+export interface AutomationManualTriggerRule {
+  type: 'manual_run_now'
+  run_now: true
+}
+
+export interface AutomationEventTriggerRule {
+  type: 'event'
+  event_source: string
+  event_name: string
+  event_version?: string
+  payload_filter?: Record<string, unknown>
+}
+
+export type AutomationTriggerRule = AutomationManualTriggerRule | AutomationEventTriggerRule
+
+export interface AutomationBackendModePolicy {
+  mode: 'inherit' | 'standard' | 'uiBridge'
+  fallback_mode?: 'standard' | 'uiBridge'
+}
+
+export type AutomationRiskTier = 'critical' | 'high' | 'medium'
+
+export interface AutomationApprovalTierRule {
+  tier: AutomationRiskTier
+  requires_confirmation: boolean
+  gate_status_on_hold: Extract<WorkflowExecutionStatus, 'waiting_confirmation' | 'gate_blocked'>
+}
+
+export interface AutomationApprovalPolicy {
+  tiers: AutomationApprovalTierRule[]
+  default_gate_status: Extract<WorkflowExecutionStatus, 'waiting_confirmation' | 'gate_blocked'>
+}
+
+export interface AutomationRetryBackoffPolicy {
+  max_retries: number
+  strategy: 'fixed' | 'linear' | 'exponential'
+  base_delay_ms: number
+  max_delay_ms?: number
+}
+
+export interface AutomationFailurePolicy {
+  retry: AutomationRetryBackoffPolicy
+  non_retryable_codes?: string[]
+  on_retry_exhausted: 'manual_takeover'
+  manual_takeover_status: Extract<WorkflowExecutionStatus, 'waiting_confirmation' | 'gate_blocked'>
+}
+
+export interface AutomationProgressionPolicy {
+  success_statuses: Array<Extract<WorkflowExecutionStatus, 'completed'>>
+  approval_policy: AutomationApprovalPolicy
+  failure_policy: AutomationFailurePolicy
+}
+
+export interface AutomationTaskDefinition {
+  task_id: string
+  title: string
+  task: string
+  level?: string | null
+  schedule_rule?: AutomationScheduleRule
+  trigger_rule: AutomationTriggerRule
+  backend_mode_policy: AutomationBackendModePolicy
+  progression_policy: AutomationProgressionPolicy
+  workspace?: ProjectWorkspaceContext
+}
+
+export interface WorkflowSchedulerErrorResponse {
+  error: string
+  workspace?: ProjectWorkspaceContext
+}
+
+export interface WorkflowSchedulerTaskRecord extends AutomationTaskDefinition {
+  status: 'active' | 'paused' | string
+  created_at: string
+  updated_at: string
+  last_run_id?: string | null
+  last_plan_id?: string | null
+  last_trigger?: 'cron' | 'event' | 'manual_run_now' | null | string
+}
+
+export interface WorkflowSchedulerRegisterResponse {
+  status: 'registered' | 'updated' | string
+  task: WorkflowSchedulerTaskRecord
+  workspace?: ProjectWorkspaceContext
+}
+
+export interface WorkflowSchedulerListResponse {
+  total: number
+  tasks: WorkflowSchedulerTaskRecord[]
+  workspace?: ProjectWorkspaceContext
+}
+
+export interface WorkflowSchedulerStatusResponse {
+  status: 'active' | 'paused' | string
+  task: WorkflowSchedulerTaskRecord
+  workspace?: ProjectWorkspaceContext
+}
+
+export interface WorkflowSchedulerRunNowResponse {
+  status: WorkflowExecutionStatus | string
+  trigger: 'manual_run_now' | string
+  run_id: string
+  plan_id: string
+  task: WorkflowSchedulerTaskRecord
+  execute: WorkflowExecuteResponse
+  workspace?: ProjectWorkspaceContext
+}
+
 export interface WorkflowQuickRollbackResult {
   status?: string
   plan_id?: string

@@ -615,6 +615,12 @@ export function StoryBiblePanel() {
       } catch (error) {
         console.error('Failed to persist Story Bible:', error)
         setSyncState('error')
+        showDraftMessage(
+          'error',
+          language === 'zh'
+            ? 'Story Bible 保存失败，当前草稿已保留，请重试。'
+            : 'Failed to save the Story Bible. Your current draft is still here. Please retry.',
+        )
       }
     }, 350)
 
@@ -626,6 +632,7 @@ export function StoryBiblePanel() {
     loading,
     outline,
     selectedStyle,
+    showDraftMessage,
     syncWorkspaceStoryBible,
     storyBibleName,
     storyBibleSignature,
@@ -777,6 +784,8 @@ export function StoryBiblePanel() {
   const genrePresets = language === 'zh'
     ? GENRE_PRESETS_ZH
     : ['Fantasy', 'Romance', 'Mystery', 'Sci-Fi', 'Horror', 'Historical', 'Martial Arts', 'Urban', 'Coming-of-Age', 'Adventure', 'Court Drama', 'Post-Apocalyptic', 'Xianxia', 'Detective', 'Light Novel']
+  const canPromoteSynopsis = synopsis.trim().length > 0
+  const synopsisPromotionHint = canPromoteSynopsis ? canonCopy.reviewHint : canonCopy.synopsisRequired
 
   const styles = [
     { id: 'tried', icon: <Sparkles size={16} />, label: t.storyBibleStyleTried, desc: t.storyBibleStyleTriedDesc },
@@ -794,8 +803,11 @@ export function StoryBiblePanel() {
         <div className="space-y-2">
           <p className="text-xs text-[var(--text-secondary)]">{t.storyBibleBraindumpHint}</p>
           <textarea
+            id="story-bible-braindump"
+            name="story-bible-braindump"
             value={braindump}
             onChange={(event) => setBraindump(event.target.value)}
+            aria-label={t.storyBibleBraindump}
             placeholder={t.storyBibleBraindumpHint}
             className="w-full min-h-32 text-sm leading-relaxed bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-sm)] p-3 resize-y outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
           />
@@ -825,9 +837,12 @@ export function StoryBiblePanel() {
           </div>
           <div className="flex gap-2">
             <input
+              id="story-bible-genre-input"
+              name="story-bible-genre-input"
               value={genreInput}
               onChange={(event) => setGenreInput(event.target.value)}
               onKeyDown={(event) => event.key === 'Enter' && addCustomGenre()}
+              aria-label={t.storyBibleGenrePlaceholder}
               placeholder={t.storyBibleGenrePlaceholder}
               className="flex-1 text-sm bg-[var(--surface-sunken)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-[var(--radius-sm)] px-3 py-1.5 outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
             />
@@ -873,12 +888,12 @@ export function StoryBiblePanel() {
           />
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-[var(--text-secondary)]">
-              {canonCopy.reviewHint}
+              {synopsisPromotionHint}
             </p>
             <button
               type="button"
               onClick={() => void handlePromoteSynopsis()}
-              disabled={canonPromoting}
+              disabled={!canPromoteSynopsis || canonPromoting}
               className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--primary-cta)]/30 bg-[var(--primary-cta)]/10 px-3 py-1.5 text-xs font-medium text-[var(--primary-cta)] hover:bg-[var(--primary-cta)]/15 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               <BookOpen size={14} />
@@ -1047,8 +1062,11 @@ export function StoryBiblePanel() {
         </button>
         <input
           ref={fileInputRef}
+          id="story-bible-import-input"
+          name="story-bible-import-input"
           type="file"
           accept="application/json"
+          aria-label={t.storyBibleImportDraft}
           className="hidden"
           onChange={handleImportDraft}
           data-testid="story-bible-import-input"
@@ -1075,9 +1093,6 @@ export function StoryBiblePanel() {
           />
         ))}
       </div>
-      <button className="mt-4 w-full rounded-[var(--radius-sm)] bg-[var(--primary-cta)] text-white py-2 text-sm font-medium hover:bg-[var(--primary-cta-hover)] transition-colors">
-        {t.storyBibleGenerate}
-      </button>
     </div>
   )
 }

@@ -62,6 +62,7 @@ const mockedRouteWorkflow = vi.mocked(routeWorkflow)
 const mockedCreatePlan = vi.mocked(createPlan)
 const mockedExecutePlan = vi.mocked(executePlan)
 const mockedWorkflowLifecycle = vi.mocked(workflowLifecycle)
+const evaluationSupportToolsLabel = '更多工具'
 
 function buildWorkspace() {
   return createDefaultProjectWorkspaceContext({
@@ -302,27 +303,37 @@ describe('writer workflow experience', () => {
   it('shows the writer project card and quick entrypoints in the sidebar', async () => {
     const onOpenKnowledge = vi.fn()
     const onOpenEvaluation = vi.fn()
+    const onContinueWriting = vi.fn()
 
     render(
-      <Sidebar
-        collapsed={false}
-        onToggle={vi.fn()}
-        onOpenKnowledge={onOpenKnowledge}
-        onOpenPrompts={vi.fn()}
-        onOpenSettings={vi.fn()}
-        onOpenEvaluation={onOpenEvaluation}
-        onOpenMcpStatus={vi.fn()}
-      />,
+      <>
+        <main id="app-main-content" tabIndex={-1}>
+          Main content
+        </main>
+        <Sidebar
+          collapsed={false}
+          onToggle={vi.fn()}
+          onContinueWriting={onContinueWriting}
+          onOpenKnowledge={onOpenKnowledge}
+          onOpenPrompts={vi.fn()}
+          onOpenSettings={vi.fn()}
+          onOpenEvaluation={onOpenEvaluation}
+        />
+      </>,
     )
 
     expect(screen.getByText('当前写作项目')).toBeInTheDocument()
     expect(screen.getByText('星港计划')).toBeInTheDocument()
     expect(screen.getByText('第七章 暗潮')).toBeInTheDocument()
+    expect(screen.queryByText(zh.skillPacks)).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: '审阅当前草稿' }))
+    await userEvent.click(screen.getByRole('button', { name: '继续写作' }))
+    expect(screen.getByRole('main')).toHaveFocus()
+    expect(onContinueWriting).toHaveBeenCalledTimes(1)
+
     await userEvent.click(screen.getByRole('button', { name: '打开故事设定' }))
 
-    expect(onOpenEvaluation).toHaveBeenCalledTimes(1)
+    expect(onOpenEvaluation).toHaveBeenCalledTimes(0)
     expect(onOpenKnowledge).toHaveBeenCalledTimes(1)
   })
 
@@ -383,8 +394,10 @@ describe('writer workflow experience', () => {
       expect(mockedEvaluateContent).toHaveBeenCalled()
     })
 
-    expect(screen.getByText('下一步写作流程')).toBeInTheDocument()
-    expect(screen.getByText('高级控制')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
+    expect(screen.getByRole('heading', { name: '基于当前来源的下一步动作' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '高级控制' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '高级控制' }))
     expect(screen.getByRole('button', { name: zh.evaluationWorkflowRoute })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /制定修订计划/ }))
@@ -417,6 +430,7 @@ describe('writer workflow experience', () => {
       expect(mockedEvaluateContent).toHaveBeenCalled()
     })
 
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
     await userEvent.click(screen.getByRole('button', { name: /制定修订计划/ }))
 
     await waitFor(() => {
@@ -427,6 +441,7 @@ describe('writer workflow experience', () => {
       useAppStore.getState().selectConversation(legacyConversationId)
     })
 
+    await userEvent.click(screen.getByRole('button', { name: '高级控制' }))
     await userEvent.click(screen.getByRole('button', { name: zh.evaluationWorkflowExecute }))
 
     expect(mockedExecutePlan).not.toHaveBeenCalled()

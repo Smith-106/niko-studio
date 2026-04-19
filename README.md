@@ -173,6 +173,7 @@ Windows 本地如果常见 `8000` 端口占用，可优先使用仓库内启动�
 - `-PreferredPort` / `-FallbackPort`: 覆盖默认的 `8000` / `8010`
 
 若只想拉起 / 复用 gateway 而不打开桌面窗口，可直接执行 `npm --prefix desktop run local:gateway`。
+若要只跑 Vite 前端壳、但仍自动跟随本地启动器记录的健康 gateway 地址，可先执行 `npm --prefix desktop run local:gateway`，再执行 `npm --prefix desktop run local:shell`。
 
 停止由本地启动器新拉起的进程：
 
@@ -212,6 +213,7 @@ npm --prefix desktop run dev
 
 完整桌面链路仍以 `python scripts/start_gateway.py` + `npm --prefix desktop run tauri:dev` 为准。
 Windows 上如需自动处理 gateway 端口冲突，可直接使用 `./scripts/start_desktop_local.ps1`。
+如需用浏览器壳复验但避免回退到默认 `127.0.0.1:8000`，可先运行 `npm --prefix desktop run local:gateway`，再运行 `npm --prefix desktop run local:shell`。
 
 ## 📁 Project Structure
 

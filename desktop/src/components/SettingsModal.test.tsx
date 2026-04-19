@@ -20,6 +20,7 @@ vi.mock('../api/config', async () => {
 const zh = translations.zh
 const en = translations.en
 const mockedGetSecrets = vi.mocked(apiConfig.getSecrets)
+const defaultUpdateSettings = useSettingsStore.getState().updateSettings
 
 const createBackendConfig = (): BackendConfig => ({
   app_name: 'Niko Studio',
@@ -155,9 +156,15 @@ describe('SettingsModal quality presets', () => {
   beforeEach(() => {
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
-    useAppStore.setState({ checkBackend: vi.fn().mockResolvedValue(undefined) })
+    useAppStore.setState({
+      backendStatus: true,
+      checkBackend: vi.fn().mockImplementation(async () => {
+        useAppStore.setState({ backendStatus: true })
+      }),
+    })
     useSettingsStore.setState((state) => ({
       ...state,
+      updateSettings: defaultUpdateSettings,
       settings: {
         ...state.settings,
         language: 'zh',
@@ -256,6 +263,51 @@ describe('SettingsModal quality presets', () => {
     expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  it('keeps the modal open and shows staged messaging when backend validation fails after persistence', async () => {
+    const onClose = vi.fn()
+    useAppStore.setState({
+      backendStatus: true,
+      checkBackend: vi.fn().mockImplementation(async () => {
+        useAppStore.setState({ backendStatus: false })
+      }),
+    })
+
+    render(<SettingsModal isOpen onClose={onClose} />)
+
+    const user = userEvent.setup()
+    const modeSelect = screen.getByLabelText(zh.workflowBackendMode) as HTMLSelectElement
+
+    await user.selectOptions(modeSelect, 'uiBridge')
+    await user.click(screen.getByRole('button', { name: zh.save }))
+
+    expect(useSettingsStore.getState().settings.workflowBackendMode).toBe('uiBridge')
+    await waitFor(() => {
+      expect(onClose).not.toHaveBeenCalled()
+      expect(screen.getByText('设置已保存，但这些阶段仍需处理：后端校验')).toBeInTheDocument()
+    })
+  })
+
+  it('keeps the modal open when the persisted settings stage fails', async () => {
+    const onClose = vi.fn()
+    const updateSettings = vi.fn(() => {
+      throw new Error('persist exploded')
+    })
+    useSettingsStore.setState((state) => ({
+      ...state,
+      updateSettings,
+    }))
+
+    render(<SettingsModal isOpen onClose={onClose} />)
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: zh.save }))
+
+    await waitFor(() => {
+      expect(onClose).not.toHaveBeenCalled()
+      expect(screen.getByText('设置未完整保存，请先处理这些阶段：设置持久化')).toBeInTheDocument()
     })
   })
 
@@ -408,6 +460,7 @@ describe('SettingsModal quality presets', () => {
     const user = userEvent.setup()
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
+    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
     await user.click(screen.getByRole('button', { name: zh.backendService }))
 
     await waitFor(() => {
@@ -437,6 +490,7 @@ describe('SettingsModal quality presets', () => {
     const user = userEvent.setup()
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
+    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
     await user.click(screen.getByRole('button', { name: zh.backendService }))
 
     // Wait for backend config panel to render all sections
@@ -485,6 +539,7 @@ describe('SettingsModal quality presets', () => {
     const user = userEvent.setup()
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
+    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
     await user.click(screen.getByRole('button', { name: zh.backendService }))
 
     const uiBridgeToggle = await screen.findByLabelText('ui bridge enabled')
@@ -527,6 +582,7 @@ describe('SettingsModal quality presets', () => {
     const user = userEvent.setup()
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
+    await user.click(screen.getByRole('button', { name: en.settingsAdvancedSupport }))
     await user.click(screen.getByRole('button', { name: en.backendService }))
 
     expect(await screen.findByText(en.backendConfigTitle)).toBeInTheDocument()
@@ -556,6 +612,7 @@ describe('SettingsModal quality presets', () => {
     const user = userEvent.setup()
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
+    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
     await user.click(screen.getByRole('button', { name: zh.backendService }))
     await user.click(await screen.findByRole('button', { name: zh.backendConfigReload }))
 
@@ -582,6 +639,7 @@ describe('SettingsModal quality presets', () => {
     const user = userEvent.setup()
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
+    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
     await user.click(screen.getByRole('button', { name: zh.backendService }))
 
     expect(await screen.findByText(zh.backendConfigSyncing)).toBeInTheDocument()
@@ -615,10 +673,39 @@ describe('SettingsModal quality presets', () => {
     const user = userEvent.setup()
     render(<SettingsModal isOpen onClose={vi.fn()} />)
 
+    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
     await user.click(screen.getByRole('button', { name: zh.backendService }))
 
     expect(await screen.findByText('sync failed')).toBeInTheDocument()
     expect(screen.getByText(zh.backendConfigNoConfig)).toBeInTheDocument()
     expect(screen.getByText(zh.backendConfigNoSecrets)).toBeInTheDocument()
+  })
+
+  it('opens directly to diagnostics and exposes detailed diagnostics action', async () => {
+    const onOpenDetailedDiagnostics = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <SettingsModal
+        isOpen
+        onClose={vi.fn()}
+        requestedSection="diagnostics"
+        onOpenDetailedDiagnostics={onOpenDetailedDiagnostics}
+      />,
+    )
+
+    expect(await screen.findByText(zh.settingsDetailedDiagnosticsHint)).toBeInTheDocument()
+    expect(screen.queryByText(zh.settingsGatewayMetrics)).not.toBeInTheDocument()
+    expect(screen.queryByText(zh.settingsToolList)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: zh.settingsOpenDetailedDiagnostics }))
+    expect(onOpenDetailedDiagnostics).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps service and diagnostics hidden behind advanced support by default', () => {
+    render(<SettingsModal isOpen onClose={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: zh.backendService })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: zh.settingsDiagnostics })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: zh.settingsAdvancedSupport })).toHaveAttribute('aria-expanded', 'false')
   })
 })

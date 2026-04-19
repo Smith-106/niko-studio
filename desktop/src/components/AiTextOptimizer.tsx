@@ -15,6 +15,8 @@ interface OptimizerPresetDef {
   icon: React.ReactNode
 }
 
+type OptimizerInputSource = 'selection' | 'manual' | 'empty'
+
 const PRESET_DEFS: OptimizerPresetDef[] = [
   { id: 'humanize', icon: <Shield size={16} /> },
   { id: 'aiGuide', icon: <BookOpen size={16} /> },
@@ -23,6 +25,15 @@ const PRESET_DEFS: OptimizerPresetDef[] = [
   { id: 'academicPaper', icon: <GraduationCap size={16} /> },
   { id: 'custom', icon: <SlidersHorizontal size={16} /> },
 ]
+
+function getSelectedEditorText(): string {
+  const handle = getEditorHandle()
+  if (!handle) {
+    return ''
+  }
+
+  return handle.getSelectedText()
+}
 
 function buildInstruction(
   preset: OptimizerPreset,
@@ -393,7 +404,8 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
 }) {
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const detectionEnabled = useSettingsStore((s) => s.settings.detectionEvasionGuardEnabled)
-  const { t, language } = useI18n()
+  const { t, translate, language } = useI18n()
+  const initialSelectedText = useMemo(() => getSelectedEditorText(), [])
 
   const getProviderFields = useCallback(() => {
     const { settings } = useSettingsStore.getState()
@@ -404,15 +416,9 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
       ? { api_key: provider.apiKey, base_url: provider.baseUrl, model: provider.defaultModel, provider: provider.id }
       : {}
   }, [])
-  const [content, setContent] = useState(() => {
-    // Prefill from editor selection
-    const handle = getEditorHandle()
-    if (handle) {
-      const selected = handle.getSelectedText()
-      if (selected.trim()) return selected
-    }
-    return ''
-  })
+  const [content, setContent] = useState(() => initialSelectedText.trim() ? initialSelectedText : '')
+  const [contentSource, setContentSource] = useState<OptimizerInputSource>(() => initialSelectedText.trim() ? 'selection' : 'empty')
+  const [selectionSeed, setSelectionSeed] = useState(initialSelectedText)
   const [preset, setPreset] = useState<OptimizerPreset>('humanize')
   const [customInstruction, setCustomInstruction] = useState('')
   const [twoStepMode, setTwoStepMode] = useState(false)
@@ -422,6 +428,23 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const disabled = useMemo(() => loading || content.trim().length === 0, [loading, content])
+  const hasSelectionSeed = selectionSeed.trim().length > 0
+  const sourceLabel = contentSource === 'selection'
+    ? t.optimizerSourceSelection
+    : contentSource === 'manual'
+      ? t.optimizerSourceManual
+      : t.optimizerSourceEmpty
+  const sourceHint = contentSource === 'selection'
+    ? translate('optimizerSourceSelectionHint', { count: selectionSeed.trim().length })
+    : contentSource === 'manual'
+      ? t.optimizerSourceManualHint
+      : t.optimizerSourceEmptyHint
+  const customInstructionRequiredError = language === 'zh'
+    ? '请输入自定义指令'
+    : 'Please enter custom instructions'
+  const customInstructionPlaceholder = language === 'zh'
+    ? '例如：将文本改写为更加口语化的风格，加入个人观点和情感表达...'
+    : 'Example: Rewrite the text in a more conversational style, adding personal opinions and emotional nuance...'
 
   useDialogFocusTrap({ containerRef: dialogRef, onClose })
 
@@ -447,6 +470,33 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
     }
   }, [t])
 
+  const handleContentChange = useCallback((value: string) => {
+    setContent(value)
+
+    if (!value.trim()) {
+      setContentSource('empty')
+      return
+    }
+
+    if (contentSource === 'selection' && value === selectionSeed) {
+      setContentSource('selection')
+      return
+    }
+
+    setContentSource('manual')
+  }, [contentSource, selectionSeed])
+
+  const handleRefreshFromSelection = useCallback(() => {
+    const selectedText = getSelectedEditorText()
+    if (!selectedText.trim()) {
+      return
+    }
+
+    setSelectionSeed(selectedText)
+    setContent(selectedText)
+    setContentSource('selection')
+  }, [])
+
   const handleRun = async () => {
     setLoading(true)
     setError(null)
@@ -455,7 +505,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
 
     const instruction = buildInstruction(preset, customInstruction, language)
     if (!instruction.trim()) {
-      setError('请输入自定义指令')
+      setError(customInstructionRequiredError)
       setLoading(false)
       return
     }
@@ -619,7 +669,7 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
                   value={customInstruction}
                   onChange={(e) => setCustomInstruction(e.target.value)}
                   rows={4}
-                  placeholder="例如：将文本改写为更加口语化的风格，加入个人观点和情感表达..."
+                  placeholder={customInstructionPlaceholder}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-bg text-sm leading-relaxed text-gray-900 dark:text-dark-text focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none shadow-inner transition-all custom-scrollbar resize-y"
                 />
               </div>
@@ -627,14 +677,43 @@ export function AiTextOptimizer({ onClose, onOpenSettings }: {
 
             {/* Input text */}
             <div className="space-y-1.5">
+              <div className="flex items-start justify-between gap-3 rounded-xl border border-gray-200 dark:border-dark-border/60 bg-gray-50/70 dark:bg-dark-bg px-4 py-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-dark-text-muted">
+                    {t.optimizerSourceLabel}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 dark:bg-dark-surface dark:text-dark-text dark:ring-dark-border">
+                      {sourceLabel}
+                    </span>
+                    <span className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                      {sourceHint}
+                    </span>
+                  </div>
+                </div>
+                {hasSelectionSeed && (
+                  <button
+                    type="button"
+                    onClick={handleRefreshFromSelection}
+                    className="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-[11px] font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text dark:hover:bg-dark-surface2"
+                  >
+                    {t.optimizerRefreshFromSelection}
+                  </button>
+                )}
+              </div>
               <div className="text-xs font-semibold text-gray-700 dark:text-dark-text">{t.optimizerInputText}</div>
               <textarea
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => handleContentChange(e.target.value)}
                 rows={6}
                 placeholder={t.optimizerInputPlaceholder}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/50 dark:bg-dark-bg text-[14px] leading-relaxed text-gray-900 dark:text-dark-text focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none shadow-inner transition-all custom-scrollbar resize-y"
               />
+              {!content.trim() && (
+                <div className="rounded-xl border border-dashed border-amber-300/80 bg-amber-50/70 px-4 py-3 text-xs leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                  {t.optimizerSourceEmptyHint}
+                </div>
+              )}
             </div>
 
             {/* Actions */}

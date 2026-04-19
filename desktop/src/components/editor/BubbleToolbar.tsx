@@ -8,21 +8,29 @@
 import { useState, useCallback } from 'react'
 import { Bold, Italic, Strikethrough, Wand2, ChevronRight } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
-import { useI18n } from '../../i18n'
+import { useI18n, type Translations } from '../../i18n'
+import {
+  getEditorAIRewriteOptions,
+  type EditorAIRewriteOption,
+} from '../../hooks/editorAIPromptPolicy'
 
-export interface RewriteOption {
-  id: string
-  labelKey: string
-  instruction: string
+export type RewriteOption = EditorAIRewriteOption
+
+type FormattingAction = 'bold' | 'italic' | 'strike'
+type FormattingLabelKey = keyof Pick<
+  Translations,
+  'editorBubbleBold' | 'editorBubbleItalic' | 'editorBubbleStrikethrough'
+>
+
+const FORMATTING_LABEL_KEYS: Record<FormattingAction, FormattingLabelKey> = {
+  bold: 'editorBubbleBold',
+  italic: 'editorBubbleItalic',
+  strike: 'editorBubbleStrikethrough',
 }
 
-export const REWRITE_OPTIONS: RewriteOption[] = [
-  { id: 'polish', labelKey: 'editorBubblePolish', instruction: '润色选中文本，使其更加流畅自然' },
-  { id: 'simplify', labelKey: 'editorBubbleSimplify', instruction: '简化选中文本，使其更简洁明了' },
-  { id: 'expand', labelKey: 'editorBubbleExpand', instruction: '扩写选中文本，增加细节和深度' },
-  { id: 'formal', labelKey: 'editorBubbleFormal', instruction: '将选中文本改写为正式书面风格' },
-  { id: 'casual', labelKey: 'editorBubbleCasual', instruction: '将选中文本改写为口语化风格' },
-]
+export function getRewriteOptions(_language?: unknown): RewriteOption[] {
+  return getEditorAIRewriteOptions()
+}
 
 interface BubbleToolbarProps {
   editor: Editor
@@ -35,6 +43,7 @@ interface BubbleToolbarProps {
 export function BubbleToolbar({ editor, position, onRewrite, onContinue, onClose }: BubbleToolbarProps) {
   const { t } = useI18n()
   const [showRewriteMenu, setShowRewriteMenu] = useState(false)
+  const rewriteOptions = getRewriteOptions()
 
   const setBold = useCallback(() => editor.chain().focus().toggleBold().run(), [editor])
   const setItalic = useCallback(() => editor.chain().focus().toggleItalic().run(), [editor])
@@ -48,13 +57,21 @@ export function BubbleToolbar({ editor, position, onRewrite, onContinue, onClose
       style={{ left: position.x - 100, top: position.y - 52 }}
     >
       {/* Formatting */}
-      <ToolbarButton onClick={setBold} active={editor.isActive('bold')} title="Bold">
+      <ToolbarButton onClick={setBold} active={editor.isActive('bold')} title={t[FORMATTING_LABEL_KEYS.bold]}>
         <Bold size={14} />
       </ToolbarButton>
-      <ToolbarButton onClick={setItalic} active={editor.isActive('italic')} title="Italic">
+      <ToolbarButton
+        onClick={setItalic}
+        active={editor.isActive('italic')}
+        title={t[FORMATTING_LABEL_KEYS.italic]}
+      >
         <Italic size={14} />
       </ToolbarButton>
-      <ToolbarButton onClick={setStrike} active={editor.isActive('strike')} title="Strikethrough">
+      <ToolbarButton
+        onClick={setStrike}
+        active={editor.isActive('strike')}
+        title={t[FORMATTING_LABEL_KEYS.strike]}
+      >
         <Strikethrough size={14} />
       </ToolbarButton>
 
@@ -74,7 +91,7 @@ export function BubbleToolbar({ editor, position, onRewrite, onContinue, onClose
 
         {showRewriteMenu && (
           <div className="absolute left-0 top-full mt-1 w-44 rounded-lg bg-gray-900 dark:bg-dark-surface shadow-2xl border border-gray-700 dark:border-dark-border py-1 z-10">
-            {REWRITE_OPTIONS.map((opt) => (
+            {rewriteOptions.map((opt) => (
               <button
                 key={opt.id}
                 onClick={() => {
@@ -84,7 +101,7 @@ export function BubbleToolbar({ editor, position, onRewrite, onContinue, onClose
                 }}
                 className="w-full px-3 py-1.5 text-left text-[12px] text-gray-300 hover:text-white hover:bg-gray-700 dark:hover:bg-dark-surface2 transition-colors"
               >
-                {t[opt.labelKey as keyof typeof t] ?? opt.id}
+                {t[opt.labelKey] ?? opt.id}
               </button>
             ))}
           </div>
@@ -121,8 +138,10 @@ function ToolbarButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       title={title}
+      aria-label={title}
       className={`flex items-center px-1.5 py-1 rounded text-gray-300 hover:text-white transition-colors ${
         active ? 'bg-primary-600 text-white' : 'hover:bg-gray-700 dark:hover:bg-dark-surface2'
       }`}

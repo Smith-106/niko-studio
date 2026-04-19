@@ -1,13 +1,28 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { WritingHelperMode } from '../api/client'
 
-export type RightPanelType = 'none' | 'knowledge' | 'evaluation' | 'mcpStatus' | 'writingHelper' | 'textOptimizer'
+export type RightPanelType = 'none' | 'knowledge' | 'evaluation' | 'automation' | 'mcpStatus' | 'writingHelper' | 'textOptimizer'
+
+export interface WritingHelperEvaluationHandoff {
+  source: 'evaluation'
+  suggestionTitle: string
+  suggestionReason: string
+  guidance: string
+  carriedContent: 'original-reply' | 'revision-preview'
+  preset: {
+    mode: WritingHelperMode
+    maxSentences: number
+    maxItems: number
+  }
+}
 
 export interface WritingHelperDraftState {
   content: string
   mode: WritingHelperMode
   maxSentences: number
   maxItems: number
+  guidance: string
+  handoff?: WritingHelperEvaluationHandoff | null
 }
 
 const WRITING_HELPER_DRAFT_STORAGE_KEY = 'niko.writing-helper-draft-v1'
@@ -20,6 +35,18 @@ const DEFAULT_WRITING_HELPER_DRAFT: WritingHelperDraftState = {
   mode: 'polish',
   maxSentences: 3,
   maxItems: 6,
+  guidance: '',
+  handoff: null,
+}
+
+export function createWritingHelperDraft(
+  overrides: Partial<WritingHelperDraftState> = {},
+): WritingHelperDraftState {
+  return {
+    ...DEFAULT_WRITING_HELPER_DRAFT,
+    ...overrides,
+    handoff: overrides.handoff ?? DEFAULT_WRITING_HELPER_DRAFT.handoff,
+  }
 }
 
 const toPositiveInteger = (value: unknown, fallback: number): number => {
@@ -36,18 +63,58 @@ const toWritingHelperMode = (value: unknown, fallback: WritingHelperMode): Writi
   return fallback
 }
 
+const toWritingHelperCarriedContent = (
+  value: unknown,
+): WritingHelperEvaluationHandoff['carriedContent'] | null => {
+  if (value === 'original-reply' || value === 'revision-preview') {
+    return value
+  }
+  return null
+}
+
+const loadWritingHelperEvaluationHandoff = (value: unknown): WritingHelperEvaluationHandoff | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const parsed = value as Partial<WritingHelperEvaluationHandoff>
+  const carriedContent = toWritingHelperCarriedContent(parsed.carriedContent)
+  if (parsed.source !== 'evaluation' || !carriedContent) {
+    return null
+  }
+
+  const preset = parsed.preset && typeof parsed.preset === 'object'
+    ? parsed.preset
+    : null
+
+  return {
+    source: 'evaluation',
+    suggestionTitle: typeof parsed.suggestionTitle === 'string' ? parsed.suggestionTitle : '',
+    suggestionReason: typeof parsed.suggestionReason === 'string' ? parsed.suggestionReason : '',
+    guidance: typeof parsed.guidance === 'string' ? parsed.guidance : '',
+    carriedContent,
+    preset: {
+      mode: toWritingHelperMode(preset?.mode, DEFAULT_WRITING_HELPER_DRAFT.mode),
+      maxSentences: toPositiveInteger(preset?.maxSentences, DEFAULT_WRITING_HELPER_DRAFT.maxSentences),
+      maxItems: toPositiveInteger(preset?.maxItems, DEFAULT_WRITING_HELPER_DRAFT.maxItems),
+    },
+  }
+}
+
 const loadWritingHelperDraft = (): WritingHelperDraftState => {
   try {
     const raw = localStorage.getItem(WRITING_HELPER_DRAFT_STORAGE_KEY)
     if (!raw) return DEFAULT_WRITING_HELPER_DRAFT
 
     const parsed = JSON.parse(raw) as Partial<WritingHelperDraftState>
-    return {
+    return createWritingHelperDraft({
       content: typeof parsed.content === 'string' ? parsed.content : DEFAULT_WRITING_HELPER_DRAFT.content,
       mode: toWritingHelperMode(parsed.mode, DEFAULT_WRITING_HELPER_DRAFT.mode),
       maxSentences: toPositiveInteger(parsed.maxSentences, DEFAULT_WRITING_HELPER_DRAFT.maxSentences),
       maxItems: toPositiveInteger(parsed.maxItems, DEFAULT_WRITING_HELPER_DRAFT.maxItems),
-    }
+      guidance: typeof parsed.guidance === 'string' ? parsed.guidance : DEFAULT_WRITING_HELPER_DRAFT.guidance,
+      handoff: loadWritingHelperEvaluationHandoff(parsed.handoff),
+    })
   } catch {
     return DEFAULT_WRITING_HELPER_DRAFT
   }
@@ -77,14 +144,14 @@ const loadChatSidebarCollapsed = (): boolean => {
     const raw = localStorage.getItem(CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY)
     if (raw === 'true') return true
     if (raw === 'false') return false
-    return false
+    return true
   } catch {
-    return false
+    return true
   }
 }
 
 const isRightPanelType = (value: unknown): value is RightPanelType => {
-  return value === 'none' || value === 'knowledge' || value === 'evaluation' || value === 'mcpStatus' || value === 'writingHelper' || value === 'textOptimizer'
+  return value === 'none' || value === 'knowledge' || value === 'evaluation' || value === 'automation' || value === 'mcpStatus' || value === 'writingHelper' || value === 'textOptimizer'
 }
 
 const loadActiveRightPanel = (): RightPanelType => {
@@ -137,7 +204,7 @@ export function useAppUiPersistence() {
 
   const clearWritingHelperDraft = useCallback(() => {
     clearWritingHelperDraftStorage()
-    setWritingHelperDraft(DEFAULT_WRITING_HELPER_DRAFT)
+    setWritingHelperDraft(createWritingHelperDraft())
   }, [])
 
   return {

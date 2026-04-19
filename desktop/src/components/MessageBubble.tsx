@@ -78,6 +78,30 @@ function shouldRenderCanonContext(message: Message): boolean {
   return Boolean(canonContext && (canonContext.injected || !canonContext.available))
 }
 
+function getReferenceSummary(message: Message, language: 'zh' | 'en', t: ReturnType<typeof useI18n>['t']) {
+  const knowledge = message.writerMetadata?.knowledge_retrieved
+  const canonContext = message.writerMetadata?.canon_context
+  const labels: string[] = []
+
+  if (canonContext?.injected) labels.push(t.messageBubbleSourceTypeCanon)
+  if ((knowledge?.entities_count ?? 0) > 0) labels.push(t.messageBubbleSourceTypeEntity)
+  if ((knowledge?.relations_count ?? 0) > 0) labels.push(t.messageBubbleSourceTypeRelation)
+  if ((knowledge?.memories_count ?? 0) > 0) labels.push(t.messageBubbleSourceTypeMemory)
+
+  const uniqueLabels = labels.filter((label, index) => labels.indexOf(label) === index)
+  const summary = uniqueLabels.length > 0
+    ? t.messageBubbleSourceSummaryUsed.replace('{summary}', uniqueLabels.join(language === 'zh' ? '、' : ', '))
+    : null
+
+  return {
+    summary,
+    primaryMatch: canonContext?.injected && canonContext.matches.length > 0 ? canonContext.matches[0] : null,
+    unavailableReason: canonContext && !canonContext.available
+      ? t.messageBubbleCanonContextUnavailable.replace('{reason}', canonContext.reason ?? 'unknown')
+      : null,
+  }
+}
+
 function slugifySegment(value: string | null | undefined): string {
   const normalized = String(value ?? '')
     .trim()
@@ -114,7 +138,7 @@ const markdownComponents: Components = {
 }
 
 function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAccept }: MessageBubbleProps) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const isUser = message.role === 'user'
   const [isExpanded, setIsExpanded] = useState(false)
   const [isPromotingCanon, setIsPromotingCanon] = useState(false)
@@ -126,6 +150,7 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
     ? getUniqueComparisonLines(message.comparison.control.content, message.comparison.primary.content)
     : []
   const canonContext = message.writerMetadata?.canon_context
+  const referenceSummary = getReferenceSummary(message, language, t)
   const workspaceContext = message.workspaceContext
   const canPromoteReplyToCanon = !isUser && Boolean(workspaceContext) && Boolean(message.content.trim())
 
@@ -203,51 +228,22 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
           </div>
         )}
 
-        {/* Retrieval Status */}
-        {!isUser && message.writerMetadata?.knowledge_retrieved && (
-          <div className="mb-3 text-xs text-dark-text-muted flex items-center gap-1.5 bg-dark-bg/50 px-3 py-1.5 rounded-md border border-dark-border/50">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse-subtle"></span>
-            {t.messageBubbleRetrievalStatus
-              .replace('{entities}', String(message.writerMetadata.knowledge_retrieved.entities_count))
-              .replace('{relations}', String(message.writerMetadata.knowledge_retrieved.relations_count))
-              .replace('{memories}', String(message.writerMetadata.knowledge_retrieved.memories_count))}
-          </div>
-        )}
-
-        {!isUser && canonContext && shouldRenderCanonContext(message) && (
+        {!isUser && (referenceSummary.summary || referenceSummary.unavailableReason || (canonContext && shouldRenderCanonContext(message))) && (
           <div className="mb-3 rounded-xl border border-primary-500/20 bg-primary-500/5 px-3 py-3">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary-300">
-              <span className={`h-1.5 w-1.5 rounded-full ${canonContext.injected ? 'bg-primary-400' : 'bg-warning-500'}`}></span>
-              {t.messageBubbleCanonContextTitle}
+              <span className={`h-1.5 w-1.5 rounded-full ${referenceSummary.unavailableReason ? 'bg-warning-500' : 'bg-primary-400'}`}></span>
+              {t.messageBubbleSourceSummaryTitle}
             </div>
             <p className="mt-2 text-xs leading-relaxed text-dark-text-muted">
-              {canonContext.injected
-                ? t.messageBubbleCanonContextApplied
-                  .replace('{matches}', String(canonContext.match_count))
-                  .replace('{pages}', String(canonContext.total_pages))
-                : t.messageBubbleCanonContextUnavailable
-                  .replace('{reason}', canonContext.reason ?? 'unknown')}
+              {referenceSummary.summary ?? referenceSummary.unavailableReason ?? t.messageBubbleSourceSummaryFallback}
             </p>
-            {canonContext.injected && canonContext.matches.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {canonContext.matches.map((match) => (
-                  <div
-                    key={`${message.id}-${match.page_id}`}
-                    className="rounded-lg border border-dark-border/60 bg-dark-bg/60 px-3 py-2"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold text-dark-text">{match.title}</span>
-                      <span className="rounded-full border border-primary-500/20 bg-primary-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary-300">
-                        {match.authority.promotedFrom}
-                      </span>
-                      <span className="rounded-full border border-dark-border2 bg-dark-surface2 px-2 py-0.5 text-[10px] uppercase tracking-wider text-dark-text-secondary">
-                        {match.authority.status}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-[11px] text-dark-text-muted">{match.slug}</div>
-                    <p className="mt-2 text-xs leading-relaxed text-dark-text-secondary">{match.excerpt}</p>
-                  </div>
-                ))}
+            {referenceSummary.primaryMatch && (
+              <div className="mt-3 rounded-lg border border-dark-border/60 bg-dark-bg/60 px-3 py-2">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-text-muted">
+                  {t.messageBubbleSourcePrimary}
+                </div>
+                <div className="mt-1 text-xs font-semibold text-dark-text">{referenceSummary.primaryMatch.title}</div>
+                <p className="mt-2 text-xs leading-relaxed text-dark-text-secondary">{referenceSummary.primaryMatch.excerpt}</p>
               </div>
             )}
           </div>

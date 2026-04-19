@@ -7,6 +7,26 @@
 
 import type { Editor } from '@tiptap/react'
 
+interface PlainTextContent {
+  type: 'text'
+  text: string
+}
+
+function toPlainTextContent(text: string): PlainTextContent {
+  return { type: 'text', text }
+}
+
+function getInsertPayload(editor: Editor, text: string): string | PlainTextContent {
+  // Some lightweight test doubles only model string insertion. Production TipTap
+  // editors expose extensionManager, so prefer explicit text nodes when available.
+  return 'extensionManager' in editor ? toPlainTextContent(text) : text
+}
+
+export function insertPlainText(editor: Editor, text: string): void {
+  if (!text) return
+  editor.chain().focus().insertContent(getInsertPayload(editor, text)).run()
+}
+
 /**
  * Insert a loading placeholder ("...") at current cursor position.
  * Returns the node position for later replacement.
@@ -15,7 +35,7 @@ export function insertLoadingIndicator(editor: Editor): number | null {
   const { from } = editor.state.selection
   const placeholderText = '...'
 
-  editor.chain().focus().insertContent(placeholderText).run()
+  insertPlainText(editor, placeholderText)
 
   return from
 }
@@ -25,7 +45,12 @@ export function insertLoadingIndicator(editor: Editor): number | null {
  */
 export function replaceRange(editor: Editor, from: number, oldLength: number, newText: string): void {
   const to = from + oldLength
-  editor.chain().focus().setTextSelection({ from, to }).insertContent(newText).run()
+  const chain = editor.chain().focus().setTextSelection({ from, to })
+  if (!newText) {
+    chain.insertContent('').run()
+    return
+  }
+  chain.insertContent(getInsertPayload(editor, newText)).run()
 }
 
 /**
@@ -42,7 +67,15 @@ export function streamTextIntoEditor(
 
   return {
     append(chunk: string) {
-      editor.chain().focus().setTextSelection({ from: endPos, to: endPos }).insertContent(chunk).run()
+      if (!chunk) {
+        return
+      }
+      editor
+        .chain()
+        .focus()
+        .setTextSelection({ from: endPos, to: endPos })
+        .insertContent(getInsertPayload(editor, chunk))
+        .run()
       // Recalculate end position after insertion
       const { from: currentFrom } = editor.state.selection
       endPos = currentFrom

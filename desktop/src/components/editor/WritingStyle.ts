@@ -5,6 +5,8 @@
  * Aligned with writing-helper's lib/types.ts for consistent prompt generation.
  */
 
+import type { Language } from '../../i18n'
+
 // ── Option types for UI selects ─────────────────────────────────
 
 export type ToneOption = 'warm' | 'formal' | 'casual' | 'humorous' | 'serious' | 'melancholic'
@@ -148,20 +150,69 @@ export const DEFAULT_WRITING_STYLE: WritingStyle = {
 // ── Storage ─────────────────────────────────────────────────────
 
 const STYLE_STORAGE_KEY = 'niko.writing-helper-style-v1'
+const STYLE_INSTRUCTION_HEADER: Record<Language, string> = {
+  zh: '写作风格要求：',
+  en: 'Writing style requirements:',
+}
 
-export function loadStyle(): WritingStyle {
+function readPersistedStyle(): Partial<WritingStyle> | null {
   try {
     const raw = localStorage.getItem(STYLE_STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<WritingStyle>
-      return migrateStyle(parsed)
+    if (!raw) {
+      return null
     }
-  } catch { /* ignore */ }
+
+    return JSON.parse(raw) as Partial<WritingStyle>
+  } catch {
+    return null
+  }
+}
+
+export function loadStyle(): WritingStyle {
+  const persistedStyle = readPersistedStyle()
+  if (persistedStyle) {
+    return migrateStyle(persistedStyle)
+  }
+
   return { ...DEFAULT_WRITING_STYLE }
 }
 
 export function saveStyle(style: WritingStyle) {
   try { localStorage.setItem(STYLE_STORAGE_KEY, JSON.stringify(style)) } catch { /* ignore */ }
+}
+
+function stripStyleInstructionHeader(instruction: string, language: Language): string {
+  const header = STYLE_INSTRUCTION_HEADER[language]
+  if (instruction === header) {
+    return ''
+  }
+  if (instruction.startsWith(`${header}；`)) {
+    return instruction.slice(`${header}；`.length).trim()
+  }
+  if (instruction.startsWith(header)) {
+    return instruction.slice(header.length).replace(/^；\s*/, '').trim()
+  }
+  return instruction.trim()
+}
+
+export function getPersistedStyleInstruction(language: Language): string {
+  try {
+    const raw = localStorage.getItem(STYLE_STORAGE_KEY)?.trim() ?? ''
+    if (!raw) {
+      return ''
+    }
+    if (!readPersistedStyle()) {
+      return raw
+    }
+
+    return buildStyleInstruction(loadStyle(), language === 'zh')
+  } catch {
+    return ''
+  }
+}
+
+export function getPersistedStyleRequirements(language: Language): string {
+  return stripStyleInstructionHeader(getPersistedStyleInstruction(language), language)
 }
 
 /** Migrate old format to new format with sub-properties */

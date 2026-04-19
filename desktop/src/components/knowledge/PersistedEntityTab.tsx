@@ -48,6 +48,7 @@ function buildEditorCopy(kind: string, label: string, language: 'zh' | 'en') {
       addLabel: `添加${label}`,
       resetLabel: '清空编辑器',
       emptyLabel: `当前工作区还没有${label}条目。`,
+      loadError: `加载${label}失败，请稍后重试。`,
       saveSuccess: `${label}已保存到当前工作区。`,
       saveError: `保存${label}失败，请稍后重试。`,
     }
@@ -65,6 +66,7 @@ function buildEditorCopy(kind: string, label: string, language: 'zh' | 'en') {
     addLabel: `Add ${label}`,
     resetLabel: 'Clear editor',
     emptyLabel: `No ${label.toLowerCase()} entries exist for this workspace yet.`,
+    loadError: `Failed to load ${label.toLowerCase()}. Please try again.`,
     saveSuccess: `${label} saved to the current workspace.`,
     saveError: `Failed to save ${label.toLowerCase()}. Please try again.`,
   }
@@ -86,6 +88,7 @@ export function PersistedEntityTab({
   onStatusChange,
 }: PersistedEntityTabProps) {
   const { language, t } = useI18n()
+  const backendStatus = useAppStore((state) => state.backendStatus)
   const currentWorkspace = useAppStore((state) => state.currentWorkspace)
   const [draftName, setDraftName] = useState('')
   const [draftDescription, setDraftDescription] = useState('')
@@ -104,7 +107,7 @@ export function PersistedEntityTab({
       })
       const graphError = readGraphMutationError(response.data)
       if (!response.success || graphError) {
-        throw new Error(response.error || graphError || copy.saveError)
+        throw new Error(response.error || graphError || copy.loadError)
       }
       onItemsChange(
         filterWorkspaceKnowledgeItems(toGraphItems(response.data, 'n'), currentWorkspace, {
@@ -115,16 +118,24 @@ export function PersistedEntityTab({
       console.error(`Failed to load ${entityType}:`, error)
       onStatusChange({
         type: 'error',
-        message: copy.saveError,
+        message: copy.loadError,
       })
     } finally {
       onLoadingChange(false)
     }
-  }, [copy.saveError, currentWorkspace, entityType, itemKind, onItemsChange, onLoadingChange, onStatusChange])
+  }, [copy.loadError, currentWorkspace, entityType, itemKind, onItemsChange, onLoadingChange, onStatusChange])
 
   useEffect(() => {
-    loadItems()
-  }, [loadItems])
+    if (!backendStatus) {
+      void loadItems()
+    }
+  }, [backendStatus, loadItems])
+
+  useEffect(() => {
+    if (backendStatus) {
+      void loadItems()
+    }
+  }, [backendStatus, loadItems])
 
   useEffect(() => {
     if (!selectedItem) return

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { CharacterTab } from './CharacterTab'
 import { LocationTab } from './LocationTab'
 import { PlotTab } from './PlotTab'
 import type { KnowledgeItem, OperationStatus } from './KnowledgeTypes'
+import { createDefaultProjectWorkspaceContext } from '../../types/workspace'
+import { useAppStore } from '../../stores/appStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 
 type PersistedEntity = {
@@ -22,6 +24,7 @@ const persistedGraph = vi.hoisted(() => ({
   characters: [] as PersistedEntity[],
   locations: [] as PersistedEntity[],
   events: [] as PersistedEntity[],
+  failEntityType: null as 'Character' | 'Location' | 'Event' | null,
 }))
 
 function extractBalancedObject(text: string, startIndex: number) {
@@ -125,14 +128,23 @@ vi.mock('../../api/client', () => ({
     }
 
     if (cypher.includes('MATCH (n:Character)')) {
+      if (persistedGraph.failEntityType === 'Character') {
+        return { success: false, error: 'graph unavailable', data: [] }
+      }
       return { success: true, data: persistedGraph.characters.map((item) => ({ n: item })) }
     }
 
     if (cypher.includes('MATCH (n:Location)')) {
+      if (persistedGraph.failEntityType === 'Location') {
+        return { success: false, error: 'graph unavailable', data: [] }
+      }
       return { success: true, data: persistedGraph.locations.map((item) => ({ n: item })) }
     }
 
     if (cypher.includes('MATCH (n:Event)')) {
+      if (persistedGraph.failEntityType === 'Event') {
+        return { success: false, error: 'graph unavailable', data: [] }
+      }
       return { success: true, data: persistedGraph.events.map((item) => ({ n: item })) }
     }
 
@@ -217,6 +229,11 @@ describe('persisted knowledge authoring tabs', () => {
     persistedGraph.characters = []
     persistedGraph.locations = []
     persistedGraph.events = []
+    persistedGraph.failEntityType = null
+    useAppStore.setState({
+      backendStatus: false,
+      currentWorkspace: createDefaultProjectWorkspaceContext(),
+    })
     useSettingsStore.getState().updateSettings({ language: 'zh' })
     vi.clearAllMocks()
   })
@@ -274,5 +291,43 @@ describe('persisted knowledge authoring tabs', () => {
 
     expect(await screen.findByText('Bridge Alarm')).toBeInTheDocument()
     expect(screen.getAllByText('第一幕转折点').length).toBeGreaterThan(0)
+  })
+
+  it('reports a load-specific error when the knowledge query fails on entry', async () => {
+    persistedGraph.failEntityType = 'Character'
+
+    render(<CharacterHarness />)
+
+    expect(await screen.findByText('加载角色失败，请稍后重试。')).toBeInTheDocument()
+    expect(screen.queryByText('保存角色失败，请稍后重试。')).not.toBeInTheDocument()
+  })
+
+  it('retries loading automatically after backend health recovers', async () => {
+    persistedGraph.failEntityType = 'Character'
+
+    render(<CharacterHarness />)
+
+    expect(await screen.findByText('加载角色失败，请稍后重试。')).toBeInTheDocument()
+
+    persistedGraph.failEntityType = null
+    persistedGraph.characters = [{
+      id: 'character-1',
+      type: 'Character',
+      name: 'Alice',
+      properties: {
+        workspaceId: 'default-project',
+        projectId: 'default-project',
+        itemKind: 'character',
+        description: 'Recovered after backend ready',
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }]
+
+    act(() => {
+      useAppStore.setState({ backendStatus: true })
+    })
+
+    expect(await screen.findByText('Alice')).toBeInTheDocument()
   })
 })

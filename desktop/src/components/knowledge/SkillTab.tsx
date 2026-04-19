@@ -32,7 +32,7 @@ export function SkillTab({
     onLoadingChange(true)
     try {
       const skillsResult = await listSkills()
-      if (skillsResult.success && Array.isArray(skillsResult.data)) {
+      if (skillsResult?.success && Array.isArray(skillsResult.data)) {
         onItemsChange(
           skillsResult.data.map((skill) => ({
             id: skill.id,
@@ -66,7 +66,7 @@ export function SkillTab({
   const loadSkillDetails = async () => {
     if (!selectedSkillId) return
     const response = await loadSkill(selectedSkillId)
-    if (response.success && response.data?.content) {
+    if (response?.success && response.data?.content) {
       setSkillDetails(response.data.content)
     } else {
       setSkillDetails(t.knowledgeSkillDetailsLoadFailed)
@@ -76,7 +76,7 @@ export function SkillTab({
   const runSkillMatch = async () => {
     const keywords = searchQuery.trim() ? searchQuery.trim().split(/\s+/).slice(0, 5) : undefined
     const response = await matchSkills(undefined, keywords)
-    if (response.success && Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
       setSkillMatches(response.data)
     } else {
       setSkillMatches([])
@@ -86,7 +86,7 @@ export function SkillTab({
   const loadSkillChain = async () => {
     if (!selectedSkillId) return
     const response = await getSkillChain(selectedSkillId)
-    if (response.success && Array.isArray(response.data)) {
+    if (response?.success && Array.isArray(response.data)) {
       setSkillChain(response.data)
     } else {
       setSkillChain([])
@@ -169,14 +169,22 @@ export function SkillTab({
   )
 
   if (loading) {
-    return { controls, details, content: <div className="flex items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">{t.knowledgeLoading}</div> }
+    return (
+      <>
+        {controls}
+        {details}
+        <div className="flex items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
+          {t.knowledgeLoading}
+        </div>
+      </>
+    )
   }
 
   if (filteredItems.length === 0) {
-    return {
-      controls,
-      details,
-      content: (
+    return (
+      <>
+        {controls}
+        {details}
         <div className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-dark-text-secondary">
           <Folder size={48} className="mb-2" />
           <p>{t.knowledgeEmpty}</p>
@@ -191,14 +199,14 @@ export function SkillTab({
             {t.knowledgeTabSkills}
           </button>
         </div>
-      ),
-    }
+      </>
+    )
   }
 
-  return {
-    controls,
-    details,
-    content: (
+  return (
+    <>
+      {controls}
+      {details}
       <div className="grid grid-cols-2 gap-4">
         {filteredItems.map((item, index) => (
           <div
@@ -222,6 +230,6 @@ export function SkillTab({
           </div>
         ))}
       </div>
-    ),
-  }
+    </>
+  )
 }

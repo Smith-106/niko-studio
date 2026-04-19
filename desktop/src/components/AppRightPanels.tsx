@@ -1,19 +1,66 @@
-import { SettingsModal } from './SettingsModal'
-import { KnowledgeModal } from './KnowledgeModal'
-import { EvaluationPanel } from './EvaluationPanel'
-import { McpStatusPanel } from './McpStatusPanel'
-import { WritingHelperPanel } from './WritingHelperPanel'
-import { AiTextOptimizer } from './AiTextOptimizer'
-import type { RightPanelType, WritingHelperDraftState } from '../hooks/useAppUiPersistence'
+import { Suspense, lazy } from 'react'
+
+import type { SettingsSectionId } from '../hooks/useAppPanelOrchestration'
+import type { RightPanelType, WritingHelperDraftState, WritingHelperEvaluationHandoff } from '../hooks/useAppUiPersistence'
+import type { EvaluationSourceDescriptor } from '../stores/selectors'
+
+const SettingsModal = lazy(async () => {
+  const module = await import('./SettingsModal')
+  return { default: module.SettingsModal }
+})
+
+const KnowledgeModal = lazy(async () => {
+  const module = await import('./KnowledgeModal')
+  return { default: module.KnowledgeModal }
+})
+
+const EvaluationPanel = lazy(async () => {
+  const module = await import('./EvaluationPanel')
+  return { default: module.EvaluationPanel }
+})
+
+const AutomationPanel = lazy(async () => {
+  const module = await import('./AutomationPanel')
+  return { default: module.AutomationPanel }
+})
+
+const McpStatusPanel = lazy(async () => {
+  const module = await import('./McpStatusPanel')
+  return { default: module.McpStatusPanel }
+})
+
+const WritingHelperPanel = lazy(async () => {
+  const module = await import('./WritingHelperPanel')
+  return { default: module.WritingHelperPanel }
+})
+
+const AiTextOptimizer = lazy(async () => {
+  const module = await import('./AiTextOptimizer')
+  return { default: module.AiTextOptimizer }
+})
+
 
 interface AppRightPanelsProps {
   activeRightPanel: RightPanelType
   settingsOpen: boolean
-  latestAssistantContent: string
+  settingsRequestedSection?: SettingsSectionId
+  evaluationSources: EvaluationSourceDescriptor[]
   writingHelperDraft: WritingHelperDraftState
   closeRightPanel: () => void
   closeSettings: () => void
+  openDetailedDiagnostics: () => void
   openSettingsFromWritingHelper: () => void
+  openSettingsFromTextOptimizer: () => void
+  openSettingsFromAutomation: () => void
+  onOpenAutomationFromEvaluation: () => void
+  onOpenWritingHelperFromEvaluation: (handoff: {
+    content: string
+    guidance: string
+    mode: WritingHelperDraftState['mode']
+    maxSentences: number
+    maxItems: number
+    handoff: WritingHelperEvaluationHandoff
+  }) => void
   setWritingHelperDraft: (draft: WritingHelperDraftState) => void
   clearWritingHelperDraft: () => void
 }
@@ -21,29 +68,48 @@ interface AppRightPanelsProps {
 export function AppRightPanels({
   activeRightPanel,
   settingsOpen,
-  latestAssistantContent,
+  settingsRequestedSection,
+  evaluationSources,
   writingHelperDraft,
   closeRightPanel,
   closeSettings,
+  openDetailedDiagnostics,
   openSettingsFromWritingHelper,
+  openSettingsFromTextOptimizer,
+  openSettingsFromAutomation,
+  onOpenAutomationFromEvaluation,
+  onOpenWritingHelperFromEvaluation,
   setWritingHelperDraft,
   clearWritingHelperDraft,
 }: AppRightPanelsProps) {
   return (
-    <>
+    <Suspense fallback={null}>
       {activeRightPanel === 'knowledge' && (
         <KnowledgeModal isOpen onClose={closeRightPanel} />
       )}
 
-      <SettingsModal
-        isOpen={settingsOpen}
-        onClose={closeSettings}
-      />
+      {settingsOpen && (
+        <SettingsModal
+          isOpen
+          onClose={closeSettings}
+          requestedSection={settingsRequestedSection}
+          onOpenDetailedDiagnostics={openDetailedDiagnostics}
+        />
+      )}
 
       {activeRightPanel === 'evaluation' && (
         <EvaluationPanel
-          content={latestAssistantContent}
+          evaluationSources={evaluationSources}
           onClose={closeRightPanel}
+          onOpenAutomation={onOpenAutomationFromEvaluation}
+          onOpenWritingHelper={onOpenWritingHelperFromEvaluation}
+        />
+      )}
+
+      {activeRightPanel === 'automation' && (
+        <AutomationPanel
+          onClose={closeRightPanel}
+          onOpenSettings={openSettingsFromAutomation}
         />
       )}
 
@@ -62,9 +128,9 @@ export function AppRightPanels({
       {activeRightPanel === 'textOptimizer' && (
         <AiTextOptimizer
           onClose={closeRightPanel}
-          onOpenSettings={openSettingsFromWritingHelper}
+          onOpenSettings={openSettingsFromTextOptimizer}
         />
       )}
-    </>
+    </Suspense>
   )
 }

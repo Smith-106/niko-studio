@@ -30,8 +30,15 @@ import {
   updateGatewayServiceConfig,
   listCheckpoints,
   workflowLifecycle,
+  workflowSchedulerRegister,
+  workflowSchedulerList,
+  workflowSchedulerPause,
+  workflowSchedulerResume,
+  workflowSchedulerRunNow,
+  type AutomationTaskDefinition,
   type ChatRequest,
   type GatewayHealth,
+  type ProjectWorkspaceContext,
 } from './client'
 
 function createSseResponse(chunks: string[]): Response {
@@ -676,6 +683,221 @@ describe('workflow bridge and quality-check APIs', () => {
       expect.stringContaining('/checkpoint/list'),
       expect.objectContaining({ method: 'POST' })
     )
+  })
+
+
+  it('routes scheduler workflow calls by workflowBackendMode and includes scheduler payloads', async () => {
+    const fetchSpy = vi.fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ status: 'ok', tasks: [], task: { task_id: 'sched-1' } }) })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const schedulerTask: AutomationTaskDefinition = {
+      task_id: 'sched-1',
+      title: 'Nightly Automation',
+      task: '推进项目到完成',
+      level: 'L3',
+      schedule_rule: { cadence: 'cron', cron: '0 2 * * *', timezone: 'Asia/Shanghai', enabled: true },
+      trigger_rule: { type: 'manual_run_now', run_now: true as const },
+      backend_mode_policy: { mode: 'inherit' as const, fallback_mode: 'standard' as const },
+      progression_policy: {
+        success_statuses: ['completed' as const],
+        approval_policy: {
+          tiers: [
+            {
+              tier: 'critical' as const,
+              requires_confirmation: true,
+              gate_status_on_hold: 'waiting_confirmation' as const,
+            },
+          ],
+          default_gate_status: 'waiting_confirmation' as const,
+        },
+        failure_policy: {
+          retry: {
+            max_retries: 2,
+            strategy: 'fixed' as const,
+            base_delay_ms: 1000,
+          },
+          on_retry_exhausted: 'manual_takeover' as const,
+          manual_takeover_status: 'gate_blocked' as const,
+        },
+      },
+    }
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        workflowBackendMode: 'standard',
+      },
+    }))
+
+    await workflowSchedulerRegister(schedulerTask, true)
+    await workflowSchedulerList(10)
+    await workflowSchedulerPause('sched-1')
+    await workflowSchedulerResume('sched-1')
+    await workflowSchedulerRunNow('sched-1', [{ title: '保留冲突' }], undefined, 'confirm-token')
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/workflow/scheduler/register'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ task: schedulerTask, enabled: true }),
+      })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/workflow/scheduler/list'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ limit: 10 }),
+      })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('/workflow/scheduler/pause'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ task_id: 'sched-1' }),
+      })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('/workflow/scheduler/resume'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ task_id: 'sched-1' }),
+      })
+    )
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      5,
+      expect.stringContaining('/workflow/scheduler/run-now'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          task_id: 'sched-1',
+          confirm_token: 'confirm-token',
+          recommendations: [{
+            id: 'rec-01',
+            title: '保留冲突',
+            reason: '',
+            action: 'apply',
+          }],
+        }),
+      })
+    )
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        workflowBackendMode: 'uiBridge',
+      },
+    }))
+
+    await workflowSchedulerList(5)
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      6,
+      expect.stringContaining('/ui-bridge/workflow/scheduler/list'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ limit: 5 }),
+      })
+    )
+  })
+
+  it('attaches authoritative workspace context to scheduler payloads', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'registered', task: { task_id: 'sched-workspace' } }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const workspace: ProjectWorkspaceContext = {
+      schemaVersion: '2026-04-08',
+      identity: {
+        workspaceId: 'atlas-workspace',
+        projectId: 'atlas-project',
+        projectName: 'atlas-project',
+        workspaceRoot: '/tmp/atlas',
+      },
+      manuscript: {
+        manuscriptId: null,
+        title: null,
+        chapterId: 'chapter-9',
+        chapterTitle: null,
+        chapterNumber: 9,
+      },
+      storyBible: {
+        storyBibleId: null,
+        draftId: 'draft-9',
+        version: null,
+        storage: 'local-draft',
+      },
+      knowledge: {
+        focusEntityId: 'hero-9',
+        graphEntityIds: ['hero-9'],
+        memoryEntryIds: [],
+      },
+      workflow: {
+        sessionId: 'workflow-session-9',
+        planId: null,
+        level: 'L3',
+      },
+      chat: {
+        conversationId: 'conversation-9',
+        comparisonEnabled: false,
+      },
+      compatibility: {
+        additiveContract: true,
+        migratedLegacyFields: [],
+        notes: [],
+      },
+    }
+
+    const schedulerTask: AutomationTaskDefinition = {
+      task_id: 'sched-workspace',
+      title: 'Workspace Automation',
+      task: '推进项目到完成',
+      level: 'L3',
+      trigger_rule: { type: 'manual_run_now' as const, run_now: true as const },
+      backend_mode_policy: { mode: 'inherit' as const, fallback_mode: 'standard' as const },
+      progression_policy: {
+        success_statuses: ['completed' as const],
+        approval_policy: {
+          tiers: [
+            { tier: 'critical' as const, requires_confirmation: true, gate_status_on_hold: 'waiting_confirmation' as const },
+          ],
+          default_gate_status: 'waiting_confirmation' as const,
+        },
+        failure_policy: {
+          retry: { max_retries: 2, strategy: 'fixed' as const, base_delay_ms: 1000 },
+          on_retry_exhausted: 'manual_takeover' as const,
+          manual_takeover_status: 'gate_blocked' as const,
+        },
+      },
+    }
+
+    await workflowSchedulerRegister(schedulerTask, true, 'standard', workspace)
+
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/workflow/scheduler/register')
+    expect(init.method).toBe('POST')
+    const body = JSON.parse(String(init.body))
+    expect(body).toMatchObject({
+      task: { task_id: 'sched-workspace' },
+      workspace: {
+        identity: {
+          projectId: 'atlas-project',
+        },
+        workflow: {
+          sessionId: 'workflow-session-9',
+        },
+      },
+    })
   })
 
   it('attaches authoritative workspace context to workflow plan payloads', async () => {

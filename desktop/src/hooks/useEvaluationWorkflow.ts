@@ -299,31 +299,67 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
     )
   }
 
-  const handleWorkflowExecute = async (overrides?: WorkflowActionOverrides) => {
-    const nextPlanId = overrides?.planId ?? workflowPlanId
-    const nextStepId = overrides?.stepId ?? workflowStepId
+  const executeWorkflowStepCore = async (
+    planId: string,
+    stepId?: string,
+    confirmToken?: string,
+  ) => {
     const requestWorkspace = resolveWorkflowRequestWorkspace()
-    syncRequestedOverrides(overrides)
-    if (!nextPlanId.trim()) {
-      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
-      return
-    }
     await executeWorkflowAction(
       'execute',
       () => requestWorkspace
-        ? executePlan(nextPlanId, nextStepId || undefined, undefined, undefined, undefined, requestWorkspace)
-        : executePlan(nextPlanId, nextStepId || undefined),
+        ? executePlan(
+          planId,
+          stepId || undefined,
+          undefined,
+          undefined,
+          confirmToken && confirmToken.trim().length > 0 ? confirmToken.trim() : undefined,
+          requestWorkspace,
+        )
+        : executePlan(
+          planId,
+          stepId || undefined,
+          undefined,
+          undefined,
+          confirmToken && confirmToken.trim().length > 0 ? confirmToken.trim() : undefined,
+        ),
       {
         onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),
       },
     )
   }
 
+  const executeWorkflowLifecycleCore = async (
+    planId: string,
+    lifecycleAction: WorkflowLifecycleAction,
+  ) => {
+    const requestWorkspace = resolveWorkflowRequestWorkspace()
+    await executeWorkflowAction(
+      'lifecycle',
+      () => requestWorkspace
+        ? workflowLifecycle(planId, lifecycleAction, undefined, requestWorkspace)
+        : workflowLifecycle(planId, lifecycleAction),
+      {
+        onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),
+      },
+    )
+  }
+
+  const handleWorkflowExecute = async (overrides?: WorkflowActionOverrides) => {
+    const nextPlanId = overrides?.planId ?? workflowPlanId
+    const nextStepId = overrides?.stepId ?? workflowStepId
+    syncRequestedOverrides(overrides)
+    if (!nextPlanId.trim()) {
+      setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
+      return
+    }
+    await executeWorkflowStepCore(nextPlanId, nextStepId)
+  }
+
   const handleWorkflowConfirmAndContinue = async (overrides?: WorkflowActionOverrides) => {
     const nextPlanId = overrides?.planId ?? workflowPlanId
     const nextStepId = overrides?.stepId ?? workflowStepId
     const nextConfirmToken = overrides?.confirmToken ?? workflowConfirmToken
-    const requestWorkspace = resolveWorkflowRequestWorkspace()
     syncRequestedOverrides(overrides)
     if (!nextPlanId.trim()) {
       setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
@@ -333,58 +369,49 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
       setWorkflowState('execute', { status: 'error', message: t.evaluationWorkflowConfirmTokenRequired })
       return
     }
-    await executeWorkflowAction(
-      'execute',
-      () => requestWorkspace
-        ? executePlan(
-          nextPlanId,
-          nextStepId || undefined,
-          undefined,
-          undefined,
-          nextConfirmToken.trim(),
-          requestWorkspace,
-        )
-        : executePlan(nextPlanId, nextStepId || undefined, undefined, undefined, nextConfirmToken.trim()),
-      {
-        onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),
-      },
-    )
+    await executeWorkflowStepCore(nextPlanId, nextStepId, nextConfirmToken)
   }
 
-  const handleWorkflowLifecycle = async (overrides?: WorkflowActionOverrides) => {
+  const handleWorkflowRejectAndPause = async (overrides?: WorkflowActionOverrides) => {
     const nextPlanId = overrides?.planId ?? workflowPlanId
-    const nextLifecycleAction = overrides?.lifecycleAction ?? workflowLifecycleAction
-    const requestWorkspace = resolveWorkflowRequestWorkspace()
     syncRequestedOverrides(overrides)
     if (!nextPlanId.trim()) {
       setWorkflowState('lifecycle', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
       return
     }
-    await executeWorkflowAction(
-      'lifecycle',
-      () => requestWorkspace
-        ? workflowLifecycle(nextPlanId, nextLifecycleAction, undefined, requestWorkspace)
-        : workflowLifecycle(nextPlanId, nextLifecycleAction),
-      {
-        onSuccess: (payload) => syncWorkflowWorkspaceFromPayload(payload, workflowLevel),
-      },
-    )
+    await executeWorkflowLifecycleCore(nextPlanId, 'pause')
   }
 
-  const retryWorkflowAction = async (action: WorkflowAction) => {
+  const handleWorkflowLifecycle = async (overrides?: WorkflowActionOverrides) => {
+    const nextPlanId = overrides?.planId ?? workflowPlanId
+    const nextLifecycleAction = overrides?.lifecycleAction ?? workflowLifecycleAction
+    syncRequestedOverrides(overrides)
+    if (!nextPlanId.trim()) {
+      setWorkflowState('lifecycle', { status: 'error', message: t.evaluationWorkflowPlanIdRequired })
+      return
+    }
+    await executeWorkflowLifecycleCore(nextPlanId, nextLifecycleAction)
+  }
+
+  const retryWorkflowAction = async (action: WorkflowAction, overrides?: WorkflowActionOverrides) => {
     if (action === 'route') {
-      await handleWorkflowRoute()
+      await handleWorkflowRoute(overrides)
       return
     }
     if (action === 'plan') {
-      await handleWorkflowPlan()
+      await handleWorkflowPlan(overrides)
       return
     }
     if (action === 'execute') {
-      await handleWorkflowExecute()
+      const nextConfirmToken = overrides?.confirmToken ?? workflowConfirmToken
+      if (workflowWaitingConfirmation && nextConfirmToken.trim().length > 0) {
+        await handleWorkflowConfirmAndContinue(overrides)
+        return
+      }
+      await handleWorkflowExecute(overrides)
       return
     }
-    await handleWorkflowLifecycle()
+    await handleWorkflowLifecycle(overrides)
   }
 
   return {
@@ -410,5 +437,9 @@ export function useEvaluationWorkflow({ content, defaultLevel, workspace, t }: U
     handleWorkflowConfirmAndContinue,
     handleWorkflowLifecycle,
     retryWorkflowAction,
+    handleWorkflowApproveAndContinue: handleWorkflowConfirmAndContinue,
+    handleWorkflowRejectAndPause,
+    handleWorkflowRetryAction: retryWorkflowAction,
+    handleWorkflowLifecycleAction: handleWorkflowLifecycle,
   }
 }

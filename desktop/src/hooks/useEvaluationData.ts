@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { evaluateContent, getImprovementSuggestions, type RecommendationPayload } from '../api/client'
+import { buildFailurePresentation, type FailurePresentation } from '../utils/failurePresentation'
 
 export interface EvaluationViewModel {
   score: number
@@ -21,7 +22,16 @@ interface UseEvaluationDataOptions {
     styleConsistency: number
   }
   t: {
+    evaluationFailed: string
     evaluationSuggestionsRefreshFailed: string
+    failureCategoryGeneration: string
+    failureCategoryEvaluation: string
+    failureCategoryRetrieval: string
+    failureCategoryConnection: string
+    failureMessageGeneration: string
+    failureMessageEvaluation: string
+    failureMessageRetrieval: string
+    failureMessageConnection: string
   }
   translateSuggestions: (rawSuggestions: unknown) => RecommendationPayload[]
   buildViewModel: (payload: {
@@ -41,6 +51,7 @@ export function useEvaluationData({
 }: UseEvaluationDataOptions) {
   const [loading, setLoading] = useState(true)
   const [result, setResult] = useState<EvaluationViewModel | null>(null)
+  const [evaluationError, setEvaluationError] = useState<FailurePresentation | null>(null)
   const [suggestionsRefreshing, setSuggestionsRefreshing] = useState(false)
   const [suggestionsRefreshError, setSuggestionsRefreshError] = useState<string | null>(null)
 
@@ -56,12 +67,25 @@ export function useEvaluationData({
       if (response.success && response.data) {
         const suggestions = translateSuggestions(response.data.suggestions)
         setResult(buildViewModel({ ...response.data, suggestions }))
+        setEvaluationError(null)
       } else {
         setResult(null)
+        setEvaluationError(buildFailurePresentation({
+          t,
+          source: 'evaluation',
+          error: response.error,
+          fallbackMessage: t.evaluationFailed,
+        }))
       }
     } catch (error) {
       console.error('Evaluation failed:', error)
       setResult(null)
+      setEvaluationError(buildFailurePresentation({
+        t,
+        source: 'evaluation',
+        error,
+        fallbackMessage: t.evaluationFailed,
+      }))
     } finally {
       setLoading(false)
     }
@@ -81,10 +105,22 @@ export function useEvaluationData({
         })
         return
       }
-      setSuggestionsRefreshError(response.error || t.evaluationSuggestionsRefreshFailed)
+      const failure = buildFailurePresentation({
+        t,
+        source: 'evaluation',
+        error: response.error,
+        fallbackMessage: t.evaluationSuggestionsRefreshFailed,
+      })
+      setSuggestionsRefreshError(`${failure.label}：${failure.message}`)
     } catch (error) {
       console.error('Refreshing suggestions failed:', error)
-      setSuggestionsRefreshError(t.evaluationSuggestionsRefreshFailed)
+      const failure = buildFailurePresentation({
+        t,
+        source: 'evaluation',
+        error,
+        fallbackMessage: t.evaluationSuggestionsRefreshFailed,
+      })
+      setSuggestionsRefreshError(`${failure.label}：${failure.message}`)
     } finally {
       setSuggestionsRefreshing(false)
     }
@@ -92,10 +128,17 @@ export function useEvaluationData({
 
   useEffect(() => {
     setSuggestionsRefreshError(null)
+    if (!content.trim()) {
+      setLoading(false)
+      setResult(null)
+      setEvaluationError(null)
+      return
+    }
     runEvaluation()
   }, [content])
 
   return {
+    evaluationError,
     loading,
     result,
     suggestionsRefreshing,

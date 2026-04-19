@@ -159,6 +159,63 @@ describe('ChatArea P0 flows', () => {
     mockedAgentGetContext.mockResolvedValue({ success: true, data: { context: 'ok' } as Record<string, unknown> })
   })
 
+  it('reports dynamic context usage from the active model window', async () => {
+    const onContextUsageChange = vi.fn()
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        primaryProvider: 'openai',
+        defaultModel: 'gpt-4o',
+        llmProviders: state.settings.llmProviders.map((provider) =>
+          provider.id === 'openai'
+            ? { ...provider, defaultModel: 'gpt-3.5-turbo' }
+            : provider
+        ),
+      },
+    }))
+    setConversationWithAssistant('a'.repeat(2000))
+
+    render(<ChatArea onContextUsageChange={onContextUsageChange} />)
+
+    await waitFor(() => {
+      expect(onContextUsageChange).toHaveBeenCalled()
+    })
+
+    const latestUsage = onContextUsageChange.mock.calls[onContextUsageChange.mock.calls.length - 1]?.[0] as {
+      usedChars: number
+      usedK: number
+      totalK: number
+      percent: number
+    }
+
+    expect(latestUsage).toMatchObject({
+      usedChars: 2000,
+      usedK: 0.5,
+      totalK: 16.4,
+    })
+    expect(latestUsage.percent).toBeCloseTo(3.1, 1)
+  })
+
+  it('shows writing-first starter actions and primes the composer from the empty state', async () => {
+    render(<ChatArea />)
+
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder) as HTMLTextAreaElement
+
+    expect(screen.getByRole('button', { name: new RegExp(zh.chatStarterContinue) })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: new RegExp(zh.chatStarterRewrite) })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: new RegExp(zh.chatStarterExpand) })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: new RegExp(zh.chatStarterAlignCanon) })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: new RegExp(zh.chatStarterCheckIssues) })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(zh.chatStarterContinue) }))
+
+    expect(input).toHaveFocus()
+    expect(input.value).toMatch(/^请基于.+继续写作/)
+    expect(input.value).toContain('保持当前语气、节奏和情节推进')
+  })
+
   it('streams content and commits on done without fallback chat', async () => {
     mockedChatStream.mockImplementation(async (_request, callbacks) => {
       callbacks.onContent?.('流式结果', 0)
@@ -204,6 +261,7 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
+    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
     await userEvent.click(screen.getByRole('button', { name: zh.chatModeComparison }))
     const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '质量目标回归{enter}')
@@ -282,6 +340,7 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
+    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
     await userEvent.click(screen.getByRole('button', { name: zh.chatModeAgent }))
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: zh.chatModeAgent }),
@@ -325,10 +384,8 @@ describe('ChatArea P0 flows', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          zh.messageBubbleRetrievalStatus
-            .replace('{entities}', '2')
-            .replace('{relations}', '1')
-            .replace('{memories}', '4')
+          zh.messageBubbleSourceSummaryUsed
+            .replace('{summary}', '角色与要素、关联线索、历史记忆')
         )
       ).toBeInTheDocument()
     })
@@ -375,17 +432,15 @@ describe('ChatArea P0 flows', () => {
     await userEvent.type(input, '渲染 canon 来源{enter}')
 
     await waitFor(() => {
-      expect(screen.getByText(zh.messageBubbleCanonContextTitle)).toBeInTheDocument()
+      expect(screen.getByText(zh.messageBubbleSourceSummaryTitle)).toBeInTheDocument()
     })
     expect(
       screen.getByText(
-        zh.messageBubbleCanonContextApplied
-          .replace('{matches}', '1')
-          .replace('{pages}', '3')
+        zh.messageBubbleSourceSummaryUsed
+          .replace('{summary}', '项目设定')
       )
     ).toBeInTheDocument()
     expect(screen.getByText('Atlas Harbor Canon')).toBeInTheDocument()
-    expect(screen.getByText('locations/atlas-harbor')).toBeInTheDocument()
   })
 
   it('promotes streamed assistant replies into canon from message actions', async () => {
@@ -510,6 +565,7 @@ describe('ChatArea P0 flows', () => {
     })
 
     render(<ChatArea />)
+    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
     await userEvent.click(screen.getByRole('button', { name: zh.chatModeAgent }))
     const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, 'agent 写作检索状态{enter}')
@@ -517,10 +573,8 @@ describe('ChatArea P0 flows', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          zh.messageBubbleRetrievalStatus
-            .replace('{entities}', '2')
-            .replace('{relations}', '2')
-            .replace('{memories}', '1')
+          zh.messageBubbleSourceSummaryUsed
+            .replace('{summary}', '角色与要素、关联线索、历史记忆')
         )
       ).toBeInTheDocument()
     })
@@ -543,6 +597,7 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
+    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
     await userEvent.click(screen.getByRole('button', { name: zh.chatModeComparison }))
     const modelSelect = screen.getByLabelText(zh.chatComparisonModelLabel)
     await userEvent.selectOptions(modelSelect, 'gpt-4-turbo')
@@ -691,6 +746,7 @@ describe('ChatArea P0 flows', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: zh.streamRestoreToBeforeSend })).toBeInTheDocument()
+      expect(screen.getByText(`${zh.failureCategoryGeneration}：${zh.failureMessageGeneration}`)).toBeInTheDocument()
     })
   })
 

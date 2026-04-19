@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { BookOpen, ChevronDown, ChevronRight, Lightbulb, MessageSquareText, PenLine, RefreshCw } from 'lucide-react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -20,6 +20,7 @@ import { useMemoryUpload } from '../hooks/useMemoryUpload'
 import { useInlineActions } from '../hooks/useInlineActions'
 import { useScrollPosition } from '../hooks/useScrollPosition'
 import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
+import { buildFailurePresentation } from '../utils/failurePresentation'
 
 interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
@@ -55,6 +56,60 @@ interface RetryPayload {
   selectedSkills: string[]
   enableModelComparison: boolean
   comparisonModel: string
+}
+
+const DEFAULT_CONTEXT_WINDOW_TOKENS = 128_000
+
+const MODEL_CONTEXT_WINDOWS: Array<[prefix: string, contextWindow: number]> = [
+  ['gpt-4o-mini', 128_000],
+  ['gpt-4o', 128_000],
+  ['gpt-4-turbo', 128_000],
+  ['gpt-3.5-turbo', 16_385],
+  ['claude-3.5-sonnet', 200_000],
+  ['claude-3-5-sonnet', 200_000],
+  ['claude-3-opus', 200_000],
+  ['claude-3-sonnet', 200_000],
+  ['claude-3-haiku', 200_000],
+  ['gemini-1.5-pro', 1_000_000],
+  ['gemini-1.5-flash', 1_000_000],
+  ['local', 32_000],
+]
+
+function normalizeModelId(model: string | undefined): string {
+  const normalized = String(model ?? '').trim().toLowerCase()
+  if (!normalized) return ''
+  const modelSegments = normalized.split('/')
+  const providerScopedModel = modelSegments[modelSegments.length - 1]?.trim()
+  return providerScopedModel || normalized
+}
+
+function formatContextBudgetK(totalTokens: number): number {
+  const raw = totalTokens / 1000
+  return Number(raw.toFixed(raw >= 100 ? 0 : 1))
+}
+
+function resolveContextWindowTokens(settings: {
+  defaultModel: string
+  primaryProvider: string
+  llmProviders: Array<{ id: string; defaultModel: string }>
+  backendConfig: { config: null | { agent?: { max_tokens_per_request?: number } } }
+}): number {
+  const primaryProviderModel = settings.llmProviders.find(
+    (provider) => provider.id === settings.primaryProvider,
+  )?.defaultModel
+  const configuredModel = primaryProviderModel || settings.defaultModel
+  const normalizedModel = normalizeModelId(configuredModel)
+
+  for (const [prefix, contextWindow] of MODEL_CONTEXT_WINDOWS) {
+    if (normalizedModel === prefix || normalizedModel.startsWith(`${prefix}-`)) {
+      return contextWindow
+    }
+  }
+
+  const configuredLimit = settings.backendConfig.config?.agent?.max_tokens_per_request
+  return typeof configuredLimit === 'number' && configuredLimit > 0
+    ? configuredLimit
+    : DEFAULT_CONTEXT_WINDOW_TOKENS
 }
 
 export function ChatArea({
@@ -94,6 +149,9 @@ export function ChatArea({
   const writerContextHint = isZh
     ? '聊天、模板和评估会优先沿用这组项目范围。需要路由、对比或回滚时，展开“更多”。'
     : 'Chat, templates, and review flows will stay anchored to this project scope. Open "More" for routing, comparison, or rollback.'
+  const currentWritingTarget = writerWorkspaceSummary.chapterLabel
+    ?? writerWorkspaceSummary.projectLabel
+    ?? (isZh ? '当前文档' : 'the current document')
   const {
     recoverableCheckpointId,
     setRecoverableCheckpointId,
@@ -179,6 +237,78 @@ export function ChatArea({
     { id: 'agentDiagnose' as const, label: t.modePresetAgentDiagnose },
     { id: 'compareReview' as const, label: t.modePresetCompareReview },
   ]), [t])
+  const starterActions = useMemo(() => ([
+    {
+      id: 'continueDraft' as const,
+      label: t.chatStarterContinue,
+      icon: PenLine,
+      description: isZh
+        ? '保持当前语气和情节推进，继续往下写。'
+        : 'Keep the current tone and momentum, then continue writing.',
+      prompt: isZh
+        ? `请基于${currentWritingTarget}继续写作，保持当前语气、节奏和情节推进。`
+        : `Continue writing based on ${currentWritingTarget}, keeping the current tone, pacing, and story momentum.`,
+      mode: 'chat' as const,
+      agentAction: 'write' as const,
+      workflowLevel: 'L3' as const,
+    },
+    {
+      id: 'rewritePassage' as const,
+      label: t.chatStarterRewrite,
+      icon: RefreshCw,
+      description: isZh
+        ? '把正在写的段落改得更流畅、更自然。'
+        : 'Make the current passage read more smoothly and naturally.',
+      prompt: isZh
+        ? `请围绕${currentWritingTarget}中我正在写的段落，给出更流畅、自然的改写版本。`
+        : `Rewrite the passage I am drafting in ${currentWritingTarget} so it reads more smoothly and naturally.`,
+      mode: 'chat' as const,
+      agentAction: 'revise' as const,
+      workflowLevel: 'L3' as const,
+    },
+    {
+      id: 'expandScene' as const,
+      label: t.chatStarterExpand,
+      icon: MessageSquareText,
+      description: isZh
+        ? '补足动作、环境和情绪细节。'
+        : 'Add stronger action, setting, and emotional detail.',
+      prompt: isZh
+        ? `请围绕${currentWritingTarget}扩写这个场景，补足动作、环境和情绪细节。`
+        : `Expand the current scene in ${currentWritingTarget} with stronger action, setting, and emotional detail.`,
+      mode: 'chat' as const,
+      agentAction: 'write' as const,
+      workflowLevel: 'L2' as const,
+    },
+    {
+      id: 'alignCanon' as const,
+      label: t.chatStarterAlignCanon,
+      icon: BookOpen,
+      description: isZh
+        ? '检查当前内容是否和现有设定冲突。'
+        : 'Check whether the current content conflicts with existing canon.',
+      prompt: isZh
+        ? `请检查${currentWritingTarget}与现有故事设定是否一致，如有冲突请指出并给出修正建议。`
+        : `Check whether ${currentWritingTarget} aligns with the established story canon, and point out any conflicts with suggested fixes.`,
+      mode: 'agent' as const,
+      agentAction: 'context' as const,
+      workflowLevel: 'L4' as const,
+    },
+    {
+      id: 'checkIssues' as const,
+      label: t.chatStarterCheckIssues,
+      icon: Lightbulb,
+      description: isZh
+        ? '指出最值得先处理的问题和下一步。'
+        : 'Identify the most important issues and suggest the next step.',
+      prompt: isZh
+        ? `请审视${currentWritingTarget}当前内容，指出最值得先处理的问题，并给出下一步建议。`
+        : `Review the current content in ${currentWritingTarget}, identify the most important issues to address, and suggest the next step.`,
+      mode: 'chat' as const,
+      agentAction: 'write' as const,
+      workflowLevel: 'L2' as const,
+    },
+  ]), [currentWritingTarget, isZh, t])
   const availableComparisonModels = useMemo(() => {
     const allModels = settings.llmProviders.flatMap((provider) => {
       const models = [...(provider.models ?? []), ...(provider.fetchedModels ?? []), ...(provider.customModels ?? [])]
@@ -186,6 +316,10 @@ export function ChatArea({
     })
     return Array.from(new Set(allModels))
   }, [settings.llmProviders])
+  const contextWindowTokens = useMemo(
+    () => resolveContextWindowTokens(settings),
+    [settings],
+  )
 
   useEffect(() => {
     if (availableComparisonModels.length === 0) {
@@ -200,9 +334,13 @@ export function ChatArea({
 
     const messageChars = messages.reduce((total, message) => total + message.content.length, 0)
     const usedChars = messageChars + streamingContent.length
-    const totalK = 128
-    const usedK = Number((usedChars / 1000).toFixed(1))
-    const percent = Number(Math.min((usedChars / (totalK * 1000)) * 100, 999).toFixed(1))
+    const usedTokensApprox = Math.max(0, Math.ceil(usedChars / 4))
+    const totalTokens = Math.max(contextWindowTokens, 1)
+    const totalK = formatContextBudgetK(totalTokens)
+    const usedK = usedTokensApprox === 0
+      ? 0
+      : Number(Math.max(0.1, usedTokensApprox / 1000).toFixed(1))
+    const percent = Number(Math.min((usedTokensApprox / totalTokens) * 100, 999).toFixed(1))
     const nextUsage = { usedChars, usedK, totalK, percent }
     const prevUsage = lastContextUsageRef.current
 
@@ -218,7 +356,7 @@ export function ChatArea({
 
     lastContextUsageRef.current = nextUsage
     onContextUsageChange(nextUsage)
-  }, [messages, streamingContent, onContextUsageChange])
+  }, [contextWindowTokens, messages, streamingContent, onContextUsageChange])
 
   const { buildChatRequest } = useChatRequestBuilder({
     allowLlmFallback,
@@ -291,14 +429,22 @@ export function ChatArea({
     checkpointId,
     detail,
     diagnosticsText,
+    source = 'chat',
   }: {
     checkpointId?: string | null
     detail: string
     diagnosticsText?: string | null
+    source?: 'chat' | 'evaluation' | 'retrieval'
   }) => {
     if (!checkpointId) return
-    const message = diagnosticsText ? `${t.streamRestoreHint}（${diagnosticsText}）` : t.streamRestoreHint
-    setRecoverError(message, detail)
+    const failure = buildFailurePresentation({
+      t,
+      source,
+      error: detail,
+      diagnostics: diagnosticsText,
+      fallbackMessage: t.streamRestoreHint,
+    })
+    setRecoverError(`${failure.label}：${failure.message}`, failure.detail ?? detail)
   }
 
   const finalizeInlineSuccess = (content: string) => {
@@ -351,6 +497,7 @@ export function ChatArea({
       setSendFailureRecoverStatus({
         checkpointId,
         detail: errorMessage,
+        source: 'chat',
       })
       setStreamPhase('error')
       return 'error'
@@ -649,6 +796,7 @@ export function ChatArea({
       setSendFailureRecoverStatus({
         checkpointId,
         detail: t.backendConnectionFailed,
+        source: 'chat',
       })
     } finally {
       resetLoadingState()
@@ -737,6 +885,17 @@ export function ChatArea({
     })
   }
 
+  const handleStarterAction = (action: (typeof starterActions)[number]) => {
+    applyModePreset({
+      nextChatMode: action.mode,
+      nextEnableModelComparison: false,
+      nextAgentAction: action.agentAction,
+      nextWorkflowLevel: action.workflowLevel,
+    })
+    setInput(action.prompt)
+    composerInputRef.current?.focus()
+  }
+
 
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -798,6 +957,9 @@ export function ChatArea({
             <p className="text-sm text-gray-500 dark:text-dark-text-secondary max-w-md text-center leading-relaxed mb-8">
               {t.startWritingDesc}
             </p>
+            <p className="text-xs text-gray-500 dark:text-dark-text-secondary max-w-2xl text-center leading-relaxed mb-5">
+              {t.chatStarterHint}
+            </p>
             {writerWorkspaceSummary.hasMeaningfulScope && (
               <div className="mb-6 flex flex-wrap items-center justify-center gap-2 max-w-2xl">
                 {writerWorkspaceSummary.scopeChips.map((chip) => (
@@ -810,7 +972,32 @@ export function ChatArea({
                 ))}
               </div>
             )}
-            <div className="flex flex-wrap items-center justify-center gap-3 max-w-2xl">
+            <div className="grid w-full max-w-3xl grid-cols-1 gap-3 md:grid-cols-2">
+              {starterActions.map((action) => {
+                const Icon = action.icon
+                return (
+                  <button
+                    key={`starter-${action.id}`}
+                    type="button"
+                    onClick={() => handleStarterAction(action)}
+                    className="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md dark:border-dark-border dark:bg-dark-surface dark:hover:border-primary-500/30"
+                  >
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">
+                      <Icon size={18} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-gray-800 dark:text-dark-text">
+                        {action.label}
+                      </span>
+                      <span className="mt-1 block text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
+                        {action.description}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3 max-w-2xl">
               {modePresets.map((preset) => (
                 <button
                   key={`empty-${preset.id}`}

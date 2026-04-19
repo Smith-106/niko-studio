@@ -47,6 +47,8 @@ python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts
 npm --prefix desktop run local:selftest
 ```
 
+Treat `npm --prefix desktop run local:selftest` as mandatory whenever retained release evidence for the current HEAD is not already `fresh_current` across `release_summary_report`, `authority_alignment`, `writing_helper_acceptance`, and `governance_scripts_regression`.
+
 ### Goal
 
 - Catch obvious regressions quickly.
@@ -104,6 +106,8 @@ npm --prefix desktop run validate:package:dry-run
 python scripts/release_check_summary.py
 ```
 
+If retained release evidence for the current HEAD is not already `fresh_current` across `release_summary_report`, `authority_alignment`, `writing_helper_acceptance`, and `governance_scripts_regression`, run `npm --prefix desktop run local:selftest` before regenerating `python scripts/release_check_summary.py`.
+
 When an actual Windows package is required:
 
 ```bash
@@ -119,7 +123,7 @@ npm --prefix desktop run tauri:build
 
 - Only UI / frontend changes: `L1`, then `desktop check:local` before merge.
 - Gateway / runtime / MCP changes: `L1` + `L2`, then add targeted runtime/integration coverage from `L3`.
-- Launcher / release / governance / documentation changes: governance pytest + authority/delivery checks + launcher self-test.
+- Launcher / release / governance / documentation changes: governance pytest + authority/delivery checks + launcher self-test. Treat `local:selftest` as mandatory whenever retained release evidence for the current HEAD is not already `fresh_current`.
 - External handoff or packaging request: run `L4`.
 
 ## Current Authoritative Entrypoints

@@ -316,4 +316,116 @@ describe('workflow endpoints integration', () => {
       'No commit hash available for this checkpoint',
     );
   });
+
+  it('supports workflow scheduler register/list/pause/resume/run-now with workspace authority guards', async () => {
+    const {
+      workflowSchedulerRegisterEndpoint,
+      workflowSchedulerListEndpoint,
+      workflowSchedulerPauseEndpoint,
+      workflowSchedulerResumeEndpoint,
+      workflowSchedulerRunNowEndpoint,
+    } = await import('../../mcp/endpoints/workflow.js');
+
+    const workspaceA = buildWorkspace('workflow-session-a', 'atlas-workspace', 'atlas-project');
+    const workspaceB = buildWorkspace('workflow-session-b', 'beacon-workspace', 'beacon-project');
+
+    const schedulerTask = {
+      task_id: 'sched-nightly-001',
+      title: 'Nightly Automation',
+      task: '推进项目到完成',
+      level: 'L3',
+      schedule_rule: {
+        cadence: 'cron',
+        cron: '0 2 * * *',
+        timezone: 'Asia/Shanghai',
+        enabled: true,
+      },
+      trigger_rule: {
+        type: 'manual_run_now',
+        run_now: true,
+      },
+      backend_mode_policy: {
+        mode: 'inherit',
+        fallback_mode: 'standard',
+      },
+      progression_policy: {
+        success_statuses: ['completed'],
+        approval_policy: {
+          tiers: [
+            {
+              tier: 'critical',
+              requires_confirmation: true,
+              gate_status_on_hold: 'waiting_confirmation',
+            },
+          ],
+          default_gate_status: 'waiting_confirmation',
+        },
+        failure_policy: {
+          retry: {
+            max_retries: 2,
+            strategy: 'fixed',
+            base_delay_ms: 1000,
+          },
+          on_retry_exhausted: 'manual_takeover',
+          manual_takeover_status: 'gate_blocked',
+        },
+      },
+    };
+
+    const registerResponse = await workflowSchedulerRegisterEndpoint(
+      makeRequest({ task: schedulerTask, workspace: workspaceA }),
+    );
+    expect(registerResponse.statusCode).toBe(200);
+    expect((registerResponse.body as Record<string, unknown>)['status']).toBe('registered');
+
+    const listAResponse = await workflowSchedulerListEndpoint(
+      makeRequest({ workspace: workspaceA }),
+    );
+    expect(listAResponse.statusCode).toBe(200);
+    expect(
+      ((listAResponse.body as Record<string, unknown>)['tasks'] as Array<Record<string, unknown>>)
+        .some((item) => item['task_id'] === 'sched-nightly-001'),
+    ).toBe(true);
+
+    const listBResponse = await workflowSchedulerListEndpoint(
+      makeRequest({ workspace: workspaceB }),
+    );
+    expect(listBResponse.statusCode).toBe(200);
+    expect(
+      ((listBResponse.body as Record<string, unknown>)['tasks'] as Array<Record<string, unknown>>)
+        .some((item) => item['task_id'] === 'sched-nightly-001'),
+    ).toBe(false);
+
+    const blockedPause = await workflowSchedulerPauseEndpoint(
+      makeRequest({ task_id: 'sched-nightly-001', workspace: workspaceB }),
+    );
+    expect((blockedPause.body as Record<string, unknown>)['error']).toContain(
+      "workflow session 'workflow-session-a'",
+    );
+
+    const pauseA = await workflowSchedulerPauseEndpoint(
+      makeRequest({ task_id: 'sched-nightly-001', workspace: workspaceA }),
+    );
+    expect((pauseA.body as Record<string, unknown>)['status']).toBe('paused');
+
+    const resumeA = await workflowSchedulerResumeEndpoint(
+      makeRequest({ task_id: 'sched-nightly-001', workspace: workspaceA }),
+    );
+    expect((resumeA.body as Record<string, unknown>)['status']).toBe('active');
+
+    const blockedRunNow = await workflowSchedulerRunNowEndpoint(
+      makeRequest({ task_id: 'sched-nightly-001', workspace: workspaceB }),
+    );
+    expect((blockedRunNow.body as Record<string, unknown>)['error']).toContain(
+      "workflow session 'workflow-session-a'",
+    );
+
+    const runNowResponse = await workflowSchedulerRunNowEndpoint(
+      makeRequest({ task_id: 'sched-nightly-001', workspace: workspaceA }),
+    );
+    expect(runNowResponse.statusCode).toBe(200);
+    expect((runNowResponse.body as Record<string, unknown>)['trigger']).toBe('manual_run_now');
+    expect((runNowResponse.body as Record<string, unknown>)['plan_id']).toBeTruthy();
+    expect((runNowResponse.body as Record<string, unknown>)['run_id']).toBeTruthy();
+  });
 });

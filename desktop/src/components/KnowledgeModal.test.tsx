@@ -192,15 +192,24 @@ describe('KnowledgeModal accessibility and labels', () => {
   it('renders i18n tab labels and search control', async () => {
     render(<KnowledgeModal isOpen onClose={() => {}} />)
 
-    expect(await screen.findByRole('button', { name: zh.knowledgeTabCharacters })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: zh.knowledgeTaskLookup })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: zh.knowledgeTaskAugment })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: zh.knowledgeTaskReference })).toBeInTheDocument()
+    expect(screen.getByText(zh.knowledgeTaskScopeTitle)).toBeInTheDocument()
+    expect(screen.getByText('Atlas')).toBeInTheDocument()
+    expect(screen.getByText('Chapter 2')).toBeInTheDocument()
+    expect(screen.getByText('draft-2')).toBeInTheDocument()
+    expect(screen.getByText(zh.knowledgeTaskBrowseTitle)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: zh.knowledgeTabLocations })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: zh.knowledgeTabPlots })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: zh.knowledgeTabSkills })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: zh.knowledgeTabSkills })).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: zh.knowledgeSearchPlaceholder })).toBeInTheDocument()
   })
 
   it('renders zh-only labels for temporal, character, foreshadow, and memory forms', async () => {
     render(<KnowledgeModal isOpen onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: zh.knowledgeTaskAugment }))
+    await userEvent.click(screen.getByRole('button', { name: zh.knowledgeTaskAugmentMemory }))
 
     expect(await screen.findByText(zh.knowledgeTemporalTitle)).toBeInTheDocument()
     expect(screen.getByLabelText(zh.knowledgeTemporalEntityPlaceholder)).toBeInTheDocument()
@@ -231,6 +240,8 @@ describe('KnowledgeModal accessibility and labels', () => {
     render(<KnowledgeModal isOpen onClose={() => {}} />)
 
     expect(await screen.findByRole('dialog', { name: en.knowledgeTitle })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: en.knowledgeTaskAugment }))
+    await userEvent.click(screen.getByRole('button', { name: en.knowledgeTaskAugmentMemory }))
 
     expect(screen.getByText(en.knowledgeTemporalTitle)).toBeInTheDocument()
     expect(screen.getByLabelText(en.knowledgeTemporalEntityPlaceholder)).toBeInTheDocument()
@@ -271,6 +282,17 @@ describe('KnowledgeModal accessibility and labels', () => {
     await user.click(screen.getByRole('button', { name: zh.knowledgeTabPlots }))
     await user.click(screen.getByRole('button', { name: 'Bridge Alarm' }))
     expect(screen.getAllByText('Act 1 turning point').length).toBeGreaterThan(0)
+  })
+
+  it('switches to the skills tab without breaking hook order', async () => {
+    const user = userEvent.setup()
+    render(<KnowledgeModal isOpen onClose={() => {}} />)
+
+    await user.click(screen.getByRole('button', { name: zh.knowledgeTaskAugment }))
+    await user.click(screen.getByRole('button', { name: zh.knowledgeTaskAugmentSkills }))
+
+    expect(await screen.findByRole('button', { name: zh.knowledgeTaskMatch })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: zh.knowledgeSkillDetails })).toBeDisabled()
   })
 
   it('promotes a selected knowledge item into canon', async () => {

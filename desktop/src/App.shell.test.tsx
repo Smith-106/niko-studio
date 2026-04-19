@@ -36,12 +36,16 @@ vi.mock('./components/AppMainContent', () => ({
       headerConnectionText: string
       onOpenDiagnostics: () => void
       onToggleChatSidebar: () => void
+      onAiWrite: () => void
+      onOpenWritingHelper: () => void
     }
   }) => (
     <main id="app-main-content" tabIndex={-1}>
       <div>{`header-connection:${props.headerProps.headerConnectionText}`}</div>
       <button onClick={props.headerProps.onOpenDiagnostics}>open diagnostics</button>
       <button onClick={props.headerProps.onToggleChatSidebar}>toggle chat sidebar</button>
+      <button onClick={props.headerProps.onAiWrite}>header ai write</button>
+      <button onClick={props.headerProps.onOpenWritingHelper}>header open writing helper</button>
     </main>
   ),
 }))
@@ -63,12 +67,15 @@ vi.mock('./components/ChatSidebar', () => ({
 vi.mock('./components/AppRightPanels', () => ({
   AppRightPanels: (props: {
     activeRightPanel: string
-    latestAssistantContent: string
+    evaluationSources: Array<{
+      label: string
+      content: string
+    }>
     settingsOpen: boolean
   }) => (
     <aside>
       <div>{`active-panel:${props.activeRightPanel}`}</div>
-      <div>{`latest-assistant:${props.latestAssistantContent}`}</div>
+      <div>{`latest-assistant:${props.evaluationSources[0]?.content ?? ''}`}</div>
       <div>{`settings-open:${String(props.settingsOpen)}`}</div>
     </aside>
   ),
@@ -94,9 +101,13 @@ vi.mock('./hooks/useAppRuntimeHealth', () => ({
   useAppRuntimeHealth: appShellMocks.useAppRuntimeHealthMock,
 }))
 
-vi.mock('./hooks/useAppUiPersistence', () => ({
-  useAppUiPersistence: appShellMocks.useAppUiPersistenceMock,
-}))
+vi.mock('./hooks/useAppUiPersistence', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./hooks/useAppUiPersistence')>()
+  return {
+    ...actual,
+    useAppUiPersistence: appShellMocks.useAppUiPersistenceMock,
+  }
+})
 
 vi.mock('./hooks/useAppCheckpointMenu', () => ({
   useAppCheckpointMenu: appShellMocks.useAppCheckpointMenuMock,
@@ -151,6 +162,7 @@ describe('App shell integration', () => {
         mode: 'polish' as const,
         maxSentences: 3,
         maxItems: 6,
+        guidance: '',
       },
       setWritingHelperDraft: vi.fn(),
       clearWritingHelperDraft: vi.fn(),
@@ -168,6 +180,9 @@ describe('App shell integration', () => {
       closeSettings: vi.fn(),
       openDetailedDiagnostics: vi.fn(),
       openSettingsFromWritingHelper: vi.fn(),
+      openSettingsFromTextOptimizer: vi.fn(),
+      openSettingsFromAutomation: vi.fn(),
+      openAutomationPanel: vi.fn(),
     }
     const checkpointMenu = {
       checkpointMenuOpen: false,
@@ -250,11 +265,31 @@ describe('App shell integration', () => {
     await user.click(screen.getByRole('button', { name: 'open diagnostics' }))
     await user.click(screen.getByRole('button', { name: 'continue writing' }))
     await user.click(screen.getByRole('button', { name: 'toggle chat sidebar' }))
+    await user.click(screen.getByRole('button', { name: 'header ai write' }))
+    await user.click(screen.getByRole('button', { name: 'header open writing helper' }))
 
     expect(panelOrchestration.openDiagnostics).toHaveBeenCalledTimes(1)
     expect(panelOrchestration.setIsTemplatePanelOpen).toHaveBeenCalledWith(false)
     expect(panelOrchestration.closeSettings).toHaveBeenCalledTimes(1)
     expect(panelOrchestration.closeRightPanel).toHaveBeenCalledTimes(1)
     expect(uiPersistence.setChatSidebarCollapsed).toHaveBeenCalledWith(true)
+    expect(uiPersistence.setWritingHelperDraft).toHaveBeenNthCalledWith(1, {
+      content: '',
+      mode: 'polish',
+      maxSentences: 3,
+      maxItems: 6,
+      guidance: '',
+      handoff: null,
+    })
+    expect(uiPersistence.setWritingHelperDraft).toHaveBeenNthCalledWith(2, {
+      content: '',
+      mode: 'polish',
+      maxSentences: 3,
+      maxItems: 6,
+      guidance: '',
+      handoff: null,
+    })
+    expect(panelOrchestration.toggleRightPanel).toHaveBeenNthCalledWith(1, 'writingHelper')
+    expect(panelOrchestration.toggleRightPanel).toHaveBeenNthCalledWith(2, 'writingHelper')
   })
 })

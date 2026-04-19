@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo } from 'react'
-import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Server, Library } from 'lucide-react'
+import React from 'react'
+import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library } from 'lucide-react'
 
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
@@ -9,32 +9,25 @@ import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  onContinueWriting: () => void
   onOpenKnowledge: () => void
   onOpenPrompts: () => void
   onOpenSettings: () => void
   onOpenEvaluation: () => void
-  onOpenMcpStatus: () => void
 }
 
 export const Sidebar = React.memo(function Sidebar({
   collapsed,
   onToggle,
+  onContinueWriting,
   onOpenKnowledge,
   onOpenPrompts,
   onOpenSettings,
   onOpenEvaluation,
-  onOpenMcpStatus,
 }: SidebarProps) {
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
-  const {
-    createConversation,
-    selectConversation,
-    availableSkills,
-    selectedSkills,
-    toggleSkill,
-    refreshAvailableSkills,
-  } = useAppStore()
+  const { createConversation, selectConversation } = useAppStore()
   const { t, language } = useI18n()
   const workspaceSummary = useWriterWorkspaceSummary()
   const isZh = language === 'zh'
@@ -42,64 +35,19 @@ export const Sidebar = React.memo(function Sidebar({
   const writerWorkspaceHint = isZh
     ? '聊天、评估和知识整理会优先围绕这组上下文。'
     : 'Chat, review, and knowledge flows stay anchored to this scope.'
-  const writerReviewLabel = isZh ? '审阅当前草稿' : 'Review draft'
-  const writerStoryBibleLabel = isZh ? '打开故事设定' : 'Open story bible'
+  const writerContinueLabel = t.sidebarContinueWriting
+  const writerStoryBibleLabel = isZh ? '打开故事设定' : 'Open story notes'
   const writerChapterLabel = isZh ? '章节' : 'Chapter'
   const writerStoryBibleMetaLabel = isZh ? '设定稿' : 'Story bible'
   const writerWorkspaceLabel = isZh ? '工作区' : 'Workspace'
 
-  // ── 技能 ID → 中文显示名 / 描述映射 ──────────────────────────
-  const SKILL_DISPLAY_MAP: Record<string, { name: string; desc: string }> = useMemo(() => ({
-    'character-forge':       { name: '角色熔炉',   desc: t.skillDescCharacterForge },
-    'suspense-craft':        { name: '悬念工坊',   desc: t.skillDescSuspenseCraft },
-    'dialogue-system':       { name: '对话系统',   desc: t.skillDescDialogueSystem },
-    'tension-arc':           { name: '张力曲线',   desc: t.skillDescTensionArc },
-    'emotion-arc':           { name: '情感弧光',   desc: t.skillDescEmotionArc },
-    'opening-craft':         { name: '开篇技巧',   desc: t.skillDescOpeningCraft },
-    'ending-craft':          { name: '结尾技巧',   desc: t.skillDescEndingCraft },
-    'conflict-escalation':   { name: '冲突升级',   desc: t.skillDescConflictEscalation },
-  }), [t])
-
-  const getSkillDisplay = (skillId: string) => {
-    const entry = SKILL_DISPLAY_MAP[skillId]
-    if (entry) return entry
-    // 未知技能：kebab-case → 首字母大写可读名
-    const fallbackName = skillId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-    return { name: fallbackName, desc: t.skillDescriptionGeneric }
+  const handleContinueWriting = () => {
+    onContinueWriting()
+    const mainContent = document.getElementById('app-main-content')
+    if (mainContent instanceof HTMLElement) {
+      mainContent.focus()
+    }
   }
-
-  const groupedSkills = useMemo(() => {
-    const groups: Record<'core' | 'story' | 'quality' | 'tools', string[]> = {
-      core: [],
-      story: [],
-      quality: [],
-      tools: [],
-    }
-
-    for (const skill of availableSkills) {
-      const lowered = skill.toLowerCase()
-      if (lowered.includes('style') || lowered.includes('rewrite') || lowered.includes('quality') || lowered.includes('polish')) {
-        groups.quality.push(skill)
-      } else if (lowered.includes('plot') || lowered.includes('character') || lowered.includes('world') || lowered.includes('story')) {
-        groups.story.push(skill)
-      } else if (lowered.includes('context') || lowered.includes('memory') || lowered.includes('tool') || lowered.includes('retrieval')) {
-        groups.tools.push(skill)
-      } else {
-        groups.core.push(skill)
-      }
-    }
-
-    return [
-      { key: 'core', label: t.skillGroupCore, skills: groups.core },
-      { key: 'story', label: t.skillGroupStory, skills: groups.story },
-      { key: 'quality', label: t.skillGroupQuality, skills: groups.quality },
-      { key: 'tools', label: t.skillGroupTools, skills: groups.tools },
-    ]
-  }, [availableSkills, t])
-
-  useEffect(() => {
-    void refreshAvailableSkills()
-  }, [refreshAvailableSkills])
 
   return (
     <aside
@@ -174,11 +122,11 @@ export const Sidebar = React.memo(function Sidebar({
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button
-                onClick={onOpenEvaluation}
+                onClick={handleContinueWriting}
                 type="button"
                 className="rounded-xl bg-primary-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-primary-500"
               >
-                {writerReviewLabel}
+                {writerContinueLabel}
               </button>
               <button
                 onClick={onOpenKnowledge}
@@ -226,49 +174,6 @@ export const Sidebar = React.memo(function Sidebar({
         ))}
       </div>
 
-      {/* Skills Section */}
-      {!collapsed && (
-        <div className="border-t border-dark-border p-3 shrink-0">
-          <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2 flex items-center gap-1.5 mb-1">
-            <Sparkles size={12} className="text-primary-500" />
-            {t.skillPacks}
-          </div>
-          <div className="space-y-3 max-h-[30vh] overflow-y-auto custom-scrollbar pr-1">
-            {groupedSkills.map((group) => (
-              <div key={group.key} className="space-y-1">
-                <div className="shell-text-label px-2 uppercase tracking-wider text-dark-text-muted">{group.label}</div>
-                <div className="space-y-0.5">
-                  {group.skills.length === 0 ? (
-                    <div className="shell-text-compact px-3 py-1.5 text-dark-text-muted italic">{t.skillGroupEmpty}</div>
-                  ) : (
-                    group.skills.map((skill) => {
-                      const display = getSkillDisplay(skill)
-                      return (
-                      <button
-                        key={skill}
-                        onClick={() => toggleSkill(skill)}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex flex-col gap-0.5 ${
-                          selectedSkills.includes(skill)
-                            ? 'bg-primary-600/10 border border-primary-600/20 text-primary-400'
-                            : 'hover:bg-dark-surface text-dark-text-secondary'
-                        }`}
-                        type="button"
-                      >
-                        <div className={`font-medium truncate ${selectedSkills.includes(skill) ? 'text-primary-400' : 'text-dark-text'}`}>{display.name}</div>
-                        <div className={`text-[10px] truncate ${selectedSkills.includes(skill) ? 'text-primary-400/70' : 'text-dark-text-muted'}`}>
-                          {display.desc}
-                        </div>
-                      </button>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Primary Navigation */}
       <div className="border-t border-dark-border p-3 space-y-0.5 shrink-0">
         <button
@@ -306,20 +211,12 @@ export const Sidebar = React.memo(function Sidebar({
       {/* Footer Tools - Console Status Tags */}
       <div className="border-t border-dark-border p-3 flex flex-wrap gap-2 shrink-0 bg-dark-bg">
         <button
-          onClick={onOpenMcpStatus}
-          className="flex items-center gap-2 px-2 py-1 bg-dark-surface border border-dark-border2 rounded hover:bg-dark-surface2 transition-colors text-dark-text-secondary hover:text-dark-text"
-          title={t.sidebarMcpStatus}
-        >
-          <Server size={14} />
-          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">节点</span>}
-        </button>
-        <button
           onClick={onOpenEvaluation}
           className="flex items-center gap-2 px-2 py-1 bg-dark-surface border border-dark-border2 rounded hover:bg-dark-surface2 transition-colors text-dark-text-secondary hover:text-dark-text"
           title={t.sidebarEvaluationPanel}
         >
           <BarChart3 size={14} />
-          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">评估</span>}
+          {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">{t.sidebarEvaluationPanel}</span>}
         </button>
       </div>
     </aside>

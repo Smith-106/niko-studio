@@ -76,44 +76,33 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   onSetWorkflowLevel,
   onApplyPreset,
 }: ChatAreaModeControlsProps) {
-  const [showAdvanced, setShowAdvanced] = useState(chatMode === 'agent' || enableModelComparison || workflowLevel !== 'L1')
+  const [showAdvanced, setShowAdvanced] = useState(chatMode === 'agent' || enableModelComparison)
+
+  const activeAgentActionLabel = agentAction === 'write'
+    ? chatAgentActionWriteLabel
+    : agentAction === 'revise'
+      ? chatAgentActionReviseLabel
+      : chatAgentActionContextLabel
+
+  const activeModeSummary = enableModelComparison
+    ? chatModeComparisonLabel
+    : chatMode === 'agent'
+      ? `${chatModeAgentLabel} · ${activeAgentActionLabel}`
+      : chatModeNormalLabel
 
   useEffect(() => {
-    if (chatMode === 'agent' || enableModelComparison || workflowLevel !== 'L1') {
+    if (chatMode === 'agent' || enableModelComparison) {
       setShowAdvanced(true)
     }
-  }, [chatMode, enableModelComparison, workflowLevel])
+  }, [chatMode, enableModelComparison])
 
   return (
     <div className="mb-4 rounded-2xl border border-gray-200 bg-white/80 p-4 dark:border-dark-border dark:bg-dark-surface/80 backdrop-blur-sm shadow-sm transition-all animate-fade-in">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mr-1">{modeLabel}</span>
-        <button
-          onClick={() => onSetChatMode('chat')}
-          aria-label={chatModeNormalLabel}
-          title={chatModeNormalLabel}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
-            chatMode === 'chat'
-              ? 'bg-primary-600 text-white shadow-md'
-              : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
-          }`}
-          type="button"
-        >
-          {chatModeNormalLabel}
-        </button>
-        <button
-          onClick={() => onSetChatMode('agent')}
-          aria-label={chatModeAgentLabel}
-          title={chatModeAgentLabel}
-          className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
-            chatMode === 'agent'
-              ? 'bg-primary-600 text-white shadow-md'
-              : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
-          }`}
-          type="button"
-        >
-          {chatModeAgentLabel}
-        </button>
+        <span className="inline-flex items-center rounded-full border border-primary-100 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 dark:border-primary-500/20 dark:bg-primary-900/20 dark:text-primary-300">
+          {activeModeSummary}
+        </span>
         <button
           onClick={onOpenTemplateLibrary}
           aria-label={templateLibraryEntryLabel}
@@ -152,6 +141,32 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
       {showAdvanced && (
         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-dark-border/50 space-y-4 animate-fade-in">
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => onSetChatMode('chat')}
+              aria-label={chatModeNormalLabel}
+              title={chatModeNormalLabel}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
+                chatMode === 'chat'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
+              }`}
+              type="button"
+            >
+              {chatModeNormalLabel}
+            </button>
+            <button
+              onClick={() => onSetChatMode('agent')}
+              aria-label={chatModeAgentLabel}
+              title={chatModeAgentLabel}
+              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
+                chatMode === 'agent'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
+              }`}
+              type="button"
+            >
+              {chatModeAgentLabel}
+            </button>
             {chatMode === 'chat' ? (
               <>
                 <button

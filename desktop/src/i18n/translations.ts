@@ -27,6 +27,12 @@ export interface Translations {
   // Chat
   startWriting: string
   startWritingDesc: string
+  chatStarterHint: string
+  chatStarterContinue: string
+  chatStarterRewrite: string
+  chatStarterExpand: string
+  chatStarterAlignCanon: string
+  chatStarterCheckIssues: string
   thinking: string
   workflow: string
   quick: string
@@ -117,6 +123,19 @@ export interface Translations {
   knowledgeTabLocations: string
   knowledgeTabPlots: string
   knowledgeTabSkills: string
+  knowledgeTaskLookup: string
+  knowledgeTaskAugment: string
+  knowledgeTaskReference: string
+  knowledgeTaskLookupHint: string
+  knowledgeTaskAugmentHint: string
+  knowledgeTaskReferenceHint: string
+  knowledgeTaskScopeTitle: string
+  knowledgeTaskScopeEmpty: string
+  knowledgeTaskBrowseTitle: string
+  knowledgeTaskBrowseHint: string
+  knowledgeTaskAugmentMemory: string
+  knowledgeTaskAugmentSkills: string
+  knowledgeTaskSkillsHint: string
   knowledgeSearchPlaceholder: string
   knowledgeTaskMatch: string
   knowledgeSkillDetails: string
@@ -166,6 +185,15 @@ export interface Translations {
   evaluationTitle: string
   evaluationClose: string
   evaluationFailed: string
+  failureCategoryGeneration: string
+  failureCategoryEvaluation: string
+  failureCategoryRetrieval: string
+  failureCategoryConnection: string
+  failureMessageGeneration: string
+  failureMessageEvaluation: string
+  failureMessageRetrieval: string
+  failureMessageConnection: string
+  evaluationNoContent: string
   evaluationOverallScore: string
   evaluationDimensionAnalysis: string
   evaluationSuggestions: string
@@ -248,6 +276,14 @@ export interface Translations {
   messageBubbleDiffHighlightsLabel: string
   messageBubbleAcceptPrimary: string
   messageBubbleAcceptControl: string
+  messageBubbleSourceSummaryTitle: string
+  messageBubbleSourceSummaryUsed: string
+  messageBubbleSourceSummaryFallback: string
+  messageBubbleSourcePrimary: string
+  messageBubbleSourceTypeCanon: string
+  messageBubbleSourceTypeEntity: string
+  messageBubbleSourceTypeRelation: string
+  messageBubbleSourceTypeMemory: string
   messageBubbleRetrievalStatus: string
   messageBubbleCanonContextTitle: string
   messageBubbleCanonContextApplied: string
@@ -544,6 +580,14 @@ export interface Translations {
   optimizerPresetCustom: string
   optimizerPresetCustomDesc: string
   optimizerCustomInstruction: string
+  optimizerSourceLabel: string
+  optimizerSourceSelection: string
+  optimizerSourceSelectionHint: string
+  optimizerSourceManual: string
+  optimizerSourceManualHint: string
+  optimizerSourceEmpty: string
+  optimizerSourceEmptyHint: string
+  optimizerRefreshFromSelection: string
   optimizerInputText: string
   optimizerInputPlaceholder: string
   optimizerRun: string
@@ -653,7 +697,12 @@ export interface Translations {
 
   // Settings Modal Diagnostics & Retrieval
   settingsDiagnostics: string
+  settingsCheckConnection: string
   settingsRefreshDiagnostics: string
+  settingsAdvancedSupport: string
+  settingsAdvancedSupportHint: string
+  settingsDetailedDiagnosticsHint: string
+  settingsOpenDetailedDiagnostics: string
   settingsGatewayMetrics: string
   settingsToolList: string
   settingsNoMetricsData: string
@@ -677,6 +726,13 @@ export interface Translations {
   settingsInvalidConfigFile: string
   settingsImportFailedPrefix: string
   settingsUnknownError: string
+  settingsSaveSuccess: string
+  settingsSavePartialFailure: string
+  settingsSaveFailed: string
+  settingsSaveStagePersisted: string
+  settingsSaveStageRuntime: string
+  settingsSaveStageValidation: string
+  settingsSaveValidationFailed: string
   settingsModelNameRequired: string
   settingsModelNameTooLong: string
   settingsModelNameWhitespace: string
@@ -720,6 +776,7 @@ export interface Translations {
   streamErrorCategory: string
   scrollToBottom: string
   sidebarNewDocument: string
+  sidebarContinueWriting: string
   sidebarDocuments: string
   mcpMetricTotal: string
   mcpMetricFailed: string
@@ -756,6 +813,9 @@ export interface Translations {
   editorCmdHorizontalRule: string
   editorCmdHorizontalRuleDesc: string
   // Bubble toolbar
+  editorBubbleBold: string
+  editorBubbleItalic: string
+  editorBubbleStrikethrough: string
   editorBubbleRewrite: string
   editorBubblePolish: string
   editorBubbleSimplify: string
@@ -772,8 +832,8 @@ export const translations: Record<Language, Translations> = {
   zh: {
     // App
     appTitle: '小说创作助手',
-    serviceRunning: '服务运行中',
-    serviceOffline: '服务未启动',
+    serviceRunning: '可以继续写作',
+    serviceOffline: '当前不可用',
     contextUsage: '上下文',
     checkpoint: '还原点',
     restore: '恢复',
@@ -789,13 +849,19 @@ export const translations: Record<Language, Translations> = {
     newChat: '新对话',
     chatList: '对话列表',
     skillPacks: '技能包',
-    knowledgeBase: '知识库',
+    knowledgeBase: '故事设定',
     settings: '设置',
     skipToMainContent: '跳到主内容',
 
     // Chat
     startWriting: '开始创作你的故事',
-    startWritingDesc: '告诉我你想写什么样的故事，我会帮你规划结构、设计角色、打磨文字。',
+    startWritingDesc: '先选一个围绕当前文档的写作动作，再决定是否继续深入讨论。',
+    chatStarterHint: '这些动作会优先围绕你当前的文档、章节和设定上下文。',
+    chatStarterContinue: '继续当前文稿',
+    chatStarterRewrite: '改写当前段落',
+    chatStarterExpand: '扩写这个场景',
+    chatStarterAlignCanon: '对齐现有设定',
+    chatStarterCheckIssues: '检查当前问题',
     thinking: 'Niko 正在思考...',
     workflow: '工作流',
     quick: '快速',
@@ -880,12 +946,25 @@ export const translations: Record<Language, Translations> = {
     quickRollbackMissingRequired: '请填写计划 ID 与检查点 ID。',
 
     // Knowledge Modal
-    knowledgeTitle: '知识库',
-    knowledgeClose: '关闭知识库',
+    knowledgeTitle: '故事设定',
+    knowledgeClose: '关闭故事设定',
     knowledgeTabCharacters: '角色',
     knowledgeTabLocations: '地点',
     knowledgeTabPlots: '剧情',
     knowledgeTabSkills: '技能',
+    knowledgeTaskLookup: '查设定',
+    knowledgeTaskAugment: '补资料',
+    knowledgeTaskReference: '引用资料',
+    knowledgeTaskLookupHint: '先查角色、地点和剧情设定，再决定下一步写法。',
+    knowledgeTaskAugmentHint: '把新事实、伏笔和补充记忆写回当前项目，技能能力也收在这里。',
+    knowledgeTaskReferenceHint: '先锁定这段写作要参考的对象，后续 AI 会优先围绕它继续工作。',
+    knowledgeTaskScopeTitle: '当前写作范围',
+    knowledgeTaskScopeEmpty: '当前还没有绑定明确项目，先浏览通用资料。',
+    knowledgeTaskBrowseTitle: '设定分类',
+    knowledgeTaskBrowseHint: '先从角色、地点和剧情里找到你要查看或引用的内容。',
+    knowledgeTaskAugmentMemory: '记忆与线索',
+    knowledgeTaskAugmentSkills: '技能辅助',
+    knowledgeTaskSkillsHint: '技能库作为补资料时的辅助入口保留在这里，不再占用一级导航。',
     knowledgeSearchPlaceholder: '搜索...',
     knowledgeTaskMatch: '任务匹配',
     knowledgeSkillDetails: '技能详情',
@@ -932,9 +1011,18 @@ export const translations: Record<Language, Translations> = {
     knowledgeRequestFailed: '请求失败，请稍后重试。',
 
     // Evaluation Panel
-    evaluationTitle: '质量评估',
+    evaluationTitle: '回复评估',
     evaluationClose: '关闭评估面板',
     evaluationFailed: '评估失败',
+    failureCategoryGeneration: '生成失败',
+    failureCategoryEvaluation: '评估失败',
+    failureCategoryRetrieval: '资料拉取失败',
+    failureCategoryConnection: '连接失败',
+    failureMessageGeneration: '这次回复没有生成完成，你可以重试或先继续写。',
+    failureMessageEvaluation: '当前评估步骤暂时不可用，你可以先继续写，再稍后重试。',
+    failureMessageRetrieval: '这次没有成功取到参考资料，你可以稍后重试或先按当前内容继续写。',
+    failureMessageConnection: '当前与本地服务连接异常，请检查服务状态后再重试。',
+    evaluationNoContent: '还没有可评估的助手回复',
     evaluationOverallScore: '综合评分',
     evaluationDimensionAnalysis: '维度分析',
     evaluationSuggestions: '改进建议',
@@ -1017,10 +1105,18 @@ export const translations: Record<Language, Translations> = {
     messageBubbleDiffHighlightsLabel: '差异亮点',
     messageBubbleAcceptPrimary: '采纳主模型',
     messageBubbleAcceptControl: '采纳对照模型',
+    messageBubbleSourceSummaryTitle: '本次参考',
+    messageBubbleSourceSummaryUsed: '这次回复参考了 {summary}。',
+    messageBubbleSourceSummaryFallback: '这次回复主要基于当前对话内容，没有额外展开资料。',
+    messageBubbleSourcePrimary: '主要参考',
+    messageBubbleSourceTypeCanon: '项目设定',
+    messageBubbleSourceTypeEntity: '角色与要素',
+    messageBubbleSourceTypeRelation: '关联线索',
+    messageBubbleSourceTypeMemory: '历史记忆',
     messageBubbleRetrievalStatus: '检索状态： 实体 {entities} / 关系 {relations} / 记忆 {memories}',
     messageBubbleCanonContextTitle: 'Canon 来源',
     messageBubbleCanonContextApplied: '本次回复引用了 {matches} 条 canon 命中，来源于 {pages} 个已索引页面。',
-    messageBubbleCanonContextUnavailable: '当前无法读取 canon 上下文：{reason}',
+    messageBubbleCanonContextUnavailable: '当前没能展开项目资料：{reason}',
     messageBubblePromoteCanon: '提升回复到 Canon',
     messageBubblePromotingCanon: '正在提升到 Canon…',
     messageBubblePromoteCanonSuccess: '已将回复提升到 Canon。',
@@ -1075,8 +1171,8 @@ export const translations: Record<Language, Translations> = {
     aiToolDescribe: '描写',
     aiToolBrainstorm: '头脑风暴',
     sidebarWritingHelper: '写作助手',
-    sidebarMcpStatus: 'MCP 状态',
-    sidebarEvaluationPanel: '评估面板',
+    sidebarMcpStatus: '服务诊断',
+    sidebarEvaluationPanel: '回复评估',
     skillGroupCore: '核心',
     skillGroupStory: '故事',
     skillGroupQuality: '质量',
@@ -1093,8 +1189,8 @@ export const translations: Record<Language, Translations> = {
     skillDescConflictEscalation: '冲突升级',
 
     // App status
-    serviceDegraded: '服务降级',
-    serviceReconnecting: '连接恢复中',
+    serviceDegraded: '部分功能需要重试',
+    serviceReconnecting: '正在恢复连接',
     contextUsageLowHint: '上下文余量充足',
     contextUsageMediumHint: '上下文接近上限，建议精简输入',
     contextUsageHighHint: '上下文已接近满载，建议新建对话',
@@ -1117,9 +1213,9 @@ export const translations: Record<Language, Translations> = {
 
     // Settings
     settingsTitle: '设置',
-    backendService: '后端服务',
-    backendUrl: 'Niko-Studio 后端地址',
-    backendConfigTitle: '后端配置',
+    backendService: '连接与本地服务',
+    backendUrl: '本地服务地址',
+    backendConfigTitle: '本地服务设置',
     backendConfigDescription: '查看并编辑后端运行时配置。只读字段需要修改配置文件或重启服务。',
     backendConfigLoading: '加载配置中...',
     backendConfigSyncing: '同步中...',
@@ -1313,6 +1409,14 @@ export const translations: Record<Language, Translations> = {
     optimizerPresetCustom: '自定义指令',
     optimizerPresetCustomDesc: '使用自定义洗稿指令，满足个性化需求',
     optimizerCustomInstruction: '自定义指令',
+    optimizerSourceLabel: '文本来源',
+    optimizerSourceSelection: '编辑器选中文本',
+    optimizerSourceSelectionHint: '已从当前编辑器选区载入，共 {count} 个字符',
+    optimizerSourceManual: '手动输入',
+    optimizerSourceManualHint: '当前内容已在这里手动输入或改写。',
+    optimizerSourceEmpty: '暂无文本',
+    optimizerSourceEmptyHint: '先在编辑器里选中文本，或直接把内容粘贴到这里再进行优化。',
+    optimizerRefreshFromSelection: '从选区刷新',
     optimizerInputText: '待优化文本',
     optimizerInputPlaceholder: '粘贴需要优化的AI生成文本...',
     optimizerRun: '开始优化',
@@ -1360,22 +1464,22 @@ export const translations: Record<Language, Translations> = {
     importFailed: '导入失败',
 
     // MCP Status Panel
-    mcpPanelAriaLabel: 'MCP 状态面板',
-    mcpPanelTitle: 'MCP 状态',
+    mcpPanelAriaLabel: '服务诊断面板',
+    mcpPanelTitle: '连接详情',
     mcpRefresh: '刷新',
     mcpRefreshing: '刷新中...',
-    mcpCloseAria: '关闭 MCP 状态面板',
+    mcpCloseAria: '关闭服务诊断面板',
     mcpFetchPartialError: '部分状态拉取失败，以下信息可能不完整。',
     mcpFetchFailed: '状态拉取失败，请稍后重试。',
     mcpProbeFailed: '探测失败',
     mcpUpdateFailed: '更新失败',
     mcpServiceIdRequired: '请先填写服务 ID',
     mcpCreateFailed: '创建失败',
-    mcpGatewayStatus: '网关状态',
-    mcpGatewayHealth: '网关健康度',
+    mcpGatewayStatus: '连接状态',
+    mcpGatewayHealth: '连接情况',
     mcpSessionId: '会话 ID',
     mcpNotAvailable: '暂无',
-    mcpReconnect: '重新连接',
+    mcpReconnect: '恢复状态',
     mcpLastErrorPrefix: '最近错误：',
     mcpKeyServiceStatus: '关键服务状态',
     mcpServiceOnline: '在线',
@@ -1421,8 +1525,13 @@ export const translations: Record<Language, Translations> = {
     mcpReconnectFailed: '失败',
 
     // Settings Modal Diagnostics & Retrieval
-    settingsDiagnostics: '系统诊断',
-    settingsRefreshDiagnostics: '刷新诊断',
+    settingsDiagnostics: '连接帮助',
+    settingsCheckConnection: '查看连接',
+    settingsRefreshDiagnostics: '重新检查',
+    settingsAdvancedSupport: '高级支持',
+    settingsAdvancedSupportHint: '只在需要排查连接问题或修改本地服务配置时再展开。',
+    settingsDetailedDiagnosticsHint: '需要查看连接状态、运行指标和更详细的信息时，再进入完整详情面板。',
+    settingsOpenDetailedDiagnostics: '打开详细诊断',
     settingsGatewayMetrics: '网关指标',
     settingsToolList: '工具清单',
     settingsNoMetricsData: '暂无指标数据',
@@ -1430,10 +1539,10 @@ export const translations: Record<Language, Translations> = {
     settingsAllowFallback: '允许降级',
     settingsDetectionGuard: '检测规避拦截',
     settingsRetrieval: '检索设置',
-    settingsRetrievalProviderModel: '检索 Provider / 模型',
-    settingsRetrievalSearchPlaceholder: '输入 provider 名称或模型关键字',
-    settingsEnableKnowledgeRetrieval: '启用 Knowledge Retrieval',
-    settingsEnableRerank: '启用 Rerank',
+    settingsRetrievalProviderModel: '检索模型',
+    settingsRetrievalSearchPlaceholder: '搜索模型名称或关键词',
+    settingsEnableKnowledgeRetrieval: '为写作补充参考资料',
+    settingsEnableRerank: '优先更贴近当前内容',
     settingsModelSource: '模型来源',
     settingsValidatingModel: '校验中...',
     settingsValidateDefaultModel: '校验默认模型',
@@ -1446,6 +1555,13 @@ export const translations: Record<Language, Translations> = {
     settingsInvalidConfigFile: '无效的配置文件格式',
     settingsImportFailedPrefix: '导入失败: ',
     settingsUnknownError: '未知错误',
+    settingsSaveSuccess: '设置已保存。',
+    settingsSavePartialFailure: '设置已保存，但这些阶段仍需处理：{stages}',
+    settingsSaveFailed: '设置未完整保存，请先处理这些阶段：{stages}',
+    settingsSaveStagePersisted: '设置持久化',
+    settingsSaveStageRuntime: '运行时同步',
+    settingsSaveStageValidation: '后端校验',
+    settingsSaveValidationFailed: '后端校验未通过。',
     settingsModelNameRequired: '模型名称不能为空。',
     settingsModelNameTooLong: '模型名称过长（最多 120 个字符）。',
     settingsModelNameWhitespace: '模型名称不能包含空白字符。',
@@ -1463,19 +1579,19 @@ export const translations: Record<Language, Translations> = {
     settingsDiagnosticsFetchFailed: '诊断拉取失败，请稍后重试。',
     settingsApiKeyPlaceholder: 'sk-...',
     settingsSearchMode: '检索模式',
-    settingsSearchModeHybrid: 'Hybrid',
-    settingsSearchModeIterative: 'Iterative',
-    settingsSearchModeContext: 'Context',
+    settingsSearchModeHybrid: '混合检索',
+    settingsSearchModeIterative: '迭代检索',
+    settingsSearchModeContext: '上下文检索',
     settingsRetrievalProfile: '检索配置',
     settingsRetrievalProfilePlaceholder: 'balanced',
     settingsRetrievalMinScore: '最小分数',
-    settingsRetrievalBudgetTokens: '预算 Tokens',
+    settingsRetrievalBudgetTokens: '检索预算',
     settingsRetrievalMaxIterations: '最大迭代次数',
     settingsRetrievalConfidenceThreshold: '置信阈值',
-    settingsAgentContextTypes: 'Agent 上下文类型',
-    settingsContextTypeWorld: 'World',
-    settingsContextTypeCharacter: 'Character',
-    settingsContextTypePlot: 'Plot',
+    settingsAgentContextTypes: '参考资料范围',
+    settingsContextTypeWorld: '世界观',
+    settingsContextTypeCharacter: '角色',
+    settingsContextTypePlot: '剧情',
     quickPanelSearchPlaceholder: '搜索命令...',
     quickPanelNoMatch: '无匹配命令',
     quickPanelSelect: '↑↓ 选择',
@@ -1489,6 +1605,7 @@ export const translations: Record<Language, Translations> = {
     streamErrorCategory: '错误类别',
     scrollToBottom: '滚动到底部',
     sidebarNewDocument: '新建文档',
+    sidebarContinueWriting: '继续写作',
     sidebarDocuments: '文档列表',
     mcpMetricTotal: '总请求',
     mcpMetricFailed: '失败',
@@ -1523,6 +1640,9 @@ export const translations: Record<Language, Translations> = {
     editorCmdCodeBlockDesc: '插入代码块',
     editorCmdHorizontalRule: '分割线',
     editorCmdHorizontalRuleDesc: '插入水平分割线',
+    editorBubbleBold: '加粗',
+    editorBubbleItalic: '斜体',
+    editorBubbleStrikethrough: '删除线',
     editorBubbleRewrite: 'AI 改写',
     editorBubblePolish: '润色',
     editorBubbleSimplify: '简化',
@@ -1536,8 +1656,8 @@ export const translations: Record<Language, Translations> = {
   en: {
     // App
     appTitle: 'Novel Writing Assistant',
-    serviceRunning: 'Service Running',
-    serviceOffline: 'Service Offline',
+    serviceRunning: 'Ready to write',
+    serviceOffline: 'Unavailable',
     contextUsage: 'Context',
     checkpoint: 'Checkpoint',
     restore: 'Restore',
@@ -1553,13 +1673,19 @@ export const translations: Record<Language, Translations> = {
     newChat: 'New Chat',
     chatList: 'Conversations',
     skillPacks: 'Skills',
-    knowledgeBase: 'Knowledge Base',
+    knowledgeBase: 'Story Notes',
     settings: 'Settings',
     skipToMainContent: 'Skip to main content',
 
     // Chat
     startWriting: 'Start Writing Your Story',
-    startWritingDesc: 'Tell me what kind of story you want to write, and I\'ll help you plan the structure, design characters, and polish the text.',
+    startWritingDesc: 'Pick a writing action for the current document first, then continue the conversation if needed.',
+    chatStarterHint: 'These actions stay anchored to your current document, chapter, and story context.',
+    chatStarterContinue: 'Continue this draft',
+    chatStarterRewrite: 'Rewrite this passage',
+    chatStarterExpand: 'Expand this scene',
+    chatStarterAlignCanon: 'Align with story canon',
+    chatStarterCheckIssues: 'Check current issues',
     thinking: 'Niko is thinking...',
     workflow: 'Workflow',
     quick: 'Quick',
@@ -1644,12 +1770,25 @@ export const translations: Record<Language, Translations> = {
     quickRollbackMissingRequired: 'Please provide plan_id and checkpoint_id.',
 
     // Knowledge Modal
-    knowledgeTitle: 'Knowledge Base',
-    knowledgeClose: 'Close knowledge base',
+    knowledgeTitle: 'Story Notes',
+    knowledgeClose: 'Close story notes',
     knowledgeTabCharacters: 'Characters',
     knowledgeTabLocations: 'Locations',
     knowledgeTabPlots: 'Plots',
     knowledgeTabSkills: 'Skills',
+    knowledgeTaskLookup: 'Look Up',
+    knowledgeTaskAugment: 'Add Material',
+    knowledgeTaskReference: 'Use References',
+    knowledgeTaskLookupHint: 'Check characters, locations, and plot references before deciding the next writing move.',
+    knowledgeTaskAugmentHint: 'Add facts, foreshadows, and memory for the current project. Skill tools now live here as a secondary path.',
+    knowledgeTaskReferenceHint: 'Lock in the references for this passage first so later AI actions stay anchored to the right material.',
+    knowledgeTaskScopeTitle: 'Current writing scope',
+    knowledgeTaskScopeEmpty: 'No project scope is bound yet, so the browser is showing general material.',
+    knowledgeTaskBrowseTitle: 'Story categories',
+    knowledgeTaskBrowseHint: 'Start with characters, locations, or plot threads to find what you want to inspect or cite.',
+    knowledgeTaskAugmentMemory: 'Memory and clues',
+    knowledgeTaskAugmentSkills: 'Skill support',
+    knowledgeTaskSkillsHint: 'The skill library stays available here as a secondary helper instead of competing in the top navigation.',
     knowledgeSearchPlaceholder: 'Search...',
     knowledgeTaskMatch: 'Task Match',
     knowledgeSkillDetails: 'Skill Details',
@@ -1696,9 +1835,18 @@ export const translations: Record<Language, Translations> = {
     knowledgeRequestFailed: 'Request failed. Please try again.',
 
     // Evaluation Panel
-    evaluationTitle: 'Quality Evaluation',
+    evaluationTitle: 'Reply Review',
     evaluationClose: 'Close evaluation panel',
     evaluationFailed: 'Evaluation failed',
+    failureCategoryGeneration: 'Generation failed',
+    failureCategoryEvaluation: 'Evaluation failed',
+    failureCategoryRetrieval: 'Reference lookup failed',
+    failureCategoryConnection: 'Connection failed',
+    failureMessageGeneration: 'This reply did not finish generating. You can retry or keep writing.',
+    failureMessageEvaluation: 'The evaluation step is temporarily unavailable. You can keep writing and retry later.',
+    failureMessageRetrieval: 'The assistant could not fetch supporting references this time. Retry later or continue with the current draft.',
+    failureMessageConnection: 'The app could not reach the local service. Check the service status and try again.',
+    evaluationNoContent: 'No assistant reply to review yet',
     evaluationOverallScore: 'Overall Score',
     evaluationDimensionAnalysis: 'Dimension Analysis',
     evaluationSuggestions: 'Suggestions',
@@ -1781,10 +1929,18 @@ export const translations: Record<Language, Translations> = {
     messageBubbleDiffHighlightsLabel: 'Diff highlights',
     messageBubbleAcceptPrimary: 'Accept primary',
     messageBubbleAcceptControl: 'Accept control',
+    messageBubbleSourceSummaryTitle: 'References used',
+    messageBubbleSourceSummaryUsed: 'This reply drew on {summary}.',
+    messageBubbleSourceSummaryFallback: 'This reply stayed within the current conversation and did not expand into extra references.',
+    messageBubbleSourcePrimary: 'Primary reference',
+    messageBubbleSourceTypeCanon: 'project canon',
+    messageBubbleSourceTypeEntity: 'characters and key elements',
+    messageBubbleSourceTypeRelation: 'story links',
+    messageBubbleSourceTypeMemory: 'project memory',
     messageBubbleRetrievalStatus: 'Retrieval: Entities {entities} / Relations {relations} / Memories {memories}',
     messageBubbleCanonContextTitle: 'Canon Context',
     messageBubbleCanonContextApplied: 'This reply used {matches} canon matches from {pages} indexed pages.',
-    messageBubbleCanonContextUnavailable: 'Canon context is unavailable: {reason}',
+    messageBubbleCanonContextUnavailable: 'The app could not expand into project references this time: {reason}',
     messageBubblePromoteCanon: 'Promote Reply to Canon',
     messageBubblePromotingCanon: 'Promoting to canon…',
     messageBubblePromoteCanonSuccess: 'Reply promoted to canon.',
@@ -1839,8 +1995,8 @@ export const translations: Record<Language, Translations> = {
     aiToolDescribe: 'Describe',
     aiToolBrainstorm: 'Brainstorm',
     sidebarWritingHelper: 'Writing Helper',
-    sidebarMcpStatus: 'MCP Status',
-    sidebarEvaluationPanel: 'Evaluation Panel',
+    sidebarMcpStatus: 'Service Diagnostics',
+    sidebarEvaluationPanel: 'Reply Review',
     skillGroupCore: 'Core',
     skillGroupStory: 'Story',
     skillGroupQuality: 'Quality',
@@ -1857,8 +2013,8 @@ export const translations: Record<Language, Translations> = {
     skillDescConflictEscalation: 'Conflict Escalation',
 
     // App status
-    serviceDegraded: 'Service Degraded',
-    serviceReconnecting: 'Reconnecting',
+    serviceDegraded: 'Some actions may need retry',
+    serviceReconnecting: 'Restoring connection',
     contextUsageLowHint: 'Context budget is healthy',
     contextUsageMediumHint: 'Context usage is rising. Consider shorter prompts',
     contextUsageHighHint: 'Context is near limit. Consider starting a new chat',
@@ -1881,9 +2037,9 @@ export const translations: Record<Language, Translations> = {
 
     // Settings
     settingsTitle: 'Settings',
-    backendService: 'Backend Service',
-    backendUrl: 'Niko-Studio Backend URL',
-    backendConfigTitle: 'Backend Configuration',
+    backendService: 'Connection & local service',
+    backendUrl: 'Local service address',
+    backendConfigTitle: 'Local service settings',
     backendConfigDescription: 'View and edit runtime backend configuration. Read-only fields still require file changes or a service restart.',
     backendConfigLoading: 'Loading configuration...',
     backendConfigSyncing: 'Syncing...',
@@ -2077,6 +2233,14 @@ export const translations: Record<Language, Translations> = {
     optimizerPresetCustom: 'Custom',
     optimizerPresetCustomDesc: 'Use custom rewriting instructions for personalized results',
     optimizerCustomInstruction: 'Custom Instruction',
+    optimizerSourceLabel: 'Text source',
+    optimizerSourceSelection: 'Editor selection',
+    optimizerSourceSelectionHint: 'Loaded from the current editor selection, {count} characters',
+    optimizerSourceManual: 'Manual input',
+    optimizerSourceManualHint: 'The current text was entered or revised here.',
+    optimizerSourceEmpty: 'No text yet',
+    optimizerSourceEmptyHint: 'Select text in the editor or paste text here before running the optimizer.',
+    optimizerRefreshFromSelection: 'Refresh from selection',
     optimizerInputText: 'Text to Optimize',
     optimizerInputPlaceholder: 'Paste AI-generated text to optimize...',
     optimizerRun: 'Optimize',
@@ -2124,22 +2288,22 @@ export const translations: Record<Language, Translations> = {
     importFailed: 'Import failed',
 
     // MCP Status Panel
-    mcpPanelAriaLabel: 'MCP status panel',
-    mcpPanelTitle: 'MCP status',
+    mcpPanelAriaLabel: 'Service diagnostics panel',
+    mcpPanelTitle: 'Connection details',
     mcpRefresh: 'Refresh',
     mcpRefreshing: 'Refreshing...',
-    mcpCloseAria: 'Close MCP status panel',
+    mcpCloseAria: 'Close service diagnostics panel',
     mcpFetchPartialError: 'Some status data failed to load. Information below may be incomplete.',
     mcpFetchFailed: 'Failed to load status. Please try again later.',
     mcpProbeFailed: 'Probe failed',
     mcpUpdateFailed: 'Update failed',
     mcpServiceIdRequired: 'Please provide a service ID first',
     mcpCreateFailed: 'Create failed',
-    mcpGatewayStatus: 'Gateway status',
-    mcpGatewayHealth: 'Gateway Health',
+    mcpGatewayStatus: 'Connection status',
+    mcpGatewayHealth: 'Connection',
     mcpSessionId: 'Session ID',
     mcpNotAvailable: 'N/A',
-    mcpReconnect: 'Reconnect',
+    mcpReconnect: 'Recovery',
     mcpLastErrorPrefix: 'Last error: ',
     mcpKeyServiceStatus: 'Key service status',
     mcpServiceOnline: 'Online',
@@ -2185,8 +2349,13 @@ export const translations: Record<Language, Translations> = {
     mcpReconnectFailed: 'Failed',
 
     // Settings Modal Diagnostics & Retrieval
-    settingsDiagnostics: 'System diagnostics',
-    settingsRefreshDiagnostics: 'Refresh diagnostics',
+    settingsDiagnostics: 'Connection help',
+    settingsCheckConnection: 'Check connection',
+    settingsRefreshDiagnostics: 'Check again',
+    settingsAdvancedSupport: 'Advanced support',
+    settingsAdvancedSupportHint: 'Expand this only when you need connection troubleshooting or local service configuration.',
+    settingsDetailedDiagnosticsHint: 'Open the full details panel only when you need connection status, runtime metrics, or deeper support details.',
+    settingsOpenDetailedDiagnostics: 'Open detailed diagnostics',
     settingsGatewayMetrics: 'Gateway metrics',
     settingsToolList: 'Tool list',
     settingsNoMetricsData: 'No metrics data',
@@ -2194,10 +2363,10 @@ export const translations: Record<Language, Translations> = {
     settingsAllowFallback: 'Allow fallback',
     settingsDetectionGuard: 'Detection-evasion guard',
     settingsRetrieval: 'Retrieval settings',
-    settingsRetrievalProviderModel: 'Retrieval provider / model',
-    settingsRetrievalSearchPlaceholder: 'Enter provider name or model keyword',
-    settingsEnableKnowledgeRetrieval: 'Enable Knowledge Retrieval',
-    settingsEnableRerank: 'Enable Rerank',
+    settingsRetrievalProviderModel: 'Retrieval model',
+    settingsRetrievalSearchPlaceholder: 'Search model name or keyword',
+    settingsEnableKnowledgeRetrieval: 'Use supporting references',
+    settingsEnableRerank: 'Prioritize closer matches',
     settingsModelSource: 'Model source',
     settingsValidatingModel: 'Validating...',
     settingsValidateDefaultModel: 'Validate default model',
@@ -2210,6 +2379,13 @@ export const translations: Record<Language, Translations> = {
     settingsInvalidConfigFile: 'Invalid config file format',
     settingsImportFailedPrefix: 'Import failed: ',
     settingsUnknownError: 'Unknown error',
+    settingsSaveSuccess: 'Settings saved.',
+    settingsSavePartialFailure: 'Settings were saved, but these stages still need attention: {stages}',
+    settingsSaveFailed: 'Settings did not save cleanly. Resolve these stages first: {stages}',
+    settingsSaveStagePersisted: 'settings persistence',
+    settingsSaveStageRuntime: 'runtime sync',
+    settingsSaveStageValidation: 'backend validation',
+    settingsSaveValidationFailed: 'Backend validation did not pass.',
     settingsModelNameRequired: 'Model name cannot be empty.',
     settingsModelNameTooLong: 'Model name is too long (max 120 characters).',
     settingsModelNameWhitespace: 'Model name cannot contain whitespace.',
@@ -2233,10 +2409,10 @@ export const translations: Record<Language, Translations> = {
     settingsRetrievalProfile: 'Profile',
     settingsRetrievalProfilePlaceholder: 'balanced',
     settingsRetrievalMinScore: 'Min score',
-    settingsRetrievalBudgetTokens: 'Budget tokens',
+    settingsRetrievalBudgetTokens: 'Retrieval budget',
     settingsRetrievalMaxIterations: 'Max iterations',
     settingsRetrievalConfidenceThreshold: 'Confidence threshold',
-    settingsAgentContextTypes: 'Agent context types',
+    settingsAgentContextTypes: 'Reference scope',
     settingsContextTypeWorld: 'World',
     settingsContextTypeCharacter: 'Character',
     settingsContextTypePlot: 'Plot',
@@ -2253,6 +2429,7 @@ export const translations: Record<Language, Translations> = {
     streamErrorCategory: 'Error Category',
     scrollToBottom: 'Scroll to bottom',
     sidebarNewDocument: 'New Document',
+    sidebarContinueWriting: 'Continue writing',
     sidebarDocuments: 'Documents',
     mcpMetricTotal: 'Total',
     mcpMetricFailed: 'Failed',
@@ -2287,6 +2464,9 @@ export const translations: Record<Language, Translations> = {
     editorCmdCodeBlockDesc: 'Insert a code block',
     editorCmdHorizontalRule: 'Divider',
     editorCmdHorizontalRuleDesc: 'Insert a horizontal rule',
+    editorBubbleBold: 'Bold',
+    editorBubbleItalic: 'Italic',
+    editorBubbleStrikethrough: 'Strikethrough',
     editorBubbleRewrite: 'AI Rewrite',
     editorBubblePolish: 'Polish',
     editorBubbleSimplify: 'Simplify',

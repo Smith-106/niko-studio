@@ -12,16 +12,18 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Typography from '@tiptap/extension-typography'
 import { SlashCommandMenu, type SlashMenuItem } from './editor/SlashCommandMenu'
-import { BubbleToolbar, REWRITE_OPTIONS } from './editor/BubbleToolbar'
+import { BubbleToolbar, type RewriteOption } from './editor/BubbleToolbar'
+import { insertPlainText, replaceRange } from './editor/streamToEditor'
 import { useEditorAI } from '../hooks/useEditorAI'
-import { useI18n } from '../i18n'
+import { useI18n, type Language } from '../i18n'
 import { setEditorHandle, type EditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
+import { getPersistedStyleRequirements } from './editor/WritingStyle'
+import {
+  buildEditorAIStyleInstruction,
+  getEditorActionInstruction,
+} from '../hooks/editorAIPromptPolicy'
 
-export interface NikoEditorHandle {
-  insertText: (text: string) => void
-  getSelectedText: () => string
-  getJSON: () => JSONContent
-}
+export type NikoEditorHandle = EditorHandle
 
 export interface NikoEditorProps {
   initialContent?: string | JSONContent
@@ -50,8 +52,20 @@ interface RevisionApplyRecord {
 const EMPTY_SLASH: SlashState = { active: false, query: '', position: null, range: null }
 const EMPTY_BUBBLE: BubbleState = { active: false, position: null }
 
+export function buildEditorStyleInstruction(language: Language, raw: string | null): string {
+  return buildEditorAIStyleInstruction(language, raw)
+}
+
+export function getEditorGenerateInstruction(language: Language): string {
+  return getEditorActionInstruction(language, 'generate')
+}
+
+export function getEditorFullArticleInstruction(language: Language): string {
+  return getEditorActionInstruction(language, 'full-article')
+}
+
 export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function NikoEditor({ initialContent, onUpdate, onOpenWritingHelper: _onOpenWritingHelper }, ref) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [slashState, setSlashState] = useState<SlashState>(EMPTY_SLASH)
   const [bubbleState, setBubbleState] = useState<BubbleState>(EMPTY_BUBBLE)
 
@@ -164,7 +178,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
   })
 
   // Mutable handle object — isGenerating updated via effect
-  const handleRef = useRef<EditorHandle & { isGenerating?: boolean }>({
+  const handleRef = useRef<EditorHandle>({
     insertText: () => {},
     getSelectedText: () => '',
     getJSON: () => ({ type: 'doc', content: [] }),
@@ -185,7 +199,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       editor.state.doc.textBetween(snapshot.from, snapshot.to, '\n') === snapshot.text
 
     handleRef.current.insertText = (text: string) => {
-      editor.chain().focus().insertContent(text).run()
+      insertPlainText(editor, text)
     }
     handleRef.current.getSelectedText = () => {
       const { from, to } = editor.state.selection
@@ -209,7 +223,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
         return false
       }
 
-      editor.chain().focus().setTextSelection({ from: snapshot.from, to: snapshot.to }).insertContent(text).run()
+      replaceRange(editor, snapshot.from, snapshot.to - snapshot.from, text)
       lastRevisionApplyRef.current = {
         from: snapshot.from,
         oldText: snapshot.text,
@@ -223,7 +237,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       }
 
       const insertionText = `\n\n${text}`
-      editor.chain().focus().setTextSelection({ from: snapshot.to, to: snapshot.to }).insertContent(insertionText).run()
+      replaceRange(editor, snapshot.to, 0, insertionText)
       lastRevisionApplyRef.current = {
         from: snapshot.to,
         oldText: '',
@@ -246,15 +260,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
         return false
       }
 
-      editor
-        .chain()
-        .focus()
-        .setTextSelection({
-          from: lastApply.from,
-          to: lastApply.from + lastApply.newText.length,
-        })
-        .insertContent(lastApply.oldText)
-        .run()
+      replaceRange(editor, lastApply.from, lastApply.newText.length, lastApply.oldText)
       lastRevisionApplyRef.current = null
       return true
     }
@@ -265,57 +271,88 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
     }
   }, [editor])
 
+  const getStyleRequirements = useCallback(
+    () => getPersistedStyleRequirements(language),
+    [language],
+  )
+
   const ai = useEditorAI({
     editor,
-    getStyleInstruction: () => {
-      try {
-        const raw = localStorage.getItem('niko.writing-helper-style-v1')
-        return raw ? `风格要求：${raw}` : ''
-      } catch {
-        return ''
-      }
-    },
+    language,
+    getStyleRequirements,
   })
 
   const handleSlashSelect = useCallback(
     (item: SlashMenuItem) => {
       if (!editor || !slashState.range) return
 
-      editor.chain().focus().deleteRange(slashState.range).run()
-      setSlashState(EMPTY_SLASH)
+      const slashRange = slashState.range
+      const clearSlashMenu = () => {
+        editor.chain().focus().deleteRange(slashRange).run()
+        setSlashState(EMPTY_SLASH)
+      }
 
       switch (item.id) {
         case 'ai-generate':
-          ai.generateAtCursor('请根据上下文生成一段合适的文本')
+          void ai.runRequest(
+            { action: 'generate' },
+            {
+              owner: 'slash',
+              allowRestart: true,
+              beforeRequestStart: clearSlashMenu,
+            },
+          )
           break
         case 'ai-continue':
-          ai.continueWriting()
+          void ai.runRequest(
+            { action: 'continue' },
+            {
+              owner: 'slash',
+              allowRestart: true,
+              beforeRequestStart: clearSlashMenu,
+            },
+          )
           break
         case 'ai-full-article':
-          ai.generateAtCursor('请生成一篇完整的文章')
+          void ai.runRequest(
+            { action: 'full-article' },
+            {
+              owner: 'slash',
+              allowRestart: true,
+              beforeRequestStart: clearSlashMenu,
+            },
+          )
           break
         case 'heading-1':
+          clearSlashMenu()
           editor.chain().focus().toggleHeading({ level: 1 }).run()
           break
         case 'heading-2':
+          clearSlashMenu()
           editor.chain().focus().toggleHeading({ level: 2 }).run()
           break
         case 'heading-3':
+          clearSlashMenu()
           editor.chain().focus().toggleHeading({ level: 3 }).run()
           break
         case 'bullet-list':
+          clearSlashMenu()
           editor.chain().focus().toggleBulletList().run()
           break
         case 'ordered-list':
+          clearSlashMenu()
           editor.chain().focus().toggleOrderedList().run()
           break
         case 'blockquote':
+          clearSlashMenu()
           editor.chain().focus().toggleBlockquote().run()
           break
         case 'code-block':
+          clearSlashMenu()
           editor.chain().focus().toggleCodeBlock().run()
           break
         case 'horizontal-rule':
+          clearSlashMenu()
           editor.chain().focus().setHorizontalRule().run()
           break
       }
@@ -324,14 +361,26 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
   )
 
   const handleRewrite = useCallback(
-    (option: typeof REWRITE_OPTIONS[number]) => {
-      ai.rewriteSelection(option.instruction)
+    (option: RewriteOption) => {
+      void ai.runRequest(
+        { action: 'rewrite', variant: option.id },
+        {
+          owner: 'bubble',
+          allowRestart: true,
+        },
+      )
     },
     [ai],
   )
 
   const handleContinue = useCallback(() => {
-    ai.continueWriting()
+    void ai.runRequest(
+      { action: 'continue' },
+      {
+        owner: 'bubble',
+        allowRestart: true,
+      },
+    )
   }, [ai])
 
   // Click outside to close bubble toolbar
@@ -396,7 +445,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
           <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
           <span className="text-[11px] font-medium text-primary-600 dark:text-primary-400">{t.editorAiGenerating}</span>
           <button
-            onClick={ai.cancel}
+            onClick={() => ai.cancel()}
             className="text-[10px] text-primary-500 hover:text-primary-700 dark:hover:text-primary-300 underline"
           >
             {t.editorAiCancel}

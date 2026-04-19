@@ -3,6 +3,7 @@ import { Search, User, MapPin, BookOpen, Sparkles, X } from 'lucide-react'
 import { promoteProjectWikiCanonApi } from '../api/client'
 import { useI18n } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
+import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 import { useAppStore } from '../stores/appStore'
 import type { TabType, KnowledgeItem, OperationStatus, TabConfig } from './knowledge/KnowledgeTypes'
 import { CharacterTab } from './knowledge/CharacterTab'
@@ -15,6 +16,10 @@ interface KnowledgeModalProps {
   isOpen: boolean
   onClose: () => void
 }
+
+type KnowledgeTask = 'lookup' | 'augment' | 'reference'
+type KnowledgeAugmentMode = 'memory' | 'skills'
+type StoryTabType = Exclude<TabType, 'skills'>
 
 function slugifySegment(value: unknown): string {
   const normalized = String(value ?? '')
@@ -52,8 +57,11 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
   const { t } = useI18n()
   const currentWorkspace = useAppStore((state) => state.currentWorkspace)
   const setCurrentWorkspace = useAppStore((state) => state.setCurrentWorkspace)
+  const workspaceSummary = useWriterWorkspaceSummary()
   const dialogRef = useRef<HTMLDivElement | null>(null)
-  const [activeTab, setActiveTab] = useState<TabType>('characters')
+  const [activeTask, setActiveTask] = useState<KnowledgeTask>('lookup')
+  const [activeTab, setActiveTab] = useState<StoryTabType>('characters')
+  const [augmentMode, setAugmentMode] = useState<KnowledgeAugmentMode>('memory')
   const [searchQuery, setSearchQuery] = useState('')
   const [items, setItems] = useState<KnowledgeItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -68,11 +76,12 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
     isActive: isOpen,
   })
 
-  // Reset items when tab changes
+  // Reset transient list/detail state when the visible surface changes.
   useEffect(() => {
     setItems([])
     setSelectedItem(null)
-  }, [activeTab])
+    setOperationStatus(null)
+  }, [activeTask, activeTab, augmentMode])
 
   const handleStatusChange = useCallback((status: OperationStatus | null) => {
     setOperationStatus(status)
@@ -101,7 +110,7 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
       : ''
 
   const renderSelectedItemDetails = () => {
-    if (activeTab === 'skills' || !selectedItem) return null
+    if (!selectedItem) return null
 
     const title =
       (selectedItem.name as string) ||
@@ -217,12 +226,46 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
 
   if (!isOpen) return null
 
-  const tabs: TabConfig[] = [
+  const taskSections = [
+    {
+      id: 'lookup' as const,
+      label: t.knowledgeTaskLookup,
+      hint: t.knowledgeTaskLookupHint,
+      icon: Search,
+    },
+    {
+      id: 'augment' as const,
+      label: t.knowledgeTaskAugment,
+      hint: t.knowledgeTaskAugmentHint,
+      icon: Sparkles,
+    },
+    {
+      id: 'reference' as const,
+      label: t.knowledgeTaskReference,
+      hint: t.knowledgeTaskReferenceHint,
+      icon: BookOpen,
+    },
+  ]
+
+  const tabs: Array<TabConfig & { id: StoryTabType }> = [
     { id: 'characters', label: t.knowledgeTabCharacters, icon: User },
     { id: 'locations', label: t.knowledgeTabLocations, icon: MapPin },
     { id: 'plots', label: t.knowledgeTabPlots, icon: BookOpen },
-    { id: 'skills', label: t.knowledgeTabSkills, icon: Sparkles },
   ]
+
+  const renderSearchField = () => (
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder={t.knowledgeSearchPlaceholder}
+        aria-label={t.knowledgeSearchPlaceholder}
+        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
+      />
+    </div>
+  )
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -268,41 +311,155 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
             onStatusChange={handleStatusChange}
           />
         )
-      case 'skills': {
-        const skillTab = SkillTab({
-          items,
-          onItemsChange: handleItemsChange,
-          loading,
-          onLoadingChange: handleLoadingChange,
-          selectedSkillId,
-          onSelectedSkillIdChange: setSelectedSkillId,
-          searchQuery,
-        })
-        return (
-          <>
-            {skillTab.details}
-            {skillTab.content}
-          </>
-        )
-      }
       default:
         return null
     }
   }
 
-  const getSkillTabControls = () => {
-    if (activeTab !== 'skills') return null
-    const skillTab = SkillTab({
-      items,
-      onItemsChange: handleItemsChange,
-      loading,
-      onLoadingChange: handleLoadingChange,
-      selectedSkillId,
-      onSelectedSkillIdChange: setSelectedSkillId,
-      searchQuery,
-    })
-    return skillTab.controls
+  const renderSurfaceNotice = () => (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-4 dark:border-dark-border dark:bg-dark-surface/50">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-dark-text-muted">
+        {t.knowledgeTaskScopeTitle}
+      </div>
+      {workspaceSummary.scopeChips.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {workspaceSummary.scopeChips.map((chip) => (
+            <span
+              key={chip}
+              className="rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs text-primary-700 dark:border-primary-500/20 dark:bg-primary-900/10 dark:text-primary-300"
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-slate-600 dark:text-dark-text-secondary">{t.knowledgeTaskScopeEmpty}</p>
+      )}
+      <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-dark-text-secondary">
+        {taskSections.find((section) => section.id === activeTask)?.hint}
+      </p>
+    </div>
+  )
+
+  const renderOperationStatus = () => {
+    if (!operationStatus) return null
+
+    return (
+      <div
+        className={`rounded-lg border p-3 text-xs font-medium shadow-sm animate-fade-in ${
+          operationStatus.type === 'success'
+            ? 'bg-success-50 text-success-700 border-success-100 dark:bg-success-900/20 dark:text-success-400 dark:border-success-500/20'
+            : 'bg-danger-50 text-danger-700 border-danger-100 dark:bg-danger-900/20 dark:text-danger-400 dark:border-danger-500/20'
+        }`}
+      >
+        {operationStatus.message}
+      </div>
+    )
   }
+
+  const renderStoryBrowser = () => (
+    <>
+      <div className="rounded-2xl border border-gray-200 bg-white/90 p-4 dark:border-dark-border dark:bg-dark-surface/40">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-dark-text-muted">
+          {t.knowledgeTaskBrowseTitle}
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-dark-text-secondary">
+          {t.knowledgeTaskBrowseHint}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-500/20 dark:bg-primary-900/10 dark:text-primary-300'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-secondary dark:hover:text-dark-text'
+            }`}
+          >
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTask === 'reference' ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm leading-relaxed text-amber-800 dark:border-amber-500/20 dark:bg-amber-900/10 dark:text-amber-200">
+          {t.knowledgeTaskReferenceHint}
+        </div>
+      ) : null}
+
+      {renderOperationStatus()}
+
+      <div className="rounded-2xl border border-gray-200 bg-white/90 p-4 dark:border-dark-border dark:bg-dark-surface/40">
+        {renderSelectedItemDetails()}
+        {renderTabContent()}
+      </div>
+    </>
+  )
+
+  const renderAugmentSurface = () => (
+    <>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setAugmentMode('memory')}
+          className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+            augmentMode === 'memory'
+              ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-500/20 dark:bg-primary-900/10 dark:text-primary-300'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-secondary dark:hover:text-dark-text'
+          }`}
+        >
+          {t.knowledgeTaskAugmentMemory}
+        </button>
+        <button
+          type="button"
+          onClick={() => setAugmentMode('skills')}
+          className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+            augmentMode === 'skills'
+              ? 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-500/20 dark:bg-primary-900/10 dark:text-primary-300'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-secondary dark:hover:text-dark-text'
+          }`}
+        >
+          {t.knowledgeTaskAugmentSkills}
+        </button>
+      </div>
+
+      {augmentMode === 'skills' ? renderSearchField() : null}
+      {renderOperationStatus()}
+
+      {augmentMode === 'memory' ? (
+        <div className="rounded-2xl border border-gray-200 bg-white/90 p-4 dark:border-dark-border dark:bg-dark-surface/40">
+          <MemoryForm onStatusChange={handleStatusChange} onItemsChange={handleItemsChange} />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-gray-200 bg-white/90 p-4 dark:border-dark-border dark:bg-dark-surface/40">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-dark-text-muted">
+              {t.knowledgeTaskAugmentSkills}
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-dark-text-secondary">
+              {t.knowledgeTaskSkillsHint}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white/90 p-4 dark:border-dark-border dark:bg-dark-surface/40">
+            <SkillTab
+              items={items}
+              onItemsChange={handleItemsChange}
+              loading={loading}
+              onLoadingChange={handleLoadingChange}
+              selectedSkillId={selectedSkillId}
+              onSelectedSkillIdChange={setSelectedSkillId}
+              searchQuery={searchQuery}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  )
 
   return (
     <div
@@ -326,53 +483,35 @@ export function KnowledgeModal({ isOpen, onClose }: KnowledgeModalProps) {
       </div>
 
       <div className="flex border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg overflow-x-auto custom-scrollbar">
-        {tabs.map((tab) => (
+        {taskSections.map((section) => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            key={section.id}
+            type="button"
+            onClick={() => setActiveTask(section.id)}
             className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-all focus:outline-none shrink-0 text-sm font-medium ${
-              activeTab === tab.id
+              activeTask === section.id
                 ? 'border-primary-600 text-primary-600 dark:text-primary-400 bg-primary-50/30 dark:bg-primary-900/10'
                 : 'border-transparent text-gray-500 dark:text-dark-text-secondary hover:text-gray-700 dark:hover:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-surface2'
             }`}
           >
-            <tab.icon size={18} className={activeTab === tab.id ? 'text-primary-600' : ''} />
-            {tab.label}
+            <section.icon size={18} className={activeTask === section.id ? 'text-primary-600' : ''} />
+            {section.label}
           </button>
         ))}
       </div>
 
-      <div className="p-6 border-b border-gray-200 dark:border-dark-border space-y-4 bg-white dark:bg-dark-bg">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t.knowledgeSearchPlaceholder}
-            aria-label={t.knowledgeSearchPlaceholder}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-surface text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
-          />
-        </div>
-        {getSkillTabControls()}
-
-        <MemoryForm onStatusChange={handleStatusChange} onItemsChange={handleItemsChange} />
-
-        {operationStatus && (
-          <div
-            className={`mt-2 p-3 rounded-lg text-xs font-medium shadow-sm animate-fade-in ${
-              operationStatus.type === 'success' 
-                ? 'bg-success-50 text-success-700 border border-success-100 dark:bg-success-900/20 dark:text-success-400 dark:border-success-500/20' 
-                : 'bg-danger-50 text-danger-700 border border-danger-100 dark:bg-danger-900/20 dark:text-danger-400 dark:border-danger-500/20'
-            }`}
-          >
-            {operationStatus.message}
-          </div>
-        )}
-      </div>
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50 dark:bg-dark-bg">
-        {renderSelectedItemDetails()}
-        {renderTabContent()}
+        <div className="space-y-4">
+          {renderSurfaceNotice()}
+          {activeTask === 'augment' ? (
+            renderAugmentSurface()
+          ) : (
+            <>
+              {renderSearchField()}
+              {renderStoryBrowser()}
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

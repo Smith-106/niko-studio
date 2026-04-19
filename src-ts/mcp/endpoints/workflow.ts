@@ -17,6 +17,11 @@ import {
   checkpointCreate,
   checkpointRestore,
   checkpointList,
+  workflowSchedulerRegister,
+  workflowSchedulerList,
+  workflowSchedulerPause,
+  workflowSchedulerResume,
+  workflowSchedulerRunNow,
 } from '../services/workflow';
 
 // ---------------------------------------------------------------
@@ -90,6 +95,63 @@ export async function workflowQuickRollbackEndpoint(request: HttpRequest): Promi
 }
 
 // ---------------------------------------------------------------
+// Scheduler endpoints
+// ---------------------------------------------------------------
+
+export async function workflowSchedulerRegisterEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowSchedulerRegister({
+    definition: body.task,
+    enabled: body.enabled as boolean | undefined,
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowSchedulerListEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowSchedulerList({
+    limit: body.limit as number | undefined,
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowSchedulerPauseEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowSchedulerPause({
+    taskId: (body.task_id as string) ?? '',
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowSchedulerResumeEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowSchedulerResume({
+    taskId: (body.task_id as string) ?? '',
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowSchedulerRunNowEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowSchedulerRunNow({
+    taskId: (body.task_id as string) ?? '',
+    confirmToken: body.confirm_token as string | undefined,
+    recommendations: body.recommendations as unknown[] | undefined,
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+// ---------------------------------------------------------------
 // UI Bridge wrappers
 // ---------------------------------------------------------------
 
@@ -121,6 +183,31 @@ export async function uiBridgeWorkflowExecuteEndpoint(request: HttpRequest): Pro
 export async function uiBridgeWorkflowLifecycleEndpoint(request: HttpRequest): Promise<HttpResponse> {
   if (!uiBridgeEnabled) return uiBridgeDisabledResponse();
   return workflowLifecycleEndpoint(request);
+}
+
+export async function uiBridgeWorkflowSchedulerRegisterEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  if (!uiBridgeEnabled) return uiBridgeDisabledResponse();
+  return workflowSchedulerRegisterEndpoint(request);
+}
+
+export async function uiBridgeWorkflowSchedulerListEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  if (!uiBridgeEnabled) return uiBridgeDisabledResponse();
+  return workflowSchedulerListEndpoint(request);
+}
+
+export async function uiBridgeWorkflowSchedulerPauseEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  if (!uiBridgeEnabled) return uiBridgeDisabledResponse();
+  return workflowSchedulerPauseEndpoint(request);
+}
+
+export async function uiBridgeWorkflowSchedulerResumeEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  if (!uiBridgeEnabled) return uiBridgeDisabledResponse();
+  return workflowSchedulerResumeEndpoint(request);
+}
+
+export async function uiBridgeWorkflowSchedulerRunNowEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  if (!uiBridgeEnabled) return uiBridgeDisabledResponse();
+  return workflowSchedulerRunNowEndpoint(request);
 }
 
 // ---------------------------------------------------------------

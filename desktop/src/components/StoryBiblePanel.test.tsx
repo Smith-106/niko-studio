@@ -281,6 +281,76 @@ describe('StoryBiblePanel', () => {
     expect(localStorage.getItem('niko.sb-style-v1')).toBeNull()
   })
 
+  it('adds deterministic semantics to the visible draft fields and hidden import input', async () => {
+    render(<StoryBiblePanel />)
+
+    const braindumpInput = await screen.findByLabelText(zh.storyBibleBraindump)
+    const genreInput = screen.getByLabelText(zh.storyBibleGenrePlaceholder)
+    const importInput = screen.getByTestId('story-bible-import-input')
+
+    expect(braindumpInput).toHaveAttribute('id', 'story-bible-braindump')
+    expect(braindumpInput).toHaveAttribute('name', 'story-bible-braindump')
+    expect(genreInput).toHaveAttribute('id', 'story-bible-genre-input')
+    expect(genreInput).toHaveAttribute('name', 'story-bible-genre-input')
+    expect(importInput).toHaveAttribute('id', 'story-bible-import-input')
+    expect(importInput).toHaveAttribute('name', 'story-bible-import-input')
+    expect(importInput).toHaveAttribute('aria-label', zh.storyBibleImportDraft)
+  })
+
+  it('hides the inert generate CTA and gates synopsis promotion until synopsis content exists', async () => {
+    const user = userEvent.setup()
+
+    render(<StoryBiblePanel />)
+
+    expect(screen.queryByRole('button', { name: zh.storyBibleGenerate })).not.toBeInTheDocument()
+
+    await user.click(await screen.findByRole('button', { name: zh.storyBibleSynopsis }))
+
+    const promoteButton = screen.getByRole('button', { name: '提升概要到 Canon' })
+    expect(promoteButton).toBeDisabled()
+    expect(screen.getByText('请先填写概要后再提升到 Canon。')).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText(zh.storyBibleSynopsisPlaceholder), '导入概要')
+
+    expect(promoteButton).toBeEnabled()
+    expect(screen.getByText('显式提升后的 canon 页面会出现在这里，并保持为只读检查视图。')).toBeInTheDocument()
+  })
+
+  it('keeps the local draft visible and surfaces an explicit failure state when graph save fails', async () => {
+    const user = userEvent.setup()
+    const originalQueryGraph = vi.mocked(queryGraph).getMockImplementation()
+
+    vi.mocked(queryGraph).mockImplementation(async (cypher: string, options) => {
+      if (cypher.startsWith('MERGE (n:Item')) {
+        return {
+          success: false,
+          error: 'graph unavailable',
+          data: undefined,
+        }
+      }
+      return originalQueryGraph ? originalQueryGraph(cypher, options) : { success: true, data: [] }
+    })
+
+    try {
+      render(<StoryBiblePanel />)
+
+      expect(await screen.findByText(zh.storyBiblePersistenceTitle)).toBeInTheDocument()
+
+      const braindumpInput = screen.getByPlaceholderText(zh.storyBibleBraindumpHint)
+      await user.type(braindumpInput, '失败后也要保留的草稿')
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('失败后也要保留的草稿')).toBeInTheDocument()
+        expect(screen.getByText('Story Bible 保存失败，当前草稿已保留，请重试。')).toBeInTheDocument()
+        expect(screen.getByText('同步失败，请稍后重试')).toBeInTheDocument()
+      })
+    } finally {
+      if (originalQueryGraph) {
+        vi.mocked(queryGraph).mockImplementation(originalQueryGraph)
+      }
+    }
+  })
+
   it('promotes synopsis into canon and shows the canon review preview', async () => {
     const user = userEvent.setup()
     vi.mocked(listProjectWikiCanonPagesApi)
@@ -333,7 +403,9 @@ describe('StoryBiblePanel', () => {
 
     await user.click(await screen.findByRole('button', { name: zh.storyBibleSynopsis }))
     const synopsisInput = screen.getByPlaceholderText(zh.storyBibleSynopsisPlaceholder)
+    expect(screen.getByRole('button', { name: '提升概要到 Canon' })).toBeDisabled()
     await user.type(synopsisInput, '导入概要')
+    expect(screen.getByRole('button', { name: '提升概要到 Canon' })).toBeEnabled()
 
     await user.click(screen.getByRole('button', { name: '提升概要到 Canon' }))
 

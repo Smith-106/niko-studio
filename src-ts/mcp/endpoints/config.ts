@@ -167,6 +167,7 @@ export async function getConfig(_request: HttpRequest): Promise<HttpResponse> {
     return jsonResponse({
       status: 'ok',
       config: maskedConfig,
+      modifiable_fields: MODIFIABLE_FIELDS,
     });
   } catch (e) {
     return jsonResponse({ error: `Failed to get configuration: ${String(e)}` }, 500);

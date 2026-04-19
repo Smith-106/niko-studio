@@ -372,6 +372,31 @@ RULES: tuple[GateRule, ...] = (
         reason="release summary 未将 writing-helper acceptance 视为 P0 blocking 信号。",
     ),
     GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"local_selftest_enforcement\"",
+        reason="release summary 未暴露 local:selftest enforcement blocking 信号。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"release_evidence\": release_evidence,",
+        reason="release summary 未把 retained release evidence 元数据写入 machine-readable contract。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES",
+        reason="release summary 未将 local:selftest enforcement 绑定到 retained release evidence 来源集合。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="(\"freshness_status\", retained_evidence[\"freshness_status\"])",
+        reason="release summary 未显式输出 retained evidence freshness_status。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="(\"supersession_status\", retained_evidence[\"supersession_status\"])",
+        reason="release summary 未显式输出 retained evidence supersession_status。",
+    ),
+    GateRule(
         file_path="docs/release/SIGN_OFF.md",
         needle="certificateThumbprint",
         reason="release sign-off 文档未显式记录签名先决条件。",
@@ -385,6 +410,36 @@ RULES: tuple[GateRule, ...] = (
         file_path="docs/release/SIGN_OFF.md",
         needle=".workflow/evidence/release/writing-helper-acceptance.json",
         reason="release sign-off 文档未声明 retained writing-helper acceptance artifact。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="freshness_status: fresh",
+        reason="release sign-off 文档未声明 retained evidence freshness green-state 合约。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="supersession_status: current",
+        reason="release sign-off 文档未声明 retained evidence supersession green-state 合约。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle=".workflow/evidence/release/release-readiness-artifact.json",
+        reason="release sign-off 文档未声明 retained release-readiness artifact 元数据锚点。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="`npm --prefix desktop run local:selftest` is the authoritative launcher smoke-test.",
+        reason="release sign-off 文档未声明 authoritative local:selftest smoke-test 入口。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="blocking `local_selftest_enforcement` signal",
+        reason="release sign-off 文档未声明 local:selftest enforcement 的 blocking signal。",
+    ),
+    GateRule(
+        file_path="docs/testing/TEST_TIER_MATRIX.md",
+        needle="Treat `npm --prefix desktop run local:selftest` as mandatory whenever retained release evidence for the current HEAD is not already `fresh_current`",
+        reason="test tier matrix 未声明 retained evidence 驱动的 local:selftest 强制条件。",
     ),
     GateRule(
         file_path=".github/workflows/writing-helper-acceptance.yml",

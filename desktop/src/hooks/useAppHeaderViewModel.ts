@@ -31,10 +31,11 @@ interface UseAppHeaderViewModelOptions {
 }
 
 export function useAppHeaderViewModel({ runtimeView, backendStatus, t, contextUsage }: UseAppHeaderViewModelOptions) {
-  const headerConnectionState = runtimeView?.connectionState ?? (backendStatus ? 'connected' : 'disconnected')
+  const headerConnectionState: HeaderConnectionState = runtimeView?.connectionState ?? (backendStatus ? 'connected' : 'disconnected')
   const headerDotClass = APP_CONNECTION_DOT[headerConnectionState] ?? APP_CONNECTION_DOT.disconnected
   const headerConnectionLabelKey = APP_CONNECTION_LABEL[headerConnectionState] ?? (backendStatus ? 'serviceRunning' : 'serviceOffline')
   const headerConnectionText = t[headerConnectionLabelKey]
+  const contextUsageVisible = contextUsage.usedK > 0 || contextUsage.percent > 0
 
   const contextUsageText = `${contextUsage.usedK.toFixed(1)}k/${contextUsage.totalK}k`
   const contextUsageBarClass =
@@ -49,6 +50,7 @@ export function useAppHeaderViewModel({ runtimeView, backendStatus, t, contextUs
     headerConnectionState,
     headerDotClass,
     headerConnectionText,
+    contextUsageVisible,
     contextUsageText,
     contextUsageBarClass,
     contextUsageWidthPercent,

@@ -2,6 +2,14 @@ import { useAppStore, Conversation, Message } from './appStore'
 import { useSettingsStore } from './settingsStore'
 import { useShallow } from 'zustand/react/shallow'
 
+export type EvaluationSourceKind = 'latestAssistantReply' | 'editorSelection' | 'currentDraft'
+
+export interface EvaluationSourceDescriptor {
+  kind: EvaluationSourceKind
+  label: string
+  content: string
+}
+
 /**
  * Selector for current conversation ID only
  * Re-renders only when currentConversationId changes

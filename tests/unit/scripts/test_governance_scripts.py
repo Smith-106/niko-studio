@@ -5,8 +5,11 @@ import io
 import json
 import sys
 from contextlib import redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
 from types import ModuleType
+
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -116,9 +119,69 @@ def test_delivery_gate_rules_cover_authority_alignment_contract() -> None:
         and must_exist
         for file_path, needle, must_exist in rule_map
     )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '"local_selftest_enforcement"' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '"release_evidence": release_evidence,' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and "LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES" in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '("freshness_status", retained_evidence["freshness_status"])' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '("supersession_status", retained_evidence["supersession_status"])' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
     assert (
         "docs/release/SIGN_OFF.md",
         ".workflow/evidence/release/writing-helper-acceptance.json",
+        True,
+    ) in rule_map
+    assert (
+        "docs/release/SIGN_OFF.md",
+        "freshness_status: fresh",
+        True,
+    ) in rule_map
+    assert (
+        "docs/release/SIGN_OFF.md",
+        "supersession_status: current",
+        True,
+    ) in rule_map
+    assert (
+        "docs/release/SIGN_OFF.md",
+        ".workflow/evidence/release/release-readiness-artifact.json",
+        True,
+    ) in rule_map
+    assert (
+        "docs/release/SIGN_OFF.md",
+        "`npm --prefix desktop run local:selftest` is the authoritative launcher smoke-test.",
+        True,
+    ) in rule_map
+    assert (
+        "docs/release/SIGN_OFF.md",
+        "blocking `local_selftest_enforcement` signal",
+        True,
+    ) in rule_map
+    assert (
+        "docs/testing/TEST_TIER_MATRIX.md",
+        "Treat `npm --prefix desktop run local:selftest` as mandatory whenever retained release evidence for the current HEAD is not already `fresh_current`",
         True,
     ) in rule_map
     assert (
@@ -210,6 +273,7 @@ def test_desktop_local_launcher_scripts_are_exposed_via_package_json() -> None:
     assert scripts["local:gateway"] == (
         "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/start_desktop_local.ps1 -NoDesktop"
     )
+    assert scripts["local:shell"] == "node scripts/run_local_vite_shell.cjs"
     assert scripts["local:status"] == (
         "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/status_desktop_local.ps1"
     )
@@ -320,6 +384,7 @@ def test_desktop_local_launcher_docs_share_same_entrypoints() -> None:
     assert "local:start:binary" in root_readme
     assert "local:start:binary:force" in root_readme
     assert "local:gateway" in root_readme
+    assert "local:shell" in root_readme
     assert "local:status" in root_readme
     assert "local:stop" in root_readme
     assert "local:selftest" in root_readme
@@ -337,6 +402,7 @@ def test_desktop_local_launcher_docs_share_same_entrypoints() -> None:
     assert "local:start:binary" in desktop_readme
     assert "local:start:binary:force" in desktop_readme
     assert "local:gateway" in desktop_readme
+    assert "local:shell" in desktop_readme
     assert "local:status" in desktop_readme
     assert "local:stop" in desktop_readme
     assert "local:selftest" in desktop_readme
@@ -352,6 +418,7 @@ def test_desktop_local_launcher_docs_share_same_entrypoints() -> None:
     assert "./scripts/selftest_desktop_local.ps1" in runbook
     assert "npm --prefix desktop run local:start|local:start:force|local:start:binary|local:start:binary:force|local:gateway|local:status|local:stop|local:selftest" in runbook
     assert "local:gateway" in runbook
+    assert "local:shell" in runbook
     assert "scripts\\\\start_desktop_local.cmd" in runbook
     assert "scripts\\\\stop_desktop_local.cmd" in runbook
     assert "scripts\\\\status_desktop_local.cmd" in runbook
@@ -498,6 +565,17 @@ def test_authority_alignment_signal_helper_returns_pass_for_clean_payload() -> N
     assert "checked_files=2" in detail
 
 
+def test_release_evidence_status_normalizer_maps_pytest_terms_to_release_contract() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_status_normalizer",
+    )
+
+    assert module.normalize_release_evidence_status("passed") == "PASS"
+    assert module.normalize_release_evidence_status("failed") == "FAIL"
+    assert module.normalize_release_evidence_status("PASS") == "PASS"
+
+
 def test_writing_helper_acceptance_signal_returns_fail_for_parse_error() -> None:
     module = load_script_module(
         "scripts/release_check_summary.py",
@@ -540,6 +618,439 @@ def test_writing_helper_acceptance_signal_returns_fail_for_missing_required_keys
     assert "decision=no_go" in detail
 
 
+def test_writing_helper_acceptance_signal_returns_pass_for_fresh_current_artifact() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_writing_helper_fresh_current",
+    )
+
+    status, exit_code, detail = module.writing_helper_acceptance_signal(
+        True,
+        {
+            "status": "PASS",
+            "strict": True,
+            "generated_at": "2026-04-17T11:30:00+00:00",
+            "head_sha": "6066c334d6954d29a126af413f6d53af6d39d99f",
+            "version": "9.0.8",
+            "total_cases": 7,
+            "passed_cases": 7,
+            "failed_cases": 0,
+            "failed_cases_path": None,
+        },
+        "6066c334d6954d29a126af413f6d53af6d39d99f",
+        None,
+        "9.0.8",
+        now=datetime(2026, 4, 17, 12, 0, tzinfo=timezone.utc),
+    )
+
+    assert status == "PASS"
+    assert exit_code == 0
+    assert "freshness_status=fresh" in detail
+    assert "supersession_status=current" in detail
+    assert "evidence_state=fresh_current" in detail
+    assert "decision=go" in detail
+
+
+def test_writing_helper_acceptance_signal_returns_fail_for_stale_superseded_artifact() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_writing_helper_stale_superseded",
+    )
+
+    status, exit_code, detail = module.writing_helper_acceptance_signal(
+        True,
+        {
+            "status": "PASS",
+            "strict": True,
+            "generated_at": "2026-04-15T09:00:00+00:00",
+            "head_sha": "0b0662fa77b5785916e49cdc5850600706cea653",
+            "version": "9.0.7",
+            "total_cases": 7,
+            "passed_cases": 7,
+            "failed_cases": 0,
+            "failed_cases_path": None,
+        },
+        "4d63e03db1f673379901fb827aff1a1f6947faa8",
+        None,
+        "9.0.8",
+        now=datetime(2026, 4, 17, 12, 0, tzinfo=timezone.utc),
+    )
+
+    assert status == "FAIL"
+    assert exit_code == 1
+    assert "freshness_status=stale" in detail
+    assert "supersession_status=superseded" in detail
+    assert "evidence_state=stale_superseded" in detail
+    assert "supersession_reasons=head_mismatch,version_mismatch" in detail
+    assert "decision=no_go" in detail
+
+
+def test_local_selftest_enforcement_signal_returns_pass_for_fresh_current_release_evidence() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_local_selftest_pass",
+    )
+
+    release_evidence = {
+        "status": "fresh_current",
+        "evidence_sources": [
+            {
+                "source_id": "release_summary_report",
+                "status": "PASS",
+                "is_fresh": True,
+                "is_current": True,
+                "freshness_status": "fresh",
+                "supersession_status": "current",
+            },
+            {
+                "source_id": "authority_alignment",
+                "status": "PASS",
+                "is_fresh": True,
+                "is_current": True,
+                "freshness_status": "fresh",
+                "supersession_status": "current",
+            },
+            {
+                "source_id": "writing_helper_acceptance",
+                "status": "PASS",
+                "is_fresh": True,
+                "is_current": True,
+                "freshness_status": "fresh",
+                "supersession_status": "current",
+            },
+            {
+                "source_id": "governance_scripts_regression",
+                "status": "PASS",
+                "is_fresh": True,
+                "is_current": True,
+                "freshness_status": "fresh",
+                "supersession_status": "current",
+            },
+        ],
+    }
+
+    status, exit_code, detail = module.local_selftest_enforcement_signal(release_evidence)
+
+    assert status == "PASS"
+    assert exit_code == 0
+    assert "command=npm --prefix desktop run local:selftest" in detail
+    assert "blocking_sources=none" in detail
+    assert "proof_state=fresh_current" in detail
+    assert "decision=optional_with_fresh_current_evidence" in detail
+
+
+def test_local_selftest_enforcement_signal_returns_fail_for_non_green_release_evidence() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_local_selftest_fail",
+    )
+
+    release_evidence = {
+        "status": "non_green",
+        "evidence_sources": [
+            {
+                "source_id": "release_summary_report",
+                "status": "PASS",
+                "is_fresh": True,
+                "is_current": True,
+                "freshness_status": "fresh",
+                "supersession_status": "current",
+            },
+            {
+                "source_id": "authority_alignment",
+                "status": "PASS",
+                "is_fresh": True,
+                "is_current": True,
+                "freshness_status": "fresh",
+                "supersession_status": "current",
+            },
+            {
+                "source_id": "writing_helper_acceptance",
+                "status": "PASS",
+                "is_fresh": False,
+                "is_current": True,
+                "freshness_status": "stale",
+                "supersession_status": "current",
+            },
+            {
+                "source_id": "governance_scripts_regression",
+                "status": "PASS",
+                "is_fresh": True,
+                "is_current": True,
+                "freshness_status": "fresh",
+                "supersession_status": "current",
+            },
+        ],
+    }
+
+    status, exit_code, detail = module.local_selftest_enforcement_signal(release_evidence)
+
+    assert status == "FAIL"
+    assert exit_code == 1
+    assert "release_evidence_status=non_green" in detail
+    assert "blocking_sources=writing_helper_acceptance:freshness=stale" in detail
+    assert "proof_state=missing_or_non_green" in detail
+    assert "decision=run_local_selftest_before_go" in detail
+
+
+def test_build_release_readiness_artifact_includes_release_evidence_metadata() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_release_evidence_artifact",
+    )
+
+    release_evidence = {
+        "status": "fresh_current",
+        "blocking_sources": [],
+        "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+        "version": "9.0.8",
+        "generated_at": "2026-04-17T12:00:00+00:00",
+        "freshness_window_hours": module.RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS,
+        "evidence_sources": [
+            {
+                "source_id": "writing_helper_acceptance",
+                "status": "PASS",
+                "freshness_status": "fresh",
+                "supersession_status": "current",
+                "evidence_state": "fresh_current",
+            }
+        ],
+    }
+
+    artifact = module._build_release_readiness_artifact(
+        decision="GO",
+        go_no_go_reasons=[],
+        generated_at="2026-04-17T12:00:00+00:00",
+        head_sha="4d63e03db1f673379901fb827aff1a1f6947faa8",
+        version="9.0.8",
+        checks=[],
+        release_evidence=release_evidence,
+        report_path=PROJECT_ROOT / "release-check-summary.md",
+    )
+
+    assert artifact["schema_version"] == module.RELEASE_EVIDENCE_SCHEMA_VERSION
+    assert artifact["head_sha"] == "4d63e03db1f673379901fb827aff1a1f6947faa8"
+    assert artifact["version"] == "9.0.8"
+    assert artifact["freshness_window_hours"] == module.RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS
+    assert artifact["release_evidence"] == release_evidence
+
+
+def test_release_check_summary_main_handles_preliminary_decision_before_evidence_sources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_main_preliminary_decision",
+    )
+
+    release_dir = tmp_path / "release-evidence"
+    report_path = tmp_path / "release-check-summary.md"
+    readiness_path = release_dir / "release-readiness-artifact.json"
+    authority_path = release_dir / "authority-alignment.json"
+    writing_helper_path = release_dir / "writing-helper-acceptance.json"
+    governance_junit_path = release_dir / "governance-scripts.junit.xml"
+    production_guard_junit_path = release_dir / "vitest-production-guard.xml"
+    e2e_junit_path = release_dir / "vitest-e2e.xml"
+
+    release_dir.mkdir(parents=True, exist_ok=True)
+    writing_helper_path.write_text(
+        json.dumps(
+            {
+                "status": "PASS",
+                "strict": True,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "head_sha": "deadbeef",
+                "version": "9.0.8",
+                "total_cases": 7,
+                "passed_cases": 7,
+                "failed_cases": 0,
+                "failed_cases_path": None,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "REPORT_PATH", report_path)
+    monkeypatch.setattr(module, "RELEASE_EVIDENCE_DIR", release_dir)
+    monkeypatch.setattr(module, "RELEASE_READINESS_ARTIFACT_PATH", readiness_path)
+    monkeypatch.setattr(module, "AUTHORITY_ALIGNMENT_ARTIFACT_PATH", authority_path)
+    monkeypatch.setattr(module, "WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH", writing_helper_path)
+    monkeypatch.setattr(module, "GOVERNANCE_JUNIT_PATH", governance_junit_path)
+    monkeypatch.setattr(module, "PRODUCTION_GUARD_JUNIT_PATH", production_guard_junit_path)
+    monkeypatch.setattr(module, "E2E_JUNIT_PATH", e2e_junit_path)
+
+    def fake_run_cmd(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str]:
+        del env
+        command = " ".join(cmd)
+        if cmd[:3] == ["git", "rev-parse", "HEAD"]:
+            return 0, "deadbeef"
+        if "scripts/check_versions.py" in command:
+            return 0, "版本一致性检查通过。"
+        if "scripts/delivery_gate.py" in command:
+            return 0, "delivery gate: ok"
+        if "scripts/check_tasks_completion.py" in command:
+            return 0, json.dumps(
+                {
+                    "total_checked": 10,
+                    "total_unchecked": 0,
+                    "completion_ratio": 100.0,
+                },
+                ensure_ascii=False,
+            )
+        if "scripts/check_authority_alignment.py" in command:
+            return 0, json.dumps(
+                {
+                    "status": "PASS",
+                    "checked_rules": 20,
+                    "passed_rules": 20,
+                    "failed_rules": 0,
+                    "checked_files": ["README.md"],
+                    "mismatches": [],
+                },
+                ensure_ascii=False,
+            )
+        if "test:coverage:phase4" in command:
+            return 0, "64 passed"
+        if "build:sidecar" in command:
+            return 0, "1 passed"
+        if "validate:sidecar-contract" in command:
+            return 0, "1 passed"
+        if "validate:package:dry-run" in command:
+            return 0, "1 passed"
+        if "ensure-deps" in command:
+            return 0, "ok"
+        if "check:local" in command:
+            return 0, "270 passed"
+        if "tests/mcp/workflow-endpoints.integration.test.ts" in command:
+            return 0, "10 passed"
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(module, "run_cmd", fake_run_cmd)
+    monkeypatch.setattr(module, "_run_governance_scripts_regression", lambda path: (0, "19 passed"))
+    monkeypatch.setattr(module, "_run_release_runtime_guard", lambda path: (0, "4 passed"))
+
+    buffer = io.StringIO()
+    with redirect_stdout(buffer):
+        exit_code = module.main()
+
+    assert exit_code in {0, 1}
+    assert report_path.exists()
+    assert readiness_path.exists()
+    assert authority_path.exists()
+    report_text = report_path.read_text(encoding="utf-8")
+    assert "- Decision:" in report_text
+
+
+def test_release_check_summary_main_binds_desktop_check_to_authoritative_gate_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_desktop_check_binding",
+    )
+
+    release_dir = tmp_path / "release-evidence"
+    report_path = tmp_path / "release-check-summary.md"
+    readiness_path = release_dir / "release-readiness-artifact.json"
+    authority_path = release_dir / "authority-alignment.json"
+    writing_helper_path = release_dir / "writing-helper-acceptance.json"
+    governance_junit_path = release_dir / "governance-scripts.junit.xml"
+    production_guard_junit_path = release_dir / "vitest-production-guard.xml"
+    e2e_junit_path = release_dir / "vitest-e2e.xml"
+
+    release_dir.mkdir(parents=True, exist_ok=True)
+    writing_helper_path.write_text(
+        json.dumps(
+            {
+                "status": "PASS",
+                "strict": True,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "head_sha": "deadbeef",
+                "version": "9.0.8",
+                "total_cases": 7,
+                "passed_cases": 7,
+                "failed_cases": 0,
+                "failed_cases_path": None,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(module, "REPORT_PATH", report_path)
+    monkeypatch.setattr(module, "RELEASE_EVIDENCE_DIR", release_dir)
+    monkeypatch.setattr(module, "RELEASE_READINESS_ARTIFACT_PATH", readiness_path)
+    monkeypatch.setattr(module, "AUTHORITY_ALIGNMENT_ARTIFACT_PATH", authority_path)
+    monkeypatch.setattr(module, "WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH", writing_helper_path)
+    monkeypatch.setattr(module, "GOVERNANCE_JUNIT_PATH", governance_junit_path)
+    monkeypatch.setattr(module, "PRODUCTION_GUARD_JUNIT_PATH", production_guard_junit_path)
+    monkeypatch.setattr(module, "E2E_JUNIT_PATH", e2e_junit_path)
+
+    def fake_run_cmd(cmd: list[str], env: dict[str, str] | None = None) -> tuple[int, str]:
+        del env
+        command = " ".join(cmd)
+        if cmd[:3] == ["git", "rev-parse", "HEAD"]:
+            return 0, "deadbeef"
+        if "scripts/check_versions.py" in command:
+            return 0, "versions ok"
+        if "scripts/delivery_gate.py" in command:
+            return 0, "delivery ok"
+        if "scripts/check_tasks_completion.py" in command:
+            return 0, json.dumps(
+                {
+                    "total_checked": 10,
+                    "total_unchecked": 0,
+                    "completion_ratio": 100.0,
+                },
+                ensure_ascii=False,
+            )
+        if "scripts/check_authority_alignment.py" in command:
+            return 0, json.dumps(
+                {
+                    "status": "PASS",
+                    "checked_rules": 20,
+                    "passed_rules": 20,
+                    "failed_rules": 0,
+                    "checked_files": ["README.md"],
+                    "mismatches": [],
+                },
+                ensure_ascii=False,
+            )
+        if "test:coverage:phase4" in command:
+            return 0, "64 passed"
+        if "build:sidecar" in command:
+            return 0, "1 passed"
+        if "validate:sidecar-contract" in command:
+            return 0, "1 passed"
+        if "validate:package:dry-run" in command:
+            return 0, "1 passed"
+        if "ensure-deps" in command:
+            return 1, "bootstrap failed"
+        if "check:local" in command:
+            return 0, "270 passed"
+        if "tests/mcp/workflow-endpoints.integration.test.ts" in command:
+            return 0, "10 passed"
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(module, "run_cmd", fake_run_cmd)
+    monkeypatch.setattr(module, "_run_governance_scripts_regression", lambda path: (0, "19 passed"))
+    monkeypatch.setattr(module, "_run_release_runtime_guard", lambda path: (0, "4 passed"))
+
+    with redirect_stdout(io.StringIO()):
+        exit_code = module.main()
+
+    readiness = json.loads(readiness_path.read_text(encoding="utf-8"))
+    checks = readiness["checks"]
+    desktop_check = next(check for check in checks if check["check_id"] == "desktop_check")
+
+    assert exit_code == 0
+    assert desktop_check["status"] == "PASS"
+    assert desktop_check["exit_code"] == 0
+
+
 def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None:
     module = load_script_module(
         "scripts/release_check_summary.py",
@@ -547,6 +1058,7 @@ def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None
     )
 
     sign_off_text = (PROJECT_ROOT / "docs/release/SIGN_OFF.md").read_text(encoding="utf-8")
+    tier_matrix_text = (PROJECT_ROOT / "docs/testing/TEST_TIER_MATRIX.md").read_text(encoding="utf-8")
     summary_source = (PROJECT_ROOT / "scripts/release_check_summary.py").read_text(encoding="utf-8")
     package_json = json.loads((PROJECT_ROOT / "desktop/package.json").read_text(encoding="utf-8"))
 
@@ -558,12 +1070,28 @@ def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None
         "run",
         "check:local",
     ]
+    assert module.DESKTOP_LOCAL_SELFTEST_COMMAND == "npm --prefix desktop run local:selftest"
     assert "The authoritative desktop local gate is `npm --prefix desktop run check:local`." in sign_off_text
     assert "`python scripts/release_check_summary.py` reruns this exact command" in sign_off_text
+    assert "`npm --prefix desktop run local:selftest` is the authoritative launcher smoke-test." in sign_off_text
     assert package_json["scripts"]["check:local"] == "npm run check:release"
     assert "run_cmd(DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS)" in summary_source
     assert '("command", DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND)' in summary_source
     assert "desktop_authoritative_local_gate" in summary_source
+    assert "local_selftest_enforcement" in summary_source
+    assert "LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES" in summary_source
     assert "writing_helper_acceptance_signal" in summary_source
     assert "WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH" in summary_source
+    assert '"release_evidence": release_evidence,' in summary_source
+    assert "freshness_window_hours" in summary_source
+    assert "supersession_status" in summary_source
+    assert "## Retained Release Evidence" in summary_source
     assert ".workflow/evidence/release/writing-helper-acceptance.json" in sign_off_text
+    assert ".workflow/evidence/release/release-readiness-artifact.json" in sign_off_text
+    assert "freshness_status: fresh" in sign_off_text
+    assert "supersession_status: current" in sign_off_text
+    assert "blocking `local_selftest_enforcement` signal" in sign_off_text
+    assert (
+        "Treat `npm --prefix desktop run local:selftest` as mandatory whenever retained release evidence"
+        in tier_matrix_text
+    )

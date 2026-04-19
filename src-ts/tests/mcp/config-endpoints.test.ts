@@ -76,6 +76,10 @@ describe('config endpoints backup parity', () => {
     const backup = (body['config'] as Record<string, unknown>)['backup'] as Record<string, unknown>;
 
     expect(configResponse.statusCode).toBe(200);
+    expect(body['modifiable_fields']).toEqual(expect.arrayContaining([
+      'backup.s3_endpoint_url',
+      'gateway.detection_evasion_guard',
+    ]));
     expect(backup).toMatchObject({
       s3_endpoint_url: 'http://127.0.0.1:9000',
       s3_access_key_id: 'minio',

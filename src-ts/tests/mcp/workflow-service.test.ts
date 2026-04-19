@@ -8,6 +8,8 @@ const lifecycleMock = vi.fn();
 const createCheckpointMock = vi.fn();
 const restoreCheckpointMock = vi.fn();
 const listCheckpointsMock = vi.fn();
+const getCheckpointMock = vi.fn();
+const checkpointsMock = new Map<string, Record<string, unknown>>();
 
 vi.mock('../../workflow/workflow-engine.js', () => ({
   WorkflowEngine: vi.fn().mockImplementation(() => ({
@@ -19,6 +21,8 @@ vi.mock('../../workflow/workflow-engine.js', () => ({
     createCheckpoint: createCheckpointMock,
     restoreCheckpoint: restoreCheckpointMock,
     listCheckpoints: listCheckpointsMock,
+    getCheckpoint: getCheckpointMock,
+    checkpoints: checkpointsMock,
   })),
 }));
 
@@ -26,6 +30,7 @@ describe('mcp workflow service', () => {
   afterEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    checkpointsMock.clear();
   });
 
   it('delegates route/plan/execute to WorkflowEngine with adapted arguments', async () => {
@@ -62,6 +67,26 @@ describe('mcp workflow service', () => {
     createCheckpointMock.mockResolvedValueOnce({ checkpoint_id: 'cp-1' });
     restoreCheckpointMock.mockResolvedValueOnce({ status: 'restored' });
     listCheckpointsMock.mockResolvedValueOnce([{ id: 'cp-1' }]);
+    getCheckpointMock.mockImplementation((checkpointId: string) => {
+      if (checkpointId !== 'cp-1') return null;
+      return {
+        id: 'cp-1',
+        description: 'snapshot',
+        commit_hash: null,
+        created_at: '2026-04-20T00:00:00.000Z',
+        plan_id: null,
+        step_id: null,
+        replay_payload: {},
+      };
+    });
+    checkpointsMock.set('cp-1', {
+      id: 'cp-1',
+      description: 'snapshot',
+      created_at: '2026-04-20T00:00:00.000Z',
+      replay_payload: {},
+      plan_id: null,
+      step_id: null,
+    });
 
     const {
       workflowQuickRollback,
@@ -83,5 +108,110 @@ describe('mcp workflow service', () => {
     expect(restoreCheckpointMock).toHaveBeenCalledWith('cp-1', 'confirm-token');
     expect(listCheckpointsMock).toHaveBeenCalledWith(5);
     expect(checkpoints).toEqual([{ id: 'cp-1' }]);
+  });
+
+  it('registers/lists/pauses/resumes and runs scheduler tasks', async () => {
+    planMock.mockResolvedValueOnce({ plan_id: 'plan-scheduler-1' });
+    executeMock.mockResolvedValueOnce({ status: 'completed', step_name: 'analyze' });
+
+    const {
+      workflowSchedulerRegister,
+      workflowSchedulerList,
+      workflowSchedulerPause,
+      workflowSchedulerResume,
+      workflowSchedulerRunNow,
+    } = await import('../../mcp/services/workflow.js');
+
+    const definition = {
+      task_id: 'sched-1',
+      title: 'Nightly delivery',
+      task: '推进项目到完成',
+      level: 'L3',
+      schedule_rule: { cadence: 'cron', cron: '0 2 * * *', timezone: 'Asia/Shanghai' },
+      trigger_rule: { type: 'manual_run_now', run_now: true },
+      backend_mode_policy: { mode: 'inherit', fallback_mode: 'standard' },
+      progression_policy: {
+        success_statuses: ['completed'],
+        approval_policy: {
+          tiers: [
+            { tier: 'critical', requires_confirmation: true, gate_status_on_hold: 'waiting_confirmation' },
+          ],
+          default_gate_status: 'waiting_confirmation',
+        },
+        failure_policy: {
+          retry: { max_retries: 2, strategy: 'fixed', base_delay_ms: 1000 },
+          on_retry_exhausted: 'manual_takeover',
+          manual_takeover_status: 'gate_blocked',
+        },
+      },
+    };
+
+    const registerResult = await workflowSchedulerRegister({
+      definition,
+      workspace: {
+        schemaVersion: '2026-04-08',
+        identity: {
+          workspaceId: 'workspace-1',
+          projectId: 'project-1',
+          projectName: 'project-1',
+          workspaceRoot: '/tmp/workspace-1',
+        },
+        manuscript: {
+          manuscriptId: null,
+          title: null,
+          chapterId: null,
+          chapterTitle: null,
+          chapterNumber: null,
+        },
+        storyBible: {
+          storyBibleId: null,
+          draftId: null,
+          version: null,
+          storage: 'workspace',
+        },
+        knowledge: {
+          focusEntityId: null,
+          graphEntityIds: [],
+          memoryEntryIds: [],
+        },
+        workflow: {
+          sessionId: 'workflow-session-1',
+          planId: null,
+          level: null,
+        },
+        chat: {
+          conversationId: 'workflow-session-1',
+          comparisonEnabled: false,
+        },
+        compatibility: {
+          additiveContract: true,
+          migratedLegacyFields: [],
+          notes: [],
+        },
+      },
+    });
+
+    expect(registerResult['status']).toBe('registered');
+
+    const listResult = await workflowSchedulerList({ limit: 10 });
+    expect(Array.isArray(listResult['tasks'])).toBe(true);
+    expect((listResult['tasks'] as Array<Record<string, unknown>>).some((item) => item['task_id'] === 'sched-1')).toBe(true);
+
+    const pauseResult = await workflowSchedulerPause({ taskId: 'sched-1' });
+    expect(pauseResult['status']).toBe('paused');
+
+    const pausedRun = await workflowSchedulerRunNow({ taskId: 'sched-1' });
+    expect(pausedRun['error']).toContain('paused');
+
+    const resumeResult = await workflowSchedulerResume({ taskId: 'sched-1' });
+    expect(resumeResult['status']).toBe('active');
+
+    const runResult = await workflowSchedulerRunNow({ taskId: 'sched-1' });
+    expect(runResult['status']).toBe('completed');
+    expect(runResult['trigger']).toBe('manual_run_now');
+    expect(runResult['plan_id']).toBe('plan-scheduler-1');
+
+    expect(planMock).toHaveBeenCalledWith('推进项目到完成', 'L3', []);
+    expect(executeMock).toHaveBeenCalledWith('plan-scheduler-1', undefined, undefined, undefined);
   });
 });

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const hookMocks = vi.hoisted(() => ({
   useAppStoreMock: vi.fn(),
   useLatestAssistantMessageContentMock: vi.fn(),
+  getCurrentEditorSelectionTextMock: vi.fn(),
   useAppRuntimeHealthMock: vi.fn(),
   useAppUiPersistenceMock: vi.fn(),
   useAppCheckpointMenuMock: vi.fn(),
@@ -20,6 +21,10 @@ vi.mock('../stores/appStore', () => ({
 
 vi.mock('../stores/selectors', () => ({
   useLatestAssistantMessageContent: hookMocks.useLatestAssistantMessageContentMock,
+}))
+
+vi.mock('../utils/editorHandle', () => ({
+  getCurrentEditorSelectionText: hookMocks.getCurrentEditorSelectionTextMock,
 }))
 
 vi.mock('./useAppRuntimeHealth', () => ({
@@ -74,10 +79,11 @@ describe('useAppViewModel', () => {
       activeRightPanel: 'none' as const,
       setActiveRightPanel: vi.fn(),
       writingHelperDraft: {
-        content: '',
+        content: 'Current draft',
         mode: 'polish' as const,
         maxSentences: 3,
         maxItems: 6,
+        guidance: '',
       },
       setWritingHelperDraft: vi.fn(),
       clearWritingHelperDraft: vi.fn(),
@@ -145,9 +151,10 @@ describe('useAppViewModel', () => {
     hookMocks.useAppStoreMock.mockReturnValue(backendStore)
     hookMocks.useAppUiPersistenceMock.mockReturnValue(uiPersistence)
     hookMocks.useLatestAssistantMessageContentMock.mockReturnValue('Latest assistant reply')
+    hookMocks.getCurrentEditorSelectionTextMock.mockReturnValue('Selected text')
     hookMocks.useAppContextUsageMock.mockReturnValue(contextUsageView)
     hookMocks.useAppRuntimeHealthMock.mockReturnValue(runtimeView)
-    hookMocks.useI18nMock.mockReturnValue({ t })
+    hookMocks.useI18nMock.mockReturnValue({ t, language: 'en' })
     hookMocks.useAppPanelOrchestrationMock.mockReturnValue(panelOrchestration)
     hookMocks.useAppCheckpointMenuMock.mockReturnValue(checkpointMenu)
     hookMocks.useAppHeaderViewModelMock.mockReturnValue(headerViewModel)
@@ -175,7 +182,23 @@ describe('useAppViewModel', () => {
     expect(hookMocks.useAppShellViewModelMock).toHaveBeenCalledWith({
       uiPersistence,
       panelOrchestration,
-      latestAssistantContent: 'Latest assistant reply',
+      evaluationSources: [
+        {
+          kind: 'latestAssistantReply',
+          label: 'Latest assistant reply',
+          content: 'Latest assistant reply',
+        },
+        {
+          kind: 'editorSelection',
+          label: 'Current editor selection',
+          content: 'Selected text',
+        },
+        {
+          kind: 'currentDraft',
+          label: 'Current draft',
+          content: 'Current draft',
+        },
+      ],
       t,
       headerViewModel,
       checkpointMenu,

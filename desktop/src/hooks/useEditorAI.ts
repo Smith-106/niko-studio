@@ -14,33 +14,63 @@ import { useState, useCallback, useRef } from 'react'
 import type { Editor } from '@tiptap/react'
 import { insertLoadingIndicator, streamTextIntoEditor, replaceRange } from '../components/editor/streamToEditor'
 import { streamWritingHelper } from '../api/client'
+import type { Language } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
+import {
+  buildEditorAIPayload,
+  type EditorAIGenerateAction,
+  type EditorAIPayload,
+  type EditorAIRequest,
+  type EditorAIRewriteVariant,
+} from './editorAIPromptPolicy'
 
 export interface UseEditorAIOptions {
   editor: Editor | null
-  getStyleInstruction?: () => string
+  language: Language
+  getStyleRequirements?: () => string | null | undefined
 }
 
 interface StreamRecoveryOptions {
   replaceFrom?: number
-  replaceTo?: number
   fallbackText?: string
+}
+
+export type EditorAIRequestOwner = 'slash' | 'bubble'
+
+export interface EditorAIRequestOptions {
+  owner?: EditorAIRequestOwner
+  allowRestart?: boolean
+  beforeRequestStart?: () => void
+}
+
+interface ActiveEditorAIRequest {
+  owner: EditorAIRequestOwner | null
+  requestId: number
+  controller: AbortController | null
+  completion: Promise<void>
+  resolveCompletion: () => void
 }
 
 export interface UseEditorAIReturn {
   isGenerating: boolean
   errorMessage: string | null
   clearError: () => void
-  generateAtCursor: (instruction: string) => Promise<void>
-  rewriteSelection: (instruction: string) => Promise<void>
+  runRequest: (request: EditorAIRequest, options?: EditorAIRequestOptions) => Promise<void>
+  generateAtCursor: (action?: EditorAIGenerateAction) => Promise<void>
+  rewriteSelection: (variant: EditorAIRewriteVariant) => Promise<void>
   continueWriting: () => Promise<void>
-  cancel: () => void
+  cancel: (owner?: EditorAIRequestOwner) => void
 }
 
-export function useEditorAI({ editor, getStyleInstruction }: UseEditorAIOptions): UseEditorAIReturn {
+export function useEditorAI({
+  editor,
+  language,
+  getStyleRequirements,
+}: UseEditorAIOptions): UseEditorAIReturn {
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  const activeRequestRef = useRef<ActiveEditorAIRequest | null>(null)
+  const requestIdRef = useRef(0)
 
   const getProviderConfig = useCallback(() => {
     const { settings } = useSettingsStore.getState()
@@ -54,22 +84,88 @@ export function useEditorAI({ editor, getStyleInstruction }: UseEditorAIOptions)
     setErrorMessage(null)
   }, [])
 
+  const releaseRequest = useCallback((requestId: number) => {
+    const activeRequest = activeRequestRef.current
+    if (!activeRequest || activeRequest.requestId !== requestId) {
+      return
+    }
+
+    activeRequest.resolveCompletion()
+    activeRequestRef.current = null
+    setIsGenerating(false)
+  }, [])
+
+  const claimRequest = useCallback(
+    async (options?: EditorAIRequestOptions) => {
+      const owner = options?.owner ?? null
+
+      while (true) {
+        const activeRequest = activeRequestRef.current
+        if (!activeRequest) {
+          let resolveCompletion = () => {}
+          const completion = new Promise<void>((resolve) => {
+            resolveCompletion = resolve
+          })
+          const nextRequest: ActiveEditorAIRequest = {
+            owner,
+            requestId: requestIdRef.current + 1,
+            controller: null,
+            completion,
+            resolveCompletion,
+          }
+
+          requestIdRef.current = nextRequest.requestId
+          activeRequestRef.current = nextRequest
+          setIsGenerating(true)
+          setErrorMessage(null)
+          return nextRequest
+        }
+
+        const canRestart =
+          Boolean(owner) &&
+          options?.allowRestart === true &&
+          activeRequest.owner === owner
+
+        if (!canRestart) {
+          return null
+        }
+
+        if (activeRequest.controller) {
+          activeRequest.controller.abort()
+        } else {
+          releaseRequest(activeRequest.requestId)
+        }
+
+        await activeRequest.completion
+      }
+    },
+    [releaseRequest],
+  )
+
   const callStream = useCallback(
-    async (prompt: string, recovery?: StreamRecoveryOptions) => {
+    async (
+      requestId: number,
+      payload: EditorAIPayload,
+      recovery?: StreamRecoveryOptions,
+    ) => {
       if (!editor) return
 
-      const controller = new AbortController()
-      abortRef.current = controller
-      setIsGenerating(true)
-      setErrorMessage(null)
-
-      // Insert "..." placeholder
-      const pos = insertLoadingIndicator(editor)
-      if (pos === null) {
-        setIsGenerating(false)
-        abortRef.current = null
+      const activeRequest = activeRequestRef.current
+      if (!activeRequest || activeRequest.requestId !== requestId) {
         return
       }
+
+      const controller = new AbortController()
+      activeRequest.controller = controller
+      const isCurrentRequest = () =>
+        activeRequestRef.current?.requestId === requestId
+
+      const pos = insertLoadingIndicator(editor)
+      if (pos === null) {
+        releaseRequest(requestId)
+        return
+      }
+
       const placeholderLen = 3
       const streamer = streamTextIntoEditor(editor, pos, placeholderLen)
 
@@ -77,116 +173,208 @@ export function useEditorAI({ editor, getStyleInstruction }: UseEditorAIOptions)
       let streamError: string | null = null
       let hasStreamedContent = false
 
-      await streamWritingHelper(
-        {
-          content: prompt,
-          mode: 'generate',
-          instruction: getStyleInstruction?.() ?? '',
-          model: provider?.defaultModel ?? '',
-          provider: provider?.id ?? '',
-          api_key: provider?.apiKey ?? '',
-          base_url: provider?.baseUrl ?? '',
-        },
-        {
-          onContent: (chunk) => {
-            if (chunk.length > 0) {
-              hasStreamedContent = true
-            }
-            streamer.append(chunk)
+      try {
+        await streamWritingHelper(
+          {
+            content: payload.prompt,
+            mode: 'generate',
+            instruction: payload.styleInstruction,
+            model: provider?.defaultModel ?? '',
+            provider: provider?.id ?? '',
+            api_key: provider?.apiKey ?? '',
+            base_url: provider?.baseUrl ?? '',
           },
-          onDone: () => {
-            streamer.finish()
+          {
+            onContent: (chunk) => {
+              if (!isCurrentRequest() || controller.signal.aborted) {
+                return
+              }
+              if (chunk.length > 0) {
+                hasStreamedContent = true
+              }
+              streamer.append(chunk)
+            },
+            onDone: () => {
+              if (!isCurrentRequest() || controller.signal.aborted) {
+                return
+              }
+              streamer.finish()
+            },
+            onError: (err) => {
+              if (!isCurrentRequest() || controller.signal.aborted) {
+                return
+              }
+              streamError = err
+              console.error('AI stream error:', err)
+            },
           },
-          onError: (err) => {
-            streamError = err
-            console.error('AI stream error:', err)
-          },
-        },
-        { signal: controller.signal },
-      )
-
-      const totalLen = streamer.finish()
-      const shouldRestoreRewrite = Boolean(
-        recovery?.fallbackText !== undefined && recovery.replaceFrom !== undefined && !hasStreamedContent,
-      )
-
-      if (streamError) {
-        if (shouldRestoreRewrite) {
-          replaceRange(editor, recovery?.replaceFrom ?? pos, totalLen, recovery?.fallbackText ?? '')
-        } else if (!hasStreamedContent && totalLen <= placeholderLen) {
-          replaceRange(editor, pos, totalLen, '')
+          { signal: controller.signal },
+        )
+      } catch (error) {
+        if (!isCurrentRequest() || controller.signal.aborted) {
+          return
         }
-        setErrorMessage(streamError)
-      } else if (controller.signal.aborted) {
-        if (shouldRestoreRewrite) {
-          replaceRange(editor, recovery?.replaceFrom ?? pos, totalLen, recovery?.fallbackText ?? '')
-        } else if (!hasStreamedContent && totalLen <= placeholderLen) {
-          replaceRange(editor, pos, totalLen, '')
+
+        streamError = error instanceof Error ? error.message : String(error)
+        console.error('AI stream error:', error)
+      } finally {
+        if (!isCurrentRequest()) {
+          return
         }
+
+        const totalLen = streamer.finish()
+        const shouldRestoreRewrite = Boolean(
+          recovery?.fallbackText !== undefined &&
+            recovery.replaceFrom !== undefined &&
+            !hasStreamedContent,
+        )
+
+        if (streamError) {
+          if (shouldRestoreRewrite) {
+            replaceRange(
+              editor,
+              recovery?.replaceFrom ?? pos,
+              totalLen,
+              recovery?.fallbackText ?? '',
+            )
+          } else if (!hasStreamedContent && totalLen <= placeholderLen) {
+            replaceRange(editor, pos, totalLen, '')
+          }
+          setErrorMessage(streamError)
+        } else if (controller.signal.aborted) {
+          if (shouldRestoreRewrite) {
+            replaceRange(
+              editor,
+              recovery?.replaceFrom ?? pos,
+              totalLen,
+              recovery?.fallbackText ?? '',
+            )
+          } else if (!hasStreamedContent && totalLen <= placeholderLen) {
+            replaceRange(editor, pos, totalLen, '')
+          }
+        }
+
+        releaseRequest(requestId)
       }
-
-      setIsGenerating(false)
-      abortRef.current = null
     },
-    [editor, getProviderConfig, getStyleInstruction],
+    [editor, getProviderConfig, releaseRequest],
   )
 
-  const generateAtCursor = useCallback(
-    async (instruction: string) => {
+  const runRequest = useCallback(
+    async (request: EditorAIRequest, options?: EditorAIRequestOptions) => {
       if (!editor) return
+
+      const claimedRequest = await claimRequest(options)
+      if (!claimedRequest) {
+        return
+      }
+      const isClaimedRequestActive = () =>
+        activeRequestRef.current?.requestId === claimedRequest.requestId
+
+      try {
+        options?.beforeRequestStart?.()
+      } catch (error) {
+        releaseRequest(claimedRequest.requestId)
+        throw error
+      }
+
+      if (!isClaimedRequestActive()) {
+        return
+      }
+
+      const rawStyleRequirements = getStyleRequirements?.() ?? null
+
+      if (request.action === 'rewrite') {
+        const { from, to } = editor.state.selection
+        const selectedText = editor.state.doc.textBetween(from, to, '\n')
+        if (!selectedText.trim()) {
+          releaseRequest(claimedRequest.requestId)
+          return
+        }
+
+        editor.chain().focus().deleteSelection().run()
+
+        await callStream(
+          claimedRequest.requestId,
+          buildEditorAIPayload({
+            request,
+            language,
+            selectedText,
+            rawStyleRequirements,
+          }),
+          {
+            replaceFrom: from,
+            fallbackText: selectedText,
+          },
+        )
+        return
+      }
+
       const { from } = editor.state.selection
-      const textBefore = editor.state.doc.textBetween(
-        Math.max(0, from - 2000),
+      const contextWindow = request.action === 'continue' ? 3000 : 2000
+      const contextBefore = editor.state.doc.textBetween(
+        Math.max(0, from - contextWindow),
         from,
         '\n',
       )
-      const prompt = `${instruction}\n\n上下文：\n${textBefore}`
-      await callStream(prompt)
+
+      await callStream(
+        claimedRequest.requestId,
+        buildEditorAIPayload({
+          request,
+          language,
+          contextBefore,
+          rawStyleRequirements,
+        }),
+      )
     },
-    [editor, callStream],
+    [editor, language, getStyleRequirements, claimRequest, callStream, releaseRequest],
+  )
+
+  const cancel = useCallback(
+    (owner?: EditorAIRequestOwner) => {
+      const activeRequest = activeRequestRef.current
+      if (!activeRequest) {
+        return
+      }
+
+      if (owner && activeRequest.owner !== owner) {
+        return
+      }
+
+      if (activeRequest.controller) {
+        activeRequest.controller.abort()
+        return
+      }
+
+      releaseRequest(activeRequest.requestId)
+    },
+    [releaseRequest],
+  )
+
+  const generateAtCursor = useCallback(
+    async (action: EditorAIGenerateAction = 'generate') => {
+      await runRequest({ action })
+    },
+    [runRequest],
   )
 
   const rewriteSelection = useCallback(
-    async (instruction: string) => {
-      if (!editor) return
-      const { from, to } = editor.state.selection
-      const selectedText = editor.state.doc.textBetween(from, to, '\n')
-      if (!selectedText.trim()) return
-
-      // Delete selected text so stream replaces it.
-      editor.chain().focus().deleteSelection().run()
-
-      const prompt = `请根据以下指令改写文本：\n\n指令：${instruction}\n\n原文：\n${selectedText}`
-      await callStream(prompt, {
-        replaceFrom: from,
-        replaceTo: to,
-        fallbackText: selectedText,
-      })
+    async (variant: EditorAIRewriteVariant) => {
+      await runRequest({ action: 'rewrite', variant })
     },
-    [editor, callStream],
+    [runRequest],
   )
 
   const continueWriting = useCallback(async () => {
-    if (!editor) return
-    const { from } = editor.state.selection
-    const textBefore = editor.state.doc.textBetween(
-      Math.max(0, from - 3000),
-      from,
-      '\n',
-    )
-    const prompt = `请续写以下内容，保持风格和语气一致：\n\n${textBefore}`
-    await callStream(prompt)
-  }, [editor, callStream])
-
-  const cancel = useCallback(() => {
-    abortRef.current?.abort()
-    setIsGenerating(false)
-  }, [])
+    await runRequest({ action: 'continue' })
+  }, [runRequest])
 
   return {
     isGenerating,
     errorMessage,
     clearError,
+    runRequest,
     generateAtCursor,
     rewriteSelection,
     continueWriting,

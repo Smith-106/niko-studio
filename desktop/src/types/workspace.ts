@@ -38,6 +38,9 @@ export interface ProjectWorkspaceWorkflow {
   sessionId: string | null
   planId: string | null
   level: string | null
+  schedulerTaskId?: string | null
+  schedulerRunId?: string | null
+  schedulerTrigger?: 'cron' | 'event' | 'manual_run_now' | null
 }
 
 export interface ProjectWorkspaceChat {
@@ -125,6 +128,13 @@ function readStoryBibleStorage(value: unknown): ProjectWorkspaceStoryBible['stor
   return null
 }
 
+function readSchedulerTrigger(value: unknown): ProjectWorkspaceWorkflow['schedulerTrigger'] | null {
+  if (value === 'cron' || value === 'event' || value === 'manual_run_now') {
+    return value
+  }
+  return null
+}
+
 export function createDefaultProjectWorkspaceContext(
   options: NormalizeWorkspaceOptions = {},
 ): ProjectWorkspaceContext {
@@ -164,6 +174,9 @@ export function createDefaultProjectWorkspaceContext(
       sessionId: null,
       planId: null,
       level: null,
+      schedulerTaskId: null,
+      schedulerRunId: null,
+      schedulerTrigger: null,
     },
     chat: {
       conversationId: null,
@@ -338,6 +351,18 @@ export function normalizeProjectWorkspaceContext(
         ?? readString(root.workflowLevel)
         ?? readString(root.workflow_level)
         ?? readString(root.level),
+      schedulerTaskId: readString(workflowRecord?.schedulerTaskId)
+        ?? readString(workflowRecord?.scheduler_task_id)
+        ?? readString(root.scheduler_task_id)
+        ?? readString(root.schedulerTaskId),
+      schedulerRunId: readString(workflowRecord?.schedulerRunId)
+        ?? readString(workflowRecord?.scheduler_run_id)
+        ?? readString(root.scheduler_run_id)
+        ?? readString(root.schedulerRunId),
+      schedulerTrigger: readSchedulerTrigger(workflowRecord?.schedulerTrigger)
+        ?? readSchedulerTrigger(workflowRecord?.scheduler_trigger)
+        ?? readSchedulerTrigger(root.scheduler_trigger)
+        ?? readSchedulerTrigger(root.schedulerTrigger),
     },
     chat: {
       conversationId: readString(chatRecord?.conversationId)
