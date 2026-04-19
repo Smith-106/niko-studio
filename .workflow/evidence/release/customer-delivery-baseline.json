@@ -6,18 +6,26 @@
   "issue_id": "ISS-20260418-002",
   "generated_at": "2026-04-18T19:01:38.0485321+08:00",
   "freeze_mode": "reuse_retained_release_proof",
-  "summary": "Freeze customer delivery on the retained GO baseline `4d63e03 / 9.0.8` and explicitly reuse the retained release proof set without rerunning authority evidence on a different SHA.",
+  "summary": "Freeze customer delivery on the retained release-evidence baseline `4d63e03 / 9.0.8` and explicitly reuse the retained release evidence set without rebuilding that evidence on a different SHA.",
   "baseline_decision_artifact": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json",
   "baseline": {
-    "label": "retained_release_go_baseline",
+    "label": "retained_release_evidence_baseline",
     "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
     "short_sha": "4d63e03",
     "version": "9.0.8",
     "commit_timestamp": "2026-04-16T21:06:44+08:00",
     "delivery_mode": {
-      "status": "pending",
-      "planned_decision_task": "EXEC-004",
-      "note": "EXEC-002 freezes build identity only. Signed external shipment versus unsigned internal/demo handoff remains a downstream decision."
+      "status": "resolved_downstream",
+      "shipment_mode": "unsigned demo/internal handoff",
+      "platform_scope": "Windows x64 only",
+      "readiness": "HOLD_PENDING_WRITER_SMOKE",
+      "decision_artifacts": [
+        ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/shipment-mode-decision.json",
+        ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/platform-scope-decision.json",
+        ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-handoff-bundle-manifest.json",
+        ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/final-handoff-status.md"
+      ],
+      "note": "EXEC-002 froze build identity only. Downstream EXEC-004 through EXEC-007 plus the retained handoff closeout resolved shipment mode and platform scope, but overall readiness remains on hold pending the retained writer smoke result."
     },
     "package_artifacts": [
       {
@@ -43,9 +51,9 @@
   "retained_release_proof": {
     "decision": "reused_without_rerun",
     "rationale": [
-      "The selected customer-delivery baseline remains the retained GO proof `4d63e03 / 9.0.8` from EXEC-001.",
+      "The selected customer-delivery baseline remains the retained release evidence for `4d63e03 / 9.0.8` from EXEC-001.",
       "The retained release-readiness artifact already records `release_evidence.status = fresh_current` for the same `head_sha` and version.",
-      "Rerunning release proof from the current dirty workspace would create a parallel proof chain on a different SHA, which this issue must not do."
+      "Rebuilding release evidence from the current dirty workspace would create a parallel evidence chain on a different SHA, which this issue must not do."
     ],
     "go_summary": {
       "path": "release-check-summary.md",
@@ -134,9 +142,9 @@
       ".workflow/evidence/release/vitest-e2e.xml"
     ],
     "notes": [
-      "No release-proof rerun was performed in EXEC-002 because the retained proof set already binds to the selected baseline.",
-      "Downstream EXEC tasks must cite this artifact plus `release-readiness-artifact.json` when referring to the frozen customer-delivery proof set.",
-      "The dirty workspace HEAD `802c7771720adfafc6e0ba682835273d2c6bb082` remains outside customer-delivery authority until a later task explicitly revalidates it."
+      "No release-evidence rerun was performed in EXEC-002 because the retained evidence set already binds to the selected baseline.",
+      "Downstream EXEC tasks must cite this artifact plus `release-readiness-artifact.json` when referring to the frozen customer-delivery evidence set.",
+      "The dirty workspace HEAD `802c7771720adfafc6e0ba682835273d2c6bb082` remains outside the retained customer-delivery reference set until a later task explicitly revalidates it."
     ]
   }
 }

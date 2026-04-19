@@ -1,0 +1,111 @@
+{
+  "artifact_type": "writer_golden_path_smoke",
+  "schema_version": "writer_golden_path_smoke.v1",
+  "session_id": "PEX-2026-04-18-client-delivery-remaining-work",
+  "task_id": "EXEC-003",
+  "issue_id": "ISS-20260418-003",
+  "generated_at": "2026-04-18T20:17:47.9652072+08:00",
+  "baseline": {
+    "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+    "short_sha": "4d63e03",
+    "version": "9.0.8"
+  },
+  "decision": "NOT_CLOSED",
+  "status": "retained_package_partial_walkthrough_incomplete",
+  "previous_blocked_note": {
+    "source": ".workflow/.csv-wave/cwp-client-delivery-handoff-20260413/context.md",
+    "source_date": "2026-04-13T12:45:00+08:00",
+    "summary": "The live writer golden-path smoke was blocked by a local Chrome DevTools MCP browser/profile conflict, leaving the handoff session in a historical blocked-note state."
+  },
+  "validated_prereqs": [
+    {
+      "kind": "frozen_baseline_binding",
+      "status": "PASS",
+      "source": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json",
+      "detail": "Selected customer-delivery baseline is 4d63e03 / 9.0.8."
+    },
+    {
+      "kind": "retained_release_readiness",
+      "status": "PASS",
+      "source": ".workflow/evidence/release/release-readiness-artifact.json",
+      "detail": "Release readiness artifact records the same retained release decision for head_sha 4d63e03db1f673379901fb827aff1a1f6947faa8 and version 9.0.8."
+    },
+    {
+      "kind": "retained_package_presence",
+      "status": "PASS",
+      "source": "desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.0.8_x64-setup.exe",
+      "detail": "Retained release installer is still present with 2026-04-16 timestamp."
+    },
+    {
+      "kind": "retained_package_presence",
+      "status": "PASS",
+      "source": "desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.8_x64_en-US.msi",
+      "detail": "Retained release MSI is still present with 2026-04-16 timestamp."
+    },
+    {
+      "kind": "retained_installed_surface_binding",
+      "status": "PASS",
+      "source": "desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.8_x64_zh-CN.msi",
+      "detail": "Windows Installer product {0DBAF73C-D2E8-4274-B5E1-918973BA41B0} is installed at D:\\写作\\ with InstallSource bound to the retained bundle/msi directory and cached local package C:\\WINDOWS\\Installer\\ca59f82.msi."
+    },
+    {
+      "kind": "retained_package_launch",
+      "status": "PASS",
+      "source": "D:/写作/niko-studio-desktop.exe",
+      "detail": "Retained installed surface launched to a visible Niko-Studio window at 2026-04-18T20:06:15.1474355+08:00."
+    }
+  ],
+  "non_qualifying_local_surfaces": [
+    {
+      "path": ".codex-run/local-shell-4177.out.log",
+      "reason": "Shows a 2026-04-18 developer browser shell, not a retained frozen package walkthrough."
+    },
+    {
+      "path": ".codex-run/desktop-local-state.json",
+      "reason": "Tracks a developer gateway session started on 2026-04-18 and cannot prove the retained package surface."
+    },
+    {
+      "path": "desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe",
+      "reason": "Local debug executable timestamp is newer than the frozen release package and cannot be used as customer-delivery evidence."
+    }
+  ],
+  "retained_attempt_evidence": [
+    {
+      "kind": "launch",
+      "path": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/launch-window-foreground.png",
+      "observation": "Retained package launched to a visible Niko-Studio window."
+    },
+    {
+      "kind": "new_document_attempt",
+      "path": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/after-new-doc-click.png",
+      "observation": "新建文档 created a 新对话 entry but the center pane remained on 小说创作助手."
+    },
+    {
+      "kind": "text_entry_attempt",
+      "path": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/after-text-entry-attempt.png",
+      "observation": "Keyboard paste into the center pane produced no visible edited text."
+    },
+    {
+      "kind": "settings_entry",
+      "path": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/settings-entry-attempt-3.png",
+      "observation": "Settings surface opened on the retained package."
+    },
+    {
+      "kind": "knowledge_entry",
+      "path": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/knowledge-entry-attempt-3.png",
+      "observation": "Knowledge surface opened on the retained package and displayed 保存角色失败，请稍后重试。"
+    }
+  ],
+  "closure_reason": "This session directly reached the retained 9.0.8 package surface and captured launch/settings/knowledge evidence, but it did not directly verify a writable document plus a non-error Writing Helper result on that retained package.",
+  "hold_authority": {
+    "retained_blocker_source": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/retained-writer-smoke-attempt.md",
+    "final_disposition_source": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/final-handoff-status.md",
+    "rule": "This smoke artifact remains the content-level blocker source, while overall customer-delivery readiness stays on hold under the retained closeout artifacts."
+  },
+  "operator_plan": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/writer-smoke-operator-plan.md",
+  "next_required_actions": [
+    "Run one manual retained-package walkthrough against D:/写作/niko-studio-desktop.exe or a clean host installed from desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.8_x64_zh-CN.msi.",
+    "Capture screenshots for launch, visible edited text in the main writing surface, Writing Helper response, settings, and knowledge entry.",
+    "Update this artifact to CLOSED only if the retained writer path completes without a customer-blocking defect."
+  ]
+}

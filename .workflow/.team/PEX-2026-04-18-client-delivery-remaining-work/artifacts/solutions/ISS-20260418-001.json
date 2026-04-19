@@ -1,0 +1,73 @@
+{
+  "session_id": "PEX-2026-04-18-client-delivery-remaining-work",
+  "issue_id": "ISS-20260418-001",
+  "solution_id": "SOL-ISS-20260418-001",
+  "issue_title": "Capture exact customer delivery baseline decision",
+  "status": "completed",
+  "created_at": "2026-04-18T19:05:00+08:00",
+  "approach": {
+    "summary": "Create one decision record that names the exact delivery SHA, version, retained package artifact(s), and superseded candidate baselines before any additional handoff work proceeds.",
+    "rationale": [
+      "The upstream analysis shows the retained release evidence is bound to `4d63e03 / 9.0.8`, while the current workspace on 2026-04-18 is dirty and cannot be shipped without an explicit baseline choice.",
+      "Every remaining delivery artifact depends on the chosen build identity; without one baseline record, smoke evidence and handoff notes become non-traceable.",
+      "This keeps the first step bounded and decision-focused instead of mixing stakeholder confirmation with evidence regeneration."
+    ],
+    "non_goals": [
+      "Do not refresh release evidence in this issue.",
+      "Do not assemble the customer handoff bundle in this issue."
+    ],
+    "risk_controls": [
+      "Use the retained release evidence files as the reference source for the currently validated baseline.",
+      "Record both the selected baseline and the rejected candidate state so later artifacts can explain why one path was chosen."
+    ]
+  },
+  "tasks": [
+    {
+      "id": "ISS-20260418-001-T1",
+      "title": "Enumerate viable delivery baseline candidates",
+      "description": "Compare the currently validated `4d63e03 / 9.0.8` evidence-bound baseline with any newer candidate SHA the operator may want to ship, and list the package filenames and evidence files currently attached to each candidate.",
+      "target_files": [
+        "D:/工作目录/niko-studio/release-check-summary.md",
+        "D:/工作目录/niko-studio/.workflow/evidence/release/release-readiness-artifact.json",
+        "D:/工作目录/niko-studio/.workflow/.analysis/ANL-2026-04-18-为了交付客户还有哪些工作没做/conclusions.json"
+      ],
+      "acceptance": [
+        "The candidate list explicitly names the current validated baseline and any requested newer candidate.",
+        "Each candidate is mapped to a SHA, version, and currently available package artifact names."
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "ISS-20260418-001-T2",
+      "title": "Record the exact customer delivery baseline decision",
+      "description": "Write a session-scoped decision artifact that captures the chosen `head_sha`, version, retained package artifact filename(s), rationale, approver/owner, and the superseded candidate(s) that were not selected.",
+      "target_files": [
+        "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json"
+      ],
+      "acceptance": [
+        "The decision artifact contains one exact SHA and version.",
+        "The decision artifact references the package artifact filename(s) that later smoke/bundle steps must use."
+      ],
+      "depends_on": [
+        "ISS-20260418-001-T1"
+      ]
+    }
+  ],
+  "estimated_files": [
+    "D:/工作目录/niko-studio/release-check-summary.md",
+    "D:/工作目录/niko-studio/.workflow/evidence/release/release-readiness-artifact.json",
+    "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json"
+  ],
+  "dependencies": [
+    "Use the retained release evidence set as the reference point for the validated baseline.",
+    "Require explicit operator/business confirmation if the chosen baseline is not the already validated `4d63e03 / 9.0.8` path."
+  ],
+  "validation_commands": [
+    "git rev-parse HEAD",
+    "git status --porcelain",
+    "python - <<'PY'\nimport json, pathlib\np = pathlib.Path('.workflow/evidence/release/release-readiness-artifact.json')\nprint(json.loads(p.read_text(encoding='utf-8'))['head_sha'])\nPY"
+  ],
+  "conflict_risks": [
+    "This decision feeds every later issue; changing it after evidence refresh or bundle assembly will invalidate downstream artifacts."
+  ]
+}

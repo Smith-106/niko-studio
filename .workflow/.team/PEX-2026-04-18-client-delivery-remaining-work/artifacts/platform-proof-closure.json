@@ -1,0 +1,80 @@
+{
+  "artifact_type": "platform_proof_closure",
+  "schema_version": "platform_proof_closure.v1",
+  "session_id": "PEX-2026-04-18-client-delivery-remaining-work",
+  "task_id": "EXEC-006",
+  "issue_id": "ISS-20260418-006",
+  "generated_at": "2026-04-18T19:37:03.6970003+08:00",
+  "baseline": {
+    "head_sha": "4d63e03db1f673379901fb827aff1a1f6947faa8",
+    "short_sha": "4d63e03",
+    "version": "9.0.8"
+  },
+  "shipment_mode": {
+    "decision": "UNSIGNED_DEMO_INTERNAL_HANDOFF",
+    "label": "unsigned demo/internal handoff",
+    "source": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/shipment-mode-decision.json",
+    "closure_status": "covered_by_selected_mode"
+  },
+  "platform_scope": {
+    "decision": "WINDOWS_X64_ONLY",
+    "label": "Windows x64 only",
+    "source": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/platform-scope-decision.json",
+    "closure_status": "bounded_to_selected_scope"
+  },
+  "promised_platforms": [
+    {
+      "platform_id": "windows-x64",
+      "delivery_status": "promised",
+      "proof_status": "retained_proof_bound",
+      "proof_sources": [
+        ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/customer-delivery-baseline-decision.json",
+        ".workflow/evidence/release/customer-delivery-baseline.json",
+        "release-check-summary.md",
+        ".workflow/evidence/release/release-readiness-artifact.json",
+        "docs/release/SIGN_OFF.md"
+      ],
+      "notes": [
+        "Retained evidence remains bound to frozen baseline 4d63e03 / 9.0.8.",
+        "Packaging target and retained package inventory are Windows x64-specific.",
+        "This task does not rerun release evidence on the dirty 2026-04-18 workspace."
+      ]
+    }
+  ],
+  "excluded_platforms": [
+    "windows-x86",
+    "windows-arm64",
+    "macos-x64",
+    "macos-arm64",
+    "linux-x64",
+    "linux-arm64",
+    "all-other-non-windows-x64"
+  ],
+  "cross_cutting_open_items": [
+    {
+      "item": "writer_golden_path_smoke",
+      "status": "NOT_CLOSED",
+      "source": ".workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/writer-golden-path-smoke.json",
+      "detail": "Platform promise is bounded, but the retained Windows x64 package still requires the retained writer-smoke blocker to stay active until one operator walkthrough directly verifies the writing path."
+    }
+  ],
+  "hold_authority": {
+    "retained_blocker_source": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/retained-writer-smoke-attempt.md",
+    "final_disposition_source": ".workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/final-handoff-status.md",
+    "rule": "Platform evidence is bounded to the selected Windows x64 scope, but overall customer-delivery readiness remains on hold under the retained writer-smoke artifacts."
+  },
+  "non_claims": [
+    "No signed external shipment is claimed.",
+    "No non-Windows-x64 platform support is claimed.",
+    "No writer golden-path smoke closure is claimed."
+  ],
+  "downstream_contract": {
+    "bundle_task": "EXEC-007",
+    "rules": [
+      "Label the handoff bundle as unsigned demo/internal handoff.",
+      "Do not imply support beyond Windows x64.",
+      "Do not imply signing or signed external shipment readiness.",
+      "If platform scope changes later, record a new decision and create a target-specific evidence chain first."
+    ]
+  }
+}

@@ -2,7 +2,7 @@
   "id": "EXEC-002",
   "status": "completed",
   "role": "executor",
-  "findings": "Froze customer-delivery baseline into `.workflow/evidence/release/customer-delivery-baseline.json`, binding `4d63e03 / 9.0.8` to the retained GO proof set. Explicitly documented reuse of the retained release summary, release-readiness artifact, authority-alignment, writing-helper acceptance, and retained JUnit proof files, so no release-proof rerun was needed on the dirty 2026-04-18 workspace.",
+  "findings": "Froze customer-delivery baseline into `.workflow/evidence/release/customer-delivery-baseline.json`, binding `4d63e03 / 9.0.8` to the retained release evidence set. The artifact now also records the downstream-resolved shipment mode (`unsigned demo/internal handoff`), platform scope (`Windows x64 only`), and overall readiness (`HOLD_PENDING_WRITER_SMOKE`), so later delivery work cites one baseline artifact without rerunning release evidence on the dirty 2026-04-18 workspace.",
   "artifact": "D:/工作目录/niko-studio/.workflow/evidence/release/customer-delivery-baseline.json",
   "files_modified": [
     "D:/工作目录/niko-studio/.workflow/evidence/release/customer-delivery-baseline.json",

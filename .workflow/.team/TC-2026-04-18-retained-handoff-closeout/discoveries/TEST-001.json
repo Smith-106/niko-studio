@@ -1,0 +1,14 @@
+{
+  "id": "TEST-001",
+  "status": "completed",
+  "role": "retained-smoke-tester",
+  "findings": "Retained 9.0.8 package reached the installed zh-CN MSI surface at D:\\写作\\ with direct launch/settings/knowledge evidence. The smoke remains NOT_CLOSED because 新建文档 never produced a visibly editable document, center-pane paste showed no text, and no retained-package Writing Helper success on document text was directly verified. This retained attempt therefore remains the current blocker note for downstream handoff readiness.",
+  "artifact": "D:/工作目录/niko-studio/.workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/retained-writer-smoke-attempt.md",
+  "files_modified": [
+    "D:/工作目录/niko-studio/.workflow/.team/TC-2026-04-18-retained-handoff-closeout/artifacts/retained-writer-smoke-attempt.md",
+    "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/writer-golden-path-smoke.md",
+    "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/writer-golden-path-smoke.json",
+    "D:/工作目录/niko-studio/.workflow/.team/TC-2026-04-18-retained-handoff-closeout/tasks.json"
+  ],
+  "error": ""
+}

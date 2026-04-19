@@ -1,0 +1,10 @@
+{
+  "session_id": "PEX-2026-04-18-client-delivery-remaining-work",
+  "topic": "处理客户交付剩余工序",
+  "input_type": "text_requirement",
+  "raw_input": "基于 ANL-2026-04-18-为了交付客户还有哪些工作没做 的结论，处理剩余客户交付工序：冻结精确交付基线、补跑客户 writer golden-path smoke、明确 unsigned demo/internal handoff vs signed external shipment、组装 customer handoff bundle、确认客户平台范围并补充缺失证明。",
+  "execution_method": "codex",
+  "complexity": "high",
+  "estimated_issue_count": 7,
+  "reasoning": "The remaining work spans release baseline control, customer-facing validation, package/signing policy, handoff packaging, platform-scope confirmation, and hold/readiness references, so it was decomposed by the planner into seven bounded execution issues before implementation."
+}

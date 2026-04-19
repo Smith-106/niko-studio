@@ -1,0 +1,70 @@
+{
+  "session_id": "PEX-2026-04-18-client-delivery-remaining-work",
+  "issue_id": "ISS-20260418-004",
+  "solution_id": "SOL-ISS-20260418-004",
+  "issue_title": "Record shipment mode for customer handoff",
+  "status": "completed",
+  "created_at": "2026-04-18T19:08:00+08:00",
+  "approach": {
+    "summary": "Capture and retain the explicit decision that this delivery is an `unsigned demo/internal handoff`, not a `signed external shipment`, and bind that decision to the frozen baseline before later evidence or bundle assembly references it.",
+    "rationale": [
+      "The analysis showed the repository already distinguished unsigned local validation evidence from signed external bundles, so the delivery session needed one recorded customer-facing mode decision.",
+      "This remained a business-facing decision because signed external shipment would require certificate material outside git.",
+      "Separating the decision from later execution prevented the executor from mixing bundle labeling with unconfirmed signing work, and the recorded outcome now keeps signed shipment explicitly out of scope."
+    ],
+    "non_goals": [
+      "Do not run signing or package rebuild steps in this issue.",
+      "Do not infer shipment mode from existing docs without an explicit recorded owner decision."
+    ],
+    "risk_controls": [
+      "Require the decision record to name the owner/date and reference the exact frozen baseline.",
+      "Describe the non-applicable branch explicitly so later bundle assembly has no ambiguity."
+    ]
+  },
+  "tasks": [
+    {
+      "id": "ISS-20260418-004-T1",
+      "title": "Document shipment mode options against the frozen baseline",
+      "description": "Summarize the two permitted delivery modes for the chosen build: unsigned local validation handoff versus signed external shipment, including the extra material each mode requires.",
+      "target_files": [
+        "D:/工作目录/niko-studio/docs/release/SIGN_OFF.md",
+        "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/shipment-mode-decision.md"
+      ],
+      "acceptance": [
+        "Both modes are described using the same terminology as `SIGN_OFF.md`.",
+        "The frozen SHA/build artifact is referenced in the decision context."
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "ISS-20260418-004-T2",
+      "title": "Record the selected shipment mode and owner confirmation",
+      "description": "Write a decision record that names the selected shipment mode, owner/approver, decision date, and the exact follow-up obligations that become active because of that choice.",
+      "target_files": [
+        "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/shipment-mode-decision.json"
+      ],
+      "acceptance": [
+        "One shipment mode is selected explicitly.",
+        "The decision artifact lists the exact next-step obligations for the chosen branch."
+      ],
+      "depends_on": [
+        "ISS-20260418-004-T1"
+      ]
+    }
+  ],
+  "estimated_files": [
+    "D:/工作目录/niko-studio/docs/release/SIGN_OFF.md",
+    "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/shipment-mode-decision.md",
+    "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/shipment-mode-decision.json"
+  ],
+  "dependencies": [
+    "Requires the frozen baseline from `ISS-20260418-001`.",
+    "Needs stakeholder/business confirmation when the selected path is signed external shipment."
+  ],
+  "validation_commands": [
+    "rg -n \"unsigned local validation build|signed external\" docs/release/SIGN_OFF.md"
+  ],
+  "conflict_risks": [
+    "This decision intentionally overlaps `docs/release/SIGN_OFF.md` with the bundle issue; the executor should treat this issue as the reference point for wording and branch selection."
+  ]
+}

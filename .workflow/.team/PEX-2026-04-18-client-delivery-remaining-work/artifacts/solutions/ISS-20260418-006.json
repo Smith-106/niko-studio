@@ -1,0 +1,77 @@
+{
+  "session_id": "PEX-2026-04-18-client-delivery-remaining-work",
+  "issue_id": "ISS-20260418-006",
+  "solution_id": "SOL-ISS-20260418-006",
+  "issue_title": "Execute mode-specific and platform-specific scope bounding",
+  "status": "completed",
+  "created_at": "2026-04-18T19:10:00+08:00",
+  "approach": {
+    "summary": "Turn the recorded shipment-mode and platform-scope decisions into retained evidence, explicit unsigned labeling, and documented platform exclusions so the customer handoff bundle carries only bounded obligations plus the explicitly retained writer-smoke blocker notes.",
+    "rationale": [
+      "The previous two issues deliberately separate customer/business decisions from action. This issue is where those decisions became delivery reference artifacts.",
+      "The executed branch was the bounded unsigned internal/demo labeling path on `Windows x64 only`; signed shipment remained explicitly out of scope.",
+      "Keeping this work out of the bundle issue prevented customer-facing packaging from being assembled on top of unresolved compliance/evidence gaps, while still preserving the retained writer-smoke blocker as open."
+    ],
+    "non_goals": [
+      "Do not rerun the writer UI smoke here.",
+      "Do not treat missing certificate material as solved if the shipment mode requires signing and the material is unavailable."
+    ],
+    "risk_controls": [
+      "Use the shipment-mode and platform-scope decision artifacts as hard prerequisites.",
+      "If signed shipment or extra platform evidence is blocked by external inputs, retain a blocker artifact instead of silently downgrading the scope."
+    ]
+  },
+  "tasks": [
+    {
+      "id": "ISS-20260418-006-T1",
+      "title": "Apply the selected shipment-mode evidence path",
+      "description": "If the delivery is unsigned demo/internal handoff, update the handoff notes and retained manifest text to explicitly label the package as an unsigned local validation build. If the delivery is signed external shipment, obtain the out-of-git certificate/timestamp inputs, rebuild/sign the package, and retain the post-sign-off evidence set for that signed artifact.",
+      "target_files": [
+        "D:/工作目录/niko-studio/docs/release/SIGN_OFF.md",
+        "D:/工作目录/niko-studio/release-check-summary.md",
+        "D:/工作目录/niko-studio/.workflow/evidence/release/release-readiness-artifact.json",
+        "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/shipment-proof-closure.md"
+      ],
+      "acceptance": [
+        "The retained evidence and notes match the selected shipment mode.",
+        "If signed shipment was selected, the resulting package and evidence explicitly reference the signed artifact."
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "ISS-20260418-006-T2",
+      "title": "Resolve promised platform-specific evidence gaps",
+      "description": "For every platform still in scope after the platform decision, either retain the missing evidence artifact or document the explicit limitation/exclusion that removes it from the shipment promise.",
+      "target_files": [
+        "D:/工作目录/niko-studio/docs/release/SIGN_OFF.md",
+        "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/platform-proof-closure.md",
+        "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/platform-proof-closure.json"
+      ],
+      "acceptance": [
+        "No promised platform remains without either retained evidence or an explicit exclusion note.",
+        "Customer-facing scope wording matches the selected evidence set."
+      ],
+      "depends_on": [
+        "ISS-20260418-006-T1"
+      ]
+    }
+  ],
+  "estimated_files": [
+    "D:/工作目录/niko-studio/docs/release/SIGN_OFF.md",
+    "D:/工作目录/niko-studio/release-check-summary.md",
+    "D:/工作目录/niko-studio/.workflow/evidence/release/release-readiness-artifact.json",
+    "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/shipment-proof-closure.md",
+    "D:/工作目录/niko-studio/.workflow/.team/PEX-2026-04-18-client-delivery-remaining-work/artifacts/platform-proof-closure.json"
+  ],
+  "dependencies": [
+    "Requires `ISS-20260418-002`, `ISS-20260418-004`, and `ISS-20260418-005` to be complete.",
+    "May require out-of-git signing materials if signed external shipment is selected."
+  ],
+  "validation_commands": [
+    "npm --prefix desktop run tauri:build",
+    "python scripts/release_check_summary.py"
+  ],
+  "conflict_risks": [
+    "This issue intentionally overlaps the core retained release artifacts. Downstream bundle assembly should consume these artifacts, not rewrite them."
+  ]
+}
