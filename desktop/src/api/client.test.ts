@@ -35,6 +35,7 @@ import {
   workflowSchedulerPause,
   workflowSchedulerResume,
   workflowSchedulerRunNow,
+  workflowSchedulerImportLitePlan,
   type AutomationTaskDefinition,
   type ChatRequest,
   type GatewayHealth,
@@ -805,6 +806,70 @@ describe('workflow bridge and quality-check APIs', () => {
         method: 'POST',
         body: JSON.stringify({ limit: 5 }),
       })
+    )
+  })
+
+
+  it('routes scheduler import-lite-plan calls by workflowBackendMode with normalized payload', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        session_id: 'sess-1',
+        imported: 2,
+        registered: 2,
+        updated: 0,
+        failed: 0,
+        total_tasks: 2,
+        tasks: [],
+        failures: [],
+      }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        workflowBackendMode: 'standard',
+      },
+    }))
+
+    await workflowSchedulerImportLitePlan('sess-1', 'L5', true)
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/workflow/scheduler/import-lite-plan'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          session_id: 'sess-1',
+          force_level: 'L5',
+          enabled: true,
+        }),
+      }),
+    )
+
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: {
+        ...state.settings,
+        workflowBackendMode: 'uiBridge',
+      },
+    }))
+
+    await workflowSchedulerImportLitePlan(undefined, 'L5', true)
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/ui-bridge/workflow/scheduler/import-lite-plan'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          force_level: 'L5',
+          enabled: true,
+        }),
+      }),
     )
   })
 

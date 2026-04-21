@@ -81,6 +81,23 @@ describe('run_local_vite_shell', () => {
     expect(childEnv.PATH).toBe('test-path')
   })
 
+  it('ignores non-loopback gateway overrides and clears inherited browser overrides', async () => {
+    const script = await modulePromise
+    const testHealth = vi.fn<(base: string) => Promise<boolean>>()
+    const statePath = await createStateFile('https://example.com:8010/')
+
+    expect(script.readTrackedGatewayBase(statePath)).toBeNull()
+    await expect(
+      script.resolveLocalShellGatewayBase({
+        env: { VITE_NIKO_GATEWAY_URL: 'https://example.com:8010/' },
+        statePath,
+        testHealth,
+      }),
+    ).resolves.toEqual({ base: null, source: 'default' })
+    expect(script.buildLocalShellEnv(null, { PATH: 'test-path', VITE_NIKO_GATEWAY_URL: 'https://example.com:8010/' }).VITE_NIKO_GATEWAY_URL).toBeUndefined()
+    expect(testHealth).not.toHaveBeenCalled()
+  })
+
   it('uses the tracked launcher gateway when the recorded base is healthy', async () => {
     const script = await modulePromise
     const statePath = await createStateFile('http://127.0.0.1:8010/')

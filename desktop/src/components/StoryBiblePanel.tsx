@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react'
+import { useState, useEffect, useCallback, useRef, useId, type ChangeEvent } from 'react'
 import {
   ChevronDown,
   BookOpen,
@@ -46,11 +46,15 @@ interface StoryBibleSection {
 
 function CollapsibleSection({ title, icon, content, defaultOpen = false }: StoryBibleSection) {
   const [open, setOpen] = useState(defaultOpen)
+  const contentId = useId()
 
   return (
     <div className="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden">
       <button
-        onClick={() => setOpen(!open)}
+        type="button"
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={() => setOpen((current) => !current)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
       >
         <span className="text-[var(--text-muted)]">{icon}</span>
@@ -60,7 +64,7 @@ function CollapsibleSection({ title, icon, content, defaultOpen = false }: Story
           className={`text-[var(--text-muted)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
-      {open && <div className="px-4 py-3 border-t border-[var(--border-default)]">{content}</div>}
+      {open && <div id={contentId} className="px-4 py-3 border-t border-[var(--border-default)]">{content}</div>}
     </div>
   )
 }

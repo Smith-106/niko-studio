@@ -76,7 +76,7 @@ describe('useAppViewModel', () => {
       setSidebarCollapsed: vi.fn(),
       chatSidebarCollapsed: true,
       setChatSidebarCollapsed: vi.fn(),
-      activeRightPanel: 'none' as const,
+      activeRightPanel: 'evaluation' as const,
       setActiveRightPanel: vi.fn(),
       writingHelperDraft: {
         content: 'Current draft',
@@ -205,5 +205,32 @@ describe('useAppViewModel', () => {
       onContextUsageChange: contextUsageView.handleContextUsageChange,
     })
     expect(result.current).toBe(shellViewModel)
+  })
+
+  it('skips editor selection reads while the evaluation panel is closed', () => {
+    hookMocks.useAppStoreMock.mockReturnValue({ backendStatus: false, checkBackend: vi.fn() })
+    hookMocks.useAppUiPersistenceMock.mockReturnValue({
+      sidebarCollapsed: false,
+      setSidebarCollapsed: vi.fn(),
+      chatSidebarCollapsed: true,
+      setChatSidebarCollapsed: vi.fn(),
+      activeRightPanel: 'none',
+      setActiveRightPanel: vi.fn(),
+      writingHelperDraft: { content: 'Current draft', mode: 'polish', maxSentences: 3, maxItems: 6, guidance: '' },
+      setWritingHelperDraft: vi.fn(),
+      clearWritingHelperDraft: vi.fn(),
+    })
+    hookMocks.useLatestAssistantMessageContentMock.mockReturnValue('Latest assistant reply')
+    hookMocks.useAppContextUsageMock.mockReturnValue({ contextUsage: { usedK: 0, totalK: 128, percent: 0 }, handleContextUsageChange: vi.fn() })
+    hookMocks.useAppRuntimeHealthMock.mockReturnValue({ connectionState: 'connected' })
+    hookMocks.useI18nMock.mockReturnValue({ t: { restoreFailed: 'Restore failed', restoreSuccess: 'Restore successful' }, language: 'en' })
+    hookMocks.useAppPanelOrchestrationMock.mockReturnValue({})
+    hookMocks.useAppCheckpointMenuMock.mockReturnValue({})
+    hookMocks.useAppHeaderViewModelMock.mockReturnValue({})
+    hookMocks.useAppShellViewModelMock.mockReturnValue({ sidebarProps: {}, appRightPanelsProps: {}, appMainContentProps: {}, chatSidebarProps: {} })
+
+    renderHook(() => useAppViewModel())
+
+    expect(hookMocks.getCurrentEditorSelectionTextMock).not.toHaveBeenCalled()
   })
 })

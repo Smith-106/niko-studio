@@ -63,6 +63,7 @@ function tryLaunchRealGateway() {
     return null;
   }
 
+  const repoRoot = resolveRepoRoot();
   const child = spawn(
     process.execPath,
     [
@@ -82,6 +83,7 @@ function tryLaunchRealGateway() {
         ...process.env,
         NIKO_GATEWAY_HOST: getListenHost(),
         NIKO_GATEWAY_PORT: String(getListenPort()),
+        NIKO_WORKFLOW_WORKSPACE: process.env.NIKO_WORKFLOW_WORKSPACE || repoRoot,
       },
     }
   );

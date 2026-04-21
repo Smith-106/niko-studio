@@ -5,6 +5,9 @@
  * Ported from src/mcp/services/workflow.py
  */
 
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
 import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
 import {
   normalizeProjectWorkspaceContext,
@@ -86,6 +89,11 @@ interface WorkflowEngineAuthorityBridge {
 
 type WorkflowExecutionStatus = 'completed' | 'waiting_confirmation' | 'gate_blocked';
 type WorkflowSchedulerStatus = 'active' | 'paused';
+
+const SCHEDULER_STORE_DIR = join('.writing', 'scheduler');
+const SCHEDULER_STORE_FILE = 'tasks.json';
+let schedulerStoreLoaded = false;
+let schedulerStoreVersion = 0;
 
 interface WorkflowSchedulerTaskDefinition {
   task_id: string;
@@ -431,6 +439,187 @@ function parseSchedulerTaskDefinition(input: unknown): WorkflowSchedulerTaskDefi
   };
 }
 
+function parseWorkflowAuthority(input: unknown): WorkflowAuthority | null {
+  const record = asRecord(input);
+  if (!record) return null;
+  const sessionId = readString(record.sessionId ?? record.session_id);
+  const workspaceId = readString(record.workspaceId ?? record.workspace_id);
+  const projectId = readString(record.projectId ?? record.project_id);
+  if (!sessionId && !workspaceId && !projectId) {
+    return null;
+  }
+  return { sessionId, workspaceId, projectId };
+}
+
+function parseSchedulerTaskRecord(input: unknown): WorkflowSchedulerTaskRecord | null {
+  const record = asRecord(input);
+  if (!record) return null;
+  const definition = parseSchedulerTaskDefinition(record);
+  if (!definition) return null;
+
+  const now = utcNowIso();
+  const status = readString(record.status);
+  const normalizedStatus: WorkflowSchedulerStatus = status === 'paused' ? 'paused' : 'active';
+
+  return {
+    ...definition,
+    status: normalizedStatus,
+    created_at: readString(record.created_at) ?? now,
+    updated_at: readString(record.updated_at) ?? now,
+    authority: parseWorkflowAuthority(record.authority),
+    last_run_id: readString(record.last_run_id),
+    last_plan_id: readString(record.last_plan_id),
+    last_trigger: normalizeSchedulerTrigger(record.last_trigger),
+  };
+}
+
+function schedulerStorePath(): string {
+  return join(resolveWorkflowWorkspace(), SCHEDULER_STORE_DIR, SCHEDULER_STORE_FILE);
+}
+
+async function loadSchedulerEntriesFromStore(force = false): Promise<void> {
+  if (schedulerStoreLoaded && !force) return;
+
+  schedulerEntries.clear();
+  const storePath = schedulerStorePath();
+
+  try {
+    const payload = JSON.parse(await readFile(storePath, 'utf-8')) as Record<string, unknown>;
+    const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+    for (const task of tasks) {
+      const parsed = parseSchedulerTaskRecord(task);
+      if (parsed) {
+        schedulerEntries.set(parsed.task_id, parsed);
+      }
+    }
+    const version = payload.version;
+    schedulerStoreVersion = typeof version === 'number' && Number.isFinite(version)
+      ? Math.max(1, Math.floor(version))
+      : 1;
+  } catch {
+    schedulerStoreVersion = 1;
+  }
+
+  schedulerStoreLoaded = true;
+}
+
+async function persistSchedulerEntriesToStore(): Promise<void> {
+  const storePath = schedulerStorePath();
+  const storeDir = join(resolveWorkflowWorkspace(), SCHEDULER_STORE_DIR);
+  await mkdir(storeDir, { recursive: true });
+
+  const tasks = [...schedulerEntries.values()].sort((left, right) => left.task_id.localeCompare(right.task_id));
+  const payload = {
+    version: schedulerStoreVersion,
+    updated_at: utcNowIso(),
+    tasks,
+  };
+
+  await writeFile(storePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8');
+}
+
+const DEFAULT_IMPORT_BACKEND_MODE_POLICY: Record<string, unknown> = {
+  mode: 'uiBridge',
+  fallback_mode: 'standard',
+};
+
+const DEFAULT_IMPORT_PROGRESSION_POLICY: Record<string, unknown> = {
+  success_statuses: ['completed'],
+  approval_policy: {
+    tiers: [
+      {
+        tier: 'critical',
+        requires_confirmation: true,
+        gate_status_on_hold: 'waiting_confirmation',
+      },
+      {
+        tier: 'high',
+        requires_confirmation: true,
+        gate_status_on_hold: 'waiting_confirmation',
+      },
+      {
+        tier: 'medium',
+        requires_confirmation: false,
+        gate_status_on_hold: 'waiting_confirmation',
+      },
+    ],
+    default_gate_status: 'waiting_confirmation',
+  },
+  failure_policy: {
+    retry: {
+      max_retries: 2,
+      strategy: 'linear',
+      base_delay_ms: 1000,
+    },
+    on_retry_exhausted: 'manual_takeover',
+    manual_takeover_status: 'gate_blocked',
+  },
+};
+
+function sanitizeImportSessionId(sessionId: string): string {
+  return sessionId.replace(/[^a-zA-Z0-9._-]/g, '');
+}
+
+async function resolveLitePlanSessionId(baseDir: string, requestedSessionId?: string | null): Promise<string | null> {
+  const requested = readString(requestedSessionId);
+  if (requested) {
+    const sanitized = sanitizeImportSessionId(requested);
+    return sanitized || null;
+  }
+
+  const entries = await readdir(baseDir, { withFileTypes: true });
+  const candidates = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const ranked = await Promise.all(candidates.map(async (name) => {
+    const fullPath = join(baseDir, name);
+    const details = await stat(fullPath);
+    return {
+      name,
+      mtimeMs: details.mtimeMs,
+    };
+  }));
+
+  ranked.sort((left, right) => right.mtimeMs - left.mtimeMs);
+  return ranked[0]?.name ?? null;
+}
+
+function normalizeImportedTaskId(sessionId: string, taskId: string): string {
+  const normalizedTaskId = taskId.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+  const normalizedSession = sessionId.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+  return `lite-${normalizedSession}-${normalizedTaskId}`;
+}
+
+function buildImportedSchedulerDefinition(params: {
+  sessionId: string;
+  taskId: string;
+  taskRecord: Record<string, unknown>;
+  forceLevel: string;
+}): WorkflowSchedulerTaskDefinition {
+  const title = readString(params.taskRecord.title) ?? params.taskId;
+  const taskText = readString(params.taskRecord.description)
+    ?? readString(params.taskRecord.scope)
+    ?? title;
+
+  return {
+    task_id: normalizeImportedTaskId(params.sessionId, params.taskId),
+    title,
+    task: taskText,
+    level: params.forceLevel,
+    trigger_rule: {
+      type: 'manual_run_now',
+      run_now: true,
+    },
+    backend_mode_policy: { ...DEFAULT_IMPORT_BACKEND_MODE_POLICY },
+    progression_policy: { ...DEFAULT_IMPORT_PROGRESSION_POLICY },
+  };
+}
+
 function getEngine(): WorkflowEngine | null {
   if (!workflowEngineInstance) {
     const engine = new WorkflowEngineRuntime(resolveWorkflowWorkspace(), 'mcp-workflow');
@@ -552,7 +741,6 @@ export async function workflowPlan(params: {
   genre?: string | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  // Merge genre-specific recommendations if applicable
   let mergedRecommendations = params.recommendations ?? [];
 
   const engine = getEngine();
@@ -618,6 +806,8 @@ export async function workflowSchedulerRegister(params: {
   enabled?: boolean | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
+  await loadSchedulerEntriesFromStore();
+
   const definition = parseSchedulerTaskDefinition(params.definition);
   if (!definition) {
     return { error: 'Invalid scheduler task definition' };
@@ -657,6 +847,8 @@ export async function workflowSchedulerRegister(params: {
   };
 
   schedulerEntries.set(taskRecord.task_id, taskRecord);
+  schedulerStoreVersion += 1;
+  await persistSchedulerEntriesToStore();
 
   return {
     status: existing ? 'updated' : 'registered',
@@ -664,10 +856,106 @@ export async function workflowSchedulerRegister(params: {
   };
 }
 
+export async function workflowSchedulerImportLitePlan(params: {
+  sessionId?: string | null;
+  forceLevel?: string | null;
+  enabled?: boolean | null;
+  workspace?: ProjectWorkspaceContext;
+}): Promise<Record<string, unknown>> {
+  await loadSchedulerEntriesFromStore();
+
+  const workspaceRoot = resolveWorkflowWorkspace();
+  const baseDir = join(workspaceRoot, '.workflow', '.lite-plan');
+
+  let sessionId: string | null = null;
+  try {
+    sessionId = await resolveLitePlanSessionId(baseDir, params.sessionId);
+  } catch {
+    return { error: `Lite-plan directory not found at '${baseDir}'` };
+  }
+
+  if (!sessionId) {
+    return { error: 'No lite-plan session available for import' };
+  }
+
+  const planDir = join(baseDir, sessionId);
+  const planPath = join(planDir, 'plan.json');
+
+  const planPayload = JSON.parse(await readFile(planPath, 'utf-8')) as Record<string, unknown>;
+  const taskIds = Array.isArray(planPayload.task_ids)
+    ? planPayload.task_ids.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    : [];
+
+  if (taskIds.length === 0) {
+    return { error: `No task_ids found in lite-plan session '${sessionId}'` };
+  }
+
+  const importedTasks: WorkflowSchedulerTaskRecord[] = [];
+  const failures: Array<{ task_id: string; error: string }> = [];
+  let registeredCount = 0;
+  let updatedCount = 0;
+  const forceLevel = readString(params.forceLevel) ?? 'L5';
+
+  for (const taskId of taskIds) {
+    const taskPath = join(planDir, '.task', `${taskId}.json`);
+
+    try {
+      const taskPayload = JSON.parse(await readFile(taskPath, 'utf-8')) as Record<string, unknown>;
+      const definition = buildImportedSchedulerDefinition({
+        sessionId,
+        taskId,
+        taskRecord: taskPayload,
+        forceLevel,
+      });
+
+      const upsertResult = await workflowSchedulerRegister({
+        definition,
+        enabled: params.enabled,
+        workspace: params.workspace,
+      });
+
+      if (upsertResult.error) {
+        failures.push({ task_id: taskId, error: String(upsertResult.error) });
+        continue;
+      }
+
+      const taskRecord = upsertResult.task as WorkflowSchedulerTaskRecord | undefined;
+      if (taskRecord) {
+        importedTasks.push(taskRecord);
+      }
+
+      if (upsertResult.status === 'updated') {
+        updatedCount += 1;
+      } else {
+        registeredCount += 1;
+      }
+    } catch (error) {
+      failures.push({
+        task_id: taskId,
+        error: error instanceof Error ? error.message : 'Failed to import task',
+      });
+    }
+  }
+
+  return {
+    session_id: sessionId,
+    imported: importedTasks.length,
+    registered: registeredCount,
+    updated: updatedCount,
+    failed: failures.length,
+    total_tasks: taskIds.length,
+    force_level: forceLevel,
+    tasks: importedTasks,
+    failures,
+  };
+}
+
 export async function workflowSchedulerList(params: {
   limit?: number;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
+  await loadSchedulerEntriesFromStore();
+
   const authority = resolveWorkflowAuthority(params.workspace);
   const entries = [...schedulerEntries.values()]
     .filter((item) => schedulerTaskMatchesAuthority(item, authority))
@@ -687,6 +975,8 @@ export async function workflowSchedulerPause(params: {
   taskId: string;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
+  await loadSchedulerEntriesFromStore();
+
   const authority = resolveWorkflowAuthority(params.workspace);
   const accessible = ensureSchedulerTaskAccess({
     taskId: params.taskId,
@@ -703,6 +993,8 @@ export async function workflowSchedulerPause(params: {
     authority: accessible.authority,
   };
   schedulerEntries.set(updated.task_id, updated);
+  schedulerStoreVersion += 1;
+  await persistSchedulerEntriesToStore();
 
   return {
     status: 'paused',
@@ -714,6 +1006,8 @@ export async function workflowSchedulerResume(params: {
   taskId: string;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
+  await loadSchedulerEntriesFromStore();
+
   const authority = resolveWorkflowAuthority(params.workspace);
   const accessible = ensureSchedulerTaskAccess({
     taskId: params.taskId,
@@ -730,6 +1024,8 @@ export async function workflowSchedulerResume(params: {
     authority: accessible.authority,
   };
   schedulerEntries.set(updated.task_id, updated);
+  schedulerStoreVersion += 1;
+  await persistSchedulerEntriesToStore();
 
   return {
     status: 'active',
@@ -743,6 +1039,8 @@ export async function workflowSchedulerRunNow(params: {
   recommendations?: unknown[] | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
+  await loadSchedulerEntriesFromStore();
+
   const authority = resolveWorkflowAuthority(params.workspace);
   const accessible = ensureSchedulerTaskAccess({
     taskId: params.taskId,
@@ -791,6 +1089,8 @@ export async function workflowSchedulerRunNow(params: {
     last_trigger: 'manual_run_now',
   };
   schedulerEntries.set(updatedTask.task_id, updatedTask);
+  schedulerStoreVersion += 1;
+  await persistSchedulerEntriesToStore();
 
   return {
     status: executionStatus ?? 'completed',

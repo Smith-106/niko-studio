@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   workflowLifecycle,
+  workflowSchedulerImportLitePlan,
   workflowSchedulerList,
   workflowSchedulerPause,
   workflowSchedulerResume,
@@ -260,6 +261,39 @@ export function AutomationPanel({ onClose, onOpenSettings }: AutomationPanelProp
     await refreshTasks()
   }, [selectedPlanId, workspaceSummary.meaningfulWorkspace, setWorkflowError, setWorkflowMessage, isZh, refreshTasks])
 
+  const handleImportLitePlan = useCallback(async () => {
+    setActionLoading('import-lite-plan')
+    setMessage(null)
+    setError(null)
+
+    const response = await workflowSchedulerImportLitePlan(
+      undefined,
+      'L5',
+      true,
+      undefined,
+      workspaceSummary.meaningfulWorkspace ?? undefined,
+    )
+
+    if (!response.success) {
+      setWorkflowError(response.error ?? (isZh ? '导入 lite-plan 任务失败。' : 'Failed to import lite-plan tasks.'))
+      setActionLoading(null)
+      return
+    }
+
+    const payload = (response.data ?? {}) as Record<string, unknown>
+    const imported = typeof payload.imported === 'number' ? payload.imported : 0
+    const failed = typeof payload.failed === 'number' ? payload.failed : 0
+    const sessionId = typeof payload.session_id === 'string' ? payload.session_id : ''
+
+    const importMessage = isZh
+      ? `已导入 ${imported} 条任务${failed > 0 ? `，失败 ${failed} 条` : ''}${sessionId ? `（会话：${sessionId}）` : ''}。`
+      : `Imported ${imported} task(s)${failed > 0 ? `, ${failed} failed` : ''}${sessionId ? ` (session: ${sessionId})` : ''}.`
+
+    setWorkflowMessage(importMessage)
+    setActionLoading(null)
+    await refreshTasks()
+  }, [workspaceSummary.meaningfulWorkspace, setWorkflowError, setWorkflowMessage, isZh, refreshTasks])
+
   return (
     <div
       className="fixed right-0 top-14 bottom-0 w-96 bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col z-30"
@@ -285,6 +319,18 @@ export function AutomationPanel({ onClose, onOpenSettings }: AutomationPanelProp
             className="rounded-md border border-gray-200 dark:border-dark-border px-2 py-1 text-xs text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface2"
           >
             {isZh ? '刷新' : 'Refresh'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void handleImportLitePlan()
+            }}
+            disabled={actionLoading !== null}
+            className="rounded-md border border-gray-200 dark:border-dark-border px-2 py-1 text-xs text-gray-600 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface2 disabled:opacity-50"
+          >
+            {actionLoading === 'import-lite-plan'
+              ? (isZh ? '导入中...' : 'Importing...')
+              : (isZh ? '导入计划' : 'Import plan')}
           </button>
           <button
             type="button"

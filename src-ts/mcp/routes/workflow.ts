@@ -6,6 +6,7 @@ import {
   uiBridgeWorkflowLifecycleEndpoint,
   uiBridgeWorkflowPlanEndpoint,
   uiBridgeWorkflowRouteEndpoint,
+  uiBridgeWorkflowSchedulerImportLitePlanEndpoint,
   uiBridgeWorkflowSchedulerListEndpoint,
   uiBridgeWorkflowSchedulerPauseEndpoint,
   uiBridgeWorkflowSchedulerRegisterEndpoint,
@@ -16,6 +17,7 @@ import {
   workflowPlanEndpoint,
   workflowQuickRollbackEndpoint,
   workflowRouteEndpoint,
+  workflowSchedulerImportLitePlanEndpoint,
   workflowSchedulerListEndpoint,
   workflowSchedulerPauseEndpoint,
   workflowSchedulerRegisterEndpoint,
@@ -35,6 +37,7 @@ export const workflowRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/workflow\/scheduler\/pause$/, handler: workflowSchedulerPauseEndpoint },
   { method: 'POST', pattern: /^\/workflow\/scheduler\/resume$/, handler: workflowSchedulerResumeEndpoint },
   { method: 'POST', pattern: /^\/workflow\/scheduler\/run-now$/, handler: workflowSchedulerRunNowEndpoint },
+  { method: 'POST', pattern: /^\/workflow\/scheduler\/import-lite-plan$/, handler: workflowSchedulerImportLitePlanEndpoint },
   { method: 'POST', pattern: /^\/checkpoint\/create$/, handler: checkpointCreateEndpoint },
   { method: 'POST', pattern: /^\/checkpoint\/restore$/, handler: checkpointRestoreEndpoint },
   { method: 'POST', pattern: /^\/checkpoint\/list$/, handler: checkpointListEndpoint },
@@ -47,5 +50,5 @@ export const workflowRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/ui-bridge\/workflow\/scheduler\/pause$/, handler: uiBridgeWorkflowSchedulerPauseEndpoint },
   { method: 'POST', pattern: /^\/ui-bridge\/workflow\/scheduler\/resume$/, handler: uiBridgeWorkflowSchedulerResumeEndpoint },
   { method: 'POST', pattern: /^\/ui-bridge\/workflow\/scheduler\/run-now$/, handler: uiBridgeWorkflowSchedulerRunNowEndpoint },
+  { method: 'POST', pattern: /^\/ui-bridge\/workflow\/scheduler\/import-lite-plan$/, handler: uiBridgeWorkflowSchedulerImportLitePlanEndpoint },
 ];
-

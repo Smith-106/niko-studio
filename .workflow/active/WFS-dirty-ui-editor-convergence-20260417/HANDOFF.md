@@ -32,4 +32,4 @@
 
 ## Follow-up Rule
 
-- For future questions about the current dirty desktop convergence status, start with this handoff plus `execution-summary.md`; use `release-check-summary.md` and `.workflow/evidence/release/release-readiness-artifact.json` as the current release/readiness authority.
+- For future questions about the current dirty desktop convergence status, start with this handoff plus `execution-summary.md`; treat `release-check-summary.md` and `.workflow/evidence/release/release-readiness-artifact.json` as the last retained release/readiness snapshot for the recorded `head_sha`, and rerun `python scripts/release_check_summary.py` before making a current release-status claim when `HEAD` has moved or the `freshness_window_hours` window has expired.

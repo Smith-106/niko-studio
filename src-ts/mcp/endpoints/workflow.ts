@@ -22,6 +22,7 @@ import {
   workflowSchedulerPause,
   workflowSchedulerResume,
   workflowSchedulerRunNow,
+  workflowSchedulerImportLitePlan,
 } from '../services/workflow';
 
 // ---------------------------------------------------------------
@@ -151,6 +152,18 @@ export async function workflowSchedulerRunNowEndpoint(request: HttpRequest): Pro
   return jsonResponse({ ...result, workspace });
 }
 
+export async function workflowSchedulerImportLitePlanEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowSchedulerImportLitePlan({
+    sessionId: (body.session_id as string | null | undefined) ?? null,
+    forceLevel: (body.force_level as string | null | undefined) ?? null,
+    enabled: body.enabled as boolean | null | undefined,
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
 // ---------------------------------------------------------------
 // UI Bridge wrappers
 // ---------------------------------------------------------------
@@ -208,6 +221,11 @@ export async function uiBridgeWorkflowSchedulerResumeEndpoint(request: HttpReque
 export async function uiBridgeWorkflowSchedulerRunNowEndpoint(request: HttpRequest): Promise<HttpResponse> {
   if (!uiBridgeEnabled) return uiBridgeDisabledResponse();
   return workflowSchedulerRunNowEndpoint(request);
+}
+
+export async function uiBridgeWorkflowSchedulerImportLitePlanEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  if (!uiBridgeEnabled) return uiBridgeDisabledResponse();
+  return workflowSchedulerImportLitePlanEndpoint(request);
 }
 
 // ---------------------------------------------------------------

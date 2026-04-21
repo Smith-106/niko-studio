@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -315,6 +315,76 @@ describe('workflow endpoints integration', () => {
     expect((matchingManualRestore.body as Record<string, unknown>)['error']).toBe(
       'No commit hash available for this checkpoint',
     );
+  });
+
+
+  it('imports lite-plan tasks into scheduler with force level and workspace authority', async () => {
+    const {
+      workflowSchedulerImportLitePlanEndpoint,
+      workflowSchedulerListEndpoint,
+    } = await import('../../mcp/endpoints/workflow.js');
+
+    const workspaceA = buildWorkspace('workflow-session-a', 'atlas-workspace', 'atlas-project');
+    const workspaceB = buildWorkspace('workflow-session-b', 'beacon-workspace', 'beacon-project');
+
+    const sessionId = 'session-import-001';
+    const planDir = join(workspace, '.workflow', '.lite-plan', sessionId);
+    const taskDir = join(planDir, '.task');
+    await mkdir(taskDir, { recursive: true });
+
+    await writeFile(
+      join(planDir, 'plan.json'),
+      JSON.stringify({
+        summary: 'import scheduler test',
+        approach: 'integration',
+        task_ids: ['TASK-001'],
+      }),
+      'utf-8',
+    );
+
+    await writeFile(
+      join(taskDir, 'TASK-001.json'),
+      JSON.stringify({
+        id: 'TASK-001',
+        title: '导入后任务',
+        description: '推进章节修订并收敛',
+        scope: 'chapter-revision',
+      }),
+      'utf-8',
+    );
+
+    const importResponse = await workflowSchedulerImportLitePlanEndpoint(
+      makeRequest({
+        session_id: sessionId,
+        force_level: 'L5',
+        enabled: true,
+        workspace: workspaceA,
+      }),
+    );
+
+    expect(importResponse.statusCode).toBe(200);
+    const importBody = importResponse.body as Record<string, unknown>;
+    expect(importBody['session_id']).toBe(sessionId);
+    expect(importBody['imported']).toBe(1);
+    expect(importBody['registered']).toBe(1);
+    expect(importBody['failed']).toBe(0);
+    expect(importBody['force_level']).toBe('L5');
+
+    const importedTasks = importBody['tasks'] as Array<Record<string, unknown>>;
+    expect(Array.isArray(importedTasks)).toBe(true);
+    expect(importedTasks[0]?.['task_id']).toBe('lite-session-import-001-task-001');
+    expect(importedTasks[0]?.['level']).toBe('L5');
+    expect(importedTasks[0]?.['status']).toBe('active');
+
+    const listAResponse = await workflowSchedulerListEndpoint(makeRequest({ workspace: workspaceA }));
+    expect(listAResponse.statusCode).toBe(200);
+    const tasksA = (listAResponse.body as Record<string, unknown>)['tasks'] as Array<Record<string, unknown>>;
+    expect(tasksA.some((item) => item['task_id'] === 'lite-session-import-001-task-001')).toBe(true);
+
+    const listBResponse = await workflowSchedulerListEndpoint(makeRequest({ workspace: workspaceB }));
+    expect(listBResponse.statusCode).toBe(200);
+    const tasksB = (listBResponse.body as Record<string, unknown>)['tasks'] as Array<Record<string, unknown>>;
+    expect(tasksB.some((item) => item['task_id'] === 'lite-session-import-001-task-001')).toBe(false);
   });
 
   it('supports workflow scheduler register/list/pause/resume/run-now with workspace authority guards', async () => {

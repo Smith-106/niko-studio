@@ -17,9 +17,11 @@ export function useAppViewModel() {
   const contextUsageView = useAppContextUsage()
   const runtimeView = useAppRuntimeHealth({ backendStatus, checkBackend })
   const { t, language } = useI18n()
-  const editorSelectionContent = getCurrentEditorSelectionText()
-  const currentDraftContent = uiPersistence.writingHelperDraft.content.trim()
   const isZh = language === 'zh'
+  const shouldCollectEvaluationSources = uiPersistence.activeRightPanel === 'evaluation'
+  // TipTap selection reads walk the current document, so avoid them while the evaluation UI is closed.
+  const editorSelectionContent = shouldCollectEvaluationSources ? getCurrentEditorSelectionText() : ''
+  const currentDraftContent = shouldCollectEvaluationSources ? uiPersistence.writingHelperDraft.content.trim() : ''
   const evaluationSources: EvaluationSourceDescriptor[] = []
 
   if (latestAssistantContent.trim()) {

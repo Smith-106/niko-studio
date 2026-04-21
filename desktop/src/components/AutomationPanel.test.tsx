@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 
 import {
   workflowLifecycle,
+  workflowSchedulerImportLitePlan,
   workflowSchedulerList,
   workflowSchedulerPause,
   workflowSchedulerResume,
@@ -24,6 +25,7 @@ vi.mock('../hooks/useWriterWorkspaceSummary', () => ({
 
 vi.mock('../api/client', () => ({
   workflowLifecycle: vi.fn(),
+  workflowSchedulerImportLitePlan: vi.fn(),
   workflowSchedulerList: vi.fn(),
   workflowSchedulerPause: vi.fn(),
   workflowSchedulerResume: vi.fn(),
@@ -35,6 +37,7 @@ const mockedWorkflowSchedulerPause = vi.mocked(workflowSchedulerPause)
 const mockedWorkflowSchedulerResume = vi.mocked(workflowSchedulerResume)
 const mockedWorkflowSchedulerRunNow = vi.mocked(workflowSchedulerRunNow)
 const mockedWorkflowLifecycle = vi.mocked(workflowLifecycle)
+const mockedWorkflowSchedulerImportLitePlan = vi.mocked(workflowSchedulerImportLitePlan)
 
 const workspaceAuthority: ProjectWorkspaceContext = {
   schemaVersion: '2026-04-08',
@@ -241,6 +244,18 @@ describe('AutomationPanel reliability regressions', () => {
       success: true,
       data: buildLifecycleResponse('resume'),
     })
+
+    mockedWorkflowSchedulerImportLitePlan.mockResolvedValue({
+      success: true,
+      data: {
+        session_id: 'sess-1',
+        imported: 1,
+        registered: 1,
+        updated: 0,
+        failed: 0,
+        total_tasks: 1,
+      },
+    })
   })
 
   it('threads workspace authority through scheduler and lifecycle actions', async () => {
@@ -326,6 +341,28 @@ describe('AutomationPanel reliability regressions', () => {
       )
       expect(screen.getByText('任务已触发执行。')).toBeInTheDocument()
       expect(confirmInput).toHaveValue('')
+    })
+  })
+
+  it('imports lite-plan tasks with L5 policy and refreshes scheduler list', async () => {
+    const user = userEvent.setup()
+
+    render(<AutomationPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    await screen.findByText('章节修订推进')
+    await user.click(screen.getByRole('button', { name: '导入计划' }))
+
+    await waitFor(() => {
+      expect(mockedWorkflowSchedulerImportLitePlan).toHaveBeenCalledWith(
+        undefined,
+        'L5',
+        true,
+        undefined,
+        workspaceAuthority,
+      )
+      expect(screen.getByText('已导入 1 条任务（会话：sess-1）。')).toBeInTheDocument()
+      expect(mockedWorkflowSchedulerList).toHaveBeenCalledTimes(2)
+      expect(mockedWorkflowSchedulerList).toHaveBeenLastCalledWith(50, undefined, workspaceAuthority)
     })
   })
 

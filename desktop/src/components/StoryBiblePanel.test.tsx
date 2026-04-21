@@ -179,6 +179,22 @@ describe('StoryBiblePanel', () => {
     vi.clearAllMocks()
   })
 
+  it('announces story bible section expansion state', async () => {
+    const user = userEvent.setup()
+    render(<StoryBiblePanel />)
+
+    expect(await screen.findByText(zh.storyBiblePersistenceTitle)).toBeInTheDocument()
+    const synopsisToggle = screen.getByRole('button', { name: zh.storyBibleSynopsis })
+    expect(synopsisToggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByPlaceholderText(zh.storyBibleSynopsisPlaceholder)).not.toBeInTheDocument()
+
+    await user.click(synopsisToggle)
+
+    const synopsisField = screen.getByPlaceholderText(zh.storyBibleSynopsisPlaceholder)
+    expect(synopsisToggle).toHaveAttribute('aria-expanded', 'true')
+    expect(document.getElementById(synopsisToggle.getAttribute('aria-controls') ?? '')).toContainElement(synopsisField)
+  })
+
   it('migrates the legacy local draft into persisted workspace authority and restores it after reload', async () => {
     localStorage.setItem('niko.sb-braindump-v1', '本地灵感')
     localStorage.setItem('niko.sb-genres-v1', '奇幻,悬疑')

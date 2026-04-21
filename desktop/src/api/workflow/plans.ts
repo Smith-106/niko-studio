@@ -10,6 +10,7 @@ import type {
   WorkflowLifecycleResponse,
   WorkflowPlanStatusResponse,
   WorkflowSchedulerErrorResponse,
+  WorkflowSchedulerImportLitePlanResponse,
   WorkflowSchedulerListResponse,
   WorkflowSchedulerRegisterResponse,
   WorkflowSchedulerRunNowResponse,
@@ -280,6 +281,41 @@ export async function uiWorkflowSchedulerRunNow(
       task_id: taskId,
       confirm_token: confirmToken && confirmToken.trim().length > 0 ? confirmToken : undefined,
       recommendations: normalizedRecommendations.length > 0 ? normalizedRecommendations : undefined,
+    }, workspace),
+  )
+}
+
+export async function workflowSchedulerImportLitePlan(
+  sessionId?: string,
+  forceLevel?: string,
+  enabled?: boolean,
+  mode?: WorkflowBackendMode,
+  workspace?: ProjectWorkspaceContext,
+): Promise<ApiResponse<WorkflowSchedulerImportLitePlanResponse | WorkflowSchedulerErrorResponse>> {
+  return callApi(
+    resolveWorkflowSchedulerEndpoint('/scheduler/import-lite-plan', mode),
+    'POST',
+    appendWorkspacePayload({
+      session_id: sessionId && sessionId.trim().length > 0 ? sessionId : undefined,
+      force_level: forceLevel && forceLevel.trim().length > 0 ? forceLevel : undefined,
+      enabled,
+    }, workspace),
+  )
+}
+
+export async function uiWorkflowSchedulerImportLitePlan(
+  sessionId?: string,
+  forceLevel?: string,
+  enabled?: boolean,
+  workspace?: ProjectWorkspaceContext,
+): Promise<ApiResponse<WorkflowSchedulerImportLitePlanResponse | WorkflowSchedulerErrorResponse>> {
+  return callApi(
+    resolveWorkflowSchedulerEndpoint('/scheduler/import-lite-plan', 'uiBridge'),
+    'POST',
+    appendWorkspacePayload({
+      session_id: sessionId && sessionId.trim().length > 0 ? sessionId : undefined,
+      force_level: forceLevel && forceLevel.trim().length > 0 ? forceLevel : undefined,
+      enabled,
     }, workspace),
   )
 }

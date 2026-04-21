@@ -320,6 +320,24 @@ export interface WorkflowSchedulerRunNowResponse {
   workspace?: ProjectWorkspaceContext
 }
 
+export interface WorkflowSchedulerImportLitePlanFailure {
+  task_id: string
+  error: string
+}
+
+export interface WorkflowSchedulerImportLitePlanResponse {
+  session_id: string
+  imported: number
+  registered: number
+  updated: number
+  failed: number
+  total_tasks: number
+  force_level: string
+  tasks: WorkflowSchedulerTaskRecord[]
+  failures: WorkflowSchedulerImportLitePlanFailure[]
+  workspace?: ProjectWorkspaceContext
+}
+
 export interface WorkflowQuickRollbackResult {
   status?: string
   plan_id?: string

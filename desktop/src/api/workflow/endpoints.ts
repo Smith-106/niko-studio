@@ -14,6 +14,7 @@ export type WorkflowSchedulerEndpointPath =
   | '/scheduler/pause'
   | '/scheduler/resume'
   | '/scheduler/run-now'
+  | '/scheduler/import-lite-plan'
 
 export type WorkflowEndpointPath = WorkflowPlanEndpointPath | WorkflowSchedulerEndpointPath
 

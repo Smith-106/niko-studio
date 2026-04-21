@@ -12,10 +12,29 @@ const PROJECT_ROOT = path.resolve(DESKTOP_DIR, '..');
 const DEFAULT_STATE_PATH = path.join(PROJECT_ROOT, '.codex-run', 'desktop-local-state.json');
 const DEFAULT_GATEWAY_TIMEOUT_MS = 3000;
 const HEALTHY_GATEWAY_STATES = new Set(['healthy', 'ok', 'degraded']);
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 const VITE_BIN_PATH = path.join(DESKTOP_DIR, 'node_modules', 'vite', 'bin', 'vite.js');
 
 function normalizeBaseUrl(value) {
   return String(value ?? '').trim().replace(/\/+$/, '');
+}
+
+// Keep the browser shell pinned to loopback so inherited env/state cannot redirect it to a remote gateway.
+function normalizeLoopbackGatewayBase(value) {
+  const normalized = normalizeBaseUrl(value);
+  if (!normalized) {
+    return null;
+  }
+
+  try {
+    const url = new URL(normalized);
+    const hostname = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && LOOPBACK_HOSTS.has(hostname)) {
+      return normalized;
+    }
+  } catch {}
+
+  return null;
 }
 
 function readJsonFile(filePath) {
@@ -37,7 +56,7 @@ function readTrackedGatewayBase(statePath = DEFAULT_STATE_PATH) {
   if (typeof candidate !== 'string' || candidate.trim().length === 0) {
     return null;
   }
-  return normalizeBaseUrl(candidate);
+  return normalizeLoopbackGatewayBase(candidate);
 }
 
 function testGatewayHealth(base, timeoutMs = DEFAULT_GATEWAY_TIMEOUT_MS) {
@@ -95,7 +114,7 @@ async function resolveLocalShellGatewayBase(options = {}) {
     testHealth = testGatewayHealth,
   } = options;
 
-  const explicitViteBase = normalizeBaseUrl(env.VITE_NIKO_GATEWAY_URL || '');
+  const explicitViteBase = normalizeLoopbackGatewayBase(env.VITE_NIKO_GATEWAY_URL || '');
   if (explicitViteBase) {
     return {
       base: explicitViteBase,
@@ -103,7 +122,7 @@ async function resolveLocalShellGatewayBase(options = {}) {
     };
   }
 
-  const explicitGatewayBase = normalizeBaseUrl(env.NIKO_GATEWAY_URL || '');
+  const explicitGatewayBase = normalizeLoopbackGatewayBase(env.NIKO_GATEWAY_URL || '');
   if (explicitGatewayBase) {
     return {
       base: explicitGatewayBase,
@@ -127,7 +146,8 @@ async function resolveLocalShellGatewayBase(options = {}) {
 
 function buildLocalShellEnv(base, parentEnv = process.env) {
   const nextEnv = { ...parentEnv };
-  const normalizedBase = normalizeBaseUrl(base || '');
+  delete nextEnv.VITE_NIKO_GATEWAY_URL;
+  const normalizedBase = normalizeLoopbackGatewayBase(base || '');
   if (normalizedBase) {
     nextEnv.VITE_NIKO_GATEWAY_URL = normalizedBase;
   }
