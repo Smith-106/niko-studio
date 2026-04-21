@@ -87,7 +87,19 @@
       "WebFetch(domain:ccw-command-explorer.vercel.app)",
       "mcp__chrome-devtools__list_network_requests",
       "mcp__chrome-devtools__fill",
-      "mcp__chrome-devtools__upload_file"
+      "mcp__chrome-devtools__upload_file",
+      "WebSearch",
+      "WebFetch(domain:docs.temporal.io)",
+      "WebFetch(domain:stately.ai)",
+      "WebFetch(domain:aws.amazon.com)",
+      "WebFetch(domain:airflow.apache.org)",
+      "WebFetch(domain:argo-workflows.readthedocs.io)",
+      "WebFetch(domain:opentelemetry.io)",
+      "WebFetch(domain:docs.stripe.com)",
+      "WebFetch(domain:docs.prefect.io)",
+      "WebFetch(domain:docs.celeryq.dev)",
+      "WebFetch(domain:cheatsheetseries.owasp.org)",
+      "WebFetch(domain:docs.github.com)"
     ]
   },
   "hooks": {

@@ -1,5 +1,0 @@
-- [x] IMPL-001: Graduate remaining internal soft gates into explicit governance rules
-- [x] IMPL-002: Tighten Node-first runtime compatibility boundary
-- [x] IMPL-003: Publish a clearer current-vs-historical authority map
-- [x] IMPL-004: Add automated authority alignment checks
-- [x] IMPL-005: Run verification sweep and publish governance handoff

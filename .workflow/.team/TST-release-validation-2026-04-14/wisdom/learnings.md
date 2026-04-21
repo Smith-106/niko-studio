@@ -1,3 +1,0 @@
-# Learnings
-
-Pending execution findings.

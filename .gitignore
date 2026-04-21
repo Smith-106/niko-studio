@@ -49,6 +49,9 @@ htmlcov/
 # Local workflow artifacts
 .tmp/
 .niko-studio/
+.Jules/
+.codex/
+.codex-run/
 .workflow/.analysis/
 .workflow/.scratchpad/
 .workflow/evidence/
@@ -61,6 +64,10 @@ coverage.xml
 src-ts/coverage/
 pytest-*.xml
 release-check-summary.md
+release-*.zip
+*.log
+_diff.txt
+screenshot*.png
 
 # Desktop gateway sidecar build artifacts
 .build/

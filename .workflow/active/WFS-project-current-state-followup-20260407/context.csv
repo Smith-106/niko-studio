@@ -1,6 +1,0 @@
-"key","type","value","source"
-"analysis_source","string","UAN-project-status-2026-04-07","plan.json"
-"authority_path","string","desktop + src-ts","plan.json"
-"governance_state","string","complete, GO, authority_alignment_signal = PASS","plan.json"
-"context_package_path","path",".process/context-package.json","session"
-"discoveries_path","path","discoveries.ndjson","session"

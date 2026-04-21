@@ -1,3 +1,0 @@
-## 2026-03-24 - Missing Focus Outlines on Icon Buttons
-**Learning:** This app drops focus outlines using `focus:outline-none` on multiple elements, but occasionally forgets to add `focus-visible` replacements for keyboard users (e.g., the close button in `McpStatusPanel`). Additionally, adding subtle loading spinners to row-level action buttons where only the text changes makes the app feel vastly more responsive without needing large loading overalls.
-**Action:** When finding `focus:outline-none`, always verify there's a corresponding `focus-visible` ring. When reviewing async buttons, check if they change state appropriately instead of just getting disabled.

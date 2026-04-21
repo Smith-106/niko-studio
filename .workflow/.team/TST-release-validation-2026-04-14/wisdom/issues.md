@@ -1,3 +1,0 @@
-# Issues
-
-Pending execution findings.
