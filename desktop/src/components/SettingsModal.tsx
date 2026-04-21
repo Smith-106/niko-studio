@@ -4,7 +4,7 @@ import type { BackendConfig } from '../api/config'
 import { isTauriRuntime, syncGatewayBaseOverride } from '../api/transport'
 import { useSettingsStore, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
-import { useI18n } from '../i18n'
+import { useI18n, syncI18nLanguage } from '../i18n'
 import { MASKED_SECRET_VALUE, formatBackendFieldValue, useSettingsBackendConfig } from '../hooks/useSettingsBackendConfig'
 import { useSettingsProviderModels } from '../hooks/useSettingsProviderModels'
 import { useSettingsDiagnostics } from '../hooks/useSettingsDiagnostics'
@@ -1461,7 +1461,11 @@ export function SettingsModal({
                       id="settings-language"
                       name="settings-language"
                       value={localSettings.language}
-                      onChange={(e) => setLocalSettings({ ...localSettings, language: e.target.value as 'zh' | 'en' })}
+                      onChange={(e) => {
+                        const next = e.target.value as 'zh' | 'en'
+                        setLocalSettings({ ...localSettings, language: next })
+                        syncI18nLanguage()
+                      }}
                       className="w-full px-3 py-2.5 border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-800 dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
                     >
                       <option value="zh">{t.langChinese}</option>

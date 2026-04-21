@@ -142,16 +142,13 @@ export function ChatArea({
   const [quickRollbackReason, setQuickRollbackReason] = useState('')
   const [showQuickRollbackAdvanced, setShowQuickRollbackAdvanced] = useState(false)
   const [quickRollbackStatus, setQuickRollbackStatus] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
-  const { t, translate, language } = useI18n()
+  const { t, translate } = useI18n()
   const writerWorkspaceSummary = useWriterWorkspaceSummary()
-  const isZh = language === 'zh'
-  const writerContextTitle = isZh ? '当前写作上下文' : 'Current writing context'
-  const writerContextHint = isZh
-    ? '聊天、模板和评估会优先沿用这组项目范围。需要路由、对比或回滚时，展开“更多”。'
-    : 'Chat, templates, and review flows will stay anchored to this project scope. Open "More" for routing, comparison, or rollback.'
+  const writerContextTitle = translate('writerContextTitle')
+  const writerContextHint = translate('writerContextHint')
   const currentWritingTarget = writerWorkspaceSummary.chapterLabel
     ?? writerWorkspaceSummary.projectLabel
-    ?? (isZh ? '当前文档' : 'the current document')
+    ?? translate('currentDocumentFallback')
   const {
     recoverableCheckpointId,
     setRecoverableCheckpointId,
@@ -242,12 +239,8 @@ export function ChatArea({
       id: 'continueDraft' as const,
       label: t.chatStarterContinue,
       icon: PenLine,
-      description: isZh
-        ? '保持当前语气和情节推进，继续往下写。'
-        : 'Keep the current tone and momentum, then continue writing.',
-      prompt: isZh
-        ? `请基于${currentWritingTarget}继续写作，保持当前语气、节奏和情节推进。`
-        : `Continue writing based on ${currentWritingTarget}, keeping the current tone, pacing, and story momentum.`,
+      description: translate('starterContinueDesc'),
+      prompt: translate('starterContinuePrompt', { target: currentWritingTarget }),
       mode: 'chat' as const,
       agentAction: 'write' as const,
       workflowLevel: 'L3' as const,
@@ -256,12 +249,8 @@ export function ChatArea({
       id: 'rewritePassage' as const,
       label: t.chatStarterRewrite,
       icon: RefreshCw,
-      description: isZh
-        ? '把正在写的段落改得更流畅、更自然。'
-        : 'Make the current passage read more smoothly and naturally.',
-      prompt: isZh
-        ? `请围绕${currentWritingTarget}中我正在写的段落，给出更流畅、自然的改写版本。`
-        : `Rewrite the passage I am drafting in ${currentWritingTarget} so it reads more smoothly and naturally.`,
+      description: translate('starterRewriteDesc'),
+      prompt: translate('starterRewritePrompt', { target: currentWritingTarget }),
       mode: 'chat' as const,
       agentAction: 'revise' as const,
       workflowLevel: 'L3' as const,
@@ -270,12 +259,8 @@ export function ChatArea({
       id: 'expandScene' as const,
       label: t.chatStarterExpand,
       icon: MessageSquareText,
-      description: isZh
-        ? '补足动作、环境和情绪细节。'
-        : 'Add stronger action, setting, and emotional detail.',
-      prompt: isZh
-        ? `请围绕${currentWritingTarget}扩写这个场景，补足动作、环境和情绪细节。`
-        : `Expand the current scene in ${currentWritingTarget} with stronger action, setting, and emotional detail.`,
+      description: translate('starterExpandDesc'),
+      prompt: translate('starterExpandPrompt', { target: currentWritingTarget }),
       mode: 'chat' as const,
       agentAction: 'write' as const,
       workflowLevel: 'L2' as const,
@@ -284,12 +269,8 @@ export function ChatArea({
       id: 'alignCanon' as const,
       label: t.chatStarterAlignCanon,
       icon: BookOpen,
-      description: isZh
-        ? '检查当前内容是否和现有设定冲突。'
-        : 'Check whether the current content conflicts with existing canon.',
-      prompt: isZh
-        ? `请检查${currentWritingTarget}与现有故事设定是否一致，如有冲突请指出并给出修正建议。`
-        : `Check whether ${currentWritingTarget} aligns with the established story canon, and point out any conflicts with suggested fixes.`,
+      description: translate('starterAlignCanonDesc'),
+      prompt: translate('starterAlignCanonPrompt', { target: currentWritingTarget }),
       mode: 'agent' as const,
       agentAction: 'context' as const,
       workflowLevel: 'L4' as const,
@@ -298,17 +279,13 @@ export function ChatArea({
       id: 'checkIssues' as const,
       label: t.chatStarterCheckIssues,
       icon: Lightbulb,
-      description: isZh
-        ? '指出最值得先处理的问题和下一步。'
-        : 'Identify the most important issues and suggest the next step.',
-      prompt: isZh
-        ? `请审视${currentWritingTarget}当前内容，指出最值得先处理的问题，并给出下一步建议。`
-        : `Review the current content in ${currentWritingTarget}, identify the most important issues to address, and suggest the next step.`,
+      description: translate('starterCheckIssuesDesc'),
+      prompt: translate('starterCheckIssuesPrompt', { target: currentWritingTarget }),
       mode: 'chat' as const,
       agentAction: 'write' as const,
       workflowLevel: 'L2' as const,
     },
-  ]), [currentWritingTarget, isZh, t])
+  ]), [currentWritingTarget, t, translate])
   const availableComparisonModels = useMemo(() => {
     const allModels = settings.llmProviders.flatMap((provider) => {
       const models = [...(provider.models ?? []), ...(provider.fetchedModels ?? []), ...(provider.customModels ?? [])]

@@ -83,8 +83,9 @@ export class QueryEmbeddingCache {
       return null;
     }
 
-    // Move to end (most recently used)
+    // Move to end (most recently used): delete then re-insert
     this._cache.delete(key);
+    this._cache.set(key, entry);
     entry.access_count++;
     this._hits++;
 

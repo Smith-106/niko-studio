@@ -826,6 +826,29 @@ export interface Translations {
   // Export
   exportMarkdown: string
   exportHtml: string
+
+  // Sidebar writer workspace (extracted hardcoded strings)
+  writerWorkspaceTitle: string
+  writerWorkspaceHint: string
+  writerStoryBibleLabel: string
+  writerChapterLabel: string
+  writerStoryBibleMetaLabel: string
+  writerWorkspaceLabel: string
+
+  // ChatArea starter actions (extracted hardcoded strings)
+  starterContinueDesc: string
+  starterRewriteDesc: string
+  starterExpandDesc: string
+  starterAlignCanonDesc: string
+  starterCheckIssuesDesc: string
+  starterContinuePrompt: string
+  starterRewritePrompt: string
+  starterExpandPrompt: string
+  starterAlignCanonPrompt: string
+  starterCheckIssuesPrompt: string
+  writerContextTitle: string
+  writerContextHint: string
+  currentDocumentFallback: string
 }
 
 export const translations: Record<Language, Translations> = {
@@ -1652,6 +1675,29 @@ export const translations: Record<Language, Translations> = {
     editorBubbleContinue: '续写',
     exportMarkdown: '导出 Markdown',
     exportHtml: '导出 HTML',
+
+    // Sidebar writer workspace
+    writerWorkspaceTitle: '当前写作项目',
+    writerWorkspaceHint: '聊天、评估和知识整理会优先围绕这组上下文。',
+    writerStoryBibleLabel: '打开故事设定',
+    writerChapterLabel: '章节',
+    writerStoryBibleMetaLabel: '设定稿',
+    writerWorkspaceLabel: '工作区',
+
+    // ChatArea starter actions
+    starterContinueDesc: '保持当前语气和情节推进，继续往下写。',
+    starterRewriteDesc: '把正在写的段落改得更流畅、更自然。',
+    starterExpandDesc: '补足动作、环境和情绪细节。',
+    starterAlignCanonDesc: '检查当前内容是否和现有设定冲突。',
+    starterCheckIssuesDesc: '指出最值得先处理的问题和下一步。',
+    starterContinuePrompt: '请基于{target}继续写作，保持当前语气、节奏和情节推进。',
+    starterRewritePrompt: '请围绕{target}中我正在写的段落，给出更流畅、自然的改写版本。',
+    starterExpandPrompt: '请围绕{target}扩写这个场景，补足动作、环境和情绪细节。',
+    starterAlignCanonPrompt: '请检查{target}与现有故事设定是否一致，如有冲突请指出并给出修正建议。',
+    starterCheckIssuesPrompt: '请审视{target}当前内容，指出最值得先处理的问题，并给出下一步建议。',
+    writerContextTitle: '当前写作上下文',
+    writerContextHint: '聊天、模板和评估会优先沿用这组项目范围。需要路由、对比或回滚时，展开"更多"。',
+    currentDocumentFallback: '当前文档',
   },
   en: {
     // App
@@ -2476,5 +2522,28 @@ export const translations: Record<Language, Translations> = {
     editorBubbleContinue: 'Continue',
     exportMarkdown: 'Export Markdown',
     exportHtml: 'Export HTML',
+
+    // Sidebar writer workspace
+    writerWorkspaceTitle: 'Current writing project',
+    writerWorkspaceHint: 'Chat, review, and knowledge flows stay anchored to this scope.',
+    writerStoryBibleLabel: 'Open story notes',
+    writerChapterLabel: 'Chapter',
+    writerStoryBibleMetaLabel: 'Story bible',
+    writerWorkspaceLabel: 'Workspace',
+
+    // ChatArea starter actions
+    starterContinueDesc: 'Keep the current tone and momentum, then continue writing.',
+    starterRewriteDesc: 'Make the current passage read more smoothly and naturally.',
+    starterExpandDesc: 'Add stronger action, setting, and emotional detail.',
+    starterAlignCanonDesc: 'Check whether the current content conflicts with existing canon.',
+    starterCheckIssuesDesc: 'Identify the most important issues and suggest the next step.',
+    starterContinuePrompt: 'Continue writing based on {target}, keeping the current tone, pacing, and story momentum.',
+    starterRewritePrompt: 'Rewrite the passage I am drafting in {target} so it reads more smoothly and naturally.',
+    starterExpandPrompt: 'Expand the current scene in {target} with stronger action, setting, and emotional detail.',
+    starterAlignCanonPrompt: 'Check whether {target} aligns with the established story canon, and point out any conflicts with suggested fixes.',
+    starterCheckIssuesPrompt: 'Review the current content in {target}, identify the most important issues to address, and suggest the next step.',
+    writerContextTitle: 'Current writing context',
+    writerContextHint: 'Chat, templates, and review flows will stay anchored to this project scope. Open "More" for routing, comparison, or rollback.',
+    currentDocumentFallback: 'the current document',
   },
 }

@@ -28,18 +28,15 @@ export const Sidebar = React.memo(function Sidebar({
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
   const { createConversation, selectConversation } = useAppStore()
-  const { t, language } = useI18n()
+  const { t, translate } = useI18n()
   const workspaceSummary = useWriterWorkspaceSummary()
-  const isZh = language === 'zh'
-  const writerWorkspaceTitle = isZh ? '当前写作项目' : 'Current writing project'
-  const writerWorkspaceHint = isZh
-    ? '聊天、评估和知识整理会优先围绕这组上下文。'
-    : 'Chat, review, and knowledge flows stay anchored to this scope.'
+  const writerWorkspaceTitle = translate('writerWorkspaceTitle')
+  const writerWorkspaceHint = translate('writerWorkspaceHint')
   const writerContinueLabel = t.sidebarContinueWriting
-  const writerStoryBibleLabel = isZh ? '打开故事设定' : 'Open story notes'
-  const writerChapterLabel = isZh ? '章节' : 'Chapter'
-  const writerStoryBibleMetaLabel = isZh ? '设定稿' : 'Story bible'
-  const writerWorkspaceLabel = isZh ? '工作区' : 'Workspace'
+  const writerStoryBibleLabel = translate('writerStoryBibleLabel')
+  const writerChapterLabel = translate('writerChapterLabel')
+  const writerStoryBibleMetaLabel = translate('writerStoryBibleMetaLabel')
+  const writerWorkspaceLabel = translate('writerWorkspaceLabel')
 
   const handleContinueWriting = () => {
     onContinueWriting()

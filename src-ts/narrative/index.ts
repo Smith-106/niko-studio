@@ -136,3 +136,6 @@ export * from './premise-validator';
 export * from './scene-coherence';
 export * from './style-system';
 export * from './suspense-analyzer';
+export * from './cross-chapter-character-tracker';
+export * from './timeline-consistency-checker';
+export * from './worldview-coherence-validator';
