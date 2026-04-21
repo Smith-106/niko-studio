@@ -6,6 +6,7 @@
  */
 
 import type { IAgentLLMService } from './base';
+import { SkillRouter, SKILL_REGISTRY } from './skill-router';
 
 // ============================================================
 // Interfaces (Pydantic models -> TS interfaces)
@@ -220,20 +221,12 @@ Continue with scene resolution:
 `;
 
 // ============================================================
-// Skill Loader interface (stub)
-// ============================================================
-
-interface SkillLoader {
-  loadSkill(skillId: string): Record<string, unknown> | null;
-}
-
-// ============================================================
 // WriterAgent
 // ============================================================
 
 export class WriterAgent {
   private llmService: IAgentLLMService;
-  private skillLoader: SkillLoader | null;
+  private skillRouter: SkillRouter | null;
   private knowledgeLayer: unknown;
   private enableKnowledgeRetrieval: boolean;
   private injectedSkills: string[];
@@ -243,12 +236,12 @@ export class WriterAgent {
 
   constructor(options: {
     llmService: IAgentLLMService;
-    skillLoader?: SkillLoader | null;
+    skillRouter?: SkillRouter | null;
     knowledgeLayer?: unknown;
     enableKnowledgeRetrieval?: boolean;
   }) {
     this.llmService = options.llmService;
-    this.skillLoader = options.skillLoader ?? null;
+    this.skillRouter = options.skillRouter ?? null;
     this.knowledgeLayer = options.knowledgeLayer ?? null;
     this.enableKnowledgeRetrieval = options.enableKnowledgeRetrieval ?? true;
     this.injectedSkills = [];
@@ -425,7 +418,7 @@ export class WriterAgent {
   // ---------- Skill injection ----------
 
   injectSkills(skillIds: string[], warnings?: string[]): string {
-    if (!this.skillLoader) {
+    if (!this.skillRouter) {
       this.injectedSkills = [];
       this.injectedSkillGuidance = '';
       return '';
@@ -436,9 +429,9 @@ export class WriterAgent {
 
     for (const skillId of this.injectedSkills) {
       try {
-        const skill = this.skillLoader.loadSkill(skillId);
-        if (skill) {
-          contents.push(`### ${skill['name'] ?? skillId}\n${skill['content'] ?? ''}`);
+        const skillEntry = SKILL_REGISTRY[skillId];
+        if (skillEntry) {
+          contents.push(`### ${skillEntry.name}\n${skillEntry.description}`);
         }
       } catch (e) {
         this.appendWarning(warnings, `skill_load_failed: ${skillId}: ${e}`);

@@ -9,6 +9,7 @@ import {
   DistillationService,
   type LegacyDistillationData,
 } from '../services/distill-service';
+import { SequentialThinking, ThoughtType } from './sequential-thinking';
 
 // ============================================================
 // Interfaces (Pydantic models -> TS interfaces)
@@ -93,14 +94,8 @@ export interface StoryBlueprint {
 }
 
 // ============================================================
-// Distillation stub interface
+// Internal knowledge layer type adapter
 // ============================================================
-
-export interface IDistillService {
-  distillChapter(content: string): Promise<LegacyDistillationData>;
-  applyToGraph(knowledgeLayer: unknown, data: LegacyDistillationData): void;
-  getDistillationPrompt(taskType: string, content?: string): string;
-}
 
 interface GraphKnowledgeLayer {
   addEntity?: (
@@ -120,31 +115,6 @@ interface GraphKnowledgeLayer {
 type DistilledBlueprintData = LegacyDistillationData & {
   status?: string;
 };
-
-// ============================================================
-// SequentialThinking stub (minimal interface used by architect)
-// ============================================================
-
-interface ThinkingEngine {
-  reset(): void;
-  think(content: string, options: { thoughtType: string; metadata?: Record<string, unknown>; confidence?: number }): void;
-  branch(options: { name: string; description: string; priority: number }): { id: string };
-  switchBranch(id: string): void;
-  conclude(content: string, options: { confidence: number }): void;
-  toMarkdown(): string;
-  toDict(): Record<string, unknown>;
-}
-
-const THOUGHT_TYPES = {
-  INITIAL: 'initial',
-  ANALYSIS: 'analysis',
-  HYPOTHESIS: 'hypothesis',
-  VERIFICATION: 'verification',
-  CONCLUSION: 'conclusion',
-  BRANCH: 'branch',
-  REVISION: 'revision',
-  BACKTRACK: 'backtrack',
-} as const;
 
 // ============================================================
 // System Prompt
@@ -233,8 +203,8 @@ export class ArchitectAgent {
   private enableSequentialThinking: boolean;
   private enableDistillation: boolean;
   private knowledgeLayer: unknown;
-  private thinkingEngine: ThinkingEngine | null;
-  private distillService: IDistillService | null;
+  private thinkingEngine: SequentialThinking | null;
+  private distillService: DistillationService | null;
 
   constructor(options: {
     llmService: IAgentLLMService;
@@ -252,29 +222,14 @@ export class ArchitectAgent {
     this.enableDistillation = normalizedOptions.enableDistillation ?? true;
     this.knowledgeLayer = normalizedOptions.knowledgeLayer ?? null;
 
-    // SequentialThinking stub (full implementation to be migrated separately)
+    // SequentialThinking engine
     if (this.enableSequentialThinking) {
-      this.thinkingEngine = this.createThinkingEngine(normalizedOptions.thinkingMaxDepth ?? 10);
+      this.thinkingEngine = new SequentialThinking(normalizedOptions.thinkingMaxDepth ?? 10);
     } else {
       this.thinkingEngine = null;
     }
 
-    this.distillService = this.enableDistillation ? this.createDistillService() : null;
-  }
-
-  private createDistillService(): IDistillService {
-    const service = new DistillationService();
-    return {
-      distillChapter: (content: string) => service.distillChapter(content),
-      applyToGraph: (knowledgeLayer: unknown, data: LegacyDistillationData) => {
-        service.applyToGraph(
-          this.asKnowledgeLayer(knowledgeLayer),
-          data,
-        );
-      },
-      getDistillationPrompt: (taskType: string, content: string = '') =>
-        service.getDistillationPrompt(taskType, content),
-    };
+    this.distillService = this.enableDistillation ? new DistillationService() : null;
   }
 
   private asKnowledgeLayer(knowledgeLayer: unknown): GraphKnowledgeLayer {
@@ -282,43 +237,6 @@ export class ArchitectAgent {
       return knowledgeLayer as GraphKnowledgeLayer;
     }
     return {};
-  }
-
-  private createThinkingEngine(_maxDepth: number): ThinkingEngine {
-    const thoughts: Array<{ content: string; type: string; metadata?: Record<string, unknown>; confidence?: number }> = [];
-    const branches = new Map<string, string>();
-    let currentBranch = 'main';
-    let branchCounter = 0;
-    return {
-      reset: () => {
-        thoughts.length = 0;
-        branches.clear();
-        currentBranch = 'main';
-        branchCounter = 0;
-      },
-      think: (content, opts) => {
-        thoughts.push({
-          content,
-          type: opts.thoughtType,
-          metadata: { branch: currentBranch, ...(opts.metadata ?? {}) },
-          confidence: opts.confidence,
-        });
-      },
-      branch: ({ name }) => {
-        branchCounter += 1;
-        const id = `branch-${branchCounter}`;
-        branches.set(id, name);
-        return { id };
-      },
-      switchBranch: (id: string) => {
-        currentBranch = id === 'main' ? 'main' : (branches.get(id) ?? currentBranch);
-      },
-      conclude: (content, opts) => {
-        thoughts.push({ content, type: 'conclusion', metadata: { branch: currentBranch }, confidence: opts.confidence });
-      },
-      toMarkdown: () => thoughts.map((t, i) => `${i + 1}. [${t.type}] ${t.content}`).join('\n'),
-      toDict: () => ({ thoughts }),
-    };
   }
 
   // ---------- Main planning method ----------
@@ -360,7 +278,7 @@ export class ArchitectAgent {
     if (this.thinkingEngine) {
       this.thinkingEngine.conclude(
         `Generated story blueprint: ${result.title} (LOCK score: ${lockTotalScore(result.lock_analysis)})`,
-        { confidence: Math.min(lockTotalScore(result.lock_analysis) / 40, 1.0) },
+        Math.min(lockTotalScore(result.lock_analysis) / 40, 1.0),
       );
     }
 
@@ -396,51 +314,27 @@ export class ArchitectAgent {
     const engine = this.thinkingEngine!;
     engine.reset();
 
-    engine.think(`Received user inspiration: ${userIdea.slice(0, 100)}...`, {
-      thoughtType: THOUGHT_TYPES.INITIAL,
-      metadata: { genre, target_chapters: targetChapters },
-    });
+    engine.think(`Received user inspiration: ${userIdea.slice(0, 100)}...`, ThoughtType.INITIAL, undefined, { genre, target_chapters: targetChapters });
 
-    engine.think('Analyzing protagonist: identifying desire, pain point, uniqueness', {
-      thoughtType: THOUGHT_TYPES.ANALYSIS,
-      metadata: { lock_element: 'L' },
-    });
+    engine.think('Analyzing protagonist: identifying desire, pain point, uniqueness', ThoughtType.ANALYSIS, undefined, { lock_element: 'L' });
 
-    engine.think('Analyzing story objectives: determining short/long term goals, measurability', {
-      thoughtType: THOUGHT_TYPES.ANALYSIS,
-      metadata: { lock_element: 'O' },
-    });
+    engine.think('Analyzing story objectives: determining short/long term goals, measurability', ThoughtType.ANALYSIS, undefined, { lock_element: 'O' });
 
-    engine.think('Designing conflict system: external, internal, escalation path', {
-      thoughtType: THOUGHT_TYPES.ANALYSIS,
-      metadata: { lock_element: 'C' },
-    });
+    engine.think('Designing conflict system: external, internal, escalation path', ThoughtType.ANALYSIS, undefined, { lock_element: 'C' });
 
-    engine.think('Planning ending design: chapter hooks, protagonist transformation, emotional impact', {
-      thoughtType: THOUGHT_TYPES.ANALYSIS,
-      metadata: { lock_element: 'K' },
-    });
+    engine.think('Planning ending design: chapter hooks, protagonist transformation, emotional impact', ThoughtType.ANALYSIS, undefined, { lock_element: 'K' });
 
-    engine.think('Validating two doors structure: Door 1 (20-25%), Door 2 (75%)', {
-      thoughtType: THOUGHT_TYPES.VERIFICATION,
-      metadata: { structure: 'two_doors' },
-    });
+    engine.think('Validating two doors structure: Door 1 (20-25%), Door 2 (75%)', ThoughtType.VERIFICATION, undefined, { structure: 'two_doors' });
 
     // Explore genre-specific openings
     if (['fantasy', 'urban', 'xianxia', 'xuanhuan'].includes(genre.toLowerCase())) {
-      const branch = engine.branch({ name: 'opening_style', description: 'Explore opening styles', priority: 1 });
+      const branch = engine.branch('opening_style', 'Explore opening styles', 1);
       engine.switchBranch(branch.id);
-      engine.think(`Consider common ${genre} openings: regression/system/counterattack`, {
-        thoughtType: THOUGHT_TYPES.HYPOTHESIS,
-        confidence: 0.8,
-      });
+      engine.think(`Consider common ${genre} openings: regression/system/counterattack`, ThoughtType.HYPOTHESIS, 0.8);
       engine.switchBranch('main');
     }
 
-    engine.think(`Planning scene card sequence for ${targetChapters} chapters`, {
-      thoughtType: THOUGHT_TYPES.ANALYSIS,
-      metadata: { target_chapters: targetChapters },
-    });
+    engine.think(`Planning scene card sequence for ${targetChapters} chapters`, ThoughtType.ANALYSIS, undefined, { target_chapters: targetChapters });
   }
 
   getThinkingChain(): string {
@@ -462,7 +356,7 @@ export class ArchitectAgent {
     const distilledData = await this.distillService.distillChapter(content);
 
     if (this.knowledgeLayer) {
-      this.distillService.applyToGraph(this.knowledgeLayer, distilledData);
+      this.distillService.applyToGraph(this.asKnowledgeLayer(this.knowledgeLayer), distilledData);
     }
 
     if (this.thinkingEngine) {
@@ -470,7 +364,9 @@ export class ArchitectAgent {
       const relationCount = Array.isArray(distilledData.relations) ? distilledData.relations.length : 0;
       this.thinkingEngine.think(
         `Knowledge distillation complete: ${entityCount} entities, ${relationCount} relations`,
-        { thoughtType: THOUGHT_TYPES.CONCLUSION, metadata: { distilled: true } },
+        ThoughtType.CONCLUSION,
+        undefined,
+        { distilled: true },
       );
     }
 

@@ -106,14 +106,17 @@ export class NoopOrchestrationHookAdapter implements OrchestrationHookAdapter {
 
 // ============================================================
 // Stub Adapters (for when integrations are enabled)
+// @future: awaiting external service integration
 // ============================================================
 
+// @future: awaiting external service integration
 export class StubPostgresShadowAdapter implements StorageShadowAdapter {
   async shadowWriteMemory(payload: Record<string, unknown>): Promise<boolean> {
     return true;
   }
 }
 
+// @future: awaiting external service integration
 export class StubRedisCacheRateLimitAdapter implements CacheRateLimitAdapter {
   async cacheGet(_key: string): Promise<Record<string, unknown> | null> {
     return null;
@@ -126,6 +129,7 @@ export class StubRedisCacheRateLimitAdapter implements CacheRateLimitAdapter {
   }
 }
 
+// @future: awaiting external service integration
 export class StubElasticsearchAdapter implements SearchAdapter {
   async indexDocument(_document: Record<string, unknown>): Promise<boolean> {
     return true;
@@ -135,6 +139,7 @@ export class StubElasticsearchAdapter implements SearchAdapter {
   }
 }
 
+// @future: awaiting external service integration
 export class StubNeo4jProjectionAdapter implements GraphProjectionAdapter {
   async projectEntity(_entity: Record<string, unknown>): Promise<boolean> {
     return true;
@@ -144,12 +149,14 @@ export class StubNeo4jProjectionAdapter implements GraphProjectionAdapter {
   }
 }
 
+// @future: awaiting external service integration
 export class StubDbhubGovernanceHook implements GovernanceHookAdapter {
   async onSchemaWorkflow(_event: string, _payload: Record<string, unknown>): Promise<boolean> {
     return true;
   }
 }
 
+// @future: awaiting external service integration
 export class StubLangflowOrchestrationHook implements OrchestrationHookAdapter {
   async run(flowName: string, _payload: Record<string, unknown>): Promise<Record<string, unknown>> {
     return { status: 'ok', flow_name: flowName, provider: 'langflow' };

@@ -38,6 +38,19 @@ import {
   VectorSearch,
 } from '../search';
 import type { EmbeddingService as VectorEmbeddingService } from '../protocols/embedding';
+import { createIntegrationAdapters } from '../integrations';
+import {
+  MemoryEngineAdapter,
+  GraphEngineAdapter,
+  SearchEngineAdapter,
+  WorkflowEngineAdapter,
+  CriticEngineAdapter,
+  AgentFactoryAdapter,
+  BackupManagerAdapter,
+  TokenServiceAdapter,
+  ObsidianServiceAdapter,
+  MCPGatewayAdapter,
+} from './adapters';
 
 function createLocalVectorEmbeddingService(dimension: number): VectorEmbeddingService {
   const normalize = (text: string): number[] => {
@@ -180,73 +193,68 @@ export const ContainerModule = new InversifyContainerModule((bind) => {
     .toDynamicValue(() => createVectorSearch())
     .inSingletonScope();
 
-  // ============ Placeholder Services (To Be Migrated) ============
+  // ============ Core Runtime Services (Adapted implementations) ============
 
   // Memory Engine Binding
-  // Will be implemented when MemoryEngine is migrated from Python
-  // bind<IMemoryEngine>(ServiceTypes.MemoryEngine)
-  //   .toDynamicValue(() => new MemoryEngine())
-  //   .inSingletonScope();
+  const integrationAdapters = createIntegrationAdapters();
+  bind<IMemoryEngine>(ServiceTypes.MemoryEngine)
+    .toDynamicValue(() => new MemoryEngineAdapter({
+      flags: integrationAdapters.flags,
+      storageShadow: integrationAdapters.storageShadow,
+    }))
+    .inSingletonScope();
 
   // Graph Engine Binding
-  // Will be implemented when GraphEngine is migrated from Python
-  // bind<IGraphEngine>(ServiceTypes.GraphEngine)
-  //   .toDynamicValue(() => new GraphEngine())
-  //   .inSingletonScope();
+  bind<IGraphEngine>(ServiceTypes.GraphEngine)
+    .toDynamicValue(() => new GraphEngineAdapter())
+    .inSingletonScope();
 
   // Search Engine Binding
-  // Will be implemented when SearchEngine is migrated from Python
-  // bind<ISearchEngine>(ServiceTypes.SearchEngine)
-  //   .toDynamicValue(() => new IterativeRetriever())
-  //   .inSingletonScope();
+  bind<ISearchEngine>(ServiceTypes.SearchEngine)
+    .toDynamicValue(() => new SearchEngineAdapter(undefined, integrationAdapters))
+    .inSingletonScope();
 
   // Workflow Engine Binding
-  // Will be implemented when WorkflowEngine is migrated from Python
-  // bind<IWorkflowEngine>(ServiceTypes.WorkflowEngine)
-  //   .toDynamicValue(() => new WorkflowEngine())
-  //   .inSingletonScope();
+  bind<IWorkflowEngine>(ServiceTypes.WorkflowEngine)
+    .toDynamicValue(() => new WorkflowEngineAdapter())
+    .inSingletonScope();
 
   // Critic Engine Binding
-  // Will be implemented when CriticEngine is migrated from Python
-  // bind<ICriticEngine>(ServiceTypes.CriticEngine)
-  //   .toDynamicValue(() => new CriticEngine())
-  //   .inSingletonScope();
+  bind<ICriticEngine>(ServiceTypes.CriticEngine)
+    .toDynamicValue(() => new CriticEngineAdapter())
+    .inSingletonScope();
 
   // Agent Factory Binding
-  // Will be implemented when AgentFactory is migrated from Python
-  // bind<IAgentFactory>(ServiceTypes.AgentFactory)
-  //   .toDynamicValue(() => new AgentFactory())
-  //   .inSingletonScope();
+  bind<IAgentFactory>(ServiceTypes.AgentFactory)
+    .toDynamicValue(() => new AgentFactoryAdapter())
+    .inSingletonScope();
 
   // Backup Manager Binding
-  // Will be implemented when BackupManager is migrated from Python
-  // bind<IBackupManager>(ServiceTypes.BackupManager)
-  //   .toDynamicValue(() => new BackupManager())
-  //   .inSingletonScope();
+  bind<IBackupManager>(ServiceTypes.BackupManager)
+    .toDynamicValue(() => new BackupManagerAdapter())
+    .inSingletonScope();
 
   // Token Service Binding
-  // Will be implemented when TokenService is migrated from Python
-  // bind<ITokenService>(ServiceTypes.TokenService)
-  //   .toDynamicValue(() => new TokenService())
-  //   .inSingletonScope();
+  bind<ITokenService>(ServiceTypes.TokenService)
+    .toDynamicValue(() => new TokenServiceAdapter())
+    .inSingletonScope();
 
   // Obsidian Service Binding
-  // Will be implemented when ObsidianService is migrated from Python
-  // bind<IObsidianService>(ServiceTypes.ObsidianService)
-  //   .toDynamicValue(() => new ObsidianService())
-  //   .inSingletonScope();
+  bind<IObsidianService>(ServiceTypes.ObsidianService)
+    .toDynamicValue(() => new ObsidianServiceAdapter())
+    .inSingletonScope();
 
   // MCP Gateway Binding
-  // Will be implemented when MCPGateway is migrated from Python
-  // bind<IMCPGateway>(ServiceTypes.MCPGateway)
-  //   .toDynamicValue(() => new MCPGateway())
-  //   .inSingletonScope();
+  bind<IMCPGateway>(ServiceTypes.MCPGateway)
+    .toDynamicValue(() => new MCPGatewayAdapter())
+    .inSingletonScope();
 });
 
 /**
  * Service Binding Helper Functions
- * 
- * These functions will be used when actual implementations are available
+ *
+ * These functions allow consumers to override the default adapter bindings
+ * with custom implementations (e.g., for testing or specialized configurations).
  */
 
 export function bindMemoryEngine(bind: interfaces.Bind, implementation: new () => IMemoryEngine): void {

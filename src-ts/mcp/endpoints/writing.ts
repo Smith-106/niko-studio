@@ -8,6 +8,7 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { processWritingHelper as processLocalWritingHelper } from '../../services/writing-helper';
+import { evaluateContent, type EvaluateContentResult } from '../services/critic';
 
 // ---------------------------------------------------------------
 // Mode-specific prompt builders
@@ -176,7 +177,7 @@ async function* streamLLM(
 }
 
 // ---------------------------------------------------------------
-// Placeholder functions for quality check
+// Quality check via CriticEngine
 // ---------------------------------------------------------------
 
 function qualityDefaultPayload(): Record<string, unknown> {
@@ -191,8 +192,39 @@ function qualityDefaultPayload(): Record<string, unknown> {
   }
 }
 
-function normalizeQualityPayload(result: Record<string, unknown>): Record<string, unknown> {
-  return result
+/**
+ * Evaluate novel quality using the real CriticEngine.
+ * Wraps the MCP critic service evaluateContent for use in the
+ * writing quality check endpoint.
+ */
+async function evaluateNovelQuality(
+  content: string,
+  options?: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const dimensions = Array.isArray(options?.dimensions)
+    ? (options.dimensions as string[])
+    : undefined;
+
+  const qualityGoals = (options?.quality_goals ?? options?.qualityGoals) as
+    | Record<string, unknown>
+    | undefined;
+
+  const result: EvaluateContentResult = await evaluateContent(
+    content,
+    undefined,
+    dimensions,
+    qualityGoals,
+  );
+
+  return {
+    status: 'ok',
+    total_score: result.total_score,
+    lock_score: result.lock_score,
+    style_score: result.style_score,
+    logic_score: result.logic_score,
+    actionable_feedback: result.actionable_feedback,
+    suggestions: result.suggestions,
+  };
 }
 
 function mergeQualitySidecar(
@@ -207,13 +239,6 @@ function mergeQualitySidecar(
     ...(contextBudget != null ? { context_budget: contextBudget } : {}),
     ...(selfLearning != null ? { self_learning: selfLearning } : {}),
   }
-}
-
-async function evaluateNovelQuality(
-  _content: string,
-  _options?: Record<string, unknown>
-): Promise<Record<string, unknown>> {
-  return qualityDefaultPayload()
 }
 
 // ---------------------------------------------------------------
@@ -257,14 +282,7 @@ export async function novelQualityCheckEndpoint(
 
   result = mergeQualitySidecar(result, retrievalMetadata, contextBudget, selfLearning)
 
-  let normalizedResult: Record<string, unknown>
-  try {
-    normalizedResult = normalizeQualityPayload(result)
-  } catch {
-    normalizedResult = qualityDefaultPayload()
-  }
-
-  return jsonResponse(normalizedResult)
+  return jsonResponse(result)
 }
 
 export async function writingHelperProcessEndpoint(

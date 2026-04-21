@@ -8,9 +8,10 @@
  */
 
 import { getConfigValue as getAppConfigValue } from '../config';
+import { getContainer } from '../container/ServiceContainer';
 
 // ============================================================
-// Internal: Config Value Placeholder
+// Config Value Resolver
 // ============================================================
 
 /**
@@ -19,14 +20,6 @@ import { getConfigValue as getAppConfigValue } from '../config';
  */
 export function getConfigValue<T>(key: string, fallback: T): T {
   return coerceConfigValue(getAppConfigValue(mapLegacyConfigKey(key), fallback), fallback);
-}
-
-/** Stub for Python's get_services(). */
-interface ServicesStub {
-  isHealthy?: () => boolean | Record<string, unknown>;
-}
-function getServices(): ServicesStub {
-  return {};
 }
 
 // ============================================================
@@ -152,21 +145,13 @@ export function resolveGatewayHostPort(): { host: string; port: number } {
 }
 
 /**
- * Check if LLM service is available.
+ * Check if LLM service is available via the DI container.
+ * Returns true when the container resolves an LLM service instance.
  */
 export function isLlmAvailable(): boolean {
   try {
-    const services = getServices();
-    const checker = services.isHealthy;
-    if (typeof checker === 'function') {
-      const result = checker();
-      if (typeof result === 'boolean') return result;
-      if (typeof result === 'object' && result !== null) {
-        const status = String((result as Record<string, unknown>).status ?? '').trim().toLowerCase();
-        return status === 'ok' || status === 'healthy' || status === 'pass';
-      }
-    }
-    return true;
+    const container = getContainer();
+    return container.llm != null;
   } catch {
     return false;
   }

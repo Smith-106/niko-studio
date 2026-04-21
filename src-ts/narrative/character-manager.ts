@@ -84,16 +84,16 @@ export enum DepthLevel {
 }
 
 // ============================================================
-// Stub interface for GraphManager integration
+// GraphManager integration (real service from graph/graph-manager.ts)
 // ============================================================
 
 export interface IGraphManager {
-  getEntity(id: string): unknown | null;
-  createEntity(entity: unknown): void;
-  updateEntity(entity: unknown): void;
-  deleteEntity(id: string): void;
-  createRelationship(rel: unknown): void;
-  findRelatedEntities(id: string, maxDepth?: number): unknown[];
+  getEntity(id: string): unknown;
+  createEntity(entity: unknown): unknown;
+  updateEntity(entity: unknown): unknown;
+  deleteEntity(id: string): unknown;
+  createRelationship(rel: unknown): unknown;
+  findRelatedEntities(id: string, maxDepth?: number, limit?: number): unknown[];
   getSubgraph(id: string, radius?: number): { entities: unknown[]; relationships: unknown[] };
 }
 

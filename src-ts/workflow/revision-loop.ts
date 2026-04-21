@@ -14,6 +14,7 @@ import {
   NOVEL_HUMAN_REVIEW_SCORE,
   NOVEL_SCORE_IMPROVEMENT_THRESHOLD,
 } from './novel-state.js';
+import { type ContentType as SessionContentType } from './session/session-manager.js';
 
 // ============================================================
 // Types
@@ -466,26 +467,10 @@ export function buildFeedbackArtifactEnvelope(
 }
 
 // ============================================================
-// Session manager stub interface
-// (The full SessionManager is not yet migrated; this minimal
-//  interface captures what revision_loop needs from it.)
+// Session manager (real service from session/session-manager.ts)
 // ============================================================
 
-export enum ContentType {
-  CHAPTER = 'chapter',
-  OUTLINE = 'outline',
-  CHARACTER = 'character',
-  WORLDVIEW = 'worldview',
-  PLAN = 'plan',
-  TODO = 'todo',
-  SUMMARY = 'summary',
-  STATE = 'state',
-  SNAPSHOT_INDEX = 'snapshot_index',
-  AUDIT = 'audit',
-  HANDOFF = 'handoff',
-  REVISION_CHECKPOINT = 'revision_checkpoint',
-  GENERATION_SNAPSHOT = 'generation_snapshot',
-}
+export type ContentType = SessionContentType;
 
 export interface ISessionManager {
   readonly activePath: string;

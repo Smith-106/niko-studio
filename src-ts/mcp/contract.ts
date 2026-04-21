@@ -8,37 +8,17 @@
  */
 
 import { getConfigValue, isTruthyString } from './config';
+import {
+  ANALYSIS_SCHEMA_VERSION,
+  LEGACY_DECISION_MAP,
+  ensureContractPayload,
+} from '../workflow/types';
 
 // ============================================================
-// Placeholder constants for workflow.levels.types
+// Canonical workflow contract definitions (re-exported from workflow/types)
 // ============================================================
 
-/** Placeholder for ANALYSIS_SCHEMA_VERSION from workflow.levels.types. */
-export const ANALYSIS_SCHEMA_VERSION = '2.0.0';
-
-/** Placeholder for LEGACY_DECISION_MAP from workflow.levels.types. */
-export const LEGACY_DECISION_MAP: Record<string, string> = {
-  'go': 'go',
-  'soft_go': 'soft_go',
-  'no_go': 'no_go',
-  'pass': 'go',
-  'revise': 'soft_go',
-  'block': 'no_go',
-};
-
-/**
- * Placeholder for ensure_contract_payload from workflow.levels.types.
- * Ensures payload has required contract fields.
- */
-export function ensureContractPayload(
-  payload: Record<string, unknown>,
-): Record<string, unknown> {
-  const result = { ...payload };
-  if (result.analysis_schema_version === undefined) {
-    result.analysis_schema_version = ANALYSIS_SCHEMA_VERSION;
-  }
-  return result;
-}
+export { ANALYSIS_SCHEMA_VERSION, LEGACY_DECISION_MAP, ensureContractPayload };
 
 // ============================================================
 // JSONResponse replacement type

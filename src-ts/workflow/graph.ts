@@ -10,6 +10,7 @@
 import type { BaseState } from './state';
 import type { IWorkflowGraph } from './adapters/base-adapter';
 import { type NodeFunction, type RoutingFunction } from './adapters/base-adapter';
+import { DistillationManager } from '../memory/distillation-manager.js';
 
 // ============================================================
 // Distillation Types
@@ -244,40 +245,10 @@ export class DistillationNode {
 
   private _executeDistillation(
     content: string,
-    template: DistillationTemplate,
+    _template: DistillationTemplate,
   ): Record<string, unknown> {
-    // Stub: In production, this calls DistillationManager.distillChapter()
-    const baseResult: Record<string, unknown> = {
-      entities: [],
-      relations: [],
-      events: [],
-    };
-
-    switch (template) {
-      case DistillationTemplate.ENTITY_EXTRACTION:
-        baseResult.entities = [];
-        break;
-      case DistillationTemplate.RELATION_EXTRACTION:
-        baseResult.relations = [];
-        break;
-      case DistillationTemplate.EVENT_EXTRACTION:
-        baseResult.events = [];
-        break;
-      case DistillationTemplate.SUMMARY:
-        baseResult['summary'] = '';
-        break;
-      case DistillationTemplate.CHARACTER_ARC:
-        baseResult['character_arcs'] = [];
-        break;
-      case DistillationTemplate.PLOT_STRUCTURE:
-        baseResult['plot_points'] = [];
-        break;
-      case DistillationTemplate.FULL:
-        // All fields already initialized as empty arrays
-        break;
-    }
-
-    return baseResult;
+    const distillationManager = new DistillationManager();
+    return distillationManager.distillChapter(content);
   }
 }
 
