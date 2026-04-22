@@ -45,6 +45,12 @@ describe('mcp workflow service', () => {
       task: '写一段场景',
       level: 'L2',
       recommendations: [{ title: '保留冲突' }],
+      traceContext: {
+        requestId: 'req-1',
+        route: '^/workflow/plan$',
+        method: 'POST',
+        startAtMs: 123,
+      },
     });
     const execute = await workflowExecute({
       planId: 'plan-1',
@@ -54,7 +60,19 @@ describe('mcp workflow service', () => {
     });
 
     expect(routeMock).toHaveBeenCalledWith('写一段场景');
-    expect(planMock).toHaveBeenCalledWith('写一段场景', 'L2', [{ title: '保留冲突' }]);
+    expect(planMock).toHaveBeenCalledWith(
+      '写一段场景',
+      'L2',
+      [{ title: '保留冲突' }],
+      {
+        trace_context: {
+          requestId: 'req-1',
+          route: '^/workflow/plan$',
+          method: 'POST',
+          startAtMs: 123,
+        },
+      },
+    );
     expect(executeMock).toHaveBeenCalledWith('plan-1', 'step-1', [{ title: '保留冲突' }], 'token-1');
     expect(route).toEqual({ level: 'L2' });
     expect(plan).toEqual({ plan_id: 'plan-1' });
@@ -122,8 +140,9 @@ describe('mcp workflow service', () => {
       workflowSchedulerRunNow,
     } = await import('../../mcp/services/workflow.js');
 
+    const taskId = `sched-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const definition = {
-      task_id: 'sched-1',
+      task_id: taskId,
       title: 'Nightly delivery',
       task: '推进项目到完成',
       level: 'L3',
@@ -195,23 +214,65 @@ describe('mcp workflow service', () => {
 
     const listResult = await workflowSchedulerList({ limit: 10 });
     expect(Array.isArray(listResult['tasks'])).toBe(true);
-    expect((listResult['tasks'] as Array<Record<string, unknown>>).some((item) => item['task_id'] === 'sched-1')).toBe(true);
+    expect((listResult['tasks'] as Array<Record<string, unknown>>).some((item) => item['task_id'] === taskId)).toBe(true);
 
-    const pauseResult = await workflowSchedulerPause({ taskId: 'sched-1' });
+    const pauseResult = await workflowSchedulerPause({ taskId });
     expect(pauseResult['status']).toBe('paused');
 
-    const pausedRun = await workflowSchedulerRunNow({ taskId: 'sched-1' });
+    const pausedRun = await workflowSchedulerRunNow({ taskId });
     expect(pausedRun['error']).toContain('paused');
 
-    const resumeResult = await workflowSchedulerResume({ taskId: 'sched-1' });
+    const resumeResult = await workflowSchedulerResume({ taskId });
     expect(resumeResult['status']).toBe('active');
 
-    const runResult = await workflowSchedulerRunNow({ taskId: 'sched-1' });
+    const runResult = await workflowSchedulerRunNow({ taskId });
     expect(runResult['status']).toBe('completed');
     expect(runResult['trigger']).toBe('manual_run_now');
     expect(runResult['plan_id']).toBe('plan-scheduler-1');
 
-    expect(planMock).toHaveBeenCalledWith('推进项目到完成', 'L3', []);
+    expect(planMock).toHaveBeenCalledWith('推进项目到完成', 'L3', [], undefined);
     expect(executeMock).toHaveBeenCalledWith('plan-scheduler-1', undefined, undefined, undefined);
+  });
+
+  it('supports runtime provider override for workflow engine construction', async () => {
+    const providerPlanMock = vi.fn().mockResolvedValue({ plan_id: 'plan-provider' });
+    const providerRouteMock = vi.fn().mockResolvedValue({ level: 'L2' });
+    const providerExecuteMock = vi.fn().mockResolvedValue({ status: 'completed' });
+    const providerQuickRollbackMock = vi.fn().mockResolvedValue({ restored: true });
+    const providerLifecycleMock = vi.fn().mockResolvedValue({ runner_state: 'running' });
+    const providerCreateCheckpointMock = vi.fn().mockResolvedValue({ checkpoint_id: 'cp-provider' });
+    const providerRestoreCheckpointMock = vi.fn().mockResolvedValue({ status: 'restored' });
+    const providerListCheckpointsMock = vi.fn().mockResolvedValue([]);
+    const providerBindPlanSessionMock = vi.fn().mockReturnValue('session-1');
+
+    const {
+      setWorkflowEngineRuntimeProvider,
+      resetWorkflowEngineRuntimeProvider,
+      workflowPlan,
+    } = await import('../../mcp/services/workflow.js');
+
+    const provider = vi.fn().mockReturnValue({
+      route: providerRouteMock,
+      plan: providerPlanMock,
+      execute: providerExecuteMock,
+      quickRollback: providerQuickRollbackMock,
+      lifecycle: providerLifecycleMock,
+      createCheckpoint: providerCreateCheckpointMock,
+      restoreCheckpoint: providerRestoreCheckpointMock,
+      listCheckpoints: providerListCheckpointsMock,
+      bindPlanSession: providerBindPlanSessionMock,
+    });
+
+    setWorkflowEngineRuntimeProvider(provider);
+
+    await workflowPlan({ task: 'provider-plan-task' });
+
+    expect(provider).toHaveBeenCalledWith({
+      workspace: expect.any(String),
+      sessionNamespace: 'mcp-workflow',
+    });
+    expect(providerPlanMock).toHaveBeenCalledWith('provider-plan-task', undefined, [], undefined);
+
+    resetWorkflowEngineRuntimeProvider();
   });
 });

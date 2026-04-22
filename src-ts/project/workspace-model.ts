@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 export const PROJECT_WORKSPACE_SCHEMA_VERSION = '2026-04-08';
 
 export const PROJECT_WORKSPACE_MIGRATION_NOTES = [
@@ -111,8 +109,8 @@ function readStringArray(value: unknown): string[] {
 function basenameOrNull(value: string | null | undefined): string | null {
   const raw = readString(value);
   if (!raw) return null;
-  const base = path.basename(raw);
-  return readString(base);
+  const parts = raw.split(/[\\/]/).filter(Boolean);
+  return parts.length > 0 ? readString(parts[parts.length - 1]) : null;
 }
 
 function sanitizeIdentifier(value: string): string {

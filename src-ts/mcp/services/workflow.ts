@@ -28,7 +28,7 @@ interface WorkflowEngine {
   plan(
     task: string,
     level?: string | null,
-    params?: { recommendations?: unknown[] | null }
+    params?: { recommendations?: unknown[] | null; traceContext?: WorkflowTraceContext | null }
   ): Promise<Record<string, unknown>>;
   execute(
     planId: string,
@@ -58,14 +58,44 @@ interface WorkflowEngine {
   bindPlanSession(planId: string, sessionId: string): string;
 }
 
+type WorkflowEngineRuntimeProvider = (params: {
+  workspace: string;
+  sessionNamespace: string;
+}) => WorkflowEngineRuntimeLike;
+
+const defaultWorkflowEngineRuntimeProvider: WorkflowEngineRuntimeProvider = ({
+  workspace,
+  sessionNamespace,
+}) => new WorkflowEngineRuntime(workspace, sessionNamespace) as unknown as WorkflowEngineRuntimeLike;
+
+let workflowEngineRuntimeProvider: WorkflowEngineRuntimeProvider = defaultWorkflowEngineRuntimeProvider;
 let workflowEngineInstance: WorkflowEngine | null = null;
 const checkpointAuthorityBindings = new Map<string, WorkflowAuthority>();
 const schedulerEntries = new Map<string, WorkflowSchedulerTaskRecord>();
+
+export function setWorkflowEngineRuntimeProvider(
+  provider?: WorkflowEngineRuntimeProvider | null,
+): void {
+  workflowEngineRuntimeProvider = provider ?? defaultWorkflowEngineRuntimeProvider;
+  workflowEngineInstance = null;
+}
+
+export function resetWorkflowEngineRuntimeProvider(): void {
+  workflowEngineRuntimeProvider = defaultWorkflowEngineRuntimeProvider;
+  workflowEngineInstance = null;
+}
 
 interface WorkflowAuthority {
   sessionId: string | null;
   workspaceId: string | null;
   projectId: string | null;
+}
+
+export interface WorkflowTraceContext {
+  requestId: string;
+  route: string;
+  method: string;
+  startAtMs: number;
 }
 
 interface WorkflowCheckpointSummary {
@@ -85,6 +115,39 @@ interface WorkflowEngineAuthorityBridge {
   bindPlanAuthority?: (planId: string, authority: WorkflowAuthority) => WorkflowAuthority;
   getPlanAuthority?: (planId: string) => WorkflowAuthority;
   checkpoints?: Map<string, WorkflowCheckpointRecord>;
+}
+
+interface WorkflowEngineRuntimeLike extends WorkflowEngineAuthorityBridge {
+  route(task: string): Promise<Record<string, unknown>>;
+  plan(
+    task: string,
+    level?: string,
+    recommendations?: unknown[],
+    executionContext?: Record<string, unknown>,
+  ): Promise<Record<string, unknown>>;
+  execute(
+    planId: string,
+    stepId?: string,
+    recommendations?: unknown[],
+    confirmToken?: string,
+    authority?: WorkflowAuthority,
+  ): Promise<Record<string, unknown>>;
+  quickRollback(
+    planId: string,
+    checkpointId: string,
+    reason: string,
+    authority?: WorkflowAuthority,
+  ): Promise<Record<string, unknown>>;
+  lifecycle(
+    planId: string,
+    action: string,
+    triageState?: string,
+    authority?: WorkflowAuthority,
+  ): Promise<Record<string, unknown>>;
+  createCheckpoint(description: string, autoCommit: boolean): Promise<Record<string, unknown>>;
+  restoreCheckpoint(checkpointId: string, confirmToken?: string): Promise<Record<string, unknown>>;
+  listCheckpoints(limit: number): Promise<unknown[]>;
+  bindPlanSession(planId: string, sessionId: string): string;
 }
 
 type WorkflowExecutionStatus = 'completed' | 'waiting_confirmation' | 'gate_blocked';
@@ -622,7 +685,10 @@ function buildImportedSchedulerDefinition(params: {
 
 function getEngine(): WorkflowEngine | null {
   if (!workflowEngineInstance) {
-    const engine = new WorkflowEngineRuntime(resolveWorkflowWorkspace(), 'mcp-workflow');
+    const engine = workflowEngineRuntimeProvider({
+      workspace: resolveWorkflowWorkspace(),
+      sessionNamespace: 'mcp-workflow',
+    });
     const engineWithAuthority = engine as unknown as WorkflowEngineAuthorityBridge;
     workflowEngineInstance = {
       bindPlanAuthority(planId: string, authority: WorkflowAuthority) {
@@ -662,8 +728,21 @@ function getEngine(): WorkflowEngine | null {
       route(task: string) {
         return engine.route(task);
       },
-      plan(task: string, level?: string | null, params?: { recommendations?: unknown[] | null }) {
-        return engine.plan(task, level ?? undefined, params?.recommendations ?? undefined);
+      plan(
+        task: string,
+        level?: string | null,
+        params?: { recommendations?: unknown[] | null; traceContext?: WorkflowTraceContext | null },
+      ) {
+        return engine.plan(
+          task,
+          level ?? undefined,
+          params?.recommendations ?? undefined,
+          params?.traceContext
+            ? {
+                trace_context: params.traceContext,
+              }
+            : undefined,
+        );
       },
       execute(
         planId: string,
@@ -738,6 +817,7 @@ export async function workflowPlan(params: {
   task: string;
   level?: string | null;
   recommendations?: unknown[] | null;
+  traceContext?: WorkflowTraceContext | null;
   genre?: string | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
@@ -745,7 +825,10 @@ export async function workflowPlan(params: {
 
   const engine = getEngine();
   if (!engine) return { error: 'Workflow engine unavailable' };
-  const result = await engine.plan(params.task, params.level, { recommendations: mergedRecommendations });
+  const result = await engine.plan(params.task, params.level, {
+    recommendations: mergedRecommendations,
+    traceContext: params.traceContext ?? null,
+  });
   const planId = result['plan_id'];
   const authority = resolveWorkflowAuthority(params.workspace);
   if (typeof planId === 'string' && planId && authority) {

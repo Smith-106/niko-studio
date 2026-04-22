@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { randomUUID } from 'node:crypto';
 
 import type { GatewayRoute } from './gateway-route-types';
+import { recordRequestMetrics } from './metrics';
 import {
   addCorsHeaders,
   extractPath,
@@ -29,8 +31,18 @@ export function createGatewayRequestHandler(routes: readonly GatewayRoute[]) {
     if (!matched) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Not found', path }));
+      recordRequestMetrics({
+        route: path,
+        method,
+        statusCode: 404,
+        latencyMs: 0,
+      });
       return;
     }
+
+    const startedAt = Date.now();
+    const routePattern = matched.route.pattern.source;
+    const requestId = randomUUID();
 
     try {
       let body: unknown;
@@ -46,8 +58,20 @@ export function createGatewayRequestHandler(routes: readonly GatewayRoute[]) {
       }
 
       const httpRequest = toHttpRequest(req, body, query, matched.params);
+      httpRequest.traceContext = {
+        requestId,
+        route: routePattern,
+        method,
+        startAtMs: startedAt,
+      };
       const httpResponse = await matched.route.handler(httpRequest);
       sendHttpResponse(res, httpResponse);
+      recordRequestMetrics({
+        route: routePattern,
+        method,
+        statusCode: httpResponse.statusCode,
+        latencyMs: Date.now() - startedAt,
+      });
     } catch (error) {
       console.error(`Error handling ${method} ${path}:`, error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -57,6 +81,12 @@ export function createGatewayRequestHandler(routes: readonly GatewayRoute[]) {
           message: error instanceof Error ? error.message : String(error),
         }),
       );
+      recordRequestMetrics({
+        route: routePattern,
+        method,
+        statusCode: 500,
+        latencyMs: Date.now() - startedAt,
+      });
     }
   };
 }

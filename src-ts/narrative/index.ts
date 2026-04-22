@@ -136,6 +136,44 @@ export * from './premise-validator';
 export * from './scene-coherence';
 export * from './style-system';
 export * from './suspense-analyzer';
-export * from './cross-chapter-character-tracker';
-export * from './timeline-consistency-checker';
-export * from './worldview-coherence-validator';
+
+export {
+  CharacterConflictType,
+  ConsistencySeverity,
+  CrossChapterCharacterTracker,
+} from './cross-chapter-character-tracker';
+export type {
+  ChapterMeta,
+  CharacterTimelineConflict,
+  CharacterChapterState,
+  CrossChapterCharacterReport,
+} from './cross-chapter-character-tracker';
+
+export {
+  TimelineConflictType,
+  TimelineSeverity,
+  TimeRefType,
+  TimelineConsistencyChecker,
+} from './timeline-consistency-checker';
+export type {
+  ChapterMeta as TimelineChapterMeta,
+  TimeReference,
+  TimelineConflict,
+  ChapterTimeProfile,
+  TimelineReport,
+} from './timeline-consistency-checker';
+
+export {
+  WorldviewConflictType,
+  WorldviewSeverity,
+  WorldviewCoherenceValidator,
+} from './worldview-coherence-validator';
+export type {
+  ChapterMeta as WorldviewChapterMeta,
+  WorldRule,
+  WorldviewConflict,
+  ChapterWorldviewProfile,
+  WorldviewReport,
+  IWorldviewGraphAdapter,
+} from './worldview-coherence-validator';
+

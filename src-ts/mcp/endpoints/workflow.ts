@@ -5,7 +5,8 @@
  * Ported from src/mcp/endpoints/workflow.py
  */
 
-import type { HttpRequest, HttpResponse } from '../http-types';
+import type { HttpRequest, HttpResponse, HttpRequestTraceContext } from '../http-types';
+
 import { jsonResponse, parseBody } from '../http-types';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
 import {
@@ -39,6 +40,19 @@ function resolveWorkspace(body: Record<string, unknown>) {
   });
 }
 
+function resolveTraceContext(request: HttpRequest): HttpRequestTraceContext | null {
+  const traceContext = request.traceContext;
+  if (!traceContext) {
+    return null;
+  }
+  return {
+    requestId: traceContext.requestId,
+    route: traceContext.route,
+    method: traceContext.method,
+    startAtMs: traceContext.startAtMs,
+  };
+}
+
 export async function workflowRouteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
@@ -53,6 +67,7 @@ export async function workflowPlanEndpoint(request: HttpRequest): Promise<HttpRe
     task: (body.task as string) ?? '',
     level: body.level as string | undefined,
     recommendations: body.recommendations as unknown[] | undefined,
+    traceContext: resolveTraceContext(request),
     genre: body.genre as string | undefined,
     workspace,
   });

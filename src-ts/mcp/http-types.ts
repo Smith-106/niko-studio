@@ -5,6 +5,13 @@
  * Adapted from Starlette request/response to framework-agnostic pattern.
  */
 
+export interface HttpRequestTraceContext {
+  requestId: string;
+  route: string;
+  method: string;
+  startAtMs: number;
+}
+
 export interface HttpRequest {
   method: string;
   url: string;
@@ -12,6 +19,7 @@ export interface HttpRequest {
   body: unknown;
   query: Record<string, string>;
   params: Record<string, string>;
+  traceContext?: HttpRequestTraceContext;
 }
 
 export interface HttpResponse {

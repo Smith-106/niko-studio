@@ -530,4 +530,38 @@ describe('workflow endpoints integration', () => {
     expect((runNowResponse.body as Record<string, unknown>)['plan_id']).toBeTruthy();
     expect((runNowResponse.body as Record<string, unknown>)['run_id']).toBeTruthy();
   });
+
+  it('forwards request trace context to workflow plan service', async () => {
+    const workflowService = await import('../../mcp/services/workflow.js');
+    const spy = vi.spyOn(workflowService, 'workflowPlan');
+    spy.mockResolvedValue({ plan_id: 'trace-plan' });
+
+    const { workflowPlanEndpoint } = await import('../../mcp/endpoints/workflow.js');
+
+    const request = makeRequest({ task: 'trace test', level: 'L2' });
+    request.traceContext = {
+      requestId: 'req-trace-1',
+      route: '^/workflow/plan$',
+      method: 'POST',
+      startAtMs: 100,
+    };
+
+    const response = await workflowPlanEndpoint(request);
+
+    expect(response.statusCode).toBe(200);
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: 'trace test',
+        level: 'L2',
+        traceContext: {
+          requestId: 'req-trace-1',
+          route: '^/workflow/plan$',
+          method: 'POST',
+          startAtMs: 100,
+        },
+      }),
+    );
+
+    spy.mockRestore();
+  });
 });
