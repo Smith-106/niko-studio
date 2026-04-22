@@ -194,4 +194,137 @@ describe('wiki endpoints', () => {
       }),
     }));
   });
+
+  it('forwards page-not-found results from the service layer', async () => {
+    readProjectWikiCanonPageMock.mockResolvedValueOnce({
+      available: true,
+      reason: 'page-not-found',
+      workspace_id: 'atlas-workspace',
+      page: null,
+    });
+
+    const { wikiReadPageEndpoint } = await import('../../mcp/endpoints/wiki.js');
+    const response = await wikiReadPageEndpoint(makeRequest('/wiki/page', {
+      slug: 'nonexistent-page',
+      workspace: {
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'Atlas',
+          workspaceRoot: '/tmp/atlas',
+        },
+      },
+    }));
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      reason: 'page-not-found',
+      page: null,
+    });
+  });
+
+  it('maps both snake_case and camelCase raw evidence fields', async () => {
+    promoteProjectWikiCanonMock.mockResolvedValueOnce({
+      available: true,
+      reason: null,
+      workspace_id: 'atlas-workspace',
+      page: { id: 'page-2', slug: 'test/camel-case' },
+      raw_evidence_path: '/tmp/raw-camel.md',
+      log_entry: { type: 'promotion' },
+    });
+
+    const { wikiPromoteEndpoint } = await import('../../mcp/endpoints/wiki.js');
+
+    // Use camelCase keys in the request body
+    await wikiPromoteEndpoint(makeRequest('/wiki/promote', {
+      title: 'CamelCase Test',
+      body: 'Testing camelCase keys',
+      rawEvidence: {
+        relativePath: 'imports/raw.md',
+        content: 'raw content',
+      },
+      workspace: {
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'Atlas',
+          workspaceRoot: '/tmp/atlas',
+        },
+      },
+    }));
+
+    expect(promoteProjectWikiCanonMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rawEvidence: expect.objectContaining({
+          relativePath: 'imports/raw.md',
+          content: 'raw content',
+        }),
+      }),
+    );
+  });
+
+  it('returns service errors with 200 status but available:false', async () => {
+    listProjectWikiCanonPagesMock.mockResolvedValueOnce({
+      available: false,
+      reason: 'missing-workspace-root',
+      workspace_id: null,
+      total_pages: 0,
+      pages: [],
+    });
+
+    const { wikiListEndpoint } = await import('../../mcp/endpoints/wiki.js');
+    const response = await wikiListEndpoint(makeRequest('/wiki/list', {
+      workspace: {
+        identity: {
+          workspaceId: null,
+          projectId: null,
+          projectName: null,
+          workspaceRoot: null,
+        },
+      },
+    }));
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      available: false,
+      reason: 'missing-workspace-root',
+    });
+  });
+
+  it('includes workspace context in all endpoint responses', async () => {
+    readProjectWikiCanonPageMock.mockResolvedValueOnce({
+      available: true,
+      reason: null,
+      workspace_id: 'atlas-workspace',
+      page: {
+        id: 'page-3',
+        slug: 'test/workspace-ctx',
+        title: 'Workspace Context Test',
+        status: 'curated',
+        file_path: 'test/workspace-ctx.md',
+        markdown: '# Workspace Context',
+      },
+    });
+
+    const { wikiReadPageEndpoint } = await import('../../mcp/endpoints/wiki.js');
+    const response = await wikiReadPageEndpoint(makeRequest('/wiki/page', {
+      slug: 'test/workspace-ctx',
+      workspace: {
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'Atlas',
+          workspaceRoot: '/tmp/atlas',
+        },
+        workflow: { sessionId: 'session-7' },
+      },
+    }));
+
+    expect(response.body).toHaveProperty('workspace');
+    expect(response.body.workspace).toMatchObject({
+      identity: expect.objectContaining({
+        workspaceId: 'atlas-workspace',
+      }),
+    });
+  });
 });

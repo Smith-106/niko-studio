@@ -99,7 +99,21 @@
       "WebFetch(domain:docs.prefect.io)",
       "WebFetch(domain:docs.celeryq.dev)",
       "WebFetch(domain:cheatsheetseries.owasp.org)",
-      "WebFetch(domain:docs.github.com)"
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:duckduckgo.com)",
+      "WebFetch(domain:dora.dev)",
+      "WebFetch(domain:www.inkandswitch.com)",
+      "WebFetch(domain:www.bing.com)",
+      "WebFetch(domain:martinfowler.com)",
+      "WebFetch(domain:testing.googleblog.com)",
+      "WebFetch(domain:abseil.io)",
+      "WebFetch(domain:www.sonarsource.com)",
+      "WebFetch(domain:google.github.io)",
+      "WebFetch(domain:kentcdodds.com)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:link.springer.com)",
+      "WebFetch(domain:pitest.org)",
+      "WebFetch(domain:www.iso.org)"
     ]
   },
   "hooks": {

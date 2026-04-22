@@ -189,4 +189,141 @@ describe('mcp wiki service', () => {
       page: null,
     });
   });
+
+  it('lists pages filtered by status', async () => {
+    workspaceRoot = await mkdtemp(join(tmpdir(), 'niko-wiki-service-filter-'));
+
+    const {
+      listProjectWikiCanonPages,
+      promoteProjectWikiCanon,
+    } = await import('../../mcp/services/wiki.js');
+
+    const workspace = buildWorkspace(workspaceRoot);
+
+    // Create a curated page
+    await promoteProjectWikiCanon({
+      workspace,
+      title: 'Curated Page',
+      slug: 'curated/page',
+      idSeed: 'curated-1',
+      body: 'Curated content',
+      status: 'curated',
+    });
+
+    // Create a draft page
+    await promoteProjectWikiCanon({
+      workspace,
+      title: 'Draft Page',
+      slug: 'draft/page',
+      idSeed: 'draft-1',
+      body: 'Draft content',
+      status: 'draft',
+    });
+
+    const allPages = await listProjectWikiCanonPages({ workspace });
+    expect(allPages.total_pages).toBe(2);
+
+    const curatedOnly = await listProjectWikiCanonPages({ workspace, status: 'curated' });
+    expect(curatedOnly.total_pages).toBe(2);
+    expect(curatedOnly.pages.length).toBeGreaterThanOrEqual(1);
+
+    const draftOnly = await listProjectWikiCanonPages({ workspace, status: 'draft' });
+    expect(draftOnly.total_pages).toBe(2);
+    expect(draftOnly.pages.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('applies limit to page listing', async () => {
+    workspaceRoot = await mkdtemp(join(tmpdir(), 'niko-wiki-service-limit-'));
+
+    const {
+      listProjectWikiCanonPages,
+      promoteProjectWikiCanon,
+    } = await import('../../mcp/services/wiki.js');
+
+    const workspace = buildWorkspace(workspaceRoot);
+
+    await promoteProjectWikiCanon({
+      workspace,
+      title: 'Page A',
+      slug: 'page-a',
+      idSeed: 'page-a',
+      body: 'Content A',
+    });
+
+    await promoteProjectWikiCanon({
+      workspace,
+      title: 'Page B',
+      slug: 'page-b',
+      idSeed: 'page-b',
+      body: 'Content B',
+    });
+
+    const limited = await listProjectWikiCanonPages({ workspace, limit: 1 });
+    expect(limited.total_pages).toBe(2);
+    expect(limited.pages.length).toBe(1);
+  });
+
+  it('supports promotion from different sources (story-bible, chat, research, manual)', async () => {
+    workspaceRoot = await mkdtemp(join(tmpdir(), 'niko-wiki-service-sources-'));
+
+    const { promoteProjectWikiCanon } = await import('../../mcp/services/wiki.js');
+    const workspace = buildWorkspace(workspaceRoot);
+
+    const sources = ['story-bible', 'chat', 'research', 'manual'] as const;
+
+    for (const source of sources) {
+      const result = await promoteProjectWikiCanon({
+        workspace,
+        title: `Source ${source} page`,
+        slug: `sources/${source}`,
+        idSeed: `source-${source}`,
+        promotedFrom: source,
+        body: `Content from ${source}`,
+      });
+
+      expect(result.available).toBe(true);
+      expect(result.page?.promoted_from).toBe(source);
+    }
+  });
+
+  it('handles promotion without raw evidence', async () => {
+    workspaceRoot = await mkdtemp(join(tmpdir(), 'niko-wiki-service-noevidence-'));
+
+    const { promoteProjectWikiCanon } = await import('../../mcp/services/wiki.js');
+    const workspace = buildWorkspace(workspaceRoot);
+
+    const result = await promoteProjectWikiCanon({
+      workspace,
+      title: 'No Evidence Page',
+      slug: 'no-evidence/page',
+      idSeed: 'no-ev-1',
+      body: 'Page without raw evidence',
+      rawEvidence: null,
+    });
+
+    expect(result.available).toBe(true);
+    expect(result.raw_evidence_path).toBeNull();
+    expect(result.page?.markdown).toContain('No Evidence Page');
+  });
+
+  it('stores metadata on promoted pages', async () => {
+    workspaceRoot = await mkdtemp(join(tmpdir(), 'niko-wiki-service-metadata-'));
+
+    const { promoteProjectWikiCanon } = await import('../../mcp/services/wiki.js');
+    const workspace = buildWorkspace(workspaceRoot);
+
+    const metadata = { section: 'characters', tags: ['protagonist', 'main'], priority: 1 };
+    const result = await promoteProjectWikiCanon({
+      workspace,
+      title: 'Metadata Page',
+      slug: 'metadata/page',
+      idSeed: 'meta-1',
+      body: 'Page with metadata',
+      metadata,
+    });
+
+    expect(result.available).toBe(true);
+    expect(result.log_entry).toBeTruthy();
+    expect(result.log_entry?.metadata).toEqual(metadata);
+  });
 });

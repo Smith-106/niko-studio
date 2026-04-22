@@ -1,0 +1,39 @@
+{
+  "id": "TASK-006",
+  "title": "Add convergence regression suite for recovery and authority chains",
+  "description": "Add deterministic regression coverage for concurrency, destructive-confirm, restore failure, rollback failure, and authority mismatch paths.",
+  "depends_on": [
+    "TASK-001",
+    "TASK-002",
+    "TASK-003",
+    "TASK-004",
+    "TASK-005"
+  ],
+  "convergence": {
+    "criteria": [
+      "concurrency recovery and rollback scenarios are covered",
+      "authority mismatch and destructive-confirm exception paths are covered",
+      "new tests remain stable and non-flaky"
+    ]
+  },
+  "files": [
+    {
+      "path": "src-ts/tests/workflow/workflow-engine.integration.test.ts",
+      "change": "Add restore and rollback failure plus concurrency tests"
+    },
+    {
+      "path": "src-ts/tests/mcp/workflow-endpoints.integration.test.ts",
+      "change": "Add authority and destructive-confirm regressions"
+    },
+    {
+      "path": "desktop/src/components/ChatArea.test.tsx",
+      "change": "Add UI recovery failure and retry path coverage"
+    }
+  ],
+  "implementation": [
+    "Encode deterministic concurrency and failure scenarios",
+    "Cover authority and confirm-flag guarded paths",
+    "Stabilize fixtures to reduce flake risk"
+  ],
+  "test": "Run backend and desktop recovery workflow suites and confirm stable pass"
+}

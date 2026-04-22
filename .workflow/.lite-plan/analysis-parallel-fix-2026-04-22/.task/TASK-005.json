@@ -1,0 +1,29 @@
+{
+  "id": "TASK-005",
+  "title": "Close request metrics and tracing instrumentation gap",
+  "description": "Add end-to-end request metrics and tracing hooks at request-handler boundary.",
+  "depends_on": [],
+  "convergence": {
+    "criteria": [
+      "request handler emits route, method, status, and latency metrics",
+      "trace context propagates through workflow endpoint and service chain",
+      "health and metrics endpoints stay compatible"
+    ]
+  },
+  "files": [
+    {
+      "path": "src-ts/mcp/gateway-request-handler.ts",
+      "change": "Instrument request lifecycle metrics and error labels"
+    },
+    {
+      "path": "src-ts/mcp/metrics.ts",
+      "change": "Add request-dimension counters or histograms and helpers"
+    }
+  ],
+  "implementation": [
+    "Instrument request start and end events",
+    "Attach trace identifiers in request context",
+    "Keep overhead bounded with stable dimensions"
+  ],
+  "test": "Extend metrics tests and verify no regressions in platform health routes"
+}
