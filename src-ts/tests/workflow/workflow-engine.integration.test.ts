@@ -104,4 +104,57 @@ describe('WorkflowEngine integration', () => {
     expect(bound).toBe('manual-session-001');
     expect(engine.getPlanSessionId(planId)).toBe('manual-session-001');
   });
+
+  it('serializes restore operations in the same workspace lock domain', async () => {
+    const engine = new WorkflowEngine(workspace, 'phase4-recovery-lock') as WorkflowEngine & {
+      _restoreCheckpointInternal: (checkpointId: string, confirmToken?: string) => Promise<Record<string, unknown>>;
+    };
+
+    const callOrder: string[] = [];
+    let firstRunning = false;
+
+    engine._restoreCheckpointInternal = async (checkpointId: string) => {
+      callOrder.push(`start:${checkpointId}`);
+      if (checkpointId === 'cp-1') {
+        firstRunning = true;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        firstRunning = false;
+      } else {
+        expect(firstRunning).toBe(false);
+      }
+      callOrder.push(`end:${checkpointId}`);
+      return { status: 'restored', checkpoint_id: checkpointId };
+    };
+
+    await Promise.all([
+      engine.restoreCheckpoint('cp-1', 'approved-token'),
+      engine.restoreCheckpoint('cp-2', 'approved-token'),
+    ]);
+
+    expect(callOrder).toEqual([
+      'start:cp-1',
+      'end:cp-1',
+      'start:cp-2',
+      'end:cp-2',
+    ]);
+  });
+
+  it('keeps persisted checkpoint state unchanged when quick rollback restore fails', async () => {
+    const engine = new WorkflowEngine(workspace, 'phase4-rollback-atomicity');
+
+    const plan = await engine.plan('写一章并逐步完善冲突与细节', 'L3');
+    const planId = String(plan['plan_id']);
+
+    const beforeStatus = engine.getPlanStatus(planId);
+    const beforeTemplateMeta = beforeStatus['template_meta'] as Record<string, unknown>;
+    expect(String(beforeTemplateMeta['last_checkpoint_id'] ?? '')).toBe('');
+
+    const rollbackResult = await engine.quickRollback(planId, 'missing-checkpoint', 'failure consistency test');
+    expect(rollbackResult['restored']).toBe(false);
+    expect((rollbackResult['restore'] as Record<string, unknown>)['error']).toContain("Checkpoint 'missing-checkpoint' not found");
+
+    const afterStatus = engine.getPlanStatus(planId);
+    const afterTemplateMeta = afterStatus['template_meta'] as Record<string, unknown>;
+    expect(String(afterTemplateMeta['last_checkpoint_id'] ?? '')).toBe('');
+  });
 });

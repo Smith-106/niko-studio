@@ -191,12 +191,11 @@ describe('workflow endpoints integration', () => {
     expect((confirmedResponse.body as Record<string, unknown>)['step_name']).toBe('analyze');
   });
 
-  it('supports checkpoint create/list and quick rollback through workflow endpoints', async () => {
+  it('requires confirm token for destructive checkpoint restore and succeeds after confirmation', async () => {
     const {
       workflowPlanEndpoint,
       workflowLifecycleEndpoint,
-      workflowQuickRollbackEndpoint,
-      checkpointListEndpoint,
+      checkpointRestoreEndpoint,
     } = await import('../../mcp/endpoints/workflow.js');
 
     const planResponse = await workflowPlanEndpoint(
@@ -208,28 +207,61 @@ describe('workflow endpoints integration', () => {
       makeRequest({ plan_id: planId, action: 'pause' }),
     );
     const checkpointId = String((pauseResponse.body as Record<string, unknown>)['checkpoint_id']);
-    expect(checkpointId).toBeTruthy();
 
-    const listResponse = await checkpointListEndpoint(
-      makeRequest({ limit: 10 }),
+    const blockedRestore = await checkpointRestoreEndpoint(
+      makeRequest({ checkpoint_id: checkpointId }),
     );
-    expect(listResponse.statusCode).toBe(200);
-    expect(Array.isArray(listResponse.body)).toBe(true);
-    expect((listResponse.body as Array<Record<string, unknown>>).some(item => item['id'] === checkpointId)).toBe(true);
+    expect((blockedRestore.body as Record<string, unknown>)['status']).toBe('waiting_confirmation');
+    expect((blockedRestore.body as Record<string, unknown>)['error']).toContain('destructive restore requires secondary confirmation');
 
-    const rollbackResponse = await workflowQuickRollbackEndpoint(
-      makeRequest({
-        plan_id: planId,
-        checkpoint_id: checkpointId,
-        reason: 'integration rollback test',
-      }),
+    const confirmedRestore = await checkpointRestoreEndpoint(
+      makeRequest({ checkpoint_id: checkpointId, confirm_token: 'approved-token' }),
     );
-    expect(rollbackResponse.statusCode).toBe(200);
-    expect((rollbackResponse.body as Record<string, unknown>)['plan_id']).toBe(planId);
-    expect((rollbackResponse.body as Record<string, unknown>)['checkpoint_id']).toBe(checkpointId);
-    expect((rollbackResponse.body as Record<string, unknown>)['restore']).toBeTruthy();
+    expect((confirmedRestore.body as Record<string, unknown>)['status']).toBe('restored');
   });
 
+  it('does not persist checkpoint state when quick rollback restore fails', async () => {
+    const {
+      workflowPlanEndpoint,
+      workflowQuickRollbackEndpoint,
+      workflowLifecycleEndpoint,
+    } = await import('../../mcp/endpoints/workflow.js');
+
+    const workspaceA = buildWorkspace('workflow-session-rollback', 'atlas-workspace', 'atlas-project');
+
+    const planResponse = await workflowPlanEndpoint(
+      makeRequest({
+        task: '写一章并逐步完善冲突与细节',
+        level: 'L3',
+        workspace: workspaceA,
+      }),
+    );
+    const planId = String((planResponse.body as Record<string, unknown>)['plan_id']);
+
+    const statusBefore = await workflowLifecycleEndpoint(
+      makeRequest({ plan_id: planId, action: 'status', workspace: workspaceA }),
+    );
+    expect((statusBefore.body as Record<string, unknown>)['last_checkpoint_id']).toBe('');
+
+    const failedRollback = await workflowQuickRollbackEndpoint(
+      makeRequest({
+        plan_id: planId,
+        checkpoint_id: 'missing-checkpoint',
+        reason: 'force failure branch',
+        workspace: workspaceA,
+      }),
+    );
+
+    const rollbackBody = failedRollback.body as Record<string, unknown>;
+    expect(rollbackBody['restored']).toBe(false);
+    expect(rollbackBody['reason']).toBe('force failure branch');
+    expect((rollbackBody['restore'] as Record<string, unknown>)['error']).toContain("Checkpoint 'missing-checkpoint' not found");
+
+    const statusAfter = await workflowLifecycleEndpoint(
+      makeRequest({ plan_id: planId, action: 'status', workspace: workspaceA }),
+    );
+    expect((statusAfter.body as Record<string, unknown>)['last_checkpoint_id']).toBe('');
+  });
   it('scopes checkpoint create/list and restore to the request workspace authority', async () => {
     const {
       workflowPlanEndpoint,

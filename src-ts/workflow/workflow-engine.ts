@@ -155,6 +155,7 @@ export const MAINTENANCE_TO_SESSION_STATUS: Record<string, string> = {
 
 export const DESTRUCTIVE_STEP_NAMES = new Set(['revise', 'checkpoint', 'final_review']);
 export const AUTO_ROLLBACK_CONFIRM_TOKEN = '__auto_rollback__';
+const RECOVERY_WORKSPACE_LOCK = 'checkpoint-recovery';
 export const RECOVERY_CHAIN_STEPS = ['analyze-with-file', 'plan', 'plan-verify', 'execute'] as const;
 export const OBSERVABILITY_MODES = ['Autopilot', 'Team', 'Pipeline/Ralph'] as const;
 export const ECO_MODE_LABEL = 'EcoMode';
@@ -1140,35 +1141,7 @@ export class WorkflowEngine {
   }
 
   async restoreCheckpoint(checkpointId: string, confirmToken?: string): Promise<Record<string, unknown>> {
-    const checkpoint = this.checkpoints.get(checkpointId);
-    if (!checkpoint) return { error: `Checkpoint '${checkpointId}' not found` };
-
-    const destructive = Object.keys(checkpoint.replay_payload).length > 0;
-    const confirmed = !destructive || this._hasValidConfirmToken(confirmToken);
-
-    if (destructive && !confirmed) {
-      return this._withContract({
-        status: 'waiting_confirmation',
-        error: 'destructive restore requires secondary confirmation',
-        checkpoint_id: checkpointId,
-        plan_id: checkpoint.plan_id,
-        step_id: checkpoint.step_id,
-        gate: { decision: WorkflowDecision.NO_GO, reason: 'destructive restore requires secondary confirmation', blocking: true },
-      });
-    }
-
-    const replayResult = this._applyReplayPayload(checkpoint);
-
-    if (checkpoint.commit_hash) {
-      try {
-        await execFileAsync('git', ['checkout', checkpoint.commit_hash], { cwd: this.workspace });
-        return this._withContract({ status: 'restored', checkpoint_id: checkpointId, commit_hash: checkpoint.commit_hash, plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult });
-      } catch (e) {
-        return { error: `Git restore failed: ${e}`, replay: replayResult };
-      }
-    }
-
-    return { error: 'No commit hash available for this checkpoint', plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult };
+    return this._withModuleLock(RECOVERY_WORKSPACE_LOCK, () => this._restoreCheckpointInternal(checkpointId, confirmToken));
   }
 
   async quickRollback(
@@ -1177,20 +1150,26 @@ export class WorkflowEngine {
     reason: string = '',
     authority?: WorkflowAuthority | null,
   ): Promise<Record<string, unknown>> {
-    const managedPlan = this._resolveManagedPlan(planId, authority, { checkpoint_id: checkpointId });
-    if (managedPlan.response) {
-      return managedPlan.response;
-    }
-    const { plan } = managedPlan.context!;
+    return this._withModuleLock(RECOVERY_WORKSPACE_LOCK, async () => {
+      const managedPlan = this._resolveManagedPlan(planId, authority, { checkpoint_id: checkpointId });
+      if (managedPlan.response) {
+        return managedPlan.response;
+      }
+      const { plan } = managedPlan.context!;
 
-    const restoreResult = await this.restoreCheckpoint(checkpointId, AUTO_ROLLBACK_CONFIRM_TOKEN);
-    this._persistPlanState(
-      plan,
-      String(plan.template_meta['current_phase'] ?? plan.status),
-      checkpointId,
-    );
-    return { plan_id: planId, checkpoint_id: checkpointId, restored: restoreResult['status'] === 'restored', restore: restoreResult };
+      const restoreResult = await this._restoreCheckpointInternal(checkpointId, AUTO_ROLLBACK_CONFIRM_TOKEN);
+      const restored = restoreResult['status'] === 'restored';
+      if (restored) {
+        this._persistPlanState(
+          plan,
+          String(plan.template_meta['current_phase'] ?? plan.status),
+          checkpointId,
+        );
+      }
+      return { plan_id: planId, checkpoint_id: checkpointId, reason, restored, restore: restoreResult };
+    });
   }
+
 
   async listCheckpoints(limit: number = 10): Promise<Record<string, unknown>[]> {
     return Array.from(this.checkpoints.values())
@@ -1320,6 +1299,77 @@ export class WorkflowEngine {
     return plan.task;
   }
 
+  private async _withModuleLock<T>(moduleId: string, runner: () => Promise<T>): Promise<T> {
+    const normalizedId = moduleId.trim() || 'default';
+    const previous = this._moduleLocks.get(normalizedId) ?? Promise.resolve();
+
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    this._moduleLocks.set(normalizedId, previous.then(() => current));
+
+    await previous;
+    this._moduleOwners.set(normalizedId, this._sessionNamespace);
+
+    try {
+      return await runner();
+    } finally {
+      this._moduleOwners.delete(normalizedId);
+      release();
+      if (this._moduleLocks.get(normalizedId) === current) {
+        this._moduleLocks.delete(normalizedId);
+      }
+    }
+  }
+
+  private async _restoreCheckpointInternal(
+    checkpointId: string,
+    confirmToken?: string,
+  ): Promise<Record<string, unknown>> {
+    const checkpoint = this.checkpoints.get(checkpointId);
+    if (!checkpoint) return { error: `Checkpoint '${checkpointId}' not found` };
+
+    const destructive = Object.keys(checkpoint.replay_payload).length > 0;
+    const confirmed = !destructive || this._hasValidConfirmToken(confirmToken);
+
+    if (destructive && !confirmed) {
+      return this._withContract({
+        status: 'waiting_confirmation',
+        error: 'destructive restore requires secondary confirmation',
+        checkpoint_id: checkpointId,
+        plan_id: checkpoint.plan_id,
+        step_id: checkpoint.step_id,
+        gate: { decision: WorkflowDecision.NO_GO, reason: 'destructive restore requires secondary confirmation', blocking: true },
+      });
+    }
+
+    const replayResult = this._applyReplayPayload(checkpoint);
+
+    if (checkpoint.commit_hash) {
+      try {
+        await execFileAsync('git', ['checkout', checkpoint.commit_hash], { cwd: this.workspace });
+        return this._withContract({ status: 'restored', checkpoint_id: checkpointId, commit_hash: checkpoint.commit_hash, plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult });
+      } catch (e) {
+        return { error: `Git restore failed: ${e}`, replay: replayResult };
+      }
+    }
+
+    if (replayResult['applied'] === true) {
+      return this._withContract({
+        status: 'restored',
+        checkpoint_id: checkpointId,
+        commit_hash: null,
+        plan_id: checkpoint.plan_id,
+        step_id: checkpoint.step_id,
+        replay: replayResult,
+      });
+    }
+
+    return { error: 'No commit hash available for this checkpoint', plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult };
+  }
+
   // ---- Observability ----
 
   private _refreshPlanRuntime(plan: WorkflowPlan): {
@@ -1413,7 +1463,7 @@ export class WorkflowEngine {
 
   private _buildLifecycleStatusResponse(plan: WorkflowPlan): Record<string, unknown> {
     const runtime = this._planRuntimeContext(plan);
-    return this._withContract(buildWorkflowLifecycleStatusContract({
+    const payload = this._withContract(buildWorkflowLifecycleStatusContract({
       planId: plan.id,
       action: 'status',
       runnerState: plan.runner_state,
@@ -1425,6 +1475,8 @@ export class WorkflowEngine {
       qualityMetrics: plan.quality_metrics,
       runtime,
     }));
+    payload['last_checkpoint_id'] = String(plan.template_meta['last_checkpoint_id'] ?? '');
+    return payload;
   }
 
   private _buildLifecycleActionResponse(
@@ -1434,7 +1486,7 @@ export class WorkflowEngine {
     sessionStatus: string | null,
   ): Record<string, unknown> {
     const runtime = this._planRuntimeContext(plan, undefined, sessionStatus);
-    return this._withContract(buildWorkflowLifecycleActionContract({
+    const payload = this._withContract(buildWorkflowLifecycleActionContract({
       planId: plan.id,
       action,
       runnerState: plan.runner_state,
@@ -1447,6 +1499,8 @@ export class WorkflowEngine {
       qualityMetrics: plan.quality_metrics,
       runtime,
     }));
+    payload['last_checkpoint_id'] = String(plan.template_meta['last_checkpoint_id'] ?? '');
+    return payload;
   }
 
   private _createObservabilityBaseline(): Record<string, unknown> {

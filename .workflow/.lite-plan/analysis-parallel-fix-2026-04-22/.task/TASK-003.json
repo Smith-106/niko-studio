@@ -1,0 +1,33 @@
+{
+  "task_id": "TASK-003",
+  "title": "Expand recovery test matrix for concurrency and failure paths",
+  "status": "completed",
+  "priority": "P1",
+  "owner": "unassigned",
+  "parallel_group": "C",
+  "problem": "Current recovery tests are strong on happy path but under-cover destructive confirm, concurrent operations, and restore failure consistency.",
+  "target_files": [
+    "src-ts/tests/mcp/workflow-endpoints.integration.test.ts",
+    "src-ts/tests/workflow/workflow-engine.integration.test.ts",
+    "desktop/src/components/ChatArea.test.tsx"
+  ],
+  "implementation_outline": [
+    "Add destructive restore confirm branch tests.",
+    "Add concurrent restore/rollback tests against shared workspace fixtures.",
+    "Add failure injection assertions for persistence consistency and UI-facing behavior."
+  ],
+  "acceptance_criteria": [
+    "New failure/concurrency scenarios are reproducible and stable.",
+    "Tests assert both API result and persisted state consistency.",
+    "Existing core workflow tests remain green."
+  ],
+  "evidence_refs": [
+    "src-ts/tests/mcp/workflow-endpoints.integration.test.ts:233-318",
+    "src-ts/tests/workflow/workflow-engine.integration.test.ts",
+    "desktop/src/components/ChatArea.test.tsx"
+  ],
+  "depends_on": [
+    "TASK-001",
+    "TASK-002"
+  ]
+}
