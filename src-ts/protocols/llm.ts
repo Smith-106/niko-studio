@@ -71,14 +71,6 @@ export interface LLMService {
   ): AsyncIterableIterator<StreamChunk>;
 
   /**
-   * Generate embedding (from instructions: Migrate LLMProtocol with generate(), stream(), embed() methods)
-   */
-  embed?(
-    text: string,
-    options?: { model?: string }
-  ): Promise<number[]>;
-
-  /**
    * Batch generate text responses
    */
   batchGenerate(

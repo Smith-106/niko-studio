@@ -577,9 +577,6 @@ describe('LLMServiceImpl', () => {
       expect(error.fallbackAvailable).toBe(true);
     });
 
-    it('should throw error for embed (not implemented)', async () => {
-      await expect(service.embed?.('test')).rejects.toThrow('Embedding not supported');
-    });
   });
 
   // ============================================================

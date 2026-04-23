@@ -42,10 +42,6 @@ describe('Protocols Migration Tests', () => {
           yield { content: prompt.substring(1), isFinished: true, metadata: { done: true } };
         }
 
-        async embed(text: string): Promise<number[]> {
-          return [0.1, 0.2, 0.3];
-        }
-        
         async batchGenerate(prompts: string[]): Promise<string[]> {
           return prompts.map(p => `Batch: ${p}`);
         }
@@ -87,12 +83,6 @@ describe('Protocols Migration Tests', () => {
         expect(chunks[0].isFinished).toBe(false);
         expect(chunks[1].content).toBe('i');
         expect(chunks[1].isFinished).toBe(true);
-      });
-
-      it('should implement embed in LLMService', async () => {
-        const service: LLMService = new MockLLMService();
-        const result = await service.embed!('test');
-        expect(result).toEqual([0.1, 0.2, 0.3]);
       });
 
       it('should implement batchGenerate', async () => {

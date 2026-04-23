@@ -182,7 +182,35 @@ describe('config endpoints backup parity', () => {
   });
 });
 
-describe('gateway control plane ui bridge runtime sync', () => {
+describe('gateway control plane ui bridge/runtime sync', () => {
+  it('binds workflow runtime provider from the container composition root', async () => {
+    const setUiBridgeEnabledMock = vi.fn();
+    const setWorkflowEngineRuntimeProviderMock = vi.fn();
+
+    vi.doMock('../../mcp/endpoints/workflow', () => ({
+      setUiBridgeEnabled: setUiBridgeEnabledMock,
+    }));
+    vi.doMock('../../container/workflow-runtime-provider.js', () => ({
+      setWorkflowEngineRuntimeProvider: setWorkflowEngineRuntimeProviderMock,
+    }));
+
+    const { initializeGatewayControlPlane } = await import('../../container/gateway-control-plane.js');
+    const workflow = { createRuntime: vi.fn() };
+
+    initializeGatewayControlPlane({ workflow } as Parameters<typeof initializeGatewayControlPlane>[0]);
+
+    expect(setWorkflowEngineRuntimeProviderMock).toHaveBeenCalledTimes(1);
+    const provider = setWorkflowEngineRuntimeProviderMock.mock.calls[0]?.[0] as
+      | ((params: { workspace: string; sessionNamespace: string }) => unknown)
+      | undefined;
+    expect(typeof provider).toBe('function');
+    provider?.({ workspace: '/tmp/workspace-a', sessionNamespace: 'mcp-workflow' });
+    expect(workflow.createRuntime).toHaveBeenCalledWith({
+      workspace: '/tmp/workspace-a',
+      sessionNamespace: 'mcp-workflow',
+    });
+  });
+
   it('initializes the ui bridge runtime from shared config when no env override is present', async () => {
     delete process.env[UI_BRIDGE_ENV_KEY];
 

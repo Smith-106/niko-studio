@@ -354,18 +354,6 @@ export class LLMServiceImpl implements LLMService {
   }
 
   /**
-   * Generate embedding (optional method)
-   */
-  async embed?(
-    text: string,
-    options?: { model?: string }
-  ): Promise<number[]> {
-    // This would require an EmbeddingProvider
-    // For now, throw not implemented
-    throw new LLMError('Embedding not supported by LLMService. Use EmbeddingService instead.');
-  }
-
-  /**
    * Batch generate text responses
    */
   async batchGenerate(
