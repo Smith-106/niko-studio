@@ -7,14 +7,19 @@
 
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-
-import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
 import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToWorkflowAuthority,
   type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
 import { normalizeWorkflowAuthority } from '../../workflow/engine/authority.js';
+import {
+  getWorkflowEngineRuntimeProvider,
+  getWorkflowEngineRuntimeProviderVersion,
+  setWorkflowEngineRuntimeProvider as setContainerWorkflowEngineRuntimeProvider,
+  resetWorkflowEngineRuntimeProvider as resetContainerWorkflowEngineRuntimeProvider,
+  type WorkflowEngineRuntimeProvider,
+} from '../../container/workflow-runtime-provider.js';
 
 // ---------------------------------------------------------------
 // Engine accessor
@@ -58,31 +63,23 @@ interface WorkflowEngine {
   bindPlanSession(planId: string, sessionId: string): string;
 }
 
-type WorkflowEngineRuntimeProvider = (params: {
-  workspace: string;
-  sessionNamespace: string;
-}) => WorkflowEngineRuntimeLike;
-
-const defaultWorkflowEngineRuntimeProvider: WorkflowEngineRuntimeProvider = ({
-  workspace,
-  sessionNamespace,
-}) => new WorkflowEngineRuntime(workspace, sessionNamespace) as unknown as WorkflowEngineRuntimeLike;
-
-let workflowEngineRuntimeProvider: WorkflowEngineRuntimeProvider = defaultWorkflowEngineRuntimeProvider;
 let workflowEngineInstance: WorkflowEngine | null = null;
+let workflowEngineInstanceProviderVersion = -1;
 const checkpointAuthorityBindings = new Map<string, WorkflowAuthority>();
 const schedulerEntries = new Map<string, WorkflowSchedulerTaskRecord>();
 
 export function setWorkflowEngineRuntimeProvider(
   provider?: WorkflowEngineRuntimeProvider | null,
 ): void {
-  workflowEngineRuntimeProvider = provider ?? defaultWorkflowEngineRuntimeProvider;
+  setContainerWorkflowEngineRuntimeProvider(provider);
   workflowEngineInstance = null;
+  workflowEngineInstanceProviderVersion = -1;
 }
 
 export function resetWorkflowEngineRuntimeProvider(): void {
-  workflowEngineRuntimeProvider = defaultWorkflowEngineRuntimeProvider;
+  resetContainerWorkflowEngineRuntimeProvider();
   workflowEngineInstance = null;
+  workflowEngineInstanceProviderVersion = -1;
 }
 
 interface WorkflowAuthority {
@@ -684,11 +681,17 @@ function buildImportedSchedulerDefinition(params: {
 }
 
 function getEngine(): WorkflowEngine | null {
+  const providerVersion = getWorkflowEngineRuntimeProviderVersion();
+  if (workflowEngineInstance && workflowEngineInstanceProviderVersion !== providerVersion) {
+    workflowEngineInstance = null;
+  }
+
   if (!workflowEngineInstance) {
-    const engine = workflowEngineRuntimeProvider({
+    const runtimeProvider = getWorkflowEngineRuntimeProvider();
+    const engine = runtimeProvider({
       workspace: resolveWorkflowWorkspace(),
       sessionNamespace: 'mcp-workflow',
-    });
+    }) as WorkflowEngineRuntimeLike;
     const engineWithAuthority = engine as unknown as WorkflowEngineAuthorityBridge;
     workflowEngineInstance = {
       bindPlanAuthority(planId: string, authority: WorkflowAuthority) {
@@ -799,6 +802,7 @@ function getEngine(): WorkflowEngine | null {
         return engine.bindPlanSession(planId, sessionId);
       },
     };
+    workflowEngineInstanceProviderVersion = providerVersion;
   }
   return workflowEngineInstance;
 }

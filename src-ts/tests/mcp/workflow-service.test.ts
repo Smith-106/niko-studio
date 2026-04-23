@@ -7,8 +7,8 @@ const quickRollbackMock = vi.fn();
 const lifecycleMock = vi.fn();
 const createCheckpointMock = vi.fn();
 const restoreCheckpointMock = vi.fn();
+const bindPlanSessionMock = vi.fn();
 const listCheckpointsMock = vi.fn();
-const getCheckpointMock = vi.fn();
 const checkpointsMock = new Map<string, Record<string, unknown>>();
 
 vi.mock('../../workflow/workflow-engine.js', () => ({
@@ -21,7 +21,7 @@ vi.mock('../../workflow/workflow-engine.js', () => ({
     createCheckpoint: createCheckpointMock,
     restoreCheckpoint: restoreCheckpointMock,
     listCheckpoints: listCheckpointsMock,
-    getCheckpoint: getCheckpointMock,
+    bindPlanSession: bindPlanSessionMock,
     checkpoints: checkpointsMock,
   })),
 }));
@@ -85,18 +85,6 @@ describe('mcp workflow service', () => {
     createCheckpointMock.mockResolvedValueOnce({ checkpoint_id: 'cp-1' });
     restoreCheckpointMock.mockResolvedValueOnce({ status: 'restored' });
     listCheckpointsMock.mockResolvedValueOnce([{ id: 'cp-1' }]);
-    getCheckpointMock.mockImplementation((checkpointId: string) => {
-      if (checkpointId !== 'cp-1') return null;
-      return {
-        id: 'cp-1',
-        description: 'snapshot',
-        commit_hash: null,
-        created_at: '2026-04-20T00:00:00.000Z',
-        plan_id: null,
-        step_id: null,
-        replay_payload: {},
-      };
-    });
     checkpointsMock.set('cp-1', {
       id: 'cp-1',
       description: 'snapshot',
@@ -274,5 +262,152 @@ describe('mcp workflow service', () => {
     expect(providerPlanMock).toHaveBeenCalledWith('provider-plan-task', undefined, [], undefined);
 
     resetWorkflowEngineRuntimeProvider();
+  });
+
+  it('forwards trace context into engine execution context payload for planning', async () => {
+    planMock.mockResolvedValueOnce({ plan_id: 'plan-trace-context' });
+
+    const { workflowPlan } = await import('../../mcp/services/workflow.js');
+
+    const workspace = {
+      schemaVersion: '2026-04-08',
+      identity: {
+        workspaceId: 'atlas-workspace',
+        projectId: 'atlas-project',
+        projectName: 'Atlas Project',
+        workspaceRoot: '/tmp/atlas-project',
+      },
+      manuscript: {
+        manuscriptId: null,
+        title: null,
+        chapterId: null,
+        chapterTitle: null,
+        chapterNumber: null,
+      },
+      storyBible: {
+        storyBibleId: null,
+        draftId: null,
+        version: null,
+        storage: 'workspace',
+      },
+      knowledge: {
+        focusEntityId: null,
+        graphEntityIds: [],
+        memoryEntryIds: [],
+      },
+      workflow: {
+        sessionId: 'workflow-session-trace',
+        planId: null,
+        level: 'L2',
+      },
+      chat: {
+        conversationId: 'conversation-trace',
+        comparisonEnabled: false,
+      },
+      compatibility: {
+        additiveContract: true,
+        migratedLegacyFields: [],
+        notes: [],
+      },
+    };
+
+    await workflowPlan({
+      task: 'trace planning path',
+      level: 'L2',
+      workspace,
+      traceContext: {
+        requestId: 'req-trace-plan-1',
+        route: '^/workflow/plan$',
+        method: 'POST',
+        startAtMs: 100,
+      },
+    });
+
+    expect(planMock).toHaveBeenCalledWith(
+      'trace planning path',
+      'L2',
+      [],
+      {
+        trace_context: {
+          requestId: 'req-trace-plan-1',
+          route: '^/workflow/plan$',
+          method: 'POST',
+          startAtMs: 100,
+        },
+      },
+    );
+  });
+
+  it('rebuilds cached engine when composition-root provider changes after first use', async () => {
+    routeMock.mockResolvedValueOnce({ level: 'L2-default' });
+
+    const { workflowRoute } = await import('../../mcp/services/workflow.js');
+    const {
+      setWorkflowEngineRuntimeProvider,
+      resetWorkflowEngineRuntimeProvider,
+    } = await import('../../container/workflow-runtime-provider.js');
+
+    const providerRouteMock = vi.fn().mockResolvedValue({ level: 'L3-provider' });
+    const provider = vi.fn().mockReturnValue({
+      route: providerRouteMock,
+      plan: planMock,
+      execute: executeMock,
+      quickRollback: quickRollbackMock,
+      lifecycle: lifecycleMock,
+      createCheckpoint: createCheckpointMock,
+      restoreCheckpoint: restoreCheckpointMock,
+      listCheckpoints: listCheckpointsMock,
+      bindPlanSession: bindPlanSessionMock,
+    });
+
+    await workflowRoute('default-runtime');
+    setWorkflowEngineRuntimeProvider(provider);
+    await workflowRoute('provider-runtime');
+
+    expect(provider).toHaveBeenCalledWith({
+      workspace: expect.any(String),
+      sessionNamespace: 'mcp-workflow',
+    });
+    expect(providerRouteMock).toHaveBeenCalledWith('provider-runtime');
+
+    resetWorkflowEngineRuntimeProvider();
+  });
+
+  it('uses workflow runtime provider from composition root when gateway control plane initializes', async () => {
+    const runtimePlanMock = vi.fn().mockResolvedValue({ plan_id: 'plan-composition-root' });
+    const runtimeProvider = vi.fn().mockReturnValue({
+      route: routeMock,
+      plan: runtimePlanMock,
+      execute: executeMock,
+      quickRollback: quickRollbackMock,
+      lifecycle: lifecycleMock,
+      createCheckpoint: createCheckpointMock,
+      restoreCheckpoint: restoreCheckpointMock,
+      listCheckpoints: listCheckpointsMock,
+      bindPlanSession: bindPlanSessionMock,
+    });
+
+    const { setWorkflowEngineRuntimeProvider } = await import('../../container/workflow-runtime-provider.js');
+    const {
+      initializeGatewayControlPlane,
+    } = await import('../../container/gateway-control-plane.js');
+    const { workflowPlan, resetWorkflowEngineRuntimeProvider } = await import('../../mcp/services/workflow.js');
+
+    initializeGatewayControlPlane({
+      workflow: {
+        createRuntime: runtimeProvider,
+      },
+    } as unknown as Parameters<typeof initializeGatewayControlPlane>[0]);
+
+    await workflowPlan({ task: 'composition-root-plan-task' });
+
+    expect(runtimeProvider).toHaveBeenCalledWith({
+      workspace: expect.any(String),
+      sessionNamespace: 'mcp-workflow',
+    });
+    expect(runtimePlanMock).toHaveBeenCalledWith('composition-root-plan-task', undefined, [], undefined);
+
+    resetWorkflowEngineRuntimeProvider();
+    setWorkflowEngineRuntimeProvider(undefined);
   });
 });

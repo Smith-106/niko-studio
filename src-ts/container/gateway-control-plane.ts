@@ -11,9 +11,30 @@ import {
   type GatewayRuntimeState,
 } from '../mcp/gateway-state';
 import { getContainer, ServiceContainer } from './ServiceContainer';
+import { setWorkflowEngineRuntimeProvider } from './workflow-runtime-provider';
 
 export interface GatewayControlPlaneState extends GatewayRuntimeState {
   container: ServiceContainer;
+}
+
+function bindWorkflowRuntimeProvider(container: ServiceContainer): void {
+  const workflow = (container as unknown as { workflow?: unknown }).workflow;
+  if (!workflow) {
+    return;
+  }
+
+  setWorkflowEngineRuntimeProvider(({ workspace, sessionNamespace }) => {
+    if (
+      typeof workflow === 'object'
+      && typeof (workflow as { createRuntime?: unknown }).createRuntime === 'function'
+    ) {
+      return (workflow as {
+        createRuntime: (params: { workspace: string; sessionNamespace: string }) => unknown;
+      }).createRuntime({ workspace, sessionNamespace });
+    }
+
+    return workflow;
+  });
 }
 
 const uiBridgeConfigListeners = new WeakMap<ConfigManager, () => void>();
@@ -58,6 +79,7 @@ export function initializeGatewayControlPlane(
 ): GatewayControlPlaneState {
   const state = createGatewayRuntimeState();
 
+  bindWorkflowRuntimeProvider(container);
   setGatewayDeps(buildGatewayDeps(container, state));
   setConfigAccess(buildConfigAccess());
   setMcpServiceState(state.mcpConfigs, state.healthCache);

@@ -212,6 +212,11 @@ export interface IWorkflowEngine {
   initialize(): Promise<void>;
 
   /**
+   * Build a workflow runtime for a specific workspace/session namespace.
+   */
+  createRuntime?(params: { workspace: string; sessionNamespace: string }): unknown;
+
+  /**
    * Execute a workflow level
    */
   executeLevel(level: string, context: WorkflowContext): Promise<WorkflowResult>;

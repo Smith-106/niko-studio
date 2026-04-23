@@ -357,6 +357,10 @@ export class WorkflowEngineAdapter implements IWorkflowEngine {
     this.engine = engine ?? new WorkflowEngine();
   }
 
+  createRuntime(params: { workspace: string; sessionNamespace: string }): WorkflowEngine {
+    return new WorkflowEngine(params.workspace, params.sessionNamespace);
+  }
+
   async initialize(): Promise<void> {}
 
   async executeLevel(level: string, context: WorkflowContext): Promise<WorkflowResult> {
