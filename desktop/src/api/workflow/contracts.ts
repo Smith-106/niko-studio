@@ -340,9 +340,13 @@ export interface WorkflowSchedulerImportLitePlanResponse {
 
 export interface WorkflowQuickRollbackResult {
   status?: string
+  restored?: boolean
   plan_id?: string
   checkpoint_id?: string
+  reason?: string
   message?: string
+  error?: string
+  restore?: Record<string, unknown>
   [key: string]: unknown
 }
 

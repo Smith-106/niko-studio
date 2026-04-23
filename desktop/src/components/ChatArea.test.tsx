@@ -776,6 +776,29 @@ describe('ChatArea P0 flows', () => {
     expect(screen.queryByRole('button', { name: zh.streamRestoreToBeforeSend })).not.toBeInTheDocument()
   })
 
+  it('keeps restore entry visible when restore fails with confirmation requirement', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onError?.('stream failed')
+    })
+    mockedChat.mockResolvedValue({ success: false, error: 'chat failed' })
+    mockedRestoreCheckpoint.mockResolvedValue({
+      success: false,
+      error: 'destructive restore requires secondary confirmation',
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '触发恢复确认{enter}')
+
+    const restoreButton = await screen.findByRole('button', { name: zh.streamRestoreToBeforeSend })
+    await userEvent.click(restoreButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('destructive restore requires secondary confirmation')).toBeInTheDocument()
+    })
+    expect(screen.getByRole('button', { name: zh.streamRestoreToBeforeSend })).toBeInTheDocument()
+  })
+
   it('shows inline actions after assistant selection and no action before selection', async () => {
     setConversationWithAssistant('这是可选中的 assistant 文本')
     const selectionMock = vi.spyOn(window, 'getSelection')

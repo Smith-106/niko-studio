@@ -642,7 +642,7 @@ describe('workflow bridge and quality-check APIs', () => {
     const fetchSpy = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: 'ok', plan_id: 'plan-1', checkpoint_id: 'cp-1' }),
+        json: async () => ({ status: 'ok', restored: true, plan_id: 'plan-1', checkpoint_id: 'cp-1' }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -659,9 +659,15 @@ describe('workflow bridge and quality-check APIs', () => {
 
     vi.stubGlobal('fetch', fetchSpy)
 
-    await quickRollbackWorkflow('plan-1', 'cp-1', 'undo risky step')
+    await expect(quickRollbackWorkflow('plan-1', 'cp-1', 'undo risky step')).resolves.toMatchObject({
+      success: true,
+      data: expect.objectContaining({ restored: true, plan_id: 'plan-1', checkpoint_id: 'cp-1' }),
+    })
     await createCheckpoint('Initial checkpoint', true)
-    await restoreCheckpoint('cp-1')
+    await expect(restoreCheckpoint('cp-1')).resolves.toMatchObject({
+      success: true,
+      data: expect.objectContaining({ status: 'ok' }),
+    })
     await listCheckpoints(5)
 
     expect(fetchSpy).toHaveBeenNthCalledWith(
@@ -684,6 +690,37 @@ describe('workflow bridge and quality-check APIs', () => {
       expect.stringContaining('/checkpoint/list'),
       expect.objectContaining({ method: 'POST' })
     )
+  })
+
+  it('surfaces rollback and restore failure payloads as client errors', async () => {
+    const fetchSpy = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          plan_id: 'plan-1',
+          checkpoint_id: 'cp-missing',
+          restored: false,
+          restore: { error: "Checkpoint 'cp-missing' not found" },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'waiting_confirmation',
+          error: 'destructive restore requires secondary confirmation',
+        }),
+      })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await expect(quickRollbackWorkflow('plan-1', 'cp-missing', 'undo risky step')).resolves.toEqual({
+      success: false,
+      error: "Checkpoint 'cp-missing' not found",
+    })
+    await expect(restoreCheckpoint('cp-1')).resolves.toEqual({
+      success: false,
+      error: 'destructive restore requires secondary confirmation',
+    })
   })
 
 
