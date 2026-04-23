@@ -51,9 +51,10 @@ Existing writing tools rarely support a complete loop from ideation to auto-gene
 ## Technical Preferences (Optional)
 
 ### Preferred Technologies
-- Python-based orchestration and testable workflow modules
+- Desktop + Tauri shell + local Node/TypeScript gateway as the default runtime surface
+- Python helper scripts for release governance and explicit compatibility-only launcher paths
 - Local file artifacts (Markdown/JSON) as source of truth
-- CLI-first operation with optional UI layers
+- CLI-first operation with optional desktop UI layers
 
 ### Technologies to Avoid
 - Mandatory cloud lock-in for core authoring operations
