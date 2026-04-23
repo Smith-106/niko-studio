@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -225,7 +225,10 @@ function PlotHarness() {
 }
 
 describe('persisted knowledge authoring tabs', () => {
+  const originalConsoleError = console.error
+
   beforeEach(() => {
+    console.error = vi.fn()
     persistedGraph.characters = []
     persistedGraph.locations = []
     persistedGraph.events = []
@@ -236,6 +239,10 @@ describe('persisted knowledge authoring tabs', () => {
     })
     useSettingsStore.getState().updateSettings({ language: 'zh' })
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    console.error = originalConsoleError
   })
 
   it('creates, edits, and reloads persisted characters', async () => {

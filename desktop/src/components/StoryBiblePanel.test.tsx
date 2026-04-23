@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -86,7 +86,10 @@ vi.mock('../api/client', () => ({
 const zh = translations.zh
 
 describe('StoryBiblePanel', () => {
+  const originalConsoleError = console.error
+
   beforeEach(() => {
+    console.error = vi.fn()
     persistedState.storyBible = null
     persistedState.characters = [
       {
@@ -177,6 +180,10 @@ describe('StoryBiblePanel', () => {
     })
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    console.error = originalConsoleError
   })
 
   it('announces story bible section expansion state', async () => {

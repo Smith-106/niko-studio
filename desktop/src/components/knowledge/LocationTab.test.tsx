@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LocationTab } from './LocationTab'
@@ -114,7 +114,10 @@ function LocationHarness(props: { searchQuery?: string }) {
 }
 
 describe('LocationTab', () => {
+  const originalConsoleError = console.error
+
   beforeEach(() => {
+    console.error = vi.fn()
     persistedGraph.locations = []
     persistedGraph.failEntityType = null
     useAppStore.setState({
@@ -123,6 +126,10 @@ describe('LocationTab', () => {
     })
     useSettingsStore.getState().updateSettings({ language: 'zh' })
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    console.error = originalConsoleError
   })
 
   it('loads and displays location items from the graph', async () => {

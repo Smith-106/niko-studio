@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import { useMemoryUpload } from './useMemoryUpload'
 
 const uploadMemoryFileMock = vi.hoisted(() => vi.fn())
@@ -86,7 +86,7 @@ describe('useMemoryUpload', () => {
 
     // Manually attach a mock ref
     const mockInput = { click: clickSpy } as unknown as HTMLInputElement
-    result.current.fileInputRef.current = mockInput
+    ;(result.current.fileInputRef as { current: HTMLInputElement | null }).current = mockInput
 
     act(() => {
       result.current.openPicker()

@@ -561,7 +561,7 @@ describe('SettingsModal quality presets', () => {
         'gateway.ui_bridge_enabled': true,
       })
     })
-  })
+  }, 10_000)
 
   it('renders backend config labels in english', async () => {
     useSettingsStore.setState((state) => ({

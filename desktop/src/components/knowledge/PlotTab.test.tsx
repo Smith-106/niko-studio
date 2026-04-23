@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PlotTab } from './PlotTab'
@@ -114,7 +114,10 @@ function PlotHarness(props: { searchQuery?: string }) {
 }
 
 describe('PlotTab', () => {
+  const originalConsoleError = console.error
+
   beforeEach(() => {
+    console.error = vi.fn()
     persistedGraph.events = []
     persistedGraph.failEntityType = null
     useAppStore.setState({
@@ -123,6 +126,10 @@ describe('PlotTab', () => {
     })
     useSettingsStore.getState().updateSettings({ language: 'zh' })
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    console.error = originalConsoleError
   })
 
   it('loads and displays plot event items from the graph', async () => {
@@ -253,11 +260,11 @@ describe('PlotTab', () => {
   })
 
   it('uses plot-specific description placeholder text', async () => {
-    const user = userEvent.setup()
     render(<PlotHarness />)
 
-    // The description placeholder for plot should mention plot-specific content
-    const descriptionTextarea = screen.getByLabelText('剧情描述')
-    expect(descriptionTextarea.getAttribute('placeholder')).toContain('剧情节点的关键冲突')
+    await waitFor(() => {
+      const descriptionTextarea = screen.getByLabelText('剧情描述')
+      expect(descriptionTextarea.getAttribute('placeholder')).toContain('剧情节点的关键冲突')
+    })
   })
 })

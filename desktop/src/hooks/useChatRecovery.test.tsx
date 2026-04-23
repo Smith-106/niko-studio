@@ -38,6 +38,8 @@ const defaultT = {
   restoreFailed: 'Restore failed',
 }
 
+type TestConnectionState = 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
+
 describe('useChatRecovery', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -54,11 +56,11 @@ describe('useChatRecovery', () => {
 
   it('sets reconnecting status when connection state changes to reconnecting', () => {
     const { result, rerender } = renderHook(
-      ({ state }) => useChatRecovery({ connectionState: state, t: defaultT }),
-      { initialProps: { state: 'connected' as const } },
+      ({ state }: { state: TestConnectionState }) => useChatRecovery({ connectionState: state, t: defaultT }),
+      { initialProps: { state: 'connected' as TestConnectionState } },
     )
 
-    rerender({ state: 'reconnecting' })
+    rerender({ state: 'reconnecting' as TestConnectionState })
 
     expect(result.current.recoverStatus?.type).toBe('error')
     expect(result.current.recoverStatus?.message).toBe('Reconnecting...')
@@ -66,11 +68,11 @@ describe('useChatRecovery', () => {
 
   it('sets recovered status when transitioning from reconnecting to connected', () => {
     const { result, rerender } = renderHook(
-      ({ state }) => useChatRecovery({ connectionState: state, t: defaultT }),
-      { initialProps: { state: 'reconnecting' as const } },
+      ({ state }: { state: TestConnectionState }) => useChatRecovery({ connectionState: state, t: defaultT }),
+      { initialProps: { state: 'reconnecting' as TestConnectionState } },
     )
 
-    rerender({ state: 'connected' })
+    rerender({ state: 'connected' as TestConnectionState })
 
     expect(result.current.recoverStatus?.type).toBe('success')
     expect(result.current.recoverStatus?.message).toBe('Stream recovered')
@@ -78,11 +80,11 @@ describe('useChatRecovery', () => {
 
   it('sets disconnected status when connection state changes', () => {
     const { result, rerender } = renderHook(
-      ({ state }) => useChatRecovery({ connectionState: state, t: defaultT }),
-      { initialProps: { state: 'connected' as const } },
+      ({ state }: { state: TestConnectionState }) => useChatRecovery({ connectionState: state, t: defaultT }),
+      { initialProps: { state: 'connected' as TestConnectionState } },
     )
 
-    rerender({ state: 'disconnected' })
+    rerender({ state: 'disconnected' as TestConnectionState })
 
     expect(result.current.recoverStatus?.type).toBe('error')
     expect(result.current.recoverStatus?.message).toBe('Stream interrupted')
@@ -90,11 +92,11 @@ describe('useChatRecovery', () => {
 
   it('does not update status when connection state stays the same', () => {
     const { result, rerender } = renderHook(
-      ({ state }) => useChatRecovery({ connectionState: state, t: defaultT }),
-      { initialProps: { state: 'connected' as const } },
+      ({ state }: { state: TestConnectionState }) => useChatRecovery({ connectionState: state, t: defaultT }),
+      { initialProps: { state: 'connected' as TestConnectionState } },
     )
 
-    rerender({ state: 'connected' })
+    rerender({ state: 'connected' as TestConnectionState })
 
     expect(result.current.recoverStatus).toBeNull()
   })

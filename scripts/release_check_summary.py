@@ -580,36 +580,63 @@ def _extract_policy_contract_from_docs(quality_doc: Path, pdd_doc: Path) -> dict
 
 
 def _runtime_policy_contract() -> dict[str, object]:
-    # Deprecated runtime contract path kept only for historical fallback.
-    from legacy_runtime.workflow.novel_quality import BLOCK_THRESHOLD, PASS_THRESHOLD, evaluate_novel_quality
-    from legacy_runtime.workflow.state import DEFAULT_CONFIG, NOVEL_HUMAN_REVIEW_SCORE, NOVEL_PASS_SCORE
-    from legacy_runtime.mcp import gateway as gateway_module
-    from legacy_runtime.mcp import contract as contract_module
+    novel_state_text = _read_project_text("src-ts/workflow/novel-state.ts") or ""
+    novel_quality_text = _read_project_text("src-ts/workflow/novel-quality.ts") or ""
+    contract_text = _read_project_text("src-ts/mcp/contract.ts") or ""
+    workflow_engine_text = _read_project_text("src-ts/workflow/workflow-engine.ts") or ""
+    workflow_risk_text = _read_project_text("src-ts/workflow/engine/risk.ts") or ""
 
-    sample_text = (
-        '"Open the door," she whispered. '
-        "Moonlight spilled across the wet street and painted sharp shadows under the arch. "
-        "Because he betrayed the pact, the argument turned into open conflict. "
-        "Therefore she crossed the square, eyes fixed on the only lit window."
+    pass_score = _extract_first_float(r"export const NOVEL_PASS_SCORE = (\d+(?:\.\d+)?)", novel_state_text)
+    human_review_score = _extract_first_float(
+        r"export const NOVEL_HUMAN_REVIEW_SCORE = (\d+(?:\.\d+)?)",
+        novel_state_text,
     )
-    auto_eval = evaluate_novel_quality(sample_text, quality_mode="auto")
-    manual_eval = evaluate_novel_quality(sample_text, quality_mode="manual")
+    block_threshold = _extract_first_float(r"block:\s*(\d+(?:\.\d+)?)", novel_state_text)
+    novel_quality_pass_threshold = pass_score if "const PASS_THRESHOLD = NOVEL_QUALITY_THRESHOLDS.pass;" in novel_quality_text else None
+
+    default_pass_bound = bool(re.search(r"pass_score:\s*NOVEL_PASS_SCORE\b", novel_state_text))
+    default_review_bound = bool(re.search(r"human_review_score:\s*NOVEL_HUMAN_REVIEW_SCORE\b", novel_state_text))
+    public_entry_api_present = bool(
+        re.search(
+            r"ENGINE_PUBLIC_ENTRY_API\s*=\s*\['route',\s*'plan',\s*'execute',\s*'run',\s*'run_stream'\]",
+            workflow_engine_text,
+        )
+    )
+    workflow_hard_gate_present = (
+        ("WorkflowDecision.NO_GO" in workflow_engine_text or "WorkflowDecision.NO_GO" in workflow_risk_text)
+        and "confirm_required: true" in workflow_risk_text
+    )
+    quality_mode_consistent = (
+        "const qualityMode = options?.qualityMode ?? 'auto';" in novel_quality_text
+        and "const resolvedMode = _normalizeQualityMode(qualityMode);" in novel_quality_text
+        and "quality_mode_used: resolvedMode" in novel_quality_text
+    )
+    terminal_default_decision = "go" if "if (normalized.decision === undefined) normalized.decision = 'go';" in contract_text else None
+    terminal_no_go_preserved = bool(
+        re.search(
+            r"if \(normalized\.decision === undefined\) normalized\.decision = 'go';",
+            contract_text,
+        )
+        and re.search(r"if \(lf\.decision === undefined\) lf\.decision = normalized\.decision;", contract_text)
+    )
 
     return {
-        "quality_pass_score": float(NOVEL_PASS_SCORE),
-        "human_review_score": float(NOVEL_HUMAN_REVIEW_SCORE),
-        "revise_lower_bound": float(BLOCK_THRESHOLD),
-        "rewrite_below": float(BLOCK_THRESHOLD),
-        "novel_quality_pass_threshold": float(PASS_THRESHOLD),
-        "default_pass_score": float(DEFAULT_CONFIG.get("pass_score", 0)),
-        "default_human_review_score": float(DEFAULT_CONFIG.get("human_review_score", 0)),
-        "publish_from_go": contract_module._normalize_publish_recommendation({"decision": "go"}, "revise"),
-        "publish_from_soft_go": contract_module._normalize_publish_recommendation({"decision": "soft_go"}, "pass"),
-        "publish_from_no_go": contract_module._normalize_publish_recommendation({"decision": "no_go"}, "pass"),
-        "terminal_default_decision": gateway_module._with_terminal_contract({"status": "completed"}).get("decision"),
-        "terminal_no_go_preserved": gateway_module._with_terminal_contract({"terminal": "interrupted", "decision": "no_go"}).get("decision") == "no_go",
-        "quality_mode_consistent": auto_eval.get("publish_recommendation") == manual_eval.get("publish_recommendation"),
-        "blocked_semantics_declared": True,
+        "quality_pass_score": pass_score,
+        "human_review_score": human_review_score,
+        "revise_lower_bound": block_threshold,
+        "rewrite_below": block_threshold,
+        "novel_quality_pass_threshold": novel_quality_pass_threshold,
+        "default_pass_score": pass_score if default_pass_bound else None,
+        "default_human_review_score": human_review_score if default_review_bound else None,
+        "publish_from_go": "pass" if re.search(r"go:\s*'pass'", contract_text) else None,
+        "publish_from_soft_go": "revise" if re.search(r"soft_go:\s*'revise'", contract_text) else None,
+        "publish_from_no_go": "block" if re.search(r"no_go:\s*'block'", contract_text) else None,
+        "terminal_default_decision": terminal_default_decision,
+        "terminal_no_go_preserved": terminal_no_go_preserved,
+        "workflow_hard_gate_present": workflow_hard_gate_present,
+        "public_entry_api_present": public_entry_api_present,
+        "quality_mode_consistent": quality_mode_consistent,
+        "blocked_semantics_declared": workflow_hard_gate_present,
     }
 
 
@@ -660,6 +687,10 @@ def runtime_policy_conformance_signal(
 
     if policy_contract.get("blocked_semantics_declared") is not True:
         mismatches.append("blocked_semantics_declared")
+    if runtime.get("workflow_hard_gate_present") is not True:
+        mismatches.append("workflow_hard_gate_present")
+    if runtime.get("public_entry_api_present") is not True:
+        mismatches.append("public_entry_api_present")
 
     has_mismatch = len(mismatches) > 0
     status = "FAIL" if has_mismatch else "PASS"
@@ -680,6 +711,8 @@ def runtime_policy_conformance_signal(
         ("terminal_default_decision", terminal_default_decision or "missing"),
         ("terminal_no_go_preserved", "yes" if runtime.get("terminal_no_go_preserved") else "no"),
         ("quality_mode_consistent", "yes" if runtime.get("quality_mode_consistent") else "no"),
+        ("workflow_hard_gate_present", "yes" if runtime.get("workflow_hard_gate_present") else "no"),
+        ("public_entry_api_present", "yes" if runtime.get("public_entry_api_present") else "no"),
         ("mismatches", _format_csv(mismatches)),
         ("decision", "no_go" if has_mismatch else "go"),
     ])
@@ -693,13 +726,6 @@ def _extract_first_float(pattern: str, text: str) -> float | None:
         return float(match.group(1))
     except ValueError:
         return None
-
-
-def _extract_single_quoted_map_value(text: str, key: str) -> str | None:
-    match = re.search(rf"'{re.escape(key)}'\s*:\s*'([^']+)'", text, flags=re.MULTILINE)
-    if not match:
-        return None
-    return match.group(1).strip()
 
 
 def _typescript_production_guard() -> tuple[int, str]:
@@ -766,118 +792,6 @@ def _typescript_metrics_guard() -> tuple[int, str]:
             ),
         ],
     )
-
-
-def _runtime_policy_contract() -> dict[str, object]:
-    novel_state_text = _read_project_text("src-ts/workflow/novel-state.ts") or ""
-    novel_quality_text = _read_project_text("src-ts/workflow/novel-quality.ts") or ""
-    contract_text = _read_project_text("src-ts/mcp/contract.ts") or ""
-    workflow_engine_text = _read_project_text("src-ts/workflow/workflow-engine.ts") or ""
-    workflow_risk_text = _read_project_text("src-ts/workflow/engine/risk.ts") or ""
-
-    pass_score = _extract_first_float(r"export const NOVEL_PASS_SCORE = (\d+(?:\.\d+)?)", novel_state_text)
-    human_review_score = _extract_first_float(
-        r"export const NOVEL_HUMAN_REVIEW_SCORE = (\d+(?:\.\d+)?)",
-        novel_state_text,
-    )
-    block_threshold = _extract_first_float(r"block:\s*(\d+(?:\.\d+)?)", novel_state_text)
-    novel_quality_pass_threshold = _extract_first_float(r"pass:\s*(\d+(?:\.\d+)?)", novel_quality_text)
-
-    default_pass_bound = bool(re.search(r"pass_score:\s*NOVEL_PASS_SCORE\b", novel_state_text))
-    default_review_bound = bool(re.search(r"human_review_score:\s*NOVEL_HUMAN_REVIEW_SCORE\b", novel_state_text))
-    public_entry_api_present = bool(
-        re.search(
-            r"ENGINE_PUBLIC_ENTRY_API\s*=\s*\['route',\s*'plan',\s*'execute',\s*'run',\s*'run_stream'\]",
-            workflow_engine_text,
-        )
-    )
-    workflow_hard_gate_present = (
-        ("WorkflowDecision.NO_GO" in workflow_engine_text or "WorkflowDecision.NO_GO" in workflow_risk_text)
-        and "confirm_required: true" in workflow_risk_text
-    )
-
-    return {
-        "quality_pass_score": pass_score,
-        "human_review_score": human_review_score,
-        "revise_lower_bound": block_threshold,
-        "rewrite_below": block_threshold,
-        "novel_quality_pass_threshold": novel_quality_pass_threshold,
-        "default_pass_score": pass_score if default_pass_bound else None,
-        "default_human_review_score": human_review_score if default_review_bound else None,
-        "publish_from_go": _extract_single_quoted_map_value(contract_text, "pass"),
-        "publish_from_soft_go": _extract_single_quoted_map_value(contract_text, "revise"),
-        "publish_from_no_go": _extract_single_quoted_map_value(contract_text, "block"),
-        "workflow_hard_gate_present": workflow_hard_gate_present,
-        "public_entry_api_present": public_entry_api_present,
-        "blocked_semantics_declared": workflow_hard_gate_present,
-    }
-
-
-def runtime_policy_conformance_signal(
-    quality_doc: Path | None = None,
-    pdd_doc: Path | None = None,
-    runtime_contract: dict[str, object] | None = None,
-) -> tuple[str, int, str]:
-    quality_path = quality_doc or (PROJECT_ROOT / "docs" / "quality" / "QUALITY_CRITERIA.md")
-    pdd_path = pdd_doc or (PROJECT_ROOT / "docs" / "PDD.md")
-
-    policy_contract = _extract_policy_contract_from_docs(quality_path, pdd_path)
-    runtime = runtime_contract if runtime_contract is not None else _runtime_policy_contract()
-
-    mismatches: list[str] = []
-
-    if runtime.get("quality_pass_score") != policy_contract.get("quality_pass_score"):
-        mismatches.append("quality_pass_score")
-    if runtime.get("human_review_score") != policy_contract.get("human_review_score"):
-        mismatches.append("human_review_score")
-    if runtime.get("revise_lower_bound") != policy_contract.get("revise_lower_bound"):
-        mismatches.append("revise_lower_bound")
-    if runtime.get("rewrite_below") != policy_contract.get("rewrite_below"):
-        mismatches.append("rewrite_below")
-
-    if runtime.get("default_pass_score") != runtime.get("quality_pass_score"):
-        mismatches.append("default_pass_score")
-    if runtime.get("default_human_review_score") != runtime.get("human_review_score"):
-        mismatches.append("default_human_review_score")
-    if runtime.get("novel_quality_pass_threshold") != runtime.get("quality_pass_score"):
-        mismatches.append("novel_quality_pass_threshold")
-
-    if runtime.get("publish_from_go") != "go":
-        mismatches.append("publish_from_go")
-    if runtime.get("publish_from_soft_go") != "soft_go":
-        mismatches.append("publish_from_soft_go")
-    if runtime.get("publish_from_no_go") != "no_go":
-        mismatches.append("publish_from_no_go")
-
-    if runtime.get("workflow_hard_gate_present") is not True:
-        mismatches.append("workflow_hard_gate_present")
-    if runtime.get("public_entry_api_present") is not True:
-        mismatches.append("public_entry_api_present")
-    if policy_contract.get("blocked_semantics_declared") is not True:
-        mismatches.append("blocked_semantics_declared")
-    if runtime.get("blocked_semantics_declared") is not True:
-        mismatches.append("runtime_blocked_semantics_declared")
-
-    has_mismatch = len(mismatches) > 0
-    status = "FAIL" if has_mismatch else "PASS"
-    exit_code = 1 if has_mismatch else 0
-    return status, exit_code, _format_detail_pairs([
-        ("policy_pass", policy_contract.get("quality_pass_score")),
-        ("runtime_pass", runtime.get("quality_pass_score")),
-        ("policy_human_review", policy_contract.get("human_review_score")),
-        ("runtime_human_review", runtime.get("human_review_score")),
-        ("policy_revise_lower", policy_contract.get("revise_lower_bound")),
-        ("runtime_revise_lower", runtime.get("revise_lower_bound")),
-        ("policy_rewrite_below", policy_contract.get("rewrite_below")),
-        ("runtime_rewrite_below", runtime.get("rewrite_below")),
-        ("publish_from_go", runtime.get("publish_from_go")),
-        ("publish_from_soft_go", runtime.get("publish_from_soft_go")),
-        ("publish_from_no_go", runtime.get("publish_from_no_go")),
-        ("workflow_hard_gate_present", "yes" if runtime.get("workflow_hard_gate_present") else "no"),
-        ("public_entry_api_present", "yes" if runtime.get("public_entry_api_present") else "no"),
-        ("mismatches", _format_csv(mismatches)),
-        ("decision", "no_go" if has_mismatch else "go"),
-    ])
 
 
 def slo_baseline_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:

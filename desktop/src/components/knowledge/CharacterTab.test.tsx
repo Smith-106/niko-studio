@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CharacterTab } from './CharacterTab'
 import type { KnowledgeItem, OperationStatus } from './KnowledgeTypes'
@@ -115,7 +115,10 @@ function CharacterHarness(props: { searchQuery?: string }) {
 }
 
 describe('CharacterTab', () => {
+  const originalConsoleError = console.error
+
   beforeEach(() => {
+    console.error = vi.fn()
     persistedGraph.characters = []
     persistedGraph.failEntityType = null
     useAppStore.setState({
@@ -124,6 +127,10 @@ describe('CharacterTab', () => {
     })
     useSettingsStore.getState().updateSettings({ language: 'zh' })
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    console.error = originalConsoleError
   })
 
   it('loads and displays character items from the graph', async () => {

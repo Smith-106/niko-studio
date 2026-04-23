@@ -85,13 +85,14 @@ describe('MemoryForm', () => {
     useAppStore.setState({
       backendStatus: false,
       currentWorkspace: {
+        schemaVersion: '2026-04-08',
         identity: {
           workspaceId: 'default-project',
           projectId: 'default-project',
           projectName: 'Test',
           workspaceRoot: '/tmp/test',
         },
-        knowledge: { focusEntityId: '' },
+        knowledge: { focusEntityId: '', graphEntityIds: [], memoryEntryIds: [] },
         manuscript: {
           manuscriptId: null,
           title: null,
@@ -284,7 +285,10 @@ describe('MemoryForm', () => {
       ...state,
       currentWorkspace: {
         ...state.currentWorkspace,
-        knowledge: { focusEntityId: 'entity-42' },
+        knowledge: {
+          ...state.currentWorkspace.knowledge,
+          focusEntityId: 'entity-42',
+        },
       },
     }))
 

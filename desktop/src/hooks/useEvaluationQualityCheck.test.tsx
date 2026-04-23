@@ -9,7 +9,17 @@ vi.mock('../api/client', () => ({
 }))
 
 vi.mock('../utils/failurePresentation', () => ({
-  buildFailurePresentation: ({ t, source, error, fallbackMessage }) => {
+  buildFailurePresentation: ({
+    t,
+    source,
+    error,
+    fallbackMessage,
+  }: {
+    t: typeof defaultT
+    source: string
+    error: unknown
+    fallbackMessage?: string
+  }) => {
     const detail = typeof error === 'string' ? error : null
     return {
       category: source === 'evaluation' ? 'evaluation' : 'generation',

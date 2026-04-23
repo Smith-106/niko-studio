@@ -1,6 +1,8 @@
+import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { AppMainContent } from './AppMainContent'
+import { AppHeader } from './AppHeader'
 
 vi.mock('./AppHeader', () => ({
   AppHeader: ({ children }: { children?: React.ReactNode }) => <div data-testid="app-header">{children}</div>,
@@ -40,9 +42,36 @@ vi.mock('../hooks/useWriterWorkspaceSummary', () => ({
   }),
 }))
 
-const defaultHeaderProps = {
-  sidebarCollapsed: false,
-  onToggleSidebar: vi.fn(),
+const defaultHeaderProps: ComponentProps<typeof AppHeader> = {
+  appTitle: 'Niko Studio',
+  contextUsageLabel: 'Context',
+  contextUsageVisible: true,
+  contextUsageText: '~1.2k tokens',
+  contextUsageBarClass: 'bg-emerald-500',
+  contextUsageWidthPercent: 24,
+  headerConnectionState: 'connected',
+  headerDotClass: 'bg-emerald-500',
+  headerConnectionText: 'Connected',
+  onOpenDiagnostics: vi.fn(),
+  checkpointLabel: 'Checkpoints',
+  loadingCheckpointsLabel: 'Loading checkpoints',
+  noCheckpointsLabel: 'No checkpoints',
+  restoreLabel: 'Restore',
+  checkpointMenuOpen: false,
+  checkpointsLoading: false,
+  checkpoints: [],
+  checkpointMenuContainerRef: { current: null },
+  onToggleCheckpointMenu: vi.fn(),
+  onRestoreCheckpoint: vi.fn(),
+  chatSidebarCollapsed: false,
+  onToggleChatSidebar: vi.fn(),
+  aiToolbarDisabled: false,
+  onAiWrite: vi.fn(),
+  onAiRewrite: vi.fn(),
+  onAiDescribe: vi.fn(),
+  onAiBrainstorm: vi.fn(),
+  onOpenWritingHelper: vi.fn(),
+  onOpenTextOptimizer: vi.fn(),
 }
 
 const defaultProps = {

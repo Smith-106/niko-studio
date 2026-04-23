@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import { useSettingsDiagnostics } from './useSettingsDiagnostics'
 
 const getGatewayMetricsMock = vi.hoisted(() => vi.fn())

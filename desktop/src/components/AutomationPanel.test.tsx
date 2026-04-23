@@ -254,6 +254,9 @@ describe('AutomationPanel reliability regressions', () => {
         updated: 0,
         failed: 0,
         total_tasks: 1,
+        force_level: 'L2',
+        tasks: [buildTask()],
+        failures: [],
       },
     })
   })

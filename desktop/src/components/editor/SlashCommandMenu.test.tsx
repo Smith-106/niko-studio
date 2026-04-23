@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { SlashCommandMenu, type SlashMenuItem } from './SlashCommandMenu'
+import { SlashCommandMenu } from './SlashCommandMenu'
 
 vi.mock('../../i18n', () => ({
   useI18n: () => ({

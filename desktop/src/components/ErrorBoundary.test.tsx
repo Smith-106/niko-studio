@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ErrorBoundary } from './ErrorBoundary'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -111,7 +111,7 @@ describe('ErrorBoundary', () => {
     const originalLocation = window.location
 
     // Delete the non-configurable property first, then redefine
-    delete (window as Record<string, unknown>).location
+    delete (window as unknown as { location?: Location }).location
     Object.defineProperty(window, 'location', {
       value: { ...originalLocation, reload: reloadSpy },
       writable: true,
@@ -150,7 +150,7 @@ describe('ErrorBoundary', () => {
   })
 
   it('displays default description when error has no message', () => {
-    function NoMessageChild() {
+    function NoMessageChild(): never {
       throw new Error('')
     }
 

@@ -1,9 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ChatSidebar } from './ChatSidebar'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
-import { translations } from '../i18n'
 
 vi.mock('./ChatArea', () => ({
   ChatArea: (props: Record<string, unknown>) => (

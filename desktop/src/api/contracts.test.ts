@@ -7,6 +7,8 @@ import type {
   GatewayRuntime,
   GatewayRuntimeView,
   GatewayServiceConfig,
+  GatewayServiceConfigInput,
+  GatewayServiceProbeResult,
   WritingHelperMode,
   WritingHelperRequest,
   WritingHelperResponse,
