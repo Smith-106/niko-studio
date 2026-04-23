@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  PROJECT_WORKSPACE_SCHEMA_VERSION,
   createDefaultProjectWorkspaceContext,
+  normalizeProjectWorkspaceContext,
   projectWorkspaceToMemoryScope,
   projectWorkspaceToWorkflowAuthority,
 } from './workspace'
@@ -27,5 +29,32 @@ describe('workspace projections', () => {
       workspaceId: 'atlas-workspace',
       projectId: 'atlas-project',
     })
+  })
+
+  it('normalizes legacy payload fields through the canonical workspace contract', () => {
+    const workspace = normalizeProjectWorkspaceContext({
+      project_id: 'atlas-project',
+      session_id: 'workflow-session-legacy',
+      chapter_id: 'chapter-legacy',
+      story_bible_draft_id: 'draft-legacy',
+      workspace: {
+        identity: {
+          workspace_root: '/tmp/atlas-project',
+        },
+      },
+      context: {
+        chapterId: 'chapter-context',
+      },
+    })
+
+    expect(workspace.schemaVersion).toBe(PROJECT_WORKSPACE_SCHEMA_VERSION)
+    expect(workspace.identity.projectId).toBe('atlas-project')
+    expect(workspace.workflow.sessionId).toBe('workflow-session-legacy')
+    expect(workspace.manuscript.chapterId).toBe('chapter-legacy')
+    expect(workspace.storyBible.draftId).toBe('draft-legacy')
+    expect(workspace.storyBible.storage).toBe('local-draft')
+    expect(workspace.compatibility.migratedLegacyFields).toEqual(
+      expect.arrayContaining(['project_id', 'session_id', 'chapter_id', 'story_bible_draft_id']),
+    )
   })
 })
