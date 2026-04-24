@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, type MutableRefObject } from 'react'
+import { useId, useLayoutEffect, useRef, type MutableRefObject } from 'react'
 import { PanelRightClose, PanelRightOpen } from 'lucide-react'
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { useI18n } from '../i18n'
 import { AiToolbar } from './AiToolbar'
 
@@ -28,7 +29,9 @@ interface AppHeaderProps {
   checkpointsLoading: boolean
   checkpoints: CheckpointItem[]
   checkpointMenuContainerRef: MutableRefObject<HTMLDivElement | null>
+  checkpointMenuTriggerRef: MutableRefObject<HTMLButtonElement | null>
   onToggleCheckpointMenu: () => void | Promise<void>
+  onCloseCheckpointMenu: () => void
   onRestoreCheckpoint: (checkpointId: string) => void | Promise<void>
   chatSidebarCollapsed: boolean
   onToggleChatSidebar: () => void
@@ -60,7 +63,9 @@ export function AppHeader({
   checkpointsLoading,
   checkpoints,
   checkpointMenuContainerRef,
+  checkpointMenuTriggerRef,
   onToggleCheckpointMenu,
+  onCloseCheckpointMenu,
   onRestoreCheckpoint,
   chatSidebarCollapsed,
   onToggleChatSidebar,
@@ -77,18 +82,34 @@ export function AppHeader({
   const checkpointPanelRef = useRef<HTMLDivElement | null>(null)
   const firstRestoreButtonRef = useRef<HTMLButtonElement | null>(null)
 
-  useEffect(() => {
-    if (!checkpointMenuOpen) {
+  useLayoutEffect(() => {
+    if (!checkpointMenuOpen || checkpointsLoading) {
       return
     }
 
-    const nextFocusTarget =
-      checkpointsLoading || checkpoints.length === 0
-        ? checkpointPanelRef.current
-        : firstRestoreButtonRef.current
+    const panel = checkpointPanelRef.current
+    const restoreButton = firstRestoreButtonRef.current
+    const activeElement = document.activeElement
 
-    nextFocusTarget?.focus()
+    if (!panel || !restoreButton) {
+      return
+    }
+
+    if (activeElement instanceof HTMLElement && panel.contains(activeElement) && activeElement !== panel) {
+      return
+    }
+
+    restoreButton.focus()
   }, [checkpointMenuOpen, checkpointsLoading, checkpoints.length])
+
+  useDialogFocusTrap({
+    containerRef: checkpointPanelRef,
+    initialFocusRef: firstRestoreButtonRef,
+    restoreFocusRef: checkpointMenuTriggerRef,
+    isActive: checkpointMenuOpen,
+    onClose: onCloseCheckpointMenu,
+  })
+
   return (
     <header className="h-14 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-surface/80 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-10 relative">
       <div className="flex items-center gap-3">
@@ -103,7 +124,7 @@ export function AppHeader({
           onOpenTextOptimizer={onOpenTextOptimizer}
         />
       </div>
-      <div className="flex items-center gap-4 relative" ref={checkpointMenuContainerRef}>
+      <div className="flex items-center gap-4 relative">
         <button
           onClick={onToggleChatSidebar}
           className="p-1.5 rounded-md text-gray-500 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface2 hover:text-gray-700 dark:hover:text-dark-text transition-colors"
@@ -140,56 +161,56 @@ export function AppHeader({
             </div>
           </div>
         )}
-        <button
-          type="button"
-          onClick={onToggleCheckpointMenu}
-          className="shell-text-compact px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border2 text-gray-700 dark:text-dark-text rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all active:scale-[0.98]"
-          aria-expanded={checkpointMenuOpen}
-          aria-controls={checkpointMenuId}
-          aria-haspopup="dialog"
-        >
-          {checkpointLabel}
-        </button>
-
-        {checkpointMenuOpen && (
-          <div
-            id={checkpointMenuId}
-            ref={(node) => {
-              checkpointPanelRef.current = node
-              checkpointMenuContainerRef.current = node
-            }}
-            tabIndex={-1}
-            role="dialog"
-            aria-modal="false"
-            aria-label={checkpointLabel}
-            className="absolute right-0 top-10 w-72 p-2 rounded border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-lg z-20"
+        <div className="relative" ref={checkpointMenuContainerRef}>
+          <button
+            ref={checkpointMenuTriggerRef}
+            type="button"
+            onClick={onToggleCheckpointMenu}
+            className="shell-text-compact px-3 py-1.5 font-medium bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border2 text-gray-700 dark:text-dark-text rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-dark-surface2 transition-all active:scale-[0.98]"
+            aria-expanded={checkpointMenuOpen}
+            aria-controls={checkpointMenuId}
+            aria-haspopup="dialog"
           >
-            {checkpointsLoading ? (
-              <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2">{loadingCheckpointsLabel}</div>
-            ) : checkpoints.length === 0 ? (
-              <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2">{noCheckpointsLabel}</div>
-            ) : (
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {checkpoints.map((checkpoint, index) => (
-                  <div key={checkpoint.id} className="p-2 border border-gray-200 dark:border-dark-border rounded">
-                    <div className="shell-text-compact text-gray-700 dark:text-dark-text truncate" title={checkpoint.description || checkpoint.id}>
-                      {checkpoint.description || checkpoint.id}
+            {checkpointLabel}
+          </button>
+
+          {checkpointMenuOpen && (
+            <div
+              id={checkpointMenuId}
+              ref={checkpointPanelRef}
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="false"
+              aria-label={checkpointLabel}
+              className="absolute right-0 top-10 w-72 p-2 rounded border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-lg z-20"
+            >
+              {checkpointsLoading ? (
+                <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2">{loadingCheckpointsLabel}</div>
+              ) : checkpoints.length === 0 ? (
+                <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary p-2">{noCheckpointsLabel}</div>
+              ) : (
+                <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {checkpoints.map((checkpoint, index) => (
+                    <div key={checkpoint.id} className="p-2 border border-gray-200 dark:border-dark-border rounded">
+                      <div className="shell-text-compact text-gray-700 dark:text-dark-text truncate" title={checkpoint.description || checkpoint.id}>
+                        {checkpoint.description || checkpoint.id}
+                      </div>
+                      <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary">{checkpoint.created_at}</div>
+                      <button
+                        ref={index === 0 ? firstRestoreButtonRef : undefined}
+                        type="button"
+                        onClick={() => onRestoreCheckpoint(checkpoint.id)}
+                        className="shell-text-compact mt-1 px-2 py-1 bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+                      >
+                        {restoreLabel}
+                      </button>
                     </div>
-                    <div className="shell-text-compact text-gray-500 dark:text-dark-text-secondary">{checkpoint.created_at}</div>
-                    <button
-                      ref={index === 0 ? firstRestoreButtonRef : undefined}
-                      type="button"
-                      onClick={() => onRestoreCheckpoint(checkpoint.id)}
-                      className="shell-text-compact mt-1 px-2 py-1 bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
-                    >
-                      {restoreLabel}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

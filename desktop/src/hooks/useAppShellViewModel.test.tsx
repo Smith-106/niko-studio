@@ -47,6 +47,8 @@ function createOptions() {
     checkpointsLoading: false,
     checkpoints: [],
     checkpointMenuContainerRef: { current: null as HTMLDivElement | null },
+    checkpointMenuTriggerRef: { current: null as HTMLButtonElement | null },
+    closeCheckpointMenu: vi.fn(),
     handleToggleCheckpointMenu: vi.fn(),
     handleRestoreCheckpoint: vi.fn(),
     restoreStatus: null,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { listCheckpoints, restoreCheckpoint } from '../api/client'
+import type { DialogCloseReason } from './useDialogFocusTrap'
 import { useAppStore } from '../stores/appStore'
 
 interface CheckpointItem {
@@ -23,6 +24,7 @@ export function useAppCheckpointMenu({ restoreFailedText, restoreSuccessText }: 
   const currentWorkspace = useAppStore((state) => state.currentWorkspace)
   const [checkpointMenuOpen, setCheckpointMenuOpen] = useState(false)
   const checkpointMenuContainerRef = useRef<HTMLDivElement | null>(null)
+  const checkpointMenuTriggerRef = useRef<HTMLButtonElement | null>(null)
   const [checkpointsLoading, setCheckpointsLoading] = useState(false)
   const [checkpoints, setCheckpoints] = useState<CheckpointItem[]>([])
   const [restoreStatus, setRestoreStatus] = useState<RestoreStatus | null>(null)
@@ -56,20 +58,16 @@ export function useAppCheckpointMenu({ restoreFailedText, restoreSuccessText }: 
       setCheckpointMenuOpen(false)
     }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setCheckpointMenuOpen(false)
-      }
-    }
-
     document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [checkpointMenuOpen])
+
+  const closeCheckpointMenu = (_reason?: DialogCloseReason) => {
+    setCheckpointMenuOpen(false)
+  }
 
   const refreshCheckpoints = async () => {
     setCheckpointsLoading(true)
@@ -114,9 +112,11 @@ export function useAppCheckpointMenu({ restoreFailedText, restoreSuccessText }: 
   return {
     checkpointMenuOpen,
     checkpointMenuContainerRef,
+    checkpointMenuTriggerRef,
     checkpointsLoading,
     checkpoints,
     restoreStatus,
+    closeCheckpointMenu,
     handleToggleCheckpointMenu,
     handleRestoreCheckpoint,
   }

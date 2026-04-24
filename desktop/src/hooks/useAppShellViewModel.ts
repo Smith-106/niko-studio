@@ -59,6 +59,8 @@ interface UseAppShellViewModelOptions {
     checkpointsLoading: boolean
     checkpoints: ComponentProps<typeof AppMainContent>['headerProps']['checkpoints']
     checkpointMenuContainerRef: ComponentProps<typeof AppMainContent>['headerProps']['checkpointMenuContainerRef']
+    checkpointMenuTriggerRef: ComponentProps<typeof AppMainContent>['headerProps']['checkpointMenuTriggerRef']
+    closeCheckpointMenu: ComponentProps<typeof AppMainContent>['headerProps']['onCloseCheckpointMenu']
     handleToggleCheckpointMenu: ComponentProps<typeof AppMainContent>['headerProps']['onToggleCheckpointMenu']
     handleRestoreCheckpoint: ComponentProps<typeof AppMainContent>['headerProps']['onRestoreCheckpoint']
     restoreStatus: ComponentProps<typeof AppMainContent>['restoreStatus']
@@ -143,6 +145,8 @@ export function useAppShellViewModel({
       checkpointsLoading: checkpointMenu.checkpointsLoading,
       checkpoints: checkpointMenu.checkpoints,
       checkpointMenuContainerRef: checkpointMenu.checkpointMenuContainerRef,
+      checkpointMenuTriggerRef: checkpointMenu.checkpointMenuTriggerRef,
+      onCloseCheckpointMenu: checkpointMenu.closeCheckpointMenu,
       onToggleCheckpointMenu: checkpointMenu.handleToggleCheckpointMenu,
       onRestoreCheckpoint: checkpointMenu.handleRestoreCheckpoint,
       chatSidebarCollapsed: uiPersistence.chatSidebarCollapsed,

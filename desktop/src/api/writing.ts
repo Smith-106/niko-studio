@@ -21,6 +21,23 @@ export type {
 } from './contracts'
 export type LegacyPolishType = 'standard' | 'academic' | 'business' | 'creative'
 
+interface WritingStreamEvent {
+  event: WritingStreamEventType
+  data: Record<string, unknown>
+}
+
+type WritingStreamEventType = 'start' | 'content' | 'done' | 'error'
+
+const INVALID_WRITING_STREAM_PAYLOAD = 'Invalid writing stream payload'
+
+function isWritingStreamEventType(value: unknown): value is WritingStreamEventType {
+  return value === 'start' || value === 'content' || value === 'done' || value === 'error'
+}
+
+function isWritingStreamEventData(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export interface LegacyPolishRequest {
   originalText: string
   llmApiUrl?: string
@@ -47,6 +64,189 @@ export async function processWritingHelper(
     'POST',
     appendWorkspacePayload(payload as unknown as Record<string, unknown>, payload.workspace),
   )
+}
+
+function dispatchWritingStreamEvent(
+  eventType: WritingStreamEventType,
+  data: Record<string, unknown>,
+  callbacks: {
+    onContent: (chunk: string, index: number) => void
+    onDone: () => void
+    onError: (error: string) => void
+  },
+): void {
+  if (eventType === 'content') {
+    if (typeof data.chunk !== 'string' || typeof data.index !== 'number' || Number.isNaN(data.index)) {
+      callbacks.onError(INVALID_WRITING_STREAM_PAYLOAD)
+      return
+    }
+
+    callbacks.onContent(data.chunk, data.index)
+    return
+  }
+
+  if (eventType === 'done') {
+    callbacks.onDone()
+    return
+  }
+
+  if (eventType === 'error') {
+    callbacks.onError(String(data.error ?? 'Stream error'))
+  }
+}
+
+function parseJsonErrorPayload(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const error = (payload as { error?: unknown }).error
+  return typeof error === 'string' && error.trim() ? error : null
+}
+
+function parseWritingStreamEvent(rawEvent: unknown): WritingStreamEvent | null {
+  if (!rawEvent || typeof rawEvent !== 'object') {
+    return null
+  }
+
+  const event = (rawEvent as { event?: unknown }).event
+  if (!isWritingStreamEventType(event)) {
+    return null
+  }
+
+  const data = (rawEvent as { data?: unknown }).data
+  if (!isWritingStreamEventData(data)) {
+    return null
+  }
+
+  if (
+    event === 'content' &&
+    (typeof data.chunk !== 'string' || typeof data.index !== 'number' || Number.isNaN(data.index))
+  ) {
+    return null
+  }
+
+  return { event, data }
+}
+
+async function consumeJsonWritingEvents(
+  response: Response,
+  callbacks: {
+    onContent: (chunk: string, index: number) => void
+    onDone: () => void
+    onError: (error: string) => void
+  },
+): Promise<void> {
+  const data = await response.json() as {
+    streaming?: unknown
+    events?: unknown
+    error?: unknown
+  }
+
+  const error = parseJsonErrorPayload(data)
+  if (error) {
+    callbacks.onError(error)
+    return
+  }
+
+  if (data.streaming !== true || !Array.isArray(data.events)) {
+    callbacks.onError(INVALID_WRITING_STREAM_PAYLOAD)
+    return
+  }
+
+  for (const rawEvent of data.events) {
+    const event = parseWritingStreamEvent(rawEvent)
+    if (!event) {
+      callbacks.onError(INVALID_WRITING_STREAM_PAYLOAD)
+      return
+    }
+
+    dispatchWritingStreamEvent(event.event, event.data, callbacks)
+  }
+}
+
+async function consumeSseWritingEvents(
+  response: Response,
+  callbacks: {
+    onContent: (chunk: string, index: number) => void
+    onDone: () => void
+    onError: (error: string) => void
+  },
+): Promise<void> {
+  const reader = response.body?.getReader()
+  if (!reader) {
+    throw new Error('No response body')
+  }
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let currentEvent = ''
+  let currentData = ''
+
+  const flushEvent = () => {
+    if (!currentEvent || !currentData) {
+      currentEvent = ''
+      currentData = ''
+      return
+    }
+
+    if (!isWritingStreamEventType(currentEvent)) {
+      callbacks.onError(INVALID_WRITING_STREAM_PAYLOAD)
+      currentEvent = ''
+      currentData = ''
+      return
+    }
+
+    try {
+      const data = JSON.parse(currentData) as unknown
+      if (!isWritingStreamEventData(data)) {
+        callbacks.onError(INVALID_WRITING_STREAM_PAYLOAD)
+      } else {
+        dispatchWritingStreamEvent(currentEvent, data, callbacks)
+      }
+    } catch {
+      callbacks.onError('Failed to parse writing stream event')
+    }
+
+    currentEvent = ''
+    currentData = ''
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+
+    if (done) {
+      buffer += decoder.decode()
+      const lines = buffer.split('\n')
+      for (const line of lines) {
+        const trimmed = line.replace(/\r$/, '')
+        if (trimmed.startsWith('event: ')) {
+          currentEvent = trimmed.slice(7).trim()
+        } else if (trimmed.startsWith('data: ')) {
+          currentData = trimmed.slice(6).trim()
+        } else if (trimmed === '') {
+          flushEvent()
+        }
+      }
+      flushEvent()
+      break
+    }
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      const trimmed = line.replace(/\r$/, '')
+      if (trimmed.startsWith('event: ')) {
+        currentEvent = trimmed.slice(7).trim()
+      } else if (trimmed.startsWith('data: ')) {
+        currentData = trimmed.slice(6).trim()
+      } else if (trimmed === '') {
+        flushEvent()
+      }
+    }
+  }
 }
 
 export async function streamWritingHelper(
@@ -77,28 +277,17 @@ export async function streamWritingHelper(
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`)
+      const error = parseJsonErrorPayload(await response.clone().json().catch(() => null))
+      throw new Error(error ?? `HTTP error: ${response.status}`)
     }
 
-    const data = await response.json() as {
-      streaming?: boolean
-      events?: Array<{ event: string; data: Record<string, unknown> }>
+    const contentType = response.headers.get('Content-Type')?.toLowerCase() ?? ''
+    if (contentType.includes('text/event-stream')) {
+      await consumeSseWritingEvents(response, callbacks)
+      return
     }
 
-    if (data.events) {
-      for (const evt of data.events) {
-        if (evt.event === 'content' && evt.data) {
-          callbacks.onContent(
-            evt.data.chunk as string,
-            evt.data.index as number,
-          )
-        } else if (evt.event === 'done') {
-          callbacks.onDone()
-        } else if (evt.event === 'error') {
-          callbacks.onError(evt.data.error as string)
-        }
-      }
-    }
+    await consumeJsonWritingEvents(response, callbacks)
   } catch (err) {
     if ((err as Error).name !== 'AbortError') {
       callbacks.onError(err instanceof Error ? err.message : String(err))

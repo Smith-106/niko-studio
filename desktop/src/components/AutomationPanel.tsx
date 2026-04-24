@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   workflowLifecycle,
@@ -9,6 +9,7 @@ import {
   workflowSchedulerRunNow,
   type WorkflowSchedulerTaskRecord,
 } from '../api/client'
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 import { useI18n } from '../i18n'
 
@@ -93,6 +94,8 @@ export function AutomationPanel({ onClose, onOpenSettings }: AutomationPanelProp
   const { language } = useI18n()
   const isZh = language === 'zh'
   const workspaceSummary = useWriterWorkspaceSummary()
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const refreshButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const [loading, setLoading] = useState(true)
   const [tasks, setTasks] = useState<WorkflowSchedulerTaskRecord[]>([])
@@ -294,8 +297,20 @@ export function AutomationPanel({ onClose, onOpenSettings }: AutomationPanelProp
     await refreshTasks()
   }, [workspaceSummary.meaningfulWorkspace, setWorkflowError, setWorkflowMessage, isZh, refreshTasks])
 
+  const handleClose = useCallback(() => {
+    onClose()
+  }, [onClose])
+
+  useDialogFocusTrap({
+    containerRef: panelRef,
+    initialFocusRef: refreshButtonRef,
+    onClose: handleClose,
+  })
+
   return (
     <div
+      ref={panelRef}
+      tabIndex={-1}
       className="fixed right-0 top-14 bottom-0 w-96 bg-slate-50 dark:bg-dark-bg border-l border-gray-200 dark:border-dark-border shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)] flex flex-col z-30"
       role="dialog"
       aria-modal="true"
@@ -312,6 +327,7 @@ export function AutomationPanel({ onClose, onOpenSettings }: AutomationPanelProp
         </div>
         <div className="flex items-center gap-2">
           <button
+            ref={refreshButtonRef}
             type="button"
             onClick={() => {
               void refreshTasks()

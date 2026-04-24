@@ -27,6 +27,7 @@ import {
   routeWorkflow,
   searchMemory,
   setGatewayServiceEnabled,
+  streamWritingHelper,
   updateGatewayServiceConfig,
   listCheckpoints,
   workflowLifecycle,
@@ -41,6 +42,15 @@ import {
   type GatewayHealth,
   type ProjectWorkspaceContext,
 } from './client'
+
+function createJsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+}
 
 function createSseResponse(chunks: string[]): Response {
   const encoder = new TextEncoder()
@@ -1601,6 +1611,184 @@ describe('workspace api surface', () => {
     expect(body.project_id).toBe('atlas-project')
     expect(body.session_id).toBe('workflow-session-13')
     expect(body.entity_id).toBe('hero-13')
+  })
+})
+
+describe('writing helper streaming API', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('parses SSE content and done events from writing stream endpoint', async () => {
+    const onContent = vi.fn()
+    const onDone = vi.fn()
+
+    const sseChunk = [
+      'event: content\n',
+      'data: {"chunk":"续写","index":0}\n',
+      '\n',
+      'event: content\n',
+      'data: {"chunk":"完成","index":1}\n',
+      '\n',
+      'event: done\n',
+      'data: {"status":"completed","chunks":2}\n',
+      '\n',
+    ].join('')
+
+    vi.stubGlobal('fetch', vi.fn(async () => createSseResponse([sseChunk])))
+
+    await streamWritingHelper(
+      {
+        content: '请续写这一段。',
+        mode: 'generate',
+      },
+      { onContent, onDone, onError: vi.fn() },
+    )
+
+    expect(onContent).toHaveBeenCalledWith('续写', 0)
+    expect(onContent).toHaveBeenCalledWith('完成', 1)
+    expect(onDone).toHaveBeenCalledOnce()
+  })
+
+  it('preserves legacy json event-array fallback for writing stream endpoint', async () => {
+    const onContent = vi.fn()
+    const onDone = vi.fn()
+
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      streaming: true,
+      events: [
+        { event: 'content', data: { chunk: '兼容', index: 0 } },
+        { event: 'done', data: { status: 'completed' } },
+      ],
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })))
+
+    await streamWritingHelper(
+      {
+        content: '请续写这一段。',
+        mode: 'generate',
+      },
+      { onContent, onDone, onError: vi.fn() },
+    )
+
+    expect(onContent).toHaveBeenCalledWith('兼容', 0)
+    expect(onDone).toHaveBeenCalledOnce()
+  })
+
+  it('reports malformed SSE event payloads as stream errors', async () => {
+    const onError = vi.fn()
+
+    const sseChunk = [
+      'event: content\n',
+      'data: {not-json}\n',
+      '\n',
+    ].join('')
+
+    vi.stubGlobal('fetch', vi.fn(async () => createSseResponse([sseChunk])))
+
+    await streamWritingHelper(
+      {
+        content: '请续写这一段。',
+        mode: 'generate',
+      },
+      { onContent: vi.fn(), onDone: vi.fn(), onError },
+    )
+
+    expect(onError).toHaveBeenCalledWith('Failed to parse writing stream event')
+  })
+
+  it('reports server error events from writing stream endpoint', async () => {
+    const onError = vi.fn()
+
+    const sseChunk = [
+      'event: error\n',
+      'data: {"error":"provider failed"}\n',
+      '\n',
+    ].join('')
+
+    vi.stubGlobal('fetch', vi.fn(async () => createSseResponse([sseChunk])))
+
+    await streamWritingHelper(
+      {
+        content: '请续写这一段。',
+        mode: 'generate',
+      },
+      { onContent: vi.fn(), onDone: vi.fn(), onError },
+    )
+
+    expect(onError).toHaveBeenCalledWith('provider failed')
+  })
+})
+
+
+describe('writing stream helper', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('parses JSON writing stream events from the gateway contract', async () => {
+    const onContent = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    vi.stubGlobal('fetch', vi.fn(async () => createJsonResponse({
+      streaming: true,
+      events: [
+        { event: 'start', data: {} },
+        { event: 'content', data: { chunk: 'Hello', index: 0 } },
+        { event: 'done', data: {} },
+      ],
+    })))
+
+    await streamWritingHelper(
+      { content: 'prompt', mode: 'generate' },
+      { onContent, onDone, onError },
+    )
+
+    expect(onContent).toHaveBeenCalledWith('Hello', 0)
+    expect(onDone).toHaveBeenCalledOnce()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('surfaces top-level JSON error payloads from the writing stream endpoint', async () => {
+    const onError = vi.fn()
+
+    vi.stubGlobal('fetch', vi.fn(async () => createJsonResponse({
+      error: 'writer unavailable',
+    })))
+
+    await streamWritingHelper(
+      { content: 'prompt', mode: 'generate' },
+      { onContent: vi.fn(), onDone: vi.fn(), onError },
+    )
+
+    expect(onError).toHaveBeenCalledWith('writer unavailable')
+  })
+
+  it('rejects invalid JSON writing stream payloads', async () => {
+    const onContent = vi.fn()
+    const onDone = vi.fn()
+    const onError = vi.fn()
+
+    vi.stubGlobal('fetch', vi.fn(async () => createJsonResponse({
+      streaming: true,
+      events: [
+        { event: 'content', data: { index: 0 } },
+      ],
+    })))
+
+    await streamWritingHelper(
+      { content: 'prompt', mode: 'generate' },
+      { onContent, onDone, onError },
+    )
+
+    expect(onContent).not.toHaveBeenCalled()
+    expect(onDone).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledWith('Invalid writing stream payload')
   })
 })
 

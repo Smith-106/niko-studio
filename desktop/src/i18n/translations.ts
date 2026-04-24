@@ -765,6 +765,8 @@ export interface Translations {
   settingsContextTypeWorld: string
   settingsContextTypeCharacter: string
   settingsContextTypePlot: string
+  quickPanelTitle: string
+  quickPanelResultsLabel: string
   quickPanelSearchPlaceholder: string
   quickPanelNoMatch: string
   quickPanelSelect: string
@@ -1619,6 +1621,8 @@ export const translations: Record<Language, Translations> = {
     settingsContextTypeWorld: '世界观',
     settingsContextTypeCharacter: '角色',
     settingsContextTypePlot: '剧情',
+    quickPanelTitle: '快捷命令面板',
+    quickPanelResultsLabel: '命令结果',
     quickPanelSearchPlaceholder: '搜索命令...',
     quickPanelNoMatch: '无匹配命令',
     quickPanelSelect: '↑↓ 选择',
@@ -2468,6 +2472,8 @@ export const translations: Record<Language, Translations> = {
     settingsContextTypeWorld: 'World',
     settingsContextTypeCharacter: 'Character',
     settingsContextTypePlot: 'Plot',
+    quickPanelTitle: 'Quick command panel',
+    quickPanelResultsLabel: 'Command results',
     quickPanelSearchPlaceholder: 'Search commands...',
     quickPanelNoMatch: 'No matching commands',
     quickPanelSelect: '↑↓ Select',

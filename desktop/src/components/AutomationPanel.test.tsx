@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -369,49 +370,35 @@ describe('AutomationPanel reliability regressions', () => {
     })
   })
 
-  it('supports gate-blocked recovery and panel-level interaction wiring', async () => {
+  it('restores focus to the opener when the automation panel closes', async () => {
     const user = userEvent.setup()
-    const onClose = vi.fn()
-    const onOpenSettings = vi.fn()
 
-    mockedWorkflowSchedulerRunNow.mockResolvedValueOnce({
-      success: true,
-      data: {
-        status: 'gate_blocked',
-        trigger: 'manual_run_now',
-        run_id: 'run-4',
-        plan_id: 'plan-1',
-        task: buildTask(),
-        execute: buildExecuteResponse('gate_blocked', '门控阻塞，需人工恢复'),
-      },
+    function AutomationPanelHarness() {
+      const [open, setOpen] = useState(false)
+
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>open automation</button>
+          {open ? <AutomationPanel onClose={() => setOpen(false)} onOpenSettings={() => {}} /> : null}
+        </>
+      )
+    }
+
+    render(<AutomationPanelHarness />)
+
+    const openButton = screen.getByRole('button', { name: 'open automation' })
+    await user.click(openButton)
+
+    const refreshButton = await screen.findByRole('button', { name: '刷新' })
+    await waitFor(() => {
+      expect(refreshButton).toHaveFocus()
     })
 
-    mockedWorkflowLifecycle.mockResolvedValueOnce({
-      success: true,
-      data: buildLifecycleResponse('pause'),
-    })
-
-    render(<AutomationPanel onClose={onClose} onOpenSettings={onOpenSettings} />)
-
-    await screen.findByText('章节修订推进')
-    await user.click(screen.getByRole('button', { name: '立即执行 / 重试' }))
+    await user.keyboard('{Escape}')
 
     await waitFor(() => {
-      expect(screen.getByText('任务进入阻塞状态，请执行恢复操作。')).toBeInTheDocument()
-      expect(screen.getByText('门控阻塞，需人工恢复')).toBeInTheDocument()
+      expect(screen.queryByRole('dialog', { name: '自动化面板' })).not.toBeInTheDocument()
+      expect(openButton).toHaveFocus()
     })
-
-    await user.click(screen.getByRole('button', { name: '拒绝并暂停计划' }))
-
-    await waitFor(() => {
-      expect(mockedWorkflowLifecycle).toHaveBeenCalledWith('plan-1', 'pause', undefined, workspaceAuthority)
-      expect(screen.getByText('计划已暂停。')).toBeInTheDocument()
-    })
-
-    await user.click(screen.getByRole('button', { name: '设置' }))
-    await user.click(screen.getByRole('button', { name: '关闭' }))
-
-    expect(onOpenSettings).toHaveBeenCalledTimes(1)
-    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

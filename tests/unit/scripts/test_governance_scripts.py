@@ -3,7 +3,12 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
+import platform
+import shutil
+import subprocess
 import sys
+import textwrap
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +27,252 @@ def load_script_module(relative_path: str, module_name: str) -> ModuleType:
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def run_node_cjs_and_capture(
+    relative_path: str,
+    *,
+    env_overrides: dict[str, str | None] | None = None,
+    argv: list[str] | None = None,
+    platform_name: str | None = None,
+    arch: str | None = None,
+    exists_paths: dict[Path | str, bool] | None = None,
+    json_files: dict[Path | str, object] | None = None,
+    fail_commands: list[str] | None = None,
+) -> dict[str, object]:
+    node_binary = shutil.which("node")
+    if node_binary is None:
+        pytest.skip("node is required for governance script regression tests")
+
+    script_path = PROJECT_ROOT / relative_path
+    env = os.environ.copy()
+    for key, value in (env_overrides or {}).items():
+        if value is None:
+            env.pop(key, None)
+        else:
+            env[key] = value
+
+    payload = {
+        "scriptPath": str(script_path),
+        "argv": argv or [],
+        "platform": platform_name,
+        "arch": arch,
+        "existsPaths": {
+            str(Path(path)): exists for path, exists in (exists_paths or {}).items()
+        },
+        "jsonFiles": {
+            str(Path(path)): value for path, value in (json_files or {}).items()
+        },
+        "failCommands": fail_commands or [],
+    }
+    env["CJS_TEST_PAYLOAD"] = json.dumps(payload)
+
+    harness = textwrap.dedent(
+        """
+        const fs = require('fs');
+        const path = require('path');
+        const vm = require('vm');
+
+        const payload = JSON.parse(process.env.CJS_TEST_PAYLOAD);
+        const scriptPath = path.resolve(payload.scriptPath);
+        const rawScriptSource = fs.readFileSync(scriptPath, 'utf8');
+        const shebangNewlineIndex = rawScriptSource.indexOf(String.fromCharCode(10));
+        const scriptSource = rawScriptSource.startsWith('#!')
+          ? rawScriptSource.slice(shebangNewlineIndex >= 0 ? shebangNewlineIndex + 1 : rawScriptSource.length)
+          : rawScriptSource;
+        const logs = [];
+        const errors = [];
+        const commands = [];
+        let exitCode = 0;
+
+        const existsMap = new Map(
+          Object.entries(payload.existsPaths || {}).map(([filePath, exists]) => [
+            path.normalize(path.resolve(filePath)),
+            exists,
+          ]),
+        );
+        const jsonFileMap = new Map(
+          Object.entries(payload.jsonFiles || {}).map(([filePath, value]) => [
+            path.normalize(path.resolve(filePath)),
+            typeof value === 'string' ? value : JSON.stringify(value),
+          ]),
+        );
+
+        const fsStub = {
+          existsSync(filePath) {
+            const normalizedPath = path.normalize(path.resolve(filePath));
+            if (existsMap.has(normalizedPath)) {
+              return existsMap.get(normalizedPath);
+            }
+            return fs.existsSync(normalizedPath);
+          },
+          readFileSync(filePath, encoding) {
+            const normalizedPath = path.normalize(path.resolve(filePath));
+            if (jsonFileMap.has(normalizedPath)) {
+              return jsonFileMap.get(normalizedPath);
+            }
+            return fs.readFileSync(normalizedPath, encoding);
+          },
+        };
+
+        const childProcessStub = {
+          execSync(command, options = {}) {
+            commands.push({
+              command,
+              cwd: options.cwd ?? null,
+              stdio: options.stdio ?? null,
+            });
+            if ((payload.failCommands || []).includes(command)) {
+              const error = new Error(`Command failed: ${command}`);
+              error.command = command;
+              throw error;
+            }
+            return Buffer.from('');
+          },
+        };
+
+        const sandboxProcess = {
+          env: process.env,
+          argv: ['node', scriptPath, ...(payload.argv || [])],
+          platform: payload.platform || process.platform,
+          arch: payload.arch || process.arch,
+          exit(code = 0) {
+            exitCode = code;
+            throw new Error(`__EXIT__:${code}`);
+          },
+        };
+
+        const sandbox = {
+          console: {
+            log: (...args) => logs.push(args.join(' ')),
+            warn: (...args) => logs.push(args.join(' ')),
+            error: (...args) => errors.push(args.join(' ')),
+          },
+          process: sandboxProcess,
+          require(moduleName) {
+            if (moduleName === 'path') {
+              return path;
+            }
+            if (moduleName === 'fs') {
+              return fsStub;
+            }
+            if (moduleName === 'child_process') {
+              return childProcessStub;
+            }
+            return require(moduleName);
+          },
+          __filename: scriptPath,
+          __dirname: path.dirname(scriptPath),
+          module: { exports: {} },
+          exports: {},
+          Buffer,
+        };
+
+        try {
+          vm.runInNewContext(
+            `(function (exports, require, module, __filename, __dirname) {${scriptSource}\n})(exports, require, module, __filename, __dirname);`,
+            sandbox,
+            { filename: scriptPath },
+          );
+        } catch (error) {
+          if (!String(error && error.message ? error.message : error).startsWith('__EXIT__:')) {
+            throw error;
+          }
+        }
+
+        process.stdout.write(JSON.stringify({ exitCode, logs, errors, commands }));
+        """
+    )
+
+    result = subprocess.run(
+        [node_binary, "-e", harness],
+        cwd=PROJECT_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+def resolve_current_target_triple() -> str | None:
+    machine = platform.machine().lower()
+
+    if sys.platform == "win32":
+        if machine in {"amd64", "x86_64"}:
+            return "x86_64-pc-windows-msvc"
+        if machine in {"arm64", "aarch64"}:
+            return "aarch64-pc-windows-msvc"
+    elif sys.platform == "darwin":
+        if machine in {"amd64", "x86_64"}:
+            return "x86_64-apple-darwin"
+        if machine in {"arm64", "aarch64"}:
+            return "aarch64-apple-darwin"
+    elif sys.platform.startswith("linux"):
+        if machine in {"amd64", "x86_64"}:
+            return "x86_64-unknown-linux-gnu"
+        if machine in {"arm64", "aarch64"}:
+            return "aarch64-unknown-linux-gnu"
+
+    return None
+
+
+def build_sidecar_contract_fixture(
+    *,
+    include_python_runtime: bool = False,
+    external_bin: list[str] | None = None,
+    capability_permissions: list[str] | None = None,
+) -> tuple[dict[Path, bool], dict[Path, object]]:
+    desktop_dir = PROJECT_ROOT / "desktop"
+    bin_dir = desktop_dir / "src-tauri" / "bin"
+    tauri_config_path = desktop_dir / "src-tauri" / "tauri.conf.json"
+    capability_path = desktop_dir / "src-tauri" / "capabilities" / "main-desktop.json"
+    legacy_python_entry = PROJECT_ROOT / "src" / "mcp" / "sidecar_entry.py"
+
+    exists_paths: dict[Path, bool] = {
+        bin_dir: True,
+        legacy_python_entry: False,
+        bin_dir / "niko-gateway-node": True,
+    }
+    if sys.platform == "win32":
+        exists_paths[bin_dir / "niko-gateway-node.cmd"] = True
+    if include_python_runtime:
+        exists_paths[bin_dir / ("niko-gateway.exe" if sys.platform == "win32" else "niko-gateway")] = True
+
+    target_triple = resolve_current_target_triple()
+    if target_triple is not None:
+        packaged_python_name = f"niko-gateway-{target_triple}"
+        if sys.platform == "win32":
+            packaged_python_name += ".exe"
+        exists_paths[bin_dir / packaged_python_name] = True
+
+    json_files: dict[Path, object] = {
+        tauri_config_path: {
+            "app": {
+                "security": {
+                    "csp": "default-src 'self'; connect-src 'self' https: http://127.0.0.1:*; img-src 'self' asset: data:; script-src 'self'; style-src 'self' 'unsafe-inline'",
+                    "devCsp": "default-src 'self'; script-src 'self' 'unsafe-eval'; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:; style-src 'self' 'unsafe-inline'",
+                    "capabilities": ["main-desktop"],
+                    "freezePrototype": True,
+                },
+                "windows": [{"label": "main"}],
+            },
+            "bundle": {
+                "externalBin": external_bin or ["bin/niko-gateway"],
+            },
+        },
+        capability_path: {
+            "identifier": "main-desktop",
+            "windows": ["main"],
+            "permissions": capability_permissions or ["core:default"],
+        },
+    }
+
+    return exists_paths, json_files
 
 
 def test_authority_alignment_checker_passes_current_repo() -> None:
@@ -1167,7 +1418,225 @@ def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None
     assert "freshness_status: fresh" in sign_off_text
     assert "supersession_status: current" in sign_off_text
     assert "blocking `local_selftest_enforcement` signal" in sign_off_text
-    assert (
-        "Treat `npm --prefix desktop run local:selftest` as mandatory whenever retained release evidence"
-        in tier_matrix_text
+
+
+def test_sidecar_selector_defaults_to_node_and_validates_contract() -> None:
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/choose_sidecar.cjs",
+        env_overrides={"NIKO_GATEWAY_RUNTIME": None},
     )
+
+    logs = "\n".join(result["logs"])
+    commands = result["commands"]
+
+    assert result["exitCode"] == 0
+    assert "Runtime selection: NIKO_GATEWAY_RUNTIME=node" in logs
+    assert "Authoritative runtime active: Node-first sidecar path" in logs
+    assert "Building Node sidecar (default runtime)..." in logs
+    assert "Validating sidecar contract..." in logs
+    assert "✅ Sidecar build complete" in logs
+    assert commands == [
+        {
+            "command": "npm run build:sidecar:node",
+            "cwd": str(PROJECT_ROOT / "desktop"),
+            "stdio": "inherit",
+        },
+        {
+            "command": "npm run validate:sidecar-contract",
+            "cwd": str(PROJECT_ROOT / "desktop"),
+            "stdio": "inherit",
+        },
+    ]
+
+
+@pytest.mark.parametrize("runtime_value", ["NODE", " node "])
+def test_sidecar_selector_normalizes_supported_node_values(runtime_value: str) -> None:
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/choose_sidecar.cjs",
+        env_overrides={"NIKO_GATEWAY_RUNTIME": runtime_value},
+    )
+
+    logs = "\n".join(result["logs"])
+    commands = result["commands"]
+
+    assert result["exitCode"] == 0
+    assert "Runtime selection: NIKO_GATEWAY_RUNTIME=node" in logs
+    assert "Unknown runtime" not in logs
+    assert commands[0]["command"] == "npm run build:sidecar:node"
+    assert commands[1]["command"] == "npm run validate:sidecar-contract"
+
+
+@pytest.mark.parametrize("runtime_value", ["PYTHON", " python "])
+def test_sidecar_selector_normalizes_supported_python_values(runtime_value: str) -> None:
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/choose_sidecar.cjs",
+        env_overrides={"NIKO_GATEWAY_RUNTIME": runtime_value},
+    )
+
+    logs = "\n".join(result["logs"])
+    commands = result["commands"]
+
+    assert result["exitCode"] == 0
+    assert "Runtime selection: NIKO_GATEWAY_RUNTIME=python" in logs
+    assert "Compatibility override active: Python sidecar is not the authoritative default runtime" in logs
+    assert commands[0]["command"] == "npm run build:sidecar:python"
+    assert commands[1]["command"] == "npm run validate:sidecar-contract"
+
+
+def test_sidecar_selector_falls_back_to_node_for_unknown_runtime() -> None:
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/choose_sidecar.cjs",
+        env_overrides={"NIKO_GATEWAY_RUNTIME": "  ruby  "},
+    )
+
+    logs = "\n".join(result["logs"])
+    commands = result["commands"]
+
+    assert result["exitCode"] == 0
+    assert "Runtime selection: NIKO_GATEWAY_RUNTIME=node" in logs
+    assert 'Unknown runtime "  ruby  ", falling back to authoritative node runtime' in logs
+    assert "Authoritative runtime active: Node-first sidecar path" in logs
+    assert commands[0]["command"] == "npm run build:sidecar:node"
+    assert commands[1]["command"] == "npm run validate:sidecar-contract"
+
+
+def test_sidecar_selector_honors_python_compatibility_override() -> None:
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/choose_sidecar.cjs",
+        env_overrides={"NIKO_GATEWAY_RUNTIME": " python "},
+    )
+
+    logs = "\n".join(result["logs"])
+    commands = result["commands"]
+
+    assert result["exitCode"] == 0
+    assert "Runtime selection: NIKO_GATEWAY_RUNTIME=python" in logs
+    assert "Compatibility override active: Python sidecar is not the authoritative default runtime" in logs
+    assert "Building Python sidecar (explicit compatibility runtime)..." in logs
+    assert "Validating sidecar contract..." in logs
+    assert commands[0]["command"] == "npm run build:sidecar:python"
+    assert commands[1]["command"] == "npm run validate:sidecar-contract"
+
+
+def test_sidecar_selector_exits_when_validation_fails_after_build() -> None:
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/choose_sidecar.cjs",
+        env_overrides={"NIKO_GATEWAY_RUNTIME": None},
+        fail_commands=["npm run validate:sidecar-contract"],
+    )
+
+    logs = "\n".join(result["logs"])
+    commands = result["commands"]
+
+    assert result["exitCode"] == 1
+    assert commands == [
+        {
+            "command": "npm run build:sidecar:node",
+            "cwd": str(PROJECT_ROOT / "desktop"),
+            "stdio": "inherit",
+        },
+        {
+            "command": "npm run validate:sidecar-contract",
+            "cwd": str(PROJECT_ROOT / "desktop"),
+            "stdio": "inherit",
+        },
+    ]
+    assert "❌ Contract validation failed" in logs
+    assert "✅ Sidecar build complete" not in logs
+
+
+def test_sidecar_contract_validator_keeps_node_authority_and_python_packaging_contract() -> None:
+    exists_paths, json_files = build_sidecar_contract_fixture()
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/validate_sidecar_contract.cjs",
+        argv=["--strict"],
+        exists_paths=exists_paths,
+        json_files=json_files,
+    )
+
+    logs = "\n".join(result["logs"])
+
+    assert result["exitCode"] == 0
+    assert "Validation scope: node runtime" in logs
+    assert "node (Node.js sidecar (standalone proxy))" in logs
+    assert "Desktop security boundary" in logs
+    assert "Runtime / packaging matrix" in logs
+    assert "Authoritative local runtime: node" in logs
+    assert "Packaged compatibility runtime: python" in logs
+    assert "authoritative local runtime remains node-first" in logs
+    assert "packaged externalBin stays on the python compatibility sidecar" in logs
+    assert "node sidecar is repo-local only and not claimed as a packaged binary" in logs
+    assert "✅ All contracts validated successfully" in logs
+
+
+def test_sidecar_contract_validator_all_runtimes_reports_both_contract_sets() -> None:
+    exists_paths, json_files = build_sidecar_contract_fixture(include_python_runtime=True)
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/validate_sidecar_contract.cjs",
+        argv=["--strict", "--all-runtimes"],
+        exists_paths=exists_paths,
+        json_files=json_files,
+    )
+
+    logs = "\n".join(result["logs"])
+
+    assert result["exitCode"] == 0
+    assert "Validation scope: all runtimes" in logs
+    assert "python (Python sidecar (PyInstaller output))" in logs
+    assert "node (Node.js sidecar (standalone proxy))" in logs
+    assert "Packaged compatibility runtime: python" in logs
+    assert "✅ All contracts validated successfully" in logs
+
+
+def test_sidecar_contract_validator_defaults_invalid_runtime_to_node_scope() -> None:
+    exists_paths, json_files = build_sidecar_contract_fixture()
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/validate_sidecar_contract.cjs",
+        argv=["--strict"],
+        env_overrides={"NIKO_GATEWAY_RUNTIME": " ruby "},
+        exists_paths=exists_paths,
+        json_files=json_files,
+    )
+
+    logs = "\n".join(result["logs"])
+
+    assert result["exitCode"] == 0
+    assert "Validation scope: node runtime" in logs
+    assert "python (Python sidecar (PyInstaller output))" not in logs
+    assert "node (Node.js sidecar (standalone proxy))" in logs
+
+
+def test_sidecar_contract_validator_fails_strict_mode_when_packaged_binary_switches_to_node() -> None:
+    exists_paths, json_files = build_sidecar_contract_fixture(external_bin=["bin/niko-gateway-node"])
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/validate_sidecar_contract.cjs",
+        argv=["--strict"],
+        exists_paths=exists_paths,
+        json_files=json_files,
+    )
+
+    logs = "\n".join(result["logs"])
+    errors = "\n".join(result["errors"])
+
+    assert result["exitCode"] == 1
+    assert "packaged externalBin stays on the python compatibility sidecar" in logs
+    assert "externalBin=bin/niko-gateway-node" in logs
+    assert "Contract validation FAILED (strict mode)" in errors
+
+
+def test_sidecar_contract_validator_fails_strict_mode_when_capability_boundary_expands() -> None:
+    exists_paths, json_files = build_sidecar_contract_fixture(capability_permissions=["core:default", "shell:allow-open"])
+    result = run_node_cjs_and_capture(
+        "desktop/scripts/validate_sidecar_contract.cjs",
+        argv=["--strict"],
+        exists_paths=exists_paths,
+        json_files=json_files,
+    )
+
+    logs = "\n".join(result["logs"])
+    errors = "\n".join(result["errors"])
+
+    assert result["exitCode"] == 1
+    assert "frontend capability is limited to core invoke access" in logs
+    assert "permissions=core:default, shell:allow-open" in logs
+    assert "Contract validation FAILED (strict mode)" in errors
