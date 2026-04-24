@@ -21,6 +21,7 @@ WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "writing-helper
 GOVERNANCE_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "governance-scripts.junit.xml"
 PRODUCTION_GUARD_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-production-guard.xml"
 E2E_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-e2e.xml"
+ISSUE_HISTORY_PATH = PROJECT_ROOT / ".workflow" / "issues" / "issue-history.jsonl"
 DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND = "npm --prefix desktop run check:local"
 DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS = ["npm.cmd", "--prefix", "desktop", "run", "check:local"]
 DESKTOP_LOCAL_SELFTEST_COMMAND = "npm --prefix desktop run local:selftest"
@@ -32,6 +33,49 @@ LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES = (
     "authority_alignment",
     "writing_helper_acceptance",
     "governance_scripts_regression",
+)
+ROADMAP_ISSUE_TERMINAL_STATUSES = ("completed", "closed", "resolved", "done")
+SCORECARD_DIMENSIONS = (
+    (
+        "functional",
+        "Functional closure",
+        (
+            "delivery_semantic_gate",
+            "runtime_policy_conformance_signal",
+            "external_e2e_smoke",
+            "production_guard",
+            "metrics_guard",
+        ),
+    ),
+    (
+        "testing",
+        "Test gates",
+        (
+            "governance_scripts_regression",
+            "baseline_tests_and_coverage",
+        ),
+    ),
+    (
+        "release",
+        "Release readiness",
+        (
+            "desktop_check",
+            "desktop_sidecar_readiness",
+            "desktop_packaging_dry_run",
+            "writing_helper_acceptance_signal",
+            "local_selftest_enforcement",
+        ),
+    ),
+    (
+        "governance",
+        "Governance closure",
+        (
+            "authority_alignment_signal",
+            "evidence_completeness_blocker_signal",
+            "gate_score_or_critical_blocker_signal",
+            "issue_pending_blocker_signal",
+        ),
+    ),
 )
 
 
@@ -215,6 +259,104 @@ def _format_csv(values: list[str]) -> str:
     return ",".join(values)
 
 
+def _build_scorecard_section(
+    scorecard_dimensions: list[dict[str, object]],
+    delivery_contract: dict[str, object] | None = None,
+) -> str:
+    lines = [
+        "## 100% Scorecard Dimensions",
+        "",
+    ]
+    if delivery_contract:
+        lines.extend(
+            [
+                f"- Contract: {delivery_contract.get('contract_id', 'unknown')} — {delivery_contract.get('label', 'unknown')}",
+                f"- Status: {delivery_contract.get('status', 'unknown')}",
+                (
+                    "- Completion: "
+                    f"{delivery_contract.get('completion_percent', 0.0)}% "
+                    f"({delivery_contract.get('passed_dimensions', 0)}/{delivery_contract.get('required_dimensions', 0)} dimensions passed)"
+                ),
+                f"- Decision rule: {delivery_contract.get('decision_rule', 'unknown')}",
+                f"- Blocking signal: {delivery_contract.get('gate_signal', 'delivery_contract_100_signal')}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "| dimension_id | label | status | blocking_failures | non_pass_checks |",
+            "|---|---|---|---|---|",
+        ]
+    )
+    for dimension in scorecard_dimensions:
+        lines.append(
+            "| {dimension_id} | {label} | {status} | {blocking_failures} | {non_pass_checks} |".format(
+                dimension_id=dimension.get("dimension_id", "unknown"),
+                label=dimension.get("label", "unknown"),
+                status=dimension.get("status", "unknown"),
+                blocking_failures=_format_csv(
+                    [str(item) for item in dimension.get("blocking_failures", [])]
+                ) or "none",
+                non_pass_checks=_format_csv(
+                    [str(item) for item in dimension.get("non_pass_checks", [])]
+                ) or "none",
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "Single scorecard contract: functional + testing + release + governance must all be PASS before the repo can claim 100% completion.",
+            "Verification path: release check + issue pending inspection + targeted governance regression.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _build_delivery_contract(scorecard_dimensions: list[dict[str, object]]) -> dict[str, object]:
+    required_dimensions = len(scorecard_dimensions)
+    passed_dimensions = sum(
+        1
+        for dimension in scorecard_dimensions
+        if str(dimension.get("status") or "") == "PASS"
+    )
+    failed_dimensions = [
+        str(dimension.get("dimension_id") or "unknown")
+        for dimension in scorecard_dimensions
+        if str(dimension.get("status") or "") != "PASS"
+    ]
+    completion_percent = round(
+        (passed_dimensions / required_dimensions) * 100,
+        1,
+    ) if required_dimensions else 0.0
+    status = "PASS" if required_dimensions > 0 and passed_dimensions == required_dimensions else "FAIL"
+    return {
+        "contract_id": "ISS-20260423-001",
+        "label": "100% delivery contract",
+        "gate_signal": "delivery_contract_100_signal",
+        "status": status,
+        "decision_rule": "all scorecard dimensions must PASS",
+        "required_dimensions": required_dimensions,
+        "passed_dimensions": passed_dimensions,
+        "failed_dimensions": failed_dimensions,
+        "completion_percent": completion_percent,
+    }
+
+
+def delivery_contract_100_signal(delivery_contract: dict[str, object]) -> tuple[str, int, str]:
+    status = str(delivery_contract.get("status") or "FAIL")
+    exit_code = 0 if status == "PASS" else 1
+    failed_dimensions = delivery_contract.get("failed_dimensions")
+    return status, exit_code, _format_detail_pairs([
+        ("contract_id", delivery_contract.get("contract_id") or "unknown"),
+        ("label", delivery_contract.get("label") or "unknown"),
+        ("required_dimensions", delivery_contract.get("required_dimensions") or 0),
+        ("passed_dimensions", delivery_contract.get("passed_dimensions") or 0),
+        ("failed_dimensions", _format_csv(failed_dimensions if isinstance(failed_dimensions, list) else []) or "none"),
+        ("completion_percent", delivery_contract.get("completion_percent") or 0.0),
+        ("decision", "go" if status == "PASS" else "no_go"),
+    ])
+
+
 def _build_check_detail_summary_section(checks: list[dict[str, object]]) -> str:
     lines = ["### Check Detail Summary (from machine payload)", ""]
     if checks:
@@ -225,7 +367,6 @@ def _build_check_detail_summary_section(checks: list[dict[str, object]]) -> str:
     else:
         lines.append("- no checks")
     return "\n".join(lines)
-
 
 def _build_release_evidence_summary_section(release_evidence: dict[str, object]) -> str:
     evidence_sources = release_evidence.get("evidence_sources")
@@ -515,6 +656,94 @@ def _build_release_evidence_source(
         "is_current": retained_evidence["is_current"],
         "generated_at_parse_error": retained_evidence["generated_at_parse_error"] or "none",
     }
+
+
+def _read_issue_history_entries(issue_history_path: Path = ISSUE_HISTORY_PATH) -> list[dict[str, object]]:
+    if not issue_history_path.exists():
+        return []
+
+    entries: list[dict[str, object]] = []
+    for raw_line in issue_history_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            entries.append(payload)
+    return entries
+
+
+
+def issue_pending_blocker_signal(
+    issue_history_path: Path = ISSUE_HISTORY_PATH,
+) -> tuple[str, int, str]:
+    entries = _read_issue_history_entries(issue_history_path)
+    roadmap_entries = [
+        entry
+        for entry in entries
+        if isinstance(entry.get("id"), str)
+        and entry["id"].startswith("ISS-20260423-")
+    ]
+    pending_entries = [
+        entry
+        for entry in roadmap_entries
+        if str(entry.get("status") or "").strip().lower() not in ROADMAP_ISSUE_TERMINAL_STATUSES
+    ]
+    pending_ids = [str(entry.get("id") or "unknown") for entry in pending_entries]
+
+    has_blocker = bool(pending_entries)
+    return (
+        "FAIL" if has_blocker else "PASS",
+        1 if has_blocker else 0,
+        _format_detail_pairs([
+            ("issue_history", _trace_path(issue_history_path)),
+            ("roadmap_issues_checked", len(roadmap_entries)),
+            ("pending_issues", len(pending_entries)),
+            ("pending_issue_ids", _format_csv(pending_ids) or "none"),
+            ("terminal_statuses", _format_csv(list(ROADMAP_ISSUE_TERMINAL_STATUSES))),
+            ("decision", "no_go" if has_blocker else "go"),
+        ]),
+    )
+
+
+
+def _build_scorecard_dimensions(
+    checks: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    check_map = {
+        str(item.get("check_id") or ""): item
+        for item in checks
+        if isinstance(item, dict)
+    }
+    dimensions: list[dict[str, object]] = []
+
+    for dimension_id, label, check_ids in SCORECARD_DIMENSIONS:
+        rows = [check_map[check_id] for check_id in check_ids if check_id in check_map]
+        blocking_failures = [
+            str(row.get("check_id") or "unknown")
+            for row in rows
+            if bool(row.get("blocking")) and str(row.get("status") or "") == "FAIL"
+        ]
+        non_pass = [
+            str(row.get("check_id") or "unknown")
+            for row in rows
+            if str(row.get("status") or "") != "PASS"
+        ]
+        dimensions.append(
+            {
+                "dimension_id": dimension_id,
+                "label": label,
+                "status": "PASS" if not blocking_failures and not non_pass else "FAIL",
+                "check_ids": list(check_ids),
+                "blocking_failures": blocking_failures,
+                "non_pass_checks": non_pass,
+            }
+        )
+
+    return dimensions
 
 
 def _run_governance_scripts_regression(junit_output_path: Path) -> tuple[int, str]:
@@ -1992,6 +2221,7 @@ def main() -> int:
         tasks_payload,
         tasks_parse_error,
     )
+    issue_pending_status, issue_pending_exit, issue_pending_detail = issue_pending_blocker_signal()
     current_head_sha = _current_head_sha()
     current_release_version = _current_release_version()
     writing_helper_acceptance_payload, writing_helper_acceptance_parse_error = _read_json_artifact(
@@ -2200,6 +2430,14 @@ def main() -> int:
             authority_alignment_exit,
             authority_alignment_detail,
             status_override=authority_alignment_status,
+        ),
+        build_check_result(
+            "issue_pending_blocker_signal",
+            "P0",
+            True,
+            issue_pending_exit,
+            issue_pending_detail,
+            status_override=issue_pending_status,
         ),
         build_check_result(
             "evidence_coverage_signal",
@@ -2506,6 +2744,21 @@ def main() -> int:
             status_override=local_selftest_status,
         )
     )
+    scorecard_dimensions = _build_scorecard_dimensions(checks)
+    delivery_contract = _build_delivery_contract(scorecard_dimensions)
+    delivery_contract_status, delivery_contract_exit, delivery_contract_detail = delivery_contract_100_signal(
+        delivery_contract
+    )
+    checks.append(
+        build_check_result(
+            "delivery_contract_100_signal",
+            "P0",
+            True,
+            delivery_contract_exit,
+            delivery_contract_detail,
+            status_override=delivery_contract_status,
+        )
+    )
     no_go_reasons = [
         check["check_id"]
         for check in checks
@@ -2519,6 +2772,8 @@ def main() -> int:
         "head_sha": current_head_sha,
         "version": current_release_version,
         "freshness_window_hours": RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS,
+        "delivery_contract": delivery_contract,
+        "scorecard_dimensions": scorecard_dimensions,
         "checks": checks,
         "release_evidence": release_evidence,
     }
@@ -2534,6 +2789,7 @@ def main() -> int:
     table = "\n".join(table_lines)
 
     check_details_block = _build_check_detail_summary_section(checks)
+    scorecard_block = _build_scorecard_section(scorecard_dimensions, delivery_contract)
     release_evidence_block = _build_release_evidence_summary_section(release_evidence)
 
     report = f"""# Release Check Summary
@@ -2551,6 +2807,8 @@ def main() -> int:
 ```json
 {json.dumps(machine_payload, ensure_ascii=False, indent=2)}
 ```
+
+{scorecard_block}
 
 {release_evidence_block}
 

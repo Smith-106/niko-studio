@@ -256,6 +256,65 @@ describe('MemoryForm', () => {
     expect(await screen.findByText('记忆添加成功。')).toBeInTheDocument()
   })
 
+  it('uses the focused entity automatically when no explicit entity is provided', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      currentWorkspace: {
+        ...state.currentWorkspace,
+        knowledge: {
+          ...state.currentWorkspace.knowledge,
+          focusEntityId: 'entity-42',
+        },
+      },
+    }))
+
+    const user = userEvent.setup()
+    render(<MemoryFormHarness />)
+
+    await user.type(screen.getByLabelText('记忆内容'), 'Remember the captain')
+    await user.click(screen.getByRole('button', { name: '添加记忆' }))
+
+    await waitFor(() => {
+      expect(mockAddMemory).toHaveBeenCalledWith(
+        'Remember the captain',
+        expect.objectContaining({
+          entity_id: undefined,
+          use_focus_entity: true,
+        }),
+      )
+    })
+  })
+
+  it('prefers the explicit entity over the focused entity when both exist', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      currentWorkspace: {
+        ...state.currentWorkspace,
+        knowledge: {
+          ...state.currentWorkspace.knowledge,
+          focusEntityId: 'entity-42',
+        },
+      },
+    }))
+
+    const user = userEvent.setup()
+    render(<MemoryFormHarness />)
+
+    await user.type(screen.getByLabelText('记忆内容'), 'Remember the harbor')
+    await user.type(screen.getByLabelText('实体ID（可选）'), 'harbor-7')
+    await user.click(screen.getByRole('button', { name: '添加记忆' }))
+
+    await waitFor(() => {
+      expect(mockAddMemory).toHaveBeenCalledWith(
+        'Remember the harbor',
+        expect.objectContaining({
+          entity_id: 'harbor-7',
+          use_focus_entity: false,
+        }),
+      )
+    })
+  })
+
   it('shows error when memory content is empty', async () => {
     const user = userEvent.setup()
     render(<MemoryFormHarness />)

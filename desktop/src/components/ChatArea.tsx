@@ -146,6 +146,8 @@ export function ChatArea({
   const writerWorkspaceSummary = useWriterWorkspaceSummary()
   const writerContextTitle = translate('writerContextTitle')
   const writerContextHint = translate('writerContextHint')
+  const voiceInputStatusLabel = translate('voiceInputStatusLabel')
+  const quickRollbackSummary = translate('quickRollbackSummary')
   const currentWritingTarget = writerWorkspaceSummary.chapterLabel
     ?? writerWorkspaceSummary.projectLabel
     ?? translate('currentDocumentFallback')
@@ -1086,6 +1088,9 @@ export function ChatArea({
           <span>{t.quickRollbackAdvancedToggle}</span>
           {showQuickRollbackAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
+        <p className="mt-1 text-[11px] leading-relaxed text-gray-400 dark:text-dark-text-muted">
+          {quickRollbackSummary}
+        </p>
 
         {showQuickRollbackAdvanced && (
           <div className="animate-fade-in mt-3 mb-2">
@@ -1214,6 +1219,7 @@ export function ChatArea({
           inputPlaceholder={t.inputPlaceholder}
           uploadLabel={t.composerUpload}
           voiceInputLabel={t.composerVoiceInput}
+          voiceInputStatusLabel={voiceInputStatusLabel}
           sendLabel={t.composerSend}
           cancelLabel={t.cancel}
           sendShortcutLabel={t.sendShortcutLabel}

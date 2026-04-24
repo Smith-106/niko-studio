@@ -8,6 +8,7 @@ This document is the repeatable local and CI sign-off path for the shipped Niko 
 - `Packaged compatibility runtime`: bundled Python sidecar
 - `Primary release gate`: `.github/workflows/external-release-gate.yml`
 - `Windows acceptance gate`: `.github/workflows/writing-helper-acceptance.yml`
+- `100% completion contract`: single scorecard（functional / testing / release / governance）plus issue-pending inspection must all stay green before claiming `Decision: GO`
 
 ## Prerequisites
 
@@ -33,6 +34,15 @@ python scripts/delivery_gate.py
 python scripts/check_authority_alignment.py
 python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q
 ```
+
+The release summary is the authoritative single scorecard for 100% completion. It must keep all four dimensions green:
+
+- `functional`: delivery semantics, runtime policy, external E2E smoke, runtime/metrics guards
+- `testing`: governance regression + baseline tests/coverage
+- `release`: desktop authoritative gate, sidecar readiness, packaging dry-run, writing-helper acceptance, local:selftest enforcement
+- `governance`: authority alignment, evidence completeness, blocker semantics, and `issue_pending_blocker_signal`
+
+`issue_pending_blocker_signal` is blocking. If the roadmap issue set required for the 100% contract has any non-terminal status in `.workflow/issues/issue-history.jsonl`, release sign-off must stop with `Decision: NO_GO`.
 
 ### 2. Authoritative local quality gates
 

@@ -18,6 +18,7 @@ vi.mock('../api/client', () => ({
   createCheckpoint: vi.fn(),
   restoreCheckpoint: vi.fn(),
   uploadMemoryFile: vi.fn(),
+  quickRollbackWorkflow: vi.fn(),
 }))
 
 import {
@@ -30,6 +31,7 @@ import {
   uploadMemoryFile,
   agentGetContext,
   promoteProjectWikiCanonApi,
+  quickRollbackWorkflow,
 } from '../api/client'
 
 const mockedChat = vi.mocked(chat)
@@ -41,6 +43,7 @@ const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
 const mockedUploadMemoryFile = vi.mocked(uploadMemoryFile)
 const mockedAgentGetContext = vi.mocked(agentGetContext)
 const mockedPromoteProjectWikiCanonApi = vi.mocked(promoteProjectWikiCanonApi)
+const mockedQuickRollbackWorkflow = vi.mocked(quickRollbackWorkflow)
 const zh = translations.zh
 
 function resetStores(): void {
@@ -157,6 +160,7 @@ describe('ChatArea P0 flows', () => {
       },
     })
     mockedAgentGetContext.mockResolvedValue({ success: true, data: { context: 'ok' } as Record<string, unknown> })
+    mockedQuickRollbackWorkflow.mockResolvedValue({ success: true, data: { status: 'ok' } as Record<string, unknown> })
   })
 
   it('reports dynamic context usage from the active model window', async () => {
@@ -214,6 +218,28 @@ describe('ChatArea P0 flows', () => {
     expect(input).toHaveFocus()
     expect(input.value).toMatch(/^请基于.+继续写作/)
     expect(input.value).toContain('保持当前语气、节奏和情节推进')
+  })
+
+  it('shows voice input as coming soon status text instead of a disabled button', () => {
+    render(<ChatArea />)
+
+    expect(screen.getByRole('status', { name: `${zh.composerVoiceInput}: ${zh.voiceInputStatusLabel}` })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: zh.composerVoiceInput })).not.toBeInTheDocument()
+  })
+
+  it('keeps quick rollback behind an advanced summary and validates required ids only after opening it', async () => {
+    const user = userEvent.setup()
+
+    render(<ChatArea />)
+
+    expect(screen.getByText(zh.quickRollbackSummary)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: zh.quickRollbackAction })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: zh.quickRollbackAdvancedToggle }))
+    await user.click(screen.getByRole('button', { name: zh.quickRollbackAction }))
+
+    expect(screen.getByText(zh.quickRollbackMissingRequired)).toBeInTheDocument()
+    expect(mockedQuickRollbackWorkflow).not.toHaveBeenCalled()
   })
 
   it('streams content and commits on done without fallback chat', async () => {
@@ -836,7 +862,6 @@ describe('ChatArea P0 flows', () => {
 
     await waitFor(() => {
       expect(mockedUploadMemoryFile).toHaveBeenCalledTimes(1)
-      // Upload status is now shown in banner, not as assistant message
       expect(screen.getByText(zh.uploadInjectedChunks.replace('{fileName}', 'context.txt').replace('{chunks}', '2'))).toBeInTheDocument()
     })
   })

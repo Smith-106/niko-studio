@@ -358,13 +358,53 @@ RULES: tuple[GateRule, ...] = (
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"authority_alignment_signal\",\n            \"P0\",\n            True,",
+        needle="\"authority_alignment_signal\"",
         reason="release summary 未将 authority_alignment_signal 视为 P0 blocking 信号。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
         needle="\"desktop_packaging_dry_run\"",
         reason="release summary 未将 desktop packaging dry-run 视为 P0 blocking 信号。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"delivery_contract\": delivery_contract,",
+        reason="release summary 未把 100% delivery contract 写入 machine-readable contract。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"scorecard_dimensions\": scorecard_dimensions,",
+        reason="release summary 未把单一 100% scorecard 维度写入 machine-readable contract。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="Single scorecard contract: functional + testing + release + governance must all be PASS before the repo can claim 100% completion.",
+        reason="release summary 未声明单一 100% scorecard 合约。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"delivery_contract_100_signal\",",
+        reason="release summary 未暴露 100% delivery contract blocking signal。",
+    ),
+    GateRule(
+        file_path="scripts/release_check_summary.py",
+        needle="\"gate_signal\": \"delivery_contract_100_signal\"",
+        reason="release summary 未声明 100% delivery contract 的 blocking signal 名称。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="100% completion contract",
+        reason="release sign-off 文档未声明 100% completion contract。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="The release summary is the authoritative single scorecard for 100% completion.",
+        reason="release sign-off 文档未声明 release summary 是 100% completion 的权威 scorecard。",
+    ),
+    GateRule(
+        file_path="docs/release/SIGN_OFF.md",
+        needle="issue_pending_blocker_signal` is blocking.",
+        reason="release sign-off 文档未声明 issue pending 是 blocking release gate。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",

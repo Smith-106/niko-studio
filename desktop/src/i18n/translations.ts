@@ -115,6 +115,7 @@ export interface Translations {
   quickRollbackSuccess: string
   quickRollbackFailed: string
   quickRollbackMissingRequired: string
+  quickRollbackSummary: string
 
   // Knowledge Modal
   knowledgeTitle: string
@@ -297,6 +298,7 @@ export interface Translations {
   chatAgentActionContext: string
   composerUpload: string
   composerVoiceInput: string
+  voiceInputStatusLabel: string
   composerSend: string
 
   // Sidebar
@@ -967,6 +969,7 @@ export const translations: Record<Language, Translations> = {
     quickRollbackSuccess: '快速回滚执行成功。',
     quickRollbackFailed: '快速回滚执行失败。',
     quickRollbackMissingRequired: '请填写计划 ID 与检查点 ID。',
+    quickRollbackSummary: '默认写作流程通常不需要这里；只有需要按计划或检查点回退时再展开高级区。',
 
     // Knowledge Modal
     knowledgeTitle: '故事设定',
@@ -1149,6 +1152,7 @@ export const translations: Record<Language, Translations> = {
     chatAgentActionContext: '取上下文',
     composerUpload: '上传文件',
     composerVoiceInput: '语音输入',
+    voiceInputStatusLabel: '暂未开放',
     composerSend: '发送',
 
     // Sidebar
@@ -1814,6 +1818,7 @@ export const translations: Record<Language, Translations> = {
     quickRollbackSuccess: 'Quick rollback completed successfully.',
     quickRollbackFailed: 'Quick rollback failed.',
     quickRollbackMissingRequired: 'Please provide plan_id and checkpoint_id.',
+    quickRollbackSummary: 'Most writing sessions never need this area. Open the advanced section only when you need to roll back by plan or checkpoint.',
 
     // Knowledge Modal
     knowledgeTitle: 'Story Notes',
@@ -1996,6 +2001,7 @@ export const translations: Record<Language, Translations> = {
     chatAgentActionContext: 'Get Context',
     composerUpload: 'Upload file',
     composerVoiceInput: 'Voice input',
+    voiceInputStatusLabel: 'Coming soon',
     composerSend: 'Send',
 
     // Sidebar

@@ -67,7 +67,26 @@ describe('writing endpoints local fallback parity', () => {
     expect(String(body['processed_text']).length).toBeGreaterThan(0);
   });
 
-  it('returns a clear error for generate mode when no LLM provider is configured', async () => {
+  it('keeps process endpoint on deterministic local-helper behavior even when env LLM config exists', async () => {
+    process.env.OPENAI_API_KEY = 'sk-env-test';
+    process.env.OPENAI_BASE_URL = 'https://example.invalid/v1';
+    process.env.OPENAI_MODEL = 'env-model';
+
+    const response = await writingHelperProcessEndpoint(makeRequest({
+      content: '第一句。 第一句。',
+      mode: 'rewrite',
+    }));
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      mode: 'rewrite',
+      status: 'ok',
+      provider: 'local',
+      processed_text: '第一句。',
+    });
+  });
+
+  it('requires explicit LLM config for generate mode on the process endpoint', async () => {
     const response = await writingHelperProcessEndpoint(makeRequest({
       content: '请续写这一段。',
       mode: 'generate',

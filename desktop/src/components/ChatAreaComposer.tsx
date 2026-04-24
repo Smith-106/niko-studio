@@ -8,6 +8,7 @@ interface ChatAreaComposerProps {
   inputPlaceholder: string
   uploadLabel: string
   voiceInputLabel: string
+  voiceInputStatusLabel: string
   sendLabel: string
   cancelLabel: string
   sendShortcutLabel: string
@@ -29,6 +30,7 @@ export function ChatAreaComposer({
   inputPlaceholder,
   uploadLabel,
   voiceInputLabel,
+  voiceInputStatusLabel,
   sendLabel,
   cancelLabel,
   sendShortcutLabel,
@@ -55,7 +57,7 @@ export function ChatAreaComposer({
             onKeyDown={onKeyDown}
             aria-label={inputPlaceholder}
             placeholder={inputPlaceholder}
-            className="w-full resize-none border-0 bg-transparent py-1 pr-24 text-[15px] leading-relaxed text-gray-900 focus:outline-none focus:ring-0 dark:text-dark-text custom-scrollbar"
+            className="w-full resize-none border-0 bg-transparent py-1 pr-40 text-[15px] leading-relaxed text-gray-900 focus:outline-none focus:ring-0 dark:text-dark-text custom-scrollbar"
             rows={Math.min(8, Math.max(1, input.split('\n').length))}
             style={{ minHeight: '28px', maxHeight: '200px' }}
           />
@@ -80,15 +82,15 @@ export function ChatAreaComposer({
             >
               <Paperclip size={18} />
             </button>
-            <button
-              aria-label={voiceInputLabel}
-              title={voiceInputLabel}
-              className="cursor-not-allowed rounded-lg p-2 text-gray-300 dark:text-gray-600"
-              type="button"
-              disabled
+            <div
+              role="status"
+              aria-label={`${voiceInputLabel}: ${voiceInputStatusLabel}`}
+              title={`${voiceInputLabel}: ${voiceInputStatusLabel}`}
+              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] font-medium text-gray-500 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-secondary"
             >
-              <MicOff size={18} />
-            </button>
+              <MicOff size={14} />
+              <span>{voiceInputStatusLabel}</span>
+            </div>
           </div>
         </div>
         <div className="mt-2 flex items-center justify-between gap-3 px-1 border-t border-gray-100 dark:border-dark-border/50 pt-2">

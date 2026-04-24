@@ -145,13 +145,47 @@ def test_delivery_gate_rules_cover_authority_alignment_contract() -> None:
     )
     assert any(
         file_path == "scripts/release_check_summary.py"
-        and '("supersession_status", retained_evidence["supersession_status"])' in needle
+        and '"delivery_contract": delivery_contract,' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '"scorecard_dimensions": scorecard_dimensions,' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and 'Single scorecard contract: functional + testing + release + governance must all be PASS before the repo can claim 100% completion.' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '"delivery_contract_100_signal",' in needle
+        and must_exist
+        for file_path, needle, must_exist in rule_map
+    )
+    assert any(
+        file_path == "scripts/release_check_summary.py"
+        and '"gate_signal": "delivery_contract_100_signal"' in needle
         and must_exist
         for file_path, needle, must_exist in rule_map
     )
     assert (
         "docs/release/SIGN_OFF.md",
-        ".workflow/evidence/release/writing-helper-acceptance.json",
+        "100% completion contract",
+        True,
+    ) in rule_map
+    assert (
+        "docs/release/SIGN_OFF.md",
+        "The release summary is the authoritative single scorecard for 100% completion.",
+        True,
+    ) in rule_map
+    assert (
+        "docs/release/SIGN_OFF.md",
+        "issue_pending_blocker_signal` is blocking.",
         True,
     ) in rule_map
     assert (
@@ -1051,6 +1085,42 @@ def test_release_check_summary_main_binds_desktop_check_to_authoritative_gate_on
     assert desktop_check["exit_code"] == 0
 
 
+
+
+def test_delivery_contract_100_signal_tracks_scorecard_completion() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_delivery_contract_signal",
+    )
+
+    contract = module._build_delivery_contract(
+        [
+            {"dimension_id": "functional", "status": "PASS"},
+            {"dimension_id": "testing", "status": "PASS"},
+            {"dimension_id": "release", "status": "FAIL"},
+            {"dimension_id": "governance", "status": "PASS"},
+        ]
+    )
+
+    status, exit_code, detail = module.delivery_contract_100_signal(contract)
+
+    assert contract["contract_id"] == "ISS-20260423-001"
+    assert contract["label"] == "100% delivery contract"
+    assert contract["gate_signal"] == "delivery_contract_100_signal"
+    assert contract["required_dimensions"] == 4
+    assert contract["passed_dimensions"] == 3
+    assert contract["failed_dimensions"] == ["release"]
+    assert contract["completion_percent"] == 75.0
+    assert status == "FAIL"
+    assert exit_code == 1
+    assert "contract_id=ISS-20260423-001" in detail
+    assert "passed_dimensions=3" in detail
+    assert "failed_dimensions=release" in detail
+    assert "completion_percent=75.0" in detail
+    assert "decision=no_go" in detail
+
+
+
 def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None:
     module = load_script_module(
         "scripts/release_check_summary.py",
@@ -1083,9 +1153,15 @@ def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None
     assert "writing_helper_acceptance_signal" in summary_source
     assert "WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH" in summary_source
     assert '"release_evidence": release_evidence,' in summary_source
+    assert '"scorecard_dimensions": scorecard_dimensions,' in summary_source
+    assert "Single scorecard contract: functional + testing + release + governance must all be PASS before the repo can claim 100% completion." in summary_source
+    assert '"gate_signal": "delivery_contract_100_signal"' in summary_source
     assert "freshness_window_hours" in summary_source
     assert "supersession_status" in summary_source
     assert "## Retained Release Evidence" in summary_source
+    assert "100% completion contract" in sign_off_text
+    assert "The release summary is the authoritative single scorecard for 100% completion." in sign_off_text
+    assert "issue_pending_blocker_signal` is blocking." in sign_off_text
     assert ".workflow/evidence/release/writing-helper-acceptance.json" in sign_off_text
     assert ".workflow/evidence/release/release-readiness-artifact.json" in sign_off_text
     assert "freshness_status: fresh" in sign_off_text

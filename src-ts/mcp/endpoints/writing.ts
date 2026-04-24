@@ -47,36 +47,24 @@ interface ProviderConfig {
 }
 
 function resolveProviderConfig(body: Record<string, unknown>): ProviderConfig | null {
-  // Check if provider config is passed in the request
+  // Only honor provider config explicitly passed in the request.
+  // `/writing-helper/process` keeps deterministic local-helper semantics by default,
+  // while callers that want remote LLM behavior must opt in per request.
   const apiKey = body.api_key as string | undefined
   const baseUrl = body.base_url as string | undefined
   const model = body.model as string | undefined
   const provider = body.provider as string | undefined
 
-  if (apiKey) {
-    return {
-      apiKey,
-      baseUrl: baseUrl ?? 'https://api.openai.com/v1',
-      model: model ?? 'gpt-4o',
-      provider: provider ?? 'openai',
-    }
+  if (!apiKey) {
+    return null
   }
 
-  // Try environment variables
-  const envApiKey = process.env.NIKO_LLM_API_KEY ?? process.env.OPENAI_API_KEY
-  const envBaseUrl = process.env.NIKO_LLM_BASE_URL ?? process.env.OPENAI_BASE_URL
-  const envModel = process.env.NIKO_LLM_MODEL ?? process.env.OPENAI_MODEL
-
-  if (envApiKey) {
-    return {
-      apiKey: envApiKey,
-      baseUrl: envBaseUrl ?? 'https://api.openai.com/v1',
-      model: envModel ?? 'gpt-4o',
-      provider: provider ?? 'openai',
-    }
+  return {
+    apiKey,
+    baseUrl: baseUrl ?? 'https://api.openai.com/v1',
+    model: model ?? 'gpt-4o',
+    provider: provider ?? 'openai',
   }
-
-  return null
 }
 
 function buildOpenAIMessages(prompt: string, systemPrompt?: string): Array<{ role: string; content: string }> {

@@ -99,6 +99,14 @@ describe('useAppShellViewModel', () => {
     expect(result.current.appRightPanelsProps.evaluationSources).toEqual(options.evaluationSources)
   })
 
+  it('surfaces the header context meter inside the main content footer text', () => {
+    const options = createOptions()
+
+    const { result } = renderHook(() => useAppShellViewModel(options))
+
+    expect(result.current.appMainContentProps.contextEstimatedText).toBe('Estimated · 0.0k/128k')
+  })
+
   it('keeps continue-writing and chat-toggle shell actions routed through the expected coordinators', () => {
     const options = createOptions()
 
@@ -182,7 +190,6 @@ describe('useAppShellViewModel', () => {
       options.panelOrchestration.openAutomationPanel,
     )
   })
-
 
   it('treats header writing-helper launches as fresh starts instead of stale draft resumes', () => {
     const options = createOptions()

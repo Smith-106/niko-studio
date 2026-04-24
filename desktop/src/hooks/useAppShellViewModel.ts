@@ -156,7 +156,9 @@ export function useAppShellViewModel({
       onOpenTextOptimizer: () => panelOrchestration.toggleRightPanel('textOptimizer'),
     },
     restoreStatus: checkpointMenu.restoreStatus,
-    contextEstimatedText: '',
+    contextEstimatedText: headerViewModel.contextUsageText
+      ? `${t.contextEstimated} · ${headerViewModel.contextUsageText}`
+      : '',
     onOpenWritingHelper: () => openWritingHelperFreshStart('polish'),
   }
 

@@ -33,6 +33,8 @@ describe('chat endpoints', () => {
     } else {
       process.env['NIKO_WORKFLOW_WORKSPACE'] = originalWorkspace;
     }
+    const { resetWorkflowEngineRuntimeProvider } = await import('../../container/workflow-runtime-provider.js');
+    resetWorkflowEngineRuntimeProvider();
     vi.resetModules();
     if (workspace) {
       await rm(workspace, { recursive: true, force: true });
@@ -73,6 +75,63 @@ describe('chat endpoints', () => {
     expect(typeof body['content']).toBe('string');
     expect(String(body['content']).length).toBeGreaterThan(0);
     expect(body['workflow_level']).toBe('L2');
+  });
+
+  it('resolves chat runtimes from the shared workflow runtime provider', async () => {
+    const {
+      setWorkflowEngineRuntimeProvider,
+    } = await import('../../container/workflow-runtime-provider.js');
+    const { chatEndpoint, chatStreamEndpoint } = await import('../../mcp/endpoints/chat.js');
+
+    const runWithExecutionContext = vi.fn().mockResolvedValue({
+      final_output: 'provider-backed chat response',
+      evaluation: { score: 9, feedback: 'solid' },
+      plan: { total_steps: 1 },
+    });
+    const runStreamWithExecutionContext = vi.fn(async function* () {
+      yield { type: 'plan_created', plan: { total_steps: 1 } };
+      yield { type: 'step_complete', final_output: 'provider-backed stream response' };
+      yield { type: 'plan_complete', final_output: 'provider-backed stream response' };
+    });
+    const providerRouteMock = vi.fn().mockResolvedValue({ level: 'L2-provider' });
+    const provider = vi.fn().mockReturnValue({
+      route: providerRouteMock,
+      runWithExecutionContext,
+      runStreamWithExecutionContext,
+    });
+
+    setWorkflowEngineRuntimeProvider(provider);
+
+    const response = await chatEndpoint(makeRequest({
+      messages: [{ role: 'user', content: '通过 provider 返回聊天内容' }],
+      workflowLevel: 'L2',
+      skills: [],
+      allowLlmFallback: true,
+    }));
+
+    expect(response.statusCode).toBe(200);
+    expect(provider).toHaveBeenCalledWith({
+      workspace: workspace,
+      sessionNamespace: 'mcp-chat',
+    });
+    expect(providerRouteMock).toHaveBeenCalledWith('通过 provider 返回聊天内容');
+    expect(runWithExecutionContext).toHaveBeenCalledWith('通过 provider 返回聊天内容', undefined, 'L2', undefined);
+    expect((response.body as Record<string, unknown>)['content']).toBe('provider-backed chat response');
+
+    const streamResponse = await chatStreamEndpoint(makeRequest({
+      messages: [{ role: 'user', content: '通过 provider 返回流式聊天内容' }],
+      workflowLevel: 'L2',
+      skills: [],
+      allowLlmFallback: true,
+    }));
+
+    expect(streamResponse.statusCode).toBe(200);
+    expect(provider).toHaveBeenCalledWith({
+      workspace: workspace,
+      sessionNamespace: 'mcp-chat-stream',
+    });
+    expect(runStreamWithExecutionContext).toHaveBeenCalledWith('通过 provider 返回流式聊天内容', undefined, 'L2', undefined);
+    expect(String(streamResponse.body)).toContain('provider-backed stream response');
   });
 
   it('includes canon context metadata when workspace canon matches the user message', async () => {

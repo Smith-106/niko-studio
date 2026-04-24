@@ -461,6 +461,11 @@ export function AutomationPanel({ onClose, onOpenSettings }: AutomationPanelProp
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-muted">
                 {isZh ? '人工干预' : 'Manual intervention'}
               </div>
+              <p className="text-[11px] leading-relaxed text-gray-500 dark:text-dark-text-secondary">
+                {isZh
+                  ? '常规写作无需处理这里；只有任务等待确认、阻塞或需要手动重试时才展开。'
+                  : 'Most writing sessions never need this area. Open it only when a task is waiting for confirmation, blocked, or needs a manual retry.'}
+              </p>
 
               <div className="grid grid-cols-2 gap-2">
                 <button

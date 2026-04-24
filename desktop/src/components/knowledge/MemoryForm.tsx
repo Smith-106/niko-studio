@@ -96,6 +96,7 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
   const handleAddMemory = async () => {
     const content = memoryContent.trim()
     const explicitEntityId = memoryEntityId.trim()
+    const shouldUseFocusEntity = !explicitEntityId && Boolean(currentFocusEntityId)
     if (!content) {
       onStatusChange({ type: 'error', message: t.knowledgeMemoryContentRequired })
       return
@@ -110,7 +111,7 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
       layer: memoryLayer,
       dimension: memoryDimension,
       entity_id: explicitEntityId || undefined,
-      use_focus_entity: false,
+      use_focus_entity: shouldUseFocusEntity,
       tags,
       workspace: currentWorkspace,
     })

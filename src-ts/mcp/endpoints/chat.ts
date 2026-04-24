@@ -7,7 +7,7 @@
 
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
-import { WorkflowEngine as WorkflowEngineRuntime } from '../../workflow/workflow-engine.js';
+import { getWorkflowEngineRuntimeProvider } from '../../container/workflow-runtime-provider.js';
 import { toWorkflowLabel, toWorkflowSlug } from '../../workflow/types.js';
 import {
   normalizeProjectWorkspaceContext,
@@ -211,8 +211,27 @@ function resolveWorkflowWorkspace(): string {
   return override || process.cwd();
 }
 
-function createWorkflowEngine(sessionNamespace: string): WorkflowEngineRuntime {
-  return new WorkflowEngineRuntime(resolveWorkflowWorkspace(), sessionNamespace);
+interface ChatWorkflowEngine {
+  route(task: string): Promise<Record<string, unknown>>;
+  runWithExecutionContext(
+    task: string,
+    executionContext?: Record<string, unknown>,
+    level?: string,
+    recommendations?: unknown[],
+  ): Promise<Record<string, unknown>>;
+  runStreamWithExecutionContext(
+    task: string,
+    executionContext?: Record<string, unknown>,
+    level?: string,
+    recommendations?: unknown[],
+  ): AsyncGenerator<Record<string, unknown>>;
+}
+
+function createWorkflowEngine(sessionNamespace: string): ChatWorkflowEngine {
+  return getWorkflowEngineRuntimeProvider()({
+    workspace: resolveWorkflowWorkspace(),
+    sessionNamespace,
+  }) as ChatWorkflowEngine;
 }
 
 function resolveWorkspaceContext(body: ChatBody) {
