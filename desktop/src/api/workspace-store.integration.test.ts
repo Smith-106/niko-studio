@@ -73,6 +73,74 @@ describe('workspace store integration', () => {
     })
   })
 
+  it('updates both conversation workspace and current workspace when syncing the active conversation', () => {
+    useAppStore.getState().createConversation()
+    const conversationId = useAppStore.getState().currentConversationId!
+
+    useAppStore.getState().syncConversationWorkspace(conversationId, {
+      identity: {
+        projectId: 'atlas-project',
+      },
+      workflow: {
+        sessionId: 'workflow-session-sync',
+      },
+    })
+
+    const state = useAppStore.getState()
+    expect(state.currentWorkspace).toMatchObject({
+      identity: {
+        projectId: 'atlas-project',
+      },
+      workflow: {
+        sessionId: 'workflow-session-sync',
+      },
+    })
+    expect(state.conversationsById[conversationId]?.workspace).toMatchObject({
+      identity: {
+        projectId: 'atlas-project',
+      },
+      workflow: {
+        sessionId: 'workflow-session-sync',
+      },
+    })
+  })
+
+  it('keeps current workspace stable when syncing an inactive conversation', async () => {
+    useAppStore.getState().createConversation()
+    const firstId = useAppStore.getState().currentConversationId!
+    useAppStore.getState().syncConversationWorkspace(firstId, {
+      identity: {
+        projectId: 'first-project',
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 2))
+
+    useAppStore.getState().createConversation()
+    const secondId = useAppStore.getState().currentConversationId!
+
+    useAppStore.getState().syncConversationWorkspace(firstId, {
+      identity: {
+        projectId: 'synced-inactive-project',
+      },
+    })
+
+    const state = useAppStore.getState()
+    expect(state.currentConversationId).toBe(secondId)
+    expect(state.currentWorkspace).toMatchObject({
+      chat: {
+        conversationId: null,
+      },
+    })
+    expect(state.currentWorkspace.identity.projectId).not.toBe('synced-inactive-project')
+    expect(state.conversationsById[firstId]?.workspace).toMatchObject({
+      identity: {
+        projectId: 'synced-inactive-project',
+      },
+    })
+  })
+
+
   it('resets legacy conversations without stored workspace to a safe default', () => {
     useAppStore.getState().setCurrentWorkspace({
       ...buildMeaningfulWorkspace(),

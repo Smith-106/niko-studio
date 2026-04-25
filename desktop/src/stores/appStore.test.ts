@@ -9,6 +9,7 @@ vi.mock('@/api/client', () => ({
 }))
 
 import { useAppStore } from './appStore'
+import { DEFAULT_AVAILABLE_SKILLS } from './app/skillsSlice'
 
 describe('appStore', () => {
   beforeEach(() => {
@@ -18,12 +19,7 @@ describe('appStore', () => {
       conversationsById: {},
       allConversationIds: [],
       currentConversationId: null,
-      availableSkills: [
-        'character-forge',
-        'suspense-craft',
-        'dialogue-system',
-        'tension-arc',
-      ],
+      availableSkills: DEFAULT_AVAILABLE_SKILLS.slice(0, 4),
       selectedSkills: [],
       loadingMap: {},
     })
@@ -66,7 +62,7 @@ describe('appStore', () => {
       const convId = state.currentConversationId!
       expect(state.conversationsById[convId]).toBeDefined()
       expect(state.conversationsById[convId].messages).toHaveLength(0)
-      expect(state.conversationsById[convId].title).toBe('\u65b0\u5bf9\u8bdd')
+      expect(state.conversationsById[convId].title).toBe('新对话')
     })
 
     it('adds a user message to the current conversation', () => {
@@ -104,7 +100,6 @@ describe('appStore', () => {
       useAppStore.getState().createConversation()
       useAppStore.getState().addMessage('user', 'Keep')
 
-      // Ensure different timestamp for message id (Date.now()-based)
       await new Promise((r) => setTimeout(r, 2))
 
       useAppStore.getState().addMessage('user', 'Delete')
@@ -168,7 +163,6 @@ describe('appStore', () => {
       const conv = useAppStore.getState().conversationsById[convId]
 
       useAppStore.getState().updateConversationTitle(convId, conv.title)
-      // Should be the same reference since no state change occurred
       expect(useAppStore.getState().conversationsById[convId].title).toBe(conv.title)
     })
 
@@ -236,6 +230,22 @@ describe('appStore', () => {
       await useAppStore.getState().refreshAvailableSkills()
 
       expect(useAppStore.getState().selectedSkills).not.toContain('character-forge')
+    })
+
+    it('keeps selected skills that remain available after refresh', async () => {
+      useAppStore.setState({
+        availableSkills: ['skill-a', 'skill-b'],
+        selectedSkills: ['skill-a'],
+      })
+      listSkillsMock.mockResolvedValue({
+        success: true,
+        data: [{ id: 'skill-a' }, { id: 'skill-c' }],
+      })
+
+      await useAppStore.getState().refreshAvailableSkills()
+
+      expect(useAppStore.getState().selectedSkills).toEqual(['skill-a'])
+      expect(useAppStore.getState().availableSkills).toEqual(['skill-a', 'skill-c'])
     })
 
     it('keeps static fallback skills when API returns empty', async () => {

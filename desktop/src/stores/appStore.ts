@@ -1,21 +1,16 @@
-import { create } from 'zustand'
-import { checkBackendHealth, listSkills, type WriterMetadata } from '@/api/client'
-import {
-  createDefaultProjectWorkspaceContext,
-  mergeProjectWorkspaceContext,
-  type ProjectWorkspaceContext,
-} from '@/types/workspace'
+import { create, type StateCreator } from 'zustand'
+import type { ProjectWorkspaceContext } from '@/types/workspace'
 
+import { createBackendSlice, type BackendSlice } from './app/backendSlice'
+import { createConversationSlice, type ConversationSlice } from './app/conversationSlice'
+import { createLoadingSlice, type LoadingSlice } from './app/loadingSlice'
+import { createSkillsSlice, type SkillsSlice } from './app/skillsSlice'
 import {
-  createConversationRecord,
-  createConversationWorkspaceSeed,
-  resolveConversationStateForMessage,
-  resolveConversationWorkspaceForSync,
-  resolveSelectedConversationWorkspace,
-  updateConversationMessages,
   type Conversation,
   type MessageComparison,
+  type MessageComparisonItem,
 } from './app/shared'
+import { createWorkspaceSlice, type WorkspaceSlice } from './app/workspaceSlice'
 
 export type {
   Conversation,
@@ -24,240 +19,24 @@ export type {
   MessageComparisonItem,
 } from './app/shared'
 
-interface AppState {
-  backendStatus: boolean
-  checkBackend: () => Promise<void>
-  currentWorkspace: ProjectWorkspaceContext
-  setCurrentWorkspace: (workspace: ProjectWorkspaceContext | Record<string, unknown>) => void
-  syncConversationWorkspace: (conversationId: string, workspace: ProjectWorkspaceContext | Record<string, unknown>) => void
-  conversationsById: Record<string, Conversation>
-  allConversationIds: string[]
-  currentConversationId: string | null
-  createConversation: () => void
-  selectConversation: (id: string) => void
-  updateConversationTitle: (conversationId: string, title: string) => void
-  addMessage: (
-    role: 'user' | 'assistant',
-    content: string,
-    skills?: string[],
-    comparison?: MessageComparison,
-    writerMetadata?: WriterMetadata,
-  ) => void
-  deleteMessage: (messageId: string) => void
-  editMessage: (messageId: string, content: string) => void
-  getConversationById: (id: string) => Conversation | undefined
-  availableSkills: string[]
-  selectedSkills: string[]
-  toggleSkill: (skill: string) => void
-  refreshAvailableSkills: () => Promise<void>
-  loadingMap: Record<string, boolean>
-  startLoading: (id: string) => void
-  finishLoading: (id: string) => void
-  isLoading: (id: string) => boolean
-}
+export type AppState =
+  & BackendSlice
+  & WorkspaceSlice
+  & ConversationSlice
+  & SkillsSlice
+  & LoadingSlice
 
-export const useAppStore = create<AppState>((set, get) => ({
-  backendStatus: false,
-  checkBackend: async () => {
-    try {
-      const healthy = await checkBackendHealth()
-      set({ backendStatus: healthy })
-    } catch {
-      set({ backendStatus: false })
-    }
-  },
+export type AppSlice<T> = StateCreator<AppState, [], [], T>
 
-  currentWorkspace: createDefaultProjectWorkspaceContext(),
-  setCurrentWorkspace: (workspace) => {
-    set((state) => ({
-      currentWorkspace: mergeProjectWorkspaceContext(state.currentWorkspace, workspace),
-    }))
-  },
-  syncConversationWorkspace: (conversationId, workspace) => {
-    set((state) => {
-      const resolved = resolveConversationWorkspaceForSync({
-        conversation: state.conversationsById[conversationId],
-        conversationId,
-        currentConversationId: state.currentConversationId,
-        currentWorkspace: state.currentWorkspace,
-        patch: workspace,
-      })
-      if (!resolved) return state
+export type AppStoreConversation = Conversation
+export type AppStoreMessageComparison = MessageComparison
+export type AppStoreMessageComparisonItem = MessageComparisonItem
+export type AppStoreWorkspace = ProjectWorkspaceContext
 
-      return {
-        currentWorkspace: resolved.currentWorkspace,
-        conversationsById: {
-          ...state.conversationsById,
-          [conversationId]: {
-            ...state.conversationsById[conversationId],
-            workspace: resolved.conversationWorkspace,
-            updatedAt: new Date(),
-          },
-        },
-      }
-    })
-  },
-
-  conversationsById: {},
-  allConversationIds: [],
-  currentConversationId: null,
-
-  createConversation: () => {
-    const id = Date.now().toString()
-    const seedWorkspace = createConversationWorkspaceSeed(get().currentWorkspace)
-    const conversation = createConversationRecord({ id, workspace: seedWorkspace })
-    set((state) => ({
-      conversationsById: { ...state.conversationsById, [id]: conversation },
-      allConversationIds: [id, ...state.allConversationIds],
-      currentConversationId: id,
-      currentWorkspace: seedWorkspace,
-    }))
-  },
-
-  selectConversation: (id: string) => {
-    const conversation = get().conversationsById[id]
-    if (!conversation) return
-    set({
-      currentConversationId: id,
-      currentWorkspace: resolveSelectedConversationWorkspace(conversation),
-    })
-  },
-  updateConversationTitle: (conversationId, title) => {
-    set((state) => {
-      const conversation = state.conversationsById[conversationId]
-      if (!conversation) return state
-      if (conversation.title === title) return state
-
-      return {
-        conversationsById: {
-          ...state.conversationsById,
-          [conversationId]: {
-            ...conversation,
-            title,
-            updatedAt: new Date(),
-          },
-        },
-      }
-    })
-  },
-
-  addMessage: (role, content, skills, comparison, writerMetadata) => {
-    const { currentConversationId, conversationsById, currentWorkspace } = get()
-    if (!currentConversationId) {
-      get().createConversation()
-      return get().addMessage(role, content, skills, comparison, writerMetadata)
-    }
-
-    const conversation = conversationsById[currentConversationId]
-    if (!conversation) return
-
-    const { nextWorkspace, nextConversation } = resolveConversationStateForMessage({
-      conversation,
-      currentWorkspace,
-      role,
-      content,
-      skills,
-      comparison,
-      writerMetadata,
-    })
-
-    set({
-      currentWorkspace: nextWorkspace,
-      conversationsById: {
-        ...conversationsById,
-        [currentConversationId]: nextConversation,
-      },
-    })
-  },
-
-  deleteMessage: (messageId: string) => {
-    const { currentConversationId, conversationsById } = get()
-    if (!currentConversationId) return
-    const conversation = conversationsById[currentConversationId]
-    if (!conversation) return
-    set({
-      conversationsById: {
-        ...conversationsById,
-        [currentConversationId]: updateConversationMessages(
-          conversation,
-          (messages) => messages.filter((message) => message.id !== messageId),
-        ),
-      },
-    })
-  },
-
-  editMessage: (messageId: string, content: string) => {
-    const { currentConversationId, conversationsById } = get()
-    if (!currentConversationId) return
-    const conversation = conversationsById[currentConversationId]
-    if (!conversation) return
-    set({
-      conversationsById: {
-        ...conversationsById,
-        [currentConversationId]: updateConversationMessages(
-          conversation,
-          (messages) => messages.map((message) =>
-            message.id === messageId ? { ...message, content, timestamp: new Date() } : message,
-          ),
-        ),
-      },
-    })
-  },
-
-  getConversationById: (id: string) => {
-    return get().conversationsById[id]
-  },
-
-  availableSkills: [
-    'character-forge',
-    'suspense-craft',
-    'dialogue-system',
-    'tension-arc',
-    'opening-craft',
-    'ending-craft',
-    'emotion-arc',
-    'conflict-escalation',
-  ],
-  selectedSkills: [],
-  toggleSkill: (skill: string) => {
-    set((state) => ({
-      selectedSkills: state.selectedSkills.includes(skill)
-        ? state.selectedSkills.filter((selected) => selected !== skill)
-        : [...state.selectedSkills, skill],
-    }))
-  },
-  refreshAvailableSkills: async () => {
-    try {
-      const response = await listSkills()
-      if (!response.success || !Array.isArray(response.data) || response.data.length === 0) {
-        return
-      }
-      const nextSkills = response.data
-        .map((skill) => (typeof skill?.id === 'string' && skill.id.trim() ? skill.id.trim() : ''))
-        .filter(Boolean)
-      if (nextSkills.length === 0) {
-        return
-      }
-      set((state) => {
-        const selectedSkills = state.selectedSkills.filter((skill) => nextSkills.includes(skill))
-        return {
-          availableSkills: nextSkills,
-          selectedSkills,
-        }
-      })
-    } catch {
-      // Ignore dynamic fetch failures and keep the static fallback list.
-    }
-  },
-
-  loadingMap: {},
-  startLoading: (id: string) => {
-    set((state) => ({ loadingMap: { ...state.loadingMap, [id]: true } }))
-  },
-  finishLoading: (id: string) => {
-    set((state) => ({ loadingMap: { ...state.loadingMap, [id]: false } }))
-  },
-  isLoading: (id: string) => {
-    return get().loadingMap[id] ?? false
-  },
+export const useAppStore = create<AppState>()((...args) => ({
+  ...createBackendSlice(...args),
+  ...createWorkspaceSlice(...args),
+  ...createConversationSlice(...args),
+  ...createSkillsSlice(...args),
+  ...createLoadingSlice(...args),
 }))

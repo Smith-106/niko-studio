@@ -3,7 +3,7 @@ import { BookOpen, ChevronDown, ChevronRight, Lightbulb, MessageSquareText, PenL
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
-import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
+import { useCreateConversation, useAddMessage, useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
 import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, quickRollbackWorkflow, buildConsistencyGovernanceMetadata, mergeWriterMetadataGovernance } from '../api/client'
 import type { ChatRequest, StreamDonePayload, WriterMetadata } from '../api/client'
 import { MessageBubble } from './MessageBubble'
@@ -199,10 +199,8 @@ export function ChatArea({
 
   const lastContextUsageRef = useRef<{ usedChars: number; usedK: number; totalK: number; percent: number } | null>(null)
 
-  const {
-    addMessage,
-    createConversation,
-  } = useAppStore()
+  const addMessage = useAddMessage()
+  const createConversation = useCreateConversation()
   const setWorkflowLevel = useSettingsStore((state) => (level: 'L1' | 'L2' | 'L3' | 'L4' | 'L5') => {
     state.updateSettings({ defaultWorkflowLevel: level })
   })
