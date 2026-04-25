@@ -16,11 +16,6 @@ import {
 } from './types';
 import { WorkflowEngine } from '../workflow/workflow-engine';
 import { refreshProjectTechMetadata } from '../workflow/project-tech';
-import type {
-  WorkflowExecuteResult,
-  WorkflowRunResult,
-} from '../workflow/engine/engine-contracts.js';
-
 
 // ============================================================
 // init command
@@ -141,26 +136,6 @@ function extractWorkflowContent(value: unknown): string {
   return '';
 }
 
-function getExecuteTerminalStatus(result: WorkflowExecuteResult): string {
-  if ('error' in result) return 'failed';
-  if ('plan_status' in result) return String(result.plan_status ?? result.status ?? 'unknown');
-  return String(result.status ?? 'unknown');
-}
-
-function shouldStopExecuteLoop(result: WorkflowExecuteResult): boolean {
-  if ('error' in result) return true;
-  if (['blocked', 'waiting_confirmation', 'preflight_blocked', 'gate_blocked'].includes(String(result.status))) {
-    return true;
-  }
-  if (result.status !== 'completed') return false;
-  return !('remaining_steps' in result) || Number(result.remaining_steps ?? 0) === 0;
-}
-
-function getWorkflowRunError(result: WorkflowRunResult): string | null {
-  if ('error' in result) return String(result.error);
-  return null;
-}
-
 export const runCommand: Command = {
   name: 'run',
   description: 'Execute a writing workflow',
@@ -204,16 +179,26 @@ export const runCommand: Command = {
     }
 
     const maxIterations = Math.max(steps + 5, 5);
-    let latest: WorkflowExecuteResult = { error: 'Workflow did not execute' };
+    let latest: Record<string, unknown> = {};
     for (let i = 0; i < maxIterations; i++) {
       latest = await engine.execute(planId);
-      if (shouldStopExecuteLoop(latest)) break;
+      const status = String(latest.status ?? '');
+      const planStatus = String(latest.plan_status ?? '');
+      if (status === 'completed' || planStatus === 'completed') break;
+      if (status === 'blocked' || status === 'waiting_confirmation' || status === 'preflight_blocked' || status === 'gate_blocked') {
+        break;
+      }
+      if (latest.error) break;
     }
 
     const finalStatus = engine.getPlanStatus(planId);
-    ctx.console.log(`Execution status: ${getExecuteTerminalStatus(latest)}`);
+    ctx.console.log(`Execution status: ${String(latest.status ?? latest.plan_status ?? 'unknown')}`);
+    if ('error' in finalStatus) {
+      ctx.console.error(`Plan status failed: ${String(finalStatus.error)}`);
+      return;
+    }
     ctx.console.log(`Plan progress: ${String(finalStatus.progress ?? 'unknown')}`);
-    if ('error' in latest) {
+    if (latest.error) {
       ctx.console.error(`Workflow execution failed: ${String(latest.error)}`);
     }
   },
@@ -287,9 +272,8 @@ export const chatCommand: Command = {
       const workflowLevel = toWorkflowLevel(level) ?? 'L3-Standard';
       const result = await engine.run(input, workflowLevel);
 
-      const runError = getWorkflowRunError(result);
-      if (runError) {
-        ctx.console.error(`Niko: ${runError}`);
+      if (result && typeof result === 'object' && result.error) {
+        ctx.console.error(`Niko: ${String(result.error)}`);
         continue;
       }
 
@@ -570,18 +554,26 @@ export const guidedDraftCommand: Command = {
 
     const totalSteps = Number(plan.total_steps ?? (Array.isArray(plan.steps) ? plan.steps.length : 0));
     const maxIterations = Math.min(Math.max(totalSteps + 5, 5), maxSteps);
-    let latest: WorkflowExecuteResult = { error: 'Workflow did not execute' };
+    let latest: Record<string, unknown> = {};
     for (let i = 0; i < maxIterations; i++) {
       latest = await engine.execute(planId, undefined, recommendations);
-      if (shouldStopExecuteLoop(latest)) break;
+      const status = String(latest.status ?? '');
+      const planStatus = String(latest.plan_status ?? '');
+      if (status === 'completed' || planStatus === 'completed') break;
+      if (status === 'blocked' || status === 'waiting_confirmation' || status === 'preflight_blocked' || status === 'gate_blocked') break;
+      if (latest.error) break;
     }
 
-    if ('error' in latest) {
+    if (latest.error) {
       ctx.console.error(`Guided draft failed: ${String(latest.error)}`);
       return;
     }
 
     const finalStatus = engine.getPlanStatus(planId);
+    if ('error' in finalStatus) {
+      ctx.console.error(`Guided draft status failed: ${String(finalStatus.error)}`);
+      return;
+    }
     const finalSteps = Array.isArray(finalStatus.steps) ? finalStatus.steps : [];
     const contentStep = [...finalSteps]
       .reverse()

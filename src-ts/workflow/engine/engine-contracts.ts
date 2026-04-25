@@ -1,4 +1,3 @@
-import type { WorkflowAuthority } from './authority.js';
 import {
   buildWorkflowCheckpointTrace,
   buildWorkflowSnapshotArtifacts,
@@ -8,171 +7,136 @@ import {
   buildWorkflowStateSnapshot,
 } from './persistence.js';
 import {
-  buildWorkflowLifecycleActionResponse,
-  buildWorkflowLifecycleStatusResponse,
+  buildWorkflowLifecycleActionContract as buildWorkflowLifecycleActionResponseContract,
+  buildWorkflowLifecycleStatusContract as buildWorkflowLifecycleStatusResponseContract,
 } from './responses.js';
+import type { WorkflowAuthority } from './authority.js';
 
-export type WorkflowSerializedMap = Record<string, unknown>;
 
-export interface WorkflowExecutionContextPayload extends WorkflowSerializedMap {
-  trace_context?: WorkflowSerializedMap;
-  chat_canon_prompt?: string;
+export interface WorkflowRecommendation {
+  [key: string]: unknown;
 }
 
-export type WorkflowRecommendationPrimitive = string | number | boolean | null;
+export interface WorkflowExecutionContextPayload {
+  [key: string]: unknown;
+}
 
-export type WorkflowRecommendationRecordInput = WorkflowSerializedMap & {
-  title?: string;
-  name?: string;
-  recommendation?: string;
-  reason?: string;
-  rationale?: string;
-  action?: string;
-  suggestion?: string;
-  target?: string;
-  params?: WorkflowSerializedMap;
-};
-
-export type WorkflowRecommendationInputItem =
-  | WorkflowRecommendationPrimitive
-  | WorkflowRecommendationRecordInput;
-
-export type WorkflowRecommendationInput = WorkflowRecommendationInputItem[];
-export type WorkflowObservabilityMetrics = unknown;
-
-export interface WorkflowErrorResult extends WorkflowSerializedMap {
-  error: string;
+export interface WorkflowTemplateStepDescriptor {
+  name: string;
+  description: string;
 }
 
 export interface WorkflowRouteRequest {
   task: string;
 }
 
-export interface WorkflowTemplateStep {
-  name: string;
-  description: string;
-}
-
 export interface WorkflowRouteResult {
   level: string;
   description: string;
-  suggested_workflow: WorkflowTemplateStep[];
+  suggested_workflow: WorkflowTemplateStepDescriptor[];
   reason: string;
-  matched_features: WorkflowSerializedMap[];
+  matched_features: Array<Record<string, unknown>>;
   score: number;
   final_level: string;
-  routing_diagnostics: WorkflowSerializedMap;
+  routing_diagnostics: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
-export interface WorkflowPlanRequest {
-  task: string;
-  level?: string;
-  recommendations?: WorkflowRecommendationInput;
-  executionContext?: WorkflowExecutionContextPayload;
-}
-
-export interface WorkflowPlanStepSummary {
+export interface WorkflowPlanStepResult {
   id: string;
   name: string;
   description: string;
   dependencies: string[];
   status: string;
+  [key: string]: unknown;
+}
+
+export interface WorkflowPlanRequest {
+  task: string;
+  level?: string;
+  recommendations?: WorkflowRecommendation[];
+  executionContext?: WorkflowExecutionContextPayload;
 }
 
 export interface WorkflowPlanResult {
   plan_id: string;
   level: string;
-  template_meta: WorkflowSerializedMap;
+  template_meta: Record<string, unknown>;
   gate_decision: string;
-  recommendations: WorkflowSerializedMap[];
+  recommendations: WorkflowRecommendation[];
   recommendations_frozen: boolean;
   plan_hash: string;
   execution_mode: string;
-  observability_metrics: WorkflowObservabilityMetrics;
-  budget_guardrail: WorkflowSerializedMap;
-  steps: WorkflowPlanStepSummary[];
+  observability_metrics: unknown;
+  budget_guardrail: Record<string, unknown>;
+  steps: WorkflowPlanStepResult[];
   total_steps: number;
+  [key: string]: unknown;
 }
 
-export interface WorkflowStateResumeMetadata {
+export interface WorkflowWorkspaceAuthorityContract {
+  session_id: string | null;
+  workspace_id: string | null;
+  project_id: string | null;
+}
+
+export interface WorkflowStateResumeMetadataContract {
   current_phase: string;
   state_trace_id: string;
   can_resume_from_checkpoint: boolean;
-  observability: WorkflowSerializedMap;
-  budget_guardrail: WorkflowSerializedMap;
-  handoff_package: WorkflowSerializedMap;
+  observability: Record<string, unknown>;
+  budget_guardrail: Record<string, unknown>;
+  handoff_package: Record<string, unknown>;
   session_status: string | null;
-  workspace_authority: {
-    session_id: string;
-    workspace_id: string | null;
-    project_id: string | null;
-  };
+  workspace_authority: WorkflowWorkspaceAuthorityContract;
+  [key: string]: unknown;
 }
 
-export interface WorkflowPlanRuntimeState {
-  observability: WorkflowSerializedMap;
-  budgetGuardrail: WorkflowSerializedMap;
-  executionMode: string;
-}
-
-export interface WorkflowPlanRuntimeResponseContext {
-  executionMode: string;
-  observabilityMetrics: WorkflowObservabilityMetrics;
-  budgetGuardrail: WorkflowSerializedMap;
-  handoffPackage: WorkflowSerializedMap;
-  sessionStatus: string | null;
-}
-
-export interface WorkflowExecutionResponseContext {
-  executionMode: string;
-  observabilityMetrics: WorkflowObservabilityMetrics;
-  budgetGuardrail: WorkflowSerializedMap;
-  remainingSteps: number;
-  stateResumeMetadata: WorkflowStateResumeMetadata;
-}
-
-export interface WorkflowGateResult extends WorkflowSerializedMap {
+export interface WorkflowRiskGateResult {
   decision: string;
   reason: string;
-  risk?: string;
+  risk: string;
   blocking: boolean;
   destructive: boolean;
   confirm_required: boolean;
   confirmed: boolean;
+  [key: string]: unknown;
 }
 
-export interface WorkflowExecutionResultBase extends WorkflowStateResumeMetadata {
+export interface WorkflowExecutionResultBase extends WorkflowStateResumeMetadataContract {
   execution_mode: string;
-  observability_metrics: WorkflowObservabilityMetrics;
+  observability_metrics: unknown;
+  budget_guardrail: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
-export interface WorkflowExecuteCompletedResult extends WorkflowExecutionResultBase {
+export interface WorkflowExecutionSuccessResult extends WorkflowExecutionResultBase {
   step_id: string;
   step_name: string;
   status: 'completed';
   result: unknown;
-  gate: WorkflowGateResult | WorkflowSerializedMap;
+  gate: WorkflowRiskGateResult;
   plan_status: string;
   runner_state: string;
   remaining_steps: number;
 }
 
-export interface WorkflowExecuteWaitingConfirmationResult extends WorkflowExecutionResultBase {
+export interface WorkflowExecutionWaitingConfirmationResult extends WorkflowExecutionResultBase {
   step_id: string;
   step_name: string;
   status: 'waiting_confirmation';
-  gate: WorkflowGateResult | WorkflowSerializedMap;
+  gate: WorkflowRiskGateResult;
   plan_status: string;
   runner_state: string;
   remaining_steps: number;
 }
 
-export interface WorkflowExecuteAllStepsCompletedResult extends WorkflowExecutionResultBase {
+export interface WorkflowExecutionTerminalResult extends WorkflowExecutionResultBase {
   status: 'completed';
   message: string;
 }
 
-export interface WorkflowExecuteFailureResult extends WorkflowExecutionResultBase {
+export interface WorkflowExecutionErrorResult extends WorkflowExecutionResultBase {
   error: string;
   step_id: string;
   failure: {
@@ -181,26 +145,32 @@ export interface WorkflowExecuteFailureResult extends WorkflowExecutionResultBas
   };
 }
 
+export interface WorkflowOperationErrorResult {
+  error: string;
+  [key: string]: unknown;
+}
+
 export type WorkflowExecuteResult =
-  | WorkflowExecuteCompletedResult
-  | WorkflowExecuteWaitingConfirmationResult
-  | WorkflowExecuteAllStepsCompletedResult
-  | WorkflowExecuteFailureResult
-  | WorkflowErrorResult;
+  | WorkflowExecutionSuccessResult
+  | WorkflowExecutionWaitingConfirmationResult
+  | WorkflowExecutionTerminalResult
+  | WorkflowExecutionErrorResult
+  | WorkflowOperationErrorResult;
 
 export interface WorkflowExecuteRequest {
   planId: string;
   stepId?: string;
-  recommendations?: WorkflowRecommendationInput;
+  recommendations?: WorkflowRecommendation[];
   confirmToken?: string;
   authority?: WorkflowAuthority | null;
 }
 
-export interface WorkflowPlanStatusStepSummary {
+export interface WorkflowPlanStatusStepResult {
   id: string;
   name: string;
   status: string;
   output: unknown;
+  [key: string]: unknown;
 }
 
 export interface WorkflowPlanStatusResult {
@@ -212,25 +182,21 @@ export interface WorkflowPlanStatusResult {
   triage_state: string;
   fix_status: string;
   fix_owner: string;
-  template_meta: WorkflowSerializedMap;
+  template_meta: Record<string, unknown>;
   gate_decision: string;
-  recommendations: WorkflowSerializedMap[];
+  recommendations: WorkflowRecommendation[];
   recommendations_frozen: boolean;
   plan_hash: string;
   execution_mode: string;
-  observability_metrics: WorkflowObservabilityMetrics;
-  budget_guardrail: WorkflowSerializedMap;
-  handoff_package: WorkflowSerializedMap;
-  steps: WorkflowPlanStatusStepSummary[];
+  observability_metrics: unknown;
+  budget_guardrail: Record<string, unknown>;
+  handoff_package: Record<string, unknown>;
+  steps: WorkflowPlanStatusStepResult[];
   progress: string;
+  [key: string]: unknown;
 }
 
-export interface WorkflowRunRequest {
-  task: string;
-  level?: string;
-  recommendations?: WorkflowRecommendationInput;
-  executionContext?: WorkflowExecutionContextPayload;
-}
+export interface WorkflowRunRequest extends WorkflowPlanRequest {}
 
 export interface WorkflowRunCompletedResult {
   status: 'completed';
@@ -238,6 +204,7 @@ export interface WorkflowRunCompletedResult {
   plan: WorkflowPlanResult;
   last_step: WorkflowExecuteResult;
   final_status: WorkflowPlanStatusResult;
+  [key: string]: unknown;
 }
 
 export interface WorkflowRunBlockedResult {
@@ -246,6 +213,7 @@ export interface WorkflowRunBlockedResult {
   plan: WorkflowPlanResult;
   last_step: WorkflowExecuteResult;
   final_status: WorkflowPlanStatusResult;
+  [key: string]: unknown;
 }
 
 export interface WorkflowRunFailedResult {
@@ -253,28 +221,27 @@ export interface WorkflowRunFailedResult {
   plan_id: string;
   plan: WorkflowPlanResult;
   error: unknown;
+  [key: string]: unknown;
 }
 
 export type WorkflowRunResult =
   | WorkflowRunCompletedResult
   | WorkflowRunBlockedResult
   | WorkflowRunFailedResult
-  | WorkflowErrorResult;
+  | WorkflowOperationErrorResult;
 
-export type WorkflowRunWithExecutionContextRequest = WorkflowRunRequest;
-export type WorkflowRunStreamRequest = WorkflowRunRequest;
-export type WorkflowRunStreamWithExecutionContextRequest = WorkflowRunRequest;
-
-export interface WorkflowStreamPlanCreationErrorEvent {
-  type: 'error';
-  status: 'failed';
-  error: string;
+export interface WorkflowRunWithExecutionContextRequest {
+  task: string;
+  executionContext?: WorkflowExecutionContextPayload;
+  level?: string;
+  recommendations?: WorkflowRecommendation[];
 }
 
 export interface WorkflowStreamPlanCreatedEvent {
   type: 'plan_created';
   plan_id: string;
   plan: WorkflowPlanResult;
+  [key: string]: unknown;
 }
 
 export interface WorkflowStreamStepStartEvent {
@@ -283,17 +250,20 @@ export interface WorkflowStreamStepStartEvent {
   step_id: string;
   step_name: string;
   iteration: number;
+  [key: string]: unknown;
 }
 
-export type WorkflowStreamStepCompleteEvent = {
+export interface WorkflowStreamStepCompleteEvent {
   type: 'step_complete';
   plan_id: string;
-} & WorkflowExecuteResult;
+  [key: string]: unknown;
+}
 
 export interface WorkflowStreamPlanErrorEvent {
   type: 'plan_error';
   plan_id: string;
-  error: unknown;
+  error: string;
+  [key: string]: unknown;
 }
 
 export interface WorkflowStreamPlanBlockedEvent {
@@ -301,6 +271,7 @@ export interface WorkflowStreamPlanBlockedEvent {
   plan_id: string;
   status: string;
   last_step: WorkflowExecuteResult;
+  [key: string]: unknown;
 }
 
 export interface WorkflowStreamPlanCompleteEvent {
@@ -310,36 +281,35 @@ export interface WorkflowStreamPlanCompleteEvent {
   plan: WorkflowPlanResult;
   last_step: WorkflowExecuteResult;
   final_status: WorkflowPlanStatusResult;
+  [key: string]: unknown;
+}
+
+export interface WorkflowStreamErrorEvent {
+  type: 'error';
+  status: 'failed';
+  error: string;
+  [key: string]: unknown;
 }
 
 export type WorkflowStreamEvent =
-  | WorkflowStreamPlanCreationErrorEvent
   | WorkflowStreamPlanCreatedEvent
   | WorkflowStreamStepStartEvent
   | WorkflowStreamStepCompleteEvent
   | WorkflowStreamPlanErrorEvent
   | WorkflowStreamPlanBlockedEvent
-  | WorkflowStreamPlanCompleteEvent;
+  | WorkflowStreamPlanCompleteEvent
+  | WorkflowStreamErrorEvent;
 
-export interface WorkflowLifecycleStatusResult {
-  plan_id: string;
-  action: 'status';
-  runner_state: string;
-  triage_state: string;
-  fix_status: string;
-  fix_owner: string;
-  plan_status: string;
-  lane: string;
-  quality_metrics: Record<string, number>;
-  execution_mode: string;
-  observability_metrics: WorkflowObservabilityMetrics;
-  budget_guardrail: WorkflowSerializedMap;
-  handoff_package: WorkflowSerializedMap;
-  session_status: string | null;
-  last_checkpoint_id?: string;
+export interface WorkflowStreamRequest extends WorkflowPlanRequest {}
+
+export interface WorkflowStreamWithExecutionContextRequest {
+  task: string;
+  executionContext?: WorkflowExecutionContextPayload;
+  level?: string;
+  recommendations?: WorkflowRecommendation[];
 }
 
-export interface WorkflowLifecycleActionResult {
+export interface WorkflowLifecycleResult {
   plan_id: string;
   action: string;
   runner_state: string;
@@ -351,87 +321,40 @@ export interface WorkflowLifecycleActionResult {
   lane: string;
   quality_metrics: Record<string, number>;
   execution_mode: string;
-  observability_metrics: WorkflowObservabilityMetrics;
-  budget_guardrail: WorkflowSerializedMap;
-  handoff_package: WorkflowSerializedMap;
+  observability_metrics: unknown;
+  budget_guardrail: Record<string, unknown>;
+  handoff_package: Record<string, unknown>;
   session_status: string | null;
   last_checkpoint_id?: string;
+  [key: string]: unknown;
 }
 
-export type WorkflowLifecycleResult =
-  | WorkflowLifecycleStatusResult
-  | WorkflowLifecycleActionResult
-  | WorkflowErrorResult;
-
-export interface WorkflowCheckpointResult {
-  checkpoint_id: string;
-  commit_hash: string | null;
-  description: string;
-  plan_id: string | null;
-  step_id: string | null;
-  replay_payload: WorkflowSerializedMap;
-  created_at: string;
+export interface WorkflowPlanRuntimeState {
+  observability: Record<string, unknown>;
+  budgetGuardrail: Record<string, unknown>;
+  executionMode: string;
 }
 
-export interface WorkflowCheckpointSummary {
-  id: string;
-  description: string;
-  commit_hash: string | null;
-  created_at: string;
+export interface WorkflowPlanRuntimeResponseContext {
+  executionMode: string;
+  observabilityMetrics: unknown;
+  budgetGuardrail: Record<string, unknown>;
+  handoffPackage: Record<string, unknown>;
+  sessionStatus: string | null;
 }
 
-export interface WorkflowRestoreWaitingConfirmationResult {
-  status: 'waiting_confirmation';
-  error: string;
-  checkpoint_id: string;
-  plan_id: string | null;
-  step_id: string | null;
-  gate: WorkflowGateResult | WorkflowSerializedMap;
+export interface WorkflowExecutionResponseContext {
+  executionMode: string;
+  observabilityMetrics: unknown;
+  budgetGuardrail: Record<string, unknown>;
+  remainingSteps: number;
+  stateResumeMetadata: WorkflowStateResumeMetadataContract;
 }
 
-export interface WorkflowRestoreResult {
-  status: 'restored';
-  checkpoint_id: string;
-  commit_hash: string | null;
-  plan_id: string | null;
-  step_id: string | null;
-  replay: WorkflowSerializedMap;
-}
-
-export type WorkflowRestoreCheckpointResult =
-  | WorkflowRestoreResult
-  | WorkflowRestoreWaitingConfirmationResult
-  | WorkflowErrorResult;
-
-export interface WorkflowQuickRollbackResult {
-  plan_id: string;
-  checkpoint_id: string;
-  reason: string;
-  restored: boolean;
-  restore: WorkflowRestoreCheckpointResult;
-}
-
-interface WorkflowAuthoritySnapshot {
+export interface WorkflowAuthoritySnapshot {
   sessionId: string;
   workspaceId: string | null;
   projectId: string | null;
-}
-
-interface WorkflowLifecycleContractInput {
-  planId: string;
-  action: string;
-  runnerState: string;
-  triageState: string;
-  fixStatus: string;
-  fixOwner: string;
-  planStatus: string;
-  lane: string;
-  qualityMetrics: Record<string, number>;
-  runtime: WorkflowPlanRuntimeResponseContext;
-}
-
-interface WorkflowLifecycleActionContractInput extends WorkflowLifecycleContractInput {
-  checkpointId?: string;
 }
 
 interface WorkflowPersistedStateSnapshotInput {
@@ -502,7 +425,7 @@ export function normalizeWorkflowRouteRequest(
 export function normalizeWorkflowPlanRequest(
   taskOrRequest: string | WorkflowPlanRequest,
   level?: string,
-  recommendations?: WorkflowRecommendationInput,
+  recommendations?: WorkflowRecommendation[],
   executionContext?: WorkflowExecutionContextPayload,
 ): WorkflowPlanRequest {
   if (typeof taskOrRequest === 'string') {
@@ -522,16 +445,53 @@ export function normalizeWorkflowPlanRequest(
   };
 }
 
+export function normalizeWorkflowRunRequest(
+  taskOrRequest: string | WorkflowRunRequest,
+  level?: string,
+  recommendations?: WorkflowRecommendation[],
+  executionContext?: WorkflowExecutionContextPayload,
+): WorkflowRunRequest {
+  return normalizeWorkflowPlanRequest(
+    taskOrRequest,
+    level,
+    recommendations,
+    executionContext,
+  );
+}
+
+export function normalizeWorkflowRunWithExecutionContextRequest(
+  taskOrRequest: string | WorkflowRunWithExecutionContextRequest,
+  executionContext?: WorkflowExecutionContextPayload,
+  level?: string,
+  recommendations?: WorkflowRecommendation[],
+): WorkflowRunRequest {
+  if (typeof taskOrRequest === 'string') {
+    return {
+      task: taskOrRequest,
+      executionContext,
+      level,
+      recommendations,
+    };
+  }
+
+  return {
+    task: taskOrRequest.task,
+    executionContext: taskOrRequest.executionContext,
+    level: taskOrRequest.level,
+    recommendations: taskOrRequest.recommendations,
+  };
+}
+
 export function normalizeWorkflowExecuteRequest(
-  requestOrPlanId: string | WorkflowExecuteRequest,
+  planIdOrRequest: string | WorkflowExecuteRequest,
   stepId?: string,
-  recommendations?: WorkflowRecommendationInput,
+  recommendations?: WorkflowRecommendation[],
   confirmToken?: string,
   authority?: WorkflowAuthority | null,
 ): WorkflowExecuteRequest {
-  if (typeof requestOrPlanId === 'string') {
+  if (typeof planIdOrRequest === 'string') {
     return {
-      planId: requestOrPlanId,
+      planId: planIdOrRequest,
       stepId,
       recommendations,
       confirmToken,
@@ -540,75 +500,34 @@ export function normalizeWorkflowExecuteRequest(
   }
 
   return {
-    planId: requestOrPlanId.planId,
-    stepId: requestOrPlanId.stepId,
-    recommendations: requestOrPlanId.recommendations,
-    confirmToken: requestOrPlanId.confirmToken,
-    authority: requestOrPlanId.authority,
+    planId: planIdOrRequest.planId,
+    stepId: planIdOrRequest.stepId,
+    recommendations: planIdOrRequest.recommendations,
+    confirmToken: planIdOrRequest.confirmToken,
+    authority: planIdOrRequest.authority,
   };
 }
 
-export function normalizeWorkflowRunRequest(
-  taskOrRequest: string | WorkflowRunRequest,
+export function normalizeWorkflowStreamRequest(
+  taskOrRequest: string | WorkflowStreamRequest,
   level?: string,
-  recommendations?: WorkflowRecommendationInput,
+  recommendations?: WorkflowRecommendation[],
   executionContext?: WorkflowExecutionContextPayload,
-): WorkflowRunRequest {
-  if (typeof taskOrRequest === 'string') {
-    return {
-      task: taskOrRequest,
-      level,
-      recommendations,
-      executionContext,
-    };
-  }
-
-  return {
-    task: taskOrRequest.task,
-    level: taskOrRequest.level,
-    recommendations: taskOrRequest.recommendations,
-    executionContext: taskOrRequest.executionContext,
-  };
+): WorkflowStreamRequest {
+  return normalizeWorkflowPlanRequest(
+    taskOrRequest,
+    level,
+    recommendations,
+    executionContext,
+  );
 }
 
-export function normalizeWorkflowRunWithExecutionContextRequest(
-  taskOrRequest: string | WorkflowRunWithExecutionContextRequest,
+export function normalizeWorkflowStreamWithExecutionContextRequest(
+  taskOrRequest: string | WorkflowStreamWithExecutionContextRequest,
   executionContext?: WorkflowExecutionContextPayload,
   level?: string,
-  recommendations?: WorkflowRecommendationInput,
-): WorkflowRunWithExecutionContextRequest {
-  if (typeof taskOrRequest === 'string') {
-    return {
-      task: taskOrRequest,
-      executionContext,
-      level,
-      recommendations,
-    };
-  }
-
-  return {
-    task: taskOrRequest.task,
-    executionContext: taskOrRequest.executionContext,
-    level: taskOrRequest.level,
-    recommendations: taskOrRequest.recommendations,
-  };
-}
-
-export function normalizeWorkflowRunStreamRequest(
-  taskOrRequest: string | WorkflowRunStreamRequest,
-  level?: string,
-  recommendations?: WorkflowRecommendationInput,
-  executionContext?: WorkflowExecutionContextPayload,
-): WorkflowRunStreamRequest {
-  return normalizeWorkflowRunRequest(taskOrRequest, level, recommendations, executionContext);
-}
-
-export function normalizeWorkflowRunStreamWithExecutionContextRequest(
-  taskOrRequest: string | WorkflowRunStreamWithExecutionContextRequest,
-  executionContext?: WorkflowExecutionContextPayload,
-  level?: string,
-  recommendations?: WorkflowRecommendationInput,
-): WorkflowRunStreamWithExecutionContextRequest {
+  recommendations?: WorkflowRecommendation[],
+): WorkflowStreamRequest {
   return normalizeWorkflowRunWithExecutionContextRequest(
     taskOrRequest,
     executionContext,
@@ -634,7 +553,7 @@ export function buildWorkflowRuntimeResponseContext(
 export function buildWorkflowExecutionResponseContext(
   runtime: WorkflowPlanRuntimeResponseContext,
   remainingSteps: number,
-  stateResumeMetadata: WorkflowStateResumeMetadata,
+  stateResumeMetadata: WorkflowStateResumeMetadataContract,
 ): WorkflowExecutionResponseContext {
   return {
     executionMode: runtime.executionMode,
@@ -645,53 +564,41 @@ export function buildWorkflowExecutionResponseContext(
   };
 }
 
-export function buildWorkflowLifecycleStatusContract(
-  input: WorkflowLifecycleContractInput,
-): WorkflowLifecycleStatusResult {
-  return buildWorkflowLifecycleStatusResponse({
-    planId: input.planId,
-    action: input.action,
-    runnerState: input.runnerState,
-    triageState: input.triageState,
-    fixStatus: input.fixStatus,
-    fixOwner: input.fixOwner,
-    planStatus: input.planStatus,
-    lane: input.lane,
-    qualityMetrics: input.qualityMetrics,
-    executionMode: input.runtime.executionMode,
-    observabilityMetrics: input.runtime.observabilityMetrics,
-    budgetGuardrail: input.runtime.budgetGuardrail,
-    handoffPackage: input.runtime.handoffPackage,
-    sessionStatus: input.runtime.sessionStatus,
-  });
+export function buildWorkflowLifecycleStatusContract(input: {
+  planId: string;
+  action: string;
+  runnerState: string;
+  triageState: string;
+  fixStatus: string;
+  fixOwner: string;
+  planStatus: string;
+  lane: string;
+  qualityMetrics: Record<string, number>;
+  runtime: WorkflowPlanRuntimeResponseContext;
+}): WorkflowLifecycleResult {
+  return buildWorkflowLifecycleStatusResponseContract(input);
 }
 
-export function buildWorkflowLifecycleActionContract(
-  input: WorkflowLifecycleActionContractInput,
-): WorkflowLifecycleActionResult {
-  return buildWorkflowLifecycleActionResponse({
-    planId: input.planId,
-    action: input.action,
-    runnerState: input.runnerState,
-    triageState: input.triageState,
-    fixStatus: input.fixStatus,
-    fixOwner: input.fixOwner,
-    planStatus: input.planStatus,
-    checkpointId: input.checkpointId,
-    lane: input.lane,
-    qualityMetrics: input.qualityMetrics,
-    executionMode: input.runtime.executionMode,
-    observabilityMetrics: input.runtime.observabilityMetrics,
-    budgetGuardrail: input.runtime.budgetGuardrail,
-    handoffPackage: input.runtime.handoffPackage,
-    sessionStatus: input.runtime.sessionStatus,
-  });
+export function buildWorkflowLifecycleActionContract(input: {
+  planId: string;
+  action: string;
+  runnerState: string;
+  triageState: string;
+  fixStatus: string;
+  fixOwner: string;
+  planStatus: string;
+  checkpointId?: string;
+  lane: string;
+  qualityMetrics: Record<string, number>;
+  runtime: WorkflowPlanRuntimeResponseContext;
+}): WorkflowLifecycleResult {
+  return buildWorkflowLifecycleActionResponseContract(input);
 }
 
 export function buildWorkflowStateResumeContract(
   input: WorkflowResumeMetadataInput,
-): WorkflowStateResumeMetadata {
-  return buildWorkflowStateResumeMetadata<WorkflowStateResumeMetadata>({
+): WorkflowStateResumeMetadataContract {
+  return buildWorkflowStateResumeMetadata<WorkflowStateResumeMetadataContract>({
     currentPhase: input.currentPhase,
     stateTraceId: input.sessionId,
     canResumeFromCheckpoint: input.canResumeFromCheckpoint,
@@ -749,7 +656,7 @@ export function buildWorkflowPersistedStateSnapshot<T>(
 
 export function buildWorkflowPersistedAuditContract(
   input: WorkflowPersistedAuditInput,
-): WorkflowSerializedMap {
+): Record<string, unknown> {
   return buildWorkflowStatePersistedAuditEvent({
     planId: input.planId,
     runnerState: input.runnerState,
