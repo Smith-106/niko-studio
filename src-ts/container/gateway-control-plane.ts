@@ -1,6 +1,6 @@
 import { ConfigManager } from '../config';
 import { setConfigAccess } from '../mcp/endpoints/config';
-import { resolveUiBridgeEnabled } from '../mcp/config';
+import { resolveUiBridgeEnabled, setLlmAvailabilityProbe } from '../mcp/config';
 import { setGatewayDeps } from '../mcp/endpoints/health';
 import { setMcpServiceState } from '../mcp/endpoints/mcp-admin';
 import { setUiBridgeEnabled } from '../mcp/endpoints/workflow';
@@ -38,7 +38,6 @@ function bindWorkflowRuntimeProvider(container: ServiceContainer): void {
 }
 
 const uiBridgeConfigListeners = new WeakMap<ConfigManager, () => void>();
-const patchedUiBridgeReloadManagers = new WeakSet<ConfigManager>();
 let activeUiBridgeConfigManager: ConfigManager | null = null;
 
 function syncUiBridgeRuntime(): void {
@@ -61,15 +60,6 @@ function bindUiBridgeConfigRuntime(configManager: ConfigManager): void {
     uiBridgeConfigListeners.set(configManager, listener);
   }
 
-  if (!patchedUiBridgeReloadManagers.has(configManager)) {
-    const reload = configManager.reload.bind(configManager);
-    configManager.reload = () => {
-      reload();
-      syncUiBridgeRuntime();
-    };
-    patchedUiBridgeReloadManagers.add(configManager);
-  }
-
   activeUiBridgeConfigManager = configManager;
   syncUiBridgeRuntime();
 }
@@ -81,8 +71,9 @@ export function initializeGatewayControlPlane(
 
   bindWorkflowRuntimeProvider(container);
   setGatewayDeps(buildGatewayDeps(container, state));
-  setConfigAccess(buildConfigAccess());
+  setConfigAccess(buildConfigAccess(syncUiBridgeRuntime));
   setMcpServiceState(state.mcpConfigs, state.healthCache);
+  setLlmAvailabilityProbe(() => container.llm != null);
   bindUiBridgeConfigRuntime(ConfigManager.getInstance());
 
   return {

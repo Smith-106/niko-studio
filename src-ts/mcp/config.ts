@@ -1,14 +1,13 @@
 /**
  * MCP Gateway Configuration Resolvers
  *
- * Stateless configuration resolution functions for the MCP gateway.
- * All functions are pure and have no runtime dependencies.
+ * Configuration resolution utilities for the MCP gateway.
+ * Pure config resolvers stay side-effect free; runtime probes are injected explicitly.
  *
  * Migrated from src/mcp/config.py
  */
 
 import { getConfigValue as getAppConfigValue } from '../config';
-import { getContainer } from '../container/ServiceContainer';
 
 // ============================================================
 // Config Value Resolver
@@ -97,6 +96,14 @@ const LEGACY_CONFIG_KEY_MAP: Record<string, string> = {
   'integration.redis_cache_ttl_seconds': 'integration.redisCacheTtlSeconds',
 };
 
+type LlmAvailabilityProbe = () => boolean;
+
+let llmAvailabilityProbe: LlmAvailabilityProbe | null = null;
+
+export function setLlmAvailabilityProbe(probe: LlmAvailabilityProbe | null): void {
+  llmAvailabilityProbe = probe;
+}
+
 function mapLegacyConfigKey(key: string): string {
   return LEGACY_CONFIG_KEY_MAP[key] ?? key;
 }
@@ -145,13 +152,16 @@ export function resolveGatewayHostPort(): { host: string; port: number } {
 }
 
 /**
- * Check if LLM service is available via the DI container.
- * Returns true when the container resolves an LLM service instance.
+ * Check if LLM service is available.
+ * Returns true when an injected runtime probe resolves an available LLM service.
  */
 export function isLlmAvailable(): boolean {
+  if (!llmAvailabilityProbe) {
+    return false;
+  }
+
   try {
-    const container = getContainer();
-    return container.llm != null;
+    return Boolean(llmAvailabilityProbe());
   } catch {
     return false;
   }

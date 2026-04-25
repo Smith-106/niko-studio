@@ -81,7 +81,7 @@ export function createGatewayRuntimeState(): GatewayRuntimeState {
   };
 }
 
-export function buildConfigAccess(): ConfigAccess {
+export function buildConfigAccess(onReload?: () => void): ConfigAccess {
   return {
     getConfig: () => toSnakeCaseValue(getAppConfig()) as Record<string, unknown>,
     getConfigValue: (key: string) => getAppConfigValue(mapConfigKeyToSharedKey(key)),
@@ -90,6 +90,7 @@ export function buildConfigAccess(): ConfigAccess {
     },
     reloadConfig: () => {
       ConfigManager.getInstance().reload();
+      onReload?.();
     },
   };
 }
