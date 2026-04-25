@@ -156,6 +156,37 @@ describe('MessageBubble selection', () => {
     ).toBeInTheDocument()
   })
 
+  it('renders consistency governance summary when governance metadata is present', () => {
+    render(
+      <MessageBubble
+        message={{
+          id: 'm-governance',
+          role: 'assistant',
+          content: '带一致性治理的回复',
+          timestamp: new Date(),
+          writerMetadata: {
+            consistency_governance: {
+              decision: 'soft_go',
+              publish_recommendation: 'revise',
+              score: 86,
+              feedback: '建议补充时间线交代。',
+            },
+            narrative_authority: {
+              consistencyRunId: 'run-42',
+            },
+          },
+        }}
+      />
+    )
+
+    expect(screen.getByText('一致性治理')).toBeInTheDocument()
+    expect(screen.getByText('一致性治理：Soft Go / 需修改')).toBeInTheDocument()
+    expect(screen.getByText('评估分数 86')).toBeInTheDocument()
+    expect(screen.getByText('运行 ID run-42')).toBeInTheDocument()
+    expect(screen.getByText('建议补充时间线交代。')).toBeInTheDocument()
+  })
+
+
   it('promotes an assistant reply into canon when workspace context is present', async () => {
     vi.mocked(promoteProjectWikiCanonApi).mockResolvedValue({
       success: true,
@@ -209,6 +240,13 @@ describe('MessageBubble selection', () => {
               focusEntityId: null,
               graphEntityIds: [],
               memoryEntryIds: [],
+            },
+            authority: {
+              recordSetId: null,
+              activeSceneId: null,
+              activeEventId: null,
+              activeTimelineId: null,
+              consistencyRunId: null,
             },
             workflow: {
               sessionId: 'workflow-session-6',

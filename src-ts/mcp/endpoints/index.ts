@@ -35,6 +35,7 @@ export {
 export {
   criticEvaluateEndpoint,
   criticSuggestionsEndpoint,
+  criticConsistencyEndpoint,
 } from './critic';
 
 export {

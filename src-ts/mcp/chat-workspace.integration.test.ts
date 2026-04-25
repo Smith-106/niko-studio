@@ -83,6 +83,7 @@ describe('chat workspace integration', () => {
     const writerMetadata = body['writer_metadata'] as Record<string, unknown>;
     const workspace = writerMetadata['workspace_context'] as Record<string, unknown>;
     const canonContext = writerMetadata['canon_context'] as Record<string, unknown>;
+    const retrievalPacket = writerMetadata['retrieval_packet'] as Record<string, unknown>;
     expect(body['workspace']).toMatchObject({
       identity: {
         projectId: 'atlas-project',
@@ -107,6 +108,30 @@ describe('chat workspace integration', () => {
       injected: true,
       match_count: 1,
     });
+    expect(retrievalPacket).toMatchObject({
+      schemaVersion: '2026-04-25',
+      query: '整理当前章节需要的上下文',
+      counts: {
+        entities: 1,
+        relations: 0,
+        memories: 0,
+        total: 1,
+      },
+    });
+    expect(retrievalPacket['workspaceId']).toBe(
+      (workspace as Record<string, unknown>)['identity']
+        ? ((workspace as Record<string, unknown>)['identity'] as Record<string, unknown>)['workspaceId']
+        : undefined,
+    );
+    expect(writerMetadata['narrative_authority']).toMatchObject({
+      sessionId: 'workflow-session-9',
+      projectId: 'atlas-project',
+    });
+    expect((writerMetadata['narrative_authority'] as Record<string, unknown>)['workspaceId']).toBe(
+      (workspace as Record<string, unknown>)['identity']
+        ? ((workspace as Record<string, unknown>)['identity'] as Record<string, unknown>)['workspaceId']
+        : undefined,
+    );
     expect(String(body['content'])).toContain('Chapter 9 Canon');
     expect(body['context']).toEqual({
       projectId: 'atlas-project',

@@ -151,6 +151,13 @@ describe('KnowledgeModal accessibility and labels', () => {
           graphEntityIds: [],
           memoryEntryIds: [],
         },
+        authority: {
+          recordSetId: null,
+          activeSceneId: null,
+          activeEventId: null,
+          activeTimelineId: null,
+          consistencyRunId: null,
+        },
         workflow: {
           sessionId: 'workflow-session-2',
           planId: null,

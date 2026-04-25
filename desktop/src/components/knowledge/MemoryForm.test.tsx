@@ -93,6 +93,13 @@ describe('MemoryForm', () => {
           workspaceRoot: '/tmp/test',
         },
         knowledge: { focusEntityId: '', graphEntityIds: [], memoryEntryIds: [] },
+        authority: {
+          recordSetId: null,
+          activeSceneId: null,
+          activeEventId: null,
+          activeTimelineId: null,
+          consistencyRunId: null,
+        },
         manuscript: {
           manuscriptId: null,
           title: null,

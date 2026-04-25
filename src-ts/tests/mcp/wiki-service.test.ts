@@ -33,6 +33,13 @@ function buildWorkspace(workspaceRoot: string | null): ProjectWorkspaceContext {
       graphEntityIds: [],
       memoryEntryIds: [],
     },
+    authority: {
+      recordSetId: null,
+      activeSceneId: null,
+      activeEventId: null,
+      activeTimelineId: null,
+      consistencyRunId: null,
+    },
     workflow: {
       sessionId: 'session-1',
       planId: null,

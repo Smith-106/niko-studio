@@ -549,6 +549,8 @@ export class ServiceContainer {
     return new KnowledgeServiceImpl({
       dbPath: '.writing/knowledge.db',
       enableDistillation: true,
+      memoryEngine: this.createMemoryEngine(),
+      graphEngine: this.createGraphEngine(),
     });
   }
 

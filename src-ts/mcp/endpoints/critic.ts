@@ -8,7 +8,11 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { evaluateContent, getImprovementSuggestions } from '../services/critic';
-
+import {
+  normalizeProjectWorkspaceContext,
+  projectWorkspaceToNarrativeAuthority,
+} from '../../project/workspace-model.js';
+import { normalizeProjectNarrativeRecordSetId } from '../../project/narrative-records.js';
 import {
   CrossChapterCharacterTracker,
   type ChapterMeta as CharChapterMeta,
@@ -56,7 +60,7 @@ export async function criticSuggestionsEndpoint(request: HttpRequest): Promise<H
 // Cross-Chapter Consistency Check Endpoint
 // ============================================================
 
-export interface ConsistencyCheckRequest {
+interface ConsistencyCheckRequest {
   chapters: string[];
   chapterMeta: Array<{ chapterNumber: number; title: string }>;
   worldRules?: Array<{
@@ -67,6 +71,7 @@ export interface ConsistencyCheckRequest {
     constraints: string[];
     establishedIn: number;
   }>;
+  workspace?: Record<string, unknown>;
 }
 
 interface SeverityConflict {
@@ -75,8 +80,14 @@ interface SeverityConflict {
   source: 'character' | 'timeline' | 'worldview';
   description: string;
   chaptersInvolved: number[];
-  suggestion: string;
+  suggestion?: string;
 }
+
+function buildConsistencyRunId(workspaceId: string, analyzedAt: string): string {
+  const compactTimestamp = analyzedAt.replace(/[-:.TZ]/g, '').slice(0, 14);
+  return `consistency-${workspaceId}-${compactTimestamp}`;
+}
+
 
 export interface ConsistencyCheckResult {
   character: CrossChapterCharacterReport;
@@ -93,6 +104,9 @@ export interface ConsistencyCheckResult {
     summary: string;
   };
   analyzedAt: string;
+  runId: string;
+  workspace: ReturnType<typeof normalizeProjectWorkspaceContext>;
+  narrativeAuthority: ReturnType<typeof projectWorkspaceToNarrativeAuthority>;
 }
 
 /**
@@ -102,7 +116,10 @@ export interface ConsistencyCheckResult {
  * consistency checkers, and returns a combined report sorted by severity.
  */
 export async function criticConsistencyEndpoint(request: HttpRequest): Promise<HttpResponse> {
-  const body = parseBody(request) as ConsistencyCheckRequest;
+  const body = parseBody(request) as ConsistencyCheckRequest & Record<string, unknown>;
+  const workspace = normalizeProjectWorkspaceContext(body, {
+    workspaceRoot: String(process.env['NIKO_WORKFLOW_WORKSPACE'] ?? '').trim() || process.cwd(),
+  });
   const chapters: string[] = Array.isArray(body.chapters) ? body.chapters : [];
   const chapterMetaRaw: Array<Record<string, unknown>> = Array.isArray(body.chapterMeta)
     ? body.chapterMeta
@@ -122,64 +139,60 @@ export async function criticConsistencyEndpoint(request: HttpRequest): Promise<H
     title: (m.title as string) ?? `Chapter ${i + 1}`,
   }));
 
-  // Run all three checkers concurrently
   const [characterReport, timelineReport, worldviewReport] = await Promise.all([
     new CrossChapterCharacterTracker().analyze(chapters, charMeta),
     new TimelineConsistencyChecker().analyze(chapters, timeMeta),
     runWorldviewCheck(chapters, worldMeta, body.worldRules),
   ]);
 
-  // Build combined severity-sorted list
-  const combinedConflicts: SeverityConflict[] = [];
-
-  for (const c of characterReport.conflicts) {
-    combinedConflicts.push({
+  const combinedConflicts = [
+    ...characterReport.conflicts.map((c) => ({
       severity: c.severity,
       type: c.type,
-      source: 'character',
+      source: 'character' as const,
       description: c.description,
       chaptersInvolved: c.chaptersInvolved,
       suggestion: c.suggestion,
-    });
-  }
-  for (const c of timelineReport.conflicts) {
-    combinedConflicts.push({
+    })),
+    ...timelineReport.conflicts.map((c) => ({
       severity: c.severity,
       type: c.type,
-      source: 'timeline',
+      source: 'timeline' as const,
       description: c.description,
       chaptersInvolved: c.chaptersInvolved,
       suggestion: c.suggestedFix,
-    });
-  }
-  for (const c of worldviewReport.conflicts) {
-    combinedConflicts.push({
+    })),
+    ...worldviewReport.conflicts.map((c) => ({
       severity: c.severity,
       type: c.type,
-      source: 'worldview',
+      source: 'worldview' as const,
       description: c.description,
       chaptersInvolved: c.chaptersInvolved,
       suggestion: c.suggestion,
-    });
-  }
-
-  // Sort by severity
-  combinedConflicts.sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
+    })),
+  ].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
 
   const criticalCount = combinedConflicts.filter((c) => c.severity === 'critical').length;
   const majorCount = combinedConflicts.filter((c) => c.severity === 'major').length;
   const minorCount = combinedConflicts.filter((c) => c.severity === 'minor').length;
   const infoCount = combinedConflicts.filter((c) => c.severity === 'info').length;
-
-  const avgScore = Math.round(
-    ((characterReport.coherenceScore + timelineReport.consistencyScore + worldviewReport.coherenceScore) / 3) * 10
-  ) / 10;
-
-  const overallSummary = [
-    characterReport.summary,
-    timelineReport.summary,
-    worldviewReport.summary,
-  ].join(' ');
+  const analyzedAt = new Date().toISOString();
+  const runId = buildConsistencyRunId(workspace.identity.workspaceId, analyzedAt);
+  const recordSetId = normalizeProjectNarrativeRecordSetId(
+    workspace.authority.recordSetId,
+    workspace.identity.workspaceId,
+  );
+  const nextWorkspace = normalizeProjectWorkspaceContext({
+    ...workspace,
+    authority: {
+      ...workspace.authority,
+      recordSetId,
+      consistencyRunId: runId,
+    },
+  }, {
+    workspaceRoot: workspace.identity.workspaceRoot,
+    fallbackProjectId: workspace.identity.projectId,
+  });
 
   const result: ConsistencyCheckResult = {
     character: characterReport,
@@ -192,10 +205,19 @@ export async function criticConsistencyEndpoint(request: HttpRequest): Promise<H
       minorCount,
       infoCount,
       conflicts: combinedConflicts,
-      overallScore: avgScore,
-      summary: overallSummary,
+      overallScore: Math.round(
+        ((characterReport.coherenceScore + timelineReport.consistencyScore + worldviewReport.coherenceScore) / 3) * 10,
+      ) / 10,
+      summary: [
+        characterReport.summary,
+        timelineReport.summary,
+        worldviewReport.summary,
+      ].join(' '),
     },
-    analyzedAt: new Date().toISOString(),
+    analyzedAt,
+    runId,
+    workspace: nextWorkspace,
+    narrativeAuthority: projectWorkspaceToNarrativeAuthority(nextWorkspace),
   };
 
   return jsonResponse(result);

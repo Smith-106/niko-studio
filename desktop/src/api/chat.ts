@@ -58,6 +58,27 @@ export interface ChatModelComparisonResult {
   control: ChatModelComparisonResultItem
 }
 
+export type WorkflowDecision = 'go' | 'soft_go' | 'no_go'
+export type PublishRecommendation = 'pass' | 'revise' | 'block'
+
+export interface NarrativeAuthorityMetadata {
+  sessionId?: string
+  workspaceId?: string
+  projectId?: string
+  recordSetId?: string
+  sceneId?: string
+  eventId?: string
+  timelineId?: string
+  consistencyRunId?: string
+}
+
+export interface ConsistencyGovernanceMetadata {
+  decision?: WorkflowDecision
+  publish_recommendation?: PublishRecommendation
+  score?: number
+  feedback?: string
+}
+
 export interface WriterMetadata {
   canon_context?: {
     available: boolean
@@ -89,7 +110,62 @@ export interface WriterMetadata {
     memories_count: number
   }
   workspace_context?: ProjectWorkspaceContext
+  narrative_authority?: NarrativeAuthorityMetadata
+  consistency_governance?: ConsistencyGovernanceMetadata
   [key: string]: unknown
+}
+
+export function toPublishRecommendation(
+  decision?: WorkflowDecision,
+): PublishRecommendation | undefined {
+  if (decision === 'go') return 'pass'
+  if (decision === 'soft_go') return 'revise'
+  if (decision === 'no_go') return 'block'
+  return undefined
+}
+
+export function buildConsistencyGovernanceMetadata(params: {
+  decision?: WorkflowDecision
+  evaluation?: {
+    score?: number
+    feedback?: string
+  } | null
+}): ConsistencyGovernanceMetadata | undefined {
+  const score = typeof params.evaluation?.score === 'number' ? params.evaluation.score : undefined
+  const feedback = typeof params.evaluation?.feedback === 'string'
+    ? params.evaluation.feedback.trim()
+    : ''
+  const publishRecommendation = toPublishRecommendation(params.decision)
+  const hasMeaningfulScore = typeof score === 'number' && Number.isFinite(score) && score > 0
+  const hasFeedback = feedback.length > 0
+
+  if (!params.decision && !publishRecommendation && !hasMeaningfulScore && !hasFeedback) {
+    return undefined
+  }
+
+  return {
+    decision: params.decision,
+    publish_recommendation: publishRecommendation,
+    score: hasMeaningfulScore ? score : undefined,
+    feedback: hasFeedback ? feedback : undefined,
+  }
+}
+
+export function mergeWriterMetadataGovernance(
+  writerMetadata: WriterMetadata | undefined,
+  governance: ConsistencyGovernanceMetadata | undefined,
+): WriterMetadata | undefined {
+  if (!governance) {
+    return writerMetadata
+  }
+
+  return {
+    ...(writerMetadata ?? {}),
+    consistency_governance: {
+      ...(writerMetadata?.consistency_governance ?? {}),
+      ...governance,
+    },
+  }
 }
 
 export interface ChatResponse {
@@ -141,7 +217,7 @@ interface StreamTerminalPayload {
 
 export interface StreamDonePayload extends StreamTerminalPayload {
   skills_used?: string[]
-  decision?: 'go' | 'soft_go' | 'no_go'
+  decision?: WorkflowDecision
   writer_metadata?: WriterMetadata
 }
 

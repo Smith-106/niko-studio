@@ -30,9 +30,13 @@ vi.mock('../../container/ServiceContainer', () => ({
   getContainer: vi.fn(() => containerMock),
 }));
 
-vi.mock('../../project/wiki-knowledge-layer.js', () => ({
-  createProjectWikiKnowledgeLayer: createProjectWikiKnowledgeLayerMock,
-}));
+vi.mock('../../project/wiki-knowledge-layer.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../project/wiki-knowledge-layer.js')>();
+  return {
+    ...actual,
+    createProjectWikiKnowledgeLayer: createProjectWikiKnowledgeLayerMock,
+  };
+});
 
 function makeRequest(body: Record<string, unknown>): HttpRequest {
   return {
@@ -71,6 +75,13 @@ function buildWorkspaceContext() {
       focusEntityId: null,
       graphEntityIds: [],
       memoryEntryIds: [],
+    },
+    authority: {
+      recordSetId: null,
+      activeSceneId: null,
+      activeEventId: null,
+      activeTimelineId: null,
+      consistencyRunId: null,
     },
     workflow: {
       sessionId: 'session-1',
@@ -193,28 +204,79 @@ describe('mcp agent service', () => {
     llmGenerateJsonMock.mockResolvedValue({});
     searchEntitiesMock.mockResolvedValue([
       {
+        authority: {
+          workspaceId: 'atlas-workspace',
+          scopeAuthority: 'workspace',
+          canonAuthority: 'canon-page',
+          projectionAuthority: 'derived',
+          promotion: 'manual',
+          promotedFrom: 'manual',
+          status: 'active',
+        },
         id: 'char-aster',
         name: 'Aster',
         type: 'character',
         description: 'A detective who knows the dock ledger by heart.',
+        filePath: 'characters/aster.md',
+        origin: 'wiki-canon',
+        pageId: 'page-aster',
+        score: 0.94,
+        slug: 'characters/aster',
       },
       {
+        authority: {
+          workspaceId: 'atlas-workspace',
+          scopeAuthority: 'workspace',
+          canonAuthority: 'canon-page',
+          projectionAuthority: 'derived',
+          promotion: 'manual',
+          promotedFrom: 'manual',
+          status: 'active',
+        },
         id: 'loc-old-dock',
         name: 'Old Dock',
         type: 'location',
         description: 'A fog-bound harbor lined with rusted cranes.',
+        filePath: 'locations/old-dock.md',
+        origin: 'wiki-canon',
+        pageId: 'page-old-dock',
+        score: 0.88,
+        slug: 'locations/old-dock',
       },
     ]);
     getRelatedEntitiesMock.mockResolvedValue([
       {
+        canonAuthority: 'canon-page',
+        id: 'rel-aster-dock',
+        origin: 'wiki-projection-graph',
+        pageId: 'page-aster',
+        projectionAuthority: 'derived',
+        projectionId: 'graph:page-aster',
         source: 'Aster',
+        sourceId: 'char-aster',
         target: 'Old Dock',
+        targetId: 'loc-old-dock',
         type: 'visits',
+        workspaceId: 'atlas-workspace',
       },
     ]);
     searchMemoriesMock.mockResolvedValue([
       {
+        authority: {
+          workspaceId: 'atlas-workspace',
+          scopeAuthority: 'workspace',
+          canonAuthority: 'canon-page',
+          projectionAuthority: 'derived',
+          promotion: 'manual',
+          promotedFrom: 'manual',
+          status: 'active',
+        },
         content: 'Aster once lost a witness at Old Dock during a midnight handoff.',
+        id: 'memory-aster-dock',
+        origin: 'wiki-canon',
+        pageId: 'page-aster',
+        score: 0.79,
+        title: 'Old Dock Witness',
       },
     ]);
     createProjectWikiKnowledgeLayerMock.mockReturnValue({
@@ -263,13 +325,42 @@ describe('mcp agent service', () => {
         relations_count: 2,
         memories_count: 1,
       },
+      retrieval_packet: {
+        schemaVersion: '2026-04-25',
+        query: 'Aster Find the ledger Evade the dock watch',
+        workspaceId: 'atlas-workspace',
+        counts: {
+          entities: 2,
+          relations: 2,
+          memories: 1,
+          total: 5,
+        },
+      },
       workspace_context: {
         identity: {
           workspaceId: 'atlas-workspace',
           projectId: 'atlas-project',
         },
       },
+      narrative_authority: {
+        sessionId: 'session-1',
+        workspaceId: 'atlas-workspace',
+        projectId: 'atlas-project',
+      },
     });
+    expect((result.writer_metadata?.['retrieval_packet'] as { packets: Array<Record<string, unknown>> }).packets)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'entity',
+          title: 'Aster',
+          pageId: 'page-aster',
+        }),
+        expect.objectContaining({
+          kind: 'memory',
+          title: 'Old Dock Witness',
+          pageId: 'page-aster',
+        }),
+      ]));
   });
 
   it('normalizes explicit workspace payloads before invoking the write endpoint', async () => {
@@ -338,11 +429,25 @@ describe('mcp agent service', () => {
     expect(response.body).toMatchObject({
       content: expect.any(String),
       writer_metadata: {
+        retrieval_packet: {
+          counts: {
+            entities: 0,
+            relations: 0,
+            memories: 0,
+            total: 0,
+          },
+          workspaceId: 'atlas-workspace',
+        },
         workspace_context: {
           identity: {
             workspaceId: 'atlas-workspace',
             projectId: 'atlas-project',
           },
+        },
+        narrative_authority: {
+          sessionId: 'session-10',
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
         },
       },
     });

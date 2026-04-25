@@ -202,6 +202,13 @@ describe('workspace store integration', () => {
           graphEntityIds: ['hero-4'],
           memoryEntryIds: ['memory-4'],
         },
+        authority: {
+          recordSetId: null,
+          activeSceneId: null,
+          activeEventId: null,
+          activeTimelineId: null,
+          consistencyRunId: null,
+        },
         workflow: {
           sessionId: 'workflow-session-4',
           planId: 'plan-4',

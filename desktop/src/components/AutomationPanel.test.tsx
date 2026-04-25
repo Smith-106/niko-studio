@@ -66,6 +66,13 @@ const workspaceAuthority: ProjectWorkspaceContext = {
     graphEntityIds: ['entity-1'],
     memoryEntryIds: [],
   },
+  authority: {
+    recordSetId: null,
+    activeSceneId: null,
+    activeEventId: null,
+    activeTimelineId: null,
+    consistencyRunId: null,
+  },
   workflow: {
     level: 'L3',
     planId: 'plan-1',

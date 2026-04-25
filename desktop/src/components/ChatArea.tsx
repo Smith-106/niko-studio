@@ -4,7 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
-import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, quickRollbackWorkflow } from '../api/client'
+import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, quickRollbackWorkflow, buildConsistencyGovernanceMetadata, mergeWriterMetadataGovernance } from '../api/client'
 import type { ChatRequest, StreamDonePayload, WriterMetadata } from '../api/client'
 import { MessageBubble } from './MessageBubble'
 import { PromptTemplatePanel, type ApplyTemplatePayload } from './PromptTemplatePanel'
@@ -383,6 +383,13 @@ export function ChatArea({
   const commitAssistantResponse = (response: Awaited<ReturnType<typeof chat>>) => {
     if (!response.success || !response.data) return
 
+    const writerMetadata = mergeWriterMetadataGovernance(
+      response.data.writer_metadata,
+      buildConsistencyGovernanceMetadata({
+        evaluation: response.data.evaluation,
+      }),
+    )
+
     if (response.data.comparison?.enabled) {
       const comparison = response.data.comparison
       addMessage(
@@ -390,7 +397,7 @@ export function ChatArea({
         response.data.content || comparison.primary.content,
         response.data.skills_used || selectedSkills,
         comparison,
-        response.data.writer_metadata
+        writerMetadata
       )
       return
     }
@@ -400,7 +407,7 @@ export function ChatArea({
       response.data.content || t.processingCompleted,
       response.data.skills_used || selectedSkills,
       undefined,
-      response.data.writer_metadata
+      writerMetadata
     )
   }
 
@@ -499,10 +506,10 @@ export function ChatArea({
     const maybeShowGateHint = (payload?: StreamDonePayload) => {
       if (!payload?.decision) return
       if (payload.decision === 'soft_go') {
-        setRecoverStatus({ type: 'error', message: t.streamGateSoftGo })
+        setRecoverStatus({ type: 'info', message: `${t.streamGateSoftGo} ${t.streamGovernanceReviewReady}` })
       }
       if (payload.decision === 'no_go') {
-        setRecoverStatus({ type: 'error', message: t.streamGateNoGo })
+        setRecoverStatus({ type: 'error', message: `${t.streamGateNoGo} ${t.streamGovernanceReviewReady}` })
       }
       streamMeta = {
         terminal: normalizeTerminal(payload),
@@ -510,7 +517,7 @@ export function ChatArea({
         diagnostics: payload.diagnostics,
       }
       if (streamMeta.terminal === 'recovered') {
-        setRecoverStatus({ type: 'success', message: t.streamRecovered })
+        setRecoverStatus({ type: 'success', message: `${t.streamRecovered} ${t.streamGovernanceRecovered}` })
       }
     }
 
@@ -527,7 +534,17 @@ export function ChatArea({
           setRecoverStatus(null)
           return
         }
-        setRecoverStatus(status)
+        setRecoverStatus((prev) => {
+          if (
+            prev?.type === 'success'
+            && prev.message === `${t.streamRecovered} ${t.streamGovernanceRecovered}`
+            && status.type === 'success'
+            && status.message === t.streamRecovered
+          ) {
+            return prev
+          }
+          return status
+        })
       },
       onCommitAssistantMessage: ({ content, writerMetadata }) => {
         addMessage('assistant', content, selectedSkills, undefined, writerMetadata)

@@ -2,11 +2,44 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EvaluationPanel } from './EvaluationPanel'
+import { type ProjectWorkspaceContext } from '../types/workspace'
 import { useSettingsStore } from '../stores/settingsStore'
 import { translations } from '../i18n'
 
 const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
-  const createMockWorkspace = () => ({
+  const createMockWorkspace = (): ProjectWorkspaceContext => ({
+    schemaVersion: '2026-04-08',
+    identity: {
+      workspaceId: 'default-project',
+      projectId: 'default-project',
+      projectName: 'default-project',
+      workspaceRoot: null,
+    },
+    manuscript: {
+      manuscriptId: null,
+      title: null,
+      chapterId: null,
+      chapterTitle: null,
+      chapterNumber: null,
+    },
+    storyBible: {
+      storyBibleId: null,
+      draftId: null,
+      version: null,
+      storage: 'workspace' as const,
+    },
+    knowledge: {
+      focusEntityId: null,
+      graphEntityIds: [],
+      memoryEntryIds: [],
+    },
+    authority: {
+      recordSetId: null,
+      activeSceneId: null,
+      activeEventId: null,
+      activeTimelineId: null,
+      consistencyRunId: null,
+    },
     workflow: {
       level: 'L3',
       planId: '',
@@ -14,13 +47,19 @@ const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
     },
     chat: {
       conversationId: null,
+      comparisonEnabled: null,
+    },
+    compatibility: {
+      additiveContract: true as const,
+      migratedLegacyFields: [],
+      notes: [],
     },
   })
 
   const state: {
     currentConversationId: string | null
-    currentWorkspace: ReturnType<typeof createMockWorkspace>
-    conversationsById: Record<string, { workspace?: ReturnType<typeof createMockWorkspace> }>
+    currentWorkspace: ProjectWorkspaceContext
+    conversationsById: Record<string, { workspace?: ProjectWorkspaceContext }>
     addMessage: ReturnType<typeof vi.fn>
     setCurrentWorkspace: ReturnType<typeof vi.fn>
     syncConversationWorkspace: ReturnType<typeof vi.fn>
@@ -34,19 +73,43 @@ const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
   }
 
   const mergeWorkspacePatch = (
-    currentWorkspace: ReturnType<typeof createMockWorkspace>,
+    currentWorkspace: ProjectWorkspaceContext,
     workspacePatch: Record<string, unknown>,
-  ) => ({
+  ): ProjectWorkspaceContext => ({
     ...currentWorkspace,
     ...workspacePatch,
+    identity: {
+      ...currentWorkspace.identity,
+      ...(workspacePatch.identity as Record<string, unknown> | undefined),
+    } as ProjectWorkspaceContext['identity'],
+    manuscript: {
+      ...currentWorkspace.manuscript,
+      ...(workspacePatch.manuscript as Record<string, unknown> | undefined),
+    } as ProjectWorkspaceContext['manuscript'],
+    storyBible: {
+      ...currentWorkspace.storyBible,
+      ...(workspacePatch.storyBible as Record<string, unknown> | undefined),
+    } as ProjectWorkspaceContext['storyBible'],
+    knowledge: {
+      ...currentWorkspace.knowledge,
+      ...(workspacePatch.knowledge as Record<string, unknown> | undefined),
+    } as ProjectWorkspaceContext['knowledge'],
+    authority: {
+      ...currentWorkspace.authority,
+      ...(workspacePatch.authority as Record<string, unknown> | undefined),
+    } as ProjectWorkspaceContext['authority'],
     workflow: {
       ...currentWorkspace.workflow,
       ...(workspacePatch.workflow as Record<string, unknown> | undefined),
-    },
+    } as ProjectWorkspaceContext['workflow'],
     chat: {
       ...currentWorkspace.chat,
       ...(workspacePatch.chat as Record<string, unknown> | undefined),
-    },
+    } as ProjectWorkspaceContext['chat'],
+    compatibility: {
+      ...currentWorkspace.compatibility,
+      ...(workspacePatch.compatibility as Record<string, unknown> | undefined),
+    } as ProjectWorkspaceContext['compatibility'],
   })
 
   const resetMockAppStore = () => {
@@ -101,6 +164,7 @@ vi.mock('../api/client', () => ({
   evaluateContent: vi.fn(),
   getImprovementSuggestions: vi.fn(),
   novelQualityCheck: vi.fn(),
+  runConsistencyCheck: vi.fn(),
   createCheckpoint: vi.fn(),
   listCheckpoints: vi.fn(),
   restoreCheckpoint: vi.fn(),
@@ -129,6 +193,7 @@ import {
   novelQualityCheck,
   restoreCheckpoint,
   routeWorkflow,
+  runConsistencyCheck,
   undoRecommendation,
   workflowLifecycle,
   type WorkflowExecuteResponse,
@@ -139,6 +204,7 @@ import {
 const mockedEvaluateContent = vi.mocked(evaluateContent)
 const mockedGetImprovementSuggestions = vi.mocked(getImprovementSuggestions)
 const mockedNovelQualityCheck = vi.mocked(novelQualityCheck)
+const mockedRunConsistencyCheck = vi.mocked(runConsistencyCheck)
 const mockedListCheckpoints = vi.mocked(listCheckpoints)
 const mockedCreateCheckpoint = vi.mocked(createCheckpoint)
 const mockedRestoreCheckpoint = vi.mocked(restoreCheckpoint)
@@ -155,6 +221,54 @@ const evaluationDetailedReviewLabel = '详细评估'
 const evaluationSupportToolsLabel = '更多工具'
 const evaluationWorkflowSuccessRoute = `${zh.evaluationWorkflowRoute}: ${zh.evaluationWorkflowSuccess}`
 const evaluationWorkflowSuccessLifecycle = `${zh.evaluationWorkflowLifecycle}: ${zh.evaluationWorkflowSuccess}`
+const createMeaningfulWorkspace = (): ProjectWorkspaceContext => ({
+  schemaVersion: '2026-04-08',
+  identity: {
+    workspaceId: 'atlas-workspace',
+    projectId: 'atlas-project',
+    projectName: 'Atlas',
+    workspaceRoot: '/tmp/atlas',
+  },
+  manuscript: {
+    manuscriptId: null,
+    title: null,
+    chapterId: 'chapter-9',
+    chapterTitle: 'Chapter 9',
+    chapterNumber: 9,
+  },
+  storyBible: {
+    storyBibleId: null,
+    draftId: null,
+    version: null,
+    storage: 'workspace' as const,
+  },
+  knowledge: {
+    focusEntityId: null,
+    graphEntityIds: [],
+    memoryEntryIds: [],
+  },
+  authority: {
+    recordSetId: null,
+    activeSceneId: null,
+    activeEventId: null,
+    activeTimelineId: null,
+    consistencyRunId: null,
+  },
+  workflow: {
+    level: 'L3',
+    planId: '',
+    sessionId: null,
+  },
+  chat: {
+    conversationId: null,
+    comparisonEnabled: null,
+  },
+  compatibility: {
+    additiveContract: true as const,
+    migratedLegacyFields: [],
+    notes: [],
+  },
+})
 const expectWorkflowRequestWorkspace = () => expect.objectContaining({
   workflow: expect.objectContaining({
     level: 'L3',
@@ -248,9 +362,9 @@ describe('EvaluationPanel actions', () => {
       data: {
         decision: 'REVISE',
         total_score: 74,
-        lock_score: 26,
-        style_score: 24,
-        logic_score: 24,
+        lock_score: 71,
+        style_score: 76,
+        logic_score: 73,
         actionable_feedback: '补强角色动机',
       },
     })
@@ -468,23 +582,78 @@ describe('EvaluationPanel actions', () => {
     })
   })
 
-  it('shows a visible error message when refreshing suggestions fails', async () => {
-    mockedGetImprovementSuggestions.mockResolvedValueOnce({
-      success: false,
-      error: 'refresh failed',
+  it('runs consistency governance with workspace scope and syncs returned authority state', async () => {
+    useAppStoreMock.setState({
+      currentWorkspace: createMeaningfulWorkspace(),
+    })
+    mockedRunConsistencyCheck.mockResolvedValueOnce({
+      success: true,
+      data: {
+        character: {},
+        timeline: {},
+        worldview: {},
+        combined: {
+          totalConflicts: 1,
+          criticalCount: 0,
+          majorCount: 1,
+          minorCount: 0,
+          infoCount: 0,
+          conflicts: [],
+          overallScore: 8.2,
+          summary: 'Found one major conflict.',
+        },
+        analyzedAt: '2026-04-25T12:00:00.000Z',
+        runId: 'consistency-atlas-workspace-20260425120000',
+        workspace: {
+          ...createMeaningfulWorkspace(),
+          authority: {
+            recordSetId: 'atlas-workspace',
+            activeSceneId: null,
+            activeEventId: null,
+            activeTimelineId: null,
+            consistencyRunId: 'consistency-atlas-workspace-20260425120000',
+          },
+        } satisfies ProjectWorkspaceContext,
+        narrativeAuthority: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          consistencyRunId: 'consistency-atlas-workspace-20260425120000',
+        },
+      },
     })
 
     render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
 
     await screen.findByText(zh.evaluationSuggestions)
-    await userEvent.click(screen.getByRole('button', { name: evaluationDetailedReviewLabel }))
-    await userEvent.click(screen.getByRole('button', { name: zh.evaluationSuggestionsRefresh }))
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
+    await userEvent.click(screen.getByRole('button', { name: zh.evaluationConsistencyRun }))
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(`${zh.failureCategoryEvaluation}：${zh.failureMessageEvaluation}`)
+      expect(mockedRunConsistencyCheck).toHaveBeenCalledWith(
+        ['测试内容'],
+        [{ chapterNumber: 9, title: 'Chapter 9' }],
+        undefined,
+        expect.objectContaining({
+          identity: expect.objectContaining({
+            workspaceId: 'atlas-workspace',
+            projectId: 'atlas-project',
+          }),
+        }),
+      )
+      expect(screen.getByText(`${zh.evaluationConsistencyRunId}: consistency-atlas-workspace-20260425120000`)).toBeInTheDocument()
+      expect(screen.getByText(`${zh.evaluationConsistencyScore}: 8.2`)).toBeInTheDocument()
+      expect(useAppStoreMock.getState().currentWorkspace.authority.consistencyRunId).toBe('consistency-atlas-workspace-20260425120000')
     })
   })
 
+  it('disables consistency governance when no meaningful workspace scope exists', async () => {
+    render(<EvaluationPanel content="测试内容" onClose={() => {}} />)
+
+    await screen.findByText(zh.evaluationSuggestions)
+    await userEvent.click(screen.getByRole('button', { name: evaluationSupportToolsLabel }))
+
+    expect(screen.getByRole('button', { name: zh.evaluationConsistencyRun })).toBeDisabled()
+  })
   it('shows a classified failure state when the initial evaluation request fails', async () => {
     mockedEvaluateContent.mockResolvedValueOnce({
       success: false,

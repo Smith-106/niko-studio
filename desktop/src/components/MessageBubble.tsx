@@ -25,6 +25,77 @@ const getUniqueComparisonLines = (source: string, target: string): string[] => {
     .filter((line, index, lines) => Boolean(line) && !targetLines.has(line) && lines.indexOf(line) === index)
 }
 
+function governanceSignature(message: Message): string {
+  return JSON.stringify({
+    governance: message.writerMetadata?.consistency_governance ?? null,
+    narrative_authority: message.writerMetadata?.narrative_authority ?? null,
+  })
+}
+
+function getGovernanceSummary(message: Message, language: 'zh' | 'en') {
+  const governance = message.writerMetadata?.consistency_governance
+  const authority = message.writerMetadata?.narrative_authority
+  if (!governance && !authority?.consistencyRunId) {
+    return null
+  }
+
+  const decision = governance?.decision
+  const publishRecommendation = governance?.publish_recommendation
+  const score = governance?.score
+  const feedback = governance?.feedback?.trim()
+
+  const decisionLabel = (() => {
+    if (language === 'zh') {
+      if (decision === 'go') return 'Go'
+      if (decision === 'soft_go') return 'Soft Go'
+      if (decision === 'no_go') return 'No-Go'
+      return '未标记'
+    }
+    if (decision === 'go') return 'Go'
+    if (decision === 'soft_go') return 'Soft Go'
+    if (decision === 'no_go') return 'No-Go'
+    return 'Not marked'
+  })()
+
+  const recommendationLabel = (() => {
+    if (language === 'zh') {
+      if (publishRecommendation === 'pass') return '通过'
+      if (publishRecommendation === 'revise') return '需修改'
+      if (publishRecommendation === 'block') return '阻塞'
+      return '未生成'
+    }
+    if (publishRecommendation === 'pass') return 'Pass'
+    if (publishRecommendation === 'revise') return 'Revise'
+    if (publishRecommendation === 'block') return 'Block'
+    return 'Not generated'
+  })()
+
+  const statusTone = decision === 'no_go'
+    ? 'error'
+    : decision === 'soft_go'
+      ? 'warning'
+      : 'success'
+
+  const summary = language === 'zh'
+    ? `一致性治理：${decisionLabel} / ${recommendationLabel}`
+    : `Consistency governance: ${decisionLabel} / ${recommendationLabel}`
+
+  const scoreLine = typeof score === 'number'
+    ? (language === 'zh' ? `评估分数 ${score}` : `Evaluation score ${score}`)
+    : null
+  const runIdLine = authority?.consistencyRunId
+    ? (language === 'zh' ? `运行 ID ${authority.consistencyRunId}` : `Run ID ${authority.consistencyRunId}`)
+    : null
+
+  return {
+    summary,
+    scoreLine,
+    feedback: feedback || null,
+    runIdLine,
+    statusTone,
+  }
+}
+
 // Custom comparison function for React.memo
 function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubbleProps): boolean {
   const prevMsg = prevProps.message
@@ -63,6 +134,7 @@ function arePropsEqual(prevProps: MessageBubbleProps, nextProps: MessageBubblePr
   }
 
   if (canonContextSignature(prevMsg) !== canonContextSignature(nextMsg)) return false
+  if (governanceSignature(prevMsg) !== governanceSignature(nextMsg)) return false
 
   return true
 }
@@ -150,6 +222,7 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
     ? getUniqueComparisonLines(message.comparison.control.content, message.comparison.primary.content)
     : []
   const canonContext = message.writerMetadata?.canon_context
+  const governanceSummary = getGovernanceSummary(message, language)
   const referenceSummary = getReferenceSummary(message, language, t)
   const workspaceContext = message.workspaceContext
   const canPromoteReplyToCanon = !isUser && Boolean(workspaceContext) && Boolean(message.content.trim())
@@ -214,7 +287,6 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
             : 'bg-dark-surface border border-dark-border text-dark-text rounded-tl-sm'
         }`}
       >
-        {/* Skills Badge */}
         {message.skills && message.skills.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {message.skills.map((skill) => (
@@ -225,6 +297,41 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
                 📦 {skill}
               </span>
             ))}
+          </div>
+        )}
+
+        {!isUser && governanceSummary && (
+          <div
+            className={`mb-3 rounded-xl border px-3 py-3 ${
+              governanceSummary.statusTone === 'error'
+                ? 'border-danger-500/20 bg-danger-500/5'
+                : governanceSummary.statusTone === 'warning'
+                  ? 'border-warning-500/20 bg-warning-500/5'
+                  : 'border-success-500/20 bg-success-500/5'
+            }`}
+          >
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-dark-text-secondary">
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  governanceSummary.statusTone === 'error'
+                    ? 'bg-danger-400'
+                    : governanceSummary.statusTone === 'warning'
+                      ? 'bg-warning-400'
+                      : 'bg-success-400'
+                }`}
+              ></span>
+              {language === 'zh' ? '一致性治理' : 'Consistency governance'}
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-dark-text-muted">{governanceSummary.summary}</p>
+            {(governanceSummary.scoreLine || governanceSummary.runIdLine || governanceSummary.feedback) && (
+              <div className="mt-3 space-y-1 text-xs text-dark-text-secondary">
+                {governanceSummary.scoreLine && <div>{governanceSummary.scoreLine}</div>}
+                {governanceSummary.runIdLine && <div>{governanceSummary.runIdLine}</div>}
+                {governanceSummary.feedback && (
+                  <p className="leading-relaxed text-dark-text-muted">{governanceSummary.feedback}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -269,7 +376,6 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
           </div>
         )}
 
-        {/* Content */}
         {message.comparison?.enabled ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2" onMouseUp={handleMouseUp}>
             <div className="rounded-xl border border-dark-border bg-dark-bg p-4 shadow-inner">
@@ -364,7 +470,6 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
           </div>
         )}
 
-        {/* Timestamp */}
         <div
           className={`text-[11px] mt-3 flex items-center gap-1 ${
             isUser ? 'text-primary-100/70 justify-end' : 'text-dark-text-muted justify-start'
@@ -377,5 +482,4 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
   )
 }
 
-// Export memoized component to prevent unnecessary re-renders
 export const MessageBubble = React.memo(MessageBubbleComponent, arePropsEqual)

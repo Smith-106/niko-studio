@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BarChart3, TrendingUp, AlertCircle, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import {
+  runConsistencyCheck,
+  type ConsistencyCheckResult,
   type RecommendationPayload,
 } from '../api/client'
 import { processWritingHelper } from '../api/writing'
@@ -312,6 +314,9 @@ export function EvaluationPanel({
   const [showAdvancedWorkflow, setShowAdvancedWorkflow] = useState(false)
   const [showDetailedReview, setShowDetailedReview] = useState(false)
   const [showSupportTools, setShowSupportTools] = useState(false)
+  const [consistencyChecking, setConsistencyChecking] = useState(false)
+  const [consistencyCheckError, setConsistencyCheckError] = useState<string | null>(null)
+  const [consistencyCheckResult, setConsistencyCheckResult] = useState<ConsistencyCheckResult | null>(null)
   const qualityGoals = useSettingsStore((state) => state.settings.qualityGoals)
   const detectionEvasionGuardEnabled = useSettingsStore((state) => state.settings.detectionEvasionGuardEnabled)
   const workspaceSummary = useWriterWorkspaceSummary()
@@ -561,6 +566,47 @@ export function EvaluationPanel({
       failureMessageConnection: t.failureMessageConnection,
     },
   })
+
+  const runWorkspaceConsistencyCheck = async () => {
+    const activeWorkspace = workspaceSummary.meaningfulWorkspace
+    if (!activeWorkspace) {
+      setConsistencyCheckResult(null)
+      setConsistencyCheckError(t.evaluationConsistencyFailed)
+      return
+    }
+
+    const chapterTitle = workspaceSummary.chapterLabel ?? activeWorkspace.manuscript.chapterTitle ?? 'Chapter 1'
+    const chapterNumber = activeWorkspace.manuscript.chapterNumber ?? 1
+
+    setConsistencyChecking(true)
+    setConsistencyCheckError(null)
+    try {
+      const response = await runConsistencyCheck(
+        [content],
+        [{ chapterNumber, title: chapterTitle }],
+        undefined,
+        activeWorkspace,
+      )
+      if (!response.success || !response.data) {
+        setConsistencyCheckResult(null)
+        setConsistencyCheckError(response.error || t.evaluationConsistencyFailed)
+        return
+      }
+
+      setConsistencyCheckResult(response.data)
+      const activeConversationId = useAppStore.getState().currentConversationId
+      if (activeConversationId) {
+        useAppStore.getState().syncConversationWorkspace(activeConversationId, response.data.workspace)
+      } else {
+        useAppStore.getState().setCurrentWorkspace(response.data.workspace)
+      }
+    } catch (error) {
+      setConsistencyCheckResult(null)
+      setConsistencyCheckError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setConsistencyChecking(false)
+    }
+  }
 
   const getProviderFields = () => {
     const { settings } = useSettingsStore.getState()
@@ -1274,6 +1320,41 @@ export function EvaluationPanel({
                     <div>{t.evaluationQualityCheckStyle}: {qualityCheckResult.styleScore}</div>
                     <div>{t.evaluationQualityCheckLogic}: {qualityCheckResult.logicScore}</div>
                     <div className="mt-1">{t.evaluationQualityCheckFeedback}: {qualityCheckResult.feedback}</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-dark-border pt-4">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-sm font-medium text-gray-700 dark:text-dark-text">{t.evaluationConsistencyTitle}</span>
+                  <button
+                    onClick={() => {
+                      void runWorkspaceConsistencyCheck()
+                    }}
+                    disabled={consistencyChecking || !workspaceSummary.hasMeaningfulScope}
+                    className="px-2 py-1 text-xs bg-indigo-600 text-white rounded disabled:opacity-50"
+                    aria-label={t.evaluationConsistencyRun}
+                    title={t.evaluationConsistencyRun}
+                  >
+                    {consistencyChecking ? t.evaluationConsistencyRunning : t.evaluationConsistencyRun}
+                  </button>
+                </div>
+                {!workspaceSummary.hasMeaningfulScope && (
+                  <p className="text-xs text-gray-500 dark:text-dark-text-secondary">
+                    {isZh ? '需要先进入带项目范围的工作区后才能执行一致性治理。' : 'Consistency governance needs a workspace-scoped project context first.'}
+                  </p>
+                )}
+                {consistencyCheckError && (
+                  <p className="text-xs text-red-500">{consistencyCheckError}</p>
+                )}
+                {consistencyCheckResult && (
+                  <div className="mt-2 p-2 rounded border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-xs text-gray-700 dark:text-dark-text-secondary">
+                    <div className="font-medium text-gray-800 dark:text-dark-text mb-1">
+                      {t.evaluationConsistencyRunId}: {consistencyCheckResult.runId}
+                    </div>
+                    <div>{t.evaluationConsistencyScore}: {consistencyCheckResult.combined.overallScore}</div>
+                    <div>{t.evaluationConsistencyConflicts}: {consistencyCheckResult.combined.totalConflicts}</div>
+                    <div className="mt-1">{t.evaluationConsistencySummary}: {consistencyCheckResult.combined.summary}</div>
                   </div>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import { chatStream } from '../api/client'
+import { buildConsistencyGovernanceMetadata, chatStream, mergeWriterMetadataGovernance } from '../api/client'
 import type { ChatRequest, StreamDonePayload } from '../api/client'
 import { useSmoothStream } from './useSmoothStream'
 
@@ -55,6 +55,7 @@ export function useChatStreaming() {
     let hasStreamContent = false
     let streamText = ''
     let streamWriterMetadata: StreamDonePayload['writer_metadata']
+    let streamEvaluation: { score?: number; feedback?: string } | undefined
     let finalPhase: StreamPhase | null = null
     let finalized = false
     let streamDoneFlag = false
@@ -82,10 +83,19 @@ export function useChatStreaming() {
           streamText += chunk
           addChunk(chunk)
         },
+        onEvaluation: (payload) => {
+          streamEvaluation = payload
+        },
         onDone: (payload) => {
           streamDoneFlag = true
           setStreamDone(true)
-          streamWriterMetadata = payload.writer_metadata
+          streamWriterMetadata = mergeWriterMetadataGovernance(
+            payload.writer_metadata,
+            buildConsistencyGovernanceMetadata({
+              decision: payload.decision,
+              evaluation: streamEvaluation,
+            }),
+          )
           options.maybeShowGateHint(payload)
           const terminal = options.normalizeTerminal(payload)
           finalize(terminal, { terminal, decision: payload.decision, diagnostics: payload.diagnostics })

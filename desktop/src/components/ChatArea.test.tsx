@@ -19,6 +19,43 @@ vi.mock('../api/client', () => ({
   restoreCheckpoint: vi.fn(),
   uploadMemoryFile: vi.fn(),
   quickRollbackWorkflow: vi.fn(),
+  buildConsistencyGovernanceMetadata: vi.fn(({ decision, evaluation }) => {
+    const feedback = typeof evaluation?.feedback === 'string' ? evaluation.feedback.trim() : ''
+    const score = typeof evaluation?.score === 'number' && Number.isFinite(evaluation.score)
+      ? evaluation.score
+      : undefined
+    const publishRecommendation = decision === 'go'
+      ? 'pass'
+      : decision === 'soft_go'
+        ? 'revise'
+        : decision === 'no_go'
+          ? 'block'
+          : undefined
+
+    if (!decision && publishRecommendation === undefined && score === undefined && !feedback) {
+      return undefined
+    }
+
+    return {
+      decision,
+      publish_recommendation: publishRecommendation,
+      score,
+      feedback: feedback || undefined,
+    }
+  }),
+  mergeWriterMetadataGovernance: vi.fn((writerMetadata, governance) => {
+    if (!governance) {
+      return writerMetadata
+    }
+
+    return {
+      ...(writerMetadata ?? {}),
+      consistency_governance: {
+        ...(writerMetadata?.consistency_governance ?? {}),
+        ...governance,
+      },
+    }
+  }),
 }))
 
 import {
@@ -502,6 +539,13 @@ describe('ChatArea P0 flows', () => {
               graphEntityIds: [],
               memoryEntryIds: [],
             },
+            authority: {
+              recordSetId: null,
+              activeSceneId: null,
+              activeEventId: null,
+              activeTimelineId: null,
+              consistencyRunId: null,
+            },
             workflow: {
               sessionId: 'workflow-session-1',
               planId: null,
@@ -570,6 +614,13 @@ describe('ChatArea P0 flows', () => {
               focusEntityId: null,
               graphEntityIds: [],
               memoryEntryIds: [],
+            },
+            authority: {
+              recordSetId: null,
+              activeSceneId: null,
+              activeEventId: null,
+              activeTimelineId: null,
+              consistencyRunId: null,
             },
             workflow: {
               sessionId: 'workflow-session-3',
@@ -703,7 +754,77 @@ describe('ChatArea P0 flows', () => {
     expect(mockedChat).not.toHaveBeenCalled()
   })
 
-  it('shows recovered hint when stream emits recovered terminal', async () => {
+
+  it('renders durable governance details from stream decision and evaluation metadata', async () => {
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('带治理记录的流式回复', 0)
+      callbacks.onEvaluation?.({
+        score: 91,
+        feedback: '建议补足章节过渡。',
+      })
+      callbacks.onDone?.({
+        status: 'completed',
+        terminal: 'done',
+        decision: 'soft_go',
+        skills_used: [],
+        writer_metadata: {
+          narrative_authority: {
+            consistencyRunId: 'run-stream-1',
+          },
+        },
+      })
+    })
+
+    render(<ChatArea />)
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '渲染治理元数据{enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText('一致性治理')).toBeInTheDocument()
+      expect(screen.getByText('一致性治理：Soft Go / 需修改')).toBeInTheDocument()
+      expect(screen.getByText('评估分数 91')).toBeInTheDocument()
+      expect(screen.getByText('运行 ID run-stream-1')).toBeInTheDocument()
+      expect(screen.getByText('建议补足章节过渡。')).toBeInTheDocument()
+      expect(screen.getByText(`${zh.streamGateSoftGo} ${zh.streamGovernanceReviewReady}`)).toBeInTheDocument()
+    })
+  })
+
+  it('renders durable governance details from non-stream evaluation metadata', async () => {
+    mockedChatStream.mockResolvedValue()
+    mockedChat.mockResolvedValue({
+      success: true,
+      data: {
+        content: '非流式治理结果',
+        skills_used: [],
+        evaluation: {
+          score: 88,
+          feedback: '整体可用，但建议再收紧语气。',
+        },
+        writer_metadata: {
+          narrative_authority: {
+            consistencyRunId: 'run-chat-1',
+          },
+        },
+      },
+    })
+
+    render(<ChatArea />)
+
+    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
+    await userEvent.click(screen.getByRole('button', { name: zh.chatModeComparison }))
+    const input = screen.getByPlaceholderText(zh.inputPlaceholder)
+    await userEvent.type(input, '非流式治理{enter}')
+
+    await waitFor(() => {
+      expect(screen.getByText('一致性治理')).toBeInTheDocument()
+      expect(screen.getByText('一致性治理：未标记 / 未生成')).toBeInTheDocument()
+      expect(screen.getByText('评估分数 88')).toBeInTheDocument()
+      expect(screen.getByText('运行 ID run-chat-1')).toBeInTheDocument()
+      expect(screen.getByText('整体可用，但建议再收紧语气。')).toBeInTheDocument()
+    })
+  })
+
+  it('shows recovered governance hint when stream emits recovered terminal', async () => {
     mockedChatStream.mockImplementation(async (_request, callbacks) => {
       callbacks.onContent?.('已恢复内容', 0)
       callbacks.onDone?.({
@@ -720,7 +841,7 @@ describe('ChatArea P0 flows', () => {
 
     await waitFor(() => {
       expect(screen.getByText('已恢复内容')).toBeInTheDocument()
-      expect(screen.getByText(zh.streamRecovered)).toBeInTheDocument()
+      expect(screen.getByText(`${zh.streamRecovered} ${zh.streamGovernanceRecovered}`)).toBeInTheDocument()
     })
   })
 

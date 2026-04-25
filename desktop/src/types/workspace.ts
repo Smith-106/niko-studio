@@ -5,8 +5,10 @@ import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToLegacyChatContext,
   projectWorkspaceToMemoryScope as projectWorkspaceToMemoryScopeCanonical,
+  projectWorkspaceToNarrativeAuthority as projectWorkspaceToNarrativeAuthorityCanonical,
   projectWorkspaceToWorkflowAuthority,
   type ProjectWorkspaceContext,
+  type ProjectWorkspaceNarrativeAuthority,
 } from '../../../src-ts/project/workspace-model.ts'
 
 export {
@@ -23,11 +25,13 @@ export type {
   ProjectWorkspaceManuscript,
   ProjectWorkspaceStoryBible,
   ProjectWorkspaceKnowledge,
+  ProjectWorkspaceAuthority,
   ProjectWorkspaceWorkflow,
   ProjectWorkspaceChat,
   ProjectWorkspaceCompatibility,
   ProjectWorkspaceContext,
   ProjectWorkspaceWorkflowAuthority,
+  ProjectWorkspaceNarrativeAuthority,
 } from '../../../src-ts/project/workspace-model.ts'
 
 interface ProjectWorkspaceToMemoryScopeOptions {
@@ -66,6 +70,10 @@ export function mergeProjectWorkspaceContext(
           ...base.knowledge,
           ...(asRecord(patchRecord.knowledge) ?? {}),
         },
+        authority: {
+          ...base.authority,
+          ...(asRecord(patchRecord.authority) ?? {}),
+        },
         workflow: {
           ...base.workflow,
           ...(asRecord(patchRecord.workflow) ?? {}),
@@ -99,6 +107,12 @@ export function projectWorkspaceToMemoryScope(
     session_id: scope.sessionId,
     entity_id: scope.entityId,
   }
+}
+
+export function projectWorkspaceToNarrativeAuthority(
+  workspace: ProjectWorkspaceContext,
+): ProjectWorkspaceNarrativeAuthority {
+  return projectWorkspaceToNarrativeAuthorityCanonical(workspace)
 }
 
 export function migrateLegacyProjectWorkspaceState(input: unknown): ProjectWorkspaceContext {

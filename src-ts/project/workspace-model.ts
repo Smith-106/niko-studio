@@ -48,6 +48,14 @@ export interface ProjectWorkspaceChat {
   comparisonEnabled: boolean | null;
 }
 
+export interface ProjectWorkspaceAuthority {
+  recordSetId: string | null;
+  activeSceneId: string | null;
+  activeEventId: string | null;
+  activeTimelineId: string | null;
+  consistencyRunId: string | null;
+}
+
 export interface ProjectWorkspaceCompatibility {
   additiveContract: true;
   migratedLegacyFields: string[];
@@ -60,6 +68,7 @@ export interface ProjectWorkspaceContext {
   manuscript: ProjectWorkspaceManuscript;
   storyBible: ProjectWorkspaceStoryBible;
   knowledge: ProjectWorkspaceKnowledge;
+  authority: ProjectWorkspaceAuthority;
   workflow: ProjectWorkspaceWorkflow;
   chat: ProjectWorkspaceChat;
   compatibility: ProjectWorkspaceCompatibility;
@@ -69,6 +78,17 @@ export interface ProjectWorkspaceWorkflowAuthority {
   sessionId?: string;
   workspaceId?: string;
   projectId?: string;
+}
+
+export interface ProjectWorkspaceNarrativeAuthority {
+  sessionId?: string;
+  workspaceId?: string;
+  projectId?: string;
+  recordSetId?: string;
+  sceneId?: string;
+  eventId?: string;
+  timelineId?: string;
+  consistencyRunId?: string;
 }
 
 interface NormalizeWorkspaceOptions {
@@ -192,6 +212,13 @@ export function createDefaultProjectWorkspaceContext(
       graphEntityIds: [],
       memoryEntryIds: [],
     },
+    authority: {
+      recordSetId: null,
+      activeSceneId: null,
+      activeEventId: null,
+      activeTimelineId: null,
+      consistencyRunId: null,
+    },
     workflow: {
       sessionId: null,
       planId: null,
@@ -225,6 +252,7 @@ export function normalizeProjectWorkspaceContext(
   const manuscriptRecord = asRecord(workspaceRecord.manuscript);
   const storyBibleRecord = asRecord(workspaceRecord.storyBible);
   const knowledgeRecord = asRecord(workspaceRecord.knowledge);
+  const authorityRecord = asRecord(workspaceRecord.authority);
   const workflowRecord = asRecord(workspaceRecord.workflow);
   const chatRecord = asRecord(workspaceRecord.chat);
 
@@ -255,6 +283,36 @@ export function normalizeProjectWorkspaceContext(
     if (readString(root.conversation_id)) migratedLegacyFields.add('conversation_id');
     if (readString(root.conversationId)) migratedLegacyFields.add('conversationId');
     if (readString(root.currentConversationId)) migratedLegacyFields.add('currentConversationId');
+  }
+
+  const legacyRecordSetId = readString(root.record_set_id) ?? readString(root.recordSetId);
+  if (legacyRecordSetId) {
+    if (readString(root.record_set_id)) migratedLegacyFields.add('record_set_id');
+    if (readString(root.recordSetId)) migratedLegacyFields.add('recordSetId');
+  }
+
+  const legacySceneId = readString(root.active_scene_id) ?? readString(root.activeSceneId);
+  if (legacySceneId) {
+    if (readString(root.active_scene_id)) migratedLegacyFields.add('active_scene_id');
+    if (readString(root.activeSceneId)) migratedLegacyFields.add('activeSceneId');
+  }
+
+  const legacyEventId = readString(root.active_event_id) ?? readString(root.activeEventId);
+  if (legacyEventId) {
+    if (readString(root.active_event_id)) migratedLegacyFields.add('active_event_id');
+    if (readString(root.activeEventId)) migratedLegacyFields.add('activeEventId');
+  }
+
+  const legacyTimelineId = readString(root.active_timeline_id) ?? readString(root.activeTimelineId);
+  if (legacyTimelineId) {
+    if (readString(root.active_timeline_id)) migratedLegacyFields.add('active_timeline_id');
+    if (readString(root.activeTimelineId)) migratedLegacyFields.add('activeTimelineId');
+  }
+
+  const legacyConsistencyRunId = readString(root.consistency_run_id) ?? readString(root.consistencyRunId);
+  if (legacyConsistencyRunId) {
+    if (readString(root.consistency_run_id)) migratedLegacyFields.add('consistency_run_id');
+    if (readString(root.consistencyRunId)) migratedLegacyFields.add('consistencyRunId');
   }
 
   const projectId = readString(identityRecord?.projectId)
@@ -366,6 +424,28 @@ export function normalizeProjectWorkspaceContext(
         ]),
       ],
     },
+    authority: {
+      recordSetId: readString(authorityRecord?.recordSetId)
+        ?? readString(authorityRecord?.record_set_id)
+        ?? legacyRecordSetId
+        ?? fallback.authority.recordSetId,
+      activeSceneId: readString(authorityRecord?.activeSceneId)
+        ?? readString(authorityRecord?.active_scene_id)
+        ?? legacySceneId
+        ?? fallback.authority.activeSceneId,
+      activeEventId: readString(authorityRecord?.activeEventId)
+        ?? readString(authorityRecord?.active_event_id)
+        ?? legacyEventId
+        ?? fallback.authority.activeEventId,
+      activeTimelineId: readString(authorityRecord?.activeTimelineId)
+        ?? readString(authorityRecord?.active_timeline_id)
+        ?? legacyTimelineId
+        ?? fallback.authority.activeTimelineId,
+      consistencyRunId: readString(authorityRecord?.consistencyRunId)
+        ?? readString(authorityRecord?.consistency_run_id)
+        ?? legacyConsistencyRunId
+        ?? fallback.authority.consistencyRunId,
+    },
     workflow: {
       sessionId: readString(workflowRecord?.sessionId)
         ?? readString(workflowRecord?.session_id)
@@ -450,6 +530,21 @@ export function projectWorkspaceToWorkflowAuthority(
   };
 }
 
+export function projectWorkspaceToNarrativeAuthority(
+  workspace: ProjectWorkspaceContext,
+): ProjectWorkspaceNarrativeAuthority {
+  return {
+    sessionId: workspace.workflow.sessionId || workspace.chat.conversationId || undefined,
+    workspaceId: workspace.identity.workspaceId || undefined,
+    projectId: workspace.identity.projectId || undefined,
+    recordSetId: workspace.authority.recordSetId || undefined,
+    sceneId: workspace.authority.activeSceneId || undefined,
+    eventId: workspace.authority.activeEventId || undefined,
+    timelineId: workspace.authority.activeTimelineId || undefined,
+    consistencyRunId: workspace.authority.consistencyRunId || undefined,
+  };
+}
+
 export function summarizeProjectWorkspaceContext(
   workspace: ProjectWorkspaceContext,
 ): Record<string, unknown> {
@@ -460,6 +555,11 @@ export function summarizeProjectWorkspaceContext(
     chapterId: workspace.manuscript.chapterId,
     storyBibleDraftId: workspace.storyBible.draftId,
     focusEntityId: workspace.knowledge.focusEntityId,
+    recordSetId: workspace.authority.recordSetId,
+    activeSceneId: workspace.authority.activeSceneId,
+    activeEventId: workspace.authority.activeEventId,
+    activeTimelineId: workspace.authority.activeTimelineId,
+    consistencyRunId: workspace.authority.consistencyRunId,
     workflowSessionId: workspace.workflow.sessionId,
     conversationId: workspace.chat.conversationId,
     migratedLegacyFields: workspace.compatibility.migratedLegacyFields,

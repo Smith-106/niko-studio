@@ -168,10 +168,31 @@ describe('chat endpoints', () => {
     const body = response.body as Record<string, unknown>;
     const writerMetadata = body['writer_metadata'] as Record<string, unknown>;
     const canonContext = writerMetadata['canon_context'] as Record<string, unknown>;
+    const retrievalPacket = writerMetadata['retrieval_packet'] as Record<string, unknown>;
     expect(canonContext).toMatchObject({
       available: true,
       injected: true,
       match_count: 1,
+    });
+    expect(retrievalPacket).toMatchObject({
+      schemaVersion: '2026-04-25',
+      query: '整理 Atlas Harbor 的 smuggler 线索',
+      workspaceId: 'atlas-project',
+      counts: {
+        entities: 1,
+        relations: 0,
+        memories: 0,
+        total: 1,
+      },
+    });
+    expect((retrievalPacket['packets'] as Array<Record<string, unknown>>)[0]).toMatchObject({
+      kind: 'entity',
+      title: 'Atlas Harbor Canon',
+      pageId: expect.any(String),
+    });
+    expect(writerMetadata['narrative_authority']).toMatchObject({
+      workspaceId: 'atlas-project',
+      projectId: 'atlas-project',
     });
     expect(String(body['content'])).toContain('Atlas Harbor Canon');
     expect(JSON.stringify(canonContext)).toContain('Atlas Harbor Canon');
@@ -193,6 +214,7 @@ describe('chat endpoints', () => {
     expect(streamResponse.statusCode).toBe(200);
     const streamBody = String(streamResponse.body);
     expect(streamBody).toContain('"canon_context"');
+    expect(streamBody).toContain('"retrieval_packet"');
     expect(streamBody).toContain('Atlas Harbor Canon');
     expect(streamBody).toContain('Workspace Canon Context');
   });

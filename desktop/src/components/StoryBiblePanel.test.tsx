@@ -25,6 +25,9 @@ const persistedState = vi.hoisted(() => ({
   storyBible: null as PersistedEntity | null,
   characters: [] as PersistedEntity[],
   locations: [] as PersistedEntity[],
+  scenes: [] as PersistedEntity[],
+  events: [] as PersistedEntity[],
+  timelines: [] as PersistedEntity[],
 }))
 
 const canonApiState = vi.hoisted(() => ({
@@ -33,26 +36,79 @@ const canonApiState = vi.hoisted(() => ({
   read: vi.fn(),
 }))
 
-function extractMergePayload(cypher: string): Record<string, unknown> {
-  const setStart = cypher.indexOf(' SET ')
-  const returnStart = cypher.lastIndexOf(' RETURN n')
-  return JSON.parse(cypher.slice(setStart + 5, returnStart))
+function persistWorkspaceItem(payload: Record<string, unknown>) {
+  const timestamp = new Date().toISOString()
+  const itemKind = String(payload.itemKind ?? '')
+  const entity: PersistedEntity = {
+    id: String((payload.id ?? payload.name ?? itemKind) || 'item'),
+    type: 'Item',
+    name: String(payload.name ?? payload.title ?? payload.id ?? 'item'),
+    properties: payload,
+    created_at: timestamp,
+    updated_at: timestamp,
+  }
+
+  if (itemKind === 'story-bible') {
+    persistedState.storyBible = {
+      ...entity,
+      id: 'story-bible-1',
+      created_at: persistedState.storyBible?.created_at ?? timestamp,
+    }
+    return persistedState.storyBible
+  }
+
+  const collections: Record<string, PersistedEntity[]> = {
+    'narrative-scene': persistedState.scenes,
+    'narrative-event': persistedState.events,
+    'narrative-timeline': persistedState.timelines,
+  }
+  const collection = collections[itemKind]
+  if (collection) {
+    const existingIndex = collection.findIndex((entry) => entry.id === entity.id)
+    if (existingIndex >= 0) {
+      collection[existingIndex] = {
+        ...collection[existingIndex],
+        ...entity,
+        created_at: collection[existingIndex].created_at,
+      }
+      return collection[existingIndex]
+    }
+    collection.unshift(entity)
+    return entity
+  }
+
+  return entity
 }
 
 vi.mock('../api/client', () => ({
   queryGraph: vi.fn(async (cypher: string) => {
     if (cypher.startsWith('MERGE (n:Item')) {
-      const payload = extractMergePayload(cypher)
-      const timestamp = new Date().toISOString()
-      persistedState.storyBible = {
-        id: 'story-bible-1',
-        type: 'Item',
-        name: String(payload.name ?? 'story-bible'),
-        properties: payload,
-        created_at: persistedState.storyBible?.created_at ?? timestamp,
-        updated_at: timestamp,
+      const setStart = cypher.indexOf(' SET ')
+      const returnStart = cypher.lastIndexOf(' RETURN n')
+      const payload = JSON.parse(cypher.slice(setStart + 5, returnStart)) as Record<string, unknown>
+      const persisted = persistWorkspaceItem(payload)
+      return { success: true, data: [{ n: persisted }] }
+    }
+
+    if (cypher.includes('MATCH (n:Item) WHERE n.itemKind = "narrative-scene"')) {
+      return {
+        success: true,
+        data: persistedState.scenes.map((scene) => ({ n: scene })),
       }
-      return { success: true, data: [{ n: persistedState.storyBible }] }
+    }
+
+    if (cypher.includes('MATCH (n:Item) WHERE n.itemKind = "narrative-event"')) {
+      return {
+        success: true,
+        data: persistedState.events.map((event) => ({ n: event })),
+      }
+    }
+
+    if (cypher.includes('MATCH (n:Item) WHERE n.itemKind = "narrative-timeline"')) {
+      return {
+        success: true,
+        data: persistedState.timelines.map((timeline) => ({ n: timeline })),
+      }
     }
 
     if (cypher.includes('MATCH (n:Item)')) {
@@ -83,6 +139,7 @@ vi.mock('../api/client', () => ({
   readProjectWikiCanonPageApi: canonApiState.read,
 }))
 
+
 const zh = translations.zh
 
 describe('StoryBiblePanel', () => {
@@ -91,6 +148,9 @@ describe('StoryBiblePanel', () => {
   beforeEach(() => {
     console.error = vi.fn()
     persistedState.storyBible = null
+    persistedState.scenes = []
+    persistedState.events = []
+    persistedState.timelines = []
     persistedState.characters = [
       {
         id: 'char-1',
@@ -372,6 +432,79 @@ describe('StoryBiblePanel', () => {
         vi.mocked(queryGraph).mockImplementation(originalQueryGraph)
       }
     }
+  })
+
+
+
+  it('authors workspace-scoped scene, event, and timeline records and activates them', async () => {
+    const user = userEvent.setup()
+
+    render(<StoryBiblePanel />)
+
+    const scenesToggle = await screen.findByRole('button', { name: /场景 \(0\)/ })
+    await user.click(scenesToggle)
+    await user.type(screen.getByPlaceholderText('输入场景标题'), '开场戏')
+    await user.type(screen.getByPlaceholderText('chapter-1'), 'chapter-1')
+    await user.type(screen.getByPlaceholderText('1'), '1')
+    await user.type(screen.getByPlaceholderText('记录场景目标、冲突、结果和关键线索。'), '主角第一次抵达港口。')
+    await user.click(screen.getByRole('button', { name: '添加场景' }))
+
+    await waitFor(() => {
+      expect(persistedState.scenes).toHaveLength(1)
+      expect(persistedState.scenes[0]?.properties).toMatchObject({
+        itemKind: 'narrative-scene',
+        kind: 'scene',
+        title: '开场戏',
+        chapterId: 'chapter-1',
+        sceneOrder: 1,
+        scopeAuthority: 'workspace',
+        canonAuthority: 'canon-page',
+        projectionAuthority: 'derived',
+      })
+    })
+    expect(screen.getByText('场景已保存到当前工作区。')).toBeInTheDocument()
+
+    const setActiveScene = await screen.findByRole('button', { name: '设为当前场景' })
+    await user.click(setActiveScene)
+    expect(await screen.findByText(/当前场景: scene-default-project-开场戏/)).toBeInTheDocument()
+
+    const eventsToggle = screen.getByRole('button', { name: /事件 \(0\)/ })
+    await user.click(eventsToggle)
+    await user.type(screen.getByPlaceholderText('输入事件标题'), '抵达港口')
+    await user.type(screen.getByPlaceholderText('scene-default-project-opening'), 'scene-default-project-开场戏')
+    await user.type(screen.getByPlaceholderText('记录事件触发原因、参与者与后果。'), '抵达引发第一轮冲突。')
+    await user.click(screen.getByRole('button', { name: '添加事件' }))
+
+    await waitFor(() => {
+      expect(persistedState.events).toHaveLength(1)
+      expect(persistedState.events[0]?.properties).toMatchObject({
+        itemKind: 'narrative-event',
+        kind: 'event',
+        title: '抵达港口',
+        sceneId: 'scene-default-project-开场戏',
+      })
+    })
+    await user.click(await screen.findByRole('button', { name: '设为当前事件' }))
+    expect(await screen.findByText(/当前事件: event-default-project-抵达港口/)).toBeInTheDocument()
+
+    const timelinesToggle = screen.getByRole('button', { name: /时间线 \(0\)/ })
+    await user.click(timelinesToggle)
+    await user.type(screen.getByPlaceholderText('输入时间线标题'), '主线时间')
+    await user.selectOptions(screen.getByRole('combobox'), 'narrative')
+    await user.type(screen.getByPlaceholderText('说明这条时间线覆盖的范围和排序原则。'), '按叙事顺序编排当前章节。')
+    await user.click(screen.getByRole('button', { name: '添加时间线' }))
+
+    await waitFor(() => {
+      expect(persistedState.timelines).toHaveLength(1)
+      expect(persistedState.timelines[0]?.properties).toMatchObject({
+        itemKind: 'narrative-timeline',
+        kind: 'timeline',
+        title: '主线时间',
+        mode: 'narrative',
+      })
+    })
+    await user.click(await screen.findByRole('button', { name: '设为当前时间线' }))
+    expect(await screen.findByText(/当前时间线: timeline-default-project-主线时间/)).toBeInTheDocument()
   })
 
   it('promotes synopsis into canon and shows the canon review preview', async () => {

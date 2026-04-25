@@ -1,5 +1,12 @@
 import type { ProjectWorkspaceContext } from './workspace-model.js';
 import {
+  PROJECT_NARRATIVE_AUTHORITY_CONTRACT,
+  PROJECT_NARRATIVE_SCHEMA_VERSION,
+  type ProjectNarrativeAuthorityContract,
+  type ProjectNarrativeEvidenceLink,
+  type ProjectNarrativeEvidenceSource,
+} from './narrative-records.js';
+import {
   queryProjectWikiCanon,
   type ProjectWikiQueryAuthorityMetadata,
   type ProjectWikiQueryMatch,
@@ -100,6 +107,46 @@ export interface ProjectWikiKnowledgeMemory {
   title: string;
 }
 
+export interface ProjectWikiFactPacketSource {
+  kind: 'entity' | 'relation' | 'memory';
+  origin: ProjectWikiKnowledgeEntity['origin'] | ProjectWikiKnowledgeRelation['origin'] | ProjectWikiKnowledgeMemory['origin'];
+  authority: ProjectWikiQueryAuthorityMetadata | null;
+}
+
+export interface ProjectWikiFactPacket {
+  schemaVersion: string;
+  packetId: string;
+  workspaceId: string;
+  authority: ProjectNarrativeAuthorityContract;
+  scopeAuthority: ProjectWikiQueryAuthorityMetadata['scopeAuthority'];
+  canonAuthority: ProjectWikiQueryAuthorityMetadata['canonAuthority'];
+  projectionAuthority: ProjectWikiQueryAuthorityMetadata['projectionAuthority'];
+  query: string;
+  kind: 'entity' | 'relation' | 'memory';
+  title: string;
+  summary: string;
+  score: number | null;
+  pageId: string | null;
+  refId: string;
+  source: ProjectWikiFactPacketSource;
+  evidence: ProjectNarrativeEvidenceLink[];
+  payload: ProjectWikiKnowledgeEntity | ProjectWikiKnowledgeRelation | ProjectWikiKnowledgeMemory;
+}
+
+export interface ProjectWikiFactPacketBundle {
+  schemaVersion: string;
+  query: string;
+  workspaceId: string;
+  authority: ProjectNarrativeAuthorityContract;
+  counts: {
+    entities: number;
+    relations: number;
+    memories: number;
+    total: number;
+  };
+  packets: ProjectWikiFactPacket[];
+}
+
 export interface ProjectWikiKnowledgeLayer {
   get_related_entities(entityId: string): Promise<ProjectWikiKnowledgeRelation[]>;
   search_entities(
@@ -158,6 +205,211 @@ function mapCanonMatchToEntity(match: ProjectWikiQueryMatch): ProjectWikiKnowled
     slug: match.slug,
     type: inferEntityType(match.slug),
   };
+}
+
+function readAuthorityWorkspaceId(authority: ProjectWikiQueryAuthorityMetadata | null | undefined): string | null {
+  return authority?.workspaceId ?? null;
+}
+
+function resolveFactPacketWorkspaceId(
+  payload: ProjectWikiKnowledgeEntity | ProjectWikiKnowledgeRelation | ProjectWikiKnowledgeMemory,
+): string {
+  if ('workspaceId' in payload && readString(payload.workspaceId)) {
+    return payload.workspaceId;
+  }
+  if ('authority' in payload) {
+    const workspaceId = readAuthorityWorkspaceId(payload.authority);
+    if (workspaceId) return workspaceId;
+  }
+  return 'workspace';
+}
+
+function resolveFactPacketAuthority(
+  payload: ProjectWikiKnowledgeEntity | ProjectWikiKnowledgeRelation | ProjectWikiKnowledgeMemory,
+): ProjectWikiQueryAuthorityMetadata | null {
+  return 'authority' in payload ? payload.authority : null;
+}
+
+function mapEvidenceSource(
+  payload: ProjectWikiKnowledgeEntity | ProjectWikiKnowledgeRelation | ProjectWikiKnowledgeMemory,
+): ProjectNarrativeEvidenceSource {
+  if (payload.origin === 'wiki-canon') {
+    return 'wiki-canon';
+  }
+  if (payload.origin === 'wiki-projection-graph') {
+    return 'graph-projection';
+  }
+  return 'memory-fact';
+}
+
+function createEntityPacketTitle(entity: ProjectWikiKnowledgeEntity): string {
+  return entity.name;
+}
+
+function createRelationPacketTitle(relation: ProjectWikiKnowledgeRelation): string {
+  return `${relation.source} ${relation.type} ${relation.target}`;
+}
+
+function createMemoryPacketTitle(memory: ProjectWikiKnowledgeMemory): string {
+  return memory.title;
+}
+
+function createEntityPacketSummary(entity: ProjectWikiKnowledgeEntity): string {
+  return entity.description;
+}
+
+function createRelationPacketSummary(relation: ProjectWikiKnowledgeRelation): string {
+  return `${relation.source} ${relation.type} ${relation.target}`;
+}
+
+function createMemoryPacketSummary(memory: ProjectWikiKnowledgeMemory): string {
+  return memory.content;
+}
+
+function createFactPacketEvidence(
+  packetId: string,
+  source: ProjectNarrativeEvidenceSource,
+  refId: string,
+  label: string,
+  excerpt: string,
+): ProjectNarrativeEvidenceLink[] {
+  return [{
+    id: `${packetId}:evidence`,
+    source,
+    refId,
+    label,
+    excerpt: excerpt || null,
+  }];
+}
+
+function createEntityFactPacket(query: string, entity: ProjectWikiKnowledgeEntity): ProjectWikiFactPacket {
+  const packetId = `entity:${entity.id}`;
+  const title = createEntityPacketTitle(entity);
+  const summary = createEntityPacketSummary(entity);
+  return {
+    schemaVersion: PROJECT_NARRATIVE_SCHEMA_VERSION,
+    packetId,
+    workspaceId: resolveFactPacketWorkspaceId(entity),
+    authority: PROJECT_NARRATIVE_AUTHORITY_CONTRACT,
+    scopeAuthority: entity.authority.scopeAuthority,
+    canonAuthority: entity.authority.canonAuthority,
+    projectionAuthority: entity.authority.projectionAuthority,
+    query,
+    kind: 'entity',
+    title,
+    summary,
+    score: entity.score,
+    pageId: entity.pageId,
+    refId: entity.id,
+    source: {
+      kind: 'entity',
+      origin: entity.origin,
+      authority: entity.authority,
+    },
+    evidence: createFactPacketEvidence(packetId, mapEvidenceSource(entity), entity.id, title, summary),
+    payload: entity,
+  };
+}
+
+function createRelationFactPacket(query: string, relation: ProjectWikiKnowledgeRelation): ProjectWikiFactPacket {
+  const packetId = `relation:${relation.id}`;
+  const title = createRelationPacketTitle(relation);
+  const summary = createRelationPacketSummary(relation);
+  return {
+    schemaVersion: PROJECT_NARRATIVE_SCHEMA_VERSION,
+    packetId,
+    workspaceId: resolveFactPacketWorkspaceId(relation),
+    authority: PROJECT_NARRATIVE_AUTHORITY_CONTRACT,
+    scopeAuthority: PROJECT_NARRATIVE_AUTHORITY_CONTRACT.scopeAuthority,
+    canonAuthority: relation.canonAuthority,
+    projectionAuthority: relation.projectionAuthority,
+    query,
+    kind: 'relation',
+    title,
+    summary,
+    score: null,
+    pageId: relation.pageId,
+    refId: relation.id,
+    source: {
+      kind: 'relation',
+      origin: relation.origin,
+      authority: null,
+    },
+    evidence: createFactPacketEvidence(packetId, mapEvidenceSource(relation), relation.id, title, summary),
+    payload: relation,
+  };
+}
+
+function createMemoryFactPacket(query: string, memory: ProjectWikiKnowledgeMemory): ProjectWikiFactPacket {
+  const packetId = `memory:${memory.id}`;
+  const title = createMemoryPacketTitle(memory);
+  const summary = createMemoryPacketSummary(memory);
+  return {
+    schemaVersion: PROJECT_NARRATIVE_SCHEMA_VERSION,
+    packetId,
+    workspaceId: resolveFactPacketWorkspaceId(memory),
+    authority: PROJECT_NARRATIVE_AUTHORITY_CONTRACT,
+    scopeAuthority: memory.authority.scopeAuthority,
+    canonAuthority: memory.authority.canonAuthority,
+    projectionAuthority: memory.authority.projectionAuthority,
+    query,
+    kind: 'memory',
+    title,
+    summary,
+    score: typeof memory.score === 'number' ? memory.score : null,
+    pageId: memory.pageId,
+    refId: memory.id,
+    source: {
+      kind: 'memory',
+      origin: memory.origin,
+      authority: memory.authority,
+    },
+    evidence: createFactPacketEvidence(packetId, mapEvidenceSource(memory), memory.id, title, summary),
+    payload: memory,
+  };
+}
+
+export function createProjectWikiFactPacketBundle(
+  workspace: ProjectWorkspaceContext,
+  query: string,
+  retrieved: {
+    entities?: ProjectWikiKnowledgeEntity[];
+    relations?: ProjectWikiKnowledgeRelation[];
+    memories?: ProjectWikiKnowledgeMemory[];
+  },
+): ProjectWikiFactPacketBundle {
+  const entities = retrieved.entities ?? [];
+  const relations = retrieved.relations ?? [];
+  const memories = retrieved.memories ?? [];
+  const packets = [
+    ...entities.map((entity) => createEntityFactPacket(query, entity)),
+    ...relations.map((relation) => createRelationFactPacket(query, relation)),
+    ...memories.map((memory) => createMemoryFactPacket(query, memory)),
+  ];
+
+  return {
+    schemaVersion: PROJECT_NARRATIVE_SCHEMA_VERSION,
+    query,
+    workspaceId: workspace.identity.workspaceId,
+    authority: PROJECT_NARRATIVE_AUTHORITY_CONTRACT,
+    counts: {
+      entities: entities.length,
+      relations: relations.length,
+      memories: memories.length,
+      total: packets.length,
+    },
+    packets,
+  };
+}
+
+export function createProjectWikiFactPacketBundleFromCanonMatches(
+  workspace: ProjectWorkspaceContext,
+  query: string,
+  matches: ProjectWikiQueryMatch[],
+): ProjectWikiFactPacketBundle {
+  return createProjectWikiFactPacketBundle(workspace, query, {
+    entities: matches.map((match) => mapCanonMatchToEntity(match)),
+  });
 }
 
 function readGraphNode(value: unknown): GraphNodeSummary | null {

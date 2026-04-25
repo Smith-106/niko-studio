@@ -6,7 +6,7 @@ vi.mock('./core', () => ({
   callApi: callApiMock,
 }))
 
-import { evaluateContent, getImprovementSuggestions, novelQualityCheck } from './evaluation'
+import { evaluateContent, getImprovementSuggestions, novelQualityCheck, runConsistencyCheck } from './evaluation'
 
 describe('evaluateContent', () => {
   beforeEach(() => {
@@ -178,6 +178,85 @@ describe('novelQualityCheck', () => {
     const result = await novelQualityCheck('')
     expect(result.success).toBe(false)
     expect(result.error).toBe('content is required')
+  })
+})
+
+describe('runConsistencyCheck', () => {
+  beforeEach(() => {
+    callApiMock.mockReset()
+  })
+
+  it('calls /critic/consistency with normalized workspace payload', async () => {
+    callApiMock.mockResolvedValue({ success: true, data: { runId: 'consistency-run-1' } })
+
+    await runConsistencyCheck(
+      ['chapter text'],
+      [{ chapterNumber: 9, title: 'Chapter 9' }],
+      undefined,
+      {
+        schemaVersion: '2026-04-08',
+        identity: {
+          workspaceId: 'atlas-workspace',
+          projectId: 'atlas-project',
+          projectName: 'Atlas',
+          workspaceRoot: '/tmp/atlas',
+        },
+        manuscript: {
+          manuscriptId: null,
+          title: null,
+          chapterId: 'chapter-9',
+          chapterTitle: 'Chapter 9',
+          chapterNumber: 9,
+        },
+        storyBible: {
+          storyBibleId: null,
+          draftId: null,
+          version: null,
+          storage: 'workspace',
+        },
+        knowledge: {
+          focusEntityId: null,
+          graphEntityIds: [],
+          memoryEntryIds: [],
+        },
+        authority: {
+          recordSetId: null,
+          activeSceneId: null,
+          activeEventId: null,
+          activeTimelineId: null,
+          consistencyRunId: null,
+        },
+        workflow: {
+          sessionId: null,
+          planId: null,
+          level: 'L3',
+        },
+        chat: {
+          conversationId: null,
+          comparisonEnabled: null,
+        },
+        compatibility: {
+          additiveContract: true,
+          migratedLegacyFields: [],
+          notes: [],
+        },
+      },
+    )
+
+    expect(callApiMock).toHaveBeenCalledWith(
+      '/critic/consistency',
+      'POST',
+      expect.objectContaining({
+        chapters: ['chapter text'],
+        chapterMeta: [{ chapterNumber: 9, title: 'Chapter 9' }],
+        workspace: expect.objectContaining({
+          identity: expect.objectContaining({
+            workspaceId: 'atlas-workspace',
+            projectId: 'atlas-project',
+          }),
+        }),
+      }),
+    )
   })
 })
 

@@ -181,6 +181,13 @@ describe('mcp workflow service', () => {
           graphEntityIds: [],
           memoryEntryIds: [],
         },
+        authority: {
+          recordSetId: null,
+          activeSceneId: null,
+          activeEventId: null,
+          activeTimelineId: null,
+          consistencyRunId: null,
+        },
         workflow: {
           sessionId: 'workflow-session-1',
           planId: null,
@@ -294,6 +301,13 @@ describe('mcp workflow service', () => {
         focusEntityId: null,
         graphEntityIds: [],
         memoryEntryIds: [],
+      },
+      authority: {
+        recordSetId: null,
+        activeSceneId: null,
+        activeEventId: null,
+        activeTimelineId: null,
+        consistencyRunId: null,
       },
       workflow: {
         sessionId: 'workflow-session-trace',

@@ -7,6 +7,14 @@
 
 import type { IAgentLLMService } from './base';
 import { SkillRouter, SKILL_REGISTRY } from './skill-router';
+import type { ProjectWorkspaceContext } from '../project/workspace-model.js';
+import {
+  createProjectWikiFactPacketBundle,
+  type ProjectWikiKnowledgeEntity,
+  type ProjectWikiKnowledgeMemory,
+  type ProjectWikiKnowledgeRelation,
+  type ProjectWikiFactPacketBundle,
+} from '../project/wiki-knowledge-layer.js';
 
 // ============================================================
 // Interfaces (Pydantic models -> TS interfaces)
@@ -72,6 +80,18 @@ export interface WriterOutput {
   forbidden_words_found: string[];
   sections_needing_review: string[];
 }
+
+export interface WriterKnowledgeContext {
+  entities: ProjectWikiKnowledgeEntity[];
+  relations: ProjectWikiKnowledgeRelation[];
+  memories: ProjectWikiKnowledgeMemory[];
+}
+
+export interface WriterKnowledgeMetadata {
+  knowledgeSummary: Record<string, number>;
+  factPacketBundle?: ProjectWikiFactPacketBundle;
+}
+
 
 export type WriterWarningCode =
   | 'knowledge_retrieval_failed'
@@ -231,6 +251,7 @@ export class WriterAgent {
   private enableKnowledgeRetrieval: boolean;
   private injectedSkills: string[];
   private injectedSkillGuidance: string;
+  private workspace: ProjectWorkspaceContext | null;
 
   static readonly FORBIDDEN_WORDS = ['suddenly', 'involuntarily', 'surprisingly', 'unexpectedly', 'uncontrollably'];
 
@@ -239,6 +260,7 @@ export class WriterAgent {
     skillRouter?: SkillRouter | null;
     knowledgeLayer?: unknown;
     enableKnowledgeRetrieval?: boolean;
+    workspace?: ProjectWorkspaceContext | null;
   }) {
     this.llmService = options.llmService;
     this.skillRouter = options.skillRouter ?? null;
@@ -246,6 +268,7 @@ export class WriterAgent {
     this.enableKnowledgeRetrieval = options.enableKnowledgeRetrieval ?? true;
     this.injectedSkills = [];
     this.injectedSkillGuidance = '';
+    this.workspace = options.workspace ?? null;
   }
 
   // ---------- Knowledge retrieval ----------
@@ -255,31 +278,30 @@ export class WriterAgent {
     contextTypes?: string[],
     limit: number = 10,
     warnings?: string[],
-  ): Promise<Record<string, unknown>> {
+  ): Promise<WriterKnowledgeContext> {
     if (!this.knowledgeLayer || !this.enableKnowledgeRetrieval) {
       return { entities: [], relations: [], memories: [] };
     }
 
-    const context: Record<string, unknown> = { entities: [], relations: [], memories: [] };
+    const context: WriterKnowledgeContext = { entities: [], relations: [], memories: [] };
     const kl = this.knowledgeLayer as Record<string, unknown>;
 
     try {
       if (typeof kl['search_entities'] === 'function') {
-        let entities = await this.safeCall(kl['search_entities'] as (...args: unknown[]) => Promise<unknown[]>, query, { limit }) as Record<string, unknown>[];
+        let entities = await this.safeCall(kl['search_entities'] as (...args: unknown[]) => Promise<unknown[]>, query, { limit }) as ProjectWikiKnowledgeEntity[];
         if (contextTypes) {
-          entities = entities.filter(e => contextTypes.includes(e['type'] as string));
+          entities = entities.filter((entity) => contextTypes.includes(entity.type));
         }
-        context['entities'] = entities;
+        context.entities = entities;
       }
 
       if (typeof kl['get_related_entities'] === 'function') {
-        const entities = context['entities'] as Record<string, unknown>[];
-        for (const entity of entities.slice(0, 3)) {
+        for (const entity of context.entities.slice(0, 3)) {
           const relations = await this.safeCall(
             kl['get_related_entities'] as (...args: unknown[]) => Promise<unknown[]>,
-            entity['id'],
-          ) as Record<string, unknown>[];
-          (context['relations'] as Record<string, unknown>[]).push(...relations);
+            entity.id,
+          ) as ProjectWikiKnowledgeRelation[];
+          context.relations.push(...relations);
         }
       }
 
@@ -288,8 +310,8 @@ export class WriterAgent {
           kl['search_memories'] as (...args: unknown[]) => Promise<unknown[]>,
           query,
           { limit },
-        ) as Record<string, unknown>[];
-        context['memories'] = memories;
+        ) as ProjectWikiKnowledgeMemory[];
+        context.memories = memories;
       }
     } catch (e) {
       this.appendWarning(warnings, `knowledge_retrieval_failed: ${e}`);
@@ -302,9 +324,9 @@ export class WriterAgent {
     return fn(...args);
   }
 
-  private buildKnowledgeContext(retrieved: Record<string, unknown>): string {
-    const entities = (retrieved['entities'] ?? []) as Record<string, unknown>[];
-    const memories = (retrieved['memories'] ?? []) as Record<string, unknown>[];
+  private buildKnowledgeContext(retrieved: WriterKnowledgeContext): string {
+    const entities = retrieved.entities;
+    const memories = retrieved.memories;
 
     if (entities.length === 0 && memories.length === 0) return '';
 
@@ -313,22 +335,16 @@ export class WriterAgent {
     if (entities.length > 0) {
       parts.push('### Related Characters/Locations');
       for (const ent of entities.slice(0, 5)) {
-        const name = (ent['name'] ?? ent['id'] ?? 'unknown') as string;
-        const type = (ent['type'] ?? '') as string;
-        const desc = (ent['description'] ?? '') as string;
-        parts.push(`- **${name}** (${type}): ${desc}`);
+        parts.push(`- **${ent.name}** (${ent.type}): ${ent.description}`);
       }
       parts.push('');
     }
 
-    const relations = (retrieved['relations'] ?? []) as Record<string, unknown>[];
+    const relations = retrieved.relations;
     if (relations.length > 0) {
       parts.push('### Character Relations');
       for (const rel of relations.slice(0, 5)) {
-        const source = (rel['source'] ?? '') as string;
-        const target = (rel['target'] ?? '') as string;
-        const type = (rel['type'] ?? '') as string;
-        parts.push(`- ${source} --[${type}]--> ${target}`);
+        parts.push(`- ${rel.source} --[${rel.type}]--> ${rel.target}`);
       }
       parts.push('');
     }
@@ -336,13 +352,22 @@ export class WriterAgent {
     if (memories.length > 0) {
       parts.push('### Related History');
       for (const mem of memories.slice(0, 3)) {
-        const content = typeof mem === 'object' && mem !== null ? String(mem['content'] ?? JSON.stringify(mem)).slice(0, 200) : String(mem).slice(0, 200);
-        parts.push(`- ${content}`);
+        parts.push(`- ${mem.content.slice(0, 200)}`);
       }
       parts.push('');
     }
 
     return parts.join('\n');
+  }
+
+  private buildKnowledgeMetadata(retrieved: WriterKnowledgeContext, query: string): WriterKnowledgeMetadata {
+    const knowledgeSummary = this.buildKnowledgeSummary(retrieved);
+    return {
+      knowledgeSummary,
+      factPacketBundle: this.workspace
+        ? createProjectWikiFactPacketBundle(this.workspace, query, retrieved)
+        : undefined,
+    };
   }
 
   // ---------- Knowledge-enhanced writing ----------
@@ -356,15 +381,15 @@ export class WriterAgent {
     const retrieved = await this.retrieveContext(query, ['character', 'location', 'event'], 10, warnings);
 
     const knowledgeContext = this.buildKnowledgeContext(retrieved);
-    if (knowledgeContext && Array.isArray(retrieved['entities'])) {
+    if (knowledgeContext && retrieved.entities.length > 0) {
       const enhancedProfiles = [...input.character_profiles];
-      for (const ent of (retrieved['entities'] as Record<string, unknown>[])) {
-        if (ent['type'] === 'character') {
-          const exists = enhancedProfiles.some(p => p['name'] === ent['name']);
+      for (const ent of retrieved.entities) {
+        if (ent.type === 'character') {
+          const exists = enhancedProfiles.some((profile) => profile['name'] === ent.name);
           if (!exists) {
             enhancedProfiles.push({
-              name: ent['name'],
-              description: ent['description'] ?? '',
+              name: ent.name,
+              description: ent.description,
               source: 'knowledge_layer',
             });
           }
@@ -380,7 +405,7 @@ export class WriterAgent {
       output.metadata['warnings'].forEach((w: unknown) => priorWarnings.push(String(w)));
     }
     const merged = [...priorWarnings, ...warnings];
-    this.attachMetadata(output, merged, this.buildKnowledgeSummary(retrieved));
+    this.attachMetadata(output, merged, this.buildKnowledgeMetadata(retrieved, query));
 
     return output;
   }
@@ -784,18 +809,23 @@ Please output the complete revised content:
     return parseInt(match[1], 10) === 1;
   }
 
-  private buildKnowledgeSummary(retrieved: Record<string, unknown>): Record<string, number> {
+  private buildKnowledgeSummary(retrieved: WriterKnowledgeContext): Record<string, number> {
     return {
-      entities_count: Array.isArray(retrieved['entities']) ? retrieved['entities'].length : 0,
-      relations_count: Array.isArray(retrieved['relations']) ? retrieved['relations'].length : 0,
-      memories_count: Array.isArray(retrieved['memories']) ? retrieved['memories'].length : 0,
+      entities_count: retrieved.entities.length,
+      relations_count: retrieved.relations.length,
+      memories_count: retrieved.memories.length,
     };
   }
 
-  private attachMetadata(output: WriterOutput, warnings: string[], knowledgeSummary?: Record<string, number>): void {
+  private attachMetadata(output: WriterOutput, warnings: string[], knowledgeMetadata?: WriterKnowledgeMetadata): void {
     const metadata: Record<string, unknown> = { ...(output.metadata ?? {}) };
     if (warnings.length > 0) metadata['warnings'] = warnings;
-    if (knowledgeSummary) metadata['knowledge_retrieved'] = knowledgeSummary;
+    if (knowledgeMetadata) {
+      metadata['knowledge_retrieved'] = knowledgeMetadata.knowledgeSummary;
+      if (knowledgeMetadata.factPacketBundle) {
+        metadata['retrieval_packet'] = knowledgeMetadata.factPacketBundle;
+      }
+    }
     output.metadata = Object.keys(metadata).length > 0 ? metadata : undefined;
   }
 

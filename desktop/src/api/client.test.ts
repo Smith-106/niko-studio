@@ -954,6 +954,13 @@ describe('workflow bridge and quality-check APIs', () => {
         graphEntityIds: ['hero-9'],
         memoryEntryIds: [],
       },
+      authority: {
+        recordSetId: null,
+        activeSceneId: null,
+        activeEventId: null,
+        activeTimelineId: null,
+        consistencyRunId: null,
+      },
       workflow: {
         sessionId: 'workflow-session-9',
         planId: null,
@@ -1051,6 +1058,13 @@ describe('workflow bridge and quality-check APIs', () => {
           graphEntityIds: ['hero-8'],
           memoryEntryIds: [],
         },
+        authority: {
+          recordSetId: null,
+          activeSceneId: null,
+          activeEventId: null,
+          activeTimelineId: null,
+          consistencyRunId: null,
+        },
         workflow: {
           sessionId: 'workflow-session-8',
           planId: null,
@@ -1112,6 +1126,13 @@ describe('agent api surface', () => {
       focusEntityId: 'hero-12',
       graphEntityIds: ['hero-12'],
       memoryEntryIds: [],
+    },
+    authority: {
+      recordSetId: null,
+      activeSceneId: null,
+      activeEventId: null,
+      activeTimelineId: null,
+      consistencyRunId: null,
     },
     workflow: {
       sessionId: 'workflow-session-12',
@@ -1441,6 +1462,13 @@ describe('chat request payload', () => {
           graphEntityIds: ['hero-11'],
           memoryEntryIds: [],
         },
+        authority: {
+          recordSetId: null,
+          activeSceneId: null,
+          activeEventId: null,
+          activeTimelineId: null,
+          consistencyRunId: null,
+        },
         workflow: {
           sessionId: 'workflow-session-11',
           planId: null,
@@ -1494,6 +1522,13 @@ describe('workspace api surface', () => {
       focusEntityId: 'hero-13',
       graphEntityIds: ['hero-13'],
       memoryEntryIds: [],
+    },
+    authority: {
+      recordSetId: null,
+      activeSceneId: null,
+      activeEventId: null,
+      activeTimelineId: null,
+      consistencyRunId: null,
     },
     workflow: {
       sessionId: 'workflow-session-13',

@@ -52,6 +52,8 @@ import {
   MCPGatewayAdapter,
 } from './adapters';
 
+const integrationAdapters = createIntegrationAdapters();
+
 function createLocalVectorEmbeddingService(dimension: number): VectorEmbeddingService {
   const normalize = (text: string): number[] => {
     const values = new Array<number>(dimension).fill(0);
@@ -121,6 +123,11 @@ function createKnowledgeService(): IKnowledgeService {
   return new KnowledgeServiceImpl({
     dbPath: '.writing/knowledge.db',
     enableDistillation: true,
+    memoryEngine: new MemoryEngineAdapter({
+      flags: integrationAdapters.flags,
+      storageShadow: integrationAdapters.storageShadow,
+    }),
+    graphEngine: new GraphEngineAdapter(),
   });
 }
 
@@ -193,10 +200,7 @@ export const ContainerModule = new InversifyContainerModule((bind) => {
     .toDynamicValue(() => createVectorSearch())
     .inSingletonScope();
 
-  // ============ Core Runtime Services (Adapted implementations) ============
-
   // Memory Engine Binding
-  const integrationAdapters = createIntegrationAdapters();
   bind<IMemoryEngine>(ServiceTypes.MemoryEngine)
     .toDynamicValue(() => new MemoryEngineAdapter({
       flags: integrationAdapters.flags,

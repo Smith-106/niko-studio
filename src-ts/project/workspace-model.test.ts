@@ -6,6 +6,7 @@ import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToLegacyChatContext,
   projectWorkspaceToMemoryScope,
+  projectWorkspaceToNarrativeAuthority,
   projectWorkspaceToWorkflowAuthority,
 } from './workspace-model.js';
 
@@ -14,6 +15,11 @@ describe('project workspace model', () => {
     const workspace = normalizeProjectWorkspaceContext({
       project_id: 'atlas-project',
       session_id: 'session-2',
+      record_set_id: 'record-set-2',
+      active_scene_id: 'scene-2',
+      active_event_id: 'event-2',
+      active_timeline_id: 'timeline-2',
+      consistency_run_id: 'consistency-2',
       context: {
         chapterId: 'chapter-2',
       },
@@ -53,6 +59,13 @@ describe('project workspace model', () => {
         graphEntityIds: ['hero-2'],
         memoryEntryIds: ['memory-1'],
       },
+      authority: {
+        recordSetId: 'record-set-2',
+        activeSceneId: 'scene-2',
+        activeEventId: 'event-2',
+        activeTimelineId: 'timeline-2',
+        consistencyRunId: 'consistency-2',
+      },
       workflow: {
         sessionId: 'session-2',
       },
@@ -62,12 +75,21 @@ describe('project workspace model', () => {
       },
     });
     expect(workspace.compatibility.migratedLegacyFields).toEqual(
-      expect.arrayContaining(['project_id', 'session_id', 'context.chapterId']),
+      expect.arrayContaining([
+        'project_id',
+        'session_id',
+        'context.chapterId',
+        'record_set_id',
+        'active_scene_id',
+        'active_event_id',
+        'active_timeline_id',
+        'consistency_run_id',
+      ]),
     );
     expect(workspace.compatibility.notes).toEqual(PROJECT_WORKSPACE_MIGRATION_NOTES);
   });
 
-  it('derives legacy chat and memory compatibility fields from the authoritative model', () => {
+  it('derives legacy chat, memory, workflow, and narrative authority projections from the authoritative model', () => {
     const workspace = createDefaultProjectWorkspaceContext({
       workspaceRoot: '/tmp/atlas-project',
     });
@@ -76,6 +98,11 @@ describe('project workspace model', () => {
     workspace.workflow.sessionId = 'workflow-session-7';
     workspace.chat.conversationId = 'conversation-7';
     workspace.knowledge.focusEntityId = 'hero-7';
+    workspace.authority.recordSetId = 'record-set-7';
+    workspace.authority.activeSceneId = 'scene-7';
+    workspace.authority.activeEventId = 'event-7';
+    workspace.authority.activeTimelineId = 'timeline-7';
+    workspace.authority.consistencyRunId = 'consistency-7';
 
     expect(projectWorkspaceToLegacyChatContext(workspace)).toEqual({
       projectId: 'atlas-project',
@@ -90,6 +117,16 @@ describe('project workspace model', () => {
       sessionId: 'workflow-session-7',
       workspaceId: 'atlas-project',
       projectId: 'atlas-project',
+    });
+    expect(projectWorkspaceToNarrativeAuthority(workspace)).toEqual({
+      sessionId: 'workflow-session-7',
+      workspaceId: 'atlas-project',
+      projectId: 'atlas-project',
+      recordSetId: 'record-set-7',
+      sceneId: 'scene-7',
+      eventId: 'event-7',
+      timelineId: 'timeline-7',
+      consistencyRunId: 'consistency-7',
     });
   });
 });

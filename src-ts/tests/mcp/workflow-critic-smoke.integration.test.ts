@@ -46,6 +46,7 @@ describe('workflow + critic smoke integration', () => {
     const {
       criticEvaluateEndpoint,
       criticSuggestionsEndpoint,
+      criticConsistencyEndpoint,
     } = await import('../../mcp/endpoints/critic.js');
 
     const planResponse = await workflowPlanEndpoint(
@@ -98,5 +99,36 @@ describe('workflow + critic smoke integration', () => {
     );
     expect(suggestionsResponse.statusCode).toBe(200);
     expect(Array.isArray(suggestionsResponse.body)).toBe(true);
+
+    const consistencyResponse = await criticConsistencyEndpoint(
+      makeRequest(
+        {
+          chapters: [generated],
+          chapterMeta: [{ chapterNumber: 1, title: 'Opening' }],
+          workspace: {
+            identity: {
+              workspaceId: 'atlas-workspace',
+              projectId: 'atlas-project',
+            },
+            workflow: {
+              sessionId: 'session-1',
+            },
+          },
+        },
+        '/critic/consistency',
+      ),
+    );
+    expect(consistencyResponse.statusCode).toBe(200);
+    const consistencyBody = consistencyResponse.body as Record<string, unknown>;
+    expect(String(consistencyBody['runId'])).toContain('consistency-atlas-workspace-');
+    expect(consistencyBody['workspace']).toMatchObject({
+      authority: {
+        recordSetId: 'atlas-workspace',
+      },
+    });
+    expect(consistencyBody['narrativeAuthority']).toMatchObject({
+      workspaceId: 'atlas-workspace',
+      projectId: 'atlas-project',
+    });
   });
 });

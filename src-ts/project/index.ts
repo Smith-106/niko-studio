@@ -5,17 +5,54 @@ export {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToLegacyChatContext,
   projectWorkspaceToMemoryScope,
+  projectWorkspaceToNarrativeAuthority,
   projectWorkspaceToWorkflowAuthority,
   summarizeProjectWorkspaceContext,
 } from './workspace-model.js';
 
+export {
+  PROJECT_NARRATIVE_AUTHORITY_CONTRACT,
+  PROJECT_NARRATIVE_SCHEMA_VERSION,
+  createProjectNarrativeEventRecord,
+  createProjectNarrativeProjectionBoundary,
+  createProjectNarrativeRecordAuthority,
+  createProjectNarrativeRecordId,
+  createProjectNarrativeSceneRecord,
+  createProjectNarrativeTimelineRecord,
+  normalizeProjectNarrativeRecordSetId,
+} from './narrative-records.js';
+
 export type {
+  CreateProjectNarrativeAuthorityInput,
+  CreateProjectNarrativeEventRecordInput,
+  CreateProjectNarrativeSceneRecordInput,
+  CreateProjectNarrativeTimelineRecordInput,
+  ProjectNarrativeAuthorityContract,
+  ProjectNarrativeEvidenceLink,
+  ProjectNarrativeEvidenceSource,
+  ProjectNarrativeEventRecord,
+  ProjectNarrativeProjectionBoundary,
+  ProjectNarrativeProjectionRefs,
+  ProjectNarrativeRecord,
+  ProjectNarrativeRecordAuthority,
+  ProjectNarrativeRecordKind,
+  ProjectNarrativeSceneRecord,
+  ProjectNarrativeStoryPosition,
+  ProjectNarrativeNarrativePosition,
+  ProjectNarrativeTimelineEntry,
+  ProjectNarrativeTimelineMode,
+  ProjectNarrativeTimelineRecord,
+} from './narrative-records.js';
+
+export type {
+  ProjectWorkspaceAuthority,
   ProjectWorkspaceChat,
   ProjectWorkspaceCompatibility,
   ProjectWorkspaceContext,
   ProjectWorkspaceIdentity,
   ProjectWorkspaceKnowledge,
   ProjectWorkspaceManuscript,
+  ProjectWorkspaceNarrativeAuthority,
   ProjectWorkspaceStoryBible,
   ProjectWorkspaceWorkflowAuthority,
   ProjectWorkspaceWorkflow,
@@ -88,9 +125,16 @@ export type {
   ProjectWikiQueryResult,
 } from './wiki-query.js';
 
-export { createProjectWikiKnowledgeLayer } from './wiki-knowledge-layer.js';
+export {
+  createProjectWikiFactPacketBundle,
+  createProjectWikiFactPacketBundleFromCanonMatches,
+  createProjectWikiKnowledgeLayer,
+} from './wiki-knowledge-layer.js';
 
 export type {
+  ProjectWikiFactPacket,
+  ProjectWikiFactPacketBundle,
+  ProjectWikiFactPacketSource,
   ProjectWikiKnowledgeEntity,
   ProjectWikiKnowledgeLayer,
   ProjectWikiKnowledgeMemory,

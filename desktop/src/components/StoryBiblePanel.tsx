@@ -38,6 +38,7 @@ import type {
 } from '../api/wiki'
 
 interface StoryBibleSection {
+  key: string
   title: string
   icon: React.ReactNode
   content: React.ReactNode
@@ -103,6 +104,68 @@ function CardList({ items, emptyText }: { items: GraphItem[]; emptyText: string 
   )
 }
 
+function NarrativeRecordList({
+  items,
+  emptyText,
+  activeRecordId,
+  activeLabel,
+  activateLabel,
+  onSelect,
+  onActivate,
+}: {
+  items: GraphItem[]
+  emptyText: string
+  activeRecordId: string | null
+  activeLabel: string
+  activateLabel: string
+  onSelect: (item: GraphItem) => void
+  onActivate: (item: GraphItem) => void
+}) {
+  if (items.length === 0) {
+    return <p className="text-sm text-[var(--text-muted)] italic">{emptyText}</p>
+  }
+
+  return (
+    <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+      {items.map((item, index) => {
+        const recordId = readText(item.id)
+        const title = readText(item.name) || readText(item.title) || recordId || `Item ${index + 1}`
+        const summary = readText(item.summary) || readText(item.description) || readText(item.content)
+        const isActive = Boolean(recordId) && recordId === activeRecordId
+
+        return (
+          <div
+            key={recordId || `${title}-${index}`}
+            className="rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] p-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => onSelect(item)}
+                className="min-w-0 flex-1 text-left"
+              >
+                <div className="text-sm font-medium text-[var(--text-primary)]">{title}</div>
+                {summary && (
+                  <div className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{summary}</div>
+                )}
+                {recordId && <div className="mt-2 text-[11px] text-[var(--text-muted)]">{recordId}</div>}
+              </button>
+              <button
+                type="button"
+                onClick={() => onActivate(item)}
+                disabled={isActive}
+                className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--border-default)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary-cta)]/40 hover:text-[var(--primary-cta)] disabled:cursor-default disabled:border-[var(--primary-cta)]/30 disabled:bg-[var(--primary-cta)]/10 disabled:text-[var(--primary-cta)] transition-colors"
+              >
+                {isActive ? activeLabel : activateLabel}
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 const GENRE_PRESETS_ZH = ['奇幻', '言情', '悬疑', '科幻', '恐怖', '历史', '武侠', '都市', '青春', '冒险', '宫斗', '末世', '仙侠', '推理', '轻小说']
 const STORY_BIBLE_DRAFT_VERSION = '1.0'
 const STORY_BIBLE_STORAGE_KEYS = {
@@ -156,6 +219,153 @@ function isStyleId(value: string): value is StyleId {
 
 function clearLegacyStoryBibleDraft() {
   Object.values(STORY_BIBLE_STORAGE_KEYS).forEach(removeFromStorage)
+}
+
+type NarrativeRecordKind = 'scene' | 'event' | 'timeline'
+type NarrativeTimelineMode = 'story' | 'narrative'
+
+function readText(value: unknown): string {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value)
+  }
+  return typeof value === 'string' ? value : ''
+}
+
+function parseOptionalNumber(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function slugifyRecordSegment(value: string): string {
+  return value
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}_-]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'record'
+}
+
+function buildNarrativeItemKind(kind: NarrativeRecordKind): string {
+  return `narrative-${kind}`
+}
+
+function buildNarrativeRecordId(kind: NarrativeRecordKind, workspaceId: string, title: string): string {
+  return `${kind}-${workspaceId}-${slugifyRecordSegment(title)}`
+}
+
+function readNarrativeAuthoringCopy(language: 'zh' | 'en') {
+  if (language === 'zh') {
+    return {
+      scene: {
+        sectionTitle: '场景',
+        titleLabel: '场景标题',
+        titlePlaceholder: '输入场景标题',
+        summaryLabel: '场景摘要',
+        summaryPlaceholder: '记录场景目标、冲突、结果和关键线索。',
+        chapterLabel: '章节 ID',
+        chapterPlaceholder: 'chapter-1',
+        orderLabel: '场次序号',
+        orderPlaceholder: '1',
+        addLabel: '添加场景',
+        saveLabel: '保存场景',
+        activateLabel: '设为当前场景',
+        activeLabel: '当前场景',
+        emptyLabel: '当前工作区还没有场景记录。',
+        saveSuccess: '场景已保存到当前工作区。',
+        saveError: '保存场景失败，请稍后重试。',
+      },
+      event: {
+        sectionTitle: '事件',
+        titleLabel: '事件标题',
+        titlePlaceholder: '输入事件标题',
+        summaryLabel: '事件摘要',
+        summaryPlaceholder: '记录事件触发原因、参与者与后果。',
+        sceneLabel: '关联场景 ID',
+        scenePlaceholder: 'scene-default-project-opening',
+        addLabel: '添加事件',
+        saveLabel: '保存事件',
+        activateLabel: '设为当前事件',
+        activeLabel: '当前事件',
+        emptyLabel: '当前工作区还没有事件记录。',
+        saveSuccess: '事件已保存到当前工作区。',
+        saveError: '保存事件失败，请稍后重试。',
+      },
+      timeline: {
+        sectionTitle: '时间线',
+        titleLabel: '时间线标题',
+        titlePlaceholder: '输入时间线标题',
+        summaryLabel: '时间线摘要',
+        summaryPlaceholder: '说明这条时间线覆盖的范围和排序原则。',
+        modeLabel: '时间线模式',
+        modeStory: '故事时间',
+        modeNarrative: '叙事时间',
+        addLabel: '添加时间线',
+        saveLabel: '保存时间线',
+        activateLabel: '设为当前时间线',
+        activeLabel: '当前时间线',
+        emptyLabel: '当前工作区还没有时间线记录。',
+        saveSuccess: '时间线已保存到当前工作区。',
+        saveError: '保存时间线失败，请稍后重试。',
+      },
+    } as const
+  }
+
+  return {
+    scene: {
+      sectionTitle: 'Scenes',
+      titleLabel: 'Scene title',
+      titlePlaceholder: 'Enter a scene title',
+      summaryLabel: 'Scene summary',
+      summaryPlaceholder: 'Capture the goal, conflict, outcome, and key clues for this scene.',
+      chapterLabel: 'Chapter ID',
+      chapterPlaceholder: 'chapter-1',
+      orderLabel: 'Scene order',
+      orderPlaceholder: '1',
+      addLabel: 'Add scene',
+      saveLabel: 'Save scene',
+      activateLabel: 'Set active scene',
+      activeLabel: 'Active scene',
+      emptyLabel: 'No scene records exist for this workspace yet.',
+      saveSuccess: 'Scene saved to the current workspace.',
+      saveError: 'Failed to save the scene. Please try again.',
+    },
+    event: {
+      sectionTitle: 'Events',
+      titleLabel: 'Event title',
+      titlePlaceholder: 'Enter an event title',
+      summaryLabel: 'Event summary',
+      summaryPlaceholder: 'Capture the trigger, participants, and aftermath for this event.',
+      sceneLabel: 'Related scene ID',
+      scenePlaceholder: 'scene-default-project-opening',
+      addLabel: 'Add event',
+      saveLabel: 'Save event',
+      activateLabel: 'Set active event',
+      activeLabel: 'Active event',
+      emptyLabel: 'No event records exist for this workspace yet.',
+      saveSuccess: 'Event saved to the current workspace.',
+      saveError: 'Failed to save the event. Please try again.',
+    },
+    timeline: {
+      sectionTitle: 'Timelines',
+      titleLabel: 'Timeline title',
+      titlePlaceholder: 'Enter a timeline title',
+      summaryLabel: 'Timeline summary',
+      summaryPlaceholder: 'Describe the ordering principle and coverage for this timeline.',
+      modeLabel: 'Timeline mode',
+      modeStory: 'Story time',
+      modeNarrative: 'Narrative time',
+      addLabel: 'Add timeline',
+      saveLabel: 'Save timeline',
+      activateLabel: 'Set active timeline',
+      activeLabel: 'Active timeline',
+      emptyLabel: 'No timeline records exist for this workspace yet.',
+      saveSuccess: 'Timeline saved to the current workspace.',
+      saveError: 'Failed to save the timeline. Please try again.',
+    },
+  } as const
 }
 
 function buildLegacyDraftPayload(): StoryBibleDraftPayload | null {
@@ -278,12 +488,37 @@ export function StoryBiblePanel() {
 
   const [characters, setCharacters] = useState<GraphItem[]>([])
   const [locations, setLocations] = useState<GraphItem[]>([])
+  const [sceneRecords, setSceneRecords] = useState<GraphItem[]>([])
+  const [eventRecords, setEventRecords] = useState<GraphItem[]>([])
+  const [timelineRecords, setTimelineRecords] = useState<GraphItem[]>([])
   const [braindump, setBraindump] = useState('')
   const [genres, setGenres] = useState<string[]>([])
   const [genreInput, setGenreInput] = useState('')
   const [synopsis, setSynopsis] = useState('')
   const [outline, setOutline] = useState('')
   const [selectedStyle, setSelectedStyle] = useState<StyleId>('tried')
+  const [sceneDraft, setSceneDraft] = useState({
+    recordId: null as string | null,
+    title: '',
+    summary: '',
+    chapterId: '',
+    sceneOrder: '',
+  })
+  const [eventDraft, setEventDraft] = useState({
+    recordId: null as string | null,
+    title: '',
+    summary: '',
+    sceneId: '',
+  })
+  const [timelineDraft, setTimelineDraft] = useState({
+    recordId: null as string | null,
+    title: '',
+    summary: '',
+    mode: 'story' as NarrativeTimelineMode,
+  })
+  const [sceneSaving, setSceneSaving] = useState(false)
+  const [eventSaving, setEventSaving] = useState(false)
+  const [timelineSaving, setTimelineSaving] = useState(false)
   const [draftMessage, setDraftMessage] = useState<StoryBibleMessage>(null)
   const [canonMessage, setCanonMessage] = useState<StoryBibleMessage>(null)
   const [canonPages, setCanonPages] = useState<ProjectWikiCanonPageSummary[]>([])
@@ -299,6 +534,7 @@ export function StoryBiblePanel() {
   const workspaceNotice = buildWorkspaceNotice(language)
   const syncCopy = readSyncCopy(language, syncState)
   const canonCopy = readCanonCopy(language)
+  const narrativeCopy = readNarrativeAuthoringCopy(language)
 
   const showDraftMessage = useCallback((type: 'success' | 'error', text: string) => {
     if (draftMessageTimeoutRef.current !== null) {
@@ -396,6 +632,247 @@ export function StoryBiblePanel() {
     }
   }, [currentWorkspace])
 
+  const buildNarrativeRecordProps = useCallback((kind: NarrativeRecordKind, base: {
+    recordId: string
+    title: string
+    summary: string
+  }) => {
+    const recordSetId = currentWorkspace.authority.recordSetId || currentWorkspace.identity.workspaceId
+    return {
+      id: base.recordId,
+      name: base.title,
+      title: base.title,
+      summary: base.summary,
+      description: base.summary,
+      content: base.summary,
+      kind,
+      itemKind: buildNarrativeItemKind(kind),
+      schemaVersion: '2026-04-25',
+      workspaceId: currentWorkspace.identity.workspaceId,
+      projectId: currentWorkspace.identity.projectId,
+      workspaceRoot: currentWorkspace.identity.workspaceRoot,
+      recordSetId,
+      scopeAuthority: 'workspace',
+      canonAuthority: 'canon-page',
+      projectionAuthority: 'derived',
+      promotionMode: 'manual',
+      status: 'draft',
+      promotedFrom: 'manual',
+      updatedAt: new Date().toISOString(),
+    }
+  }, [currentWorkspace])
+
+  const refreshNarrativeRecords = useCallback(async () => {
+    try {
+      const [sceneResult, eventResult, timelineResult] = await Promise.all([
+        queryGraph('MATCH (n:Item) WHERE n.itemKind = "narrative-scene" RETURN n LIMIT 100', { workspace: currentWorkspace }),
+        queryGraph('MATCH (n:Item) WHERE n.itemKind = "narrative-event" RETURN n LIMIT 100', { workspace: currentWorkspace }),
+        queryGraph('MATCH (n:Item) WHERE n.itemKind = "narrative-timeline" RETURN n LIMIT 100', { workspace: currentWorkspace }),
+      ])
+
+      if (sceneResult.success) {
+        setSceneRecords(
+          filterWorkspaceKnowledgeItems(toGraphItems(sceneResult.data, 'n'), currentWorkspace, {
+            itemKind: 'narrative-scene',
+          }),
+        )
+      }
+
+      if (eventResult.success) {
+        setEventRecords(
+          filterWorkspaceKnowledgeItems(toGraphItems(eventResult.data, 'n'), currentWorkspace, {
+            itemKind: 'narrative-event',
+          }),
+        )
+      }
+
+      if (timelineResult.success) {
+        setTimelineRecords(
+          filterWorkspaceKnowledgeItems(toGraphItems(timelineResult.data, 'n'), currentWorkspace, {
+            itemKind: 'narrative-timeline',
+          }),
+        )
+      }
+    } catch (error) {
+      console.error('Failed to refresh narrative records:', error)
+    }
+  }, [currentWorkspace])
+
+  const activateNarrativeRecord = useCallback((kind: NarrativeRecordKind, item: GraphItem) => {
+    const recordSetId = readText(item.recordSetId) || currentWorkspace.authority.recordSetId || currentWorkspace.identity.workspaceId
+    const recordId = readText(item.id)
+    setCurrentWorkspace({
+      authority: {
+        recordSetId,
+        ...(kind === 'scene' ? { activeSceneId: recordId } : {}),
+        ...(kind === 'event' ? { activeEventId: recordId } : {}),
+        ...(kind === 'timeline' ? { activeTimelineId: recordId } : {}),
+      },
+    })
+  }, [currentWorkspace, setCurrentWorkspace])
+
+  const selectSceneRecord = useCallback((item: GraphItem) => {
+    setSceneDraft({
+      recordId: readText(item.id) || null,
+      title: readText(item.title) || readText(item.name),
+      summary: readText(item.summary) || readText(item.description) || readText(item.content),
+      chapterId: readText(item.chapterId),
+      sceneOrder: readText(item.sceneOrder),
+    })
+  }, [])
+
+  const selectEventRecord = useCallback((item: GraphItem) => {
+    setEventDraft({
+      recordId: readText(item.id) || null,
+      title: readText(item.title) || readText(item.name),
+      summary: readText(item.summary) || readText(item.description) || readText(item.content),
+      sceneId: readText(item.sceneId),
+    })
+  }, [])
+
+  const selectTimelineRecord = useCallback((item: GraphItem) => {
+    setTimelineDraft({
+      recordId: readText(item.id) || null,
+      title: readText(item.title) || readText(item.name),
+      summary: readText(item.summary) || readText(item.description) || readText(item.content),
+      mode: readText(item.mode) === 'narrative' ? 'narrative' : 'story',
+    })
+  }, [])
+
+  const handleSaveSceneRecord = useCallback(async () => {
+    const title = sceneDraft.title.trim()
+    if (!title) {
+      showDraftMessage('error', narrativeCopy.scene.titlePlaceholder)
+      return
+    }
+
+    setSceneSaving(true)
+    try {
+      const recordId = sceneDraft.recordId || buildNarrativeRecordId('scene', currentWorkspace.identity.workspaceId, title)
+      const response = await queryGraph(
+        buildGraphMergeMutation(
+          'Item',
+          { id: recordId, workspaceId: currentWorkspace.identity.workspaceId },
+          {
+            ...buildNarrativeRecordProps('scene', {
+              recordId,
+              title,
+              summary: sceneDraft.summary.trim(),
+            }),
+            chapterId: sceneDraft.chapterId.trim() || null,
+            sceneOrder: parseOptionalNumber(sceneDraft.sceneOrder),
+          },
+        ),
+        { workspace: currentWorkspace },
+      )
+      const graphError = readGraphMutationError(response.data)
+      if (!response.success || graphError) {
+        throw new Error(response.error || graphError || narrativeCopy.scene.saveError)
+      }
+
+      setSceneDraft((current) => ({ ...current, recordId, title }))
+      await refreshNarrativeRecords()
+      showDraftMessage('success', narrativeCopy.scene.saveSuccess)
+      window.dispatchEvent(new CustomEvent(WORKSPACE_KNOWLEDGE_CHANGED_EVENT))
+    } catch (error) {
+      console.error('Failed to save scene record:', error)
+      showDraftMessage('error', narrativeCopy.scene.saveError)
+    } finally {
+      setSceneSaving(false)
+    }
+  }, [buildNarrativeRecordProps, currentWorkspace, narrativeCopy.scene.saveError, narrativeCopy.scene.saveSuccess, narrativeCopy.scene.titlePlaceholder, refreshNarrativeRecords, sceneDraft, showDraftMessage])
+
+  const handleSaveEventRecord = useCallback(async () => {
+    const title = eventDraft.title.trim()
+    if (!title) {
+      showDraftMessage('error', narrativeCopy.event.titlePlaceholder)
+      return
+    }
+
+    setEventSaving(true)
+    try {
+      const recordId = eventDraft.recordId || buildNarrativeRecordId('event', currentWorkspace.identity.workspaceId, title)
+      const response = await queryGraph(
+        buildGraphMergeMutation(
+          'Item',
+          { id: recordId, workspaceId: currentWorkspace.identity.workspaceId },
+          {
+            ...buildNarrativeRecordProps('event', {
+              recordId,
+              title,
+              summary: eventDraft.summary.trim(),
+            }),
+            sceneId: eventDraft.sceneId.trim() || null,
+          },
+        ),
+        { workspace: currentWorkspace },
+      )
+      const graphError = readGraphMutationError(response.data)
+      if (!response.success || graphError) {
+        throw new Error(response.error || graphError || narrativeCopy.event.saveError)
+      }
+
+      setEventDraft((current) => ({ ...current, recordId, title }))
+      await refreshNarrativeRecords()
+      showDraftMessage('success', narrativeCopy.event.saveSuccess)
+      window.dispatchEvent(new CustomEvent(WORKSPACE_KNOWLEDGE_CHANGED_EVENT))
+    } catch (error) {
+      console.error('Failed to save event record:', error)
+      showDraftMessage('error', narrativeCopy.event.saveError)
+    } finally {
+      setEventSaving(false)
+    }
+  }, [buildNarrativeRecordProps, currentWorkspace, eventDraft, narrativeCopy.event.saveError, narrativeCopy.event.saveSuccess, narrativeCopy.event.titlePlaceholder, refreshNarrativeRecords, showDraftMessage])
+
+  const handleSaveTimelineRecord = useCallback(async () => {
+    const title = timelineDraft.title.trim()
+    if (!title) {
+      showDraftMessage('error', narrativeCopy.timeline.titlePlaceholder)
+      return
+    }
+
+    setTimelineSaving(true)
+    try {
+      const recordId = timelineDraft.recordId || buildNarrativeRecordId('timeline', currentWorkspace.identity.workspaceId, title)
+      const response = await queryGraph(
+        buildGraphMergeMutation(
+          'Item',
+          { id: recordId, workspaceId: currentWorkspace.identity.workspaceId },
+          {
+            ...buildNarrativeRecordProps('timeline', {
+              recordId,
+              title,
+              summary: timelineDraft.summary.trim(),
+            }),
+            mode: timelineDraft.mode,
+          },
+        ),
+        { workspace: currentWorkspace },
+      )
+      const graphError = readGraphMutationError(response.data)
+      if (!response.success || graphError) {
+        throw new Error(response.error || graphError || narrativeCopy.timeline.saveError)
+      }
+
+      setTimelineDraft((current) => ({ ...current, recordId, title }))
+      await refreshNarrativeRecords()
+      showDraftMessage('success', narrativeCopy.timeline.saveSuccess)
+      window.dispatchEvent(new CustomEvent(WORKSPACE_KNOWLEDGE_CHANGED_EVENT))
+    } catch (error) {
+      console.error('Failed to save timeline record:', error)
+      showDraftMessage('error', narrativeCopy.timeline.saveError)
+    } finally {
+      setTimelineSaving(false)
+    }
+  }, [buildNarrativeRecordProps, currentWorkspace, narrativeCopy.timeline.saveError, narrativeCopy.timeline.saveSuccess, narrativeCopy.timeline.titlePlaceholder, refreshNarrativeRecords, showDraftMessage, timelineDraft])
+
+  const refreshWorkspaceLists = useCallback(async () => {
+    await Promise.all([
+      refreshKnowledgeLists(),
+      refreshNarrativeRecords(),
+    ])
+  }, [refreshKnowledgeLists, refreshNarrativeRecords])
+
   const refreshCanonPages = useCallback(async (preferredSlug?: string | null) => {
     setCanonLoading(true)
     try {
@@ -451,7 +928,7 @@ export function StoryBiblePanel() {
         queryGraph(`MATCH (n:Item) WHERE n.name = ${JSON.stringify(storyBibleName)} RETURN n`, {
           workspace: currentWorkspace,
         }),
-        refreshKnowledgeLists(),
+        refreshWorkspaceLists(),
       ])
 
       if (storyBibleResult.success) {
@@ -521,7 +998,7 @@ export function StoryBiblePanel() {
     applyDraftPayload,
     currentWorkspace,
     language,
-    refreshKnowledgeLists,
+    refreshWorkspaceLists,
     syncWorkspaceStoryBible,
     showDraftMessage,
     storyBibleName,
@@ -533,12 +1010,12 @@ export function StoryBiblePanel() {
 
   useEffect(() => {
     const handleKnowledgeChange = () => {
-      void refreshKnowledgeLists()
+      void refreshWorkspaceLists()
     }
 
     window.addEventListener(WORKSPACE_KNOWLEDGE_CHANGED_EVENT, handleKnowledgeChange)
     return () => window.removeEventListener(WORKSPACE_KNOWLEDGE_CHANGED_EVENT, handleKnowledgeChange)
-  }, [refreshKnowledgeLists])
+  }, [refreshWorkspaceLists])
 
   useEffect(() => {
     void refreshCanonPages()
@@ -800,6 +1277,7 @@ export function StoryBiblePanel() {
 
   const sections: StoryBibleSection[] = [
     {
+      key: 'braindump',
       title: t.storyBibleBraindump,
       icon: <BookOpen size={16} />,
       defaultOpen: true,
@@ -819,6 +1297,7 @@ export function StoryBiblePanel() {
       ),
     },
     {
+      key: 'genre',
       title: t.storyBibleGenre,
       icon: <Tag size={16} />,
       defaultOpen: true,
@@ -880,6 +1359,7 @@ export function StoryBiblePanel() {
       ),
     },
     {
+      key: 'synopsis',
       title: t.storyBibleSynopsis,
       icon: <FileText size={16} />,
       content: (
@@ -908,6 +1388,7 @@ export function StoryBiblePanel() {
       ),
     },
     {
+      key: 'canon-review',
       title: canonCopy.reviewTitle,
       icon: <BookOpen size={16} />,
       content: (
@@ -963,6 +1444,7 @@ export function StoryBiblePanel() {
       ),
     },
     {
+      key: 'characters',
       title: `${t.storyBibleCharacters} (${characters.length})`,
       icon: <Users size={16} />,
       content: loading
@@ -970,6 +1452,7 @@ export function StoryBiblePanel() {
         : <CardList items={characters} emptyText={t.storyBibleEmpty} />,
     },
     {
+      key: 'worldbuilding',
       title: `${t.storyBibleWorldbuilding} (${locations.length})`,
       icon: <Map size={16} />,
       content: loading
@@ -977,6 +1460,208 @@ export function StoryBiblePanel() {
         : <CardList items={locations} emptyText={t.storyBibleEmpty} />,
     },
     {
+      key: 'scenes',
+      title: `${narrativeCopy.scene.sectionTitle} (${sceneRecords.length})`,
+      icon: <FileText size={16} />,
+      content: (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.scene.titleLabel}</span>
+              <input
+                value={sceneDraft.title}
+                onChange={(event) => setSceneDraft((current) => ({ ...current, title: event.target.value }))}
+                placeholder={narrativeCopy.scene.titlePlaceholder}
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.scene.chapterLabel}</span>
+              <input
+                value={sceneDraft.chapterId}
+                onChange={(event) => setSceneDraft((current) => ({ ...current, chapterId: event.target.value }))}
+                placeholder={narrativeCopy.scene.chapterPlaceholder}
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
+              />
+            </label>
+            <label className="space-y-1 sm:col-span-2">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.scene.summaryLabel}</span>
+              <textarea
+                value={sceneDraft.summary}
+                onChange={(event) => setSceneDraft((current) => ({ ...current, summary: event.target.value }))}
+                placeholder={narrativeCopy.scene.summaryPlaceholder}
+                className="min-h-24 w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm leading-relaxed text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.scene.orderLabel}</span>
+              <input
+                value={sceneDraft.sceneOrder}
+                onChange={(event) => setSceneDraft((current) => ({ ...current, sceneOrder: event.target.value }))}
+                placeholder={narrativeCopy.scene.orderPlaceholder}
+                inputMode="numeric"
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSaveSceneRecord()}
+              disabled={sceneSaving}
+              className="rounded-[var(--radius-sm)] bg-[var(--primary-cta)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--primary-cta-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            >
+              {sceneSaving ? narrativeCopy.scene.saveLabel : (sceneDraft.recordId ? narrativeCopy.scene.saveLabel : narrativeCopy.scene.addLabel)}
+            </button>
+            {currentWorkspace.authority.activeSceneId && (
+              <span className="text-xs text-[var(--text-secondary)]">
+                {narrativeCopy.scene.activeLabel}: {currentWorkspace.authority.activeSceneId}
+              </span>
+            )}
+          </div>
+          <NarrativeRecordList
+            items={sceneRecords}
+            emptyText={narrativeCopy.scene.emptyLabel}
+            activeRecordId={currentWorkspace.authority.activeSceneId}
+            activeLabel={narrativeCopy.scene.activeLabel}
+            activateLabel={narrativeCopy.scene.activateLabel}
+            onSelect={selectSceneRecord}
+            onActivate={(item) => activateNarrativeRecord('scene', item)}
+          />
+        </div>
+      ),
+    },
+    {
+      key: 'events',
+      title: `${narrativeCopy.event.sectionTitle} (${eventRecords.length})`,
+      icon: <Sparkles size={16} />,
+      content: (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.event.titleLabel}</span>
+              <input
+                value={eventDraft.title}
+                onChange={(event) => setEventDraft((current) => ({ ...current, title: event.target.value }))}
+                placeholder={narrativeCopy.event.titlePlaceholder}
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.event.sceneLabel}</span>
+              <input
+                value={eventDraft.sceneId}
+                onChange={(event) => setEventDraft((current) => ({ ...current, sceneId: event.target.value }))}
+                placeholder={narrativeCopy.event.scenePlaceholder}
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
+              />
+            </label>
+            <label className="space-y-1 sm:col-span-2">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.event.summaryLabel}</span>
+              <textarea
+                value={eventDraft.summary}
+                onChange={(event) => setEventDraft((current) => ({ ...current, summary: event.target.value }))}
+                placeholder={narrativeCopy.event.summaryPlaceholder}
+                className="min-h-24 w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm leading-relaxed text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSaveEventRecord()}
+              disabled={eventSaving}
+              className="rounded-[var(--radius-sm)] bg-[var(--primary-cta)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--primary-cta-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            >
+              {eventSaving ? narrativeCopy.event.saveLabel : (eventDraft.recordId ? narrativeCopy.event.saveLabel : narrativeCopy.event.addLabel)}
+            </button>
+            {currentWorkspace.authority.activeEventId && (
+              <span className="text-xs text-[var(--text-secondary)]">
+                {narrativeCopy.event.activeLabel}: {currentWorkspace.authority.activeEventId}
+              </span>
+            )}
+          </div>
+          <NarrativeRecordList
+            items={eventRecords}
+            emptyText={narrativeCopy.event.emptyLabel}
+            activeRecordId={currentWorkspace.authority.activeEventId}
+            activeLabel={narrativeCopy.event.activeLabel}
+            activateLabel={narrativeCopy.event.activateLabel}
+            onSelect={selectEventRecord}
+            onActivate={(item) => activateNarrativeRecord('event', item)}
+          />
+        </div>
+      ),
+    },
+    {
+      key: 'timelines',
+      title: `${narrativeCopy.timeline.sectionTitle} (${timelineRecords.length})`,
+      icon: <Map size={16} />,
+      content: (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.timeline.titleLabel}</span>
+              <input
+                value={timelineDraft.title}
+                onChange={(event) => setTimelineDraft((current) => ({ ...current, title: event.target.value }))}
+                placeholder={narrativeCopy.timeline.titlePlaceholder}
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)]"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.timeline.modeLabel}</span>
+              <select
+                value={timelineDraft.mode}
+                onChange={(event) => setTimelineDraft((current) => ({
+                  ...current,
+                  mode: event.target.value === 'narrative' ? 'narrative' : 'story',
+                }))}
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30"
+              >
+                <option value="story">{narrativeCopy.timeline.modeStory}</option>
+                <option value="narrative">{narrativeCopy.timeline.modeNarrative}</option>
+              </select>
+            </label>
+            <label className="space-y-1 sm:col-span-2">
+              <span className="text-xs text-[var(--text-secondary)]">{narrativeCopy.timeline.summaryLabel}</span>
+              <textarea
+                value={timelineDraft.summary}
+                onChange={(event) => setTimelineDraft((current) => ({ ...current, summary: event.target.value }))}
+                placeholder={narrativeCopy.timeline.summaryPlaceholder}
+                className="min-h-24 w-full rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--surface-sunken)] px-3 py-2 text-sm leading-relaxed text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--primary-cta)]/30 placeholder:text-[var(--text-muted)] custom-scrollbar"
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSaveTimelineRecord()}
+              disabled={timelineSaving}
+              className="rounded-[var(--radius-sm)] bg-[var(--primary-cta)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--primary-cta-hover)] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            >
+              {timelineSaving ? narrativeCopy.timeline.saveLabel : (timelineDraft.recordId ? narrativeCopy.timeline.saveLabel : narrativeCopy.timeline.addLabel)}
+            </button>
+            {currentWorkspace.authority.activeTimelineId && (
+              <span className="text-xs text-[var(--text-secondary)]">
+                {narrativeCopy.timeline.activeLabel}: {currentWorkspace.authority.activeTimelineId}
+              </span>
+            )}
+          </div>
+          <NarrativeRecordList
+            items={timelineRecords}
+            emptyText={narrativeCopy.timeline.emptyLabel}
+            activeRecordId={currentWorkspace.authority.activeTimelineId}
+            activeLabel={narrativeCopy.timeline.activeLabel}
+            activateLabel={narrativeCopy.timeline.activateLabel}
+            onSelect={selectTimelineRecord}
+            onActivate={(item) => activateNarrativeRecord('timeline', item)}
+          />
+        </div>
+      ),
+    },
+    {
+      key: 'style',
       title: t.storyBibleStyleTitle,
       icon: <Sparkles size={16} />,
       content: (
@@ -1005,6 +1690,7 @@ export function StoryBiblePanel() {
       ),
     },
     {
+      key: 'outline',
       title: t.storyBibleOutline,
       icon: <BookOpen size={16} />,
       content: (
@@ -1089,7 +1775,7 @@ export function StoryBiblePanel() {
       <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
         {sections.map((section) => (
           <CollapsibleSection
-            key={section.title}
+            key={section.key}
             title={section.title}
             icon={section.icon}
             content={section.content}

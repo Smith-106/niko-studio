@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { type ProjectWorkspaceContext } from './workspace'
 import {
   listProjectWikiCanonPagesApi,
   promoteProjectWikiCanonApi,
   readProjectWikiCanonPageApi,
 } from './wiki'
 
-const workspace = {
+const workspace: ProjectWorkspaceContext = {
   schemaVersion: '2026-04-08',
   identity: {
     workspaceId: 'atlas-workspace',
@@ -31,6 +32,13 @@ const workspace = {
     focusEntityId: null,
     graphEntityIds: [],
     memoryEntryIds: [],
+  },
+  authority: {
+    recordSetId: null,
+    activeSceneId: null,
+    activeEventId: null,
+    activeTimelineId: null,
+    consistencyRunId: null,
   },
   workflow: {
     sessionId: 'workflow-session-1',

@@ -13,8 +13,8 @@
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 import type {
   KnowledgeService,
@@ -23,6 +23,8 @@ import type {
   KnowledgeSearchResult,
   DocumentMetadata,
   KnowledgeServiceConfig,
+  KnowledgeGraphEngineAdapter,
+  KnowledgeMemoryEngineAdapter,
 } from '../protocols/knowledge';
 import type { LLMService } from '../protocols/llm';
 import type { EmbeddingService } from '../protocols/embedding';
@@ -64,6 +66,25 @@ interface DocumentChunk {
   createdAt: number;
 }
 
+interface DurableKnowledgeSnapshot {
+  documents: Array<{
+    id: string;
+    sourceId?: string;
+    sourceType: string;
+    content: string;
+    embedding?: number[];
+    createdAt: number;
+  }>;
+  entities: KnowledgeEntity[];
+  relations: KnowledgeRelation[];
+}
+
+const EMPTY_SNAPSHOT: DurableKnowledgeSnapshot = {
+  documents: [],
+  entities: [],
+  relations: [],
+};
+
 /**
  * KnowledgeService Implementation
  *
@@ -76,14 +97,15 @@ export class KnowledgeServiceImpl implements KnowledgeService {
   private readonly distillationService?: DistillationService;
   private readonly enableDistillation: boolean;
   private readonly embeddingModel?: string;
+  private readonly memoryEngine?: KnowledgeMemoryEngineAdapter;
+  private readonly graphEngine?: KnowledgeGraphEngineAdapter;
+  private readonly snapshotPath: string;
 
-  // In-memory storage for TypeScript implementation
-  // (Would use SQLite in production)
   private documentChunks: Map<string, DocumentChunk> = new Map();
   private entities: Map<string, KnowledgeEntity> = new Map();
   private relations: Map<string, KnowledgeRelation> = new Map();
-  private entityFTSIndex: Map<string, Set<string>> = new Map(); // name -> entity ids
-  private initialized: boolean = false;
+  private entityFTSIndex: Map<string, Set<string>> = new Map();
+  private initialized = false;
 
   constructor(config: KnowledgeServiceConfig) {
     this.dbPath = config.dbPath;
@@ -94,32 +116,34 @@ export class KnowledgeServiceImpl implements KnowledgeService {
       : undefined;
     this.enableDistillation = config.enableDistillation ?? false;
     this.embeddingModel = config.embeddingModel;
+    this.memoryEngine = config.memoryEngine;
+    this.graphEngine = config.graphEngine;
+    this.snapshotPath = this.resolveSnapshotPath(config.dbPath);
   }
 
-  // ============================================================
-  // KnowledgeService Interface Implementation
-  // ============================================================
-
-  /**
-   * Initialize the knowledge service
-   */
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
     }
 
-    // Initialize storage structures
-    this.documentChunks = new Map();
-    this.entities = new Map();
-    this.relations = new Map();
-    this.entityFTSIndex = new Map();
+    await this.memoryEngine?.initialize();
+    await this.graphEngine?.initialize();
+
+    const snapshot = this.loadSnapshot();
+    this.documentChunks = new Map(
+      snapshot.documents.map((document) => [document.id, { ...document }]),
+    );
+    this.entities = new Map(
+      snapshot.entities.map((entity) => [entity.id, { ...entity }]),
+    );
+    this.relations = new Map(
+      snapshot.relations.map((relation) => [relation.id, { ...relation }]),
+    );
+    this.rebuildEntityFTSIndex();
 
     this.initialized = true;
   }
 
-  /**
-   * Add a document to the knowledge base
-   */
   async addDocument(
     docId: string,
     content: string,
@@ -127,7 +151,6 @@ export class KnowledgeServiceImpl implements KnowledgeService {
   ): Promise<void> {
     this.ensureInitialized();
 
-    // Generate embedding if service available
     let embedding: number[] | undefined;
     if (this.embeddingService) {
       try {
@@ -136,11 +159,9 @@ export class KnowledgeServiceImpl implements KnowledgeService {
         });
       } catch (error) {
         console.error('Failed to generate embedding:', error);
-        // Continue without embedding
       }
     }
 
-    // Store document chunk
     const chunk: DocumentChunk = {
       id: docId,
       sourceId: metadata?.sourceId,
@@ -151,39 +172,29 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     };
 
     this.documentChunks.set(docId, chunk);
+
+    await this.persistDocument(docId, chunk);
+    await this.persistSnapshot();
   }
 
-  /**
-   * Add an entity to the knowledge graph
-   */
   async addEntity(entity: KnowledgeEntity): Promise<void> {
     this.ensureInitialized();
 
-    // Store entity
     const entityWithTimestamp: KnowledgeEntity = {
       ...entity,
       createdAt: entity.createdAt ?? new Date().toISOString(),
     };
 
     this.entities.set(entity.id, entityWithTimestamp);
+    this.rebuildEntityFTSIndex();
 
-    // Update FTS index
-    const nameTokens = this.tokenize(entity.name);
-    for (const token of nameTokens) {
-      if (!this.entityFTSIndex.has(token)) {
-        this.entityFTSIndex.set(token, new Set());
-      }
-      this.entityFTSIndex.get(token)!.add(entity.id);
-    }
+    await this.persistEntity(entityWithTimestamp);
+    await this.persistSnapshot();
   }
 
-  /**
-   * Add a relation to the knowledge graph
-   */
   async addRelation(relation: KnowledgeRelation): Promise<void> {
     this.ensureInitialized();
 
-    // Verify source and target entities exist
     if (!this.entities.has(relation.sourceId)) {
       throw new EntityNotFoundError(relation.sourceId);
     }
@@ -191,18 +202,17 @@ export class KnowledgeServiceImpl implements KnowledgeService {
       throw new EntityNotFoundError(relation.targetId);
     }
 
-    // Store relation
     const relationWithTimestamp: KnowledgeRelation = {
       ...relation,
       createdAt: relation.createdAt ?? new Date().toISOString(),
     };
 
     this.relations.set(relation.id, relationWithTimestamp);
+
+    await this.persistRelation(relationWithTimestamp);
+    await this.persistSnapshot();
   }
 
-  /**
-   * Perform hybrid search (vector + graph)
-   */
   async search(
     query: string,
     options?: {
@@ -212,20 +222,26 @@ export class KnowledgeServiceImpl implements KnowledgeService {
   ): Promise<KnowledgeSearchResult> {
     this.ensureInitialized();
 
+    const normalizedQuery = query.trim();
+    if (normalizedQuery.length === 0) {
+      return {
+        chunks: [],
+        entities: [],
+      };
+    }
+
     const topK = options?.topK ?? 5;
     const result: KnowledgeSearchResult = {
       chunks: [],
       entities: [],
     };
 
-    // 1. Vector search (if embedding service available)
     if (this.embeddingService) {
       try {
-        const queryEmbedding = await this.embeddingService.embed(query, {
+        const queryEmbedding = await this.embeddingService.embed(normalizedQuery, {
           model: this.embeddingModel,
         });
 
-        // Calculate similarity scores
         const scored = Array.from(this.documentChunks.values())
           .filter((chunk) => chunk.embedding)
           .map((chunk) => ({
@@ -247,15 +263,12 @@ export class KnowledgeServiceImpl implements KnowledgeService {
         }));
       } catch (error) {
         console.error('Vector search failed:', error);
-        // Continue with text-based search
       }
     }
 
-    // 2. Graph search with FTS optimization
-    const queryTokens = this.tokenize(query);
+    const queryTokens = this.tokenize(normalizedQuery);
     const candidateIds = new Set<string>();
 
-    // Find entities by token matches
     for (const token of queryTokens) {
       const ids = this.entityFTSIndex.get(token);
       if (ids) {
@@ -263,27 +276,26 @@ export class KnowledgeServiceImpl implements KnowledgeService {
       }
     }
 
-    // Verify matches - entity name must match at least one query token
-    const queryLower = query.toLowerCase();
+    const queryLower = normalizedQuery.toLowerCase();
     for (const entityId of candidateIds) {
       const entity = this.entities.get(entityId);
-      if (entity) {
-        // Check if entity name contains any query token or vice versa
-        const nameTokens = this.tokenize(entity.name);
-        const hasMatch = queryTokens.some((qt) => nameTokens.includes(qt)) ||
-                         nameTokens.some((nt) => queryLower.includes(nt)) ||
-                         entity.name.toLowerCase().includes(queryLower);
-        
-        if (hasMatch) {
-          result.entities.push(entity);
-        }
+      if (!entity) {
+        continue;
+      }
+
+      const nameTokens = this.tokenize(entity.name);
+      const hasMatch = queryTokens.some((qt) => nameTokens.includes(qt))
+        || nameTokens.some((nt) => queryLower.includes(nt))
+        || entity.name.toLowerCase().includes(queryLower);
+
+      if (hasMatch) {
+        result.entities.push(entity);
       }
     }
 
-    // 3. Apply entity filters if provided
     if (options?.entityFilter) {
       for (const filterId of options.entityFilter) {
-        if (!result.entities.some((e) => e.id === filterId)) {
+        if (!result.entities.some((entity) => entity.id === filterId)) {
           const entity = this.entities.get(filterId);
           if (entity) {
             result.entities.push(entity);
@@ -295,14 +307,10 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     return result;
   }
 
-  /**
-   * Get neighboring entities in the knowledge graph
-   */
   async getNeighbors(entityId: string): Promise<KnowledgeRelation[]> {
     this.ensureInitialized();
 
     const neighbors: KnowledgeRelation[] = [];
-
     for (const relation of this.relations.values()) {
       if (relation.sourceId === entityId) {
         neighbors.push(relation);
@@ -312,9 +320,6 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     return neighbors;
   }
 
-  /**
-   * Distill knowledge from content using LLM
-   */
   async distillKnowledge(
     content: string,
     template: string,
@@ -330,19 +335,14 @@ export class KnowledgeServiceImpl implements KnowledgeService {
       Object.values(DistillationTemplate).find((t) => t === template) ??
       DistillationTemplate.SUMMARY;
 
-    const result = await this.distillationService.distill(
+    return this.distillationService.distill(
       [content],
       templateEnum,
       [],
       metadata
     );
-
-    return result;
   }
 
-  /**
-   * Sync a file to the knowledge base
-   */
   async syncFile(
     filePath: string,
     options?: {
@@ -371,8 +371,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
       const content = readFileSync(resolvedPath, 'utf-8');
       const contentHash = createHash('sha256').update(content, 'utf-8').digest('hex');
       const docId = this.hashPath(resolvedPath);
-      const sourceType =
-        options?.sourceType ?? this.determineSourceType(resolvedPath);
+      const sourceType = options?.sourceType ?? this.determineSourceType(resolvedPath);
 
       const existing = this.documentChunks.get(docId);
       if (
@@ -413,16 +412,10 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     }
   }
 
-  /**
-   * Health check
-   */
   async healthCheck(): Promise<boolean> {
     return this.initialized;
   }
 
-  /**
-   * Shutdown the service
-   */
   async shutdown(): Promise<void> {
     this.initialized = false;
     this.documentChunks.clear();
@@ -431,79 +424,52 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     this.entityFTSIndex.clear();
   }
 
-  // ============================================================
-  // Additional Helper Methods
-  // ============================================================
-
-  /**
-   * Get entity by ID
-   */
   getEntity(entityId: string): KnowledgeEntity | undefined {
     return this.entities.get(entityId);
   }
 
-  /**
-   * Get relation by ID
-   */
   getRelation(relationId: string): KnowledgeRelation | undefined {
     return this.relations.get(relationId);
   }
 
-  /**
-   * Get document by ID
-   */
   getDocument(docId: string): DocumentChunk | undefined {
     return this.documentChunks.get(docId);
   }
 
-  /**
-   * List all entities
-   */
   listEntities(): KnowledgeEntity[] {
     return Array.from(this.entities.values());
   }
 
-  /**
-   * List all relations
-   */
   listRelations(): KnowledgeRelation[] {
     return Array.from(this.relations.values());
   }
 
-  /**
-   * Delete entity by ID
-   */
   async deleteEntity(entityId: string): Promise<void> {
     const entity = this.entities.get(entityId);
-    if (entity) {
-      // Remove from FTS index
-      const nameTokens = this.tokenize(entity.name);
-      for (const token of nameTokens) {
-        this.entityFTSIndex.get(token)?.delete(entityId);
-      }
+    if (!entity) {
+      return;
+    }
 
-      // Remove entity
-      this.entities.delete(entityId);
+    for (const token of this.tokenize(entity.name)) {
+      this.entityFTSIndex.get(token)?.delete(entityId);
+    }
 
-      // Remove related relations
-      for (const [relationId, relation] of this.relations.entries()) {
-        if (relation.sourceId === entityId || relation.targetId === entityId) {
-          this.relations.delete(relationId);
-        }
+    this.entities.delete(entityId);
+
+    for (const [relationId, relation] of this.relations.entries()) {
+      if (relation.sourceId === entityId || relation.targetId === entityId) {
+        this.relations.delete(relationId);
       }
     }
+
+    await this.persistSnapshot();
   }
 
-  /**
-   * Delete document by ID
-   */
   async deleteDocument(docId: string): Promise<void> {
     this.documentChunks.delete(docId);
+    await this.persistSnapshot();
   }
 
-  /**
-   * Get statistics
-   */
   getStats(): {
     documentCount: number;
     entityCount: number;
@@ -516,64 +482,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
     };
   }
 
-  // ============================================================
-  // Private Helper Methods
-  // ============================================================
-
-  /**
-   * Ensure service is initialized
-   */
-  private ensureInitialized(): void {
-    if (!this.initialized) {
-      throw new KnowledgeError('Knowledge service not initialized');
-    }
-  }
-
-  /**
-   * Tokenize text for FTS indexing
-   */
-  private tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
-      .split(/\s+/)
-      .filter((token) => token.length > 0);
-  }
-
-  /**
-   * Hash file path to generate doc ID
-   */
-  private hashPath(filePath: string): string {
-    // Simple hash function for demo
-    // In production, would use crypto.subtle.digest or similar
-    let hash = 0;
-    for (let i = 0; i < filePath.length; i++) {
-      const char = filePath.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(16).padStart(16, '0');
-  }
-
-  /**
-   * Determine source type from file path
-   */
-  private determineSourceType(filePath: string): 'citation' | 'memory' | 'document' {
-    const normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
-    
-    if (normalizedPath.includes('citation')) {
-      return 'citation';
-    } else if (normalizedPath.includes('memor')) {
-      return 'memory';
-    }
-    return 'document';
-  }
-
-  /**
-   * Apply distilled knowledge to knowledge graph
-   * (Legacy compatibility method)
-   */
-  applyDistilledToGraph(distilledData: {
+  async applyDistilledToGraph(distilledData: {
     entities?: Array<{
       id: string;
       name: string;
@@ -586,10 +495,9 @@ export class KnowledgeServiceImpl implements KnowledgeService {
       type: string;
       props?: Record<string, unknown>;
     }>;
-  }): void {
-    // Apply entities
+  }): Promise<void> {
     for (const ent of distilledData.entities || []) {
-      this.addEntity({
+      await this.addEntity({
         id: ent.id,
         name: ent.name,
         type: ent.type,
@@ -597,10 +505,9 @@ export class KnowledgeServiceImpl implements KnowledgeService {
       });
     }
 
-    // Apply relations
     for (const rel of distilledData.relations || []) {
       const relationId = `${rel.source}-${rel.type}-${rel.target}`;
-      this.addRelation({
+      await this.addRelation({
         id: relationId,
         sourceId: rel.source,
         targetId: rel.target,
@@ -608,5 +515,174 @@ export class KnowledgeServiceImpl implements KnowledgeService {
         properties: rel.props,
       });
     }
+  }
+
+  private ensureInitialized(): void {
+    if (!this.initialized) {
+      throw new KnowledgeError('Knowledge service not initialized');
+    }
+  }
+
+  private tokenize(text: string): string[] {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter((token) => token.length > 0);
+  }
+
+  private rebuildEntityFTSIndex(): void {
+    this.entityFTSIndex = new Map();
+    for (const entity of this.entities.values()) {
+      for (const token of this.tokenize(entity.name)) {
+        if (!this.entityFTSIndex.has(token)) {
+          this.entityFTSIndex.set(token, new Set());
+        }
+        this.entityFTSIndex.get(token)!.add(entity.id);
+      }
+    }
+  }
+
+  private async persistDocument(docId: string, chunk: DocumentChunk): Promise<void> {
+    if (this.memoryEngine?.add) {
+      await this.memoryEngine.add({
+        content: chunk.content,
+        layer: 'knowledge-document',
+        dimension: chunk.sourceType,
+        entityId: docId,
+        source: chunk.sourceId ?? chunk.sourceType,
+      });
+      return;
+    }
+
+    if (this.memoryEngine?.store) {
+      await this.memoryEngine.store(`knowledge-document:${docId}`, {
+        ...chunk,
+      });
+    }
+  }
+
+  private async persistEntity(entity: KnowledgeEntity): Promise<void> {
+    const properties = {
+      ...(entity.properties ?? {}),
+      id: entity.id,
+      description: entity.description ?? null,
+      createdAt: entity.createdAt ?? null,
+    };
+
+    if (this.graphEngine?.createEntity) {
+      await this.graphEngine.createEntity(
+        this.normalizeGraphEntityType(entity.type),
+        entity.name,
+        properties,
+      );
+      return;
+    }
+
+    if (this.graphEngine?.addNode) {
+      await this.graphEngine.addNode(entity.id, entity);
+    }
+  }
+
+  private async persistRelation(relation: KnowledgeRelation): Promise<void> {
+    const sourceEntity = this.entities.get(relation.sourceId);
+    const targetEntity = this.entities.get(relation.targetId);
+    if (!sourceEntity || !targetEntity) {
+      return;
+    }
+
+    const properties = {
+      ...(relation.properties ?? {}),
+      id: relation.id,
+      createdAt: relation.createdAt ?? null,
+    };
+
+    if (this.graphEngine?.createRelation) {
+      await this.graphEngine.createRelation(
+        sourceEntity.name,
+        targetEntity.name,
+        relation.type,
+        properties,
+      );
+      return;
+    }
+
+    if (this.graphEngine?.addEdge) {
+      await this.graphEngine.addEdge(relation.sourceId, relation.targetId, relation.type);
+    }
+  }
+
+  private normalizeGraphEntityType(type: string): string {
+    const normalized = type.trim();
+    const candidate = normalized.length > 0
+      ? normalized[0].toUpperCase() + normalized.slice(1)
+      : 'Item';
+    const allowed = new Set(['Character', 'Location', 'Event', 'Item', 'Foreshadow', 'Chapter', 'Scene']);
+    return allowed.has(candidate) ? candidate : 'Item';
+  }
+
+  private resolveSnapshotPath(dbPath: string): string {
+    if (dbPath === ':memory:') {
+      return ':memory:';
+    }
+    if (/\.json$/i.test(dbPath)) {
+      return dbPath;
+    }
+    return `${dbPath}.json`;
+  }
+
+  private loadSnapshot(): DurableKnowledgeSnapshot {
+    if (this.snapshotPath === ':memory:' || !existsSync(this.snapshotPath)) {
+      return EMPTY_SNAPSHOT;
+    }
+
+    try {
+      const raw = readFileSync(this.snapshotPath, 'utf-8');
+      const parsed = JSON.parse(raw) as Partial<DurableKnowledgeSnapshot>;
+      return {
+        documents: Array.isArray(parsed.documents)
+          ? parsed.documents.filter((value): value is DurableKnowledgeSnapshot['documents'][number] => typeof value === 'object' && value !== null)
+          : [],
+        entities: Array.isArray(parsed.entities)
+          ? parsed.entities.filter((value): value is KnowledgeEntity => typeof value === 'object' && value !== null)
+          : [],
+        relations: Array.isArray(parsed.relations)
+          ? parsed.relations.filter((value): value is KnowledgeRelation => typeof value === 'object' && value !== null)
+          : [],
+      };
+    } catch (error) {
+      console.warn('Failed to load knowledge snapshot:', error);
+      return EMPTY_SNAPSHOT;
+    }
+  }
+
+  private async persistSnapshot(): Promise<void> {
+    if (this.snapshotPath === ':memory:') {
+      return;
+    }
+
+    mkdirSync(dirname(this.snapshotPath), { recursive: true });
+    const snapshot: DurableKnowledgeSnapshot = {
+      documents: Array.from(this.documentChunks.values()).map((chunk) => ({ ...chunk })),
+      entities: this.listEntities().map((entity) => ({ ...entity })),
+      relations: this.listRelations().map((relation) => ({ ...relation })),
+    };
+    writeFileSync(this.snapshotPath, JSON.stringify(snapshot, null, 2), 'utf-8');
+  }
+
+  private hashPath(filePath: string): string {
+    return createHash('sha256').update(filePath, 'utf-8').digest('hex');
+  }
+
+  private determineSourceType(filePath: string): 'citation' | 'memory' | 'document' {
+    const normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
+
+    if (normalizedPath.includes('citation')) {
+      return 'citation';
+    }
+    if (normalizedPath.includes('memor')) {
+      return 'memory';
+    }
+    return 'document';
   }
 }

@@ -12,6 +12,7 @@ describe('gateway route registry', () => {
         'PUT:^\\/config$',
         'POST:^\\/config\\/reload$',
         'POST:^\\/chat$',
+        'POST:^\\/critic\\/consistency$',
         'POST:^\\/workflow\\/execute$',
         'POST:^\\/ui-bridge\\/workflow\\/route$',
         'POST:^\\/writing\\/quality$',
@@ -40,5 +41,12 @@ describe('gateway route registry', () => {
     expect(match).not.toBeNull();
     expect(match?.route.pattern.source).toBe('^\\/writing\\/quality$');
     expect(matchGatewayRoute('POST', '/api/novel/quality-check')).toBeNull();
+  });
+
+  it('maps critic consistency through the shared agent route family', () => {
+    const match = matchGatewayRoute('POST', '/critic/consistency');
+
+    expect(match).not.toBeNull();
+    expect(match?.route.pattern.source).toBe('^\\/critic\\/consistency$');
   });
 });

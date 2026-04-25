@@ -91,6 +91,13 @@ function buildWorkspace(
       graphEntityIds: ['hero-1'],
       memoryEntryIds: [],
     },
+    authority: {
+      recordSetId: null,
+      activeSceneId: null,
+      activeEventId: null,
+      activeTimelineId: null,
+      consistencyRunId: null,
+    },
     workflow: {
       sessionId,
       planId: null,

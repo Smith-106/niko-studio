@@ -524,5 +524,70 @@ describe('KnowledgeService', () => {
       const health = await service.healthCheck();
       expect(health).toBe(false);
     });
+
+    it('persists snapshot-backed knowledge across service instances', async () => {
+      const durablePath = join(tempRoot, 'durable', 'knowledge.db');
+      const first = new KnowledgeServiceImpl({
+        dbPath: durablePath,
+      });
+      await first.initialize();
+      await first.addEntity({ id: 'persisted-entity', name: 'Atlas Harbor', type: 'Location' });
+      await first.addDocument('persisted-doc', 'Durable harbor notes');
+      await first.shutdown();
+
+      const second = new KnowledgeServiceImpl({
+        dbPath: durablePath,
+      });
+      await second.initialize();
+
+      expect(second.getEntity('persisted-entity')).toMatchObject({
+        name: 'Atlas Harbor',
+        type: 'Location',
+      });
+      expect(second.getDocument('persisted-doc')?.content).toBe('Durable harbor notes');
+    });
+
+    it('delegates durable persistence to memory and graph adapters', async () => {
+      const memoryInitialize = vi.fn().mockResolvedValue(undefined);
+      const memoryAdd = vi.fn().mockResolvedValue({ id: 'memory-1', status: 'created' });
+      const graphInitialize = vi.fn().mockResolvedValue(undefined);
+      const createEntity = vi.fn().mockResolvedValue({ id: 'graph-entity', status: 'created' });
+      const createRelation = vi.fn().mockResolvedValue({ id: 'graph-relation', status: 'created' });
+      const orchestrated = new KnowledgeServiceImpl({
+        dbPath: join(tempRoot, 'adapters', 'knowledge.db'),
+        memoryEngine: {
+          initialize: memoryInitialize,
+          add: memoryAdd,
+        },
+        graphEngine: {
+          initialize: graphInitialize,
+          createEntity,
+          createRelation,
+        },
+      });
+
+      await orchestrated.initialize();
+      await orchestrated.addDocument('doc-1', 'Aster keeps the dock ledger hidden.');
+      await orchestrated.addEntity({ id: 'e1', name: 'Aster', type: 'character' });
+      await orchestrated.addEntity({ id: 'e2', name: 'Old Dock', type: 'location' });
+      await orchestrated.addRelation({ id: 'r1', sourceId: 'e1', targetId: 'e2', type: 'visits' });
+
+      expect(memoryInitialize).toHaveBeenCalledTimes(1);
+      expect(graphInitialize).toHaveBeenCalledTimes(1);
+      expect(memoryAdd).toHaveBeenCalledWith(expect.objectContaining({
+        content: 'Aster keeps the dock ledger hidden.',
+        layer: 'knowledge-document',
+        entityId: 'doc-1',
+      }));
+      expect(createEntity).toHaveBeenNthCalledWith(1, 'Character', 'Aster', expect.objectContaining({
+        id: 'e1',
+      }));
+      expect(createEntity).toHaveBeenNthCalledWith(2, 'Location', 'Old Dock', expect.objectContaining({
+        id: 'e2',
+      }));
+      expect(createRelation).toHaveBeenCalledWith('Aster', 'Old Dock', 'visits', expect.objectContaining({
+        id: 'r1',
+      }));
+    });
   });
 });

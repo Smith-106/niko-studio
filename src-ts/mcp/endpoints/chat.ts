@@ -1,10 +1,3 @@
-/**
- * Chat REST Endpoints
- *
- * Chat-related HTTP endpoints for Desktop frontend, including SSE streaming.
- * Ported from src/mcp/endpoints/chat.py
- */
-
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { getWorkflowEngineRuntimeProvider } from '../../container/workflow-runtime-provider.js';
@@ -12,11 +5,13 @@ import { toWorkflowLabel, toWorkflowSlug } from '../../workflow/types.js';
 import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToLegacyChatContext,
+  projectWorkspaceToNarrativeAuthority,
 } from '../../project/workspace-model.js';
 import {
   queryProjectWikiCanon,
   type ProjectWikiQueryAuthorityMetadata,
 } from '../../project/wiki-query.js';
+import { createProjectWikiFactPacketBundleFromCanonMatches } from '../../project/wiki-knowledge-layer.js';
 
 // ---------------------------------------------------------------
 // Constants
@@ -342,10 +337,25 @@ function buildComparisonPayload(
 function buildWriterMetadata(
   workspace: ReturnType<typeof resolveWorkspaceContext>,
   canonContext: ChatCanonContextPayload,
+  userMessage: string,
 ): Record<string, unknown> {
   return {
     workspace_context: workspace,
     canon_context: canonContext,
+    narrative_authority: projectWorkspaceToNarrativeAuthority(workspace),
+    retrieval_packet: createProjectWikiFactPacketBundleFromCanonMatches(
+      workspace,
+      userMessage,
+      canonContext.matches.map((match) => ({
+        pageId: match.page_id,
+        slug: match.slug,
+        title: match.title,
+        filePath: match.slug,
+        score: match.score,
+        excerpt: match.excerpt,
+        authority: match.authority,
+      })),
+    ),
   };
 }
 
@@ -483,7 +493,7 @@ export async function chatEndpoint(request: HttpRequest): Promise<HttpResponse> 
       content: finalContent,
       skills_used: skills.slice(0, 5),
       comparison: comparisonPayload,
-      writer_metadata: buildWriterMetadata(workspace, canonContext.metadata),
+      writer_metadata: buildWriterMetadata(workspace, canonContext.metadata, userMessage),
       workflow_info: {
         level: workflowLevel,
         level_slug: workflowLevelSlug,
@@ -604,7 +614,7 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
           },
           workflow_level: workflowLevel,
           workflow_level_slug: workflowLevelSlug,
-          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata),
+          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata, userMessage),
           workspace,
         })));
         return {
@@ -626,7 +636,7 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
             ...DEFAULT_DIAGNOSTICS,
             failure_reason: String(eventRecord['error'] ?? 'Stream error'),
           },
-          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata),
+          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata, userMessage),
           workspace,
         })));
         return {
@@ -682,7 +692,7 @@ export async function chatStreamEndpoint(request: HttpRequest): Promise<HttpResp
           diagnostics: { ...DEFAULT_DIAGNOSTICS },
           workflow_level: workflowLevel,
           workflow_level_slug: workflowLevelSlug,
-          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata),
+          writer_metadata: buildWriterMetadata(workspace, canonContext.metadata, userMessage),
           workspace,
         })));
       }

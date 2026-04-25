@@ -18,7 +18,10 @@ import { WriterAgent, createWriterInput } from '../../agents/writer';
 import { WorldbuildingAgent } from '../../agents/worldbuilding';
 import { CharacterAgent } from '../../agents/character';
 import { PlotAgent } from '../../agents/plot';
-import type { ProjectWorkspaceContext } from '../../project/workspace-model.js';
+import {
+  projectWorkspaceToNarrativeAuthority,
+  type ProjectWorkspaceContext,
+} from '../../project/workspace-model.js';
 import { createProjectWikiKnowledgeLayer } from '../../project/wiki-knowledge-layer.js';
 import { toWorkflowLabel, toWorkflowSlug } from '../../workflow/types';
 
@@ -199,6 +202,7 @@ async function executeWorkspaceAwareWrite(
   const writerAgent = new WriterAgent({
     llmService: adaptAgentLlmService(container.llm),
     knowledgeLayer: createProjectWikiKnowledgeLayer(workspace),
+    workspace,
   });
 
   return writerAgent.writeWithKnowledge(
@@ -305,7 +309,12 @@ function toAgentWriteResult(
   if (metadata && (Object.keys(metadata).length > 0 || Boolean(workspace))) {
     result.writer_metadata = {
       ...metadata,
-      ...(workspace ? { workspace_context: workspace } : {}),
+      ...(workspace
+        ? {
+            workspace_context: workspace,
+            narrative_authority: projectWorkspaceToNarrativeAuthority(workspace),
+          }
+        : {}),
     };
   }
 

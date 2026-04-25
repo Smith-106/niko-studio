@@ -46,6 +46,49 @@ export interface KnowledgeSearchResult {
 }
 
 /**
+ * Optional durable memory adapter for KnowledgeService orchestration.
+ */
+export interface KnowledgeMemoryEngineAdapter {
+  initialize(): Promise<void>;
+  add?(params: {
+    content: string;
+    layer?: string;
+    dimension?: string | null;
+    entityId?: string | null;
+    validFrom?: string | null;
+    validUntil?: string | null;
+    importance?: number;
+    tags?: string[];
+    userId?: string | null;
+    projectId?: string | null;
+    sessionId?: string | null;
+    source?: string;
+    confidence?: number;
+  }): Promise<Record<string, unknown>>;
+  store?(key: string, value: unknown): Promise<void>;
+}
+
+/**
+ * Optional durable graph adapter for KnowledgeService orchestration.
+ */
+export interface KnowledgeGraphEngineAdapter {
+  initialize(): Promise<void>;
+  createEntity?(
+    entityType: string,
+    name: string,
+    properties: Record<string, unknown>
+  ): Promise<Record<string, unknown>>;
+  createRelation?(
+    fromName: string,
+    toName: string,
+    relationType: string,
+    properties?: Record<string, unknown>
+  ): Promise<Record<string, unknown>>;
+  addNode?(id: string, data: unknown): Promise<void>;
+  addEdge?(from: string, to: string, relationship: string): Promise<void>;
+}
+
+/**
  * Document metadata
  */
 export interface DocumentMetadata {
@@ -151,4 +194,6 @@ export interface KnowledgeServiceConfig {
   embeddingService?: EmbeddingService;
   enableDistillation?: boolean;
   embeddingModel?: string;
+  memoryEngine?: KnowledgeMemoryEngineAdapter;
+  graphEngine?: KnowledgeGraphEngineAdapter;
 }

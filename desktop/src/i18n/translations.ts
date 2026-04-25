@@ -67,6 +67,8 @@ export interface Translations {
   inlineGenerateContextFallback: string
   streamGateSoftGo: string
   streamGateNoGo: string
+  streamGovernanceRecovered: string
+  streamGovernanceReviewReady: string
   templateLibraryEntry: string
   templateLibraryTitle: string
   templateClosePanel: string
@@ -234,6 +236,14 @@ export interface Translations {
   evaluationQualityCheckStyle: string
   evaluationQualityCheckLogic: string
   evaluationQualityCheckFeedback: string
+  evaluationConsistencyTitle: string
+  evaluationConsistencyRun: string
+  evaluationConsistencyRunning: string
+  evaluationConsistencyFailed: string
+  evaluationConsistencySummary: string
+  evaluationConsistencyScore: string
+  evaluationConsistencyConflicts: string
+  evaluationConsistencyRunId: string
   evaluationWorkflowTitle: string
   evaluationWorkflowTaskPlaceholder: string
   evaluationWorkflowLevelPlaceholder: string
@@ -923,6 +933,8 @@ export const translations: Record<Language, Translations> = {
     inlineGenerateContextFallback: '根据当前对话上下文生成。',
     streamGateSoftGo: '已降级执行（Soft Go）：结果可用，建议继续关注。',
     streamGateNoGo: '当前结果未通过质量门（No-Go），请调整后重试。',
+    streamGovernanceRecovered: '本次结果记录为已恢复执行，可继续使用并建议复核。',
+    streamGovernanceReviewReady: '本次结果已附带一致性治理记录，可在回复卡片中查看。',
     templateLibraryEntry: '模板库',
     templateLibraryTitle: '模板库',
     templateClosePanel: '关闭模板库',
@@ -1090,6 +1102,14 @@ export const translations: Record<Language, Translations> = {
     evaluationQualityCheckStyle: '风格分',
     evaluationQualityCheckLogic: '逻辑分',
     evaluationQualityCheckFeedback: '反馈',
+    evaluationConsistencyTitle: '一致性治理',
+    evaluationConsistencyRun: '执行一致性检查',
+    evaluationConsistencyRunning: '一致性检查中...',
+    evaluationConsistencyFailed: '一致性检查失败',
+    evaluationConsistencySummary: '摘要',
+    evaluationConsistencyScore: '综合评分',
+    evaluationConsistencyConflicts: '冲突数',
+    evaluationConsistencyRunId: '运行 ID',
     evaluationWorkflowTitle: '高级工作流',
     evaluationWorkflowTaskPlaceholder: '工作流任务',
     evaluationWorkflowLevelPlaceholder: '工作流级别（如 L3）',
@@ -1774,6 +1794,8 @@ export const translations: Record<Language, Translations> = {
     inlineGenerateContextFallback: 'Generate based on the current conversation context.',
     streamGateSoftGo: 'Executed with fallback (Soft Go): output is available, please keep monitoring.',
     streamGateNoGo: 'The current output did not pass the quality gate (No-Go). Please adjust and retry.',
+    streamGovernanceRecovered: 'This result is recorded as recovered execution and remains usable with review.',
+    streamGovernanceReviewReady: 'This reply includes consistency governance details in the message card.',
     templateLibraryEntry: 'Template Library',
     templateLibraryTitle: 'Template Library',
     templateClosePanel: 'Close template library',
@@ -1941,6 +1963,14 @@ export const translations: Record<Language, Translations> = {
     evaluationQualityCheckStyle: 'Style',
     evaluationQualityCheckLogic: 'Logic',
     evaluationQualityCheckFeedback: 'Feedback',
+    evaluationConsistencyTitle: 'Consistency governance',
+    evaluationConsistencyRun: 'Run consistency check',
+    evaluationConsistencyRunning: 'Running consistency check...',
+    evaluationConsistencyFailed: 'Consistency check failed',
+    evaluationConsistencySummary: 'Summary',
+    evaluationConsistencyScore: 'Overall score',
+    evaluationConsistencyConflicts: 'Conflicts',
+    evaluationConsistencyRunId: 'Run ID',
     evaluationWorkflowTitle: 'Advanced Workflow',
     evaluationWorkflowTaskPlaceholder: 'workflow task',
     evaluationWorkflowLevelPlaceholder: 'workflow level (e.g. L3)',
