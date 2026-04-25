@@ -50,6 +50,7 @@ import {
   type WorkflowPlanStatusResult,
   type WorkflowPlanRequest,
   type WorkflowQuickRollbackResult,
+  type WorkflowRecommendationInput,
   type WorkflowRestoreCheckpointResult,
   type WorkflowRouteRequest,
   type WorkflowRouteResult,
@@ -657,7 +658,7 @@ export class WorkflowEngine {
   async run(
     taskOrRequest: string | WorkflowRunRequest,
     level?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     executionContext?: WorkflowExecutionContextPayload,
   ): Promise<WorkflowRunResult> {
     const request = normalizeWorkflowRunRequest(
@@ -732,7 +733,7 @@ export class WorkflowEngine {
     taskOrRequest: string | WorkflowRunWithExecutionContextRequest,
     executionContext?: WorkflowExecutionContextPayload,
     level?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
   ): Promise<WorkflowRunResult> {
     const request = normalizeWorkflowRunWithExecutionContextRequest(
       taskOrRequest,
@@ -746,7 +747,7 @@ export class WorkflowEngine {
   async *runStream(
     taskOrRequest: string | WorkflowRunStreamRequest,
     level?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     executionContext?: WorkflowExecutionContextPayload,
   ): AsyncGenerator<WorkflowStreamEvent> {
     const request = normalizeWorkflowRunStreamRequest(
@@ -807,7 +808,7 @@ export class WorkflowEngine {
     taskOrRequest: string | WorkflowRunStreamWithExecutionContextRequest,
     executionContext?: WorkflowExecutionContextPayload,
     level?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
   ): AsyncGenerator<WorkflowStreamEvent> {
     const request = normalizeWorkflowRunStreamWithExecutionContextRequest(
       taskOrRequest,
@@ -892,7 +893,7 @@ export class WorkflowEngine {
   async plan(
     taskOrRequest: string | WorkflowPlanRequest,
     level?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     executionContext?: WorkflowExecutionContextPayload,
   ): Promise<WorkflowPlanResult> {
     const request = normalizeWorkflowPlanRequest(
@@ -1127,7 +1128,7 @@ export class WorkflowEngine {
   async execute(
     requestOrPlanId: string | WorkflowExecuteRequest,
     stepId?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     confirmToken?: string,
     authority?: WorkflowAuthority | null,
   ): Promise<WorkflowExecuteResult> {
@@ -1739,7 +1740,7 @@ export class WorkflowEngine {
 
   // ---- Recommendations ----
 
-  private _canonicalizeRecommendations(recommendations?: unknown[]): Record<string, unknown>[] {
+  private _canonicalizeRecommendations(recommendations?: WorkflowRecommendationInput): Record<string, unknown>[] {
     return canonicalizeWorkflowRecommendations(recommendations);
   }
 
@@ -1771,7 +1772,7 @@ export class WorkflowEngine {
       if (currentHash !== expectedHash) return { applied: false, reason: 'plan_hash_mismatch', expected_plan_hash: expectedHash, current_plan_hash: currentHash };
     }
 
-    plan.recommendations = this._canonicalizeRecommendations(payload['recommendations'] as unknown[]);
+    plan.recommendations = this._canonicalizeRecommendations(payload['recommendations'] as WorkflowRecommendationInput);
     plan.recommendations_frozen = Boolean(payload['recommendations_frozen'] ?? true);
     plan.plan_hash = expectedHash || this._computePlanHash(plan);
 

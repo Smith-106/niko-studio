@@ -13,6 +13,10 @@ import {
   type ProjectWorkspaceContext,
 } from '../../project/workspace-model.js';
 import { normalizeWorkflowAuthority } from '../../workflow/engine/authority.js';
+import type {
+  WorkflowExecutionContextPayload,
+  WorkflowRecommendationInput,
+} from '../../workflow/engine/engine-contracts.js';
 import {
   getWorkflowEngineRuntimeProvider,
   getWorkflowEngineRuntimeProviderVersion,
@@ -33,12 +37,18 @@ interface WorkflowEngine {
   plan(
     task: string,
     level?: string | null,
-    params?: { recommendations?: unknown[] | null; traceContext?: WorkflowTraceContext | null }
+    params?: {
+      recommendations?: WorkflowRecommendationInput | null;
+      traceContext?: WorkflowTraceContext | null;
+    }
   ): Promise<Record<string, unknown>>;
   execute(
     planId: string,
     stepId?: string | null,
-    params?: { recommendations?: unknown[] | null; confirmToken?: string | null },
+    params?: {
+      recommendations?: WorkflowRecommendationInput | null;
+      confirmToken?: string | null;
+    },
     authority?: WorkflowAuthority | null,
   ): Promise<Record<string, unknown>>;
   quickRollback(params: {
@@ -59,7 +69,7 @@ interface WorkflowEngine {
     checkpointId: string,
     params?: { confirmToken?: string | null }
   ): Promise<Record<string, unknown>>;
-  listCheckpoints(limit: number): Promise<unknown[]>;
+  listCheckpoints(limit: number): Promise<WorkflowCheckpointSummary[]>;
   bindPlanSession(planId: string, sessionId: string): string;
 }
 
@@ -119,13 +129,13 @@ interface WorkflowEngineRuntimeLike extends WorkflowEngineAuthorityBridge {
   plan(
     task: string,
     level?: string,
-    recommendations?: unknown[],
-    executionContext?: Record<string, unknown>,
+    recommendations?: WorkflowRecommendationInput,
+    executionContext?: WorkflowExecutionContextPayload,
   ): Promise<Record<string, unknown>>;
   execute(
     planId: string,
     stepId?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     confirmToken?: string,
     authority?: WorkflowAuthority,
   ): Promise<Record<string, unknown>>;
@@ -143,7 +153,7 @@ interface WorkflowEngineRuntimeLike extends WorkflowEngineAuthorityBridge {
   ): Promise<Record<string, unknown>>;
   createCheckpoint(description: string, autoCommit: boolean): Promise<Record<string, unknown>>;
   restoreCheckpoint(checkpointId: string, confirmToken?: string): Promise<Record<string, unknown>>;
-  listCheckpoints(limit: number): Promise<unknown[]>;
+  listCheckpoints(limit: number): Promise<WorkflowCheckpointSummary[]>;
   bindPlanSession(planId: string, sessionId: string): string;
 }
 
@@ -734,7 +744,10 @@ function getEngine(): WorkflowEngine | null {
       plan(
         task: string,
         level?: string | null,
-        params?: { recommendations?: unknown[] | null; traceContext?: WorkflowTraceContext | null },
+        params?: {
+          recommendations?: WorkflowRecommendationInput | null;
+          traceContext?: WorkflowTraceContext | null;
+        },
       ) {
         return engine.plan(
           task,
@@ -742,7 +755,7 @@ function getEngine(): WorkflowEngine | null {
           params?.recommendations ?? undefined,
           params?.traceContext
             ? {
-                trace_context: params.traceContext,
+                trace_context: params.traceContext as unknown as Record<string, unknown>,
               }
             : undefined,
         );
@@ -750,7 +763,10 @@ function getEngine(): WorkflowEngine | null {
       execute(
         planId: string,
         stepId?: string | null,
-        params?: { recommendations?: unknown[] | null; confirmToken?: string | null },
+        params?: {
+          recommendations?: WorkflowRecommendationInput | null;
+          confirmToken?: string | null;
+        },
         authority?: WorkflowAuthority | null,
       ) {
         if (authority) {
@@ -820,7 +836,7 @@ export async function workflowRoute(task: string): Promise<Record<string, unknow
 export async function workflowPlan(params: {
   task: string;
   level?: string | null;
-  recommendations?: unknown[] | null;
+  recommendations?: WorkflowRecommendationInput | null;
   traceContext?: WorkflowTraceContext | null;
   genre?: string | null;
   workspace?: ProjectWorkspaceContext;
@@ -848,7 +864,7 @@ export async function workflowPlan(params: {
 export async function workflowExecute(params: {
   planId: string;
   stepId?: string | null;
-  recommendations?: unknown[] | null;
+  recommendations?: WorkflowRecommendationInput | null;
   confirmToken?: string | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
@@ -1123,7 +1139,7 @@ export async function workflowSchedulerResume(params: {
 export async function workflowSchedulerRunNow(params: {
   taskId: string;
   confirmToken?: string | null;
-  recommendations?: unknown[] | null;
+  recommendations?: WorkflowRecommendationInput | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
   await loadSchedulerEntriesFromStore();

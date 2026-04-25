@@ -8,8 +8,11 @@
 import type {
   ProviderConfig,
   ServiceConfig,
+  LLMProvider as LLMServiceProviderContract,
+  EmbeddingProvider as EmbeddingServiceProviderContract,
   LLMResponse,
   EmbeddingResponse,
+  StreamChunk,
 } from './models';
 import {
   ProviderType,
@@ -25,6 +28,89 @@ import {
   LocalEmbeddingProvider,
 } from './providers';
 
+interface LLMRuntimeProvider {
+  readonly providerType: string;
+  getModelForTier(tier: string): string;
+  complete(
+    prompt: string,
+    model: string,
+    options?: {
+      temperature?: number;
+      maxTokens?: number;
+      systemPrompt?: string;
+      stopSequences?: string[];
+      responseFormat?: Record<string, unknown>;
+    },
+  ): Promise<LLMResponse>;
+  streamComplete(
+    prompt: string,
+    model: string,
+    options?: {
+      temperature?: number;
+      maxTokens?: number;
+      systemPrompt?: string;
+      stopSequences?: string[];
+    },
+  ): AsyncGenerator<StreamChunk, void, undefined>;
+  healthCheck(): Promise<boolean>;
+}
+
+interface EmbeddingRuntimeProvider {
+  readonly providerType: string;
+  getDimensions(model: string): number;
+  embed(
+    texts: string[],
+    model: string,
+    options?: { dimensions?: number },
+  ): Promise<EmbeddingResponse>;
+  healthCheck(): Promise<boolean>;
+}
+
+function createLLMServiceProvider(
+  provider: LLMRuntimeProvider,
+): LLMServiceProviderContract {
+  return {
+    providerType: provider.providerType,
+    getModelForTier: (tier) => provider.getModelForTier(tier),
+    generate: async (request) => {
+      const model = request.modelOverride ?? provider.getModelForTier(request.modelTier);
+      return provider.complete(request.prompt, model, {
+        temperature: request.temperature,
+        maxTokens: request.maxTokens ?? undefined,
+        systemPrompt: request.systemPrompt ?? undefined,
+        stopSequences: request.stopSequences,
+        responseFormat: request.responseFormat ?? undefined,
+      });
+    },
+    streamGenerate: async function* (request) {
+      const model = request.modelOverride ?? provider.getModelForTier(request.modelTier);
+      for await (const chunk of provider.streamComplete(request.prompt, model, {
+        temperature: request.temperature,
+        maxTokens: request.maxTokens ?? undefined,
+        systemPrompt: request.systemPrompt ?? undefined,
+        stopSequences: request.stopSequences,
+      })) {
+        yield chunk;
+      }
+    },
+    healthCheck: () => provider.healthCheck(),
+  };
+}
+
+function createEmbeddingServiceProvider(
+  provider: EmbeddingRuntimeProvider,
+): EmbeddingServiceProviderContract {
+  return {
+    providerType: provider.providerType,
+    getModel: () => '',
+    embed: async (texts, model) => {
+      const response = await provider.embed(texts, model ?? '');
+      return response.embeddings;
+    },
+    healthCheck: () => provider.healthCheck(),
+  };
+}
+
 /**
  * Service manager
  *
@@ -38,8 +124,8 @@ export class ServiceManager {
   private static _instance: ServiceManager | null = null;
 
   private _config: ServiceConfig;
-  private readonly _llmProviders: Map<string, any>;
-  private readonly _embeddingProviders: Map<string, any>;
+  private readonly _llmProviders: Map<string, LLMServiceProviderContract>;
+  private readonly _embeddingProviders: Map<string, EmbeddingServiceProviderContract>;
   private _llmService: LLMServiceImpl | null = null;
   private _embeddingService: EmbeddingServiceImpl | null = null;
   private _cache: InMemoryEmbeddingCache | null = null;
@@ -123,36 +209,40 @@ export class ServiceManager {
     const ptype = config.provider;
 
     if (ptype === ProviderType.OPENAI) {
-      this._llmProviders.set(ptype, new OpenAILLMProvider({
+      const llmProvider = new OpenAILLMProvider({
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,
         organization: config.organization,
         modelMapping: config.modelMapping,
         timeout: config.timeout,
         maxRetries: config.maxRetries,
-      }));
+      });
+      this._llmProviders.set(ptype, createLLMServiceProvider(llmProvider));
 
-      this._embeddingProviders.set(ptype, new OpenAIEmbeddingProvider({
+      const embeddingProvider = new OpenAIEmbeddingProvider({
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,
         organization: config.organization,
         defaultModel: config.embeddingModel,
         timeout: config.timeout,
         maxRetries: config.maxRetries,
-      }));
+      });
+      this._embeddingProviders.set(ptype, createEmbeddingServiceProvider(embeddingProvider));
     } else if (ptype === ProviderType.ANTHROPIC) {
-      this._llmProviders.set(ptype, new AnthropicLLMProvider({
+      const llmProvider = new AnthropicLLMProvider({
         apiKey: config.apiKey,
         baseUrl: config.baseUrl,
         modelMapping: config.modelMapping,
         timeout: config.timeout,
         maxRetries: config.maxRetries,
-      }));
+      });
+      this._llmProviders.set(ptype, createLLMServiceProvider(llmProvider));
     } else if (ptype === ProviderType.LOCAL) {
-      this._embeddingProviders.set(ptype, new LocalEmbeddingProvider({
+      const embeddingProvider = new LocalEmbeddingProvider({
         modelName: config.embeddingModel,
         backend: config.baseUrl ?? 'fastembed',
-      }));
+      });
+      this._embeddingProviders.set(ptype, createEmbeddingServiceProvider(embeddingProvider));
     }
   }
 

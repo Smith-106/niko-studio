@@ -13,8 +13,31 @@ import {
 } from './responses.js';
 
 export type WorkflowSerializedMap = Record<string, unknown>;
-export type WorkflowExecutionContextPayload = Record<string, unknown>;
-export type WorkflowRecommendationInput = unknown[];
+
+export interface WorkflowExecutionContextPayload extends WorkflowSerializedMap {
+  trace_context?: WorkflowSerializedMap;
+  chat_canon_prompt?: string;
+}
+
+export type WorkflowRecommendationPrimitive = string | number | boolean | null;
+
+export type WorkflowRecommendationRecordInput = WorkflowSerializedMap & {
+  title?: string;
+  name?: string;
+  recommendation?: string;
+  reason?: string;
+  rationale?: string;
+  action?: string;
+  suggestion?: string;
+  target?: string;
+  params?: WorkflowSerializedMap;
+};
+
+export type WorkflowRecommendationInputItem =
+  | WorkflowRecommendationPrimitive
+  | WorkflowRecommendationRecordInput;
+
+export type WorkflowRecommendationInput = WorkflowRecommendationInputItem[];
 export type WorkflowObservabilityMetrics = unknown;
 
 export interface WorkflowErrorResult extends WorkflowSerializedMap {

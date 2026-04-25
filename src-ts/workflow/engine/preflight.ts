@@ -1,3 +1,5 @@
+import type { WorkflowRecommendationInput } from './engine-contracts.js';
+
 export interface WorkflowPlanPreflightState {
   runner_state: string;
   recommendations: Record<string, unknown>[];
@@ -16,8 +18,8 @@ export function validateWorkflowRunnerState(
 
 export function applyWorkflowRecommendationRefresh(
   plan: WorkflowPlanPreflightState,
-  recommendations: unknown[] | undefined,
-  canonicalizeRecommendations: (recommendations?: unknown[]) => Record<string, unknown>[],
+  recommendations: WorkflowRecommendationInput | undefined,
+  canonicalizeRecommendations: (recommendations?: WorkflowRecommendationInput) => Record<string, unknown>[],
   computePlanHash: () => string,
 ): void {
   if (recommendations) {
