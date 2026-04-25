@@ -1,13 +1,12 @@
 /**
  * ServiceContainer - TypeScript Dependency Injection Container
- * 
+ *
  * Migrated from Python ServiceContainer (src/container.py)
  * Uses InversifyJS for dependency injection with lazy initialization pattern
  */
 
 import 'reflect-metadata';
-import { createHash } from 'node:crypto';
-import { Container, injectable } from 'inversify';
+import { Container } from 'inversify';
 import {
   ServiceTypes,
   IMemoryEngine,
@@ -30,81 +29,12 @@ import {
   IHybridSearch,
   IVectorSearch,
 } from './types';
-import {
-  DistillationService,
-  LLMServiceImpl,
-  EmbeddingServiceImpl,
-  KnowledgeServiceImpl,
-} from '../services';
-import {
-  SmartSearch,
-  HybridSearch,
-  VectorSearch,
-} from '../search';
-import type { EmbeddingService as VectorEmbeddingService } from '../protocols/embedding';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
-
-function createLocalVectorEmbeddingService(dimension: number): VectorEmbeddingService {
-  const normalize = (text: string): number[] => {
-    const values = new Array<number>(dimension).fill(0);
-    for (let i = 0; i < dimension; i += 1) {
-      const hash = createHash('sha256').update(`${text}:${i}`).digest();
-      values[i] = hash.readUInt32LE(0) / 0xffffffff;
-    }
-    return values;
-  };
-
-  return {
-    async embed(text: string): Promise<number[]> {
-      return normalize(text);
-    },
-    async embedBatch(texts: string[]): Promise<number[][]> {
-      return texts.map((text) => normalize(text));
-    },
-    async embedWithMetadata(request: { text: string; model?: string }): Promise<{ embedding: number[]; metadata: Record<string, unknown> }> {
-      const embedding = normalize(request.text);
-      return {
-        embedding,
-        metadata: {
-          model: request.model ?? 'local-vector-fallback',
-          dimensions: dimension,
-          provider: 'local',
-        },
-      };
-    },
-    similarity(embedding1: number[], embedding2: number[]): number {
-      let dotProduct = 0;
-      let normA = 0;
-      let normB = 0;
-      for (let i = 0; i < embedding1.length; i += 1) {
-        dotProduct += embedding1[i] * embedding2[i];
-        normA += embedding1[i] * embedding1[i];
-        normB += embedding2[i] * embedding2[i];
-      }
-      if (normA === 0 || normB === 0) return 0;
-      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-    },
-    getDimensions(): number {
-      return dimension;
-    },
-  };
-}
-import {
-  MemoryEngineAdapter,
-  GraphEngineAdapter,
-  SearchEngineAdapter,
-  WorkflowEngineAdapter,
-  CriticEngineAdapter,
-  AgentFactoryAdapter,
-  BackupManagerAdapter,
-  TokenServiceAdapter,
-  ObsidianServiceAdapter,
-  MCPGatewayAdapter,
-} from './adapters';
+import { registerCanonicalBindings } from './bindings';
 
 /**
  * ServiceContainer - Lightweight DI Container with Lazy Initialization
- * 
+ *
  * This container manages service lifecycle with:
  * - Lazy initialization (services created on first access)
  * - Singleton pattern (same instance reused)
@@ -129,97 +59,10 @@ export class ServiceContainer {
    * Uses toDynamicValue for lazy initialization
    */
   private registerServices(): void {
-    // ============ Migrated Services (TypeScript) ============
-
-    // Distillation Service
-    this.container.bind<IDistillationService>(ServiceTypes.DistillationService).toDynamicValue(() => {
-      return this.createDistillationService();
-    }).inSingletonScope();
-
-    // LLM Service
-    this.container.bind<ILLMService>(ServiceTypes.LLMService).toDynamicValue(() => {
-      return this.createLLMService();
-    }).inSingletonScope();
-
-    // Embedding Service
-    this.container.bind<IEmbeddingService>(ServiceTypes.EmbeddingService).toDynamicValue(() => {
-      return this.createEmbeddingService();
-    }).inSingletonScope();
-
-    // Knowledge Service
-    this.container.bind<IKnowledgeService>(ServiceTypes.KnowledgeService).toDynamicValue(() => {
-      return this.createKnowledgeService();
-    }).inSingletonScope();
-
-    // Smart Search
-    this.container.bind<ISmartSearch>(ServiceTypes.SmartSearch).toDynamicValue(() => {
-      return this.createSmartSearch();
-    }).inSingletonScope();
-
-    // Hybrid Search
-    this.container.bind<IHybridSearch>(ServiceTypes.HybridSearch).toDynamicValue(() => {
-      return this.createHybridSearch();
-    }).inSingletonScope();
-
-    // Vector Search
-    this.container.bind<IVectorSearch>(ServiceTypes.VectorSearch).toDynamicValue(() => {
-      return this.createVectorSearch();
-    }).inSingletonScope();
-
-    // ============ Core Runtime Services (Adapted implementations) ============
-
-    // Memory Engine
-    this.container.bind<IMemoryEngine>(ServiceTypes.MemoryEngine).toDynamicValue(() => {
-      return this.createMemoryEngine();
-    }).inSingletonScope();
-
-    // Graph Engine
-    this.container.bind<IGraphEngine>(ServiceTypes.GraphEngine).toDynamicValue(() => {
-      return this.createGraphEngine();
-    }).inSingletonScope();
-
-    // Search Engine
-    this.container.bind<ISearchEngine>(ServiceTypes.SearchEngine).toDynamicValue(() => {
-      return this.createSearchEngine();
-    }).inSingletonScope();
-
-    // Workflow Engine
-    this.container.bind<IWorkflowEngine>(ServiceTypes.WorkflowEngine).toDynamicValue(() => {
-      return this.createWorkflowEngine();
-    }).inSingletonScope();
-
-    // Critic Engine
-    this.container.bind<ICriticEngine>(ServiceTypes.CriticEngine).toDynamicValue(() => {
-      return this.createCriticEngine();
-    }).inSingletonScope();
-
-    // Agent Factory
-    this.container.bind<IAgentFactory>(ServiceTypes.AgentFactory).toDynamicValue(() => {
-      return this.createAgentFactory();
-    }).inSingletonScope();
-
-    // Backup Manager
-    this.container.bind<IBackupManager>(ServiceTypes.BackupManager).toDynamicValue(() => {
-      return this.createBackupManager();
-    }).inSingletonScope();
-
-    // Token Service
-    this.container.bind<ITokenService>(ServiceTypes.TokenService).toDynamicValue(() => {
-      return this.createTokenService();
-    }).inSingletonScope();
-
-    // Obsidian Service
-    this.container.bind<IObsidianService>(ServiceTypes.ObsidianService).toDynamicValue(() => {
-      return this.createObsidianService();
-    }).inSingletonScope();
-
-    // MCP Gateway
-    this.container.bind<IMCPGateway>(ServiceTypes.MCPGateway).toDynamicValue(() => {
-      return this.createMCPGateway();
-    }).inSingletonScope();
+    registerCanonicalBindings(this.container.bind.bind(this.container), {
+      integrationAdapters: this.integrationAdapters,
+    });
   }
-
-  // ============ Mock Registration ============
 
   /**
    * Register a mock service for testing
@@ -236,8 +79,6 @@ export class ServiceContainer {
   clearMocks(): void {
     this.mocks.clear();
   }
-
-  // ============ Service Getters with Lazy Initialization ============
 
   /**
    * Get Memory Engine (lazy loaded)
@@ -339,8 +180,6 @@ export class ServiceContainer {
     return this.container.get<IMCPGateway>(ServiceTypes.MCPGateway);
   }
 
-  // ============ Migrated Service Getters ============
-
   /**
    * Get Distillation Service (lazy loaded)
    */
@@ -411,8 +250,6 @@ export class ServiceContainer {
     return this.container.get<IVectorSearch>(ServiceTypes.VectorSearch);
   }
 
-  // ============ Agent Shortcut Methods ============
-
   /**
    * Get agent instance via factory (lazy loaded with caching)
    */
@@ -431,8 +268,6 @@ export class ServiceContainer {
   registerMockAgent(agentType: AgentType, mock: IAgent): void {
     this.agentFactory.registerMock(agentType, mock);
   }
-
-  // ============ Lifecycle Management ============
 
   /**
    * Check if engines have been pre-warmed
@@ -485,7 +320,6 @@ export class ServiceContainer {
     console.log('Pre-warming engines...');
     const startTime = Date.now();
 
-    // Trigger lazy loading for all services
     const services = [
       { identifier: ServiceTypes.MemoryEngine, instance: () => this.memory },
       { identifier: ServiceTypes.GraphEngine, instance: () => this.graph },
@@ -494,7 +328,6 @@ export class ServiceContainer {
       { identifier: ServiceTypes.WorkflowEngine, instance: () => this.workflow },
     ];
 
-    // Create initialization promises
     for (const service of services) {
       try {
         const instance = service.instance();
@@ -507,7 +340,6 @@ export class ServiceContainer {
       }
     }
 
-    // Wait for all initialization promises
     if (this.initPromises.size > 0) {
       await this.ensureInitialized(Array.from(this.initPromises.keys()), 60000);
     }
@@ -525,107 +357,8 @@ export class ServiceContainer {
     this.initPromises.clear();
     this.initialized = false;
   }
-
-  // ============ Service Factories ============
-
-  // Migrated Service Factories
-
-  private createDistillationService(): IDistillationService {
-    return new DistillationService();
-  }
-
-  private createLLMService(): ILLMService {
-    // Create LLMService with empty providers map (will be configured later)
-    return new LLMServiceImpl(new Map(), {});
-  }
-
-  private createEmbeddingService(): IEmbeddingService {
-    // Create EmbeddingService with empty providers map (will be configured later)
-    return new EmbeddingServiceImpl(new Map(), {});
-  }
-
-  private createKnowledgeService(): IKnowledgeService {
-    // Create KnowledgeService with default configuration
-    return new KnowledgeServiceImpl({
-      dbPath: '.writing/knowledge.db',
-      enableDistillation: true,
-      memoryEngine: this.createMemoryEngine(),
-      graphEngine: this.createGraphEngine(),
-    });
-  }
-
-  private createSmartSearch(): ISmartSearch {
-    // Create SmartSearch with default configuration
-    return new SmartSearch({});
-  }
-
-  private createHybridSearch(): IHybridSearch {
-    // Create HybridSearch with default configuration
-    return new HybridSearch({
-      strategies: [],
-      rrfK: 60,
-      defaultTopK: 10,
-      parallelExecution: true,
-    });
-  }
-
-  private createVectorSearch(): IVectorSearch {
-    const dimension = 384;
-    return new VectorSearch({
-      dbPath: '.writing/vectors.db',
-      dimension,
-      modelName: 'BAAI/bge-small-en-v1.5',
-      embeddingService: createLocalVectorEmbeddingService(dimension),
-    });
-  }
-
-  // Core Runtime Service Factories (Adapted implementations)
-
-  private createMemoryEngine(): IMemoryEngine {
-    return new MemoryEngineAdapter({
-      flags: this.integrationAdapters.flags,
-      storageShadow: this.integrationAdapters.storageShadow,
-    });
-  }
-
-  private createGraphEngine(): IGraphEngine {
-    return new GraphEngineAdapter();
-  }
-
-  private createSearchEngine(): ISearchEngine {
-    return new SearchEngineAdapter(undefined, this.integrationAdapters);
-  }
-
-  private createWorkflowEngine(): IWorkflowEngine {
-    return new WorkflowEngineAdapter();
-  }
-
-  private createCriticEngine(): ICriticEngine {
-    return new CriticEngineAdapter();
-  }
-
-  private createAgentFactory(): IAgentFactory {
-    return new AgentFactoryAdapter();
-  }
-
-  private createBackupManager(): IBackupManager {
-    return new BackupManagerAdapter();
-  }
-
-  private createTokenService(): ITokenService {
-    return new TokenServiceAdapter();
-  }
-
-  private createObsidianService(): IObsidianService {
-    return new ObsidianServiceAdapter();
-  }
-
-  private createMCPGateway(): IMCPGateway {
-    return new MCPGatewayAdapter();
-  }
 }
 
-// Singleton container instance
 let containerInstance: ServiceContainer | null = null;
 
 /**
