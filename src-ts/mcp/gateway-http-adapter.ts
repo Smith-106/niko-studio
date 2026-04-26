@@ -1,10 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+import { resolveCorsOrigins } from './config';
 import type { HttpRequest, HttpResponse } from './http-types';
-
-const CORS_ORIGINS = (process.env.NIKO_CORS_ORIGINS ?? '*')
-  .split(',')
-  .map((value) => value.trim());
 
 export function readRequestBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -78,11 +75,24 @@ export function sendHttpResponse(res: ServerResponse, httpResponse: HttpResponse
   );
 }
 
+export function resolveGatewayCorsOrigins(): string[] {
+  try {
+    return resolveCorsOrigins();
+  } catch {
+    return [];
+  }
+}
+
 export function addCorsHeaders(req: IncomingMessage, res: ServerResponse): void {
   const origin = req.headers.origin;
-  if (CORS_ORIGINS.includes('*') || (origin && CORS_ORIGINS.includes(origin))) {
+  const corsOrigins = resolveGatewayCorsOrigins();
+
+  if (corsOrigins.includes('*')) {
     res.setHeader('Access-Control-Allow-Origin', origin ?? '*');
+  } else if (origin && corsOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
   }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400');

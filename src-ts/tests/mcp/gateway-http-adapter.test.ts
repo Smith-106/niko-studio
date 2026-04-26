@@ -1,12 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+import * as mcpConfig from '../../mcp/config';
 import {
   addCorsHeaders,
   extractPath,
   parseQuery,
   readRequestBody,
+  resolveGatewayCorsOrigins,
   sendHttpResponse,
   toHttpRequest,
 } from '../../mcp/gateway-http-adapter';
@@ -33,6 +35,19 @@ function createMockRes(): { res: ServerResponse; calls: Record<string, unknown[]
 }
 
 describe('gateway-http-adapter', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (process.env) {
+      delete process.env.NIKO_CORS_DEV_ORIGINS;
+      delete process.env.NIKO_CORS_PROD_ORIGINS;
+      delete process.env.NIKO_ENV;
+    }
+  });
+
   describe('extractPath', () => {
     it('returns the full URL when there is no query string', () => {
       expect(extractPath('/health')).toBe('/health');
@@ -94,7 +109,6 @@ describe('gateway-http-adapter', () => {
 
       const promise = readRequestBody(req);
 
-      // Simulate data events
       const dataHandlers = onFn.mock.calls.filter(([event]) => event === 'data').map(([, fn]) => fn);
       for (const handler of dataHandlers) {
         handler('{"key":"value"}');
@@ -202,18 +216,52 @@ describe('gateway-http-adapter', () => {
     });
   });
 
-  describe('addCorsHeaders', () => {
-    it('sets CORS headers allowing wildcard origin', () => {
+  describe('CORS policy', () => {
+    it('reads cors origins from canonical resolver at request time', () => {
+      const resolverSpy = vi.spyOn(mcpConfig, 'resolveCorsOrigins').mockReturnValue(['http://allowed.local']);
+
+      const origins = resolveGatewayCorsOrigins();
+
+      expect(origins).toEqual(['http://allowed.local']);
+      expect(resolverSpy).toHaveBeenCalled();
+    });
+
+    it('sets allow-origin for allowed explicit origin', () => {
+      const resolverSpy = vi.spyOn(mcpConfig, 'resolveCorsOrigins').mockReturnValue(['http://allowed.local']);
+      const req = createMockReq({ headers: { origin: 'http://allowed.local' } });
+      const { res, calls } = createMockRes();
+
+      addCorsHeaders(req, res);
+
+      const setHeaderCalls = calls['setHeader'] ?? [];
+      expect(setHeaderCalls.some(([key, value]) => key === 'Access-Control-Allow-Origin' && value === 'http://allowed.local')).toBe(true);
+      expect(resolverSpy).toHaveBeenCalled();
+    });
+
+    it('does not set allow-origin when origin is denied', () => {
+      vi.spyOn(mcpConfig, 'resolveCorsOrigins').mockReturnValue(['http://allowed.local']);
+      const req = createMockReq({ headers: { origin: 'http://denied.local' } });
+      const { res, calls } = createMockRes();
+
+      addCorsHeaders(req, res);
+
+      const setHeaderCalls = calls['setHeader'] ?? [];
+      expect(setHeaderCalls.some(([key]) => key === 'Access-Control-Allow-Origin')).toBe(false);
+      expect(setHeaderCalls.some(([key]) => key === 'Access-Control-Allow-Methods')).toBe(true);
+    });
+
+    it('falls back safely when resolver throws', () => {
+      vi.spyOn(mcpConfig, 'resolveCorsOrigins').mockImplementation(() => {
+        throw new Error('bad-cors');
+      });
       const req = createMockReq({ headers: { origin: 'http://localhost:3000' } });
       const { res, calls } = createMockRes();
 
       addCorsHeaders(req, res);
 
       const setHeaderCalls = calls['setHeader'] ?? [];
-      expect(setHeaderCalls.some(([key]) => key === 'Access-Control-Allow-Origin')).toBe(true);
+      expect(setHeaderCalls.some(([key]) => key === 'Access-Control-Allow-Origin')).toBe(false);
       expect(setHeaderCalls.some(([key]) => key === 'Access-Control-Allow-Methods')).toBe(true);
-      expect(setHeaderCalls.some(([key]) => key === 'Access-Control-Allow-Headers')).toBe(true);
-      expect(setHeaderCalls.some(([key]) => key === 'Access-Control-Max-Age')).toBe(true);
     });
   });
 });
