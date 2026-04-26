@@ -1071,9 +1071,11 @@ export class WorkflowEngine {
 
     const levelEnum = this._levelFromLabel(plan.level);
     const gate = this._evaluateRiskGate(levelEnum, step, plan.recommendations, request.confirmToken);
-    plan.gate_decision = gate.decision as string;
+    plan.gate_decision = String(gate.decision ?? WorkflowDecision.GO);
 
     if (gate.confirm_required && !gate.confirmed) {
+      // Hard guard: unconfirmed destructive/high-risk steps must stay NO_GO.
+      plan.gate_decision = WorkflowDecision.NO_GO;
       this._persistPlanState(plan, 'planned');
       const responseContext = this._executionResponseContext(plan, preflightRuntime);
       return {
