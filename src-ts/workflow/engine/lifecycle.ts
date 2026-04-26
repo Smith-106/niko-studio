@@ -1,8 +1,6 @@
 import {
-  resolveLifecycleTargetState,
-  resolveWorkflowLifecycleSessionStatus,
-  shouldCreateWorkflowPauseCheckpoint,
-  shouldPersistWorkflowHandoff,
+  executeWorkflowLifecycleTransition,
+  normalizeWorkflowLifecycleAction,
 } from './flow-control.js';
 import type { WorkflowLifecycleResult } from './engine-contracts.js';
 
@@ -33,40 +31,20 @@ interface WorkflowLifecycleTransitionInput {
 export async function runWorkflowLifecycleTransition(
   input: WorkflowLifecycleTransitionInput,
 ): Promise<WorkflowLifecycleResult | { error: string }> {
-  const targetState = resolveLifecycleTargetState(input.action);
-  if (!targetState) {
-    return { error: `Unsupported lifecycle action: ${input.action}` };
-  }
-
-  let checkpointId: string | undefined;
-  if (shouldCreateWorkflowPauseCheckpoint(input.action)) {
-    checkpointId = await input.createPauseCheckpoint(`loop-pause:${input.plan.id}`, input.plan.id);
-  }
-
-  let sessionLifecycle: Record<string, unknown> = {};
-  try {
-    sessionLifecycle = input.setRunnerState(
-      targetState,
-      checkpointId,
-      `lifecycle:${input.action}`,
-    );
-    if (input.triageState) {
-      input.setTriageState(
-        input.triageState.trim().toLowerCase(),
-        `lifecycle:${input.action}`,
-      );
-    }
-  } catch (exc) {
-    return { error: String(exc) };
-  }
-
-  if (shouldPersistWorkflowHandoff(input.action)) {
-    input.persistHandoffPackage(input.action);
-  }
-
-  return input.buildLifecycleActionResponse(
-    input.action,
-    checkpointId,
-    resolveWorkflowLifecycleSessionStatus(sessionLifecycle, input.plan.template_meta),
-  );
+  return executeWorkflowLifecycleTransition({
+    plan: input.plan,
+    normalizedAction: normalizeWorkflowLifecycleAction(input.action),
+    triageState: input.triageState,
+    createPauseCheckpoint: async (plan) =>
+      input.createPauseCheckpoint(`loop-pause:${plan.id}`, plan.id),
+    setRunnerState: (_plan, targetState, checkpointId, transitionReason) =>
+      input.setRunnerState(targetState, checkpointId, transitionReason),
+    setTriageState: (_plan, triageState, transitionReason) =>
+      input.setTriageState(triageState, transitionReason),
+    persistHandoff: (_plan, trigger) => {
+      input.persistHandoffPackage(trigger);
+    },
+    buildActionResponse: (_plan, action, checkpointId, sessionStatus) =>
+      input.buildLifecycleActionResponse(action, checkpointId, sessionStatus),
+  });
 }

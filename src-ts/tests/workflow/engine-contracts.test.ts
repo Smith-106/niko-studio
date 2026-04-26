@@ -9,6 +9,7 @@ import {
   buildWorkflowRuntimeResponseContext,
   buildWorkflowStateResumeContract,
 } from '../../workflow/engine/engine-contracts.js';
+import { runWorkflowLifecycleTransition } from '../../workflow/engine/lifecycle.js';
 
 describe('workflow/engine/engine-contracts', () => {
   it('builds runtime and execution response contexts without changing payload shape', () => {
@@ -235,5 +236,88 @@ describe('workflow/engine/engine-contracts', () => {
     });
 
     vi.useRealTimers();
+  });
+
+  it('applies pause transition through canonical lifecycle path', async () => {
+    const createPauseCheckpoint = vi.fn().mockResolvedValue('cp-1');
+    const setRunnerState = vi.fn().mockReturnValue({ status: 'checkpointed' });
+    const setTriageState = vi.fn();
+    const persistHandoffPackage = vi.fn();
+    const buildLifecycleActionResponse = vi.fn().mockReturnValue({
+      action: 'pause',
+      runner_state: 'paused',
+      checkpoint_id: 'cp-1',
+      session_status: 'checkpointed',
+    });
+
+    const result = await runWorkflowLifecycleTransition({
+      plan: { id: 'plan-1', template_meta: {} },
+      action: ' Pause ',
+      createPauseCheckpoint,
+      setRunnerState,
+      setTriageState,
+      persistHandoffPackage,
+      buildLifecycleActionResponse,
+    });
+
+    expect(createPauseCheckpoint).toHaveBeenCalledWith('loop-pause:plan-1', 'plan-1');
+    expect(setRunnerState).toHaveBeenCalledWith('paused', 'cp-1', 'lifecycle:pause');
+    expect(persistHandoffPackage).toHaveBeenCalledWith('pause');
+    expect(buildLifecycleActionResponse).toHaveBeenCalledWith('pause', 'cp-1', 'checkpointed');
+    expect(result).toMatchObject({ action: 'pause', runner_state: 'paused' });
+  });
+
+  it('applies resume and stop transitions through canonical lifecycle path', async () => {
+    const setRunnerState = vi.fn().mockReturnValue({ status: 'active' });
+    const persistHandoffPackage = vi.fn();
+
+    const resumeResult = await runWorkflowLifecycleTransition({
+      plan: { id: 'plan-1', template_meta: {} },
+      action: 'resume',
+      createPauseCheckpoint: vi.fn(),
+      setRunnerState,
+      setTriageState: vi.fn(),
+      persistHandoffPackage,
+      buildLifecycleActionResponse: vi.fn().mockReturnValue({
+        action: 'resume',
+        runner_state: 'running',
+        session_status: 'active',
+      }),
+    });
+
+    expect(setRunnerState).toHaveBeenCalledWith('running', undefined, 'lifecycle:resume');
+    expect(persistHandoffPackage).not.toHaveBeenCalled();
+    expect(resumeResult).toMatchObject({ action: 'resume', runner_state: 'running' });
+
+    const stopResult = await runWorkflowLifecycleTransition({
+      plan: { id: 'plan-1', template_meta: {} },
+      action: 'stop',
+      createPauseCheckpoint: vi.fn(),
+      setRunnerState: vi.fn().mockReturnValue({ status: 'archived' }),
+      setTriageState: vi.fn(),
+      persistHandoffPackage,
+      buildLifecycleActionResponse: vi.fn().mockReturnValue({
+        action: 'stop',
+        runner_state: 'stopped',
+        session_status: 'archived',
+      }),
+    });
+
+    expect(persistHandoffPackage).toHaveBeenCalledWith('stop');
+    expect(stopResult).toMatchObject({ action: 'stop', runner_state: 'stopped' });
+  });
+
+  it('returns deterministic error for unsupported lifecycle action', async () => {
+    const result = await runWorkflowLifecycleTransition({
+      plan: { id: 'plan-1', template_meta: {} },
+      action: 'run-now',
+      createPauseCheckpoint: vi.fn(),
+      setRunnerState: vi.fn(),
+      setTriageState: vi.fn(),
+      persistHandoffPackage: vi.fn(),
+      buildLifecycleActionResponse: vi.fn(),
+    });
+
+    expect(result).toEqual({ error: 'Unsupported lifecycle action: run-now' });
   });
 });
