@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const routeMock = vi.fn();
 const planMock = vi.fn();
@@ -423,5 +426,84 @@ describe('mcp workflow service', () => {
 
     resetWorkflowEngineRuntimeProvider();
     setWorkflowEngineRuntimeProvider(undefined);
+  });
+
+  it('uses independent engine/runtime caches for different workspace roots', async () => {
+    const workspaceA = await mkdtemp(join(tmpdir(), 'niko-workflow-cache-a-'));
+    const workspaceB = await mkdtemp(join(tmpdir(), 'niko-workflow-cache-b-'));
+
+    try {
+      const providerAPlan = vi.fn().mockResolvedValue({ plan_id: 'plan-a' });
+      const providerBPlan = vi.fn().mockResolvedValue({ plan_id: 'plan-b' });
+      const provider = vi.fn(({ workspace }: { workspace: string }) => ({
+        route: routeMock,
+        plan: workspace === workspaceA ? providerAPlan : providerBPlan,
+        execute: executeMock,
+        quickRollback: quickRollbackMock,
+        lifecycle: lifecycleMock,
+        createCheckpoint: createCheckpointMock,
+        restoreCheckpoint: restoreCheckpointMock,
+        listCheckpoints: listCheckpointsMock,
+        bindPlanSession: bindPlanSessionMock,
+      }));
+
+      const {
+        setWorkflowEngineRuntimeProvider,
+        resetWorkflowEngineRuntimeProvider,
+      } = await import('../../mcp/services/workflow.js');
+      const { workflowPlan } = await import('../../mcp/services/workflow.js');
+
+      setWorkflowEngineRuntimeProvider(provider);
+
+      await workflowPlan({
+        task: 'workspace-a-plan',
+        workspace: {
+          schemaVersion: '2026-04-08',
+          identity: {
+            workspaceId: 'workspace-a',
+            projectId: 'project-a',
+            projectName: 'project-a',
+            workspaceRoot: workspaceA,
+          },
+          manuscript: { manuscriptId: null, title: null, chapterId: null, chapterTitle: null, chapterNumber: null },
+          storyBible: { storyBibleId: null, draftId: null, version: null, storage: 'workspace' },
+          knowledge: { focusEntityId: null, graphEntityIds: [], memoryEntryIds: [] },
+          authority: { recordSetId: null, activeSceneId: null, activeEventId: null, activeTimelineId: null, consistencyRunId: null },
+          workflow: { sessionId: 'session-a', planId: null, level: null },
+          chat: { conversationId: 'session-a', comparisonEnabled: false },
+          compatibility: { additiveContract: true, migratedLegacyFields: [], notes: [] },
+        },
+      });
+
+      await workflowPlan({
+        task: 'workspace-b-plan',
+        workspace: {
+          schemaVersion: '2026-04-08',
+          identity: {
+            workspaceId: 'workspace-b',
+            projectId: 'project-b',
+            projectName: 'project-b',
+            workspaceRoot: workspaceB,
+          },
+          manuscript: { manuscriptId: null, title: null, chapterId: null, chapterTitle: null, chapterNumber: null },
+          storyBible: { storyBibleId: null, draftId: null, version: null, storage: 'workspace' },
+          knowledge: { focusEntityId: null, graphEntityIds: [], memoryEntryIds: [] },
+          authority: { recordSetId: null, activeSceneId: null, activeEventId: null, activeTimelineId: null, consistencyRunId: null },
+          workflow: { sessionId: 'session-b', planId: null, level: null },
+          chat: { conversationId: 'session-b', comparisonEnabled: false },
+          compatibility: { additiveContract: true, migratedLegacyFields: [], notes: [] },
+        },
+      });
+
+      expect(provider).toHaveBeenCalledWith({ workspace: workspaceA, sessionNamespace: 'mcp-workflow' });
+      expect(provider).toHaveBeenCalledWith({ workspace: workspaceB, sessionNamespace: 'mcp-workflow' });
+      expect(providerAPlan).toHaveBeenCalledWith('workspace-a-plan', undefined, [], undefined);
+      expect(providerBPlan).toHaveBeenCalledWith('workspace-b-plan', undefined, [], undefined);
+
+      resetWorkflowEngineRuntimeProvider();
+    } finally {
+      await rm(workspaceA, { recursive: true, force: true });
+      await rm(workspaceB, { recursive: true, force: true });
+    }
   });
 });

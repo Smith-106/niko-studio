@@ -5,6 +5,7 @@
  * Ported from src/mcp/services/workflow.py
  */
 
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
@@ -73,23 +74,70 @@ interface WorkflowEngine {
   bindPlanSession(planId: string, sessionId: string): string;
 }
 
-let workflowEngineInstance: WorkflowEngine | null = null;
-let workflowEngineInstanceProviderVersion = -1;
-const checkpointAuthorityBindings = new Map<string, WorkflowAuthority>();
-const schedulerEntries = new Map<string, WorkflowSchedulerTaskRecord>();
+interface WorkflowRuntimeCaches {
+  workspaceRoot: string;
+  workflowEngineInstance: WorkflowEngine | null;
+  workflowEngineInstanceProviderVersion: number;
+  checkpointAuthorityBindings: Map<string, WorkflowAuthority>;
+  schedulerEntries: Map<string, WorkflowSchedulerTaskRecord>;
+  schedulerStoreLoaded: boolean;
+  schedulerStoreVersion: number;
+}
+
+const workflowRuntimeCachesByWorkspace = new Map<string, WorkflowRuntimeCaches>();
+
+function normalizeWorkspaceKey(workspaceRoot: string): string {
+  return workspaceRoot.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+}
+
+function resolveWorkspaceCacheKey(workspaceRoot?: string): string {
+  return normalizeWorkspaceKey(workspaceRoot ?? resolveWorkflowWorkspace());
+}
+
+function getWorkspaceRootFromCacheKey(cacheKey: string): string {
+  for (const cache of workflowRuntimeCachesByWorkspace.values()) {
+    if (resolveWorkspaceCacheKey(cache.workspaceRoot) === cacheKey) {
+      return cache.workspaceRoot;
+    }
+  }
+  return cacheKey;
+}
+
+function getOrCreateWorkspaceCaches(workspaceRoot?: string): WorkflowRuntimeCaches {
+  const resolvedWorkspaceRoot = workspaceRoot ?? resolveWorkflowWorkspace();
+  const cacheKey = resolveWorkspaceCacheKey(resolvedWorkspaceRoot);
+  let caches = workflowRuntimeCachesByWorkspace.get(cacheKey);
+  if (!caches) {
+    caches = {
+      workspaceRoot: resolvedWorkspaceRoot,
+      workflowEngineInstance: null,
+      workflowEngineInstanceProviderVersion: -1,
+      checkpointAuthorityBindings: new Map<string, WorkflowAuthority>(),
+      schedulerEntries: new Map<string, WorkflowSchedulerTaskRecord>(),
+      schedulerStoreLoaded: false,
+      schedulerStoreVersion: 0,
+    };
+    workflowRuntimeCachesByWorkspace.set(cacheKey, caches);
+  }
+  return caches;
+}
+
+function clearWorkspaceCaches(workspaceRoot?: string): void {
+  const cacheKey = resolveWorkspaceCacheKey(workspaceRoot);
+  workflowRuntimeCachesByWorkspace.delete(cacheKey);
+}
+
 
 export function setWorkflowEngineRuntimeProvider(
   provider?: WorkflowEngineRuntimeProvider | null,
 ): void {
   setContainerWorkflowEngineRuntimeProvider(provider);
-  workflowEngineInstance = null;
-  workflowEngineInstanceProviderVersion = -1;
+  workflowRuntimeCachesByWorkspace.clear();
 }
 
 export function resetWorkflowEngineRuntimeProvider(): void {
   resetContainerWorkflowEngineRuntimeProvider();
-  workflowEngineInstance = null;
-  workflowEngineInstanceProviderVersion = -1;
+  workflowRuntimeCachesByWorkspace.clear();
 }
 
 interface WorkflowAuthority {
@@ -162,8 +210,6 @@ type WorkflowSchedulerStatus = 'active' | 'paused';
 
 const SCHEDULER_STORE_DIR = join('.writing', 'scheduler');
 const SCHEDULER_STORE_FILE = 'tasks.json';
-let schedulerStoreLoaded = false;
-let schedulerStoreVersion = 0;
 
 interface WorkflowSchedulerTaskDefinition {
   task_id: string;
@@ -211,6 +257,14 @@ function resolveWorkflowWorkspace(): string {
   return override || process.cwd();
 }
 
+function resolveWorkspaceRootForRequest(workspace?: ProjectWorkspaceContext | null): string {
+  const requestedWorkspaceRoot = readString(workspace?.identity?.workspaceRoot);
+  if (requestedWorkspaceRoot && existsSync(requestedWorkspaceRoot)) {
+    return requestedWorkspaceRoot;
+  }
+  return resolveWorkflowWorkspace();
+}
+
 function resolveWorkflowAuthority(
   workspace?: ProjectWorkspaceContext | null,
 ): WorkflowAuthority | null {
@@ -249,10 +303,13 @@ function cloneWorkflowAuthority(
 
 function resolveCheckpointAuthority(
   workspace?: ProjectWorkspaceContext | null,
+  workspaceRoot?: string,
 ): WorkflowAuthority | null {
   return resolveWorkflowAuthority(
     workspace
-    ?? normalizeProjectWorkspaceContext({}, { workspaceRoot: resolveWorkflowWorkspace() }),
+    ?? normalizeProjectWorkspaceContext({}, {
+      workspaceRoot: workspaceRoot ?? resolveWorkflowWorkspace(),
+    }),
   );
 }
 
@@ -343,11 +400,25 @@ function resolveCheckpointRequestAuthority(params: {
 function resolveStoredCheckpointAuthority(
   engine: WorkflowEngine,
   checkpoint: WorkflowCheckpointRecord,
+  workspaceRoot?: string,
 ): WorkflowAuthority | null {
   if (checkpoint.plan_id && typeof engine.getPlanAuthority === 'function') {
     return cloneWorkflowAuthority(engine.getPlanAuthority(checkpoint.plan_id));
   }
-  return cloneWorkflowAuthority(checkpointAuthorityBindings.get(checkpoint.id));
+  const caches = getOrCreateWorkspaceCaches(workspaceRoot);
+  const direct = caches.checkpointAuthorityBindings.get(checkpoint.id);
+  if (direct) {
+    return cloneWorkflowAuthority(direct);
+  }
+
+  for (const cache of workflowRuntimeCachesByWorkspace.values()) {
+    const fallback = cache.checkpointAuthorityBindings.get(checkpoint.id);
+    if (fallback) {
+      return cloneWorkflowAuthority(fallback);
+    }
+  }
+
+  return null;
 }
 
 function normalizeSchedulerTrigger(value: unknown): 'cron' | 'event' | 'manual_run_now' | null {
@@ -453,29 +524,130 @@ function schedulerTaskMatchesAuthority(
   return !resolved.error;
 }
 
+function getFallbackWorkspaceCachesForAuthority(
+  requestAuthority: WorkflowAuthority | null,
+  preferredWorkspaceRoot?: string,
+): WorkflowRuntimeCaches | null {
+  const preferredCaches = preferredWorkspaceRoot
+    ? getOrCreateWorkspaceCaches(preferredWorkspaceRoot)
+    : null;
+
+  if (!requestAuthority) {
+    return preferredCaches;
+  }
+
+  const preferredKey = preferredWorkspaceRoot
+    ? resolveWorkspaceCacheKey(preferredWorkspaceRoot)
+    : null;
+
+  const entries = [...workflowRuntimeCachesByWorkspace.entries()];
+  if (preferredKey) {
+    const preferredIndex = entries.findIndex(([key]) => key === preferredKey);
+    if (preferredIndex > 0) {
+      const [preferred] = entries.splice(preferredIndex, 1);
+      entries.unshift(preferred);
+    }
+  }
+
+  for (const [cacheKey, cache] of entries) {
+    const matches = [...cache.schedulerEntries.values()].some((taskRecord) => {
+      if (!taskRecord.authority) {
+        return false;
+      }
+      return !resolveSchedulerRequestAuthority({
+        taskId: taskRecord.task_id,
+        storedAuthority: taskRecord.authority,
+        requestAuthority,
+      }).error;
+    });
+
+    if (matches) {
+      return getOrCreateWorkspaceCaches(getWorkspaceRootFromCacheKey(cacheKey));
+    }
+  }
+
+  for (const [cacheKey, cache] of entries) {
+    const matches = [...cache.checkpointAuthorityBindings.values()].some((storedAuthority) => {
+      if (!storedAuthority) {
+        return false;
+      }
+      return !resolveCheckpointRequestAuthority({
+        checkpoint: {
+          id: 'checkpoint',
+          description: '',
+          commit_hash: null,
+          created_at: '',
+          plan_id: null,
+          step_id: null,
+          replay_payload: {},
+        },
+        storedAuthority,
+        requestAuthority,
+      }).error;
+    });
+
+    if (matches) {
+      return getOrCreateWorkspaceCaches(getWorkspaceRootFromCacheKey(cacheKey));
+    }
+  }
+
+  return preferredCaches;
+}
+
 function ensureSchedulerTaskAccess(params: {
   taskId: string;
   requestAuthority: WorkflowAuthority | null;
-}): { task: WorkflowSchedulerTaskRecord; authority: WorkflowAuthority | null } | { error: string } {
-  const task = schedulerEntries.get(params.taskId);
-  if (!task) {
+  workspaceRoot?: string;
+}):
+  | { task: WorkflowSchedulerTaskRecord; authority: WorkflowAuthority | null; caches: WorkflowRuntimeCaches }
+  | { error: string } {
+  const triedCaches = new Set<string>();
+  const candidateCaches: WorkflowRuntimeCaches[] = [];
+
+  const pushCandidate = (cache: WorkflowRuntimeCaches | null) => {
+    if (!cache) return;
+    const key = resolveWorkspaceCacheKey(cache.workspaceRoot);
+    if (triedCaches.has(key)) return;
+    triedCaches.add(key);
+    candidateCaches.push(cache);
+  };
+
+  pushCandidate(params.workspaceRoot ? getOrCreateWorkspaceCaches(params.workspaceRoot) : null);
+  pushCandidate(getFallbackWorkspaceCachesForAuthority(params.requestAuthority, params.workspaceRoot));
+  for (const cache of workflowRuntimeCachesByWorkspace.values()) {
+    pushCandidate(cache);
+  }
+
+  let sawTask = false;
+  for (const cache of candidateCaches) {
+    const task = cache.schedulerEntries.get(params.taskId);
+    if (!task) {
+      continue;
+    }
+    sawTask = true;
+
+    const resolved = resolveSchedulerRequestAuthority({
+      taskId: params.taskId,
+      storedAuthority: task.authority,
+      requestAuthority: params.requestAuthority,
+    });
+
+    if (resolved.error) {
+      return { error: resolved.error };
+    }
+
+    return {
+      task,
+      authority: resolved.authority,
+      caches: cache,
+    };
+  }
+
+  if (!sawTask) {
     return { error: `Scheduler task '${params.taskId}' not found` };
   }
 
-  const resolved = resolveSchedulerRequestAuthority({
-    taskId: params.taskId,
-    storedAuthority: task.authority,
-    requestAuthority: params.requestAuthority,
-  });
-
-  if (resolved.error) {
-    return { error: resolved.error };
-  }
-
-  return {
-    task,
-    authority: resolved.authority,
-  };
+  return { error: `Scheduler task '${params.taskId}' is not accessible in current authority scope` };
 }
 
 function parseSchedulerTaskDefinition(input: unknown): WorkflowSchedulerTaskDefinition | null {
@@ -543,15 +715,19 @@ function parseSchedulerTaskRecord(input: unknown): WorkflowSchedulerTaskRecord |
   };
 }
 
-function schedulerStorePath(): string {
-  return join(resolveWorkflowWorkspace(), SCHEDULER_STORE_DIR, SCHEDULER_STORE_FILE);
+function schedulerStorePath(workspaceRoot: string): string {
+  return join(workspaceRoot, SCHEDULER_STORE_DIR, SCHEDULER_STORE_FILE);
 }
 
-async function loadSchedulerEntriesFromStore(force = false): Promise<void> {
-  if (schedulerStoreLoaded && !force) return;
+async function loadSchedulerEntriesFromStore(params: {
+  force?: boolean;
+  workspaceRoot: string;
+}): Promise<void> {
+  const caches = getOrCreateWorkspaceCaches(params.workspaceRoot);
+  if (caches.schedulerStoreLoaded && !params.force) return;
 
-  schedulerEntries.clear();
-  const storePath = schedulerStorePath();
+  caches.schedulerEntries.clear();
+  const storePath = schedulerStorePath(params.workspaceRoot);
 
   try {
     const payload = JSON.parse(await readFile(storePath, 'utf-8')) as Record<string, unknown>;
@@ -559,28 +735,54 @@ async function loadSchedulerEntriesFromStore(force = false): Promise<void> {
     for (const task of tasks) {
       const parsed = parseSchedulerTaskRecord(task);
       if (parsed) {
-        schedulerEntries.set(parsed.task_id, parsed);
+        caches.schedulerEntries.set(parsed.task_id, parsed);
       }
     }
     const version = payload.version;
-    schedulerStoreVersion = typeof version === 'number' && Number.isFinite(version)
+    caches.schedulerStoreVersion = typeof version === 'number' && Number.isFinite(version)
       ? Math.max(1, Math.floor(version))
       : 1;
   } catch {
-    schedulerStoreVersion = 1;
+    caches.schedulerStoreVersion = 1;
   }
 
-  schedulerStoreLoaded = true;
+  caches.schedulerStoreLoaded = true;
 }
 
-async function persistSchedulerEntriesToStore(): Promise<void> {
-  const storePath = schedulerStorePath();
-  const storeDir = join(resolveWorkflowWorkspace(), SCHEDULER_STORE_DIR);
+async function loadSchedulerEntriesAcrossWorkspaces(taskId: string): Promise<void> {
+  const loaded = new Set<string>();
+
+  for (const cache of workflowRuntimeCachesByWorkspace.values()) {
+    const root = cache.workspaceRoot;
+    const key = resolveWorkspaceCacheKey(root);
+    if (loaded.has(key)) {
+      continue;
+    }
+    loaded.add(key);
+    await loadSchedulerEntriesFromStore({ workspaceRoot: root });
+  }
+
+  if (!taskId) {
+    return;
+  }
+
+  const fallbackRoot = resolveWorkflowWorkspace();
+  const fallbackKey = resolveWorkspaceCacheKey(fallbackRoot);
+  if (!loaded.has(fallbackKey)) {
+    await loadSchedulerEntriesFromStore({ workspaceRoot: fallbackRoot });
+  }
+}
+
+async function persistSchedulerEntriesToStore(workspaceRoot: string): Promise<void> {
+  const caches = getOrCreateWorkspaceCaches(workspaceRoot);
+  const storePath = schedulerStorePath(workspaceRoot);
+  const storeDir = join(workspaceRoot, SCHEDULER_STORE_DIR);
   await mkdir(storeDir, { recursive: true });
 
-  const tasks = [...schedulerEntries.values()].sort((left, right) => left.task_id.localeCompare(right.task_id));
+  const tasks = [...caches.schedulerEntries.values()]
+    .sort((left, right) => left.task_id.localeCompare(right.task_id));
   const payload = {
-    version: schedulerStoreVersion,
+    version: caches.schedulerStoreVersion,
     updated_at: utcNowIso(),
     tasks,
   };
@@ -690,20 +892,25 @@ function buildImportedSchedulerDefinition(params: {
   };
 }
 
-function getEngine(): WorkflowEngine | null {
+function getEngine(workspaceRoot?: string): WorkflowEngine | null {
+  const resolvedWorkspaceRoot = workspaceRoot ?? resolveWorkflowWorkspace();
+  const caches = getOrCreateWorkspaceCaches(resolvedWorkspaceRoot);
   const providerVersion = getWorkflowEngineRuntimeProviderVersion();
-  if (workflowEngineInstance && workflowEngineInstanceProviderVersion !== providerVersion) {
-    workflowEngineInstance = null;
+  if (
+    caches.workflowEngineInstance
+    && caches.workflowEngineInstanceProviderVersion !== providerVersion
+  ) {
+    caches.workflowEngineInstance = null;
   }
 
-  if (!workflowEngineInstance) {
+  if (!caches.workflowEngineInstance) {
     const runtimeProvider = getWorkflowEngineRuntimeProvider();
     const engine = runtimeProvider({
-      workspace: resolveWorkflowWorkspace(),
+      workspace: resolvedWorkspaceRoot,
       sessionNamespace: 'mcp-workflow',
     }) as WorkflowEngineRuntimeLike;
     const engineWithAuthority = engine as unknown as WorkflowEngineAuthorityBridge;
-    workflowEngineInstance = {
+    caches.workflowEngineInstance = {
       bindPlanAuthority(planId: string, authority: WorkflowAuthority) {
         if (typeof engineWithAuthority.bindPlanAuthority === 'function') {
           return engineWithAuthority.bindPlanAuthority(planId, authority);
@@ -818,17 +1025,21 @@ function getEngine(): WorkflowEngine | null {
         return engine.bindPlanSession(planId, sessionId);
       },
     };
-    workflowEngineInstanceProviderVersion = providerVersion;
+    caches.workflowEngineInstanceProviderVersion = providerVersion;
   }
-  return workflowEngineInstance;
+  return caches.workflowEngineInstance;
 }
 
 // ---------------------------------------------------------------
 // Tool implementations
 // ---------------------------------------------------------------
 
-export async function workflowRoute(task: string): Promise<Record<string, unknown>> {
-  const engine = getEngine();
+export async function workflowRoute(
+  task: string,
+  workspace?: ProjectWorkspaceContext,
+): Promise<Record<string, unknown>> {
+  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const engine = getEngine(workspaceRoot);
   if (!engine) return { level: 'L1', reason: 'Workflow engine unavailable' };
   return engine.route(task);
 }
@@ -843,7 +1054,8 @@ export async function workflowPlan(params: {
 }): Promise<Record<string, unknown>> {
   let mergedRecommendations = params.recommendations ?? [];
 
-  const engine = getEngine();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const engine = getEngine(workspaceRoot);
   if (!engine) return { error: 'Workflow engine unavailable' };
   const result = await engine.plan(params.task, params.level, {
     recommendations: mergedRecommendations,
@@ -868,7 +1080,8 @@ export async function workflowExecute(params: {
   confirmToken?: string | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const engine = getEngine();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const engine = getEngine(workspaceRoot);
   if (!engine) return { error: 'Workflow engine unavailable' };
   const authority = resolveWorkflowAuthority(params.workspace);
   return engine.execute(params.planId, params.stepId ?? null, {
@@ -883,7 +1096,8 @@ export async function workflowQuickRollback(params: {
   reason?: string;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  const engine = getEngine();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const engine = getEngine(workspaceRoot);
   if (!engine) return { error: 'Workflow engine unavailable' };
   const authority = resolveWorkflowAuthority(params.workspace);
   return engine.quickRollback({
@@ -898,7 +1112,8 @@ export async function workflowLifecycle(
   action = 'status',
   workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
-  const engine = getEngine();
+  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const engine = getEngine(workspaceRoot);
   if (!engine) return { error: 'Workflow engine unavailable' };
   const authority = resolveWorkflowAuthority(workspace);
   return engine.lifecycle(planId, action, authority);
@@ -909,7 +1124,9 @@ export async function workflowSchedulerRegister(params: {
   enabled?: boolean | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  await loadSchedulerEntriesFromStore();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const caches = getOrCreateWorkspaceCaches(workspaceRoot);
+  await loadSchedulerEntriesFromStore({ workspaceRoot });
 
   const definition = parseSchedulerTaskDefinition(params.definition);
   if (!definition) {
@@ -917,7 +1134,7 @@ export async function workflowSchedulerRegister(params: {
   }
 
   const now = utcNowIso();
-  const existing = schedulerEntries.get(definition.task_id);
+  const existing = caches.schedulerEntries.get(definition.task_id);
   const authority = resolveWorkflowAuthority(params.workspace);
 
   if (existing) {
@@ -949,9 +1166,9 @@ export async function workflowSchedulerRegister(params: {
     last_trigger: existing?.last_trigger ?? triggerFromDefinition,
   };
 
-  schedulerEntries.set(taskRecord.task_id, taskRecord);
-  schedulerStoreVersion += 1;
-  await persistSchedulerEntriesToStore();
+  caches.schedulerEntries.set(taskRecord.task_id, taskRecord);
+  caches.schedulerStoreVersion += 1;
+  await persistSchedulerEntriesToStore(workspaceRoot);
 
   return {
     status: existing ? 'updated' : 'registered',
@@ -965,10 +1182,14 @@ export async function workflowSchedulerImportLitePlan(params: {
   enabled?: boolean | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  await loadSchedulerEntriesFromStore();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  await loadSchedulerEntriesFromStore({ workspaceRoot });
 
-  const workspaceRoot = resolveWorkflowWorkspace();
   const baseDir = join(workspaceRoot, '.workflow', '.lite-plan');
+  const importedWorkspace = normalizeProjectWorkspaceContext(
+    { workspace: params.workspace ?? {} },
+    { workspaceRoot },
+  );
 
   let sessionId: string | null = null;
   try {
@@ -1014,7 +1235,7 @@ export async function workflowSchedulerImportLitePlan(params: {
       const upsertResult = await workflowSchedulerRegister({
         definition,
         enabled: params.enabled,
-        workspace: params.workspace,
+        workspace: importedWorkspace,
       });
 
       if (upsertResult.error) {
@@ -1057,11 +1278,41 @@ export async function workflowSchedulerList(params: {
   limit?: number;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  await loadSchedulerEntriesFromStore();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const hasWorkspace = Boolean(params.workspace);
 
-  const authority = resolveWorkflowAuthority(params.workspace);
-  const entries = [...schedulerEntries.values()]
-    .filter((item) => schedulerTaskMatchesAuthority(item, authority))
+  if (hasWorkspace) {
+    const caches = getOrCreateWorkspaceCaches(workspaceRoot);
+    await loadSchedulerEntriesFromStore({ workspaceRoot });
+
+    const authority = resolveWorkflowAuthority(params.workspace);
+    const entries = [...caches.schedulerEntries.values()]
+      .filter((item) => schedulerTaskMatchesAuthority(item, authority))
+      .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
+
+    const limit = typeof params.limit === 'number' && Number.isFinite(params.limit)
+      ? Math.max(0, Math.floor(params.limit))
+      : 50;
+
+    return {
+      total: entries.length,
+      tasks: entries.slice(0, limit),
+    };
+  }
+
+  await loadSchedulerEntriesAcrossWorkspaces('');
+
+  const dedupedByTaskId = new Map<string, WorkflowSchedulerTaskRecord>();
+  for (const cache of workflowRuntimeCachesByWorkspace.values()) {
+    for (const task of cache.schedulerEntries.values()) {
+      const existing = dedupedByTaskId.get(task.task_id);
+      if (!existing || task.updated_at > existing.updated_at) {
+        dedupedByTaskId.set(task.task_id, task);
+      }
+    }
+  }
+
+  const entries = [...dedupedByTaskId.values()]
     .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
 
   const limit = typeof params.limit === 'number' && Number.isFinite(params.limit)
@@ -1078,12 +1329,15 @@ export async function workflowSchedulerPause(params: {
   taskId: string;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  await loadSchedulerEntriesFromStore();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const caches = getOrCreateWorkspaceCaches(workspaceRoot);
+  await loadSchedulerEntriesFromStore({ workspaceRoot });
 
   const authority = resolveWorkflowAuthority(params.workspace);
   const accessible = ensureSchedulerTaskAccess({
     taskId: params.taskId,
     requestAuthority: authority,
+    workspaceRoot,
   });
   if ('error' in accessible) {
     return { error: accessible.error };
@@ -1095,9 +1349,9 @@ export async function workflowSchedulerPause(params: {
     updated_at: utcNowIso(),
     authority: accessible.authority,
   };
-  schedulerEntries.set(updated.task_id, updated);
-  schedulerStoreVersion += 1;
-  await persistSchedulerEntriesToStore();
+  caches.schedulerEntries.set(updated.task_id, updated);
+  caches.schedulerStoreVersion += 1;
+  await persistSchedulerEntriesToStore(workspaceRoot);
 
   return {
     status: 'paused',
@@ -1109,12 +1363,15 @@ export async function workflowSchedulerResume(params: {
   taskId: string;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  await loadSchedulerEntriesFromStore();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const caches = getOrCreateWorkspaceCaches(workspaceRoot);
+  await loadSchedulerEntriesFromStore({ workspaceRoot });
 
   const authority = resolveWorkflowAuthority(params.workspace);
   const accessible = ensureSchedulerTaskAccess({
     taskId: params.taskId,
     requestAuthority: authority,
+    workspaceRoot,
   });
   if ('error' in accessible) {
     return { error: accessible.error };
@@ -1126,9 +1383,9 @@ export async function workflowSchedulerResume(params: {
     updated_at: utcNowIso(),
     authority: accessible.authority,
   };
-  schedulerEntries.set(updated.task_id, updated);
-  schedulerStoreVersion += 1;
-  await persistSchedulerEntriesToStore();
+  caches.schedulerEntries.set(updated.task_id, updated);
+  caches.schedulerStoreVersion += 1;
+  await persistSchedulerEntriesToStore(workspaceRoot);
 
   return {
     status: 'active',
@@ -1142,12 +1399,15 @@ export async function workflowSchedulerRunNow(params: {
   recommendations?: WorkflowRecommendationInput | null;
   workspace?: ProjectWorkspaceContext;
 }): Promise<Record<string, unknown>> {
-  await loadSchedulerEntriesFromStore();
+  const workspaceRoot = resolveWorkspaceRootForRequest(params.workspace);
+  const caches = getOrCreateWorkspaceCaches(workspaceRoot);
+  await loadSchedulerEntriesFromStore({ workspaceRoot });
 
   const authority = resolveWorkflowAuthority(params.workspace);
   const accessible = ensureSchedulerTaskAccess({
     taskId: params.taskId,
     requestAuthority: authority,
+    workspaceRoot,
   });
   if ('error' in accessible) {
     return { error: accessible.error };
@@ -1191,9 +1451,9 @@ export async function workflowSchedulerRunNow(params: {
     last_run_id: runId,
     last_trigger: 'manual_run_now',
   };
-  schedulerEntries.set(updatedTask.task_id, updatedTask);
-  schedulerStoreVersion += 1;
-  await persistSchedulerEntriesToStore();
+  caches.schedulerEntries.set(updatedTask.task_id, updatedTask);
+  caches.schedulerStoreVersion += 1;
+  await persistSchedulerEntriesToStore(workspaceRoot);
 
   return {
     status: executionStatus ?? 'completed',
@@ -1210,13 +1470,15 @@ export async function checkpointCreate(
   autoCommit = true,
   workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
-  const engine = getEngine();
+  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const caches = getOrCreateWorkspaceCaches(workspaceRoot);
+  const engine = getEngine(workspaceRoot);
   if (!engine) return { error: 'Workflow engine unavailable' };
   const result = await engine.createCheckpoint(description, autoCommit);
   const checkpointId = typeof result['checkpoint_id'] === 'string' ? result['checkpoint_id'] : null;
-  const authority = resolveCheckpointAuthority(workspace);
+  const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
   if (checkpointId && authority) {
-    checkpointAuthorityBindings.set(checkpointId, authority);
+    caches.checkpointAuthorityBindings.set(checkpointId, authority);
   }
   return result;
 }
@@ -1226,14 +1488,15 @@ export async function checkpointRestore(
   confirmToken?: string | null,
   workspace?: ProjectWorkspaceContext,
 ): Promise<Record<string, unknown>> {
-  const engine = getEngine();
+  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const engine = getEngine(workspaceRoot);
   if (!engine) return { error: 'Workflow engine unavailable' };
   const checkpoint = engine.getCheckpoint?.(checkpointId) ?? null;
   if (!checkpoint) {
     return { error: `Checkpoint '${checkpointId}' not found` };
   }
-  const storedAuthority = resolveStoredCheckpointAuthority(engine, checkpoint);
-  const authority = resolveCheckpointAuthority(workspace);
+  const storedAuthority = resolveStoredCheckpointAuthority(engine, checkpoint, workspaceRoot);
+  const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
   const resolvedAuthority = resolveCheckpointRequestAuthority({
     checkpoint,
     storedAuthority,
@@ -1249,16 +1512,17 @@ export async function checkpointList(
   limit = 10,
   workspace?: ProjectWorkspaceContext,
 ): Promise<WorkflowCheckpointSummary[]> {
-  const engine = getEngine();
+  const workspaceRoot = resolveWorkspaceRootForRequest(workspace);
+  const engine = getEngine(workspaceRoot);
   if (!engine) return [];
-  const authority = resolveCheckpointAuthority(workspace);
+  const authority = resolveCheckpointAuthority(workspace, workspaceRoot);
   const checkpoints = await engine.listCheckpoints(limit) as WorkflowCheckpointSummary[];
   return checkpoints.filter((summary) => {
     const checkpoint = engine.getCheckpoint?.(summary.id) ?? null;
     if (!checkpoint) {
       return false;
     }
-    const storedAuthority = resolveStoredCheckpointAuthority(engine, checkpoint);
+    const storedAuthority = resolveStoredCheckpointAuthority(engine, checkpoint, workspaceRoot);
     return !resolveCheckpointRequestAuthority({
       checkpoint,
       storedAuthority,

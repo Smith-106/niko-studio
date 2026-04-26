@@ -36,9 +36,17 @@ function resolveWorkspaceRoot(): string {
 }
 
 function resolveWorkspace(body: Record<string, unknown>) {
-  return normalizeProjectWorkspaceContext(body, {
-    workspaceRoot: resolveWorkspaceRoot(),
+  const workspaceRoot = resolveWorkspaceRoot();
+  const workspace = normalizeProjectWorkspaceContext(body, {
+    workspaceRoot,
   });
+  return {
+    ...workspace,
+    identity: {
+      ...workspace.identity,
+      workspaceRoot,
+    },
+  };
 }
 
 function resolveTraceContext(request: HttpRequest): HttpRequestTraceContext | null {
@@ -57,7 +65,7 @@ function resolveTraceContext(request: HttpRequest): HttpRequestTraceContext | nu
 export async function workflowRouteEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
   const workspace = resolveWorkspace(body);
-  const result = await workflowRoute((body.task as string) ?? '');
+  const result = await workflowRoute((body.task as string) ?? '', workspace);
   return jsonResponse({ ...result, workspace });
 }
 
