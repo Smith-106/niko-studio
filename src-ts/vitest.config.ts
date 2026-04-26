@@ -15,6 +15,7 @@ export default defineConfig({
     exclude: [
       '**/.claude/**',
       '**/.ccw/**',
+      '**/node_modules/**',
     ],
     coverage: {
       provider: 'v8',

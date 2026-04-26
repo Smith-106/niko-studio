@@ -36,8 +36,8 @@
 
 ## 3. fallback / rollback 入口
 
-### Web fallback（deprecated）
-- `src-ts/web/app.ts` 根路径默认 `410`，仅在 `WEB_UI_FORWARD_URL` 存在时 `302` 转发
+### Web fallback（removed）
+- `src-ts/web/app.ts` has been removed from the codebase. The deprecated browser-first web entry is no longer present.
 
 ### 回滚入口
 - 回滚手册：`docs/operations/ROLLBACK.md`

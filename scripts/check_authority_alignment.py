@@ -49,8 +49,8 @@ DELIVERY_CONTRACT_PATTERNS: tuple[tuple[str, str], ...] = (
         "must bound compatibility surfaces as advisory only.",
     ),
     (
-        r"`Deprecated surface`: browser-first web entry \(`src-ts/web/app\.ts`\).*WEB_UI_FORWARD_URL.*not shipped primary UI paths\.",
-        "must label the browser-first web path as deprecated.",
+        r"`Deprecated surface` \(removed\): browser-first web entry has been removed from the codebase\.",
+        "must label the browser-first web path as deprecated and removed.",
     ),
 )
 

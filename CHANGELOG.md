@@ -1,5 +1,19 @@
 # Changelog
 
+## [9.0.10] - 2026-04-24
+
+### Changed
+- 收紧桌面壳层焦点行为，覆盖 checkpoint disclosure、automation panel restore-focus 与 QuickPanel 可访问性流程。
+- 加固写作流解析，JSON/SSE 响应拒绝无效 payload 结构并保留现有 callback 契约。
+- 合并 sidecar 治理测试覆盖到统一 Python 回归套件，移除重复的独立测试副本。
+
+## [9.0.9] - 2026-04-18
+
+### Changed
+- 新增受控 revision loop v1 与自动化工作流面板可靠性测试覆盖。
+- 冻结 retained delivery baseline 并收紧 handoff hold 文档。
+- 稳定 stage1 frontstage 验证与 dirty UI editor convergence session 清理。
+
 ## [9.0.8] - 2026-04-16
 
 ### Changed

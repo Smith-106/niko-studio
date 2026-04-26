@@ -34,8 +34,8 @@ Goal: establish migration baseline for single-authority external workflow entry
 | `src-ts/workflow/types.ts` legacy aliases (`contract_version`, `workflowLevel`, `level`, `decision_result`) | retain | Frozen as a bounded alias map for existing desktop/MCP-compatible payload shapes. |
 | `src-ts/workflow/types.ts` alias `level_slug -> workflow_level_slug` | remove | Removed from legacy field map because it had no active consumer and only created migration-era drift. |
 | `src-ts/workflow/types.ts` top-level legacy alias backfill | retain (bounded) | Backfill now applies only when alias value is defined, so compatibility fields no longer spread empty placeholders. |
-| `src-ts/web/app.ts` deprecated root (`GET /`) | retain | Default is intentional `410 Gone` with deprecation message. |
-| `src-ts/web/app.ts` forward shim (`WEB_UI_FORWARD_URL`) | retain (bounded) | Redirect enabled only for valid `http/https` URLs; invalid/unsupported values fall back to `410` instead of forwarding. |
+| `src-ts/web/app.ts` deprecated root (`GET /`) | removed | Browser-first web entry has been removed from the codebase. |
+| `src-ts/web/app.ts` forward shim (`WEB_UI_FORWARD_URL`) | removed | Forward shim has been removed alongside the web entry. |
 
 ## Migration Status
 

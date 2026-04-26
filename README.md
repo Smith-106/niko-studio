@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 9.0.8 (Platform Edition)
+> **Version**: 9.0.10 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -22,8 +22,8 @@ Compatibility and migration surfaces
   -> explicit legacy Python override when compatibility sources exist
   -> Streamlit validation flows when a candidate still ships them
 
-Deprecated release surface
-  -> browser-first web entry (`src-ts/web/app.ts`)
+Deprecated release surface (removed)
+  -> browser-first web entry was removed; WEB_UI_FORWARD_URL is no longer supported
 ```
 
 ## ✨ Writer-Facing Capabilities
@@ -61,7 +61,7 @@ uv sync
 - `Supported runtime`: `desktop/` + Tauri host + local `src-ts/` Node/TypeScript gateway. This is the shipped product, default build, and default runtime path.
 - `Supported launcher`: `python scripts/start_gateway.py` remains an operator-facing entrypoint, but in the current checkout it starts the Node/TypeScript gateway by default.
 - `Advisory compatibility surfaces`: explicit `--runtime python` legacy override, legacy `src/mcp/**` sources, and Streamlit validation flows only when a release candidate explicitly includes them.
-- `Deprecated surface`: browser-first web entry (`src-ts/web/app.ts`) and any `WEB_UI_FORWARD_URL` forward are not shipped primary UI paths.
+- `Deprecated surface` (removed): browser-first web entry has been removed from the codebase.
 
 ### 单命令验收入口
 
@@ -271,7 +271,7 @@ niko-studio/
 
 ## 📄 License
 
-当前仓库根目录未提供独立 `LICENSE` 文件；如需对外分发，请先明确许可策略。
+当前仓库使用 MIT 许可协议，详见根目录 `LICENSE` 文件。
 
 ## 🙏 Acknowledgments
 
@@ -282,4 +282,4 @@ Built on concepts from:
 
 ---
 
-*Version 9.0.8 Platform Edition | Updated: 2026-04-21*
+*Version 9.0.10 Platform Edition | Updated: 2026-04-27*
