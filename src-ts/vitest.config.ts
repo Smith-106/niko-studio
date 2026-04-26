@@ -14,6 +14,7 @@ export default defineConfig({
     environment: 'node',
     exclude: [
       '**/.claude/**',
+      '**/.ccw/**',
     ],
     coverage: {
       provider: 'v8',

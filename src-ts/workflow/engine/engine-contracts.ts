@@ -671,3 +671,45 @@ export function buildWorkflowPersistedAuditContract(
     recordedAt: input.recordedAt,
   });
 }
+
+// ============================================================
+// Compatibility aliases (consumed by engine sub-modules)
+// ============================================================
+
+export type WorkflowRecommendationInput = Array<Record<string, unknown>> | unknown[];
+
+export type WorkflowErrorResult = WorkflowOperationErrorResult;
+
+export type WorkflowLifecycleActionResult = WorkflowLifecycleResult;
+
+export type WorkflowSerializedMap = Record<string, unknown>;
+
+export type WorkflowGateResult = WorkflowRiskGateResult;
+
+export interface WorkflowRestoreWaitingConfirmationResult {
+  status: 'waiting_confirmation';
+  error: string;
+  checkpoint_id: string;
+  plan_id: string | null;
+  step_id: string | null;
+  gate: {
+    decision: string;
+    reason: string;
+    blocking: boolean;
+  };
+}
+
+export interface WorkflowRestoreResult {
+  status: 'restored';
+  checkpoint_id: string;
+  commit_hash: string | null;
+  plan_id: string | null;
+  step_id: string | null;
+  replay: Record<string, unknown>;
+}
+
+export type WorkflowRestoreCheckpointResult =
+  | WorkflowRestoreWaitingConfirmationResult
+  | WorkflowRestoreResult
+  | { error: string; replay: Record<string, unknown> }
+  | { error: string; plan_id: string | null; step_id: string | null; replay: Record<string, unknown> };
