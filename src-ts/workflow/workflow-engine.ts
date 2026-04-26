@@ -1828,15 +1828,24 @@ export class WorkflowEngine {
     const plan = this.plans.get(planId);
     if (!plan) return { applied: false, reason: `plan_not_found:${planId}` };
 
-    const expectedHash = payload['plan_hash'] as string;
-    if (expectedHash) {
-      const currentHash = this._computePlanHash(plan);
-      if (currentHash !== expectedHash) return { applied: false, reason: 'plan_hash_mismatch', expected_plan_hash: expectedHash, current_plan_hash: currentHash };
+    const expectedHash = payload['plan_hash'];
+    if (typeof expectedHash !== 'string' || expectedHash.trim().length === 0) {
+      return { applied: false, reason: 'missing_plan_hash' };
+    }
+
+    const currentHash = this._computePlanHash(plan);
+    if (currentHash !== expectedHash) {
+      return {
+        applied: false,
+        reason: 'plan_hash_mismatch',
+        expected_plan_hash: expectedHash,
+        current_plan_hash: currentHash,
+      };
     }
 
     plan.recommendations = this._canonicalizeRecommendations(payload['recommendations'] as unknown[]);
     plan.recommendations_frozen = Boolean(payload['recommendations_frozen'] ?? true);
-    plan.plan_hash = expectedHash || this._computePlanHash(plan);
+    plan.plan_hash = expectedHash;
 
     return { applied: true, plan_id: planId, plan_hash: plan.plan_hash, recommendation_count: plan.recommendations.length };
   }

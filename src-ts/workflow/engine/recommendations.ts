@@ -19,6 +19,20 @@ export interface WorkflowPlanHashable {
   recommendations: Record<string, unknown>[];
 }
 
+const VOLATILE_TEMPLATE_META_KEYS = new Set([
+  'current_phase',
+  'last_checkpoint_id',
+  'session_id',
+  'session_status',
+  'execution_mode',
+  'runner_transition_reason',
+]);
+
+function stableTemplateMetaForHash(templateMeta: Record<string, unknown>): Record<string, unknown> {
+  const stableEntries = Object.entries(templateMeta).filter(([key]) => !VOLATILE_TEMPLATE_META_KEYS.has(key));
+  return Object.fromEntries(stableEntries);
+}
+
 export function canonicalizeWorkflowRecommendations(
   recommendations?: WorkflowRecommendationInput,
 ): WorkflowRecommendationRecord[] {
@@ -63,7 +77,7 @@ export function computeWorkflowPlanHash(plan: WorkflowPlanHashable): string {
       description: step.description,
       dependencies: step.dependencies,
     })),
-    template_meta: plan.template_meta,
+    template_meta: stableTemplateMetaForHash(plan.template_meta),
     recommendations: plan.recommendations.map((recommendation) => ({
       id: recommendation['id'],
       title: recommendation['title'],

@@ -312,10 +312,17 @@ describe('WorkflowEngine unit tests', () => {
 
       const plan = await engine.plan('Test task', 'L3');
       const planId = String(plan.plan_id);
+      const expectedPlanHash = String((engine.getPlanStatus(planId) as Record<string, unknown>)['plan_hash'] ?? '');
+      expect(expectedPlanHash.length).toBeGreaterThan(0);
 
       const pauseResult = await engine.lifecycle(planId, 'pause');
       expect(pauseResult.runner_state).toBe('paused');
       expect(pauseResult.checkpoint_id).toBeTruthy();
+
+      const replayRestore = await engine.restoreCheckpoint(String(pauseResult.checkpoint_id), 'approved-token');
+      const replay = replayRestore['replay'] as Record<string, unknown>;
+      expect(replay['applied']).toBe(true);
+      expect(replay['plan_hash']).toBe(expectedPlanHash);
 
       const resumeResult = await engine.lifecycle(planId, 'resume');
       expect(resumeResult.runner_state).toBe('running');
@@ -360,6 +367,52 @@ describe('WorkflowEngine unit tests', () => {
       expect(checkpoint.checkpoint_id).toBeTruthy();
       expect(checkpoint.description).toBe('test checkpoint');
       expect(checkpoint.plan_id).toBe(planId);
+    });
+
+    it('rejects replay restore when checkpoint payload plan_hash is missing', async () => {
+      const engine = new WorkflowEngine(workspace, 'checkpoint-missing-hash');
+
+      const plan = await engine.plan('Test task', 'L2');
+      const planId = String(plan.plan_id);
+
+      const checkpoint = await engine.createCheckpoint('missing hash replay', false, planId, undefined, {
+        plan_id: planId,
+        plan_hash: '',
+        recommendations: [],
+        recommendations_frozen: true,
+      });
+
+      const restored = await engine.restoreCheckpoint(String(checkpoint.checkpoint_id), 'approved-token');
+      const replay = restored['replay'] as Record<string, unknown>;
+
+      expect(restored['error']).toBe('No commit hash available for this checkpoint');
+      expect(replay['applied']).toBe(false);
+      expect(replay['reason']).toBe('missing_plan_hash');
+    });
+
+    it('rejects replay restore when checkpoint payload plan_hash mismatches current plan hash', async () => {
+      const engine = new WorkflowEngine(workspace, 'checkpoint-hash-mismatch');
+
+      const plan = await engine.plan('Test task', 'L2');
+      const planId = String(plan.plan_id);
+      const currentPlanHash = String((engine.getPlanStatus(planId) as Record<string, unknown>)['plan_hash'] ?? '');
+      expect(currentPlanHash.length).toBeGreaterThan(0);
+
+      const checkpoint = await engine.createCheckpoint('hash mismatch replay', false, planId, undefined, {
+        plan_id: planId,
+        plan_hash: `${currentPlanHash}-mismatch`,
+        recommendations: [],
+        recommendations_frozen: true,
+      });
+
+      const restored = await engine.restoreCheckpoint(String(checkpoint.checkpoint_id), 'approved-token');
+      const replay = restored['replay'] as Record<string, unknown>;
+
+      expect(restored['error']).toBe('No commit hash available for this checkpoint');
+      expect(replay['applied']).toBe(false);
+      expect(replay['reason']).toBe('plan_hash_mismatch');
+      expect(replay['expected_plan_hash']).toBe(`${currentPlanHash}-mismatch`);
+      expect(replay['current_plan_hash']).toBe(currentPlanHash);
     });
 
     it('lists checkpoints', async () => {

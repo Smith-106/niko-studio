@@ -114,7 +114,7 @@ export function buildWorkflowPauseReplayPayload(
 ): Record<string, unknown> {
   return {
     plan_id: plan.id,
-    plan_hash: '',
+    plan_hash: plan.plan_hash,
     recommendations: structuredClone(plan.recommendations),
     recommendations_frozen: plan.recommendations_frozen,
   };
