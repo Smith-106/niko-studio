@@ -1,4 +1,4 @@
-import { useAppStore, Conversation, Message } from './appStore'
+import { useAppStore, Conversation, Message, type AppState } from './appStore'
 import { useSettingsStore } from './settingsStore'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -100,4 +100,12 @@ export function useQualityGoals() {
  */
 export function useSelectedSkills(): string[] {
   return useAppStore(useShallow((state) => state.selectedSkills))
+}
+
+export function useCreateConversation(): AppState['createConversation'] {
+  return useAppStore((state) => state.createConversation)
+}
+
+export function useAddMessage(): AppState['addMessage'] {
+  return useAppStore((state) => state.addMessage)
 }

@@ -1,3 +1,9 @@
+import type {
+  WorkflowExecuteResult,
+  WorkflowPlanStatusResult,
+  WorkflowSerializedMap,
+} from './engine-contracts.js';
+
 export interface MutableWorkflowStepState {
   name: string;
   status: string;
@@ -13,6 +19,40 @@ export interface MutableWorkflowPlanRuntimeState {
   fix_status: string;
   fix_owner: string;
   template_meta: Record<string, unknown>;
+}
+
+interface WorkflowExecutionOutcomeInput<TPlan, TStep> {
+  plan: TPlan;
+  step: TStep;
+  gate: WorkflowSerializedMap;
+  executeStep: (plan: TPlan, step: TStep) => Promise<unknown>;
+  transitionStepState: (
+    plan: TPlan,
+    step: TStep,
+    targetStatus: string,
+    reason: string,
+  ) => void;
+  completeExecutionStep: (
+    plan: TPlan,
+    step: TStep,
+    gate: WorkflowSerializedMap,
+    result: unknown,
+  ) => WorkflowExecuteResult;
+  failExecutionStep: (
+    plan: TPlan,
+    step: TStep,
+    error: unknown,
+    runtime: {
+      observability: Record<string, unknown>;
+      budgetGuardrail: Record<string, unknown>;
+      executionMode: string;
+    },
+  ) => WorkflowExecuteResult;
+  runtime: {
+    observability: Record<string, unknown>;
+    budgetGuardrail: Record<string, unknown>;
+    executionMode: string;
+  };
 }
 
 export function canonicalWorkflowStepStatus(
@@ -97,4 +137,25 @@ export function applyWorkflowTriageTransition(
   }
 
   return { changed: true };
+}
+
+export async function executeWorkflowStepWithTransitions<TPlan, TStep>(
+  input: WorkflowExecutionOutcomeInput<TPlan, TStep>,
+): Promise<WorkflowExecuteResult> {
+  try {
+    input.transitionStepState(input.plan, input.step, 'executing', 'execution_started');
+    const result = await input.executeStep(input.plan, input.step);
+    input.transitionStepState(input.plan, input.step, 'review', 'execution_review');
+    input.transitionStepState(input.plan, input.step, 'test', 'execution_test');
+    input.transitionStepState(input.plan, input.step, 'done', 'execution_completed');
+    return input.completeExecutionStep(input.plan, input.step, input.gate, result);
+  } catch (error) {
+    return input.failExecutionStep(input.plan, input.step, error, input.runtime);
+  }
+}
+
+export function buildWorkflowPlanStatusResult(
+  input: WorkflowPlanStatusResult,
+): WorkflowPlanStatusResult {
+  return structuredClone(input);
 }

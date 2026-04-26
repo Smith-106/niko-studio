@@ -82,4 +82,24 @@ describe('mcp config resolvers', () => {
 
     ConfigManager.resetInstance();
   });
+
+  it('uses injected llm availability probe instead of direct container lookups', async () => {
+    const {
+      isLlmAvailable,
+      setLlmAvailabilityProbe,
+    } = await import('../../mcp/config.js');
+
+    expect(isLlmAvailable()).toBe(false);
+
+    setLlmAvailabilityProbe(() => true);
+    expect(isLlmAvailable()).toBe(true);
+
+    setLlmAvailabilityProbe(() => {
+      throw new Error('probe-failed');
+    });
+    expect(isLlmAvailable()).toBe(false);
+
+    setLlmAvailabilityProbe(null);
+    expect(isLlmAvailable()).toBe(false);
+  });
 });

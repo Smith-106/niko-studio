@@ -12,6 +12,12 @@ import {
   type ProjectWikiQueryAuthorityMetadata,
 } from '../../project/wiki-query.js';
 import { createProjectWikiFactPacketBundleFromCanonMatches } from '../../project/wiki-knowledge-layer.js';
+import type {
+  WorkflowExecutionContextPayload,
+  WorkflowRecommendationInput,
+  WorkflowRunResult,
+  WorkflowStreamEvent,
+} from '../../workflow/engine/engine-contracts.js';
 
 // ---------------------------------------------------------------
 // Constants
@@ -210,16 +216,16 @@ interface ChatWorkflowEngine {
   route(task: string): Promise<Record<string, unknown>>;
   runWithExecutionContext(
     task: string,
-    executionContext?: Record<string, unknown>,
+    executionContext?: WorkflowExecutionContextPayload,
     level?: string,
-    recommendations?: unknown[],
-  ): Promise<Record<string, unknown>>;
+    recommendations?: WorkflowRecommendationInput,
+  ): Promise<WorkflowRunResult>;
   runStreamWithExecutionContext(
     task: string,
-    executionContext?: Record<string, unknown>,
+    executionContext?: WorkflowExecutionContextPayload,
     level?: string,
-    recommendations?: unknown[],
-  ): AsyncGenerator<Record<string, unknown>>;
+    recommendations?: WorkflowRecommendationInput,
+  ): AsyncGenerator<WorkflowStreamEvent>;
 }
 
 function createWorkflowEngine(sessionNamespace: string): ChatWorkflowEngine {

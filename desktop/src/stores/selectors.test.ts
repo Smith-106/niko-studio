@@ -9,8 +9,10 @@ vi.mock('@/api/client', () => ({
 
 import { useAppStore } from './appStore'
 import {
+  useAddMessage,
   useAllowLlmFallback,
   useConversationList,
+  useCreateConversation,
   useCurrentConversation,
   useCurrentConversationId,
   useLatestAssistantMessageContent,
@@ -162,6 +164,26 @@ describe('selectors', () => {
       })
 
       expect(result.current).toEqual(['skill-b'])
+    })
+  })
+
+  describe('action selectors', () => {
+    it('returns stable createConversation action reference', () => {
+      const { result, rerender } = renderHook(() => useCreateConversation())
+      const firstReference = result.current
+
+      rerender()
+
+      expect(result.current).toBe(firstReference)
+    })
+
+    it('returns stable addMessage action reference', () => {
+      const { result, rerender } = renderHook(() => useAddMessage())
+      const firstReference = result.current
+
+      rerender()
+
+      expect(result.current).toBe(firstReference)
     })
   })
 })

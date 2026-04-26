@@ -1,4 +1,30 @@
-import { WorkflowDecision, WorkflowLevel } from '../types.js';
+import {
+  WorkflowDecision,
+  WorkflowLevel,
+} from '../types.js';
+import type {
+  WorkflowGateResult,
+  WorkflowRestoreCheckpointResult,
+  WorkflowRestoreResult,
+  WorkflowRestoreWaitingConfirmationResult,
+  WorkflowSerializedMap,
+} from './engine-contracts.js';
+
+export interface WorkflowCheckpointLike {
+  id: string;
+  commit_hash: string | null;
+  plan_id: string | null;
+  step_id: string | null;
+  replay_payload: Record<string, unknown>;
+}
+
+interface WorkflowRestoreCheckpointInput {
+  checkpoint: WorkflowCheckpointLike;
+  confirmToken?: string;
+  hasValidConfirmToken: (confirmToken: string | null | undefined) => boolean;
+  applyReplayPayload: (checkpoint: WorkflowCheckpointLike) => WorkflowSerializedMap;
+  checkoutCommit: (commitHash: string) => Promise<void>;
+}
 
 export function buildWorkflowQualityMetrics(task: string): Record<string, number> {
   const taskLength = (task ?? '').length;
@@ -83,7 +109,7 @@ export function evaluateWorkflowRiskGate(
   confirmToken: string | null | undefined,
   templateMetadataMap: Record<number, Record<string, unknown>>,
   destructiveStepNames: Set<string>,
-): Record<string, unknown> {
+): WorkflowGateResult {
   const templateMeta = templateMetadataMap[level] ?? {};
   const risk = (templateMeta as Record<string, unknown>)['risk'] as string ?? 'low';
   const needsSoftReview = ['checkpoint', 'final_review'].includes(stepName) && ['medium', 'high'].includes(risk);
@@ -122,5 +148,69 @@ export function evaluateWorkflowRiskGate(
     destructive: false,
     confirm_required: false,
     confirmed: true,
+  };
+}
+
+export async function restoreWorkflowCheckpoint(
+  input: WorkflowRestoreCheckpointInput,
+): Promise<WorkflowRestoreCheckpointResult> {
+  const destructive = Object.keys(input.checkpoint.replay_payload).length > 0;
+  const confirmed = !destructive || input.hasValidConfirmToken(input.confirmToken);
+
+  if (destructive && !confirmed) {
+    const blocked: WorkflowRestoreWaitingConfirmationResult = {
+      status: 'waiting_confirmation',
+      error: 'destructive restore requires secondary confirmation',
+      checkpoint_id: input.checkpoint.id,
+      plan_id: input.checkpoint.plan_id,
+      step_id: input.checkpoint.step_id,
+      gate: {
+        decision: WorkflowDecision.NO_GO,
+        reason: 'destructive restore requires secondary confirmation',
+        blocking: true,
+      },
+    };
+    return blocked;
+  }
+
+  const replayResult = input.applyReplayPayload(input.checkpoint);
+
+  if (input.checkpoint.commit_hash) {
+    try {
+      await input.checkoutCommit(input.checkpoint.commit_hash);
+      const restored: WorkflowRestoreResult = {
+        status: 'restored',
+        checkpoint_id: input.checkpoint.id,
+        commit_hash: input.checkpoint.commit_hash,
+        plan_id: input.checkpoint.plan_id,
+        step_id: input.checkpoint.step_id,
+        replay: replayResult,
+      };
+      return restored;
+    } catch (error) {
+      return {
+        error: `Git restore failed: ${error}`,
+        replay: replayResult,
+      };
+    }
+  }
+
+  if (replayResult['applied'] === true) {
+    const restored: WorkflowRestoreResult = {
+      status: 'restored',
+      checkpoint_id: input.checkpoint.id,
+      commit_hash: null,
+      plan_id: input.checkpoint.plan_id,
+      step_id: input.checkpoint.step_id,
+      replay: replayResult,
+    };
+    return restored;
+  }
+
+  return {
+    error: 'No commit hash available for this checkpoint',
+    plan_id: input.checkpoint.plan_id,
+    step_id: input.checkpoint.step_id,
+    replay: replayResult,
   };
 }

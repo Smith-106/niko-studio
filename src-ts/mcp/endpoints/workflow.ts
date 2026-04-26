@@ -6,6 +6,7 @@
  */
 
 import type { HttpRequest, HttpResponse, HttpRequestTraceContext } from '../http-types';
+import type { WorkflowRecommendationInput } from '../../workflow/engine/engine-contracts.js';
 
 import { jsonResponse, parseBody } from '../http-types';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
@@ -66,7 +67,7 @@ export async function workflowPlanEndpoint(request: HttpRequest): Promise<HttpRe
   const result = await workflowPlan({
     task: (body.task as string) ?? '',
     level: body.level as string | undefined,
-    recommendations: body.recommendations as unknown[] | undefined,
+    recommendations: body.recommendations as WorkflowRecommendationInput | undefined,
     traceContext: resolveTraceContext(request),
     genre: body.genre as string | undefined,
     workspace,
@@ -80,7 +81,7 @@ export async function workflowExecuteEndpoint(request: HttpRequest): Promise<Htt
   const result = await workflowExecute({
     planId: (body.plan_id as string) ?? '',
     stepId: body.step_id as string | undefined,
-    recommendations: body.recommendations as unknown[] | undefined,
+    recommendations: body.recommendations as WorkflowRecommendationInput | undefined,
     confirmToken: body.confirm_token as string | undefined,
     workspace,
   });
@@ -161,7 +162,7 @@ export async function workflowSchedulerRunNowEndpoint(request: HttpRequest): Pro
   const result = await workflowSchedulerRunNow({
     taskId: (body.task_id as string) ?? '',
     confirmToken: body.confirm_token as string | undefined,
-    recommendations: body.recommendations as unknown[] | undefined,
+    recommendations: body.recommendations as WorkflowRecommendationInput | undefined,
     workspace,
   });
   return jsonResponse({ ...result, workspace });

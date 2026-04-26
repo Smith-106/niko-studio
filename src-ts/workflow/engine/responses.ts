@@ -1,14 +1,20 @@
-interface WorkflowExecutionResponseBaseInput {
-  stepId: string;
-  stepName: string;
-  planStatus: string;
-  runnerState: string;
-  remainingSteps: number;
-  executionMode: string;
-  observabilityMetrics: unknown;
-  budgetGuardrail: Record<string, unknown>;
-  stateResumeMetadata: Record<string, unknown>;
-}
+import type {
+  WorkflowExecuteAllStepsCompletedResult,
+  WorkflowExecuteCompletedResult,
+  WorkflowExecuteFailureResult,
+  WorkflowExecuteResult,
+  WorkflowExecuteWaitingConfirmationResult,
+  WorkflowLifecycleActionResult,
+  WorkflowLifecycleStatusResult,
+  WorkflowPlanResult,
+  WorkflowPlanStatusResult,
+  WorkflowRestoreCheckpointResult,
+  WorkflowRouteResult,
+  WorkflowRunBlockedResult,
+  WorkflowRunCompletedResult,
+  WorkflowRunFailedResult,
+  WorkflowStreamEvent,
+} from './engine-contracts.js';
 
 interface WorkflowLifecycleResponseBaseInput {
   planId: string;
@@ -26,72 +32,58 @@ interface WorkflowLifecycleResponseBaseInput {
   handoffPackage: Record<string, unknown>;
 }
 
+export function buildWorkflowRouteResponse(input: WorkflowRouteResult): WorkflowRouteResult {
+  return structuredClone(input);
+}
+
+export function buildWorkflowPlanResponse(input: WorkflowPlanResult): WorkflowPlanResult {
+  return structuredClone(input);
+}
+
+export function buildWorkflowPlanStatusResponse(
+  input: WorkflowPlanStatusResult,
+): WorkflowPlanStatusResult {
+  return structuredClone(input);
+}
+
 export function buildWorkflowWaitingConfirmationResponse(
-  input: WorkflowExecutionResponseBaseInput & { gate: Record<string, unknown> },
-): Record<string, unknown> {
+  input: Omit<WorkflowExecuteWaitingConfirmationResult, 'status'>,
+): WorkflowExecuteWaitingConfirmationResult {
   return {
-    step_id: input.stepId,
-    step_name: input.stepName,
+    ...structuredClone(input),
     status: 'waiting_confirmation',
-    gate: input.gate,
-    plan_status: input.planStatus,
-    runner_state: input.runnerState,
-    remaining_steps: input.remainingSteps,
-    execution_mode: input.executionMode,
-    observability_metrics: input.observabilityMetrics,
-    budget_guardrail: input.budgetGuardrail,
-    ...input.stateResumeMetadata,
   };
 }
 
 export function buildWorkflowExecutionSuccessResponse(
-  input: WorkflowExecutionResponseBaseInput & {
-    result: unknown;
-    gate: Record<string, unknown>;
-  },
-): Record<string, unknown> {
+  input: Omit<WorkflowExecuteCompletedResult, 'status'>,
+): WorkflowExecuteCompletedResult {
   return {
-    step_id: input.stepId,
-    step_name: input.stepName,
+    ...structuredClone(input),
     status: 'completed',
-    result: input.result,
-    gate: input.gate,
-    plan_status: input.planStatus,
-    runner_state: input.runnerState,
-    remaining_steps: input.remainingSteps,
-    execution_mode: input.executionMode,
-    observability_metrics: input.observabilityMetrics,
-    budget_guardrail: input.budgetGuardrail,
-    ...input.stateResumeMetadata,
+  };
+}
+
+export function buildWorkflowExecutionCompleteResponse(
+  input: Omit<WorkflowExecuteAllStepsCompletedResult, 'status'>,
+): WorkflowExecuteAllStepsCompletedResult {
+  return {
+    ...structuredClone(input),
+    status: 'completed',
   };
 }
 
 export function buildWorkflowExecutionErrorResponse(
-  input: {
-    error: string;
-    stepId: string;
-    executionMode: string;
-    observabilityMetrics: unknown;
-    budgetGuardrail: Record<string, unknown>;
-    stateResumeMetadata: Record<string, unknown>;
-  },
-): Record<string, unknown> {
-  return {
-    error: input.error,
-    step_id: input.stepId,
-    failure: { phase: 'executing', reason: input.error },
-    execution_mode: input.executionMode,
-    observability_metrics: input.observabilityMetrics,
-    budget_guardrail: input.budgetGuardrail,
-    ...input.stateResumeMetadata,
-  };
+  input: WorkflowExecuteFailureResult,
+): WorkflowExecuteFailureResult {
+  return structuredClone(input);
 }
 
 export function buildWorkflowLifecycleStatusResponse(
   input: WorkflowLifecycleResponseBaseInput & {
     sessionStatus: string | null;
   },
-): Record<string, unknown> {
+): WorkflowLifecycleStatusResult {
   return {
     plan_id: input.planId,
     action: 'status',
@@ -115,7 +107,7 @@ export function buildWorkflowLifecycleActionResponse(
     checkpointId?: string;
     sessionStatus: string | null;
   },
-): Record<string, unknown> {
+): WorkflowLifecycleActionResult {
   return {
     plan_id: input.planId,
     action: input.action,
@@ -133,4 +125,38 @@ export function buildWorkflowLifecycleActionResponse(
     handoff_package: input.handoffPackage,
     session_status: input.sessionStatus,
   };
+}
+
+export function buildWorkflowRunCompletedResponse(
+  input: WorkflowRunCompletedResult,
+): WorkflowRunCompletedResult {
+  return structuredClone(input);
+}
+
+export function buildWorkflowRunBlockedResponse(
+  input: WorkflowRunBlockedResult,
+): WorkflowRunBlockedResult {
+  return structuredClone(input);
+}
+
+export function buildWorkflowRunFailedResponse(
+  input: WorkflowRunFailedResult,
+): WorkflowRunFailedResult {
+  return structuredClone(input);
+}
+
+export function buildWorkflowStreamEvent<T extends WorkflowStreamEvent>(event: T): T {
+  return structuredClone(event);
+}
+
+export function buildWorkflowRestoreCheckpointResponse<T extends WorkflowRestoreCheckpointResult>(
+  result: T,
+): T {
+  return structuredClone(result);
+}
+
+export function isWorkflowExecutionErrorResult(
+  result: WorkflowExecuteResult,
+): result is WorkflowExecuteFailureResult | { error: string } {
+  return 'error' in result;
 }

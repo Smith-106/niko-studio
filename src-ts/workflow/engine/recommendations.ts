@@ -1,4 +1,5 @@
 import * as crypto from 'crypto';
+import type { WorkflowRecommendationInput } from './engine-contracts.js';
 
 export interface WorkflowRecommendationRecord extends Record<string, unknown> {
   id: string;
@@ -19,7 +20,7 @@ export interface WorkflowPlanHashable {
 }
 
 export function canonicalizeWorkflowRecommendations(
-  recommendations?: unknown[],
+  recommendations?: WorkflowRecommendationInput,
 ): WorkflowRecommendationRecord[] {
   const normalized: WorkflowRecommendationRecord[] = [];
   for (let index = 0; index < (recommendations ?? []).length; index++) {

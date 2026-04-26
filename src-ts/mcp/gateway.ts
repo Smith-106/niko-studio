@@ -1,10 +1,20 @@
 /**
- * MCP module - Model Context Protocol Gateway
+ * MCP module - Model Context Protocol Gateway (legacy compatibility)
  *
- * Migrated from src/mcp/.
+ * Legacy gateway exports are retained for compatibility only.
+ * Canonical runtime authority lives in gateway-bootstrap.ts + config.ts.
  */
 
+import type { Server } from 'node:http';
+
 import { getConfig } from '../config';
+import {
+  resolveCorsOrigins,
+  resolveGatewayHostPort as resolveCanonicalGatewayHostPort,
+  resolveReloadEnabled as resolveCanonicalReloadEnabled,
+} from './config';
+import { type GatewayServerStartOptions, startGatewayServer } from './gateway-bootstrap';
+import { getMetricsSnapshot as getCanonicalMetricsSnapshot } from './metrics';
 
 // ============================================================
 // Types
@@ -89,36 +99,31 @@ export interface MetricsResponse {
 }
 
 // ============================================================
-// Config
+// Legacy compatibility config wrappers
 // ============================================================
 
 export function createDefaultConfig(): McpConfig {
+  const { host, port } = resolveCanonicalGatewayHostPort();
   return {
-    gatewayHost: process.env.MCP_GATEWAY_HOST || '127.0.0.1',
-    gatewayPort: parseInt(process.env.MCP_GATEWAY_PORT || '8000', 10),
-    reloadEnabled: process.env.MCP_RELOAD === 'true',
-    corsOrigins: [
-      'http://localhost',
-      'http://localhost:8000',
-      'http://127.0.0.1',
-      'http://127.0.0.1:8000',
-    ],
+    gatewayHost: host,
+    gatewayPort: port,
+    reloadEnabled: resolveCanonicalReloadEnabled(),
+    corsOrigins: resolveCorsOrigins(),
     maxConnections: 100,
     requestTimeout: 30000,
   };
 }
 
 export function resolveGatewayHostPort(): { host: string; port: number } {
-  const config = createDefaultConfig();
-  return { host: config.gatewayHost, port: config.gatewayPort };
+  return resolveCanonicalGatewayHostPort();
 }
 
 export function resolveReloadEnabled(): boolean {
-  return createDefaultConfig().reloadEnabled;
+  return resolveCanonicalReloadEnabled();
 }
 
 // ============================================================
-// MCP Contract
+// Legacy MCP Contract (compatibility only)
 // ============================================================
 
 export function getMcpContract(): McpContract {
@@ -271,10 +276,8 @@ export class McpMetricsCollector {
 }
 
 // ============================================================
-// Gateway
+// Legacy gateway adapter (delegates to canonical bootstrap)
 // ============================================================
-
-import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http';
 
 export class McpGateway {
   private config: McpConfig;
@@ -295,72 +298,39 @@ export class McpGateway {
   }
 
   async start(): Promise<void> {
-    this.server = createServer(async (req, res) => {
-      await this.handleRequest(req, res);
-    });
+    if (this.requestHandlers.size > 0) {
+      console.warn('Legacy McpGateway.registerHandler is ignored; route-based gateway authority is canonical.');
+    }
 
-    this.server.listen(this.config.gatewayPort, this.config.gatewayHost, () => {
-      console.log(`MCP Gateway listening on ${this.config.gatewayHost}:${this.config.gatewayPort}`);
-    });
+    const options: GatewayServerStartOptions = {
+      host: this.config.gatewayHost,
+      port: this.config.gatewayPort,
+    };
+    this.server = await startGatewayServer(options);
+    this.runtime.connect(`legacy-${Date.now()}`);
+    this.runtime.touch();
   }
 
   async stop(): Promise<void> {
     if (this.server) {
-      this.server.close();
+      await new Promise<void>((resolve, reject) => {
+        this.server?.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
       this.server = null;
     }
     this.runtime.disconnect();
   }
 
-  private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const startTime = Date.now();
-
-    try {
-      const body = await this.readBody(req);
-      const mcpRequest = JSON.parse(body) as McpRequest;
-
-      const handler = this.requestHandlers.get(mcpRequest.method);
-      let mcpResponse: McpResponse;
-
-      if (handler) {
-        mcpResponse = await handler(mcpRequest);
-      } else {
-        mcpResponse = {
-          jsonrpc: '2.0',
-          id: mcpRequest.id,
-          error: { code: -32601, message: `Method not found: ${mcpRequest.method}` },
-        };
-      }
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(mcpResponse));
-
-      this.metrics.recordRequest(Date.now() - startTime);
-      this.runtime.touch();
-    } catch (e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        jsonrpc: '2.0',
-        id: null,
-        error: { code: -32603, message: String(e) },
-      }));
-      this.metrics.recordRequest(Date.now() - startTime, true);
-    }
-  }
-
-  private readBody(req: IncomingMessage): Promise<string> {
-    return new Promise((resolve, reject) => {
-      let body = '';
-      req.on('data', (chunk: string) => { body += chunk; });
-      req.on('end', () => resolve(body));
-      req.on('error', reject);
-    });
-  }
-
   getHealth(): HealthResponse {
     const version = String(getConfig().version ?? '1.0.0');
     return {
-      status: this.runtime.connectionState === 'connected' ? 'ok' : 'degraded',
+      status: this.server ? 'ok' : 'degraded',
       version,
       mcp_runtime: this.runtime.toJSON(),
       uptime_seconds: this.metrics.getMetrics().uptimeSeconds,
@@ -368,32 +338,31 @@ export class McpGateway {
   }
 
   getMetricsSnapshot(): MetricsResponse {
+    const snapshot = getCanonicalMetricsSnapshot();
+    const requestsTotal = Number(snapshot.requests_total ?? 0);
+    const requestsFailedTotal = Number(snapshot.requests_failed_total ?? 0);
+    const latencyMsAvg = Number(snapshot.latency_ms_avg ?? 0);
+    const latencyMsMax = Number(snapshot.latency_ms_max ?? 0);
+
     return {
-      metrics: this.metrics.getMetrics(),
+      metrics: {
+        requestsTotal,
+        requestsFailedTotal,
+        latencyMsAvg,
+        latencyMsMax,
+        uptimeSeconds: this.metrics.getMetrics().uptimeSeconds,
+      },
       runtime: this.runtime.toJSON(),
     };
   }
 }
 
 // ============================================================
-// Sidecar Entry
+// Sidecar Entry (legacy compatibility)
 // ============================================================
 
 export async function startSidecar(): Promise<void> {
   const gateway = new McpGateway();
-
-  gateway.registerHandler('initialize', async (req) => ({
-    jsonrpc: '2.0',
-    id: req.id,
-    result: { protocolVersion: '2024-11-05', },
-  }));
-
-  gateway.registerHandler('tools/list', async () => ({
-    jsonrpc: '2.0',
-    id: 0,
-    result: { tools: [] },
-  }));
-
   await gateway.start();
-  console.log('MCP Sidecar started');
+  console.log('Legacy MCP sidecar started via canonical gateway bootstrap');
 }

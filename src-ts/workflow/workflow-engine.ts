@@ -28,9 +28,40 @@ import {
   buildWorkflowPersistedStateSnapshot,
   buildWorkflowRuntimeResponseContext,
   buildWorkflowStateResumeContract,
+  normalizeWorkflowExecuteRequest,
+  normalizeWorkflowPlanRequest,
+  normalizeWorkflowRouteRequest,
+  normalizeWorkflowRunRequest,
+  normalizeWorkflowRunStreamRequest,
+  normalizeWorkflowRunStreamWithExecutionContextRequest,
+  normalizeWorkflowRunWithExecutionContextRequest,
+  type WorkflowCheckpointResult,
+  type WorkflowCheckpointSummary,
+  type WorkflowErrorResult,
+  type WorkflowExecuteRequest,
+  type WorkflowExecuteResult,
+  type WorkflowExecutionContextPayload,
   type WorkflowExecutionResponseContext,
+  type WorkflowLifecycleActionResult,
+  type WorkflowLifecycleResult,
+  type WorkflowPlanResult,
   type WorkflowPlanRuntimeResponseContext,
   type WorkflowPlanRuntimeState,
+  type WorkflowPlanStatusResult,
+  type WorkflowPlanRequest,
+  type WorkflowQuickRollbackResult,
+  type WorkflowRecommendationInput,
+  type WorkflowRestoreCheckpointResult,
+  type WorkflowRouteRequest,
+  type WorkflowRouteResult,
+  type WorkflowRunRequest,
+  type WorkflowRunResult,
+  type WorkflowRunStreamRequest,
+  type WorkflowRunStreamWithExecutionContextRequest,
+  type WorkflowRunWithExecutionContextRequest,
+  type WorkflowStateResumeMetadata,
+  type WorkflowStreamEvent,
+  type WorkflowTemplateStep,
 } from './engine/engine-contracts.js';
 import {
   bindWorkflowPlanAuthority,
@@ -58,26 +89,40 @@ import {
   isDestructiveWorkflowStep,
   resolveAdaptiveWorkflowLevel,
   resolveWorkflowGateProfile,
+  restoreWorkflowCheckpoint,
+  type WorkflowCheckpointLike,
 } from './engine/risk.js';
 import {
-  buildWorkflowExecutionErrorResponse,
-  buildWorkflowExecutionSuccessResponse,
-  buildWorkflowWaitingConfirmationResponse,
+  buildWorkflowPlanResponse,
+  buildWorkflowPlanStatusResponse,
+  buildWorkflowRouteResponse,
 } from './engine/responses.js';
 import {
+  buildWorkflowAllStepsCompletedResult,
+  buildWorkflowCompletedStepResult,
+  buildWorkflowExecutionFailureResult,
+  buildWorkflowRunBlockedResult,
+  buildWorkflowRunCompletedResult,
+  buildWorkflowRunFailedResult,
+  buildWorkflowStreamPlanBlockedEvent,
+  buildWorkflowStreamPlanCompleteEvent,
+  buildWorkflowStreamPlanCreatedEvent,
+  buildWorkflowStreamPlanCreationErrorEvent,
+  buildWorkflowStreamPlanErrorEvent,
+  buildWorkflowStreamStepCompleteEvent,
+  buildWorkflowStreamStepStartEvent,
+  buildWorkflowWaitingConfirmationResult,
   syncWorkflowSessionContext,
   writeWorkflowStateArtifacts,
 } from './engine/session-io.js';
 import {
   areAllWorkflowStepsDone,
   buildWorkflowPauseReplayPayload,
+  executeWorkflowLifecycleTransition,
   findIncompleteWorkflowDependency,
   normalizeWorkflowLifecycleAction,
   resolveExecutableWorkflowStep,
-  resolveLifecycleTargetState,
   resolveWorkflowLifecycleSessionStatus,
-  shouldCreateWorkflowPauseCheckpoint,
-  shouldPersistWorkflowHandoff,
 } from './engine/flow-control.js';
 import {
   applyWorkflowPreflightExecutionMode,
@@ -93,6 +138,7 @@ import {
   applyWorkflowStepTransition,
   applyWorkflowTriageTransition,
   canonicalWorkflowStepStatus,
+  executeWorkflowStepWithTransitions,
   remainingWorkflowSteps,
 } from './engine/runtime-state.js';
 import { SessionManager } from './session/session-manager.js';
@@ -244,8 +290,6 @@ interface WorkflowExecutionContext {
 interface ResolvedWorkflowPlanContext {
   plan: WorkflowPlan;
 }
-
-type WorkflowExecutionContextPayload = Record<string, unknown>;
 
 export class WorkflowStep {
   id: string;
@@ -612,108 +656,178 @@ export class WorkflowEngine {
   // ---- Public API ----
 
   async run(
-    task: string,
+    taskOrRequest: string | WorkflowRunRequest,
     level?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     executionContext?: WorkflowExecutionContextPayload,
-  ): Promise<Record<string, unknown>> {
-    const plan = await this.plan(task, level, recommendations, executionContext);
-    const planId = String(plan['plan_id'] ?? '');
-    if (!planId) return { error: 'Plan creation failed' };
+  ): Promise<WorkflowRunResult> {
+    const request = normalizeWorkflowRunRequest(
+      taskOrRequest,
+      level,
+      recommendations,
+      executionContext,
+    );
+    const plan = await this.plan(request);
+    const planId = plan.plan_id;
+    if (!planId) {
+      return buildWorkflowRunFailedResult({
+        planId: '',
+        plan: plan as WorkflowPlanResult,
+        error: 'Plan creation failed',
+      });
+    }
 
-    const maxIterations = Math.max(Number(plan['total_steps'] ?? 0) + 5, 5);
-    let latestResult: Record<string, unknown> = {};
+    const maxIterations = Math.max(plan.total_steps + 5, 5);
+    let latestResult: WorkflowExecuteResult = { error: 'Workflow did not execute' };
 
     for (let i = 0; i < maxIterations; i++) {
       latestResult = await this.execute(planId);
       if ('error' in latestResult) {
-        return this._withContract({ status: 'failed', plan_id: planId, plan, error: latestResult['error'] });
+        return buildWorkflowRunFailedResult({
+          planId,
+          plan,
+          error: latestResult.error,
+        });
       }
-      if (['waiting_confirmation', 'preflight_blocked', 'gate_blocked'].includes(String(latestResult['status']))) {
-        return this._withContract({ status: 'blocked', plan_id: planId, plan, last_step: latestResult, final_status: this.getPlanStatus(planId) });
+      if (['waiting_confirmation', 'preflight_blocked', 'gate_blocked'].includes(String(latestResult.status))) {
+        const finalStatus = this.getPlanStatus(planId);
+        if ('error' in finalStatus) {
+          return buildWorkflowRunFailedResult({
+            planId,
+            plan,
+            error: finalStatus.error,
+          });
+        }
+        return buildWorkflowRunBlockedResult({
+          planId,
+          plan,
+          lastStep: latestResult,
+          finalStatus,
+        });
       }
-      if (
-        latestResult['plan_status'] === 'completed'
-        || (latestResult['status'] === 'completed' && Number(latestResult['remaining_steps'] ?? 1) === 0)
-      ) break;
+      if (latestResult.status === 'completed') {
+        if (!('remaining_steps' in latestResult) || Number(latestResult.remaining_steps ?? 0) === 0) {
+          break;
+        }
+      }
     }
 
     const finalStatus = this.getPlanStatus(planId);
-    return this._withContract({ status: 'completed', plan_id: planId, plan, last_step: latestResult, final_status: finalStatus });
+    if ('error' in finalStatus) {
+      return buildWorkflowRunFailedResult({
+        planId,
+        plan,
+        error: finalStatus.error,
+      });
+    }
+
+    return buildWorkflowRunCompletedResult({
+      planId,
+      plan,
+      lastStep: latestResult,
+      finalStatus,
+    });
   }
 
   async runWithExecutionContext(
-    task: string,
+    taskOrRequest: string | WorkflowRunWithExecutionContextRequest,
     executionContext?: WorkflowExecutionContextPayload,
     level?: string,
-    recommendations?: unknown[],
-  ): Promise<Record<string, unknown>> {
-    return this.run(task, level, recommendations, executionContext);
+    recommendations?: WorkflowRecommendationInput,
+  ): Promise<WorkflowRunResult> {
+    const request = normalizeWorkflowRunWithExecutionContextRequest(
+      taskOrRequest,
+      executionContext,
+      level,
+      recommendations,
+    );
+    return this.run(request);
   }
 
   async *runStream(
-    task: string,
+    taskOrRequest: string | WorkflowRunStreamRequest,
     level?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     executionContext?: WorkflowExecutionContextPayload,
-  ): AsyncGenerator<Record<string, unknown>> {
-    const plan = await this.plan(task, level, recommendations, executionContext);
-    const planId = String(plan['plan_id'] ?? '');
+  ): AsyncGenerator<WorkflowStreamEvent> {
+    const request = normalizeWorkflowRunStreamRequest(
+      taskOrRequest,
+      level,
+      recommendations,
+      executionContext,
+    );
+    const plan = await this.plan(request);
+    const planId = plan.plan_id;
     if (!planId) {
-      yield this._withContract({ type: 'error', status: 'failed', error: 'Plan creation failed' });
+      yield buildWorkflowStreamPlanCreationErrorEvent('Plan creation failed');
       return;
     }
 
-    yield this._withContract({ type: 'plan_created', plan_id: planId, plan });
+    yield buildWorkflowStreamPlanCreatedEvent(planId, plan);
 
-    const maxIterations = Math.max(Number(plan['total_steps'] ?? 0) + 5, 5);
-    let latestResult: Record<string, unknown> = {};
+    const maxIterations = Math.max(plan.total_steps + 5, 5);
+    let latestResult: WorkflowExecuteResult = { error: 'Workflow did not execute' };
 
     for (let iteration = 0; iteration < maxIterations; iteration++) {
       const currentPlan = this.plans.get(planId);
-      if (currentPlan && currentPlan.steps.length > 0) {
-        const currentStep = currentPlan.steps[currentPlan.steps.length - 1];
-        yield this._withContract({ type: 'step_start', plan_id: planId, step_id: currentStep.id, step_name: currentStep.name, iteration });
+      const currentStep = currentPlan?.steps.find(
+        (step) => this._canonicalStepStatus(step.status) === 'planned',
+      );
+      if (currentStep) {
+        yield buildWorkflowStreamStepStartEvent(planId, currentStep.id, currentStep.name, iteration);
       }
 
       latestResult = await this.execute(planId);
-      yield this._withContract({ type: 'step_complete', plan_id: planId, ...latestResult });
+      yield buildWorkflowStreamStepCompleteEvent(planId, latestResult);
 
       if ('error' in latestResult) {
-        yield this._withContract({ type: 'plan_error', plan_id: planId, error: latestResult['error'] });
+        yield buildWorkflowStreamPlanErrorEvent(planId, latestResult.error);
         return;
       }
-      if (['waiting_confirmation', 'preflight_blocked', 'gate_blocked'].includes(String(latestResult['status']))) {
-        yield this._withContract({ type: 'plan_blocked', plan_id: planId, status: latestResult['status'], last_step: latestResult });
+      if (['waiting_confirmation', 'preflight_blocked', 'gate_blocked'].includes(String(latestResult.status))) {
+        yield buildWorkflowStreamPlanBlockedEvent(planId, String(latestResult.status), latestResult);
         return;
       }
-      if (
-        latestResult['plan_status'] === 'completed'
-        || (latestResult['status'] === 'completed' && Number(latestResult['remaining_steps'] ?? 1) === 0)
-      ) break;
+      if (latestResult.status === 'completed') {
+        if (!('remaining_steps' in latestResult) || Number(latestResult.remaining_steps ?? 0) === 0) {
+          break;
+        }
+      }
     }
 
     const finalStatus = this.getPlanStatus(planId);
-    yield this._withContract({ type: 'plan_complete', plan_id: planId, status: 'completed', plan, last_step: latestResult, final_status: finalStatus });
+    if ('error' in finalStatus) {
+      yield buildWorkflowStreamPlanErrorEvent(planId, finalStatus.error);
+      return;
+    }
+
+    yield buildWorkflowStreamPlanCompleteEvent(planId, plan, latestResult, finalStatus);
   }
 
   async *runStreamWithExecutionContext(
-    task: string,
+    taskOrRequest: string | WorkflowRunStreamWithExecutionContextRequest,
     executionContext?: WorkflowExecutionContextPayload,
     level?: string,
-    recommendations?: unknown[],
-  ): AsyncGenerator<Record<string, unknown>> {
-    yield* this.runStream(task, level, recommendations, executionContext);
+    recommendations?: WorkflowRecommendationInput,
+  ): AsyncGenerator<WorkflowStreamEvent> {
+    const request = normalizeWorkflowRunStreamWithExecutionContextRequest(
+      taskOrRequest,
+      executionContext,
+      level,
+      recommendations,
+    );
+    yield* this.runStream(request);
   }
 
-  private _withContract(payload: Record<string, unknown>): Record<string, unknown> {
-    return ensureContractPayload(payload);
+  private _withContract<T extends Record<string, unknown>>(payload: T): T {
+    return ensureContractPayload(payload) as T;
   }
 
   // ---- Routing ----
 
-  async route(task: string): Promise<Record<string, unknown>> {
-    const routingScore = this.router.scoreRouteFeatures(task);
+  async route(taskOrRequest: string | WorkflowRouteRequest): Promise<WorkflowRouteResult> {
+    const request = normalizeWorkflowRouteRequest(taskOrRequest);
+    const routingScore = this.router.scoreRouteFeatures(request.task);
     const matchedLevel = routingScore.matched_level as number;
 
     const levelDescriptions: Record<number, string> = {
@@ -724,20 +838,20 @@ export class WorkflowEngine {
       [WorkflowLevel.L5_COORDINATOR]: '全书规划模式 - 完整工作流，大纲到成稿',
     };
 
-    return {
+    return buildWorkflowRouteResponse({
       level: levelToLabel(matchedLevel),
       description: levelDescriptions[matchedLevel],
       suggested_workflow: this._getWorkflowTemplate(matchedLevel),
       reason: `匹配关键词得分: ${routingScore.legacy_top_score} | 结构化得分: ${routingScore.structured_top_score}`,
-      matched_features: routingScore.matched_features,
-      score: routingScore.structured_top_score,
+      matched_features: routingScore.matched_features as Record<string, unknown>[],
+      score: routingScore.structured_top_score as number,
       final_level: levelToLabel(matchedLevel),
       routing_diagnostics: routingScore,
-    };
+    });
   }
 
-  private _getWorkflowTemplate(level: number): Record<string, string>[] {
-    const templates: Record<number, Record<string, string>[]> = {
+  private _getWorkflowTemplate(level: number): WorkflowTemplateStep[] {
+    const templates: Record<number, WorkflowTemplateStep[]> = {
       [WorkflowLevel.L1_RAPID]: [{ name: 'answer', description: '直接回答问题' }],
       [WorkflowLevel.L2_LITE]: [
         { name: 'analyze', description: '分析任务需求' },
@@ -777,18 +891,25 @@ export class WorkflowEngine {
   // ---- Planning ----
 
   async plan(
-    task: string,
+    taskOrRequest: string | WorkflowPlanRequest,
     level?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     executionContext?: WorkflowExecutionContextPayload,
-  ): Promise<Record<string, unknown>> {
-    if (!level) {
-      const routing = await this.route(task);
-      level = routing['level'] as string;
+  ): Promise<WorkflowPlanResult> {
+    const request = normalizeWorkflowPlanRequest(
+      taskOrRequest,
+      level,
+      recommendations,
+      executionContext,
+    );
+    let resolvedLevel = request.level;
+    if (!resolvedLevel) {
+      const routing = await this.route(request.task);
+      resolvedLevel = routing.level;
     }
 
-    const workflowLevel = this._levelFromLabel(level);
-    const qualityMetrics = this._buildQualityMetrics(task);
+    const workflowLevel = this._levelFromLabel(resolvedLevel);
+    const qualityMetrics = this._buildQualityMetrics(request.task);
     const lane = this._determineLane(qualityMetrics);
     const adaptiveLevel = this._resolveAdaptiveLevel(workflowLevel, lane, qualityMetrics);
 
@@ -799,10 +920,12 @@ export class WorkflowEngine {
       quality_metrics: qualityMetrics,
       gate_profile: this._resolveGateProfile(adaptiveLevel, lane, qualityMetrics),
     };
-    if (executionContext && Object.keys(executionContext).length > 0) {
-      templateMeta['execution_context'] = structuredClone(executionContext);
+    if (request.executionContext && Object.keys(request.executionContext).length > 0) {
+      templateMeta.execution_context = structuredClone(request.executionContext);
     }
-    if (adaptiveLevel !== workflowLevel) (templateMeta as Record<string, unknown>)['adaptive_from_level'] = levelToLabel(workflowLevel);
+    if (adaptiveLevel !== workflowLevel) {
+      templateMeta.adaptive_from_level = levelToLabel(workflowLevel);
+    }
 
     const planId = generateId();
     const steps: WorkflowStep[] = template.map((t, i) => new WorkflowStep({
@@ -812,11 +935,11 @@ export class WorkflowEngine {
       dependencies: i > 0 ? [`${planId}-${i - 1}`] : [],
     }));
 
-    const canonicalRecommendations = this._canonicalizeRecommendations(recommendations);
+    const canonicalRecommendations = this._canonicalizeRecommendations(request.recommendations);
 
     const planObj = new WorkflowPlan({
       id: planId,
-      task,
+      task: request.task,
       level: levelToLabel(adaptiveLevel),
       steps,
       template_meta: templateMeta,
@@ -835,7 +958,7 @@ export class WorkflowEngine {
     this.plans.set(planId, planObj);
     this._persistPlanState(planObj, 'planned');
 
-    return this._withContract({
+    return buildWorkflowPlanResponse({
       plan_id: planId,
       level: levelToLabel(adaptiveLevel),
       template_meta: templateMeta,
@@ -844,9 +967,15 @@ export class WorkflowEngine {
       recommendations_frozen: planObj.recommendations_frozen,
       plan_hash: planObj.plan_hash,
       execution_mode: executionMode,
-      observability_metrics: observability['aggregate'],
+      observability_metrics: observability.aggregate,
       budget_guardrail: budgetGuardrail,
-      steps: steps.map(s => ({ id: s.id, name: s.name, description: s.description, dependencies: s.dependencies, status: s.status })),
+      steps: steps.map((s) => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        dependencies: s.dependencies,
+        status: s.status,
+      })),
       total_steps: steps.length,
     });
   }
@@ -857,7 +986,7 @@ export class WorkflowEngine {
     planId: string,
     authority?: WorkflowAuthority | null,
     extraErrorFields: Record<string, unknown> = {},
-  ): { response?: Record<string, unknown>; context?: ResolvedWorkflowPlanContext } {
+  ): { response?: WorkflowErrorResult; context?: ResolvedWorkflowPlanContext } {
     const plan = this.plans.get(planId);
     if (!plan) {
       return { response: { error: `Plan '${planId}' not found`, ...extraErrorFields } };
@@ -876,13 +1005,9 @@ export class WorkflowEngine {
   }
 
   private _prepareExecutionContext(
-    planId: string,
-    stepId: string | undefined,
-    recommendations: unknown[] | undefined,
-    confirmToken: string | undefined,
-    authority?: WorkflowAuthority | null,
-  ): { response?: Record<string, unknown>; context?: WorkflowExecutionContext } {
-    const managedPlan = this._resolveManagedPlan(planId, authority);
+    request: WorkflowExecuteRequest,
+  ): { response?: WorkflowExecuteResult; context?: WorkflowExecutionContext } {
+    const managedPlan = this._resolveManagedPlan(request.planId, request.authority);
     if (managedPlan.response) {
       return { response: managedPlan.response };
     }
@@ -893,7 +1018,7 @@ export class WorkflowEngine {
 
     applyWorkflowRecommendationRefresh(
       plan,
-      recommendations,
+      request.recommendations,
       (items) => this._canonicalizeRecommendations(items),
       () => this._computePlanHash(plan),
     );
@@ -911,7 +1036,7 @@ export class WorkflowEngine {
 
     const stepResolution = resolveExecutableWorkflowStep(
       plan.steps,
-      stepId,
+      request.stepId,
       (status) => this._canonicalStepStatus(status),
     );
     if (stepResolution.error) {
@@ -923,14 +1048,13 @@ export class WorkflowEngine {
       this._persistPlanState(plan, 'done');
       const responseContext = this._executionResponseContext(plan, preflightRuntime);
       return {
-        response: {
-          status: 'completed',
+        response: buildWorkflowAllStepsCompletedResult({
           message: 'All steps completed',
-          execution_mode: responseContext.executionMode,
-          observability_metrics: responseContext.observabilityMetrics,
-          budget_guardrail: responseContext.budgetGuardrail,
-          ...responseContext.stateResumeMetadata,
-        },
+          executionMode: responseContext.executionMode,
+          observabilityMetrics: responseContext.observabilityMetrics,
+          budgetGuardrail: responseContext.budgetGuardrail,
+          stateResumeMetadata: responseContext.stateResumeMetadata,
+        }),
       };
     }
 
@@ -946,14 +1070,16 @@ export class WorkflowEngine {
     if (plan.status === 'created') plan.status = 'running';
 
     const levelEnum = this._levelFromLabel(plan.level);
-    const gate = this._evaluateRiskGate(levelEnum, step, plan.recommendations, confirmToken);
-    plan.gate_decision = gate['decision'] as string;
+    const gate = this._evaluateRiskGate(levelEnum, step, plan.recommendations, request.confirmToken);
+    plan.gate_decision = String(gate.decision ?? WorkflowDecision.GO);
 
-    if (gate['confirm_required'] && !gate['confirmed']) {
+    if (gate.confirm_required && !gate.confirmed) {
+      // Hard guard: unconfirmed destructive/high-risk steps must stay NO_GO.
+      plan.gate_decision = WorkflowDecision.NO_GO;
       this._persistPlanState(plan, 'planned');
       const responseContext = this._executionResponseContext(plan, preflightRuntime);
       return {
-        response: this._withContract(buildWorkflowWaitingConfirmationResponse({
+        response: buildWorkflowWaitingConfirmationResult({
           stepId: step.id,
           stepName: step.name,
           gate,
@@ -964,7 +1090,7 @@ export class WorkflowEngine {
           observabilityMetrics: responseContext.observabilityMetrics,
           budgetGuardrail: responseContext.budgetGuardrail,
           stateResumeMetadata: responseContext.stateResumeMetadata,
-        })),
+        }),
       };
     }
 
@@ -982,46 +1108,40 @@ export class WorkflowEngine {
 
   private async _runExecutionStep(
     context: WorkflowExecutionContext,
-  ): Promise<Record<string, unknown>> {
-    const {
-      plan,
-      step,
-      gate,
-      preflightObservability,
-      preflightBudgetGuardrail,
-      preflightExecutionMode,
-    } = context;
-
-    try {
-      this._transitionStepState(plan, step, 'executing', 'execution_started');
-      const result = await this._executeStep(plan, step);
-      this._transitionStepState(plan, step, 'review', 'execution_review');
-      this._transitionStepState(plan, step, 'test', 'execution_test');
-      this._transitionStepState(plan, step, 'done', 'execution_completed');
-      return this._completeExecutionStep(plan, step, gate, result);
-    } catch (error) {
-      return this._failExecutionStep(plan, step, error, {
-        observability: preflightObservability,
-        budgetGuardrail: preflightBudgetGuardrail,
-        executionMode: preflightExecutionMode,
-      });
-    }
+  ): Promise<WorkflowExecuteResult> {
+    return executeWorkflowStepWithTransitions({
+      plan: context.plan,
+      step: context.step,
+      gate: context.gate,
+      executeStep: (plan, step) => this._executeStep(plan, step),
+      transitionStepState: (plan, step, targetStatus, reason) => {
+        this._transitionStepState(plan, step, targetStatus, reason);
+      },
+      completeExecutionStep: (plan, step, gate, result) => this._completeExecutionStep(plan, step, gate, result),
+      failExecutionStep: (plan, step, error, runtime) => this._failExecutionStep(plan, step, error, runtime),
+      runtime: {
+        observability: context.preflightObservability,
+        budgetGuardrail: context.preflightBudgetGuardrail,
+        executionMode: context.preflightExecutionMode,
+      },
+    });
   }
 
   async execute(
-    planId: string,
+    requestOrPlanId: string | WorkflowExecuteRequest,
     stepId?: string,
-    recommendations?: unknown[],
+    recommendations?: WorkflowRecommendationInput,
     confirmToken?: string,
     authority?: WorkflowAuthority | null,
-  ): Promise<Record<string, unknown>> {
-    const preparation = this._prepareExecutionContext(
-      planId,
+  ): Promise<WorkflowExecuteResult> {
+    const request = normalizeWorkflowExecuteRequest(
+      requestOrPlanId,
       stepId,
       recommendations,
       confirmToken,
       authority,
     );
+    const preparation = this._prepareExecutionContext(request);
     if (preparation.response) {
       return preparation.response;
     }
@@ -1030,11 +1150,11 @@ export class WorkflowEngine {
 
   // ---- Lifecycle ----
 
-  private _lifecycleStatus(plan: WorkflowPlan): Record<string, unknown> {
+  private _lifecycleStatus(plan: WorkflowPlan): WorkflowLifecycleResult {
     this._persistPlanState(
       plan,
-      String(plan.template_meta['current_phase'] ?? plan.status),
-      String(plan.template_meta['last_checkpoint_id'] ?? ''),
+      String(plan.template_meta.current_phase ?? plan.status),
+      String(plan.template_meta.last_checkpoint_id ?? ''),
     );
     return this._buildLifecycleStatusResponse(plan);
   }
@@ -1043,47 +1163,40 @@ export class WorkflowEngine {
     plan: WorkflowPlan,
     normalizedAction: string,
     triageState?: string,
-  ): Promise<Record<string, unknown>> {
-    const targetState = resolveLifecycleTargetState(normalizedAction);
-    if (!targetState) return { error: `Unsupported lifecycle action: ${normalizedAction}` };
-
-    let checkpointId: string | undefined;
-    if (shouldCreateWorkflowPauseCheckpoint(normalizedAction)) {
-      const checkpoint = await this.createCheckpoint(
-        `loop-pause:${plan.id}`,
-        false,
-        plan.id,
-        undefined,
-        buildWorkflowPauseReplayPayload(plan),
-      );
-      checkpointId = checkpoint['checkpoint_id'] as string;
-    }
-
-    let sessionLifecycle: Record<string, unknown> = {};
-    try {
-      sessionLifecycle = this._setRunnerState(
-        plan,
-        targetState,
-        checkpointId,
-        `lifecycle:${normalizedAction}`,
-      );
-      if (triageState) {
-        this._setTriageState(plan, triageState.trim().toLowerCase(), `lifecycle:${normalizedAction}`);
-      }
-    } catch (exc) {
-      return { error: String(exc) };
-    }
-
-    if (shouldPersistWorkflowHandoff(normalizedAction)) {
-      this._persistHandoffPackage(plan, normalizedAction);
-    }
-
-    return this._buildLifecycleActionResponse(
+  ): Promise<WorkflowLifecycleResult> {
+    return executeWorkflowLifecycleTransition({
       plan,
       normalizedAction,
-      checkpointId,
-      resolveWorkflowLifecycleSessionStatus(sessionLifecycle, plan.template_meta),
-    );
+      triageState,
+      createPauseCheckpoint: async (targetPlan) => {
+        const checkpoint = await this.createCheckpoint(
+          `loop-pause:${targetPlan.id}`,
+          false,
+          targetPlan.id,
+          undefined,
+          buildWorkflowPauseReplayPayload(targetPlan),
+        );
+        return checkpoint.checkpoint_id;
+      },
+      setRunnerState: (targetPlan, targetState, checkpointId, transitionReason) => this._setRunnerState(
+        targetPlan,
+        targetState,
+        checkpointId,
+        transitionReason,
+      ),
+      setTriageState: (targetPlan, targetState, transitionReason) => {
+        this._setTriageState(targetPlan, targetState, transitionReason);
+      },
+      persistHandoff: (targetPlan, trigger) => {
+        this._persistHandoffPackage(targetPlan, trigger);
+      },
+      buildActionResponse: (targetPlan, action, checkpointId, sessionStatus) => this._buildLifecycleActionResponse(
+        targetPlan,
+        action,
+        checkpointId,
+        sessionStatus,
+      ),
+    });
   }
 
   async lifecycle(
@@ -1091,7 +1204,7 @@ export class WorkflowEngine {
     action: string,
     triageState?: string,
     authority?: WorkflowAuthority | null,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<WorkflowLifecycleResult> {
     const managedPlan = this._resolveManagedPlan(planId, authority);
     if (managedPlan.response) {
       return managedPlan.response;
@@ -1113,7 +1226,7 @@ export class WorkflowEngine {
     planId?: string,
     stepId?: string,
     replayPayload?: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<WorkflowCheckpointResult> {
     const checkpointId = generateId();
     let commitHash: string | null = null;
 
@@ -1137,11 +1250,22 @@ export class WorkflowEngine {
       this._persistPlanState(this.plans.get(planId)!, undefined, checkpointId);
     }
 
-    return { checkpoint_id: checkpointId, commit_hash: commitHash, description, plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay_payload: checkpoint.replay_payload, created_at: checkpoint.created_at };
+    return {
+      checkpoint_id: checkpointId,
+      commit_hash: commitHash,
+      description,
+      plan_id: checkpoint.plan_id,
+      step_id: checkpoint.step_id,
+      replay_payload: checkpoint.replay_payload,
+      created_at: checkpoint.created_at,
+    };
   }
 
-  async restoreCheckpoint(checkpointId: string, confirmToken?: string): Promise<Record<string, unknown>> {
-    return this._withModuleLock(RECOVERY_WORKSPACE_LOCK, () => this._restoreCheckpointInternal(checkpointId, confirmToken));
+  async restoreCheckpoint(checkpointId: string, confirmToken?: string): Promise<WorkflowRestoreCheckpointResult> {
+    return this._withModuleLock(
+      RECOVERY_WORKSPACE_LOCK,
+      () => this._restoreCheckpointInternal(checkpointId, confirmToken),
+    );
   }
 
   async quickRollback(
@@ -1149,7 +1273,7 @@ export class WorkflowEngine {
     checkpointId: string,
     reason: string = '',
     authority?: WorkflowAuthority | null,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<WorkflowQuickRollbackResult | WorkflowErrorResult> {
     return this._withModuleLock(RECOVERY_WORKSPACE_LOCK, async () => {
       const managedPlan = this._resolveManagedPlan(planId, authority, { checkpoint_id: checkpointId });
       if (managedPlan.response) {
@@ -1158,11 +1282,11 @@ export class WorkflowEngine {
       const { plan } = managedPlan.context!;
 
       const restoreResult = await this._restoreCheckpointInternal(checkpointId, AUTO_ROLLBACK_CONFIRM_TOKEN);
-      const restored = restoreResult['status'] === 'restored';
+      const restored = restoreResult.status === 'restored';
       if (restored) {
         this._persistPlanState(
           plan,
-          String(plan.template_meta['current_phase'] ?? plan.status),
+          String(plan.template_meta.current_phase ?? plan.status),
           checkpointId,
         );
       }
@@ -1171,29 +1295,39 @@ export class WorkflowEngine {
   }
 
 
-  async listCheckpoints(limit: number = 10): Promise<Record<string, unknown>[]> {
+  async listCheckpoints(limit: number = 10): Promise<WorkflowCheckpointSummary[]> {
     return Array.from(this.checkpoints.values())
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, limit)
-      .map(c => ({ id: c.id, description: c.description, commit_hash: c.commit_hash, created_at: c.created_at }));
+      .map((c) => ({ id: c.id, description: c.description, commit_hash: c.commit_hash, created_at: c.created_at }));
   }
 
-  getPlanStatus(planId: string): Record<string, unknown> {
+  getPlanStatus(planId: string): WorkflowPlanStatusResult | WorkflowErrorResult {
     const plan = this.plans.get(planId);
     if (!plan) return { error: `Plan '${planId}' not found` };
 
     const runtime = this._planRuntimeContext(plan);
 
-    return this._withContract({
-      plan_id: plan.id, task: plan.task, level: plan.level, status: plan.status,
-      runner_state: plan.runner_state, triage_state: plan.triage_state, fix_status: plan.fix_status,
-      fix_owner: plan.fix_owner, template_meta: plan.template_meta, gate_decision: plan.gate_decision,
-      recommendations: plan.recommendations, recommendations_frozen: plan.recommendations_frozen,
-      plan_hash: plan.plan_hash, execution_mode: runtime.executionMode,
-      observability_metrics: runtime.observabilityMetrics, budget_guardrail: runtime.budgetGuardrail,
+    return buildWorkflowPlanStatusResponse({
+      plan_id: plan.id,
+      task: plan.task,
+      level: plan.level,
+      status: plan.status,
+      runner_state: plan.runner_state,
+      triage_state: plan.triage_state,
+      fix_status: plan.fix_status,
+      fix_owner: plan.fix_owner,
+      template_meta: plan.template_meta,
+      gate_decision: plan.gate_decision,
+      recommendations: plan.recommendations,
+      recommendations_frozen: plan.recommendations_frozen,
+      plan_hash: plan.plan_hash,
+      execution_mode: runtime.executionMode,
+      observability_metrics: runtime.observabilityMetrics,
+      budget_guardrail: runtime.budgetGuardrail,
       handoff_package: runtime.handoffPackage,
-      steps: plan.steps.map(s => ({ id: s.id, name: s.name, status: s.status, output: s.output })),
-      progress: `${plan.steps.filter(s => this._canonicalStepStatus(s.status) === 'done').length}/${plan.steps.length}`,
+      steps: plan.steps.map((s) => ({ id: s.id, name: s.name, status: s.status, output: s.output })),
+      progress: `${plan.steps.filter((s) => this._canonicalStepStatus(s.status) === 'done').length}/${plan.steps.length}`,
     });
   }
 
@@ -1327,47 +1461,19 @@ export class WorkflowEngine {
   private async _restoreCheckpointInternal(
     checkpointId: string,
     confirmToken?: string,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<WorkflowRestoreCheckpointResult> {
     const checkpoint = this.checkpoints.get(checkpointId);
     if (!checkpoint) return { error: `Checkpoint '${checkpointId}' not found` };
 
-    const destructive = Object.keys(checkpoint.replay_payload).length > 0;
-    const confirmed = !destructive || this._hasValidConfirmToken(confirmToken);
-
-    if (destructive && !confirmed) {
-      return this._withContract({
-        status: 'waiting_confirmation',
-        error: 'destructive restore requires secondary confirmation',
-        checkpoint_id: checkpointId,
-        plan_id: checkpoint.plan_id,
-        step_id: checkpoint.step_id,
-        gate: { decision: WorkflowDecision.NO_GO, reason: 'destructive restore requires secondary confirmation', blocking: true },
-      });
-    }
-
-    const replayResult = this._applyReplayPayload(checkpoint);
-
-    if (checkpoint.commit_hash) {
-      try {
-        await execFileAsync('git', ['checkout', checkpoint.commit_hash], { cwd: this.workspace });
-        return this._withContract({ status: 'restored', checkpoint_id: checkpointId, commit_hash: checkpoint.commit_hash, plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult });
-      } catch (e) {
-        return { error: `Git restore failed: ${e}`, replay: replayResult };
-      }
-    }
-
-    if (replayResult['applied'] === true) {
-      return this._withContract({
-        status: 'restored',
-        checkpoint_id: checkpointId,
-        commit_hash: null,
-        plan_id: checkpoint.plan_id,
-        step_id: checkpoint.step_id,
-        replay: replayResult,
-      });
-    }
-
-    return { error: 'No commit hash available for this checkpoint', plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult };
+    return restoreWorkflowCheckpoint({
+      checkpoint: checkpoint as WorkflowCheckpointLike,
+      confirmToken,
+      hasValidConfirmToken: (token) => this._hasValidConfirmToken(token),
+      applyReplayPayload: (targetCheckpoint) => this._applyReplayPayload(targetCheckpoint as Checkpoint),
+      checkoutCommit: async (commitHash) => {
+        await execFileAsync('git', ['checkout', commitHash], { cwd: this.workspace });
+      },
+    });
   }
 
   // ---- Observability ----
@@ -1417,7 +1523,7 @@ export class WorkflowEngine {
     step: WorkflowStep,
     gate: Record<string, unknown>,
     result: unknown,
-  ): Record<string, unknown> {
+  ): WorkflowExecuteResult {
     step.output = result;
 
     if (areAllWorkflowStepsDone(plan.steps, (status) => this._canonicalStepStatus(status))) {
@@ -1427,7 +1533,7 @@ export class WorkflowEngine {
 
     const responseContext = this._executionResponseContext(plan);
 
-    return this._withContract(buildWorkflowExecutionSuccessResponse({
+    return buildWorkflowCompletedStepResult({
       stepId: step.id,
       stepName: step.name,
       result,
@@ -1439,7 +1545,7 @@ export class WorkflowEngine {
       observabilityMetrics: responseContext.observabilityMetrics,
       budgetGuardrail: responseContext.budgetGuardrail,
       stateResumeMetadata: responseContext.stateResumeMetadata,
-    }));
+    });
   }
 
   private _failExecutionStep(
@@ -1447,11 +1553,11 @@ export class WorkflowEngine {
     step: WorkflowStep,
     error: unknown,
     runtime: WorkflowPlanRuntimeState,
-  ): Record<string, unknown> {
+  ): WorkflowExecuteResult {
     this._transitionStepState(plan, step, 'failed', 'execution_error');
     plan.status = 'failed';
     const responseContext = this._executionResponseContext(plan, runtime);
-    return buildWorkflowExecutionErrorResponse({
+    return buildWorkflowExecutionFailureResult({
       error: String(error),
       stepId: step.id,
       executionMode: responseContext.executionMode,
@@ -1461,9 +1567,9 @@ export class WorkflowEngine {
     });
   }
 
-  private _buildLifecycleStatusResponse(plan: WorkflowPlan): Record<string, unknown> {
+  private _buildLifecycleStatusResponse(plan: WorkflowPlan): WorkflowLifecycleResult {
     const runtime = this._planRuntimeContext(plan);
-    const payload = this._withContract(buildWorkflowLifecycleStatusContract({
+    const payload = buildWorkflowLifecycleStatusContract({
       planId: plan.id,
       action: 'status',
       runnerState: plan.runner_state,
@@ -1474,8 +1580,8 @@ export class WorkflowEngine {
       lane: plan.lane,
       qualityMetrics: plan.quality_metrics,
       runtime,
-    }));
-    payload['last_checkpoint_id'] = String(plan.template_meta['last_checkpoint_id'] ?? '');
+    });
+    payload.last_checkpoint_id = String(plan.template_meta['last_checkpoint_id'] ?? '');
     return payload;
   }
 
@@ -1484,9 +1590,9 @@ export class WorkflowEngine {
     action: string,
     checkpointId: string | undefined,
     sessionStatus: string | null,
-  ): Record<string, unknown> {
+  ): WorkflowLifecycleActionResult {
     const runtime = this._planRuntimeContext(plan, undefined, sessionStatus);
-    const payload = this._withContract(buildWorkflowLifecycleActionContract({
+    const payload = buildWorkflowLifecycleActionContract({
       planId: plan.id,
       action,
       runnerState: plan.runner_state,
@@ -1498,8 +1604,8 @@ export class WorkflowEngine {
       lane: plan.lane,
       qualityMetrics: plan.quality_metrics,
       runtime,
-    }));
-    payload['last_checkpoint_id'] = String(plan.template_meta['last_checkpoint_id'] ?? '');
+    });
+    payload.last_checkpoint_id = String(plan.template_meta['last_checkpoint_id'] ?? '');
     return payload;
   }
 
@@ -1636,7 +1742,7 @@ export class WorkflowEngine {
 
   // ---- Recommendations ----
 
-  private _canonicalizeRecommendations(recommendations?: unknown[]): Record<string, unknown>[] {
+  private _canonicalizeRecommendations(recommendations?: WorkflowRecommendationInput): Record<string, unknown>[] {
     return canonicalizeWorkflowRecommendations(recommendations);
   }
 
@@ -1668,7 +1774,7 @@ export class WorkflowEngine {
       if (currentHash !== expectedHash) return { applied: false, reason: 'plan_hash_mismatch', expected_plan_hash: expectedHash, current_plan_hash: currentHash };
     }
 
-    plan.recommendations = this._canonicalizeRecommendations(payload['recommendations'] as unknown[]);
+    plan.recommendations = this._canonicalizeRecommendations(payload['recommendations'] as WorkflowRecommendationInput);
     plan.recommendations_frozen = Boolean(payload['recommendations_frozen'] ?? true);
     plan.plan_hash = expectedHash || this._computePlanHash(plan);
 
@@ -1759,7 +1865,7 @@ export class WorkflowEngine {
     return sessionLifecycle;
   }
 
-  private _stateResumeMetadata(plan: WorkflowPlan): Record<string, unknown> {
+  private _stateResumeMetadata(plan: WorkflowPlan): WorkflowStateResumeMetadata {
     const authority = this.getPlanAuthority(plan.id);
     const sessionId = authority.sessionId ?? this.getPlanSessionId(plan.id);
     return buildWorkflowStateResumeContract({
