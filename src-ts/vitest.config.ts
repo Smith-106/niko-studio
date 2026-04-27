@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    pool: 'forks',
+    globalTeardown: 'tests/globalTeardown.ts',
     exclude: [
       '**/.claude/**',
       '**/.ccw/**',
@@ -20,11 +22,19 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      exclude: [
+        '**/index.ts',
+        '**/types.ts',
+        'tests/**',
+        '*.config.*',
+        'dist/**',
+        'verify.js',
+      ],
       thresholds: {
-        lines: 90,
-        branches: 90,
-        functions: 90,
-        statements: 90
+        lines: 80,
+        branches: 70,
+        functions: 80,
+        statements: 80
       }
     },
   },

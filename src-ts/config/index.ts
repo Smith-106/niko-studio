@@ -896,7 +896,17 @@ integration:
   }
 
   reload(): void {
+    const oldConfig = this.config
     this.loadConfig()
+
+    const event: ConfigChangeEvent = {
+      key: '*',
+      oldValue: oldConfig,
+      newValue: this.config,
+      source: ConfigSource.File,
+      timestamp: Date.now(),
+    }
+    this.emit(CONFIG_CHANGE_EVENT, event)
   }
 
   shutdown(): void {

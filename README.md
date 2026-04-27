@@ -56,11 +56,11 @@ uv sync
 
 ## Writer-First Desktop Delivery Contract
 
-以下四条标签构成当前唯一的运行时 / 发布交付地图；`desktop/README.md`、`docs/release/RELEASE_NOTES.md` 与 `docs/operations/*.md` 仅复用这四条标签，不扩展新的运行时承诺。
+以下标签构成当前唯一的运行时 / 发布交付地图。Legacy 兼容性详细说明已归档至 [docs/archive/LEGACY_COMPATIBILITY.md](docs/archive/LEGACY_COMPATIBILITY.md)。
 
 - `Supported runtime`: `desktop/` + Tauri host + local `src-ts/` Node/TypeScript gateway. This is the shipped product, default build, and default runtime path.
 - `Supported launcher`: `python scripts/start_gateway.py` remains an operator-facing entrypoint, but in the current checkout it starts the Node/TypeScript gateway by default.
-- `Advisory compatibility surfaces`: explicit `--runtime python` legacy override, legacy `src/mcp/**` sources, and Streamlit validation flows only when a release candidate explicitly includes them.
+- `Advisory compatibility surfaces`: explicit `--runtime python` legacy override, legacy `src/mcp/**` sources, and Streamlit validation flows only when a release candidate explicitly includes them. Details: [docs/archive/LEGACY_COMPATIBILITY.md](docs/archive/LEGACY_COMPATIBILITY.md).
 - `Deprecated surface` (removed): browser-first web entry has been removed from the codebase.
 
 ### 单命令验收入口
