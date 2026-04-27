@@ -46,5 +46,26 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     globals: true,
     css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.d.ts',
+        'src/test/**',
+        'src/types/**',
+        'src/i18n/**',
+        'src/styles/**',
+      ],
+      thresholds: {
+        // Baseline: stmts 79.2%, branches 74.6%, funcs 73.4%, lines 79.2%
+        // Floored to nearest 5% below baseline as non-regression gate
+        lines: 75,
+        functions: 70,
+        branches: 70,
+        statements: 75,
+      },
+    },
   },
 })
