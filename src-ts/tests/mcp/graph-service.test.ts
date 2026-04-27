@@ -165,4 +165,48 @@ describe('mcp graph service wiring', () => {
       {},
     );
   });
+
+  it('delegates scoped graph reads through the scope-aware branches', async () => {
+    graphEngineInstance = createMockGraphEngine();
+    (graphEngineInstance as MockGraphEngine).executeCypher.mockResolvedValueOnce([{ n: { id: 's-1' } }]);
+    (graphEngineInstance as MockGraphEngine).getCharacter.mockResolvedValueOnce({ name: 'Scoped Alice' });
+    (graphEngineInstance as MockGraphEngine).getRelationships.mockResolvedValueOnce([{ type: 'KNOWS' }]);
+    (graphEngineInstance as MockGraphEngine).getForeshadows.mockResolvedValueOnce([{ id: 'f-scoped' }]);
+
+    const {
+      graphQuery,
+      graphGetCharacter,
+      graphGetRelationships,
+      graphGetForeshadows,
+    } = await import('../../mcp/services/graph.js');
+
+    const scope = { workspaceId: 'w-1', projectId: 'p-1', allowLegacy: false };
+
+    await expect(graphQuery('MATCH (n) RETURN n', scope)).resolves.toEqual([{ n: { id: 's-1' } }]);
+    await expect(graphGetCharacter('Scoped Alice', true, true, scope)).resolves.toEqual({ name: 'Scoped Alice' });
+    await expect(graphGetRelationships('Scoped Alice', 'KNOWS', 2, scope)).resolves.toEqual([{ type: 'KNOWS' }]);
+    await expect(graphGetForeshadows('pending', 5, scope)).resolves.toEqual([{ id: 'f-scoped' }]);
+
+    expect((graphEngineInstance as MockGraphEngine).executeCypher).toHaveBeenCalledWith(
+      'MATCH (n) RETURN n',
+      scope,
+    );
+    expect((graphEngineInstance as MockGraphEngine).getCharacter).toHaveBeenCalledWith(
+      'Scoped Alice',
+      true,
+      true,
+      scope,
+    );
+    expect((graphEngineInstance as MockGraphEngine).getRelationships).toHaveBeenCalledWith(
+      'Scoped Alice',
+      'KNOWS',
+      2,
+      scope,
+    );
+    expect((graphEngineInstance as MockGraphEngine).getForeshadows).toHaveBeenCalledWith(
+      'pending',
+      5,
+      scope,
+    );
+  });
 });

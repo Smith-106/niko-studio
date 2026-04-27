@@ -11,6 +11,7 @@ import {
   GraphManager,
   RelationType,
   Relationship,
+  SubGraph,
 } from '../../graph/graph-manager';
 
 function createDbPath(): string {
@@ -457,6 +458,378 @@ describe('graph/graph-manager', () => {
       expect(fallbackResults.map((entity) => entity.id)).toEqual(
         expect.arrayContaining([aliceId, bobId]),
       );
+    } finally {
+      manager.close();
+      rmSync(join(dbPath, '..'), { recursive: true, force: true });
+    }
+  });
+
+  it('covers parser conversions and internal fallback branches', () => {
+    const dbPath = createDbPath();
+    const manager = new GraphManager(dbPath);
+
+    try {
+      const initialStats = manager.getEntityStats();
+      expect(initialStats.avg_connections_per_entity).toBe(0);
+      expect(manager.getEntitiesBatch([])).toEqual({});
+
+      const parsedWithLeftArrow = CypherParser.parse(
+        'MATCH (a:Character)<-[r:KNOWS]->(b:Character) RETURN a, r, b LIMIT 2',
+      );
+      expect(parsedWithLeftArrow.relationships).toEqual([
+        expect.objectContaining({
+          direction: 'left',
+          type: 'KNOWS',
+        }),
+      ]);
+      expect(CypherParser._parseProps('')).toEqual({});
+      expect(CypherParser._parseProps("count: 42, ratio: 1.5, ok: true, bad: false, note: 'alpha'"))
+        .toEqual({
+          count: 42,
+          ratio: 1.5,
+          ok: true,
+          bad: false,
+          note: 'alpha',
+        });
+
+      const noIdEntity = new Entity({
+        id: '',
+        name: 'No Id Entity',
+        type: EntityType.CHARACTER,
+      });
+      const generatedEntityId = manager.createEntity(noIdEntity);
+      expect(generatedEntityId).toBeTruthy();
+
+      const createdWithoutName = manager.runCypher('CREATE (n:Mystery)');
+      const createdWithoutLabel = manager.runCypher('CREATE (n)');
+      const createHarness = manager as unknown as {
+        _executeCreate: (parsed: Record<string, unknown>, original: string) => Record<string, unknown>[];
+      };
+      const fallbackLabelResult = createHarness._executeCreate(
+        {
+          nodes: [
+            {
+              label: {
+                toLowerCase(): string {
+                  throw new Error('label explode');
+                },
+              },
+              properties: { name: 'Fallback Label Entity' },
+            },
+          ],
+        },
+        'CREATE (n)',
+      );
+      const fallbackNodePropsResult = createHarness._executeCreate(
+        {
+          nodes: [
+            {
+              label: 'Character',
+            },
+          ],
+        },
+        'CREATE (n:Character)',
+      );
+      const createdNoNameId = createdWithoutName[0]?.created as string;
+      const createdNoNameEntity = createdNoNameId ? manager.getEntity(createdNoNameId) : null;
+      const fallbackLabelCreatedId = fallbackLabelResult[0]?.created as string | undefined;
+      const fallbackLabelEntity = fallbackLabelCreatedId ? manager.getEntity(fallbackLabelCreatedId) : null;
+      const fallbackNodePropsCreatedId = fallbackNodePropsResult[0]?.created as string | undefined;
+      const fallbackNodePropsEntity = fallbackNodePropsCreatedId ? manager.getEntity(fallbackNodePropsCreatedId) : null;
+
+      expect(createdWithoutLabel).toEqual([]);
+      expect(fallbackLabelResult).toHaveLength(1);
+      expect(fallbackLabelEntity).toMatchObject({
+        type: EntityType.CONCEPT,
+        name: 'Fallback Label Entity',
+      });
+      expect(fallbackNodePropsResult).toHaveLength(1);
+      expect(fallbackNodePropsEntity).toMatchObject({
+        type: EntityType.CHARACTER,
+      });
+      expect(fallbackNodePropsEntity?.name).toContain('Entity_');
+
+      const constrainedMatch = manager.runCypher(
+        `MATCH (n:Character) WHERE n.id = '${generatedEntityId}' AND n.type = 'character' RETURN n LIMIT 1`,
+      );
+      expect(constrainedMatch).toEqual([
+        {
+          n: expect.objectContaining({
+            id: generatedEntityId,
+            type: EntityType.CHARACTER,
+          }),
+        },
+      ]);
+
+      const sourceWithNullProps = 'raw-null-props-source';
+      const targetWithNullProps = 'raw-null-props-target';
+      manager.runCypher(
+        `INSERT INTO entities (id, name, type, properties, created_at, updated_at) VALUES ('${sourceWithNullProps}', 'Raw Source', 'unknown_type', NULL, NULL, NULL)`,
+      );
+      manager.runCypher(
+        `INSERT INTO entities (id, name, type, properties, created_at, updated_at) VALUES ('${targetWithNullProps}', 'Raw Target', 'character', NULL, NULL, NULL)`,
+      );
+      manager.runCypher(
+        `INSERT INTO relationships (id, source_id, target_id, type, properties, weight, created_at) VALUES ('raw-broken-rel', '${sourceWithNullProps}', '${targetWithNullProps}', 'BROKEN_REL', NULL, NULL, NULL)`,
+      );
+
+      const rawEntity = manager.getEntity(sourceWithNullProps);
+      const rawRelationships = manager.getRelationships(sourceWithNullProps, 'out');
+      const rawPathToSelf = manager.findShortestPath(sourceWithNullProps, sourceWithNullProps);
+      const fallbackSubgraph = manager.getSubGraph(sourceWithNullProps, 2);
+
+      expect(createdWithoutName).toHaveLength(1);
+      expect(createdNoNameEntity).toMatchObject({
+        type: EntityType.CONCEPT,
+      });
+      expect(createdNoNameEntity?.name).toContain('Entity_');
+      expect(rawEntity).toMatchObject({
+        id: sourceWithNullProps,
+        type: EntityType.CONCEPT,
+        properties: {},
+      });
+      expect(rawRelationships).toEqual([
+        expect.objectContaining({
+          id: 'raw-broken-rel',
+          type: RelationType.RELATED_TO,
+          properties: {},
+          weight: 1,
+        }),
+      ]);
+      expect(rawPathToSelf).toMatchObject({
+        nodes: [expect.objectContaining({ id: sourceWithNullProps })],
+        edges: [],
+        total_weight: 0,
+      });
+      expect(fallbackSubgraph.entities.map((entity) => entity.id)).toEqual(
+        expect.arrayContaining([sourceWithNullProps, targetWithNullProps]),
+      );
+
+      const entityToDict = (manager as unknown as {
+        _entityToDict: (entity: Entity) => Record<string, unknown>;
+      })._entityToDict;
+      const nullTimeEntityDict = entityToDict(new Entity({
+        id: 'null-time',
+        name: 'Null Time',
+        type: EntityType.CONCEPT,
+        properties: {},
+        created_at: null,
+        updated_at: null,
+      }));
+      expect(nullTimeEntityDict).toMatchObject({
+        created_at: null,
+        updated_at: null,
+      });
+
+      const sourceA = manager.createEntity(new Entity({
+        id: 'limit-source-a',
+        name: 'Limit Source A',
+        type: EntityType.CHARACTER,
+      }));
+      const sourceB = manager.createEntity(new Entity({
+        id: 'limit-source-b',
+        name: 'Limit Source B',
+        type: EntityType.CHARACTER,
+      }));
+      const commonNeighbor = manager.createEntity(new Entity({
+        id: 'limit-neighbor',
+        name: 'Limit Neighbor',
+        type: EntityType.CHARACTER,
+      }));
+      manager.createRelationship(new Relationship({
+        id: '',
+        source_id: sourceA,
+        target_id: commonNeighbor,
+        type: RelationType.KNOWS,
+      }));
+      manager.createRelationship(new Relationship({
+        id: '',
+        source_id: sourceB,
+        target_id: commonNeighbor,
+        type: RelationType.KNOWS,
+      }));
+
+      const limitedRelated = manager.findRelatedEntities(sourceA, 3, 1);
+      expect(limitedRelated).toHaveLength(1);
+
+      const isolatedId = manager.createEntity(new Entity({
+        id: 'isolated-node',
+        name: 'Isolated Node',
+        type: EntityType.CHARACTER,
+      }));
+      expect(manager.findRelatedEntities(isolatedId, 2, 5)).toEqual([]);
+
+      const rootId = manager.createEntity(new Entity({
+        id: 'dup-root',
+        name: 'Duplicate Root',
+        type: EntityType.CHARACTER,
+      }));
+      const leftId = manager.createEntity(new Entity({
+        id: 'dup-left',
+        name: 'Duplicate Left',
+        type: EntityType.CHARACTER,
+      }));
+      const rightId = manager.createEntity(new Entity({
+        id: 'dup-right',
+        name: 'Duplicate Right',
+        type: EntityType.CHARACTER,
+      }));
+      const leafId = manager.createEntity(new Entity({
+        id: 'dup-leaf',
+        name: 'Duplicate Leaf',
+        type: EntityType.CHARACTER,
+      }));
+      manager.createRelationship(new Relationship({
+        id: 'dup-r-l',
+        source_id: rootId,
+        target_id: leftId,
+        type: RelationType.KNOWS,
+      }));
+      manager.createRelationship(new Relationship({
+        id: 'dup-r-r',
+        source_id: rootId,
+        target_id: rightId,
+        type: RelationType.KNOWS,
+      }));
+      manager.createRelationship(new Relationship({
+        id: 'dup-l-leaf',
+        source_id: leftId,
+        target_id: leafId,
+        type: RelationType.KNOWS,
+      }));
+      manager.createRelationship(new Relationship({
+        id: 'dup-r-leaf',
+        source_id: rightId,
+        target_id: leafId,
+        type: RelationType.KNOWS,
+      }));
+      const duplicateTraversalSubgraph = manager.getSubGraph(rootId, 3);
+      expect(duplicateTraversalSubgraph.entities.map((entity) => entity.id)).toEqual(
+        expect.arrayContaining([rootId, leftId, rightId, leafId]),
+      );
+      expect(duplicateTraversalSubgraph.relationships.map((relationship) => relationship.id).sort()).toEqual(
+        ['dup-l-leaf', 'dup-r-l', 'dup-r-leaf', 'dup-r-r'].sort(),
+      );
+
+      const rowToEntity = (manager as unknown as {
+        _rowToEntity: (row: Record<string, unknown>) => Entity;
+      })._rowToEntity;
+      const throwingDate = {
+        toString(): string {
+          throw new Error('invalid date coercion');
+        },
+      };
+      const invalidDateEntity = rowToEntity({
+        id: 'invalid-date',
+        name: 'Invalid Date',
+        type: 'character',
+        properties: null,
+        created_at: throwingDate,
+        updated_at: throwingDate,
+      });
+      expect(invalidDateEntity).toMatchObject({
+        id: 'invalid-date',
+        type: EntityType.CHARACTER,
+        properties: {},
+        created_at: null,
+        updated_at: null,
+      });
+    } finally {
+      manager.close();
+      rmSync(join(dbPath, '..'), { recursive: true, force: true });
+    }
+  });
+
+  it('covers where-property compare and lifecycle compatibility branches', () => {
+    const dbPath = createDbPath();
+    const manager = new GraphManager(dbPath);
+
+    try {
+      const defaultSubGraph = new SubGraph({
+        entities: [],
+        relationships: [],
+      });
+      expect(defaultSubGraph.center_entity_id).toBeNull();
+
+      const defaultPathManager = new GraphManager(null);
+      try {
+        expect(defaultPathManager.db_path).toContain('graph_manager.db');
+      } finally {
+        defaultPathManager.close();
+        rmSync(join(defaultPathManager.db_path, '..'), { recursive: true, force: true });
+      }
+
+      const sourceId = manager.createEntity(new Entity({
+        id: 'compare-source',
+        name: 'Compare Source',
+        type: EntityType.CHARACTER,
+        properties: { chapter: '4' },
+      }));
+      const targetId = manager.createEntity(new Entity({
+        id: 'compare-target',
+        name: 'Compare Target',
+        type: EntityType.CHARACTER,
+        properties: { chapter: '8' },
+      }));
+      manager.createRelationship(new Relationship({
+        id: 'compare-rel',
+        source_id: sourceId,
+        target_id: targetId,
+        type: RelationType.KNOWS,
+      }));
+
+      const comparable = manager.runCypher(
+        "MATCH (n:Character) WHERE n.chapter = '4' RETURN n",
+      );
+      const aliasLessMatch = manager.runCypher('MATCH (:Character) RETURN n LIMIT 1');
+      const relationshipNullPropsQuery = manager.runCypher(
+        'MATCH (a:Character)-[r:BROKEN_REL]->(b:Character) RETURN a, r, b LIMIT 1',
+      );
+      const missingSelfPath = manager.findShortestPath('missing-node', 'missing-node');
+
+      expect(comparable).toEqual([
+        expect.objectContaining({
+          n: expect.objectContaining({ id: sourceId }),
+        }),
+      ]);
+      expect(aliasLessMatch).toHaveLength(1);
+      expect(aliasLessMatch[0]).toHaveProperty('n');
+      expect(relationshipNullPropsQuery).toEqual([]);
+      expect(missingSelfPath).toBeNull();
+
+      manager.runCypher(
+        `INSERT INTO entities (id, name, type, properties, created_at, updated_at) VALUES ('compare-source-null', 'Compare Source Null', 'character', NULL, NULL, NULL)`,
+      );
+      manager.runCypher(
+        `INSERT INTO entities (id, name, type, properties, created_at, updated_at) VALUES ('compare-target-null', 'Compare Target Null', 'character', NULL, NULL, NULL)`,
+      );
+      manager.runCypher(
+        `INSERT INTO relationships (id, source_id, target_id, type, properties, weight, created_at) VALUES ('compare-rel-null', 'compare-source-null', 'compare-target-null', 'BROKEN_REL', NULL, NULL, NULL)`,
+      );
+
+      const relationshipWithNullPropsQuery = manager.runCypher(
+        'MATCH (a:Character)-[r:BROKEN_REL]->(b:Character) RETURN a, r, b LIMIT 1',
+      );
+      expect(relationshipWithNullPropsQuery).toEqual([
+        expect.objectContaining({
+          source: expect.objectContaining({
+            id: 'compare-source-null',
+            properties: {},
+          }),
+          relationship: expect.objectContaining({
+            id: 'compare-rel-null',
+            properties: {},
+          }),
+          target: expect.objectContaining({
+            id: 'compare-target-null',
+            properties: {},
+          }),
+        }),
+      ]);
+
+      manager[Symbol.dispose]();
+      const managerAfterDispose = manager as unknown as { _conn: unknown };
+      expect(managerAfterDispose._conn).toBeNull();
     } finally {
       manager.close();
       rmSync(join(dbPath, '..'), { recursive: true, force: true });

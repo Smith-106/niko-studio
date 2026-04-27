@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -54,10 +55,31 @@ describe('store/openkl-contract', () => {
       source_type: 'notes',
       metadata: { tag: 'story' },
     });
+    expect(mapping.metadata).toEqual({ tag: 'story' });
     expect(DocumentMapping.fromDict(mapping.toDict())).toMatchObject({
       docId: 'doc-1',
       path: 'store/sources/doc-1.md',
     });
+    const defaultCtorMapping = new DocumentMapping({
+      docId: 'doc-ctor-default',
+      path: 'store/sources/default-ctor.md',
+      sha256: 'ctor',
+      sourceType: 'notes',
+      createdAt: '2026-04-05T00:00:00.000Z',
+      updatedAt: '2026-04-05T00:00:00.000Z',
+    });
+    expect(defaultCtorMapping.metadata).toEqual({});
+    expect(
+      DocumentMapping.fromDict({
+        doc_id: 'doc-default-metadata',
+        path: 'store/sources/default.md',
+        sha256: 'def',
+        source_type: 'general',
+        created_at: '2026-04-05T00:00:00.000Z',
+        updated_at: '2026-04-05T00:00:00.000Z',
+        metadata: undefined,
+      }).metadata,
+    ).toEqual({});
   });
 
   it('loads persisted mappings with compatibility defaults and skips blank or invalid lines', () => {
@@ -106,6 +128,21 @@ describe('store/openkl-contract', () => {
     }
   });
 
+  it('handles missing mapping file branch when structure setup is bypassed', () => {
+    const basePath = createBasePath();
+    const ensureSpy = vi
+      .spyOn(OpenKLContract.prototype as unknown as { _ensureStructure: () => void }, '_ensureStructure')
+      .mockImplementation(() => {});
+
+    try {
+      const contract = new OpenKLContract(basePath);
+      expect(contract.listDocuments()).toEqual([]);
+    } finally {
+      ensureSpy.mockRestore();
+      rmSync(basePath, { recursive: true, force: true });
+    }
+  });
+
   it('covers ingestFile validation, auto-generated ids, CRUD fallbacks, and filtered iteration', () => {
     const basePath = createBasePath();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -120,10 +157,17 @@ describe('store/openkl-contract', () => {
       expect(() => contract.ingestFile(imageSource)).toThrow(/Unsupported file type: \.png/);
 
       const fileDocId = contract.ingestFile(textSource, null, 'notes', false);
+      const normalizedFileDocId = contract.ingestFile(
+        textSource,
+        'doc-normalized-file',
+        'notes',
+        true,
+      );
       const contentDocId = contract.ingestContent('Chapter only', 'doc-chapter', 'chapter', null, false);
 
       expect(fileDocId).toMatch(/^doc-\d{8}.*-[0-9a-f]{8}$/);
       expect(contract.getNormalizedContent(fileDocId)).toBeNull();
+      expect(contract.getNormalizedContent(normalizedFileDocId)).toContain('source:');
       expect(contract.getDocument('missing-doc')).toBeNull();
 
       const limited = contract.listDocuments(null, 1);
@@ -142,7 +186,9 @@ describe('store/openkl-contract', () => {
       expect(contract.getDocument(contentDocId)).toBeNull();
       expect(contract.deleteDocument('missing-doc')).toBe(false);
       expect(contract.deleteDocument(contentDocId)).toBe(true);
+      expect(contract.deleteDocument(normalizedFileDocId)).toBe(true);
       expect(contract.getNormalizedContent(contentDocId)).toBeNull();
+      expect(contract.getNormalizedContent(normalizedFileDocId)).toBeNull();
       expect(warnSpy.mock.calls.some(([message]) => String(message).includes('Document file missing'))).toBe(true);
       expect(infoSpy.mock.calls.some(([message]) => String(message).includes('Deleted document'))).toBe(true);
     } finally {
@@ -269,6 +315,72 @@ describe('store/openkl-contract', () => {
         total_documents: 2,
       });
     } finally {
+      rmSync(basePath, { recursive: true, force: true });
+    }
+  });
+
+  it('covers doc-id generation and malformed mapping ingestion branches', () => {
+    const basePath = createBasePath();
+    const contract = new OpenKLContract(basePath);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const fixedNow = new Date('2026-04-27T12:34:56.000Z');
+      vi.useFakeTimers();
+      vi.setSystemTime(fixedNow);
+
+      const generatedId = contract.ingestContent('Auto id content', undefined, 'note', 'auto-id.md', false);
+      expect(generatedId).toMatch(/^doc-[0-9A-Z]+-[0-9a-f]{8}$/);
+
+      vi.useRealTimers();
+
+      const mappingFilePath = contract.paths.mappingFile;
+      const originalMapping = readFileSync(mappingFilePath, 'utf-8');
+      writeFileSync(mappingFilePath, `${originalMapping}{bad-json\n`, 'utf-8');
+
+      const reloaded = new OpenKLContract(basePath);
+      expect(reloaded.listDocuments().map((doc) => doc.doc_id)).toEqual(
+        expect.arrayContaining([generatedId]),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid mapping line:'));
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+      rmSync(basePath, { recursive: true, force: true });
+    }
+  });
+
+  it('uses copy fallback for topic links on win32 platforms', () => {
+    const basePath = createBasePath();
+    const contract = new OpenKLContract(basePath);
+
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+
+    try {
+      const memoryPath = contract.createMemory('mem-copy-fallback', 'Copied topic memory', ['topic-copy']);
+      const topicLinkPath = join(contract.paths.memoriesTopics, 'topic-copy', 'mem-copy-fallback.md');
+
+      expect(memoryPath).toContain(join('memories', 'by_date'));
+      expect(existsSync(topicLinkPath)).toBe(true);
+      expect(readFileSync(topicLinkPath, 'utf-8')).toContain('Copied topic memory');
+    } finally {
+      platformSpy.mockRestore();
+      rmSync(basePath, { recursive: true, force: true });
+    }
+  });
+
+  it('covers non-win32 topic link handling branches without breaking memory creation', () => {
+    const basePath = createBasePath();
+    const contract = new OpenKLContract(basePath);
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
+
+    try {
+      const memoryPath = contract.createMemory('mem-symlink-branch', 'Symlink branch memory', ['topic-symlink']);
+
+      expect(existsSync(memoryPath)).toBe(true);
+      expect(readFileSync(memoryPath, 'utf-8')).toContain('Symlink branch memory');
+    } finally {
+      platformSpy.mockRestore();
       rmSync(basePath, { recursive: true, force: true });
     }
   });
