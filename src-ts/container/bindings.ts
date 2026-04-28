@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { interfaces } from 'inversify';
 
 import {
@@ -23,14 +22,17 @@ import {
 } from './types';
 import {
   DistillationService,
+  EmbeddingServiceImpl,
   LLMServiceImpl,
   KnowledgeServiceImpl,
 } from '../services';
+import { ProviderType as EmbeddingProviderType } from '../services/embedding-service';
 import {
   SmartSearch,
   HybridSearch,
   VectorSearch,
 } from '../search';
+import { LocalEmbeddingProvider } from '../knowledge/providers';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 import {
   MemoryEngineAdapter,
@@ -44,7 +46,11 @@ import {
   ObsidianServiceAdapter,
   MCPGatewayAdapter,
 } from './adapters';
-import type { EmbeddingService as VectorEmbeddingService } from '../protocols/embedding';
+import type {
+  BatchEmbeddingResponse,
+  EmbeddingProvider as VectorEmbeddingProvider,
+  EmbeddingService as VectorEmbeddingService,
+} from '../protocols/embedding';
 
 export type CanonicalServiceIdentifier = (typeof ServiceTypes)[keyof typeof ServiceTypes];
 
@@ -57,57 +63,46 @@ export interface BindingRegistryOptions {
 const DEFAULT_VECTOR_DIMENSION = 384;
 const DEFAULT_VECTOR_MODEL = 'BAAI/bge-small-en-v1.5';
 
-function createLocalEmbeddingService(
-  dimension: number = DEFAULT_VECTOR_DIMENSION,
-): IEmbeddingService & VectorEmbeddingService {
-  const normalize = (text: string): number[] => {
-    const values = new Array<number>(dimension).fill(0);
-    for (let index = 0; index < dimension; index += 1) {
-      const hash = createHash('sha256').update(`${text}:${index}`).digest();
-      values[index] = hash.readUInt32LE(0) / 0xffffffff;
-    }
-    return values;
-  };
-
-  return {
-    async embed(text: string): Promise<number[]> {
-      return normalize(text);
-    },
-    async embedBatch(texts: string[]): Promise<number[][]> {
-      return texts.map((text) => normalize(text));
-    },
-    async embedWithMetadata(request: { text: string; model?: string }): Promise<{ embedding: number[]; metadata: Record<string, unknown> }> {
-      const embedding = normalize(request.text);
+function createProductionEmbeddingService(): IEmbeddingService & VectorEmbeddingService {
+  const localProvider = new LocalEmbeddingProvider({
+    modelName: DEFAULT_VECTOR_MODEL,
+    backend: 'fastembed',
+  });
+  const productionProvider: VectorEmbeddingProvider = {
+    providerType: EmbeddingProviderType.LOCAL,
+    async embed(texts: string[], model: string, options?: { dimensions?: number }): Promise<BatchEmbeddingResponse> {
+      const response = await localProvider.embed(texts, model, options);
       return {
-        embedding,
-        metadata: {
-          model: request.model ?? 'local-vector-fallback',
-          dimensions: dimension,
-          provider: 'local',
-        },
+        embeddings: response.embeddings,
+        model: response.modelUsed,
+        provider: response.provider,
+        dimensions: response.dimensions,
+        usage: response.usage,
+        latencyMs: response.latencyMs,
+        cacheHits: response.cacheHits,
       };
     },
-    similarity(embedding1: number[], embedding2: number[]): number {
-      let dotProduct = 0;
-      let normA = 0;
-      let normB = 0;
-
-      for (let index = 0; index < embedding1.length; index += 1) {
-        dotProduct += embedding1[index] * embedding2[index];
-        normA += embedding1[index] * embedding1[index];
-        normB += embedding2[index] * embedding2[index];
-      }
-
-      if (normA === 0 || normB === 0) {
-        return 0;
-      }
-
-      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    async healthCheck(): Promise<boolean> {
+      return localProvider.healthCheck();
     },
-    getDimensions(): number {
-      return dimension;
+    getDimensions(model: string): number {
+      return localProvider.getDimensions(model);
     },
   };
+  const dimension = productionProvider.getDimensions(DEFAULT_VECTOR_MODEL);
+  if (dimension !== DEFAULT_VECTOR_DIMENSION) {
+    throw new Error(
+      `Production embedding invariant violation: expected ${DEFAULT_VECTOR_DIMENSION} dimensions for ${DEFAULT_VECTOR_MODEL}, got ${dimension}`,
+    );
+  }
+
+  return new EmbeddingServiceImpl(
+    new Map<EmbeddingProviderType, VectorEmbeddingProvider>([[EmbeddingProviderType.LOCAL, productionProvider]]),
+    {
+      defaultProvider: EmbeddingProviderType.LOCAL,
+      defaultModel: DEFAULT_VECTOR_MODEL,
+    },
+  ) as IEmbeddingService & VectorEmbeddingService;
 }
 
 export function registerCanonicalBindings(
@@ -136,7 +131,7 @@ export function registerCanonicalBindings(
 
   bindSingleton<IEmbeddingService>(
     ServiceTypes.EmbeddingService,
-    () => createLocalEmbeddingService(),
+    () => createProductionEmbeddingService(),
   );
 
   bindSingleton<IKnowledgeService>(

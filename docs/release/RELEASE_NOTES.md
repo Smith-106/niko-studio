@@ -7,6 +7,19 @@
 | internal | 内部 dry-run / 日常集成验证 | 可跳过 | 告警，不阻断 | 用于内部验证；main 分支仍保留 authority alignment 与选定契约的阻断门禁 |
 | external | 对外交付 / 正式发布 | 必须通过 | 有 `CODECOV_TOKEN` 时阻断；无 token 时告警并登记风险 | 满足 Go/No-Go 条件后放行 |
 
+## 发布状态模型
+
+| 状态 | 含义 | 是否可对外交付 |
+|---|---|---|
+| `unsigned_local_proof` | 仓库内权威门禁通过，但 `desktop/src-tauri/tauri.conf.json` 仍保留 `certificateThumbprint: null` 与 `timestampUrl: ""` | 否 |
+| `prerequisite_missing_hold` | 对外发布所需 4 个前提中任一缺失：证书指纹、时间戳 URL、已 hydrate 的 packaged compatibility artifact、Windows 打包主机/工具链 | 否 |
+| `signed_external_release` | 仓库内门禁保持通过，且 4 个前提已在 Windows 打包主机上满足，并完成带签名的 `npm --prefix desktop run tauri:build` | 是 |
+
+补充说明：
+- `unsigned_local_proof` 可以证明本地验证链闭合，但不能被表述成 signed external shipment。
+- `prerequisite_missing_hold` 是显式 hold 状态，不允许把历史绿色 dry-run 或 CI 结果解释为可对外交付。
+- `signed_external_release` 需要 release-private signing inputs 在 git 外注入；仓库内仍只保留 unsigned 默认配置。
+
 补充说明：
 
 - internal 口径允许跳过 external e2e 冒烟，但不代表内部完全无阻断门禁；main 分支仍保留 authority alignment 与选定高风险契约的 blocking checks。
@@ -100,6 +113,7 @@ python scripts/release_check_summary.py
 > 说明：`release-check-summary.md` 属于本地检查快照；external 是否放行以 CI workflow 结果为准。
 > 本地人工签收顺序、Windows packaging dry-run、writing-helper acceptance，以及签名先决条件见 `docs/release/SIGN_OFF.md`。
 > `python scripts/release_check_summary.py` 现在同时覆盖 authority alignment 与 desktop packaging dry-run；若仍返回 `NO_GO`，应按报告中的 blocking checks 处理，而不是回退 Wave 1 的权威契约结论。
+> 当报告为 `Decision: GO` 且 `certificateThumbprint = null`、`timestampUrl = ""` 时，该结果只表示 `unsigned_local_proof`；若 4 个外部前提缺失任意一项，应继续保持 `prerequisite_missing_hold`，不得描述为 signed external release。
 
 ## external 口径对齐说明（新增）
 
@@ -117,6 +131,13 @@ external 对外“100% 完成度”仅指核心可达链路：
 
 证据链建议在同一次发布中保留：
 
+- `release-check-summary.md`
+- `.workflow/evidence/release/release-readiness-artifact.json`
+- `.workflow/evidence/release/authority-alignment.json`
+- `.workflow/evidence/release/writing-helper-acceptance.json`
+- `.workflow/evidence/release/vitest-production-guard.xml`
+- `.workflow/evidence/release/vitest-e2e.xml`
+- `.workflow/evidence/release/governance-scripts.junit.xml`
 - TypeScript Phase 4 基线日志：`npm --prefix src-ts run test:coverage:phase4 -- --coverage.reporter=text --coverage.reporter=json --coverage.reporter=html --coverage.reporter=cobertura`
 - external 冒烟日志：`npm --prefix src-ts exec -- vitest run tests/mcp/workflow-endpoints.integration.test.ts tests/mcp/workflow-critic-smoke.integration.test.ts --reporter=default`
 - production guard 日志：`npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default`

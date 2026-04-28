@@ -67,6 +67,27 @@ describe('integrations adapter factory', () => {
     await expect(adapters.orchestration.run('sync', {})).resolves.toEqual({
       status: 'disabled',
       flow_name: 'sync',
+      state: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Langflow orchestration is disabled; no external orchestration flow was started.',
+    });
+    expect(adapters.storageShadow.getStatus()).toEqual({
+      integration: 'postgres-shadow',
+      state: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Postgres shadow-write integration is disabled; local-first persistence remains authoritative.',
+    });
+    expect(adapters.search.getStatus()).toEqual({
+      integration: 'elasticsearch-search',
+      state: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Elasticsearch integration is disabled; local retrieval remains the only active search path.',
+    });
+    expect(adapters.orchestration.getStatus()).toEqual({
+      integration: 'langflow-orchestration',
+      state: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Langflow orchestration is disabled; no external orchestration flow was started.',
     });
   });
 
@@ -94,14 +115,35 @@ describe('integrations adapter factory', () => {
     expect(adapters.graphProjection).toBeInstanceOf(integrations.StubNeo4jProjectionAdapter);
     expect(adapters.governance).toBeInstanceOf(integrations.StubDbhubGovernanceHook);
     expect(adapters.orchestration).toBeInstanceOf(integrations.StubLangflowOrchestrationHook);
-    await expect(adapters.storageShadow.shadowWriteMemory({ id: 'mem-2' })).resolves.toBe(true);
+    await expect(adapters.storageShadow.shadowWriteMemory({ id: 'mem-2' })).resolves.toBe(false);
     await expect(adapters.cacheRateLimit.cacheSet('cache-key', { cached: true }, 30)).resolves.toBe(true);
-    await expect(adapters.search.indexDocument({ id: 'doc-1' })).resolves.toBe(true);
+    await expect(adapters.search.indexDocument({ id: 'doc-1' })).resolves.toBe(false);
     await expect(adapters.graphProjection.projectEntity({ id: 'entity-1' })).resolves.toBe(true);
+    expect(adapters.storageShadow.getStatus()).toEqual({
+      integration: 'postgres-shadow',
+      state: 'unsupported',
+      code: 'POSTGRES_SHADOW_UNSUPPORTED',
+      detail: 'Postgres shadow-write is enabled in configuration but no durable external writer is implemented.',
+    });
+    expect(adapters.search.getStatus()).toEqual({
+      integration: 'elasticsearch-search',
+      state: 'degraded',
+      code: 'ELASTICSEARCH_DEGRADED',
+      detail: 'Elasticsearch is enabled but no durable external index is available; requests must fall back to local retrieval.',
+    });
     await expect(adapters.orchestration.run('shadow-sync', { topic: 'memory' })).resolves.toEqual({
-      status: 'ok',
+      status: 'unsupported',
       flow_name: 'shadow-sync',
       provider: 'langflow',
+      state: 'unsupported',
+      code: 'LANGFLOW_UNSUPPORTED',
+      detail: 'Langflow orchestration is enabled in configuration but no real remote flow runner is implemented.',
+    });
+    expect(adapters.orchestration.getStatus()).toEqual({
+      integration: 'langflow-orchestration',
+      state: 'unsupported',
+      code: 'LANGFLOW_UNSUPPORTED',
+      detail: 'Langflow orchestration is enabled in configuration but no real remote flow runner is implemented.',
     });
   });
 

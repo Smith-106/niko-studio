@@ -28,6 +28,8 @@ import {
   LocalEmbeddingProvider,
 } from './providers';
 
+const DEFAULT_LOCAL_EMBEDDING_MODEL = 'BAAI/bge-small-en-v1.5';
+
 interface LLMRuntimeProvider {
   readonly providerType: string;
   getModelForTier(tier: string): string;
@@ -178,6 +180,17 @@ export class ServiceManager {
       await this._initProvider(providerConfig);
     }
 
+    if (
+      this._config.defaultEmbeddingProvider === ProviderType.LOCAL
+      && !this._embeddingProviders.has(ProviderType.LOCAL)
+    ) {
+      const embeddingProvider = new LocalEmbeddingProvider({
+        modelName: DEFAULT_LOCAL_EMBEDDING_MODEL,
+        backend: 'fastembed',
+      });
+      this._embeddingProviders.set(ProviderType.LOCAL, createEmbeddingServiceProvider(embeddingProvider));
+    }
+
     // Initialize services
     this._llmService = new LLMServiceImpl({
       providers: this._llmProviders,
@@ -238,9 +251,12 @@ export class ServiceManager {
       });
       this._llmProviders.set(ptype, createLLMServiceProvider(llmProvider));
     } else if (ptype === ProviderType.LOCAL) {
+      const backend = config.baseUrl === 'fastembed' || config.baseUrl === 'sentence-transformers'
+        ? config.baseUrl
+        : 'fastembed';
       const embeddingProvider = new LocalEmbeddingProvider({
         modelName: config.embeddingModel,
-        backend: config.baseUrl ?? 'fastembed',
+        backend,
       });
       this._embeddingProviders.set(ptype, createEmbeddingServiceProvider(embeddingProvider));
     }

@@ -12,7 +12,7 @@ import {
   normalizeProjectWorkspaceContext,
   projectWorkspaceToMemoryScope,
 } from '../../project/workspace-model.js';
-import { DocumentLoader } from '../../services/document-loader';
+import { DocumentLoadError, DocumentLoader } from '../../services/document-loader';
 import { recursiveCharacterSplit } from '../../ui/file-utils';
 
 function resolveWorkspaceRoot(): string {
@@ -133,6 +133,9 @@ export async function memoryUploadEndpoint(request: HttpRequest): Promise<HttpRe
   try {
     text = await DocumentLoader.loadFileAsync(fileBuffer, fileName);
   } catch (error) {
+    if (error instanceof DocumentLoadError) {
+      return jsonResponse(error.toResponseBody(fileName), 400);
+    }
     return jsonResponse({ error: `failed to parse file: ${String(error)}` }, 400);
   }
 

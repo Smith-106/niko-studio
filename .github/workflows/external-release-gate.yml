@@ -219,14 +219,14 @@ jobs:
 
           if ($legacyEntry -or $packagedCompatArtifact) {
             "strict_required=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging: strict Windows packaging gate enabled (Python compatibility sidecar prerequisite present).'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging: strict Windows packaging gate enabled (Python compatibility sidecar prerequisite present). release_state=unsigned_local_proof by default because tauri.conf keeps certificateThumbprint=null and timestampUrl=""; signed_external_release still requires release-private signing inputs on the Windows packaging host.'
             return
           }
 
           "strict_required=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           $warning = 'Skipping strict Windows packaging gate because this checkout does not include the Python compatibility sidecar prerequisite. Sidecar readiness and advisory packaging logs remain authoritative until the compatibility artifact is hydrated.'
           Write-Host "::warning::$warning"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging: skipped strict Windows packaging gate because the Python compatibility sidecar prerequisite is not hydrated in this checkout; rely on sidecar readiness plus advisory packaging logs.'
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging: prerequisite_missing_hold because the Python compatibility sidecar prerequisite is not hydrated in this checkout; rely on sidecar readiness plus advisory packaging logs until the compatibility artifact is hydrated.'
 
       - name: Install Rust toolchain
         if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}

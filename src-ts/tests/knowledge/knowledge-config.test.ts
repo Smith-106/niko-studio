@@ -39,7 +39,7 @@ describe('ConfigLoader', () => {
       expect(config).toBeDefined();
       expect(config.providers).toEqual([]);
       expect(config.defaultLLMProvider).toBe(ProviderType.OPENAI);
-      expect(config.defaultEmbeddingProvider).toBe(ProviderType.OPENAI);
+      expect(config.defaultEmbeddingProvider).toBe(ProviderType.LOCAL);
       expect(config.embeddingCacheEnabled).toBe(true);
       expect(config.retryMaxAttempts).toBe(3);
     });

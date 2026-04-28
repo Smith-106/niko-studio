@@ -11,8 +11,18 @@ import { getConfigValue as getAppConfigValue } from '../config';
 // Adapter Interfaces
 // ============================================================
 
+export type IntegrationRuntimeState = 'disabled' | 'real' | 'unsupported' | 'degraded';
+
+export interface IntegrationStatus {
+  integration: string;
+  state: IntegrationRuntimeState;
+  code: string;
+  detail: string;
+}
+
 export interface StorageShadowAdapter {
   shadowWriteMemory(payload: Record<string, unknown>): Promise<boolean>;
+  getStatus(): IntegrationStatus;
 }
 
 export interface CacheRateLimitAdapter {
@@ -24,6 +34,7 @@ export interface CacheRateLimitAdapter {
 export interface SearchAdapter {
   indexDocument(document: Record<string, unknown>): Promise<boolean>;
   search(query: string, scope: string, limit: number): Promise<Record<string, unknown>[]>;
+  getStatus(): IntegrationStatus;
 }
 
 export interface GraphProjectionAdapter {
@@ -37,6 +48,7 @@ export interface GovernanceHookAdapter {
 
 export interface OrchestrationHookAdapter {
   run(flowName: string, payload: Record<string, unknown>): Promise<Record<string, unknown>>;
+  getStatus(): IntegrationStatus;
 }
 
 // ============================================================
@@ -60,6 +72,15 @@ export class NoopStorageShadowAdapter implements StorageShadowAdapter {
   async shadowWriteMemory(_payload: Record<string, unknown>): Promise<boolean> {
     return false;
   }
+
+  getStatus(): IntegrationStatus {
+    return {
+      integration: 'postgres-shadow',
+      state: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Postgres shadow-write integration is disabled; local-first persistence remains authoritative.',
+    };
+  }
 }
 
 export class NoopCacheRateLimitAdapter implements CacheRateLimitAdapter {
@@ -81,6 +102,15 @@ export class NoopSearchAdapter implements SearchAdapter {
   async search(_query: string, _scope: string, _limit: number): Promise<Record<string, unknown>[]> {
     return [];
   }
+
+  getStatus(): IntegrationStatus {
+    return {
+      integration: 'elasticsearch-search',
+      state: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Elasticsearch integration is disabled; local retrieval remains the only active search path.',
+    };
+  }
 }
 
 export class NoopGraphProjectionAdapter implements GraphProjectionAdapter {
@@ -100,7 +130,22 @@ export class NoopGovernanceHookAdapter implements GovernanceHookAdapter {
 
 export class NoopOrchestrationHookAdapter implements OrchestrationHookAdapter {
   async run(flowName: string, _payload: Record<string, unknown>): Promise<Record<string, unknown>> {
-    return { status: 'disabled', flow_name: flowName };
+    return {
+      status: 'disabled',
+      flow_name: flowName,
+      state: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Langflow orchestration is disabled; no external orchestration flow was started.',
+    };
+  }
+
+  getStatus(): IntegrationStatus {
+    return {
+      integration: 'langflow-orchestration',
+      state: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Langflow orchestration is disabled; no external orchestration flow was started.',
+    };
   }
 }
 
@@ -111,8 +156,17 @@ export class NoopOrchestrationHookAdapter implements OrchestrationHookAdapter {
 
 // @future: awaiting external service integration
 export class StubPostgresShadowAdapter implements StorageShadowAdapter {
-  async shadowWriteMemory(payload: Record<string, unknown>): Promise<boolean> {
-    return true;
+  async shadowWriteMemory(_payload: Record<string, unknown>): Promise<boolean> {
+    return false;
+  }
+
+  getStatus(): IntegrationStatus {
+    return {
+      integration: 'postgres-shadow',
+      state: 'unsupported',
+      code: 'POSTGRES_SHADOW_UNSUPPORTED',
+      detail: 'Postgres shadow-write is enabled in configuration but no durable external writer is implemented.',
+    };
   }
 }
 
@@ -132,10 +186,19 @@ export class StubRedisCacheRateLimitAdapter implements CacheRateLimitAdapter {
 // @future: awaiting external service integration
 export class StubElasticsearchAdapter implements SearchAdapter {
   async indexDocument(_document: Record<string, unknown>): Promise<boolean> {
-    return true;
+    return false;
   }
   async search(_query: string, _scope: string, _limit: number): Promise<Record<string, unknown>[]> {
     return [];
+  }
+
+  getStatus(): IntegrationStatus {
+    return {
+      integration: 'elasticsearch-search',
+      state: 'degraded',
+      code: 'ELASTICSEARCH_DEGRADED',
+      detail: 'Elasticsearch is enabled but no durable external index is available; requests must fall back to local retrieval.',
+    };
   }
 }
 
@@ -159,7 +222,23 @@ export class StubDbhubGovernanceHook implements GovernanceHookAdapter {
 // @future: awaiting external service integration
 export class StubLangflowOrchestrationHook implements OrchestrationHookAdapter {
   async run(flowName: string, _payload: Record<string, unknown>): Promise<Record<string, unknown>> {
-    return { status: 'ok', flow_name: flowName, provider: 'langflow' };
+    return {
+      status: 'unsupported',
+      flow_name: flowName,
+      provider: 'langflow',
+      state: 'unsupported',
+      code: 'LANGFLOW_UNSUPPORTED',
+      detail: 'Langflow orchestration is enabled in configuration but no real remote flow runner is implemented.',
+    };
+  }
+
+  getStatus(): IntegrationStatus {
+    return {
+      integration: 'langflow-orchestration',
+      state: 'unsupported',
+      code: 'LANGFLOW_UNSUPPORTED',
+      detail: 'Langflow orchestration is enabled in configuration but no real remote flow runner is implemented.',
+    };
   }
 }
 

@@ -102,6 +102,7 @@ export interface Translations {
   uploadErrorFormat: string
   uploadErrorSize: string
   uploadErrorNetwork: string
+  uploadErrorPrerequisite: string
   uploadErrorService: string
   uploadInjectedChunks: string
   uploadInjectedContext: string
@@ -706,6 +707,18 @@ export interface Translations {
   mcpReconnectRetrying: string
   mcpReconnectRecovered: string
   mcpReconnectFailed: string
+  mcpRuntimeDiagnostics: string
+  mcpDiagnosticClass: string
+  runtimeUnavailableLabel: string
+  runtimeUnavailableMessage: string
+  packagedPrerequisiteMissingLabel: string
+  packagedPrerequisiteMissingMessage: string
+  embeddingAuthorityUnavailableLabel: string
+  embeddingAuthorityUnavailableMessage: string
+  parserMissingLabel: string
+  parserMissingMessage: string
+  integrationDegradedLabel: string
+  integrationDegradedMessage: string
 
   // Settings Modal Diagnostics & Retrieval
   settingsDiagnostics: string
@@ -968,6 +981,7 @@ export const translations: Record<Language, Translations> = {
     uploadErrorFormat: '文件格式不支持',
     uploadErrorSize: '文件过大或超出限制',
     uploadErrorNetwork: '网络错误，请检查连接',
+    uploadErrorPrerequisite: '缺少文档解析依赖或当前导入路径不支持该格式',
     uploadErrorService: '服务处理失败，请稍后重试',
     uploadInjectedChunks: '已完成文件上下文注入：{fileName}（{chunks} 段）',
     uploadInjectedContext: '文件已注入上下文：{fileName}（{chunks} 段）',
@@ -1572,6 +1586,18 @@ export const translations: Record<Language, Translations> = {
     mcpReconnectRetrying: '重试中',
     mcpReconnectRecovered: '已恢复',
     mcpReconnectFailed: '失败',
+    mcpRuntimeDiagnostics: '运行诊断',
+    mcpDiagnosticClass: '故障分类',
+    runtimeUnavailableLabel: '运行时不可用',
+    runtimeUnavailableMessage: '本地运行时当前不可用，请先启动或恢复网关服务。',
+    packagedPrerequisiteMissingLabel: '缺少运行前置条件',
+    packagedPrerequisiteMissingMessage: '当前环境缺少必要依赖，请先补齐运行前置条件后再重试。',
+    embeddingAuthorityUnavailableLabel: 'Embedding 权威路径不可用',
+    embeddingAuthorityUnavailableMessage: '当前检索依赖的 embedding 路径不可用，请恢复配置的 embedding 提供方或本地运行时。',
+    parserMissingLabel: '文档解析器缺失',
+    parserMissingMessage: '当前文档导入缺少解析依赖，请安装对应解析器后重试。',
+    integrationDegradedLabel: '集成已降级',
+    integrationDegradedMessage: '部分核心集成当前处于降级状态，请根据诊断信息修复后再继续。',
 
     // Settings Modal Diagnostics & Retrieval
     settingsDiagnostics: '连接帮助',
@@ -1829,6 +1855,7 @@ export const translations: Record<Language, Translations> = {
     uploadErrorFormat: 'Unsupported file format.',
     uploadErrorSize: 'File is too large or exceeds the limit.',
     uploadErrorNetwork: 'Network error. Please check your connection.',
+    uploadErrorPrerequisite: 'Missing document parser dependency or unsupported import path for this format.',
     uploadErrorService: 'Service failed to process the file. Please retry later.',
     uploadInjectedChunks: 'File context injected: {fileName} ({chunks} chunks)',
     uploadInjectedContext: 'Context injected from file: {fileName} ({chunks} chunks)',
@@ -2433,6 +2460,18 @@ export const translations: Record<Language, Translations> = {
     mcpReconnectRetrying: 'Retrying',
     mcpReconnectRecovered: 'Recovered',
     mcpReconnectFailed: 'Failed',
+    mcpRuntimeDiagnostics: 'Runtime diagnostics',
+    mcpDiagnosticClass: 'Failure class',
+    runtimeUnavailableLabel: 'Runtime unavailable',
+    runtimeUnavailableMessage: 'The local runtime is unavailable. Start or restore the gateway service before retrying.',
+    packagedPrerequisiteMissingLabel: 'Missing runtime prerequisite',
+    packagedPrerequisiteMissingMessage: 'This environment is missing a required dependency. Install the prerequisite and retry.',
+    embeddingAuthorityUnavailableLabel: 'Embedding authority unavailable',
+    embeddingAuthorityUnavailableMessage: 'The authoritative embedding path is unavailable. Restore the configured embedding provider or local runtime before using retrieval flows.',
+    parserMissingLabel: 'Document parser missing',
+    parserMissingMessage: 'Document import is missing a parser dependency. Install the required parser and retry.',
+    integrationDegradedLabel: 'Integration degraded',
+    integrationDegradedMessage: 'One or more core integrations are degraded. Fix the affected services before continuing.',
 
     // Settings Modal Diagnostics & Retrieval
     settingsDiagnostics: 'Connection help',

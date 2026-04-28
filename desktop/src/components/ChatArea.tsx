@@ -220,6 +220,7 @@ export function ChatArea({
       uploadErrorFormat: t.uploadErrorFormat,
       uploadErrorSize: t.uploadErrorSize,
       uploadErrorNetwork: t.uploadErrorNetwork,
+      uploadErrorPrerequisite: t.uploadErrorPrerequisite,
       uploadErrorService: t.uploadErrorService,
       uploadMultipleProgress: t.uploadMultipleProgress,
       uploadMultipleComplete: t.uploadMultipleComplete,

@@ -108,16 +108,6 @@ jobs:
         run: npm audit --audit-level=high
         working-directory: desktop
 
-      - name: Run desktop unit tests
-        run: npm run test:ci
-        working-directory: desktop
-
-      - name: Upload desktop test report artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: desktop-vitest-report
-          path: desktop/test-results/vitest.junit.xml
-
       - name: Build desktop sidecar contract artifact
         run: npm run build:sidecar
         working-directory: desktop
@@ -131,6 +121,16 @@ jobs:
       - name: Check desktop frontend constraints (typecheck + build)
         run: npm run check
         working-directory: desktop
+
+      - name: Run desktop unit tests
+        run: npm run test:ci
+        working-directory: desktop
+
+      - name: Upload desktop test report artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: desktop-vitest-report
+          path: desktop/test-results/vitest.junit.xml
 
   i18n-check:
     runs-on: ubuntu-latest
@@ -419,6 +419,14 @@ jobs:
         run: npm ci
         working-directory: desktop
 
+      - name: Build desktop sidecar contract artifact (high-risk soft fail)
+        run: npm run build:sidecar
+        working-directory: desktop
+
+      - name: Verify desktop sidecar contract artifact (high-risk soft fail)
+        run: npm run validate:sidecar-contract
+        working-directory: desktop
+
       - name: Run runtime guard contracts (high-risk soft fail)
         run: |
           npm exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts --reporter=default
@@ -451,6 +459,14 @@ jobs:
 
       - name: Install desktop dependencies
         run: npm ci
+        working-directory: desktop
+
+      - name: Build desktop sidecar contract artifact (selected hard gate)
+        run: npm run build:sidecar
+        working-directory: desktop
+
+      - name: Validate desktop sidecar contract artifact (selected hard gate)
+        run: npm run validate:sidecar-contract
         working-directory: desktop
 
       - name: Run current src-ts hard gate contracts

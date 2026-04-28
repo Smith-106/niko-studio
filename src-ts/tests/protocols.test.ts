@@ -172,7 +172,7 @@ describe('Protocols Migration Tests', () => {
         }
         
         getDimensions(model?: string): number {
-          return 1536;
+          return 384;
         }
       }
 
@@ -208,7 +208,7 @@ describe('Protocols Migration Tests', () => {
 
       it('should implement getDimensions for EmbeddingService', () => {
         const service: EmbeddingService = new MockEmbeddingService();
-        expect(service.getDimensions('test-model')).toBe(1536);
+        expect(service.getDimensions('test-model')).toBe(384);
       });
     });
 

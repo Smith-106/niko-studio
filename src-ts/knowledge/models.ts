@@ -221,7 +221,7 @@ export function createServiceConfig(overrides?: Partial<ServiceConfig>): Service
   return {
     providers: [],
     defaultLLMProvider: ProviderType.OPENAI,
-    defaultEmbeddingProvider: ProviderType.OPENAI,
+    defaultEmbeddingProvider: ProviderType.LOCAL,
     embeddingCacheEnabled: true,
     embeddingCacheTTL: 86400,
     embeddingCacheMaxSize: 10000,

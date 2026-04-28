@@ -41,6 +41,10 @@
     "tauri:dev": "npm run build:sidecar && npm run tauri -- dev",
     "tauri:build": "npm run build:sidecar && npm run tauri -- build"
   },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
     "@tanstack/react-virtual": "^3.13.23",

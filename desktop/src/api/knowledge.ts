@@ -59,6 +59,19 @@ export interface MemoryUploadResponse {
   memory_ids: string[]
 }
 
+export interface MemoryUploadErrorResponse {
+  error: string
+  error_code?: string
+  file_name?: string
+  file_type?: string
+  mode?: 'sync' | 'async'
+  parser?: string | null
+  dependency?: string | null
+  install_command?: string | null
+  detail?: string
+  action?: string | null
+}
+
 export async function uploadMemoryFile(
   payload: {
     file_name: string
@@ -68,7 +81,7 @@ export async function uploadMemoryFile(
     chunk_overlap?: number
     workspace?: ProjectWorkspaceContext
   }
-): Promise<ApiResponse<MemoryUploadResponse>> {
+): Promise<ApiResponse<MemoryUploadResponse, MemoryUploadErrorResponse>> {
   return callApi(
     '/memory/upload',
     'POST',

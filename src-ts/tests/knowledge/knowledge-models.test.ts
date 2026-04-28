@@ -224,7 +224,7 @@ describe('createServiceConfig', () => {
     const config = createServiceConfig();
     expect(config.providers).toEqual([]);
     expect(config.defaultLLMProvider).toBe(ProviderType.OPENAI);
-    expect(config.defaultEmbeddingProvider).toBe(ProviderType.OPENAI);
+    expect(config.defaultEmbeddingProvider).toBe(ProviderType.LOCAL);
     expect(config.embeddingCacheEnabled).toBe(true);
     expect(config.embeddingCacheTTL).toBe(86400);
     expect(config.embeddingCacheMaxSize).toBe(10000);

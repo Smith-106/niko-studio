@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { deriveGatewayRuntimeState, getGatewayHealth, type GatewayRuntimeView } from '../api/client'
+import { getGatewayHealth, mergeGatewayHealthState, type GatewayRuntimeView } from '../api/client'
 
 interface UseAppRuntimeHealthOptions {
   backendStatus: boolean
@@ -15,14 +15,10 @@ export function useAppRuntimeHealth({ backendStatus, checkBackend }: UseAppRunti
     const fetchGatewayRuntime = async () => {
       try {
         const response = await getGatewayHealth()
-        if (response.success && response.data) {
-          setRuntimeView(deriveGatewayRuntimeState(response.data, backendStatus))
-          return
-        }
+        setRuntimeView(mergeGatewayHealthState(backendStatus, response))
       } catch {
-        // ignore runtime fetch error
+        setRuntimeView(mergeGatewayHealthState(backendStatus, null))
       }
-      setRuntimeView(deriveGatewayRuntimeState(null, backendStatus))
     }
 
     void fetchGatewayRuntime()

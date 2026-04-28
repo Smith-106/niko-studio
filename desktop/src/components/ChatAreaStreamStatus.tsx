@@ -7,7 +7,7 @@ interface ChatAreaStatus {
 }
 
 type UploadStage = 'reading' | 'uploading' | 'injecting' | 'done' | 'error'
-type UploadErrorCategory = 'format' | 'size' | 'network' | 'service'
+type UploadErrorCategory = 'format' | 'size' | 'network' | 'prerequisite' | 'service'
 
 interface UploadStatus {
   type: 'success' | 'error' | 'info'

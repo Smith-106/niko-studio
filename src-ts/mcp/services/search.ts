@@ -102,7 +102,11 @@ export async function searchHybrid(params: {
     }
   }
 
-  const effectiveRouteMode = params.routeMode ?? resolveSearchRouteMode();
+  const searchStatus = adapters?.search.getStatus();
+  const requestedRouteMode = params.routeMode ?? resolveSearchRouteMode();
+  const effectiveRouteMode = searchStatus?.state === 'degraded' && requestedRouteMode !== 'legacy'
+    ? 'legacy'
+    : requestedRouteMode;
   const effectiveTimeoutMs = resolveSearchElasticTimeoutMs();
 
   const engine = getEngine();
@@ -119,6 +123,22 @@ export async function searchHybrid(params: {
     effectiveRouteMode,
     effectiveTimeoutMs,
   );
+
+  if (searchStatus && searchStatus.state !== 'real' && searchStatus.state !== 'disabled') {
+    return [{
+      id: `integration:${searchStatus.integration}`,
+      content: searchStatus.detail,
+      source: 'integration',
+      score: 1,
+      metadata: {
+        integration: searchStatus.integration,
+        state: searchStatus.state,
+        code: searchStatus.code,
+        routeMode: effectiveRouteMode,
+        results,
+      },
+    }];
+  }
 
   if (adapters && adapters.flags.redisCacheEnabled) {
     const ttlSeconds = resolveRedisCacheTtlSeconds();

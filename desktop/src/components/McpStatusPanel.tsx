@@ -3,7 +3,6 @@ import { Activity, AlertCircle, RefreshCw, Server, Wrench } from 'lucide-react'
 import {
   checkBackendHealth,
   createGatewayServiceConfig,
-  deriveGatewayRuntimeState,
   GatewayHealth,
   GatewayMetrics,
   GatewayServiceConfig,
@@ -12,12 +11,14 @@ import {
   getGatewayMetrics,
   listGatewayServiceConfigs,
   listGatewayTools,
+  mergeGatewayHealthState,
   probeGatewayServiceHealth,
   setGatewayServiceEnabled,
   updateGatewayServiceConfig,
 } from '../api/client'
 
 import { useI18n } from '../i18n'
+import { buildRuntimeDiagnosticSummary } from '../utils/failurePresentation'
 
 interface McpStatusPanelProps {
   onClose: () => void
@@ -71,9 +72,22 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
         hasError = true
       }
 
-      if (gatewayHealthResult.status === 'fulfilled' && gatewayHealthResult.value.success && gatewayHealthResult.value.data?.services) {
-        setGatewayHealth(gatewayHealthResult.value.data)
-        setServices(gatewayHealthResult.value.data.services)
+      if (gatewayHealthResult.status === 'fulfilled') {
+        if (gatewayHealthResult.value.success && gatewayHealthResult.value.data?.services) {
+          setGatewayHealth(gatewayHealthResult.value.data)
+          setServices(gatewayHealthResult.value.data.services)
+        } else {
+          const degradedGatewayHealth: GatewayHealth = {
+            status: gatewayHealthResult.value.errorData?.status ?? 'degraded',
+            version: 'unavailable',
+            services: {},
+            diagnostic: gatewayHealthResult.value.errorData?.diagnostic ?? gatewayHealthResult.value.errorData?.mcp_runtime?.diagnostic ?? null,
+            mcp_runtime: gatewayHealthResult.value.errorData?.mcp_runtime,
+          }
+          setGatewayHealth(degradedGatewayHealth)
+          setServices(degradedGatewayHealth.services)
+          hasError = true
+        }
       } else {
         setGatewayHealth(null)
         setServices(null)
@@ -144,8 +158,24 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
   )
 
   const runtimeView = useMemo(
-    () => deriveGatewayRuntimeState(gatewayHealth, backendHealthy),
-    [gatewayHealth, backendHealthy]
+    () => mergeGatewayHealthState(
+      backendHealthy,
+      gatewayHealth
+        ? { success: true, data: gatewayHealth }
+        : { success: false, error: t.mcpFetchFailed },
+    ),
+    [backendHealthy, gatewayHealth, t.mcpFetchFailed]
+  )
+
+  const runtimeDiagnostic = useMemo(
+    () => buildRuntimeDiagnosticSummary(
+      {
+        message: runtimeView.lastError,
+        diagnostics: runtimeView.diagnostic,
+      },
+      t,
+    ),
+    [runtimeView.diagnostic, runtimeView.lastError, t]
   )
 
   const serviceStatusLabel: Record<string, string> = {
@@ -351,13 +381,46 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
                 {reconnectStateLabel} <span className="text-gray-400 mx-1">·</span> <span className="text-primary-500">#{runtimeView.reconnectAttempts}</span>
               </span>
             </div>
-            {runtimeView.lastError && (
+            {runtimeDiagnostic && (
+              <div className={`text-[11px] break-all p-2 rounded-md border mt-2 ${runtimeDiagnostic.tone === 'danger' ? 'text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/10 border-danger-100 dark:border-danger-500/20' : 'text-warning-700 dark:text-warning-300 bg-warning-50 dark:bg-warning-900/10 border-warning-100 dark:border-warning-500/20'}`}>
+                <div className="font-semibold">{runtimeDiagnostic.title}</div>
+                {runtimeDiagnostic.detail && (
+                  <div className="mt-1">
+                    <span className="font-semibold">{t.mcpLastErrorPrefix}</span> {runtimeDiagnostic.detail}
+                  </div>
+                )}
+                {runtimeDiagnostic.action && (
+                  <div className="mt-1 opacity-90">{runtimeDiagnostic.action}</div>
+                )}
+              </div>
+            )}
+            {!runtimeDiagnostic && runtimeView.lastError && (
               <div className="text-[11px] text-danger-600 dark:text-danger-400 break-all bg-danger-50 dark:bg-danger-900/10 p-2 rounded-md border border-danger-100 dark:border-danger-500/20 mt-2">
                 <span className="font-semibold">{t.mcpLastErrorPrefix}</span> {runtimeView.lastError}
               </div>
             )}
           </div>
         </section>
+
+        {runtimeDiagnostic && (
+          <section className="border border-gray-200 dark:border-dark-border rounded-xl p-4 bg-slate-50 dark:bg-dark-surface shadow-sm">
+            <h3 className="text-[13px] font-semibold text-gray-700 dark:text-dark-text mb-3 uppercase tracking-wider">{t.mcpRuntimeDiagnostics}</h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-500 dark:text-dark-text-secondary">{t.mcpDiagnosticClass}</span>
+                <span className="font-semibold text-gray-700 dark:text-dark-text">{runtimeDiagnostic.title}</span>
+              </div>
+              {runtimeDiagnostic.detail && (
+                <div className="text-gray-700 dark:text-dark-text leading-relaxed">{runtimeDiagnostic.detail}</div>
+              )}
+              {runtimeDiagnostic.action && (
+                <div className="rounded-lg border border-primary-100 dark:border-primary-500/20 bg-primary-50 dark:bg-primary-900/10 px-3 py-2 text-primary-700 dark:text-primary-300 leading-relaxed">
+                  {runtimeDiagnostic.action}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         <section className="border border-gray-200 dark:border-dark-border rounded-xl p-4 bg-slate-50 dark:bg-dark-surface shadow-sm">
           <h3 className="text-[13px] font-semibold text-gray-700 dark:text-dark-text mb-3 uppercase tracking-wider">{t.mcpKeyServiceStatus}</h3>

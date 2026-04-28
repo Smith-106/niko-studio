@@ -4,11 +4,11 @@ import type { GatewayRuntimeView } from '../api/client'
 
 const mockCheckBackend = vi.fn().mockResolvedValue(undefined)
 const mockGetGatewayHealth = vi.fn()
-const mockDeriveGatewayRuntimeState = vi.fn()
+const mockMergeGatewayHealthState = vi.fn()
 
 vi.mock('../api/client', () => ({
   getGatewayHealth: (...args: unknown[]) => mockGetGatewayHealth(...args),
-  deriveGatewayRuntimeState: (...args: unknown[]) => mockDeriveGatewayRuntimeState(...args),
+  mergeGatewayHealthState: (...args: unknown[]) => mockMergeGatewayHealthState(...args),
 }))
 
 import { useAppRuntimeHealth } from './useAppRuntimeHealth'
@@ -20,6 +20,7 @@ const fakeRuntimeView: GatewayRuntimeView = {
   reconnectAttempts: 0,
   lastError: null,
   lastProbeAt: null,
+  diagnostic: null,
   servers: {},
 }
 
@@ -27,7 +28,7 @@ describe('useAppRuntimeHealth', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCheckBackend.mockResolvedValue(undefined)
-    mockDeriveGatewayRuntimeState.mockReturnValue(fakeRuntimeView)
+    mockMergeGatewayHealthState.mockReturnValue(fakeRuntimeView)
     mockGetGatewayHealth.mockResolvedValue({
       success: true,
       data: { status: 'ok' },
@@ -62,7 +63,7 @@ describe('useAppRuntimeHealth', () => {
     expect(result.current).toBeNull()
   })
 
-  it('calls getGatewayHealth and sets runtimeView from successful response', async () => {
+  it('calls getGatewayHealth and sets runtimeView from merged successful response', async () => {
     const { result } = renderHook(() =>
       useAppRuntimeHealth({
         backendStatus: true,
@@ -75,19 +76,19 @@ describe('useAppRuntimeHealth', () => {
     })
 
     expect(mockGetGatewayHealth).toHaveBeenCalledTimes(1)
-    expect(mockDeriveGatewayRuntimeState).toHaveBeenCalledWith(
-      { status: 'ok' },
+    expect(mockMergeGatewayHealthState).toHaveBeenCalledWith(
       true,
+      { success: true, data: { status: 'ok' } },
     )
   })
 
-  it('sets runtimeView via deriveGatewayRuntimeState(null, ...) when getGatewayHealth fails', async () => {
+  it('sets runtimeView via mergeGatewayHealthState(null-response) when getGatewayHealth fails', async () => {
     mockGetGatewayHealth.mockRejectedValue(new Error('network error'))
     const degradedView: GatewayRuntimeView = {
       ...fakeRuntimeView,
       connectionState: 'disconnected',
     }
-    mockDeriveGatewayRuntimeState.mockReturnValue(degradedView)
+    mockMergeGatewayHealthState.mockReturnValue(degradedView)
 
     const { result } = renderHook(() =>
       useAppRuntimeHealth({
@@ -100,12 +101,31 @@ describe('useAppRuntimeHealth', () => {
       expect(result.current).toBe(degradedView)
     })
 
-    expect(mockDeriveGatewayRuntimeState).toHaveBeenCalledWith(null, false)
+    expect(mockMergeGatewayHealthState).toHaveBeenCalledWith(false, null)
   })
 
-  it('sets runtimeView via deriveGatewayRuntimeState(null, ...) when response is unsuccessful', async () => {
-    mockGetGatewayHealth.mockResolvedValue({ success: false, error: 'fail' })
-    mockDeriveGatewayRuntimeState.mockReturnValue(fakeRuntimeView)
+  it('preserves structured unsuccessful health responses through mergeGatewayHealthState', async () => {
+    mockGetGatewayHealth.mockResolvedValue({
+      success: false,
+      error: 'gateway offline',
+      errorData: {
+        status: 'error',
+        diagnostic: {
+          failure_class: 'runtime_unavailable',
+          summary: 'Gateway offline',
+        },
+      },
+    })
+
+    const degradedView: GatewayRuntimeView = {
+      ...fakeRuntimeView,
+      connectionState: 'disconnected',
+      diagnostic: {
+        failure_class: 'runtime_unavailable',
+        summary: 'Gateway offline',
+      },
+    }
+    mockMergeGatewayHealthState.mockReturnValue(degradedView)
 
     const { result } = renderHook(() =>
       useAppRuntimeHealth({
@@ -115,10 +135,23 @@ describe('useAppRuntimeHealth', () => {
     )
 
     await waitFor(() => {
-      expect(result.current).toBe(fakeRuntimeView)
+      expect(result.current).toBe(degradedView)
     })
 
-    expect(mockDeriveGatewayRuntimeState).toHaveBeenCalledWith(null, true)
+    expect(mockMergeGatewayHealthState).toHaveBeenCalledWith(
+      true,
+      {
+        success: false,
+        error: 'gateway offline',
+        errorData: {
+          status: 'error',
+          diagnostic: {
+            failure_class: 'runtime_unavailable',
+            summary: 'Gateway offline',
+          },
+        },
+      },
+    )
   })
 
   it('cleans up interval and visibilitychange listener on unmount', async () => {

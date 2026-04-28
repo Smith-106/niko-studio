@@ -29,6 +29,7 @@ describe('callApi Tauri bridge', () => {
     expect(response).toEqual({
       success: false,
       error: 'UI Bridge is disabled',
+      errorData: { error: 'UI Bridge is disabled', status: 'disabled' },
     })
   })
 

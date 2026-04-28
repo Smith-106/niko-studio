@@ -274,9 +274,10 @@ export class SearchEngineAdapter implements ISearchEngine {
       : null;
 
     const indexedResults = this.searchIndexedDocuments(query, limit, minScore, filterType);
-    const indexedIds = new Set(indexedResults.map(result => result.id));
+    if (indexedResults.length > 0) {
+      return indexedResults;
+    }
 
-    let retrieverResults: SearchResult[] = [];
     try {
       const results = await this.retriever.hybridSearch(
         query,
@@ -289,21 +290,15 @@ export class SearchEngineAdapter implements ISearchEngine {
         'hybrid',
         300,
       );
-      retrieverResults = results
-        .filter(result => !indexedIds.has(result.id))
-        .map(result => ({
-          id: result.id,
-          score: result.score,
-          content: result.content,
-          metadata: result.metadata,
-        }));
+      return results.map(result => ({
+        id: result.id,
+        score: result.score,
+        content: result.content,
+        metadata: result.metadata,
+      }));
     } catch {
-      retrieverResults = [];
+      return [];
     }
-
-    return [...indexedResults, ...retrieverResults]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
   }
 
   async index(document: { id: string; content: string; metadata?: Record<string, unknown> }): Promise<void> {

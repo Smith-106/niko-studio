@@ -88,16 +88,236 @@ describe('contracts type compilation', () => {
       reconnect_attempts: 3,
       last_error: 'search service unavailable',
       last_probe_at: '2026-04-21T10:00:00Z',
+      diagnostic: {
+        failure_class: 'integration_degraded',
+        summary: 'Search integration degraded',
+      },
     }
     const health: GatewayHealth = {
       status: 'degraded',
       version: '2.0.0',
       services: {},
+      diagnostic: {
+        failure_class: 'integration_degraded',
+        summary: 'Search integration degraded',
+      },
       mcp_runtime: runtime,
     }
     expect(health.mcp_runtime?.connection_state).toBe('reconnecting')
     expect(health.mcp_runtime?.reconnect_attempts).toBe(3)
     expect(health.mcp_runtime?.last_error).toBe('search service unavailable')
+    expect(health.mcp_runtime?.diagnostic?.failure_class).toBe('integration_degraded')
+  })
+
+  it('GatewayHealthErrorResponse accepts structured runtime diagnostics', () => {
+    const payload: import('./contracts').GatewayHealthErrorResponse = {
+      error: 'gateway offline',
+      status: 'error',
+      diagnostic: {
+        failure_class: 'runtime_unavailable',
+        summary: 'Gateway offline',
+      },
+      mcp_runtime: {
+        connection_state: 'disconnected',
+        reconnect_state: 'failed',
+        last_error: 'gateway offline',
+        diagnostic: {
+          failure_class: 'runtime_unavailable',
+          summary: 'Gateway offline',
+          action: 'Start gateway',
+        },
+      },
+    }
+    expect(payload.mcp_runtime?.diagnostic?.failure_class).toBe('runtime_unavailable')
+    expect(payload.diagnostic?.summary).toBe('Gateway offline')
+  })
+
+  it('FailurePresentationInput accepts parser prerequisite metadata', () => {
+    const input: import('./contracts').FailurePresentationInput = {
+      message: 'upload failed',
+      errorData: {
+        error_code: 'PARSER_PREREQUISITE_MISSING',
+        detail: 'mammoth is required',
+        action: 'Install mammoth',
+        dependency: 'mammoth',
+      },
+    }
+    expect(input.errorData?.dependency).toBe('mammoth')
+  })
+
+  it('RuntimeDiagnosticPresentation captures failure-class messaging', () => {
+    const presentation: import('./contracts').RuntimeDiagnosticPresentation = {
+      label: 'Runtime unavailable',
+      message: 'Start gateway',
+      detail: 'gateway offline',
+      action: 'Start gateway',
+      tone: 'danger',
+      failureClass: 'runtime_unavailable',
+    }
+    expect(presentation.failureClass).toBe('runtime_unavailable')
+    expect(presentation.tone).toBe('danger')
+  })
+
+  it('RuntimeFailureTranslations covers diagnostic copy', () => {
+    const translations: import('./contracts').RuntimeFailureTranslations = {
+      runtimeUnavailableLabel: 'Runtime unavailable',
+      runtimeUnavailableMessage: 'Start gateway',
+      packagedPrerequisiteMissingLabel: 'Missing prerequisite',
+      packagedPrerequisiteMissingMessage: 'Install dependency',
+      embeddingAuthorityUnavailableLabel: 'Embedding unavailable',
+      embeddingAuthorityUnavailableMessage: 'Restore provider',
+      parserMissingLabel: 'Parser missing',
+      parserMissingMessage: 'Install parser',
+      integrationDegradedLabel: 'Integration degraded',
+      integrationDegradedMessage: 'Repair service',
+    }
+    expect(translations.parserMissingLabel).toBe('Parser missing')
+  })
+
+  it('GatewayRuntimeServerState supports both last_error and lastError forms', () => {
+    const serverState: GatewayRuntime['servers'] = {
+      search: { state: 'disconnected', loading: false, last_error: 'timeout', lastError: 'timeout', enabled: true },
+    }
+    expect(serverState.search.last_error).toBe('timeout')
+    expect(serverState.search.lastError).toBe('timeout')
+  })
+
+  it('GatewayFailureClass covers all runtime diagnostic states', () => {
+    const failureClasses: import('./contracts').GatewayFailureClass[] = [
+      'runtime_unavailable',
+      'packaged_prerequisite_missing',
+      'embedding_authority_unavailable',
+      'parser_missing',
+      'integration_degraded',
+    ]
+    expect(failureClasses).toHaveLength(5)
+  })
+
+  it('GatewayRuntimeDiagnosticPrerequisite accepts install metadata', () => {
+    const prerequisite: import('./contracts').GatewayRuntimeDiagnosticPrerequisite = {
+      kind: 'parser',
+      dependency: 'mammoth',
+      install_command: 'npm install mammoth',
+    }
+    expect(prerequisite.install_command).toBe('npm install mammoth')
+  })
+
+  it('GatewayApiErrorData can carry health diagnostics', () => {
+    const errorData: import('./contracts').GatewayApiErrorData = {
+      error: 'gateway offline',
+      diagnostic: {
+        failure_class: 'runtime_unavailable',
+        summary: 'Gateway offline',
+      },
+    }
+    expect(errorData.diagnostic?.failure_class).toBe('runtime_unavailable')
+  })
+
+  it('FailurePresentationResult preserves diagnostic detail', () => {
+    const result: import('./contracts').FailurePresentationResult = {
+      message: 'Install parser',
+      detail: 'mammoth missing',
+      diagnostic: {
+        failureClass: 'parser_missing',
+        detail: 'mammoth missing',
+      },
+    }
+    expect(result.diagnostic?.failureClass).toBe('parser_missing')
+  })
+
+  it('RuntimeDiagnosticSummary stores actionable runtime guidance', () => {
+    const summary: import('./contracts').RuntimeDiagnosticSummary = {
+      title: 'Runtime unavailable',
+      detail: 'gateway offline',
+      action: 'Start gateway',
+      tone: 'danger',
+      failureClass: 'runtime_unavailable',
+    }
+    expect(summary.action).toBe('Start gateway')
+  })
+
+  it('RuntimeFailureMatrix maps all failure classes', () => {
+    const matrix: import('./contracts').RuntimeFailureMatrix = {
+      runtime_unavailable: { title: 'Runtime unavailable', summary: 'Start gateway', tone: 'danger' },
+      packaged_prerequisite_missing: { title: 'Missing prerequisite', summary: 'Install dependency', tone: 'danger' },
+      embedding_authority_unavailable: { title: 'Embedding unavailable', summary: 'Restore provider', tone: 'warning' },
+      parser_missing: { title: 'Parser missing', summary: 'Install parser', tone: 'warning' },
+      integration_degraded: { title: 'Integration degraded', summary: 'Repair service', tone: 'warning' },
+    }
+    expect(Object.keys(matrix)).toHaveLength(5)
+  })
+
+  it('RuntimePresentationTranslations extends runtime copy with generic fetch fallback', () => {
+    const translations: import('./contracts').RuntimePresentationTranslations = {
+      runtimeUnavailableLabel: 'Runtime unavailable',
+      runtimeUnavailableMessage: 'Start gateway',
+      packagedPrerequisiteMissingLabel: 'Missing prerequisite',
+      packagedPrerequisiteMissingMessage: 'Install dependency',
+      embeddingAuthorityUnavailableLabel: 'Embedding unavailable',
+      embeddingAuthorityUnavailableMessage: 'Restore provider',
+      parserMissingLabel: 'Parser missing',
+      parserMissingMessage: 'Install parser',
+      integrationDegradedLabel: 'Integration degraded',
+      integrationDegradedMessage: 'Repair service',
+      mcpFetchFailed: 'Fetch failed',
+    }
+    expect(translations.mcpFetchFailed).toBe('Fetch failed')
+  })
+
+  it('RuntimeDiagnosticTranslations extends runtime copy with availability fallback', () => {
+    const translations: import('./contracts').RuntimeDiagnosticTranslations = {
+      runtimeUnavailableLabel: 'Runtime unavailable',
+      runtimeUnavailableMessage: 'Start gateway',
+      packagedPrerequisiteMissingLabel: 'Missing prerequisite',
+      packagedPrerequisiteMissingMessage: 'Install dependency',
+      embeddingAuthorityUnavailableLabel: 'Embedding unavailable',
+      embeddingAuthorityUnavailableMessage: 'Restore provider',
+      parserMissingLabel: 'Parser missing',
+      parserMissingMessage: 'Install parser',
+      integrationDegradedLabel: 'Integration degraded',
+      integrationDegradedMessage: 'Repair service',
+      mcpNotAvailable: 'N/A',
+    }
+    expect(translations.mcpNotAvailable).toBe('N/A')
+  })
+
+  it('FailurePresentationDiagnostic accepts snake_case and camelCase compatible payloads', () => {
+    const diagnostic: import('./contracts').FailurePresentationDiagnostic = {
+      failureClass: 'integration_degraded',
+      summary: 'Search degraded',
+      detail: 'search timeout',
+      action: 'Retry search',
+      prerequisite: {
+        kind: 'integration',
+        service: 'search',
+      },
+    }
+    expect(diagnostic.prerequisite?.service).toBe('search')
+  })
+
+  it('FailurePresentationErrorData can carry runtime and parser fields together', () => {
+    const errorData: import('./contracts').FailurePresentationErrorData = {
+      error_code: 'PARSER_PREREQUISITE_MISSING',
+      dependency: 'mammoth',
+      mcp_runtime: {
+        last_error: 'gateway offline',
+      },
+    }
+    expect(errorData.error_code).toBe('PARSER_PREREQUISITE_MISSING')
+    expect(errorData.mcp_runtime?.last_error).toBe('gateway offline')
+  })
+
+  it('GatewayHealth accepts top-level diagnostic without runtime payload', () => {
+    const health: GatewayHealth = {
+      status: 'degraded',
+      version: '2.0.0',
+      services: {},
+      diagnostic: {
+        failure_class: 'packaged_prerequisite_missing',
+        summary: 'Python missing',
+      },
+    }
+    expect(health.diagnostic?.failure_class).toBe('packaged_prerequisite_missing')
   })
 
   it('GatewayRuntimeServerState holds per-server state', () => {
@@ -218,6 +438,7 @@ describe('GatewayRuntimeView', () => {
       reconnectAttempts: 0,
       lastError: null,
       lastProbeAt: '2026-04-21T10:00:00Z',
+      diagnostic: null,
       servers: {},
     }
     expect(view.connectionState).toBe('connected')

@@ -101,9 +101,9 @@ export class VectorSearch implements SearchInterface {
 
   constructor(config: VectorSearchConfig) {
     this.dbPath = config.dbPath;
-    this.dimension = config.dimension ?? 384;
     this.modelName = config.modelName ?? DEFAULT_MODEL_NAME;
     this.embeddingService = config.embeddingService;
+    this.dimension = config.dimension ?? this.embeddingService.getDimensions(this.modelName);
     this.hnswConfig = { ...DEFAULT_HNSW_CONFIG, ...config.hnsw, dimension: this.dimension };
 
     this.initializeDatabase();

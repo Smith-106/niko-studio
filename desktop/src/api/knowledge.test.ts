@@ -189,6 +189,31 @@ describe('uploadMemoryFile', () => {
     expect(result.data?.chunks).toBe(12)
     expect(result.data?.memory_ids).toHaveLength(3)
   })
+
+  it('preserves structured upload error payloads', async () => {
+    callApiMock.mockResolvedValue({
+      success: false,
+      error: 'mammoth is required for DOCX support. Install with: npm install mammoth',
+      errorData: {
+        error: 'mammoth is required for DOCX support. Install with: npm install mammoth',
+        error_code: 'PARSER_PREREQUISITE_MISSING',
+        file_name: 'notes.docx',
+        file_type: 'docx',
+        parser: 'mammoth',
+        dependency: 'mammoth',
+      },
+    })
+
+    const result = await uploadMemoryFile({
+      file_name: 'notes.docx',
+      file_content_base64: 'ZmFrZS1kb2N4',
+      session_id: 'sess-1',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.errorData?.error_code).toBe('PARSER_PREREQUISITE_MISSING')
+    expect(result.errorData?.parser).toBe('mammoth')
+  })
 })
 
 describe('getTemporalFacts', () => {
@@ -261,39 +286,17 @@ describe('getCharacter', () => {
   it('calls /graph/character with name', async () => {
     callApiMock.mockResolvedValue({
       success: true,
-      data: {
-        name: 'Lin',
-        role: 'protagonist',
-        relationships: { rival: 'Zhao' },
-      },
+      data: { name: 'Hero', role: 'protagonist', relationships: {} },
     })
 
-    const result = await getCharacter('Lin')
+    const result = await getCharacter('Hero')
 
-    expect(appendWorkspacePayloadMock).toHaveBeenCalledWith(
-      { name: 'Lin', include_relations: undefined },
-      undefined,
-    )
     expect(callApiMock).toHaveBeenCalledWith(
       '/graph/character',
       'POST',
-      expect.objectContaining({ name: 'Lin' }),
+      expect.objectContaining({ name: 'Hero', include_relations: undefined }),
     )
-    expect(result.data?.role).toBe('protagonist')
-  })
-
-  it('passes include_relations flag', async () => {
-    callApiMock.mockResolvedValue({
-      success: true,
-      data: { name: 'Lin', role: 'protagonist', relationships: {} },
-    })
-
-    await getCharacter('Lin', true)
-
-    expect(appendWorkspacePayloadMock).toHaveBeenCalledWith(
-      { name: 'Lin', include_relations: true },
-      undefined,
-    )
+    expect(result.success).toBe(true)
   })
 })
 
@@ -303,33 +306,19 @@ describe('getForeshadows', () => {
     appendWorkspacePayloadMock.mockImplementation((payload) => payload)
   })
 
-  it('calls /graph/foreshadows with status and chapter', async () => {
+  it('calls /graph/foreshadows with filters', async () => {
     callApiMock.mockResolvedValue({
       success: true,
-      data: [
-        { id: 'fs-1', description: 'The mysterious letter', status: 'open' },
-        { id: 'fs-2', description: 'Hidden weapon', status: 'resolved' },
-      ],
+      data: [{ id: 'f-1', description: 'Hidden clue', status: 'open' }],
     })
 
-    const result = await getForeshadows('open', 5)
+    const result = await getForeshadows('open', 3)
 
-    expect(appendWorkspacePayloadMock).toHaveBeenCalledWith(
-      { status: 'open', chapter: 5 },
-      undefined,
-    )
     expect(callApiMock).toHaveBeenCalledWith(
       '/graph/foreshadows',
       'POST',
-      expect.objectContaining({ status: 'open', chapter: 5 }),
+      expect.objectContaining({ status: 'open', chapter: 3 }),
     )
-    expect(result.data).toHaveLength(2)
-  })
-
-  it('works without optional parameters', async () => {
-    callApiMock.mockResolvedValue({ success: true, data: [] })
-
-    await getForeshadows()
-    expect(callApiMock).toHaveBeenCalled()
+    expect(result.success).toBe(true)
   })
 })

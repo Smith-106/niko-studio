@@ -54,6 +54,31 @@ uv sync
 
 当前默认构建与运行权威面是 `desktop + src-ts`。Python 主要保留给发布辅助脚本、治理脚本和显式兼容路径。
 
+## Authoritative Native Dependency Matrix
+
+The following 7 prerequisites define the authoritative dependency matrix across developer local, Ubuntu CI, and Windows packaging:
+
+| Prerequisite | Developer local | Ubuntu CI | Windows packaging |
+|---|---|---|---|
+| Node.js 20 + npm 10 | required for `src-ts/` and `desktop/` installs, tests, and build scripts | required | required |
+| Python 3.11+ | required for release helpers, governance scripts, and compatibility launcher paths | required | required |
+| Rust stable + MSVC Windows target | required when building or running the Tauri host locally | not used in the current Ubuntu internal lanes | required |
+| `better-sqlite3` | hydrated by `npm ci` in `src-ts/` before backend tests | hydrated by `npm ci` in `src-ts/` before CI tests | hydrated whenever the local backend gate is rerun on the packaging host |
+| `fastembed` / transitive `onnxruntime-node` | hydrated by `npm ci` in `src-ts/` before embedding/runtime checks | hydrated by `npm ci` in `src-ts/` before CI tests | hydrated whenever the local backend gate is rerun on the packaging host |
+| `pdf-parse` | hydrated by `npm ci` in `src-ts/` before import/runtime checks | hydrated by `npm ci` in `src-ts/` before CI tests | hydrated whenever the local backend gate is rerun on the packaging host |
+| `mammoth` | hydrated by `npm ci` in `src-ts/` before DOCX import/runtime checks | hydrated by `npm ci` in `src-ts/` before CI tests | hydrated whenever the local backend gate is rerun on the packaging host |
+
+Failure-first hydration order:
+
+1. `pip install -r requirements.txt` or `uv sync`
+2. `npm ci` in `src-ts/`
+3. `npm ci` in `desktop/`
+4. `npm --prefix desktop run build:sidecar`
+5. `npm --prefix desktop run validate:sidecar-contract`
+6. `npm --prefix src-ts run check:local`
+7. `npm --prefix desktop run check:local`
+8. On Windows release hosts only: `npm --prefix desktop run validate:package:dry-run` or the signed `npm --prefix desktop run tauri:build`
+
 ## Writer-First Desktop Delivery Contract
 
 以下标签构成当前唯一的运行时 / 发布交付地图。Legacy 兼容性详细说明已归档至 [docs/archive/LEGACY_COMPATIBILITY.md](docs/archive/LEGACY_COMPATIBILITY.md)。
@@ -136,6 +161,9 @@ npm --prefix src-ts run typecheck
 ```bash
 # 默认：Node sidecar（Node-first）
 npm --prefix desktop run build:sidecar
+
+# Sidecar/runtime contract must pass before downstream desktop gates claim success
+npm --prefix desktop run validate:sidecar-contract
 
 # 显式 Python 兼容构建（仅 legacy entry 存在时可用）
 # 当前 checkout 默认不包含该 legacy entry

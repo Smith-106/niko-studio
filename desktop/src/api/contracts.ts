@@ -61,10 +61,37 @@ export type GatewayReconnectState =
   | 'recovered'
   | 'failed'
 
+export type GatewayFailureClass =
+  | 'runtime_unavailable'
+  | 'packaged_prerequisite_missing'
+  | 'embedding_authority_unavailable'
+  | 'parser_missing'
+  | 'integration_degraded'
+
+export interface GatewayRuntimeDiagnosticPrerequisite {
+  kind?: 'runtime' | 'package' | 'embedding' | 'parser' | 'integration'
+  dependency?: string | null
+  service?: string | null
+  detail?: string | null
+  action?: string | null
+  install_command?: string | null
+}
+
+export interface GatewayRuntimeDiagnostic {
+  failure_class?: GatewayFailureClass
+  summary?: string | null
+  detail?: string | null
+  action?: string | null
+  affected_services?: string[]
+  prerequisite?: GatewayRuntimeDiagnosticPrerequisite | null
+}
+
 export interface GatewayRuntimeServerState {
   state: GatewayConnectionState
   loading: boolean
   last_error?: string | null
+  lastError?: string | null
+  enabled?: boolean
 }
 
 export interface GatewayServiceConfig {
@@ -85,6 +112,7 @@ export interface GatewayRuntime {
   last_probe_at?: string
   reconnect_attempts?: number
   last_error?: string | null
+  diagnostic?: GatewayRuntimeDiagnostic | null
   servers?: Record<string, GatewayRuntimeServerState>
   service_configs?: GatewayServiceConfig[]
 }
@@ -96,7 +124,113 @@ export interface GatewayRuntimeView {
   reconnectAttempts: number
   lastError: string | null
   lastProbeAt: string | null
+  diagnostic: GatewayRuntimeDiagnostic | null
   servers: Record<string, GatewayRuntimeServerState>
+}
+
+export interface GatewayHealthErrorResponse {
+  error: string
+  status?: string
+  mcp_runtime?: GatewayRuntime
+  diagnostic?: GatewayRuntimeDiagnostic | null
+}
+
+export interface GatewayApiErrorData {
+  error?: string
+  diagnostic?: GatewayRuntimeDiagnostic | null
+  mcp_runtime?: GatewayRuntime
+  status?: string
+}
+
+export interface FailurePresentationDiagnostic {
+  failureClass?: GatewayFailureClass | null
+  summary?: string | null
+  detail?: string | null
+  action?: string | null
+  prerequisite?: GatewayRuntimeDiagnosticPrerequisite | null
+}
+
+export interface FailurePresentationErrorData {
+  diagnostic?: FailurePresentationDiagnostic | null
+  mcp_runtime?: {
+    diagnostic?: FailurePresentationDiagnostic | null
+    last_error?: string | null
+  } | null
+  error_code?: string
+  detail?: string | null
+  action?: string | null
+  dependency?: string | null
+  parser?: string | null
+  service?: string | null
+}
+
+export interface FailurePresentationInput {
+  message?: string | null
+  diagnostics?: FailurePresentationDiagnostic | null
+  errorData?: FailurePresentationErrorData | null
+}
+
+export interface FailurePresentationResult {
+  message: string
+  detail: string | null
+  diagnostic: FailurePresentationDiagnostic | null
+}
+
+export interface RuntimeDiagnosticPresentation {
+  label: string
+  message: string
+  detail: string | null
+  action: string | null
+  tone: 'danger' | 'warning' | 'info'
+  failureClass: GatewayFailureClass | null
+}
+
+export interface RuntimeDiagnosticSummary {
+  title: string
+  detail: string | null
+  action: string | null
+  tone: 'danger' | 'warning' | 'info'
+  failureClass: GatewayFailureClass | null
+}
+
+export interface RuntimeFailureMatrixEntry {
+  title: string
+  summary: string
+  tone: 'danger' | 'warning' | 'info'
+}
+
+export type RuntimeFailureMatrix = Record<GatewayFailureClass, RuntimeFailureMatrixEntry>
+
+export interface RuntimeFailureTranslations {
+  runtimeUnavailableLabel: string
+  runtimeUnavailableMessage: string
+  packagedPrerequisiteMissingLabel: string
+  packagedPrerequisiteMissingMessage: string
+  embeddingAuthorityUnavailableLabel: string
+  embeddingAuthorityUnavailableMessage: string
+  parserMissingLabel: string
+  parserMissingMessage: string
+  integrationDegradedLabel: string
+  integrationDegradedMessage: string
+}
+
+export interface RuntimePresentationTranslations extends RuntimeFailureTranslations {
+  mcpFetchFailed: string
+}
+
+export interface RuntimeDiagnosticTranslations extends RuntimeFailureTranslations {
+  mcpNotAvailable: string
+}
+
+export interface GatewayHealth {
+  status: string
+  version: string
+  services: Record<string, string>
+  engine_health?: Record<string, { status: string; error?: string }>
+  agents?: string[]
+  skills_count?: number
+  diagnostic?: GatewayRuntimeDiagnostic | null
+  mcp_runtime?: GatewayRuntime
 }
 
 export interface GatewayServiceConfigInput {
@@ -118,12 +252,3 @@ export interface GatewayServiceProbeResult {
   }
 }
 
-export interface GatewayHealth {
-  status: string
-  version: string
-  services: Record<string, string>
-  engine_health?: Record<string, { status: string; error?: string }>
-  agents?: string[]
-  skills_count?: number
-  mcp_runtime?: GatewayRuntime
-}

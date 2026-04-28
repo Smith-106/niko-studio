@@ -74,6 +74,9 @@ export interface EmbeddingServiceConfig {
   cache?: EmbeddingCache;
 }
 
+const DEFAULT_OPENAI_EMBEDDING_MODEL = 'text-embedding-3-small';
+const DEFAULT_LOCAL_EMBEDDING_MODEL = 'BAAI/bge-small-en-v1.5';
+
 /**
  * EmbeddingService Implementation
  *
@@ -95,7 +98,6 @@ export class EmbeddingServiceImpl implements EmbeddingService {
       ? providers
       : new Map(Object.entries(providers) as [ProviderType, EmbeddingProvider][]);
 
-    this.defaultProvider = config.defaultProvider ?? ProviderType.OPENAI;
     this.defaultModel = config.defaultModel;
     this.cache = config.cache;
 
@@ -103,6 +105,11 @@ export class EmbeddingServiceImpl implements EmbeddingService {
     if (this.providers.size === 0) {
       throw new EmbeddingError('At least one provider is required');
     }
+
+    const availableProviders = Array.from(this.providers.keys());
+    this.defaultProvider = config.defaultProvider && this.providers.has(config.defaultProvider)
+      ? config.defaultProvider
+      : availableProviders[0]!;
   }
 
   /**
@@ -134,12 +141,12 @@ export class EmbeddingServiceImpl implements EmbeddingService {
     // Provider-specific defaults
     switch (provider.providerType) {
       case ProviderType.OPENAI:
-        return 'text-embedding-3-small';
+        return DEFAULT_OPENAI_EMBEDDING_MODEL;
       case ProviderType.LOCAL:
       case ProviderType.FASTEMBED:
-        return 'BAAI/bge-small-zh-v1.5';
+        return DEFAULT_LOCAL_EMBEDDING_MODEL;
       default:
-        return 'text-embedding-3-small';
+        return DEFAULT_OPENAI_EMBEDDING_MODEL;
     }
   }
 

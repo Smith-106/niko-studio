@@ -2900,11 +2900,16 @@ def main() -> int:
 - signoff_doc: `docs/release/SIGN_OFF.md`
 - contract_docs: `README.md`, `desktop/README.md`, `docs/release/RELEASE_NOTES.md`, `docs/operations/DESKTOP_RUNBOOK.md`, `docs/operations/ROLLBACK.md`
 - contract_labels: `Supported runtime`, `Supported launcher`, `Advisory compatibility surfaces`, `Deprecated surface`
+- release_state_model:
+  - `unsigned_local_proof`: repo-visible gates are green while `desktop/src-tauri/tauri.conf.json` still keeps `certificateThumbprint=null` and `timestampUrl=""`; valid local proof only, not a signed external shipment.
+  - `prerequisite_missing_hold`: hold external shipment whenever any release prerequisite is missing [certificate thumbprint, timestamp URL, hydrated packaged compatibility artifact, Windows packaging host/toolchain].
+  - `signed_external_release`: all repo-visible gates stay green and a Windows-hosted `npm --prefix desktop run tauri:build` completes with release-private signing inputs outside git.
 - authority_alignment_checker: `scripts/check_authority_alignment.py`
 - desktop_authoritative_local_gate: `{DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND}` (from `desktop/package.json` `check:local`, which currently resolves to `check:release`)
 - desktop_local_selftest: `{DESKTOP_LOCAL_SELFTEST_COMMAND}` (required whenever retained release evidence for `release_summary_report`, `authority_alignment`, `writing_helper_acceptance`, or `governance_scripts_regression` is not already `fresh_current` for the current HEAD)
 - packaging_dry_run: `{DESKTOP_PACKAGING_DRY_RUN_COMMAND}` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`)
 - formal_evidence_dir: `{_trace_path(RELEASE_EVIDENCE_DIR)}`
+- retained_production_contract_evidence: `release-check-summary.md`, `{_trace_path(RELEASE_READINESS_ARTIFACT_PATH)}`, `{_trace_path(AUTHORITY_ALIGNMENT_ARTIFACT_PATH)}`, `{_trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)}`, `{_trace_path(PRODUCTION_GUARD_JUNIT_PATH)}`, `{_trace_path(E2E_JUNIT_PATH)}`, `{_trace_path(GOVERNANCE_JUNIT_PATH)}`
 - authority_alignment_artifact: `{_trace_path(AUTHORITY_ALIGNMENT_ARTIFACT_PATH)}`
 - writing_helper_acceptance_artifact: `{_trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)}`
 - governance_junit: `{_trace_path(GOVERNANCE_JUNIT_PATH)}`

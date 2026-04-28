@@ -29,9 +29,25 @@ const integrationAdaptersMock = {
   search: {
     indexDocument: indexDocumentMock,
     search: elasticSearchMock,
+    getStatus: vi.fn(() => ({
+      integration: 'elasticsearch-search',
+      state: integrationAdaptersMock.flags.elasticsearchEnabled ? 'degraded' : 'disabled',
+      code: integrationAdaptersMock.flags.elasticsearchEnabled ? 'ELASTICSEARCH_DEGRADED' : 'INTEGRATION_DISABLED',
+      detail: integrationAdaptersMock.flags.elasticsearchEnabled
+        ? 'Elasticsearch is enabled but no durable external index is available; requests must fall back to local retrieval.'
+        : 'Elasticsearch integration is disabled; local retrieval remains the only active search path.',
+    })),
   },
   orchestration: {
     run: orchestrationRunMock,
+    getStatus: vi.fn(() => ({
+      integration: 'langflow-orchestration',
+      state: integrationAdaptersMock.flags.langflowEnabled ? 'unsupported' : 'disabled',
+      code: integrationAdaptersMock.flags.langflowEnabled ? 'LANGFLOW_UNSUPPORTED' : 'INTEGRATION_DISABLED',
+      detail: integrationAdaptersMock.flags.langflowEnabled
+        ? 'Langflow orchestration is enabled in configuration but no real remote flow runner is implemented.'
+        : 'Langflow orchestration is disabled; no external orchestration flow was started.',
+    })),
   },
 };
 
@@ -147,12 +163,38 @@ describe('mcp search service wiring', () => {
     hybridSearchMock.mockResolvedValueOnce([]);
 
     const { searchHybrid } = await import('../../mcp/services/search.js');
-    await searchHybrid({ query: 'hybrid branch', routeMode: 'hybrid' });
+    const result = await searchHybrid({ query: 'hybrid branch', routeMode: 'hybrid' });
 
     expect(createIterativeRetrieverMock).toHaveBeenCalledWith({
       projectRoot: process.cwd(),
       elasticAdapter: integrationAdaptersMock.search,
       elasticsearchEnabled: true,
     });
+    expect(hybridSearchMock).toHaveBeenCalledWith(
+      'hybrid branch',
+      'all',
+      10,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      'legacy',
+      300,
+    );
+    expect(result).toEqual([
+      {
+        id: 'integration:elasticsearch-search',
+        content: 'Elasticsearch is enabled but no durable external index is available; requests must fall back to local retrieval.',
+        source: 'integration',
+        score: 1,
+        metadata: {
+          integration: 'elasticsearch-search',
+          state: 'degraded',
+          code: 'ELASTICSEARCH_DEGRADED',
+          routeMode: 'legacy',
+          results: [],
+        },
+      },
+    ]);
   });
 });

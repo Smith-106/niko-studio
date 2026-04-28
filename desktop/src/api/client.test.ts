@@ -29,6 +29,7 @@ import {
   setGatewayServiceEnabled,
   streamWritingHelper,
   updateGatewayServiceConfig,
+  mergeGatewayHealthState,
   listCheckpoints,
   workflowLifecycle,
   workflowSchedulerRegister,
@@ -394,6 +395,64 @@ describe('gateway runtime mapping', () => {
     expect(result.sessionId).toBe('gw-20260220-xyz')
     expect(result.reconnectAttempts).toBe(2)
     expect(result.lastError).toBe('search:error')
+  })
+
+  it('preserves runtime diagnostic from health payload', () => {
+    const health: GatewayHealth = {
+      status: 'degraded',
+      version: '8.0.0',
+      services: {
+        search: 'error',
+      },
+      diagnostic: {
+        failure_class: 'integration_degraded',
+        summary: 'Search degraded',
+      },
+    }
+
+    const result = deriveGatewayRuntimeState(health, true)
+
+    expect(result.diagnostic).toEqual({
+      failure_class: 'integration_degraded',
+      summary: 'Search degraded',
+    })
+  })
+
+  it('merges structured unsuccessful health response into degraded runtime state', () => {
+    const result = mergeGatewayHealthState(true, {
+      success: false,
+      error: 'gateway offline',
+      errorData: {
+        status: 'degraded',
+        diagnostic: {
+          failure_class: 'integration_degraded',
+          summary: 'Search degraded',
+          detail: 'search timeout',
+        },
+        mcp_runtime: {
+          connection_state: 'disconnected',
+          reconnect_state: 'failed',
+          reconnect_attempts: 4,
+          last_error: 'search timeout',
+          diagnostic: {
+            failure_class: 'integration_degraded',
+            summary: 'Search degraded',
+            detail: 'search timeout',
+          },
+          servers: {},
+        },
+      },
+    })
+
+    expect(result.connectionState).toBe('disconnected')
+    expect(result.reconnectState).toBe('failed')
+    expect(result.reconnectAttempts).toBe(4)
+    expect(result.lastError).toBe('search timeout')
+    expect(result.diagnostic).toEqual({
+      failure_class: 'integration_degraded',
+      summary: 'Search degraded',
+      detail: 'search timeout',
+    })
   })
 })
 

@@ -67,6 +67,7 @@ beforeEach(() => {
         reconnect_state: 'idle',
         reconnect_attempts: 0,
         last_error: null,
+        diagnostic: null,
         servers: {},
       },
     },
@@ -156,20 +157,44 @@ describe('deriveGatewayRuntimeState', () => {
 })
 
 describe('McpStatusPanel', () => {
-  it('renders the softened top-level connection framing in the detailed diagnostics view', async () => {
+  it('renders structured runtime diagnostics for degraded gateway health', async () => {
+    mockedGetGatewayHealth.mockResolvedValue({
+      success: false,
+      error: 'gateway offline',
+      errorData: {
+        status: 'degraded',
+        diagnostic: {
+          failure_class: 'parser_missing',
+          summary: 'Document parser prerequisite is missing.',
+          detail: 'mammoth is required',
+          action: 'Install mammoth and retry.',
+        },
+        mcp_runtime: {
+          connection_state: 'disconnected',
+          reconnect_state: 'failed',
+          reconnect_attempts: 2,
+          last_error: 'mammoth is required',
+          diagnostic: {
+            failure_class: 'parser_missing',
+            summary: 'Document parser prerequisite is missing.',
+            detail: 'mammoth is required',
+            action: 'Install mammoth and retry.',
+          },
+          servers: {},
+        },
+      },
+    })
+
     render(<McpStatusPanel onClose={() => {}} />)
 
     await waitFor(() => {
       expect(mockedListGatewayServiceConfigs).toHaveBeenCalledTimes(1)
     })
 
-    expect(screen.getByText('Connection details')).toBeInTheDocument()
-    expect(screen.getByText('Connection status')).toBeInTheDocument()
-    expect(screen.getByText('Connection')).toBeInTheDocument()
-    expect(screen.getByText('Recovery')).toBeInTheDocument()
-
-    expect(screen.queryByText('Gateway status')).not.toBeInTheDocument()
-    expect(screen.queryByText('Gateway health')).not.toBeInTheDocument()
-    expect(screen.queryByText('Reconnect')).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Service diagnostics panel' })).toBeInTheDocument()
+    expect(screen.getByText('Runtime diagnostics')).toBeInTheDocument()
+    expect(screen.getAllByText('Document parser missing').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('mammoth is required').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Install mammoth and retry.').length).toBeGreaterThan(0)
   })
 })

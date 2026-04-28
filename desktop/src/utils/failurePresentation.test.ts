@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildFailurePresentation } from './failurePresentation'
+import { buildFailurePresentation, buildRuntimeDiagnosticSummary } from './failurePresentation'
 
 const t = {
   failureCategoryGeneration: '生成失败',
@@ -12,6 +12,40 @@ const t = {
   failureMessageRetrieval: '这次没有成功取到参考资料。',
   failureMessageConnection: '当前与本地服务的连接不稳定。',
 }
+
+describe('buildRuntimeDiagnosticSummary', () => {
+  it('maps parser_missing diagnostics to actionable summary copy', () => {
+    expect(buildRuntimeDiagnosticSummary(
+      {
+        message: 'mammoth is required',
+        diagnostics: {
+          failureClass: 'parser_missing',
+          detail: 'mammoth is required',
+          action: 'Install mammoth and retry.',
+        },
+      },
+      {
+        runtimeUnavailableLabel: 'Runtime unavailable',
+        runtimeUnavailableMessage: 'Start runtime',
+        packagedPrerequisiteMissingLabel: 'Missing runtime prerequisite',
+        packagedPrerequisiteMissingMessage: 'Install prerequisite',
+        embeddingAuthorityUnavailableLabel: 'Embedding authority unavailable',
+        embeddingAuthorityUnavailableMessage: 'Restore embedding',
+        parserMissingLabel: 'Document parser missing',
+        parserMissingMessage: 'Install parser',
+        integrationDegradedLabel: 'Integration degraded',
+        integrationDegradedMessage: 'Fix service',
+        mcpFetchFailed: 'Fetch failed',
+      },
+    )).toEqual({
+      title: 'Document parser missing',
+      detail: 'mammoth is required',
+      action: 'Install mammoth and retry.',
+      tone: 'warning',
+      failureClass: 'parser_missing',
+    })
+  })
+})
 
 describe('buildFailurePresentation', () => {
   it('classifies retrieval-oriented failures from the detail text', () => {

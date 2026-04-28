@@ -41,7 +41,7 @@ export class EmbeddingServiceImpl {
     defaultModel?: string | null;
   }) {
     this._providers = params.providers;
-    this._defaultProvider = params.defaultProvider ?? ProviderType.OPENAI;
+    this._defaultProvider = params.defaultProvider ?? ProviderType.LOCAL;
     this._cache = params.cache ?? null;
     this._defaultModel = params.defaultModel ?? null;
   }
@@ -72,7 +72,7 @@ export class EmbeddingServiceImpl {
       return 'text-embedding-3-small';
     }
     if (provider.providerType === ProviderType.LOCAL) {
-      return 'BAAI/bge-small-zh-v1.5';
+      return 'BAAI/bge-small-en-v1.5';
     }
     return 'text-embedding-3-small';
   }

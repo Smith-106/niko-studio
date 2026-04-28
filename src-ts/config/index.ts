@@ -210,8 +210,8 @@ function defaultAgentConfig(): AgentConfig {
 function defaultMemoryConfig(): MemoryConfig {
   return {
     vectorDbPath: '.writing/vector_store',
-    embeddingModel: 'text-embedding-3-small',
-    embeddingDimension: 1536,
+    embeddingModel: 'BAAI/bge-small-en-v1.5',
+    embeddingDimension: 384,
     cacheEnabled: true,
     cacheTtl: 86400,
     cacheMaxSize: 10000,
@@ -722,8 +722,8 @@ agent:
 
 memory:
   vector_db_path: .writing/vector_store
-  embedding_model: text-embedding-3-small
-  embedding_dimension: 1536
+  embedding_model: BAAI/bge-small-en-v1.5
+  embedding_dimension: 384
   cache_enabled: true
   cache_ttl: 86400
   cache_max_size: 10000

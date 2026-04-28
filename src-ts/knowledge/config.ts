@@ -283,13 +283,13 @@ export class ConfigLoader {
           [ModelTier.DEFAULT]: process.env.LOCAL_MODEL_DEFAULT ?? 'llama3',
           [ModelTier.POWERFUL]: process.env.LOCAL_MODEL_POWERFUL ?? 'llama3',
         },
-        embeddingModel: process.env.LOCAL_EMBEDDING_MODEL ?? 'bge-large-zh-v1.5',
+        embeddingModel: process.env.LOCAL_EMBEDDING_MODEL ?? 'BAAI/bge-small-en-v1.5',
       }));
     }
 
     // Default providers
     const defaultLLM = process.env.LLM_DEFAULT_PROVIDER ?? 'openai';
-    const defaultEmbedding = process.env.EMBEDDING_DEFAULT_PROVIDER ?? 'openai';
+    const defaultEmbedding = process.env.EMBEDDING_DEFAULT_PROVIDER ?? 'local';
 
     return createServiceConfig({
       providers,
@@ -355,7 +355,7 @@ export class ConfigLoader {
         (data.default_llm_provider as string) ?? 'openai'
       ),
       defaultEmbeddingProvider: parseProviderType(
-        (data.default_embedding_provider as string) ?? 'openai'
+        (data.default_embedding_provider as string) ?? 'local'
       ),
       embeddingCacheEnabled: (cacheConfig.enabled as boolean) ?? true,
       embeddingCacheTTL: (cacheConfig.ttl as number) ?? 86400,

@@ -24,6 +24,28 @@ This document is the repeatable local and CI sign-off path for the shipped Niko 
   - `npm --prefix desktop run validate:package:dry-run` runs `tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`
 - Signed external bundles require release-private certificate thumbprint and timestamp URL material outside git before `npm --prefix desktop run tauri:build`
 
+## Release states and external prerequisites
+
+Use the following 3 release states consistently across local sign-off, CI gate output, and handoff language:
+
+1. `unsigned_local_proof`
+   - Repo-visible gates are green and the packaged Python compatibility artifact is hydrated.
+   - `desktop/src-tauri/tauri.conf.json` still keeps `bundle.windows.certificateThumbprint: null` and `bundle.windows.timestampUrl: ""`.
+   - This is valid local validation proof, but it is not a signed external shipment.
+2. `prerequisite_missing_hold`
+   - External shipment is on hold whenever any of these 4 prerequisites is missing:
+     - Windows code-signing certificate thumbprint
+     - Windows timestamp URL
+     - Hydrated packaged compatibility artifact (`desktop/src-tauri/bin/niko-gateway*.exe`)
+     - Windows packaging host or toolchain (`validate:package:dry-run` / `tauri:build` on Windows with the MSVC target)
+   - Treat this state as non-shippable even if earlier local checks were green.
+3. `signed_external_release`
+   - The same repo-visible gates stay green.
+   - All 4 prerequisites above are present on the Windows packaging host.
+   - `npm --prefix desktop run tauri:build` completes with the release-private signing inputs provided outside git.
+
+The reusable `.github/workflows/external-release-gate.yml` workflow must surface the same state model in CI output so unsigned local proof cannot be misread as a signed release.
+
 ## Local Sign-Off Sequence
 
 ### 1. Governance and contract proof
@@ -97,6 +119,7 @@ python scripts/release_check_summary.py
 ```
 
 `release-check-summary.md` must end in `Decision: GO`.
+A `Decision: GO` with `certificateThumbprint = null` and `timestampUrl = ""` is only the `unsigned_local_proof` state. If any of the 4 external prerequisites is missing, treat the result as `prerequisite_missing_hold`; only a Windows-hosted `npm --prefix desktop run tauri:build` with release-private signing inputs can graduate that proof to `signed_external_release`.
 This command also refreshes the formal sign-off artifacts under `.workflow/evidence/release/`, including the retained authority-alignment JSON, `.workflow/evidence/release/writing-helper-acceptance.json`, and the governance and Vitest JUnit/XML reports used by the release bundle manifest.
 The consolidated snapshot is only valid when the retained writing-helper acceptance artifact is `strict: true`, `freshness_status: fresh`, and `supersession_status: current`.
 The release readiness artifact at `.workflow/evidence/release/release-readiness-artifact.json` now records `head_sha`, `version`, `generated_at`, `freshness_window_hours: 48`, and the retained `evidence_sources` list used by the sign-off decision.
@@ -122,15 +145,21 @@ Use one concise bundle for internal delivery or customer-facing demo preparation
   - local proof only; `certificateThumbprint = null`
   - local proof only; `timestampUrl = ""`
 
+### Retained production contract evidence (7 items)
+
+These 7 retained evidence items are the production contract. Docs, package files, and sidecar binaries support the handoff, but they do not replace this proof set:
+
+1. `release-check-summary.md`
+2. `.workflow/evidence/release/release-readiness-artifact.json`
+3. `.workflow/evidence/release/authority-alignment.json`
+4. `.workflow/evidence/release/writing-helper-acceptance.json`
+5. `.workflow/evidence/release/vitest-production-guard.xml`
+6. `.workflow/evidence/release/vitest-e2e.xml`
+7. `.workflow/evidence/release/governance-scripts.junit.xml`
+
 ### Include
 
-- `release-check-summary.md`
-- `.workflow/evidence/release/release-readiness-artifact.json`
-- `.workflow/evidence/release/authority-alignment.json`
-- `.workflow/evidence/release/writing-helper-acceptance.json`
-- `.workflow/evidence/release/vitest-production-guard.xml`
-- `.workflow/evidence/release/vitest-e2e.xml`
-- `.workflow/evidence/release/governance-scripts.junit.xml`
+- The 7 retained production contract evidence items listed above
 - `docs/release/SIGN_OFF.md`
 - The exact desktop executable or package artifact produced from the validated path
 - The exact packaged Python compatibility sidecar artifact used for sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` on Windows)

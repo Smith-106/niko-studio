@@ -13,10 +13,11 @@ import type { GatewayRequestMethod } from './tauri-contract'
 const DEFAULT_API_BASE = 'http://127.0.0.1:8000'
 export const GENERIC_API_ERROR_MESSAGE = 'Request failed. Please try again.'
 
-export interface ApiResponse<T> {
+export interface ApiResponse<T, E = unknown> {
   success: boolean
   data?: T
   error?: string
+  errorData?: E
 }
 
 export const getErrorName = (error: unknown): string =>
@@ -78,11 +79,11 @@ export const getResolvedApiBase = (): string => resolveApiBase()
  * 统一 API 调用方法
  * 在 Tauri 环境中使用 invoke，否则直接 fetch
  */
-export async function callApi<T>(
+export async function callApi<T, E = unknown>(
   endpoint: string,
   method: GatewayRequestMethod = 'GET',
   body?: Record<string, unknown>
-): Promise<ApiResponse<T>> {
+): Promise<ApiResponse<T, E>> {
   try {
     let data: T
 
@@ -94,7 +95,11 @@ export async function callApi<T>(
       })
       const payload = parseResponseText(response.body)
       if (!isSuccessfulStatusCode(response.statusCode)) {
-        return { success: false, error: readErrorMessage(response.statusCode, payload) }
+        return {
+          success: false,
+          error: readErrorMessage(response.statusCode, payload),
+          errorData: payload as E,
+        }
       }
       data = payload as T
     } else {
@@ -114,7 +119,11 @@ export async function callApi<T>(
       }
 
       if (!response.ok) {
-        return { success: false, error: readErrorMessage(response.status, payload) }
+        return {
+          success: false,
+          error: readErrorMessage(response.status, payload),
+          errorData: payload as E,
+        }
       }
 
       data = payload as T

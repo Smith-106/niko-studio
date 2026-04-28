@@ -18,6 +18,7 @@ const defaultT = {
   uploadErrorFormat: 'Format error',
   uploadErrorSize: 'Size error',
   uploadErrorNetwork: 'Network error',
+  uploadErrorPrerequisite: 'Parser prerequisite error',
   uploadErrorService: 'Service error',
   uploadMultipleProgress: 'Uploading {current}/{total}...',
   uploadMultipleComplete: 'Done: {success}/{total}',
@@ -36,7 +37,6 @@ function createFile(name: string, content: string, type = 'text/plain'): File {
   const encoder = new TextEncoder()
   const bytes = encoder.encode(content)
   const file = new File([bytes], name, { type })
-  // jsdom may not support File.prototype.arrayBuffer
   if (typeof file.arrayBuffer !== 'function') {
     file.arrayBuffer = () => Promise.resolve(bytes.buffer as ArrayBuffer)
   }
@@ -84,7 +84,6 @@ describe('useMemoryUpload', () => {
       }),
     )
 
-    // Manually attach a mock ref
     const mockInput = { click: clickSpy } as unknown as HTMLInputElement
     ;(result.current.fileInputRef as { current: HTMLInputElement | null }).current = mockInput
 
@@ -244,10 +243,49 @@ describe('useMemoryUpload', () => {
     expect(result.current.uploadStatus?.errorCategory).toBe('network')
   })
 
+  it('shows parser prerequisite error when backend returns structured parser metadata', async () => {
+    uploadMemoryFileMock.mockResolvedValue({
+      success: false,
+      error: 'mammoth is required for DOCX support. Install with: npm install mammoth',
+      errorData: {
+        error: 'mammoth is required for DOCX support. Install with: npm install mammoth',
+        error_code: 'PARSER_PREREQUISITE_MISSING',
+        file_name: 'notes.docx',
+        file_type: 'docx',
+        mode: 'async',
+        parser: 'mammoth',
+        dependency: 'mammoth',
+        install_command: 'npm install mammoth',
+        detail: 'DOCX parsing is enabled by configuration, but the required parser dependency is not installed or not loadable.',
+        action: 'Install mammoth in the src-ts runtime environment and retry the upload.',
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useMemoryUpload({
+        t: defaultT,
+        translate: defaultTranslate,
+        currentConversationId: 'conv-1',
+        createConversation: vi.fn(),
+        getCurrentConversationId: () => 'conv-1',
+      }),
+    )
+
+    const file = createFile('notes.docx', 'binary data', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    const event = createChangeEvent([file])
+
+    await act(async () => {
+      await result.current.handleFileUpload(event)
+    })
+
+    expect(result.current.uploadStatus?.stage).toBe('error')
+    expect(result.current.uploadStatus?.errorCategory).toBe('prerequisite')
+    expect(result.current.uploadStatus?.message).toContain('Parser prerequisite error')
+    expect(result.current.uploadStatus?.message).toContain('Install mammoth in the src-ts runtime environment and retry the upload.')
+  })
+
   it('creates conversation when currentConversationId is null', async () => {
     const createConversationMock = vi.fn()
-    // The hook calls getCurrentConversationId() right after createConversation()
-    // to get the newly created session ID
     const getCurrentConversationIdMock = vi.fn(() => 'conv-new')
 
     uploadMemoryFileMock.mockResolvedValue({

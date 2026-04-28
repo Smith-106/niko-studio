@@ -1,3 +1,14 @@
+import type {
+  FailurePresentationDiagnostic,
+  FailurePresentationErrorData,
+  FailurePresentationInput,
+  FailurePresentationResult,
+  GatewayFailureClass,
+  RuntimeDiagnosticPresentation,
+  RuntimeDiagnosticSummary,
+  RuntimePresentationTranslations,
+} from '../api/contracts'
+
 export type FailureCategory = 'generation' | 'evaluation' | 'retrieval' | 'connection'
 
 export interface FailurePresentationTranslations {
@@ -46,6 +57,154 @@ function resolveFailureCategory(source: BuildFailurePresentationOptions['source'
   }
 
   return 'generation'
+}
+
+function isGatewayFailureClass(value: unknown): value is GatewayFailureClass {
+  return value === 'runtime_unavailable'
+    || value === 'packaged_prerequisite_missing'
+    || value === 'embedding_authority_unavailable'
+    || value === 'parser_missing'
+    || value === 'integration_degraded'
+}
+
+function normalizeFailureDiagnostic(value: unknown): FailurePresentationDiagnostic | null {
+  if (!value || typeof value !== 'object') return null
+
+  const record = value as Record<string, unknown>
+  const rawFailureClass = record.failureClass ?? record.failure_class
+  const prerequisite = record.prerequisite && typeof record.prerequisite === 'object'
+    ? record.prerequisite as FailurePresentationDiagnostic['prerequisite']
+    : null
+
+  return {
+    failureClass: isGatewayFailureClass(rawFailureClass) ? rawFailureClass : null,
+    summary: normalizeFailureText(record.summary),
+    detail: normalizeFailureText(record.detail),
+    action: normalizeFailureText(record.action),
+    prerequisite,
+  }
+}
+
+function diagnosticFromErrorData(errorData?: FailurePresentationErrorData | null): FailurePresentationDiagnostic | null {
+  const direct = normalizeFailureDiagnostic(errorData?.diagnostic)
+  if (direct) return direct
+
+  const runtimeDiagnostic = normalizeFailureDiagnostic(errorData?.mcp_runtime?.diagnostic)
+  if (runtimeDiagnostic) return runtimeDiagnostic
+
+  if (errorData?.error_code === 'PARSER_PREREQUISITE_MISSING' || errorData?.error_code === 'ASYNC_PARSER_REQUIRED') {
+    return {
+      failureClass: 'parser_missing',
+      summary: normalizeFailureText(errorData.detail) ?? 'Parser prerequisite is missing.',
+      detail: normalizeFailureText(errorData.detail),
+      action: normalizeFailureText(errorData.action),
+      prerequisite: {
+        kind: 'parser',
+        dependency: errorData.dependency ?? errorData.parser ?? null,
+        service: errorData.service ?? null,
+        detail: normalizeFailureText(errorData.detail),
+        action: normalizeFailureText(errorData.action),
+      },
+    }
+  }
+
+  return null
+}
+
+function getFailureMatrixEntry(
+  failureClass: GatewayFailureClass,
+  t: RuntimePresentationTranslations,
+): Pick<RuntimeDiagnosticPresentation, 'label' | 'message' | 'tone'> {
+  if (failureClass === 'runtime_unavailable') {
+    return {
+      label: t.runtimeUnavailableLabel,
+      message: t.runtimeUnavailableMessage,
+      tone: 'danger',
+    }
+  }
+
+  if (failureClass === 'packaged_prerequisite_missing') {
+    return {
+      label: t.packagedPrerequisiteMissingLabel,
+      message: t.packagedPrerequisiteMissingMessage,
+      tone: 'danger',
+    }
+  }
+
+  if (failureClass === 'embedding_authority_unavailable') {
+    return {
+      label: t.embeddingAuthorityUnavailableLabel,
+      message: t.embeddingAuthorityUnavailableMessage,
+      tone: 'warning',
+    }
+  }
+
+  if (failureClass === 'parser_missing') {
+    return {
+      label: t.parserMissingLabel,
+      message: t.parserMissingMessage,
+      tone: 'warning',
+    }
+  }
+
+  return {
+    label: t.integrationDegradedLabel,
+    message: t.integrationDegradedMessage,
+    tone: 'warning',
+  }
+}
+
+export function extractFailureDiagnostic(input?: FailurePresentationInput | null): FailurePresentationDiagnostic | null {
+  if (!input) return null
+  return normalizeFailureDiagnostic(input.diagnostics) ?? diagnosticFromErrorData(input.errorData)
+}
+
+export function buildRuntimeDiagnosticPresentation(
+  input: FailurePresentationInput,
+  t: RuntimePresentationTranslations,
+): RuntimeDiagnosticPresentation | null {
+  const diagnostic = extractFailureDiagnostic(input)
+  if (!diagnostic?.failureClass) return null
+
+  const matrix = getFailureMatrixEntry(diagnostic.failureClass, t)
+  return {
+    label: matrix.label,
+    message: matrix.message,
+    detail: diagnostic.detail ?? diagnostic.summary ?? normalizeFailureText(input.message),
+    action: diagnostic.action ?? diagnostic.prerequisite?.action ?? null,
+    tone: matrix.tone,
+    failureClass: diagnostic.failureClass,
+  }
+}
+
+export function buildRuntimeDiagnosticSummary(
+  input: FailurePresentationInput,
+  t: RuntimePresentationTranslations,
+): RuntimeDiagnosticSummary | null {
+  const presentation = buildRuntimeDiagnosticPresentation(input, t)
+  if (!presentation) return null
+
+  return {
+    title: presentation.label,
+    detail: presentation.detail,
+    action: presentation.action,
+    tone: presentation.tone,
+    failureClass: presentation.failureClass,
+  }
+}
+
+export function buildFailurePresentationResult(
+  input: FailurePresentationInput,
+  t: RuntimePresentationTranslations,
+): FailurePresentationResult {
+  const presentation = buildRuntimeDiagnosticPresentation(input, t)
+  const detail = presentation?.detail ?? normalizeFailureText(input.message) ?? null
+
+  return {
+    message: presentation?.message ?? normalizeFailureText(input.message) ?? t.mcpFetchFailed,
+    detail,
+    diagnostic: extractFailureDiagnostic(input),
+  }
 }
 
 export function buildFailurePresentation({

@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
-import { uploadMemoryFile } from '../api/client'
+import { type MemoryUploadErrorResponse, uploadMemoryFile } from '../api/client'
 
 const BASE64_CHUNK_SIZE = 0x8000
 
 type UploadStage = 'reading' | 'uploading' | 'injecting' | 'done' | 'error'
 
-type UploadErrorCategory = 'format' | 'size' | 'network' | 'service'
+type UploadErrorCategory = 'format' | 'size' | 'network' | 'prerequisite' | 'service'
 
 interface UploadStatus {
   type: 'error' | 'success' | 'info'
@@ -25,6 +25,7 @@ interface UseMemoryUploadOptions {
     uploadErrorFormat: string
     uploadErrorSize: string
     uploadErrorNetwork: string
+    uploadErrorPrerequisite: string
     uploadErrorService: string
     uploadMultipleProgress: string
     uploadMultipleComplete: string
@@ -57,13 +58,23 @@ export function useMemoryUpload({
   const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const classifyUploadError = (errorMessage: string | undefined): UploadErrorCategory => {
+  const classifyUploadError = (
+    errorMessage: string | undefined,
+    errorData?: MemoryUploadErrorResponse,
+  ): UploadErrorCategory => {
+    if (errorData?.error_code === 'PARSER_PREREQUISITE_MISSING' || errorData?.error_code === 'ASYNC_PARSER_REQUIRED') {
+      return 'prerequisite'
+    }
+
     const text = (errorMessage || '').toLowerCase()
     if (text.includes('413') || text.includes('payload') || text.includes('too large') || text.includes('size')) {
       return 'size'
     }
     if (text.includes('network') || text.includes('fetch') || text.includes('timeout') || text.includes('failed to fetch')) {
       return 'network'
+    }
+    if (text.includes('parser') || text.includes('dependency') || text.includes('install with: npm install')) {
+      return 'prerequisite'
     }
     if (text.includes('format') || text.includes('extension') || text.includes('unsupported')) {
       return 'format'
@@ -75,7 +86,19 @@ export function useMemoryUpload({
     if (category === 'format') return t.uploadErrorFormat
     if (category === 'size') return t.uploadErrorSize
     if (category === 'network') return t.uploadErrorNetwork
+    if (category === 'prerequisite') return t.uploadErrorPrerequisite
     return t.uploadErrorService
+  }
+
+  const formatUploadErrorDetail = (
+    errorMessage: string | undefined,
+    errorData?: MemoryUploadErrorResponse,
+  ): string => {
+    if (errorData?.detail && errorData.detail.trim()) {
+      const action = errorData.action && errorData.action.trim() ? ` ${errorData.action.trim()}` : ''
+      return `${errorData.detail.trim()}${action}`
+    }
+    return errorMessage ?? ''
   }
 
   const setUploadStage = (stage: UploadStage, message: string, progress: number, errorCategory?: UploadErrorCategory) => {
@@ -150,9 +173,10 @@ export function useMemoryUpload({
 
         if (!response.success || !response.data) {
           if (totalFiles === 1) {
-            const category = classifyUploadError(response.error)
-            const message = response.error
-              ? `${getUploadErrorMessage(category)} (${response.error})`
+            const category = classifyUploadError(response.error, response.errorData)
+            const detail = formatUploadErrorDetail(response.error, response.errorData)
+            const message = detail
+              ? `${getUploadErrorMessage(category)} (${detail})`
               : getUploadErrorMessage(category)
             setUploadStage('error', message, 100, category)
             return

@@ -48,8 +48,146 @@ interface GatewayDeps {
 
 let gatewayDeps: GatewayDeps | null = null;
 
+const CORE_RUNTIME_SERVICES = ['memory', 'graph', 'search', 'workflow', 'critic'];
+
 export function setGatewayDeps(deps: GatewayDeps): void {
   gatewayDeps = deps;
+}
+
+function normalizeErrorText(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function inferDependencyName(text: string): string | null {
+  const patterns: Array<[RegExp, string]> = [
+    [/pdf-parse/i, 'pdf-parse'],
+    [/mammoth/i, 'mammoth'],
+    [/sentence[- ]transformers/i, 'sentence-transformers'],
+    [/onnxruntime/i, 'onnxruntime'],
+    [/sqlite/i, 'sqlite'],
+    [/python/i, 'python'],
+  ];
+
+  for (const [pattern, dependency] of patterns) {
+    if (pattern.test(text)) {
+      return dependency;
+    }
+  }
+
+  return null;
+}
+
+function buildGatewayDiagnostic(
+  status: string,
+  services: Record<string, string>,
+  engineHealth: Record<string, Record<string, unknown>>,
+  runtimeLastError: string | null,
+): Record<string, unknown> | null {
+  const affectedServices = CORE_RUNTIME_SERVICES.filter(
+    (name) => !['ok', 'disabled'].includes(services[name] ?? 'unknown'),
+  );
+  const errorText = [
+    runtimeLastError,
+    ...affectedServices.map((name) => normalizeErrorText(engineHealth[name]?.error)).filter(Boolean),
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(' | ');
+
+  if (!errorText && affectedServices.length === 0) {
+    return null;
+  }
+
+  const parserMissing = /(pdf-parse|mammoth|parser|docx|\.docx|\.pdf)/i.test(errorText);
+  if (parserMissing) {
+    const dependency = inferDependencyName(errorText);
+    return {
+      failure_class: 'parser_missing',
+      summary: 'Document parser prerequisite is missing.',
+      detail: errorText,
+      action: dependency
+        ? `Install ${dependency} in the src-ts runtime environment and retry the document workflow.`
+        : 'Install the required document parser in the src-ts runtime environment and retry the document workflow.',
+      affected_services: affectedServices,
+      prerequisite: {
+        kind: 'parser',
+        dependency,
+        detail: errorText,
+        action: dependency
+          ? `Install ${dependency} in the src-ts runtime environment and retry the document workflow.`
+          : 'Install the required document parser in the src-ts runtime environment and retry the document workflow.',
+        install_command: dependency ? `npm install ${dependency}` : null,
+      },
+    };
+  }
+
+  const embeddingUnavailable = /(embedding|embed|vector|sentence[- ]transformers|provider.+model|model.+provider)/i.test(errorText);
+  if (embeddingUnavailable) {
+    const dependency = inferDependencyName(errorText);
+    return {
+      failure_class: 'embedding_authority_unavailable',
+      summary: 'The authoritative embedding path is unavailable.',
+      detail: errorText,
+      action: 'Restore the configured embedding provider or local embedding runtime before relying on retrieval flows.',
+      affected_services: affectedServices,
+      prerequisite: {
+        kind: 'embedding',
+        dependency,
+        service: affectedServices.includes('search') ? 'search' : affectedServices[0] ?? null,
+        detail: errorText,
+        action: 'Restore the configured embedding provider or local embedding runtime before relying on retrieval flows.',
+      },
+    };
+  }
+
+  const prerequisiteMissing = /(module not found|cannot find module|not installed|install with|dependency|prerequisite|missing package|python|dll|vcruntime|msvcp)/i.test(errorText);
+  if (prerequisiteMissing) {
+    const dependency = inferDependencyName(errorText);
+    return {
+      failure_class: 'packaged_prerequisite_missing',
+      summary: 'A packaged or runtime prerequisite is missing.',
+      detail: errorText,
+      action: 'Install the missing runtime prerequisite and retry the packaged or local health flow.',
+      affected_services: affectedServices,
+      prerequisite: {
+        kind: 'package',
+        dependency,
+        detail: errorText,
+        action: 'Install the missing runtime prerequisite and retry the packaged or local health flow.',
+        install_command: dependency ? `npm install ${dependency}` : null,
+      },
+    };
+  }
+
+  if (status === 'degraded' || affectedServices.length > 0) {
+    return {
+      failure_class: 'integration_degraded',
+      summary: 'One or more gateway integrations are degraded.',
+      detail: errorText || affectedServices.join(', '),
+      action: 'Inspect the affected services, fix their health errors, and retry the gateway workflow.',
+      affected_services: affectedServices,
+      prerequisite: {
+        kind: 'integration',
+        service: affectedServices[0] ?? null,
+        detail: errorText || affectedServices.join(', '),
+        action: 'Inspect the affected services, fix their health errors, and retry the gateway workflow.',
+      },
+    };
+  }
+
+  return {
+    failure_class: 'runtime_unavailable',
+    summary: 'The gateway runtime is unavailable.',
+    detail: errorText,
+    action: 'Start the local gateway runtime and retry the health check.',
+    affected_services: affectedServices,
+    prerequisite: {
+      kind: 'runtime',
+      detail: errorText,
+      action: 'Start the local gateway runtime and retry the health check.',
+    },
+  };
 }
 
 // ---------------------------------------------------------------
@@ -93,11 +231,12 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
     }
   }
 
-  const coreDependencies = ['memory', 'graph', 'search', 'workflow', 'critic'];
-  const degraded = coreDependencies.some(
+  const degraded = CORE_RUNTIME_SERVICES.some(
     (name) => (engineHealth[name]?.status ?? 'ok') !== 'ok'
   );
   const status = degraded ? 'degraded' : 'healthy';
+
+  const runtimeUnavailable = !gw.runtimeSessionId;
 
   const services: Record<string, string> = {
     memory: (engineHealth.memory?.status as string) ?? 'ok',
@@ -133,14 +272,34 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
     gw.runtimeReconnectAttempts = 0;
   }
 
-  const connectionState = gw.toRuntimeConnectionState(status, services);
-  const reconnectState = gw.toRuntimeReconnectState(connectionState);
+  const effectiveStatus = runtimeUnavailable && status === 'healthy' ? 'degraded' : status;
+  const connectionState = runtimeUnavailable
+    ? 'disconnected'
+    : gw.toRuntimeConnectionState(effectiveStatus, services);
+  const reconnectState = runtimeUnavailable
+    ? 'failed'
+    : gw.toRuntimeReconnectState(connectionState);
+  const diagnostic = runtimeUnavailable
+    ? {
+        failure_class: 'runtime_unavailable',
+        summary: 'Gateway runtime session is unavailable.',
+        detail: gw.runtimeLastError ?? 'Gateway runtime session has not been initialized.',
+        action: 'Start or reinitialize the local gateway runtime and retry the health check.',
+        affected_services: [],
+        prerequisite: {
+          kind: 'runtime',
+          detail: gw.runtimeLastError ?? 'Gateway runtime session has not been initialized.',
+          action: 'Start or reinitialize the local gateway runtime and retry the health check.',
+        },
+      }
+    : buildGatewayDiagnostic(effectiveStatus, services, engineHealth, gw.runtimeLastError);
 
   return jsonResponse({
-    status,
+    status: effectiveStatus,
     version: gw.version,
     services,
     engine_health: engineHealth,
+    diagnostic,
     observability: gw.getObservabilitySnapshot(services, engineHealth),
     agents: [
       'commander', 'architect', 'writer', 'critic',
@@ -154,6 +313,7 @@ export async function healthCheck(_request: HttpRequest): Promise<HttpResponse> 
       last_probe_at: gw.runtimeLastProbeAt,
       reconnect_attempts: gw.runtimeReconnectAttempts,
       last_error: gw.runtimeLastError,
+      diagnostic,
       servers: gw.buildRuntimeServers(services, connectionState, gw.runtimeLastError),
       service_configs: Array.from(gw.mcpServiceConfigs.values()).map((config) =>
         gw.serializeServiceConfig(config, services)

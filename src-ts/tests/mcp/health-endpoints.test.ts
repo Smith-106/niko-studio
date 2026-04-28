@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { HttpRequest } from '../../mcp/http-types';
-import { listModels, setGatewayDeps } from '../../mcp/endpoints/health';
+import { healthCheck, listModels, setGatewayDeps } from '../../mcp/endpoints/health';
 import {
   createProviderConfig,
   createServiceConfig,
@@ -46,6 +46,117 @@ function installGatewayDeps(loadServicesConfig: () => unknown): void {
 
 afterEach(() => {
   installGatewayDeps(() => ({}));
+});
+
+describe('health endpoint diagnostics', () => {
+  it('reports runtime_unavailable when runtime session is missing', async () => {
+    setGatewayDeps({
+      version: 'test',
+      getEngine: () => null,
+      getConfigValue: () => undefined,
+      loadServicesConfig: () => ({}),
+      getMetricsSnapshot: () => ({}),
+      getObservabilitySnapshot: () => ({}),
+      runtimeSessionId: '',
+      runtimeLastProbeAt: null,
+      runtimeReconnectAttempts: 0,
+      runtimeLastError: null,
+      mcpServiceConfigs: new Map(),
+      runtimeServerOrder: [],
+      refreshServiceHealthCache: () => {},
+      serviceRuntimeStatus: () => 'ok',
+      toRuntimeConnectionState: () => 'connected',
+      toRuntimeReconnectState: () => 'idle',
+      buildRuntimeServers: () => ({}),
+      serializeServiceConfig: () => ({}),
+      utcNowIso: () => '2026-04-28T10:00:00Z',
+    });
+
+    const response = await healthCheck(makeRequest());
+    const body = response.body as Record<string, any>;
+
+    expect(response.statusCode).toBe(200);
+    expect(body.status).toBe('degraded');
+    expect(body.diagnostic).toMatchObject({
+      failure_class: 'runtime_unavailable',
+    });
+    expect(body.mcp_runtime).toMatchObject({
+      connection_state: 'disconnected',
+      reconnect_state: 'failed',
+    });
+  });
+
+  it('classifies parser_missing from engine health errors', async () => {
+    setGatewayDeps({
+      version: 'test',
+      getEngine: (name: string) => name === 'search'
+        ? { healthCheck: async () => ({ status: 'error', error: 'mammoth is required for .docx parsing' }) }
+        : null,
+      getConfigValue: () => undefined,
+      loadServicesConfig: () => ({}),
+      getMetricsSnapshot: () => ({}),
+      getObservabilitySnapshot: () => ({}),
+      runtimeSessionId: 'session-1',
+      runtimeLastProbeAt: null,
+      runtimeReconnectAttempts: 0,
+      runtimeLastError: null,
+      mcpServiceConfigs: new Map(),
+      runtimeServerOrder: ['search'],
+      refreshServiceHealthCache: () => {},
+      serviceRuntimeStatus: (_name: string, services: Record<string, string>) => services.search ?? 'ok',
+      toRuntimeConnectionState: () => 'degraded',
+      toRuntimeReconnectState: () => 'retrying',
+      buildRuntimeServers: () => ({}),
+      serializeServiceConfig: () => ({}),
+      utcNowIso: () => '2026-04-28T10:00:00Z',
+    });
+
+    const response = await healthCheck(makeRequest());
+    const body = response.body as Record<string, any>;
+
+    expect(response.statusCode).toBe(200);
+    expect(body.diagnostic).toMatchObject({
+      failure_class: 'parser_missing',
+    });
+    expect(body.mcp_runtime?.diagnostic).toMatchObject({
+      failure_class: 'parser_missing',
+    });
+  });
+
+  it('classifies integration_degraded when services fail without prerequisite signature', async () => {
+    setGatewayDeps({
+      version: 'test',
+      getEngine: (name: string) => name === 'search'
+        ? { healthCheck: async () => ({ status: 'error', error: 'search timeout' }) }
+        : null,
+      getConfigValue: () => undefined,
+      loadServicesConfig: () => ({}),
+      getMetricsSnapshot: () => ({}),
+      getObservabilitySnapshot: () => ({}),
+      runtimeSessionId: 'session-1',
+      runtimeLastProbeAt: null,
+      runtimeReconnectAttempts: 0,
+      runtimeLastError: null,
+      mcpServiceConfigs: new Map(),
+      runtimeServerOrder: ['search'],
+      refreshServiceHealthCache: () => {},
+      serviceRuntimeStatus: (_name: string, services: Record<string, string>) => services.search ?? 'ok',
+      toRuntimeConnectionState: () => 'degraded',
+      toRuntimeReconnectState: () => 'retrying',
+      buildRuntimeServers: () => ({}),
+      serializeServiceConfig: () => ({}),
+      utcNowIso: () => '2026-04-28T10:00:00Z',
+    });
+
+    const response = await healthCheck(makeRequest());
+    const body = response.body as Record<string, any>;
+
+    expect(response.statusCode).toBe(200);
+    expect(body.diagnostic).toMatchObject({
+      failure_class: 'integration_degraded',
+      detail: expect.stringContaining('search:error'),
+    });
+  });
 });
 
 describe('health endpoints model listing parity', () => {

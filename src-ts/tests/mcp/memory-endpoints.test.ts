@@ -13,17 +13,6 @@ vi.mock('../../mcp/services/memory', () => ({
   memoryGetTemporal: vi.fn(),
 }));
 
-vi.mock('mammoth', () => ({
-  extractRawText: mammothExtractRawTextMock,
-}));
-
-vi.mock('pdf-parse', () => ({
-  PDFParse: vi.fn().mockImplementation(() => ({
-    getText: pdfParseMock,
-    destroy: pdfDestroyMock,
-  })),
-}));
-
 function makeRequest(body: Record<string, unknown>): HttpRequest {
   return {
     method: 'POST',
@@ -38,7 +27,10 @@ function makeRequest(body: Record<string, unknown>): HttpRequest {
 describe('memory endpoints', () => {
   afterEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     vi.resetModules();
+    vi.unmock('mammoth');
+    vi.unmock('pdf-parse');
   });
 
   it('maps snake_case add payload fields into memory service parameters', async () => {
@@ -98,6 +90,31 @@ describe('memory endpoints', () => {
     expect(response.body).toEqual({ error: 'invalid file_content_base64' });
   });
 
+  it('returns structured parser prerequisite metadata for unsupported async document parser', async () => {
+    vi.doMock('mammoth', () => {
+      throw new Error('module not found');
+    });
+    const { memoryUploadEndpoint } = await import('../../mcp/endpoints/memory.js');
+
+    const response = await memoryUploadEndpoint(
+      makeRequest({
+        file_name: 'upload.docx',
+        file_content_base64: Buffer.from('fake-docx-binary').toString('base64'),
+        session_id: 'sess-docx',
+      }),
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toMatchObject({
+      error_code: 'PARSER_PREREQUISITE_MISSING',
+      file_name: 'upload.docx',
+      file_type: 'docx',
+      mode: 'async',
+      parser: 'mammoth',
+      dependency: 'mammoth',
+    });
+  });
+
   it('uploads txt content, chunks it, and injects memory records', async () => {
     memoryAddMock.mockImplementation(async () => ({
       id: `mem-upload-${memoryAddMock.mock.calls.length}`,
@@ -155,6 +172,9 @@ describe('memory endpoints', () => {
     mammothExtractRawTextMock.mockResolvedValue({
       value: 'DOCX paragraph one.\n\nDOCX paragraph two.',
     });
+    vi.doMock('mammoth', () => ({
+      extractRawText: mammothExtractRawTextMock,
+    }));
 
     const payload = Buffer.from('fake-docx-binary').toString('base64');
 
@@ -188,6 +208,12 @@ describe('memory endpoints', () => {
     pdfParseMock.mockResolvedValue({
       text: 'PDF paragraph one.\n\nPDF paragraph two.',
     });
+    vi.doMock('pdf-parse', () => ({
+      PDFParse: vi.fn().mockImplementation(() => ({
+        getText: pdfParseMock,
+        destroy: pdfDestroyMock,
+      })),
+    }));
 
     const payload = Buffer.from('fake-pdf-binary').toString('base64');
 
