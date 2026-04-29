@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, waitFor } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { renderHook, waitFor } from '@testing-library/react'
 
 vi.mock('../api/transport', () => ({
   getRuntimeGatewayBase: vi.fn(),
@@ -47,7 +47,7 @@ describe('useAppBackendBootstrap', () => {
     vi.mocked(useSettingsStore.getState).mockReturnValue({
       settings: { apiBaseUrl: '  http://localhost:8080  ' },
       updateSettings,
-    } as ReturnType<typeof useSettingsStore.getState>)
+    } as unknown as ReturnType<typeof useSettingsStore.getState>)
 
     renderHook(() => useAppBackendBootstrap())
 
@@ -65,7 +65,7 @@ describe('useAppBackendBootstrap', () => {
     vi.mocked(useSettingsStore.getState).mockReturnValue({
       settings: { apiBaseUrl: '   ' },
       updateSettings,
-    } as ReturnType<typeof useSettingsStore.getState>)
+    } as unknown as ReturnType<typeof useSettingsStore.getState>)
 
     renderHook(() => useAppBackendBootstrap())
 
@@ -82,7 +82,7 @@ describe('useAppBackendBootstrap', () => {
     vi.mocked(useSettingsStore.getState).mockReturnValue({
       settings: {},
       updateSettings,
-    } as ReturnType<typeof useSettingsStore.getState>)
+    } as unknown as ReturnType<typeof useSettingsStore.getState>)
 
     renderHook(() => useAppBackendBootstrap())
 
@@ -98,7 +98,7 @@ describe('useAppBackendBootstrap', () => {
     vi.mocked(useSettingsStore.getState).mockReturnValue({
       settings: { apiBaseUrl: 'http://127.0.0.1:8000' },
       updateSettings,
-    } as ReturnType<typeof useSettingsStore.getState>)
+    } as unknown as ReturnType<typeof useSettingsStore.getState>)
 
     renderHook(() => useAppBackendBootstrap())
 
