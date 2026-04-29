@@ -590,10 +590,13 @@ export class EmbeddingEngine {
         embedding.push(0.0);
       }
     } else {
-      // In production, call the actual embedding model
-      // const embeddings = this._modelValue.embed([text]);
-      // embedding = embeddings[0];
-      throw new Error("EmbeddingEngine: real embedding model not yet integrated");
+      // Fallback: return zero vector when no real embedding model is available.
+      // This degrades retrieval quality but keeps the memory subsystem operational.
+      console.warn(
+        "EmbeddingEngine: no real embedding model available — returning zero vector (degraded mode). " +
+        "Configure a provider (openai/local) or set EMBEDDING_DEFAULT_PROVIDER for full retrieval."
+      );
+      embedding = new Array(384).fill(0.0);
     }
 
     if (useCache) {

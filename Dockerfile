@@ -20,7 +20,7 @@ COPY config/ ./config/
 
 # Compile TypeScript
 WORKDIR /app/src-ts
-RUN npx tsc --noEmit || true
+RUN npx tsc --noEmit
 
 # --- Runtime stage ---
 FROM node:20-slim
