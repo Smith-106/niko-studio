@@ -1,0 +1,73 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Desktop (not needed for gateway container)
+desktop/
+参考/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+src-ts/coverage/
+test-results/
+pytest-*.xml
+
+# Runtime artifacts (created at runtime, not build)
+.writing/
+*.db
+*.log
+.codex-run/
+.tmp/
+
+# Workflow artifacts
+.workflow/
+.niko-studio/
+.Jules/
+.codex/
+
+# Build artifacts
+.build/
+release-check-summary.md
+release-*.zip
+_diff.txt
+screenshot*.png
+
+# Node modules (rebuilt in container)
+node_modules/
+src-ts/node_modules/
+
+# Reference projects
+cherry-studio/
+Claude-Code-Workflow/
+openkl/
+AionUi/
+ui-ux-pro-max-skill/
+
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+NUL
+
+# Docs (optional, keep if needed for reference)
+# docs/

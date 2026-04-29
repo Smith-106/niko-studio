@@ -175,6 +175,76 @@ Authoritative checklist:
 
 ---
 
+## Docker Deployment
+
+### Prerequisites
+- Docker 20.10+ and Docker Compose v2+
+- At least 2 GB free disk space for the image build
+
+### Quick Start
+
+```bash
+# Build and start the gateway
+docker compose up -d
+
+# Verify health
+docker compose ps
+curl http://localhost:8000/health
+
+# View logs
+docker compose logs -f gateway
+
+# Stop
+docker compose down
+```
+
+### Build Only
+
+```bash
+docker build -t niko-gateway .
+docker run -d -p 8000:8000 -v gateway-data:/app/.writing --name niko-gateway niko-gateway
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `NIKO_GATEWAY_HOST` | `0.0.0.0` | Bind address inside container |
+| `NIKO_GATEWAY_PORT` | `8000` | Gateway port (internal and external) |
+| `NODE_ENV` | `production` | Node.js environment |
+
+Override the host port mapping via:
+
+```bash
+NIKO_GATEWAY_PORT=9000 docker compose up -d
+```
+
+### Persistent Data
+
+The `.writing/` directory (containing `memory.db` and `graph.db`) is mounted as a Docker volume (`gateway-data`). Data survives container restarts and rebuilds.
+
+To back up:
+
+```bash
+docker compose cp gateway:/app/.writing ./backup-writing
+```
+
+### Health Check
+
+The container includes a built-in health check that polls `GET /health` every 15 seconds. Use `docker compose ps` to confirm the service shows `healthy`.
+
+### Docker Troubleshooting
+
+**Build fails on `better-sqlite3`**: The build stage installs `python3`, `make`, and `g++` for native module compilation. If the build still fails, ensure your Docker daemon has sufficient memory (at least 2 GB).
+
+**Container starts but health check fails**: Check logs with `docker compose logs gateway`. Common causes:
+- Port conflict on the host (another service on 8000)
+- Missing config files (ensure `config/` directory is present in build context)
+
+**Permission errors on `.writing/`**: The container runs as the `node` user. The Dockerfile pre-creates `/app/.writing` with correct ownership. If using a bind mount instead of a named volume, ensure the host directory is writable.
+
+---
+
 ## Troubleshooting
 
 ### i18n Key Mismatch Error

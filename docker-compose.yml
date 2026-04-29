@@ -1,0 +1,25 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: niko-gateway
+    ports:
+      - "8080:8000"
+    volumes:
+      - gateway-data:/app/.writing
+    environment:
+      - NIKO_GATEWAY_HOST=0.0.0.0
+      - NIKO_GATEWAY_PORT=8000
+      - NODE_ENV=${NODE_ENV:-production}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  gateway-data:
+    driver: local
