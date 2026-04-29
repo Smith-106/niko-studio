@@ -7,6 +7,7 @@ import { useI18n, type Translations } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { RevisionPreviewCard } from './RevisionPreviewCard'
 import { getEditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
+import { useAppStore } from '../stores/appStore'
 import {
   applyRevisionCandidateToEditor,
   captureMatchedSelectionSnapshot,
@@ -41,6 +42,7 @@ interface WritingHelperResult {
   mode?: string
   sourceText?: string
   selectionSnapshot?: EditorSelectionSnapshot | null
+  skillsUsed?: string[]
 }
 
 type PresetFieldKey = 'mode' | 'maxSentences' | 'maxItems' | 'guidance'
@@ -192,6 +194,12 @@ function CollapsibleGroup({ title, defaultOpen = false, children }: {
 export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraftStateChange, onClearDraft }: WritingHelperPanelProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const detectionEvasionGuardEnabled = useSettingsStore((state) => state.settings.detectionEvasionGuardEnabled)
+  const selectedSkills = useAppStore((state) => state.selectedSkills)
+  const availableSkills = useAppStore((state) => state.availableSkills)
+  const toggleSkill = useAppStore((state) => state.toggleSkill)
+  const selectedSkillIds = Array.isArray(selectedSkills) ? selectedSkills : []
+  const availableSkillIds = Array.isArray(availableSkills) ? availableSkills : []
+  const toggleSelectedSkill = typeof toggleSkill === 'function' ? toggleSkill : () => {}
   const useLegacyPolish = useSettingsStore((state) => state.settings.writingHelperUseLegacyPolish)
   const updateSettings = useSettingsStore((state) => state.updateSettings)
   const { t, translate, language } = useI18n()
@@ -436,6 +444,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
           processedText: legacyResponse.polishedText,
           sourceText: content,
           selectionSnapshot: matchedSelectionSnapshot,
+          skillsUsed: selectedSkillIds,
         })
         return
       }
@@ -455,6 +464,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
         max_sentences: maxSentences,
         max_items: maxItems,
         instruction: combinedInstruction || undefined,
+        skill_ids: selectedSkillIds,
         detection_evasion_guard_enabled: detectionEvasionGuardEnabled,
         ...getProviderFields(),
       })
@@ -470,6 +480,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
         outline: Array.isArray(response.data.outline) ? response.data.outline : undefined,
         sourceText: content,
         selectionSnapshot: matchedSelectionSnapshot,
+        skillsUsed: Array.isArray(response.data.skills_used) ? response.data.skills_used : selectedSkillIds,
       })
     } catch (submitError) {
       setError(String(submitError))
@@ -1152,6 +1163,44 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
               )}
             </div>
 
+            <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white/70 dark:bg-dark-bg/40 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">{t.skillPacks}</div>
+                  <p className="text-[12px] text-gray-500 dark:text-dark-text-secondary">
+                    {selectedSkillIds.length > 0
+                      ? (isZh ? `当前已应用 ${selectedSkillIds.length} 个技能包` : `${selectedSkillIds.length} skill packs applied`)
+                      : (isZh ? '为本次写作显式应用技能包。' : 'Explicitly apply skill packs to this writing run.')}
+                  </p>
+                </div>
+                {selectedSkillIds.length > 0 && (
+                  <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 border border-primary-100 dark:border-primary-500/20">
+                    {translate('selectedSkills', { count: selectedSkillIds.length })}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {availableSkillIds.map((skillId) => {
+                  const selected = selectedSkillIds.includes(skillId)
+                  return (
+                    <button
+                      key={skillId}
+                      type="button"
+                      onClick={() => toggleSelectedSkill(skillId)}
+                      className={`rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                        selected
+                          ? 'border-primary-500 bg-primary-600 text-white shadow-sm'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300 hover:text-primary-700 dark:border-dark-border dark:bg-dark-surface dark:text-dark-text dark:hover:border-primary-500/40 dark:hover:text-primary-300'
+                      }`}
+                      aria-pressed={selected}
+                    >
+                      {skillId}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* Textarea */}
             <label className="text-sm font-semibold text-gray-800 dark:text-dark-text flex flex-col gap-2">
               {t.writingHelperInputText}
@@ -1192,6 +1241,21 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse-subtle"></span>
                   {translate('writingHelperModePrefix', { mode: result.mode ?? '' })}
                 </div>
+                {result.skillsUsed && result.skillsUsed.length > 0 && (
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold text-primary-700 dark:text-primary-300">
+                      {isZh ? '已应用技能包' : 'Applied skill packs'}
+                    </span>
+                    {result.skillsUsed.map((skillId) => (
+                      <span
+                        key={skillId}
+                        className="rounded-full border border-primary-100 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-primary-700 dark:border-primary-500/20 dark:bg-dark-bg/40 dark:text-primary-300"
+                      >
+                        {skillId}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {hasRevisionPreview && (
                   <RevisionPreviewCard
                     previewTitle={revisionCopy.previewTitle}

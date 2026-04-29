@@ -5,7 +5,7 @@
 This document is the repeatable local and CI sign-off path for the shipped Niko Studio contract:
 
 - `Supported runtime`: `desktop/` + Tauri host + local `src-ts/` Node/TypeScript gateway
-- `Packaged compatibility runtime`: bundled Python sidecar
+- `Packaged compatibility runtime`: packaged proof remains bound to the compatibility sidecar artifact referenced by `bundle.externalBin`; local/runtime contract validation no longer requires that artifact unless explicit packaging proof is requested
 - `Primary release gate`: `.github/workflows/external-release-gate.yml`
 - `Windows acceptance gate`: `.github/workflows/writing-helper-acceptance.yml`
 - `100% completion contract`: single scorecard（functional / testing / release / governance）plus issue-pending inspection must all stay green before claiming `Decision: GO`
@@ -18,11 +18,18 @@ This document is the repeatable local and CI sign-off path for the shipped Niko 
 - Pre-stage the packaged Python compatibility sidecar artifact in `desktop/src-tauri/bin/`:
   - Windows: `niko-gateway.exe` and `niko-gateway-x86_64-pc-windows-msvc.exe`
   - The current node-first checkout does not include the retired legacy Python gateway sources needed to rebuild these binaries from source.
+  - When a retained compatibility artifact already exists under `desktop/src-tauri/target/**/debug/`, run `npm --prefix desktop run hydrate:packaged-compat` before `npm --prefix desktop run validate:package:dry-run`.
 - Local packaging proof is intentionally unsigned:
   - `desktop/src-tauri/tauri.conf.json` keeps `bundle.windows.certificateThumbprint: null`
   - `desktop/src-tauri/tauri.conf.json` keeps `bundle.windows.timestampUrl: ""`
   - `npm --prefix desktop run validate:package:dry-run` runs `tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`
-- Signed external bundles require release-private certificate thumbprint and timestamp URL material outside git before `npm --prefix desktop run tauri:build`
+- Signed external bundles require release-private certificate thumbprint and timestamp URL material outside git before `npm --prefix desktop run tauri:build:signed`
+- Release-host signing flow:
+  1. Export `NIKO_WINDOWS_CERT_THUMBPRINT`
+  2. Export `NIKO_WINDOWS_TIMESTAMP_URL`
+  3. Run `python scripts/generate_signed_tauri_config.py`
+  4. Run `npm --prefix desktop run tauri:build:signed`
+  5. Verify with `Get-AuthenticodeSignature desktop/src-tauri/target/release/bundle/nsis/*.exe | Format-List`
 
 ## Release states and external prerequisites
 
@@ -37,12 +44,12 @@ Use the following 3 release states consistently across local sign-off, CI gate o
      - Windows code-signing certificate thumbprint
      - Windows timestamp URL
      - Hydrated packaged compatibility artifact (`desktop/src-tauri/bin/niko-gateway*.exe`)
-     - Windows packaging host or toolchain (`validate:package:dry-run` / `tauri:build` on Windows with the MSVC target)
+     - Windows packaging host or toolchain (`validate:package:dry-run` / `tauri:build:signed` on Windows with the MSVC target)
    - Treat this state as non-shippable even if earlier local checks were green.
 3. `signed_external_release`
    - The same repo-visible gates stay green.
    - All 4 prerequisites above are present on the Windows packaging host.
-   - `npm --prefix desktop run tauri:build` completes with the release-private signing inputs provided outside git.
+   - `npm --prefix desktop run tauri:build:signed` completes with the release-private signing inputs provided outside git.
 
 The reusable `.github/workflows/external-release-gate.yml` workflow must surface the same state model in CI output so unsigned local proof cannot be misread as a signed release.
 
@@ -74,7 +81,7 @@ npm --prefix desktop run check:local
 ```
 
 The authoritative desktop local gate is `npm --prefix desktop run check:local`. In `desktop/package.json` this currently resolves to `check:release`, and `python scripts/release_check_summary.py` reruns this exact command before it can report `Decision: GO`.
-If the packaged Python compatibility sidecar artifact is not present, this gate is expected to fail before formal release sign-off.
+If the packaged compatibility artifact is not present, `npm --prefix desktop run check:local` can still validate the local/runtime contract; only explicit packaging proof (`npm --prefix desktop run validate:package:dry-run`) must fail before formal release sign-off.
 `npm --prefix desktop run local:selftest` is the authoritative launcher smoke-test. It is mandatory whenever the retained release evidence for `release_summary_report`, `authority_alignment`, `writing_helper_acceptance`, and `governance_scripts_regression` is not already `fresh_current` for the current HEAD.
 If those retained release-evidence sources are already same-HEAD `fresh_current`, `local:selftest` is optional for that sign-off pass.
 
@@ -87,9 +94,20 @@ npm --prefix desktop run validate:sidecar-contract
 npm --prefix desktop run validate:package:dry-run
 ```
 
-For the current migration baseline, `validate:sidecar-contract` and `validate:package:dry-run` validate a pre-staged packaged Python compatibility artifact plus the repo-local Node launcher. They do not rebuild the retired Python gateway sources.
+For the current migration baseline, `validate:sidecar-contract` validates the repo-local Node launcher plus the declared packaging boundary, while `validate:package:dry-run` is the command that still requires a pre-staged packaged compatibility artifact. They do not rebuild the retired Python gateway sources.
 
-### 4. Writing-helper acceptance
+### 4. Evidence refresh single path
+
+Prefer the single operator path whenever retained same-head evidence must be refreshed before sign-off:
+
+```bash
+npm --prefix desktop run release:evidence:refresh
+```
+
+This helper runs the authoritative launcher smoke-test, starts the authoritative gateway, refreshes strict writing-helper acceptance evidence, and then regenerates `release-check-summary.md`.
+If the single-path helper fails, fall back to the granular commands below to diagnose the specific broken leg.
+
+### 5. Writing-helper acceptance
 
 Start the authoritative gateway in one PowerShell session:
 
@@ -112,14 +130,31 @@ Stop-Process -Id $proc.Id -Force
 The reusable CI equivalent is `.github/workflows/writing-helper-acceptance.yml`.
 Each strict run must also refresh `.workflow/evidence/release/writing-helper-acceptance.json` for the same `git rev-parse HEAD`.
 
-### 5. Consolidated release snapshot
+### 6. Installed-package smoke acceptance
+
+After package-generation proof, run the installed-package checklist on the Windows host for the exact retained artifact:
+
+```bash
+npm --prefix desktop run package:e2e:checklist
+```
+
+Authoritative checklist:
+- `docs/operations/E2E_VERIFICATION.md`
+
+Retained evidence artifact:
+- `.workflow/evidence/release/package-e2e-acceptance.json`
+
+This closes the remaining gap between package-generation proof and actual install/start/use validation of the retained package artifact.
+If package-generation proof is green but installed-package smoke fails, treat external handoff as blocked.
+
+### 7. Consolidated release snapshot
 
 ```bash
 python scripts/release_check_summary.py
 ```
 
 `release-check-summary.md` must end in `Decision: GO`.
-A `Decision: GO` with `certificateThumbprint = null` and `timestampUrl = ""` is only the `unsigned_local_proof` state. If any of the 4 external prerequisites is missing, treat the result as `prerequisite_missing_hold`; only a Windows-hosted `npm --prefix desktop run tauri:build` with release-private signing inputs can graduate that proof to `signed_external_release`.
+A `Decision: GO` with `certificateThumbprint = null` and `timestampUrl = ""` is only the `unsigned_local_proof` state. If any of the 4 external prerequisites is missing, treat the result as `prerequisite_missing_hold`; only a Windows-hosted `npm --prefix desktop run tauri:build:signed` with release-private signing inputs can graduate that proof to `signed_external_release`.
 This command also refreshes the formal sign-off artifacts under `.workflow/evidence/release/`, including the retained authority-alignment JSON, `.workflow/evidence/release/writing-helper-acceptance.json`, and the governance and Vitest JUnit/XML reports used by the release bundle manifest.
 The consolidated snapshot is only valid when the retained writing-helper acceptance artifact is `strict: true`, `freshness_status: fresh`, and `supersession_status: current`.
 The release readiness artifact at `.workflow/evidence/release/release-readiness-artifact.json` now records `head_sha`, `version`, `generated_at`, `freshness_window_hours: 48`, and the retained `evidence_sources` list used by the sign-off decision.
@@ -136,7 +171,7 @@ Use one concise bundle for internal delivery or customer-facing demo preparation
 - Retained evidence HEAD stamp: see `.workflow/evidence/release/writing-helper-acceptance.json`
 - Packaging proof completed:
   - `npm --prefix desktop run validate:package:dry-run`
-  - `npm --prefix desktop run tauri:build`
+  - `npm --prefix desktop run tauri:build:signed`
 - Retained unsigned package artifacts:
   - `desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.0.8_x64-setup.exe`
   - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.8_x64_en-US.msi`
@@ -145,21 +180,22 @@ Use one concise bundle for internal delivery or customer-facing demo preparation
   - local proof only; `certificateThumbprint = null`
   - local proof only; `timestampUrl = ""`
 
-### Retained production contract evidence (7 items)
+### Retained production contract evidence (8 items)
 
-These 7 retained evidence items are the production contract. Docs, package files, and sidecar binaries support the handoff, but they do not replace this proof set:
+These 8 retained evidence items are the production contract. Docs, package files, and sidecar binaries support the handoff, but they do not replace this proof set:
 
 1. `release-check-summary.md`
 2. `.workflow/evidence/release/release-readiness-artifact.json`
 3. `.workflow/evidence/release/authority-alignment.json`
 4. `.workflow/evidence/release/writing-helper-acceptance.json`
-5. `.workflow/evidence/release/vitest-production-guard.xml`
-6. `.workflow/evidence/release/vitest-e2e.xml`
-7. `.workflow/evidence/release/governance-scripts.junit.xml`
+5. `.workflow/evidence/release/package-e2e-acceptance.json`
+6. `.workflow/evidence/release/vitest-production-guard.xml`
+7. `.workflow/evidence/release/vitest-e2e.xml`
+8. `.workflow/evidence/release/governance-scripts.junit.xml`
 
 ### Include
 
-- The 7 retained production contract evidence items listed above
+- The 8 retained production contract evidence items listed above
 - `docs/release/SIGN_OFF.md`
 - The exact desktop executable or package artifact produced from the validated path
 - The exact packaged Python compatibility sidecar artifact used for sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` on Windows)
@@ -177,7 +213,7 @@ These 7 retained evidence items are the production contract. Docs, package files
 
 - Treat the current worktree plus the regenerated 2026-04-16 packaging proof and retained GO evidence as the authoritative handoff baseline.
 - Prefer a single authoritative handoff bundle over duplicate release summaries or copied historical session conclusions.
-- If a signed external bundle is required, add the release-private certificate thumbprint and timestamp URL material outside git before running `npm --prefix desktop run tauri:build`.
+- If a signed external bundle is required, add the release-private certificate thumbprint and timestamp URL material outside git before running `npm --prefix desktop run tauri:build:signed`.
 - If the package is for customer demo rather than external shipment, keep the same proof set and explicitly mark the package as an unsigned local validation build when applicable.
 
 ## CI Mapping

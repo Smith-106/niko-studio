@@ -21,6 +21,7 @@ export interface WritingHelperRequest {
   max_sentences?: number
   max_items?: number
   instruction?: string
+  skill_ids?: string[]
   workspace?: ProjectWorkspaceContext
   detection_evasion_guard_enabled?: boolean
   api_key?: string
@@ -33,6 +34,7 @@ export interface WritingHelperResponse {
   mode: WritingHelperMode
   processed_text?: string
   outline?: string[]
+  skills_used?: string[]
   stats?: Record<string, number>
 }
 
@@ -40,6 +42,7 @@ export interface StreamWritingHelperRequest {
   content: string
   mode?: string
   instruction?: string
+  skill_ids?: string[]
   workspace?: ProjectWorkspaceContext
   model?: string
   provider?: string

@@ -59,6 +59,8 @@ Treat `npm --prefix desktop run local:selftest` as mandatory whenever retained r
 Use the authoritative local quality gates for the affected product surfaces.
 
 ```bash
+python -m pre_commit install
+npm --prefix desktop run local:pre-commit
 npm --prefix src-ts run check:local
 npm --prefix desktop run check:local
 python scripts/delivery_gate.py
@@ -69,6 +71,7 @@ python scripts/check_authority_alignment.py
 
 - Prove the current local checkout still satisfies the supported `desktop + src-ts` path.
 - Catch contract drift in docs, workflow, runtime, and release helpers before review.
+- Keep commit-time feedback lightweight by reserving heavier release/runtime checks for the later L2/L3 gates.
 
 ## L3: Pre-Merge to `main`
 
@@ -111,7 +114,7 @@ If retained release evidence for the current HEAD is not already `fresh_current`
 When an actual Windows package is required:
 
 ```bash
-npm --prefix desktop run tauri:build
+npm --prefix desktop run tauri:build:signed
 ```
 
 ### Goal
@@ -128,6 +131,8 @@ npm --prefix desktop run tauri:build
 
 ## Current Authoritative Entrypoints
 
+- Release-evidence refresh single path: `npm --prefix desktop run release:evidence:refresh`
+- Local pre-commit gate: `npm --prefix desktop run local:pre-commit`
 - Desktop local quality gate: `npm --prefix desktop run check:local`
 - Gateway local quality gate: `npm --prefix src-ts run check:local`
 - Release summary: `python scripts/release_check_summary.py`

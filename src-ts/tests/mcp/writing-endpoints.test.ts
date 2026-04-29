@@ -96,13 +96,46 @@ describe('writing endpoints local fallback parity', () => {
     expect(response.body).toEqual({ error: 'No LLM provider configured' });
   });
 
-  it('keeps the streaming endpoint on explicit LLM-only behavior', async () => {
+  it('propagates selected skill ids through process endpoint responses', async () => {
+    const response = await writingHelperProcessEndpoint(makeRequest({
+      content: '第一句。 第二句。',
+      mode: 'rewrite',
+      skill_ids: ['character-forge', 'dialogue-system'],
+    }));
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      mode: 'rewrite',
+      status: 'ok',
+      provider: 'local',
+      skills_used: ['character-forge', 'dialogue-system'],
+    });
+  });
+
+  it('includes selected skill ids in writing stream completion events', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      choices: [{ delta: { content: '续写' } }],
+    }), { status: 200 })));
+
     const response = await writingStreamEndpoint(makeRequest({
       content: '请续写这一段。',
       mode: 'generate',
+      api_key: 'sk-test',
+      base_url: 'https://example.invalid/v1',
+      model: 'test-model',
+      provider: 'openai',
+      skill_ids: ['character-forge'],
     }));
 
-    expect(response.statusCode).toBe(400);
-    expect(response.body).toEqual({ error: 'No LLM provider configured' });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toMatchObject({
+      streaming: true,
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          event: 'done',
+          data: expect.objectContaining({ skills_used: ['character-forge'] }),
+        }),
+      ]),
+    });
   });
 });

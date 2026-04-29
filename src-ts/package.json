@@ -19,9 +19,11 @@
     "test:release": "vitest run --config vitest.release.config.ts",
     "typecheck": "tsc --noEmit",
     "check:quick": "npm run lint && npm run format:check && npm run typecheck && npm run test:phase4",
+    "check:pre-commit": "npm run lint && npm run format:check",
     "check:release": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage:phase4 -- --coverage.reporter=text && npm run test:release",
     "check:local": "npm run check:release",
-    "dev": "ts-node --esm src/index.ts"
+    "dev": "ts-node --esm src/index.ts",
+    "audit:high": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",

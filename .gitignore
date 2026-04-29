@@ -36,6 +36,7 @@ ENV/
 
 # Testing
 .pytest_cache/
+.pre-commit-cache/
 .coverage
 htmlcov/
 .tox/
@@ -75,7 +76,7 @@ desktop/src-tauri/bin/*
 !desktop/src-tauri/bin/niko-gateway-node
 !desktop/src-tauri/bin/niko-gateway-node.cmd
 desktop/src-tauri/target/
-desktop/src-tauri/gen/
+desktop/src-tauri/tauri.signed.local.generated.json
 
 # Reference projects (submodules or downloaded)
 参考/

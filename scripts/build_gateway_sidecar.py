@@ -79,7 +79,9 @@ def main() -> None:
 
     # Ensure project root is importable for PyInstaller analysis.
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(root) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+    env["PYTHONPATH"] = str(root) + (
+        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
+    )
 
     entry = _resolve_legacy_entry(root, args.legacy_entry)
     if not entry.exists():

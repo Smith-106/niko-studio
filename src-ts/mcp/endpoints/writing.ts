@@ -9,6 +9,7 @@ import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { processWritingHelper as processLocalWritingHelper } from '../../services/writing-helper';
 import { evaluateContent, type EvaluateContentResult } from '../services/critic';
+import { skillsLoad } from '../services/skills';
 
 // ---------------------------------------------------------------
 // Mode-specific prompt builders
@@ -164,9 +165,41 @@ async function* streamLLM(
   }
 }
 
-// ---------------------------------------------------------------
-// Quality check via CriticEngine
-// ---------------------------------------------------------------
+async function resolveSkillInstruction(skillIds: unknown): Promise<{ skillIds: string[]; instruction: string }> {
+  if (!Array.isArray(skillIds)) {
+    return { skillIds: [], instruction: '' };
+  }
+
+  const normalizedIds = skillIds
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (normalizedIds.length === 0) {
+    return { skillIds: [], instruction: '' };
+  }
+
+  const uniqueIds = [...new Set(normalizedIds)];
+  const sections: string[] = [];
+
+  for (const skillId of uniqueIds) {
+    const loaded = await skillsLoad(skillId);
+    if ('content' in loaded && loaded.content.trim()) {
+      sections.push(`## Skill Pack: ${skillId}\n${loaded.content.trim()}`);
+    }
+  }
+
+  return {
+    skillIds: uniqueIds,
+    instruction: sections.join('\n\n'),
+  };
+}
+
+function mergeSkillInstruction(instruction: string, skillInstruction: string): string {
+  const parts = [instruction.trim(), skillInstruction.trim()].filter(Boolean);
+  return parts.join('\n\n');
+}
+
 
 function qualityDefaultPayload(): Record<string, unknown> {
   return {
@@ -292,6 +325,8 @@ export async function writingHelperProcessEndpoint(
 
   const mode = (body.mode as string) ?? 'polish'
   const instruction = typeof body.instruction === 'string' ? body.instruction : ''
+  const { skillIds, instruction: skillInstruction } = await resolveSkillInstruction(body.skill_ids)
+  const combinedInstruction = mergeSkillInstruction(instruction, skillInstruction)
   const detectionEvasion = body.detection_evasion_guard_enabled === true
   const maxSentences = typeof body.max_sentences === 'number'
     ? body.max_sentences
@@ -315,7 +350,7 @@ export async function writingHelperProcessEndpoint(
       const localResult = processLocalWritingHelper({
         content,
         mode: normalizedMode,
-        instruction,
+        instruction: combinedInstruction,
         maxSentences,
         maxItems,
       })
@@ -329,6 +364,7 @@ export async function writingHelperProcessEndpoint(
         ...normalizedLocalResult,
         status: 'ok',
         provider: 'local',
+        skills_used: skillIds,
       })
     } catch (exc) {
       const message = exc instanceof Error ? exc.message : String(exc)
@@ -337,7 +373,7 @@ export async function writingHelperProcessEndpoint(
   }
 
   try {
-    const prompt = buildModePrompt(mode, content, instruction)
+    const prompt = buildModePrompt(mode, content, combinedInstruction)
     const systemPrompt = detectionEvasion
       ? '你是一位专业的写作助手。请确保输出文本具有人类写作的自然特征，避免AI生成的典型模式。'
       : '你是一位专业的写作助手。'
@@ -346,10 +382,10 @@ export async function writingHelperProcessEndpoint(
 
     if (mode === 'outline') {
       const outline = result.split('\n').filter((l) => l.trim())
-      return jsonResponse({ mode, outline, processed_text: result, status: 'ok' })
+      return jsonResponse({ mode, outline, processed_text: result, status: 'ok', skills_used: skillIds })
     }
 
-    return jsonResponse({ mode, processed_text: result, status: 'ok' })
+    return jsonResponse({ mode, processed_text: result, status: 'ok', skills_used: skillIds })
   } catch (exc) {
     const message = exc instanceof Error ? exc.message : String(exc)
     return jsonResponse({ error: message }, 500)
@@ -379,6 +415,8 @@ export async function writingStreamEndpoint(
 
   const mode = (body.mode as string) ?? 'generate'
   const instruction = typeof body.instruction === 'string' ? body.instruction : ''
+  const { skillIds, instruction: skillInstruction } = await resolveSkillInstruction(body.skill_ids)
+  const combinedInstruction = mergeSkillInstruction(instruction, skillInstruction)
 
   const config = resolveProviderConfig(body)
   if (!config) {
@@ -386,7 +424,7 @@ export async function writingStreamEndpoint(
   }
 
   try {
-    const prompt = buildModePrompt(mode, content, instruction)
+    const prompt = buildModePrompt(mode, content, combinedInstruction)
     const systemPrompt = '你是一位专业的写作助手。请确保输出文本具有人类写作的自然特征。'
 
     // Collect streamed chunks
@@ -403,7 +441,7 @@ export async function writingStreamEndpoint(
       index++
     }
 
-    events.push({ event: 'done', data: { status: 'completed', chunks: index } })
+    events.push({ event: 'done', data: { status: 'completed', chunks: index, skills_used: skillIds } })
 
     return jsonResponse({ streaming: true, events })
   } catch (exc) {

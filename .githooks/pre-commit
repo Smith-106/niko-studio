@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+set -eu
+
+python "$(git rev-parse --show-toplevel)/scripts/run_local_pre_commit.py"

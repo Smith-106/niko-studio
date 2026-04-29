@@ -144,6 +144,62 @@ vi.mock('./AiTextOptimizer', () => ({
   AiTextOptimizer: () => null,
 }))
 
+vi.mock('./EvaluationPanel', () => ({
+  EvaluationPanel: ({
+    onOpenWritingHelper,
+  }: {
+    onOpenWritingHelper: (handoff: {
+      content: string
+      guidance: string
+      mode: 'rewrite'
+      maxSentences: number
+      maxItems: number
+      handoff: {
+        source: 'evaluation'
+        suggestionTitle: string
+        suggestionReason: string
+        guidance: string
+        carriedContent: 'revision-preview'
+        preset: {
+          mode: 'rewrite'
+          maxSentences: number
+          maxItems: number
+        }
+      }
+    }) => void
+  }) => (
+    <div>
+      <div>{translations.zh.evaluationSuggestions}</div>
+      <button type="button">生成修改预览</button>
+      <div>交给写作助手的预览稿。</div>
+      <button
+        type="button"
+        onClick={() => onOpenWritingHelper({
+          content: '交给写作助手的预览稿。',
+          guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力',
+          mode: 'rewrite',
+          maxSentences: 4,
+          maxItems: 6,
+          handoff: {
+            source: 'evaluation',
+            suggestionTitle: '增加冲突',
+            suggestionReason: '提升张力',
+            guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力',
+            carriedContent: 'revision-preview',
+            preset: {
+              mode: 'rewrite',
+              maxSentences: 4,
+              maxItems: 6,
+            },
+          },
+        })}
+      >
+        带着修改预览继续到写作助手
+      </button>
+    </div>
+  ),
+}))
+
 import { evaluateContent, getImprovementSuggestions, listCheckpoints } from '../api/client'
 import { processWritingHelper } from '../api/writing'
 import { useAppUiPersistence } from '../hooks/useAppUiPersistence'

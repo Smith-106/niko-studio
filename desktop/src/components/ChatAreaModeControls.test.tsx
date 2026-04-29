@@ -12,6 +12,9 @@ const defaultProps = {
   modeLabel: 'Mode',
   workflowLabel: 'Workflow',
   modePresetsLabel: 'Presets',
+  availableSkillIds: ['character-forge', 'dialogue-system'],
+  selectedSkillIds: [],
+  skillPacksLabel: 'Skills',
   chatMode: 'chat' as const,
   agentAction: 'write' as const,
   enableModelComparison: false,
@@ -41,6 +44,7 @@ const defaultProps = {
   onSetAgentAction: vi.fn(),
   onSetWorkflowLevel: vi.fn(),
   onApplyPreset: vi.fn(),
+  onToggleSkill: vi.fn(),
 }
 
 describe('ChatAreaModeControls', () => {
@@ -188,9 +192,17 @@ describe('ChatAreaModeControls', () => {
     expect(standardButton.className).toContain('bg-primary-600')
   })
 
-  it('renders selectedSkillsLabel when provided', () => {
-    render(<ChatAreaModeControls {...defaultProps} selectedSkillsLabel="2 skills selected" />)
-    expect(screen.getByText('2 skills selected')).toBeInTheDocument()
+  it('renders primary skill-pack chips when provided', () => {
+    render(<ChatAreaModeControls {...defaultProps} />)
+    expect(screen.getByText('Skills')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'character-forge' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'dialogue-system' })).toBeInTheDocument()
+  })
+
+  it('calls onToggleSkill when a skill-pack chip is clicked', () => {
+    render(<ChatAreaModeControls {...defaultProps} />)
+    fireEvent.click(screen.getByRole('button', { name: 'character-forge' }))
+    expect(defaultProps.onToggleSkill).toHaveBeenCalledWith('character-forge')
   })
 
   it('does not render selectedSkillsLabel when not provided', () => {

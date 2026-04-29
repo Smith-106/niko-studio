@@ -7,6 +7,7 @@
 
 import type { IAgentLLMService } from './base';
 import { SkillRouter, SKILL_REGISTRY } from './skill-router';
+import { SkillLoader } from '../skills/skill-loader';
 import type { ProjectWorkspaceContext } from '../project/workspace-model.js';
 import {
   createProjectWikiFactPacketBundle,
@@ -252,6 +253,7 @@ export class WriterAgent {
   private injectedSkills: string[];
   private injectedSkillGuidance: string;
   private workspace: ProjectWorkspaceContext | null;
+  private skillLoader: SkillLoader;
 
   static readonly FORBIDDEN_WORDS = ['suddenly', 'involuntarily', 'surprisingly', 'unexpectedly', 'uncontrollably'];
 
@@ -261,6 +263,7 @@ export class WriterAgent {
     knowledgeLayer?: unknown;
     enableKnowledgeRetrieval?: boolean;
     workspace?: ProjectWorkspaceContext | null;
+    skillLoader?: SkillLoader;
   }) {
     this.llmService = options.llmService;
     this.skillRouter = options.skillRouter ?? null;
@@ -269,6 +272,7 @@ export class WriterAgent {
     this.injectedSkills = [];
     this.injectedSkillGuidance = '';
     this.workspace = options.workspace ?? null;
+    this.skillLoader = options.skillLoader ?? new SkillLoader(this.workspace?.identity.workspaceRoot ?? undefined);
   }
 
   // ---------- Knowledge retrieval ----------
@@ -454,10 +458,9 @@ export class WriterAgent {
 
     for (const skillId of this.injectedSkills) {
       try {
-        const skillEntry = SKILL_REGISTRY[skillId];
-        if (skillEntry) {
-          contents.push(`### ${skillEntry.name}\n${skillEntry.description}`);
-        }
+        const loaded = this.skillLoader.loadFull(skillId);
+        const title = loaded.meta.name || SKILL_REGISTRY[skillId]?.name || skillId;
+        contents.push(`### ${title}\n${loaded.content}`);
       } catch (e) {
         this.appendWarning(warnings, `skill_load_failed: ${skillId}: ${e}`);
       }
@@ -775,7 +778,7 @@ Please output the complete revised content:
     this.injectedSkillGuidance = '';
     if (skillIds.length > 0) {
       try {
-        this.injectSkills(skillIds);
+        this.injectSkills(skillIds, warnings);
       } catch (e) {
         this.appendWarning(warnings, `skill_injection_failed: ${e}`);
         this.injectedSkills = [];

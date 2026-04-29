@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: niko-local-pre-commit
+        name: niko local pre-commit quality gate
+        entry: python scripts/run_local_pre_commit.py
+        language: system
+        pass_filenames: false

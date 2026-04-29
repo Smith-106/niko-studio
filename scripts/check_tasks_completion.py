@@ -88,7 +88,9 @@ def scan_markdown(file_path: Path) -> tuple[int, list[PendingItem], int]:
             continue
 
         text = checkbox_match.group("text")
-        inferred_phase = current_phase if current_phase is not None else detect_phase_from_text(text)
+        inferred_phase = (
+            current_phase if current_phase is not None else detect_phase_from_text(text)
+        )
         phase_hint = f"Phase {inferred_phase}" if inferred_phase is not None else ""
         pending.append(
             PendingItem(
@@ -102,7 +104,9 @@ def scan_markdown(file_path: Path) -> tuple[int, list[PendingItem], int]:
     return checked, pending, len(content)
 
 
-def build_payload(file_path: Path, checked: int, pending: list[PendingItem], total_lines: int, preview_limit: int) -> dict[str, object]:
+def build_payload(
+    file_path: Path, checked: int, pending: list[PendingItem], total_lines: int, preview_limit: int
+) -> dict[str, object]:
     total_tasks = checked + len(pending)
     ratio = round((checked / total_tasks) * 100, 2) if total_tasks else 100.0
     preview = [{"line": item.line, "text": item.text} for item in pending[: max(preview_limit, 0)]]
@@ -207,7 +211,9 @@ def main() -> int:
             queue_path = PROJECT_ROOT / queue_path
         queue_path.parent.mkdir(parents=True, exist_ok=True)
         queue_payload = build_queue_payload(target_file, pending)
-        queue_path.write_text(json.dumps(queue_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        queue_path.write_text(
+            json.dumps(queue_payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         print(f"queue exported: {queue_path}")
 
     if args.strict and payload["total_unchecked"] > 0:

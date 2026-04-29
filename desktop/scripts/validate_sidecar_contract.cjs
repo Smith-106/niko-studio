@@ -36,6 +36,7 @@ const LEGACY_PY_SIDECAR_ENTRY = path.join(PROJECT_ROOT, 'src', 'mcp', 'sidecar_e
 const IS_WINDOWS = process.platform === 'win32';
 const STRICT_MODE = process.argv.includes('--strict');
 const VALIDATE_ALL_RUNTIMES = process.argv.includes('--all-runtimes');
+const STRICT_PACKAGING_MODE = process.argv.includes('--strict-packaging');
 const rawRuntime = (process.env.NIKO_GATEWAY_RUNTIME || '').trim().toLowerCase();
 const SELECTED_RUNTIME = ['node', 'python'].includes(rawRuntime) ? rawRuntime : 'node';
 const EXPECTED_WINDOW_LABEL = 'main';
@@ -119,6 +120,9 @@ function packagedPythonArtifactDetail(packagedPythonArtifact, packagedPythonExis
   }
   if (packagedPythonExists) {
     return `${packagedPythonArtifact} => present`;
+  }
+  if (!STRICT_PACKAGING_MODE) {
+    return `${packagedPythonArtifact} => missing; packaged compatibility artifact is only required for explicit packaging proof (for example npm --prefix desktop run validate:package:dry-run).`;
   }
   if (!REQUIRE_PACKAGED_COMPAT_ARTIFACT) {
     return `${packagedPythonArtifact} => missing; packaged Python compatibility artifact is only a blocking prerequisite for the supported Windows packaging target.`;
@@ -281,8 +285,11 @@ function validatePackagingBoundary() {
       detail: `externalBin=${externalBins.join(', ') || '(none)'}`,
     },
     {
-      label: 'current target has a packaged python sidecar artifact',
-      pass: !REQUIRE_PACKAGED_COMPAT_ARTIFACT || Boolean(packagedPythonArtifact && packagedPythonExists),
+      label: 'packaged compatibility artifact is present when explicit packaging proof is requested',
+      pass:
+        !STRICT_PACKAGING_MODE ||
+        !REQUIRE_PACKAGED_COMPAT_ARTIFACT ||
+        Boolean(packagedPythonArtifact && packagedPythonExists),
       detail: packagedPythonArtifactDetail(packagedPythonArtifact, packagedPythonExists),
     },
     {
@@ -307,7 +314,11 @@ function printPackagingBoundary(results) {
   console.log(`   Authoritative local runtime: ${AUTHORITATIVE_RUNTIME}`);
   console.log(`   Packaged compatibility runtime: ${results.packagedRuntime}`);
   console.log(`   Current target triple: ${results.targetTriple || 'unmapped'}`);
-  console.log('   Note: packaged desktop builds currently expect a Python compatibility sidecar artifact; the Node launcher remains a repo-local path and packaged execution falls back to Python.');
+  console.log(`   Validation mode: ${STRICT_PACKAGING_MODE ? 'packaging proof' : 'local/runtime contract'}`);
+  console.log('   Note: local desktop validation stays Node-first; explicit packaging proof still binds bundle.externalBin to the compatibility sidecar until a packaged Node target is intentionally introduced.');
+  if (!STRICT_PACKAGING_MODE) {
+    console.log('   Packaging prerequisite note: hydrated packaged compatibility artifact is checked by validate:package:dry-run, not by the generic sidecar contract gate.');
+  }
   if (!REQUIRE_PACKAGED_COMPAT_ARTIFACT) {
     console.log('   Current platform note: packaged Python compatibility artifact is advisory here; the blocking packaged target remains Windows x64.');
   }
@@ -325,9 +336,8 @@ function main() {
   console.log(`   Bin directory: ${BIN_DIR}`);
   console.log(`   Platform: ${IS_WINDOWS ? 'Windows' : 'Unix'}`);
   console.log(`   Mode: ${STRICT_MODE ? 'STRICT' : 'WARN'}`);
-  console.log(
-    `   Validation scope: ${VALIDATE_ALL_RUNTIMES ? 'all runtimes' : `${SELECTED_RUNTIME} runtime`}`,
-  );
+  console.log(`   Validation scope: ${VALIDATE_ALL_RUNTIMES ? 'all runtimes' : `${SELECTED_RUNTIME} runtime`}`);
+  console.log(`   Packaging proof: ${STRICT_PACKAGING_MODE ? 'required' : 'not required'}`);
 
   if (!fs.existsSync(BIN_DIR)) {
     console.error(`\n❌ Bin directory not found: ${BIN_DIR}`);

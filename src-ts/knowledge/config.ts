@@ -9,6 +9,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { fileURLToPath } from 'url';
 
 import {
   ModelTier,
@@ -37,8 +38,8 @@ export class ConfigError extends Error {
 /**
  * Environment variable pattern: ${VAR} or ${VAR:default}
  */
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ENV_PATTERN = /\$\{([^}:]+)(?::([^}]*))?\}/;
-
 /**
  * Parse a ProviderType string value
  */
@@ -389,6 +390,8 @@ export function loadConfig(
       'config/services.yaml',
       'services.yaml',
       path.join(os.homedir(), '.config', 'niko-studio', 'services.yaml'),
+      path.join(MODULE_DIR, '..', '..', 'config', 'services.yaml'),
+      path.join(MODULE_DIR, '..', '..', '..', 'config', 'services.yaml'),
     ];
     for (const candidate of candidates) {
       if (fs.existsSync(candidate)) {

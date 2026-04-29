@@ -43,7 +43,8 @@
       "bin/niko-gateway"
     ],
     "resources": [
-      "../../skills"
+      "../../skills",
+      "../../config/services.yaml"
     ],
     "icon": [
       "icons/32x32.png",

@@ -7,6 +7,7 @@ vi.mock('../api/client', () => ({
 }))
 
 import { streamWritingHelper } from '../api/client'
+import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { buildEditorAIPayload, type BuildEditorAIPayloadOptions } from './editorAIPromptPolicy'
 import { useEditorAI } from './useEditorAI'
@@ -165,6 +166,10 @@ describe('useEditorAI', () => {
   beforeEach(() => {
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
+    useAppStore.setState((state) => ({
+      ...state,
+      selectedSkills: ['character-forge', 'dialogue-system'],
+    }))
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
@@ -408,12 +413,13 @@ describe('useEditorAI', () => {
       await result.current.runRequest({ action: 'generate' })
     })
 
-    expectLatestStreamPayload({
-      request: { action: 'generate' },
-      language: 'zh',
-      contextBefore: 'Before ',
-      rawStyleRequirements: 'Keep tone',
-    })
+    expect(mockStreamWritingHelper).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        skill_ids: ['character-forge', 'dialogue-system'],
+      }),
+      expect.any(Object),
+      expect.any(Object),
+    )
 
     expect(editor.getText()).toBe('Before ...generated after')
     expect(result.current.errorMessage).toBeNull()

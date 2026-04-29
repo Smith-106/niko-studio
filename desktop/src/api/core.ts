@@ -71,7 +71,7 @@ const resolveApiBase = (): string => {
 }
 
 // Gateway configuration:
-// - Default local 127.0.0.1:8000
+// - Default browser-shell fallback is local 127.0.0.1:8000, matching the direct `python scripts/start_gateway.py` dev startup path.
 // - Remote mode: env(NIKO_GATEWAY_URL / VITE_NIKO_GATEWAY_URL) or settings apiBaseUrl
 export const getResolvedApiBase = (): string => resolveApiBase()
 

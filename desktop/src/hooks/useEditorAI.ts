@@ -16,6 +16,7 @@ import { insertLoadingIndicator, streamTextIntoEditor, replaceRange } from '../c
 import { streamWritingHelper } from '../api/client'
 import type { Language } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useAppStore } from '../stores/appStore'
 import {
   buildEditorAIPayload,
   type EditorAIGenerateAction,
@@ -79,6 +80,8 @@ export function useEditorAI({
     )
     return provider ?? null
   }, [])
+
+  const getSelectedSkillIds = useCallback(() => useAppStore.getState().selectedSkills, [])
 
   const clearError = useCallback(() => {
     setErrorMessage(null)
@@ -170,6 +173,7 @@ export function useEditorAI({
       const streamer = streamTextIntoEditor(editor, pos, placeholderLen)
 
       const provider = getProviderConfig()
+      const skillIds = getSelectedSkillIds()
       let streamError: string | null = null
       let hasStreamedContent = false
 
@@ -179,6 +183,7 @@ export function useEditorAI({
             content: payload.prompt,
             mode: 'generate',
             instruction: payload.styleInstruction,
+            skill_ids: skillIds,
             model: provider?.defaultModel ?? '',
             provider: provider?.id ?? '',
             api_key: provider?.apiKey ?? '',
@@ -257,7 +262,7 @@ export function useEditorAI({
         releaseRequest(requestId)
       }
     },
-    [editor, getProviderConfig, releaseRequest],
+    [editor, getProviderConfig, getSelectedSkillIds, releaseRequest],
   )
 
   const runRequest = useCallback(

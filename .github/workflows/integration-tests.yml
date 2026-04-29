@@ -37,6 +37,11 @@ jobs:
         run: |
           python scripts/delivery_gate.py
 
+      - name: Run Python static checks
+        run: |
+          python -m ruff check --select F,I scripts tests/unit/scripts
+          python -m ruff format --check scripts tests/unit/scripts
+
       - name: Run governance script regression tests
         run: |
           python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q
@@ -52,6 +57,11 @@ jobs:
 
       - name: Install backend dependencies
         run: npm ci
+        working-directory: src-ts
+
+      - name: Audit backend dependencies (high+, advisory)
+        continue-on-error: true
+        run: npm run audit:high
         working-directory: src-ts
 
       - name: Install desktop dependencies
@@ -415,6 +425,11 @@ jobs:
         run: npm ci
         working-directory: src-ts
 
+      - name: Audit backend dependencies (high+, advisory)
+        continue-on-error: true
+        run: npm run audit:high
+        working-directory: src-ts
+
       - name: Install desktop dependencies
         run: npm ci
         working-directory: desktop
@@ -455,6 +470,11 @@ jobs:
 
       - name: Install backend dependencies
         run: npm ci
+        working-directory: src-ts
+
+      - name: Audit backend dependencies (high+, advisory)
+        continue-on-error: true
+        run: npm run audit:high
         working-directory: src-ts
 
       - name: Install desktop dependencies

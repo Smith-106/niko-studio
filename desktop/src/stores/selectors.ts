@@ -102,6 +102,10 @@ export function useSelectedSkills(): string[] {
   return useAppStore(useShallow((state) => state.selectedSkills))
 }
 
+export function useAvailableSkills(): string[] {
+  return useAppStore(useShallow((state) => state.availableSkills))
+}
+
 export function useCreateConversation(): AppState['createConversation'] {
   return useAppStore((state) => state.createConversation)
 }

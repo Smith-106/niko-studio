@@ -13,7 +13,7 @@
 |---|---|---|
 | `unsigned_local_proof` | 仓库内权威门禁通过，但 `desktop/src-tauri/tauri.conf.json` 仍保留 `certificateThumbprint: null` 与 `timestampUrl: ""` | 否 |
 | `prerequisite_missing_hold` | 对外发布所需 4 个前提中任一缺失：证书指纹、时间戳 URL、已 hydrate 的 packaged compatibility artifact、Windows 打包主机/工具链 | 否 |
-| `signed_external_release` | 仓库内门禁保持通过，且 4 个前提已在 Windows 打包主机上满足，并完成带签名的 `npm --prefix desktop run tauri:build` | 是 |
+| `signed_external_release` | 仓库内门禁保持通过，且 4 个前提已在 Windows 打包主机上满足，并完成带签名的 `npm --prefix desktop run tauri:build:signed` | 是 |
 
 补充说明：
 - `unsigned_local_proof` 可以证明本地验证链闭合，但不能被表述成 signed external shipment。
@@ -40,9 +40,9 @@
 - The current runtime matrix is intentional:
   - `Supported local runtime`: Node-first launcher + local `src-ts/` gateway.
   - `Packaged compatibility runtime`: Python sidecar bundled through `bundle.externalBin`.
-  - `Explicit boundary`: the repo-local Node launcher is not a packaged externalBin artifact today, so packaged desktop execution falls back to the bundled Python sidecar unless a future target-triple Node binary is added.
+  - `Explicit boundary`: local desktop validation stays Node-first. Packaged proof still binds `bundle.externalBin` to the compatibility sidecar until a packaged Node target-triple artifact is intentionally introduced.
 - Current documented dry-run packaging target is Windows x64: `npm --prefix desktop run validate:package:dry-run` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`).
-- Signing prerequisites remain external to the repository: `desktop/src-tauri/tauri.conf.json` keeps `certificateThumbprint: null` and `timestampUrl: ""` for unsigned local proof; signed external bundles require release-private override material before `npm --prefix desktop run tauri:build`.
+- Signing prerequisites remain external to the repository: `desktop/src-tauri/tauri.conf.json` keeps `certificateThumbprint: null` and `timestampUrl: ""` for unsigned local proof; signed external bundles require release-private override material before `npm --prefix desktop run tauri:build:signed`.
 
 ## External 发布准入条件（Go/No-Go）
 
@@ -214,7 +214,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 - Desktop packaging dry-run：通过
   - `npm --prefix desktop run validate:package:dry-run`
 - Desktop release bundle：通过
-  - `npm --prefix desktop run tauri:build`
+  - `npm --prefix desktop run tauri:build:signed`
 - writing-helper acceptance：通过
   - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1`
   - `7 / 7 PASS`
@@ -242,7 +242,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 
 - 当前产物是基于仓库内 `tauri.conf.json` 生成的 unsigned local build；`certificateThumbprint = null` 且 `timestampUrl = ""`。
 - 打包链路继续遵循 “本地 Node-first，打包 Python compatibility sidecar” 的当前边界。
-- 若要形成正式对外签名包，仍需在仓库外注入 release-private 签名材料后重新运行 `npm --prefix desktop run tauri:build`。
+- 若要形成正式对外签名包，仍需在仓库外注入 release-private 签名材料后重新运行 `npm --prefix desktop run tauri:build:signed`。
 
 ## v9.0.7 验收记录（2026-04-15）
 
@@ -272,7 +272,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 - Desktop packaging dry-run：通过
   - `npm --prefix desktop run validate:package:dry-run`
 - Desktop release bundle：通过
-  - `npm --prefix desktop run tauri:build`
+  - `npm --prefix desktop run tauri:build:signed`
 - writing-helper acceptance：通过
   - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\check-writing-helper.ps1 -Strict -Port 18080 -Host 127.0.0.1`
   - `7 / 7 PASS`
@@ -300,7 +300,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 
 - 当前产物是基于仓库内 `tauri.conf.json` 生成的 unsigned local build；`certificateThumbprint = null` 且 `timestampUrl = ""`。
 - 打包链路继续遵循 “本地 Node-first，打包 Python compatibility sidecar” 的当前边界。
-- 若要形成正式对外签名包，仍需在仓库外注入 release-private 签名材料后重新运行 `npm --prefix desktop run tauri:build`。
+- 若要形成正式对外签名包，仍需在仓库外注入 release-private 签名材料后重新运行 `npm --prefix desktop run tauri:build:signed`。
 
 ## v9.0.6 验收记录（2026-04-14）
 
@@ -324,7 +324,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 - Desktop packaging dry-run：通过
   - `npm --prefix desktop run validate:package:dry-run`
 - Desktop release bundle：通过
-  - `npm --prefix desktop run tauri:build`
+  - `npm --prefix desktop run tauri:build:signed`
 - writing-helper acceptance：沿用当前 CI / release sign-off 证据，本次未重跑
 - 质量信号完整性（覆盖率上传、CI 关键步骤）：本地桌面打包信号完整；签名材料仍在仓库外
 - 生产守卫（CORS / reload / metrics）：沿用当前 release summary 中的通过结论
@@ -348,7 +348,7 @@ external 对外“100% 完成度”仅指核心可达链路：
 
 - 当前产物是基于仓库内 `tauri.conf.json` 生成的 unsigned local build；`certificateThumbprint = null` 且 `timestampUrl = ""`。
 - 打包链路继续遵循 “本地 Node-first，打包 Python compatibility sidecar” 的当前边界。
-- 若要形成正式对外签名包，仍需在仓库外注入 release-private 签名材料后重新运行 `npm --prefix desktop run tauri:build`。
+- 若要形成正式对外签名包，仍需在仓库外注入 release-private 签名材料后重新运行 `npm --prefix desktop run tauri:build:signed`。
 
 ## v9.0.4 验收记录（2026-04-11）
 

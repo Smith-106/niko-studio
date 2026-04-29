@@ -1,153 +1,127 @@
-# E2E Verification Checklist
+# Desktop Installed-Package E2E Verification
 
-End-to-end verification checklist for Niko Studio desktop application.
+## Purpose
 
-## Prerequisites
+This checklist covers the gap between package-generation proof and actual installed-package behavior.
+Use it on the Windows host that produced the retained package artifact.
 
-- [ ] Node.js 20+ installed
-- [ ] Python 3.11+ installed
-- [ ] At least one LLM API key configured (OpenAI, Google, or Anthropic)
-- [ ] `.env` file created from `.env.example` with valid API key
+It does **not** replace:
+- `npm --prefix desktop run validate:package:dry-run`
+- `npm --prefix desktop run tauri:build:signed`
+- `npm --prefix desktop run local:selftest`
+- `python scripts/release_check_summary.py`
 
-## 1. Build Verification
+Instead, it adds install/start/use validation for the exact package artifact retained for sign-off.
+
+## Required Inputs
+
+- Exact retained package artifact under `desktop/src-tauri/target/release/bundle/**`
+- Matching retained release evidence set under `.workflow/evidence/release/`
+- Windows host with the packaging/runtime prerequisites already satisfied
+
+## Verification Scope
+
+Validate the exact package artifact you plan to hand off:
+
+1. Install succeeds
+2. App launches successfully
+3. Gateway-backed desktop path becomes usable
+4. Primary user path is reachable
+5. App can be closed cleanly
+6. Evidence is recorded for the same artifact and same HEAD
+
+## Installed-Package Smoke Checklist
+
+Record the following for the exact artifact under test:
+
+- Artifact path:
+- Artifact SHA256:
+- HEAD SHA:
+- Version:
+- Verification host:
+- Verification timestamp:
+
+### Step 1 — Install
+
+- [ ] Launch the retained installer package
+- [ ] Installation completes without fatal error
+- [ ] Installed app entry is visible in Windows shortcuts / installed apps surface
+
+### Step 2 — First launch
+
+- [ ] Launch the installed application from the installed location / shortcut
+- [ ] Main window opens
+- [ ] No startup crash dialog appears
+
+### Step 3 — Runtime readiness
+
+- [ ] Desktop reaches usable state
+- [ ] Gateway-backed features do not remain stuck in permanent loading/error state
+- [ ] If startup recovery UI appears, it resolves to a usable desktop state
+
+### Step 4 — Primary writer path
+
+- [ ] Knowledge view is reachable
+- [ ] Settings view is reachable
+- [ ] Evaluation view is reachable
+- [ ] Primary writing/chat surface is reachable
+
+### Step 5 — Basic interaction proof
+
+- [ ] Open the app and navigate across the primary surfaces
+- [ ] Confirm at least one gateway-backed interaction completes successfully
+- [ ] Close the app cleanly
+
+## Evidence to retain
+
+Retain at minimum:
+
+- package artifact path
+- SHA256
+- HEAD SHA
+- version
+- operator name / host
+- verification timestamp
+- pass/fail result for each checklist section
+- optional screenshots only if needed to explain a failure
+
+## Suggested verification record template
+
+```text
+installed_package_artifact =
+sha256 =
+head_sha =
+version =
+verification_host =
+verified_at =
+install = PASS|FAIL
+first_launch = PASS|FAIL
+runtime_readiness = PASS|FAIL
+primary_writer_path = PASS|FAIL
+basic_interaction = PASS|FAIL
+overall = PASS|FAIL
+notes =
+```
+
+## Retained evidence entrypoint
+
+After the manual checklist passes on the Windows host, record the retained artifact acceptance for the exact package you validated:
 
 ```bash
-# TypeScript type check (both packages)
-cd src-ts && npx tsc --noEmit     # Expected: 0 errors
-cd desktop && npx tsc --noEmit    # Expected: 0 errors
-
-# Backend tests
-cd src-ts && npx vitest run       # Expected: 197 files, ~2229 tests, all pass
-
-# Desktop tests
-cd desktop && npx vitest run      # Expected: 84 files, 812 tests, all pass
-
-# Python governance tests
-python -m pytest tests/unit/ -q   # Expected: 35+ passed
+npm --prefix desktop run package:e2e:checklist -- --artifact-path "desktop/src-tauri/target/release/bundle/nsis/<installer>.exe" --tester "<operator>" --result pass --install-verified --launch-verified --core-flow-verified --shutdown-verified
 ```
 
-## 2. Gateway Startup
+This writes:
 
-```powershell
-# Start gateway only
-npm --prefix desktop run local:gateway
-```
+- `.workflow/evidence/release/package-e2e-acceptance.json`
 
-- [ ] Gateway starts without errors
-- [ ] Health endpoint responds: `curl http://127.0.0.1:8000/health`
-- [ ] Metrics endpoint responds: `curl http://127.0.0.1:8000/metrics`
-- [ ] Tools endpoint responds: `curl http://127.0.0.1:8000/tools`
+The command is intentionally strict:
+- `--artifact-path` must point at the exact retained installer/package artifact you validated.
+- `--tester` is required.
+- `--result pass` requires all four verification flags.
+- `--result fail` requires `--notes` so the blocked handoff reason is retained.
 
-## 3. Desktop Application
+## Relationship to release sign-off
 
-```powershell
-# Start full desktop
-npm --prefix desktop run local:start
-```
-
-- [ ] Desktop window opens
-- [ ] Gateway connection established (check McpStatusPanel)
-- [ ] Sidebar loads correctly
-- [ ] Settings can be opened and saved
-- [ ] Language toggle works (zh/en)
-
-## 4. Writing Features
-
-- [ ] Create a new chat session
-- [ ] Send a message and receive AI response
-- [ ] Open Knowledge Modal — verify character/location/plot tabs render
-- [ ] Open StoryBiblePanel — verify it loads without errors
-- [ ] Open EvaluationPanel — verify it renders correctly
-
-## 5. Workflow Features
-
-- [ ] Open AutomationPanel
-- [ ] Select a workflow level (e.g., Level 1 - Rapid)
-- [ ] Submit a workflow request
-- [ ] Verify workflow progresses through stages
-- [ ] Check checkpoint functionality
-
-## 6. Document Editing
-
-- [ ] Open DocumentEditor
-- [ ] Type text — verify TipTap editor works
-- [ ] Test formatting toolbar (bold, italic, heading)
-- [ ] Test slash commands
-- [ ] Verify AI text optimizer integration
-
-## 7. Search & Knowledge
-
-- [ ] Test content search functionality
-- [ ] Verify knowledge browsing works
-- [ ] Test memory upload functionality
-
-## 8. Configuration
-
-- [ ] Change settings and verify persistence after restart
-- [ ] Test config reload: `curl -X POST http://127.0.0.1:8000/config/reload`
-- [ ] Verify CORS settings apply correctly
-
-## 9. Error Handling
-
-- [ ] Disconnect gateway — verify desktop shows error gracefully
-- [ ] Reconnect gateway — verify desktop recovers
-- [ ] Test with invalid API key — verify error feedback
-- [ ] Test with no API key — verify graceful degradation
-
-## 10. Build & Package
-
-```powershell
-# Build sidecar
-npm --prefix desktop run build:sidecar
-
-# Validate sidecar contract
-npm --prefix desktop run validate:sidecar-contract
-
-# Build desktop
-npm --prefix desktop run build
-```
-
-- [ ] Sidecar builds without errors
-- [ ] Sidecar contract validation passes
-- [ ] Desktop build produces output in `desktop/dist/`
-
-## 11. Authority Alignment
-
-```bash
-python scripts/check_authority_alignment.py   # Expected: mismatches: []
-python scripts/check_versions.py              # Expected: all versions aligned at 9.0.10
-python scripts/delivery_gate.py               # Expected: PASS
-```
-
-## 12. Clean Shutdown
-
-```powershell
-# Stop all processes
-npm --prefix desktop run local:stop
-```
-
-- [ ] Gateway shuts down cleanly
-- [ ] Desktop window closes without errors
-- [ ] No orphaned processes remaining
-
-## Results Template
-
-| Step | Status | Notes |
-|------|--------|-------|
-| 1. Build Verification | | |
-| 2. Gateway Startup | | |
-| 3. Desktop Application | | |
-| 4. Writing Features | | |
-| 5. Workflow Features | | |
-| 6. Document Editing | | |
-| 7. Search & Knowledge | | |
-| 8. Configuration | | |
-| 9. Error Handling | | |
-| 10. Build & Package | | |
-| 11. Authority Alignment | | |
-| 12. Clean Shutdown | | |
-
-**Overall**: PASS / FAIL / PARTIAL
-**Date**: 
-**Tester**: 
-**Build version**: 9.0.10
+Use this checklist after package generation proof and before external handoff language claims installed-package readiness.
+If package-generation proof is green but this checklist fails, treat the release as blocked for installed-package acceptance.

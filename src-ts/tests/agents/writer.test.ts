@@ -6,6 +6,7 @@ import {
   createWriterNode,
   WriterAgent,
 } from '../../agents/writer';
+import { SkillRouter } from '../../agents/skill-router';
 
 function createLlmService() {
   return {
@@ -204,6 +205,73 @@ describe('WriterAgent', () => {
           pageId: 'page-aster',
         }),
       ]));
+  });
+
+  it('loads full skill-pack content into the writer system prompt', async () => {
+    const llmService = createLlmService();
+    const writer = new WriterAgent({
+      llmService: llmService as never,
+      skillRouter: new SkillRouter(),
+      skillLoader: {
+        loadFull: vi.fn().mockReturnValue({
+          name: 'fictional-dream',
+          meta: {
+            name: '虚构梦境构建技能',
+            description: '四层情感递进系统',
+            tags: [],
+            triggers: [],
+          },
+          content: '# 虚构梦境构建技能\n\n## 第一层：同情 (Sympathy)\n通过具体困境建立代入。',
+          path: '/tmp/skills/fictional-dream/SKILL.md',
+          techniques: ['第一层：同情 (Sympathy)'],
+        }),
+      } as never,
+    });
+
+    await writer.write(createWriterInput({
+      scene_id: 'scene-skill-1',
+      objective: '建立角色连接',
+      conflict: '压抑的秘密逐渐浮现',
+      outcome: '留下情感钩子',
+      emotional_arc: 'distance->connection',
+      world_settings: {
+        recommended_skills: ['fictional-dream'],
+      },
+    }));
+
+    expect(llmService.generate).toHaveBeenCalled();
+    const firstCallOptions = llmService.generate.mock.calls[0]?.[1] as { systemPrompt: string };
+    expect(firstCallOptions.systemPrompt).toContain('## Skill Guidance');
+    expect(firstCallOptions.systemPrompt).toContain('### 虚构梦境构建技能');
+    expect(firstCallOptions.systemPrompt).toContain('## 第一层：同情 (Sympathy)');
+    expect(firstCallOptions.systemPrompt).toContain('通过具体困境建立代入。');
+  });
+
+  it('records warnings when a requested skill-pack cannot be loaded', async () => {
+    const llmService = createLlmService();
+    const writer = new WriterAgent({
+      llmService: llmService as never,
+      skillRouter: new SkillRouter(),
+      skillLoader: {
+        loadFull: vi.fn().mockImplementation(() => {
+          throw new Error('Skill missing');
+        }),
+      } as never,
+    });
+
+    const output = await writer.write(createWriterInput({
+      scene_id: 'scene-skill-2',
+      objective: '制造压迫感',
+      conflict: '找不到可依赖的线索',
+      outcome: '悬念加深',
+      world_settings: {
+        recommended_skills: ['missing-skill'],
+      },
+    }));
+
+    expect(output.metadata).toMatchObject({
+      warnings: [expect.stringContaining('skill_load_failed: missing-skill: Error: Skill missing')],
+    });
   });
 
   it('revises drafts according to feedback and records forbidden words found', async () => {

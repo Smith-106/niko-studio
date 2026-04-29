@@ -21,10 +21,52 @@ const integrationAdaptersMock = {
     elasticsearchEnabled: false,
     langflowEnabled: false,
   },
+  requestedFlags: {
+    redisCacheEnabled: false,
+    elasticsearchEnabled: false,
+    langflowEnabled: false,
+  },
+  capabilities: {
+    redisCacheEnabled: {
+      flag: 'redisCacheEnabled',
+      integration: 'redis-cache-rate-limit',
+      support_level: 'experimental',
+      requested: false,
+      enabled: false,
+      detail: 'Redis cache/rate-limit integration is disabled; in-process defaults remain authoritative.',
+    },
+    elasticsearchEnabled: {
+      flag: 'elasticsearchEnabled',
+      integration: 'elasticsearch-search',
+      support_level: 'experimental',
+      requested: false,
+      enabled: false,
+      detail: 'Elasticsearch integration is disabled; local retrieval remains the only active search path.',
+    },
+    langflowEnabled: {
+      flag: 'langflowEnabled',
+      integration: 'langflow-orchestration',
+      support_level: 'disabled',
+      requested: false,
+      enabled: false,
+      detail: 'Langflow orchestration is disabled; no external orchestration flow was started.',
+    },
+  },
   cacheRateLimit: {
     allowRequest: allowRequestMock,
     cacheGet: cacheGetMock,
     cacheSet: cacheSetMock,
+    getStatus: vi.fn(() => ({
+      integration: 'redis-cache-rate-limit',
+      state: integrationAdaptersMock.flags.redisCacheEnabled ? 'degraded' : 'disabled',
+      support_level: 'experimental',
+      code: integrationAdaptersMock.flags.redisCacheEnabled
+        ? 'REDIS_CACHE_RATE_LIMIT_DEGRADED'
+        : 'INTEGRATION_DISABLED',
+      detail: integrationAdaptersMock.flags.redisCacheEnabled
+        ? 'Redis cache/rate-limit is enabled in configuration but no external backend is implemented; in-process defaults remain active.'
+        : 'Redis cache/rate-limit integration is disabled; in-process defaults remain authoritative.',
+    })),
   },
   search: {
     indexDocument: indexDocumentMock,
@@ -32,6 +74,7 @@ const integrationAdaptersMock = {
     getStatus: vi.fn(() => ({
       integration: 'elasticsearch-search',
       state: integrationAdaptersMock.flags.elasticsearchEnabled ? 'degraded' : 'disabled',
+      support_level: 'experimental',
       code: integrationAdaptersMock.flags.elasticsearchEnabled ? 'ELASTICSEARCH_DEGRADED' : 'INTEGRATION_DISABLED',
       detail: integrationAdaptersMock.flags.elasticsearchEnabled
         ? 'Elasticsearch is enabled but no durable external index is available; requests must fall back to local retrieval.'
@@ -43,6 +86,7 @@ const integrationAdaptersMock = {
     getStatus: vi.fn(() => ({
       integration: 'langflow-orchestration',
       state: integrationAdaptersMock.flags.langflowEnabled ? 'unsupported' : 'disabled',
+      support_level: 'disabled',
       code: integrationAdaptersMock.flags.langflowEnabled ? 'LANGFLOW_UNSUPPORTED' : 'INTEGRATION_DISABLED',
       detail: integrationAdaptersMock.flags.langflowEnabled
         ? 'Langflow orchestration is enabled in configuration but no real remote flow runner is implemented.'
@@ -64,6 +108,9 @@ describe('mcp search service wiring', () => {
     integrationAdaptersMock.flags.redisCacheEnabled = false;
     integrationAdaptersMock.flags.elasticsearchEnabled = false;
     integrationAdaptersMock.flags.langflowEnabled = false;
+    integrationAdaptersMock.requestedFlags.redisCacheEnabled = false;
+    integrationAdaptersMock.requestedFlags.elasticsearchEnabled = false;
+    integrationAdaptersMock.requestedFlags.langflowEnabled = false;
     vi.resetModules();
     vi.clearAllMocks();
   });
@@ -190,6 +237,7 @@ describe('mcp search service wiring', () => {
         metadata: {
           integration: 'elasticsearch-search',
           state: 'degraded',
+          support_level: 'experimental',
           code: 'ELASTICSEARCH_DEGRADED',
           routeMode: 'legacy',
           results: [],

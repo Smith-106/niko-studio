@@ -14,6 +14,14 @@ The Tauri build configuration (`desktop/src-tauri/tauri.conf.json`) is set up fo
 
 Unsigned builds will trigger Windows SmartScreen warnings when users install them.
 
+## Repository Policy
+
+- The checked-in `desktop/src-tauri/tauri.conf.json` must remain unsigned-by-default.
+- Signed external releases must inject release-private signing inputs outside git.
+- Do not edit `tauri.conf.json` in-place on release hosts.
+- Instead, generate a temporary signed config with `python scripts/generate_signed_tauri_config.py` and point Tauri at it via `TAURI_CONFIG`.
+- The authoritative signed-build entrypoint is `npm --prefix desktop run tauri:build:signed`, which delegates to `python scripts/generate_signed_tauri_config.py --run-build`.
+
 ## Signing Options
 
 ### Option A: Self-Signed Certificate (Local Testing)
@@ -21,26 +29,24 @@ Unsigned builds will trigger Windows SmartScreen warnings when users install the
 ```powershell
 # Create a self-signed certificate
 New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Niko Studio" -CertStoreLocation "Cert:\CurrentUser\My"
-
-# Copy the thumbprint from the output
 ```
 
-Then update `tauri.conf.json`:
-
-```json
-{
-  "windows": {
-    "certificateThumbprint": "<YOUR_THUMBPRINT>",
-    "digestAlgorithm": "sha256",
-    "timestampUrl": "http://timestamp.digicert.com"
-  }
-}
-```
-
-Build:
+Export the release-host environment variables instead of editing repo config:
 
 ```powershell
+$env:NIKO_WINDOWS_CERT_THUMBPRINT = "<YOUR_THUMBPRINT>"
+$env:NIKO_WINDOWS_TIMESTAMP_URL = "http://timestamp.digicert.com"
+python scripts/generate_signed_tauri_config.py
+$env:TAURI_CONFIG = "desktop/src-tauri/tauri.signed.local.generated.json"
 npm --prefix desktop run tauri:build
+```
+
+Or use the single signed-build entrypoint:
+
+```powershell
+$env:NIKO_WINDOWS_CERT_THUMBPRINT = "<YOUR_THUMBPRINT>"
+$env:NIKO_WINDOWS_TIMESTAMP_URL = "http://timestamp.digicert.com"
+npm --prefix desktop run tauri:build:signed
 ```
 
 ### Option B: EV/OV Code Signing Certificate (Production)
@@ -49,7 +55,8 @@ For production releases, obtain a code signing certificate from a trusted CA:
 
 1. **Purchase** a code signing certificate from DigiCert, Sectigo, or GlobalSign
 2. **Install** the certificate on the build machine
-3. **Configure** `tauri.conf.json` with the certificate thumbprint and timestamp URL
+3. **Export** signing inputs as release-host environment variables (`NIKO_WINDOWS_CERT_THUMBPRINT`, `NIKO_WINDOWS_TIMESTAMP_URL`)
+4. **Generate** the temporary signed Tauri config outside git before running `npm --prefix desktop run tauri:build:signed`
 
 Recommended CAs and their timestamp URLs:
 
@@ -81,12 +88,21 @@ azuresigntool sign `
 ## Build Commands
 
 ```bash
-# Unsigned build (development)
+# Unsigned build (development / local proof)
 npm --prefix desktop run tauri:build
 
-# Signed build (requires certificate installed)
-npm --prefix desktop run tauri:build
-# Tauri automatically detects and uses the configured certificate
+# Generate temporary signed config from release-host environment variables
+python scripts/generate_signed_tauri_config.py
+
+# Signed build (release host only)
+npm --prefix desktop run tauri:build:signed
+```
+
+Required release-host environment variables:
+
+```powershell
+$env:NIKO_WINDOWS_CERT_THUMBPRINT = "<thumbprint>"
+$env:NIKO_WINDOWS_TIMESTAMP_URL = "http://timestamp.digicert.com"
 ```
 
 ## Verification

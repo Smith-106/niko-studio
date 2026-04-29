@@ -48,10 +48,16 @@ def main() -> int:
         "src-ts/config/index.ts:APP_VERSION": expected,
         "src-ts/package.json": read_json_version(PROJECT_ROOT / "src-ts" / "package.json"),
         "config/niko-studio.yaml": read_yaml_version(PROJECT_ROOT / "config" / "niko-studio.yaml"),
-        "config/niko-studio.production.yaml": read_yaml_version(PROJECT_ROOT / "config" / "niko-studio.production.yaml"),
+        "config/niko-studio.production.yaml": read_yaml_version(
+            PROJECT_ROOT / "config" / "niko-studio.production.yaml"
+        ),
         "desktop/package.json": read_json_version(PROJECT_ROOT / "desktop" / "package.json"),
-        "desktop/src-tauri/tauri.conf.json": read_json_version(PROJECT_ROOT / "desktop" / "src-tauri" / "tauri.conf.json"),
-        "desktop/src-tauri/Cargo.toml": read_cargo_version(PROJECT_ROOT / "desktop" / "src-tauri" / "Cargo.toml"),
+        "desktop/src-tauri/tauri.conf.json": read_json_version(
+            PROJECT_ROOT / "desktop" / "src-tauri" / "tauri.conf.json"
+        ),
+        "desktop/src-tauri/Cargo.toml": read_cargo_version(
+            PROJECT_ROOT / "desktop" / "src-tauri" / "Cargo.toml"
+        ),
     }
 
     mismatches = {name: value for name, value in checks.items() if value != expected}

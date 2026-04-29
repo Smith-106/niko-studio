@@ -10,9 +10,26 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $failedFile = Join-Path (Get-Location) "failed-writing-helper-cases.json"
 $releaseEvidenceDir = Join-Path $projectRoot ".workflow\evidence\release"
 $acceptanceArtifact = Join-Path $releaseEvidenceDir "writing-helper-acceptance.json"
+$desktopPackageJson = Join-Path $projectRoot "desktop\package.json"
 $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 if (-not ("System.Net.Http.HttpClient" -as [type])) {
   Add-Type -AssemblyName System.Net.Http
+}
+
+function Get-CurrentVersion {
+  try {
+    if (Test-Path $desktopPackageJson) {
+      $package = Get-Content -Path $desktopPackageJson -Raw | ConvertFrom-Json
+      $version = [string]$package.version
+      if (-not [string]::IsNullOrWhiteSpace($version)) {
+        return $version.Trim()
+      }
+    }
+  }
+  catch {
+  }
+
+  return $null
 }
 
 function Get-CurrentHeadSha {
@@ -303,6 +320,7 @@ $acceptancePayload = [ordered]@{
   strict            = [bool]$Strict
   generated_at      = [DateTimeOffset]::UtcNow.ToString("o")
   head_sha          = Get-CurrentHeadSha
+  version           = Get-CurrentVersion
   host              = $GatewayHost
   port              = $Port
   total_cases       = $total

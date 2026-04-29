@@ -1,3 +1,4 @@
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -67,6 +68,22 @@ fn get_requested_gateway_runtime() -> GatewayRuntime {
         Ok(value) if value.trim().eq_ignore_ascii_case("node") => GatewayRuntime::Node,
         _ => GatewayRuntime::Node,
     }
+}
+
+fn resolve_services_config_path(resource_dir: &Path) -> Option<PathBuf> {
+    for ancestor in std::iter::once(resource_dir).chain(resource_dir.ancestors()) {
+        let nested = ancestor.join("config").join("services.yaml");
+        if nested.exists() {
+            return Some(nested);
+        }
+
+        let direct = ancestor.join("services.yaml");
+        if direct.exists() {
+            return Some(direct);
+        }
+    }
+
+    None
 }
 
 pub async fn is_gateway_healthy(base: &str) -> bool {
@@ -154,6 +171,7 @@ impl GatewayState {
             .resource_dir()
             .map_err(|e| format!("Failed to resolve resource_dir: {e}"))?;
         let skills_dir = resource_dir.join("skills");
+        let services_config_path = resolve_services_config_path(&resource_dir);
 
         let app_data_dir = app
             .path()
@@ -195,6 +213,13 @@ impl GatewayState {
                     .env("NIKO_GATEWAY_RUNTIME", runtime.as_env())
                     .env("NIKO_CORS_DEV_ORIGINS", "tauri://localhost,http://localhost:5173")
                     .env("NIKO_SKILLS_DIR", skills_dir.to_string_lossy().to_string());
+
+                if let Some(config_path) = &services_config_path {
+                    cmd = cmd.env(
+                        "NIKO_CONFIG_PATH",
+                        config_path.to_string_lossy().to_string(),
+                    );
+                }
 
                 let (_rx, child) = match cmd.spawn() {
                     Ok(result) => result,

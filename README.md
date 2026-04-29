@@ -77,7 +77,7 @@ Failure-first hydration order:
 5. `npm --prefix desktop run validate:sidecar-contract`
 6. `npm --prefix src-ts run check:local`
 7. `npm --prefix desktop run check:local`
-8. On Windows release hosts only: `npm --prefix desktop run validate:package:dry-run` or the signed `npm --prefix desktop run tauri:build`
+8. On Windows release hosts only: explicit packaging proof via `npm --prefix desktop run validate:package:dry-run` or the signed `npm --prefix desktop run tauri:build:signed`
 
 ## Writer-First Desktop Delivery Contract
 
@@ -95,6 +95,19 @@ python scripts/release_check_summary.py
 ```
 
 该命令会汇总版本一致性、baseline/e2e、production 守卫（reload/CORS/metrics）、authority alignment，以及当前交付契约观察点。
+
+### 轻量本地 pre-commit 门
+
+```bash
+npm --prefix desktop run local:pre-commit
+```
+
+这条入口只运行轻量本地提交门：desktop/src-ts lint、format check，以及 Python helper 静态检查。
+如需安装仓库内 hook 模板，可把 git hooks 路径指向 `.githooks`：
+
+```bash
+git config core.hooksPath .githooks
+```
 
 ### 当前状态权威来源
 
@@ -118,7 +131,10 @@ python scripts/release_check_summary.py
 - 后端 / 发布 CI 权威入口：`.github/workflows/external-release-gate.yml`
 - internal CI 权威入口：`.github/workflows/integration-tests.yml`
 - Desktop CI 构建入口（build / smoke）：`npm --prefix desktop run check`
-- 依赖审计：`npm audit --audit-level=high`
+- 依赖审计：`npm --prefix desktop run audit:high`、`npm --prefix src-ts run audit:high`
+- 当前策略：desktop / src-ts 审计信号已进入 CI；`src-ts` 审计当前先以 advisory 运行，待 breaking 依赖升级链完成后再提升为 blocking。
+- 依赖更新自动化：`.github/dependabot.yml`（desktop、src-ts、desktop/src-tauri Cargo、pip、GitHub Actions 按月更新）
+- Python scripts 静态质量门：`python -m ruff check --select F,I scripts tests/unit/scripts` 与 `python -m ruff format --check scripts tests/unit/scripts`
 
 ## 阶段 4：执行（自主运行）
 
@@ -165,7 +181,8 @@ npm --prefix desktop run build:sidecar
 # Sidecar/runtime contract must pass before downstream desktop gates claim success
 npm --prefix desktop run validate:sidecar-contract
 
-# 显式 Python 兼容构建（仅 legacy entry 存在时可用）
+# Explicit packaging proof is a stricter Windows release-host check
+npm --prefix desktop run validate:package:dry-run
 # 当前 checkout 默认不包含该 legacy entry
 # 正式 release 如需走 packaged fallback，需预先准备 `desktop/src-tauri/bin/niko-gateway*.exe`
 python scripts/build_gateway_sidecar.py --legacy-entry src/mcp/sidecar_entry.py
@@ -279,6 +296,10 @@ niko-studio/
 
 ## ✅ Current Validation Entrypoints
 
+- 发布 evidence 单入口刷新：`npm --prefix desktop run release:evidence:refresh`
+- 安装包级 E2E 留痕入口：`npm --prefix desktop run package:e2e:checklist`
+- 本地 pre-commit 质量门：`npm --prefix desktop run local:pre-commit`
+- 提交前启用 hook：`python -m pre_commit install`
 - Desktop 本地验收：`npm --prefix desktop run check:local`
 - Gateway 本地验收：`npm --prefix src-ts run check:local`
 - 发布汇总快照：`python scripts/release_check_summary.py`

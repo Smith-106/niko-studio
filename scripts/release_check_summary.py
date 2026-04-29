@@ -18,6 +18,7 @@ RELEASE_EVIDENCE_DIR = PROJECT_ROOT / ".workflow" / "evidence" / "release"
 RELEASE_READINESS_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "release-readiness-artifact.json"
 AUTHORITY_ALIGNMENT_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "authority-alignment.json"
 WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "writing-helper-acceptance.json"
+PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "package-e2e-acceptance.json"
 GOVERNANCE_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "governance-scripts.junit.xml"
 PRODUCTION_GUARD_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-production-guard.xml"
 E2E_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-e2e.xml"
@@ -63,6 +64,7 @@ SCORECARD_DIMENSIONS = (
             "desktop_sidecar_readiness",
             "desktop_packaging_dry_run",
             "writing_helper_acceptance_signal",
+            "package_e2e_acceptance_signal",
             "local_selftest_enforcement",
         ),
     ),
@@ -236,11 +238,7 @@ def _read_markdown_corpus(directories: list[Path]) -> str:
 
 
 def _missing_required_patterns(corpus: str, required_patterns: dict[str, str]) -> list[str]:
-    return [
-        key
-        for key, pattern in required_patterns.items()
-        if not re.search(pattern, corpus)
-    ]
+    return [key for key, pattern in required_patterns.items() if not re.search(pattern, corpus)]
 
 
 def _has_traceable_link(corpus: str) -> bool:
@@ -296,10 +294,12 @@ def _build_scorecard_section(
                 status=dimension.get("status", "unknown"),
                 blocking_failures=_format_csv(
                     [str(item) for item in dimension.get("blocking_failures", [])]
-                ) or "none",
+                )
+                or "none",
                 non_pass_checks=_format_csv(
                     [str(item) for item in dimension.get("non_pass_checks", [])]
-                ) or "none",
+                )
+                or "none",
             )
         )
     lines.extend(
@@ -315,20 +315,24 @@ def _build_scorecard_section(
 def _build_delivery_contract(scorecard_dimensions: list[dict[str, object]]) -> dict[str, object]:
     required_dimensions = len(scorecard_dimensions)
     passed_dimensions = sum(
-        1
-        for dimension in scorecard_dimensions
-        if str(dimension.get("status") or "") == "PASS"
+        1 for dimension in scorecard_dimensions if str(dimension.get("status") or "") == "PASS"
     )
     failed_dimensions = [
         str(dimension.get("dimension_id") or "unknown")
         for dimension in scorecard_dimensions
         if str(dimension.get("status") or "") != "PASS"
     ]
-    completion_percent = round(
-        (passed_dimensions / required_dimensions) * 100,
-        1,
-    ) if required_dimensions else 0.0
-    status = "PASS" if required_dimensions > 0 and passed_dimensions == required_dimensions else "FAIL"
+    completion_percent = (
+        round(
+            (passed_dimensions / required_dimensions) * 100,
+            1,
+        )
+        if required_dimensions
+        else 0.0
+    )
+    status = (
+        "PASS" if required_dimensions > 0 and passed_dimensions == required_dimensions else "FAIL"
+    )
     return {
         "contract_id": "ISS-20260423-001",
         "label": "100% delivery contract",
@@ -346,15 +350,25 @@ def delivery_contract_100_signal(delivery_contract: dict[str, object]) -> tuple[
     status = str(delivery_contract.get("status") or "FAIL")
     exit_code = 0 if status == "PASS" else 1
     failed_dimensions = delivery_contract.get("failed_dimensions")
-    return status, exit_code, _format_detail_pairs([
-        ("contract_id", delivery_contract.get("contract_id") or "unknown"),
-        ("label", delivery_contract.get("label") or "unknown"),
-        ("required_dimensions", delivery_contract.get("required_dimensions") or 0),
-        ("passed_dimensions", delivery_contract.get("passed_dimensions") or 0),
-        ("failed_dimensions", _format_csv(failed_dimensions if isinstance(failed_dimensions, list) else []) or "none"),
-        ("completion_percent", delivery_contract.get("completion_percent") or 0.0),
-        ("decision", "go" if status == "PASS" else "no_go"),
-    ])
+    return (
+        status,
+        exit_code,
+        _format_detail_pairs(
+            [
+                ("contract_id", delivery_contract.get("contract_id") or "unknown"),
+                ("label", delivery_contract.get("label") or "unknown"),
+                ("required_dimensions", delivery_contract.get("required_dimensions") or 0),
+                ("passed_dimensions", delivery_contract.get("passed_dimensions") or 0),
+                (
+                    "failed_dimensions",
+                    _format_csv(failed_dimensions if isinstance(failed_dimensions, list) else [])
+                    or "none",
+                ),
+                ("completion_percent", delivery_contract.get("completion_percent") or 0.0),
+                ("decision", "go" if status == "PASS" else "no_go"),
+            ]
+        ),
+    )
 
 
 def _build_check_detail_summary_section(checks: list[dict[str, object]]) -> str:
@@ -368,13 +382,10 @@ def _build_check_detail_summary_section(checks: list[dict[str, object]]) -> str:
         lines.append("- no checks")
     return "\n".join(lines)
 
+
 def _build_release_evidence_summary_section(release_evidence: dict[str, object]) -> str:
     evidence_sources = release_evidence.get("evidence_sources")
-    source_rows = (
-        evidence_sources
-        if isinstance(evidence_sources, list)
-        else []
-    )
+    source_rows = evidence_sources if isinstance(evidence_sources, list) else []
     lines = [
         "## Retained Release Evidence",
         "",
@@ -459,11 +470,7 @@ def _evaluate_retained_evidence(
     if parsed_generated_at is not None:
         age_seconds = max(0.0, (now_dt - parsed_generated_at).total_seconds())
         freshness_age_hours = round(age_seconds / 3600, 2)
-        freshness_status = (
-            "fresh"
-            if age_seconds <= freshness_window_hours * 3600
-            else "stale"
-        )
+        freshness_status = "fresh" if age_seconds <= freshness_window_hours * 3600 else "stale"
 
     supersession_reasons: list[str] = []
     supersession_status = "unknown"
@@ -502,7 +509,9 @@ def _evaluate_retained_evidence(
         "supersession_status": supersession_status,
         "supersession_reasons": supersession_reasons,
         "evidence_state": evidence_state,
-        "generated_at_parse_error": None if generated_at_parse_error == "missing" else generated_at_parse_error,
+        "generated_at_parse_error": None
+        if generated_at_parse_error == "missing"
+        else generated_at_parse_error,
         "is_fresh": freshness_status == "fresh",
         "is_current": supersession_status == "current",
     }
@@ -658,7 +667,9 @@ def _build_release_evidence_source(
     }
 
 
-def _read_issue_history_entries(issue_history_path: Path = ISSUE_HISTORY_PATH) -> list[dict[str, object]]:
+def _read_issue_history_entries(
+    issue_history_path: Path = ISSUE_HISTORY_PATH,
+) -> list[dict[str, object]]:
     if not issue_history_path.exists():
         return []
 
@@ -676,7 +687,6 @@ def _read_issue_history_entries(issue_history_path: Path = ISSUE_HISTORY_PATH) -
     return entries
 
 
-
 def issue_pending_blocker_signal(
     issue_history_path: Path = ISSUE_HISTORY_PATH,
 ) -> tuple[str, int, str]:
@@ -684,8 +694,7 @@ def issue_pending_blocker_signal(
     roadmap_entries = [
         entry
         for entry in entries
-        if isinstance(entry.get("id"), str)
-        and entry["id"].startswith("ISS-20260423-")
+        if isinstance(entry.get("id"), str) and entry["id"].startswith("ISS-20260423-")
     ]
     pending_entries = [
         entry
@@ -698,26 +707,23 @@ def issue_pending_blocker_signal(
     return (
         "FAIL" if has_blocker else "PASS",
         1 if has_blocker else 0,
-        _format_detail_pairs([
-            ("issue_history", _trace_path(issue_history_path)),
-            ("roadmap_issues_checked", len(roadmap_entries)),
-            ("pending_issues", len(pending_entries)),
-            ("pending_issue_ids", _format_csv(pending_ids) or "none"),
-            ("terminal_statuses", _format_csv(list(ROADMAP_ISSUE_TERMINAL_STATUSES))),
-            ("decision", "no_go" if has_blocker else "go"),
-        ]),
+        _format_detail_pairs(
+            [
+                ("issue_history", _trace_path(issue_history_path)),
+                ("roadmap_issues_checked", len(roadmap_entries)),
+                ("pending_issues", len(pending_entries)),
+                ("pending_issue_ids", _format_csv(pending_ids) or "none"),
+                ("terminal_statuses", _format_csv(list(ROADMAP_ISSUE_TERMINAL_STATUSES))),
+                ("decision", "no_go" if has_blocker else "go"),
+            ]
+        ),
     )
-
 
 
 def _build_scorecard_dimensions(
     checks: list[dict[str, object]],
 ) -> list[dict[str, object]]:
-    check_map = {
-        str(item.get("check_id") or ""): item
-        for item in checks
-        if isinstance(item, dict)
-    }
+    check_map = {str(item.get("check_id") or ""): item for item in checks if isinstance(item, dict)}
     dimensions: list[dict[str, object]] = []
 
     for dimension_id, label, check_ids in SCORECARD_DIMENSIONS:
@@ -747,13 +753,15 @@ def _build_scorecard_dimensions(
 
 
 def _run_governance_scripts_regression(junit_output_path: Path) -> tuple[int, str]:
-    return run_cmd([
-        sys.executable,
-        "scripts/run_targeted_pytest.py",
-        "tests/unit/scripts/test_governance_scripts.py",
-        "-q",
-        f"--junitxml={junit_output_path.resolve()}",
-    ])
+    return run_cmd(
+        [
+            sys.executable,
+            "scripts/run_targeted_pytest.py",
+            "tests/unit/scripts/test_governance_scripts.py",
+            "-q",
+            f"--junitxml={junit_output_path.resolve()}",
+        ]
+    )
 
 
 def _run_release_runtime_guard(junit_output_path: Path) -> tuple[int, str]:
@@ -781,10 +789,14 @@ def _run_release_runtime_guard(junit_output_path: Path) -> tuple[int, str]:
 
 
 def _extract_policy_contract_from_docs(quality_doc: Path, pdd_doc: Path) -> dict[str, object]:
-    quality_text = quality_doc.read_text(encoding="utf-8", errors="replace") if quality_doc.exists() else ""
+    quality_text = (
+        quality_doc.read_text(encoding="utf-8", errors="replace") if quality_doc.exists() else ""
+    )
     pdd_text = pdd_doc.read_text(encoding="utf-8", errors="replace") if pdd_doc.exists() else ""
 
-    quality_pass_match = re.search(r"quality\s+pass\s+threshold\s*:\s*>=\s*(\d+(?:\.\d+)?)", quality_text, flags=re.IGNORECASE)
+    quality_pass_match = re.search(
+        r"quality\s+pass\s+threshold\s*:\s*>=\s*(\d+(?:\.\d+)?)", quality_text, flags=re.IGNORECASE
+    )
     pdd_ranges = re.findall(r"(\d+(?:\.\d+)?)\s*<=\s*total_score\s*<\s*(\d+(?:\.\d+)?)", pdd_text)
     rewrite_candidates = [
         float(value)
@@ -815,16 +827,24 @@ def _runtime_policy_contract() -> dict[str, object]:
     workflow_engine_text = _read_project_text("src-ts/workflow/workflow-engine.ts") or ""
     workflow_risk_text = _read_project_text("src-ts/workflow/engine/risk.ts") or ""
 
-    pass_score = _extract_first_float(r"export const NOVEL_PASS_SCORE = (\d+(?:\.\d+)?)", novel_state_text)
+    pass_score = _extract_first_float(
+        r"export const NOVEL_PASS_SCORE = (\d+(?:\.\d+)?)", novel_state_text
+    )
     human_review_score = _extract_first_float(
         r"export const NOVEL_HUMAN_REVIEW_SCORE = (\d+(?:\.\d+)?)",
         novel_state_text,
     )
     block_threshold = _extract_first_float(r"block:\s*(\d+(?:\.\d+)?)", novel_state_text)
-    novel_quality_pass_threshold = pass_score if "const PASS_THRESHOLD = NOVEL_QUALITY_THRESHOLDS.pass;" in novel_quality_text else None
+    novel_quality_pass_threshold = (
+        pass_score
+        if "const PASS_THRESHOLD = NOVEL_QUALITY_THRESHOLDS.pass;" in novel_quality_text
+        else None
+    )
 
     default_pass_bound = bool(re.search(r"pass_score:\s*NOVEL_PASS_SCORE\b", novel_state_text))
-    default_review_bound = bool(re.search(r"human_review_score:\s*NOVEL_HUMAN_REVIEW_SCORE\b", novel_state_text))
+    default_review_bound = bool(
+        re.search(r"human_review_score:\s*NOVEL_HUMAN_REVIEW_SCORE\b", novel_state_text)
+    )
     public_entry_api_present = bool(
         re.search(
             r"ENGINE_PUBLIC_ENTRY_API\s*=\s*\['route',\s*'plan',\s*'execute',\s*'run',\s*'run_stream'\]",
@@ -832,21 +852,27 @@ def _runtime_policy_contract() -> dict[str, object]:
         )
     )
     workflow_hard_gate_present = (
-        ("WorkflowDecision.NO_GO" in workflow_engine_text or "WorkflowDecision.NO_GO" in workflow_risk_text)
-        and "confirm_required: true" in workflow_risk_text
-    )
+        "WorkflowDecision.NO_GO" in workflow_engine_text
+        or "WorkflowDecision.NO_GO" in workflow_risk_text
+    ) and "confirm_required: true" in workflow_risk_text
     quality_mode_consistent = (
         "const qualityMode = options?.qualityMode ?? 'auto';" in novel_quality_text
         and "const resolvedMode = _normalizeQualityMode(qualityMode);" in novel_quality_text
         and "quality_mode_used: resolvedMode" in novel_quality_text
     )
-    terminal_default_decision = "go" if "if (normalized.decision === undefined) normalized.decision = 'go';" in contract_text else None
+    terminal_default_decision = (
+        "go"
+        if "if (normalized.decision === undefined) normalized.decision = 'go';" in contract_text
+        else None
+    )
     terminal_no_go_preserved = bool(
         re.search(
             r"if \(normalized\.decision === undefined\) normalized\.decision = 'go';",
             contract_text,
         )
-        and re.search(r"if \(lf\.decision === undefined\) lf\.decision = normalized\.decision;", contract_text)
+        and re.search(
+            r"if \(lf\.decision === undefined\) lf\.decision = normalized\.decision;", contract_text
+        )
     )
 
     return {
@@ -858,7 +884,9 @@ def _runtime_policy_contract() -> dict[str, object]:
         "default_pass_score": pass_score if default_pass_bound else None,
         "default_human_review_score": human_review_score if default_review_bound else None,
         "publish_from_go": "pass" if re.search(r"go:\s*'pass'", contract_text) else None,
-        "publish_from_soft_go": "revise" if re.search(r"soft_go:\s*'revise'", contract_text) else None,
+        "publish_from_soft_go": "revise"
+        if re.search(r"soft_go:\s*'revise'", contract_text)
+        else None,
         "publish_from_no_go": "block" if re.search(r"no_go:\s*'block'", contract_text) else None,
         "terminal_default_decision": terminal_default_decision,
         "terminal_no_go_preserved": terminal_no_go_preserved,
@@ -925,26 +953,44 @@ def runtime_policy_conformance_signal(
     status = "FAIL" if has_mismatch else "PASS"
     exit_code = 1 if has_mismatch else 0
 
-    return status, exit_code, _format_detail_pairs([
-        ("policy_pass", policy_contract.get("quality_pass_score")),
-        ("runtime_pass", runtime.get("quality_pass_score")),
-        ("policy_human_review", policy_contract.get("human_review_score")),
-        ("runtime_human_review", runtime.get("human_review_score")),
-        ("policy_revise_lower", policy_contract.get("revise_lower_bound")),
-        ("runtime_revise_lower", runtime.get("revise_lower_bound")),
-        ("policy_rewrite_below", policy_contract.get("rewrite_below")),
-        ("runtime_rewrite_below", runtime.get("rewrite_below")),
-        ("publish_from_go", runtime.get("publish_from_go")),
-        ("publish_from_soft_go", runtime.get("publish_from_soft_go")),
-        ("publish_from_no_go", runtime.get("publish_from_no_go")),
-        ("terminal_default_decision", terminal_default_decision or "missing"),
-        ("terminal_no_go_preserved", "yes" if runtime.get("terminal_no_go_preserved") else "no"),
-        ("quality_mode_consistent", "yes" if runtime.get("quality_mode_consistent") else "no"),
-        ("workflow_hard_gate_present", "yes" if runtime.get("workflow_hard_gate_present") else "no"),
-        ("public_entry_api_present", "yes" if runtime.get("public_entry_api_present") else "no"),
-        ("mismatches", _format_csv(mismatches)),
-        ("decision", "no_go" if has_mismatch else "go"),
-    ])
+    return (
+        status,
+        exit_code,
+        _format_detail_pairs(
+            [
+                ("policy_pass", policy_contract.get("quality_pass_score")),
+                ("runtime_pass", runtime.get("quality_pass_score")),
+                ("policy_human_review", policy_contract.get("human_review_score")),
+                ("runtime_human_review", runtime.get("human_review_score")),
+                ("policy_revise_lower", policy_contract.get("revise_lower_bound")),
+                ("runtime_revise_lower", runtime.get("revise_lower_bound")),
+                ("policy_rewrite_below", policy_contract.get("rewrite_below")),
+                ("runtime_rewrite_below", runtime.get("rewrite_below")),
+                ("publish_from_go", runtime.get("publish_from_go")),
+                ("publish_from_soft_go", runtime.get("publish_from_soft_go")),
+                ("publish_from_no_go", runtime.get("publish_from_no_go")),
+                ("terminal_default_decision", terminal_default_decision or "missing"),
+                (
+                    "terminal_no_go_preserved",
+                    "yes" if runtime.get("terminal_no_go_preserved") else "no",
+                ),
+                (
+                    "quality_mode_consistent",
+                    "yes" if runtime.get("quality_mode_consistent") else "no",
+                ),
+                (
+                    "workflow_hard_gate_present",
+                    "yes" if runtime.get("workflow_hard_gate_present") else "no",
+                ),
+                (
+                    "public_entry_api_present",
+                    "yes" if runtime.get("public_entry_api_present") else "no",
+                ),
+                ("mismatches", _format_csv(mismatches)),
+                ("decision", "no_go" if has_mismatch else "go"),
+            ]
+        ),
+    )
 
 
 def _extract_first_float(pattern: str, text: str) -> float | None:
@@ -1037,13 +1083,28 @@ def slo_baseline_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, 
     missing = _missing_required_patterns(corpus, required_patterns)
 
     if not missing:
-        return "PASS", 0, _format_detail_pairs([
-            ("keywords_present", "ttft,e2e,effective_hit_rate,context_budget_utilization,gate consistency"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    (
+                        "keywords_present",
+                        "ttft,e2e,effective_hit_rate,context_budget_utilization,gate consistency",
+                    ),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("missing_keywords", _format_csv(missing)),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("missing_keywords", _format_csv(missing)),
+            ]
+        ),
+    )
 
 
 def evidence_links_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
@@ -1054,15 +1115,27 @@ def evidence_links_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int
     has_traceable_link = _has_traceable_link(corpus)
 
     if has_evidence_links_key and has_traceable_link:
-        return "PASS", 0, _format_detail_pairs([
-            ("evidence_links_key", "present"),
-            ("traceable_link", "present"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("evidence_links_key", "present"),
+                    ("traceable_link", "present"),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("evidence_links_key", "present" if has_evidence_links_key else "missing"),
-        ("traceable_link", "present" if has_traceable_link else "missing"),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("evidence_links_key", "present" if has_evidence_links_key else "missing"),
+                ("traceable_link", "present" if has_traceable_link else "missing"),
+            ]
+        ),
+    )
 
 
 def self_learning_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
@@ -1077,13 +1150,25 @@ def self_learning_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int,
     missing = _missing_required_patterns(corpus, required_patterns)
 
     if not missing:
-        return "PASS", 0, _format_detail_pairs([
-            ("fields_present", "reflector,curator,playbook"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("fields_present", "reflector,curator,playbook"),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("missing_fields", _format_csv(missing)),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("missing_fields", _format_csv(missing)),
+            ]
+        ),
+    )
 
 
 def _extract_metric_value(corpus: str, metric_key: str) -> float | None:
@@ -1113,14 +1198,26 @@ def memory_observability_signal(weekly_dir: Path, quality_dir: Path) -> tuple[st
             invalid.append(key)
 
     if not missing and not invalid:
-        return "PASS", 0, _format_detail_pairs([
-            ("metrics_present", "c_effective,s_final,r_memory"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("metrics_present", "c_effective,s_final,r_memory"),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("missing_metrics", _format_csv(missing)),
-        ("invalid_metrics", _format_csv(invalid)),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("missing_metrics", _format_csv(missing)),
+                ("invalid_metrics", _format_csv(invalid)),
+            ]
+        ),
+    )
 
 
 def compliance_keywords_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
@@ -1135,13 +1232,25 @@ def compliance_keywords_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str
     missing = _missing_required_patterns(corpus, required_patterns)
 
     if not missing:
-        return "PASS", 0, _format_detail_pairs([
-            ("keywords_present", "rbac,audit,rollback"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("keywords_present", "rbac,audit,rollback"),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("missing_keywords", _format_csv(missing)),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("missing_keywords", _format_csv(missing)),
+            ]
+        ),
+    )
 
 
 def migration_rollback_evidence_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
@@ -1152,38 +1261,66 @@ def migration_rollback_evidence_signal(weekly_dir: Path, quality_dir: Path) -> t
     has_traceable_link = _has_traceable_link(corpus)
 
     if has_migration and has_rollback and has_traceable_link:
-        return "PASS", 0, _format_detail_pairs([
-            ("migration", "present"),
-            ("rollback", "present"),
-            ("traceable_link", "present"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("migration", "present"),
+                    ("rollback", "present"),
+                    ("traceable_link", "present"),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("migration", "present" if has_migration else "missing"),
-        ("rollback", "present" if has_rollback else "missing"),
-        ("traceable_link", "present" if has_traceable_link else "missing"),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("migration", "present" if has_migration else "missing"),
+                ("rollback", "present" if has_rollback else "missing"),
+                ("traceable_link", "present" if has_traceable_link else "missing"),
+            ]
+        ),
+    )
 
 
 def quality_level_trace_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
     corpus = _read_markdown_corpus([weekly_dir, quality_dir]).lower()
 
-    effective_match = re.search(r"effective[_\s-]?quality[_\s-]?level\s*[:=]\s*(ultra|high|medium|fluent)", corpus)
-    used_match = re.search(r"quality[_\s-]?level[_\s-]?used\s*[:=]\s*(ultra|high|medium|fluent)", corpus)
+    effective_match = re.search(
+        r"effective[_\s-]?quality[_\s-]?level\s*[:=]\s*(ultra|high|medium|fluent)", corpus
+    )
+    used_match = re.search(
+        r"quality[_\s-]?level[_\s-]?used\s*[:=]\s*(ultra|high|medium|fluent)", corpus
+    )
 
     effective_value = effective_match.group(1) if effective_match else "missing"
     used_value = used_match.group(1) if used_match else "missing"
 
     if effective_match and used_match:
-        return "PASS", 0, _format_detail_pairs([
-            ("effective_quality_level", effective_value),
-            ("quality_level_used", used_value),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("effective_quality_level", effective_value),
+                    ("quality_level_used", used_value),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("effective_quality_level", effective_value),
-        ("quality_level_used", used_value),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("effective_quality_level", effective_value),
+                ("quality_level_used", used_value),
+            ]
+        ),
+    )
 
 
 def degrade_trace_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
@@ -1193,40 +1330,70 @@ def degrade_trace_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int,
     has_degrade_steps = bool(re.search(r"degrade[_\s-]?steps", corpus))
 
     if has_degrade_reason and has_degrade_steps:
-        return "PASS", 0, _format_detail_pairs([
-            ("degrade_reason", "present"),
-            ("degrade_steps", "present"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("degrade_reason", "present"),
+                    ("degrade_steps", "present"),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("degrade_reason", "present" if has_degrade_reason else "missing"),
-        ("degrade_steps", "present" if has_degrade_steps else "missing"),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("degrade_reason", "present" if has_degrade_reason else "missing"),
+                ("degrade_steps", "present" if has_degrade_steps else "missing"),
+            ]
+        ),
+    )
 
 
 def critical_gate_enforcement_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
     corpus = _read_markdown_corpus([weekly_dir, quality_dir]).lower()
 
-    has_critical_gate_config = bool(re.search(r"critical[_\s-]?gate[_\s-]?always[_\s-]?on\s*[:=]\s*(true|yes|enabled|on)", corpus))
+    has_critical_gate_config = bool(
+        re.search(
+            r"critical[_\s-]?gate[_\s-]?always[_\s-]?on\s*[:=]\s*(true|yes|enabled|on)", corpus
+        )
+    )
     has_critical_gate_statement = bool(
         re.search(r"critical[_\s-]?gate", corpus) and re.search(r"always[_\s-]?on|enforc", corpus)
     )
 
     if has_critical_gate_config or has_critical_gate_statement:
-        return "PASS", 0, _format_detail_pairs([
-            ("critical_gate", "enforced"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("critical_gate", "enforced"),
+                ]
+            ),
+        )
 
-    return "WARN", 0, _format_detail_pairs([
-        ("critical_gate", "missing"),
-    ])
+    return (
+        "WARN",
+        0,
+        _format_detail_pairs(
+            [
+                ("critical_gate", "missing"),
+            ]
+        ),
+    )
 
 
 def chapter_gate_scoring_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
     corpus = _read_markdown_corpus([weekly_dir, quality_dir]).lower()
 
     quality_score = _extract_metric_value(corpus, "quality_score")
-    recommendation_match = re.search(r"publish[_\s-]?recommendation\s*[:=]\s*(pass|revise|block)", corpus)
+    recommendation_match = re.search(
+        r"publish[_\s-]?recommendation\s*[:=]\s*(pass|revise|block)", corpus
+    )
     critical_count_match = re.search(r"critical[_\s-]?issue[_\s-]?count\s*[:=]\s*(\d+)", corpus)
 
     recommendation = recommendation_match.group(1) if recommendation_match else "missing"
@@ -1240,13 +1407,22 @@ def chapter_gate_scoring_signal(weekly_dir: Path, quality_dir: Path) -> tuple[st
     gate_pass = bool(complete and score_ok and recommendation_ok and critical_ok)
     status = "PASS" if gate_pass else "WARN"
 
-    return status, 0, _format_detail_pairs([
-        ("quality_score", quality_score if quality_score is not None else "missing"),
-        ("threshold", 99.0),
-        ("publish_recommendation", recommendation),
-        ("critical_issue_count", critical_issue_count if critical_issue_count is not None else "missing"),
-        ("decision", "go" if gate_pass else "no_go"),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("quality_score", quality_score if quality_score is not None else "missing"),
+                ("threshold", 99.0),
+                ("publish_recommendation", recommendation),
+                (
+                    "critical_issue_count",
+                    critical_issue_count if critical_issue_count is not None else "missing",
+                ),
+                ("decision", "go" if gate_pass else "no_go"),
+            ]
+        ),
+    )
 
 
 def cycle_time_kpi_measurement_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
@@ -1271,29 +1447,39 @@ def cycle_time_kpi_measurement_signal(weekly_dir: Path, quality_dir: Path) -> tu
         "duplicate_gate_mapping",
     ]
     present_reason_codes = [
-        code
-        for code in exclusion_reason_codes
-        if re.search(rf"\b{re.escape(code)}\b", corpus)
+        code for code in exclusion_reason_codes if re.search(rf"\b{re.escape(code)}\b", corpus)
     ]
 
     status = "PASS" if not missing_rules and len(present_reason_codes) >= 1 else "WARN"
-    return status, 0, _format_detail_pairs([
-        ("window_policy", "full_7_day_only"),
-        ("manual_override", "forbidden"),
-        ("missing_rules", _format_csv(missing_rules)),
-        ("present_exclusion_reason_codes", _format_csv(present_reason_codes)),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("window_policy", "full_7_day_only"),
+                ("manual_override", "forbidden"),
+                ("missing_rules", _format_csv(missing_rules)),
+                ("present_exclusion_reason_codes", _format_csv(present_reason_codes)),
+            ]
+        ),
+    )
 
 
 def comparable_quality_rubric_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
     corpus = _read_markdown_corpus([weekly_dir, quality_dir]).lower()
 
     quality_score = _extract_metric_value(corpus, "quality_score")
-    recommendation_match = re.search(r"publish[_\s-]?recommendation\s*[:=]\s*(pass|revise|block)", corpus)
+    recommendation_match = re.search(
+        r"publish[_\s-]?recommendation\s*[:=]\s*(pass|revise|block)", corpus
+    )
     critical_count_match = re.search(r"critical[_\s-]?issue[_\s-]?count\s*[:=]\s*(\d+)", corpus)
 
-    effective_level_match = re.search(r"effective[_\s-]?quality[_\s-]?level\s*[:=]\s*(ultra|high|medium|fluent)", corpus)
-    used_level_match = re.search(r"quality[_\s-]?level[_\s-]?used\s*[:=]\s*(ultra|high|medium|fluent)", corpus)
+    effective_level_match = re.search(
+        r"effective[_\s-]?quality[_\s-]?level\s*[:=]\s*(ultra|high|medium|fluent)", corpus
+    )
+    used_level_match = re.search(
+        r"quality[_\s-]?level[_\s-]?used\s*[:=]\s*(ultra|high|medium|fluent)", corpus
+    )
 
     recommendation = recommendation_match.group(1) if recommendation_match else "missing"
     critical_issue_count = int(critical_count_match.group(1)) if critical_count_match else None
@@ -1311,27 +1497,40 @@ def comparable_quality_rubric_signal(weekly_dir: Path, quality_dir: Path) -> tup
 
     has_degrade_reason = bool(re.search(r"degrade[_\s-]?reason", corpus))
     has_degrade_steps = bool(re.search(r"degrade[_\s-]?steps", corpus))
-    degrade_trace_complete = (has_degrade_reason and has_degrade_steps) or (not has_degrade_reason and not has_degrade_steps)
+    degrade_trace_complete = (has_degrade_reason and has_degrade_steps) or (
+        not has_degrade_reason and not has_degrade_steps
+    )
 
-    comparable = all([
-        quality_score_ok,
-        critical_ok,
-        recommendation_ok,
-        quality_level_match,
-        degrade_trace_complete,
-    ])
+    comparable = all(
+        [
+            quality_score_ok,
+            critical_ok,
+            recommendation_ok,
+            quality_level_match,
+            degrade_trace_complete,
+        ]
+    )
 
     status = "PASS" if comparable else "WARN"
-    return status, 0, _format_detail_pairs([
-        ("rubric_version", "v1"),
-        ("quality_score", quality_score if quality_score is not None else "missing"),
-        ("threshold", 99.0),
-        ("critical_issue_count", critical_issue_count if critical_issue_count is not None else "missing"),
-        ("publish_recommendation", recommendation),
-        ("quality_level_match", "yes" if quality_level_match else "no"),
-        ("degrade_trace_complete", "yes" if degrade_trace_complete else "no"),
-        ("decision", "comparable" if comparable else "not_comparable"),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("rubric_version", "v1"),
+                ("quality_score", quality_score if quality_score is not None else "missing"),
+                ("threshold", 99.0),
+                (
+                    "critical_issue_count",
+                    critical_issue_count if critical_issue_count is not None else "missing",
+                ),
+                ("publish_recommendation", recommendation),
+                ("quality_level_match", "yes" if quality_level_match else "no"),
+                ("degrade_trace_complete", "yes" if degrade_trace_complete else "no"),
+                ("decision", "comparable" if comparable else "not_comparable"),
+            ]
+        ),
+    )
 
 
 def weekly_kpi_dashboard_schema_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
@@ -1352,12 +1551,18 @@ def weekly_kpi_dashboard_schema_signal(weekly_dir: Path, quality_dir: Path) -> t
     missing_fields = _missing_required_patterns(corpus, required_patterns)
     status = "PASS" if not missing_fields else "WARN"
 
-    return status, 0, _format_detail_pairs([
-        ("schema_name", "weekly_kpi_dashboard"),
-        ("schema_version", "v1"),
-        ("manual_override", "forbidden"),
-        ("missing_fields", _format_csv(missing_fields)),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("schema_name", "weekly_kpi_dashboard"),
+                ("schema_version", "v1"),
+                ("manual_override", "forbidden"),
+                ("missing_fields", _format_csv(missing_fields)),
+            ]
+        ),
+    )
 
 
 def weekly_kpi_rollup_readiness_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
@@ -1376,16 +1581,27 @@ def weekly_kpi_rollup_readiness_signal(weekly_dir: Path, quality_dir: Path) -> t
     trend_match = re.search(required_patterns["cycle_time_trend"], corpus)
     status = "PASS" if not missing_fields else "WARN"
 
-    return status, 0, _format_detail_pairs([
-        ("rollup_source", "canonical_evidence"),
-        ("manual_override", "forbidden"),
-        ("baseline_state", baseline_state_match.group(1) if baseline_state_match else "missing"),
-        ("cycle_time_trend", trend_match.group(1) if trend_match else "missing"),
-        ("missing_fields", _format_csv(missing_fields)),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("rollup_source", "canonical_evidence"),
+                ("manual_override", "forbidden"),
+                (
+                    "baseline_state",
+                    baseline_state_match.group(1) if baseline_state_match else "missing",
+                ),
+                ("cycle_time_trend", trend_match.group(1) if trend_match else "missing"),
+                ("missing_fields", _format_csv(missing_fields)),
+            ]
+        ),
+    )
 
 
-def weekly_kpi_comparability_visibility_signal(weekly_dir: Path, quality_dir: Path) -> tuple[str, int, str]:
+def weekly_kpi_comparability_visibility_signal(
+    weekly_dir: Path, quality_dir: Path
+) -> tuple[str, int, str]:
     corpus = _read_markdown_corpus([weekly_dir, quality_dir]).lower()
 
     required_patterns = {
@@ -1400,24 +1616,44 @@ def weekly_kpi_comparability_visibility_signal(weekly_dir: Path, quality_dir: Pa
     baseline_state_match = re.search(required_patterns["baseline_state"], corpus)
     status = "PASS" if not missing_fields else "WARN"
 
-    return status, 0, _format_detail_pairs([
-        ("visibility_source", "comparable_quality_plus_cycle_time"),
-        ("manual_override", "forbidden"),
-        ("comparability_decision", comparability_match.group(1) if comparability_match else "missing"),
-        ("cycle_time_trend", trend_match.group(1) if trend_match else "missing"),
-        ("baseline_state", baseline_state_match.group(1) if baseline_state_match else "missing"),
-        ("missing_fields", _format_csv(missing_fields)),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("visibility_source", "comparable_quality_plus_cycle_time"),
+                ("manual_override", "forbidden"),
+                (
+                    "comparability_decision",
+                    comparability_match.group(1) if comparability_match else "missing",
+                ),
+                ("cycle_time_trend", trend_match.group(1) if trend_match else "missing"),
+                (
+                    "baseline_state",
+                    baseline_state_match.group(1) if baseline_state_match else "missing",
+                ),
+                ("missing_fields", _format_csv(missing_fields)),
+            ]
+        ),
+    )
 
 
-def evidence_freshness_signal(weekly_dir: Path, quality_dir: Path, now: datetime | None = None) -> tuple[str, int, str]:
+def evidence_freshness_signal(
+    weekly_dir: Path, quality_dir: Path, now: datetime | None = None
+) -> tuple[str, int, str]:
     paths = _iter_non_template_markdown_paths([weekly_dir, quality_dir])
     if not paths:
-        return "WARN", 0, _format_detail_pairs([
-            ("fresh_files", 0),
-            ("stale_files", 0),
-            ("window_days", 14),
-        ])
+        return (
+            "WARN",
+            0,
+            _format_detail_pairs(
+                [
+                    ("fresh_files", 0),
+                    ("stale_files", 0),
+                    ("window_days", 14),
+                ]
+            ),
+        )
 
     now_dt = now if now is not None else datetime.now(timezone.utc)
     freshness_window_seconds = 14 * 24 * 60 * 60
@@ -1432,11 +1668,17 @@ def evidence_freshness_signal(weekly_dir: Path, quality_dir: Path, now: datetime
             stale += 1
 
     status = "PASS" if fresh >= 1 else "WARN"
-    return status, 0, _format_detail_pairs([
-        ("fresh_files", fresh),
-        ("stale_files", stale),
-        ("window_days", 14),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("fresh_files", fresh),
+                ("stale_files", stale),
+                ("window_days", 14),
+            ]
+        ),
+    )
 
 
 def tasks_completion_signal(
@@ -1449,24 +1691,42 @@ def tasks_completion_signal(
     tasks_ratio = tasks_payload.get("completion_ratio") if tasks_payload else None
 
     if tasks_code != 0:
-        return "FAIL", tasks_code, _format_detail_pairs([
-            ("checker_exit", tasks_code),
-            ("json_parse_error", tasks_parse_error or "none"),
-        ])
+        return (
+            "FAIL",
+            tasks_code,
+            _format_detail_pairs(
+                [
+                    ("checker_exit", tasks_code),
+                    ("json_parse_error", tasks_parse_error or "none"),
+                ]
+            ),
+        )
 
     if not tasks_payload:
-        return "WARN", 0, _format_detail_pairs([
-            ("checker_exit", 0),
-            ("json_parse_error", tasks_parse_error or "unknown"),
-        ])
+        return (
+            "WARN",
+            0,
+            _format_detail_pairs(
+                [
+                    ("checker_exit", 0),
+                    ("json_parse_error", tasks_parse_error or "unknown"),
+                ]
+            ),
+        )
 
     status = "PASS" if isinstance(tasks_unchecked, int) and tasks_unchecked == 0 else "WARN"
-    return status, 0, _format_detail_pairs([
-        ("checked", tasks_checked if tasks_checked is not None else "n/a"),
-        ("unchecked", tasks_unchecked if tasks_unchecked is not None else "n/a"),
-        ("completion_ratio", f"{tasks_ratio}%" if tasks_ratio is not None else "n/a"),
-        ("json_parse_error", tasks_parse_error or "none"),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("checked", tasks_checked if tasks_checked is not None else "n/a"),
+                ("unchecked", tasks_unchecked if tasks_unchecked is not None else "n/a"),
+                ("completion_ratio", f"{tasks_ratio}%" if tasks_ratio is not None else "n/a"),
+                ("json_parse_error", tasks_parse_error or "none"),
+            ]
+        ),
+    )
 
 
 def authority_alignment_signal(
@@ -1484,30 +1744,48 @@ def authority_alignment_signal(
     checked_file_count = len(checked_files) if isinstance(checked_files, list) else "n/a"
 
     if authority_code != 0:
-        return "FAIL", authority_code, _format_detail_pairs([
-            ("checked_rules", checked_rules if checked_rules is not None else "n/a"),
-            ("passed_rules", passed_rules if passed_rules is not None else "n/a"),
-            ("failed_rules", failed_rules if failed_rules is not None else "n/a"),
-            ("checked_files", checked_file_count),
-            ("mismatches", _format_csv(mismatch_list)),
-            ("json_parse_error", authority_parse_error or "none"),
-        ])
+        return (
+            "FAIL",
+            authority_code,
+            _format_detail_pairs(
+                [
+                    ("checked_rules", checked_rules if checked_rules is not None else "n/a"),
+                    ("passed_rules", passed_rules if passed_rules is not None else "n/a"),
+                    ("failed_rules", failed_rules if failed_rules is not None else "n/a"),
+                    ("checked_files", checked_file_count),
+                    ("mismatches", _format_csv(mismatch_list)),
+                    ("json_parse_error", authority_parse_error or "none"),
+                ]
+            ),
+        )
 
     if not authority_payload:
-        return "WARN", 0, _format_detail_pairs([
-            ("checker_exit", 0),
-            ("json_parse_error", authority_parse_error or "unknown"),
-        ])
+        return (
+            "WARN",
+            0,
+            _format_detail_pairs(
+                [
+                    ("checker_exit", 0),
+                    ("json_parse_error", authority_parse_error or "unknown"),
+                ]
+            ),
+        )
 
     status = "PASS" if authority_payload.get("status") == "PASS" and failed_rules == 0 else "WARN"
-    return status, 0, _format_detail_pairs([
-        ("checked_rules", checked_rules if checked_rules is not None else "n/a"),
-        ("passed_rules", passed_rules if passed_rules is not None else "n/a"),
-        ("failed_rules", failed_rules if failed_rules is not None else "n/a"),
-        ("checked_files", checked_file_count),
-        ("mismatches", _format_csv(mismatch_list)),
-        ("json_parse_error", authority_parse_error or "none"),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("checked_rules", checked_rules if checked_rules is not None else "n/a"),
+                ("passed_rules", passed_rules if passed_rules is not None else "n/a"),
+                ("failed_rules", failed_rules if failed_rules is not None else "n/a"),
+                ("checked_files", checked_file_count),
+                ("mismatches", _format_csv(mismatch_list)),
+                ("json_parse_error", authority_parse_error or "none"),
+            ]
+        ),
+    )
 
 
 def writing_helper_acceptance_signal(
@@ -1519,49 +1797,67 @@ def writing_helper_acceptance_signal(
     now: datetime | None = None,
 ) -> tuple[str, int, str]:
     if not artifact_exists:
-        return "FAIL", 1, _format_detail_pairs([
-            ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
-            ("strict", "missing"),
-            ("head_sha", "missing"),
-            ("current_head_sha", current_head_sha or "unknown"),
-            ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
-            ("freshness_status", "missing"),
-            ("supersession_status", "missing"),
-            ("evidence_state", "missing"),
-            ("missing_keys", "artifact"),
-            ("json_parse_error", artifact_parse_error or "none"),
-            ("decision", "no_go"),
-        ])
+        return (
+            "FAIL",
+            1,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
+                    ("strict", "missing"),
+                    ("head_sha", "missing"),
+                    ("current_head_sha", current_head_sha or "unknown"),
+                    ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+                    ("freshness_status", "missing"),
+                    ("supersession_status", "missing"),
+                    ("evidence_state", "missing"),
+                    ("missing_keys", "artifact"),
+                    ("json_parse_error", artifact_parse_error or "none"),
+                    ("decision", "no_go"),
+                ]
+            ),
+        )
 
     if artifact_parse_error:
-        return "FAIL", 1, _format_detail_pairs([
-            ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
-            ("strict", "unknown"),
-            ("head_sha", "unknown"),
-            ("current_head_sha", current_head_sha or "unknown"),
-            ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
-            ("freshness_status", "unknown"),
-            ("supersession_status", "unknown"),
-            ("evidence_state", "unknown"),
-            ("missing_keys", "n/a"),
-            ("json_parse_error", artifact_parse_error),
-            ("decision", "no_go"),
-        ])
+        return (
+            "FAIL",
+            1,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
+                    ("strict", "unknown"),
+                    ("head_sha", "unknown"),
+                    ("current_head_sha", current_head_sha or "unknown"),
+                    ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+                    ("freshness_status", "unknown"),
+                    ("supersession_status", "unknown"),
+                    ("evidence_state", "unknown"),
+                    ("missing_keys", "n/a"),
+                    ("json_parse_error", artifact_parse_error),
+                    ("decision", "no_go"),
+                ]
+            ),
+        )
 
     if artifact_payload is None:
-        return "FAIL", 1, _format_detail_pairs([
-            ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
-            ("strict", "unknown"),
-            ("head_sha", "unknown"),
-            ("current_head_sha", current_head_sha or "unknown"),
-            ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
-            ("freshness_status", "unknown"),
-            ("supersession_status", "unknown"),
-            ("evidence_state", "unknown"),
-            ("missing_keys", "payload"),
-            ("json_parse_error", "unknown"),
-            ("decision", "no_go"),
-        ])
+        return (
+            "FAIL",
+            1,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
+                    ("strict", "unknown"),
+                    ("head_sha", "unknown"),
+                    ("current_head_sha", current_head_sha or "unknown"),
+                    ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+                    ("freshness_status", "unknown"),
+                    ("supersession_status", "unknown"),
+                    ("evidence_state", "unknown"),
+                    ("missing_keys", "payload"),
+                    ("json_parse_error", "unknown"),
+                    ("decision", "no_go"),
+                ]
+            ),
+        )
 
     required_keys = [
         "status",
@@ -1614,30 +1910,223 @@ def writing_helper_acceptance_signal(
     status = "FAIL" if has_blocker else "PASS"
     exit_code = 1 if has_blocker else 0
 
-    return status, exit_code, _format_detail_pairs([
-        ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
-        ("strict", strict_value if strict_value is not None else "missing"),
-        ("status", status_value or "missing"),
-        ("head_sha", head_sha or "missing"),
-        ("current_head_sha", current_head_sha or "unknown"),
-        ("version", version or "missing"),
-        ("current_version", current_version or "unknown"),
-        ("generated_at", generated_at or "missing"),
-        ("freshness_window_hours", retained_evidence["freshness_window_hours"]),
-        ("freshness_status", retained_evidence["freshness_status"]),
-        ("freshness_age_hours", retained_evidence["freshness_age_hours"]),
-        ("supersession_status", retained_evidence["supersession_status"]),
-        ("supersession_reasons", _format_csv(retained_evidence["supersession_reasons"])),
-        ("evidence_state", retained_evidence["evidence_state"]),
-        ("generated_at_parse_error", retained_evidence["generated_at_parse_error"] or "none"),
-        ("total_cases", total_cases if total_cases is not None else "missing"),
-        ("passed_cases", passed_cases if passed_cases is not None else "missing"),
-        ("failed_cases", failed_cases if failed_cases is not None else "missing"),
-        ("failed_cases_path", failed_cases_path if failed_cases_path else "none"),
-        ("missing_keys", _format_csv(missing_keys)),
-        ("json_parse_error", artifact_parse_error or "none"),
-        ("decision", "no_go" if has_blocker else "go"),
-    ])
+    return (
+        status,
+        exit_code,
+        _format_detail_pairs(
+            [
+                ("artifact", _trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)),
+                ("strict", strict_value if strict_value is not None else "missing"),
+                ("status", status_value or "missing"),
+                ("head_sha", head_sha or "missing"),
+                ("current_head_sha", current_head_sha or "unknown"),
+                ("version", version or "missing"),
+                ("current_version", current_version or "unknown"),
+                ("generated_at", generated_at or "missing"),
+                ("freshness_window_hours", retained_evidence["freshness_window_hours"]),
+                ("freshness_status", retained_evidence["freshness_status"]),
+                ("freshness_age_hours", retained_evidence["freshness_age_hours"]),
+                ("supersession_status", retained_evidence["supersession_status"]),
+                ("supersession_reasons", _format_csv(retained_evidence["supersession_reasons"])),
+                ("evidence_state", retained_evidence["evidence_state"]),
+                (
+                    "generated_at_parse_error",
+                    retained_evidence["generated_at_parse_error"] or "none",
+                ),
+                ("total_cases", total_cases if total_cases is not None else "missing"),
+                ("passed_cases", passed_cases if passed_cases is not None else "missing"),
+                ("failed_cases", failed_cases if failed_cases is not None else "missing"),
+                ("failed_cases_path", failed_cases_path if failed_cases_path else "none"),
+                ("missing_keys", _format_csv(missing_keys)),
+                ("json_parse_error", artifact_parse_error or "none"),
+                ("decision", "no_go" if has_blocker else "go"),
+            ]
+        ),
+    )
+
+
+def package_e2e_acceptance_signal(
+    artifact_exists: bool,
+    artifact_payload: dict[str, object] | None,
+    current_head_sha: str | None,
+    artifact_parse_error: str | None,
+    current_version: str | None = None,
+    now: datetime | None = None,
+) -> tuple[str, int, str]:
+    if not artifact_exists:
+        return (
+            "FAIL",
+            1,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH)),
+                    ("status", "missing"),
+                    ("head_sha", "missing"),
+                    ("current_head_sha", current_head_sha or "unknown"),
+                    ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+                    ("freshness_status", "missing"),
+                    ("supersession_status", "missing"),
+                    ("evidence_state", "missing"),
+                    ("missing_keys", "artifact"),
+                    ("json_parse_error", artifact_parse_error or "none"),
+                    ("decision", "no_go"),
+                ]
+            ),
+        )
+
+    if artifact_parse_error:
+        return (
+            "FAIL",
+            1,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH)),
+                    ("status", "unknown"),
+                    ("head_sha", "unknown"),
+                    ("current_head_sha", current_head_sha or "unknown"),
+                    ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+                    ("freshness_status", "unknown"),
+                    ("supersession_status", "unknown"),
+                    ("evidence_state", "unknown"),
+                    ("missing_keys", "n/a"),
+                    ("json_parse_error", artifact_parse_error),
+                    ("decision", "no_go"),
+                ]
+            ),
+        )
+
+    if artifact_payload is None:
+        return (
+            "FAIL",
+            1,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH)),
+                    ("status", "unknown"),
+                    ("head_sha", "unknown"),
+                    ("current_head_sha", current_head_sha or "unknown"),
+                    ("freshness_window_hours", RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS),
+                    ("freshness_status", "unknown"),
+                    ("supersession_status", "unknown"),
+                    ("evidence_state", "unknown"),
+                    ("missing_keys", "payload"),
+                    ("json_parse_error", "unknown"),
+                    ("decision", "no_go"),
+                ]
+            ),
+        )
+
+    required_keys = [
+        "status",
+        "generated_at",
+        "head_sha",
+        "version",
+        "tester",
+        "artifact_path",
+        "artifact_sha256",
+        "install_verified",
+        "launch_verified",
+        "core_flow_verified",
+        "shutdown_verified",
+    ]
+    missing_keys = [key for key in required_keys if key not in artifact_payload]
+
+    status_value = str(artifact_payload.get("status") or "").upper()
+    generated_at = str(artifact_payload.get("generated_at") or "").strip()
+    head_sha = str(artifact_payload.get("head_sha") or "").strip()
+    version = str(artifact_payload.get("version") or "").strip()
+    tester = str(artifact_payload.get("tester") or "").strip()
+    artifact_path = str(artifact_payload.get("artifact_path") or "").strip()
+    artifact_sha256 = str(artifact_payload.get("artifact_sha256") or "").strip()
+    install_verified = artifact_payload.get("install_verified")
+    launch_verified = artifact_payload.get("launch_verified")
+    core_flow_verified = artifact_payload.get("core_flow_verified")
+    shutdown_verified = artifact_payload.get("shutdown_verified")
+    notes = str(artifact_payload.get("notes") or "").strip()
+    retained_evidence = _evaluate_retained_evidence(
+        generated_at,
+        head_sha,
+        current_head_sha,
+        freshness_window_hours=RELEASE_EVIDENCE_FRESHNESS_WINDOW_HOURS,
+        now=now,
+        version=version or None,
+        current_version=current_version,
+    )
+
+    has_blocker = bool(missing_keys)
+    if status_value != "PASS":
+        has_blocker = True
+    if not generated_at:
+        has_blocker = True
+    if not head_sha or not current_head_sha or head_sha != current_head_sha:
+        has_blocker = True
+    if not retained_evidence["is_fresh"] or not retained_evidence["is_current"]:
+        has_blocker = True
+    if not version or (current_version and version != current_version):
+        has_blocker = True
+    if not tester:
+        has_blocker = True
+    if not artifact_path:
+        has_blocker = True
+    if not artifact_sha256:
+        has_blocker = True
+    if install_verified is not True:
+        has_blocker = True
+    if launch_verified is not True:
+        has_blocker = True
+    if core_flow_verified is not True:
+        has_blocker = True
+    if shutdown_verified is not True:
+        has_blocker = True
+
+    status = "FAIL" if has_blocker else "PASS"
+    exit_code = 1 if has_blocker else 0
+
+    return (
+        status,
+        exit_code,
+        _format_detail_pairs(
+            [
+                ("artifact", _trace_path(PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH)),
+                ("status", status_value or "missing"),
+                ("head_sha", head_sha or "missing"),
+                ("current_head_sha", current_head_sha or "unknown"),
+                ("version", version or "missing"),
+                ("current_version", current_version or "unknown"),
+                ("tester", tester or "missing"),
+                ("artifact_path", artifact_path or "missing"),
+                ("artifact_sha256", artifact_sha256 or "missing"),
+                ("generated_at", generated_at or "missing"),
+                ("freshness_window_hours", retained_evidence["freshness_window_hours"]),
+                ("freshness_status", retained_evidence["freshness_status"]),
+                ("freshness_age_hours", retained_evidence["freshness_age_hours"]),
+                ("supersession_status", retained_evidence["supersession_status"]),
+                ("supersession_reasons", _format_csv(retained_evidence["supersession_reasons"])),
+                ("evidence_state", retained_evidence["evidence_state"]),
+                (
+                    "generated_at_parse_error",
+                    retained_evidence["generated_at_parse_error"] or "none",
+                ),
+                (
+                    "install_verified",
+                    install_verified if install_verified is not None else "missing",
+                ),
+                ("launch_verified", launch_verified if launch_verified is not None else "missing"),
+                (
+                    "core_flow_verified",
+                    core_flow_verified if core_flow_verified is not None else "missing",
+                ),
+                (
+                    "shutdown_verified",
+                    shutdown_verified if shutdown_verified is not None else "missing",
+                ),
+                ("notes", notes or "none"),
+                ("missing_keys", _format_csv(missing_keys)),
+                ("json_parse_error", artifact_parse_error or "none"),
+                ("decision", "no_go" if has_blocker else "go"),
+            ]
+        ),
+    )
 
 
 def local_selftest_enforcement_signal(
@@ -1676,33 +2165,43 @@ def local_selftest_enforcement_signal(
     return (
         "FAIL" if has_blocker else "PASS",
         1 if has_blocker else 0,
-        _format_detail_pairs([
-            ("command", DESKTOP_LOCAL_SELFTEST_COMMAND),
-            (
-                "required_when",
-                "retained_release_evidence_for_release_sign_off_is_not_fresh_current",
-            ),
-            ("proof_binding", "same_head_fresh_current_release_evidence"),
-            ("release_evidence_status", str(release_evidence.get("status") or "unknown")),
-            ("bound_sources", _format_csv(list(LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES))),
-            ("blocking_sources", _format_csv(blocking_sources) or "none"),
-            ("proof_state", "missing_or_non_green" if has_blocker else "fresh_current"),
-            (
-                "decision",
-                "run_local_selftest_before_go"
-                if has_blocker
-                else "optional_with_fresh_current_evidence",
-            ),
-        ]),
+        _format_detail_pairs(
+            [
+                ("command", DESKTOP_LOCAL_SELFTEST_COMMAND),
+                (
+                    "required_when",
+                    "retained_release_evidence_for_release_sign_off_is_not_fresh_current",
+                ),
+                ("proof_binding", "same_head_fresh_current_release_evidence"),
+                ("release_evidence_status", str(release_evidence.get("status") or "unknown")),
+                ("bound_sources", _format_csv(list(LOCAL_SELFTEST_REQUIRED_RELEASE_SOURCES))),
+                ("blocking_sources", _format_csv(blocking_sources) or "none"),
+                ("proof_state", "missing_or_non_green" if has_blocker else "fresh_current"),
+                (
+                    "decision",
+                    "run_local_selftest_before_go"
+                    if has_blocker
+                    else "optional_with_fresh_current_evidence",
+                ),
+            ]
+        ),
     )
 
 
-def evidence_coverage_signal(quality_non_template: int, weekly_non_template: int) -> tuple[str, int, str]:
+def evidence_coverage_signal(
+    quality_non_template: int, weekly_non_template: int
+) -> tuple[str, int, str]:
     status = "PASS" if quality_non_template >= 1 and weekly_non_template >= 2 else "WARN"
-    return status, 0, _format_detail_pairs([
-        ("quality_non_template", quality_non_template),
-        ("weekly_non_template", weekly_non_template),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("quality_non_template", quality_non_template),
+                ("weekly_non_template", weekly_non_template),
+            ]
+        ),
+    )
 
 
 def evidence_completeness_blocker_signal(
@@ -1722,13 +2221,19 @@ def evidence_completeness_blocker_signal(
     status = "FAIL" if has_blocker else "PASS"
     exit_code = 1 if has_blocker else 0
 
-    return status, exit_code, _format_detail_pairs([
-        ("quality_non_template", quality_non_template),
-        ("weekly_non_template", weekly_non_template),
-        ("machine_payload_available", "yes" if machine_payload_available else "no"),
-        ("missing_evidence_classes", _format_csv(missing_evidence_classes)),
-        ("decision", "no_go" if has_blocker else "go"),
-    ])
+    return (
+        status,
+        exit_code,
+        _format_detail_pairs(
+            [
+                ("quality_non_template", quality_non_template),
+                ("weekly_non_template", weekly_non_template),
+                ("machine_payload_available", "yes" if machine_payload_available else "no"),
+                ("missing_evidence_classes", _format_csv(missing_evidence_classes)),
+                ("decision", "no_go" if has_blocker else "go"),
+            ]
+        ),
+    )
 
 
 def gate_score_or_critical_blocker_signal(
@@ -1744,13 +2249,19 @@ def gate_score_or_critical_blocker_signal(
     status = "FAIL" if has_blocker else "PASS"
     exit_code = 1 if has_blocker else 0
 
-    return status, exit_code, _format_detail_pairs([
-        ("chapter_gate_status", chapter_gate_status),
-        ("critical_conflict_status", critical_conflict_status),
-        ("unresolved_triage_status", unresolved_triage_status),
-        ("blocker_semantics", "chapter_gate_or_critical_or_unresolved_triage_is_fail"),
-        ("decision", "no_go" if has_blocker else "go"),
-    ])
+    return (
+        status,
+        exit_code,
+        _format_detail_pairs(
+            [
+                ("chapter_gate_status", chapter_gate_status),
+                ("critical_conflict_status", critical_conflict_status),
+                ("unresolved_triage_status", unresolved_triage_status),
+                ("blocker_semantics", "chapter_gate_or_critical_or_unresolved_triage_is_fail"),
+                ("decision", "no_go" if has_blocker else "go"),
+            ]
+        ),
+    )
 
 
 def codecov_signal(coverage_exists: bool, token_present: bool) -> tuple[str, int, str, bool]:
@@ -1769,22 +2280,30 @@ def codecov_signal(coverage_exists: bool, token_present: bool) -> tuple[str, int
         exit_code = 0
         result = "coverage_missing_in_soft_mode"
 
-    detail = _format_detail_pairs([
-        ("strict_mode", str(strict_mode).lower()),
-        ("token_present", str(token_present).lower()),
-        ("coverage_xml", "yes" if coverage_exists else "no"),
-        ("result", result),
-    ])
+    detail = _format_detail_pairs(
+        [
+            ("strict_mode", str(strict_mode).lower()),
+            ("token_present", str(token_present).lower()),
+            ("coverage_xml", "yes" if coverage_exists else "no"),
+            ("result", result),
+        ]
+    )
     return status, exit_code, detail, strict_mode
 
 
 def feedback_artifact_linkage_signal(sessions_root: Path) -> tuple[str, int, str]:
     if not sessions_root.exists():
-        return "WARN", 0, _format_detail_pairs([
-            ("snapshots_scanned", 0),
-            ("linked_feedback_artifacts", 0),
-            ("invalid_snapshots", 0),
-        ])
+        return (
+            "WARN",
+            0,
+            _format_detail_pairs(
+                [
+                    ("snapshots_scanned", 0),
+                    ("linked_feedback_artifacts", 0),
+                    ("invalid_snapshots", 0),
+                ]
+            ),
+        )
 
     snapshot_paths = list(sessions_root.glob("active/*/.data/generation-snapshots/*-feedback.json"))
     linked_count = 0
@@ -1808,8 +2327,7 @@ def feedback_artifact_linkage_signal(sessions_root: Path) -> tuple[str, int, str
         feedback_artifacts = output.get("feedback_artifacts") if isinstance(output, dict) else None
 
         trace_ok = isinstance(trace, dict) and all(
-            str(trace.get(key) or "").strip()
-            for key in ("session_id", "run_id", "revision_id")
+            str(trace.get(key) or "").strip() for key in ("session_id", "run_id", "revision_id")
         )
         links_ok = isinstance(evidence_links, list) and len(evidence_links) >= 1
         feedback_ok = isinstance(feedback_artifacts, list)
@@ -1820,11 +2338,17 @@ def feedback_artifact_linkage_signal(sessions_root: Path) -> tuple[str, int, str
             invalid_count += 1
 
     status = "PASS" if linked_count >= 1 else "WARN"
-    return status, 0, _format_detail_pairs([
-        ("snapshots_scanned", len(snapshot_paths)),
-        ("linked_feedback_artifacts", linked_count),
-        ("invalid_snapshots", invalid_count),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("snapshots_scanned", len(snapshot_paths)),
+                ("linked_feedback_artifacts", linked_count),
+                ("invalid_snapshots", invalid_count),
+            ]
+        ),
+    )
 
 
 def _scan_conflict_artifact_linkage(sessions_root: Path) -> tuple[int, int, int, int]:
@@ -1859,8 +2383,7 @@ def _scan_conflict_artifact_linkage(sessions_root: Path) -> tuple[int, int, int,
             continue
 
         trace_ok = isinstance(trace, dict) and all(
-            str(trace.get(key) or "").strip()
-            for key in ("session_id", "run_id", "revision_id")
+            str(trace.get(key) or "").strip() for key in ("session_id", "run_id", "revision_id")
         )
         links_ok = isinstance(evidence_links, list) and len(evidence_links) >= 1
 
@@ -1869,50 +2392,76 @@ def _scan_conflict_artifact_linkage(sessions_root: Path) -> tuple[int, int, int,
             continue
 
         linked_count += 1
-        if any(str(item.get("severity") or "").strip().lower() == "critical" for item in conflicts if isinstance(item, dict)):
+        if any(
+            str(item.get("severity") or "").strip().lower() == "critical"
+            for item in conflicts
+            if isinstance(item, dict)
+        ):
             critical_linked_count += 1
 
     return len(snapshot_paths), linked_count, critical_linked_count, invalid_count
 
 
 def conflict_artifact_linkage_signal(sessions_root: Path) -> tuple[str, int, str]:
-    snapshots_scanned, linked_count, critical_linked_count, invalid_count = _scan_conflict_artifact_linkage(sessions_root)
+    snapshots_scanned, linked_count, critical_linked_count, invalid_count = (
+        _scan_conflict_artifact_linkage(sessions_root)
+    )
 
     status = "PASS" if linked_count >= 1 else "WARN"
-    return status, 0, _format_detail_pairs([
-        ("snapshots_scanned", snapshots_scanned),
-        ("linked_conflict_artifacts", linked_count),
-        ("critical_conflicts_linked", critical_linked_count),
-        ("invalid_snapshots", invalid_count),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("snapshots_scanned", snapshots_scanned),
+                ("linked_conflict_artifacts", linked_count),
+                ("critical_conflicts_linked", critical_linked_count),
+                ("invalid_snapshots", invalid_count),
+            ]
+        ),
+    )
 
 
 def critical_conflict_blocker_signal(sessions_root: Path) -> tuple[str, int, str]:
-    snapshots_scanned, linked_count, critical_linked_count, invalid_count = _scan_conflict_artifact_linkage(sessions_root)
+    snapshots_scanned, linked_count, critical_linked_count, invalid_count = (
+        _scan_conflict_artifact_linkage(sessions_root)
+    )
 
     has_blocker = critical_linked_count > 0
     status = "FAIL" if has_blocker else "PASS"
     exit_code = 1 if has_blocker else 0
 
-    return status, exit_code, _format_detail_pairs([
-        ("snapshots_scanned", snapshots_scanned),
-        ("linked_conflict_artifacts", linked_count),
-        ("critical_conflicts_linked", critical_linked_count),
-        ("invalid_snapshots", invalid_count),
-        ("decision", "no_go" if has_blocker else "go"),
-    ])
+    return (
+        status,
+        exit_code,
+        _format_detail_pairs(
+            [
+                ("snapshots_scanned", snapshots_scanned),
+                ("linked_conflict_artifacts", linked_count),
+                ("critical_conflicts_linked", critical_linked_count),
+                ("invalid_snapshots", invalid_count),
+                ("decision", "no_go" if has_blocker else "go"),
+            ]
+        ),
+    )
 
 
 def unresolved_triage_blocker_signal(sessions_root: Path) -> tuple[str, int, str]:
     if not sessions_root.exists():
-        return "PASS", 0, _format_detail_pairs([
-            ("state_files_scanned", 0),
-            ("linked_triage_records", 0),
-            ("unresolved_triage_records", 0),
-            ("invalid_state_files", 0),
-            ("blocker_semantics", "triage_state_not_in_{resolved,rejected}"),
-            ("decision", "go"),
-        ])
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("state_files_scanned", 0),
+                    ("linked_triage_records", 0),
+                    ("unresolved_triage_records", 0),
+                    ("invalid_state_files", 0),
+                    ("blocker_semantics", "triage_state_not_in_{resolved,rejected}"),
+                    ("decision", "go"),
+                ]
+            ),
+        )
 
     state_paths = list(sessions_root.glob("active/*/.data/state.json"))
     linked_count = 0
@@ -1954,26 +2503,38 @@ def unresolved_triage_blocker_signal(sessions_root: Path) -> tuple[str, int, str
     has_blocker = unresolved_count > 0
     status = "FAIL" if has_blocker else "PASS"
     exit_code = 1 if has_blocker else 0
-    return status, exit_code, _format_detail_pairs([
-        ("state_files_scanned", len(state_paths)),
-        ("linked_triage_records", linked_count),
-        ("unresolved_triage_records", unresolved_count),
-        ("invalid_state_files", invalid_count),
-        ("blocker_semantics", "triage_state_not_in_{resolved,rejected}"),
-        ("decision", "no_go" if has_blocker else "go"),
-    ])
+    return (
+        status,
+        exit_code,
+        _format_detail_pairs(
+            [
+                ("state_files_scanned", len(state_paths)),
+                ("linked_triage_records", linked_count),
+                ("unresolved_triage_records", unresolved_count),
+                ("invalid_state_files", invalid_count),
+                ("blocker_semantics", "triage_state_not_in_{resolved,rejected}"),
+                ("decision", "no_go" if has_blocker else "go"),
+            ]
+        ),
+    )
 
 
 def chapter_gate_evidence_linkage_signal(sessions_root: Path) -> tuple[str, int, str]:
     if not sessions_root.exists():
-        return "WARN", 0, _format_detail_pairs([
-            ("snapshots_scanned", 0),
-            ("eligible_release_gate_runs", 0),
-            ("chapter_gate_checks_linked", 0),
-            ("aggregation_window", "active_sessions"),
-            ("result", "insufficient_data"),
-            ("invalid_snapshots", 0),
-        ])
+        return (
+            "WARN",
+            0,
+            _format_detail_pairs(
+                [
+                    ("snapshots_scanned", 0),
+                    ("eligible_release_gate_runs", 0),
+                    ("chapter_gate_checks_linked", 0),
+                    ("aggregation_window", "active_sessions"),
+                    ("result", "insufficient_data"),
+                    ("invalid_snapshots", 0),
+                ]
+            ),
+        )
 
     snapshot_paths = list(sessions_root.glob("active/*/.data/generation-snapshots/*.json"))
     eligible_release_gate_runs = 0
@@ -1998,8 +2559,7 @@ def chapter_gate_evidence_linkage_signal(sessions_root: Path) -> tuple[str, int,
         evidence_links = payload.get("evidence_links")
 
         trace_ok = isinstance(trace, dict) and all(
-            str(trace.get(key) or "").strip()
-            for key in ("session_id", "run_id", "check_id")
+            str(trace.get(key) or "").strip() for key in ("session_id", "run_id", "check_id")
         )
         links_ok = isinstance(evidence_links, list) and len(evidence_links) >= 1
 
@@ -2011,10 +2571,13 @@ def chapter_gate_evidence_linkage_signal(sessions_root: Path) -> tuple[str, int,
 
         trace_check_id = str(trace.get("check_id") or "").strip()
         output = payload.get("output")
-        output_check_id = str(output.get("check_id") or "").strip() if isinstance(output, dict) else ""
+        output_check_id = (
+            str(output.get("check_id") or "").strip() if isinstance(output, dict) else ""
+        )
         output_checks = output.get("checks") if isinstance(output, dict) else None
         checks_has_chapter_gate = isinstance(output_checks, list) and any(
-            isinstance(item, dict) and str(item.get("check_id") or "").strip() == "chapter_gate_scoring_signal"
+            isinstance(item, dict)
+            and str(item.get("check_id") or "").strip() == "chapter_gate_scoring_signal"
             for item in output_checks
         )
 
@@ -2027,14 +2590,20 @@ def chapter_gate_evidence_linkage_signal(sessions_root: Path) -> tuple[str, int,
 
     status = "PASS" if chapter_gate_checks_linked >= 1 else "WARN"
     result = "aggregated" if chapter_gate_checks_linked >= 1 else "insufficient_data"
-    return status, 0, _format_detail_pairs([
-        ("snapshots_scanned", len(snapshot_paths)),
-        ("eligible_release_gate_runs", eligible_release_gate_runs),
-        ("chapter_gate_checks_linked", chapter_gate_checks_linked),
-        ("aggregation_window", "active_sessions"),
-        ("result", result),
-        ("invalid_snapshots", invalid_count),
-    ])
+    return (
+        status,
+        0,
+        _format_detail_pairs(
+            [
+                ("snapshots_scanned", len(snapshot_paths)),
+                ("eligible_release_gate_runs", eligible_release_gate_runs),
+                ("chapter_gate_checks_linked", chapter_gate_checks_linked),
+                ("aggregation_window", "active_sessions"),
+                ("result", result),
+                ("invalid_snapshots", invalid_count),
+            ]
+        ),
+    )
 
 
 def main() -> int:
@@ -2045,52 +2614,60 @@ def main() -> int:
     governance_code, governance_output = _run_governance_scripts_regression(GOVERNANCE_JUNIT_PATH)
     governance_status, governance_passed = parse_pytest_counts(governance_output)
 
-    baseline_code, baseline_output = run_cmd([
-        "npm.cmd",
-        "--prefix",
-        "src-ts",
-        "run",
-        "test:coverage:phase4",
-        "--",
-        "--coverage.reporter=text",
-        "--coverage.reporter=json",
-        "--coverage.reporter=html",
-        "--coverage.reporter=cobertura",
-    ])
+    baseline_code, baseline_output = run_cmd(
+        [
+            "npm.cmd",
+            "--prefix",
+            "src-ts",
+            "run",
+            "test:coverage:phase4",
+            "--",
+            "--coverage.reporter=text",
+            "--coverage.reporter=json",
+            "--coverage.reporter=html",
+            "--coverage.reporter=cobertura",
+        ]
+    )
 
-    desktop_bootstrap_code, desktop_bootstrap_output = run_cmd([
-        "npm.cmd",
-        "--prefix",
-        "desktop",
-        "run",
-        "ensure-deps",
-    ])
-    desktop_sidecar_build_code, desktop_sidecar_build_output = run_cmd([
-        "npm.cmd",
-        "--prefix",
-        "desktop",
-        "run",
-        "build:sidecar",
-    ])
-    desktop_sidecar_validate_code, desktop_sidecar_validate_output = run_cmd([
-        "npm.cmd",
-        "--prefix",
-        "desktop",
-        "run",
-        "validate:sidecar-contract",
-    ])
-    desktop_packaging_code, desktop_packaging_output = run_cmd([
-        "npm.cmd",
-        "--prefix",
-        "desktop",
-        "run",
-        "validate:package:dry-run",
-    ])
+    desktop_bootstrap_code, desktop_bootstrap_output = run_cmd(
+        [
+            "npm.cmd",
+            "--prefix",
+            "desktop",
+            "run",
+            "ensure-deps",
+        ]
+    )
+    desktop_sidecar_build_code, desktop_sidecar_build_output = run_cmd(
+        [
+            "npm.cmd",
+            "--prefix",
+            "desktop",
+            "run",
+            "build:sidecar",
+        ]
+    )
+    desktop_sidecar_validate_code, desktop_sidecar_validate_output = run_cmd(
+        [
+            "npm.cmd",
+            "--prefix",
+            "desktop",
+            "run",
+            "validate:sidecar-contract",
+        ]
+    )
+    desktop_packaging_code, desktop_packaging_output = run_cmd(
+        [
+            "npm.cmd",
+            "--prefix",
+            "desktop",
+            "run",
+            "validate:package:dry-run",
+        ]
+    )
     desktop_check_code, desktop_check_output = run_cmd(DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS)
     desktop_output = "\n\n".join(
-        part
-        for part in [desktop_bootstrap_output, desktop_check_output]
-        if part
+        part for part in [desktop_bootstrap_output, desktop_check_output] if part
     )
     desktop_sidecar_readiness_code = (
         desktop_sidecar_build_code
@@ -2098,25 +2675,25 @@ def main() -> int:
         else desktop_sidecar_validate_code
     )
     desktop_sidecar_readiness_output = "\n\n".join(
-        part
-        for part in [desktop_sidecar_build_output, desktop_sidecar_validate_output]
-        if part
+        part for part in [desktop_sidecar_build_output, desktop_sidecar_validate_output] if part
     )
 
-    e2e_code, e2e_output = run_cmd([
-        "npm.cmd",
-        "--prefix",
-        "src-ts",
-        "exec",
-        "--",
-        "vitest",
-        "run",
-        "tests/mcp/workflow-endpoints.integration.test.ts",
-        "tests/mcp/workflow-critic-smoke.integration.test.ts",
-        "--reporter=basic",
-        "--reporter=junit",
-        f"--outputFile.junit={E2E_JUNIT_PATH.resolve()}",
-    ])
+    e2e_code, e2e_output = run_cmd(
+        [
+            "npm.cmd",
+            "--prefix",
+            "src-ts",
+            "exec",
+            "--",
+            "vitest",
+            "run",
+            "tests/mcp/workflow-endpoints.integration.test.ts",
+            "tests/mcp/workflow-critic-smoke.integration.test.ts",
+            "--reporter=basic",
+            "--reporter=junit",
+            f"--outputFile.junit={E2E_JUNIT_PATH.resolve()}",
+        ]
+    )
 
     prod_guard_code, prod_guard_output = _run_release_runtime_guard(PRODUCTION_GUARD_JUNIT_PATH)
     prod_guard_status, prod_guard_passed = parse_pytest_counts(prod_guard_output)
@@ -2125,8 +2702,12 @@ def main() -> int:
 
     tasks_code, tasks_output = run_cmd([sys.executable, "scripts/check_tasks_completion.py"])
     tasks_payload, tasks_parse_error = parse_first_json_object(tasks_output)
-    authority_alignment_code, authority_alignment_output = run_cmd([sys.executable, "scripts/check_authority_alignment.py"])
-    authority_alignment_payload, authority_alignment_parse_error = parse_first_json_object(authority_alignment_output)
+    authority_alignment_code, authority_alignment_output = run_cmd(
+        [sys.executable, "scripts/check_authority_alignment.py"]
+    )
+    authority_alignment_payload, authority_alignment_parse_error = parse_first_json_object(
+        authority_alignment_output
+    )
 
     weekly_evidence_dir = PROJECT_ROOT / ".workflow" / "evidence" / "weekly"
     quality_evidence_dir = PROJECT_ROOT / ".workflow" / "evidence" / "quality"
@@ -2136,7 +2717,9 @@ def main() -> int:
     evidence_quality_count = _count_non_template_markdown(quality_evidence_dir)
     evidence_weekly_review_count = _count_non_template_markdown(weekly_evidence_dir)
 
-    slo_status, slo_exit, slo_detail = slo_baseline_signal(weekly_evidence_dir, quality_evidence_dir)
+    slo_status, slo_exit, slo_detail = slo_baseline_signal(
+        weekly_evidence_dir, quality_evidence_dir
+    )
     evidence_links_status, evidence_links_exit, evidence_links_detail = evidence_links_signal(
         weekly_evidence_dir,
         quality_evidence_dir,
@@ -2145,75 +2728,115 @@ def main() -> int:
         weekly_evidence_dir,
         quality_evidence_dir,
     )
-    memory_observability_status, memory_observability_exit, memory_observability_detail = memory_observability_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
+    memory_observability_status, memory_observability_exit, memory_observability_detail = (
+        memory_observability_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
     )
-    compliance_keywords_status, compliance_keywords_exit, compliance_keywords_detail = compliance_keywords_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
+    compliance_keywords_status, compliance_keywords_exit, compliance_keywords_detail = (
+        compliance_keywords_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
     )
 
-    migration_rollback_status, migration_rollback_exit, migration_rollback_detail = migration_rollback_evidence_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
+    migration_rollback_status, migration_rollback_exit, migration_rollback_detail = (
+        migration_rollback_evidence_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
     )
 
-    quality_level_trace_status, quality_level_trace_exit, quality_level_trace_detail = quality_level_trace_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
+    quality_level_trace_status, quality_level_trace_exit, quality_level_trace_detail = (
+        quality_level_trace_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
     )
     degrade_trace_status, degrade_trace_exit, degrade_trace_detail = degrade_trace_signal(
         weekly_evidence_dir,
         quality_evidence_dir,
     )
-    critical_gate_status, critical_gate_exit, critical_gate_detail = critical_gate_enforcement_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
+    critical_gate_status, critical_gate_exit, critical_gate_detail = (
+        critical_gate_enforcement_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
     )
     chapter_gate_status, chapter_gate_exit, chapter_gate_detail = chapter_gate_scoring_signal(
         weekly_evidence_dir,
         quality_evidence_dir,
     )
-    cycle_time_kpi_status, cycle_time_kpi_exit, cycle_time_kpi_detail = cycle_time_kpi_measurement_signal(
+    cycle_time_kpi_status, cycle_time_kpi_exit, cycle_time_kpi_detail = (
+        cycle_time_kpi_measurement_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
+    )
+    (
+        comparable_quality_rubric_status,
+        comparable_quality_rubric_exit,
+        comparable_quality_rubric_detail,
+    ) = comparable_quality_rubric_signal(
         weekly_evidence_dir,
         quality_evidence_dir,
     )
-    comparable_quality_rubric_status, comparable_quality_rubric_exit, comparable_quality_rubric_detail = comparable_quality_rubric_signal(
+    (
+        weekly_kpi_dashboard_schema_status,
+        weekly_kpi_dashboard_schema_exit,
+        weekly_kpi_dashboard_schema_detail,
+    ) = weekly_kpi_dashboard_schema_signal(
         weekly_evidence_dir,
         quality_evidence_dir,
     )
-    weekly_kpi_dashboard_schema_status, weekly_kpi_dashboard_schema_exit, weekly_kpi_dashboard_schema_detail = weekly_kpi_dashboard_schema_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
+    weekly_kpi_rollup_status, weekly_kpi_rollup_exit, weekly_kpi_rollup_detail = (
+        weekly_kpi_rollup_readiness_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
     )
-    weekly_kpi_rollup_status, weekly_kpi_rollup_exit, weekly_kpi_rollup_detail = weekly_kpi_rollup_readiness_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
+    weekly_kpi_visibility_status, weekly_kpi_visibility_exit, weekly_kpi_visibility_detail = (
+        weekly_kpi_comparability_visibility_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
     )
-    weekly_kpi_visibility_status, weekly_kpi_visibility_exit, weekly_kpi_visibility_detail = weekly_kpi_comparability_visibility_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
-    )
-    critical_conflict_blocker_status, critical_conflict_blocker_exit, critical_conflict_blocker_detail = critical_conflict_blocker_signal(
+    (
+        critical_conflict_blocker_status,
+        critical_conflict_blocker_exit,
+        critical_conflict_blocker_detail,
+    ) = critical_conflict_blocker_signal(
         sessions_root,
     )
-    unresolved_triage_blocker_status, unresolved_triage_blocker_exit, unresolved_triage_blocker_detail = unresolved_triage_blocker_signal(
+    (
+        unresolved_triage_blocker_status,
+        unresolved_triage_blocker_exit,
+        unresolved_triage_blocker_detail,
+    ) = unresolved_triage_blocker_signal(
         sessions_root,
     )
-    feedback_linkage_status, feedback_linkage_exit, feedback_linkage_detail = feedback_artifact_linkage_signal(
-        sessions_root,
+    feedback_linkage_status, feedback_linkage_exit, feedback_linkage_detail = (
+        feedback_artifact_linkage_signal(
+            sessions_root,
+        )
     )
-    conflict_linkage_status, conflict_linkage_exit, conflict_linkage_detail = conflict_artifact_linkage_signal(
-        sessions_root,
+    conflict_linkage_status, conflict_linkage_exit, conflict_linkage_detail = (
+        conflict_artifact_linkage_signal(
+            sessions_root,
+        )
     )
 
-    chapter_gate_linkage_status, chapter_gate_linkage_exit, chapter_gate_linkage_detail = chapter_gate_evidence_linkage_signal(
-        sessions_root,
+    chapter_gate_linkage_status, chapter_gate_linkage_exit, chapter_gate_linkage_detail = (
+        chapter_gate_evidence_linkage_signal(
+            sessions_root,
+        )
     )
-    evidence_freshness_status, evidence_freshness_exit, evidence_freshness_detail = evidence_freshness_signal(
-        weekly_evidence_dir,
-        quality_evidence_dir,
+    evidence_freshness_status, evidence_freshness_exit, evidence_freshness_detail = (
+        evidence_freshness_signal(
+            weekly_evidence_dir,
+            quality_evidence_dir,
+        )
     )
 
     tasks_status, tasks_exit, tasks_detail = tasks_completion_signal(
@@ -2227,40 +2850,62 @@ def main() -> int:
     writing_helper_acceptance_payload, writing_helper_acceptance_parse_error = _read_json_artifact(
         WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH
     )
-    writing_helper_acceptance_status, writing_helper_acceptance_exit, writing_helper_acceptance_detail = (
-        writing_helper_acceptance_signal(
-            WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH.exists(),
-            writing_helper_acceptance_payload,
-            current_head_sha,
-            writing_helper_acceptance_parse_error,
-            current_version=current_release_version,
+    (
+        writing_helper_acceptance_status,
+        writing_helper_acceptance_exit,
+        writing_helper_acceptance_detail,
+    ) = writing_helper_acceptance_signal(
+        WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH.exists(),
+        writing_helper_acceptance_payload,
+        current_head_sha,
+        writing_helper_acceptance_parse_error,
+        current_version=current_release_version,
+    )
+    package_e2e_acceptance_payload, package_e2e_acceptance_parse_error = _read_json_artifact(
+        PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH
+    )
+    (
+        package_e2e_acceptance_status,
+        package_e2e_acceptance_exit,
+        package_e2e_acceptance_detail,
+    ) = package_e2e_acceptance_signal(
+        PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH.exists(),
+        package_e2e_acceptance_payload,
+        current_head_sha,
+        package_e2e_acceptance_parse_error,
+        current_version=current_release_version,
+    )
+    authority_alignment_status, authority_alignment_exit, authority_alignment_detail = (
+        authority_alignment_signal(
+            authority_alignment_code,
+            authority_alignment_payload,
+            authority_alignment_parse_error,
         )
     )
-    authority_alignment_status, authority_alignment_exit, authority_alignment_detail = authority_alignment_signal(
-        authority_alignment_code,
-        authority_alignment_payload,
-        authority_alignment_parse_error,
-    )
-
-    tasks_checked = tasks_payload.get("total_checked") if tasks_payload else None
-    tasks_unchecked = tasks_payload.get("total_unchecked") if tasks_payload else None
-    tasks_ratio = tasks_payload.get("completion_ratio") if tasks_payload else None
 
     evidence_status, evidence_exit, evidence_detail = evidence_coverage_signal(
         evidence_quality_count,
         evidence_weekly_review_count,
     )
-    evidence_completeness_status, evidence_completeness_exit, evidence_completeness_detail = evidence_completeness_blocker_signal(
-        evidence_quality_count,
-        evidence_weekly_review_count,
-        machine_payload_available=True,
+    evidence_completeness_status, evidence_completeness_exit, evidence_completeness_detail = (
+        evidence_completeness_blocker_signal(
+            evidence_quality_count,
+            evidence_weekly_review_count,
+            machine_payload_available=True,
+        )
     )
-    gate_score_or_critical_status, gate_score_or_critical_exit, gate_score_or_critical_detail = gate_score_or_critical_blocker_signal(
-        chapter_gate_status,
-        critical_conflict_blocker_status,
-        unresolved_triage_blocker_status,
+    gate_score_or_critical_status, gate_score_or_critical_exit, gate_score_or_critical_detail = (
+        gate_score_or_critical_blocker_signal(
+            chapter_gate_status,
+            critical_conflict_blocker_status,
+            unresolved_triage_blocker_status,
+        )
     )
-    runtime_policy_conformance_status, runtime_policy_conformance_exit, runtime_policy_conformance_detail = runtime_policy_conformance_signal()
+    (
+        runtime_policy_conformance_status,
+        runtime_policy_conformance_exit,
+        runtime_policy_conformance_detail,
+    ) = runtime_policy_conformance_signal()
 
     coverage_candidates = (
         PROJECT_ROOT / "coverage.xml",
@@ -2282,72 +2927,92 @@ def main() -> int:
             "P0",
             True,
             version_code,
-            _format_detail_pairs([
-                ("script", "scripts/check_versions.py"),
-            ]),
+            _format_detail_pairs(
+                [
+                    ("script", "scripts/check_versions.py"),
+                ]
+            ),
         ),
         build_check_result(
             "delivery_semantic_gate",
             "P0",
             True,
             delivery_code,
-            _format_detail_pairs([
-                ("script", "scripts/delivery_gate.py"),
-            ]),
+            _format_detail_pairs(
+                [
+                    ("script", "scripts/delivery_gate.py"),
+                ]
+            ),
         ),
         build_check_result(
             "governance_scripts_regression",
             "P0",
             True,
             governance_code,
-            _format_detail_pairs([
-                ("script", "scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q"),
-                ("status", governance_status),
-                ("passed_count", governance_passed),
-                ("junitxml", _trace_path(GOVERNANCE_JUNIT_PATH)),
-            ]),
+            _format_detail_pairs(
+                [
+                    (
+                        "script",
+                        "scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q",
+                    ),
+                    ("status", governance_status),
+                    ("passed_count", governance_passed),
+                    ("junitxml", _trace_path(GOVERNANCE_JUNIT_PATH)),
+                ]
+            ),
         ),
         build_check_result(
             "baseline_tests_and_coverage",
             "P0",
             True,
             baseline_code,
-            _format_detail_pairs([
-                ("command", "npm --prefix src-ts run test:coverage:phase4"),
-                ("status", baseline_status),
-                ("passed_count", baseline_passed),
-            ]),
+            _format_detail_pairs(
+                [
+                    ("command", "npm --prefix src-ts run test:coverage:phase4"),
+                    ("status", baseline_status),
+                    ("passed_count", baseline_passed),
+                ]
+            ),
         ),
         build_check_result(
             "desktop_check",
             "P0",
             True,
             desktop_check_code,
-            _format_detail_pairs([
-                ("command", DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND),
-                ("package_script", "desktop/package.json -> scripts.check:local"),
-            ]),
+            _format_detail_pairs(
+                [
+                    ("command", DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND),
+                    ("package_script", "desktop/package.json -> scripts.check:local"),
+                ]
+            ),
         ),
         build_check_result(
             "desktop_sidecar_readiness",
             "P0",
             True,
             desktop_sidecar_readiness_code,
-            _format_detail_pairs([
-                ("command", "npm --prefix desktop run build:sidecar && npm --prefix desktop run validate:sidecar-contract"),
-                ("artifact", "desktop/src-tauri/bin/niko-gateway"),
-            ]),
+            _format_detail_pairs(
+                [
+                    (
+                        "command",
+                        "npm --prefix desktop run build:sidecar && npm --prefix desktop run validate:sidecar-contract",
+                    ),
+                    ("artifact", "desktop/src-tauri/bin/niko-gateway"),
+                ]
+            ),
         ),
         build_check_result(
             "desktop_packaging_dry_run",
             "P0",
             True,
             desktop_packaging_code,
-            _format_detail_pairs([
-                ("command", DESKTOP_PACKAGING_DRY_RUN_COMMAND),
-                ("target", "x86_64-pc-windows-msvc"),
-                ("signing", "unsigned_local_dry_run"),
-            ]),
+            _format_detail_pairs(
+                [
+                    ("command", DESKTOP_PACKAGING_DRY_RUN_COMMAND),
+                    ("target", "x86_64-pc-windows-msvc"),
+                    ("signing", "unsigned_local_dry_run"),
+                ]
+            ),
         ),
         build_check_result(
             "writing_helper_acceptance_signal",
@@ -2358,38 +3023,58 @@ def main() -> int:
             status_override=writing_helper_acceptance_status,
         ),
         build_check_result(
+            "package_e2e_acceptance_signal",
+            "P0",
+            True,
+            package_e2e_acceptance_exit,
+            package_e2e_acceptance_detail,
+            status_override=package_e2e_acceptance_status,
+        ),
+        build_check_result(
             "external_e2e_smoke",
             "P0",
             True,
             e2e_code,
-            _format_detail_pairs([
-                ("status", e2e_status),
-                ("passed_count", e2e_passed),
-            ]),
+            _format_detail_pairs(
+                [
+                    ("status", e2e_status),
+                    ("passed_count", e2e_passed),
+                ]
+            ),
         ),
         build_check_result(
             "production_guard",
             "P0",
             True,
             prod_guard_code,
-            _format_detail_pairs([
-                ("command", "npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts"),
-                ("status", prod_guard_status),
-                ("passed_count", prod_guard_passed),
-                ("junitxml", _trace_path(PRODUCTION_GUARD_JUNIT_PATH)),
-            ]),
+            _format_detail_pairs(
+                [
+                    (
+                        "command",
+                        "npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts",
+                    ),
+                    ("status", prod_guard_status),
+                    ("passed_count", prod_guard_passed),
+                    ("junitxml", _trace_path(PRODUCTION_GUARD_JUNIT_PATH)),
+                ]
+            ),
         ),
         build_check_result(
             "metrics_guard",
             "P0",
             True,
             metrics_guard_code,
-            _format_detail_pairs([
-                ("command", "npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts"),
-                ("status", prod_guard_status),
-                ("passed_count", prod_guard_passed),
-                ("junitxml", _trace_path(PRODUCTION_GUARD_JUNIT_PATH)),
-            ]),
+            _format_detail_pairs(
+                [
+                    (
+                        "command",
+                        "npm --prefix src-ts exec -- vitest run tests/gateway-server.runtime.test.ts tests/mcp/health-endpoints.test.ts",
+                    ),
+                    ("status", prod_guard_status),
+                    ("passed_count", prod_guard_passed),
+                    ("junitxml", _trace_path(PRODUCTION_GUARD_JUNIT_PATH)),
+                ]
+            ),
         ),
         build_check_result(
             "codecov_signal",
@@ -2627,9 +3312,7 @@ def main() -> int:
 
     machine_payload_generated_at = datetime.now(timezone.utc).isoformat()
     preliminary_no_go_reasons = [
-        check["check_id"]
-        for check in checks
-        if check["blocking"] and check["status"] == "FAIL"
+        check["check_id"] for check in checks if check["blocking"] and check["status"] == "FAIL"
     ]
     preliminary_decision = "GO" if not preliminary_no_go_reasons else "NO_GO"
     writing_helper_generated_at = (
@@ -2679,6 +3362,26 @@ def main() -> int:
             current_head_sha,
             source_type="retained_artifact",
             version=writing_helper_version or None,
+            current_version=current_release_version,
+        ),
+        _build_release_evidence_source(
+            "package_e2e_acceptance",
+            PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH,
+            normalize_release_evidence_status(package_e2e_acceptance_status),
+            str(package_e2e_acceptance_payload.get("generated_at") or "").strip()
+            if package_e2e_acceptance_payload
+            else "",
+            str(package_e2e_acceptance_payload.get("head_sha") or "").strip()
+            if package_e2e_acceptance_payload
+            else "",
+            current_head_sha,
+            source_type="retained_artifact",
+            version=(
+                str(package_e2e_acceptance_payload.get("version") or "").strip()
+                if package_e2e_acceptance_payload
+                else ""
+            )
+            or None,
             current_version=current_release_version,
         ),
         _build_release_evidence_source(
@@ -2746,8 +3449,8 @@ def main() -> int:
     )
     scorecard_dimensions = _build_scorecard_dimensions(checks)
     delivery_contract = _build_delivery_contract(scorecard_dimensions)
-    delivery_contract_status, delivery_contract_exit, delivery_contract_detail = delivery_contract_100_signal(
-        delivery_contract
+    delivery_contract_status, delivery_contract_exit, delivery_contract_detail = (
+        delivery_contract_100_signal(delivery_contract)
     )
     checks.append(
         build_check_result(
@@ -2760,9 +3463,7 @@ def main() -> int:
         )
     )
     no_go_reasons = [
-        check["check_id"]
-        for check in checks
-        if check["blocking"] and check["status"] == "FAIL"
+        check["check_id"] for check in checks if check["blocking"] and check["status"] == "FAIL"
     ]
     decision = "GO" if not no_go_reasons else "NO_GO"
     machine_payload = {
@@ -2796,7 +3497,7 @@ def main() -> int:
 
 - Decision: {decision}
 - Go/No-Go rule: any blocking FAIL => NO_GO
-- Codecov strict mode: {'enabled' if codecov_strict_mode else 'disabled'}
+- Codecov strict mode: {"enabled" if codecov_strict_mode else "disabled"}
 
 ## Deterministic Check Results
 
@@ -2863,7 +3564,7 @@ def main() -> int:
 #### writing_helper_acceptance_signal output
 
 ```text
-{json.dumps(writing_helper_acceptance_payload, ensure_ascii=False, indent=2) if writing_helper_acceptance_payload else (writing_helper_acceptance_parse_error or 'artifact missing')}
+{json.dumps(writing_helper_acceptance_payload, ensure_ascii=False, indent=2) if writing_helper_acceptance_payload else (writing_helper_acceptance_parse_error or "artifact missing")}
 ```
 
 #### external_e2e_smoke output
@@ -2908,10 +3609,12 @@ def main() -> int:
 - desktop_authoritative_local_gate: `{DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND}` (from `desktop/package.json` `check:local`, which currently resolves to `check:release`)
 - desktop_local_selftest: `{DESKTOP_LOCAL_SELFTEST_COMMAND}` (required whenever retained release evidence for `release_summary_report`, `authority_alignment`, `writing_helper_acceptance`, or `governance_scripts_regression` is not already `fresh_current` for the current HEAD)
 - packaging_dry_run: `{DESKTOP_PACKAGING_DRY_RUN_COMMAND}` (`tauri build --debug --no-bundle --target x86_64-pc-windows-msvc`)
+- package_e2e_checklist: `npm --prefix desktop run package:e2e:checklist` (records installed-package install/start/use acceptance for the exact retained package artifact)
 - formal_evidence_dir: `{_trace_path(RELEASE_EVIDENCE_DIR)}`
-- retained_production_contract_evidence: `release-check-summary.md`, `{_trace_path(RELEASE_READINESS_ARTIFACT_PATH)}`, `{_trace_path(AUTHORITY_ALIGNMENT_ARTIFACT_PATH)}`, `{_trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)}`, `{_trace_path(PRODUCTION_GUARD_JUNIT_PATH)}`, `{_trace_path(E2E_JUNIT_PATH)}`, `{_trace_path(GOVERNANCE_JUNIT_PATH)}`
+- retained_production_contract_evidence: `release-check-summary.md`, `{_trace_path(RELEASE_READINESS_ARTIFACT_PATH)}`, `{_trace_path(AUTHORITY_ALIGNMENT_ARTIFACT_PATH)}`, `{_trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)}`, `{_trace_path(PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH)}`, `{_trace_path(PRODUCTION_GUARD_JUNIT_PATH)}`, `{_trace_path(E2E_JUNIT_PATH)}`, `{_trace_path(GOVERNANCE_JUNIT_PATH)}`
 - authority_alignment_artifact: `{_trace_path(AUTHORITY_ALIGNMENT_ARTIFACT_PATH)}`
 - writing_helper_acceptance_artifact: `{_trace_path(WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH)}`
+- package_e2e_acceptance_artifact: `{_trace_path(PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH)}`
 - governance_junit: `{_trace_path(GOVERNANCE_JUNIT_PATH)}`
 - production_guard_junit: `{_trace_path(PRODUCTION_GUARD_JUNIT_PATH)}`
 - external_smoke_junit: `{_trace_path(E2E_JUNIT_PATH)}`

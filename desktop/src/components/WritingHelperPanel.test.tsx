@@ -5,6 +5,7 @@ import { WritingHelperPanel } from './WritingHelperPanel'
 import { translations } from '../i18n'
 import { processWritingHelper, polishContent } from '../api/client'
 import { getEditorHandle } from '../utils/editorHandle'
+import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 
 vi.mock('../api/client', () => ({
@@ -26,6 +27,11 @@ describe('WritingHelperPanel clear draft', () => {
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
     vi.clearAllMocks()
+    useAppStore.setState((state) => ({
+      ...state,
+      selectedSkills: ['character-forge'],
+      availableSkills: ['character-forge', 'dialogue-system'],
+    }))
     mockGetEditorHandle.mockReturnValue(null)
   })
 
@@ -75,6 +81,11 @@ describe('WritingHelperPanel mode options and payload', () => {
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
     vi.clearAllMocks()
+    useAppStore.setState((state) => ({
+      ...state,
+      selectedSkills: ['character-forge'],
+      availableSkills: ['character-forge', 'dialogue-system'],
+    }))
     mockGetEditorHandle.mockReturnValue(null)
   })
 
@@ -372,6 +383,37 @@ describe('WritingHelperPanel mode options and payload', () => {
     expect(screen.getByText(/优先处理这条评估建议：增加冲突/)).toBeInTheDocument()
   })
 
+  it('applies selected skill packs through the primary writing request and shows used skills in the result', async () => {
+    const user = userEvent.setup()
+
+    mockProcessWritingHelper.mockResolvedValue({
+      success: true,
+      data: {
+        mode: 'rewrite',
+        processed_text: '技能包改写结果。',
+        skills_used: ['character-forge', 'dialogue-system'],
+      },
+    })
+
+    render(<WritingHelperPanel onClose={() => {}} onOpenSettings={() => {}} />)
+
+    expect(screen.getByRole('button', { name: 'character-forge' })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(screen.getByRole('button', { name: 'dialogue-system' }))
+    await user.type(screen.getByLabelText(zh.writingHelperInputText), '请改写这一段。')
+    await user.selectOptions(screen.getByLabelText(zh.writingHelperMode), 'rewrite')
+    await user.click(screen.getByRole('button', { name: zh.writingHelperRun }))
+
+    expect(mockProcessWritingHelper).toHaveBeenCalledWith(expect.objectContaining({
+      content: '请改写这一段。',
+      mode: 'rewrite',
+      skill_ids: ['character-forge', 'dialogue-system'],
+    }))
+    expect(screen.getByText('已应用技能包')).toBeInTheDocument()
+    expect(screen.getAllByText('character-forge').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('dialogue-system').length).toBeGreaterThan(0)
+  })
+
   it('uses revision-safe replace/alternative/undo actions when the current input matches an editor selection snapshot', async () => {
     const user = userEvent.setup()
     const editorHandle = {
@@ -423,6 +465,7 @@ describe('WritingHelperPanel mode options and payload', () => {
     expect(editorHandle.undoLastRevisionApply).toHaveBeenCalledTimes(1)
     expect(screen.getByText('已撤销上次应用。')).toBeInTheDocument()
   })
+
 
   it('falls back to plain insert when no matching editor selection snapshot exists', async () => {
     const user = userEvent.setup()

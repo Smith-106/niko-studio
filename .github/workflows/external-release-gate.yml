@@ -23,6 +23,10 @@ on:
         required: false
         type: boolean
         default: true
+      signed_release:
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       run_codecov:
@@ -50,6 +54,11 @@ on:
         required: false
         type: boolean
         default: true
+      signed_release:
+        description: Attempt signed external release path when signing inputs are present.
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   gate:
@@ -76,6 +85,11 @@ jobs:
         run: |
           python scripts/delivery_gate.py
 
+      - name: Run Python static checks (${{ inputs.gate_label }})
+        run: |
+          python -m ruff check --select F,I scripts tests/unit/scripts
+          python -m ruff format --check scripts tests/unit/scripts
+
       - name: Run governance script regression tests (${{ inputs.gate_label }})
         run: |
           python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q --junitxml=governance-scripts.junit.xml
@@ -97,6 +111,11 @@ jobs:
 
       - name: Install backend dependencies
         run: npm ci
+        working-directory: src-ts
+
+      - name: Audit backend dependencies (high+, advisory) (${{ inputs.gate_label }})
+        continue-on-error: true
+        run: npm run audit:high
         working-directory: src-ts
 
       - name: Install desktop dependencies
@@ -241,6 +260,19 @@ jobs:
         if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
         run: npm run validate:package:dry-run
         working-directory: desktop
+
+      - name: Attempt signed external release path
+        if: ${{ inputs.signed_release }}
+        shell: pwsh
+        working-directory: desktop
+        env:
+          NIKO_WINDOWS_CERT_THUMBPRINT: ${{ secrets.NIKO_WINDOWS_CERT_THUMBPRINT }}
+          NIKO_WINDOWS_TIMESTAMP_URL: ${{ secrets.NIKO_WINDOWS_TIMESTAMP_URL }}
+        run: |
+          if (-not $env:NIKO_WINDOWS_CERT_THUMBPRINT -or -not $env:NIKO_WINDOWS_TIMESTAMP_URL) {
+            throw 'signed_release=true requires NIKO_WINDOWS_CERT_THUMBPRINT and NIKO_WINDOWS_TIMESTAMP_URL secrets'
+          }
+          npm run tauri:build:signed
 
       - name: Upload desktop packaging dry-run artifact
         if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}

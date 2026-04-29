@@ -478,6 +478,7 @@ describe('memory/index barrel', () => {
 
   it('applies environment-selected default adapters through the public config factory', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
+    process.env.NIKO_ENV = 'development';
     const shadowWriteSpy = vi.spyOn(StubPostgresShadowAdapter.prototype, 'shadowWriteMemory');
     const tempRoot = join(tmpdir(), `niko-memory-config-default-${randomUUID()}`);
     const configuredDbPath = join(tempRoot, 'configured-memory.db');

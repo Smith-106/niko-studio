@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -15,7 +14,7 @@ def _extract_keys(section: str, content: str) -> set[str]:
     start = content.find(marker)
     if start == -1:
         raise RuntimeError(f"Missing section marker: {marker}")
-    block = content[start + len(marker):]
+    block = content[start + len(marker) :]
 
     depth = 1
     index = 0

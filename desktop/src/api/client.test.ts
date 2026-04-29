@@ -1335,6 +1335,31 @@ describe('writing helper API', () => {
     expect(response.data).toEqual({ mode: 'rewrite', processed_text: '改写后文本。' })
   })
 
+  it('posts selected skill ids to writing-helper endpoint', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ mode: 'rewrite', processed_text: '改写后文本。', skills_used: ['character-forge'] }),
+    })
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await processWritingHelper({
+      content: '原始文本。',
+      mode: 'rewrite',
+      skill_ids: ['character-forge'],
+    })
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/writing-helper/process'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ content: '原始文本。', mode: 'rewrite', skill_ids: ['character-forge'] }),
+      })
+    )
+    expect(response.success).toBe(true)
+    expect(response.data).toEqual({ mode: 'rewrite', processed_text: '改写后文本。', skills_used: ['character-forge'] })
+  })
+
   it('maps legacy polish request to writing-helper endpoint', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
@@ -1371,6 +1396,7 @@ describe('writing helper API', () => {
       diffMarkup: '<del class="diff-del">原始文本。</del>\n<ins class="diff-add">润色后文本。</ins>',
     })
   })
+
 
   it('exposes polishContent alias with same behavior', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
@@ -1887,6 +1913,30 @@ describe('writing stream helper', () => {
 })
 
 describe('chatStream', () => {
+  it('forwards selected skill ids to the writing stream endpoint', async () => {
+    const fetchSpy = vi.fn(async () => createJsonResponse({
+      streaming: true,
+      events: [
+        { event: 'content', data: { chunk: 'Hello', index: 0 } },
+        { event: 'done', data: { status: 'completed', skills_used: ['character-forge'] } },
+      ],
+    }))
+
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await streamWritingHelper(
+      { content: 'prompt', mode: 'generate', skill_ids: ['character-forge'] },
+      { onContent: vi.fn(), onDone: vi.fn(), onError: vi.fn() },
+    )
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/writing/stream'),
+      expect.objectContaining({
+        body: JSON.stringify({ content: 'prompt', mode: 'generate', skill_ids: ['character-forge'] }),
+      }),
+    )
+  })
+
   const request: ChatRequest = {
     messages: [{ role: 'user', content: 'hello' }],
     workflowLevel: 'L3',

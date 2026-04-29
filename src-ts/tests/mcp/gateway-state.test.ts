@@ -181,6 +181,44 @@ describe('gateway-state', () => {
       expect(typeof deps.loadServicesConfig).toBe('function');
     });
 
+    it('passes NIKO_CONFIG_PATH through to services config loading when present', async () => {
+      const previous = process.env.NIKO_CONFIG_PATH;
+      process.env.NIKO_CONFIG_PATH = '/tmp/services.yaml';
+
+      try {
+        const { buildGatewayDeps } = await import('../../mcp/gateway-state');
+        const mockContainer = {} as unknown as import('../../container/ServiceContainer').ServiceContainer;
+        const deps = buildGatewayDeps(mockContainer);
+
+        deps.loadServicesConfig();
+        expect(mockLoadServicesConfig).toHaveBeenCalledWith('/tmp/services.yaml');
+      } finally {
+        if (previous === undefined) {
+          delete process.env.NIKO_CONFIG_PATH;
+        } else {
+          process.env.NIKO_CONFIG_PATH = previous;
+        }
+      }
+    });
+
+    it('falls back to default services config resolution when NIKO_CONFIG_PATH is absent', async () => {
+      const previous = process.env.NIKO_CONFIG_PATH;
+      delete process.env.NIKO_CONFIG_PATH;
+
+      try {
+        const { buildGatewayDeps } = await import('../../mcp/gateway-state');
+        const mockContainer = {} as unknown as import('../../container/ServiceContainer').ServiceContainer;
+        const deps = buildGatewayDeps(mockContainer);
+
+        deps.loadServicesConfig();
+        expect(mockLoadServicesConfig).toHaveBeenCalledWith(undefined);
+      } finally {
+        if (previous !== undefined) {
+          process.env.NIKO_CONFIG_PATH = previous;
+        }
+      }
+    });
+
     it('getEngine returns null for unknown engine names', async () => {
       const { buildGatewayDeps } = await import('../../mcp/gateway-state');
       const mockContainer = {} as unknown as import('../../container/ServiceContainer').ServiceContainer;

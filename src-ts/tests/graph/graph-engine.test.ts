@@ -1,9 +1,10 @@
 import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ConfigManager } from '../../config';
 import {
   Entity as GraphEntity,
   GraphEngine,
@@ -17,6 +18,7 @@ function createDbPath(): string {
 
 describe('graph/graph-engine', () => {
   beforeEach(() => {
+    ConfigManager.resetInstance();
     vi.spyOn(console, 'info').mockImplementation(() => {});
   });
 
@@ -415,6 +417,14 @@ describe('graph/graph-engine', () => {
       const adapters = (engine as unknown as {
         _integrationAdapters: {
           flags: { neo4jEnabled: boolean };
+          requestedFlags: { neo4jEnabled: boolean };
+          capabilities: {
+            neo4jEnabled: {
+              support_level: string;
+              requested: boolean;
+              enabled: boolean;
+            };
+          };
           graphProjection: {
             projectEntity: (entity: Record<string, unknown>) => Promise<void>;
             projectRelation: (relation: Record<string, unknown>) => Promise<void>;
@@ -424,7 +434,13 @@ describe('graph/graph-engine', () => {
         _parseProperties: (raw: unknown) => Record<string, unknown>;
       })._integrationAdapters;
 
-      expect(adapters.flags.neo4jEnabled).toBe(true);
+      expect(adapters.flags.neo4jEnabled).toBe(false);
+      expect(adapters.requestedFlags.neo4jEnabled).toBe(true);
+      expect(adapters.capabilities.neo4jEnabled).toMatchObject({
+        support_level: 'disabled',
+        requested: true,
+        enabled: false,
+      });
       await adapters.graphProjection.projectEntity({ id: 'stub-entity' });
       await adapters.graphProjection.projectRelation({ id: 'stub-relation' });
 
@@ -448,6 +464,14 @@ describe('graph/graph-engine', () => {
       const projectionHarness = engine as unknown as {
         _integrationAdapters: {
           flags: { neo4jEnabled: boolean };
+          requestedFlags: { neo4jEnabled: boolean };
+          capabilities: {
+            neo4jEnabled: {
+              support_level: string;
+              requested: boolean;
+              enabled: boolean;
+            };
+          };
           graphProjection: {
             projectEntity: ReturnType<typeof vi.fn>;
             projectRelation: ReturnType<typeof vi.fn>;
@@ -825,7 +849,7 @@ describe('graph/graph-engine', () => {
 
       const homedirFallbackEngine = GraphEngine.fromConfig();
       try {
-        expect(homedirFallbackEngine.dbPath).toBe(join(fallbackHomeRoot, '.niko', 'graph.db'));
+        expect(homedirFallbackEngine.dbPath).toBe(join(homedir(), '.niko', 'graph.db'));
       } finally {
         homedirFallbackEngine.close();
         configSpy.mockRestore();

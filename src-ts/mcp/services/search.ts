@@ -104,7 +104,8 @@ export async function searchHybrid(params: {
 
   const searchStatus = adapters?.search.getStatus();
   const requestedRouteMode = params.routeMode ?? resolveSearchRouteMode();
-  const effectiveRouteMode = searchStatus?.state === 'degraded' && requestedRouteMode !== 'legacy'
+  const shouldFallbackSearch = searchStatus?.state === 'degraded';
+  const effectiveRouteMode = shouldFallbackSearch && requestedRouteMode !== 'legacy'
     ? 'legacy'
     : requestedRouteMode;
   const effectiveTimeoutMs = resolveSearchElasticTimeoutMs();
@@ -133,6 +134,7 @@ export async function searchHybrid(params: {
       metadata: {
         integration: searchStatus.integration,
         state: searchStatus.state,
+        support_level: searchStatus.support_level,
         code: searchStatus.code,
         routeMode: effectiveRouteMode,
         results,

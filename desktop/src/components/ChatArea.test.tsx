@@ -392,34 +392,31 @@ describe('ChatArea P0 flows', () => {
     })
   })
 
-  it('uses configured context types for agent context action', async () => {
-    useSettingsStore.setState((state) => ({
-      ...state,
-      settings: {
-        ...state.settings,
-        contextTypes: ['world', 'plot'],
+  it('includes selected skill-packs in chat requests from the primary flow', async () => {
+    mockedChatStream.mockResolvedValue()
+    mockedChat.mockResolvedValue({
+      success: true,
+      data: {
+        content: 'skill aware response',
+        skills_used: ['character-forge'],
       },
+    })
+
+    useAppStore.setState((state) => ({
+      ...state,
+      availableSkills: ['character-forge', 'dialogue-system'],
+      selectedSkills: ['character-forge'],
     }))
 
     render(<ChatArea />)
-
-    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
-    await userEvent.click(screen.getByRole('button', { name: zh.chatModeAgent }))
-    await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: zh.chatModeAgent }),
-      'context'
-    )
-
     const input = screen.getByPlaceholderText(zh.inputPlaceholder)
-    await userEvent.type(input, '获取上下文{enter}')
+    await userEvent.type(input, '技能包透传测试{enter}')
 
     await waitFor(() => {
-      expect(mockedAgentGetContext).toHaveBeenCalledWith(
+      expect(mockedChat).toHaveBeenCalledWith(
         expect.objectContaining({
-          task: '获取上下文',
-          workflow_level: 'L3',
-        }),
-        ['world', 'plot']
+          skills: ['character-forge'],
+        })
       )
     })
   })

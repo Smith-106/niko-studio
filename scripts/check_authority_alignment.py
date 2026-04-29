@@ -234,6 +234,26 @@ BASE_RULES: tuple[AuthorityRule, ...] = (
         reason="Desktop package manifest must expose the local:selftest launcher entrypoint.",
     ),
     AuthorityRule(
+        file_path="desktop/package.json",
+        pattern=r'"local:pre-commit"',
+        reason="Desktop package manifest must expose the local:pre-commit hook entrypoint.",
+    ),
+    AuthorityRule(
+        file_path="src-ts/package.json",
+        pattern=r'"check:pre-commit"',
+        reason="src-ts package manifest must expose the check:pre-commit hook entrypoint.",
+    ),
+    AuthorityRule(
+        file_path=".pre-commit-config.yaml",
+        pattern=r"entry: python scripts/run_local_pre_commit\.py",
+        reason="pre-commit hook config must route to the shared local pre-commit helper.",
+    ),
+    AuthorityRule(
+        file_path="docs/testing/TEST_TIER_MATRIX.md",
+        pattern=r"python -m pre_commit install",
+        reason="Test tier matrix must document the pre-commit install step.",
+    ),
+    AuthorityRule(
         file_path="README.md",
         pattern=r"\./scripts/start_desktop_local\.ps1",
         reason="README must document the local desktop launcher start entrypoint.",

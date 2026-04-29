@@ -3,7 +3,7 @@ import { BookOpen, ChevronDown, ChevronRight, Lightbulb, MessageSquareText, PenL
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
-import { useCreateConversation, useAddMessage, useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
+import { useCreateConversation, useAddMessage, useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAvailableSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
 import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, quickRollbackWorkflow, buildConsistencyGovernanceMetadata, mergeWriterMetadataGovernance } from '../api/client'
 import type { ChatRequest, StreamDonePayload, WriterMetadata } from '../api/client'
 import { MessageBubble } from './MessageBubble'
@@ -172,6 +172,7 @@ export function ChatArea({
   const messages = useMessages()
   const workflowLevel = useWorkflowLevel()
   const selectedSkills = useSelectedSkills()
+  const availableSkills = useAvailableSkills()
   const allowLlmFallback = useAllowLlmFallback()
   const qualityGoals = useQualityGoals()
   const { settings } = useSettingsStore()
@@ -201,6 +202,7 @@ export function ChatArea({
 
   const addMessage = useAddMessage()
   const createConversation = useCreateConversation()
+  const toggleSkill = useAppStore((state) => state.toggleSkill)
   const setWorkflowLevel = useSettingsStore((state) => (level: 'L1' | 'L2' | 'L3' | 'L4' | 'L5') => {
     state.updateSettings({ defaultWorkflowLevel: level })
   })
@@ -1197,6 +1199,9 @@ export function ChatArea({
           workflowLabel={`${t.workflow}:`}
           modePresetsLabel={t.modePresetsLabel}
           selectedSkillsLabel={selectedSkills.length > 0 ? translate('selectedSkills', { count: selectedSkills.length }) : undefined}
+          availableSkillIds={availableSkills}
+          selectedSkillIds={selectedSkills}
+          skillPacksLabel={t.skillPacks}
           chatMode={chatMode}
           agentAction={agentAction}
           enableModelComparison={enableModelComparison}
@@ -1226,6 +1231,7 @@ export function ChatArea({
           onSetAgentAction={setAgentAction}
           onSetWorkflowLevel={setWorkflowLevel}
           onApplyPreset={handleApplyModePreset}
+          onToggleSkill={toggleSkill}
         />
 
         <ChatAreaComposer

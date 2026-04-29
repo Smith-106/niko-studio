@@ -42,10 +42,18 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--host", default=None, help="Host to bind (default: gateway default)")
-    parser.add_argument("--port", type=int, default=None, help="Port to bind (default: gateway default)")
-    parser.add_argument("--reload", action="store_true", help="Enable auto-reload (legacy python runtime only)")
-    parser.add_argument("--log-level", default="info", help="Log level (legacy python runtime only)")
-    parser.add_argument("--env", choices=["development", "production"], default=None, help="Runtime env override")
+    parser.add_argument(
+        "--port", type=int, default=None, help="Port to bind (default: gateway default)"
+    )
+    parser.add_argument(
+        "--reload", action="store_true", help="Enable auto-reload (legacy python runtime only)"
+    )
+    parser.add_argument(
+        "--log-level", default="info", help="Log level (legacy python runtime only)"
+    )
+    parser.add_argument(
+        "--env", choices=["development", "production"], default=None, help="Runtime env override"
+    )
     parser.add_argument("--config", default=None, help="Config file path override")
     parser.add_argument(
         "--runtime",
@@ -71,7 +79,9 @@ def _run_node_gateway(args: argparse.Namespace) -> int:
     if args.reload:
         print("WARN: Node runtime does not support --reload in this launcher; flag ignored.")
     if args.log_level and args.log_level.lower() != "info":
-        print("WARN: Node runtime log-level is managed by the TS gateway; --log-level is ignored here.")
+        print(
+            "WARN: Node runtime log-level is managed by the TS gateway; --log-level is ignored here."
+        )
 
     if not NODE_GATEWAY_LAUNCHER.exists():
         print("ERROR: Node gateway launcher is unavailable in this checkout.")
@@ -90,9 +100,15 @@ def _run_legacy_python_gateway(args: argparse.Namespace) -> int:
     if not LEGACY_PY_GATEWAY.exists():
         print("ERROR: Legacy Python runtime is unavailable in this checkout.")
         print(f"   Missing: {LEGACY_PY_GATEWAY}")
-        print("   This checkout is Node-first and does not include legacy Python gateway sources by default.")
-        print("   Use default Node runtime: python scripts/start_gateway.py [--host ... --port ...]")
-        print("   Keep '--runtime python' only for compatibility branches that restore legacy sources.")
+        print(
+            "   This checkout is Node-first and does not include legacy Python gateway sources by default."
+        )
+        print(
+            "   Use default Node runtime: python scripts/start_gateway.py [--host ... --port ...]"
+        )
+        print(
+            "   Keep '--runtime python' only for compatibility branches that restore legacy sources."
+        )
         return 2
 
     # Import only when legacy path exists.
@@ -146,7 +162,9 @@ def main() -> None:
     args = parser.parse_args()
     runtime = _resolve_runtime(args.runtime)
     if runtime == "python" and args.runtime == "auto" and not LEGACY_PY_GATEWAY.exists():
-        print("WARN: auto runtime resolved to python via NIKO_GATEWAY_RUNTIME, but legacy Python source is missing.")
+        print(
+            "WARN: auto runtime resolved to python via NIKO_GATEWAY_RUNTIME, but legacy Python source is missing."
+        )
         print("      Falling back to node runtime.")
         runtime = "node"
 

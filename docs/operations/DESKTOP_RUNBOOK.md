@@ -59,7 +59,7 @@ Desktop dev mode still uses the Vite shell on port `5173`, but `npm run dev` alo
   - `Explicit fallback`: packaged builds do not currently bundle a target-triple Node sidecar binary, so packaged execution falls back to the Python compatibility artifact when the repo-local Node launcher is unavailable.
   - `Current limitation`: the default node-first checkout does not ship the retired Python gateway sources, so strict packaging validation expects the packaged Python artifact to be hydrated before release sign-off.
 - Current dry-run packaging validation target: Windows x64 (`x86_64-pc-windows-msvc`).
-- `npm --prefix desktop run validate:package:dry-run` is an unsigned `--no-bundle` proof run; signed external bundles require release-private `certificateThumbprint` and `timestampUrl` values outside git before `npm --prefix desktop run tauri:build`.
+- `npm --prefix desktop run validate:package:dry-run` is an unsigned `--no-bundle` proof run; signed external bundles require release-private `certificateThumbprint` and `timestampUrl` values outside git before `npm --prefix desktop run tauri:build:signed`.
 
 ### Port Conflict Handling
 
@@ -154,7 +154,19 @@ npm --prefix desktop run validate:sidecar-contract
 npm --prefix desktop run validate:package:dry-run
 ```
 
-For the current migration baseline, these commands validate the repo-local Node launcher plus the pre-staged packaged Python compatibility artifact; they do not rebuild the retired Python fallback from source.
+For the current migration baseline, `validate:sidecar-contract` validates the repo-local Node launcher plus the declared packaging boundary. `validate:package:dry-run` is the explicit packaging-proof command and still requires the pre-staged packaged compatibility artifact; neither command rebuilds the retired Python fallback from source.
+If a retained compatibility artifact already exists under `desktop/src-tauri/target/**/debug/`, run `npm --prefix desktop run hydrate:packaged-compat` before the dry-run so the required `desktop/src-tauri/bin/niko-gateway*.exe` files are restored.
+
+### Installed-package acceptance
+
+For package-level install/start/use verification of the retained Windows artifact, use:
+
+```bash
+npm --prefix desktop run package:e2e:checklist
+```
+
+Authoritative checklist:
+- `docs/operations/E2E_VERIFICATION.md`
 
 ### Release sign-off
 

@@ -1,0 +1,1 @@
+{"main-desktop":{"identifier":"main-desktop","description":"Writer-facing main window IPC boundary. The desktop webview only receives core invoke access; shell, dialog, fs, http, and notification plugin APIs stay unavailable to frontend code.","local":true,"windows":["main"],"permissions":["core:default"]}}

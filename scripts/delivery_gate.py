@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,77 +45,107 @@ RULES: tuple[GateRule, ...] = (
     ),
     GateRule(
         file_path="src-ts/package.json",
-        needle="\"test:phase4\"",
+        needle='"test:phase4"',
         reason="缺少 test:phase4 官方验证入口。",
     ),
     GateRule(
         file_path="src-ts/package.json",
-        needle="\"test:coverage:phase4\"",
+        needle='"test:coverage:phase4"',
         reason="缺少 test:coverage:phase4 官方覆盖率验证入口。",
     ),
     GateRule(
         file_path="src-ts/package.json",
-        needle="\"check:local\"",
-        reason="缺少 src-ts 本地基线入口 check:local，无法在本地复现当前 JS/TS 高信号校验链路。",
+        needle='"check:pre-commit"',
+        reason="缺少 src-ts 轻量 pre-commit 入口 check:pre-commit。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"build:sidecar\"",
+        needle='"local:pre-commit"',
+        reason="缺少仓库级本地 pre-commit 入口 local:pre-commit。",
+    ),
+    GateRule(
+        file_path=".pre-commit-config.yaml",
+        needle="entry: python scripts/run_local_pre_commit.py",
+        reason="缺少 pre-commit hook 配置入口。",
+    ),
+    GateRule(
+        file_path="docs/testing/TEST_TIER_MATRIX.md",
+        needle="python -m pre_commit install",
+        reason="test tier matrix 未说明 pre-commit hook 安装入口。",
+    ),
+    GateRule(
+        file_path="README.md",
+        needle="python -m pre_commit install",
+        reason="README 未说明 pre-commit hook 安装入口。",
+    ),
+    GateRule(
+        file_path="desktop/README.md",
+        needle="python -m pre_commit install",
+        reason="desktop README 未说明 pre-commit hook 安装入口。",
+    ),
+    GateRule(
+        file_path="requirements.txt",
+        needle="pre-commit>=3.8.0",
+        reason="requirements 未声明 pre-commit 依赖。",
+    ),
+    GateRule(
+        file_path="desktop/package.json",
+        needle='"build:sidecar"',
         reason="缺少 desktop sidecar 构建入口。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"check:local\"",
+        needle='"check:local"',
         reason="缺少 desktop 本地基线入口 check:local，桌面端无法在本地复现当前质量校验链路。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"check\": \"npm run typecheck && npm run build\"",
+        needle='"check": "npm run typecheck && npm run build"',
         reason="缺少 desktop 统一质量入口 check。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"validate:package:dry-run\"",
+        needle='"validate:package:dry-run"',
         reason="缺少 desktop packaging dry-run 入口。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"local:start\"",
+        needle='"local:start"',
         reason="缺少 desktop 本地启动器入口 local:start。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"local:start:force\"",
+        needle='"local:start:force"',
         reason="缺少 desktop 本地启动器入口 local:start:force。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"local:start:binary\"",
+        needle='"local:start:binary"',
         reason="缺少 desktop 本地启动器入口 local:start:binary。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"local:start:binary:force\"",
+        needle='"local:start:binary:force"',
         reason="缺少 desktop 本地启动器入口 local:start:binary:force。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"local:gateway\"",
+        needle='"local:gateway"',
         reason="缺少 desktop 本地启动器入口 local:gateway。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"local:status\"",
+        needle='"local:status"',
         reason="缺少 desktop 本地启动器入口 local:status。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"local:stop\"",
+        needle='"local:stop"',
         reason="缺少 desktop 本地启动器入口 local:stop。",
     ),
     GateRule(
         file_path="desktop/package.json",
-        needle="\"local:selftest\"",
+        needle='"local:selftest"',
         reason="缺少 desktop 本地启动器入口 local:selftest。",
     ),
     GateRule(
@@ -358,22 +387,22 @@ RULES: tuple[GateRule, ...] = (
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"authority_alignment_signal\"",
+        needle='"authority_alignment_signal"',
         reason="release summary 未将 authority_alignment_signal 视为 P0 blocking 信号。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"desktop_packaging_dry_run\"",
+        needle='"desktop_packaging_dry_run"',
         reason="release summary 未将 desktop packaging dry-run 视为 P0 blocking 信号。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"delivery_contract\": delivery_contract,",
+        needle='"delivery_contract": delivery_contract,',
         reason="release summary 未把 100% delivery contract 写入 machine-readable contract。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"scorecard_dimensions\": scorecard_dimensions,",
+        needle='"scorecard_dimensions": scorecard_dimensions,',
         reason="release summary 未把单一 100% scorecard 维度写入 machine-readable contract。",
     ),
     GateRule(
@@ -383,12 +412,12 @@ RULES: tuple[GateRule, ...] = (
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"delivery_contract_100_signal\",",
+        needle='"delivery_contract_100_signal",',
         reason="release summary 未暴露 100% delivery contract blocking signal。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"gate_signal\": \"delivery_contract_100_signal\"",
+        needle='"gate_signal": "delivery_contract_100_signal"',
         reason="release summary 未声明 100% delivery contract 的 blocking signal 名称。",
     ),
     GateRule(
@@ -408,17 +437,17 @@ RULES: tuple[GateRule, ...] = (
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"writing_helper_acceptance_signal\"",
+        needle='"writing_helper_acceptance_signal"',
         reason="release summary 未将 writing-helper acceptance 视为 P0 blocking 信号。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"local_selftest_enforcement\"",
+        needle='"local_selftest_enforcement"',
         reason="release summary 未暴露 local:selftest enforcement blocking 信号。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="\"release_evidence\": release_evidence,",
+        needle='"release_evidence": release_evidence,',
         reason="release summary 未把 retained release evidence 元数据写入 machine-readable contract。",
     ),
     GateRule(
@@ -428,12 +457,12 @@ RULES: tuple[GateRule, ...] = (
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="(\"freshness_status\", retained_evidence[\"freshness_status\"])",
+        needle='("freshness_status", retained_evidence["freshness_status"])',
         reason="release summary 未显式输出 retained evidence freshness_status。",
     ),
     GateRule(
         file_path="scripts/release_check_summary.py",
-        needle="(\"supersession_status\", retained_evidence[\"supersession_status\"])",
+        needle='("supersession_status", retained_evidence["supersession_status"])',
         reason="release summary 未显式输出 retained evidence supersession_status。",
     ),
     GateRule(

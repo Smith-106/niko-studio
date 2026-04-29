@@ -10,6 +10,9 @@ interface ChatAreaModeControlsProps {
   workflowLabel: string
   modePresetsLabel: string
   selectedSkillsLabel?: string
+  availableSkillIds?: string[]
+  selectedSkillIds?: string[]
+  skillPacksLabel?: string
   chatMode: 'chat' | 'agent'
   agentAction: 'write' | 'revise' | 'context'
   enableModelComparison: boolean
@@ -39,6 +42,7 @@ interface ChatAreaModeControlsProps {
   onSetAgentAction: (action: 'write' | 'revise' | 'context') => void
   onSetWorkflowLevel: (level: 'L1' | 'L2' | 'L3' | 'L4' | 'L5') => void
   onApplyPreset: (presetId: ChatModePreset['id']) => void
+  onToggleSkill?: (skillId: string) => void
 }
 
 export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
@@ -46,6 +50,9 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   workflowLabel,
   modePresetsLabel,
   selectedSkillsLabel,
+  availableSkillIds,
+  selectedSkillIds,
+  skillPacksLabel,
   chatMode,
   agentAction,
   enableModelComparison,
@@ -75,6 +82,7 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   onSetAgentAction,
   onSetWorkflowLevel,
   onApplyPreset,
+  onToggleSkill,
 }: ChatAreaModeControlsProps) {
   const [showAdvanced, setShowAdvanced] = useState(chatMode === 'agent' || enableModelComparison)
 
@@ -137,6 +145,30 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
           <span className="text-xs font-medium text-primary-600 dark:text-primary-400 ml-2 bg-primary-50 dark:bg-primary-900/20 px-3 py-1 rounded-full border border-primary-100 dark:border-primary-500/20">{selectedSkillsLabel}</span>
         ) : null}
       </div>
+
+      {availableSkillIds && availableSkillIds.length > 0 && onToggleSkill && skillPacksLabel ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mr-1">{skillPacksLabel}</span>
+          {availableSkillIds.slice(0, 8).map((skillId) => {
+            const selected = selectedSkillIds?.includes(skillId) ?? false
+            return (
+              <button
+                key={skillId}
+                type="button"
+                onClick={() => onToggleSkill(skillId)}
+                aria-pressed={selected}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 border ${
+                  selected
+                    ? 'bg-primary-600 text-white border-primary-600 shadow-md'
+                    : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text border-gray-200 dark:border-dark-border'
+                }`}
+              >
+                {skillId}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
 
       {showAdvanced && (
         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-dark-border/50 space-y-4 animate-fade-in">

@@ -950,7 +950,7 @@ export class CharacterManager {
   async analyzeCharacter(charId: string, content: string): Promise<Record<string, unknown>> {
     const char = this.characters.get(charId);
     if (!char) return { error: 'Character not found' };
-    if (!this.llmClient) return this.mockAnalysis(char);
+    if (!this.llmClient) return this.degradedCharacterAnalysis(char);
 
     const prompt = CHARACTER_ANALYSIS_PROMPT
       .replace('{character_info}', JSON.stringify(charToDict(char)))
@@ -962,7 +962,7 @@ export class CharacterManager {
   async suggestDevelopment(charId: string): Promise<Record<string, unknown>> {
     const char = this.characters.get(charId);
     if (!char) return { error: 'Character not found' };
-    if (!this.llmClient) return this.mockDevelopmentSuggestions(char);
+    if (!this.llmClient) return this.degradedDevelopmentSuggestions(char);
 
     const prompt = CHARACTER_DEVELOPMENT_PROMPT
       .replace('{character_info}', JSON.stringify(charToDict(char)));
@@ -973,7 +973,7 @@ export class CharacterManager {
   async analyzeFiveDimensions(charId: string, content: string): Promise<Record<string, unknown>> {
     const char = this.characters.get(charId);
     if (!char) return { error: 'Character not found' };
-    if (!this.llmClient) return this.mockFiveDimensionsAnalysis(char);
+    if (!this.llmClient) return this.degradedFiveDimensionsAnalysis(char);
 
     const prompt = FIVE_DIMENSIONS_PROMPT
       .replace('{character_info}', JSON.stringify(charToDict(char)))
@@ -1037,8 +1037,47 @@ export class CharacterManager {
     }
   }
 
+  private degradedCharacterAnalysis(char: Character): Record<string, unknown> {
+    return {
+      character: char.name,
+      status: 'degraded',
+      state: 'degraded',
+      code: 'LLM_UNAVAILABLE',
+      operation: 'character_analysis',
+      degraded: true,
+      degrade_reason: 'llm_client_unavailable',
+      actionable_feedback: 'Narrative character analysis is unavailable because no LLM client is configured.',
+    };
+  }
+
+  private degradedDevelopmentSuggestions(char: Character): Record<string, unknown> {
+    return {
+      character: char.name,
+      status: 'degraded',
+      state: 'degraded',
+      code: 'LLM_UNAVAILABLE',
+      operation: 'development_suggestions',
+      degraded: true,
+      degrade_reason: 'llm_client_unavailable',
+      actionable_feedback: 'Character development suggestions are unavailable because no LLM client is configured.',
+    };
+  }
+
+  private degradedFiveDimensionsAnalysis(char: Character): Record<string, unknown> {
+    return {
+      character: char.name,
+      status: 'degraded',
+      state: 'degraded',
+      code: 'LLM_UNAVAILABLE',
+      operation: 'five_dimension_analysis',
+      degraded: true,
+      degrade_reason: 'llm_client_unavailable',
+      actionable_feedback: 'Five-dimension narrative analysis is unavailable because no LLM client is configured.',
+    };
+  }
+
   // ========================================
-  // Default & Mock Methods
+  // Default methods
   // ========================================
 
   private defaultPersonality(): Personality {
@@ -1081,39 +1120,6 @@ export class CharacterManager {
     };
   }
 
-  private mockAnalysis(char: Character): Record<string, unknown> {
-    return {
-      character: char.name, consistency_score: 75,
-      personality_expression: '\u57FA\u672C\u4E00\u81F4',
-      motivation_clarity: '\u4E2D\u7B49', growth_visible: false,
-      suggestions: ['\u589E\u52A0\u5185\u5FC3\u72EC\u767D', '\u5F3A\u5316\u6027\u683C\u7279\u8D28\u8868\u73B0'],
-    };
-  }
-
-  private mockDevelopmentSuggestions(char: Character): Record<string, unknown> {
-    return {
-      character: char.name,
-      current_stage: char.growth.currentStage,
-      next_stage: GrowthStage.CROSSING_THRESHOLD,
-      suggested_events: ['\u9762\u4E34\u91CD\u5927\u9009\u62E9', '\u53D1\u73B0\u9690\u85CF\u771F\u76F8', '\u4E0E\u5BFC\u5E08\u76F8\u9047'],
-      relationship_opportunities: ['\u52A0\u6DF1\u4E0E\u76DF\u53CB\u7684\u4FE1\u4EFB', '\u4E0E\u5BF9\u624B\u4EA7\u751F\u51B2\u7A81'],
-      internal_growth: ['\u8D28\u7591\u539F\u6709\u4FE1\u5FF5', '\u53D1\u73B0\u65B0\u7684\u4EF7\u503C\u89C2'],
-    };
-  }
-
-  private mockFiveDimensionsAnalysis(char: Character): Record<string, unknown> {
-    return {
-      character: char.name,
-      dimensions: {
-        dynamic: { score: 60, evidence: ['\u60C5\u611F\u6709\u53D8\u5316'], suggestions: ['\u589E\u52A0\u60C5\u611F\u8F6C\u6298\u70B9'] },
-        competence: { score: 70, evidence: ['\u5C55\u793A\u4E86\u6280\u80FD'], suggestions: ['\u6DFB\u52A0\u66F4\u591A\u5C55\u793A\u573A\u666F'] },
-        eccentricity: { score: 50, evidence: [], suggestions: ['\u8D4B\u4E88\u72EC\u7279\u602A\u7656'] },
-        contrast: { score: 55, evidence: ['\u6709\u73AF\u5883\u4E0D\u9002\u5E94'], suggestions: ['\u589E\u5F3A\u73AF\u5883\u5BF9\u6BD4'] },
-        duality: { score: 40, evidence: [], suggestions: ['\u8BBE\u8BA1\u53CC\u91CD\u4EBA\u683C'] },
-      },
-      overall: 55, depth_level: 'MODERATE',
-    };
-  }
 
   private generateId(name: string): string {
     const content = `${name}-${new Date().toISOString()}`;

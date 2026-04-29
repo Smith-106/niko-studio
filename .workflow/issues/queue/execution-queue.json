@@ -1,22 +1,504 @@
 {
-  "id": null,
-  "status": "idle",
+  "id": "QUE-20260428-production-ready",
+  "status": "active",
   "session_id": null,
-  "source_task_id": null,
-  "issue_ids": [],
+  "source_task_id": "task-list#5",
+  "issue_ids": [
+    "ISS-20260428-001",
+    "ISS-20260428-002",
+    "ISS-20260428-003",
+    "ISS-20260428-004",
+    "ISS-20260428-005",
+    "ISS-20260428-006",
+    "ISS-20260428-007",
+    "ISS-20260428-008",
+    "ISS-20260428-009",
+    "ISS-20260426-004",
+    "ISS-20260426-005"
+  ],
   "solutions": [],
   "conflicts": [],
-  "execution_groups": [],
-  "parallel_groups": [],
-  "created_at": "2026-04-25T13:10:00Z",
+  "execution_groups": [
+    {
+      "id": "grp-p0-release-readiness",
+      "priority": "P0",
+      "goal": "Clear current blocking release-readiness failures before claiming production-ready delivery.",
+      "item_ids": [
+        "Q-P0-001",
+        "Q-P0-002",
+        "Q-P0-003",
+        "Q-P0-004",
+        "Q-P0-005",
+        "Q-P0-006"
+      ]
+    },
+    {
+      "id": "grp-p0-product-gap",
+      "priority": "P0",
+      "goal": "Close explicitly documented MVP-blocking product gaps.",
+      "item_ids": [
+        "Q-P0-007"
+      ]
+    },
+    {
+      "id": "grp-p1-capability-and-runtime",
+      "priority": "P1",
+      "goal": "Address high-priority capability gaps and runtime-stability items after the release gate is back to green.",
+      "item_ids": [
+        "Q-P1-001",
+        "Q-P1-002",
+        "Q-P1-003",
+        "Q-P1-004"
+      ]
+    },
+    {
+      "id": "grp-p2-contract-hardening",
+      "priority": "P2",
+      "goal": "Queue follow-up contract hardening after P0/P1 closure.",
+      "item_ids": [
+        "Q-P2-001"
+      ]
+    }
+  ],
+  "parallel_groups": [
+    {
+      "id": "pg-release-proof-lane",
+      "item_ids": [
+        "Q-P0-001",
+        "Q-P0-002",
+        "Q-P0-003",
+        "Q-P0-004",
+        "Q-P0-005"
+      ]
+    },
+    {
+      "id": "pg-capability-gap-lane",
+      "item_ids": [
+        "Q-P1-002",
+        "Q-P1-003"
+      ]
+    }
+  ],
+  "proposed_issues": [
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-001",
+      "title": "恢复 desktop 本地 release gate 绿灯",
+      "priority": "P0",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P0-001"
+      ],
+      "depends_on_issue_ids": [],
+      "parallel_lane": "release-proof",
+      "affected_components": [
+        "desktop/package.json",
+        "desktop/src",
+        "desktop/tests"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "automated",
+        "regression_scope": "affected",
+        "acceptance_type": "automated",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-002",
+      "title": "恢复 sidecar readiness 与 packaging dry-run",
+      "priority": "P0",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P0-002",
+        "Q-P0-003"
+      ],
+      "depends_on_issue_ids": [],
+      "parallel_lane": "release-proof",
+      "affected_components": [
+        "desktop/scripts",
+        "desktop/src-tauri",
+        "scripts/build_gateway_sidecar.py"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "both",
+        "regression_scope": "affected",
+        "acceptance_type": "both",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-003",
+      "title": "刷新 writing-helper 严格验收证据",
+      "priority": "P0",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P0-004"
+      ],
+      "depends_on_issue_ids": [],
+      "parallel_lane": "release-proof",
+      "affected_components": [
+        "scripts/check-writing-helper.ps1",
+        "scripts/start_gateway.py",
+        ".workflow/evidence/release"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "both",
+        "regression_scope": "related",
+        "acceptance_type": "both",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-004",
+      "title": "重建 local selftest enforcement 证明链",
+      "priority": "P0",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P0-005"
+      ],
+      "depends_on_issue_ids": [],
+      "parallel_lane": "release-proof",
+      "affected_components": [
+        "scripts/selftest_desktop_local.ps1",
+        "scripts/start_desktop_local.ps1",
+        ".workflow/evidence/release"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "both",
+        "regression_scope": "related",
+        "acceptance_type": "both",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-005",
+      "title": "回收 release summary 并关闭 100% delivery contract",
+      "priority": "P0",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P0-006"
+      ],
+      "depends_on_issue_ids": [
+        "DRAFT-ISS-20260428-001",
+        "DRAFT-ISS-20260428-002",
+        "DRAFT-ISS-20260428-003",
+        "DRAFT-ISS-20260428-004"
+      ],
+      "parallel_lane": "release-proof-finalize",
+      "affected_components": [
+        "release-check-summary.md",
+        "scripts/release_check_summary.py",
+        ".workflow/evidence/release"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "automated",
+        "regression_scope": "affected",
+        "acceptance_type": "automated",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-006",
+      "title": "实现 standalone AI text optimizer / niko polish 入口",
+      "priority": "P0",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P0-007"
+      ],
+      "depends_on_issue_ids": [],
+      "parallel_lane": "product-core",
+      "affected_components": [
+        "authoritative writing command surface",
+        "workflow action surface",
+        "product evidence/docs"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "both",
+        "regression_scope": "affected",
+        "acceptance_type": "both",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-007",
+      "title": "补齐可观测文本统计优化指标",
+      "priority": "P1",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P1-001"
+      ],
+      "depends_on_issue_ids": [
+        "DRAFT-ISS-20260428-006"
+      ],
+      "parallel_lane": "product-followups",
+      "affected_components": [
+        "evaluation output surface",
+        "quality metrics/reporting"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "automated",
+        "regression_scope": "affected",
+        "acceptance_type": "automated",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-008",
+      "title": "扩展 provider alignment 到 Grok/Ollama",
+      "priority": "P1",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P1-002"
+      ],
+      "depends_on_issue_ids": [],
+      "parallel_lane": "product-followups",
+      "affected_components": [
+        "provider selection layer",
+        "runtime provider config",
+        "provider regression tests"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "both",
+        "regression_scope": "affected",
+        "acceptance_type": "both",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-009",
+      "title": "提升 API 配置引导与校验体验",
+      "priority": "P1",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P1-003"
+      ],
+      "depends_on_issue_ids": [],
+      "parallel_lane": "product-followups",
+      "affected_components": [
+        "runtime config guidance",
+        "provider validation flow",
+        "operator-facing UX/messages"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "both",
+        "regression_scope": "related",
+        "acceptance_type": "both",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-010",
+      "title": "使 MCP workflow runtime caches 具备 workspace awareness",
+      "priority": "P1",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P1-004"
+      ],
+      "depends_on_issue_ids": [],
+      "parallel_lane": "runtime-hardening",
+      "affected_components": [
+        "src-ts/workflow",
+        "src-ts/mcp",
+        "workspace/session cache surfaces"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "integration",
+        "regression_scope": "affected",
+        "acceptance_type": "automated",
+        "commit_strategy": "atomic"
+      }
+    },
+    {
+      "draft_issue_id": "DRAFT-ISS-20260428-011",
+      "title": "收敛 container workflow DI canonical runtime contract",
+      "priority": "P2",
+      "status": "proposed",
+      "queue_item_ids": [
+        "Q-P2-001"
+      ],
+      "depends_on_issue_ids": [
+        "DRAFT-ISS-20260428-010"
+      ],
+      "parallel_lane": "runtime-contract",
+      "affected_components": [
+        "src-ts/container",
+        "src-ts/mcp runtime bridge",
+        "workflow runtime contract types"
+      ],
+      "lifecycle_requirements": {
+        "test_strategy": "integration",
+        "regression_scope": "related",
+        "acceptance_type": "automated",
+        "commit_strategy": "atomic"
+      }
+    }
+  ],
+  "queue_items": [
+    {
+      "id": "Q-P0-001",
+      "priority": "P0",
+      "status": "pending",
+      "category": "release",
+      "title": "Restore desktop check release gate to PASS",
+      "summary": "`desktop_check` is a blocking FAIL in the current release summary and must be green for production-ready sign-off.",
+      "source_ref": "release-check-summary.md:14",
+      "acceptance_signal": "desktop_check = PASS",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P0-002",
+      "priority": "P0",
+      "status": "pending",
+      "category": "release",
+      "title": "Restore desktop sidecar readiness to PASS",
+      "summary": "`desktop_sidecar_readiness` is a blocking FAIL in the current release summary.",
+      "source_ref": "release-check-summary.md:15",
+      "acceptance_signal": "desktop_sidecar_readiness = PASS",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P0-003",
+      "priority": "P0",
+      "status": "pending",
+      "category": "release",
+      "title": "Restore desktop packaging dry-run to PASS",
+      "summary": "`desktop_packaging_dry_run` is a blocking FAIL in the current release summary.",
+      "source_ref": "release-check-summary.md:16",
+      "acceptance_signal": "desktop_packaging_dry_run = PASS",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P0-004",
+      "priority": "P0",
+      "status": "pending",
+      "category": "release",
+      "title": "Refresh strict writing-helper acceptance evidence",
+      "summary": "`writing_helper_acceptance_signal` is a blocking FAIL in the current release summary because retained evidence is superseded.",
+      "source_ref": "release-check-summary.md:17,207-213",
+      "acceptance_signal": "writing_helper_acceptance_signal = PASS",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P0-005",
+      "priority": "P0",
+      "status": "pending",
+      "category": "release",
+      "title": "Re-establish local selftest enforcement proof",
+      "summary": "`local_selftest_enforcement` is a blocking FAIL in the current release summary.",
+      "source_ref": "release-check-summary.md:50",
+      "acceptance_signal": "local_selftest_enforcement = PASS",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P0-006",
+      "priority": "P0",
+      "status": "pending",
+      "category": "release",
+      "title": "Close delivery contract back to 100% GO",
+      "summary": "`delivery_contract_100_signal` is FAIL because the release dimension is not fully green.",
+      "source_ref": "release-check-summary.md:51,70-81,110-126",
+      "acceptance_signal": "delivery_contract_100_signal = PASS and Decision = GO",
+      "depends_on": [
+        "Q-P0-001",
+        "Q-P0-002",
+        "Q-P0-003",
+        "Q-P0-004",
+        "Q-P0-005"
+      ]
+    },
+    {
+      "id": "Q-P0-007",
+      "priority": "P0",
+      "status": "pending",
+      "category": "product-gap",
+      "title": "Implement standalone AI text optimizer entry",
+      "summary": "The PDD still marks a standalone AI text optimizer / `niko polish` as the top MVP补齐项 and says no explicit implementation was found.",
+      "source_ref": "docs/PDD.md:151-154,304-308",
+      "acceptance_signal": "A production-ready `polish` command and workflow action exist with traceable evidence.",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P1-001",
+      "priority": "P1",
+      "status": "pending",
+      "category": "product-gap",
+      "title": "Add observable text statistics optimization metrics",
+      "summary": "PDD defines burstiness / repetition / perplexity-proxy style metrics as the next non-blocking capability gap.",
+      "source_ref": "docs/PDD.md:154,309-313",
+      "acceptance_signal": "Evaluation outputs include the added proxy metrics with before/after comparison support.",
+      "depends_on": [
+        "Q-P0-007"
+      ]
+    },
+    {
+      "id": "Q-P1-002",
+      "priority": "P1",
+      "status": "pending",
+      "category": "product-gap",
+      "title": "Expand provider alignment to Grok and Ollama",
+      "summary": "PDD marks broader provider alignment as a high-priority capability gap after the core polish entry.",
+      "source_ref": "docs/PDD.md:155-160,313-316",
+      "acceptance_signal": "Provider layer recognizes and can execute the expanded provider set with failure fallback.",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P1-003",
+      "priority": "P1",
+      "status": "pending",
+      "category": "product-gap",
+      "title": "Improve API configuration guidance and validation UX",
+      "summary": "PDD calls for stronger provider/API configuration guidance without adding a heavy new frontend surface.",
+      "source_ref": "docs/PDD.md:158-160,317-320",
+      "acceptance_signal": "Missing key / provider-unavailable / fallback-order guidance is visible and testable.",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P1-004",
+      "priority": "P1",
+      "status": "pending",
+      "category": "runtime",
+      "title": "Make MCP workflow runtime caches workspace-aware",
+      "summary": "An active planned issue remains open for process-global workflow caches that can bleed across workspace roots and sessions.",
+      "source_ref": ".workflow/issues/issues.jsonl:1",
+      "upstream_issue_id": "ISS-20260426-004",
+      "acceptance_signal": "Workflow runtime caches are isolated by workspace/session and no longer bleed state.",
+      "depends_on": []
+    },
+    {
+      "id": "Q-P2-001",
+      "priority": "P2",
+      "status": "pending",
+      "category": "runtime-contract",
+      "title": "Converge container workflow DI canonical runtime contract",
+      "summary": "An active planned issue remains open for the legacy executeLevel-oriented container workflow interface and its MCP runtime bridge casts.",
+      "source_ref": ".workflow/issues/issues.jsonl:2",
+      "upstream_issue_id": "ISS-20260426-005",
+      "acceptance_signal": "Container workflow interface matches the canonical runtime contract without MCP bridge casts.",
+      "depends_on": []
+    }
+  ],
+  "created_at": "2026-04-28T00:00:00Z",
   "_metadata": {
-    "version": "2.1",
-    "total_tasks": 0,
-    "pending_count": 0,
+    "version": "3.1",
+    "total_tasks": 12,
+    "pending_count": 12,
     "executing_count": 0,
     "completed_count": 0,
     "failed_count": 0,
-    "updated_at": "2026-04-25T13:10:00Z",
-    "note": "No active execution queue. Historical queue records remain in .workflow/issues/queues/index.json and .workflow/issues/queues/*.json."
+    "updated_at": "2026-04-28T00:00:00Z",
+    "note": "Centralized production-ready execution queue. Update this file as future searches discover new P0/P1/P2 items or close existing ones.",
+    "priority_counts": {
+      "P0": 7,
+      "P1": 4,
+      "P2": 1
+    },
+    "sources": [
+      "release-check-summary.md",
+      "docs/PDD.md",
+      ".workflow/issues/issues.jsonl"
+    ],
+    "cleanup_notes": [
+      "Removed completed 2026-04-25 architecture-debt issues from the active queue after confirming they are completed in .workflow/issues/issue-history.jsonl.",
+      "Added the still-open ISS-20260426-005 planned item so the centralized queue reflects the full current P0/P1/P2 backlog."
+    ]
   }
 }

@@ -16,6 +16,7 @@ const ENV_KEYS = [
   'NIKO_NEO4J_ENABLED',
   'NIKO_LANGFLOW_ENABLED',
   'NIKO_DBHUB_GOVERNANCE_ENABLED',
+  'NIKO_ENV',
 ] as const;
 
 const ORIGINAL_ENV = Object.fromEntries(
@@ -54,6 +55,62 @@ describe('integrations adapter factory', () => {
       langflowEnabled: false,
       dbhubGovernanceEnabled: false,
     });
+    expect(adapters.requestedFlags).toEqual({
+      postgresEnabled: false,
+      redisCacheEnabled: false,
+      elasticsearchEnabled: false,
+      neo4jEnabled: false,
+      langflowEnabled: false,
+      dbhubGovernanceEnabled: false,
+    });
+    expect(adapters.capabilities.postgresEnabled).toEqual({
+      flag: 'postgresEnabled',
+      integration: 'postgres-shadow',
+      support_level: 'experimental',
+      requested: false,
+      enabled: false,
+      detail: 'Postgres shadow-write integration is disabled; local-first persistence remains authoritative.',
+    });
+    expect(adapters.capabilities.redisCacheEnabled).toEqual({
+      flag: 'redisCacheEnabled',
+      integration: 'redis-cache-rate-limit',
+      support_level: 'experimental',
+      requested: false,
+      enabled: false,
+      detail: 'Redis cache/rate-limit integration is disabled; in-process defaults remain authoritative.',
+    });
+    expect(adapters.capabilities.elasticsearchEnabled).toEqual({
+      flag: 'elasticsearchEnabled',
+      integration: 'elasticsearch-search',
+      support_level: 'experimental',
+      requested: false,
+      enabled: false,
+      detail: 'Elasticsearch integration is disabled; local retrieval remains the only active search path.',
+    });
+    expect(adapters.capabilities.neo4jEnabled).toEqual({
+      flag: 'neo4jEnabled',
+      integration: 'neo4j-projection',
+      support_level: 'disabled',
+      requested: false,
+      enabled: false,
+      detail: 'Neo4j projection is disabled; SQLite graph storage remains authoritative.',
+    });
+    expect(adapters.capabilities.langflowEnabled).toEqual({
+      flag: 'langflowEnabled',
+      integration: 'langflow-orchestration',
+      support_level: 'disabled',
+      requested: false,
+      enabled: false,
+      detail: 'Langflow orchestration is disabled; no external orchestration flow is started.',
+    });
+    expect(adapters.capabilities.dbhubGovernanceEnabled).toEqual({
+      flag: 'dbhubGovernanceEnabled',
+      integration: 'dbhub-governance',
+      support_level: 'disabled',
+      requested: false,
+      enabled: false,
+      detail: 'DBHub governance hook is disabled; local governance scripts remain authoritative.',
+    });
     expect(adapters.storageShadow).toBeInstanceOf(integrations.NoopStorageShadowAdapter);
     expect(adapters.cacheRateLimit).toBeInstanceOf(integrations.NoopCacheRateLimitAdapter);
     expect(adapters.search).toBeInstanceOf(integrations.NoopSearchAdapter);
@@ -68,30 +125,55 @@ describe('integrations adapter factory', () => {
       status: 'disabled',
       flow_name: 'sync',
       state: 'disabled',
+      support_level: 'disabled',
       code: 'INTEGRATION_DISABLED',
-      detail: 'Langflow orchestration is disabled; no external orchestration flow was started.',
+      detail: 'Langflow orchestration is disabled; no external orchestration flow is started.',
     });
     expect(adapters.storageShadow.getStatus()).toEqual({
       integration: 'postgres-shadow',
       state: 'disabled',
+      support_level: 'experimental',
       code: 'INTEGRATION_DISABLED',
       detail: 'Postgres shadow-write integration is disabled; local-first persistence remains authoritative.',
+    });
+    expect(adapters.cacheRateLimit.getStatus()).toEqual({
+      integration: 'redis-cache-rate-limit',
+      state: 'disabled',
+      support_level: 'experimental',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Redis cache/rate-limit integration is disabled; in-process defaults remain authoritative.',
     });
     expect(adapters.search.getStatus()).toEqual({
       integration: 'elasticsearch-search',
       state: 'disabled',
+      support_level: 'experimental',
       code: 'INTEGRATION_DISABLED',
       detail: 'Elasticsearch integration is disabled; local retrieval remains the only active search path.',
+    });
+    expect(adapters.graphProjection.getStatus()).toEqual({
+      integration: 'neo4j-projection',
+      state: 'disabled',
+      support_level: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'Neo4j projection is disabled; SQLite graph storage remains authoritative.',
+    });
+    expect(adapters.governance.getStatus()).toEqual({
+      integration: 'dbhub-governance',
+      state: 'disabled',
+      support_level: 'disabled',
+      code: 'INTEGRATION_DISABLED',
+      detail: 'DBHub governance hook is disabled; local governance scripts remain authoritative.',
     });
     expect(adapters.orchestration.getStatus()).toEqual({
       integration: 'langflow-orchestration',
       state: 'disabled',
+      support_level: 'disabled',
       code: 'INTEGRATION_DISABLED',
-      detail: 'Langflow orchestration is disabled; no external orchestration flow was started.',
+      detail: 'Langflow orchestration is disabled; no external orchestration flow is started.',
     });
   });
 
-  it('selects stub adapters when integration flags are enabled', async () => {
+  it('keeps experimental adapters available outside production while exposing capability metadata', async () => {
     process.env['INTEGRATION_POSTGRES_ENABLED'] = 'true';
     process.env['INTEGRATION_REDIS_CACHE_ENABLED'] = '1';
     process.env['INTEGRATION_ELASTICSEARCH_ENABLED'] = 'true';
@@ -101,7 +183,7 @@ describe('integrations adapter factory', () => {
 
     const adapters = integrations.createIntegrationAdapters();
 
-    expect(adapters.flags).toEqual({
+    expect(adapters.requestedFlags).toEqual({
       postgresEnabled: true,
       redisCacheEnabled: true,
       elasticsearchEnabled: true,
@@ -109,41 +191,196 @@ describe('integrations adapter factory', () => {
       langflowEnabled: true,
       dbhubGovernanceEnabled: true,
     });
+    expect(adapters.flags).toEqual({
+      postgresEnabled: true,
+      redisCacheEnabled: true,
+      elasticsearchEnabled: true,
+      neo4jEnabled: false,
+      langflowEnabled: false,
+      dbhubGovernanceEnabled: false,
+    });
+    expect(adapters.capabilities.postgresEnabled).toEqual({
+      flag: 'postgresEnabled',
+      integration: 'postgres-shadow',
+      support_level: 'experimental',
+      requested: true,
+      enabled: true,
+      detail: 'Postgres shadow-write remains experimental and non-authoritative; local-first persistence must stay authoritative.',
+    });
+    expect(adapters.capabilities.redisCacheEnabled).toEqual({
+      flag: 'redisCacheEnabled',
+      integration: 'redis-cache-rate-limit',
+      support_level: 'experimental',
+      requested: true,
+      enabled: true,
+      detail: 'Redis cache/rate-limit remains experimental and non-authoritative; in-process defaults stay authoritative.',
+    });
+    expect(adapters.capabilities.elasticsearchEnabled).toEqual({
+      flag: 'elasticsearchEnabled',
+      integration: 'elasticsearch-search',
+      support_level: 'experimental',
+      requested: true,
+      enabled: true,
+      detail: 'Elasticsearch search remains experimental and must fall back to local retrieval when no durable external index is available.',
+    });
+    expect(adapters.capabilities.neo4jEnabled).toEqual({
+      flag: 'neo4jEnabled',
+      integration: 'neo4j-projection',
+      support_level: 'disabled',
+      requested: true,
+      enabled: false,
+      detail: 'Neo4j projection is not part of the supported runtime and stays disabled until a durable projection writer exists.',
+    });
+    expect(adapters.capabilities.langflowEnabled).toEqual({
+      flag: 'langflowEnabled',
+      integration: 'langflow-orchestration',
+      support_level: 'disabled',
+      requested: true,
+      enabled: false,
+      detail: 'Langflow orchestration is not part of the supported runtime and stays disabled until a real remote flow runner exists.',
+    });
+    expect(adapters.capabilities.dbhubGovernanceEnabled).toEqual({
+      flag: 'dbhubGovernanceEnabled',
+      integration: 'dbhub-governance',
+      support_level: 'disabled',
+      requested: true,
+      enabled: false,
+      detail: 'DBHub governance hooks are not part of the supported runtime and stay disabled until a durable bridge exists.',
+    });
     expect(adapters.storageShadow).toBeInstanceOf(integrations.StubPostgresShadowAdapter);
     expect(adapters.cacheRateLimit).toBeInstanceOf(integrations.StubRedisCacheRateLimitAdapter);
     expect(adapters.search).toBeInstanceOf(integrations.StubElasticsearchAdapter);
-    expect(adapters.graphProjection).toBeInstanceOf(integrations.StubNeo4jProjectionAdapter);
-    expect(adapters.governance).toBeInstanceOf(integrations.StubDbhubGovernanceHook);
-    expect(adapters.orchestration).toBeInstanceOf(integrations.StubLangflowOrchestrationHook);
+    expect(adapters.graphProjection).toBeInstanceOf(integrations.NoopGraphProjectionAdapter);
+    expect(adapters.governance).toBeInstanceOf(integrations.NoopGovernanceHookAdapter);
+    expect(adapters.orchestration).toBeInstanceOf(integrations.NoopOrchestrationHookAdapter);
     await expect(adapters.storageShadow.shadowWriteMemory({ id: 'mem-2' })).resolves.toBe(false);
-    await expect(adapters.cacheRateLimit.cacheSet('cache-key', { cached: true }, 30)).resolves.toBe(true);
+    await expect(adapters.cacheRateLimit.cacheSet('cache-key', { cached: true }, 30)).resolves.toBe(false);
     await expect(adapters.search.indexDocument({ id: 'doc-1' })).resolves.toBe(false);
-    await expect(adapters.graphProjection.projectEntity({ id: 'entity-1' })).resolves.toBe(true);
+    await expect(adapters.graphProjection.projectEntity({ id: 'entity-1' })).resolves.toBe(false);
+    await expect(adapters.governance.onSchemaWorkflow('sync', {})).resolves.toBe(false);
     expect(adapters.storageShadow.getStatus()).toEqual({
       integration: 'postgres-shadow',
-      state: 'unsupported',
+      state: 'degraded',
+      support_level: 'experimental',
       code: 'POSTGRES_SHADOW_UNSUPPORTED',
       detail: 'Postgres shadow-write is enabled in configuration but no durable external writer is implemented.',
+    });
+    expect(adapters.cacheRateLimit.getStatus()).toEqual({
+      integration: 'redis-cache-rate-limit',
+      state: 'degraded',
+      support_level: 'experimental',
+      code: 'REDIS_CACHE_RATE_LIMIT_DEGRADED',
+      detail: 'Redis cache/rate-limit is enabled in configuration but no external backend is implemented; in-process defaults remain active.',
     });
     expect(adapters.search.getStatus()).toEqual({
       integration: 'elasticsearch-search',
       state: 'degraded',
+      support_level: 'experimental',
       code: 'ELASTICSEARCH_DEGRADED',
       detail: 'Elasticsearch is enabled but no durable external index is available; requests must fall back to local retrieval.',
+    });
+    expect(adapters.graphProjection.getStatus()).toEqual({
+      integration: 'neo4j-projection',
+      state: 'unsupported',
+      support_level: 'disabled',
+      code: 'INTEGRATION_DISABLED_BY_POLICY',
+      detail: 'Neo4j projection is not part of the supported runtime and stays disabled until a durable projection writer exists.',
+    });
+    expect(adapters.governance.getStatus()).toEqual({
+      integration: 'dbhub-governance',
+      state: 'unsupported',
+      support_level: 'disabled',
+      code: 'INTEGRATION_DISABLED_BY_POLICY',
+      detail: 'DBHub governance hooks are not part of the supported runtime and stay disabled until a durable bridge exists.',
     });
     await expect(adapters.orchestration.run('shadow-sync', { topic: 'memory' })).resolves.toEqual({
       status: 'unsupported',
       flow_name: 'shadow-sync',
-      provider: 'langflow',
       state: 'unsupported',
-      code: 'LANGFLOW_UNSUPPORTED',
-      detail: 'Langflow orchestration is enabled in configuration but no real remote flow runner is implemented.',
+      support_level: 'disabled',
+      code: 'INTEGRATION_DISABLED_BY_POLICY',
+      detail: 'Langflow orchestration is not part of the supported runtime and stays disabled until a real remote flow runner exists.',
     });
     expect(adapters.orchestration.getStatus()).toEqual({
       integration: 'langflow-orchestration',
       state: 'unsupported',
-      code: 'LANGFLOW_UNSUPPORTED',
-      detail: 'Langflow orchestration is enabled in configuration but no real remote flow runner is implemented.',
+      support_level: 'disabled',
+      code: 'INTEGRATION_DISABLED_BY_POLICY',
+      detail: 'Langflow orchestration is not part of the supported runtime and stays disabled until a real remote flow runner exists.',
+    });
+  });
+
+  it('disables experimental adapters in production and exposes the policy through capability metadata', async () => {
+    process.env['NIKO_ENV'] = 'production';
+    process.env['INTEGRATION_POSTGRES_ENABLED'] = 'true';
+    process.env['INTEGRATION_REDIS_CACHE_ENABLED'] = 'true';
+    process.env['INTEGRATION_ELASTICSEARCH_ENABLED'] = 'true';
+
+    const adapters = integrations.createIntegrationAdapters();
+
+    expect(adapters.requestedFlags).toEqual({
+      postgresEnabled: true,
+      redisCacheEnabled: true,
+      elasticsearchEnabled: true,
+      neo4jEnabled: false,
+      langflowEnabled: false,
+      dbhubGovernanceEnabled: false,
+    });
+    expect(adapters.flags).toEqual({
+      postgresEnabled: false,
+      redisCacheEnabled: false,
+      elasticsearchEnabled: false,
+      neo4jEnabled: false,
+      langflowEnabled: false,
+      dbhubGovernanceEnabled: false,
+    });
+    expect(adapters.capabilities.postgresEnabled).toEqual({
+      flag: 'postgresEnabled',
+      integration: 'postgres-shadow',
+      support_level: 'experimental',
+      requested: true,
+      enabled: false,
+      detail: 'Postgres shadow-write remains experimental and non-authoritative; local-first persistence must stay authoritative. Experimental integrations are disabled in production.',
+    });
+    expect(adapters.capabilities.redisCacheEnabled).toEqual({
+      flag: 'redisCacheEnabled',
+      integration: 'redis-cache-rate-limit',
+      support_level: 'experimental',
+      requested: true,
+      enabled: false,
+      detail: 'Redis cache/rate-limit remains experimental and non-authoritative; in-process defaults stay authoritative. Experimental integrations are disabled in production.',
+    });
+    expect(adapters.capabilities.elasticsearchEnabled).toEqual({
+      flag: 'elasticsearchEnabled',
+      integration: 'elasticsearch-search',
+      support_level: 'experimental',
+      requested: true,
+      enabled: false,
+      detail: 'Elasticsearch search remains experimental and must fall back to local retrieval when no durable external index is available. Experimental integrations are disabled in production.',
+    });
+    expect(adapters.storageShadow).toBeInstanceOf(integrations.NoopStorageShadowAdapter);
+    expect(adapters.cacheRateLimit).toBeInstanceOf(integrations.NoopCacheRateLimitAdapter);
+    expect(adapters.search).toBeInstanceOf(integrations.NoopSearchAdapter);
+    expect(adapters.storageShadow.getStatus()).toEqual({
+      integration: 'postgres-shadow',
+      state: 'degraded',
+      support_level: 'experimental',
+      code: 'INTEGRATION_EXPERIMENTAL_DISABLED_IN_PRODUCTION',
+      detail: 'Postgres shadow-write remains experimental and non-authoritative; local-first persistence must stay authoritative. Experimental integrations are disabled in production.',
+    });
+    expect(adapters.cacheRateLimit.getStatus()).toEqual({
+      integration: 'redis-cache-rate-limit',
+      state: 'degraded',
+      support_level: 'experimental',
+      code: 'INTEGRATION_EXPERIMENTAL_DISABLED_IN_PRODUCTION',
+      detail: 'Redis cache/rate-limit remains experimental and non-authoritative; in-process defaults stay authoritative. Experimental integrations are disabled in production.',
+    });
+    expect(adapters.search.getStatus()).toEqual({
+      integration: 'elasticsearch-search',
+      state: 'degraded',
+      support_level: 'experimental',
+      code: 'INTEGRATION_EXPERIMENTAL_DISABLED_IN_PRODUCTION',
+      detail: 'Elasticsearch search remains experimental and must fall back to local retrieval when no durable external index is available. Experimental integrations are disabled in production.',
     });
   });
 
@@ -157,7 +394,7 @@ describe('integrations adapter factory', () => {
 
     const adapters = integrations.createIntegrationAdapters();
 
-    expect(adapters.flags).toEqual({
+    expect(adapters.requestedFlags).toEqual({
       postgresEnabled: true,
       redisCacheEnabled: true,
       elasticsearchEnabled: true,
@@ -165,11 +402,19 @@ describe('integrations adapter factory', () => {
       langflowEnabled: true,
       dbhubGovernanceEnabled: true,
     });
+    expect(adapters.flags).toEqual({
+      postgresEnabled: true,
+      redisCacheEnabled: true,
+      elasticsearchEnabled: true,
+      neo4jEnabled: false,
+      langflowEnabled: false,
+      dbhubGovernanceEnabled: false,
+    });
     expect(adapters.storageShadow).toBeInstanceOf(integrations.StubPostgresShadowAdapter);
     expect(adapters.cacheRateLimit).toBeInstanceOf(integrations.StubRedisCacheRateLimitAdapter);
     expect(adapters.search).toBeInstanceOf(integrations.StubElasticsearchAdapter);
-    expect(adapters.graphProjection).toBeInstanceOf(integrations.StubNeo4jProjectionAdapter);
-    expect(adapters.governance).toBeInstanceOf(integrations.StubDbhubGovernanceHook);
-    expect(adapters.orchestration).toBeInstanceOf(integrations.StubLangflowOrchestrationHook);
+    expect(adapters.graphProjection).toBeInstanceOf(integrations.NoopGraphProjectionAdapter);
+    expect(adapters.governance).toBeInstanceOf(integrations.NoopGovernanceHookAdapter);
+    expect(adapters.orchestration).toBeInstanceOf(integrations.NoopOrchestrationHookAdapter);
   });
 });

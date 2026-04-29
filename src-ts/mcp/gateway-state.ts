@@ -123,7 +123,10 @@ export function buildGatewayDeps(
     },
     getConfigValue: (key: string, defaultValue?: unknown) =>
       getAppConfigValue(mapConfigKeyToSharedKey(key), defaultValue),
-    loadServicesConfig: () => loadServicesConfig(),
+    loadServicesConfig: () => {
+      const configPath = process.env.NIKO_CONFIG_PATH?.trim();
+      return loadServicesConfig(configPath || undefined);
+    },
     getMetricsSnapshot: () => getMetricsSnapshot(),
     getObservabilitySnapshot,
     runtimeSessionId: RUNTIME_SESSION_ID,

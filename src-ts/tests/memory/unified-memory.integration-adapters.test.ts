@@ -82,6 +82,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
 
   it('invokes the injected shadow-write adapter when postgres integration is enabled', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
+    process.env.NIKO_ENV = 'development';
     const adapters = createIntegrationAdapters();
     const shadowWriteSpy = vi.spyOn(adapters.storageShadow, 'shadowWriteMemory');
     const { basePath, dbPath } = createDbPath('shadow-enabled');
@@ -138,6 +139,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
 
   it('preserves the local write when the shadow-write adapter fails', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
+    process.env.NIKO_ENV = 'development';
     const adapters = createIntegrationAdapters();
     const shadowWriteSpy = vi
       .spyOn(adapters.storageShadow, 'shadowWriteMemory')
@@ -178,6 +180,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
 
   it('preserves the local write when the shadow-write adapter does not confirm success', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
+    process.env.NIKO_ENV = 'development';
     const adapters = createIntegrationAdapters();
     const shadowWriteSpy = vi
       .spyOn(adapters.storageShadow, 'shadowWriteMemory')
@@ -221,6 +224,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
 
   it('uses environment-selected default adapters when no integration bundle is injected', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
+    process.env.NIKO_ENV = 'development';
     const shadowWriteSpy = vi.spyOn(StubPostgresShadowAdapter.prototype, 'shadowWriteMemory');
     const { basePath, dbPath } = createDbPath('shadow-default-env');
     const engine = new UnifiedMemoryEngine({ dbPath });
@@ -265,6 +269,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
 
   it('uses environment-selected default adapters on the singleton accessor path', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
+    process.env.NIKO_ENV = 'development';
     const shadowWriteSpy = vi.spyOn(StubPostgresShadowAdapter.prototype, 'shadowWriteMemory');
     const { basePath, dbPath } = createDbPath('singleton-default-env');
 
@@ -314,6 +319,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
 
   it('shadow-writes merged memories with inherited metadata on the merge path', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
+    process.env.NIKO_ENV = 'development';
     const shadowWriteSpy = vi.spyOn(StubPostgresShadowAdapter.prototype, 'shadowWriteMemory');
     const { basePath, dbPath } = createDbPath('shadow-merge-default-env');
     const engine = new UnifiedMemoryEngine({ dbPath });
@@ -401,6 +407,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
 
   it('preserves merge resolution when merge shadow-write throws after local merge is stored', async () => {
     process.env[POSTGRES_ENV_KEY] = 'true';
+    process.env.NIKO_ENV = 'development';
     const shadowWriteSpy = vi.spyOn(
       StubPostgresShadowAdapter.prototype,
       'shadowWriteMemory',

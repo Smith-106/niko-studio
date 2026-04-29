@@ -110,7 +110,7 @@ describe('CharacterManager', () => {
     expect(restored?.dualPersonality?.primaryPersona.name).toBe('白昼周衡');
   });
 
-  it('returns deterministic mock outputs when llm is unavailable and validates consistency', async () => {
+  it('returns explicit degraded responses when llm is unavailable and still validates consistency', async () => {
     const manager = new CharacterManager();
     const character = manager.createCharacter('季宁', 'protagonist');
 
@@ -157,10 +157,31 @@ describe('CharacterManager', () => {
     const fiveDimensions = await manager.analyzeFiveDimensions(character.id, '角色在危机中展现能力');
     const consistency = manager.validateConsistency(character.id);
 
-    expect(analysis).toHaveProperty('consistency_score');
-    expect(development).toHaveProperty('next_stage');
-    expect(fiveDimensions).toHaveProperty('dimensions');
-    expect(fiveDimensions).toHaveProperty('overall');
+    expect(analysis).toMatchObject({
+      character: '季宁',
+      status: 'degraded',
+      state: 'degraded',
+      code: 'LLM_UNAVAILABLE',
+      operation: 'character_analysis',
+    });
+    expect(development).toMatchObject({
+      character: '季宁',
+      status: 'degraded',
+      state: 'degraded',
+      code: 'LLM_UNAVAILABLE',
+      operation: 'development_suggestions',
+    });
+    expect(fiveDimensions).toMatchObject({
+      character: '季宁',
+      status: 'degraded',
+      state: 'degraded',
+      code: 'LLM_UNAVAILABLE',
+      operation: 'five_dimension_analysis',
+    });
+    expect(analysis).not.toHaveProperty('consistency_score');
+    expect(development).not.toHaveProperty('next_stage');
+    expect(fiveDimensions).not.toHaveProperty('dimensions');
+    expect(fiveDimensions).not.toHaveProperty('overall');
     expect(consistency.valid).toBe(false);
     expect((consistency.issues as string[]).length).toBeGreaterThan(0);
   });

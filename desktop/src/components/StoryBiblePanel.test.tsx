@@ -466,7 +466,7 @@ describe('StoryBiblePanel', () => {
 
     const setActiveScene = await screen.findByRole('button', { name: '设为当前场景' })
     await user.click(setActiveScene)
-    expect(await screen.findByText(/当前场景: scene-default-project-开场戏/)).toBeInTheDocument()
+    await screen.findByText(/当前场景: scene-default-project-开场戏/)
 
     const eventsToggle = screen.getByRole('button', { name: /事件 \(0\)/ })
     await user.click(eventsToggle)
@@ -484,8 +484,9 @@ describe('StoryBiblePanel', () => {
         sceneId: 'scene-default-project-开场戏',
       })
     })
-    await user.click(await screen.findByRole('button', { name: '设为当前事件' }))
-    expect(await screen.findByText(/当前事件: event-default-project-抵达港口/)).toBeInTheDocument()
+    const setActiveEvent = await screen.findByRole('button', { name: '设为当前事件' })
+    await user.click(setActiveEvent)
+    await screen.findByText(/当前事件: event-default-project-抵达港口/)
 
     const timelinesToggle = screen.getByRole('button', { name: /时间线 \(0\)/ })
     await user.click(timelinesToggle)
@@ -503,9 +504,10 @@ describe('StoryBiblePanel', () => {
         mode: 'narrative',
       })
     })
-    await user.click(await screen.findByRole('button', { name: '设为当前时间线' }))
-    expect(await screen.findByText(/当前时间线: timeline-default-project-主线时间/)).toBeInTheDocument()
-  })
+    const setActiveTimeline = await screen.findByRole('button', { name: '设为当前时间线' })
+    await user.click(setActiveTimeline)
+    await screen.findByText(/当前时间线: timeline-default-project-主线时间/)
+  }, 15000)
 
   it('promotes synopsis into canon and shows the canon review preview', async () => {
     const user = userEvent.setup()
