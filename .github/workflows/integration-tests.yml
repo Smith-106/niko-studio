@@ -91,7 +91,7 @@ jobs:
           path: vitest-integration.xml
 
       - name: Upload coverage to Codecov (internal)
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: ./src-ts/coverage/cobertura-coverage.xml
           fail_ci_if_error: false
