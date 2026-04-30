@@ -17,6 +17,7 @@ function createMockIncoming(partial: Partial<IncomingMessage> = {}): IncomingMes
     method: 'GET',
     url: '/',
     headers: {},
+    socket: { remoteAddress: '127.0.0.1' },
     on: vi.fn(),
     ...partial,
   } as unknown as IncomingMessage;

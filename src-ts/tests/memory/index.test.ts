@@ -403,12 +403,12 @@ describe('memory/index barrel', () => {
       expect(badPlugin.onMemoryAdded).toHaveBeenCalledTimes(1);
       expect(
         errorSpy.mock.calls.some((call) =>
-          String(call[0]).includes('Memory plugin load failed: bad-plugin: Error: load failed'),
+          String(call[0]).includes('Memory plugin load failed') && String(call[0]).includes('bad-plugin'),
         ),
       ).toBe(true);
       expect(
         errorSpy.mock.calls.some((call) =>
-          String(call[0]).includes('Memory plugin callback failed: bad-plugin: Error: callback failed'),
+          String(call[0]).includes('Memory plugin callback failed') && String(call[0]).includes('bad-plugin'),
         ),
       ).toBe(true);
 

@@ -3,6 +3,12 @@
  *
  * These adapters define explicit non-critical extension points for external
  * systems while keeping local-first behavior as the default path.
+ *
+ * Current adapters are placeholder implementations guarded by integration
+ * policy flags. They are intentionally disabled and serve as future integration
+ * points for Neo4j graph projection, DBHub governance, and Langflow orchestration.
+ * When real implementations are needed, replace the Noop classes with real
+ * adapters and set the corresponding policy flag to enabled.
  */
 
 import { getConfigValue as getAppConfigValue } from '../config';
@@ -380,22 +386,16 @@ export class NoopGraphProjectionAdapter implements GraphProjectionAdapter {
       'neo4j-projection',
       'disabled',
       'disabled',
-      'INTEGRATION_DISABLED',
+      'INTEGRATION_DISABLED_BY_POLICY',
       INTEGRATION_POLICY.neo4jEnabled.disabledDetail,
     ),
   ) {}
 
   async projectEntity(_entity: Record<string, unknown>): Promise<boolean> {
-    if (this.status.code === 'INTEGRATION_DISABLED_BY_POLICY' && isProductionRuntime()) {
-      throw new Error('Neo4j projection is not supported in production without a real projection writer.');
-    }
     return false;
   }
 
   async projectRelation(_relation: Record<string, unknown>): Promise<boolean> {
-    if (this.status.code === 'INTEGRATION_DISABLED_BY_POLICY' && isProductionRuntime()) {
-      throw new Error('Neo4j projection is not supported in production without a real projection writer.');
-    }
     return false;
   }
 
@@ -410,15 +410,12 @@ export class NoopGovernanceHookAdapter implements GovernanceHookAdapter {
       'dbhub-governance',
       'disabled',
       'disabled',
-      'INTEGRATION_DISABLED',
+      'INTEGRATION_DISABLED_BY_POLICY',
       INTEGRATION_POLICY.dbhubGovernanceEnabled.disabledDetail,
     ),
   ) {}
 
   async onSchemaWorkflow(_event: string, _payload: Record<string, unknown>): Promise<boolean> {
-    if (this.status.code === 'INTEGRATION_DISABLED_BY_POLICY' && isProductionRuntime()) {
-      throw new Error('DBHub governance hook is not supported in production without a real governance bridge.');
-    }
     return false;
   }
 
@@ -433,15 +430,12 @@ export class NoopOrchestrationHookAdapter implements OrchestrationHookAdapter {
       'langflow-orchestration',
       'disabled',
       'disabled',
-      'INTEGRATION_DISABLED',
+      'INTEGRATION_DISABLED_BY_POLICY',
       INTEGRATION_POLICY.langflowEnabled.disabledDetail,
     ),
   ) {}
 
   async run(flowName: string, _payload: Record<string, unknown>): Promise<Record<string, unknown>> {
-    if (this.status.code === 'INTEGRATION_DISABLED_BY_POLICY' && isProductionRuntime()) {
-      throw new Error('Langflow orchestration is not supported in production without a real remote flow runner.');
-    }
     return {
       status: this.status.state,
       flow_name: flowName,

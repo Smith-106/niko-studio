@@ -165,7 +165,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
       expect(added).toMatchObject({ status: 'created' });
       expect(shadowWriteSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Postgres shadow write failed, local-first path preserved: Error: shadow failed'),
+        expect.stringContaining('Postgres shadow write failed, local-first path preserved'),
       );
       expect(temporal).toHaveLength(1);
       expect(temporal[0]).toMatchObject({
@@ -208,7 +208,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
       expect(added).toMatchObject({ status: 'created' });
       expect(shadowWriteSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy).toHaveBeenCalledWith(
-        'Postgres shadow write returned non-success, local-first path preserved',
+        expect.stringContaining('Postgres shadow write returned non-success, local-first path preserved'),
       );
       expect(temporal).toHaveLength(1);
       expect(temporal[0]).toMatchObject({
@@ -474,9 +474,7 @@ describe('UnifiedMemoryEngine integration adapters', () => {
       });
       expect(shadowWriteSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Postgres shadow write failed, local-first path preserved: Error: merge shadow failed',
-        ),
+        expect.stringContaining('Postgres shadow write failed, local-first path preserved'),
       );
       expect(temporal).toEqual([
         expect.objectContaining({

@@ -36,6 +36,12 @@ export {
   criticEvaluateEndpoint,
   criticSuggestionsEndpoint,
   criticConsistencyEndpoint,
+  consistencyCheckEndpoint,
+  runConsistencyCheck,
+  runConsistencyCheckCli,
+  mainConsistencyCheckCli,
+  formatConsistencyCheckText,
+  buildConsistencyInputFromWorkspace,
 } from './critic';
 
 export {

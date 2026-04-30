@@ -32,10 +32,7 @@ describe('EmbeddingEngine fallback path', () => {
     engine.embed('test input for warning');
 
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('EmbeddingEngine'),
-    );
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('degraded'),
+      expect.stringContaining('degraded mode'),
     );
   });
 

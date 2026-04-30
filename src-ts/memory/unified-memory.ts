@@ -25,6 +25,9 @@ import {
   type IntegrationFlags as SharedIntegrationFlags,
   type StorageShadowAdapter as SharedStorageShadowAdapter,
 } from "../integrations";
+import { createLogger } from "../logger";
+
+const log = createLogger('memory');
 
 type DatabaseType = InstanceType<typeof BetterSqlite3>;
 
@@ -552,7 +555,7 @@ export class EmbeddingEngine {
     if (this._model === null) {
       // In the TypeScript port, actual embedding models would be injected.
       // Fallback to dummy embeddings if no model is available.
-      console.warn("EmbeddingEngine: no embedding model installed, using dummy embeddings");
+      log.warn("No embedding model installed, using dummy embeddings", { model: this._modelName });
       this._model = "dummy";
     }
     return this._model;
@@ -592,10 +595,7 @@ export class EmbeddingEngine {
     } else {
       // Fallback: return zero vector when no real embedding model is available.
       // This degrades retrieval quality but keeps the memory subsystem operational.
-      console.warn(
-        "EmbeddingEngine: no real embedding model available — returning zero vector (degraded mode). " +
-        "Configure a provider (openai/local) or set EMBEDDING_DEFAULT_PROVIDER for full retrieval."
-      );
+      log.warn("No real embedding model available, returning zero vector (degraded mode)", { model: this._modelName });
       embedding = new Array(384).fill(0.0);
     }
 
@@ -737,7 +737,7 @@ export class UnifiedMemoryEngine {
       params.integrationAdapters ?? createIntegrationAdapters();
 
     this._initSchema();
-    console.log(`Memory engine initialized: ${this.dbPath}`);
+    log.info("Memory engine initialized", { dbPath: this.dbPath });
 
     if (params.plugins) {
       this._registerPlugins(params.plugins);
@@ -783,7 +783,7 @@ export class UnifiedMemoryEngine {
         await plugin.load(this);
       } catch (exc) {
         const name = (plugin as unknown as Record<string, unknown>).name ?? "unknown";
-        console.error(`Memory plugin load failed: ${name}: ${exc}`);
+        log.error("Memory plugin load failed", { plugin: name, error: String(exc) });
         this._pluginHealth[name as string] = {
           status: "error",
           error: String(exc),
@@ -1003,7 +1003,7 @@ export class UnifiedMemoryEngine {
     // 5. Plugin notification
     await this._notifyPlugins(memory);
 
-    console.log(`Memory added: ${memory.id.slice(0, 8)}... [${layer}]`);
+    log.info("Memory added", { memoryId: memory.id.slice(0, 8), layer });
     return { id: memory.id, status: "created" };
   }
 
@@ -1037,14 +1037,10 @@ export class UnifiedMemoryEngine {
       const shadowResult =
         await this._integrationAdapters.storageShadow.shadowWriteMemory(payload);
       if (shadowResult !== true) {
-        console.warn(
-          "Postgres shadow write returned non-success, local-first path preserved"
-        );
+        log.warn("Postgres shadow write returned non-success, local-first path preserved");
       }
     } catch (exc) {
-      console.warn(
-        `Postgres shadow write failed, local-first path preserved: ${exc}`
-      );
+      log.warn("Postgres shadow write failed, local-first path preserved", { error: String(exc) });
     }
   }
 
@@ -1089,7 +1085,7 @@ export class UnifiedMemoryEngine {
         await plugin.onMemoryAdded(memory);
       } catch (exc) {
         const name = (plugin as unknown as Record<string, unknown>).name ?? "unknown";
-        console.error(`Memory plugin callback failed: ${name}: ${exc}`);
+        log.error("Memory plugin callback failed", { plugin: name, error: String(exc) });
       }
     }
   }
