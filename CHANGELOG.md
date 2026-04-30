@@ -4,6 +4,19 @@
 
 ### Fixed
 - 修复 `tests/unit/scripts/test_governance_scripts.py` 在 ruff 0.15.x 下的 format drift，使 CI `python -m ruff format --check scripts tests/unit/scripts` 重新通过。
+- 抬高根 `vitest.config.ts` 的 `testTimeout` 至 10000ms，消除本地 Windows 高负载下 11/836 个 desktop 测试的 5 秒 flaky 超时（StoryBiblePanel / PlotTab / KnowledgeModal / ChatArea 等 `userEvent.setup()` 多步异步流程）。CI ubuntu 一直绿，仅本地体验改进。
+- 同步 `desktop/src-tauri/Cargo.lock` 中 `niko-studio-desktop` crate 版本从 9.0.10 到 9.2.1。
+
+### Added
+- 为 5 个 CI-gating Python 启动器补充独立单元测试（共 75 个新增测试）：
+  - `tests/unit/scripts/test_ci_checks.py`：covers `check_versions.py` + `check_i18n_keys.py`（22 tests）
+  - `tests/unit/scripts/test_start_gateway.py`：gateway launcher runtime/parser/branches（24 tests）
+  - `tests/unit/scripts/test_delivery_gate.py`：`GateRule` + `check_rule` + `main` 退出码（15 tests）
+  - `tests/unit/scripts/test_check_authority_alignment.py`：`AuthorityRule` + `RULES` 表 + JSON payload 契约（14 tests）
+- `tests/unit/scripts/` 测试总数从 39 提升到 114，套件用时 ~3.1s。
+
+### Known Issues
+- **ISS-20260430-001 (P1, release-blocker)**：v9.2.1 NSIS 安装包打包了 stale Python compat sidecar (`niko-gateway.exe` 2026-03-14, /health 报 8.0.0)，而非 v9.2.1 Node TS gateway。包安装后 WebView 因 CORS 配置缺失而无法连接 sidecar，前端显示 "运行时不可用 / Failed to fetch"。修复前 v9.2.1 不应作为 external release 发布。详见审计报告与 issue。
 
 ### Added
 - 为 5 个 CI-gating Python 启动器补充独立单元测试（共 75 个新增测试）：
