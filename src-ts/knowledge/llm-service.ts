@@ -17,10 +17,13 @@ import {
   ProviderUnavailableError,
   createLLMRequest,
 } from './models';
+import { createLogger } from '../logger';
 
 // ============================================================
 // Retry utility
 // ============================================================
+
+const log = createLogger('llm');
 
 /**
  * Retry with exponential backoff
@@ -47,11 +50,20 @@ async function withRetry<T>(
       lastException = e as Error;
       if (attempt === maxRetries) break;
 
+      log.warn('LLM request failed, retrying', {
+        attempt: attempt + 1,
+        maxRetries,
+        error: (e as Error).message,
+        errorType: (e as Error).constructor.name,
+      });
+
       let delay: number;
       if (e instanceof RateLimitError && e.retryAfter !== null) {
         delay = e.retryAfter;
       } else {
-        delay = Math.min(baseDelay * Math.pow(exponentialBase, attempt), maxDelay);
+        const base = Math.min(baseDelay * Math.pow(exponentialBase, attempt), maxDelay);
+        // Add jitter (0-25%) to avoid thundering herd
+        delay = base * (1 + Math.random() * 0.25);
       }
 
       await new Promise(resolve => setTimeout(resolve, delay * 1000));
@@ -224,14 +236,23 @@ export class LLMServiceImpl {
       jsonSystem = (jsonSystem + '\n\nRespond with valid JSON only.').trim();
     }
 
-    const response = await llmProvider.generate(createLLMRequest({
-      prompt,
-      modelOverride: modelName,
-      temperature: options?.temperature ?? 0.3,
-      maxTokens: options?.maxTokens ?? undefined,
-      systemPrompt: jsonSystem || undefined,
-      responseFormat: { type: 'json' },
-    }));
+    const response = await withRetry(
+      () =>
+        llmProvider.generate(createLLMRequest({
+          prompt,
+          modelOverride: modelName,
+          temperature: options?.temperature ?? 0.3,
+          maxTokens: options?.maxTokens ?? undefined,
+          systemPrompt: jsonSystem || undefined,
+          responseFormat: { type: 'json' },
+        })),
+      {
+        maxRetries: this._maxRetries,
+        baseDelay: this._retryBaseDelay,
+        maxDelay: 60.0,
+        exponentialBase: 2.0,
+      },
+    );
 
     try {
       return JSON.parse(response.content);

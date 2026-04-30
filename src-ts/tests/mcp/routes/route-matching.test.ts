@@ -134,6 +134,11 @@ describe('matchGatewayRoute', () => {
       expect(result).not.toBeNull();
     });
 
+    it('matches POST /consistency/check', () => {
+      const result = matchGatewayRoute('POST', '/consistency/check', allRoutes);
+      expect(result).not.toBeNull();
+    });
+
     it('matches GET /skills/list', () => {
       const result = matchGatewayRoute('GET', '/skills/list', allRoutes);
       expect(result).not.toBeNull();

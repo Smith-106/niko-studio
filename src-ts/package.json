@@ -23,6 +23,8 @@
     "check:release": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage:phase4 -- --coverage.reporter=text && npm run test:release",
     "check:local": "npm run check:release",
     "dev": "ts-node --esm src/index.ts",
+    "consistency-check": "ts-node --esm consistency-check.ts",
+    "benchmark": "vitest run tests/benchmark/gateway-benchmark.test.ts",
     "audit:high": "npm audit --audit-level=high"
   },
   "dependencies": {

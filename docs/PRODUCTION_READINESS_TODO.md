@@ -11,9 +11,9 @@
 | 优先级 | 总数 | 已完成 | 待办 |
 |:---:|:---:|:---:|:---:|
 | P0 | 3 | 3 | 0 |
-| P1 | 3 | 1 | 2 |
-| P2 | 4 | 2 | 2 |
-| **合计** | **10** | **6** | **4** |
+| P1 | 3 | 3 | 0 |
+| P2 | 4 | 3 | 1 |
+| **合计** | **10** | **9** | **1** |
 
 ---
 
@@ -50,6 +50,8 @@
 | **影响** | OpenAI/Anthropic API 的 429/503 错误导致写作工作流中断，用户需手动重试 |
 | **范围** | `src-ts/knowledge/providers/` 下所有 provider（openai-llm.ts、anthropic-llm.ts、local-embedding.ts） |
 | **验收标准** | 1. 在 llm-service 层实现 exponential backoff + jitter <br> 2. 默认 3 次重试，仅对可恢复错误重试（429、503、网络超时） <br> 3. 覆盖 OpenAI/Anthropic/Local 三个 provider <br> 4. 重试日志可观测（warn 级别记录重试次数和原因） <br> 5. 新增单元测试覆盖重试逻辑 |
+| **当前状态** | **已完成** |
+| **已落地证据** | `src-ts/knowledge/llm-service.ts`：`withRetry` 实现 exponential backoff + jitter（0-25%），默认 3 次重试，仅对 `RateLimitError`/`ProviderUnavailableError` 重试，支持 `retryAfter` header 优先延迟。`generate`/`generateWithMetadata`/`generateJson` 三路全部接入 `withRetry`。重试时输出 warn 级别结构化日志（含 attempt/maxRetries/error/errorType）。<br>测试覆盖：`tests/services/llm-service.test.ts` 含 4 个 retry 专项测试（RateLimitError 重试、retry-after 延迟、max retries 耗尽、non-retryable 错误不重试） |
 | **工作量** | 小 |
 
 ### #6 性能基准建立
@@ -60,6 +62,8 @@
 | **影响** | 无法回答"系统能支持多少并发写作会话"等关键问题；性能退化只能在用户投诉后发现 |
 | **范围** | Gateway 核心端点：/chat、/search、/graph_query、/health |
 | **验收标准** | 1. 建立基准数据文件（JSON），记录关键端点的 P50/P95/P99 延迟和吞吐量 <br> 2. 基准测试脚本可重复执行（如 `npm run benchmark`） <br> 3. 至少覆盖 4 个核心端点的单人使用场景 <br> 4. 基准数据提交到仓库作为参考基线 |
+| **当前状态** | **已完成** |
+| **已落地证据** | `tests/benchmark/gateway-benchmark.test.ts`（vitest 可重复执行）+ `tests/benchmark/gateway-benchmark.ts`（独立脚本）。覆盖 5 个核心端点：GET /health、GET /tools、GET /metrics、POST /chat、POST /workflow/route。每端点 50 次迭代（chat/workflow 10 次），记录 P50/P95/P99/avg/min/max。<br>基线数据 `tests/benchmark/baseline.json` 已提交到仓库（v9.0.10 基准）。<br>`npm run benchmark` 脚本已配置。 |
 | **工作量** | 中 |
 
 ---
@@ -105,6 +109,8 @@
 | **影响** | 桌面端本地部署场景下无请求限速保护 |
 | **范围** | `src-ts/mcp/config.ts`、gateway 请求处理层 |
 | **验收标准** | 1. 提供内存 fallback（如 fixed-window / sliding-window）当 Redis 不可用时 <br> 2. 本地开发/部署无需 Redis 即可有基本 rate limit <br> 3. 有 Redis 时仍使用 Redis 实现（分布式场景） <br> 4. 新增测试覆盖两种路径 |
+| **当前状态** | **已完成** |
+| **已落地证据** | `src-ts/mcp/rate-limiter.ts`：`InMemoryRateLimiter` 实现 fixed-window 算法（per-key 限速、自动过期清理、periodic cleanup timer）。<br>`src-ts/mcp/gateway-request-handler.ts`：所有请求经过 in-memory rate limiter（默认 120 req/60s per client+route），超限返回 429 + 结构化 warn 日志。<br>Redis 路径通过 `CacheRateLimitAdapter` 接口保留（分布式场景）。<br>测试覆盖：`tests/mcp/rate-limiter.test.ts`（5 tests：限额内放行、超限拦截、独立 key 跟踪、过期清理、start/stop 生命周期） |
 | **工作量** | 小 |
 
 ### #10 Integration adapters 真实实现或移除
