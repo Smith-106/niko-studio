@@ -1167,8 +1167,6 @@ def test_local_selftest_enforcement_signal_returns_fail_for_non_green_release_ev
     assert "decision=run_local_selftest_before_go" in detail
 
 
-
-
 def test_package_e2e_acceptance_signal_returns_pass_for_fresh_current_artifact() -> None:
     module = load_script_module(
         "scripts/release_check_summary.py",
@@ -1237,7 +1235,6 @@ def test_package_e2e_acceptance_signal_returns_fail_for_missing_verification() -
     assert exit_code == 1
     assert "launch_verified=False" in detail
     assert "decision=no_go" in detail
-
 
 
 def test_build_release_readiness_artifact_includes_release_evidence_metadata() -> None:
@@ -1647,7 +1644,10 @@ def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None
         package_json["scripts"]["release:evidence:refresh"]
         == "python ../scripts/refresh_release_evidence.py"
     )
-    assert package_json["scripts"]["package:e2e:checklist"] == "python ../scripts/package_e2e_checklist.py"
+    assert (
+        package_json["scripts"]["package:e2e:checklist"]
+        == "python ../scripts/package_e2e_checklist.py"
+    )
     assert "npm --prefix desktop run release:evidence:refresh" in sign_off_text
     assert "npm --prefix desktop run package:e2e:checklist" in sign_off_text
     assert (
@@ -1677,7 +1677,9 @@ def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None
         in sign_off_text
     )
     assert package_json["scripts"]["check:pre-commit"] == "npm run lint && npm run format:check"
-    assert package_json["scripts"]["local:pre-commit"] == "python ../scripts/run_local_pre_commit.py"
+    assert (
+        package_json["scripts"]["local:pre-commit"] == "python ../scripts/run_local_pre_commit.py"
+    )
     assert "run_cmd(DESKTOP_AUTHORITATIVE_LOCAL_GATE_ARGS)" in summary_source
     assert '("command", DESKTOP_AUTHORITATIVE_LOCAL_GATE_COMMAND)' in summary_source
     assert "desktop_authoritative_local_gate" in summary_source
