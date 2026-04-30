@@ -158,11 +158,18 @@ impl GatewayState {
             self.stop_child_best_effort();
         }
 
-        let port = std::net::TcpListener::bind("127.0.0.1:0")
-            .map_err(|e| format!("Failed to bind ephemeral port: {e}"))?
-            .local_addr()
-            .map_err(|e| format!("Failed to read bound addr: {e}"))?
-            .port();
+        // ISS-20260430-001 follow-up: honor NIKO_GATEWAY_PORT when set so Layer 4
+        // smoke (and any other external probe) can pin the port. Falls back to an
+        // ephemeral OS-assigned port for the normal user-launch path so multiple
+        // installs / dev instances don't collide.
+        let port = match std::env::var("NIKO_GATEWAY_PORT").ok().and_then(|v| v.parse::<u16>().ok()) {
+            Some(p) if p > 0 => p,
+            _ => std::net::TcpListener::bind("127.0.0.1:0")
+                .map_err(|e| format!("Failed to bind ephemeral port: {e}"))?
+                .local_addr()
+                .map_err(|e| format!("Failed to read bound addr: {e}"))?
+                .port(),
+        };
 
         let base = format!("http://127.0.0.1:{port}");
 

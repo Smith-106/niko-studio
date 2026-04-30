@@ -188,12 +188,18 @@ def wait_for_port_listening(port: int, timeout_seconds: int) -> bool:
     return False
 
 
-def launch_app(executable: Path, report: SmokeReport) -> subprocess.Popen | None:
+def launch_app(executable: Path, report: SmokeReport, port: int) -> subprocess.Popen | None:
     print(f"[smoke] launching: {executable}", flush=True)
     creationflags = 0
     if is_windows():
         # CREATE_NEW_PROCESS_GROUP avoids the launcher inheriting our console.
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
+    # Pin the gateway port so the smoke probe knows where to connect.
+    # gateway_runtime.rs honors NIKO_GATEWAY_PORT when set, otherwise it picks
+    # an OS-assigned ephemeral port that the smoke can't predict.
+    env = os.environ.copy()
+    env["NIKO_GATEWAY_PORT"] = str(port)
+    env["NIKO_GATEWAY_HOST"] = "127.0.0.1"
     try:
         process = subprocess.Popen(
             [str(executable)],
@@ -201,11 +207,12 @@ def launch_app(executable: Path, report: SmokeReport) -> subprocess.Popen | None
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             creationflags=creationflags,
+            env=env,
         )
     except OSError as exc:
         report.add_failure(f"failed to spawn launcher: {exc}")
         return None
-    report.notes.append(f"Spawned PID {process.pid}")
+    report.notes.append(f"Spawned PID {process.pid} (NIKO_GATEWAY_PORT={port})")
     return process
 
 
@@ -405,7 +412,7 @@ def main() -> int:
                     report.add_failure("could not locate installed launcher exe")
                     report.status = "SETUP_ERROR"
                     return EXIT_SETUP_ERROR
-                process = launch_app(executable, report)
+                process = launch_app(executable, report, args.smoke_port)
                 if process is None:
                     report.status = "SETUP_ERROR"
                     return EXIT_SETUP_ERROR
