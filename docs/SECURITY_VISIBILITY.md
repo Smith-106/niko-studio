@@ -71,3 +71,23 @@
 - `python scripts/release_check_summary.py`
 - 输出文件：`release-check-summary.md`
 - 发布机读产物：`.workflow/evidence/release/release-readiness-artifact.json`
+
+## 6. 本地密钥卫生（Local Secrets Hygiene）
+
+### 永远不要提交真实密钥
+- `.env` 已写入根目录 `.gitignore`，禁止移除该规则。
+- `.env.example` 仅示意所需环境变量名，**不要**填入真实值。
+- 真实密钥仅放置在本地 `.env` 或操作系统密钥库 / CI Secret store。
+
+### 应急轮换（Key Rotation）
+如果意外把真实 `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` 等密钥提交到 git 或粘贴到任何外部位置：
+1. **立即轮换**：登录对应控制台撤销旧密钥并生成新密钥
+   - OpenAI：<https://platform.openai.com/api-keys>
+   - Anthropic：<https://console.anthropic.com/settings/keys>
+   - Google：<https://console.cloud.google.com/apis/credentials>
+2. 用新密钥更新本地 `.env`。
+3. 如果旧密钥已经进入 git 历史，仅 `git filter-repo` / `git filter-branch` 清理历史是不够的——必须**先**完成轮换；任何已分发的提交副本都必须视为已暴露。
+
+### 其它锚点
+- `.env.example` 头部已包含同样的 ROTATE-KEY 提醒（避免开发者只读 docs 错过该约束）。
+- CI 不应把真实密钥写入 build artifact 或 log；如需 LLM 集成测试，使用 GitHub Actions Secrets 注入。

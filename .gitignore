@@ -55,6 +55,7 @@ htmlcov/
 .codex-run/
 .workflow/.analysis/
 .workflow/.scratchpad/
+.workflow/.cache/
 .workflow/evidence/
 src/.task/
 node_modules/

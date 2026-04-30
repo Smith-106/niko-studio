@@ -501,6 +501,150 @@ jobs:
         run: |
           npm --prefix desktop run test -- src/api/client.test.ts src/components/EvaluationPanel.test.tsx src/components/KnowledgeModal.test.tsx
 
+  # Rust supply-chain audit lane: covers desktop/src-tauri Cargo.lock (~600 transitive deps)
+  # complementing existing npm audit / pip audit.
+  # Advisory-first: continue-on-error keeps day-one RustSec advisories from blocking CI
+  # while the team triages. TODO: flip continue-on-error to false after RustSec triage complete.
+  cargo-audit-advisory:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    needs: [tests]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo-audit binary
+        id: cache-cargo-audit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: ${{ runner.os }}-cargo-audit-binary-v1
+
+      - name: Install cargo-audit
+        if: steps.cache-cargo-audit.outputs.cache-hit != 'true'
+        run: cargo install --locked cargo-audit
+
+      - name: Run cargo audit (advisory)
+        id: cargo-audit
+        continue-on-error: true
+        working-directory: desktop/src-tauri
+        run: |
+          cargo audit --json | tee cargo-audit-report.json
+
+      - name: Upload cargo-audit report artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cargo-audit-report
+          path: desktop/src-tauri/cargo-audit-report.json
+
+      - name: Summarize cargo audit outcome
+        if: always()
+        run: |
+          if [ "${{ steps.cargo-audit.outcome }}" = "success" ]; then
+            echo "cargo-audit-advisory: no RustSec advisories found." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::cargo-audit-advisory observed RustSec advisories. Review the cargo-audit-report artifact." >> "$GITHUB_STEP_SUMMARY"
+            echo "cargo-audit-advisory: advisories present (advisory mode — non-blocking)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # ISS-20260430-002 — Layer 4 packaged-app smoke automation.
+  # Builds the NSIS installer, silent-installs to a temp dir on a Windows runner,
+  # launches the packaged app, asserts /health version matches package.json,
+  # 7 services healthy, and CORS allows tauri://localhost origin.
+  # Catches the ISS-20260430-001 class (stale sidecar / CORS / version drift).
+  # Advisory-first: continue-on-error keeps initial flakiness from blocking CI
+  # while the team triages. TODO: flip to blocking after stability is observed.
+  packaged-app-smoke-advisory:
+    runs-on: windows-latest
+    continue-on-error: true
+    needs: [desktop-packaging-advisory]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Build sidecar contract artifact
+        run: npm run build:sidecar
+        working-directory: desktop
+
+      - name: Build NSIS installer (release, unsigned)
+        id: nsis-build
+        continue-on-error: true
+        shell: pwsh
+        working-directory: desktop
+        run: |
+          npm run tauri -- build --target x86_64-pc-windows-msvc
+
+      - name: Locate NSIS installer
+        if: steps.nsis-build.outcome == 'success'
+        id: locate-installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis -Filter '*.exe' -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($null -eq $installer) {
+            Write-Host '::warning::NSIS installer not produced — packaged-app-smoke will skip'
+            "installer_found=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            return
+          }
+          Write-Host "Found installer: $($installer.FullName)"
+          "installer_found=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "installer_path=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Run packaged-app smoke test
+        if: steps.nsis-build.outcome == 'success' && steps.locate-installer.outputs.installer_found == 'true'
+        id: smoke
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path .workflow/evidence/release -Force | Out-Null
+          python scripts/packaged_app_smoke.py `
+            --installer-path '${{ steps.locate-installer.outputs.installer_path }}' `
+            --report .workflow/evidence/release/packaged-app-smoke.json
+
+      - name: Summarize packaged-app-smoke outcome
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.smoke.outcome }}' -eq 'success') {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke-advisory: PASS — sidecar contract honored after install+launch.'
+          } elseif ('${{ steps.nsis-build.outcome }}' -ne 'success') {
+            Write-Host '::warning::packaged-app-smoke skipped — NSIS build failed earlier in pipeline.'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke-advisory: SKIPPED (NSIS build failed).'
+          } else {
+            Write-Host '::warning::packaged-app-smoke detected a contract violation. Review .workflow/evidence/release/packaged-app-smoke.json.'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke-advisory: FAIL (advisory mode — non-blocking). Review the smoke report artifact.'
+          }
+
+      - name: Upload packaged-app-smoke report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: packaged-app-smoke-report
+          path: .workflow/evidence/release/packaged-app-smoke.json
+          if-no-files-found: ignore
+
   # Performance benchmark lane: advisory, non-blocking quality signal.
   performance-benchmarks:
     runs-on: ubuntu-latest

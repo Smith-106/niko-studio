@@ -32,6 +32,9 @@ const BIN_DIR = path.join(DESKTOP_DIR, 'src-tauri', 'bin');
 const TAURI_CONFIG_PATH = path.join(DESKTOP_DIR, 'src-tauri', 'tauri.conf.json');
 const CAPABILITY_PATH = path.join(DESKTOP_DIR, 'src-tauri', 'capabilities', 'main-desktop.json');
 const LEGACY_PY_SIDECAR_ENTRY = path.join(PROJECT_ROOT, 'src', 'mcp', 'sidecar_entry.py');
+const DESKTOP_PACKAGE_PATH = path.join(DESKTOP_DIR, 'package.json');
+const SIDECAR_MANIFEST_PATH = path.join(BIN_DIR, 'sidecar.manifest.json');
+const SIDECAR_STALENESS_DAYS = parseInt(process.env.NIKO_SIDECAR_STALENESS_DAYS || '30', 10);
 
 const IS_WINDOWS = process.platform === 'win32';
 const STRICT_MODE = process.argv.includes('--strict');
@@ -256,6 +259,123 @@ function printSecurityBoundary(results) {
   }
 }
 
+/**
+ * ISS-20260430-001 guard: detect packaged sidecar binaries that are stale or
+ * version-mismatched relative to desktop/package.json.
+ *
+ * Two complementary checks (both advisory until --strict-packaging promotes them):
+ *   1. Manifest match — bin/sidecar.manifest.json (written by build:sidecar) must
+ *      record the same version as desktop/package.json. Missing manifest is a
+ *      WARNING in default mode and FAIL in --strict-packaging.
+ *   2. Staleness — bundled .exe modification time must be within
+ *      NIKO_SIDECAR_STALENESS_DAYS (default 30) of the package.json mtime. The
+ *      v9.2.1 ISS-001 incident shipped a binary 47 days older than package.json.
+ *
+ * The actual /health version handshake at runtime belongs in
+ * scripts/packaged_app_smoke.py (Layer 4 CI). This contract guard catches the
+ * cheap case at packaging time before the installer is even built.
+ */
+function validateSidecarVersionContract() {
+  const pkg = readJson(DESKTOP_PACKAGE_PATH);
+  const expectedVersion = pkg.version;
+  const targetTriple = resolveCurrentTargetTriple();
+  const bundledArtifact = resolvePackagedArtifact('niko-gateway', targetTriple);
+  const bundledArtifactPath = bundledArtifact ? path.join(BIN_DIR, bundledArtifact) : null;
+
+  // Manifest check
+  let manifestPresent = fs.existsSync(SIDECAR_MANIFEST_PATH);
+  let manifestVersionMatches = false;
+  let manifestRuntime = null;
+  let manifestVersion = null;
+  let manifestParseError = null;
+  if (manifestPresent) {
+    try {
+      const manifest = readJson(SIDECAR_MANIFEST_PATH);
+      manifestVersion = manifest?.version || null;
+      manifestRuntime = manifest?.runtime || null;
+      manifestVersionMatches = manifestVersion === expectedVersion;
+    } catch (err) {
+      manifestParseError = err.message;
+    }
+  }
+
+  // Staleness check
+  const now = Date.now();
+  const pkgMtimeMs = fs.statSync(DESKTOP_PACKAGE_PATH).mtimeMs;
+  let bundledMtimeMs = null;
+  let bundledAgeDays = null;
+  let staleVsPackage = false;
+  if (bundledArtifactPath && fs.existsSync(bundledArtifactPath)) {
+    bundledMtimeMs = fs.statSync(bundledArtifactPath).mtimeMs;
+    const ageMs = pkgMtimeMs - bundledMtimeMs;
+    bundledAgeDays = ageMs / (1000 * 60 * 60 * 24);
+    // Only stale if bundled is OLDER than package.json by more than threshold
+    staleVsPackage = bundledAgeDays > SIDECAR_STALENESS_DAYS;
+  }
+
+  const checks = [
+    {
+      label: 'sidecar.manifest.json records the build provenance',
+      // In strict-packaging mode, manifest is REQUIRED. In default mode, it's advisory.
+      pass: STRICT_PACKAGING_MODE
+        ? manifestPresent && !manifestParseError
+        : true,
+      detail: manifestPresent
+        ? (manifestParseError
+            ? `manifest parse error: ${manifestParseError}`
+            : `runtime=${manifestRuntime}, version=${manifestVersion}`)
+        : 'sidecar.manifest.json missing — build:sidecar should write it on every run',
+    },
+    {
+      label: 'bundled sidecar version matches desktop/package.json (ISS-20260430-001 guard)',
+      // Hard-fail when manifest exists and version disagrees. Soft-warn when manifest is missing.
+      pass: !manifestPresent || manifestParseError !== null || manifestVersionMatches,
+      detail: manifestPresent && !manifestParseError
+        ? `manifest=${manifestVersion}, package.json=${expectedVersion}, match=${manifestVersionMatches}`
+        : `cannot verify — manifest missing or unreadable; expected version=${expectedVersion}`,
+    },
+    {
+      label: `bundled sidecar binary is not stale vs package.json (>${SIDECAR_STALENESS_DAYS}d threshold)`,
+      // Hard-fail in strict-packaging when staleness exceeds threshold AND a bundled artifact exists.
+      pass: !STRICT_PACKAGING_MODE
+        ? true
+        : (bundledMtimeMs === null || !staleVsPackage),
+      detail: bundledMtimeMs !== null
+        ? `bundled=${bundledArtifact}, age_vs_package_days=${bundledAgeDays.toFixed(1)}, threshold=${SIDECAR_STALENESS_DAYS}d, stale=${staleVsPackage}`
+        : `no bundled artifact for current platform/arch (${targetTriple || 'unmapped'})`,
+    },
+  ];
+
+  return {
+    expectedVersion,
+    manifestPresent,
+    manifestVersion,
+    manifestVersionMatches,
+    bundledAgeDays,
+    staleVsPackage,
+    checks,
+    hasFailures: checks.some((check) => !check.pass),
+  };
+}
+
+function printSidecarVersionContract(results) {
+  console.log('\n🔢 Sidecar version contract (ISS-20260430-001 guard)');
+  console.log(`   Expected version (desktop/package.json): ${results.expectedVersion}`);
+  console.log(`   Manifest present: ${results.manifestPresent}`);
+  if (results.manifestPresent) {
+    console.log(`   Manifest version: ${results.manifestVersion} (match=${results.manifestVersionMatches})`);
+  }
+  if (results.bundledAgeDays !== null) {
+    console.log(`   Bundled binary age vs package.json: ${results.bundledAgeDays.toFixed(1)}d (stale=${results.staleVsPackage})`);
+  }
+  for (const check of results.checks) {
+    console.log(`   ${check.pass ? '✅' : '❌'} ${check.label}`);
+    if (!check.pass) {
+      console.log(`      ${check.detail}`);
+    }
+  }
+}
+
 function validatePackagingBoundary() {
   const tauriConfig = readJson(TAURI_CONFIG_PATH);
   const externalBins = Array.isArray(tauriConfig?.bundle?.externalBin)
@@ -370,6 +490,12 @@ function main() {
   const packagingBoundary = validatePackagingBoundary();
   printPackagingBoundary(packagingBoundary);
   if (packagingBoundary.hasFailures) {
+    hasFailures = true;
+  }
+
+  const versionContract = validateSidecarVersionContract();
+  printSidecarVersionContract(versionContract);
+  if (versionContract.hasFailures) {
     hasFailures = true;
   }
 

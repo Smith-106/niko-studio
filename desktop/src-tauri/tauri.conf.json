@@ -44,7 +44,8 @@
     ],
     "resources": [
       "../../skills",
-      "../../config/services.yaml"
+      "../../config/services.yaml",
+      "bin/sidecar"
     ],
     "icon": [
       "icons/32x32.png",

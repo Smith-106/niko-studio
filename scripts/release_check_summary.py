@@ -19,6 +19,7 @@ RELEASE_READINESS_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "release-readiness-arti
 AUTHORITY_ALIGNMENT_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "authority-alignment.json"
 WRITING_HELPER_ACCEPTANCE_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "writing-helper-acceptance.json"
 PACKAGE_E2E_ACCEPTANCE_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "package-e2e-acceptance.json"
+PACKAGED_APP_SMOKE_ARTIFACT_PATH = RELEASE_EVIDENCE_DIR / "packaged-app-smoke.json"
 GOVERNANCE_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "governance-scripts.junit.xml"
 PRODUCTION_GUARD_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-production-guard.xml"
 E2E_JUNIT_PATH = RELEASE_EVIDENCE_DIR / "vitest-e2e.xml"
@@ -1945,6 +1946,107 @@ def writing_helper_acceptance_signal(
     )
 
 
+def package_app_smoke_signal(
+    artifact_exists: bool,
+    artifact_payload: dict[str, object] | None,
+    current_version: str | None = None,
+    artifact_parse_error: str | None = None,
+) -> tuple[str, int, str]:
+    """ISS-20260430-002 Layer 4 packaged-app smoke signal (advisory-first).
+
+    PASS-by-absence semantics: when the smoke evidence artifact is missing
+    (e.g. local invocation with no recent CI run, or the CI lane has not yet
+    been promoted), this signal returns PASS with status=advisory_unavailable
+    so it does not block the release scorecard. When the artifact exists, the
+    signal mirrors the artifact's own PASS/FAIL verdict.
+
+    Promote to blocking by:
+      1. Wiring this signal into SCORECARD_DIMENSIONS["release"].
+      2. Switching the artifact-missing branch from PASS to FAIL.
+    Do that only after the CI lane is observed stable end-to-end.
+    """
+    if not artifact_exists:
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(PACKAGED_APP_SMOKE_ARTIFACT_PATH)),
+                    ("status", "advisory_unavailable"),
+                    ("mode", "advisory_first"),
+                    ("note", "no smoke artifact yet — packaged-app-smoke CI lane is advisory until stability is observed"),
+                    ("decision", "advisory_pass"),
+                ]
+            ),
+        )
+
+    if artifact_parse_error:
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(PACKAGED_APP_SMOKE_ARTIFACT_PATH)),
+                    ("status", "advisory_parse_error"),
+                    ("mode", "advisory_first"),
+                    ("json_parse_error", artifact_parse_error),
+                    ("decision", "advisory_pass"),
+                ]
+            ),
+        )
+
+    if artifact_payload is None:
+        return (
+            "PASS",
+            0,
+            _format_detail_pairs(
+                [
+                    ("artifact", _trace_path(PACKAGED_APP_SMOKE_ARTIFACT_PATH)),
+                    ("status", "advisory_empty_payload"),
+                    ("mode", "advisory_first"),
+                    ("decision", "advisory_pass"),
+                ]
+            ),
+        )
+
+    artifact_status = str(artifact_payload.get("status") or "").upper()
+    artifact_version = str(artifact_payload.get("package_version") or "").strip()
+    install_verified = bool(artifact_payload.get("install_verified"))
+    launch_verified = bool(artifact_payload.get("launch_verified"))
+    health_version_verified = bool(artifact_payload.get("health_version_verified"))
+    services_verified = bool(artifact_payload.get("services_verified"))
+    cors_verified = bool(artifact_payload.get("cors_verified"))
+    failures = artifact_payload.get("failures") or []
+
+    version_drift = bool(
+        current_version and artifact_version and artifact_version != current_version
+    )
+
+    detail_pairs = [
+        ("artifact", _trace_path(PACKAGED_APP_SMOKE_ARTIFACT_PATH)),
+        ("status", artifact_status or "unknown"),
+        ("package_version", artifact_version or "unknown"),
+        ("current_version", current_version or "unknown"),
+        ("version_drift", str(version_drift).lower()),
+        ("install_verified", str(install_verified).lower()),
+        ("launch_verified", str(launch_verified).lower()),
+        ("health_version_verified", str(health_version_verified).lower()),
+        ("services_verified", str(services_verified).lower()),
+        ("cors_verified", str(cors_verified).lower()),
+        ("failure_count", len(failures) if isinstance(failures, list) else 0),
+        ("mode", "advisory_first"),
+    ]
+
+    if artifact_status == "PASS" and not version_drift:
+        detail_pairs.append(("decision", "go"))
+        return ("PASS", 0, _format_detail_pairs(detail_pairs))
+
+    detail_pairs.append(("decision", "advisory_fail_observed"))
+    # Advisory-mode FAIL: still return PASS exit code so it does not block.
+    # Surface as ADVISORY status so the scorecard reader can distinguish.
+    return ("ADVISORY", 0, _format_detail_pairs(detail_pairs))
+
+
 def package_e2e_acceptance_signal(
     artifact_exists: bool,
     artifact_payload: dict[str, object] | None,
@@ -2875,6 +2977,19 @@ def main() -> int:
         package_e2e_acceptance_parse_error,
         current_version=current_release_version,
     )
+    packaged_app_smoke_payload, packaged_app_smoke_parse_error = _read_json_artifact(
+        PACKAGED_APP_SMOKE_ARTIFACT_PATH
+    )
+    (
+        packaged_app_smoke_status,
+        packaged_app_smoke_exit,
+        packaged_app_smoke_detail,
+    ) = package_app_smoke_signal(
+        PACKAGED_APP_SMOKE_ARTIFACT_PATH.exists(),
+        packaged_app_smoke_payload,
+        current_version=current_release_version,
+        artifact_parse_error=packaged_app_smoke_parse_error,
+    )
     authority_alignment_status, authority_alignment_exit, authority_alignment_detail = (
         authority_alignment_signal(
             authority_alignment_code,
@@ -3029,6 +3144,14 @@ def main() -> int:
             package_e2e_acceptance_exit,
             package_e2e_acceptance_detail,
             status_override=package_e2e_acceptance_status,
+        ),
+        build_check_result(
+            "package_app_smoke_signal",
+            "P1",
+            False,
+            packaged_app_smoke_exit,
+            packaged_app_smoke_detail,
+            status_override=packaged_app_smoke_status,
         ),
         build_check_result(
             "external_e2e_smoke",
