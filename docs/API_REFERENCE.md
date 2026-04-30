@@ -1,6 +1,6 @@
 # Niko Studio Gateway API Reference
 
-**Version**: 9.2.0
+**Version**: 9.2.1
 **Updated**: 2026-04-30
 **Base URL**: `http://localhost:8000`
 
@@ -28,7 +28,7 @@ Health check with service and engine status.
 ```json
 {
   "status": "ok",
-  "version": "9.2.0",
+  "version": "9.2.1",
   "services": { "memory": "ok", "graph": "ok", ... },
   "engine_health": { ... },
   "agents": ["writer", "architect", ...],

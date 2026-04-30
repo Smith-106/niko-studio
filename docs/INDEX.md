@@ -10,7 +10,7 @@ Niko-Studio 文档目录
 |------|------|
 | [README.md](../README.md) | 项目概览、快速开始 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 架构设计、组件概览 |
-| [API_REFERENCE.md](API_REFERENCE.md) | 历史 Python API 参考（非当前 desktop + src-ts 运行权威） |
+| [API_REFERENCE.md](API_REFERENCE.md) | 当前 TypeScript Gateway HTTP API 参考（5 路由组 / 69 endpoints） |
 | [LLM_WIKI_ADAPTATION.md](LLM_WIKI_ADAPTATION.md) | 将 Karpathy 的 LLM Wiki 思路映射到当前 Niko Studio 的 writer-first/workspace/graph/memory 架构 |
 | [sdd/](sdd/) | 系统设计规格（模块化） |
 | [TASKS_V10_OPTIMIZED.md](TASKS_V10_OPTIMIZED.md) | 历史架构路线图（非当前发布完成度口径） |

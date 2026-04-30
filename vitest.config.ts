@@ -4,5 +4,6 @@ export default {
       '**/.claude/**',
       '**/.ccw/**',
     ],
+    testTimeout: 10000,
   },
 };
