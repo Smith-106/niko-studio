@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.2.1] - 2026-04-30
+
+### Fixed
+- 修复 `tests/unit/scripts/test_governance_scripts.py` 在 ruff 0.15.x 下的 format drift，使 CI `python -m ruff format --check scripts tests/unit/scripts` 重新通过。
+
+### Added
+- 为 5 个 CI-gating Python 启动器补充独立单元测试（共 75 个新增测试）：
+  - `tests/unit/scripts/test_ci_checks.py`：covers `check_versions.py` + `check_i18n_keys.py`（22 tests）
+  - `tests/unit/scripts/test_start_gateway.py`：gateway launcher runtime/parser/branches（24 tests）
+  - `tests/unit/scripts/test_delivery_gate.py`：`GateRule` + `check_rule` + `main` 退出码（15 tests）
+  - `tests/unit/scripts/test_check_authority_alignment.py`：`AuthorityRule` + `RULES` 表 + JSON payload 契约（14 tests）
+- `tests/unit/scripts/` 测试总数从 39 提升到 114，套件用时 ~3.1s。
+
 ## [9.2.0] - 2026-04-30
 
 ### Changed
