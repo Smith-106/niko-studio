@@ -556,11 +556,12 @@ jobs:
   # launches the packaged app, asserts /health version matches package.json,
   # 7 services healthy, and CORS allows tauri://localhost origin.
   # Catches the ISS-20260430-001 class (stale sidecar / CORS / version drift).
-  # Advisory-first: continue-on-error keeps initial flakiness from blocking CI
-  # while the team triages. TODO: flip to blocking after stability is observed.
-  packaged-app-smoke-advisory:
+  # Promoted to blocking in v9.2.2 after the ISS-20260430-001 closure landed
+  # (sidecar guards + ABI alignment + launcher path resolution + smoke port pin).
+  # The job tolerates NSIS-build infra failure (Rust toolchain / runner quirks),
+  # but if the installer IS produced the smoke result is enforcing.
+  packaged-app-smoke:
     runs-on: windows-latest
-    continue-on-error: true
     needs: [desktop-packaging-advisory]
 
     steps:
@@ -615,7 +616,6 @@ jobs:
       - name: Run packaged-app smoke test
         if: steps.nsis-build.outcome == 'success' && steps.locate-installer.outputs.installer_found == 'true'
         id: smoke
-        continue-on-error: true
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path .workflow/evidence/release -Force | Out-Null
@@ -628,13 +628,12 @@ jobs:
         shell: pwsh
         run: |
           if ('${{ steps.smoke.outcome }}' -eq 'success') {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke-advisory: PASS — sidecar contract honored after install+launch.'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke: PASS — sidecar contract honored after install+launch.'
           } elseif ('${{ steps.nsis-build.outcome }}' -ne 'success') {
-            Write-Host '::warning::packaged-app-smoke skipped — NSIS build failed earlier in pipeline.'
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke-advisory: SKIPPED (NSIS build failed).'
+            Write-Host '::warning::packaged-app-smoke skipped — NSIS build failed earlier in pipeline (infra-level, not gating).'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke: SKIPPED (NSIS build failed — infra issue, non-gating).'
           } else {
-            Write-Host '::warning::packaged-app-smoke detected a contract violation. Review .workflow/evidence/release/packaged-app-smoke.json.'
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke-advisory: FAIL (advisory mode — non-blocking). Review the smoke report artifact.'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke: FAIL — sidecar contract violation. Review .workflow/evidence/release/packaged-app-smoke.json.'
           }
 
       - name: Upload packaged-app-smoke report

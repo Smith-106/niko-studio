@@ -1,5 +1,17 @@
 # Changelog
 
+## [9.2.2] - 2026-05-01
+
+### Fixed
+- **ISS-20260430-001 (P1, release-blocker)** 关闭。v9.2.1 NSIS 打包的 stale 128 MB Python compat sidecar (`niko-gateway.exe` 2026-03-14, /health 报 8.0.0) 被替换为 216 KB Rust launcher + 262 MB Node TS gateway bundle + 67 MB portable Node 20.18.1。/health 现返回 `version: 9.2.2` + 7 服务全 healthy + CORS 允许 `tauri://localhost`。
+- 修复 `desktop/scripts/build_node_sidecar.cjs` native 模块 ABI 漂移：当 `NIKO_SIDECAR_BUNDLE_NODE=true` 时注入 `npm_config_target=20.18.1` 等环境变量，强制 prebuild-install 拉匹配 Node 20 ABI 的预构建（否则 host Node 24 装 better-sqlite3 v137 ABI .node，运行时 v20 加载 fails with "NODE_MODULE_VERSION 137 vs 115"）。
+- 修复 `desktop/src-tauri/Cargo.toml` 缺 `default-run = "niko-studio-desktop"`，导致 `tauri build` 在双 [[bin]] 目标下报 "find a `package > default-run`"。
+- 修复 `desktop/src-tauri/src/bin/niko-gateway-launcher.rs` 的 sidecar 解析路径：补 `<exe_dir>/bin/sidecar/` 候选，匹配 Tauri 2 NSIS 对 `bundle.resources` 路径 "bin/sidecar" 保留相对结构的安装布局（之前 launcher 找不到 sidecar，启动后 exit 126）。
+- 修复 `desktop/src-tauri/src/gateway_runtime.rs` 端口绑定：识别 `NIKO_GATEWAY_PORT` env override，用户路径默认仍是 ephemeral 端口避免冲突；让 Layer 4 packaged_app_smoke `--installer-path` 模式可以 pin 端口做 E2E 验证。
+
+### Added
+- `packaged-app-smoke` CI job 从 advisory 升级为 blocking（`.github/workflows/integration-tests.yml`）。NSIS 安装+启动+/health+CORS 契约验证后续每次 push 到 main 都强制执行；NSIS build 基础设施失败仍非 gating（toolchain/runner 抖动隔离）。
+
 ## [9.2.1] - 2026-04-30
 
 ### Fixed
