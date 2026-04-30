@@ -59,8 +59,7 @@ jobs:
         run: npm ci
         working-directory: src-ts
 
-      - name: Audit backend dependencies (high+, advisory — blocked by fastembed transitive: protobufjs/xmldom/node-tar)
-        continue-on-error: true
+      - name: Audit backend dependencies (high+, blocking)
         run: npm run audit:high
         working-directory: src-ts
 

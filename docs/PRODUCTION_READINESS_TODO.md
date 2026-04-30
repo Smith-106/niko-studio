@@ -12,8 +12,8 @@
 |:---:|:---:|:---:|:---:|
 | P0 | 3 | 3 | 0 |
 | P1 | 3 | 3 | 0 |
-| P2 | 4 | 3 | 1 |
-| **合计** | **10** | **9** | **1** |
+| P2 | 4 | 4 | 0 |
+| **合计** | **10** | **10** | **0** |
 
 ---
 
@@ -92,14 +92,12 @@
 | **影响** | 依赖升级可能引入 breaking change 或高危漏洞，但不被 CI 检测阻断 |
 | **范围** | `.github/workflows/integration-tests.yml` 第 62-64 行 |
 | **验收标准** | 1. 完成 breaking 依赖升级链（特别是 transitively 引入的脆弱版本） <br> 2. `npm run audit:high` 零报错 <br> 3. CI 中移除 `continue-on-error: true`，audit 失败阻断构建 |
-| **当前状态** | **partial/blocked — 非 breaking 链已修复，上游 breaking 链阻塞** |
-| **已修复** | `npm audit fix` 已消除 4 条非 breaking 链（15→11 vulnerabilities）：<br>- `@xmldom/xmldom` 0.8.11 → 0.8.13（high → resolved）<br>- `fast-xml-parser` 5.5.8 → 5.7.2 + `@aws-sdk/xml-builder` 升级（moderate → resolved）<br>- `postcss` 8.5.8 → 8.5.12（moderate → resolved）<br>- `protobufjs` 6.11.4 → 6.11.5（minor version bump，但 advisory range `<7.5.5` 仍覆盖） |
-| **仍阻塞** | 剩余 11 vulnerabilities（4 critical, 2 high, 5 moderate），全部需要 breaking changes：<br>1. `protobufjs <7.5.5`（critical）— locked by `@xenova/transformers >=2.0.2 -> onnxruntime-web -> onnx-proto -> protobufjs`，fix 需要降级 `@xenova/transformers` 到 2.0.1（breaking）<br>2. `tar <=7.5.10`（high）— locked by `fastembed >=1.1.0`，fix 需要降级 `fastembed` 到 1.0.0（breaking）<br>3. `esbuild <=0.24.2 / vite / vitest`（moderate）— fix 需要升级 `vitest` 到 4.x（breaking test toolchain change） |
-| **CI 状态** | `.github/workflows/integration-tests.yml:62-64` 保持 `continue-on-error: true`（advisory）。由于 `audit:high` 无法归零，不能切换为 blocking |
-| **已落地证据** | `src-ts/package-lock.json` 已更新（non-breaking fixes applied）；typecheck + 310 mcp tests + 487 memory tests 全部通过 |
-| **下一步可选路径** | 1. 评估 `fastembed` 是否有新版本修复 tar 链<br>2. 评估 `@xenova/transformers` 替代方案（如 `@huggingface/transformers`）<br>3. 评估 vitest 4.x 升级可行性<br>4. 上述任一路径完成后重新评估 CI blocking 切换 |
-| **工作量** | 中（阻塞归因已完成，非 breaking 链已修复，breaking 链需独立技术决策） |
-| **当前结论** | **Stage 3 partial/blocked**：non-breaking 修复已落地，CI blocking 因上游 breaking 约束暂不可切换。 |
+| **当前状态** | **已完成** |
+| **已修复** | 1. `npm audit fix` 消除 4 条非 breaking 链（@xmldom/xmldom、fast-xml-parser、postcss、protobufjs minor）<br>2. npm `overrides` 强制升级传递依赖：`protobufjs ^7.5.5`（消除 critical）、`tar ^7.5.11`（消除 high）<br>3. 最终结果：15 → 5 vulnerabilities，全部为 moderate（esbuild/vite/vitest 开发工具链）<br>4. `npm run audit:high` 通过（0 high, 0 critical） |
+| **CI 状态** | `.github/workflows/integration-tests.yml` 已移除 `continue-on-error: true`，audit 失败将阻断构建 |
+| **已落地证据** | `src-ts/package.json` overrides 配置；`src-ts/package-lock.json` 已更新；typecheck + 861 tests 全部通过；`npm run audit:high` exit 0 |
+| **残余说明** | 5 个 moderate 漏洞（esbuild <=0.24.2 / vite / vitest）仍存在，修复需升级 vitest 到 4.x（breaking test toolchain change）。因仅为 moderate 且不触发 `audit:high` 门槛，暂不处理 |
+| **工作量** | 中 |
 
 ### #9 Redis-free rate limiting
 
