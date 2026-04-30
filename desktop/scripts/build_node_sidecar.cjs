@@ -195,9 +195,28 @@ function hydrateProductionDeps() {
   // Use --omit=dev to skip vitest/eslint/etc (~600 MB savings).
   // --ignore-scripts is intentionally NOT set: we want better-sqlite3 + fastembed
   // postinstall hooks to fetch the correct prebuilds for the build host arch.
+  //
+  // ABI alignment (ISS-20260430-001 follow-up): when BUNDLE_NODE=true the runtime
+  // Node version may differ from the build-host Node (e.g. host=v24, bundled=v20).
+  // prebuild-install / node-gyp inspect npm_config_target to pick the matching
+  // NODE_MODULE_VERSION prebuild. Without this, better-sqlite3 ships a v24 ABI
+  // .node that fails to load under v20 with "compiled against a different Node.js
+  // version using NODE_MODULE_VERSION 137. This version of Node.js requires
+  // NODE_MODULE_VERSION 115."
+  const env = { ...process.env };
+  if (BUNDLE_NODE) {
+    env.npm_config_target = NODE_VERSION;
+    env.npm_config_runtime = 'node';
+    env.npm_config_target_arch = process.arch;
+    env.npm_config_target_platform = process.platform;
+    env.npm_config_disturl = 'https://nodejs.org/dist';
+    env.npm_config_build_from_source = 'false';
+    log(`  ABI target: Node v${NODE_VERSION} on ${process.platform}-${process.arch} (forces matching prebuilds)`);
+  }
   execSync('npm ci --omit=dev --no-audit --no-fund', {
     cwd: STAGE_DIR,
     stdio: 'inherit',
+    env,
   });
 }
 
