@@ -46,8 +46,11 @@ fn resolve_node(exe_dir: &Path) -> Option<PathBuf> {
     } else {
         BUNDLED_NODE_REL_UNIX
     };
-    let bundled_candidates: [PathBuf; 4] = [
+    let bundled_candidates: [PathBuf; 5] = [
         exe_dir.join(bundled_rel),
+        // Tauri 2 NSIS preserves relative paths from `bundle.resources`, so
+        // `"bin/sidecar"` from tauri.conf.json lands at <install>/bin/sidecar/.
+        exe_dir.join("bin").join(bundled_rel),
         exe_dir.join("resources").join(bundled_rel),
         exe_dir
             .parent()
@@ -82,12 +85,15 @@ fn resolve_sidecar(exe_dir: &Path) -> Option<PathBuf> {
     // candidate paths in order. The first match wins.
     //
     //   1. <exe_dir>/sidecar/                    — co-located (dev / Tauri externalBin staging)
-    //   2. <exe_dir>/resources/sidecar/          — Tauri 2 default resource_dir on Windows
-    //   3. <exe_dir>/../resources/sidecar/       — Tauri 2 install layout where launcher
+    //   2. <exe_dir>/bin/sidecar/                — Tauri 2 NSIS install (resources path "bin/sidecar"
+    //                                              from tauri.conf.json is preserved relative to install root)
+    //   3. <exe_dir>/resources/sidecar/          — Tauri 2 default resource_dir on Windows
+    //   4. <exe_dir>/../resources/sidecar/       — Tauri 2 install layout where launcher
     //                                              sits in a sibling bin/ folder
-    //   4. <exe_dir>/_up_/resources/sidecar/     — Tauri's renamed parent-relative escape
-    let candidates: [PathBuf; 4] = [
+    //   5. <exe_dir>/_up_/resources/sidecar/     — Tauri's renamed parent-relative escape
+    let candidates: [PathBuf; 5] = [
         exe_dir.join(SIDECAR_DIRNAME),
+        exe_dir.join("bin").join(SIDECAR_DIRNAME),
         exe_dir.join("resources").join(SIDECAR_DIRNAME),
         exe_dir
             .parent()

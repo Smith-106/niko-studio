@@ -4,6 +4,9 @@ version = "9.2.1"
 description = "Niko-Studio Desktop - AI Writing Assistant"
 authors = ["Niko-Studio Team"]
 edition = "2021"
+# Disambiguate the two [[bin]] targets (main app + niko-gateway-launcher) for
+# `cargo run` / Tauri's release build, which both expect a single default.
+default-run = "niko-studio-desktop"
 
 [lib]
 name = "niko_studio_lib"
