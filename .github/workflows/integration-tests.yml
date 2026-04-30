@@ -59,13 +59,17 @@ jobs:
         run: npm ci
         working-directory: src-ts
 
-      - name: Audit backend dependencies (high+, advisory)
+      - name: Audit backend dependencies (high+, advisory — blocked by fastembed transitive: protobufjs/xmldom/node-tar)
         continue-on-error: true
         run: npm run audit:high
         working-directory: src-ts
 
       - name: Install desktop dependencies
         run: npm ci
+        working-directory: desktop
+
+      - name: Audit desktop dependencies (high+, blocking)
+        run: npm run audit:high
         working-directory: desktop
 
       - name: Run TypeScript Phase 4 coverage baseline
