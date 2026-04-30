@@ -1,341 +1,892 @@
-# AI Agent Platform - API 参考文档
+# Niko Studio Gateway API Reference
 
-**版本**: 2.7  
-**更新日期**: 2026-01-26
-**状态**: 历史 Python API 参考（compatibility-only）
-
-> 状态说明（2026-04-07）：本文档保留为历史 Python `src/*` API 示例，不是当前 `desktop + src-ts` 运行或发布权威。当前权威口径请以 `README.md`、`docs/release/RELEASE_NOTES.md` 与 `python scripts/release_check_summary.py` 的结果为准。
+**Version**: 9.2.0
+**Updated**: 2026-04-30
+**Base URL**: `http://localhost:8000`
 
 ---
 
-## 1. 记忆层 API
+## Overview
 
-### 1.1 MemoryManager
+The Niko Studio Gateway exposes a REST API over HTTP, organized into 5 route groups with 69 endpoints total. All request/response bodies use JSON (`Content-Type: application/json`) unless noted otherwise.
 
-```python
-from src.memory.memory_manager import MemoryManager
+### Common Patterns
 
-manager = MemoryManager(base_path=".writing")
-
-# 添加记忆
-memory_id = manager.add(
-    text="角色张三是一个性格内向的程序员",
-    tags=["character", "personality"],
-    topics=["novel", "protagonist"]
-)
-# 返回: "m-20260126-abc123"
-
-# 搜索记忆
-results = manager.search(query="张三", k=5)
-# 返回: [{"id": "...", "text": "...", "score": 0.95}, ...]
-
-# 更新记忆
-manager.update(
-    memory_id="m-20260126-abc123",
-    text="张三是一个外向开朗的程序员",
-    tags=["character", "updated"]
-)
-
-# 删除记忆
-manager.delete(memory_id="m-20260126-abc123")
-
-# 列出最近记忆
-recents = manager.list_recent(limit=10)
-```
-
-### 1.2 CitationManager
-
-```python
-from src.memory.citation_manager import CitationManager, TransientCitation
-
-manager = CitationManager()
-
-# 从搜索结果创建临时引用
-transient = manager.create_transient_citation(
-    id="doc-abc#chunk0001",
-    surface="store",
-    path=".writing/store/normalized/doc.ok.md",
-    quote="这是引用的原文内容",
-    loc={"kind": "char", "start": 100, "end": 200}
-)
-
-# 转换为持久化引用
-persisted = manager.make_citation(
-    transient=transient,
-    retention_class="durable",  # durable | ephemeral | standard
-    tags=["important", "character"]
-)
-
-# 验证引用完整性
-result = manager.verify_citation(cite_id="doc-abc#chunk0001")
-# 返回: {"valid": True, "sha256": "...", "message": "OK"}
-
-# 打开引用
-content = manager.open_citation(cite_id="doc-abc#chunk0001")
-
-# 垃圾回收
-expired = manager.gc_citations(dry_run=True)
-```
-
-### 1.3 DistillationManager
-
-```python
-from src.memory.distillation_manager import DistillationManager
-
-manager = DistillationManager()
-
-# 获取蒸馏 Prompt 模板
-prompt = manager.get_distillation_prompt(prompt_type="extract-facts")
-# 可选: extract-facts, identify-patterns, summarize-insights,
-#       extract-relationships, extract-entities, memory-synthesis
-
-# 从蒸馏内容创建记忆
-memory_id = manager.create_memory_from_distillation(
-    distilled_content="张三是主角，性格内向...",
-    source_citations=["doc-abc#chunk0001", "doc-abc#chunk0002"],
-    tags=["distilled", "character"],
-    topics=["novel"]
-)
-```
+- **Workspace context**: Most endpoints accept an optional `workspace` object for workspace-aware operations.
+- **Error responses**: `{ "error": "message" }` with appropriate HTTP status code (400/404/500/503).
+- **Streaming**: `/chat/stream` and `/writing/stream` use Server-Sent Events (`text/event-stream`).
 
 ---
 
-## 2. 工作流 API
+## 1. Platform (11 endpoints)
 
-### 2.1 SessionManager
+### GET /health
 
-```python
-from src.workflow.session.session_manager import SessionManager
+Health check with service and engine status.
 
-manager = SessionManager()
-
-# 初始化会话
-session = manager.init(session_id="session-001", session_type="standard")
-
-# 列出会话
-sessions = manager.list(location="active")  # active | archived | all
-
-# 读取会话内容
-content = manager.read(
-    session_id="session-001",
-    content_type="chapter",
-    chapter_id="1"
-)
-
-# 写入会话内容
-manager.write(
-    session_id="session-001",
-    content_type="chapter",
-    content="第一章内容...",
-    chapter_id="1"
-)
-
-# 归档会话
-manager.archive(session_id="session-001")
-
-# 获取统计
-stats = manager.stats(session_id="session-001")
+**Response 200**:
+```json
+{
+  "status": "ok",
+  "version": "9.2.0",
+  "services": { "memory": "ok", "graph": "ok", ... },
+  "engine_health": { ... },
+  "agents": ["writer", "architect", ...],
+  "skills_count": 12,
+  "mcp_runtime": { ... }
+}
 ```
 
-### 2.2 ResumeStrategy
+### GET /metrics
 
-```python
-from src.workflow.session.resume_strategy import (
-    determine_resume_strategy,
-    build_context_prefix,
-    ResumeMode,
-    ResumeDecision,
-    ContextFormat,
-)
+Runtime metrics snapshot. Returns 404 if metrics are disabled.
 
-# 决定恢复策略
-decision = determine_resume_strategy(
-    tool="gemini",
-    resume_ids=["conv-001", "conv-002"],
-    custom_id=None
-)
-# 返回: ResumeDecision(strategy=ResumeMode.HYBRID, ...)
-
-# 构建上下文前缀
-prefix = build_context_prefix(
-    context_turns=[...],
-    format="yaml"  # plain | yaml | json (默认 yaml)
-)
+**Response 200**:
+```json
+{
+  "status": "ok",
+  "metrics": { ... },
+  "runtime": {
+    "session_id": "uuid",
+    "reconnect_attempts": 0,
+    "last_probe_at": "ISO-8601",
+    "last_error": null
+  }
+}
 ```
 
-说明:
-- ResumeMode 等价于文档中的 ResumeStrategy 枚举命名。
-- build_context_prefix 默认输出格式为 yaml。
+### GET /tools
 
----
+List available tools by service.
 
-## 3. 搜索 API
-
-### 3.1 SmartSearch
-
-```python
-from src.search.smart_search import SmartSearch, SearchMode
-
-search = SmartSearch()
-
-# 执行搜索
-results = search.search(
-    query="张三的性格特点",
-    mode=SearchMode.SEMANTIC,  # FUZZY | SEMANTIC | HYBRID | AUTO
-    top_k=20,
-    type_filter=None,
-    min_score=0.0
-)
-# 返回: List[dict] (SmartSearchResult.to_dict)
-
-# 模糊搜索
-fuzzy_results = search.fuzzy_search(query="张三")
-
-# 语义搜索
-semantic_results = search.semantic_search(query="主角的心理变化")
-
-# RRF 融合排序
-merged = search.rrf_merge(results_a, results_b, k=60)
-
-# 自动分类模式
-mode = search.auto_classify(query="张三")
+**Response 200**:
+```json
+{ "memory": ["search", "add", ...], "graph": ["query", ...] }
 ```
 
-说明:
-- 回退路径: FTS5 → LIKE（同库）；语义搜索优先 VectorIndex，失败回退 VectorSearch。
+### GET /models
 
-### 3.2 VectorSearch
+List available LLM models. Query param `provider` (optional) filters by provider.
 
-```python
-from src.search.vector_search import (
-    create_vector_index,
-    search_memory_vectors,
-    search_chunk_vectors,
-    hybrid_search,
-)
-
-# 创建向量索引
-index = create_vector_index(db_path=".writing/vectors.db")
-
-# 搜索记忆向量
-results = search_memory_vectors(index, query="张三", top_k=5)
-
-# 搜索文档块向量
-results = search_chunk_vectors(index, query="张三", top_k=5)
-
-# 混合搜索
-results = hybrid_search(index, query="张三", top_k=5)
+**Response 200**:
+```json
+{ "status": "ok", "providers": { "openai": ["gpt-4o", ...] } }
 ```
 
-说明:
-- VectorIndex 为默认实现；VectorSearch 为旧实现（SmartSearch 会回退使用）。
-- sqlite-vec 不可用时自动回退到 brute force。
+### GET /config
 
----
+Read current gateway configuration.
 
-## 4. 图谱 API
+**Response 200**:
+```json
+{
+  "status": "ok",
+  "config": { ... },
+  "modifiable_fields": ["agent.default_model", ...]
+}
+```
 
-### 4.1 GraphManager
+### PUT /config
 
-```python
-from src.graph.graph_manager import GraphManager
+Update configuration fields. Also available via `POST /config`.
 
-manager = GraphManager()
+**Request**:
+```json
+{ "fields": { "agent.default_model": "gpt-4o-mini" } }
+```
 
-# 执行 Cypher 查询
-results = manager.run_cypher(
-    query="MATCH (c:Character) WHERE c.name = $name RETURN c",
-    params={"name": "张三"}
-)
+**Response 200**:
+```json
+{ "status": "ok", "updated": ["agent.default_model"] }
+```
 
-# 获取图统计
-stats = manager.get_entity_stats()
+### GET /config/secrets
 
-# 查找关联实体
-related = manager.find_related_entities(entity_name="张三")
+Read secret fields (values masked).
 
-# 获取记忆提及的实体
-entities = manager.get_memory_entities(memory_id="m-20260126-abc123")
+**Response 200**:
+```json
+{
+  "status": "ok",
+  "secrets": {
+    "agent.openai_api_key": { "configured": true, "value": "sk-****" }
+  }
+}
+```
+
+### PUT /config/secrets
+
+Update secret fields. Also available via `POST /config/secrets`.
+
+**Request**:
+```json
+{ "secrets": { "agent.openai_api_key": "sk-..." } }
+```
+
+**Response 200**:
+```json
+{ "status": "ok", "updated": ["agent.openai_api_key"] }
+```
+
+### POST /config/reload
+
+Hot-reload configuration from file.
+
+**Response 200**:
+```json
+{ "status": "ok", "message": "Configuration reloaded" }
 ```
 
 ---
 
-## 5. 文档仓库 API
+## 2. Content (17 endpoints)
 
-### 5.1 StoreManager
+### POST /chat
 
-```python
-from src.store.store_manager import StoreManager
-from pathlib import Path
+Synchronous chat completion with optional workflow, skills, and evaluation.
 
-manager = StoreManager()
+**Request**:
+```json
+{
+  "messages": [
+    { "role": "user", "content": "Help me write a scene" }
+  ],
+  "workflowLevel": "L1",
+  "skills": ["worldbuilding"],
+  "context": {},
+  "workspace": {},
+  "allowLlmFallback": true,
+  "comparison": { "enabled": false }
+}
+```
 
-# 导入文档
-doc_id = manager.ingest(path=Path("./docs/novel.md"))
+Validation: max 128 messages, 24k chars/message, 120k total chars.
 
-# 搜索文档
-results = manager.search(query="第一章", k=5)
+**Response 200**:
+```json
+{
+  "content": "...",
+  "skills_used": ["worldbuilding"],
+  "writer_metadata": { ... },
+  "workflow_info": { ... },
+  "evaluation": { "score": 85, "feedback": "..." },
+  "context": { ... },
+  "workspace": { ... },
+  "_contract": { "version": "1.0", "timestamp": 1714500000 }
+}
+```
 
-# 列出所有文档
-docs = manager.list_documents()
+### POST /chat/stream
+
+Streaming chat via Server-Sent Events.
+
+**Request**: Same as `POST /chat`.
+
+**Response** (`Content-Type: text/event-stream`):
+```
+event: start
+data: {"_contract":{"version":"1.0",...}}
+
+event: routing
+data: {"level":"L1","agent":"writer"}
+
+event: content
+data: {"chunk":"...","index":0}
+
+event: evaluation
+data: {"score":85,"feedback":"..."}
+
+event: done
+data: {"status":"ok","skills_used":["worldbuilding"]}
+```
+
+### POST /memory/search
+
+Search memories by query with optional filtering.
+
+**Request**:
+```json
+{
+  "query": "character personality",
+  "layer": "long_term",
+  "dimensions": ["character"],
+  "limit": 10,
+  "workspace": {}
+}
+```
+
+### POST /memory/add
+
+Add a new memory entry.
+
+**Request**:
+```json
+{
+  "content": "Zhang San is an introverted programmer",
+  "layer": "long_term",
+  "dimension": "character",
+  "importance": 0.8,
+  "tags": ["character", "personality"],
+  "workspace": {}
+}
+```
+
+### POST /memory/upload
+
+Upload and chunk a file into memory entries. Content must be base64-encoded.
+
+**Request**:
+```json
+{
+  "file_name": "chapter1.txt",
+  "file_content_base64": "base64-string",
+  "session_id": "uuid",
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "workspace": {}
+}
+```
+
+**Response 201**:
+```json
+{
+  "status": "created",
+  "file_name": "chapter1.txt",
+  "session_id": "uuid",
+  "chunks": 5,
+  "memory_ids": ["m-1", "m-2", ...]
+}
+```
+
+### POST /memory/temporal
+
+Retrieve temporal memory for an entity at a point in time.
+
+**Request**:
+```json
+{
+  "entity_id": "character-zhang-san",
+  "at_time": "2026-01-15T00:00:00Z",
+  "workspace": {}
+}
+```
+
+### POST /workspace/context
+
+Retrieve workspace context summary.
+
+**Request**:
+```json
+{ "identity": {}, "authority": {} }
+```
+
+**Response 200**:
+```json
+{
+  "workspace": { ... },
+  "summary": { ... },
+  "compatibility": { ... }
+}
+```
+
+### POST /graph/query
+
+Execute a Cypher-style graph query.
+
+**Request**:
+```json
+{
+  "cypher": "MATCH (c:Character) RETURN c",
+  "workspace": {}
+}
+```
+
+### POST /graph/character
+
+Get character data with optional relations and timeline.
+
+**Request**:
+```json
+{
+  "name": "Zhang San",
+  "include_relations": true,
+  "include_timeline": true,
+  "workspace": {}
+}
+```
+
+### POST /graph/foreshadows
+
+Get foreshadowing elements, optionally filtered by status or chapter.
+
+**Request**:
+```json
+{
+  "status": "planted",
+  "chapter": 3,
+  "workspace": {}
+}
+```
+
+### POST /wiki/list
+
+List wiki pages, optionally filtered by status.
+
+**Request**:
+```json
+{ "status": "curated", "limit": 20, "workspace": {} }
+```
+
+### POST /wiki/promote
+
+Promote content to a wiki page.
+
+**Request**:
+```json
+{
+  "title": "Zhang San Character Profile",
+  "body": "...",
+  "slug": "zhang-san",
+  "promoted_from": "story-bible",
+  "status": "draft",
+  "workspace": {}
+}
+```
+
+### POST /wiki/page
+
+Read a single wiki page by slug.
+
+**Request**:
+```json
+{ "slug": "zhang-san", "workspace": {} }
+```
+
+### POST /writing/quality
+
+Run novel quality check on content.
+
+**Request**:
+```json
+{
+  "content": "draft text...",
+  "quality_level": "standard",
+  "dimensions": ["style", "logic"],
+  "quality_goals": {}
+}
+```
+
+**Response 200**:
+```json
+{
+  "status": "ok",
+  "total_score": 82,
+  "lock_score": 90,
+  "style_score": 78,
+  "logic_score": 85,
+  "actionable_feedback": "...",
+  "suggestions": [...]
+}
+```
+
+### POST /writing/helper
+
+Process text through writing helper (polish, rewrite, expand, summarize, outline, generate).
+
+**Request**:
+```json
+{
+  "content": "rough draft...",
+  "mode": "polish",
+  "instruction": "make it more vivid",
+  "skill_ids": [],
+  "api_key": "sk-...",
+  "model": "gpt-4o"
+}
+```
+
+**Response 200**:
+```json
+{
+  "status": "ok",
+  "mode": "polish",
+  "processed_text": "polished text...",
+  "skills_used": [],
+  "provider": "openai"
+}
+```
+
+Also available at `POST /writing-helper/process` (alias).
+
+### POST /writing/stream
+
+Streaming writing helper via SSE. Requires LLM provider config.
+
+**Request**:
+```json
+{
+  "content": "text...",
+  "mode": "expand",
+  "api_key": "sk-...",
+  "model": "gpt-4o"
+}
+```
+
+**Response** (`text/event-stream`):
+```
+event: start
+data: {"status":"started"}
+
+event: content
+data: {"chunk":"...","index":0}
+
+event: done
+data: {"status":"done","chunks":5,"skills_used":[]}
 ```
 
 ---
 
-## 6. 数据结构
+## 3. Agent (12 endpoints)
 
-### 6.1 Citation
+### POST /agent/route
 
-```python
-@dataclass
-class TransientCitation:
-    id: str
-    surface: str          # "memory" | "store"
-    path: str
-    sha256: str
-    loc: dict            # {kind, start, end}
-    quote: str
-    context: dict = None
-    score: float = None
+Route a task to the appropriate agent.
 
-@dataclass
-class PersistedCitation:
-    id: str
-    type: str             # "doc" | "chunk" | "memory"
-    path: str
-    sha256: str
-    loc: dict
-    quote: str
-    retention_class: str  # "durable" | "ephemeral" | "standard"
-    tags: list[str] = None
-    created_at: str = None
+**Request**:
+```json
+{ "task": "Write a battle scene" }
 ```
 
-### 6.2 Memory
+### POST /agent/write
 
-```python
-@dataclass
-class MemoryNote:
-    id: str               # "m-YYYYMMDD-hash"
-    text: str
-    ts: str
-    tags: list[str]
-    topics: list[str]
-    vec: list[float]      # 384-dim
+Generate content using the writer agent.
+
+**Request**:
+```json
+{
+  "scene_card": { "setting": "forest", "characters": ["Zhang San"] },
+  "skills": ["worldbuilding"],
+  "word_target": 500,
+  "allow_llm_fallback": true,
+  "quality_goals": {},
+  "workspace": {}
+}
 ```
 
-### 6.3 Session
+### POST /agent/revise
 
-```python
-@dataclass
-class SessionInfo:
-    id: str
-    type: str             # "rapid" | "lite" | "standard" | ...
-    status: str           # "active" | "archived"
-    created_at: str
-    updated_at: str
+Revise a draft based on feedback.
+
+**Request**:
+```json
+{
+  "draft": "original text...",
+  "feedback": { "issues": ["pacing too slow"] },
+  "allow_llm_fallback": true,
+  "quality_goals": {}
+}
+```
+
+Returns 400 for validation errors, 503 for LLM errors.
+
+### POST /agent/context
+
+Get context for a scene.
+
+**Request**:
+```json
+{
+  "scene_info": { "chapter": 3, "setting": "forest" },
+  "context_types": ["character", "worldbuilding"]
+}
+```
+
+### POST /critic/evaluate
+
+Evaluate content quality across dimensions.
+
+**Request**:
+```json
+{
+  "content": "text to evaluate...",
+  "scene_card": {},
+  "dimensions": ["style", "character", "pacing"],
+  "quality_goals": {}
+}
+```
+
+### POST /critic/suggestions
+
+Get improvement suggestions for content.
+
+**Request**:
+```json
+{
+  "content": "text...",
+  "issues": ["weak dialogue"],
+  "max_suggestions": 5
+}
+```
+
+### POST /critic/consistency
+
+Cross-chapter consistency analysis.
+
+**Request**:
+```json
+{
+  "chapters": ["Chapter 1 text...", "Chapter 2 text..."],
+  "chapterMeta": [
+    { "chapterNumber": 1, "title": "The Beginning" },
+    { "chapterNumber": 2, "title": "The Journey" }
+  ],
+  "worldRules": [],
+  "workspace": {}
+}
+```
+
+**Response 200**:
+```json
+{
+  "character": { ... },
+  "timeline": { ... },
+  "worldview": { ... },
+  "combined": {
+    "totalConflicts": 3,
+    "criticalCount": 0,
+    "majorCount": 1,
+    "minorCount": 2,
+    "overallScore": 87,
+    "summary": "..."
+  },
+  "analyzedAt": "ISO-8601",
+  "runId": "uuid"
+}
+```
+
+### POST /consistency/check
+
+Same as `/critic/consistency`, but auto-scans workspace directory for chapter files if none provided.
+
+### GET /skills/list
+
+List available skills. Query param `category` (optional) filters by category.
+
+### POST /skills/load
+
+Load a skill by ID.
+
+**Request**:
+```json
+{ "skill_id": "worldbuilding" }
+```
+
+### POST /skills/match
+
+Match skills to a task.
+
+**Request**:
+```json
+{
+  "task_type": "scene_writing",
+  "keywords": ["battle", "tension"],
+  "issue": "pacing"
+}
+```
+
+### POST /skills/chain
+
+Get a skill execution chain for a task type.
+
+**Request**:
+```json
+{ "task_type": "full_chapter" }
 ```
 
 ---
 
-*文档版本: 2.7 | 更新时间: 2026-01-26*
+## 4. Workflow (24 endpoints)
+
+### POST /workflow/route
+
+Route a workflow task to the appropriate level.
+
+**Request**:
+```json
+{ "task": "Write chapter 5", "workspace": {} }
+```
+
+### POST /workflow/plan
+
+Create a workflow execution plan.
+
+**Request**:
+```json
+{
+  "task": "Write chapter 5",
+  "level": "L3",
+  "genre": "fantasy",
+  "recommendations": {},
+  "workspace": {}
+}
+```
+
+### POST /workflow/execute
+
+Execute a workflow plan step.
+
+**Request**:
+```json
+{
+  "plan_id": "uuid",
+  "step_id": "step-1",
+  "confirm_token": "token",
+  "recommendations": {},
+  "workspace": {}
+}
+```
+
+### POST /workflow/lifecycle
+
+Manage workflow lifecycle (pause, resume, cancel).
+
+**Request**:
+```json
+{
+  "plan_id": "uuid",
+  "action": "pause",
+  "workspace": {}
+}
+```
+
+### POST /workflow/rollback
+
+Quick rollback a workflow to a previous state.
+
+**Request**:
+```json
+{
+  "plan_id": "uuid",
+  "checkpoint_id": "cp-1",
+  "reason": "quality regression",
+  "workspace": {}
+}
+```
+
+### POST /workflow/scheduler/register
+
+Register a scheduled workflow task.
+
+**Request**:
+```json
+{
+  "task": { "type": "daily_review", "config": {} },
+  "enabled": true,
+  "workspace": {}
+}
+```
+
+### POST /workflow/scheduler/list
+
+List scheduled workflow tasks.
+
+**Request**:
+```json
+{ "limit": 20, "workspace": {} }
+```
+
+### POST /workflow/scheduler/pause
+
+Pause a scheduled task.
+
+**Request**:
+```json
+{ "task_id": "uuid", "workspace": {} }
+```
+
+### POST /workflow/scheduler/resume
+
+Resume a paused scheduled task.
+
+**Request**:
+```json
+{ "task_id": "uuid", "workspace": {} }
+```
+
+### POST /workflow/scheduler/run-now
+
+Immediately execute a scheduled task.
+
+**Request**:
+```json
+{
+  "task_id": "uuid",
+  "confirm_token": "token",
+  "recommendations": {},
+  "workspace": {}
+}
+```
+
+### POST /workflow/scheduler/import-lite-plan
+
+Import a lite plan into the scheduler.
+
+**Request**:
+```json
+{
+  "session_id": "uuid",
+  "force_level": "L2",
+  "enabled": true,
+  "workspace": {}
+}
+```
+
+### POST /checkpoint/create
+
+Create a workspace checkpoint.
+
+**Request**:
+```json
+{
+  "description": "Before chapter 5 rewrite",
+  "auto_commit": true,
+  "workspace": {}
+}
+```
+
+### POST /checkpoint/restore
+
+Restore workspace to a checkpoint.
+
+**Request**:
+```json
+{
+  "checkpoint_id": "cp-1",
+  "confirm_token": "token",
+  "workspace": {}
+}
+```
+
+### POST /checkpoint/list
+
+List available checkpoints.
+
+**Request**:
+```json
+{ "limit": 20, "workspace": {} }
+```
+
+### UI Bridge Endpoints (10)
+
+The following endpoints mirror the core workflow endpoints under `/ui-bridge/workflow/`, with an additional guard that returns 403 if the UI bridge is disabled:
+
+- `POST /ui-bridge/workflow/route`
+- `POST /ui-bridge/workflow/plan`
+- `POST /ui-bridge/workflow/execute`
+- `POST /ui-bridge/workflow/lifecycle`
+- `POST /ui-bridge/workflow/scheduler/register`
+- `POST /ui-bridge/workflow/scheduler/list`
+- `POST /ui-bridge/workflow/scheduler/pause`
+- `POST /ui-bridge/workflow/scheduler/resume`
+- `POST /ui-bridge/workflow/scheduler/run-now`
+- `POST /ui-bridge/workflow/scheduler/import-lite-plan`
+
+Request and response shapes are identical to their non-bridged counterparts.
+
+---
+
+## 5. Admin (6 endpoints)
+
+### GET /admin/mcp/services
+
+List registered MCP services. Query param `services` (optional, format: `"service1:status1,service2:status2"`) filters results.
+
+**Response 200**:
+```json
+{ "services": [{ "id": "memory", "enabled": true, ... }] }
+```
+
+### POST /admin/mcp/services
+
+Register a new MCP service. Returns 409 if service already exists.
+
+**Request**:
+```json
+{ "id": "custom-service", "endpoint": "http://localhost:9000", "enabled": true }
+```
+
+**Response 201**:
+```json
+{ "service": { "id": "custom-service", ... } }
+```
+
+### PUT /admin/mcp/services/:service_id
+
+Update an existing MCP service configuration.
+
+**Request**:
+```json
+{ "enabled": false, "endpoint": "http://localhost:9001" }
+```
+
+**Response 200**:
+```json
+{ "service": { "id": "custom-service", ... } }
+```
+
+### DELETE /admin/mcp/services/:service_id
+
+Delete an MCP service. Returns 400 for built-in services, 404 if not found.
+
+**Response 200**:
+```json
+{ "status": "deleted", "service_id": "custom-service" }
+```
+
+### POST /admin/mcp/services/:service_id/enabled
+
+Toggle service enabled state.
+
+**Request**:
+```json
+{ "enabled": true }
+```
+
+**Response 200**:
+```json
+{ "service": { "id": "custom-service", "enabled": true, ... } }
+```
+
+### POST /admin/mcp/services/:service_id/probe
+
+Probe service health.
+
+**Response 200**:
+```json
+{ "service": { "id": "custom-service", "status": "healthy", "checked_at": "ISO-8601" } }
+```
+
+---
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 201 | Created (POST /admin/mcp/services, POST /memory/upload) |
+| 204 | No Content (OPTIONS preflight) |
+| 400 | Validation error / bad request |
+| 403 | UI bridge disabled |
+| 404 | Not found / metrics disabled |
+| 409 | Conflict (duplicate MCP service) |
+| 429 | Rate limited (120 req/min per client per endpoint) |
+| 500 | Internal server error |
+| 503 | LLM provider unavailable |
+
+## Rate Limiting
+
+The gateway enforces in-memory rate limiting at 120 requests per minute per client IP per endpoint path. Exceeding the limit returns 429 with a `retryAfter` field.
+
+## CORS
+
+CORS headers are added to all responses. Allowed origins are configured via `NIKO_CORS_PROD_ORIGINS` environment variable (production) or default to localhost origins (development).

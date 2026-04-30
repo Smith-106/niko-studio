@@ -4,7 +4,7 @@ const requireFromCwd = createRequire(`${process.cwd()}/`);
 const tsPlugin = requireFromCwd("@typescript-eslint/eslint-plugin");
 const tsParser = requireFromCwd("@typescript-eslint/parser");
 const sharedBugRules = {
-  "no-constant-binary-expression": "warn",
+  "no-constant-binary-expression": "error",
   "no-debugger": "error",
   "no-irregular-whitespace": "error",
   "no-self-compare": "error",

@@ -95,7 +95,7 @@ async function main() {
   try {
     const results: Record<string, unknown> = {
       timestamp: new Date().toISOString(),
-      version: '9.0.10',
+      version: '9.2.0',
       iterations: 50,
       endpoints: {},
     };

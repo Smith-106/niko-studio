@@ -1,5 +1,14 @@
 # Changelog
 
+## [9.2.0] - 2026-04-30
+
+### Changed
+- 统一全局版本号到 9.2.0，对齐 backend production readiness release 基线。
+- 升级 src-ts vitest 从 1.3.0 到 3.2.4，消除 5 个 moderate 依赖漏洞（esbuild/vite 链）。
+- 收紧 src-ts ESLint 阈值到 --max-warnings 0，与 desktop 保持一致。
+- 新增 CONTRIBUTING.md 贡献指南。
+- 重写 docs/API_REFERENCE.md，覆盖当前 TypeScript Gateway 全部 69 个 HTTP 端点。
+
 ## [9.0.10] - 2026-04-24
 
 ### Changed

@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-04-29T15:52:27.886Z",
-  "version": "9.0.10",
+  "version": "9.2.0",
   "iterations": 50,
   "endpoints": {
     "GET /health": {

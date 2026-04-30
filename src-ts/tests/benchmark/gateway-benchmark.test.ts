@@ -66,7 +66,7 @@ async function measureLatency(
 describe('Gateway Performance Benchmark', () => {
   const results: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
-    version: '9.0.10',
+    version: '9.2.0',
     iterations: ITERATIONS,
     endpoints: {} as Record<string, unknown>,
   };

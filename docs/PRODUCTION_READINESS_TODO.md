@@ -1,7 +1,7 @@
 # Niko Studio 项目开发完成度评估 — 待办清单
 
 **评估日期**: 2026-04-29  
-**基准版本**: v9.0.10 Platform Edition  
+**基准版本**: v9.2.0 Platform Edition  
 **完成度评分**: 78/100（Beta-to-Release Candidate）
 
 ---
@@ -63,7 +63,7 @@
 | **范围** | Gateway 核心端点：/chat、/search、/graph_query、/health |
 | **验收标准** | 1. 建立基准数据文件（JSON），记录关键端点的 P50/P95/P99 延迟和吞吐量 <br> 2. 基准测试脚本可重复执行（如 `npm run benchmark`） <br> 3. 至少覆盖 4 个核心端点的单人使用场景 <br> 4. 基准数据提交到仓库作为参考基线 |
 | **当前状态** | **已完成** |
-| **已落地证据** | `tests/benchmark/gateway-benchmark.test.ts`（vitest 可重复执行）+ `tests/benchmark/gateway-benchmark.ts`（独立脚本）。覆盖 5 个核心端点：GET /health、GET /tools、GET /metrics、POST /chat、POST /workflow/route。每端点 50 次迭代（chat/workflow 10 次），记录 P50/P95/P99/avg/min/max。<br>基线数据 `tests/benchmark/baseline.json` 已提交到仓库（v9.0.10 基准）。<br>`npm run benchmark` 脚本已配置。 |
+| **已落地证据** | `tests/benchmark/gateway-benchmark.test.ts`（vitest 可重复执行）+ `tests/benchmark/gateway-benchmark.ts`（独立脚本）。覆盖 5 个核心端点：GET /health、GET /tools、GET /metrics、POST /chat、POST /workflow/route。每端点 50 次迭代（chat/workflow 10 次），记录 P50/P95/P99/avg/min/max。<br>基线数据 `tests/benchmark/baseline.json` 已提交到仓库（v9.2.0 基准）。<br>`npm run benchmark` 脚本已配置。 |
 | **工作量** | 中 |
 
 ---
