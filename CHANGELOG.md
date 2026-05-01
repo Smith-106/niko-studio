@@ -1,5 +1,27 @@
 # Changelog
 
+## [9.2.3] - 2026-05-01
+
+### Changed
+- 将 v9.2.2 ship 后的 4 个 post-release 提交（`2e60305` + `37efb57` + `b0cce4d`）固化为正式 patch 版本，使 git tag 与 main HEAD 状态对齐，避免后续 release-check 出现 `fresh_superseded`。
+- 同步全局版本号 `9.2.2 → 9.2.3`：`desktop/package.json`、`src-ts/package.json`、`desktop/src-tauri/Cargo.toml`、`desktop/src-tauri/Cargo.lock`、`desktop/src-tauri/tauri.conf.json`、`src-ts/config/index.ts`、`config/niko-studio.yaml`、`config/niko-studio.production.yaml`。
+
+### Fixed
+- 修复 `desktop/vite.config.ts` 缺 `test.exclude`（vitest 默认 discovery 扫到 `src-tauri/bin/sidecar/**` + `src-tauri/target/**` 下 staged 的 Node 20 ABI 编译的 native 模块测试，host Node 24 加载 `better-sqlite3.node` 抛 NODE_MODULE_VERSION 不匹配）。补 exclude 后 836/836 desktop 测试通过。
+- 修复 `desktop/scripts/hydrate_packaged_compat_artifact.cjs` source 候选优先级（原 candidate 只有 `target/.../debug/niko-gateway.exe`，本机解析为 47 天前 March 14 stale Python compat exe，导致 `validate_sidecar_contract --strict-packaging` >30d staleness gate 失败）。改为优先选 `target/release/niko-gateway-launcher.exe`，legacy 候选保留作为最后回退。
+- 修复 `tests/unit/scripts/test_governance_scripts.py` 的 `run_node_cjs_and_capture` 测试 harness（原 `fsStub` 只 mock `existsSync`/`readFileSync`，但 ISS-001 在 `choose_sidecar.cjs` 加的 `detectStalePythonBinaries` 用 `fs.statSync` + `writeSidecarManifest` 用 `fs.mkdirSync`+`fs.writeFileSync` 在 vm sandbox 中调用立即抛 "fs.X is not a function"）。补 `statSync`（fake mtimeMs=now）、`mkdirSync`、`writeFileSync` (no-op) 后 39/39 governance tests 通过。
+- 重跑 `scripts/check-writing-helper.ps1 -Strict` 刷新 `.workflow/evidence/release/writing-helper-acceptance.json`，head_sha 对齐当前 HEAD（之前 stay 在 v9.2.1 era 被 release-check 标记 `fresh_superseded`）。7/7 cases pass。
+
+### Docs
+- 更新 `docs/release/SIGN_OFF.md`，将 `Packaged runtime` 描述从 "Packaged Python compatibility runtime" 替换为 v9.2.2+ Node-first 契约：Tauri NSIS bundle the Rust launcher (`niko-gateway-launcher.exe`) + `bundle.resources` 下 `bin/sidecar/` staged Node TS gateway + portable Node 20.18.1。Python compat sidecar 退化为 advisory `--runtime python` fallback only。同步更新 prerequisites 段、release states 段、retained-artifact 列表（commit `b0cce4d`）。
+
+### Closed Issues
+- **ISS-20260428-001 (P0, ISSUE-PR-1)**：Unify packaged runtime contract — code paths v9.2.2 已 ship，docs 对齐 in v9.2.3。
+- **ISS-20260428-002 (P0, ISSUE-PR-2)**：Restore desktop authoritative local gate — `npm --prefix desktop run check:local` exit 0 验证。
+- **ISS-20260428-003 (P0, ISSUE-PR-3)**：Refresh same-head release evidence + reclose local selftest enforcement — release_check_summary.py 33/33 PASS。
+- **ISS-20260428-008 (P1, ISSUE-PR-8)**：Python static quality gates — pyproject.toml + ruff CI 已早期到位。
+- **ISS-20260428-009 (P1, ISSUE-PR-9)**：Productize release-evidence refresh — `scripts/refresh_release_evidence.py` 已是 single-path operator helper。
+
 ## [9.2.2] - 2026-05-01
 
 ### Fixed
