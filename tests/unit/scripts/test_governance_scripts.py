@@ -94,6 +94,20 @@ def run_node_cjs_and_capture(
           ]),
         );
 
+        // ISS-20260430-001 follow-up: choose_sidecar.cjs gained
+        // detectStalePythonBinaries (uses fs.statSync) and writeSidecarManifest
+        // (uses fs.mkdirSync + fs.writeFileSync). validate_sidecar_contract.cjs
+        // also uses fs.statSync for the version contract check. Without these
+        // stubs the harness throws "fs.X is not a function" before reaching the
+        // assertions the tests actually care about.
+        //
+        // Stub semantics:
+        //  - statSync: for paths in existsMap (test-mocked) return a fake stat
+        //              with mtimeMs=now (treats them as fresh — staleness
+        //              detection won't false-positive against test fixtures).
+        //              For real-disk paths, passthrough.
+        //  - writeFileSync / mkdirSync: no-op. Tests don't currently inspect
+        //              writes; if a future test needs to, capture into a Map.
         const fsStub = {
           existsSync(filePath) {
             const normalizedPath = path.normalize(path.resolve(filePath));
@@ -108,6 +122,28 @@ def run_node_cjs_and_capture(
               return jsonFileMap.get(normalizedPath);
             }
             return fs.readFileSync(normalizedPath, encoding);
+          },
+          statSync(filePath, options) {
+            const normalizedPath = path.normalize(path.resolve(filePath));
+            if (existsMap.has(normalizedPath)) {
+              const nowMs = Date.now();
+              return {
+                mtimeMs: nowMs,
+                ctimeMs: nowMs,
+                atimeMs: nowMs,
+                size: 0,
+                isFile: () => true,
+                isDirectory: () => false,
+                isSymbolicLink: () => false,
+              };
+            }
+            return fs.statSync(normalizedPath, options);
+          },
+          mkdirSync(_dirPath, _options) {
+            // no-op: tests do not assert on directory creation
+          },
+          writeFileSync(_filePath, _data, _encoding) {
+            // no-op: tests do not assert on file writes
           },
         };
 

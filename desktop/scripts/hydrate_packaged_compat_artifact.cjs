@@ -24,7 +24,20 @@ function candidateSources() {
     return [];
   }
 
+  // Order matters: ISS-20260430-001 made the Rust launcher
+  // (`niko-gateway-launcher`) the canonical packaged-compat artifact. Prefer it
+  // over legacy `niko-gateway.exe` build outputs (which can be an ancient stale
+  // Python compat exe still lingering in target/) so the hydrated
+  // bin/niko-gateway.exe stays fresh and the validate_sidecar_contract
+  // --strict-packaging staleness gate stops failing.
   return [
+    // Fresh Rust launcher (preferred — what `npm run build:sidecar` produces)
+    path.join(TARGET_DIR, 'release', 'niko-gateway-launcher.exe'),
+    path.join(TARGET_DIR, TARGET_TRIPLE, 'release', 'niko-gateway-launcher.exe'),
+    path.join(TARGET_DIR, TARGET_TRIPLE, 'debug', 'niko-gateway-launcher.exe'),
+    path.join(TARGET_DIR, 'debug', 'niko-gateway-launcher.exe'),
+    // Legacy fallback — old main-binary debug builds; kept only for hosts that
+    // have not yet built the launcher.
     path.join(TARGET_DIR, TARGET_TRIPLE, 'debug', 'niko-gateway.exe'),
     path.join(TARGET_DIR, 'debug', 'niko-gateway.exe'),
   ];

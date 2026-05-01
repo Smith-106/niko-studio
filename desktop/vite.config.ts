@@ -46,6 +46,18 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     globals: true,
     css: true,
+    // Exclude build artifacts that vitest default discovery picks up but that
+    // are not source tests:
+    //   src-tauri/bin/sidecar/**  — build:sidecar staging (Node 20 ABI native
+    //                               modules + transitive node_modules test fixtures)
+    //   src-tauri/target/**       — cargo outputs + bin/sidecar mirror
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      'src-tauri/bin/sidecar/**',
+      'src-tauri/target/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
