@@ -5,7 +5,7 @@
 This document is the repeatable local and CI sign-off path for the shipped Niko Studio contract:
 
 - `Supported runtime`: `desktop/` + Tauri host + local `src-ts/` Node/TypeScript gateway
-- `Packaged compatibility runtime`: packaged proof remains bound to the compatibility sidecar artifact referenced by `bundle.externalBin`; local/runtime contract validation no longer requires that artifact unless explicit packaging proof is requested
+- `Packaged runtime` (v9.2.2+): Tauri NSIS bundles the Rust launcher (`niko-gateway-launcher.exe`, hydrated to `desktop/src-tauri/bin/niko-gateway*.exe` via `npm --prefix desktop run hydrate:packaged-compat`) plus the staged Node TS gateway (`bin/sidecar/`) and portable Node 20.18.1 runtime — no host-side Node install required. The legacy Python compatibility sidecar (`--runtime python` override) remains as an advisory fallback only.
 - `Primary release gate`: `.github/workflows/external-release-gate.yml`
 - `Windows acceptance gate`: `.github/workflows/writing-helper-acceptance.yml`
 - `100% completion contract`: single scorecard（functional / testing / release / governance）plus issue-pending inspection must all stay green before claiming `Decision: GO`
@@ -15,10 +15,11 @@ This document is the repeatable local and CI sign-off path for the shipped Niko 
 - Windows host for `npm --prefix desktop run validate:package:dry-run` and local `check-writing-helper.ps1`
 - Node.js 20+, npm 10+, Python 3.11+, Rust stable with the MSVC Windows target
 - `npm ci` completed in `src-ts/` and `desktop/`
-- Pre-stage the packaged Python compatibility sidecar artifact in `desktop/src-tauri/bin/`:
+- Pre-stage the packaged sidecar artifact in `desktop/src-tauri/bin/`:
   - Windows: `niko-gateway.exe` and `niko-gateway-x86_64-pc-windows-msvc.exe`
-  - The current node-first checkout does not include the retired legacy Python gateway sources needed to rebuild these binaries from source.
-  - When a retained compatibility artifact already exists under `desktop/src-tauri/target/**/debug/`, run `npm --prefix desktop run hydrate:packaged-compat` before `npm --prefix desktop run validate:package:dry-run`.
+  - Standard path: `npm --prefix desktop run build:sidecar` builds the Rust launcher (`target/release/niko-gateway-launcher.exe`) and stages the Node TS gateway under `bin/sidecar/`. Set `NIKO_SIDECAR_BUNDLE_NODE=true` to additionally bundle portable Node 20 for hosts without a globally-installed Node.
+  - Hydration helper: `npm --prefix desktop run hydrate:packaged-compat` copies `target/release/niko-gateway-launcher.exe` (preferred) into the two `bin/niko-gateway*.exe` filenames Tauri's `bundle.externalBin` expects. If the launcher is missing, the script falls back to legacy `target/**/debug/niko-gateway.exe`.
+  - The retired legacy Python gateway sources are not required for the v9.2.2+ Node-first contract.
 - Local packaging proof is intentionally unsigned:
   - `desktop/src-tauri/tauri.conf.json` keeps `bundle.windows.certificateThumbprint: null`
   - `desktop/src-tauri/tauri.conf.json` keeps `bundle.windows.timestampUrl: ""`
@@ -36,14 +37,14 @@ This document is the repeatable local and CI sign-off path for the shipped Niko 
 Use the following 3 release states consistently across local sign-off, CI gate output, and handoff language:
 
 1. `unsigned_local_proof`
-   - Repo-visible gates are green and the packaged Python compatibility artifact is hydrated.
+   - Repo-visible gates are green and the packaged sidecar artifact (Rust launcher + staged Node TS gateway) is hydrated.
    - `desktop/src-tauri/tauri.conf.json` still keeps `bundle.windows.certificateThumbprint: null` and `bundle.windows.timestampUrl: ""`.
    - This is valid local validation proof, but it is not a signed external shipment.
 2. `prerequisite_missing_hold`
    - External shipment is on hold whenever any of these 4 prerequisites is missing:
      - Windows code-signing certificate thumbprint
      - Windows timestamp URL
-     - Hydrated packaged compatibility artifact (`desktop/src-tauri/bin/niko-gateway*.exe`)
+     - Hydrated packaged sidecar artifact (`desktop/src-tauri/bin/niko-gateway*.exe` Rust launcher + `bin/sidecar/` staged Node TS gateway)
      - Windows packaging host or toolchain (`validate:package:dry-run` / `tauri:build:signed` on Windows with the MSVC target)
    - Treat this state as non-shippable even if earlier local checks were green.
 3. `signed_external_release`
@@ -81,7 +82,7 @@ npm --prefix desktop run check:local
 ```
 
 The authoritative desktop local gate is `npm --prefix desktop run check:local`. In `desktop/package.json` this currently resolves to `check:release`, and `python scripts/release_check_summary.py` reruns this exact command before it can report `Decision: GO`.
-If the packaged compatibility artifact is not present, `npm --prefix desktop run check:local` can still validate the local/runtime contract; only explicit packaging proof (`npm --prefix desktop run validate:package:dry-run`) must fail before formal release sign-off.
+If the packaged sidecar artifact is not present, `npm --prefix desktop run check:local` can still validate the local/runtime contract; only explicit packaging proof (`npm --prefix desktop run validate:package:dry-run`) must fail before formal release sign-off.
 `npm --prefix desktop run local:selftest` is the authoritative launcher smoke-test. It is mandatory whenever the retained release evidence for `release_summary_report`, `authority_alignment`, `writing_helper_acceptance`, and `governance_scripts_regression` is not already `fresh_current` for the current HEAD.
 If those retained release-evidence sources are already same-HEAD `fresh_current`, `local:selftest` is optional for that sign-off pass.
 
@@ -94,7 +95,7 @@ npm --prefix desktop run validate:sidecar-contract
 npm --prefix desktop run validate:package:dry-run
 ```
 
-For the current migration baseline, `validate:sidecar-contract` validates the repo-local Node launcher plus the declared packaging boundary, while `validate:package:dry-run` is the command that still requires a pre-staged packaged compatibility artifact. They do not rebuild the retired Python gateway sources.
+For the v9.2.2+ baseline, `validate:sidecar-contract` validates the Rust launcher manifest, version-match (against `desktop/package.json`), and staleness gate (>30d threshold via `--strict-packaging`); `validate:package:dry-run` exercises `tauri build --debug --no-bundle --target x86_64-pc-windows-msvc` against the pre-staged sidecar artifact. Neither rebuilds the retired Python gateway sources.
 
 ### 4. Evidence refresh single path
 
@@ -198,7 +199,7 @@ These 8 retained evidence items are the production contract. Docs, package files
 - The 8 retained production contract evidence items listed above
 - `docs/release/SIGN_OFF.md`
 - The exact desktop executable or package artifact produced from the validated path
-- The exact packaged Python compatibility sidecar artifact used for sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` on Windows)
+- The exact packaged sidecar artifacts used for sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` Rust launcher + `desktop/src-tauri/bin/sidecar/` staged Node TS gateway on Windows)
 
 ### Exclude
 
@@ -240,5 +241,5 @@ These 8 retained evidence items are the production contract. Docs, package files
   - `desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.0.8_x64-setup.exe`
   - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.8_x64_en-US.msi`
   - `desktop/src-tauri/target/release/bundle/msi/Niko-Studio_9.0.8_x64_zh-CN.msi`
-- The exact packaged Python compatibility sidecar artifact used for the release sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` on Windows)
+- The exact packaged sidecar artifacts used for the release sign-off (`desktop/src-tauri/bin/niko-gateway*.exe` Rust launcher + `desktop/src-tauri/bin/sidecar/` staged Node TS gateway on Windows)
 - The delivery manifest and package README that enumerate the exact retained proof set for the release bundle
