@@ -95,7 +95,7 @@ jobs:
           python scripts/run_targeted_pytest.py tests/unit/scripts/test_governance_scripts.py -q --junitxml=governance-scripts.junit.xml
 
       - name: Upload governance script regression report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: governance-scripts-report-${{ inputs.gate_label }}
           path: governance-scripts.junit.xml
@@ -139,7 +139,7 @@ jobs:
         working-directory: src-ts
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-xml
           path: src-ts/coverage/cobertura-coverage.xml
@@ -156,7 +156,7 @@ jobs:
 
       - name: Upload production guard report artifact
         if: ${{ steps.gate_mode.outputs.run_metrics_guard == 'true' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vitest-production-guard-${{ inputs.gate_label }}
           path: vitest-production-guard.xml
@@ -169,7 +169,7 @@ jobs:
 
       - name: Upload e2e report artifact
         if: ${{ steps.gate_mode.outputs.run_e2e == 'true' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vitest-e2e-report-${{ inputs.gate_label }}
           path: vitest-e2e.xml
@@ -187,7 +187,7 @@ jobs:
           python scripts/check_authority_alignment.py > authority-alignment.json
 
       - name: Upload authority alignment artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: authority-alignment-report-${{ inputs.gate_label }}
           path: authority-alignment.json
@@ -276,7 +276,7 @@ jobs:
 
       - name: Upload desktop packaging dry-run artifact
         if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-packaging-dry-run-${{ inputs.gate_label }}
           path: desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe

@@ -118,21 +118,21 @@ jobs:
 
       - name: Upload failed cases artifact
         if: failure() && hashFiles('failed-writing-helper-cases.json') != ''
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: failed-writing-helper-cases
           path: failed-writing-helper-cases.json
 
       - name: Upload writing-helper acceptance evidence
         if: always() && hashFiles('.workflow/evidence/release/writing-helper-acceptance.json') != ''
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: writing-helper-acceptance-evidence
           path: .workflow/evidence/release/writing-helper-acceptance.json
 
       - name: Upload gateway logs
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: writing-helper-gateway-logs
           path: |
