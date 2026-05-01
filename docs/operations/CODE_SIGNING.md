@@ -105,13 +105,71 @@ $env:NIKO_WINDOWS_CERT_THUMBPRINT = "<thumbprint>"
 $env:NIKO_WINDOWS_TIMESTAMP_URL = "http://timestamp.digicert.com"
 ```
 
-## Verification
+## Self-Signed Pipeline Dry-Run
 
-After building, verify the signature:
+Use this when you want to prove the full signing pipeline works **before procuring a real CA-issued certificate** (e.g. before paying for DigiCert/Sectigo, or as a quarterly regression check). A self-signed dry-run exercises every step the real release host will run, but produces a binary that Windows SmartScreen will still flag — **do not ship a self-signed build to users**.
+
+### 1. Mint a self-signed cert and capture the thumbprint
+
+```powershell
+$cert = New-SelfSignedCertificate `
+  -Type CodeSigningCert `
+  -Subject "CN=Niko Studio Dry-Run" `
+  -CertStoreLocation "Cert:\CurrentUser\My" `
+  -KeyUsage DigitalSignature `
+  -KeyAlgorithm RSA `
+  -KeyLength 2048
+$thumbprint = $cert.Thumbprint
+$thumbprint  # 40-char hex; copy this
+```
+
+### 2. Run the same pipeline the real release host will run
+
+```powershell
+$env:NIKO_WINDOWS_CERT_THUMBPRINT = $thumbprint
+$env:NIKO_WINDOWS_TIMESTAMP_URL   = "http://timestamp.digicert.com"
+npm --prefix desktop run tauri:build:signed
+```
+
+### 3. Verify with Authenticode
+
+```powershell
+$exe = "desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_*_x64-setup.exe"
+Get-AuthenticodeSignature (Resolve-Path $exe) | Format-List Status, StatusMessage, SignerCertificate, TimeStamperCertificate
+```
+
+Expected dry-run output:
+
+| Field | Real CA cert | Self-signed dry-run |
+|---|---|---|
+| `Status` | `Valid` | `UnknownError` or `NotTrusted` |
+| `SignatureType` | `Authenticode` | `Authenticode` (still valid) |
+| `TimeStamperCertificate` | populated | populated |
+
+The self-signed `NotTrusted` status is **expected** — it means the pipeline produced a real Authenticode signature with a valid timestamp, but the chain doesn't terminate at a trusted root. This proves the toolchain works; replacing the cert with a CA-issued one is the only delta to ship.
+
+### 4. Capture attestation evidence
+
+Even for a dry-run, write a `.workflow/evidence/release/signed-bundle-attestation.json` matching the schema in `docs/release/SIGN_OFF.md` (section 8). Mark `release_state: "self_signed_dry_run"` so it is never confused with a shippable signed build.
+
+### 5. Cleanup
+
+```powershell
+Remove-Item desktop/src-tauri/tauri.signed.local.generated.json
+Get-ChildItem Cert:\CurrentUser\My\$thumbprint | Remove-Item   # optional
+```
+
+The repo `tauri.conf.json` is never touched by this flow — it stays `null/""`.
+
+## Verification (real signed bundle)
+
+After a release-cert build, verify the signature:
 
 ```powershell
 Get-AuthenticodeSignature desktop/src-tauri/target/release/bundle/nsis/*.exe | Format-List
 ```
+
+Then capture the result into `.workflow/evidence/release/signed-bundle-attestation.json` per the schema in `docs/release/SIGN_OFF.md` section 8. The attestation is the formal handoff proof that converts `unsigned_local_proof` → `signed_external_release`.
 
 ## Security Notes
 

@@ -162,6 +162,55 @@ The release readiness artifact at `.workflow/evidence/release/release-readiness-
 Any retained evidence labeled `stale_*` or `*_superseded` is non-green and must not be reused for a `Decision: GO`, even if the file still exists on disk.
 The release summary now exposes this as a blocking `local_selftest_enforcement` signal: missing, stale, or superseded retained proof for the bound release-sign-off sources means rerun `npm --prefix desktop run local:selftest` before claiming `Decision: GO`.
 
+### 8. Signed bundle attestation (when graduating beyond `unsigned_local_proof`)
+
+The consolidated snapshot above only certifies `unsigned_local_proof`. Graduating to `signed_external_release` (or capturing a `self_signed_dry_run` for pipeline regression) requires a separate attestation artifact. Capture it on the Windows release host immediately after `npm --prefix desktop run tauri:build:signed` completes.
+
+**Artifact location**: `.workflow/evidence/release/signed-bundle-attestation.json`
+
+**Schema** (all fields required unless marked optional):
+
+```json
+{
+  "version": "9.3.0",
+  "head_sha": "<40-char git rev-parse HEAD>",
+  "generated_at": "<ISO 8601 UTC timestamp>",
+  "release_state": "signed_external_release | self_signed_dry_run",
+  "operator": "<name or CI runner identifier>",
+  "host": "<machine identifier, e.g. DESKTOP-XXXX or github-runner-id>",
+  "artifact": {
+    "path": "desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_<ver>_x64-setup.exe",
+    "sha256_unsigned": "<sha256 of the bundle BEFORE signing, optional but recommended>",
+    "sha256_signed": "<sha256 of the bundle AFTER signing>",
+    "size_bytes": 0
+  },
+  "signature": {
+    "cert_subject": "CN=<...>",
+    "cert_thumbprint_last8": "<last 8 chars of cert thumbprint — never log full thumbprint>",
+    "cert_issuer": "<issuing CA, e.g. DigiCert Trusted G4 Code Signing RSA4096 SHA384 2021 CA1>",
+    "timestamp_authority": "http://timestamp.digicert.com",
+    "digest_algorithm": "sha256",
+    "is_authenticode_valid": true,
+    "is_root_trusted": true,
+    "verification_output_excerpt": "<first 8 lines of Get-AuthenticodeSignature | Format-List output, with thumbprints redacted to last 8 chars>"
+  },
+  "notes": "<short free-form note: what triggered this signed build, who approved, related issue ID>"
+}
+```
+
+**State semantics**:
+
+| `release_state` | `is_root_trusted` | Shippable to users |
+|---|---|---|
+| `signed_external_release` | `true` | Yes |
+| `self_signed_dry_run` | `false` (expected) | **No** — pipeline regression check only |
+
+**Never** include the full certificate thumbprint, the cert export, or the cert private key in the attestation. The last-8 suffix is sufficient for human matching against vault records.
+
+**Consumption**: when `release_check_summary.py` is enriched in a future iteration to recognize `signed-bundle-attestation.json`, an attestation with `release_state: signed_external_release` + `is_root_trusted: true` will graduate the consolidated decision from `unsigned_local_proof` to `signed_external_release`. Until then, the attestation is operator-retained handoff evidence and must accompany the customer handoff bundle (section below).
+
+The procedure for producing this attestation — including a no-cert dry-run — lives in `docs/operations/CODE_SIGNING.md` section "Self-Signed Pipeline Dry-Run".
+
 ## Customer Handoff Bundle
 
 Use one concise bundle for internal delivery or customer-facing demo preparation.
@@ -193,6 +242,7 @@ These 8 retained evidence items are the production contract. Docs, package files
 6. `.workflow/evidence/release/vitest-production-guard.xml`
 7. `.workflow/evidence/release/vitest-e2e.xml`
 8. `.workflow/evidence/release/governance-scripts.junit.xml`
+9. `.workflow/evidence/release/signed-bundle-attestation.json` (only when `release_state` ≥ `signed_external_release`; absent for `unsigned_local_proof`)
 
 ### Include
 
