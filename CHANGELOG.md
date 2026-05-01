@@ -1,5 +1,18 @@
 # Changelog
 
+## [9.2.5] - 2026-05-01
+
+### Changed
+- 同步全局版本号 `9.2.4 → 9.2.5`：8 个 source-of-truth 文件同步更新（与 v9.2.4 同范围）。
+- **No runtime behavior delta vs v9.2.4** — 收尾 v9.3 周期 deferred 项内部清理，不动 desktop / sidecar / NSIS 任何输出。
+
+### Closed (was deferred to v9.4+)
+- **ISS-20260426-004** — MCP workflow workspace-aware caches: 已验证早已实现。`src-ts/mcp/services/workflow.ts:87-128` 的 `workflowRuntimeCachesByWorkspace = new Map<string, WorkflowRuntimeCaches>()` 按 workspace 隔离 engine instance / scheduler entries / checkpoint authority bindings；跨 workspace bleed 禁止由 `src-ts/mcp/workflow-service.workspace.test.ts` 覆盖（5/5 测试通过，含 mismatched-workspace lifecycle/restore/rollback 拒绝路径）。
+- **ISS-20260428-010** — Authoritative capability matrix: 落地 `docs/CAPABILITY_MATRIX.md` 作为单一支持矩阵真源（writer features / 集成 adapters / desktop runtime / release sign-off / 历史参考 5 大类，每条带 status 标签 ✅ supported / 🟡 partial / 🧪 experimental / ⛔ disabled / 📜 historical 与 source-of-truth 锚点）。`README.md` 当前权威地图、`desktop/README.md` 当前交付契约、`docs/INDEX.md` 核心文档清单分别新增对该矩阵的引用。Authority alignment 96/96 PASS。
+
+### Refactored
+- **ISS-20260426-005** — Container workflow DI canonical runtime contract: 在 `src-ts/container/workflow-runtime-provider.ts` 定义新的 `IWorkflowEngineRuntime` interface（route / plan / execute / quickRollback / lifecycle / checkpoint helpers + 可选 bindPlanAuthority / getPlanAuthority / getCheckpoint），将 `WorkflowEngineRuntimeProvider` 返回类型从 `unknown` 收紧到 `IWorkflowEngineRuntime`。新增 `WorkflowEngine.getCheckpoint(id)` public 方法替代直接访问 private `checkpoints` Map。`src-ts/mcp/services/workflow.ts` 删除 `WorkflowEngineRuntimeLike` + `WorkflowEngineAuthorityBridge` 本地接口定义（约 -40 行）和两处 `as unknown as ...` cast；`src-ts/container/gateway-control-plane.ts` 删除过时的 `(container as unknown as { workflow?: unknown }).workflow` defensive cast（`container.workflow` 已经是 `IWorkflowEngine` typed）。`mcp/endpoints/chat.ts` 同步从 `as ChatWorkflowEngine` 调整为 `as unknown as ChatWorkflowEngine`。`src-ts` typecheck 干净，workflow + container 测试 15/15 通过。
+
 ## [9.2.4] - 2026-05-01
 
 ### Changed

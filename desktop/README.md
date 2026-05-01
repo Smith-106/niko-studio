@@ -11,6 +11,8 @@ Desktop 客户端是当前主交付入口；本 README 与根 README 的 `Writer
 - `Advisory compatibility surfaces`: explicit `--runtime python` legacy override, legacy `src/mcp/**` sources, and Streamlit validation flows only when a release candidate explicitly includes them.
 - `Deprecated surface` (removed): browser-first web entry has been removed from the codebase.
 
+> 单一能力支持矩阵真源：[`docs/CAPABILITY_MATRIX.md`](../docs/CAPABILITY_MATRIX.md)（writer features / 集成 adapters / desktop runtime / release sign-off 全部覆盖）。
+
 ## 技术栈
 
 - **前端**: React 18 + TypeScript + Vite + Tailwind CSS

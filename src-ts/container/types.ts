@@ -213,8 +213,9 @@ export interface IWorkflowEngine {
 
   /**
    * Build a workflow runtime for a specific workspace/session namespace.
+   * Returns IWorkflowEngineRuntime; left optional so legacy adapters/mocks remain valid.
    */
-  createRuntime?(params: { workspace: string; sessionNamespace: string }): unknown;
+  createRuntime?(params: { workspace: string; sessionNamespace: string }): import('./workflow-runtime-provider').IWorkflowEngineRuntime;
 
   /**
    * Execute a workflow level

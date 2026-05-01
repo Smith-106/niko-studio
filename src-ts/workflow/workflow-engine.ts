@@ -1334,6 +1334,28 @@ export class WorkflowEngine {
       .map(c => ({ id: c.id, description: c.description, commit_hash: c.commit_hash, created_at: c.created_at }));
   }
 
+  getCheckpoint(checkpointId: string): {
+    id: string;
+    description: string;
+    commit_hash?: string | null;
+    created_at: string;
+    plan_id?: string | null;
+    step_id?: string | null;
+    replay_payload?: Record<string, unknown>;
+  } | null {
+    const checkpoint = this.checkpoints.get(checkpointId);
+    if (!checkpoint) return null;
+    return {
+      id: checkpoint.id,
+      description: checkpoint.description,
+      commit_hash: checkpoint.commit_hash ?? null,
+      created_at: checkpoint.created_at,
+      plan_id: checkpoint.plan_id ?? null,
+      step_id: checkpoint.step_id ?? null,
+      replay_payload: checkpoint.replay_payload ?? {},
+    };
+  }
+
   getPlanStatus(planId: string): WorkflowPlanStatusResult | { error: string } {
     const plan = this.plans.get(planId);
     if (!plan) return { error: `Plan '${planId}' not found` };

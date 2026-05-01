@@ -44,6 +44,7 @@ function mockWorkflowEngineRuntime() {
       bindPlanAuthority: bindPlanAuthorityMock,
       getPlanAuthority: getPlanAuthorityMock,
       checkpoints: checkpointRecordsMock,
+      getCheckpoint: (checkpointId: string) => checkpointRecordsMock.get(checkpointId) ?? null,
     })),
   }));
 }

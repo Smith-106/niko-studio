@@ -9,6 +9,7 @@ Niko-Studio 文档目录
 | 文档 | 说明 |
 |------|------|
 | [README.md](../README.md) | 项目概览、快速开始 |
+| [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md) | **能力支持矩阵单一真源**（supported / partial / experimental / disabled / historical） |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 架构设计、组件概览 |
 | [API_REFERENCE.md](API_REFERENCE.md) | 当前 TypeScript Gateway HTTP API 参考（5 路由组 / 69 endpoints） |
 | [LLM_WIKI_ADAPTATION.md](LLM_WIKI_ADAPTATION.md) | 将 Karpathy 的 LLM Wiki 思路映射到当前 Niko Studio 的 writer-first/workspace/graph/memory 架构 |

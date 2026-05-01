@@ -33,6 +33,7 @@ import { GraphEngine } from '../graph/graph-engine';
 import { createIterativeRetriever, type IterativeRetriever } from '../search';
 import { CriticEngine } from '../narrative/evaluators/critic-engine';
 import { WorkflowEngine } from '../workflow/workflow-engine';
+import type { IWorkflowEngineRuntime } from './workflow-runtime-provider';
 import { AgentFactory } from '../agents/factory';
 import {
   AgentType as BaseAgentType,
@@ -352,8 +353,8 @@ export class WorkflowEngineAdapter implements IWorkflowEngine {
     this.engine = engine ?? new WorkflowEngine();
   }
 
-  createRuntime(params: { workspace: string; sessionNamespace: string }): WorkflowEngine {
-    return new WorkflowEngine(params.workspace, params.sessionNamespace);
+  createRuntime(params: { workspace: string; sessionNamespace: string }): IWorkflowEngineRuntime {
+    return new WorkflowEngine(params.workspace, params.sessionNamespace) as unknown as IWorkflowEngineRuntime;
   }
 
   async initialize(): Promise<void> {}

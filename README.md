@@ -119,6 +119,7 @@ git config core.hooksPath .githooks
 ### 当前权威地图
 
 - 运行时 / 构建默认权威：`desktop/` + `src-ts/` 代码与对应脚本。
+- 能力支持矩阵权威：[`docs/CAPABILITY_MATRIX.md`](docs/CAPABILITY_MATRIX.md)（supported / partial / experimental / disabled / historical 单一真源）
 - 交付契约权威：本节 `Writer-First Desktop Delivery Contract` + `docs/release/RELEASE_NOTES.md`
 - 发布策略权威：`docs/release/RELEASE_NOTES.md`
 - 本地发布快照权威：`python scripts/release_check_summary.py`

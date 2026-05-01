@@ -232,7 +232,7 @@ function createWorkflowEngine(sessionNamespace: string): ChatWorkflowEngine {
   return getWorkflowEngineRuntimeProvider()({
     workspace: resolveWorkflowWorkspace(),
     sessionNamespace,
-  }) as ChatWorkflowEngine;
+  }) as unknown as ChatWorkflowEngine;
 }
 
 function resolveWorkspaceContext(body: ChatBody) {

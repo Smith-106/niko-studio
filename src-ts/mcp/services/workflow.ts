@@ -15,7 +15,6 @@ import {
 } from '../../project/workspace-model.js';
 import { normalizeWorkflowAuthority } from '../../workflow/engine/authority.js';
 import type {
-  WorkflowExecutionContextPayload,
   WorkflowRecommendationInput,
 } from '../../workflow/engine/engine-contracts.js';
 import {
@@ -166,44 +165,6 @@ interface WorkflowCheckpointRecord extends WorkflowCheckpointSummary {
   replay_payload: Record<string, unknown>;
 }
 
-interface WorkflowEngineAuthorityBridge {
-  bindPlanAuthority?: (planId: string, authority: WorkflowAuthority) => WorkflowAuthority;
-  getPlanAuthority?: (planId: string) => WorkflowAuthority;
-  checkpoints?: Map<string, WorkflowCheckpointRecord>;
-}
-
-interface WorkflowEngineRuntimeLike extends WorkflowEngineAuthorityBridge {
-  route(task: string): Promise<Record<string, unknown>>;
-  plan(
-    task: string,
-    level?: string,
-    recommendations?: WorkflowRecommendationInput,
-    executionContext?: WorkflowExecutionContextPayload,
-  ): Promise<Record<string, unknown>>;
-  execute(
-    planId: string,
-    stepId?: string,
-    recommendations?: WorkflowRecommendationInput,
-    confirmToken?: string,
-    authority?: WorkflowAuthority,
-  ): Promise<Record<string, unknown>>;
-  quickRollback(
-    planId: string,
-    checkpointId: string,
-    reason: string,
-    authority?: WorkflowAuthority,
-  ): Promise<Record<string, unknown>>;
-  lifecycle(
-    planId: string,
-    action: string,
-    triageState?: string,
-    authority?: WorkflowAuthority,
-  ): Promise<Record<string, unknown>>;
-  createCheckpoint(description: string, autoCommit: boolean): Promise<Record<string, unknown>>;
-  restoreCheckpoint(checkpointId: string, confirmToken?: string): Promise<Record<string, unknown>>;
-  listCheckpoints(limit: number): Promise<WorkflowCheckpointSummary[]>;
-  bindPlanSession(planId: string, sessionId: string): string;
-}
 
 type WorkflowExecutionStatus = 'completed' | 'waiting_confirmation' | 'gate_blocked';
 type WorkflowSchedulerStatus = 'active' | 'paused';
@@ -908,12 +869,11 @@ function getEngine(workspaceRoot?: string): WorkflowEngine | null {
     const engine = runtimeProvider({
       workspace: resolvedWorkspaceRoot,
       sessionNamespace: 'mcp-workflow',
-    }) as WorkflowEngineRuntimeLike;
-    const engineWithAuthority = engine as unknown as WorkflowEngineAuthorityBridge;
+    });
     caches.workflowEngineInstance = {
       bindPlanAuthority(planId: string, authority: WorkflowAuthority) {
-        if (typeof engineWithAuthority.bindPlanAuthority === 'function') {
-          return engineWithAuthority.bindPlanAuthority(planId, authority);
+        if (typeof engine.bindPlanAuthority === 'function') {
+          return engine.bindPlanAuthority(planId, authority);
         }
         if (authority.sessionId) {
           engine.bindPlanSession(planId, authority.sessionId);
@@ -921,8 +881,8 @@ function getEngine(workspaceRoot?: string): WorkflowEngine | null {
         return authority;
       },
       getPlanAuthority(planId: string) {
-        if (typeof engineWithAuthority.getPlanAuthority === 'function') {
-          return engineWithAuthority.getPlanAuthority(planId);
+        if (typeof engine.getPlanAuthority === 'function') {
+          return engine.getPlanAuthority(planId);
         }
         return {
           sessionId: null,
@@ -931,7 +891,7 @@ function getEngine(workspaceRoot?: string): WorkflowEngine | null {
         };
       },
       getCheckpoint(checkpointId: string) {
-        const checkpoint = engineWithAuthority.checkpoints?.get(checkpointId);
+        const checkpoint = engine.getCheckpoint?.(checkpointId);
         if (!checkpoint) {
           return null;
         }
@@ -1018,8 +978,9 @@ function getEngine(workspaceRoot?: string): WorkflowEngine | null {
       restoreCheckpoint(checkpointId: string, params?: { confirmToken?: string | null }) {
         return engine.restoreCheckpoint(checkpointId, params?.confirmToken ?? undefined);
       },
-      listCheckpoints(limit: number) {
-        return engine.listCheckpoints(limit);
+      async listCheckpoints(limit: number): Promise<WorkflowCheckpointSummary[]> {
+        const records = await engine.listCheckpoints(limit);
+        return records as unknown as WorkflowCheckpointSummary[];
       },
       bindPlanSession(planId: string, sessionId: string) {
         return engine.bindPlanSession(planId, sessionId);

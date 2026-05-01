@@ -26,6 +26,7 @@ vi.mock('../../workflow/workflow-engine.js', () => ({
     listCheckpoints: listCheckpointsMock,
     bindPlanSession: bindPlanSessionMock,
     checkpoints: checkpointsMock,
+    getCheckpoint: (checkpointId: string) => checkpointsMock.get(checkpointId) ?? null,
   })),
 }));
 
