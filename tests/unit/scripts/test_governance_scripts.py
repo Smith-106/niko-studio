@@ -1771,10 +1771,11 @@ def test_signed_release_path_uses_generated_tauri_config_without_repo_config_edi
     assert "parser.add_argument(" in signing_source
     assert '"--run-build"' in signing_source
     assert (
-        'env["TAURI_CONFIG"] = str(config_path.relative_to(DESKTOP_DIR)).replace("\\\\", "/")'
+        'str(config_path.relative_to(DESKTOP_DIR)).replace("\\\\", "/")'
         in signing_source
     )
-    assert '[_npm_cmd(), "run", "tauri", "--", "build"]' in signing_source
+    assert '"--config"' in signing_source
+    assert '[_npm_cmd(), "run", "tauri", "--", "build"' in signing_source
     assert "desktop/src-tauri/tauri.signed.local.generated.json" in gitignore_text
     assert "generate a temporary signed config" in code_signing_text
     assert "Do not edit `tauri.conf.json` in-place on release hosts." in code_signing_text
