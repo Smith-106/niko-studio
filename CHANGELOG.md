@@ -1,5 +1,23 @@
 # Changelog
 
+## [9.2.4] - 2026-05-01
+
+### Changed
+- 同步全局版本号 `9.2.3 → 9.2.4`：8 个 source-of-truth 文件全量更新（`desktop/package.json`、`src-ts/package.json`、`desktop/src-tauri/Cargo.toml` + `Cargo.lock`、`tauri.conf.json`、`src-ts/config/index.ts`、`config/niko-studio.yaml` + `niko-studio.production.yaml`）。
+- **No runtime delta vs v9.2.3** — Rust launcher、gateway runtime、sidecar bundling、NSIS install layout 全部不变。
+
+### Fixed
+- **`scripts/generate_signed_tauri_config.py`** — 修复 Tauri 2 签名构建链路 2 个潜伏 bug，由 ISS-20260428-004 self-signed dry-run 暴露：
+  - **TAURI_CONFIG env path-mode 在 Tauri 2 已废弃**：原脚本设 `TAURI_CONFIG=<relative_path>`，Tauri 2 现把 `TAURI_CONFIG` 当 inline JSON 内容（不是路径），cargo build script 试解析路径字符串为 JSON 抛 `expected value at line 1 column 1`。改为 `npm run tauri -- build --config <relative_path>` CLI arg，Tauri 2 明确支持 path-or-inline-json 双模式。
+  - **`KitsRoot10` 注册表 mismatch 阻塞 signtool 检测**：在用 Visual Studio installer 装 Windows SDK 到 `C:\Program Files (x86)\Windows Kits\10\`、但 `HKLM` 注册表 `KitsRoot10` 仍指 `C:\Program Files\Windows Kits\10\` 空 stub 的 host 上，tauri-bundler 报 `failed to bundle project SignTool not found`。新增可选 `NIKO_WINDOWS_SIGNTOOL_PATH` env override：设了之后脚本注入 `bundle.windows.signCommand` 用绝对 signtool 路径，完全绕过 KitsRoot10 lookup（commit `0d550fd`）。
+
+### Docs
+- **`docs/operations/CODE_SIGNING.md`**：新增 "Self-Signed Pipeline Dry-Run" 章节（5 步剧本 + 期望输出表，self-signed `NotTrusted` 状态是预期行为，证明工具链可工作），新增 SDK install gotcha + `NIKO_WINDOWS_SIGNTOOL_PATH` 用法说明 + 诊断命令（commit `f417143`/`0d550fd`）。
+- **`docs/release/SIGN_OFF.md` §8**：新增 `signed-bundle-attestation.json` evidence schema（release_state 枚举：`signed_external_release`/`self_signed_dry_run`、artifact `sha256_unsigned`+`sha256_signed`、signature 元数据 cert_subject + thumbprint last8 + authority + digest + `is_authenticode_valid` + `is_root_trusted`、thumbprint 截断政策、未来 release_check_summary.py 集成路径）。Production contract evidence 列表新增第 9 项（仅当 release_state ≥ `signed_external_release` 时必需，commit `f417143`）。
+
+### Self-Signed Dry-Run（ISS-20260428-004 advancement，本地证据）
+- 在 ASCII-only host 上 self-signed dry-run 应能完整跑通；当前 dev host (`D:\工作目录\…` CJK 路径) 验到 signtool subprocess 边界，被 Win32 error 123 阻断（极可能是 Tauri bundler 的 ANSI-vs-UTF-16 argv 编码处理 bug）。Pipeline 8 项验证 PASS（cert mint / config 注入 / `--config` arg / vite build / cargo release compile / external-bin signing 入口 / signCommand override 激活），具体审计在 `.workflow/evidence/release/signed-bundle-attestation.json` (gitignored, `release_state=self_signed_dry_run`, `dry_run_status=blocked_by_environment`)。
+
 ## [9.2.3] - 2026-05-01
 
 ### Changed
