@@ -105,6 +105,20 @@ $env:NIKO_WINDOWS_CERT_THUMBPRINT = "<thumbprint>"
 $env:NIKO_WINDOWS_TIMESTAMP_URL = "http://timestamp.digicert.com"
 ```
 
+Optional override for hosts where Tauri's built-in `signtool.exe` detection fails:
+
+```powershell
+$env:NIKO_WINDOWS_SIGNTOOL_PATH = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe"
+```
+
+Set this when `npm --prefix desktop run tauri:build:signed` errors with `failed to bundle project SignTool not found` even though `signtool.exe` exists on the host. This happens when the Windows SDK was installed via Visual Studio installer to the `C:\Program Files (x86)\` tree but `HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots\KitsRoot10` still points at the empty `C:\Program Files\Windows Kits\10\` stub. The override injects `bundle.windows.signCommand` into the generated config with the absolute signtool path, bypassing Tauri's KitsRoot10 lookup entirely.
+
+Verify the path before exporting:
+
+```powershell
+Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object { $_.FullName -like "*x64*" } | Select-Object -First 1 -ExpandProperty FullName
+```
+
 ## Self-Signed Pipeline Dry-Run
 
 Use this when you want to prove the full signing pipeline works **before procuring a real CA-issued certificate** (e.g. before paying for DigiCert/Sectigo, or as a quarterly regression check). A self-signed dry-run exercises every step the real release host will run, but produces a binary that Windows SmartScreen will still flag — **do not ship a self-signed build to users**.

@@ -21,6 +21,7 @@ def _npm_cmd() -> str:
 def generate_signed_config() -> Path:
     thumbprint = os.getenv("NIKO_WINDOWS_CERT_THUMBPRINT", "").strip()
     timestamp_url = os.getenv("NIKO_WINDOWS_TIMESTAMP_URL", "").strip()
+    signtool_path = os.getenv("NIKO_WINDOWS_SIGNTOOL_PATH", "").strip()
 
     if not thumbprint:
         raise SystemExit("Missing NIKO_WINDOWS_CERT_THUMBPRINT")
@@ -33,6 +34,19 @@ def generate_signed_config() -> Path:
     windows["certificateThumbprint"] = thumbprint
     windows["timestampUrl"] = timestamp_url
 
+    # Optional: explicit signCommand overrides Tauri bundler's KitsRoot10 lookup.
+    # Use when the registry KitsRoot10 entry does not match the actual signtool location
+    # (common when Windows SDK was installed via Visual Studio installer to the (x86) tree).
+    if signtool_path:
+        # Tauri 2 splits signCommand via shlex-like parser before spawning.
+        # When the executable path contains spaces, the safest cross-platform pattern
+        # is to keep native OS separators and wrap the path in double-quotes so the
+        # parser treats it as a single token.
+        windows["signCommand"] = (
+            f'"{signtool_path}" sign /fd sha256 /sha1 {thumbprint} '
+            f'/tr {timestamp_url} /td sha256 %1'
+        )
+
     OUTPUT_CONFIG_PATH.write_text(
         json.dumps(config, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -42,9 +56,9 @@ def generate_signed_config() -> Path:
 
 def run_signed_build(config_path: Path) -> None:
     env = os.environ.copy()
-    env["TAURI_CONFIG"] = str(config_path.relative_to(DESKTOP_DIR)).replace("\\", "/")
+    relative_config = str(config_path.relative_to(DESKTOP_DIR)).replace("\\", "/")
     subprocess.run(
-        [_npm_cmd(), "run", "tauri", "--", "build"],
+        [_npm_cmd(), "run", "tauri", "--", "build", "--config", relative_config],
         cwd=DESKTOP_DIR,
         env=env,
         check=True,
