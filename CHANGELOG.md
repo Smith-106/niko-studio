@@ -12,6 +12,15 @@
 ### Added
 - `packaged-app-smoke` CI job 从 advisory 升级为 blocking（`.github/workflows/integration-tests.yml`）。NSIS 安装+启动+/health+CORS 契约验证后续每次 push 到 main 都强制执行；NSIS build 基础设施失败仍非 gating（toolchain/runner 抖动隔离）。
 
+### Post-release maintenance (commit `2e60305`)
+v9.2.2 ship 后 release-check (`scripts/release_check_summary.py`) 仍报 6 个 P0 FAIL 的 baseline 清理（4 个独立 fix，2 个派生信号自动跟随）：
+- 修复 `desktop/vite.config.ts` 缺 `test.exclude`：vitest 默认 discovery 会扫到 `src-tauri/bin/sidecar/**` 和 `src-tauri/target/**` 下 staged 的 `*.test.js`（含 Node 20 ABI 编译的 native 模块 + 三方 deps 的测试 fixtures），host Node 24 加载 `better-sqlite3.node` 时抛 NODE_MODULE_VERSION 不匹配。补 exclude 后 836/836 desktop 测试通过。
+- 修复 `desktop/scripts/hydrate_packaged_compat_artifact.cjs` source 候选优先级：原 candidate 只有 `target/.../debug/niko-gateway.exe`（在本机解析为 47 天前 March 14 的 stale Python compat exe），覆写到 `bin/` 后 `validate_sidecar_contract --strict-packaging` staleness gate (>30d) 失败。改为优先选 `target/release/niko-gateway-launcher.exe`（fresh launcher），legacy 候选保留作为最后回退。
+- 修复 `tests/unit/scripts/test_governance_scripts.py` 的 `run_node_cjs_and_capture` 测试 harness：原 `fsStub` 只 mock `existsSync`/`readFileSync`，但 ISS-001 在 `choose_sidecar.cjs` 加的 `detectStalePythonBinaries` (用 `fs.statSync`) 和 `writeSidecarManifest` (用 `fs.mkdirSync`+`fs.writeFileSync`) 在 vm sandbox 中调用立即抛 "fs.X is not a function"。补 `statSync`（mocked path 返回 mtimeMs=now 的 fake stat）、`mkdirSync` 和 `writeFileSync` (no-op) 后 39/39 governance tests 通过。
+- 重跑 `scripts/check-writing-helper.ps1 -Strict` 刷新 `.workflow/evidence/release/writing-helper-acceptance.json`（之前 head_sha + version 停在 v9.2.1 era，被 release-check 标记 "fresh_superseded"）。7/7 cases pass，head_sha 对齐当前 HEAD。
+- 派生：`local_selftest_enforcement` + `delivery_contract_100_signal` 跟随上面 4 项一起 PASS。
+- **Result**: `scripts/release_check_summary.py` decision NO_GO → **GO**（33/33 signals PASS）。
+
 ## [9.2.1] - 2026-04-30
 
 ### Fixed
