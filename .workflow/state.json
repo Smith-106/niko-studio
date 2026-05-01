@@ -1,0 +1,15 @@
+{
+  "quick_tasks": [],
+  "created_at": "2026-05-02T00:31:18.9393348+08:00",
+  "accumulated_context": {
+    "deferred": [],
+    "key_decisions": [],
+    "blockers": []
+  },
+  "initialized": true,
+  "artifacts": [],
+  "version": "9.2.5",
+  "current_milestone": null,
+  "project": "niko-studio",
+  "last_updated": "2026-05-02T00:31:18.9401392+08:00"
+}
