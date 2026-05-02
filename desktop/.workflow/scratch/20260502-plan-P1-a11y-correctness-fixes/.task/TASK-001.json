@@ -1,0 +1,110 @@
+{
+  "id": "TASK-001",
+  "title": "ChatAreaComposer: a11y fixes + send button + correctness",
+  "description": "Fix 6 issues in ChatAreaComposer.tsx: (1) Replace aria-hidden with tabIndex=-1 on Trash2 (WCAG A11Y-001), (2) Add aria-live region for copy success (A11Y-002), (3) Diagnose and fix send button mouse click regression, (4) Add null guard on lastAssistantContent, (5) Add focus ring to Paperclip button, (6) Clean up setTimeout on unmount",
+  "issue_id": null,
+  "issue_refs": [
+    "ISS-20260502-061",
+    "ISS-20260502-062",
+    "ISS-20260502-065"
+  ],
+  "type": "fix",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Fix 6 distinct issues in ChatAreaComposer.tsx. A11Y: replace aria-hidden={input.length === 0 || undefined} with tabIndex={input.length === 0 ? -1 : undefined} on Trash2 button. A11Y: add <span role='status' className='sr-only'>{copied ? 'Copied!' : ''}</span> after the copy button. Correctness: add if (!lastAssistantContent) return; at top of copyLastReply, remove ! assertion. Send button: inspect the button area for z-index/pointer-events/overflow issues that block mouse clicks. Paperclip: add focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 to Paperclip button className. setTimeout cleanup: store timer ID in useRef, clear in useEffect cleanup triggered by copied state.",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "actual_duration": null,
+  "scope": "src/components/ChatAreaComposer.tsx",
+  "focus_paths": [
+    "src/components/ChatAreaComposer.tsx"
+  ],
+  "read_first": [
+    "src/components/ChatAreaComposer.tsx",
+    "src/components/ChatArea.tsx",
+    "src/styles/globals.css"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": 1,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/ChatAreaComposer.tsx does NOT contain 'aria-hidden'",
+      "src/components/ChatAreaComposer.tsx contains 'tabIndex={' at the Trash2 button location",
+      "src/components/ChatAreaComposer.tsx contains 'role=\"status\"'",
+      "src/components/ChatAreaComposer.tsx contains 'sr-only'",
+      "src/components/ChatAreaComposer.tsx does NOT contain 'lastAssistantContent!'",
+      "src/components/ChatAreaComposer.tsx contains 'if (!lastAssistantContent) return'",
+      "src/components/ChatAreaComposer.tsx Paperclip button contains 'focus-visible:ring-2'",
+      "npm test -- src/components/ChatAreaComposer.test.tsx exits 0"
+    ],
+    "verification": "grep each criterion string above; run npm test",
+    "definition_of_done": "All 6 issues fixed, tests pass, no TypeScript errors"
+  },
+  "files": [
+    {
+      "path": "src/components/ChatAreaComposer.tsx",
+      "action": "modify",
+      "target": "ChatAreaComposer component",
+      "change": "Replace aria-hidden with tabIndex on Trash2; add sr-only live region for copy; add null guard; add Paperclip focus ring; add setTimeout cleanup via useEffect/ref"
+    }
+  ],
+  "implementation": [
+    "A11Y-001: At the Trash2 button (~line 115), replace aria-hidden={input.length === 0 || undefined} with tabIndex={input.length === 0 ? -1 : undefined}. Remove the aria-hidden attribute entirely.",
+    "A11Y-002: After the copy button closing tag, add: <span role='status' className='sr-only'>{copied ? 'Copied!' : ''}</span>",
+    "CORR-001: In copyLastReply handler (~line 55-59), add 'if (!lastAssistantContent) return;' as first line. Change lastAssistantContent! to lastAssistantContent.",
+    "ISS-065: Inspect the send button area and surrounding container for: z-index conflicts, pointer-events:none from parent, overflow:hidden clipping, or overlapping elements. Check if the outer flex container or any sibling element intercepts clicks. Fix by adding position:relative z-10 to the send button or removing any blocking overlay.",
+    "BP-011: Add 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50' to the Paperclip button className at ~line 95.",
+    "BP-008: Convert copied setTimeout to useEffect pattern: useEffect(() => { if (!copied) return; const id = setTimeout(() => setCopied(false), 1500); return () => clearTimeout(id); }, [copied]). Remove the setTimeout from copyLastReply handler (keep setCopied(true) only)."
+  ],
+  "test": {
+    "commands": [
+      "npm test -- src/components/ChatAreaComposer.test.tsx"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": [
+      "All existing tests pass",
+      "No TypeScript errors"
+    ]
+  },
+  "reference": {
+    "pattern": "focus-visible ring pattern from other toolbar buttons",
+    "files": [
+      "src/components/ChatAreaComposer.tsx"
+    ],
+    "examples": "Existing focus-visible rings on BookmarkPlus, Trash2, Copy buttons"
+  },
+  "rationale": {
+    "chosen_approach": "Group all ChatAreaComposer fixes into one task to avoid multiple edits to same file",
+    "decision_factors": [
+      "All fixes target the same file",
+      "Wave 2 handles tests separately"
+    ],
+    "tradeoffs": "Larger single task but avoids merge conflicts from parallel edits"
+  },
+  "risks": [
+    "ISS-065 send button cause unknown — may require layout investigation beyond ChatAreaComposer.tsx"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "chat-composer"
+    ],
+    "affected_components": [
+      "ChatAreaComposer"
+    ],
+    "affected_requirements": [
+      "REQ-A"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "25-30min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

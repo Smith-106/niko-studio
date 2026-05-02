@@ -1,0 +1,128 @@
+{
+  "phase": 1,
+  "phase_slug": "a11y-correctness-fixes",
+  "plan_dir": "scratch/20260502-plan-P1-a11y-correctness-fixes",
+  "status": "passed",
+  "verified_at": "2026-05-02T00:00:00.000Z",
+  "verifier": "maestro-verify",
+  "execution_artifact": "EXC-003",
+
+  "must_haves": {
+    "truths": [
+      {
+        "claim": "Trash2 button uses tabIndex instead of aria-hidden",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:121 — tabIndex={input.length === 0 ? -1 : undefined}; grep aria-hidden returns 0 matches"
+      },
+      {
+        "claim": "Copy success announced via sr-only live region",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:140 — <span role=\"status\" className=\"sr-only\">{copied ? 'Copied!' : ''}</span>"
+      },
+      {
+        "claim": "copyLastReply has null guard, no non-null assertion",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:56 — if (!lastAssistantContent) return; grep 'lastAssistantContent!' returns 0 matches"
+      },
+      {
+        "claim": "Send button has z-index to prevent click interception",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:173 — relative z-10 in send button className"
+      },
+      {
+        "claim": "Paperclip button has focus-visible ring",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:101 — focus-visible:ring-2 present; total 4 toolbar buttons with ring"
+      },
+      {
+        "claim": "setTimeout cleanup via useEffect with clearTimeout",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:62-66 — useEffect with clearTimeout cleanup for copied state timer"
+      },
+      {
+        "claim": "makeDebounce returns { call, cancel } object",
+        "status": "verified",
+        "evidence": "ChatArea.tsx:123-124 — const cancel = () => clearTimeout(timer); return { call, cancel }"
+      },
+      {
+        "claim": "debouncedPersist uses .call() API",
+        "status": "verified",
+        "evidence": "ChatArea.tsx:143 — debouncedPersist.call(v)"
+      },
+      {
+        "claim": "clearDraft is unconditional on send with debounce cancel",
+        "status": "verified",
+        "evidence": "ChatArea.tsx:776-777 — debouncedPersist.cancel(); clearDraft(); grep 'if (persistedText) clearDraft()' returns 0 matches"
+      },
+      {
+        "claim": "Tests updated for all fixes — 841 passing",
+        "status": "verified",
+        "evidence": "vitest run: 84 files, 841 tests passed; Trash2 uses getByRole + tabindex assertion; copy live region test added; Paperclip focus test added; vi.unstubAllGlobals cleanup added"
+      }
+    ],
+    "artifacts": [
+      { "path": "src/components/ChatAreaComposer.tsx", "status": "exists", "substantive": true, "wired": true },
+      { "path": "src/components/ChatArea.tsx", "status": "exists", "substantive": true, "wired": true },
+      { "path": "src/components/ChatAreaComposer.test.tsx", "status": "exists", "substantive": true, "wired": true }
+    ],
+    "key_links": [
+      {
+        "from": "ChatAreaComposer Trash2 → tabIndex prop → keyboard navigation",
+        "status": "wired",
+        "evidence": "ChatAreaComposer.tsx:121 — tabIndex={input.length === 0 ? -1 : undefined}; test asserts tabindex=-1 when empty"
+      },
+      {
+        "from": "ChatAreaComposer copy → setCopied(true) → useEffect → live region update",
+        "status": "wired",
+        "evidence": "ChatAreaComposer.tsx:57-58 setCopied(true) → :62-66 useEffect timer → :140 sr-only span reads copied state"
+      },
+      {
+        "from": "ChatArea makeDebounce → debouncedPersist.cancel() → clearDraft()",
+        "status": "wired",
+        "evidence": "ChatArea.tsx:117-124 makeDebounce returns {call,cancel} → :776 debouncedPersist.cancel() → :777 clearDraft()"
+      }
+    ]
+  },
+
+  "constraint_violations": [],
+
+  "antipatterns": [
+    {
+      "file": "src/components/ChatArea.tsx",
+      "pattern": "placeholder",
+      "matches": ["lines 1148-1162: quickRollback form placeholder attrs"],
+      "severity": "info",
+      "verdict": "FALSE_POSITIVE — pre-existing HTML form input placeholders, unrelated to gap fixes"
+    },
+    {
+      "file": "src/components/ChatArea.tsx",
+      "pattern": "return null",
+      "matches": ["line 1059: if (!message) return null"],
+      "severity": "info",
+      "verdict": "FALSE_POSITIVE — legitimate conditional guard for missing message"
+    }
+  ],
+
+  "gaps": [],
+  "fix_plans": [],
+
+  "human_verification": [
+    {
+      "id": "HV-004",
+      "description": "Send button mouse click — verify clicking the send button now works after z-10 fix",
+      "severity": "medium",
+      "type": "interaction"
+    }
+  ],
+
+  "coverage_score": 1.0,
+  "truths_verified": 10,
+  "truths_total": 10,
+  "artifacts_verified": 3,
+  "artifacts_total": 3,
+  "links_wired": 3,
+  "links_total": 3,
+  "test_count": 841,
+  "tests_new": 2,
+  "typescript_errors": 0
+}

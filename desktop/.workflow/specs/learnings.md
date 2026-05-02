@@ -1,5 +1,17 @@
 # Project Learnings
 
+<spec-entry category="learning" keywords="a11y,aria-hidden,tabIndex,wcag,focusable" date="2026-05-02" source="execute/EXC-003/TASK-001">
+Never use `aria-hidden` on keyboard-focusable interactive elements. Use `tabIndex={condition ? -1 : undefined}` to exclude from tab order instead. WCAG 2.1 SC 1.3.1 forbids aria-hidden on elements still in the tab order — screen readers cannot describe a focused element hidden from the accessibility tree.
+</spec-entry>
+
+<spec-entry category="learning" keywords="a11y,screen-reader,aria-live,status,announcement" date="2026-05-02" source="execute/EXC-003/TASK-001">
+Changing `aria-label` in place on a button does not reliably trigger screen reader announcements in NVDA/VoiceOver. Use `<span role="status" className="sr-only">{text}</span>` adjacent to the button for WCAG 2.1 SC 4.1.3 compliant status changes. The button's aria-label can remain static.
+</spec-entry>
+
+<spec-entry category="learning" keywords="debounce,cancel,setTimeout,draft-persist,race-condition" date="2026-05-02" source="execute/EXC-003/TASK-002">
+Inline `makeDebounce` should return `{ call, cancel }` instead of just the debounced function. Without `cancel()`, a stale debounce timer can fire after the action it was debouncing has already completed (e.g., a draft persist timer firing after a message is sent, re-creating the draft). Always call `cancel()` before clearing state in send/submit handlers.
+</spec-entry>
+
 <spec-entry category="debug" keywords="css,index.css,globals.css,file-path" date="2026-05-02" source="execute/TASK-001">
 The project CSS entry point is `src/styles/globals.css`, not `src/index.css`. Plans referencing `src/index.css` as a target should be redirected to `src/styles/globals.css`. The `:root` design token block lives at the top of globals.css.
 </spec-entry>

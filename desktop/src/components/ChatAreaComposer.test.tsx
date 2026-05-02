@@ -1,6 +1,6 @@
 import { createRef } from 'react'
 import { act, render, screen, fireEvent } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ChatAreaComposer } from './ChatAreaComposer'
 
@@ -65,12 +65,13 @@ describe('ChatAreaComposer toolbar buttons', () => {
     expect(screen.queryByRole('button', { name: /attach context|open knowledge/i })).not.toBeInTheDocument()
   })
 
-  it('clear draft button is in DOM with opacity-0 when input is empty', () => {
+  it('clear draft button is in DOM with opacity-0 and tabindex -1 when input is empty', () => {
     render(<ChatAreaComposer {...baseProps} input="" onClearDraft={vi.fn()} />)
 
-    const button = screen.getByTitle('clear draft')
+    const button = screen.getByRole('button', { name: 'clear draft' })
     expect(button).toBeInTheDocument()
     expect(button).toHaveClass('opacity-0')
+    expect(button).toHaveAttribute('tabindex', '-1')
   })
 
   it('renders clear draft button visible when input is non-empty and calls onClearDraft on click', () => {
@@ -80,6 +81,8 @@ describe('ChatAreaComposer toolbar buttons', () => {
     const button = screen.getByRole('button', { name: 'clear draft' })
     expect(button).toBeInTheDocument()
     expect(button).not.toHaveClass('opacity-0')
+    expect(button).toHaveClass('opacity-100')
+    expect(button).not.toHaveAttribute('tabindex')
     fireEvent.click(button)
     expect(onClearDraft).toHaveBeenCalledOnce()
   })
@@ -89,6 +92,17 @@ describe('ChatAreaComposer toolbar buttons', () => {
 
     expect(screen.queryByRole('button', { name: 'copy last reply' })).not.toBeInTheDocument()
   })
+
+  it('paperclip button has focus-visible ring class', () => {
+    render(<ChatAreaComposer {...baseProps} />)
+
+    const button = screen.getByRole('button', { name: baseProps.uploadLabel })
+    expect(button).toHaveClass('focus-visible:ring-2')
+  })
+})
+
+describe('ChatAreaComposer clipboard tests', () => {
+  afterEach(() => vi.unstubAllGlobals())
 
   it('renders copy last reply button and copies content when lastAssistantContent is non-empty', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
@@ -123,6 +137,33 @@ describe('ChatAreaComposer toolbar buttons', () => {
     })
 
     expect(screen.getByRole('button', { name: 'copy last reply' })).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('announces copy status via live region for screen readers', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    vi.useFakeTimers()
+
+    render(<ChatAreaComposer {...baseProps} lastAssistantContent="test content" />)
+
+    const button = screen.getByRole('button', { name: 'copy last reply' })
+    fireEvent.click(button)
+
+    await act(async () => {
+      vi.advanceTimersByTime(0)
+    })
+
+    const liveRegions = screen.getAllByRole('status')
+    const copyRegion = liveRegions.find(el => el.classList.contains('sr-only'))
+    expect(copyRegion).toBeTruthy()
+    expect(copyRegion!.textContent).toContain('Copied!')
+
+    await act(async () => {
+      vi.advanceTimersByTime(1500)
+    })
+
+    expect(copyRegion!.textContent).toBe('')
     vi.useRealTimers()
   })
 })

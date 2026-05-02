@@ -1,0 +1,118 @@
+{
+  "id": "TASK-003",
+  "title": "Update tests for a11y + correctness fixes",
+  "description": "Update ChatAreaComposer.test.tsx for: tabIndex change on Trash2 (query by role when hidden), aria-live region for copy, Paperclip focus ring test. Update ChatArea.test.tsx for debounce.cancel() API change. Add vi.unstubAllGlobals cleanup.",
+  "issue_id": null,
+  "issue_refs": [
+    "ISS-20260502-061",
+    "ISS-20260502-062"
+  ],
+  "type": "fix",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Update test files: (1) Trash2 test should verify tabIndex=-1 when input empty and tabIndex absent when input has text, (2) add test for sr-only live region appearing after copy click, (3) add Paperclip focus ring test, (4) add afterEach(() => vi.unstubAllGlobals()) for navigator clipboard stubs, (5) update ChatArea tests for debouncedPersist.call() API, (6) add opacity-100 positive assertion alongside not.toHaveClass('opacity-0').",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "actual_duration": null,
+  "scope": "src/components/",
+  "focus_paths": [
+    "src/components/ChatAreaComposer.test.tsx",
+    "src/components/ChatArea.test.tsx"
+  ],
+  "read_first": [
+    "src/components/ChatAreaComposer.test.tsx",
+    "src/components/ChatArea.test.tsx",
+    "src/components/ChatAreaComposer.tsx",
+    "src/components/ChatArea.tsx"
+  ],
+  "depends_on": [
+    "TASK-001",
+    "TASK-002"
+  ],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/ChatAreaComposer.test.tsx does NOT contain 'aria-hidden'",
+      "src/components/ChatAreaComposer.test.tsx contains 'tabIndex' or 'tabindex' for Trash2 test",
+      "src/components/ChatAreaComposer.test.tsx contains 'sr-only' or 'role.*status' for copy announcement test",
+      "src/components/ChatAreaComposer.test.tsx contains 'unstubAllGlobals'",
+      "src/components/ChatAreaComposer.test.tsx Trash2 visible test asserts both not opacity-0 AND has opacity-100",
+      "npm test exits 0 (full suite)"
+    ],
+    "verification": "grep each criterion; npm test",
+    "definition_of_done": "All tests pass, new a11y behaviors verified, no test regressions"
+  },
+  "files": [
+    {
+      "path": "src/components/ChatAreaComposer.test.tsx",
+      "action": "modify",
+      "target": "Trash2 tests, copy tests, add cleanup",
+      "change": "Update Trash2 query for tabIndex; add copy live region test; add Paperclip focus test; add vi.unstubAllGlobals; add opacity-100 positive assertion"
+    },
+    {
+      "path": "src/components/ChatArea.test.tsx",
+      "action": "modify",
+      "target": "debounce/draft tests",
+      "change": "Update any tests referencing debouncedPersist() call pattern to debouncedPersist.call()"
+    }
+  ],
+  "implementation": [
+    "Trash2 hidden test: Replace getByTitle('clear draft') + opacity-0 assertion with: query the button, assert it has tabIndex='-1' attribute when input is empty, assert NOT toHaveAttribute('tabindex') when input has text.",
+    "Copy live region: After clicking copy, assert screen.getByRole('status').textContent contains 'Copied!'. After advancing timers 1500ms, assert the status region is empty.",
+    "Paperclip focus: Add test verifying the Paperclip button has class 'focus-visible:ring-2'.",
+    "Add afterEach(() => vi.unstubAllGlobals()) to the copy test describe block to clean up navigator stub.",
+    "Trash2 visible: Add expect(button).toHaveClass('opacity-100') alongside the existing not.toHaveClass('opacity-0').",
+    "ChatArea debounce: If any tests directly call debouncedPersist(), update to debouncedPersist.call()."
+  ],
+  "test": {
+    "commands": [
+      "npm test"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": [
+      "Full test suite passes (839+ tests)",
+      "No TypeScript errors"
+    ]
+  },
+  "reference": {
+    "pattern": "Existing test patterns in ChatAreaComposer.test.tsx",
+    "files": [
+      "src/components/ChatAreaComposer.test.tsx"
+    ],
+    "examples": "getByTitle, getByRole, toHaveClass patterns"
+  },
+  "rationale": {
+    "chosen_approach": "Test updates in separate wave to avoid merge conflicts with source fixes",
+    "decision_factors": [
+      "Source changes must complete first",
+      "Tests validate the fixes"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "chat-composer",
+      "draft-persistence"
+    ],
+    "affected_components": [
+      "ChatAreaComposer",
+      "ChatArea"
+    ],
+    "affected_requirements": [
+      "REQ-A"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "15-20min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

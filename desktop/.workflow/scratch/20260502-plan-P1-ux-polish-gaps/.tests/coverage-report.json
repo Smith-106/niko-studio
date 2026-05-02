@@ -1,0 +1,8 @@
+{
+  "target": "P1-ux-polish-gaps",
+  "generated_at": "2026-05-02T00:00:00.000Z",
+  "requirements_covered": ["TRUTH-01", "TRUTH-02", "TRUTH-03", "TRUTH-04", "TRUTH-08", "TRUTH-09", "A11Y-001", "HV-003"],
+  "requirements_uncovered": ["TRUTH-05", "TRUTH-07", "TRUTH-10", "A11Y-002"],
+  "coverage_percentage": 66.7,
+  "notes": "TRUTH-05 (debounce 350ms) and TRUTH-07 (useCallback stable) are implementation details not user-observable. TRUTH-10 (clearDraft no-op) is internal. A11Y-002 (copy screen reader) requires assistive technology to verify."
+}

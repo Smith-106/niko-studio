@@ -1,0 +1,100 @@
+{
+  "id": "TASK-002",
+  "title": "ChatArea: debounce cancel + draft send race fix",
+  "description": "Fix debounce race condition on send: add cancel() to makeDebounce, call debouncedPersist.cancel() + unconditional clearDraft() on send to prevent sent messages reappearing as drafts.",
+  "issue_id": null,
+  "issue_refs": [
+    "ISS-20260502-002"
+  ],
+  "type": "fix",
+  "priority": "high",
+  "effort": "low",
+  "action": "Add cancel() method to makeDebounce return object. In ChatArea send handler, call debouncedPersist.cancel() before clearDraft(). Remove the if (persistedText) guard on clearDraft() to make it unconditional on send.",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "actual_duration": null,
+  "scope": "src/components/ChatArea.tsx",
+  "focus_paths": [
+    "src/components/ChatArea.tsx"
+  ],
+  "read_first": [
+    "src/components/ChatArea.tsx",
+    "src/hooks/useDraftCache.ts"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": 1,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/ChatArea.tsx makeDebounce function returns an object with a cancel method",
+      "src/components/ChatArea.tsx send handler calls '.cancel()' before clearDraft()",
+      "src/components/ChatArea.tsx does NOT contain 'if (persistedText) clearDraft()'",
+      "src/components/ChatArea.tsx contains 'clearDraft()' at the send handler location (unconditional)",
+      "npm test -- src/components/ChatArea.test.tsx exits 0"
+    ],
+    "verification": "grep each criterion; run npm test",
+    "definition_of_done": "Draft debounce cancel works, sent messages never reappear as drafts, tests pass"
+  },
+  "files": [
+    {
+      "path": "src/components/ChatArea.tsx",
+      "action": "modify",
+      "target": "makeDebounce function + send handler",
+      "change": "Add cancel() to makeDebounce; cancel debounce + unconditional clearDraft() on send"
+    }
+  ],
+  "implementation": [
+    "Modify makeDebounce (~line 117) to return an object with the debounced function AND a cancel method. Pattern: let timer; const debounced = (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); }; return { call: debounced, cancel: () => clearTimeout(timer) };",
+    "Update debouncedPersist usage (~line 138): const debouncedPersist = useMemo(() => makeDebounce(persist, 350), [persist]); then change call sites from debouncedPersist(text) to debouncedPersist.call(text)",
+    "In the send handler (~line 774): replace 'if (persistedText) clearDraft()' with 'debouncedPersist.cancel(); clearDraft()'. This ensures: (a) pending debounce timer is cancelled, (b) draft is always cleared on send regardless of persistedText state."
+  ],
+  "test": {
+    "commands": [
+      "npm test -- src/components/ChatArea.test.tsx"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": [
+      "All existing tests pass",
+      "No TypeScript errors"
+    ]
+  },
+  "reference": {
+    "pattern": "debounce-with-cancel pattern",
+    "files": [
+      "src/components/ChatArea.tsx"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Add cancel to existing inline makeDebounce rather than importing lodash.debounce",
+    "decision_factors": [
+      "Keep existing pattern",
+      "No new dependencies",
+      "Minimal change scope"
+    ],
+    "tradeoffs": "Slightly more complex makeDebounce vs adding a dependency"
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "draft-persistence"
+    ],
+    "affected_components": [
+      "ChatArea"
+    ],
+    "affected_requirements": [
+      "REQ-A"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "10-15min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

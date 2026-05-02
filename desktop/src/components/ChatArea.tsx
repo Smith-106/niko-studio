@@ -116,10 +116,12 @@ function resolveContextWindowTokens(settings: {
 
 function makeDebounce<T extends (...args: any[]) => void>(fn: T, delay: number) {
   let timer: ReturnType<typeof setTimeout>
-  return (...args: Parameters<T>) => {
+  const call = (...args: Parameters<T>) => {
     clearTimeout(timer)
     timer = setTimeout(() => fn(...args), delay)
   }
+  const cancel = () => clearTimeout(timer)
+  return { call, cancel }
 }
 
 export function ChatArea({
@@ -138,7 +140,7 @@ export function ChatArea({
   const debouncedPersist = useMemo(() => makeDebounce(persist, 350), [persist])
   const handleInputChange = useCallback((v: string) => {
     setInput(v)
-    debouncedPersist(v)
+    debouncedPersist.call(v)
   }, [debouncedPersist])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setInput(persistedText) }, [currentConversationId])
@@ -771,7 +773,8 @@ export function ChatArea({
 
     const userMessage = payloadForSend.message.trim()
     setInput('')
-    if (persistedText) clearDraft()
+    debouncedPersist.cancel()
+    clearDraft()
     setRecoverStatus(null)
     lastRetryPayloadRef.current = payloadForSend
 

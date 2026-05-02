@@ -1,0 +1,31 @@
+{
+  "target": "P1-ux-polish-gaps",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "results": [
+    { "id": "T-001", "name": "BookmarkPlus button absent without knowledge panel config", "status": "pass", "details": "Button correctly appears — useAppShellViewModel always provides onToggleKnowledgePanel" },
+    { "id": "T-002", "name": "Copy button shows Check icon then reverts", "status": "pass", "details": "Check icon shown after click, reverts after ~1.5s" },
+    { "id": "T-003", "name": "Clear draft button no layout shift", "status": "pass", "details": "Button stays in fixed position, opacity transition smooth" },
+    { "id": "T-004", "name": "Draft restores on conversation switch", "status": "pass", "details": "Draft text restored after switching back" },
+    { "id": "T-005", "name": "Draft does not overwrite on keystroke", "status": "pass", "details": "No flicker or reset during typing" },
+    { "id": "T-006", "name": "Composer dark mode focus ring", "status": "skipped", "details": "Blocked by pre-existing theme system issue (ISS-063)" },
+    { "id": "T-007", "name": "Context footer non-interactive", "status": "issue", "details": "Middle column bottom clipped — novel outline half visible (ISS-064, pre-existing)" },
+    { "id": "T-008", "name": "Toolbar buttons focus rings on keyboard nav", "status": "pass", "details": "Focus rings visible on keyboard navigation" },
+    { "id": "T-009", "name": "Trash2 excluded from tab order when hidden", "status": "issue", "details": "Tab does not skip clear-draft button when empty (A11Y-001, ISS-061). Also: send button mouse click broken (ISS-065)" },
+    { "id": "T-010", "name": "Rapid conversation switch draft stability", "status": "pass", "details": "Draft correctly shows conversation A's text after rapid switch" }
+  ],
+  "summary": {
+    "total": 10,
+    "passed": 6,
+    "issues": 3,
+    "skipped": 1,
+    "issue_breakdown": {
+      "blocker": 0,
+      "major": 3,
+      "minor": 0,
+      "cosmetic": 0
+    },
+    "pre_existing_issues": 2,
+    "known_unfixed": 1,
+    "new_discovered": 1
+  }
+}

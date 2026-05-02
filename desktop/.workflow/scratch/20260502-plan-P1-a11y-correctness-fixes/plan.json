@@ -1,0 +1,49 @@
+{
+  "summary": "Fix Phase 1 accessibility violations, send button regression, and draft lifecycle correctness issues",
+  "approach": "Group fixes by file to minimize merge conflicts: Wave 1 fixes ChatAreaComposer.tsx (a11y + send + correctness) and ChatArea.tsx (debounce/draft) in parallel; Wave 2 updates tests for both",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003"],
+  "task_count": 3,
+  "complexity": "medium",
+  "estimated_time": "45-60min",
+  "recommended_execution": "Agent",
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002"],
+      "label": "Source fixes"
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-003"],
+      "label": "Test updates"
+    }
+  ],
+  "data_flow": {
+    "diagram": null,
+    "stages": []
+  },
+  "design_decisions": [
+    "Use tabIndex={-1} instead of aria-hidden for Trash2 (WCAG compliant, keeps button in DOM)",
+    "Add sr-only live region for copy announcement (reliable across NVDA/VoiceOver)",
+    "Add cancel() to makeDebounce to prevent stale timer writes"
+  ],
+  "shared_context": {
+    "patterns": [
+      "opacity-0 + pointer-events-none + tabIndex={-1} for visually hidden but DOM-present buttons",
+      "sr-only + role='status' + aria-live='polite' for screen reader announcements"
+    ],
+    "conventions": [
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 for toolbar buttons"
+    ],
+    "dependencies": []
+  },
+  "gaps_addressed": ["ISS-061", "ISS-062", "ISS-065", "CORR-001", "BP-011", "BP-008", "CORR-004", "CORR-005"],
+  "gaps_deferred": "42+ architecture/maintainability items (ISS-002 through ISS-060) deferred to future phases",
+  "_metadata": {
+    "timestamp": "2026-05-02T00:00:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "gaps",
+    "plan_type": "fix",
+    "schema_version": "2.0"
+  }
+}

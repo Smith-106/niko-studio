@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { RefObject } from 'react'
 import { BookmarkPlus, Check, Copy, MicOff, Paperclip, Send, Square, Trash2 } from 'lucide-react'
 
@@ -53,11 +53,17 @@ export function ChatAreaComposer({
   const [copied, setCopied] = useState(false)
 
   const copyLastReply = () => {
-    navigator.clipboard?.writeText(lastAssistantContent!).then(() => {
+    if (!lastAssistantContent) return
+    navigator.clipboard?.writeText(lastAssistantContent).then(() => {
       setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
     }).catch(() => {})
   }
+
+  useEffect(() => {
+    if (!copied) return
+    const id = setTimeout(() => setCopied(false), 1500)
+    return () => clearTimeout(id)
+  }, [copied])
 
   return (
     <div className="flex items-end gap-3 mt-4">
@@ -92,7 +98,7 @@ export function ChatAreaComposer({
               onClick={onOpenFilePicker}
               aria-label={uploadLabel}
               title={uploadLabel}
-              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
+              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
               type="button"
             >
               <Paperclip size={15} />
@@ -112,7 +118,7 @@ export function ChatAreaComposer({
               <button
                 onClick={onClearDraft}
                 aria-label="clear draft"
-                aria-hidden={input.length === 0 || undefined}
+                tabIndex={input.length === 0 ? -1 : undefined}
                 title="clear draft"
                 className={`rounded-lg p-1.5 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${input.length > 0 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                 type="button"
@@ -121,15 +127,18 @@ export function ChatAreaComposer({
               </button>
             )}
             {lastAssistantContent && (
-              <button
-                onClick={copyLastReply}
-                aria-label={copied ? 'copied!' : 'copy last reply'}
-                title="copy last reply"
-                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
-                type="button"
-              >
-                {copied ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
-              </button>
+              <>
+                <button
+                  onClick={copyLastReply}
+                  aria-label={copied ? 'copied!' : 'copy last reply'}
+                  title="copy last reply"
+                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                  type="button"
+                >
+                  {copied ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
+                </button>
+                {copied !== undefined && <span role="status" className="sr-only">{copied ? 'Copied!' : ''}</span>}
+              </>
             )}
             <div
               role="status"
@@ -161,7 +170,7 @@ export function ChatAreaComposer({
           aria-label={sendLabel}
           title={sendLabel}
           disabled={sendDisabled}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white transition-all hover:bg-primary-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white transition-all hover:bg-primary-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm relative z-10"
           type="button"
         >
           <Send size={18} className="ml-0.5" />
