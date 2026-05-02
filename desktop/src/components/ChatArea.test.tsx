@@ -264,15 +264,16 @@ describe('ChatArea P0 flows', () => {
     expect(screen.queryByRole('button', { name: zh.composerVoiceInput })).not.toBeInTheDocument()
   })
 
-  it('keeps quick rollback behind an advanced summary and validates required ids only after opening it', async () => {
+  it('keeps quick rollback behind an advanced toggle and validates required ids only after opening it', async () => {
     const user = userEvent.setup()
 
     render(<ChatArea />)
 
-    expect(screen.getByText(zh.quickRollbackSummary)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: zh.quickRollbackAction })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: zh.quickRollbackAdvancedToggle }))
+
+    expect(screen.getByText(zh.quickRollbackSummary)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: zh.quickRollbackAction }))
 
     expect(screen.getByText(zh.quickRollbackMissingRequired)).toBeInTheDocument()
@@ -324,8 +325,7 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
-    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
-    await userEvent.click(screen.getByRole('button', { name: zh.chatModeComparison }))
+    await userEvent.click(screen.getAllByText(zh.modePresetCompareReview)[0])
     const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '质量目标回归{enter}')
 
@@ -575,72 +575,22 @@ describe('ChatArea P0 flows', () => {
   })
 
   it('renders retrieval status for agent write responses with writer metadata', async () => {
-    mockedAgentWrite.mockResolvedValue({
-      success: true,
-      data: {
-        content: 'agent 带检索状态',
-        wordcount: 280,
+    mockedChatStream.mockImplementation(async (_request, callbacks) => {
+      callbacks.onContent?.('agent 带检索状态', 0)
+      callbacks.onDone?.({
+        status: 'completed',
+        skills_used: [],
         writer_metadata: {
           knowledge_retrieved: {
             entities_count: 2,
             relations_count: 2,
             memories_count: 1,
           },
-          workspace_context: {
-            schemaVersion: '2026-04-08',
-            identity: {
-              workspaceId: 'atlas-project',
-              projectId: 'atlas-project',
-              projectName: 'Atlas',
-              workspaceRoot: '/tmp/atlas',
-            },
-            manuscript: {
-              manuscriptId: null,
-              title: null,
-              chapterId: 'chapter-3',
-              chapterTitle: null,
-              chapterNumber: 3,
-            },
-            storyBible: {
-              storyBibleId: null,
-              draftId: 'draft-3',
-              version: null,
-              storage: 'workspace',
-            },
-            knowledge: {
-              focusEntityId: null,
-              graphEntityIds: [],
-              memoryEntryIds: [],
-            },
-            authority: {
-              recordSetId: null,
-              activeSceneId: null,
-              activeEventId: null,
-              activeTimelineId: null,
-              consistencyRunId: null,
-            },
-            workflow: {
-              sessionId: 'workflow-session-3',
-              planId: null,
-              level: 'L3',
-            },
-            chat: {
-              conversationId: 'conversation-3',
-              comparisonEnabled: false,
-            },
-            compatibility: {
-              additiveContract: true,
-              migratedLegacyFields: [],
-              notes: [],
-            },
-          },
         },
-      },
+      })
     })
 
     render(<ChatArea />)
-    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
-    await userEvent.click(screen.getByRole('button', { name: zh.chatModeAgent }))
     const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, 'agent 写作检索状态{enter}')
 
@@ -671,10 +621,7 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
-    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
-    await userEvent.click(screen.getByRole('button', { name: zh.chatModeComparison }))
-    const modelSelect = screen.getByLabelText(zh.chatComparisonModelLabel)
-    await userEvent.selectOptions(modelSelect, 'gpt-4-turbo')
+    await userEvent.click(screen.getAllByText(zh.modePresetCompareReview)[0])
 
     const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '比较测试{enter}')
@@ -682,10 +629,9 @@ describe('ChatArea P0 flows', () => {
     await waitFor(() => {
       expect(mockedChat).toHaveBeenCalledWith(
         expect.objectContaining({
-          comparison: {
+          comparison: expect.objectContaining({
             enabled: true,
-            controlModel: 'gpt-4-turbo',
-          },
+          }),
           qualityGoals: expect.objectContaining({
             naturalness: 85,
             readability: 80,
@@ -807,8 +753,7 @@ describe('ChatArea P0 flows', () => {
 
     render(<ChatArea />)
 
-    await userEvent.click(screen.getByRole('button', { name: zh.showMore }))
-    await userEvent.click(screen.getByRole('button', { name: zh.chatModeComparison }))
+    await userEvent.click(screen.getAllByText(zh.modePresetCompareReview)[0])
     const input = screen.getByPlaceholderText(zh.inputPlaceholder)
     await userEvent.type(input, '非流式治理{enter}')
 
