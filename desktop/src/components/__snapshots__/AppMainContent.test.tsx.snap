@@ -1,0 +1,24 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AppMainContent > matches snapshot 1`] = `
+<main
+  class="flex-1 flex flex-col relative min-w-0 bg-slate-50 dark:bg-[#0f0f0f] shadow-[-4px_0_20px_-5px_rgba(0,0,0,0.05)] z-20"
+  id="app-main-content"
+  tabindex="-1"
+>
+  <div
+    data-testid="app-header"
+  />
+  <div
+    data-testid="restore-banner"
+  />
+  <div
+    data-testid="document-editor"
+  />
+  <div
+    data-testid="context-footer"
+  >
+    ~1.2k tokens
+  </div>
+</main>
+`;

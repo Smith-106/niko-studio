@@ -146,6 +146,16 @@ describe('Sidebar', () => {
     expect(screen.queryByText('Reply Review')).not.toBeInTheDocument()
   })
 
+  it('renders without errors', () => {
+    render(<Sidebar {...defaultSidebarProps} />)
+    expect(document.body).toBeTruthy()
+  })
+
+  it('matches snapshot', () => {
+    const { container } = render(<Sidebar {...defaultSidebarProps} collapsed={false} />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
   it('shows initial letter of conversation title when collapsed', () => {
     render(<Sidebar {...defaultSidebarProps} collapsed={true} />)
     // Both conversations start with 'C', so we expect two matching spans

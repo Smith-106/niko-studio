@@ -509,6 +509,18 @@ describe('StoryBiblePanel', () => {
     await screen.findByText(/当前时间线: timeline-default-project-主线时间/)
   }, 15000)
 
+  it('renders without errors', () => {
+    render(<StoryBiblePanel />)
+    expect(document.body).toBeTruthy()
+  })
+
+  it('matches snapshot', async () => {
+    const { container } = render(<StoryBiblePanel />)
+    // Wait for async initial load to settle
+    await screen.findByText(zh.storyBiblePersistenceTitle)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
   it('promotes synopsis into canon and shows the canon review preview', async () => {
     const user = userEvent.setup()
     vi.mocked(listProjectWikiCanonPagesApi)

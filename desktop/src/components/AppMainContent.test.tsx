@@ -116,6 +116,16 @@ describe('AppMainContent', () => {
     expect(main.className).toContain('flex-col')
   })
 
+  it('renders without errors', () => {
+    render(<AppMainContent {...defaultProps} />)
+    expect(document.body).toBeTruthy()
+  })
+
+  it('matches snapshot', () => {
+    const { container } = render(<AppMainContent {...defaultProps} />)
+    expect(container.firstChild).toMatchSnapshot()
+  })
+
   it('passes onOpenWritingHelper to DocumentEditor', () => {
     const onOpenWritingHelper = vi.fn()
     render(<AppMainContent {...defaultProps} onOpenWritingHelper={onOpenWritingHelper} />)
