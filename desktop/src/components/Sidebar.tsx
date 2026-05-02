@@ -75,7 +75,7 @@ export const Sidebar = React.memo(function Sidebar({
         )}
         <button
           onClick={onToggle}
-          className={`p-1.5 hover:bg-dark-surface2 rounded-md text-dark-text-secondary hover:text-dark-text transition-colors ${collapsed ? 'mx-auto' : ''}`}
+          className={`flex h-8 w-8 items-center justify-center rounded-lg text-dark-text-secondary transition-colors hover:bg-dark-surface hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'mx-auto' : ''}`}
           aria-label={collapsed ? t.sidebarToggleExpand : t.sidebarToggleCollapse}
           title={collapsed ? t.sidebarToggleExpand : t.sidebarToggleCollapse}
         >
@@ -157,9 +157,9 @@ export const Sidebar = React.memo(function Sidebar({
           <button
             key={conv.id}
             onClick={() => selectConversation(conv.id)}
-            className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors group ${
+            className={`w-full flex items-center px-3 py-2 rounded-lg transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
               currentConversationId === conv.id
-                ? 'bg-dark-surface text-primary-400 font-medium'
+                ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
                 : 'hover:bg-dark-surface text-dark-text-secondary hover:text-dark-text'
             } ${collapsed ? 'justify-center' : 'text-left'}`}
             title={collapsed ? conv.title : undefined}
@@ -186,7 +186,7 @@ export const Sidebar = React.memo(function Sidebar({
       <div className="border-t border-dark-border p-3 space-y-0.5 shrink-0">
         <button
           onClick={onOpenPrompts}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors ${collapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`}
           aria-label={t.templateLibraryEntry}
           title={t.templateLibraryEntry}
           type="button"
@@ -196,7 +196,7 @@ export const Sidebar = React.memo(function Sidebar({
         </button>
         <button
           onClick={onOpenKnowledge}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors ${collapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`}
           aria-label={t.knowledgeBase}
           title={t.knowledgeBase}
           type="button"
@@ -206,7 +206,7 @@ export const Sidebar = React.memo(function Sidebar({
         </button>
         <button
           onClick={onOpenSettings}
-          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors ${collapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`}
           aria-label={t.settings}
           title={t.settings}
           type="button"

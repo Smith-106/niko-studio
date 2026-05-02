@@ -105,7 +105,7 @@ describe('Sidebar', () => {
   it('highlights the current conversation', () => {
     render(<Sidebar {...defaultSidebarProps} />)
     const currentButton = screen.getByText('Chapter 1 Draft').closest('button')
-    expect(currentButton?.className).toContain('bg-dark-surface')
+    expect(currentButton?.className).toContain('bg-primary-50')
   })
 
   it('calls selectConversation when a conversation is clicked', () => {

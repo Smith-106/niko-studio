@@ -19,8 +19,8 @@ export function ChatSidebar({ chatAreaProps, chatSidebarCollapsed }: ChatSidebar
 
   return (
     <aside
-      className={`flex flex-col border-l border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shrink-0 z-30 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] relative ${
-        isResizing ? '' : 'transition-[width] duration-300'
+      className={`flex flex-col border-l border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shrink-0 z-30 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${
+        isResizing ? '' : 'transition-all duration-300'
       } ${chatSidebarCollapsed ? 'overflow-hidden' : ''}`}
       style={{ width: chatSidebarCollapsed ? 0 : width }}
     >

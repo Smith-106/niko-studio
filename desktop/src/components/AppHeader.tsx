@@ -127,7 +127,7 @@ export function AppHeader({
       <div className="flex items-center gap-4 relative">
         <button
           onClick={onToggleChatSidebar}
-          className="p-1.5 rounded-md text-gray-500 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface2 hover:text-gray-700 dark:hover:text-dark-text transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 dark:text-dark-text-secondary transition-colors hover:bg-gray-100 dark:hover:bg-dark-surface hover:text-gray-700 dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
           title={chatSidebarCollapsed ? t.chatSidebarToggleExpand : t.chatSidebarToggleCollapse}
           aria-label={chatSidebarCollapsed ? t.chatSidebarToggleExpand : t.chatSidebarToggleCollapse}
         >

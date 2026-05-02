@@ -135,8 +135,8 @@ describe('ChatSidebar', () => {
       />,
     )
 
-    const aside = container.querySelector('aside')
-    expect(aside?.className).toContain('w-0')
+    const aside = container.querySelector('aside') as HTMLElement | null
+    expect(aside?.style.width).toBe('0px')
     expect(aside?.className).toContain('overflow-hidden')
   })
 
@@ -148,9 +148,9 @@ describe('ChatSidebar', () => {
       />,
     )
 
-    const aside = container.querySelector('aside')
-    expect(aside?.className).toContain('w-[320px]')
-    expect(aside?.className).not.toContain('w-0')
+    const aside = container.querySelector('aside') as HTMLElement | null
+    expect(aside?.style.width).not.toBe('0px')
+    expect(aside?.className).not.toContain('overflow-hidden')
   })
 
   it('includes border and transition classes on the aside', () => {
