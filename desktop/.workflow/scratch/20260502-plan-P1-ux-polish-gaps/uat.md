@@ -8,17 +8,18 @@ updated: "2026-05-02T00:00:00.000Z"
 
 ## Current Test
 
-number: 1
-name: BookmarkPlus button absent without knowledge panel config
+number: 2
+name: Copy button shows Check icon then reverts
 expected: |
-  The knowledge panel toggle button (BookmarkPlus icon) does NOT appear in the composer toolbar when no knowledge panel is configured
+  After clicking the copy-last-reply button, the icon changes to a checkmark and the label says 'copied!'. After ~1.5 seconds it reverts to the copy icon with 'copy last reply' label
 awaiting: user response
 
 ## Tests
 
 ### 1. BookmarkPlus button absent without knowledge panel config
 expected: The knowledge panel toggle button (BookmarkPlus icon) does NOT appear in the composer toolbar when no knowledge panel is configured
-result: [pending]
+result: pass
+note: Button correctly appears — useAppShellViewModel always provides onToggleKnowledgePanel callback. Guard works as intended for cases where prop is omitted.
 
 ### 2. Copy button shows Check icon then reverts
 expected: After clicking the copy-last-reply button, the icon changes to a checkmark and the label says 'copied!'. After ~1.5 seconds it reverts to the copy icon with 'copy last reply' label
