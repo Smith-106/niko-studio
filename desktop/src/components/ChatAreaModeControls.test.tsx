@@ -10,7 +10,6 @@ const defaultPresets = [
 
 const defaultProps = {
   modeLabel: 'Mode',
-  workflowLabel: 'Workflow',
   modePresetsLabel: 'Presets',
   availableSkillIds: ['character-forge', 'dialogue-system'],
   selectedSkillIds: [],
@@ -18,31 +17,17 @@ const defaultProps = {
   chatMode: 'chat' as const,
   agentAction: 'write' as const,
   enableModelComparison: false,
-  comparisonModel: 'gpt-4',
-  comparisonModels: ['gpt-4', 'claude-3', 'gemini-pro'],
-  workflowLevel: 'L3' as const,
   chatModeNormalLabel: 'Normal',
   chatModeAgentLabel: 'Agent',
   chatModeComparisonLabel: 'Comparison',
   templateLibraryEntryLabel: 'Templates',
-  comparisonModelLabel: 'Comparison Model',
   chatAgentActionWriteLabel: 'Write',
   chatAgentActionReviseLabel: 'Revise',
   chatAgentActionContextLabel: 'Context',
-  workflowQuickLabel: 'Quick',
-  workflowLiteLabel: 'Lite',
-  workflowStandardLabel: 'Standard',
-  workflowBrainstormLabel: 'Brainstorm',
-  workflowCoordinatorLabel: 'Coordinator',
-  showMoreLabel: 'More',
-  showLessLabel: 'Less',
   modePresets: defaultPresets,
-  onSetChatMode: vi.fn(),
-  onToggleModelComparison: vi.fn(),
   onOpenTemplateLibrary: vi.fn(),
   onSetComparisonModel: vi.fn(),
   onSetAgentAction: vi.fn(),
-  onSetWorkflowLevel: vi.fn(),
   onApplyPreset: vi.fn(),
   onToggleSkill: vi.fn(),
 }
@@ -77,119 +62,15 @@ describe('ChatAreaModeControls', () => {
     expect(defaultProps.onOpenTemplateLibrary).toHaveBeenCalledOnce()
   })
 
-  it('shows More button by default in chat mode without comparison', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    expect(screen.getByText('More')).toBeInTheDocument()
-    expect(screen.queryByText('Less')).not.toBeInTheDocument()
-  })
-
-  it('toggles to Less button when More is clicked', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    fireEvent.click(screen.getByText('More'))
-    expect(screen.getByText('Less')).toBeInTheDocument()
-    expect(screen.queryByText('More')).not.toBeInTheDocument()
-  })
-
-  it('shows advanced panel automatically in agent mode', () => {
-    render(<ChatAreaModeControls {...defaultProps} chatMode="agent" />)
-    expect(screen.getByText('Less')).toBeInTheDocument()
-  })
-
-  it('shows advanced panel automatically when model comparison is enabled', () => {
-    render(<ChatAreaModeControls {...defaultProps} enableModelComparison={true} />)
-    expect(screen.getByText('Less')).toBeInTheDocument()
-  })
-
   it('renders comparison mode label when model comparison is enabled', () => {
     render(<ChatAreaModeControls {...defaultProps} enableModelComparison={true} />)
-    // "Comparison" appears both as summary badge and toggle button
-    expect(screen.getAllByText('Comparison').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Comparison')).toBeInTheDocument()
   })
 
   it('renders agent mode summary with action label', () => {
     render(<ChatAreaModeControls {...defaultProps} chatMode="agent" agentAction="revise" />)
     // Summary badge shows "Agent . Revise"
-    expect(screen.getByText('Agent \u00b7 Revise')).toBeInTheDocument()
-  })
-
-  it('renders Normal and Agent mode buttons when advanced panel is open', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    // Open advanced panel
-    fireEvent.click(screen.getByText('More'))
-    // Use aria-label to target the mode buttons specifically
-    expect(screen.getByRole('button', { name: 'Normal' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Agent' })).toBeInTheDocument()
-  })
-
-  it('calls onSetChatMode when mode button is clicked', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    fireEvent.click(screen.getByText('More'))
-    fireEvent.click(screen.getByRole('button', { name: 'Agent' }))
-    expect(defaultProps.onSetChatMode).toHaveBeenCalledWith('agent')
-  })
-
-  it('renders Comparison toggle button in chat mode with advanced panel open', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    fireEvent.click(screen.getByText('More'))
-    expect(screen.getByRole('button', { name: 'Comparison' })).toBeInTheDocument()
-  })
-
-  it('calls onToggleModelComparison when Comparison is clicked', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    fireEvent.click(screen.getByText('More'))
-    fireEvent.click(screen.getByRole('button', { name: 'Comparison' }))
-    expect(defaultProps.onToggleModelComparison).toHaveBeenCalledOnce()
-  })
-
-  it('renders comparison model selector when comparison is enabled', () => {
-    render(
-      <ChatAreaModeControls {...defaultProps} enableModelComparison={true} chatMode="chat" />,
-    )
-    const select = screen.getByLabelText('Comparison Model')
-    expect(select).toBeInTheDocument()
-    expect(select).toHaveValue('gpt-4')
-  })
-
-  it('renders agent action selector in agent mode', () => {
-    render(<ChatAreaModeControls {...defaultProps} chatMode="agent" />)
-    // The select has aria-label "Agent" which may collide with the button.
-    // Use getAllByLabelText and filter for select.
-    const allAgent = screen.getAllByLabelText('Agent')
-    const select = allAgent.find((el) => el.tagName === 'SELECT')
-    expect(select).toBeTruthy()
-    expect(select!).toHaveValue('write')
-  })
-
-  it('calls onSetAgentAction when agent action is changed', () => {
-    render(<ChatAreaModeControls {...defaultProps} chatMode="agent" />)
-    const allAgent = screen.getAllByLabelText('Agent')
-    const select = allAgent.find((el) => el.tagName === 'SELECT')!
-    fireEvent.change(select, { target: { value: 'revise' } })
-    expect(defaultProps.onSetAgentAction).toHaveBeenCalledWith('revise')
-  })
-
-  it('renders all workflow level buttons in advanced panel', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    fireEvent.click(screen.getByText('More'))
-    expect(screen.getByText('Quick')).toBeInTheDocument()
-    expect(screen.getByText('Lite')).toBeInTheDocument()
-    expect(screen.getByText('Standard')).toBeInTheDocument()
-    expect(screen.getByText('Brainstorm')).toBeInTheDocument()
-    expect(screen.getByText('Coordinator')).toBeInTheDocument()
-  })
-
-  it('calls onSetWorkflowLevel when a workflow level is clicked', () => {
-    render(<ChatAreaModeControls {...defaultProps} />)
-    fireEvent.click(screen.getByText('More'))
-    fireEvent.click(screen.getByText('Quick'))
-    expect(defaultProps.onSetWorkflowLevel).toHaveBeenCalledWith('L1')
-  })
-
-  it('highlights the current workflow level', () => {
-    render(<ChatAreaModeControls {...defaultProps} workflowLevel="L3" />)
-    fireEvent.click(screen.getByText('More'))
-    const standardButton = screen.getByText('Standard')
-    expect(standardButton.className).toContain('bg-primary-600')
+    expect(screen.getByText('Agent · Revise')).toBeInTheDocument()
   })
 
   it('renders primary skill-pack chips when provided', () => {
@@ -210,11 +91,31 @@ describe('ChatAreaModeControls', () => {
     expect(screen.queryByText('2 skills selected')).not.toBeInTheDocument()
   })
 
-  it('calls onSetComparisonModel when comparison model is changed', () => {
-    render(
-      <ChatAreaModeControls {...defaultProps} enableModelComparison={true} chatMode="chat" />,
-    )
-    fireEvent.change(screen.getByLabelText('Comparison Model'), { target: { value: 'claude-3' } })
-    expect(defaultProps.onSetComparisonModel).toHaveBeenCalledWith('claude-3')
+  it('renders selected skill label when provided', () => {
+    render(<ChatAreaModeControls {...defaultProps} selectedSkillsLabel="2 active" />)
+    expect(screen.getByText('2 active')).toBeInTheDocument()
+  })
+
+  it('does not render show-more/show-less toggle button', () => {
+    render(<ChatAreaModeControls {...defaultProps} />)
+    expect(screen.queryByRole('button', { name: 'More' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Less' })).not.toBeInTheDocument()
+  })
+
+  it('does not render mode buttons (Normal/Agent)', () => {
+    render(<ChatAreaModeControls {...defaultProps} />)
+    // Normal appears in the mode summary chip, but NOT as a clickable button in an advanced section
+    // The only buttons are: template library, presets, skills
+    const normalButtons = screen.queryAllByRole('button', { name: 'Normal' })
+    expect(normalButtons).toHaveLength(0)
+  })
+
+  it('does not render workflow level buttons', () => {
+    render(<ChatAreaModeControls {...defaultProps} />)
+    expect(screen.queryByText('Quick')).not.toBeInTheDocument()
+    expect(screen.queryByText('Lite')).not.toBeInTheDocument()
+    expect(screen.queryByText('Standard')).not.toBeInTheDocument()
+    expect(screen.queryByText('Brainstorm')).not.toBeInTheDocument()
+    expect(screen.queryByText('Coordinator')).not.toBeInTheDocument()
   })
 })

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 
 interface ChatModePreset {
   id: 'focusWriting' | 'agentDiagnose' | 'compareReview'
@@ -7,7 +7,6 @@ interface ChatModePreset {
 
 interface ChatAreaModeControlsProps {
   modeLabel: string
-  workflowLabel: string
   modePresetsLabel: string
   selectedSkillsLabel?: string
   availableSkillIds?: string[]
@@ -16,38 +15,23 @@ interface ChatAreaModeControlsProps {
   chatMode: 'chat' | 'agent'
   agentAction: 'write' | 'revise' | 'context'
   enableModelComparison: boolean
-  comparisonModel: string
-  comparisonModels: string[]
-  workflowLevel: 'L1' | 'L2' | 'L3' | 'L4' | 'L5'
   chatModeNormalLabel: string
   chatModeAgentLabel: string
   chatModeComparisonLabel: string
   templateLibraryEntryLabel: string
-  comparisonModelLabel: string
   chatAgentActionWriteLabel: string
   chatAgentActionReviseLabel: string
   chatAgentActionContextLabel: string
-  workflowQuickLabel: string
-  workflowLiteLabel: string
-  workflowStandardLabel: string
-  workflowBrainstormLabel: string
-  workflowCoordinatorLabel: string
-  showMoreLabel: string
-  showLessLabel: string
   modePresets: ChatModePreset[]
-  onSetChatMode: (mode: 'chat' | 'agent') => void
-  onToggleModelComparison: () => void
   onOpenTemplateLibrary: () => void
   onSetComparisonModel: (model: string) => void
   onSetAgentAction: (action: 'write' | 'revise' | 'context') => void
-  onSetWorkflowLevel: (level: 'L1' | 'L2' | 'L3' | 'L4' | 'L5') => void
   onApplyPreset: (presetId: ChatModePreset['id']) => void
   onToggleSkill?: (skillId: string) => void
 }
 
 export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   modeLabel,
-  workflowLabel,
   modePresetsLabel,
   selectedSkillsLabel,
   availableSkillIds,
@@ -56,36 +40,18 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
   chatMode,
   agentAction,
   enableModelComparison,
-  comparisonModel,
-  comparisonModels,
-  workflowLevel,
   chatModeNormalLabel,
   chatModeAgentLabel,
   chatModeComparisonLabel,
   templateLibraryEntryLabel,
-  comparisonModelLabel,
   chatAgentActionWriteLabel,
   chatAgentActionReviseLabel,
   chatAgentActionContextLabel,
-  workflowQuickLabel,
-  workflowLiteLabel,
-  workflowStandardLabel,
-  workflowBrainstormLabel,
-  workflowCoordinatorLabel,
-  showMoreLabel,
-  showLessLabel,
   modePresets,
-  onSetChatMode,
-  onToggleModelComparison,
   onOpenTemplateLibrary,
-  onSetComparisonModel,
-  onSetAgentAction,
-  onSetWorkflowLevel,
   onApplyPreset,
   onToggleSkill,
 }: ChatAreaModeControlsProps) {
-  const [showAdvanced, setShowAdvanced] = useState(chatMode === 'agent' || enableModelComparison)
-
   const activeAgentActionLabel = agentAction === 'write'
     ? chatAgentActionWriteLabel
     : agentAction === 'revise'
@@ -97,12 +63,6 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
     : chatMode === 'agent'
       ? `${chatModeAgentLabel} · ${activeAgentActionLabel}`
       : chatModeNormalLabel
-
-  useEffect(() => {
-    if (chatMode === 'agent' || enableModelComparison) {
-      setShowAdvanced(true)
-    }
-  }, [chatMode, enableModelComparison])
 
   return (
     <div className="mb-4 rounded-2xl border border-gray-200 bg-white/80 p-4 dark:border-dark-border dark:bg-dark-surface/80 backdrop-blur-sm shadow-sm transition-all animate-fade-in">
@@ -119,13 +79,6 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
           type="button"
         >
           {templateLibraryEntryLabel}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowAdvanced((prev) => !prev)}
-          className="ml-auto px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-full transition-all bg-gray-50 dark:bg-dark-bg text-gray-500 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-surface2 active:scale-95 border border-gray-100 dark:border-dark-border/50"
-        >
-          {showAdvanced ? showLessLabel : showMoreLabel}
         </button>
       </div>
 
@@ -169,108 +122,6 @@ export const ChatAreaModeControls = React.memo(function ChatAreaModeControls({
           })}
         </div>
       ) : null}
-
-      {showAdvanced && (
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-dark-border/50 space-y-4 animate-fade-in">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => onSetChatMode('chat')}
-              aria-label={chatModeNormalLabel}
-              title={chatModeNormalLabel}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
-                chatMode === 'chat'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
-              }`}
-              type="button"
-            >
-              {chatModeNormalLabel}
-            </button>
-            <button
-              onClick={() => onSetChatMode('agent')}
-              aria-label={chatModeAgentLabel}
-              title={chatModeAgentLabel}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
-                chatMode === 'agent'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
-              }`}
-              type="button"
-            >
-              {chatModeAgentLabel}
-            </button>
-            {chatMode === 'chat' ? (
-              <>
-                <button
-                  onClick={onToggleModelComparison}
-                  aria-label={chatModeComparisonLabel}
-                  title={chatModeComparisonLabel}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
-                    enableModelComparison
-                      ? 'bg-success-500 text-white shadow-md'
-                      : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
-                  }`}
-                  type="button"
-                >
-                  {chatModeComparisonLabel}
-                </button>
-                {enableModelComparison && (
-                  <select
-                    aria-label={comparisonModelLabel}
-                    value={comparisonModel}
-                    onChange={(event) => onSetComparisonModel(event.target.value)}
-                    className="px-3 py-1.5 text-xs border border-gray-200 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
-                  >
-                    {comparisonModels.map((model) => (
-                      <option key={model} value={model}>{model}</option>
-                    ))}
-                  </select>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mr-1">{chatModeAgentLabel}</span>
-                <select
-                  aria-label={chatModeAgentLabel}
-                  value={agentAction}
-                  onChange={(event) => onSetAgentAction(event.target.value as 'write' | 'revise' | 'context')}
-                  className="px-3 py-1.5 text-xs border border-gray-200 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 outline-none transition-all shadow-sm"
-                >
-                  <option value="write">{chatAgentActionWriteLabel}</option>
-                  <option value="revise">{chatAgentActionReviseLabel}</option>
-                  <option value="context">{chatAgentActionContextLabel}</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mr-1">{workflowLabel}</span>
-            <div className="flex flex-wrap gap-2">
-              {([
-                { level: 'L1' as const, label: workflowQuickLabel },
-                { level: 'L2' as const, label: workflowLiteLabel },
-                { level: 'L3' as const, label: workflowStandardLabel },
-                { level: 'L4' as const, label: workflowBrainstormLabel },
-                { level: 'L5' as const, label: workflowCoordinatorLabel },
-              ]).map(({ level, label }) => (
-                <button
-                  key={level}
-                  onClick={() => onSetWorkflowLevel(level)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all active:scale-95 ${
-                    workflowLevel === level
-                      ? 'bg-primary-600 text-white shadow-md'
-                      : 'bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border text-gray-600 dark:text-dark-text'
-                  }`}
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 })
