@@ -15,4 +15,12 @@ describe('AppContextFooter', () => {
 
     expect(screen.getByText('Estimated context summary')).toBeInTheDocument()
   })
+
+  it('outer div does not have focus-visible or tabIndex attributes', () => {
+    const { container } = render(<AppContextFooter contextEstimatedText="~2K tokens" />)
+    const div = container.firstChild as HTMLElement
+
+    expect(div).not.toHaveClass('focus-visible:ring-2')
+    expect(div).not.toHaveAttribute('tabIndex')
+  })
 })

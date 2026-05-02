@@ -1,5 +1,5 @@
 import { createRef } from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ChatAreaComposer } from './ChatAreaComposer'
@@ -59,18 +59,27 @@ describe('ChatAreaComposer toolbar buttons', () => {
     expect(onToggleKnowledgePanel).toHaveBeenCalledOnce()
   })
 
-  it('does not render clear draft button when input is empty', () => {
-    render(<ChatAreaComposer {...baseProps} input="" onClearDraft={vi.fn()} />)
+  it('does not render attach context button when onToggleKnowledgePanel is not provided', () => {
+    render(<ChatAreaComposer {...baseProps} />)
 
-    expect(screen.queryByRole('button', { name: 'clear draft' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /attach context|open knowledge/i })).not.toBeInTheDocument()
   })
 
-  it('renders clear draft button when input is non-empty and calls onClearDraft on click', () => {
+  it('clear draft button is in DOM with opacity-0 when input is empty', () => {
+    render(<ChatAreaComposer {...baseProps} input="" onClearDraft={vi.fn()} />)
+
+    const button = screen.getByTitle('clear draft')
+    expect(button).toBeInTheDocument()
+    expect(button).toHaveClass('opacity-0')
+  })
+
+  it('renders clear draft button visible when input is non-empty and calls onClearDraft on click', () => {
     const onClearDraft = vi.fn()
     render(<ChatAreaComposer {...baseProps} input="hello" onClearDraft={onClearDraft} />)
 
     const button = screen.getByRole('button', { name: 'clear draft' })
     expect(button).toBeInTheDocument()
+    expect(button).not.toHaveClass('opacity-0')
     fireEvent.click(button)
     expect(onClearDraft).toHaveBeenCalledOnce()
   })
@@ -91,5 +100,29 @@ describe('ChatAreaComposer toolbar buttons', () => {
     expect(button).toBeInTheDocument()
     fireEvent.click(button)
     expect(writeText).toHaveBeenCalledWith('hello reply')
+  })
+
+  it('shows copied aria-label after clicking copy and restores after 1.5s', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    vi.useFakeTimers()
+
+    render(<ChatAreaComposer {...baseProps} lastAssistantContent="hello reply" />)
+
+    const button = screen.getByRole('button', { name: 'copy last reply' })
+    fireEvent.click(button)
+
+    await act(async () => {
+      vi.advanceTimersByTime(0)
+    })
+
+    expect(screen.getByRole('button', { name: 'copied!' })).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(1500)
+    })
+
+    expect(screen.getByRole('button', { name: 'copy last reply' })).toBeInTheDocument()
+    vi.useRealTimers()
   })
 })
