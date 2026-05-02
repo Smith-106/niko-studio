@@ -64,8 +64,25 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _load_dotenv_into(env: dict, project_root: Path) -> None:
+    """Load .env file from project root into env dict, without overriding existing vars."""
+    env_file = project_root / ".env"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, _, v = line.partition("=")
+        k = k.strip()
+        v = v.strip().strip('"').strip("'")
+        if k and k not in env:
+            env[k] = v
+
+
 def _run_node_gateway(args: argparse.Namespace) -> int:
     env = os.environ.copy()
+    _load_dotenv_into(env, PROJECT_ROOT)
     if args.env:
         env["NIKO_ENV"] = args.env
     if args.config:

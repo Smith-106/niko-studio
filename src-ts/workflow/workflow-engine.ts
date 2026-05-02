@@ -14,6 +14,7 @@ import * as crypto from 'crypto';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { OpenAILLMProvider } from '../knowledge/providers/openai-llm.js';
 
 import { WorkflowLevel, WorkflowDecision, ensureContractPayload } from './types.js';
 import type { WorkflowLevelValue } from './types.js';
@@ -189,7 +190,7 @@ export const MAINTENANCE_TO_SESSION_STATUS: Record<string, string> = {
   stopped: 'archived',
 };
 
-export const DESTRUCTIVE_STEP_NAMES = new Set(['revise', 'checkpoint', 'final_review']);
+export const DESTRUCTIVE_STEP_NAMES = new Set(['checkpoint', 'final_review']);
 export const AUTO_ROLLBACK_CONFIRM_TOKEN = '__auto_rollback__';
 const RECOVERY_WORKSPACE_LOCK = 'checkpoint-recovery';
 export const RECOVERY_CHAIN_STEPS = ['analyze-with-file', 'plan', 'plan-verify', 'execute'] as const;
@@ -1442,11 +1443,33 @@ export class WorkflowEngine {
     return { structure, section_count: structure.length };
   }
 
-  private _runGenerateDraft(plan: WorkflowPlan): Record<string, unknown> {
+  private async _runGenerateDraft(plan: WorkflowPlan): Promise<Record<string, unknown>> {
+    const task = this._getExecutionTask(plan);
     const structureOutput = this._getStepOutput(plan, 'plan_structure') ?? {};
     const sections = (structureOutput['structure'] as string[]) ?? ['开场', '发展', '结尾'];
+    const structureHint = sections.join('、');
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    const baseUrl = process.env.OPENAI_BASE_URL ?? process.env.OPENAI_API_BASE;
+    const model = process.env.NIKO_DEFAULT_MODEL ?? 'gpt-4o-mini';
+
+    if (apiKey) {
+      try {
+        const provider = new OpenAILLMProvider({ apiKey, baseUrl: baseUrl ?? null });
+        const response = await provider.complete(task, model, {
+          systemPrompt: '你是一个专业的中文写作助手，擅长写作小说、故事和散文。请直接输出正文内容，不要加解释。',
+          temperature: 0.8,
+        });
+        if (response.content && response.content.trim()) {
+          return { draft: response.content.trim(), source_task: task, section_count: sections.length };
+        }
+      } catch {
+        // fall through to stub
+      }
+    }
+
     const draft = sections.map((section, idx) => `${idx + 1}. ${section}`).join('\n');
-    return { draft, source_task: this._getExecutionTask(plan), section_count: sections.length };
+    return { draft: `${task}\n\n结构：${structureHint}\n\n${draft}`, source_task: task, section_count: sections.length };
   }
 
   private _runGenerate(plan: WorkflowPlan): Record<string, unknown> {
