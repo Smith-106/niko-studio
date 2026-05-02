@@ -362,7 +362,7 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
               type="button"
               onClick={() => void handlePromoteReplyToCanon()}
               disabled={isPromotingCanon}
-              className="inline-flex items-center gap-2 rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1.5 text-xs font-medium text-primary-300 transition-colors hover:bg-primary-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1.5 text-xs font-medium text-primary-300 transition-colors hover:bg-primary-500/15 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
             >
               {isPromotingCanon ? t.messageBubblePromotingCanon : t.messageBubblePromoteCanon}
             </button>
@@ -388,7 +388,7 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
                   <button
                     type="button"
                     onClick={() => onComparisonAccept(message.comparison!.primary.content)}
-                    className="rounded-full bg-primary-600/10 px-3 py-1.5 text-xs font-medium text-primary-400 hover:bg-primary-600/20 border border-primary-500/20 transition-colors"
+                    className="rounded-full bg-primary-600/10 px-3 py-1.5 text-xs font-medium text-primary-400 hover:bg-primary-600/20 border border-primary-500/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
                   >
                     {t.messageBubbleAcceptPrimary}
                   </button>
@@ -423,7 +423,7 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
                   <button
                     type="button"
                     onClick={() => onComparisonAccept(message.comparison!.control.content)}
-                    className="rounded-full bg-dark-surface2 px-3 py-1.5 text-xs font-medium text-dark-text hover:bg-dark-border border border-dark-border2 transition-colors"
+                    className="rounded-full bg-dark-surface2 px-3 py-1.5 text-xs font-medium text-dark-text hover:bg-dark-border border border-dark-border2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
                   >
                     {t.messageBubbleAcceptControl}
                   </button>
@@ -462,7 +462,7 @@ function MessageBubbleComponent({ message, onAssistantSelection, onComparisonAcc
               <button
                 type="button"
                 onClick={() => setIsExpanded(true)}
-                className="mt-2 text-xs text-primary-200 hover:text-white underline"
+                className="mt-2 text-xs text-primary-200 hover:text-white underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
               >
                 {t.scrollToBottom}
               </button>

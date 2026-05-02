@@ -167,7 +167,7 @@ export const QuickPanel = React.memo(function QuickPanel({ items, visible, onClo
             aria-autocomplete="list"
             aria-activedescendant={activeOptionId}
             aria-describedby={footerId}
-            className="w-full bg-transparent text-sm text-gray-900 dark:text-dark-text outline-none placeholder:text-gray-400"
+            className="w-full bg-transparent text-sm text-gray-900 dark:text-dark-text outline-none placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
           />
         </div>
         <div

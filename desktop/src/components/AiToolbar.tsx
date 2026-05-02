@@ -34,7 +34,7 @@ export function AiToolbar({ disabled, onWrite, onRewrite, onDescribe, onBrainsto
             key={tool.label}
             onClick={tool.action}
             disabled={disabled}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-white bg-[var(--primary-cta)] hover:bg-[var(--primary-cta-hover)] active:bg-[var(--primary-cta-active)] rounded-[var(--radius-pill)] shadow-[var(--shadow-tiny)] transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-white bg-[var(--primary-cta)] hover:bg-[var(--primary-cta-hover)] active:bg-[var(--primary-cta-active)] rounded-[var(--radius-pill)] shadow-[var(--shadow-tiny)] transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
             title={tool.label}
           >
             {tool.icon}
@@ -49,7 +49,7 @@ export function AiToolbar({ disabled, onWrite, onRewrite, onDescribe, onBrainsto
             key={tool.label}
             onClick={tool.action}
             disabled={disabled}
-            className="p-1.5 text-gray-500 hover:text-[var(--primary-cta)] dark:text-dark-text-muted dark:hover:text-[var(--primary-cta)] bg-gray-50 hover:bg-[var(--primary-cta-transparent-05)] dark:bg-dark-surface2 dark:hover:bg-[var(--primary-cta-transparent-05)] rounded-[var(--radius-pill)] transition-all active:scale-[0.97] disabled:opacity-50"
+            className="p-1.5 text-gray-500 hover:text-[var(--primary-cta)] dark:text-dark-text-muted dark:hover:text-[var(--primary-cta)] bg-gray-50 hover:bg-[var(--primary-cta-transparent-05)] dark:bg-dark-surface2 dark:hover:bg-[var(--primary-cta-transparent-05)] rounded-[var(--radius-pill)] transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
             title={tool.label}
             aria-label={tool.label}
           >
