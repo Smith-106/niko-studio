@@ -174,6 +174,7 @@ export function useAppShellViewModel({
       connectionState: headerViewModel.headerConnectionState ?? 'connected',
       isTemplatePanelOpen: panelOrchestration.isTemplatePanelOpen,
       onTemplatePanelOpenChange: panelOrchestration.setIsTemplatePanelOpen,
+      onOpenKnowledgePanel: () => panelOrchestration.toggleRightPanel('knowledge'),
     }
   }
 

@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { MicOff, Paperclip, Send, Square } from 'lucide-react'
+import { BookmarkPlus, Copy, MicOff, Paperclip, Send, Square, Trash2 } from 'lucide-react'
 
 interface ChatAreaComposerProps {
   input: string
@@ -21,6 +21,9 @@ interface ChatAreaComposerProps {
   onOpenFilePicker: () => void
   onCancelStream: () => void
   onSend: () => void
+  onOpenKnowledgePanel?: () => void
+  onClearDraft?: () => void
+  lastAssistantContent?: string
 }
 
 export function ChatAreaComposer({
@@ -42,7 +45,16 @@ export function ChatAreaComposer({
   onOpenFilePicker,
   onCancelStream,
   onSend,
+  onOpenKnowledgePanel,
+  onClearDraft,
+  lastAssistantContent,
 }: ChatAreaComposerProps) {
+  const copyLastReply = () => {
+    if (lastAssistantContent) {
+      navigator.clipboard.writeText(lastAssistantContent).catch(() => {})
+    }
+  }
+
   return (
     <div className="flex items-end gap-3 mt-4">
       <div className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all">
@@ -81,6 +93,37 @@ export function ChatAreaComposer({
             >
               <Paperclip size={15} />
             </button>
+            <button
+              onClick={onOpenKnowledgePanel}
+              aria-label="attach context"
+              title="attach context"
+              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
+              type="button"
+            >
+              <BookmarkPlus size={15} />
+            </button>
+            {input.length > 0 && onClearDraft && (
+              <button
+                onClick={onClearDraft}
+                aria-label="clear draft"
+                title="clear draft"
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
+                type="button"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+            {lastAssistantContent && (
+              <button
+                onClick={copyLastReply}
+                aria-label="copy last reply"
+                title="copy last reply"
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
+                type="button"
+              >
+                <Copy size={15} />
+              </button>
+            )}
             <div
               role="status"
               aria-label={`${voiceInputLabel}: ${voiceInputStatusLabel}`}

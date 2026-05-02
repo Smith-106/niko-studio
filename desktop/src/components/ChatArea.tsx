@@ -3,7 +3,7 @@ import { BookOpen, ChevronDown, ChevronRight, Lightbulb, MessageSquareText, PenL
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
-import { useCreateConversation, useAddMessage, useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAvailableSkills, useAllowLlmFallback, useQualityGoals } from '../stores/selectors'
+import { useCreateConversation, useAddMessage, useMessages, useCurrentConversationId, useWorkflowLevel, useSelectedSkills, useAvailableSkills, useAllowLlmFallback, useQualityGoals, useLatestAssistantMessageContent } from '../stores/selectors'
 import { chat, agentRoute, agentWrite, agentRevise, agentGetContext, quickRollbackWorkflow, buildConsistencyGovernanceMetadata, mergeWriterMetadataGovernance } from '../api/client'
 import type { ChatRequest, StreamDonePayload, WriterMetadata } from '../api/client'
 import { MessageBubble } from './MessageBubble'
@@ -21,12 +21,14 @@ import { useInlineActions } from '../hooks/useInlineActions'
 import { useScrollPosition } from '../hooks/useScrollPosition'
 import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 import { buildFailurePresentation } from '../utils/failurePresentation'
+import { useDraftCache } from '../hooks/useDraftCache'
 
 interface ChatAreaProps {
   onContextUsageChange?: (usage: { usedChars: number; usedK: number; totalK: number; percent: number }) => void
   connectionState?: 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
   isTemplatePanelOpen?: boolean
   onTemplatePanelOpenChange?: (open: boolean) => void
+  onOpenKnowledgePanel?: () => void
 }
 
 type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'interrupted' | 'recovered'
@@ -117,10 +119,14 @@ export function ChatArea({
   connectionState = 'connected',
   isTemplatePanelOpen = false,
   onTemplatePanelOpenChange,
+  onOpenKnowledgePanel,
 }: ChatAreaProps) {
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const templatePanelRestoreFocusRef = useRef<HTMLElement | null>(null)
-  const [input, setInput] = useState('')
+  const currentConversationId = useCurrentConversationId()
+  const { persistedText, persist, clearDraft } = useDraftCache(currentConversationId)
+  const [input, setInput] = useState(persistedText)
+  useEffect(() => { setInput(persistedText) }, [persistedText])
   const [isLoading, setIsLoading] = useState(false)
   const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')
   const [chatMode, setChatMode] = useState<'chat' | 'agent'>('chat')
@@ -168,13 +174,13 @@ export function ChatArea({
       restoreFailed: t.restoreFailed,
     },
   })
-  const currentConversationId = useCurrentConversationId()
   const messages = useMessages()
   const workflowLevel = useWorkflowLevel()
   const selectedSkills = useSelectedSkills()
   const availableSkills = useAvailableSkills()
   const allowLlmFallback = useAllowLlmFallback()
   const qualityGoals = useQualityGoals()
+  const latestAssistantContent = useLatestAssistantMessageContent()
   const { settings } = useSettingsStore()
   const promptTemplateLibrary = settings.promptTemplateLibrary
   const {
@@ -750,6 +756,7 @@ export function ChatArea({
 
     const userMessage = payloadForSend.message.trim()
     setInput('')
+    clearDraft()
     setRecoverStatus(null)
     lastRetryPayloadRef.current = payloadForSend
 
@@ -1196,7 +1203,6 @@ export function ChatArea({
 
           <ChatAreaModeControls
             modeLabel={t.chatModeLabel}
-            workflowLabel={`${t.workflow}:`}
             modePresetsLabel={t.modePresetsLabel}
             selectedSkillsLabel={selectedSkills.length > 0 ? translate('selectedSkills', { count: selectedSkills.length }) : undefined}
             availableSkillIds={availableSkills}
@@ -1205,31 +1211,17 @@ export function ChatArea({
             chatMode={chatMode}
             agentAction={agentAction}
             enableModelComparison={enableModelComparison}
-            comparisonModel={comparisonModel}
-            comparisonModels={availableComparisonModels}
-            workflowLevel={workflowLevel}
             chatModeNormalLabel={t.chatModeNormal}
             chatModeAgentLabel={t.chatModeAgent}
             chatModeComparisonLabel={t.chatModeComparison}
             templateLibraryEntryLabel={t.templateLibraryEntry}
-            comparisonModelLabel={t.chatComparisonModelLabel}
             chatAgentActionWriteLabel={t.chatAgentActionWrite}
             chatAgentActionReviseLabel={t.chatAgentActionRevise}
             chatAgentActionContextLabel={t.chatAgentActionContext}
-            workflowQuickLabel={t.quick}
-            workflowLiteLabel={t.lite}
-            workflowStandardLabel={t.standard}
-            workflowBrainstormLabel={t.brainstorm}
-            workflowCoordinatorLabel={t.coordinator}
-            showMoreLabel={t.showMore}
-            showLessLabel={t.showLess}
             modePresets={modePresets}
-            onSetChatMode={setChatMode}
-            onToggleModelComparison={() => setEnableModelComparison((prev) => !prev)}
             onOpenTemplateLibrary={handleOpenTemplateLibrary}
             onSetComparisonModel={setComparisonModel}
             onSetAgentAction={setAgentAction}
-            onSetWorkflowLevel={setWorkflowLevel}
             onApplyPreset={handleApplyModePreset}
             onToggleSkill={toggleSkill}
           />
@@ -1250,12 +1242,15 @@ export function ChatArea({
             sendShortcutHint={settings.sendShortcut === 'ctrlEnter' ? t.sendShortcutCtrlEnter : t.sendShortcutEnter}
             fileInputRef={fileInputRef}
             inputRef={composerInputRef}
-            onInputChange={setInput}
+            onInputChange={(v) => { setInput(v); persist(v) }}
             onKeyDown={handleKeyDown}
             onFileUpload={handleFileUpload}
             onOpenFilePicker={openPicker}
             onCancelStream={handleCancelStream}
             onSend={handleSend}
+            onOpenKnowledgePanel={onOpenKnowledgePanel}
+            onClearDraft={clearDraft}
+            lastAssistantContent={latestAssistantContent}
           />
         </div>
       </div>
