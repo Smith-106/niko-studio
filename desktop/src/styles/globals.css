@@ -63,6 +63,7 @@
   --color-border: #334155;
   --focus-outline: #c4b5fd;
   --focus-outline-soft: rgba(196, 181, 253, 0.24);
+  --composer-focus-ring: rgba(167, 139, 250, 0.5); /* violet-400 at 50% for dark mode */
 
   /* Design Tokens — Dark (Aurora/Charcoal) */
   --primary-cta: #4f46e5;
