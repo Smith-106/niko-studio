@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import type { RefObject } from 'react'
-import { BookmarkPlus, Copy, MicOff, Paperclip, Send, Square, Trash2 } from 'lucide-react'
+import { BookmarkPlus, Check, Copy, MicOff, Paperclip, Send, Square, Trash2 } from 'lucide-react'
 
 interface ChatAreaComposerProps {
   input: string
@@ -21,7 +22,7 @@ interface ChatAreaComposerProps {
   onOpenFilePicker: () => void
   onCancelStream: () => void
   onSend: () => void
-  onOpenKnowledgePanel?: () => void
+  onToggleKnowledgePanel?: () => void
   onClearDraft?: () => void
   lastAssistantContent?: string
 }
@@ -45,14 +46,17 @@ export function ChatAreaComposer({
   onOpenFilePicker,
   onCancelStream,
   onSend,
-  onOpenKnowledgePanel,
+  onToggleKnowledgePanel,
   onClearDraft,
   lastAssistantContent,
 }: ChatAreaComposerProps) {
+  const [copied, setCopied] = useState(false)
+
   const copyLastReply = () => {
-    if (lastAssistantContent) {
-      navigator.clipboard.writeText(lastAssistantContent).catch(() => {})
-    }
+    navigator.clipboard?.writeText(lastAssistantContent!).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }).catch(() => {})
   }
 
   return (
@@ -93,21 +97,24 @@ export function ChatAreaComposer({
             >
               <Paperclip size={15} />
             </button>
-            <button
-              onClick={onOpenKnowledgePanel}
-              aria-label="attach context"
-              title="attach context"
-              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
-              type="button"
-            >
-              <BookmarkPlus size={15} />
-            </button>
-            {input.length > 0 && onClearDraft && (
+            {onToggleKnowledgePanel && (
+              <button
+                onClick={onToggleKnowledgePanel}
+                aria-label="attach context"
+                title="attach context"
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
+                type="button"
+              >
+                <BookmarkPlus size={15} />
+              </button>
+            )}
+            {onClearDraft && (
               <button
                 onClick={onClearDraft}
                 aria-label="clear draft"
+                aria-hidden={input.length === 0 || undefined}
                 title="clear draft"
-                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
+                className={`rounded-lg p-1.5 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${input.length > 0 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
                 type="button"
               >
                 <Trash2 size={15} />
@@ -116,12 +123,12 @@ export function ChatAreaComposer({
             {lastAssistantContent && (
               <button
                 onClick={copyLastReply}
-                aria-label="copy last reply"
+                aria-label={copied ? 'copied!' : 'copy last reply'}
                 title="copy last reply"
-                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
                 type="button"
               >
-                <Copy size={15} />
+                {copied ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
               </button>
             )}
             <div

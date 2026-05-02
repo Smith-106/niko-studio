@@ -49,14 +49,14 @@ describe('ChatAreaComposer accessibility semantics', () => {
 })
 
 describe('ChatAreaComposer toolbar buttons', () => {
-  it('renders attach context button and calls onOpenKnowledgePanel on click', () => {
-    const onOpenKnowledgePanel = vi.fn()
-    render(<ChatAreaComposer {...baseProps} onOpenKnowledgePanel={onOpenKnowledgePanel} />)
+  it('renders attach context button and calls onToggleKnowledgePanel on click', () => {
+    const onToggleKnowledgePanel = vi.fn()
+    render(<ChatAreaComposer {...baseProps} onToggleKnowledgePanel={onToggleKnowledgePanel} />)
 
     const button = screen.getByRole('button', { name: 'attach context' })
     expect(button).toBeInTheDocument()
     fireEvent.click(button)
-    expect(onOpenKnowledgePanel).toHaveBeenCalledOnce()
+    expect(onToggleKnowledgePanel).toHaveBeenCalledOnce()
   })
 
   it('does not render clear draft button when input is empty', () => {
