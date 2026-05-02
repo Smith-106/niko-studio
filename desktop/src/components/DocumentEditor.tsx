@@ -82,8 +82,8 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   return (
     <div className="flex-1 flex flex-col bg-transparent z-0 min-w-0 h-full">
       {/* Editor Canvas Area */}
-      <div className="flex-1 flex flex-col items-center overflow-y-auto custom-scrollbar p-6 sm:p-10 bg-slate-50/50 dark:bg-[#0f0f0f]">
-        <div className="w-full max-w-[680px] flex flex-col bg-white dark:bg-[#1a1a1a] shadow-sm ring-1 ring-gray-200/60 dark:ring-dark-border rounded-xl min-h-[85vh] p-12 sm:p-20 mb-4 transition-all">
+      <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 sm:p-10 bg-slate-50/50 dark:bg-[#0f0f0f]">
+        <div className="w-full flex flex-col bg-white dark:bg-[#1a1a1a] shadow-sm ring-1 ring-gray-200/60 dark:ring-dark-border rounded-xl min-h-[85vh] p-8 sm:p-12 mb-4 transition-all">
           <input
             id="document-title-input"
             name="document-title-input"

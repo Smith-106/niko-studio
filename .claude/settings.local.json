@@ -113,7 +113,36 @@
       "WebFetch(domain:arxiv.org)",
       "WebFetch(domain:link.springer.com)",
       "WebFetch(domain:pitest.org)",
-      "WebFetch(domain:www.iso.org)"
+      "WebFetch(domain:www.iso.org)",
+      "Bash(rm \"D:/工作目录/niko-studio/.claude/skills\")",
+      "Bash(cp -r /tmp/Claude-Code-Workflow/.claude/skills \"D:/工作目录/niko-studio/.claude/skills\")",
+      "mcp__awesun-mcp-server__device_search",
+      "mcp__awesun-mcp-server__device_info",
+      "mcp__awesun-mcp-server__device_add",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Write-Host \"Triggering NSIS silent install with elevation. Please click YES on the UAC dialog.\"; $exe = 'D:\\\\工作目录\\\\niko-studio\\\\desktop\\\\src-tauri\\\\target\\\\release\\\\bundle\\\\nsis\\\\Niko-Studio_9.2.1_x64-setup.exe'; $proc = Start-Process -FilePath $exe -ArgumentList '/S' -Verb RunAs -PassThru -Wait; Write-Output \"ExitCode: $\\($proc.ExitCode\\)\")",
+      "PowerShell($exe = 'C:\\\\Users\\\\32852\\\\AppData\\\\Local\\\\Niko-Studio\\\\niko-studio-desktop.exe'; $proc = Start-Process -FilePath $exe -PassThru; Start-Sleep -Seconds 3; Write-Output \"PID: $\\($proc.Id\\), HasExited: $\\($proc.HasExited\\)\")",
+      "PowerShell(Get-Item *)",
+      "PowerShell($shotDir = 'D:\\\\工作目录\\\\niko-studio\\\\.workflow\\\\.e2e-runs\\\\v9.2.1-20260430-205958'; $shotPath = \"$shotDir\\\\02-main-window-fg.png\"; Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $bmp = New-Object System.Drawing.Bitmap\\($b.Width, $b.Height\\); $g = [System.Drawing.Graphics]::FromImage\\($bmp\\); $g.CopyFromScreen\\($b.X, $b.Y, 0, 0, $bmp.Size\\); $bmp.Save\\($shotPath, [System.Drawing.Imaging.ImageFormat]::Png\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output \"Saved: $shotPath\")",
+      "PowerShell($shotDir = 'D:\\\\工作目录\\\\niko-studio\\\\.workflow\\\\.e2e-runs\\\\v9.2.1-20260430-205958'; $shotPath = \"$shotDir\\\\03-main-window-true-fg.png\"; Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $bmp = New-Object System.Drawing.Bitmap\\($b.Width, $b.Height\\); $g = [System.Drawing.Graphics]::FromImage\\($bmp\\); $g.CopyFromScreen\\($b.X, $b.Y, 0, 0, $bmp.Size\\); $bmp.Save\\($shotPath, [System.Drawing.Imaging.ImageFormat]::Png\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output \"Saved\")",
+      "PowerShell($shotDir = 'D:\\\\工作目录\\\\niko-studio\\\\.workflow\\\\.e2e-runs\\\\v9.2.1-20260430-205958'; Add-Type -AssemblyName System.Drawing; $src = [System.Drawing.Image]::FromFile\\(\"$shotDir\\\\03-main-window-true-fg.png\"\\); $crop = New-Object System.Drawing.Rectangle\\(0, 0, 1600, 80\\); $bmp = New-Object System.Drawing.Bitmap\\($crop.Width, $crop.Height\\); $g = [System.Drawing.Graphics]::FromImage\\($bmp\\); $g.DrawImage\\($src, \\(New-Object System.Drawing.Rectangle\\(0, 0, $crop.Width, $crop.Height\\)\\), $crop, [System.Drawing.GraphicsUnit]::Pixel\\); $bmp.Save\\(\"$shotDir\\\\04-topbar-crop.png\", [System.Drawing.Imaging.ImageFormat]::Png\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\); $src.Dispose\\(\\); Write-Output \"cropped\")",
+      "PowerShell($shotDir = 'D:\\\\工作目录\\\\niko-studio\\\\.workflow\\\\.e2e-runs\\\\v9.2.1-20260430-205958'; Add-Type -AssemblyName System.Drawing; $src = [System.Drawing.Image]::FromFile\\(\"$shotDir\\\\03-main-window-true-fg.png\"\\); foreach \\($r in @\\(@{n='left-side'; r=@\\(0,0,300,1440\\)}, @{n='right-side'; r=@\\(2200,0,360,1440\\)}, @{n='topbar-full'; r=@\\(0,0,2560,90\\)}\\)\\) { $rect = New-Object System.Drawing.Rectangle\\($r.r[0], $r.r[1], $r.r[2], $r.r[3]\\); $bmp = New-Object System.Drawing.Bitmap\\($rect.Width, $rect.Height\\); $g = [System.Drawing.Graphics]::FromImage\\($bmp\\); $g.DrawImage\\($src, \\(New-Object System.Drawing.Rectangle\\(0,0,$rect.Width,$rect.Height\\)\\), $rect, [System.Drawing.GraphicsUnit]::Pixel\\); $bmp.Save\\(\"$shotDir\\\\05-$\\($r.n\\).png\", [System.Drawing.Imaging.ImageFormat]::Png\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\) }; $src.Dispose\\(\\); Write-Output \"ok\")",
+      "PowerShell($shotDir = 'D:\\\\工作目录\\\\niko-studio\\\\.workflow\\\\.e2e-runs\\\\v9.2.1-20260430-205958'; Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $bmp = New-Object System.Drawing.Bitmap\\($b.Width, $b.Height\\); $g = [System.Drawing.Graphics]::FromImage\\($bmp\\); $g.CopyFromScreen\\($b.X, $b.Y, 0, 0, $bmp.Size\\); $bmp.Save\\(\"$shotDir\\\\99-failure-state.png\"\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\); Write-Output \"saved final\")",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Get-CimInstance *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(New-Item *)",
+      "PowerShell(Select-String -Path \"D:\\\\工作目录\\\\niko-studio\\\\release-check-summary.md\" -Pattern \"PASS|FAIL|NO_GO|^## \" | Select-Object -First 40 | ForEach-Object { $_.Line })",
+      "PowerShell(Select-String -Path \"D:\\\\工作目录\\\\niko-studio\\\\release-check-summary.md\" -Pattern \"delivery_contract|local_selftest|Decision:|FINAL\" | ForEach-Object { $_.Line })",
+      "PowerShell(Set-Location *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Get-WmiObject *)",
+      "PowerShell(jq *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\32852\\\\AppData\\\\Roaming\\\\npm\\\\node_modules\\\\maestro-flow\" -Recurse -File | Select-Object -First 20 | ForEach-Object { $_.FullName })",
+      "PowerShell(Invoke-RestMethod -Method Get -Uri \"http://127.0.0.1:8010/health\" -TimeoutSec 5 | ConvertTo-Json)",
+      "mcp__chrome-devtools__wait_for",
+      "PowerShell(Get-NetTCPConnection *)"
     ]
   },
   "hooks": {
@@ -138,5 +167,6 @@
         ]
       }
     ]
-  }
+  },
+  "outputStyle": "default"
 }

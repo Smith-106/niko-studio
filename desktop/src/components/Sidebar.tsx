@@ -5,6 +5,8 @@ import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
 import { useI18n } from '../i18n'
 import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
+import { useResizablePanel } from '../hooks/useResizablePanel'
+import { PanelResizeHandle } from './PanelResizeHandle'
 
 interface SidebarProps {
   collapsed: boolean
@@ -46,11 +48,20 @@ export const Sidebar = React.memo(function Sidebar({
     }
   }
 
+  const { width, isResizing, startResize, resetWidth } = useResizablePanel({
+    defaultWidth: 288,
+    minWidth: 200,
+    maxWidth: 480,
+    storageKey: 'niko.left-sidebar-width-v1',
+    direction: 'rtl',
+  })
+
   return (
     <aside
-      className={`bg-dark-bg text-dark-text flex flex-col transition-all duration-300 border-r border-dark-border z-10 relative shadow-sm ${
-        collapsed ? 'w-[72px]' : 'w-72'
+      className={`bg-dark-bg text-dark-text flex flex-col border-r border-dark-border z-10 relative shadow-sm overflow-hidden ${
+        isResizing ? '' : 'transition-[width] duration-300'
       }`}
+      style={{ width: collapsed ? 72 : width }}
     >
       {/* Header */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-dark-border shrink-0">
@@ -216,6 +227,10 @@ export const Sidebar = React.memo(function Sidebar({
           {!collapsed && <span className="text-[10px] font-medium tracking-wide uppercase">{t.sidebarEvaluationPanel}</span>}
         </button>
       </div>
+
+      {!collapsed && (
+        <PanelResizeHandle side="right" onMouseDown={startResize} onDoubleClick={resetWidth} />
+      )}
     </aside>
   )
 })

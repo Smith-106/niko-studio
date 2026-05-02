@@ -27,6 +27,7 @@ interface ChatAreaStreamStatusProps {
   onRestoreToCheckpoint: () => void
   onRetryLastSend: () => void
   onCopyRecoverError: () => Promise<boolean>
+  onDismissStatus?: () => void
   uploadStatus: UploadStatus | null
 }
 
@@ -46,6 +47,7 @@ export const ChatAreaStreamStatus = React.memo(function ChatAreaStreamStatus({
   onRestoreToCheckpoint,
   onRetryLastSend,
   onCopyRecoverError,
+  onDismissStatus,
   uploadStatus,
 }: ChatAreaStreamStatusProps) {
   return (
@@ -53,7 +55,19 @@ export const ChatAreaStreamStatus = React.memo(function ChatAreaStreamStatus({
       {recoverStatus && (
         <div className={`px-4 py-3 text-xs rounded-xl border shadow-sm ${STATUS_CLASS[recoverStatus.type]}`}>
           <div className="flex flex-col gap-3">
-            <span className="font-medium leading-relaxed">{recoverStatus.message}</span>
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-medium leading-relaxed">{recoverStatus.message}</span>
+              {onDismissStatus && (
+                <button
+                  onClick={onDismissStatus}
+                  className="shrink-0 text-current opacity-50 hover:opacity-100 transition-opacity leading-none"
+                  type="button"
+                  aria-label="dismiss"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             {recoverStatus.type === 'error' && (
               <div className="flex flex-wrap items-center gap-2">
                 <button

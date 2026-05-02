@@ -943,7 +943,7 @@ export function ChatArea({
   })()
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50 dark:bg-dark-bg h-full relative z-0">
+    <div className="flex-1 min-h-0 flex flex-col bg-slate-50 dark:bg-dark-bg relative z-0">
       <div ref={scrollPos.containerRef} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar scroll-smooth" onScroll={scrollPos.handleScroll}>
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-dark-text-muted mt-10">
@@ -969,7 +969,7 @@ export function ChatArea({
                 ))}
               </div>
             )}
-            <div className="grid w-full max-w-3xl grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="grid w-full max-w-3xl grid-cols-1 gap-3">
               {starterActions.map((action) => {
                 const Icon = action.icon
                 return (
@@ -1094,167 +1094,170 @@ export function ChatArea({
           onRestoreToCheckpoint={handleRestoreToCheckpoint}
           onRetryLastSend={handleRetryLastSend}
           onCopyRecoverError={handleCopyRecoverError}
+          onDismissStatus={() => { setStreamPhase('idle'); setRecoverStatus(null) }}
           uploadStatus={uploadStatus}
         />
 
-      <div className="px-6 py-2 border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface shadow-[0_-2px_10px_rgba(0,0,0,0.02)] z-10">
-        <button
-          type="button"
-          onClick={() => setShowQuickRollbackAdvanced((prev) => !prev)}
-          className="w-full flex items-center justify-between text-xs font-medium text-gray-500 dark:text-dark-text-secondary hover:text-gray-800 dark:hover:text-dark-text transition-colors py-1"
-        >
-          <span>{t.quickRollbackAdvancedToggle}</span>
-          {showQuickRollbackAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
-        <p className="mt-1 text-[11px] leading-relaxed text-gray-400 dark:text-dark-text-muted">
-          {quickRollbackSummary}
-        </p>
-
-        {showQuickRollbackAdvanced && (
-          <div className="animate-fade-in mt-3 mb-2">
-            <div className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 dark:text-dark-text-muted mb-2">{t.quickRollbackTitle}</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <input
-                value={quickRollbackPlanId}
-                onChange={(event) => setQuickRollbackPlanId(event.target.value)}
-                placeholder={t.quickRollbackPlanIdPlaceholder}
-                aria-label={t.quickRollbackPlanIdPlaceholder}
-                className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
-              />
-              <input
-                value={quickRollbackCheckpointId}
-                onChange={(event) => setQuickRollbackCheckpointId(event.target.value)}
-                placeholder={t.quickRollbackCheckpointIdPlaceholder}
-                aria-label={t.quickRollbackCheckpointIdPlaceholder}
-                className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
-              />
-              <input
-                value={quickRollbackReason}
-                onChange={(event) => setQuickRollbackReason(event.target.value)}
-                placeholder={t.quickRollbackReasonPlaceholder}
-                aria-label={t.quickRollbackReasonPlaceholder}
-                className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
-              />
-            </div>
-            <div className="flex items-center justify-between mt-3">
-              <button
-                onClick={handleQuickRollback}
-                type="button"
-                className="px-4 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md shadow-sm hover:bg-amber-600 active:scale-[0.98] disabled:opacity-50 transition-all"
-                disabled={isLoading}
-              >
-                {t.quickRollbackAction}
-              </button>
-              {quickRollbackStatus && (
-                <span className={`text-[11px] font-medium px-2 py-1 rounded ${quickRollbackStatus.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
-                  {quickRollbackStatus.message}
-                </span>
-              )}
-            </div>
+      <div className="border-t border-gray-200 dark:border-dark-border bg-slate-50 dark:bg-dark-bg shrink-0 flex flex-col max-h-[65%]">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 pt-3 md:pt-4 custom-scrollbar">
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => setShowQuickRollbackAdvanced((prev) => !prev)}
+              className="w-full flex items-center justify-between text-xs font-medium text-gray-400 dark:text-dark-text-muted hover:text-gray-600 dark:hover:text-dark-text-secondary transition-colors py-1"
+            >
+              <span>{t.quickRollbackAdvancedToggle}</span>
+              {showQuickRollbackAdvanced ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+            {showQuickRollbackAdvanced && (
+              <div className="animate-fade-in mt-2 mb-1">
+                <p className="text-[11px] leading-relaxed text-gray-400 dark:text-dark-text-muted mb-3">
+                  {quickRollbackSummary}
+                </p>
+                <div className="text-[11px] uppercase tracking-wider font-semibold text-gray-500 dark:text-dark-text-muted mb-2">{t.quickRollbackTitle}</div>
+                <div className="grid grid-cols-1 gap-2">
+                  <input
+                    value={quickRollbackPlanId}
+                    onChange={(event) => setQuickRollbackPlanId(event.target.value)}
+                    placeholder={t.quickRollbackPlanIdPlaceholder}
+                    aria-label={t.quickRollbackPlanIdPlaceholder}
+                    className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
+                  />
+                  <input
+                    value={quickRollbackCheckpointId}
+                    onChange={(event) => setQuickRollbackCheckpointId(event.target.value)}
+                    placeholder={t.quickRollbackCheckpointIdPlaceholder}
+                    aria-label={t.quickRollbackCheckpointIdPlaceholder}
+                    className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
+                  />
+                  <input
+                    value={quickRollbackReason}
+                    onChange={(event) => setQuickRollbackReason(event.target.value)}
+                    placeholder={t.quickRollbackReasonPlaceholder}
+                    aria-label={t.quickRollbackReasonPlaceholder}
+                    className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-md focus:ring-1 focus:ring-primary-500/50 outline-none transition-all"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <button
+                    onClick={handleQuickRollback}
+                    type="button"
+                    className="px-4 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md shadow-sm hover:bg-amber-600 active:scale-[0.98] disabled:opacity-50 transition-all"
+                    disabled={isLoading}
+                  >
+                    {t.quickRollbackAction}
+                  </button>
+                  {quickRollbackStatus && (
+                    <span className={`text-[11px] font-medium px-2 py-1 rounded ${quickRollbackStatus.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+                      {quickRollbackStatus.message}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+          {selectionMeta && (
+            <ChatAreaInlineActions
+              selectedText={selectedText}
+              inlineAction={inlineAction}
+              selectedTextInfo={translate('inlineSelectedTextInfo', { count: Math.min(selectedText.length, 80) })}
+              continueLabel={t.inlineContinue}
+              reviseLabel={t.inlineRevise}
+              generateLabel={t.inlineGenerate}
+              runLabel={t.inlineRun}
+              clearSelectionLabel={t.inlineClearSelection}
+              runDisabled={runDisabled}
+              onSelectAction={setInlineAction}
+              onRun={runInlineAction}
+              onClear={resetInlineState}
+            />
+          )}
 
-      <div className="border-t border-gray-200 dark:border-dark-border p-4 md:p-6 bg-slate-50 dark:bg-dark-bg shrink-0">
-        {selectionMeta && (
-          <ChatAreaInlineActions
-            selectedText={selectedText}
-            inlineAction={inlineAction}
-            selectedTextInfo={translate('inlineSelectedTextInfo', { count: Math.min(selectedText.length, 80) })}
-            continueLabel={t.inlineContinue}
-            reviseLabel={t.inlineRevise}
-            generateLabel={t.inlineGenerate}
-            runLabel={t.inlineRun}
-            clearSelectionLabel={t.inlineClearSelection}
-            runDisabled={runDisabled}
-            onSelectAction={setInlineAction}
-            onRun={runInlineAction}
-            onClear={resetInlineState}
+          {writerWorkspaceSummary.hasMeaningfulScope && (
+            <div className="mb-4 rounded-2xl border border-primary-100 bg-white/90 p-4 shadow-sm dark:border-primary-500/20 dark:bg-dark-surface/80">
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">
+                {writerContextTitle}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {writerWorkspaceSummary.scopeChips.map((chip) => (
+                  <span
+                    key={`writer-scope-${chip}`}
+                    className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
+                {writerContextHint}
+              </p>
+            </div>
+          )}
+
+          <ChatAreaModeControls
+            modeLabel={t.chatModeLabel}
+            workflowLabel={`${t.workflow}:`}
+            modePresetsLabel={t.modePresetsLabel}
+            selectedSkillsLabel={selectedSkills.length > 0 ? translate('selectedSkills', { count: selectedSkills.length }) : undefined}
+            availableSkillIds={availableSkills}
+            selectedSkillIds={selectedSkills}
+            skillPacksLabel={t.skillPacks}
+            chatMode={chatMode}
+            agentAction={agentAction}
+            enableModelComparison={enableModelComparison}
+            comparisonModel={comparisonModel}
+            comparisonModels={availableComparisonModels}
+            workflowLevel={workflowLevel}
+            chatModeNormalLabel={t.chatModeNormal}
+            chatModeAgentLabel={t.chatModeAgent}
+            chatModeComparisonLabel={t.chatModeComparison}
+            templateLibraryEntryLabel={t.templateLibraryEntry}
+            comparisonModelLabel={t.chatComparisonModelLabel}
+            chatAgentActionWriteLabel={t.chatAgentActionWrite}
+            chatAgentActionReviseLabel={t.chatAgentActionRevise}
+            chatAgentActionContextLabel={t.chatAgentActionContext}
+            workflowQuickLabel={t.quick}
+            workflowLiteLabel={t.lite}
+            workflowStandardLabel={t.standard}
+            workflowBrainstormLabel={t.brainstorm}
+            workflowCoordinatorLabel={t.coordinator}
+            showMoreLabel={t.showMore}
+            showLessLabel={t.showLess}
+            modePresets={modePresets}
+            onSetChatMode={setChatMode}
+            onToggleModelComparison={() => setEnableModelComparison((prev) => !prev)}
+            onOpenTemplateLibrary={handleOpenTemplateLibrary}
+            onSetComparisonModel={setComparisonModel}
+            onSetAgentAction={setAgentAction}
+            onSetWorkflowLevel={setWorkflowLevel}
+            onApplyPreset={handleApplyModePreset}
+            onToggleSkill={toggleSkill}
           />
-        )}
+        </div>
 
-        {writerWorkspaceSummary.hasMeaningfulScope && (
-          <div className="mb-4 rounded-2xl border border-primary-100 bg-white/90 p-4 shadow-sm dark:border-primary-500/20 dark:bg-dark-surface/80">
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">
-              {writerContextTitle}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {writerWorkspaceSummary.scopeChips.map((chip) => (
-                <span
-                  key={`writer-scope-${chip}`}
-                  className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
-                >
-                  {chip}
-                </span>
-              ))}
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
-              {writerContextHint}
-            </p>
-          </div>
-        )}
-
-        <ChatAreaModeControls
-          modeLabel={t.chatModeLabel}
-          workflowLabel={`${t.workflow}:`}
-          modePresetsLabel={t.modePresetsLabel}
-          selectedSkillsLabel={selectedSkills.length > 0 ? translate('selectedSkills', { count: selectedSkills.length }) : undefined}
-          availableSkillIds={availableSkills}
-          selectedSkillIds={selectedSkills}
-          skillPacksLabel={t.skillPacks}
-          chatMode={chatMode}
-          agentAction={agentAction}
-          enableModelComparison={enableModelComparison}
-          comparisonModel={comparisonModel}
-          comparisonModels={availableComparisonModels}
-          workflowLevel={workflowLevel}
-          chatModeNormalLabel={t.chatModeNormal}
-          chatModeAgentLabel={t.chatModeAgent}
-          chatModeComparisonLabel={t.chatModeComparison}
-          templateLibraryEntryLabel={t.templateLibraryEntry}
-          comparisonModelLabel={t.chatComparisonModelLabel}
-          chatAgentActionWriteLabel={t.chatAgentActionWrite}
-          chatAgentActionReviseLabel={t.chatAgentActionRevise}
-          chatAgentActionContextLabel={t.chatAgentActionContext}
-          workflowQuickLabel={t.quick}
-          workflowLiteLabel={t.lite}
-          workflowStandardLabel={t.standard}
-          workflowBrainstormLabel={t.brainstorm}
-          workflowCoordinatorLabel={t.coordinator}
-          showMoreLabel={t.showMore}
-          showLessLabel={t.showLess}
-          modePresets={modePresets}
-          onSetChatMode={setChatMode}
-          onToggleModelComparison={() => setEnableModelComparison((prev) => !prev)}
-          onOpenTemplateLibrary={handleOpenTemplateLibrary}
-          onSetComparisonModel={setComparisonModel}
-          onSetAgentAction={setAgentAction}
-          onSetWorkflowLevel={setWorkflowLevel}
-          onApplyPreset={handleApplyModePreset}
-          onToggleSkill={toggleSkill}
-        />
-
-        <ChatAreaComposer
-          input={input}
-          isLoading={isLoading}
-          sendDisabled={!input.trim()}
-          inputPlaceholder={t.inputPlaceholder}
-          uploadLabel={t.composerUpload}
-          voiceInputLabel={t.composerVoiceInput}
-          voiceInputStatusLabel={voiceInputStatusLabel}
-          sendLabel={t.composerSend}
-          cancelLabel={t.cancel}
-          sendShortcutLabel={t.sendShortcutLabel}
-          sendShortcutHint={settings.sendShortcut === 'ctrlEnter' ? t.sendShortcutCtrlEnter : t.sendShortcutEnter}
-          fileInputRef={fileInputRef}
-          inputRef={composerInputRef}
-          onInputChange={setInput}
-          onKeyDown={handleKeyDown}
-          onFileUpload={handleFileUpload}
-          onOpenFilePicker={openPicker}
-          onCancelStream={handleCancelStream}
-          onSend={handleSend}
-        />
+        <div className="shrink-0 px-4 md:px-6 pb-4 md:pb-6">
+          <ChatAreaComposer
+            input={input}
+            isLoading={isLoading}
+            sendDisabled={!input.trim()}
+            inputPlaceholder={t.inputPlaceholder}
+            uploadLabel={t.composerUpload}
+            voiceInputLabel={t.composerVoiceInput}
+            voiceInputStatusLabel={voiceInputStatusLabel}
+            sendLabel={t.composerSend}
+            cancelLabel={t.cancel}
+            sendShortcutLabel={t.sendShortcutLabel}
+            sendShortcutHint={settings.sendShortcut === 'ctrlEnter' ? t.sendShortcutCtrlEnter : t.sendShortcutEnter}
+            fileInputRef={fileInputRef}
+            inputRef={composerInputRef}
+            onInputChange={setInput}
+            onKeyDown={handleKeyDown}
+            onFileUpload={handleFileUpload}
+            onOpenFilePicker={openPicker}
+            onCancelStream={handleCancelStream}
+            onSend={handleSend}
+          />
+        </div>
       </div>
       {isTemplatePanelOpen && promptTemplateLibrary && (
         <PromptTemplatePanel

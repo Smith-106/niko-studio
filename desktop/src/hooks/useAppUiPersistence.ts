@@ -171,6 +171,15 @@ export function useAppUiPersistence() {
   const [writingHelperDraft, setWritingHelperDraft] = useState<WritingHelperDraftState>(() => loadWritingHelperDraft())
 
   useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth < 1100) setChatSidebarCollapsed(true)
+      if (window.innerWidth < 750) setSidebarCollapsed(true)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  useEffect(() => {
     try {
       localStorage.setItem(WRITING_HELPER_DRAFT_STORAGE_KEY, JSON.stringify(writingHelperDraft))
     } catch {

@@ -33,7 +33,6 @@ export function ChatAreaComposer({
   voiceInputStatusLabel,
   sendLabel,
   cancelLabel,
-  sendShortcutLabel,
   sendShortcutHint,
   fileInputRef,
   inputRef,
@@ -47,21 +46,21 @@ export function ChatAreaComposer({
   return (
     <div className="flex items-end gap-3 mt-4">
       <div className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all">
-        <div className="relative">
-          <textarea
-            id="chat-composer-input"
-            name="chat-composer-input"
-            ref={inputRef}
-            value={input}
-            onChange={(event) => onInputChange(event.target.value)}
-            onKeyDown={onKeyDown}
-            aria-label={inputPlaceholder}
-            placeholder={inputPlaceholder}
-            className="w-full resize-none border-0 bg-transparent py-1 pr-40 text-[15px] leading-relaxed text-gray-900 focus:outline-none focus:ring-0 dark:text-dark-text custom-scrollbar"
-            rows={Math.min(8, Math.max(1, input.split('\n').length))}
-            style={{ minHeight: '28px', maxHeight: '200px' }}
-          />
-          <div className="absolute right-0 bottom-0 flex items-center gap-1 bg-white dark:bg-dark-surface">
+        <textarea
+          id="chat-composer-input"
+          name="chat-composer-input"
+          ref={inputRef}
+          value={input}
+          onChange={(event) => onInputChange(event.target.value)}
+          onKeyDown={onKeyDown}
+          aria-label={inputPlaceholder}
+          placeholder={inputPlaceholder}
+          className="w-full resize-none border-0 bg-transparent py-1 text-[15px] leading-relaxed text-gray-900 focus:outline-none focus:ring-0 dark:text-dark-text custom-scrollbar"
+          rows={Math.min(8, Math.max(3, input.split('\n').length))}
+          style={{ minHeight: '72px', maxHeight: '200px' }}
+        />
+        <div className="mt-2 flex items-center justify-between gap-2 px-1 border-t border-gray-100 dark:border-dark-border/50 pt-2">
+          <div className="flex items-center gap-1">
             <input
               id="chat-composer-upload-input"
               name="chat-composer-upload-input"
@@ -77,25 +76,22 @@ export function ChatAreaComposer({
               onClick={onOpenFilePicker}
               aria-label={uploadLabel}
               title={uploadLabel}
-              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
+              className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text"
               type="button"
             >
-              <Paperclip size={18} />
+              <Paperclip size={15} />
             </button>
             <div
               role="status"
               aria-label={`${voiceInputLabel}: ${voiceInputStatusLabel}`}
               title={`${voiceInputLabel}: ${voiceInputStatusLabel}`}
-              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] font-medium text-gray-500 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-secondary"
+              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-400 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text-muted"
             >
-              <MicOff size={14} />
-              <span>{voiceInputStatusLabel}</span>
+              <MicOff size={11} />
             </div>
           </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between gap-3 px-1 border-t border-gray-100 dark:border-dark-border/50 pt-2">
-          <span className="text-[11px] text-gray-400 dark:text-dark-text-muted">
-            {sendShortcutLabel}: <kbd className="font-sans px-1 py-0.5 bg-gray-100 dark:bg-dark-bg rounded border border-gray-200 dark:border-dark-border">{sendShortcutHint}</kbd>
+          <span className="text-[10px] text-gray-400 dark:text-dark-text-muted shrink-0">
+            {sendShortcutHint}
           </span>
         </div>
       </div>
