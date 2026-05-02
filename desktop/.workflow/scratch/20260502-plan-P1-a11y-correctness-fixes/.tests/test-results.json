@@ -1,0 +1,26 @@
+{
+  "target": "P1-a11y-correctness-fixes",
+  "completed_at": "2026-05-02T23:45:00.000Z",
+  "results": [
+    { "id": "T-R01", "name": "Trash2 excluded from keyboard tab order when input empty", "status": "pass", "details": "Tab skips clear-draft button when empty, focuses when input has text" },
+    { "id": "T-R02", "name": "Send button responds to mouse click", "status": "issue", "details": "z-10 fix ineffective — clicking send button still has no response. Workaround applied: added onMouseDown handler as primary trigger" },
+    { "id": "T-R03", "name": "Sent message does not reappear as draft", "status": "pass", "details": "debounce cancel + unconditional clearDraft works correctly" },
+    { "id": "T-R04", "name": "Copy feedback still works (regression)", "status": "pass", "details": "Check icon shown after click, reverts after ~1.5s" },
+    { "id": "T-R05", "name": "Draft restore still works (regression)", "status": "pass", "details": "Draft correctly restored on conversation switch" }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 4,
+    "issues": 1,
+    "skipped": 0,
+    "issue_breakdown": {
+      "blocker": 0,
+      "major": 1,
+      "minor": 0,
+      "cosmetic": 0
+    },
+    "new_discovered": 0,
+    "unresolved_prior": 1,
+    "fix_applied": "onMouseDown workaround added to send button — pending user verification"
+  }
+}

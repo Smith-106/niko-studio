@@ -166,11 +166,15 @@ export function ChatAreaComposer({
         </button>
       ) : (
         <button
+          onMouseDown={(e) => {
+            e.preventDefault()
+            if (!sendDisabled) onSend()
+          }}
           onClick={onSend}
           aria-label={sendLabel}
           title={sendLabel}
           disabled={sendDisabled}
-          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white transition-all hover:bg-primary-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm relative z-10"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white transition-colors hover:bg-primary-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-sm cursor-pointer"
           type="button"
         >
           <Send size={18} className="ml-0.5" />
