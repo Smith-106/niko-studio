@@ -46,6 +46,14 @@
   --sidebar-bg: #f8fafc;
   --sidebar-text: #0f172a;
   --sidebar-text-secondary: #64748b;
+
+  /* Composer toolbar sizing tokens */
+  --composer-btn-sm: 28px;   /* h-7 — small icon buttons in toolbar */
+  --composer-btn-md: 32px;   /* h-8 — send / cancel button */
+  --composer-icon-sm: 14px;  /* icon size for small toolbar buttons */
+  --composer-icon-md: 16px;  /* icon size for primary actions */
+  --composer-toolbar-gap: 6px; /* gap-1.5 equivalent */
+  --composer-focus-ring: rgba(114, 64, 221, 0.5); /* primary-500 at 50% */
 }
 
 .dark {
