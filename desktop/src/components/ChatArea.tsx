@@ -28,7 +28,7 @@ interface ChatAreaProps {
   connectionState?: 'connected' | 'degraded' | 'disconnected' | 'reconnecting'
   isTemplatePanelOpen?: boolean
   onTemplatePanelOpenChange?: (open: boolean) => void
-  onOpenKnowledgePanel?: () => void
+  onToggleKnowledgePanel?: () => void
 }
 
 type StreamPhase = 'idle' | 'streaming' | 'done' | 'error' | 'interrupted' | 'recovered'
@@ -114,19 +114,34 @@ function resolveContextWindowTokens(settings: {
     : DEFAULT_CONTEXT_WINDOW_TOKENS
 }
 
+function makeDebounce<T extends (...args: any[]) => void>(fn: T, delay: number) {
+  let timer: ReturnType<typeof setTimeout>
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer)
+    timer = setTimeout(() => fn(...args), delay)
+  }
+}
+
 export function ChatArea({
   onContextUsageChange,
   connectionState = 'connected',
   isTemplatePanelOpen = false,
   onTemplatePanelOpenChange,
-  onOpenKnowledgePanel,
+  onToggleKnowledgePanel,
 }: ChatAreaProps) {
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const templatePanelRestoreFocusRef = useRef<HTMLElement | null>(null)
   const currentConversationId = useCurrentConversationId()
+  // Draft lifecycle: restore on conversationId change, persist on keystroke (debounced 350ms), clear on successful send
   const { persistedText, persist, clearDraft } = useDraftCache(currentConversationId)
   const [input, setInput] = useState(persistedText)
-  useEffect(() => { setInput(persistedText) }, [persistedText])
+  const debouncedPersist = useMemo(() => makeDebounce(persist, 350), [persist])
+  const handleInputChange = useCallback((v: string) => {
+    setInput(v)
+    debouncedPersist(v)
+  }, [debouncedPersist])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setInput(persistedText) }, [currentConversationId])
   const [isLoading, setIsLoading] = useState(false)
   const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')
   const [chatMode, setChatMode] = useState<'chat' | 'agent'>('chat')
@@ -756,7 +771,7 @@ export function ChatArea({
 
     const userMessage = payloadForSend.message.trim()
     setInput('')
-    clearDraft()
+    if (persistedText) clearDraft()
     setRecoverStatus(null)
     lastRetryPayloadRef.current = payloadForSend
 
@@ -1242,13 +1257,13 @@ export function ChatArea({
             sendShortcutHint={settings.sendShortcut === 'ctrlEnter' ? t.sendShortcutCtrlEnter : t.sendShortcutEnter}
             fileInputRef={fileInputRef}
             inputRef={composerInputRef}
-            onInputChange={(v) => { setInput(v); persist(v) }}
+            onInputChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onFileUpload={handleFileUpload}
             onOpenFilePicker={openPicker}
             onCancelStream={handleCancelStream}
             onSend={handleSend}
-            onOpenKnowledgePanel={onOpenKnowledgePanel}
+            onToggleKnowledgePanel={onToggleKnowledgePanel}
             onClearDraft={clearDraft}
             lastAssistantContent={latestAssistantContent}
           />
