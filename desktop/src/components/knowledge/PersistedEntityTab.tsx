@@ -245,7 +245,7 @@ export function PersistedEntityTab({
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-gray-200 bg-white/80 p-4 shadow-sm dark:border-dark-border dark:bg-dark-surface">
-        <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-dark-text-secondary">
+        <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted">
           <ItemIcon size={16} />
           {itemLabel}
         </div>

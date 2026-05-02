@@ -1711,7 +1711,7 @@ export function StoryBiblePanel() {
           <BookOpen size={16} className="text-[var(--primary-cta)]" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">{t.storyBibleTitle}</h3>
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted">{t.storyBibleTitle}</h3>
           <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{syncCopy}</div>
         </div>
       </div>

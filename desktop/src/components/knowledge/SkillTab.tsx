@@ -141,13 +141,13 @@ export function SkillTab({
     <div className="mb-4 space-y-2">
       {skillDetails && (
         <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-          <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeSkillDetails}</div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mb-1">{t.knowledgeSkillDetails}</div>
           <pre className="text-xs text-gray-600 dark:text-dark-text-secondary whitespace-pre-wrap break-all">{skillDetails}</pre>
         </div>
       )}
       {skillMatches.length > 0 && (
         <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-          <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeTaskMatch}</div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mb-1">{t.knowledgeTaskMatch}</div>
           <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
             {skillMatches.map((item) => `${item.skill_id} (${item.relevance})`).join('，')}
           </div>
@@ -155,7 +155,7 @@ export function SkillTab({
       )}
       {skillChain.length > 0 && (
         <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-          <div className="text-xs font-medium text-gray-700 dark:text-dark-text mb-1">{t.knowledgeSkillChain}</div>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mb-1">{t.knowledgeSkillChain}</div>
           <div className="text-xs text-gray-600 dark:text-dark-text-secondary">
             {skillChain
               .slice()
