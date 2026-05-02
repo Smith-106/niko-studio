@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Sparkles, Folder, Plus } from 'lucide-react'
-import { listSkills, loadSkill, matchSkills, getSkillChain } from '../../api/client'
+import { Sparkles, Folder, Plus, Trash2, Save, Pencil } from 'lucide-react'
+import { listSkills, loadSkill, matchSkills, getSkillChain, createSkill, saveSkill, deleteSkill, renameSkill } from '../../api/client'
 import { useI18n } from '../../i18n'
 import type { KnowledgeItem, SkillMatch, SkillChainItem } from './KnowledgeTypes'
 
@@ -27,6 +27,11 @@ export function SkillTab({
   const [skillDetails, setSkillDetails] = useState<string>('')
   const [skillMatches, setSkillMatches] = useState<SkillMatch[]>([])
   const [skillChain, setSkillChain] = useState<SkillChainItem[]>([])
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const loadSkillsList = useCallback(async () => {
     onLoadingChange(true)
@@ -73,6 +78,59 @@ export function SkillTab({
     }
   }
 
+  const handleEdit = async () => {
+    if (!selectedSkillId) return
+    if (!isEditing) {
+      const response = await loadSkill(selectedSkillId)
+      if (response?.success && response.data?.content) {
+        setSkillDetails(response.data.content)
+        setEditContent(response.data.content)
+      } else {
+        setSkillDetails(t.knowledgeSkillDetailsLoadFailed)
+        setEditContent('')
+      }
+      setIsEditing(true)
+    } else {
+      const response = await saveSkill(selectedSkillId, editContent)
+      if (response?.success) {
+        setSkillDetails(editContent)
+        setIsEditing(false)
+      }
+    }
+  }
+
+  const handleCreate = async () => {
+    if (!isCreating) {
+      setIsCreating(true)
+      setNewName('')
+      return
+    }
+    if (!newName.trim()) return
+    const template = `# ${newName}\n\nDescription: \n\n## Instructions\n\n`
+    const response = await createSkill(newName, template)
+    if (response?.success) {
+      setIsCreating(false)
+      setNewName('')
+      await loadSkillsList()
+      onSelectedSkillIdChange(response.data?.id ?? newName)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!selectedSkillId) return
+    if (confirmDelete !== selectedSkillId) {
+      setConfirmDelete(selectedSkillId)
+      return
+    }
+    const response = await deleteSkill(selectedSkillId)
+    if (response?.success) {
+      setConfirmDelete(null)
+      setSkillDetails('')
+      onSelectedSkillIdChange('')
+      await loadSkillsList()
+    }
+  }
+
   const runSkillMatch = async () => {
     const keywords = searchQuery.trim() ? searchQuery.trim().split(/\s+/).slice(0, 5) : undefined
     const response = await matchSkills(undefined, keywords)
@@ -95,6 +153,8 @@ export function SkillTab({
 
   const handleItemClick = (item: KnowledgeItem) => {
     onSelectedSkillIdChange((item.id as string) || (item.name as string) || '')
+    setIsEditing(false)
+    setConfirmDelete(null)
   }
 
   const filteredItems = items.filter((item) =>
@@ -104,21 +164,59 @@ export function SkillTab({
   const controls = (
     <div className="mt-3 flex flex-wrap items-center gap-2">
       <button
+        onClick={() => { handleCreate() }}
+        className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+        aria-label="create skill"
+        title="create skill"
+        type="button"
+      >
+        <Plus size={12} className="inline mr-1" />
+        {isCreating ? 'Create' : 'New'}
+      </button>
+      {isCreating && (
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleCreate() }}
+          placeholder="Skill name..."
+          className="px-2 py-1 text-xs border border-gray-300 dark:border-dark-border rounded bg-white dark:bg-dark-bg dark:text-dark-text"
+          autoFocus
+        />
+      )}
+      <button
+        onClick={handleEdit}
+        disabled={!selectedSkillId}
+        className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
+        aria-label={isEditing ? 'save skill' : 'edit skill'}
+        title={isEditing ? 'save skill' : 'edit skill'}
+        type="button"
+      >
+        {isEditing ? <><Save size={12} className="inline mr-1" />Save</> : <><Pencil size={12} className="inline mr-1" />Edit</>}
+      </button>
+      <button
+        onClick={handleDelete}
+        disabled={!selectedSkillId}
+        className={`px-3 py-1.5 text-xs rounded disabled:opacity-50 ${confirmDelete === selectedSkillId ? 'bg-red-600 text-white' : 'bg-gray-100 dark:bg-dark-border dark:text-dark-text'}`}
+        aria-label={confirmDelete === selectedSkillId ? 'confirm delete' : 'delete skill'}
+        title={confirmDelete === selectedSkillId ? 'confirm delete' : 'delete skill'}
+        type="button"
+      >
+        <Trash2 size={12} className="inline mr-1" />
+        {confirmDelete === selectedSkillId ? 'Confirm?' : 'Delete'}
+      </button>
+      {confirmDelete && confirmDelete !== selectedSkillId && (
+        <button onClick={() => setConfirmDelete(null)} className="text-xs text-gray-500 dark:text-dark-text-muted">
+          Cancel
+        </button>
+      )}
+      <button
         onClick={runSkillMatch}
         className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
         aria-label={t.knowledgeTaskMatch}
         title={t.knowledgeTaskMatch}
+        type="button"
       >
         {t.knowledgeTaskMatch}
-      </button>
-      <button
-        onClick={loadSkillDetails}
-        disabled={!selectedSkillId}
-        className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
-        aria-label={t.knowledgeSkillDetails}
-        title={t.knowledgeSkillDetails}
-      >
-        {t.knowledgeSkillDetails}
       </button>
       <button
         onClick={loadSkillChain}
@@ -126,6 +224,7 @@ export function SkillTab({
         className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded disabled:opacity-50"
         aria-label={t.knowledgeSkillChain}
         title={t.knowledgeSkillChain}
+        type="button"
       >
         {t.knowledgeSkillChain}
       </button>
@@ -139,11 +238,22 @@ export function SkillTab({
 
   const details = (
     <div className="mb-4 space-y-2">
-      {skillDetails && (
-        <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mb-1">{t.knowledgeSkillDetails}</div>
-          <pre className="text-xs text-gray-600 dark:text-dark-text-secondary whitespace-pre-wrap break-all">{skillDetails}</pre>
+      {isEditing ? (
+        <div className="p-3 border border-blue-300 dark:border-blue-700 rounded bg-gray-50 dark:bg-dark-bg">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mb-1">Edit Skill</div>
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            className="w-full h-48 text-xs font-mono text-gray-600 dark:text-dark-text-secondary bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded p-2 resize-y"
+          />
         </div>
+      ) : (
+        skillDetails && (
+          <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted mb-1">{t.knowledgeSkillDetails}</div>
+            <pre className="text-xs text-gray-600 dark:text-dark-text-secondary whitespace-pre-wrap break-all">{skillDetails}</pre>
+          </div>
+        )
       )}
       {skillMatches.length > 0 && (
         <div className="p-3 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-bg">
@@ -193,6 +303,7 @@ export function SkillTab({
             aria-label={`${t.knowledgeAddPrefix}${t.knowledgeTabSkills}`}
             title={`${t.knowledgeAddPrefix}${t.knowledgeTabSkills}`}
             type="button"
+            onClick={() => { setIsCreating(true) }}
           >
             <Plus size={16} />
             {t.knowledgeAddPrefix}
@@ -212,7 +323,7 @@ export function SkillTab({
           <div
             key={index}
             onClick={() => handleItemClick(item)}
-            className="p-4 border border-gray-200 dark:border-dark-border rounded-lg hover:border-blue-500 hover:shadow-md cursor-pointer transition-all"
+            className={`p-4 border rounded-lg cursor-pointer transition-all ${selectedSkillId === ((item.id as string) || (item.name as string)) ? 'border-blue-500 shadow-md' : 'border-gray-200 dark:border-dark-border hover:border-blue-500 hover:shadow-md'}`}
           >
             <div className="flex items-start gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">

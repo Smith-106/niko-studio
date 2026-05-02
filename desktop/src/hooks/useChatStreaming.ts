@@ -20,6 +20,22 @@ interface StreamRuntimeMeta {
 interface RecoverStatus {
   type: 'error' | 'success' | 'info'
   message: string
+  detail?: string
+  error_class?: string
+  recoverable?: boolean
+  retry_after?: number
+}
+
+interface StreamErrorPayload {
+  error_class: string
+  recoverable: boolean
+  retry_after: number
+  terminal?: string
+  diagnostics?: {
+    fallback_reason?: string | null
+    failure_reason?: string | null
+    error_type?: string | null
+  }
 }
 
 interface StartStreamOptions {
@@ -40,7 +56,6 @@ export function useChatStreaming() {
   const [streamDone, setStreamDone] = useState(true)
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamRequestIdRef = useRef(0)
-  const retryCountRef = useRef(0)
 
   const { addChunk, reset } = useSmoothStream({
     onUpdate: setStreamingContent,
@@ -65,8 +80,7 @@ export function useChatStreaming() {
       let finalized = false
       let streamDoneFlag = false
       let streamMeta: StreamRuntimeMeta | null = null
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let streamErrorPayload: any = null
+      let streamErrorPayload: StreamErrorPayload | null = null
 
       const requestId = ++streamRequestIdRef.current
       const abortController = new AbortController()
@@ -168,7 +182,6 @@ export function useChatStreaming() {
   }, [addChunk, reset])
 
   const resetStream = useCallback(() => {
-    retryCountRef.current = 0
     reset('')
     setStreamDone(true)
   }, [reset])

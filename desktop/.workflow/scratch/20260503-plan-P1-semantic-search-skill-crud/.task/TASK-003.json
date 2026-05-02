@@ -1,0 +1,15 @@
+{
+  "id": "TASK-003",
+  "wave": 1,
+  "title": "Audit SkillTab and skill API surface for CRUD gaps",
+  "action": "Document SkillTab.tsx read-only limitations. Check if backend skill API (listSkills, loadSkill, matchSkills, getSkillChain) supports write operations. Identify which CRUD operations need new Tauri fs commands.",
+  "files": ["src/components/knowledge/SkillTab.tsx", "src/api/client.ts"],
+  "read_first": ["src/components/knowledge/SkillTab.tsx", "src/api/client.ts"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'listSkills\\|loadSkill\\|matchSkills\\|getSkillChain' src/api/client.ts — count >= 3",
+      "grep -c 'createSkill\\|deleteSkill\\|renameSkill\\|updateSkill\\|saveSkill' src/api/client.ts — baseline count for gap assessment"
+    ]
+  },
+  "implementation": "Read-only audit. Produce summary of: (1) current skill API functions, (2) which CRUD ops exist vs need creation, (3) skill file storage structure in skills/ directory, (4) what Tauri fs commands are needed for file-based CRUD."
+}

@@ -20,15 +20,21 @@ Niko Studio 是一款面向中文作家的本地 AI 写作助手桌面应用，�
 - Story Bible / 知识库（本地图谱 + 记忆检索）
 - 大纲生成器 + 修改技能包（运行时从 `skills/` 加载）
 - 双语 UI（zh-CN / en-US）+ i18n 框架
+- Cherry Studio 风格作曲家工具栏 + 模式切换（M1 交付）
+- 跨面板布局一致性和交互状态标准化（M1 交付）
+- WCAG 2.1 无障碍访问修复（M1 交付）
+- 结构化错误分类 + 自动重试恢复（M1 交付）
+- 知识图谱完整 CRUD（角色/地点/情节 + 删除确认 + 重命名）（M1 交付）
 
 ### Active
 
 <!-- 当前正在构建的目标（交付前都是假设） -->
 
-- [ ] 改善聊天输入体验（Cherry Studio 风格工具栏、模式切换、快捷操作）
-- [ ] 优化使用界面（布局、交互一致性、视觉细节打磨）
-- [ ] 完善 Agent 工作流稳定性（L1–L5 流程可靠性、checkpoint 行为、错误恢复）
-- [ ] 知识库 / Story Bible 功能增强（角色/地点/情节管理、记忆检索精度）
+- [ ] 向量嵌入语义搜索 — 知识图谱实体的混合检索（关键词 + 向量相似度）
+- [ ] 输入框富文本附件 — 图片/文件拖拽上传到聊天输入区
+- [ ] Skill 标签页 CRUD — 创建、编辑、重命名、删除技能包
+- [ ] L4/L5 工作流可靠性 — 多轮头脑风暴、多步协调器、并发会话压力测试
+- [ ] 代码清理 — 移除废弃引用、完善类型定义
 
 ### Out of Scope
 
@@ -42,7 +48,7 @@ Niko Studio 是一款面向中文作家的本地 AI 写作助手桌面应用，�
 - **前端**: React 18 + TypeScript + Vite + Zustand + TailwindCSS
 - **桌面壳**: Tauri 2 / Rust
 - **网关**: Node.js + TypeScript (`src-ts/`)，本地 SQLite 向量库（fastembed + better-sqlite3）
-- **测试**: Vitest + React Testing Library，当前约 100+ 测试用例
+- **测试**: Vitest + React Testing Library，852 测试用例
 
 ## Constraints
 
@@ -55,6 +61,18 @@ Niko Studio 是一款面向中文作家的本地 AI 写作助手桌面应用，�
 - **Language**: TypeScript (前端 + 网关), Rust (Tauri 壳)
 - **Framework**: React 18 + Tauri 2 + TipTap
 - **Database**: better-sqlite3（本地知识库 + 记忆），.writing/memory.db / graph.db
+
+## Milestone History
+
+### M1: UX & Stability Sprint (completed 2026-05-03)
+
+Two-phase sprint delivering frontend UX polish and backend stability/knowledge CRUD. 21 tasks across 4 plans, 852 tests passing, 0 critical/high review findings.
+
+**Phase 1 deliverables**: Composer toolbar, cross-panel layout consistency, WCAG a11y fixes, draft persistence with debounce+cancel pattern.
+
+**Phase 2 deliverables**: Structured error classification with auto-retry, error class badge UI, full CRUD for Character/Location/Plot knowledge entries with extra fields, delete-with-confirmation, rename fix for graph node dedup.
+
+**Key patterns established**: Inline makeDebounce with cancel, local-variable retry tracking in React useCallback, MATCH+SET-before-MERGE for safe graph renames, `<span role="status">` for screen reader announcements.
 
 ## Key Decisions
 

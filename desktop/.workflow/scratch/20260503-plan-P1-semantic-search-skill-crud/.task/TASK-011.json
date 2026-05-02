@@ -1,0 +1,16 @@
+{
+  "id": "TASK-011",
+  "wave": 3,
+  "title": "Tests for Skill Tab CRUD operations",
+  "action": "Add tests verifying: (1) create skill from template, (2) edit skill content, (3) rename skill, (4) delete with confirmation, (5) cancel delete preserves skill.",
+  "files": ["src/components/knowledge/SkillTab.test.tsx"],
+  "read_first": ["src/components/knowledge/SkillTab.test.tsx", "src/components/knowledge/SkillTab.tsx", "src/components/knowledge/PersistedEntityTab.test.tsx"],
+  "depends_on": ["TASK-008"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'create\\|edit\\|rename\\|delete\\|confirm' src/components/knowledge/SkillTab.test.tsx — count >= 5",
+      "All new SkillTab CRUD tests pass"
+    ]
+  },
+  "implementation": "1) Mock skill API functions (createSkill, saveSkill, deleteSkill, renameSkill). 2) Test create: click + button, fill name, verify createSkill called. 3) Test edit: select skill, modify textarea content, click save, verify saveSkill called. 4) Test rename: click rename, change name, verify renameSkill called. 5) Test delete: click delete, verify confirmation dialog, click confirm, verify deleteSkill called. 6) Test cancel delete: click delete, click cancel, verify skill preserved."
+}

@@ -1,0 +1,16 @@
+{
+  "id": "TASK-010",
+  "wave": 3,
+  "title": "Tests for drag-drop file attachments in ChatAreaComposer",
+  "action": "Add tests verifying: (1) drop zone activates on dragOver, (2) files are captured on drop, (3) attachment chips render with filename, (4) remove button clears attachment, (5) file type validation (accept only configured types).",
+  "files": ["src/components/ChatAreaComposer.test.tsx"],
+  "read_first": ["src/components/ChatAreaComposer.test.tsx", "src/components/ChatAreaComposer.tsx"],
+  "depends_on": ["TASK-007"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'drop\\|drag\\|attachment\\|chip' src/components/ChatAreaComposer.test.tsx — count >= 3",
+      "All new drag-drop tests pass"
+    ]
+  },
+  "implementation": "1) Test dragOver event sets isDragging state (visual overlay). 2) Test drop event with mock FileList calls onFileUpload. 3) Test chip rendering with getByText for filename. 4) Test remove button click clears chip from DOM. 5) Test reject of non-accepted file types (.exe, .bat). Use fireEvent.dragOver, fireEvent.drop with DataTransfer mock."
+}

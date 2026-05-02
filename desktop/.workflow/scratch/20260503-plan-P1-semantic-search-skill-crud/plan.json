@@ -1,0 +1,30 @@
+{
+  "id": "PLN-005",
+  "phase": 1,
+  "milestone": "M2",
+  "title": "Semantic Search, Skill CRUD & Rich Attachments",
+  "summary": "Wire vector embeddings into knowledge graph entity lifecycle, implement hybrid semantic search, add drag-drop file attachments to composer, implement Skill Tab CRUD, clean up useChatStreaming.ts technical debt.",
+  "approach": "3 waves: Foundation (audit + cleanup) → Core (embedding pipeline, hybrid search, drag-drop, skill CRUD) → Tests. Embedding pipeline uses existing VectorSearch infrastructure. Hybrid search composes FTS5 + vector similarity via existing HybridSearch with RRF fusion.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009", "TASK-010", "TASK-011", "TASK-012"],
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Foundation & Cleanup",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"],
+      "parallel": true
+    },
+    {
+      "wave": 2,
+      "label": "Core Implementation",
+      "tasks": ["TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008"],
+      "parallel": false
+    },
+    {
+      "wave": 3,
+      "label": "Tests",
+      "tasks": ["TASK-009", "TASK-010", "TASK-011", "TASK-012"],
+      "parallel": true
+    }
+  ],
+  "context_path": "../analyze-P1-semantic-search-skill-crud-20260503/context.md"
+}

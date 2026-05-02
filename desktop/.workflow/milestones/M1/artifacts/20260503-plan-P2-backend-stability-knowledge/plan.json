@@ -1,0 +1,66 @@
+{
+  "summary": "Harden L1–L5 workflow checkpoint reliability with resume-from-checkpoint, add structured error classification with typed SSE events, complete Knowledge CRUD (delete, rename fix, type-specific fields), and improve memory retrieval precision with story-scope filtering and relevance ranking.",
+  "approach": "Three-wave execution. Wave 1: backend changes (checkpoint resume logic, error classification, retrieval scoring) — all parallel since they touch different modules. Wave 2: frontend changes (error recovery UI, knowledge CRUD) — depend on Wave 1 backend APIs. Wave 3: tests for all Phase 2 changes.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+  "task_count": 6,
+  "complexity": "high",
+  "estimated_time": "4-6 hours",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"],
+      "label": "Backend foundation"
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-004", "TASK-005"],
+      "label": "Frontend + CRUD"
+    },
+    {
+      "wave": 3,
+      "tasks": ["TASK-006"],
+      "label": "Tests"
+    }
+  ],
+
+  "data_flow": {
+    "diagram": null,
+    "stages": []
+  },
+
+  "design_decisions": [
+    "Checkpoint resume uses existing runtime-state.js step status tracking — no new persistence layer needed",
+    "Error classification adds a typed `error_class` field to SSE events in responses.js — backward compatible (missing field = unknown)",
+    "Knowledge delete uses graph-engine.js `deleteEntity(name)` which already cascades to relations — frontend just needs UI + Cypher DELETE",
+    "Rename fix: change PersistedEntityTab to use separate MATCH + SET instead of MERGE when matchName differs from draftName",
+    "Memory retrieval uses TF-IDF token overlap scoring on top of existing FTS5 — no vector DB needed"
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "SSE events follow the shape builders in responses.js — new error types must add builder functions",
+      "Knowledge CRUD uses `buildGraphMergeMutation()` from knowledgeUtils.ts — delete needs new `buildGraphDeleteMutation()`",
+      "Frontend hooks follow the pattern: useState + useCallback + side-effect in useEffect"
+    ],
+    "conventions": [
+      "Backend sidecar uses plain JS with JSDoc comments, no TypeScript",
+      "Frontend uses React hooks + Zustand stores, no class components",
+      "All graph mutations go through graph-engine.js `executeCypher()` or direct methods"
+    ],
+    "dependencies": [
+      "graph-engine.js deleteEntity() already exists — just not wired to frontend",
+      "runtime-state.js step status machine already tracks completed steps — resume flag is additive"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-03T00:30:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

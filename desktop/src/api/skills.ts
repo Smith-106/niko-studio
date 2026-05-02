@@ -22,3 +22,19 @@ export async function matchSkills(
 export async function getSkillChain(taskType: string): Promise<ApiResponse<Array<{ skill_id: string; step: number }>>> {
   return callApi('/skills/chain', 'POST', { task_type: taskType })
 }
+
+export async function createSkill(name: string, content: string): Promise<ApiResponse<{ id: string }>> {
+  return callApi('/skills/create', 'POST', { name, content })
+}
+
+export async function saveSkill(skillId: string, content: string): Promise<ApiResponse<{ success: boolean }>> {
+  return callApi('/skills/save', 'POST', { skill_id: skillId, content })
+}
+
+export async function deleteSkill(skillId: string): Promise<ApiResponse<{ success: boolean }>> {
+  return callApi('/skills/delete', 'POST', { skill_id: skillId })
+}
+
+export async function renameSkill(oldName: string, newName: string): Promise<ApiResponse<{ success: boolean }>> {
+  return callApi('/skills/rename', 'POST', { old_name: oldName, new_name: newName })
+}

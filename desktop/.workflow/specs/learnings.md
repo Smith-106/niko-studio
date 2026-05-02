@@ -43,3 +43,15 @@ React anti-pattern in draft restore: `useEffect(() => setInput(persistedText), [
 <spec-entry category="coding" keywords="opacity-0,aria-hidden,testing-library,getByTitle,conditional-render" date="2026-05-02" source="execute/TASK-004-gaps">
 When using `opacity-0 pointer-events-none` + `aria-hidden="true"` to visually hide buttons (vs conditional mount), testing-library's `getByRole` won't find aria-hidden elements even with `{ hidden: true }` in some versions. Use `getByTitle(titleText)` as the query selector for hidden-state Trash2/similar buttons, then assert `.toHaveClass('opacity-0')` for the hidden state.
 </spec-entry>
+
+<spec-entry category="learning" keywords="auto-retry,streaming,useCallback,for-loop,timer" date="2026-05-03" source="milestone-complete/M1">
+Auto-retry loops inside React `useCallback` must use local variables (not refs) for retry tracking when the loop is a synchronous `for(;;)` with `await`. Calling `reset()` from `useSmoothStream` mid-loop triggers a re-render that can invalidate `renderHook`'s `result.current` in tests. Fix: track retries via local `let` counter, skip `reset()` calls inside the loop, use `??` instead of `||` for numeric defaults (0 is falsy with `||`).
+</spec-entry>
+
+<spec-entry category="learning" keywords="cypher,graph,rename,duplicate,MERGE" date="2026-05-03" source="milestone-complete/M1">
+In custom Cypher-like graph engines, using MERGE with a match on the OLD name and SET to a NEW name can create duplicates depending on engine implementation. Safer pattern: execute a separate MATCH+SET to rename first, then MERGE on the new name for remaining property updates. This avoids the engine creating a new node if MERGE's match predicate doesn't find the pre-renamed node.
+</spec-entry>
+
+<spec-entry category="learning" keywords="test-mock,queryGraph,DETACH-DELETE,graph-crud" date="2026-05-03" source="milestone-complete/M1">
+When adding graph CRUD features (delete, rename), update the test mock's queryGraph handler to recognize the new mutation patterns (MATCH+SET for rename, DETACH DELETE for delete). Without these handlers, tests will fall through to the generic LOAD query handler, causing false failures or silent no-ops.
+</spec-entry>

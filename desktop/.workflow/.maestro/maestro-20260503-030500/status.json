@@ -1,0 +1,20 @@
+{
+  "session_id": "maestro-20260503-030500",
+  "created_at": "2026-05-03T03:05:00.000Z",
+  "intent": "continue",
+  "task_type": "state_continue",
+  "chain_name": "full-lifecycle-with-analyze",
+  "phase": 1,
+  "auto_mode": true,
+  "exec_mode": "skill",
+  "steps": [
+    { "index": 0, "skill": "maestro-analyze", "args": "1 -y", "engine": "skill", "status": "completed", "started_at": "2026-05-03T03:05:00.000Z", "completed_at": "2026-05-03T03:08:00.000Z" },
+    { "index": 1, "skill": "maestro-plan", "args": "1 --auto", "engine": "skill", "status": "completed", "started_at": "2026-05-03T03:08:00.000Z", "completed_at": "2026-05-03T03:10:00.000Z" },
+    { "index": 2, "skill": "maestro-execute", "args": "1", "engine": "skill", "status": "running", "started_at": "2026-05-03T03:10:00.000Z" },
+    { "index": 3, "skill": "maestro-verify", "args": "1", "engine": "skill", "status": "pending" },
+    { "index": 4, "skill": "quality-review", "args": "1", "engine": "skill", "status": "pending" },
+    { "index": 5, "skill": "quality-test", "args": "1 --auto-fix", "engine": "skill", "status": "pending" }
+  ],
+  "current_step": 2,
+  "status": "running"
+}

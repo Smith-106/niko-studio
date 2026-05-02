@@ -1,0 +1,17 @@
+{
+  "id": "TASK-009",
+  "wave": 3,
+  "title": "Tests for embedding pipeline and hybrid semantic search",
+  "action": "Add tests verifying: (1) embedding generated on entity create, (2) embedding updated on entity update, (3) hybrid search returns semantic matches, (4) RRF fusion ranking correctness, (5) fallback to keyword when vector unavailable.",
+  "files": ["src-tauri/bin/sidecar/search/vector-search.js", "src-tauri/bin/sidecar/graph/graph-manager.js"],
+  "read_first": ["src-tauri/bin/sidecar/search/hybrid-search.test.js", "src-tauri/bin/sidecar/search/tests/vector-search.test.js"],
+  "depends_on": ["TASK-005"],
+  "convergence": {
+    "criteria": [
+      "Test file exists for entity embedding lifecycle",
+      "Test file exists for hybrid entity search",
+      "All new tests pass"
+    ]
+  },
+  "implementation": "1) Create test for embedding generation on entity create: create entity → verify embedding exists in VectorSearch DB. 2) Test embedding update on entity property change. 3) Test searchEntities with semantic query (e.g., 'brave warrior' matches '勇敢的战士') returns correct entity. 4) Test hybrid search ranking beats pure keyword for semantic queries. 5) Test fallback path when VectorSearch throws."
+}

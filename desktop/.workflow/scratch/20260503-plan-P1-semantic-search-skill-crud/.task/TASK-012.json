@@ -1,0 +1,16 @@
+{
+  "id": "TASK-012",
+  "wave": 3,
+  "title": "Update useChatStreaming tests for StreamErrorPayload interface and retryCountRef removal",
+  "action": "Verify existing auto-retry tests still pass after removing retryCountRef. Confirm StreamErrorPayload type is used correctly in error handling path. No new tests needed — just regression verification.",
+  "files": ["src/hooks/useChatStreaming.test.tsx"],
+  "read_first": ["src/hooks/useChatStreaming.test.tsx", "src/hooks/useChatStreaming.ts"],
+  "depends_on": ["TASK-002"],
+  "convergence": {
+    "criteria": [
+      "npx vitest run src/hooks/useChatStreaming.test.tsx — exit code 0",
+      "No references to retryCountRef in test file"
+    ]
+  },
+  "implementation": "1) Run existing useChatStreaming test suite. 2) Verify all 10+ tests pass after retryCountRef removal and StreamErrorPayload typing. 3) If any test references retryCountRef, update to remove. 4) Confirm error payload mock objects conform to StreamErrorPayload interface shape."
+}

@@ -299,7 +299,7 @@ describe('KnowledgeModal accessibility and labels', () => {
     await user.click(screen.getByRole('button', { name: zh.knowledgeTaskAugmentSkills }))
 
     expect(await screen.findByRole('button', { name: zh.knowledgeTaskMatch })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: zh.knowledgeSkillDetails })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'edit skill' })).toBeDisabled()
   })
 
   it('promotes a selected knowledge item into canon', async () => {

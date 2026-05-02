@@ -1,0 +1,73 @@
+{
+  "phase": 2,
+  "status": "passed",
+  "verified_at": "2026-05-03T01:52:00.000Z",
+  "verifier": "workflow-verifier",
+
+  "must_haves": {
+    "truths": [
+      { "claim": "runtime-state.js contains restored_from_checkpoint flag", "status": "verified", "evidence": "runtime-state.js:32 sets plan.restored_from_checkpoint = true" },
+      { "claim": "flow-control.js skips completed steps on checkpoint resume", "status": "verified", "evidence": "resolveExecutableWorkflowStep accepts restoredFromCheckpoint param, resets executing to planned" },
+      { "claim": "risk.js sets restored_from_checkpoint on checkpoint restore", "status": "verified", "evidence": "risk.js:148 includes restored_from_checkpoint: true in restore result" },
+      { "claim": "responses.js has WORKFLOW_ERROR_CLASSES with 6 error types", "status": "verified", "evidence": "responses.js:204-210 defines rate_limit, timeout, schema_violation, auth_failure, model_error, unknown" },
+      { "claim": "responses.js has classifyWorkflowError function", "status": "verified", "evidence": "responses.js:325 exports classifyWorkflowError mapping HTTP codes and message patterns" },
+      { "claim": "Error events include error_class and recoverable fields", "status": "verified", "evidence": "buildWorkflowStreamErrorEvent and buildWorkflowStreamPlanErrorEvent include error_class, recoverable, retry_after" },
+      { "claim": "graph-manager.js searchEntities accepts scope parameter", "status": "verified", "evidence": "graph-manager.js:892 searchEntities(query, entityType, limit, scope={})" },
+      { "claim": "Search results ranked by token-overlap score", "status": "verified", "evidence": "graph-manager.js:927-929 _rankByRelevance computes token-overlap scoring" },
+      { "claim": "useChatStreaming auto-retries recoverable errors", "status": "verified", "evidence": "useChatStreaming.ts:43 retryCountRef, :156 retry loop with maxRetries=2" },
+      { "claim": "useChatRecovery RecoverStatus includes error_class", "status": "verified", "evidence": "useChatRecovery.ts:8 RecoverStatus type has error_class, recoverable, retry_after fields" },
+      { "claim": "ChatAreaStreamStatus shows error class badge", "status": "verified", "evidence": "ChatAreaStreamStatus.tsx:76-78 renders error_class as badge when present" },
+      { "claim": "PersistedEntityTab has delete button with confirmation", "status": "verified", "evidence": "PersistedEntityTab.tsx:356-383 deleteConfirm state, Trash2 icon, confirm/cancel" },
+      { "claim": "PersistedEntityTab handles rename without duplicates", "status": "verified", "evidence": "PersistedEntityTab.tsx:183-187 MATCH+SET before MERGE when matchName !== name" },
+      { "claim": "CharacterTab passes role/traits extraFields", "status": "verified", "evidence": "CharacterTab.tsx:9-12 CHARACTER_FIELDS with role and traits" },
+      { "claim": "LocationTab passes geography extraFields", "status": "verified", "evidence": "LocationTab.tsx:9 LOCATION_FIELDS with geography" },
+      { "claim": "PlotTab passes chapter/act extraFields", "status": "verified", "evidence": "PlotTab.tsx:9-10 PLOT_FIELDS with chapter and act" }
+    ],
+    "artifacts": [
+      { "path": "src-tauri/bin/sidecar/workflow/engine/runtime-state.js", "status": "exists", "substantive": true },
+      { "path": "src-tauri/bin/sidecar/workflow/engine/flow-control.js", "status": "exists", "substantive": true },
+      { "path": "src-tauri/bin/sidecar/workflow/engine/risk.js", "status": "exists", "substantive": true },
+      { "path": "src-tauri/bin/sidecar/workflow/engine/responses.js", "status": "exists", "substantive": true },
+      { "path": "src-tauri/bin/sidecar/graph/graph-manager.js", "status": "exists", "substantive": true },
+      { "path": "src/hooks/useChatStreaming.ts", "status": "exists", "substantive": true },
+      { "path": "src/hooks/useChatRecovery.ts", "status": "exists", "substantive": true },
+      { "path": "src/components/ChatAreaStreamStatus.tsx", "status": "exists", "substantive": true },
+      { "path": "src/components/knowledge/PersistedEntityTab.tsx", "status": "exists", "substantive": true },
+      { "path": "src/components/knowledge/KnowledgeTypes.ts", "status": "exists", "substantive": true },
+      { "path": "src/components/knowledge/knowledgeUtils.ts", "status": "exists", "substantive": true },
+      { "path": "src/components/knowledge/CharacterTab.tsx", "status": "exists", "substantive": true },
+      { "path": "src/components/knowledge/LocationTab.tsx", "status": "exists", "substantive": true },
+      { "path": "src/components/knowledge/PlotTab.tsx", "status": "exists", "substantive": true }
+    ],
+    "key_links": [
+      { "from": "risk.js restoreWorkflowCheckpoint -> runtime-state.js applyWorkflowRunnerTransition", "status": "wired", "evidence": "risk.js:148 passes restored_from_checkpoint: true" },
+      { "from": "flow-control.js resolveExecutableWorkflowStep -> step status check", "status": "wired", "evidence": "restoredFromCheckpoint param resets executing steps to planned" },
+      { "from": "responses.js classifyWorkflowError -> buildWorkflowStreamErrorEvent", "status": "wired", "evidence": "responses.js:213 calls classifyWorkflowError, :219 includes recoverable" },
+      { "from": "useChatStreaming onError -> payload.recoverable -> retry loop", "status": "wired", "evidence": ":110 captures streamErrorPayload, :156 checks recoverable" },
+      { "from": "ChatAreaStreamStatus recoverStatus.error_class -> badge rendering", "status": "wired", "evidence": ":76-78 conditionally renders error class badge" },
+      { "from": "PersistedEntityTab handleDelete -> buildGraphDeleteMutation -> queryGraph", "status": "wired", "evidence": ":274 calls buildGraphDeleteMutation via queryGraph" },
+      { "from": "CharacterTab CHARACTER_FIELDS -> PersistedEntityTab extraFields prop", "status": "wired", "evidence": "CharacterTab.tsx:35 passes CHARACTER_FIELDS" },
+      { "from": "PersistedEntityTab extraFields -> handleSave setProps", "status": "wired", "evidence": ":209-211 adds extraFields values to setProps" }
+    ]
+  },
+
+  "gaps": [],
+  "antipatterns": [],
+  "fix_plans": [],
+  "human_verification": [],
+  "coverage_score": 1.0,
+
+  "nyquist": {
+    "test_framework": "vitest",
+    "status": "passed",
+    "total_tests": 852,
+    "requirement_coverage": [
+      { "requirement": "TASK-001 checkpoint resume", "tests": ["useChatStreaming.test.tsx"], "status": "covered" },
+      { "requirement": "TASK-002 error classification", "tests": ["useChatStreaming.test.tsx (auto-retry)"], "status": "covered" },
+      { "requirement": "TASK-004 auto-retry on recoverable errors", "tests": ["useChatStreaming.test.tsx:8-10"], "status": "covered" },
+      { "requirement": "TASK-004 error class badge", "tests": ["ChatAreaStreamStatus.test.tsx"], "status": "covered" },
+      { "requirement": "TASK-005 delete with confirmation", "tests": ["PersistedEntityTab.test.tsx:6-8"], "status": "covered" },
+      { "requirement": "TASK-005 extraFields rendering", "tests": ["PersistedEntityTab.test.tsx:9-11"], "status": "covered" }
+    ]
+  }
+}

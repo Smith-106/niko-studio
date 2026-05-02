@@ -1,0 +1,19 @@
+{
+  "id": "TASK-008",
+  "wave": 2,
+  "title": "Implement Skill Tab CRUD — create, edit, rename, delete with confirmation",
+  "action": "Add create skill (from template), edit skill content in textarea, rename skill file, delete skill with confirmation dialog. Use PersistedEntityTab pattern for consistency. Wire to Tauri fs API for file operations.",
+  "files": ["src/components/knowledge/SkillTab.tsx", "src/api/client.ts"],
+  "read_first": ["src/components/knowledge/SkillTab.tsx", "src/components/knowledge/PersistedEntityTab.tsx", "src/api/client.ts"],
+  "depends_on": ["TASK-003"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'handleCreate\\|handleEdit\\|handleRename\\|handleDelete' src/components/knowledge/SkillTab.tsx — count >= 3",
+      "grep -c 'createSkill\\|saveSkill\\|deleteSkill\\|renameSkill' src/api/client.ts — count >= 2",
+      "Create button creates a new skill from template",
+      "Edit button opens skill content in textarea",
+      "Delete shows confirmation dialog before removing skill file"
+    ]
+  },
+  "implementation": "1) Add API functions: createSkill(name, template), saveSkill(id, content), deleteSkill(id), renameSkill(oldName, newName) — these call Tauri fs commands to write/read/delete/rename files in skills/ directory. 2) In SkillTab, add create button (+ icon) that prompts for skill name and creates from template. 3) When a skill is selected, show its content in editable textarea. 4) Add save button to persist edits. 5) Add rename button (inline edit of name). 6) Add delete button with confirmation dialog (reuse PersistedEntityTab pattern). 7) After CRUD operations, reload skill list."
+}

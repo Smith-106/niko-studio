@@ -1,0 +1,16 @@
+{
+  "id": "TASK-006",
+  "wave": 2,
+  "title": "Wire frontend knowledge search to use hybrid semantic results",
+  "action": "Update frontend knowledge hooks/components to send search queries through the new hybrid semantic search path. No UI changes needed — the search input in PersistedEntityTab already calls queryGraph which routes to graph-manager.searchEntities().",
+  "files": ["src/components/knowledge/PersistedEntityTab.tsx", "src/components/knowledge/knowledgeUtils.ts"],
+  "read_first": ["src/components/knowledge/PersistedEntityTab.tsx", "src/components/knowledge/knowledgeUtils.ts"],
+  "depends_on": ["TASK-005"],
+  "convergence": {
+    "criteria": [
+      "Frontend search query returns semantic matches (not just exact keyword matches)",
+      "Existing keyword search behavior preserved as fallback"
+    ]
+  },
+  "implementation": "Verify that PersistedEntityTab's search functionality works with the updated searchEntities backend. The frontend already calls queryGraph with search patterns — the backend change should be transparent. Add any needed query parameter (e.g., search_mode: 'hybrid') if the API needs to distinguish between keyword-only and hybrid search."
+}

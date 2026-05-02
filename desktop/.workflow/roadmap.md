@@ -1,116 +1,115 @@
-# Roadmap: Niko-Studio Desktop — M1: UX & Stability Sprint
+# Roadmap: Niko-Studio Desktop — M2: Intelligence & Extensibility
 
 ## Overview
 
-M1 delivers two sequential phases that together lift the application from a capable prototype to a polished, reliable writing tool. Phase 1 focuses entirely on the React/TypeScript frontend layer — refining the chat composer experience (REQ-A) and achieving visual consistency across all panels (REQ-B) — so user-facing improvements can ship and be validated without touching backend infrastructure. Phase 2 then hardens the Node.js gateway workflow engine and knowledge graph (REQ-C + REQ-D), leveraging the stable agent pipeline established in Phase 1 feedback to improve memory retrieval precision and L1–L5 checkpoint reliability. Both phases maintain strict backward compatibility: no existing features are broken, and all tests must remain green at every wave boundary.
+M2 builds on M1's stable foundation to add intelligent semantic search across the knowledge graph, harden multi-agent workflow reliability under real-world stress, extend the composer with drag-drop rich-media support, improve Skill Tab management, and clean up technical debt. The search infrastructure (VectorSearch, HybridSearch, RRF fusion, IterativeRetriever) already exists in `src-tauri/bin/sidecar/search/` but is not wired into the graph entity retrieval path — this milestone closes that gap and connects it end-to-end.
 
 ## Phases
 
-- [ ] **Phase 1: Frontend UX Polish** - Cherry Studio-style composer toolbar, mode switching, and cross-panel layout consistency (REQ-A + REQ-B)
-- [ ] **Phase 2: Backend Stability & Knowledge** - Agent workflow reliability hardening and Story Bible CRUD + retrieval enhancements (REQ-C + REQ-D)
+**Minimum-phase principle:** Default 1 phase. Only add phases for hard dependencies (runtime + not parallelizable + full barrier). Wave DAG inside each phase handles task ordering.
+
+- [ ] **Phase 1: Semantic Search, Skill CRUD & Rich Attachments** — Wire vector embeddings into knowledge retrieval, improve Skill Tab, add drag-drop attachments, clean up tech debt
+- [ ] **Phase 2: L4/L5 Workflow Hardening** — Multi-agent coordinator stress testing, edge case handling, reliability improvements
 
 ---
 
 ## Phase Details
 
-### Phase 1: Frontend UX Polish
+### Phase 1: Semantic Search, Skill CRUD & Rich Attachments
 
-**Goal**: Deliver a Cherry Studio-style composer with toolbar quick-actions and mode switching, and achieve consistent layout rhythm and interaction polish across all major panels.
+**Goal**: Deliver vector-embedding-based semantic search for knowledge graph entities so writers can find relevant characters/locations/plot elements by meaning rather than exact keyword match. Extend the composer with drag-drop file/image attachments. Improve Skill Tab with full CRUD. Clean up M1 technical debt.
 
-**Depends on**: Nothing (first phase)
+**Depends on**: Nothing (M1 complete)
 
-**Requirements**: REQ-A, REQ-B
+**Requirements**: REQ-E (semantic search), REQ-F (rich attachments), REQ-G (Skill CRUD), REQ-H (tech debt cleanup)
 
 **Success Criteria** (what must be TRUE):
-  1. The chat input area displays a persistent toolbar with at least 4 quick-action buttons (e.g., attach context, toggle mode, clear, template insert) without requiring a slash command.
-  2. Users can switch between Write / Revise / Context-Fetch agent modes from the composer toolbar with a single click, and the active mode is visually indicated at all times.
-  3. All major panels (ChatArea, Sidebar, StoryBiblePanel, SettingsModal, WritingHelperPanel) share consistent spacing, heading sizes, and interactive element dimensions with no misaligned grids or rogue margin overrides.
-  4. Hover states, focus rings, and disabled states are uniform across all button and input components — no panel exhibits uniquely styled interactive elements that break visual cohesion.
-  5. Composer draft text persists across mode switches and panel focus changes (no accidental clear on re-render).
+  1. Searching "勇敢的战士" returns relevant Character entries even when the exact phrase doesn't appear in the name or description — vector similarity finds semantic matches.
+  2. Knowledge graph entities (Character, Location, Plot) are automatically embedded when created or updated, and embeddings are stored alongside graph nodes for retrieval.
+  3. Users can drag an image file (.png, .jpg, .webp) or document (.txt, .md, .pdf, .docx) onto the composer area and see it attached as a preview chip before sending.
+  4. Skill Tab supports create, edit, rename, and delete operations with confirmation — skills are no longer read-only.
+  5. `retryCountRef` is removed from `useChatStreaming.ts` and `streamErrorPayload` has a proper TypeScript interface instead of `any`.
+  6. All 852+ existing tests remain passing; new features add dedicated test coverage.
 
 **Task Waves:**
 
-Wave 1 — Foundation:
-- [ ] TASK-1.1: Audit existing `ChatAreaComposer.tsx` and `ChatAreaModeControls.tsx` — document current props API, internal state, and event handlers; identify which responsibilities belong in the toolbar vs. the input row (`src/components/ChatAreaComposer.tsx`, `src/components/ChatAreaModeControls.tsx`)
-- [ ] TASK-1.2: Define shared design tokens for the composer toolbar — button size (32px), icon size (16px), gap rhythm, active/hover color variables — add to `src/index.css` or Tailwind config (`tailwind.config.ts`)
-- [ ] TASK-1.3: Audit all panel components for spacing/typography inconsistencies — produce a diff-list of Tailwind class mismatches across `AppMainContent.tsx`, `Sidebar.tsx`, `StoryBiblePanel.tsx`, `WritingHelperPanel.tsx`, `SettingsModal.tsx`, `ChatSidebar.tsx`
-- [ ] TASK-1.4: Review `useDraftCache.ts` to confirm draft persistence scope; verify draft survives mode switch and panel blur events (`src/hooks/useDraftCache.ts`)
+Wave 1 — Foundation & Cleanup:
+- [ ] TASK-1.1: Audit `search/` module (vector-search.js, hybrid-search.js, iterative-retriever.js) and `graph/graph-manager.js` — map current embedding pipeline, identify where entity embedding hooks should be added, document the disconnect between search infrastructure and graph entity retrieval
+- [ ] TASK-1.2: Clean up `useChatStreaming.ts` — remove dead `retryCountRef`, define `StreamErrorPayload` interface with `error_class`, `recoverable`, `retry_after` fields, replace `any` type with proper interface
+- [ ] TASK-1.3: Audit `SkillTab.tsx` and skill API surface (`listSkills`, `loadSkill`, `matchSkills`, `getSkillChain`) — document current read-only limitations, identify which CRUD operations the backend supports vs. which need new endpoints
 
-Wave 2 — Core:
-- [ ] TASK-1.5: Implement `ChatAreaToolbar` sub-component inside `ChatAreaComposer.tsx` — render quick-action buttons (attach context, insert template, clear draft, copy last reply) with accessible `aria-label` attributes and keyboard navigation (`src/components/ChatAreaComposer.tsx`)
-- [ ] TASK-1.6: Refactor `ChatAreaModeControls.tsx` to expose a compact single-row mode switcher (Write / Revise / Context-Fetch) that fits inline with the toolbar; connect to existing Zustand chat mode state (`src/components/ChatAreaModeControls.tsx`)
-- [ ] TASK-1.7: Wire toolbar "attach context" action to open existing `KnowledgeModal` or inject a @-mention token into the composer input — no new modal, reuse existing flow (`src/components/ChatArea.tsx`, `src/components/KnowledgeModal.tsx`)
-- [ ] TASK-1.8: Apply standardized spacing pass to `StoryBiblePanel.tsx` and `knowledge/` tab components (`CharacterTab.tsx`, `LocationTab.tsx`, `PlotTab.tsx`, `SkillTab.tsx`) — normalize section headers, card padding, and form field gaps (`src/components/StoryBiblePanel.tsx`, `src/components/knowledge/`)
-- [ ] TASK-1.9: Apply layout consistency pass to `Sidebar.tsx`, `ChatSidebar.tsx`, `AppHeader.tsx`, and `AppContextFooter.tsx` — unify icon button sizing, divider widths, and active-item highlight colors (`src/components/Sidebar.tsx`, `src/components/ChatSidebar.tsx`, `src/components/AppHeader.tsx`, `src/components/AppContextFooter.tsx`)
-- [ ] TASK-1.10: Standardize interactive states (hover, focus-visible ring, disabled opacity) in `AiToolbar.tsx`, `MessageBubble.tsx`, and `QuickPanel.tsx` — derive from shared Tailwind utilities, remove one-off inline styles (`src/components/AiToolbar.tsx`, `src/components/MessageBubble.tsx`, `src/components/QuickPanel.tsx`)
+Wave 2 — Core Implementation:
+- [ ] TASK-1.4: Wire embedding pipeline into graph entity lifecycle — when a Character/Location/Plot is created or updated via `graph-manager.js`, generate and store an embedding vector; add `embedding` column to entities table or parallel embeddings table
+- [ ] TASK-1.5: Implement semantic entity search — extend `graph-manager.searchEntities()` to use `HybridSearch` (FTS5 keyword + vector similarity) with RRF fusion; replace the current token-overlap ranking with the hybrid pipeline
+- [ ] TASK-1.6: Update frontend knowledge hooks to use semantic search — wire the new search path from `PersistedEntityTab` search through the gateway API to the hybrid entity search
+- [ ] TASK-1.7: Add drag-drop file attachment support to `ChatAreaComposer` — accept image and document drops on the composer textarea, show preview chips with remove button, pass attachment data through the existing `onFileUpload` flow
+- [ ] TASK-1.8: Implement Skill Tab CRUD — add create skill (from template), edit skill content, rename skill, and delete with confirmation; wire to backend skill file operations
 
 Wave 3 — Polish & Tests:
-- [ ] TASK-1.11: Update `ChatAreaComposer.test.tsx` and `ChatAreaModeControls.test.tsx` — add test cases for toolbar button rendering, mode switch state transitions, and draft persistence across mode changes (`src/components/ChatAreaComposer.test.tsx`, `src/components/ChatAreaModeControls.test.tsx`)
-- [ ] TASK-1.12: Add snapshot or visual regression tests for the standardized panel layouts — cover `StoryBiblePanel.test.tsx`, `Sidebar.test.tsx`, and `AppMainContent.test.tsx` at representative viewport width (`src/components/StoryBiblePanel.test.tsx`, `src/components/Sidebar.test.tsx`, `src/components/AppMainContent.test.tsx`)
-- [ ] TASK-1.13: Manual smoke-test checklist — verify toolbar quick actions, mode switching persistence, and consistent panel appearance in both zh-CN and en-US locales; confirm no regression in existing slash-command and bubble-toolbar flows
+- [ ] TASK-1.9: Add tests for semantic entity search — verify embedding generation on create/update, hybrid search returns semantic matches, RRF fusion ranking correctness
+- [ ] TASK-1.10: Add tests for drag-drop attachments — verify drop zone behavior, preview chip rendering, file type validation, remove attachment action
+- [ ] TASK-1.11: Add tests for Skill Tab CRUD — create, edit, rename, delete flows with confirmation dialog
+- [ ] TASK-1.12: Update existing tests for `useChatStreaming` — verify `StreamErrorPayload` interface, confirm `retryCountRef` removal doesn't break auto-retry tests
 
 ---
 
-### Phase 2: Backend Stability & Knowledge
+### Phase 2: L4/L5 Workflow Hardening
 
-**Goal**: Harden L1–L5 agent workflow reliability with checkpoint save/restore and error recovery, and improve Story Bible CRUD completeness and memory retrieval precision in the gateway knowledge graph.
+**Goal**: Stress-test the L4 Brainstorm and L5 Coordinator multi-agent workflows under realistic conditions — long conversations, multiple sequential commands, concurrent sessions, and edge-case error recovery — and fix reliability issues discovered.
 
-**Depends on**: Phase 1
+**Depends on**: Phase 1 (semantic search wiring may be used by L5 Coordinator's `hybridSearch` calls)
 
-**Requirements**: REQ-C, REQ-D
+**Requirements**: REQ-I (L4/L5 reliability)
 
 **Success Criteria** (what must be TRUE):
-  1. An interrupted L3–L5 workflow (simulated by killing the sidecar mid-run) resumes from the last saved checkpoint without data loss when the user clicks "Restore" — the engine does not restart from the beginning.
-  2. When an agent step returns a non-recoverable error, the chat interface displays a human-readable error message with a retry option, rather than silently hanging or showing a raw stack trace.
-  3. Character, Location, and Plot entries each support full CRUD (create, rename, update all fields, delete with confirmation) — no field is read-only or silently dropped on save.
-  4. Memory retrieval for an open novel document surfaces at least the top-3 relevant character/location entries when the user queries an entity by name, with no false-positive matches from unrelated stories.
-  5. All L1–L5 workflow levels complete their respective test scenarios (rapid reply, lite revision, standard plan, brainstorm, coordinator) without hanging or emitting unhandled promise rejections under normal network conditions.
+  1. L4 Brainstorm completes a 5-round ideation session without hanging, dropping context, or emitting unhandled promise rejections.
+  2. L5 Coordinator executes a 3-step command chain (analyze → plan → execute) end-to-end, with correct state persistence at each step and clean resume if interrupted mid-chain.
+  3. Running two concurrent L4 sessions against the same project does not corrupt shared graph state or produce cross-session data leaks.
+  4. All identified edge cases from stress testing are documented with root cause and either fixed or tracked as issues for M3.
 
 **Task Waves:**
 
-Wave 1 — Foundation:
-- [ ] TASK-2.1: Audit `workflow/engine/` for checkpoint write/read paths — map where `persistence.js` saves state, identify missing `await` or fire-and-forget patterns that can lose checkpoint data (`src-tauri/bin/sidecar/workflow/engine/persistence.js`, `src-tauri/bin/sidecar/workflow/engine/lifecycle.js`)
-- [ ] TASK-2.2: Audit `useChatStreaming.ts` and `useChatRecovery.ts` — document the current error propagation path from gateway SSE stream to UI toast; identify which error classes are swallowed silently (`src/hooks/useChatStreaming.ts`, `src/hooks/useChatRecovery.ts`)
-- [ ] TASK-2.3: Audit `knowledge/` tab components and `MemoryForm.tsx` — enumerate which fields are present in the form vs. stored in the graph engine; flag any field that is accepted by the form but not persisted to `graph-engine.js` (`src/components/knowledge/MemoryForm.tsx`, `src/components/knowledge/KnowledgeTypes.ts`, `src-tauri/bin/sidecar/graph/graph-engine.js`)
-- [ ] TASK-2.4: Audit `graph-manager.js` memory retrieval query — examine scoring/ranking logic; identify whether entity name matching uses exact string, fuzzy, or embedding similarity, and whether story-scope isolation is enforced (`src-tauri/bin/sidecar/graph/graph-manager.js`)
+Wave 1 — Audit & Stress Framework:
+- [ ] TASK-2.1: Audit L4 Brainstorm (`level4-brainstorm.js`) and L5 Coordinator (`level5-coordinator.js`) — document state machine transitions, session isolation guarantees, error recovery paths, and `SessionManager` usage patterns
+- [ ] TASK-2.2: Build stress test harness — create test fixtures for multi-round L4 sessions, multi-step L5 command chains, and concurrent session scenarios; instrument with timeout guards and state validators
 
-Wave 2 — Core:
-- [ ] TASK-2.5: Fix checkpoint persistence in `workflow/engine/persistence.js` — ensure checkpoint is written atomically before each level transition; add a `restored_from_checkpoint` flag to the runtime state so the engine skips completed steps on resume (`src-tauri/bin/sidecar/workflow/engine/persistence.js`, `src-tauri/bin/sidecar/workflow/engine/runtime-state.js`)
-- [ ] TASK-2.6: Implement structured error classification in `workflow/engine/` — distinguish recoverable (rate-limit, timeout) vs. non-recoverable (schema violation, auth failure) errors; emit typed error events on the SSE stream (`src-tauri/bin/sidecar/workflow/engine/responses.js`, `src-tauri/bin/sidecar/workflow/engine/flow-control.js`)
-- [ ] TASK-2.7: Update `useChatRecovery.ts` to handle the new typed error events — map recoverable errors to auto-retry (max 2 attempts) and non-recoverable errors to a user-visible error card with "Retry" and "Dismiss" actions (`src/hooks/useChatRecovery.ts`, `src/hooks/useChatStreaming.ts`)
-- [ ] TASK-2.8: Complete CRUD for `CharacterTab.tsx` — add rename-in-place, delete-with-confirmation, and field validation for all character fields (name, role, traits, backstory); wire delete to `graph-engine.js` node removal (`src/components/knowledge/CharacterTab.tsx`, `src-tauri/bin/sidecar/graph/graph-engine.js`)
-- [ ] TASK-2.9: Complete CRUD for `LocationTab.tsx` and `PlotTab.tsx` — apply same rename/delete/validate pattern as TASK-2.8; ensure `PlotTab` supports reordering plot beats (`src/components/knowledge/LocationTab.tsx`, `src/components/knowledge/PlotTab.tsx`)
-- [ ] TASK-2.10: Improve memory retrieval precision in `graph-manager.js` — add story-scope filter (only return nodes belonging to the current `project_id`); implement simple TF-IDF or token-overlap scoring to rank results instead of returning all nodes (`src-tauri/bin/sidecar/graph/graph-manager.js`)
+Wave 2 — Stress Testing & Fixes:
+- [ ] TASK-2.3: Run L4 stress tests — execute 5+ round brainstorm sessions with varied inputs, verify context accumulation, check for memory leaks in long sessions, test interrupt/resume behavior
+- [ ] TASK-2.4: Run L5 stress tests — execute 3+ step command chains, test interrupt between steps, verify checkpoint persistence and resume accuracy, test concurrent session isolation
+- [ ] TASK-2.5: Fix discovered issues — address any hangs, state corruption, unhandled rejections, or session isolation failures found during stress testing
+- [ ] TASK-2.6: Document remaining issues — for any issues not fixed in this phase, create detailed issue records with root cause analysis, affected components, and suggested fix direction
 
-Wave 3 — Polish & Tests:
-- [ ] TASK-2.11: Add unit tests for checkpoint resume path in `workflow/engine/` — test that a workflow initialized with a pre-existing checkpoint state skips already-completed steps and resumes at the correct level (`src-tauri/bin/sidecar/workflow/engine/persistence.js` test suite, if present under `src-ts/tests/`)
-- [ ] TASK-2.12: Update `useChatRecovery.test.tsx` and `useChatStreaming.test.tsx` — add cases for typed error events (recoverable auto-retry, non-recoverable error card render) (`src/hooks/useChatRecovery.test.tsx`, `src/hooks/useChatStreaming.test.tsx`)
-- [ ] TASK-2.13: Update `MemoryForm.test.tsx`, `CharacterTab.test.tsx`, `LocationTab.test.tsx`, `PlotTab.test.tsx` — cover create, update all fields, rename, and delete-with-confirmation flows (`src/components/knowledge/`)
-- [ ] TASK-2.14: End-to-end smoke test — run L1 through L3 workflow levels manually, interrupt L3 mid-run, verify checkpoint restore; verify character/location CRUD round-trip in both zh-CN and en-US; confirm all existing tests are green
+Wave 3 — Validation:
+- [ ] TASK-2.7: Regression test suite — run full test suite (852+ tests) to confirm no regressions from Phase 1 or Phase 2 changes
+- [ ] TASK-2.8: Integration verification — confirm L4/L5 workflows correctly use semantic search from Phase 1 for knowledge retrieval; verify end-to-end: entity created → embedded → retrieved during L5 Coordinator analysis
 
 ---
 
 ## Scope Decisions
 
 - **In scope**:
-  - Cherry Studio-style composer toolbar with quick-action buttons and inline mode switcher (REQ-A)
-  - Cross-panel layout consistency pass covering spacing, typography, and interactive states (REQ-B)
-  - Checkpoint save/restore for L1–L5 workflow levels (REQ-C)
-  - Structured error classification and user-visible error recovery UI (REQ-C)
-  - Full CRUD for Character, Location, and Plot in Story Bible (REQ-D)
-  - Story-scoped memory retrieval with relevance ranking in graph-manager (REQ-D)
+  - Vector embedding pipeline for knowledge graph entities (Character, Location, Plot)
+  - Hybrid semantic search (keyword + vector) for entity retrieval
+  - Frontend wiring of semantic search results
+  - Drag-drop image and document attachment in chat composer
+  - Skill Tab full CRUD (create, edit, rename, delete)
+  - `useChatStreaming.ts` type cleanup (remove `retryCountRef`, type `streamErrorPayload`)
+  - L4 Brainstorm multi-round stress testing and fixes
+  - L5 Coordinator multi-step command chain stress testing and fixes
+  - Concurrent session isolation testing
 
 - **Deferred**:
-  - Full embedding-based semantic search for knowledge retrieval (requires vector DB — deferred to M2)
-  - L4/L5 multi-agent coordinator stress testing under concurrent sessions (deferred to M2)
-  - Composer rich-text attachments (image/file drag-drop into chat — deferred to M2)
-  - Skill Tab CRUD improvements (lower user-impact than Character/Location/Plot — deferred to M2)
+  - Real-time collaborative editing (single-user app, not applicable)
+  - Custom embedding model training or fine-tuning (use default BAAI/bge-small-en-v1.5)
+  - L4/L5 performance optimization beyond reliability (latency tuning deferred to M3)
+  - Skill version control or marketplace features
+  - Audio/video attachment support (images + documents only for M2)
 
 - **Out of scope**:
-  - Cloud sync or any network storage feature (violates local-first constraint)
+  - Cloud sync or network storage (local-first constraint)
   - New AI model integrations or provider changes
-  - TipTap editor core modifications unrelated to the composer toolbar
-  - Breaking changes to existing Zustand store shape or Tauri command surface
+  - TipTap editor core modifications unrelated to drag-drop
+  - Breaking changes to Zustand store shape or Tauri command surface
 
 ---
 
@@ -118,5 +117,5 @@ Wave 3 — Polish & Tests:
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Frontend UX Polish | Not started | - |
-| 2. Backend Stability & Knowledge | Not started | - |
+| 1. Semantic Search, Skill CRUD & Rich Attachments | Not started | - |
+| 2. L4/L5 Workflow Hardening | Not started | - |

@@ -1,0 +1,90 @@
+{
+  "id": "TASK-003",
+  "title": "Memory retrieval precision — story-scope filter + TF-IDF scoring",
+  "description": "Improve graph-manager.js searchEntities to enforce story-scope isolation (only return nodes belonging to current project_id) and add TF-IDF token-overlap scoring for relevance ranking instead of plain FTS5 ordering.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "In graph-manager.js searchEntities(), add required `scope` parameter with {projectId, workspaceId}. Add WHERE clause filtering entities by JSON_EXTRACT(properties, '$.projectId') = scope.projectId. Replace FTS5 rank with token-overlap scoring: tokenize query and entity name/properties into lowercase word sets, compute overlap count as score, ORDER BY score DESC LIMIT N.",
+  "status": "completed",
+  "completed_at": "2026-05-02T17:18:53.718Z",
+  "actual_duration": null,
+  "scope": "src-tauri/bin/sidecar/graph/",
+  "focus_paths": [],
+  "read_first": [
+    "src-tauri/bin/sidecar/graph/graph-manager.js",
+    "src-tauri/bin/sidecar/graph/graph-engine.js"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": 1,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src-tauri/bin/sidecar/graph/graph-manager.js searchEntities accepts a scope parameter with projectId",
+      "src-tauri/bin/sidecar/graph/graph-manager.js contains 'projectId' or 'project_id' in searchEntities function body",
+      "Search results are ranked by token-overlap score, not FTS5 default rank"
+    ],
+    "verification": "Insert entities with different projectId values, call searchEntities with a specific projectId, verify only matching entities returned and ranked by relevance to query",
+    "definition_of_done": "Memory retrieval for an open novel returns top-3 relevant entries scoped to current story with no false-positive matches from other projects"
+  },
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/graph/graph-manager.js",
+      "action": "modify",
+      "target": "searchEntities",
+      "change": "Add scope parameter {projectId, workspaceId}. Add SQL WHERE filter: JSON_EXTRACT(properties, '$.projectId') = ? for non-null projectId. Replace FTS5 ranking with token-overlap scoring function."
+    }
+  ],
+  "implementation": [
+    "Update searchEntities(query, entityType, limit) signature to searchEntities(query, entityType, limit, scope={}) where scope = {projectId, workspaceId}",
+    "Add scope filter: if scope.projectId is provided, append AND JSON_EXTRACT(e.properties, '$.projectId') = ? to the WHERE clause with scope.projectId as parameter",
+    "Add token-overlap scoring function computeRelevanceScore(queryTokens, entityText) that tokenizes both to lowercase words, computes intersection size / union size (Jaccard), returns float 0-1",
+    "In searchEntities, fetch results then re-rank by computeRelevanceScore(tokenize(query), entity.name + ' ' + JSON.stringify(entity.properties)), sort descending, return top-N",
+    "Ensure backward compatibility: if scope is omitted or scope.projectId is null, skip scope filter (includes all entities as before)"
+  ],
+  "test": {
+    "commands": [],
+    "unit": [],
+    "integration": [],
+    "success_metrics": []
+  },
+  "reference": {
+    "pattern": "graph-engine.js _buildScopedEntityPredicate() already generates SQL scope predicates — follow same pattern",
+    "files": [],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "TF-IDF token overlap is lightweight and doesn't require vector DB — sufficient for name/property matching within a story scope",
+    "decision_factors": [
+      "No external dependencies",
+      "Works on existing SQLite data",
+      "Semantic search deferred to M2 per roadmap"
+    ],
+    "tradeoffs": "Token overlap won't catch semantic synonyms — acceptable for M1 scope"
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "FT-033 Graph Query & Merge",
+      "FT-030 Knowledge Modal"
+    ],
+    "affected_components": [
+      "TC-037 StoryBiblePanel"
+    ],
+    "affected_requirements": [
+      "REQ-D"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

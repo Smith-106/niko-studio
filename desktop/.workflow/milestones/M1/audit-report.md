@@ -1,6 +1,6 @@
 # M1 Audit Report: UX & Stability Sprint
 
-**Audited**: 2026-05-02
+**Audited**: 2026-05-03 (third audit — final)
 **Milestone**: M1 (phases 1, 2)
 
 ---
@@ -9,58 +9,43 @@
 
 | Phase | Title | Plan | Execute | Verify | Review | Test | Status |
 |-------|-------|------|---------|--------|--------|------|--------|
-| 1 | Frontend UX Polish | PLN-001, PLN-002 | EXC-001, EXC-002 | VRF-001, VRF-002 | REV-001, REV-002 | TST-001 | **COMPLETE** |
-| 2 | Backend Stability & Knowledge | — | — | — | — | — | **MISSING** |
-
-**WARN**: Phase 2 has no artifacts — not started.
+| 1 | Frontend UX Polish | PLN-001, PLN-002, PLN-003 | EXC-001, EXC-002, EXC-003 | VRF-001, VRF-002, VRF-003 | REV-001, REV-002, REV-003 | TST-001, TST-002 | **COMPLETE** |
+| 2 | Backend Stability & Knowledge | PLN-004 | EXC-005 | VRF-004 | REV-004 | TST-003 | **COMPLETE** |
 
 ## Execution Completeness
 
-- EXC-001: 8/8 tasks completed
-- EXC-002: 4/4 tasks completed
+- EXC-001: 8/8 tasks completed (initial UX polish)
+- EXC-002: 4/4 tasks completed (gap fixes from REV-001)
+- EXC-003: 3/3 tasks completed (a11y + correctness from REV-002)
+- EXC-005: 6/6 tasks completed (backend stability + knowledge CRUD)
 
-All tasks complete.
+**Total: 21/21 tasks completed across 4 plans**
 
 ## Integration Check Results
 
 | Check | Status | Gaps |
 |-------|--------|------|
-| Shared Interfaces (prop rename) | PASSED | 0 |
-| Dependency Chains (prop passing) | PASSED | 0 |
-| Data Contracts (draft/copy) | GAP_FOUND | 2 |
-| API Consistency (props) | PASSED | 0 |
-| Configuration (CSS/Tailwind) | GAP_FOUND | 2 |
-| Error Handling (a11y/fallbacks) | GAP_FOUND | 3 |
+| Shared Interfaces (hooks → ChatArea) | PASSED | 0 |
+| Dependency Chains (P1 → P2 sequential) | PASSED | 0 |
+| Data Contracts (RecoverStatus extended, backward compatible) | PASSED | 0 |
+| API Consistency (SSE payload extended, existing fields unchanged) | PASSED | 0 |
+| Configuration (FieldConfig shared across knowledge tabs) | PASSED | 0 |
+| Error Handling (classifyWorkflowError → auto-retry → error card) | PASSED | 0 |
+| Test Regression (852 tests) | PASSED | 0 |
 
-### Gap Summary
+## Phase 2 Summary
 
-**High (2)**:
-- A11Y-001 (ISS-061): Trash2 aria-hidden on focusable element
-- A11Y-002 (ISS-062): Copy success not announced to screen readers
-
-**Medium (3)**:
-- CORR-001: Non-null assertion on optional lastAssistantContent
-- CORR-003: Draft-restore useEffect ordering dependency
-- CORR-004: Debounce race on send (sent message reappears as draft)
-
-**Low (2)**:
-- Dead CSS token (--composer-focus-ring never consumed)
-- BP-011: Paperclip button missing focus-visible ring
-
-### UAT Findings (TST-001)
-
-**Phase 1 gap-fix specific**: 6/7 pass (1 blocked by pre-existing theme issue)
-**Pre-existing issues**: 3 (theme switching, DocumentEditor layout, send button mouse)
-**Known unfixed**: 1 (A11Y-001 — tracked but not yet fixed)
+- 6 tasks across 3 waves (backend, frontend+CRUD, tests)
+- 14 source files modified (5 backend, 9 frontend)
+- 852 tests passing (89 in Phase 2 test files)
+- Review: PASS (0 critical, 0 high, 2 medium, 2 low)
+- Verification: 16/16 truths verified, 8/8 key links wired
 
 ---
 
-## Verdict: FAIL
+## Verdict: PASS
 
-**Reasons**:
-1. Phase 2 (Backend Stability & Knowledge) has no artifacts — milestone incomplete
-2. 2 high-severity accessibility gaps remain in Phase 1
-
-**To reach PASS**:
-1. Start Phase 2 (plan → execute → verify → review → test)
-2. Fix A11Y-001 and A11Y-002 (accessibility violations)
+All phases have complete artifact chains (PLN → EXC → VRF → REV → TST).
+All 21 tasks completed across 4 execution plans.
+Cross-phase integration verified — no gaps.
+852 automated tests passing.

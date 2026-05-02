@@ -1,0 +1,17 @@
+{
+  "id": "TASK-005",
+  "wave": 2,
+  "title": "Implement hybrid semantic search for entity retrieval",
+  "action": "Replace graph-manager.searchEntities() token-overlap ranking with HybridSearch composition: FTS5 keyword strategy + VectorSearch semantic strategy, merged via RRF fusion. Keep FTS5 fallback for when VectorSearch is unavailable.",
+  "files": ["src-tauri/bin/sidecar/graph/graph-manager.js", "src-tauri/bin/sidecar/search/hybrid-search.js", "src-tauri/bin/sidecar/search/utils/rrf-fusion.js"],
+  "read_first": ["src-tauri/bin/sidecar/graph/graph-manager.js", "src-tauri/bin/sidecar/search/hybrid-search.js", "src/components/knowledge/PersistedEntityTab.tsx"],
+  "depends_on": ["TASK-004"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'HybridSearch\\|hybridSearch\\|rrfMerge' src-tauri/bin/sidecar/graph/graph-manager.js — count >= 1",
+      "searchEntities returns results ranked by combined keyword + semantic similarity",
+      "Fallback to FTS5/LIKE still works when vector search unavailable"
+    ]
+  },
+  "implementation": "1) In graph-manager, create HybridSearch instance with two strategies: (a) keyword strategy wrapping existing FTS5/LIKE query, (b) vector strategy using VectorSearch similarity query filtered by entity type and workspaceId. 2) Replace _rankByRelevance with HybridSearch.search() call. 3) Map HybridSearch results back to Entity objects. 4) Keep existing fallback path for environments without VectorSearch."
+}

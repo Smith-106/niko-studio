@@ -1,0 +1,84 @@
+{
+  "phase": 2,
+  "level": "standard",
+  "verdict": "PASS",
+  "reviewed_at": "2026-05-03T01:55:00.000Z",
+  "reviewer": "workflow-reviewer",
+  "dimensions_reviewed": ["correctness", "security", "performance", "architecture", "maintainability", "best-practices"],
+  "files_reviewed": [
+    "src-tauri/bin/sidecar/workflow/engine/flow-control.js",
+    "src-tauri/bin/sidecar/workflow/engine/runtime-state.js",
+    "src-tauri/bin/sidecar/workflow/engine/risk.js",
+    "src-tauri/bin/sidecar/workflow/engine/responses.js",
+    "src-tauri/bin/sidecar/graph/graph-manager.js",
+    "src/hooks/useChatStreaming.ts",
+    "src/hooks/useChatRecovery.ts",
+    "src/components/ChatAreaStreamStatus.tsx",
+    "src/components/knowledge/PersistedEntityTab.tsx",
+    "src/components/knowledge/CharacterTab.tsx",
+    "src/components/knowledge/LocationTab.tsx",
+    "src/components/knowledge/PlotTab.tsx",
+    "src/components/knowledge/KnowledgeTypes.ts",
+    "src/components/knowledge/knowledgeUtils.ts"
+  ],
+  "severity_distribution": {
+    "critical": 0,
+    "high": 0,
+    "medium": 2,
+    "low": 2,
+    "total": 4
+  },
+  "critical_files": [],
+  "findings": [
+    {
+      "id": "REV2-001",
+      "dimension": "maintainability",
+      "severity": "medium",
+      "title": "Dead code: retryCountRef is declared but never meaningfully used",
+      "file": "src/hooks/useChatStreaming.ts",
+      "line": 43,
+      "snippet": "const retryCountRef = useRef(0)",
+      "description": "retryCountRef is declared at line 43 and only written to in resetStream (line 171), but never read or checked. The actual retry tracking uses local `retries` variable (line 55). This dead ref could confuse future readers.",
+      "impact": "Minor code smell — no functional impact but misleading for maintainers",
+      "suggestion": "Remove retryCountRef entirely since retry state is tracked via local variable"
+    },
+    {
+      "id": "REV2-002",
+      "dimension": "best-practices",
+      "severity": "medium",
+      "title": "streamErrorPayload typed as any with eslint-disable",
+      "file": "src/hooks/useChatStreaming.ts",
+      "line": 68,
+      "snippet": "let streamErrorPayload: any = null",
+      "description": "The error payload from SSE onError callback is typed as `any` to avoid TypeScript narrowing issues with StreamTerminalPayload. A proper interface or type assertion would be cleaner.",
+      "impact": "Loss of type safety for error payload fields (error_class, recoverable, retry_after)",
+      "suggestion": "Define a StreamErrorPayload interface extending StreamTerminalPayload with the new fields, or cast at the boundary"
+    },
+    {
+      "id": "REV2-003",
+      "dimension": "best-practices",
+      "severity": "low",
+      "title": "Delete confirmation uses inline strings instead of i18n",
+      "file": "src/components/knowledge/PersistedEntityTab.tsx",
+      "line": 366,
+      "snippet": "language === 'zh' ? `确定删除\"${matchName}\"？` : `Delete \"${matchName}\"?`",
+      "description": "The delete confirmation dialog uses inline language-conditional strings rather than the i18n system used elsewhere in the component (copy.*, t.*).",
+      "impact": "Inconsistent i18n pattern — strings won't be in translation files",
+      "suggestion": "Add delete confirmation strings to the copy builder function or use i18n t() function"
+    },
+    {
+      "id": "REV2-004",
+      "dimension": "security",
+      "severity": "low",
+      "title": "Cypher query built with string interpolation for rename",
+      "file": "src/components/knowledge/PersistedEntityTab.tsx",
+      "line": 186,
+      "snippet": "`MATCH (n:${entityType} {name: ${JSON.stringify(matchName)}, workspaceId: ${JSON.stringify(wid)}}) SET n.name = ${JSON.stringify(name)} RETURN n`",
+      "description": "The rename query uses template literal interpolation. JSON.stringify properly escapes string values, and entityType is constrained to known values ('Character'|'Location'|'Event'), so injection risk is minimal. This follows the existing pattern in buildGraphMergeMutation.",
+      "impact": "Low — JSON.stringify escapes strings, entityType is type-constrained",
+      "suggestion": "Acceptable for M1. Consider parameterized queries if the graph engine supports them in future."
+    }
+  ],
+  "deep_dives": [],
+  "issues_created": []
+}

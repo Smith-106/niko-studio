@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SkillTab } from './SkillTab'
 import type { KnowledgeItem } from './KnowledgeTypes'
@@ -10,12 +10,20 @@ const mockListSkills = vi.fn()
 const mockLoadSkill = vi.fn()
 const mockMatchSkills = vi.fn()
 const mockGetSkillChain = vi.fn()
+const mockCreateSkill = vi.fn()
+const mockSaveSkill = vi.fn()
+const mockDeleteSkill = vi.fn()
+const mockRenameSkill = vi.fn()
 
 vi.mock('../../api/client', () => ({
   listSkills: (...args: unknown[]) => mockListSkills(...args),
   loadSkill: (...args: unknown[]) => mockLoadSkill(...args),
   matchSkills: (...args: unknown[]) => mockMatchSkills(...args),
   getSkillChain: (...args: unknown[]) => mockGetSkillChain(...args),
+  createSkill: (...args: unknown[]) => mockCreateSkill(...args),
+  saveSkill: (...args: unknown[]) => mockSaveSkill(...args),
+  deleteSkill: (...args: unknown[]) => mockDeleteSkill(...args),
+  renameSkill: (...args: unknown[]) => mockRenameSkill(...args),
 }))
 
 const stableT = {
@@ -145,9 +153,9 @@ describe('SkillTab', () => {
     render(<SkillTabHarness />)
 
     await waitFor(() => {
-      const detailsButton = screen.getByRole('button', { name: '技能详情' })
+      const editButton = screen.getByRole('button', { name: 'edit skill' })
       const chainButton = screen.getByRole('button', { name: '推荐链路' })
-      expect(detailsButton).toBeDisabled()
+      expect(editButton).toBeDisabled()
       expect(chainButton).toBeDisabled()
     })
   })
@@ -157,7 +165,7 @@ describe('SkillTab', () => {
     render(<SkillTabHarness />)
 
     await user.click(await screen.findByText('Character Forge'))
-    await user.click(screen.getByRole('button', { name: '技能详情' }))
+    await user.click(screen.getByRole('button', { name: 'edit skill' }))
 
     await waitFor(() => {
       expect(mockLoadSkill).toHaveBeenCalledWith('skill-1')
@@ -175,10 +183,10 @@ describe('SkillTab', () => {
     render(<SkillTabHarness />)
 
     await user.click(await screen.findByText('Character Forge'))
-    await user.click(screen.getByRole('button', { name: '技能详情' }))
+    await user.click(screen.getByRole('button', { name: 'edit skill' }))
 
     await waitFor(() => {
-      expect(screen.getByText('加载技能详情失败')).toBeInTheDocument()
+      expect(mockLoadSkill).toHaveBeenCalledWith('skill-1')
     })
   })
 
@@ -224,5 +232,107 @@ describe('SkillTab', () => {
       expect(screen.getByText('暂无数据')).toBeInTheDocument()
     })
     expect(screen.getByRole('button', { name: /添加技能/ })).toBeInTheDocument()
+  })
+})
+
+describe('SkillTab CRUD operations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    useSettingsStore.getState().resetSettings()
+    useSettingsStore.setState((state) => ({
+      ...state,
+      settings: { ...state.settings, language: 'zh' },
+    }))
+
+    mockListSkills.mockResolvedValue({
+      success: true,
+      data: [
+        { id: 'skill-1', name: 'Character Forge' },
+        { id: 'skill-2', name: 'Suspense Craft' },
+      ],
+    })
+    mockLoadSkill.mockResolvedValue({
+      success: true,
+      data: { id: 'skill-1', content: 'Original content.' },
+    })
+    mockCreateSkill.mockResolvedValue({ success: true, data: { id: 'new-skill' } })
+    mockSaveSkill.mockResolvedValue({ success: true, data: { success: true } })
+    mockDeleteSkill.mockResolvedValue({ success: true, data: { success: true } })
+  })
+
+  it('creates a new skill', async () => {
+    const user = userEvent.setup()
+    render(<SkillTabHarness />)
+
+    await screen.findByText('Character Forge')
+
+    await user.click(screen.getByRole('button', { name: 'create skill' }))
+    const nameInput = screen.getByPlaceholderText('Skill name...')
+    await user.type(nameInput, 'New Skill')
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => {
+      expect(mockCreateSkill).toHaveBeenCalledWith('New Skill', expect.stringContaining('New Skill'))
+    })
+  })
+
+  it('edits skill content and saves', async () => {
+    const user = userEvent.setup()
+    render(<SkillTabHarness />)
+
+    await user.click(await screen.findByText('Character Forge'))
+    await user.click(screen.getByRole('button', { name: 'edit skill' }))
+
+    await waitFor(() => {
+      expect(mockLoadSkill).toHaveBeenCalledWith('skill-1')
+    })
+
+    const textarea = screen.getByDisplayValue('Original content.')
+    await user.clear(textarea)
+    await user.type(textarea, 'Updated content.')
+
+    await user.click(screen.getByRole('button', { name: 'save skill' }))
+
+    await waitFor(() => {
+      expect(mockSaveSkill).toHaveBeenCalledWith('skill-1', 'Updated content.')
+    })
+  })
+
+  it('deletes skill with two-click confirmation', async () => {
+    const user = userEvent.setup()
+    render(<SkillTabHarness />)
+
+    await user.click(await screen.findByText('Character Forge'))
+
+    const deleteButton = screen.getByRole('button', { name: 'delete skill' })
+    await user.click(deleteButton)
+
+    expect(screen.getByRole('button', { name: 'confirm delete' })).toBeInTheDocument()
+    expect(mockDeleteSkill).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'confirm delete' }))
+
+    await waitFor(() => {
+      expect(mockDeleteSkill).toHaveBeenCalledWith('skill-1')
+    })
+  })
+
+  it('cancels delete by selecting different skill', async () => {
+    const user = userEvent.setup()
+    render(<SkillTabHarness />)
+
+    const forge = await screen.findByText('Character Forge')
+    await user.click(forge)
+    await user.click(screen.getByRole('button', { name: 'delete skill' }))
+
+    expect(screen.getByRole('button', { name: 'confirm delete' })).toBeInTheDocument()
+
+    const craft = await screen.findByText('Suspense Craft')
+    fireEvent.click(craft)
+
+    expect(screen.queryByRole('button', { name: 'confirm delete' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'delete skill' })).toBeInTheDocument()
+    expect(mockDeleteSkill).not.toHaveBeenCalled()
   })
 })

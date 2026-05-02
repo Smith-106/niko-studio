@@ -1,0 +1,15 @@
+{
+  "id": "TASK-001",
+  "wave": 1,
+  "title": "Audit search module and graph entity embedding gap",
+  "action": "Trace VectorSearch, HybridSearch, and IterativeRetriever APIs. Document the disconnect between search infrastructure and graph-manager.searchEntities(). Identify exact integration points for embedding generation on entity create/update.",
+  "files": ["src-tauri/bin/sidecar/search/vector-search.js", "src-tauri/bin/sidecar/search/hybrid-search.js", "src-tauri/bin/sidecar/search/iterative-retriever.js", "src-tauri/bin/sidecar/graph/graph-manager.js"],
+  "read_first": ["src-tauri/bin/sidecar/search/vector-search.js", "src-tauri/bin/sidecar/graph/graph-manager.js"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'upsertEmbedding\\|insertVector\\|addEmbedding' src-tauri/bin/sidecar/search/vector-search.js — count >= 1",
+      "grep -c 'searchEntities\\|_rankByRelevance' src-tauri/bin/sidecar/graph/graph-manager.js — count >= 2"
+    ]
+  },
+  "implementation": "Read-only audit. Produce a summary of: (1) VectorSearch.upsertEmbedding() or equivalent API for storing vectors, (2) HybridSearch.search() interface for composing strategies, (3) graph-manager.searchEntities() current implementation, (4) exact function signatures needed to bridge them."
+}

@@ -1,0 +1,98 @@
+{
+  "id": "TASK-002",
+  "title": "Structured error classification — typed error events for SSE stream",
+  "description": "Add error classification to responses.js that distinguishes recoverable errors (rate-limit, timeout) from non-recoverable errors (schema violation, auth failure). Emit typed error events on the SSE stream so the frontend can auto-retry recoverable errors and show error cards for non-recoverable ones.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "In responses.js, add ERROR_CLASSES map: { rate_limit: {recoverable: true, retry_after: 30}, timeout: {recoverable: true, retry_after: 5}, schema_violation: {recoverable: false}, auth_failure: {recoverable: false}, model_error: {recoverable: true, retry_after: 10}, unknown: {recoverable: false} }. Add buildStructuredErrorEvent(errorClass, message, diagnostics) that produces {type:'error', error_class, recoverable, retry_after, message, diagnostics}. In flow-control.js, classify errors before emitting events.",
+  "status": "completed",
+  "completed_at": "2026-05-02T17:18:53.717Z",
+  "actual_duration": null,
+  "scope": "src-tauri/bin/sidecar/workflow/engine/",
+  "focus_paths": [],
+  "read_first": [
+    "src-tauri/bin/sidecar/workflow/engine/responses.js",
+    "src-tauri/bin/sidecar/workflow/engine/flow-control.js",
+    "src-tauri/bin/sidecar/workflow/engine/engine-contracts.js"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": 1,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src-tauri/bin/sidecar/workflow/engine/responses.js contains 'ERROR_CLASSES'",
+      "src-tauri/bin/sidecar/workflow/engine/responses.js contains 'buildStructuredErrorEvent'",
+      "src-tauri/bin/sidecar/workflow/engine/responses.js contains 'rate_limit'",
+      "src-tauri/bin/sidecar/workflow/engine/responses.js contains 'recoverable'",
+      "src-tauri/bin/sidecar/workflow/engine/flow-control.js contains 'classifyError' or 'error_class'"
+    ],
+    "verification": "Call buildStructuredErrorEvent('rate_limit', 'Too many requests', {}) and verify output has {error_class: 'rate_limit', recoverable: true, retry_after: 30}",
+    "definition_of_done": "SSE error events include typed error_class and recoverable flag that frontend can route to auto-retry or error card"
+  },
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/workflow/engine/responses.js",
+      "action": "modify",
+      "target": "error response builders",
+      "change": "Add ERROR_CLASSES constant map with 6 error types and their recoverable/retry_after properties. Add buildStructuredErrorEvent(errorClass, message, diagnostics) function returning {type:'error', error_class, recoverable, retry_after, message, diagnostics, timestamp}"
+    },
+    {
+      "path": "src-tauri/bin/sidecar/workflow/engine/flow-control.js",
+      "action": "modify",
+      "target": "error handling in step execution",
+      "change": "Add classifyError(error) function that maps error.message/status to ERROR_CLASSES key. Replace raw error emission with buildStructuredErrorEvent()"
+    }
+  ],
+  "implementation": [
+    "In responses.js, add const ERROR_CLASSES = { rate_limit: {recoverable:true, retry_after:30}, timeout: {recoverable:true, retry_after:5}, schema_violation: {recoverable:false}, auth_failure: {recoverable:false}, model_error: {recoverable:true, retry_after:10}, unknown: {recoverable:false} }",
+    "In responses.js, add function buildStructuredErrorEvent(errorClass, message, diagnostics) that looks up ERROR_CLASSES[errorClass] || ERROR_CLASSES.unknown and returns structured error object",
+    "In flow-control.js, add function classifyError(error) that checks error.status (429→rate_limit, 401/403→auth_failure, 408→timeout) and error.message patterns (schema→schema_violation, model→model_error) with fallback to 'unknown'",
+    "In flow-control.js step execution error path, replace raw error object with classifyError(error) → buildStructuredErrorEvent(result, error.message, error.diagnostics)"
+  ],
+  "test": {
+    "commands": [],
+    "unit": [],
+    "integration": [],
+    "success_metrics": []
+  },
+  "reference": {
+    "pattern": "responses.js builds all SSE event shapes — new builders follow same pattern as buildWorkflowErrorResponse",
+    "files": [],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Error classification at the engine level ensures all frontend consumers get consistent error types without re-parsing messages",
+    "decision_factors": [
+      "Backward compatible — error_class field is additive",
+      "Centralized classification avoids per-hook error parsing"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "FT-015 Streaming with Cancel",
+      "FT-016 Chat Recovery"
+    ],
+    "affected_components": [
+      "TC-016 useChatStreaming",
+      "TC-017 useChatRecovery"
+    ],
+    "affected_requirements": [
+      "REQ-C"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "40 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

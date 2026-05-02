@@ -1,0 +1,16 @@
+{
+  "id": "TASK-004",
+  "wave": 2,
+  "title": "Wire embedding generation into graph entity lifecycle",
+  "action": "When Character/Location/Plot entities are created or updated via graph-manager, generate embedding vector using VectorSearch embedding service and store via VectorSearch.upsertEmbedding or equivalent. Add entity ID + workspaceId mapping so embeddings can be queried by entity.",
+  "files": ["src-tauri/bin/sidecar/graph/graph-manager.js", "src-tauri/bin/sidecar/search/vector-search.js"],
+  "read_first": ["src-tauri/bin/sidecar/search/vector-search.js", "src-tauri/bin/sidecar/graph/graph-manager.js", "src/components/knowledge/PersistedEntityTab.tsx"],
+  "depends_on": ["TASK-001"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'vectorSearch\\|VectorSearch\\|upsertEmbedding\\|embedAndStore' src-tauri/bin/sidecar/graph/graph-manager.js — count >= 1",
+      "Entity created in graph should produce corresponding embedding record in VectorSearch DB"
+    ]
+  },
+  "implementation": "1) Import or inject VectorSearch instance into GraphManager constructor. 2) After successful entity MERGE/CREATE in graph-manager, call embedding service to generate vector from entity name + description + properties. 3) Store embedding via VectorSearch with entity ID as document ID. 4) On entity update, regenerate and upsert embedding. 5) On entity delete, remove embedding. Use existing EmbeddingService from VectorSearch."
+}

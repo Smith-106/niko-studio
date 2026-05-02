@@ -1,0 +1,104 @@
+{
+  "id": "TASK-001",
+  "title": "Checkpoint resume — skip completed steps on workflow restart",
+  "description": "Add a `restored_from_checkpoint` flag to runtime state so that when a workflow resumes from a saved checkpoint, the engine skips steps whose status is already 'done' and resumes execution at the first non-completed step.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "In runtime-state.js, add `restored_from_checkpoint` boolean to plan state. In flow-control.js executeWorkflowLifecycleTransition(), when this flag is true, call remainingWorkflowSteps() to find the first non-done step and set current_phase to that step's index. Clear the flag after resume.",
+  "status": "completed",
+  "completed_at": "2026-05-02T17:18:53.714Z",
+  "actual_duration": null,
+  "scope": "src-tauri/bin/sidecar/workflow/engine/",
+  "focus_paths": [],
+  "read_first": [
+    "src-tauri/bin/sidecar/workflow/engine/runtime-state.js",
+    "src-tauri/bin/sidecar/workflow/engine/flow-control.js",
+    "src-tauri/bin/sidecar/workflow/engine/lifecycle.js",
+    "src-tauri/bin/sidecar/workflow/engine/persistence.js",
+    "src-tauri/bin/sidecar/workflow/engine/risk.js"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": 1,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src-tauri/bin/sidecar/workflow/engine/runtime-state.js contains 'restored_from_checkpoint'",
+      "src-tauri/bin/sidecar/workflow/engine/flow-control.js contains 'restored_from_checkpoint'",
+      "When a plan with restored_from_checkpoint=true and step 0 status='done' resumes, execution starts at step 1, not step 0"
+    ],
+    "verification": "Create a test plan object with 3 steps, mark step 0 as done, set restored_from_checkpoint=true, call resume transition, verify current_phase advances to step 1",
+    "definition_of_done": "Interrupted workflow resumes from last completed checkpoint step, not from the beginning"
+  },
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/workflow/engine/runtime-state.js",
+      "action": "modify",
+      "target": "applyWorkflowRunnerTransition",
+      "change": "Accept and persist `restored_from_checkpoint` boolean in plan state during 'resume' transition"
+    },
+    {
+      "path": "src-tauri/bin/sidecar/workflow/engine/flow-control.js",
+      "action": "modify",
+      "target": "executeWorkflowLifecycleTransition",
+      "change": "On 'resume' action, if plan.restored_from_checkpoint is true, find first step with status !== 'done', set current_phase to that step's index, clear the flag"
+    },
+    {
+      "path": "src-tauri/bin/sidecar/workflow/engine/risk.js",
+      "action": "modify",
+      "target": "checkpoint restore path",
+      "change": "When restoring from checkpoint, set restored_from_checkpoint=true on the plan before triggering resume"
+    }
+  ],
+  "implementation": [
+    "In runtime-state.js applyWorkflowRunnerTransition(): when targetState is 'running' and transition is 'resume', accept input.restored_from_checkpoint and store as plan.restored_from_checkpoint = true",
+    "In flow-control.js executeWorkflowLifecycleTransition(): after runner state transitions to 'running', if plan.restored_from_checkpoint is true, call remainingWorkflowSteps(plan.steps) to find first non-done step index, set plan.current_phase to that index, set plan.restored_from_checkpoint = false",
+    "In risk.js checkpoint restore handler: after loading checkpoint state, set plan.restored_from_checkpoint = true before calling lifecycle resume"
+  ],
+  "test": {
+    "commands": [],
+    "unit": [],
+    "integration": [],
+    "success_metrics": []
+  },
+  "reference": {
+    "pattern": "runtime-state.js step status machine: planned → executing → review → test → done/failed",
+    "files": [],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Leverage existing step status tracking rather than adding new persistence — the data already exists in checkpoint snapshots",
+    "decision_factors": [
+      "Minimal backend changes",
+      "Backward compatible — missing flag = false = current behavior"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "FT-052 Checkpoint Management",
+      "FT-015 Streaming with Cancel",
+      "FT-012 Workflow Level Selection"
+    ],
+    "affected_components": [
+      "TC-062 useAppCheckpointMenu",
+      "TC-016 useChatStreaming"
+    ],
+    "affected_requirements": [
+      "REQ-C"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

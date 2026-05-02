@@ -1,0 +1,15 @@
+{
+  "target": "phase-2-backend-stability-knowledge",
+  "completed_at": "2026-05-03T02:05:00.000Z",
+  "results": [
+    { "id": "T-001", "name": "Character extra fields visible", "status": "pass", "details": "getByLabelText('Role') and getByLabelText('Traits') found in rendered component" },
+    { "id": "T-002", "name": "Location extra fields visible", "status": "pass", "details": "getByLabelText('Geography') found in rendered component" },
+    { "id": "T-003", "name": "Plot extra fields visible", "status": "pass", "details": "getByLabelText('Chapter') and getByLabelText('Act') found" },
+    { "id": "T-004", "name": "Extra fields persist after save", "status": "pass", "details": "Create→unmount→remount cycle preserves content" },
+    { "id": "T-005", "name": "Delete button appears for existing entries", "status": "pass", "details": "Trash icon button rendered when matchName is set" },
+    { "id": "T-006", "name": "Delete confirmation dialog works", "status": "pass", "details": "Cancel preserves entry, Confirm/Cancel buttons present" },
+    { "id": "T-007", "name": "Delete removes entry from list", "status": "pass", "details": "After confirm, entry removed from rendered list" },
+    { "id": "T-008", "name": "Rename without creating duplicate", "status": "pass", "details": "Rename Alice→Alicia, only new name appears" }
+  ],
+  "summary": { "total": 8, "passed": 8, "issues": 0, "skipped": 0 }
+}

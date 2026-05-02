@@ -1,0 +1,126 @@
+{
+  "id": "TASK-005",
+  "title": "Knowledge CRUD completeness — delete with confirmation, rename fix, type-specific fields",
+  "description": "Complete CRUD for CharacterTab, LocationTab, and PlotTab: add delete button with confirmation dialog, fix rename (currently creates duplicate due to MERGE behavior), add type-specific editable fields (Character: role/traits; Location: geography; Plot: chapter/act).",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "high",
+  "action": "In PersistedEntityTab.tsx: (1) Add delete button next to save button, wired to graph-engine deleteEntity() via new buildGraphDeleteMutation() in knowledgeUtils.ts, with confirmation dialog. (2) Fix rename: when matchName !== draftName, execute MATCH+SET to update name on existing node first, then update other fields. (3) Add entity-type-specific field sections via a field config prop. Update CharacterTab, LocationTab, PlotTab to pass their field configs.",
+  "status": "completed",
+  "completed_at": "2026-05-02T17:35:46.800Z",
+  "actual_duration": null,
+  "scope": "src/components/knowledge/",
+  "focus_paths": [],
+  "read_first": [
+    "src/components/knowledge/PersistedEntityTab.tsx",
+    "src/components/knowledge/CharacterTab.tsx",
+    "src/components/knowledge/LocationTab.tsx",
+    "src/components/knowledge/PlotTab.tsx",
+    "src/components/knowledge/KnowledgeTypes.ts",
+    "src-tauri/bin/sidecar/graph/graph-engine.js"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": 2,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/knowledge/PersistedEntityTab.tsx contains a delete button element",
+      "src/components/knowledge/PersistedEntityTab.tsx contains confirmation dialog logic before delete",
+      "src/components/knowledge/PersistedEntityTab.tsx handles name change (rename) without creating duplicates",
+      "CharacterTab passes type-specific fields (role, traits) to PersistedEntityTab",
+      "LocationTab passes type-specific fields (geography) to PersistedEntityTab",
+      "PlotTab passes type-specific fields (chapter, act) to PersistedEntityTab"
+    ],
+    "verification": "Create a character, rename it, verify old name is gone. Delete with confirmation, verify entity removed from list. Edit type-specific fields, save, reload, verify persisted.",
+    "definition_of_done": "Character/Location/Plot entries support full CRUD: create, rename, update all fields, delete with confirmation. No stale duplicates after rename."
+  },
+  "files": [
+    {
+      "path": "src/components/knowledge/PersistedEntityTab.tsx",
+      "action": "modify",
+      "target": "editor section",
+      "change": "Add delete button with confirmation dialog. Fix rename: when matchName !== draftName, execute MATCH (n:Type {name: matchName, workspaceId}) SET n.name = draftName first. Add optional `extraFields` prop: Array<{key: string, label: string, type: 'text'|'textarea'}> rendered as additional form fields in editor, persisted to entity properties JSON."
+    },
+    {
+      "path": "src/components/knowledge/CharacterTab.tsx",
+      "action": "modify",
+      "target": "props passed to PersistedEntityTab",
+      "change": "Add extraFields prop: [{key:'role', label:'Role', type:'text'}, {key:'traits', label:'Traits', type:'textarea'}]"
+    },
+    {
+      "path": "src/components/knowledge/LocationTab.tsx",
+      "action": "modify",
+      "target": "props passed to PersistedEntityTab",
+      "change": "Add extraFields prop: [{key:'geography', label:'Geography', type:'textarea'}]"
+    },
+    {
+      "path": "src/components/knowledge/PlotTab.tsx",
+      "action": "modify",
+      "target": "props passed to PersistedEntityTab",
+      "change": "Add extraFields prop: [{key:'chapter', label:'Chapter', type:'text'}, {key:'act', label:'Act', type:'text'}]"
+    },
+    {
+      "path": "src/components/knowledge/KnowledgeTypes.ts",
+      "action": "modify",
+      "target": "type definitions",
+      "change": "Add FieldConfig interface: {key: string, label: string, type: 'text' | 'textarea'}. Add extraFields?: FieldConfig[] to PersistedEntityTab props type."
+    }
+  ],
+  "implementation": [
+    "In KnowledgeTypes.ts: Add `export interface FieldConfig { key: string; label: string; type: 'text' | 'textarea' }`",
+    "In PersistedEntityTab.tsx: Accept `extraFields?: FieldConfig[]` prop. In the editor section, after the description textarea, render extraFields as labeled inputs/textareas, reading values from selectedItem properties and writing back on save.",
+    "In PersistedEntityTab.tsx: Add delete button (Trash2 icon) next to save button, only shown when matchName is set (editing existing). On click, show confirmation: `Are you sure you want to delete \"{matchName}\"?`. On confirm, call buildGraphDeleteMutation(entityType, matchName, matchWorkspaceId) then executeCypher, then clear editor and reload items.",
+    "In PersistedEntityTab.tsx: Fix rename in save handler — before the main MERGE, if matchName !== draftName, execute: `MATCH (n:${entityType} {name: $oldName, workspaceId: $wid}) SET n.name = $newName RETURN n` with oldName=matchName, newName=draftName. Then proceed with normal MERGE using the updated name.",
+    "In knowledgeUtils.ts (or inline): Add buildGraphDeleteMutation(entityType, name, workspaceId) returning `MATCH (n:${entityType} {name: $name, workspaceId: $workspaceId}) DETACH DELETE n`",
+    "Update CharacterTab, LocationTab, PlotTab to pass extraFields arrays"
+  ],
+  "test": {
+    "commands": [],
+    "unit": [],
+    "integration": [],
+    "success_metrics": []
+  },
+  "reference": {
+    "pattern": "PersistedEntityTab uses buildGraphMergeMutation() from knowledgeUtils.ts — delete mutation follows same pattern",
+    "files": [],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Extend PersistedEntityTab with extraFields prop rather than creating type-specific tab components — all three tabs remain thin wrappers",
+    "decision_factors": [
+      "Minimal component duplication",
+      "Extra fields stored in existing properties JSON — no schema changes",
+      "graph-engine deleteEntity() already cascades to relations"
+    ],
+    "tradeoffs": "Field configs are client-side only — backend doesn't enforce field schemas. Acceptable for M1."
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "FT-030 Knowledge Modal",
+      "FT-031 Story Bible Panel"
+    ],
+    "affected_components": [
+      "TC-031 CharacterTab",
+      "TC-032 LocationTab",
+      "TC-033 PlotTab",
+      "TC-035 PersistedEntityTab",
+      "TC-036 MemoryForm"
+    ],
+    "affected_requirements": [
+      "REQ-D"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "60 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

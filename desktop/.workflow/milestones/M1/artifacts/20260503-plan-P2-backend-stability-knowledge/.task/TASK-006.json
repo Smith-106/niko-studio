@@ -1,0 +1,106 @@
+{
+  "id": "TASK-006",
+  "title": "Phase 2 tests — update and add tests for all Phase 2 changes",
+  "description": "Update existing test files and add new tests covering: checkpoint resume skip logic, structured error event building, error classification, auto-retry in useChatStreaming, error card rendering in ChatAreaStreamStatus, knowledge delete with confirmation, rename fix, and type-specific field persistence.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "test",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Add/update tests in: ChatAreaComposer.test.tsx (error card rendering if applicable), ChatAreaStreamStatus.test.tsx (error card with retry/dismiss), useChatStreaming.test.ts (auto-retry on recoverable errors), useChatRecovery.test.tsx (structured error handling), PersistedEntityTab.test.tsx (delete, rename, extraFields). Add backend test for responses.js buildStructuredErrorEvent if test infrastructure exists.",
+  "status": "completed",
+  "completed_at": "2026-05-02T17:49:21.644Z",
+  "actual_duration": null,
+  "scope": "src/",
+  "focus_paths": [],
+  "read_first": [
+    "src/hooks/useChatStreaming.ts",
+    "src/hooks/useChatRecovery.ts",
+    "src/components/ChatAreaStreamStatus.tsx",
+    "src/components/knowledge/PersistedEntityTab.tsx",
+    "src/components/knowledge/CharacterTab.tsx"
+  ],
+  "depends_on": [
+    "TASK-004",
+    "TASK-005"
+  ],
+  "wave": 3,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "All existing tests continue to pass (npx vitest run exits 0)",
+      "Test count increases from 841 to at least 850",
+      "New tests cover: error card render, auto-retry logic, delete confirmation, rename without duplicate"
+    ],
+    "verification": "Run npx vitest run — all tests pass, no failures",
+    "definition_of_done": "Phase 2 changes have test coverage for all new features; existing tests remain green"
+  },
+  "files": [
+    {
+      "path": "src/hooks/useChatStreaming.test.ts",
+      "action": "create_or_modify",
+      "target": "test suite",
+      "change": "Add tests for auto-retry on recoverable errors, max retry limit, non-recoverable error passthrough"
+    },
+    {
+      "path": "src/components/ChatAreaStreamStatus.test.tsx",
+      "action": "create_or_modify",
+      "target": "test suite",
+      "change": "Add tests for error card rendering with error_class, Retry and Dismiss buttons"
+    },
+    {
+      "path": "src/components/knowledge/PersistedEntityTab.test.tsx",
+      "action": "create_or_modify",
+      "target": "test suite",
+      "change": "Add tests for delete button presence, confirmation dialog, rename without creating duplicate, extraFields rendering and persistence"
+    }
+  ],
+  "implementation": [
+    "Add useChatStreaming tests: mock chatStream to emit recoverable error, verify auto-retry fires; mock 3 consecutive errors, verify no retry after 2nd; mock non-recoverable error, verify no auto-retry and error phase set",
+    "Add ChatAreaStreamStatus tests: render with recoverStatus={type:'error', error_class:'auth_failure', message:'Invalid key'}, verify error card shows message, Retry button exists, Dismiss button exists",
+    "Add PersistedEntityTab tests: render with matchName set, verify delete button visible; click delete, verify confirmation dialog; complete delete, verify item removed from list; change name on existing item, save, verify no duplicate created; verify extraFields render as labeled inputs"
+  ],
+  "test": {
+    "commands": [
+      "npx vitest run"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": [
+      "841+ tests passing",
+      "0 test failures"
+    ]
+  },
+  "reference": {
+    "pattern": "Follow existing test patterns: vitest + @testing-library/react, mock API calls with vi.fn(), render components with render()",
+    "files": [],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Group all test updates into one task since they share setup patterns and test infrastructure",
+    "decision_factors": [
+      "Reduces task count",
+      "Tests can validate integration across Wave 1+2 changes"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [],
+    "affected_components": [],
+    "affected_requirements": [
+      "REQ-C",
+      "REQ-D"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

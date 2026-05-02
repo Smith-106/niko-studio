@@ -1,0 +1,17 @@
+{
+  "id": "TASK-007",
+  "wave": 2,
+  "title": "Add drag-drop file attachment support to ChatAreaComposer",
+  "action": "Make the composer textarea a drop target for files. Show a visual drop zone overlay when dragging. Display dropped files as removable chip-style attachments below the textarea. Pass files through existing onFileUpload handler.",
+  "files": ["src/components/ChatAreaComposer.tsx"],
+  "read_first": ["src/components/ChatAreaComposer.tsx", "src/components/ChatArea.tsx"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'onDragOver\\|onDragEnter\\|onDragLeave\\|onDrop' src/components/ChatAreaComposer.tsx — count >= 3",
+      "grep -c 'isDragging\\|dragActive\\|dropZone' src/components/ChatAreaComposer.tsx — count >= 1",
+      "Dropping a .png file on the composer shows a chip with filename and remove button",
+      "Removed attachment chip clears the file from pending uploads"
+    ]
+  },
+  "implementation": "1) Add `isDragging` state. 2) Add onDragOver/onDragEnter/onDragLeave/onDrop handlers to the composer wrapper div. 3) onDragOver: preventDefault, setIsDragging(true). 4) onDragLeave: setIsDragging(false). 5) onDrop: extract files from DataTransfer, store in pendingFiles state, setIsDragging(false). 6) Render pending files as chips (filename + X button) between textarea and toolbar. 7) X button removes from pendingFiles. 8) Send button passes pendingFiles to onFileUpload. 9) Add visual drop overlay (border highlight + 'Drop files here' text) when isDragging is true."
+}

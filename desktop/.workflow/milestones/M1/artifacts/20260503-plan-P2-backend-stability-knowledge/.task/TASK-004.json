@@ -1,0 +1,106 @@
+{
+  "id": "TASK-004",
+  "title": "Error recovery UI — typed error handling with auto-retry and error cards",
+  "description": "Update frontend hooks (useChatStreaming, useChatRecovery) to handle the new typed error events from the backend. Map recoverable errors to auto-retry (max 2 attempts) and non-recoverable errors to user-visible error cards in ChatAreaStreamStatus with Retry and Dismiss actions.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "In useChatStreaming.ts onError handler, parse payload.error_class and payload.recoverable. If recoverable and retryCount < 2, auto-retry after payload.retry_after seconds. If non-recoverable, emit structured error to useChatRecovery. In ChatAreaStreamStatus.tsx, add error card rendering for non-recoverable errors with Retry and Dismiss buttons.",
+  "status": "completed",
+  "completed_at": "2026-05-02T17:35:46.794Z",
+  "actual_duration": null,
+  "scope": "src/hooks/, src/components/",
+  "focus_paths": [],
+  "read_first": [
+    "src/hooks/useChatStreaming.ts",
+    "src/hooks/useChatRecovery.ts",
+    "src/components/ChatAreaStreamStatus.tsx",
+    "src/components/ChatArea.tsx"
+  ],
+  "depends_on": [
+    "TASK-002"
+  ],
+  "wave": 2,
+  "parallel_group": 2,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/hooks/useChatStreaming.ts contains 'error_class' or 'errorClass'",
+      "src/hooks/useChatStreaming.ts contains 'retry_after' or 'retryAfter' or auto-retry logic",
+      "src/hooks/useChatRecovery.ts contains 'recoverable' or structured error type handling",
+      "src/components/ChatAreaStreamStatus.tsx contains 'Retry' button or retry action for error state"
+    ],
+    "verification": "Trigger a non-recoverable error event, verify error card appears with Retry and Dismiss buttons. Trigger a recoverable error, verify auto-retry fires without user interaction.",
+    "definition_of_done": "Recoverable errors auto-retry up to 2 times. Non-recoverable errors show human-readable error card with retry/dismiss."
+  },
+  "files": [
+    {
+      "path": "src/hooks/useChatStreaming.ts",
+      "action": "modify",
+      "target": "onError handler in startStream",
+      "change": "Parse payload.error_class and payload.recoverable from SSE error event. If recoverable and retryCount < 2, schedule auto-retry via setTimeout(payload.retry_after * 1000). Track retryCount in ref. On max retries exceeded or non-recoverable, emit structured error to recovery hook."
+    },
+    {
+      "path": "src/hooks/useChatRecovery.ts",
+      "action": "modify",
+      "target": "error handling",
+      "change": "Accept structured error objects with {error_class, recoverable, message}. Add setStructuredError() to expose error details to ChatArea. Add retryFromError() that re-triggers send with original input."
+    },
+    {
+      "path": "src/components/ChatAreaStreamStatus.tsx",
+      "action": "modify",
+      "target": "error rendering",
+      "change": "When recoverStatus has error_class, render error card with: error message, error class label, Retry button (calls onRetryFromError), Dismiss button (calls onDismissStatus). Style with red/warning variant."
+    }
+  ],
+  "implementation": [
+    "In useChatStreaming.ts: Add retryCountRef = useRef(0). In onError, check payload.error_class and payload.recoverable. If recoverable and retryCountRef.current < 2, increment count, schedule setTimeout(() => startStream(originalRequest), (payload.retry_after || 5) * 1000). Reset retryCountRef on successful stream completion.",
+    "In useChatRecovery.ts: Extend RecoverStatus type to include error_class and recoverable fields. Add retryFromError() function that re-calls handleSend with the last sent message.",
+    "In ChatAreaStreamStatus.tsx: When recoverStatus.type === 'error' and recoverStatus.error_class exists, render error card with: <div className='error-card'> with message, class label badge, Retry button calling onRetry, Dismiss button calling onDismiss"
+  ],
+  "test": {
+    "commands": [],
+    "unit": [],
+    "integration": [],
+    "success_metrics": []
+  },
+  "reference": {
+    "pattern": "useChatStreaming follows onError → finalize('error') pattern — add branching before finalize",
+    "files": [],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Auto-retry in the streaming hook keeps the recovery transparent to the user for transient errors, while surfacing persistent errors via the existing ChatAreaStreamStatus component",
+    "decision_factors": [
+      "Minimal new components",
+      "Reuses existing error display patterns"
+    ],
+    "tradeoffs": null
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "FT-015 Streaming with Cancel",
+      "FT-016 Chat Recovery"
+    ],
+    "affected_components": [
+      "TC-016 useChatStreaming",
+      "TC-017 useChatRecovery",
+      "TC-015 ChatAreaStreamStatus"
+    ],
+    "affected_requirements": [
+      "REQ-C"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "50 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

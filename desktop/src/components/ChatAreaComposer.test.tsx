@@ -1,5 +1,6 @@
 import { createRef } from 'react'
 import { act, render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ChatAreaComposer } from './ChatAreaComposer'
@@ -165,5 +166,52 @@ describe('ChatAreaComposer clipboard tests', () => {
 
     expect(copyRegion!.textContent).toBe('')
     vi.useRealTimers()
+  })
+})
+
+describe('ChatAreaComposer drag-drop file attachment', () => {
+  it('shows drop zone overlay on drag over', () => {
+    render(<ChatAreaComposer {...baseProps} />)
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-2xl"]')!
+
+    fireEvent.dragOver(composer, { dataTransfer: { files: [] } })
+    expect(screen.getByText('Drop files here')).toBeInTheDocument()
+
+    fireEvent.dragLeave(composer)
+    expect(screen.queryByText('Drop files here')).not.toBeInTheDocument()
+  })
+
+  it('captures files on drop and shows attachment chips', () => {
+    render(<ChatAreaComposer {...baseProps} />)
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-2xl"]')!
+
+    const file = new File(['test content'], 'test.md', { type: 'text/markdown' })
+    fireEvent.drop(composer, { dataTransfer: { files: [file] } })
+
+    expect(screen.getByText('test.md')).toBeInTheDocument()
+    expect(screen.getByLabelText('remove test.md')).toBeInTheDocument()
+  })
+
+  it('removes attachment when chip X button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<ChatAreaComposer {...baseProps} />)
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-2xl"]')!
+
+    const file = new File(['test content'], 'test.md', { type: 'text/markdown' })
+    fireEvent.drop(composer, { dataTransfer: { files: [file] } })
+    expect(screen.getByText('test.md')).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('remove test.md'))
+    expect(screen.queryByText('test.md')).not.toBeInTheDocument()
+  })
+
+  it('rejects unsupported file types on drop', () => {
+    render(<ChatAreaComposer {...baseProps} />)
+    const composer = screen.getByLabelText(baseProps.inputPlaceholder).closest('div[class*="rounded-2xl"]')!
+
+    const file = new File(['malicious'], 'virus.exe', { type: 'application/x-msdownload' })
+    fireEvent.drop(composer, { dataTransfer: { files: [file] } })
+
+    expect(screen.queryByText('virus.exe')).not.toBeInTheDocument()
   })
 })

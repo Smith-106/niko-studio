@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { RefObject } from 'react'
-import { BookmarkPlus, Check, Copy, MicOff, Paperclip, Send, Square, Trash2 } from 'lucide-react'
+import { BookmarkPlus, Check, Copy, MicOff, Paperclip, Send, Square, Trash2, X } from 'lucide-react'
 
 interface ChatAreaComposerProps {
   input: string
@@ -51,6 +51,37 @@ export function ChatAreaComposer({
   lastAssistantContent,
 }: ChatAreaComposerProps) {
   const [copied, setCopied] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const files = Array.from(e.dataTransfer.files).filter((f) => {
+      const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+      return ['.txt', '.md', '.pdf', '.docx', '.png', '.jpg', '.jpeg', '.webp', '.gif'].some((a) => ext === a.slice(1))
+    })
+    if (files.length > 0) {
+      setPendingFiles((prev) => [...prev, ...files])
+    }
+  }, [])
+
+  const removeFile = useCallback((index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index))
+  }, [])
 
   const copyLastReply = () => {
     if (!lastAssistantContent) return
@@ -67,7 +98,17 @@ export function ChatAreaComposer({
 
   return (
     <div className="flex items-end gap-3 mt-4">
-      <div className="flex-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all">
+      <div
+        className={`flex-1 rounded-2xl border bg-white px-4 py-3 shadow-sm dark:bg-dark-surface focus-within:ring-1 focus-within:ring-primary-500/50 transition-all relative ${isDragging ? 'border-primary-500 ring-2 ring-primary-500/30' : 'border-gray-200 dark:border-dark-border'}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isDragging && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-primary-50/80 dark:bg-primary-900/20 pointer-events-none">
+            <span className="text-sm font-medium text-primary-600 dark:text-primary-400">Drop files here</span>
+          </div>
+        )}
         <textarea
           id="chat-composer-input"
           name="chat-composer-input"
@@ -81,6 +122,24 @@ export function ChatAreaComposer({
           rows={Math.min(8, Math.max(3, input.split('\n').length))}
           style={{ minHeight: '72px', maxHeight: '200px' }}
         />
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {pendingFiles.map((file, i) => (
+              <span key={`${file.name}-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-dark-border text-gray-700 dark:text-dark-text">
+                <Paperclip size={10} />
+                {file.name}
+                <button
+                  onClick={() => removeFile(i)}
+                  className="ml-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-dark-bg"
+                  aria-label={`remove ${file.name}`}
+                  type="button"
+                >
+                  <X size={10} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
         <div className="mt-2 flex items-center justify-between gap-2 px-1 border-t border-gray-100 dark:border-dark-border/50 pt-2">
           <div className="flex items-center gap-1">
             <input

@@ -1,0 +1,17 @@
+{
+  "id": "TASK-002",
+  "wave": 1,
+  "title": "Clean up useChatStreaming.ts — remove dead retryCountRef and type streamErrorPayload",
+  "action": "Remove unused `retryCountRef = useRef(0)` at line 43. Define StreamErrorPayload interface with error_class, recoverable, retry_after fields. Replace `let streamErrorPayload: any` with `let streamErrorPayload: StreamErrorPayload | null`. Remove eslint-disable comment.",
+  "files": ["src/hooks/useChatStreaming.ts", "src/hooks/useChatStreaming.test.tsx"],
+  "read_first": ["src/hooks/useChatStreaming.ts", "src/hooks/useChatStreaming.test.tsx"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'retryCountRef' src/hooks/useChatStreaming.ts — count == 0",
+      "grep -c 'StreamErrorPayload' src/hooks/useChatStreaming.ts — count >= 2",
+      "grep -c 'any' src/hooks/useChatStreaming.ts — count == 0 (or only in comments)",
+      "npx vitest run src/hooks/useChatStreaming.test.tsx — exit code 0"
+    ]
+  },
+  "implementation": "1) Add `interface StreamErrorPayload { error_class: string; recoverable: boolean; retry_after: number }` before useChatStreaming function. 2) Change line 68-69 from `let streamErrorPayload: any = null` to `let streamErrorPayload: StreamErrorPayload | null = null`. 3) Remove `retryCountRef` declaration and any references. 4) Remove eslint-disable comment for no-explicit-any on that line. 5) Run tests to confirm no regression."
+}
