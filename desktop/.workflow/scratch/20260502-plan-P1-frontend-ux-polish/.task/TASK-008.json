@@ -1,0 +1,63 @@
+{
+  "id": "TASK-008",
+  "title": "Panel snapshot/regression tests for StoryBiblePanel, Sidebar, AppMainContent",
+  "description": "Add snapshot tests (or update existing ones) for the standardized panel layouts in StoryBiblePanel.test.tsx, Sidebar.test.tsx, and AppMainContent.test.tsx. Capture renders at 1280px viewport width to lock in the normalized spacing and heading classes from TASK-004 and TASK-005.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "test",
+  "priority": "low",
+  "effort": "medium",
+  "action": "In StoryBiblePanel.test.tsx, Sidebar.test.tsx, AppMainContent.test.tsx: add or update snapshot tests using toMatchSnapshot(). If existing snapshots exist, delete .snap files and let tests regenerate them with the new normalized classes. Add at least one 'renders without errors' and one 'matches snapshot' test per file.",
+  "status": "completed",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src/components/StoryBiblePanel.test.tsx, src/components/Sidebar.test.tsx, src/components/AppMainContent.test.tsx",
+  "focus_paths": [
+    "src/components/StoryBiblePanel.test.tsx",
+    "src/components/Sidebar.test.tsx",
+    "src/components/AppMainContent.test.tsx"
+  ],
+  "read_first": [
+    "src/components/StoryBiblePanel.test.tsx",
+    "src/components/Sidebar.test.tsx",
+    "src/components/AppMainContent.test.tsx",
+    "src/components/StoryBiblePanel.tsx",
+    "src/components/Sidebar.tsx"
+  ],
+  "depends_on": ["TASK-004", "TASK-005"],
+  "wave": 3,
+  "parallel_group": "tests",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/StoryBiblePanel.test.tsx contains 'toMatchSnapshot'",
+      "src/components/Sidebar.test.tsx contains 'toMatchSnapshot'",
+      "pnpm test -- --run src/components/StoryBiblePanel.test.tsx exits 0",
+      "pnpm test -- --run src/components/Sidebar.test.tsx exits 0"
+    ],
+    "verification": "pnpm test -- --run src/components/StoryBiblePanel.test.tsx src/components/Sidebar.test.tsx src/components/AppMainContent.test.tsx",
+    "definition_of_done": "Snapshot tests pass and capture the normalized panel layouts. Any stale snapshots are regenerated."
+  },
+  "files": [
+    {"path": "src/components/StoryBiblePanel.test.tsx", "action": "modify", "target": "test suite", "change": "Add snapshot test: render <StoryBiblePanel /> with minimal mocks, expect container.firstChild toMatchSnapshot()"},
+    {"path": "src/components/Sidebar.test.tsx", "action": "modify", "target": "test suite", "change": "Add snapshot test for Sidebar at collapsed=false state"},
+    {"path": "src/components/AppMainContent.test.tsx", "action": "modify", "target": "test suite", "change": "Add or update snapshot test for main content layout"}
+  ],
+  "implementation": [
+    "Step 1 — Read each test file to understand current test setup and what mocks are already in place.",
+    "Step 2 — If __snapshots__/*.snap files exist for these components, delete them so they regenerate with post-TASK-004/005 classes.",
+    "Step 3 — In StoryBiblePanel.test.tsx: add 'it(\"matches snapshot\", () => { const { container } = render(<StoryBiblePanel ...minimalProps />); expect(container.firstChild).toMatchSnapshot() })'.",
+    "Step 4 — Repeat for Sidebar.test.tsx with collapsed=false props.",
+    "Step 5 — For AppMainContent.test.tsx: add a smoke-render test if not present.",
+    "Step 6 — Run pnpm test -- --run for these three files. Snapshots will be generated on first run.",
+    "Step 7 — Commit the generated .snap files alongside the test changes."
+  ],
+  "test": {"commands": ["pnpm test -- --run src/components/StoryBiblePanel.test.tsx src/components/Sidebar.test.tsx src/components/AppMainContent.test.tsx"], "unit": [], "integration": [], "success_metrics": ["All three test files pass, .snap files generated"]},
+  "reference": {"pattern": "Existing snapshot tests in the codebase (check for any *.test.tsx with toMatchSnapshot)", "files": ["src/components/StoryBiblePanel.test.tsx"], "examples": null},
+  "rationale": {"chosen_approach": "Snapshot tests as regression guards after layout normalization — cheap to add, catches accidental class regressions in future.", "decision_factors": ["Roadmap TASK-1.12 explicitly requests snapshot tests"], "tradeoffs": "Snapshots can be brittle with frequent UI changes — but Phase 1 layout is intended to be stable."},
+  "risks": ["StoryBiblePanel may require complex store mocking — check existing test setup and replicate the minimal mock pattern."],
+  "code_skeleton": null,
+  "doc_context": {"affected_features": ["FT-031", "FT-070"], "affected_components": ["TC-037", "TC-080", "TC-026"], "affected_requirements": ["REQ-B"], "adr_ids": []},
+  "meta": {"estimated_time": "30 min", "risk": "low", "autonomous": true, "checkpoint": false}
+}

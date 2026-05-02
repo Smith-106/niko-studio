@@ -1,0 +1,90 @@
+{
+  "target": "P1-ux-polish-gaps",
+  "generated_at": "2026-05-02T00:00:00.000Z",
+  "tests": [
+    {
+      "id": "T-001",
+      "name": "BookmarkPlus button absent without knowledge panel config",
+      "category": "integration",
+      "expected": "The knowledge panel toggle button (BookmarkPlus icon) does NOT appear in the composer toolbar when no knowledge panel is configured",
+      "requirement_ref": "TRUTH-01",
+      "source": "verification"
+    },
+    {
+      "id": "T-002",
+      "name": "Copy button shows Check icon then reverts",
+      "category": "e2e",
+      "expected": "After clicking the copy-last-reply button, the icon changes to a checkmark and the label says 'copied!'. After ~1.5 seconds it reverts to the copy icon with 'copy last reply' label",
+      "requirement_ref": "TRUTH-02",
+      "source": "verification"
+    },
+    {
+      "id": "T-003",
+      "name": "Clear draft button no layout shift",
+      "category": "e2e",
+      "expected": "The trash/clear button stays in the same position at all times. When the input is empty, the button appears faded/invisible but does not shift any other toolbar elements. When text is typed, the button fades in smoothly at the same position",
+      "requirement_ref": "TRUTH-03",
+      "source": "verification"
+    },
+    {
+      "id": "T-004",
+      "name": "Draft restores on conversation switch",
+      "category": "e2e",
+      "expected": "Type some text in a conversation. Switch to a different conversation, then switch back. The typed text should be restored in the composer",
+      "requirement_ref": "TRUTH-04",
+      "source": "verification"
+    },
+    {
+      "id": "T-005",
+      "name": "Draft does not overwrite on keystroke",
+      "category": "e2e",
+      "expected": "While typing in a conversation, the composer should not flicker or reset. Each keystroke updates the input without triggering a draft restore",
+      "requirement_ref": "TRUTH-04",
+      "source": "verification"
+    },
+    {
+      "id": "T-006",
+      "name": "Composer dark mode focus ring",
+      "category": "e2e",
+      "expected": "In dark mode, focusing the composer textarea shows a violet/purple focus ring (not the default blue/light ring)",
+      "requirement_ref": "TRUTH-08",
+      "source": "verification"
+    },
+    {
+      "id": "T-007",
+      "name": "Context footer non-interactive",
+      "category": "e2e",
+      "expected": "Tabbing through the interface, the context footer area (showing token usage like '~2K tokens') does not receive a focus ring. It is not focusable",
+      "requirement_ref": "TRUTH-09",
+      "source": "verification"
+    },
+    {
+      "id": "T-008",
+      "name": "Toolbar buttons focus rings on keyboard nav",
+      "category": "e2e",
+      "expected": "Using Tab to navigate, the toolbar buttons (BookmarkPlus when visible, Trash2 when visible, Copy) show a visible focus ring when focused via keyboard",
+      "requirement_ref": "TRUTH-06",
+      "source": "verification"
+    },
+    {
+      "id": "T-009",
+      "name": "Trash2 excluded from tab order when hidden",
+      "category": "e2e",
+      "expected": "When the composer input is empty, pressing Tab should skip over the clear-draft button — it should not receive keyboard focus",
+      "requirement_ref": "A11Y-001",
+      "source": "review_finding"
+    },
+    {
+      "id": "T-010",
+      "name": "Rapid conversation switch draft stability",
+      "category": "e2e",
+      "expected": "Type text in conversation A. Quickly switch to conversation B then back to A. The draft should show conversation A's text, not conversation B's",
+      "requirement_ref": "HV-003",
+      "source": "human_verification"
+    }
+  ],
+  "coverage": {
+    "requirements_mapped": ["TRUTH-01", "TRUTH-02", "TRUTH-03", "TRUTH-04", "TRUTH-08", "TRUTH-09", "A11Y-001", "HV-003"],
+    "requirements_unmapped": ["TRUTH-05", "TRUTH-07", "TRUTH-10", "A11Y-002"]
+  }
+}

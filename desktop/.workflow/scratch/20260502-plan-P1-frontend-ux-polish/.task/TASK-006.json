@@ -1,0 +1,61 @@
+{
+  "id": "TASK-006",
+  "title": "Standardize interactive states in AiToolbar, MessageBubble, QuickPanel",
+  "description": "Remove one-off inline styles and non-standard hover/focus/disabled patterns from AiToolbar.tsx, MessageBubble.tsx, and QuickPanel.tsx. Replace with shared Tailwind utilities: hover:bg-gray-100 dark:hover:bg-dark-bg, focus-visible:ring-2 focus-visible:ring-primary-500/50, disabled:opacity-50 disabled:cursor-not-allowed.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "In AiToolbar.tsx, MessageBubble.tsx, QuickPanel.tsx: (1) remove any style={{ }} inline style objects on interactive elements; (2) add focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:outline-none to all <button> elements missing it; (3) ensure disabled buttons use 'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100' not custom opacity values; (4) normalize hover states to hover:bg-gray-100 dark:hover:bg-dark-bg on icon buttons.",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "actual_duration": null,
+  "scope": "src/components/AiToolbar.tsx, src/components/MessageBubble.tsx, src/components/QuickPanel.tsx",
+  "focus_paths": [
+    "src/components/AiToolbar.tsx",
+    "src/components/MessageBubble.tsx",
+    "src/components/QuickPanel.tsx"
+  ],
+  "read_first": [
+    "src/components/AiToolbar.tsx",
+    "src/components/MessageBubble.tsx",
+    "src/components/QuickPanel.tsx"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": "panels",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/AiToolbar.tsx contains 'focus-visible:ring-2'",
+      "src/components/MessageBubble.tsx contains 'focus-visible:ring-2'",
+      "src/components/QuickPanel.tsx contains 'focus-visible:ring-2'",
+      "src/components/AiToolbar.tsx does NOT contain 'style={'",
+      "src/components/MessageBubble.tsx does NOT contain 'style={'",
+      "pnpm test -- --run exits 0"
+    ],
+    "verification": "grep -n 'focus-visible:ring-2' src/components/AiToolbar.tsx src/components/MessageBubble.tsx src/components/QuickPanel.tsx",
+    "definition_of_done": "All interactive elements in the three components have consistent focus-visible rings. No inline style objects on buttons. Disabled states use standard Tailwind utilities."
+  },
+  "files": [
+    {"path": "src/components/AiToolbar.tsx", "action": "modify", "target": "all <button> elements", "change": "Add focus-visible:ring-2 focus-visible:ring-primary-500/50, remove inline style objects"},
+    {"path": "src/components/MessageBubble.tsx", "action": "modify", "target": "action buttons (copy, retry, etc.)", "change": "Add focus-visible:ring-2, normalize hover states"},
+    {"path": "src/components/QuickPanel.tsx", "action": "modify", "target": "command item buttons", "change": "Add focus-visible:ring-2, normalize hover/disabled states"}
+  ],
+  "implementation": [
+    "Step 1 — Read each file. Find all <button> elements.",
+    "Step 2 — For each button: if it lacks 'focus-visible:ring-2', add 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50' to its className.",
+    "Step 3 — Find any style={{ }} prop on <button> elements. Move the styles to Tailwind equivalents (e.g., style={{ opacity: 0.5 }} → className 'opacity-50').",
+    "Step 4 — Find disabled prop usage. Ensure className includes 'disabled:opacity-50 disabled:cursor-not-allowed'.",
+    "Step 5 — Run pnpm test -- --run."
+  ],
+  "test": {"commands": ["pnpm test -- --run"], "unit": [], "integration": [], "success_metrics": ["AiToolbar.test.tsx, MessageBubble.test.tsx, QuickPanel.test.tsx pass"]},
+  "reference": {"pattern": "ChatAreaComposer send button: 'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100' and ChatArea cancel button for consistent interactive states.", "files": ["src/components/ChatAreaComposer.tsx"], "examples": null},
+  "rationale": {"chosen_approach": "Tailwind utility classes instead of inline styles — consistent with the rest of the codebase and PurgeCSS-friendly.", "decision_factors": ["REQ-B uniform interactive states"], "tradeoffs": null},
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {"affected_features": ["FT-043 AI Toolbar", "FT-051 Quick Panel"], "affected_components": ["TC-049 AiToolbar", "TC-012 MessageBubble", "TC-061 QuickPanel"], "affected_requirements": ["REQ-B"], "adr_ids": []},
+  "meta": {"estimated_time": "30 min", "risk": "low", "autonomous": true, "checkpoint": false}
+}

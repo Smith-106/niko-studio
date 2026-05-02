@@ -1,0 +1,4 @@
+# Quality Rules
+
+## Entries
+

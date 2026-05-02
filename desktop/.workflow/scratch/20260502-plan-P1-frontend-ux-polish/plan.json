@@ -1,0 +1,83 @@
+{
+  "summary": "Phase 1 Frontend UX Polish: add 4 quick-action buttons to the existing Cherry Studio-style composer toolbar (clear draft, copy last reply, attach file, attach context), integrate useDraftCache for localStorage draft persistence in ChatArea, simplify ChatAreaModeControls to a presets-only panel, and apply consistent spacing/interactive-state passes across all major panels.",
+  "approach": "Wave 1 defines CSS design tokens so downstream tasks have a shared vocabulary. Wave 2 implements all functional and visual changes in parallel across independent component groups. Wave 3 adds targeted tests for the changed components. Each wave task is self-contained; the only cross-wave dependency is that TASK-002/003 must precede TASK-007, and TASK-004/005 must precede TASK-008.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008"],
+  "task_count": 8,
+  "complexity": "large",
+  "estimated_time": "5-7 hours",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Foundation",
+      "tasks": ["TASK-001"]
+    },
+    {
+      "wave": 2,
+      "label": "Core Implementation",
+      "tasks": ["TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"]
+    },
+    {
+      "wave": 3,
+      "label": "Polish & Tests",
+      "tasks": ["TASK-007", "TASK-008"]
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "useAppShellViewModel.ts → chatAreaProps.onOpenKnowledgePanel → ChatSidebar (spread) → ChatArea → ChatAreaComposer (button click)",
+    "stages": [
+      "TASK-001: CSS tokens defined in index.css (read by all components)",
+      "TASK-002: ChatArea wires useDraftCache + passes onOpenKnowledgePanel; ChatAreaComposer renders 3 new buttons",
+      "TASK-003: ChatAreaModeControls simplified to presets-only row",
+      "TASK-004/005/006: Independent spacing + state passes on non-composer panels",
+      "TASK-007/008: Tests verify behaviour and capture layout snapshots"
+    ]
+  },
+
+  "design_decisions": [
+    {
+      "decision": "Keep Paperclip for file upload; add separate BookmarkPlus icon for knowledge context",
+      "rationale": "User confirmed: preserve existing file-upload UX, add distinct context-attach affordance (wires to KnowledgeModal via onOpenKnowledgePanel)"
+    },
+    {
+      "decision": "Integrate useDraftCache into ChatArea for localStorage draft persistence",
+      "rationale": "User confirmed: chat input should survive page refresh, not just in-session mode switches"
+    },
+    {
+      "decision": "ChatAreaModeControls simplified to presets + skills row only",
+      "rationale": "Mode/level/skills are already in the composer toolbar chips; the expanded panel was duplicating them. Removing duplication makes the advanced panel narrower and less confusing."
+    }
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "CHIP_BASE / CHIP_ACTIVE / CHIP_DEFAULT constants in ChatAreaComposer are the reference style for toolbar elements",
+      "useAppPanelOrchestration.toggleRightPanel is the canonical way to open any right panel",
+      "useDraftCache(conversationId) pattern from DocumentEditor is the reference for localStorage-backed drafts"
+    ],
+    "conventions": [
+      "All toolbar icon buttons: h-7 w-7 or h-8 w-8 with rounded-lg, lucide icons, aria-label required",
+      "Section labels in panels: text-[11px] font-bold uppercase tracking-wider text-gray-500",
+      "Focus rings: focus-visible:ring-2 focus-visible:ring-primary-500/50 (NOT focus:ring)",
+      "Hover states: hover:bg-gray-100 dark:hover:bg-dark-bg on icon buttons"
+    ],
+    "dependencies": [
+      "lucide-react — icons (BookmarkPlus, Trash2, Copy already importable)",
+      "Tailwind h-7, h-8, rounded-lg, gap-1.5 — sizing tokens",
+      "useDraftCache hook — draft persistence pattern"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-02T00:00:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "phase": 1,
+    "phase_title": "Frontend UX Polish",
+    "git_commit": null
+  }
+}

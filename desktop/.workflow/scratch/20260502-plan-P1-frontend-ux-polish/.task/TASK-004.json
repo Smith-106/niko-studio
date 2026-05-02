@@ -1,0 +1,67 @@
+{
+  "id": "TASK-004",
+  "title": "StoryBiblePanel + knowledge tab spacing normalization",
+  "description": "Apply standardized spacing pass to StoryBiblePanel.tsx and all knowledge tab components (CharacterTab, LocationTab, PlotTab, SkillTab). Normalize section headers to 'text-[11px] font-bold uppercase tracking-wider text-gray-500', card padding to 'p-4', form field gaps to 'gap-3', and list item padding to 'py-2 px-3'.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "In StoryBiblePanel.tsx and src/components/knowledge/*.tsx: replace inconsistent section headers with 'text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted', normalize card/section wrapper padding to 'p-4', form field vertical gap to 'gap-3 flex flex-col', list item interactive rows to 'py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface'.",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "actual_duration": null,
+  "scope": "src/components/StoryBiblePanel.tsx, src/components/knowledge/",
+  "focus_paths": [
+    "src/components/StoryBiblePanel.tsx",
+    "src/components/knowledge/CharacterTab.tsx",
+    "src/components/knowledge/LocationTab.tsx",
+    "src/components/knowledge/PlotTab.tsx",
+    "src/components/knowledge/SkillTab.tsx"
+  ],
+  "read_first": [
+    "src/components/StoryBiblePanel.tsx",
+    "src/components/knowledge/CharacterTab.tsx",
+    "src/components/knowledge/LocationTab.tsx",
+    "src/components/knowledge/PlotTab.tsx",
+    "src/components/knowledge/SkillTab.tsx",
+    "src/components/knowledge/MemoryForm.tsx"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": "panels",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/StoryBiblePanel.tsx contains 'uppercase tracking-wider'",
+      "src/components/knowledge/CharacterTab.tsx contains 'uppercase tracking-wider'",
+      "src/components/knowledge/LocationTab.tsx contains 'uppercase tracking-wider'",
+      "src/components/knowledge/PlotTab.tsx contains 'uppercase tracking-wider'",
+      "pnpm test -- --run exits 0"
+    ],
+    "verification": "grep -rn 'uppercase tracking-wider' src/components/knowledge/ | wc -l",
+    "definition_of_done": "All knowledge panel section headers use the standardized label style. Card padding and form gaps are consistent across all 5 files."
+  },
+  "files": [
+    {"path": "src/components/StoryBiblePanel.tsx", "action": "modify", "target": "section headers and card padding", "change": "Normalize section headers to text-[11px] font-bold uppercase tracking-wider; card wrappers to p-4"},
+    {"path": "src/components/knowledge/CharacterTab.tsx", "action": "modify", "target": "section headers, list items, form gaps", "change": "Same normalization"},
+    {"path": "src/components/knowledge/LocationTab.tsx", "action": "modify", "target": "section headers, list items, form gaps", "change": "Same normalization"},
+    {"path": "src/components/knowledge/PlotTab.tsx", "action": "modify", "target": "section headers, list items, form gaps", "change": "Same normalization"},
+    {"path": "src/components/knowledge/SkillTab.tsx", "action": "modify", "target": "section headers, list items, form gaps", "change": "Same normalization"}
+  ],
+  "implementation": [
+    "Step 1 — Read each file and identify ALL section label elements (e.g., <span>, <h3>, <div> acting as labels). Replace their className with 'text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted'.",
+    "Step 2 — Find card/section wrapper divs with inconsistent padding (e.g., p-3, p-2, p-5). Normalize to 'p-4' for main content cards, 'p-3' for compact list items.",
+    "Step 3 — Find form field containers (stacked label+input pairs). Ensure each uses 'flex flex-col gap-3' for consistent vertical rhythm.",
+    "Step 4 — Find list item rows that have hover states. Normalize to 'flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-surface/50 transition-colors'.",
+    "Step 5 — Run pnpm test -- --run to confirm no regressions."
+  ],
+  "test": {"commands": ["pnpm test -- --run"], "unit": [], "integration": [], "success_metrics": ["All knowledge tab tests pass"]},
+  "reference": {"pattern": "AppHeader.tsx or ChatSidebar.tsx section labels as reference for the uppercase tracking-wider pattern", "files": ["src/components/AppHeader.tsx"], "examples": null},
+  "rationale": {"chosen_approach": "Direct Tailwind class normalization — no new abstractions. Match existing panel patterns.", "decision_factors": ["REQ-B requires consistent spacing across panels"], "tradeoffs": "Manual class-by-class audit required per file."},
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {"affected_features": ["FT-031 Story Bible Panel", "FT-030 Knowledge Modal"], "affected_components": ["TC-037 StoryBiblePanel", "TC-031", "TC-032", "TC-033", "TC-034"], "affected_requirements": ["REQ-B"], "adr_ids": []},
+  "meta": {"estimated_time": "45 min", "risk": "low", "autonomous": true, "checkpoint": false}
+}

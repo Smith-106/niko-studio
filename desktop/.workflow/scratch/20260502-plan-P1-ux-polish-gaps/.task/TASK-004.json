@@ -1,0 +1,89 @@
+{
+  "id": "TASK-004",
+  "title": "Update tests for Wave 1 gap fixes",
+  "description": "Update ChatAreaComposer.test.tsx for renamed prop (onToggleKnowledgePanel), copy feedback state, and Trash2 transition. Update ChatArea.test.tsx if the useEffect change or debounce requires adjustment. Add minimal AppContextFooter.test.tsx to prevent regression of BP-004 fix.",
+  "issue_id": null,
+  "issue_refs": ["ISS-20260502-001","ISS-20260502-003","ISS-20260502-016","ISS-20260502-018","ISS-20260502-019"],
+  "type": "fix",
+  "priority": "high",
+  "effort": "small",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "wave": 2,
+  "executor": "agent",
+
+  "action": "Update 3 test files: (A) src/components/ChatAreaComposer.test.tsx — rename all 'onOpenKnowledgePanel' mock props to 'onToggleKnowledgePanel'; update the 'attach context' button test to pass only when onToggleKnowledgePanel is provided (add test for button NOT rendering when prop is absent); update copy button test to verify CheckIcon appears after click (use fake timers to advance 1.5s); update clear-draft test to verify Trash2 is rendered with opacity-0 when input is empty (not absent from DOM). (B) src/components/ChatArea.test.tsx — verify existing tests still pass; if any test mocks onInputChange inline and passes persistedText, ensure it still works with the new debounce/useCallback approach. (C) Create src/components/AppContextFooter.test.tsx with: (1) renders null when contextEstimatedText is empty string, (2) renders text content when provided, (3) the outer div does NOT have focus-visible or tabIndex attributes.",
+  "scope": "src/components/ChatAreaComposer.test.tsx, src/components/ChatArea.test.tsx, src/components/AppContextFooter.test.tsx",
+  "focus_paths": [
+    "src/components/ChatAreaComposer.test.tsx",
+    "src/components/ChatArea.test.tsx",
+    "src/components/AppContextFooter.tsx"
+  ],
+
+  "read_first": [
+    "src/components/ChatAreaComposer.test.tsx",
+    "src/components/ChatAreaComposer.tsx",
+    "src/components/ChatArea.test.tsx",
+    "src/components/AppContextFooter.tsx"
+  ],
+
+  "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
+
+  "files": [
+    {
+      "path": "src/components/ChatAreaComposer.test.tsx",
+      "action": "modify",
+      "target": "toolbar button tests",
+      "change": "Rename prop, add conditional-render test, update copy + Trash2 tests"
+    },
+    {
+      "path": "src/components/ChatArea.test.tsx",
+      "action": "modify",
+      "target": "draft-related tests",
+      "change": "Verify tests pass after useEffect dep change + debounce"
+    },
+    {
+      "path": "src/components/AppContextFooter.test.tsx",
+      "action": "create",
+      "target": "new test file",
+      "change": "3 tests: null render, content render, no focus-visible attributes"
+    }
+  ],
+
+  "implementation": [
+    "Read src/components/ChatAreaComposer.test.tsx. Replace all 'onOpenKnowledgePanel' with 'onToggleKnowledgePanel' throughout the file.",
+    "In ChatAreaComposer.test.tsx: find the 'attach context' button test. Add a NEW test: 'it does not render attach context button when onToggleKnowledgePanel is not provided, () => { render(<ChatAreaComposer {...baseProps} />); expect(screen.queryByRole(\\'button\\', { name: /attach context|open knowledge/i })).not.toBeInTheDocument() }' — where baseProps does NOT include onToggleKnowledgePanel.",
+    "In ChatAreaComposer.test.tsx: update the copy button test to use fake timers. Before the test: 'vi.useFakeTimers()'. After clicking copy: expect Copy icon is in doc; advance timers: 'vi.advanceTimersByTime(0)'; expect Check icon (text-green-500 or aria-label='copied!'). After 1.5s: 'vi.advanceTimersByTime(1500)'; expect Copy icon restored. After: 'vi.useRealTimers()'.",
+    "In ChatAreaComposer.test.tsx: update the Trash2 test to check opacity-0 class instead of DOM absence. When input is empty: expect(trashButton).toHaveClass('opacity-0'). When input has text: expect(trashButton).not.toHaveClass('opacity-0').",
+    "Run pnpm test src/components/ChatAreaComposer.test.tsx — fix any failures.",
+    "Run pnpm test src/components/ChatArea.test.tsx — fix any failures caused by useEffect dep change or debounce (most likely tests will pass as-is since jsdom localStorage is synchronous).",
+    "Create src/components/AppContextFooter.test.tsx with these 3 tests using @testing-library/react: (1) renders null when empty: render(<AppContextFooter contextEstimatedText='' />); expect(document.body.firstChild).toBeNull() or similar. (2) renders content: render(<AppContextFooter contextEstimatedText='~2K tokens' />); expect(screen.getByText('~2K tokens')).toBeInTheDocument(). (3) no focus attributes: const {container} = render(<AppContextFooter contextEstimatedText='~2K tokens' />); expect(container.firstChild).not.toHaveClass('focus-visible:ring-2'); expect(container.firstChild).not.toHaveAttribute('tabIndex').",
+    "Run pnpm test src/components/AppContextFooter.test.tsx — ensure all 3 pass.",
+    "Run full pnpm test to confirm no regressions."
+  ],
+
+  "convergence": {
+    "criteria": [
+      "src/components/ChatAreaComposer.test.tsx does NOT contain 'onOpenKnowledgePanel'",
+      "src/components/ChatAreaComposer.test.tsx contains 'onToggleKnowledgePanel'",
+      "src/components/AppContextFooter.test.tsx exists",
+      "src/components/AppContextFooter.test.tsx contains 'focus-visible'",
+      "pnpm test exits 0"
+    ],
+    "verification": "pnpm test --reporter=verbose 2>&1 | tail -20",
+    "definition_of_done": "All tests pass. ChatAreaComposer tests cover conditional render, copy feedback, and Trash2 opacity. AppContextFooter has basic coverage preventing focus-visible regression."
+  },
+
+  "test": {
+    "commands": ["pnpm test src/components/ChatAreaComposer.test.tsx", "pnpm test src/components/AppContextFooter.test.tsx", "pnpm test"],
+    "success_metrics": ["All tests pass, test count increases by at least 3 (new AppContextFooter tests)"]
+  },
+
+  "rationale": {
+    "chosen_approach": "Update existing tests + create AppContextFooter test to lock in the BP-004 fix. Fake timers for copy feedback test to avoid real setTimeout waits.",
+    "decision_factors": ["Test count should increase, not decrease", "AppContextFooter.test.tsx prevents re-introduction of focus classes on non-interactive div"],
+    "tradeoffs": "Fake timers add slight test complexity but are necessary for the 1.5s copied→reset transition."
+  },
+
+  "meta": { "estimated_time": "30 min", "risk": "low", "autonomous": true, "checkpoint": false }
+}

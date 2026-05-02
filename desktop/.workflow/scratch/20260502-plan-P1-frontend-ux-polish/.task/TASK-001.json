@@ -1,0 +1,102 @@
+{
+  "id": "TASK-001",
+  "title": "Define composer toolbar design tokens in src/index.css",
+  "description": "Add CSS custom property definitions for the ChatAreaComposer toolbar to src/index.css so downstream tasks reference named values instead of magic numbers. Defines button size, icon size, gap rhythm, and composer-specific focus-ring color for both light and dark themes.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "small",
+  "action": "In src/index.css, inside the existing :root block add: --composer-btn-sm: 28px; --composer-btn-md: 32px; --composer-icon-sm: 14px; --composer-icon-md: 16px; --composer-toolbar-gap: 6px; --composer-focus-ring: rgba(114,64,221,0.5). These match the current h-7/h-8 Tailwind sizes to give the values a semantic name. No dark-mode overrides needed (focus-ring uses rgba which works in both).",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/index.css",
+  "focus_paths": ["src/index.css"],
+
+  "read_first": [
+    "src/index.css",
+    "tailwind.config.js"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/index.css contains '--composer-btn-sm: 28px'",
+      "src/index.css contains '--composer-btn-md: 32px'",
+      "src/index.css contains '--composer-icon-sm: 14px'",
+      "src/index.css contains '--composer-icon-md: 16px'",
+      "src/index.css contains '--composer-toolbar-gap: 6px'",
+      "src/index.css contains '--composer-focus-ring'"
+    ],
+    "verification": "grep -n 'composer-btn-sm' src/index.css",
+    "definition_of_done": "CSS custom properties for composer toolbar are defined in the :root block and can be referenced by ChatAreaComposer and ChatAreaModeControls."
+  },
+
+  "files": [
+    {
+      "path": "src/index.css",
+      "action": "modify",
+      "target": ":root block",
+      "change": "Append 6 CSS custom properties after the existing semantic token declarations: --composer-btn-sm, --composer-btn-md, --composer-icon-sm, --composer-icon-md, --composer-toolbar-gap, --composer-focus-ring"
+    }
+  ],
+
+  "implementation": [
+    "Open src/index.css and locate the :root { } block (contains existing --surface-base, --primary-cta, etc. declarations).",
+    "Append the following inside :root, after the existing declarations:",
+    "  /* Composer toolbar sizing tokens */",
+    "  --composer-btn-sm: 28px;   /* h-7 — small icon buttons in toolbar */",
+    "  --composer-btn-md: 32px;   /* h-8 — send / cancel button */",
+    "  --composer-icon-sm: 14px;  /* icon size for small toolbar buttons */",
+    "  --composer-icon-md: 16px;  /* icon size for primary actions */",
+    "  --composer-toolbar-gap: 6px; /* gap-1.5 equivalent */",
+    "  --composer-focus-ring: rgba(114, 64, 221, 0.5); /* primary-500 at 50% */",
+    "No dark-mode block needed (rgba focus-ring and pixel sizes are theme-agnostic).",
+    "Verify with: grep -n 'composer-btn-sm' src/index.css"
+  ],
+
+  "test": {
+    "commands": ["pnpm test -- --run"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["All existing tests pass (no CSS import breakage)"]
+  },
+
+  "reference": {
+    "pattern": "Existing semantic token declarations in src/index.css :root block (--surface-base, --primary-cta, etc.)",
+    "files": ["src/index.css", "tailwind.config.js"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "CSS custom properties in index.css (not Tailwind extend) because composer tokens are component-specific sizing constants, not reusable design system values. Tailwind config already uses CSS vars for semantic surfaces; this follows the same pattern.",
+    "decision_factors": ["Existing codebase uses CSS vars for semantic tokens", "Component-specific values don't belong in the global Tailwind scale"],
+    "tradeoffs": "CSS vars not tree-shaken by Tailwind purge — acceptable since index.css is always loaded."
+  },
+
+  "risks": [],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["FT-010 Chat Mode Conversation"],
+    "affected_components": ["TC-011 ChatAreaComposer"],
+    "affected_requirements": ["REQ-A"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "15 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

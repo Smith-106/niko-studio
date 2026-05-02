@@ -1,0 +1,80 @@
+{
+  "id": "TASK-002",
+  "title": "ChatArea: fix draft lifecycle race condition + debounce + rename",
+  "description": "Fix 5 issues in ChatArea.tsx: (1) useEffect anti-pattern that overwrites in-progress input on conversation switch — change dependency from [persistedText] to [currentConversationId]; (2) debounce persist() calls to avoid synchronous localStorage writes on every keystroke; (3) wrap onInputChange in useCallback; (4) guard clearDraft with persistedText check; (5) add draft lifecycle contract comment; (6) rename onOpenKnowledgePanel → onToggleKnowledgePanel.",
+  "issue_id": "ISS-20260502-001",
+  "issue_refs": ["ISS-20260502-001","ISS-20260502-004","ISS-20260502-005","ISS-20260502-014","ISS-20260502-015","ISS-20260502-017","ISS-20260502-058"],
+  "type": "fix",
+  "priority": "high",
+  "effort": "small",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "wave": 1,
+  "executor": "agent",
+
+  "action": "In src/components/ChatArea.tsx: (1) Add 'useCallback, useMemo' to the React imports if not already present. (2) Add a useRef-based debounce helper immediately before the component body (no lodash needed): 'function makeDebounce<T extends (...args: any[]) => void>(fn: T, delay: number) { let timer: ReturnType<typeof setTimeout>; return (...args: Parameters<T>) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay) } }'. (3) At the useDraftCache call site (~line 127), add comment: '// Draft lifecycle: restore on conversationId change, persist on keystroke (debounced 350ms), clear on successful send'. (4) Change 'useEffect(() => { setInput(persistedText) }, [persistedText])' at line ~129 to 'useEffect(() => { setInput(persistedText) }, [currentConversationId])' and add '// eslint-disable-next-line react-hooks/exhaustive-deps' on the line above. (5) Add 'const debouncedPersist = useMemo(() => makeDebounce(persist, 350), [persist])' after the useDraftCache destructure. (6) Add 'const handleInputChange = useCallback((v: string) => { setInput(v); debouncedPersist(v) }, [debouncedPersist])'. (7) Find where onInputChange is passed to ChatAreaComposer (~line 1245): replace the inline arrow with 'onInputChange={handleInputChange}'. (8) At the clearDraft call site (~line 759): change 'clearDraft()' to 'if (persistedText) clearDraft()'. (9) Rename all occurrences of 'onOpenKnowledgePanel' to 'onToggleKnowledgePanel' in this file (prop interface declaration, destructure, and pass-through to ChatAreaComposer).",
+
+  "scope": "src/components/ChatArea.tsx",
+  "focus_paths": ["src/components/ChatArea.tsx"],
+
+  "read_first": [
+    "src/components/ChatArea.tsx",
+    "src/hooks/useDraftCache.ts",
+    "src/components/ChatAreaComposer.tsx"
+  ],
+
+  "depends_on": [],
+
+  "files": [
+    {
+      "path": "src/components/ChatArea.tsx",
+      "action": "modify",
+      "target": "ChatArea component — useDraftCache integration",
+      "change": "Fix useEffect deps; add debounce; add useCallback; guard clearDraft; add lifecycle comment; rename prop"
+    }
+  ],
+
+  "implementation": [
+    "Read src/components/ChatArea.tsx fully before editing. Note current line numbers for: useDraftCache line, useEffect line, onInputChange inline handler, clearDraft call, onOpenKnowledgePanel prop interface + destructure + pass-through.",
+    "Add React hooks to existing import: ensure 'useCallback, useMemo' are imported from 'react'.",
+    "Add the makeDebounce helper function BEFORE the ChatArea function declaration (not inside it): function makeDebounce<T extends (...args: any[]) => void>(fn: T, delay: number) { let timer: ReturnType<typeof setTimeout>; return (...args: Parameters<T>) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay) } }",
+    "At the useDraftCache destructure line (~127), add on the line ABOVE it the comment: // Draft lifecycle: restore on conversationId change, persist on keystroke (debounced 350ms), clear on successful send",
+    "Change the useEffect at line ~129: change dependency array from [persistedText] to [currentConversationId]. Add '// eslint-disable-next-line react-hooks/exhaustive-deps' on the line immediately BEFORE the useEffect.",
+    "Add after the useDraftCache line: const debouncedPersist = useMemo(() => makeDebounce(persist, 350), [persist])",
+    "Add after debouncedPersist: const handleInputChange = useCallback((v: string) => { setInput(v); debouncedPersist(v) }, [debouncedPersist])",
+    "Find the inline onInputChange handler passed to ChatAreaComposer (looks like: onInputChange={(v) => { setInput(v); persist(v) }}). Replace with: onInputChange={handleInputChange}",
+    "At the clearDraft() call in the send handler (~line 759): change 'clearDraft()' to 'if (persistedText) clearDraft()'",
+    "Rename all 3 occurrences of 'onOpenKnowledgePanel' in this file: (a) in ChatAreaProps interface, (b) in destructure, (c) in the JSX prop pass to ChatAreaComposer. Change all to 'onToggleKnowledgePanel'."
+  ],
+
+  "convergence": {
+    "criteria": [
+      "src/components/ChatArea.tsx contains 'makeDebounce'",
+      "src/components/ChatArea.tsx contains 'debouncedPersist'",
+      "src/components/ChatArea.tsx contains 'handleInputChange = useCallback'",
+      "src/components/ChatArea.tsx contains 'onInputChange={handleInputChange}'",
+      "src/components/ChatArea.tsx contains '[currentConversationId]' (the useEffect dependency)",
+      "src/components/ChatArea.tsx contains 'if (persistedText) clearDraft()'",
+      "src/components/ChatArea.tsx contains 'Draft lifecycle:'",
+      "src/components/ChatArea.tsx contains 'onToggleKnowledgePanel'",
+      "src/components/ChatArea.tsx does NOT contain 'onOpenKnowledgePanel'",
+      "pnpm test src/components/ChatArea.test.tsx exits 0"
+    ],
+    "verification": "grep 'debouncedPersist\\|handleInputChange\\|onToggleKnowledgePanel\\|if (persistedText) clearDraft' src/components/ChatArea.tsx",
+    "definition_of_done": "useEffect no longer fires on every keystroke; persist debounced 350ms; handleInputChange is stable via useCallback; clearDraft only fires when a draft exists; draft lifecycle documented in-code; prop renamed."
+  },
+
+  "test": {
+    "commands": ["pnpm test src/components/ChatArea.test.tsx"],
+    "unit": ["existing ChatArea tests should pass after changes"],
+    "success_metrics": ["All existing ChatArea tests pass"]
+  },
+
+  "rationale": {
+    "chosen_approach": "Change useEffect dep from [persistedText] to [currentConversationId] — minimal 1-token change that eliminates the race. The eslint-disable comment makes the intent explicit. makeDebounce inline avoids adding lodash dependency.",
+    "decision_factors": ["No new dependencies", "Minimal diff", "eslint-disable is explicit about intentionality"],
+    "tradeoffs": "makeDebounce helper function is a tiny inline implementation; alternative is importing lodash.debounce but that adds a dependency for 3 lines of code."
+  },
+
+  "meta": { "estimated_time": "30 min", "risk": "low", "autonomous": true, "checkpoint": false }
+}

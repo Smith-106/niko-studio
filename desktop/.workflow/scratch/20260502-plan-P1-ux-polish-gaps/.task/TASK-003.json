@@ -1,0 +1,80 @@
+{
+  "id": "TASK-003",
+  "title": "CSS + AppContextFooter + useAppShellViewModel cleanup batch",
+  "description": "Fix 4 issues across 3 files: (1) add --composer-focus-ring dark mode override to globals.css; (2) fix token block blank line formatting in globals.css; (3) remove focus-visible classes from non-interactive AppContextFooter div; (4) rename onOpenKnowledgePanel → onToggleKnowledgePanel in useAppShellViewModel.ts.",
+  "issue_id": "ISS-20260502-021",
+  "issue_refs": ["ISS-20260502-013","ISS-20260502-018","ISS-20260502-021","ISS-20260502-058"],
+  "type": "fix",
+  "priority": "high",
+  "effort": "small",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "wave": 1,
+  "executor": "agent",
+
+  "action": "Three-file batch: (A) src/styles/globals.css — in the .dark block, after '--focus-outline-soft: rgba(196, 181, 253, 0.24);', add '--composer-focus-ring: rgba(167, 139, 250, 0.5); /* violet-400 at 50% for dark mode */'. Also add a blank line before the '/* Composer toolbar sizing tokens */' comment block in :root. (B) src/components/AppContextFooter.tsx — on the outer div (line 13), remove the three classes: 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50'. (C) src/hooks/useAppShellViewModel.ts — rename 'onOpenKnowledgePanel' to 'onToggleKnowledgePanel' (all occurrences in this file, typically just the property key in chatAreaProps).",
+
+  "scope": "src/styles/globals.css, src/components/AppContextFooter.tsx, src/hooks/useAppShellViewModel.ts",
+  "focus_paths": ["src/styles/globals.css","src/components/AppContextFooter.tsx","src/hooks/useAppShellViewModel.ts"],
+
+  "read_first": [
+    "src/styles/globals.css",
+    "src/components/AppContextFooter.tsx",
+    "src/hooks/useAppShellViewModel.ts"
+  ],
+
+  "depends_on": [],
+
+  "files": [
+    {
+      "path": "src/styles/globals.css",
+      "action": "modify",
+      "target": ".dark block + :root composer token block",
+      "change": "Add --composer-focus-ring dark override; add blank line before composer token section"
+    },
+    {
+      "path": "src/components/AppContextFooter.tsx",
+      "action": "modify",
+      "target": "outer div className",
+      "change": "Remove focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 from div"
+    },
+    {
+      "path": "src/hooks/useAppShellViewModel.ts",
+      "action": "modify",
+      "target": "chatAreaProps.onOpenKnowledgePanel",
+      "change": "Rename key to onToggleKnowledgePanel"
+    }
+  ],
+
+  "implementation": [
+    "Read src/styles/globals.css. In the .dark block, find the line '--focus-outline-soft: rgba(196, 181, 253, 0.24);'. Insert on the next line: '  --composer-focus-ring: rgba(167, 139, 250, 0.5); /* violet-400 at 50% for dark mode */'",
+    "In src/styles/globals.css :root block, find the comment '/* Composer toolbar sizing tokens */'. Ensure there is a blank line immediately before this comment (between the last sidebar token line and this comment).",
+    "Read src/components/AppContextFooter.tsx. On the outer div at line ~13, the className is: 'shell-text-compact px-4 py-1 text-gray-400 dark:text-dark-text-secondary border-t border-gray-200 dark:border-dark-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50'. Remove the three focus-visible classes, leaving: 'shell-text-compact px-4 py-1 text-gray-400 dark:text-dark-text-secondary border-t border-gray-200 dark:border-dark-border'",
+    "Read src/hooks/useAppShellViewModel.ts. Find the chatAreaProps object where 'onOpenKnowledgePanel' is defined as a key. Rename it to 'onToggleKnowledgePanel'. This is likely one occurrence: 'onToggleKnowledgePanel: () => panelOrchestration.toggleRightPanel(\\'knowledge\\')'",
+    "Run pnpm test to verify no regressions."
+  ],
+
+  "convergence": {
+    "criteria": [
+      "src/styles/globals.css .dark block contains '--composer-focus-ring: rgba(167, 139, 250, 0.5)'",
+      "src/components/AppContextFooter.tsx does NOT contain 'focus-visible:ring-2'",
+      "src/hooks/useAppShellViewModel.ts contains 'onToggleKnowledgePanel'",
+      "src/hooks/useAppShellViewModel.ts does NOT contain 'onOpenKnowledgePanel'"
+    ],
+    "verification": "grep 'composer-focus-ring' src/styles/globals.css; grep 'focus-visible' src/components/AppContextFooter.tsx (expect no output); grep 'onToggleKnowledgePanel' src/hooks/useAppShellViewModel.ts",
+    "definition_of_done": "Dark mode focus ring token is set; AppContextFooter div has no focus classes; prop renamed in ViewModel."
+  },
+
+  "test": {
+    "commands": ["pnpm test"],
+    "success_metrics": ["No test regressions from CSS/naming changes"]
+  },
+
+  "rationale": {
+    "chosen_approach": "Batch all cross-file cleanup into one task since none of the 3 files overlap with Wave 1 TASK-001 or TASK-002.",
+    "decision_factors": ["3 separate files with no inter-dependency", "All changes are tiny (<5 lines each)"],
+    "tradeoffs": "None — pure cleanup with no behavior change."
+  },
+
+  "meta": { "estimated_time": "15 min", "risk": "low", "autonomous": true, "checkpoint": false }
+}

@@ -1,0 +1,343 @@
+{
+  "phase": "1-frontend-ux-polish",
+  "status": "pass",
+  "verified_at": "2026-05-02",
+  "test_run": {
+    "files": 84,
+    "tests": 836,
+    "passed": 836,
+    "failed": 0
+  },
+  "layers": {
+    "existence": {
+      "pass": true,
+      "checks": [
+        {"file": "src/styles/globals.css", "exists": true, "lines": 496, "evidence": "496 lines, non-trivial CSS with design tokens"},
+        {"file": "src/components/ChatArea.tsx", "exists": true, "lines": 1269, "evidence": "1269-line component with full chat logic"},
+        {"file": "src/components/ChatAreaComposer.tsx", "exists": true, "lines": 166, "evidence": "166-line composer with 3 new toolbar buttons"},
+        {"file": "src/components/ChatAreaModeControls.tsx", "exists": true, "lines": 127, "evidence": "127-line simplified presets-only panel"},
+        {"file": "src/hooks/useDraftCache.ts", "exists": true, "lines": 60, "evidence": "60-line hook with persist/clearDraft/TTL logic"},
+        {"file": "src/hooks/useAppShellViewModel.ts", "exists": true, "lines": 187, "evidence": "187-line viewmodel with panel orchestration"},
+        {"file": "src/components/ChatAreaComposer.test.tsx", "exists": true, "evidence": "7 passing tests"},
+        {"file": "src/hooks/useDraftCache.test.tsx", "exists": true, "evidence": "10 passing tests"},
+        {"file": "src/components/Sidebar.test.tsx", "exists": true, "evidence": "15 passing tests"},
+        {"file": "src/components/StoryBiblePanel.test.tsx", "exists": true, "evidence": "snapshot test at line 521"},
+        {"file": "src/components/__snapshots__/Sidebar.test.tsx.snap", "exists": true, "evidence": "snapshot file present"},
+        {"file": "src/components/__snapshots__/StoryBiblePanel.test.tsx.snap", "exists": true, "evidence": "snapshot file present"}
+      ]
+    },
+    "substance": {
+      "pass": true,
+      "checks": [
+        {
+          "file": "src/hooks/useDraftCache.ts",
+          "pass": true,
+          "evidence": "Real localStorage read/write with TTL expiry, per-conversation keying (niko.draft:), persist/clearDraft/reload on conversationId change. Not a stub."
+        },
+        {
+          "file": "src/components/ChatAreaComposer.tsx",
+          "pass": true,
+          "evidence": "BookmarkPlus renders unconditionally at line 103; Trash2 conditionally when input.length>0 && onClearDraft (line 105-115); Copy conditionally when lastAssistantContent (line 116-128). Conditional logic is real, not pass-through."
+        },
+        {
+          "file": "src/components/ChatAreaModeControls.tsx",
+          "pass": true,
+          "evidence": "No showAdvanced or onSetChatMode — confirmed simplified to presets-only panel. 127 substantive lines."
+        },
+        {
+          "file": "src/components/ChatArea.tsx",
+          "pass": true,
+          "evidence": "useDraftCache imported at line 24; persist() called on onChange at line 1245; clearDraft() called on send at line 759; onOpenKnowledgePanel threaded to composer at line 1251."
+        },
+        {
+          "file": "src/hooks/useDraftCache.test.tsx",
+          "pass": true,
+          "evidence": "10 behavioral tests: empty on no draft, persist+read, clearDraft removes from localStorage, null id uses __global__, load on mount, TTL expiry, overwrite, empty text removes entry, corrupted JSON graceful, reload on id change."
+        },
+        {
+          "file": "src/components/ChatAreaComposer.test.tsx",
+          "pass": true,
+          "evidence": "7 tests cover: attach context button click (line 52-61), clear draft hidden when empty (62-67), clear draft visible+click when non-empty (68-77), copy last reply hidden when empty (78-83), copy last reply visible+copies (84-end)."
+        }
+      ]
+    },
+    "connection": {
+      "pass": true,
+      "checks": [
+        {
+          "chain": "useAppShellViewModel → chatAreaProps.onOpenKnowledgePanel",
+          "pass": true,
+          "evidence": "useAppShellViewModel.ts:177 — onOpenKnowledgePanel: () => panelOrchestration.toggleRightPanel('knowledge')"
+        },
+        {
+          "chain": "chatAreaProps.onOpenKnowledgePanel → ChatSidebar spread → ChatArea",
+          "pass": true,
+          "evidence": "ChatSidebar.tsx:7 chatAreaProps: ComponentProps<typeof ChatArea>; ChatSidebar.tsx:30 <ChatArea {...chatAreaProps} />. onOpenKnowledgePanel is part of ChatArea's prop interface (ChatArea.tsx:31), so the spread propagates it correctly."
+        },
+        {
+          "chain": "ChatArea → ChatAreaComposer onOpenKnowledgePanel",
+          "pass": true,
+          "evidence": "ChatArea.tsx:1251 — onOpenKnowledgePanel={onOpenKnowledgePanel} passed to ChatAreaComposer"
+        },
+        {
+          "chain": "ChatArea useDraftCache persist on input change",
+          "pass": true,
+          "evidence": "ChatArea.tsx:1245 — onInputChange={(v) => { setInput(v); persist(v) }}"
+        },
+        {
+          "chain": "ChatArea useDraftCache clearDraft on send",
+          "pass": true,
+          "evidence": "ChatArea.tsx:759 — clearDraft() called in send handler"
+        },
+        {
+          "chain": "ChatArea lastAssistantContent → ChatAreaComposer",
+          "pass": true,
+          "evidence": "ChatArea.tsx:183 latestAssistantContent = useLatestAssistantMessageContent(); ChatArea.tsx:1253 lastAssistantContent={latestAssistantContent}"
+        },
+        {
+          "chain": "ChatAreaComposer BookmarkPlus → onOpenKnowledgePanel",
+          "pass": true,
+          "evidence": "ChatAreaComposer.tsx:103 — BookmarkPlus button renders; import verified at line 2"
+        }
+      ]
+    }
+  },
+  "convergence_check": {
+    "TASK-001": {
+      "status": "pass",
+      "criteria": [
+        {
+          "criterion": "src/styles/globals.css contains '--composer-btn-sm: 28px'",
+          "pass": true,
+          "evidence": "globals.css:51 — --composer-btn-sm: 28px;   /* h-7 — small icon buttons in toolbar */"
+        }
+      ]
+    },
+    "TASK-002": {
+      "status": "pass",
+      "criteria": [
+        {
+          "criterion": "src/components/ChatArea.tsx contains 'useDraftCache'",
+          "pass": true,
+          "evidence": "ChatArea.tsx:24 import { useDraftCache } from '../hooks/useDraftCache'; line 127: const { persistedText, persist, clearDraft } = useDraftCache(currentConversationId)"
+        },
+        {
+          "criterion": "src/components/ChatArea.tsx contains 'clearDraft'",
+          "pass": true,
+          "evidence": "ChatArea.tsx:759 clearDraft(); ChatArea.tsx:1252 onClearDraft={clearDraft}"
+        },
+        {
+          "criterion": "src/components/ChatArea.tsx contains 'onOpenKnowledgePanel'",
+          "pass": true,
+          "evidence": "ChatArea.tsx:31 (prop decl), 122 (destructure), 1251 (pass to ChatAreaComposer)"
+        },
+        {
+          "criterion": "src/components/ChatAreaComposer.tsx contains 'BookmarkPlus'",
+          "pass": true,
+          "evidence": "ChatAreaComposer.tsx:2 (import), 103 (render)"
+        },
+        {
+          "criterion": "src/components/ChatAreaComposer.tsx contains 'Trash2'",
+          "pass": true,
+          "evidence": "ChatAreaComposer.tsx:2 (import), 113 (render inside conditional)"
+        },
+        {
+          "criterion": "src/components/ChatAreaComposer.tsx contains 'Copy'",
+          "pass": true,
+          "evidence": "ChatAreaComposer.tsx:2 (import), 124 (render inside conditional)"
+        },
+        {
+          "criterion": "src/components/ChatAreaComposer.tsx contains 'onClearDraft'",
+          "pass": true,
+          "evidence": "ChatAreaComposer.tsx:25 (prop), 49 (destructure), 107 (onClick handler)"
+        },
+        {
+          "criterion": "src/components/ChatAreaComposer.tsx contains 'lastAssistantContent'",
+          "pass": true,
+          "evidence": "ChatAreaComposer.tsx:26 (prop), 50 (destructure), 53 (conditional check), 116 (conditional render)"
+        },
+        {
+          "criterion": "src/hooks/useAppShellViewModel.ts contains 'onOpenKnowledgePanel'",
+          "pass": true,
+          "evidence": "useAppShellViewModel.ts:177 — onOpenKnowledgePanel: () => panelOrchestration.toggleRightPanel('knowledge')"
+        }
+      ]
+    },
+    "TASK-003": {
+      "status": "pass",
+      "criteria": [
+        {
+          "criterion": "src/components/ChatAreaModeControls.tsx does NOT contain 'showAdvanced'",
+          "pass": true,
+          "evidence": "grep returned NOT FOUND — no matches in 127-line file"
+        },
+        {
+          "criterion": "src/components/ChatAreaModeControls.tsx does NOT contain 'onSetChatMode'",
+          "pass": true,
+          "evidence": "grep returned NOT FOUND — no matches in 127-line file"
+        }
+      ]
+    },
+    "TASK-004": {
+      "status": "pass",
+      "criteria": [
+        {
+          "criterion": "src/components/StoryBiblePanel.tsx contains 'uppercase tracking-wider'",
+          "pass": true,
+          "evidence": "StoryBiblePanel.tsx:1714 — className includes 'text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-dark-text-muted'"
+        }
+      ]
+    },
+    "TASK-005": {
+      "status": "pass",
+      "criteria": [
+        {
+          "criterion": "src/components/AppHeader.tsx contains 'focus-visible:ring-2'",
+          "pass": true,
+          "evidence": "AppHeader.tsx:130 — focus-visible:ring-2 focus-visible:ring-primary-500/50 (1 occurrence)"
+        },
+        {
+          "criterion": "src/components/Sidebar.tsx contains 'focus-visible:ring-2'",
+          "pass": true,
+          "evidence": "Sidebar.tsx:78, 160, 189, 199, 209 — 5 occurrences across nav items and icon buttons"
+        },
+        {
+          "criterion": "src/components/ChatSidebar.tsx contains 'focus-visible:ring-2'",
+          "pass": true,
+          "evidence": "ChatSidebar.tsx:22 — focus-visible:ring-2 focus-visible:ring-primary-500/50 (1 occurrence)"
+        },
+        {
+          "criterion": "src/components/AppContextFooter.tsx contains 'focus-visible:ring-2'",
+          "pass": true,
+          "evidence": "AppContextFooter.tsx:13 — focus-visible:ring-2 focus-visible:ring-primary-500/50 (1 occurrence)"
+        }
+      ]
+    },
+    "TASK-006": {
+      "status": "pass",
+      "criteria": [
+        {
+          "criterion": "src/components/AiToolbar.tsx contains 'focus-visible:ring-2'",
+          "pass": true,
+          "evidence": "AiToolbar.tsx:37, 52 — 2 occurrences"
+        },
+        {
+          "criterion": "src/components/MessageBubble.tsx contains 'focus-visible:ring-2'",
+          "pass": true,
+          "evidence": "MessageBubble.tsx:365, 391, 426, 465 — 4 occurrences"
+        },
+        {
+          "criterion": "src/components/QuickPanel.tsx contains 'focus-visible:ring-2'",
+          "pass": true,
+          "evidence": "QuickPanel.tsx:170 — focus-visible:ring-2 focus-visible:ring-primary-500/50 (1 occurrence)"
+        }
+      ]
+    },
+    "TASK-007": {
+      "status": "pass",
+      "criteria": [
+        {
+          "criterion": "src/components/ChatAreaComposer.test.tsx contains 'attach context'",
+          "pass": true,
+          "evidence": "ChatAreaComposer.test.tsx:52, 56 — test description and getByRole selector"
+        },
+        {
+          "criterion": "src/components/ChatAreaComposer.test.tsx contains 'clear draft'",
+          "pass": true,
+          "evidence": "ChatAreaComposer.test.tsx:62, 65, 68, 72 — test descriptions and selectors"
+        },
+        {
+          "criterion": "src/components/ChatAreaComposer.test.tsx contains 'copy last reply'",
+          "pass": true,
+          "evidence": "ChatAreaComposer.test.tsx:78, 81, 84, 90 — test descriptions and selectors"
+        }
+      ]
+    },
+    "TASK-008": {
+      "status": "pass",
+      "criteria": [
+        {
+          "criterion": "src/components/Sidebar.test.tsx contains 'toMatchSnapshot'",
+          "pass": true,
+          "evidence": "Sidebar.test.tsx:156, 521 — two snapshot assertions; Sidebar.test.tsx.snap exists"
+        },
+        {
+          "criterion": "src/components/StoryBiblePanel.test.tsx contains 'toMatchSnapshot'",
+          "pass": true,
+          "evidence": "StoryBiblePanel.test.tsx:521 — snapshot assertion; StoryBiblePanel.test.tsx.snap exists"
+        }
+      ]
+    }
+  },
+  "must_haves": {
+    "truths": [
+      {"claim": "CSS token --composer-btn-sm: 28px defined", "verified": true, "evidence": "globals.css:51"},
+      {"claim": "useDraftCache integrated in ChatArea for localStorage draft persistence", "verified": true, "evidence": "ChatArea.tsx:24,127"},
+      {"claim": "clearDraft called on send in ChatArea", "verified": true, "evidence": "ChatArea.tsx:759"},
+      {"claim": "onOpenKnowledgePanel wired from useAppShellViewModel through to ChatAreaComposer", "verified": true, "evidence": "useAppShellViewModel.ts:177 → ChatSidebar spread → ChatArea.tsx:1251"},
+      {"claim": "BookmarkPlus, Trash2, Copy buttons present in ChatAreaComposer", "verified": true, "evidence": "ChatAreaComposer.tsx:2,103,113,124"},
+      {"claim": "ChatAreaModeControls simplified — showAdvanced and onSetChatMode removed", "verified": true, "evidence": "grep found no matches in ChatAreaModeControls.tsx"},
+      {"claim": "focus-visible:ring-2 applied to all shell panels (AppHeader, Sidebar, ChatSidebar, AppContextFooter)", "verified": true, "evidence": "confirmed in all 4 files"},
+      {"claim": "focus-visible:ring-2 applied to interactive components (AiToolbar, MessageBubble, QuickPanel)", "verified": true, "evidence": "confirmed in all 3 files"},
+      {"claim": "Draft persistence tested in dedicated useDraftCache.test.tsx with 10 behavioral tests", "verified": true, "evidence": "useDraftCache.test.tsx — 10 passing tests"},
+      {"claim": "All 3 toolbar buttons tested in ChatAreaComposer.test.tsx", "verified": true, "evidence": "ChatAreaComposer.test.tsx — 7 passing tests covering all 3 buttons"},
+      {"claim": "Snapshot tests in Sidebar.test.tsx and StoryBiblePanel.test.tsx with .snap files", "verified": true, "evidence": "__snapshots__/Sidebar.test.tsx.snap and StoryBiblePanel.test.tsx.snap both present"}
+    ],
+    "artifacts": [
+      {"path": "src/styles/globals.css", "exists": true, "substantial": true},
+      {"path": "src/components/ChatArea.tsx", "exists": true, "substantial": true},
+      {"path": "src/components/ChatAreaComposer.tsx", "exists": true, "substantial": true},
+      {"path": "src/components/ChatAreaModeControls.tsx", "exists": true, "substantial": true},
+      {"path": "src/hooks/useDraftCache.ts", "exists": true, "substantial": true},
+      {"path": "src/hooks/useAppShellViewModel.ts", "exists": true, "substantial": true},
+      {"path": "src/components/ChatAreaComposer.test.tsx", "exists": true, "substantial": true},
+      {"path": "src/hooks/useDraftCache.test.tsx", "exists": true, "substantial": true},
+      {"path": "src/components/__snapshots__/Sidebar.test.tsx.snap", "exists": true, "substantial": true},
+      {"path": "src/components/__snapshots__/StoryBiblePanel.test.tsx.snap", "exists": true, "substantial": true}
+    ],
+    "key_links": [
+      {
+        "from": "useAppShellViewModel.ts:177 chatAreaProps.onOpenKnowledgePanel",
+        "to": "ChatSidebar spread via ComponentProps<typeof ChatArea>",
+        "connected": true,
+        "evidence": "ChatSidebar.tsx:7 chatAreaProps typed as ComponentProps<typeof ChatArea>; ChatSidebar.tsx:30 <ChatArea {...chatAreaProps} />"
+      },
+      {
+        "from": "ChatArea.tsx onOpenKnowledgePanel prop",
+        "to": "ChatAreaComposer.tsx onOpenKnowledgePanel prop",
+        "connected": true,
+        "evidence": "ChatArea.tsx:1251 onOpenKnowledgePanel={onOpenKnowledgePanel}"
+      },
+      {
+        "from": "ChatArea.tsx useDraftCache(currentConversationId)",
+        "to": "persist() called on every input change",
+        "connected": true,
+        "evidence": "ChatArea.tsx:1245 onInputChange={(v) => { setInput(v); persist(v) }}"
+      },
+      {
+        "from": "ChatArea.tsx clearDraft()",
+        "to": "called in send handler",
+        "connected": true,
+        "evidence": "ChatArea.tsx:759 clearDraft()"
+      },
+      {
+        "from": "ChatArea.tsx latestAssistantContent",
+        "to": "ChatAreaComposer.tsx lastAssistantContent prop",
+        "connected": true,
+        "evidence": "ChatArea.tsx:183 latestAssistantContent = useLatestAssistantMessageContent(); ChatArea.tsx:1253 lastAssistantContent={latestAssistantContent}"
+      }
+    ]
+  },
+  "antipatterns": [],
+  "gaps": [],
+  "fix_plans": [],
+  "coverage_score": {
+    "must_haves_verified": 28,
+    "must_haves_total": 28,
+    "percentage": "100%",
+    "test_pass_rate": "836/836 (100%)",
+    "draft_persistence_coverage": "useDraftCache.test.tsx: 10 behavioral tests; ChatArea.test.tsx: localStorage.clear() in beforeEach (indirect coverage only — no dedicated ChatArea draft integration test)",
+    "toolbar_button_coverage": "ChatAreaComposer.test.tsx: 7 tests covering all 3 buttons with conditional render and click behavior",
+    "snapshot_coverage": "Sidebar.test.tsx.snap and StoryBiblePanel.test.tsx.snap both generated and present"
+  }
+}

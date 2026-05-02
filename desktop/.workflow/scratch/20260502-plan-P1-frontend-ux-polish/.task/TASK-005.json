@@ -1,0 +1,63 @@
+{
+  "id": "TASK-005",
+  "title": "Shell panel layout consistency: Sidebar, ChatSidebar, AppHeader, AppContextFooter",
+  "description": "Apply layout consistency pass to the four shell components. Unify icon button sizing (h-8 w-8 for regular, h-7 w-7 for compact), divider styling (border-gray-200 dark:border-dark-border), and active-item highlight (bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300) across all four files.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "In Sidebar.tsx, ChatSidebar.tsx, AppHeader.tsx, AppContextFooter.tsx: (1) standardize icon-only button className to 'flex h-8 w-8 items-center justify-center rounded-lg transition-colors' with consistent hover/active/focus-visible ring; (2) replace any one-off divider heights/colors with 'border-t border-gray-200 dark:border-dark-border'; (3) normalize active conversation/item highlight to 'bg-primary-50 dark:bg-primary-900/20'; (4) ensure all interactive elements have focus-visible:ring-2 focus-visible:ring-primary-500/50.",
+  "status": "completed",
+  "completed_at": "2026-05-02T18:40:00.000Z",
+  "actual_duration": null,
+  "scope": "src/components/Sidebar.tsx, src/components/ChatSidebar.tsx, src/components/AppHeader.tsx, src/components/AppContextFooter.tsx",
+  "focus_paths": [
+    "src/components/Sidebar.tsx",
+    "src/components/ChatSidebar.tsx",
+    "src/components/AppHeader.tsx",
+    "src/components/AppContextFooter.tsx"
+  ],
+  "read_first": [
+    "src/components/Sidebar.tsx",
+    "src/components/ChatSidebar.tsx",
+    "src/components/AppHeader.tsx",
+    "src/components/AppContextFooter.tsx"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": "panels",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/AppHeader.tsx contains 'focus-visible:ring-2'",
+      "src/components/Sidebar.tsx contains 'focus-visible:ring-2'",
+      "src/components/ChatSidebar.tsx contains 'focus-visible:ring-2'",
+      "src/components/AppContextFooter.tsx contains 'focus-visible:ring-2'",
+      "pnpm test -- --run exits 0"
+    ],
+    "verification": "grep -rn 'focus-visible:ring-2' src/components/Sidebar.tsx src/components/ChatSidebar.tsx src/components/AppHeader.tsx src/components/AppContextFooter.tsx",
+    "definition_of_done": "All four shell components use consistent icon-button sizing, divider styling, active highlight color, and focus-visible rings. No panel-specific rogue overrides remain."
+  },
+  "files": [
+    {"path": "src/components/Sidebar.tsx", "action": "modify", "target": "icon buttons, dividers, active item highlight", "change": "Normalize to standard icon button + focus-visible pattern"},
+    {"path": "src/components/ChatSidebar.tsx", "action": "modify", "target": "icon buttons, dividers, active item highlight", "change": "Same normalization"},
+    {"path": "src/components/AppHeader.tsx", "action": "modify", "target": "icon buttons, dividers", "change": "Same normalization"},
+    {"path": "src/components/AppContextFooter.tsx", "action": "modify", "target": "icon buttons, dividers", "change": "Same normalization"}
+  ],
+  "implementation": [
+    "Step 1 — Read each file. List all <button> elements that are icon-only (no text label visible). Check their current h-/w- classes.",
+    "Step 2 — Normalize icon buttons to: 'flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 dark:text-dark-text-secondary transition-colors hover:bg-gray-100 dark:hover:bg-dark-surface hover:text-gray-700 dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50'.",
+    "Step 3 — Find all horizontal/vertical divider elements. Replace one-off colors with 'border-gray-200 dark:border-dark-border'.",
+    "Step 4 — In Sidebar.tsx and ChatSidebar.tsx, find the active conversation/item highlight. Replace with 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'.",
+    "Step 5 — Run pnpm test -- --run."
+  ],
+  "test": {"commands": ["pnpm test -- --run"], "unit": [], "integration": [], "success_metrics": ["Sidebar.test.tsx, ChatSidebar.test.tsx, AppHeader.test.tsx, AppContextFooter.test.tsx all pass"]},
+  "reference": {"pattern": "ChatAreaComposer toolbar icon buttons (h-7 w-7 rounded-lg) as the compact reference; AppMainContent buttons for h-8 w-8 standard size.", "files": ["src/components/ChatAreaComposer.tsx"], "examples": null},
+  "rationale": {"chosen_approach": "In-place Tailwind class normalization — no new abstractions. Audit + replace.", "decision_factors": ["REQ-B cross-panel consistency"], "tradeoffs": null},
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {"affected_features": ["FT-070 Sidebar", "FT-071 Chat Sidebar"], "affected_components": ["TC-080 Sidebar", "TC-083 ChatSidebar", "TC-023 AppHeader", "TC-024 AppContextFooter"], "affected_requirements": ["REQ-B"], "adr_ids": []},
+  "meta": {"estimated_time": "45 min", "risk": "low", "autonomous": true, "checkpoint": false}
+}

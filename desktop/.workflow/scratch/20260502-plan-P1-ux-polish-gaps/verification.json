@@ -1,0 +1,143 @@
+{
+  "phase": 1,
+  "phase_slug": "ux-polish-gaps",
+  "plan_dir": ".workflow/scratch/20260502-plan-P1-ux-polish-gaps",
+  "status": "passed",
+  "verified_at": "2026-05-02T00:00:00.000Z",
+  "verifier": "maestro-verify",
+
+  "must_haves": {
+    "truths": [
+      {
+        "claim": "BookmarkPlus button renders only when onToggleKnowledgePanel prop is provided",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:100 — {onToggleKnowledgePanel && (<button...>)}; test confirms absence without prop"
+      },
+      {
+        "claim": "Copy button shows Check icon for 1.5s after successful copy, then restores Copy icon",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:53 — copied state; :128 — setCopied(true)/setTimeout; test verified with fake timers"
+      },
+      {
+        "claim": "Trash2 button always in DOM (no layout shift), opacity-0 when input is empty",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx:117 — opacity-0 pointer-events-none conditional class; test verifies toHaveClass('opacity-0')"
+      },
+      {
+        "claim": "Draft restore useEffect only fires on conversation switch, not on every keystroke",
+        "status": "verified",
+        "evidence": "ChatArea.tsx:144 — useEffect deps [currentConversationId]; eslint-disable comment makes intent explicit"
+      },
+      {
+        "claim": "localStorage persist calls are debounced 350ms on keystroke",
+        "status": "verified",
+        "evidence": "ChatArea.tsx:117 — makeDebounce helper; :138 — debouncedPersist = useMemo(() => makeDebounce(persist, 350))"
+      },
+      {
+        "claim": "onInputChange handler is stable via useCallback (no new reference per render)",
+        "status": "verified",
+        "evidence": "ChatArea.tsx:139 — handleInputChange = useCallback; :1260 — onInputChange={handleInputChange}"
+      },
+      {
+        "claim": "clearDraft() only fires when a draft exists (no-op localStorage remove eliminated)",
+        "status": "verified",
+        "evidence": "ChatArea.tsx:774 — if (persistedText) clearDraft()"
+      },
+      {
+        "claim": "--composer-focus-ring token overridden in .dark block (violet-400 at 50%)",
+        "status": "verified",
+        "evidence": "globals.css:66 — --composer-focus-ring: rgba(167, 139, 250, 0.5) in .dark block"
+      },
+      {
+        "claim": "AppContextFooter outer div has no focus-visible classes (non-interactive element)",
+        "status": "verified",
+        "evidence": "AppContextFooter.tsx — grep 'focus-visible' returns 0 matches; AppContextFooter.test.tsx regression test added"
+      },
+      {
+        "claim": "onOpenKnowledgePanel renamed to onToggleKnowledgePanel in all 4 locations",
+        "status": "verified",
+        "evidence": "ChatAreaComposer.tsx: 0 'onOpen' / 4 'onToggle'; ChatArea.tsx: 0 'onOpen' / 3 'onToggle'; useAppShellViewModel.ts: 0 'onOpen' / 1 'onToggle'; ChatSidebar.tsx: uses ComponentProps spread (auto-updated)"
+      }
+    ],
+    "artifacts": [
+      { "path": "src/components/ChatAreaComposer.tsx", "status": "exists", "substantive": true, "wired": true },
+      { "path": "src/components/ChatArea.tsx", "status": "exists", "substantive": true, "wired": true },
+      { "path": "src/styles/globals.css", "status": "exists", "substantive": true, "wired": true },
+      { "path": "src/components/AppContextFooter.tsx", "status": "exists", "substantive": true, "wired": true },
+      { "path": "src/hooks/useAppShellViewModel.ts", "status": "exists", "substantive": true, "wired": true },
+      { "path": "src/components/AppContextFooter.test.tsx", "status": "exists", "substantive": true, "wired": true }
+    ],
+    "key_links": [
+      {
+        "from": "useAppShellViewModel.chatAreaProps.onToggleKnowledgePanel → ChatArea → ChatAreaComposer",
+        "status": "wired",
+        "evidence": "ViewModel:177 provides key; ChatArea:130+1266 passes through; ChatAreaComposer:100 guards + calls it"
+      },
+      {
+        "from": "ChatArea.handleInputChange → debouncedPersist → useDraftCache.persist",
+        "status": "wired",
+        "evidence": "ChatArea:139-141 wires handleInputChange→debouncedPersist; useDraftCache returns persist fn"
+      },
+      {
+        "from": "ChatArea.useEffect([currentConversationId]) → setInput(persistedText)",
+        "status": "wired",
+        "evidence": "ChatArea:142-144 — fires only on conversation switch, restores draft"
+      }
+    ]
+  },
+
+  "constraint_violations": [],
+
+  "antipatterns": [
+    {
+      "file": "src/components/ChatAreaComposer.tsx",
+      "pattern": "placeholder",
+      "matches": ["line 9: inputPlaceholder (prop name)", "line 34: destructure", "line 72-73: HTML aria-label/placeholder attrs"],
+      "severity": "info",
+      "verdict": "FALSE_POSITIVE — legitimate HTML input placeholder prop, not stub content"
+    },
+    {
+      "file": "src/components/ChatArea.tsx",
+      "pattern": "placeholder",
+      "matches": ["lines 1144-1159: quickRollback form placeholder attrs (pre-existing)"],
+      "severity": "info",
+      "verdict": "FALSE_POSITIVE — pre-existing HTML form placeholders, unrelated to gap fixes"
+    }
+  ],
+
+  "gaps": [],
+
+  "fix_plans": [],
+
+  "human_verification": [
+    {
+      "id": "HV-001",
+      "description": "Dark mode composer focus ring (--composer-focus-ring) — visually verify violet-400 ring appears correctly on dark background when composer textarea is focused",
+      "severity": "low",
+      "type": "visual"
+    },
+    {
+      "id": "HV-002",
+      "description": "Trash2 opacity transition — verify no layout shift on first character typed and after clearing input",
+      "severity": "low",
+      "type": "visual"
+    },
+    {
+      "id": "HV-003",
+      "description": "Draft restore — switch conversations rapidly, verify draft is not overwritten by the previous conversation's restore",
+      "severity": "medium",
+      "type": "interaction"
+    }
+  ],
+
+  "coverage_score": 1.0,
+  "truths_verified": 10,
+  "truths_total": 10,
+  "artifacts_verified": 6,
+  "artifacts_total": 6,
+  "links_wired": 3,
+  "links_total": 3,
+  "test_count": 839,
+  "tests_new": 6,
+  "typescript_errors": 0
+}

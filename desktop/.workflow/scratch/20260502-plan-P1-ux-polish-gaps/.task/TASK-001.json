@@ -1,0 +1,77 @@
+{
+  "id": "TASK-001",
+  "title": "ChatAreaComposer: toolbar button correctness + UX polish",
+  "description": "Fix 5 issues in ChatAreaComposer.tsx introduced by Phase 1: conditional render on BookmarkPlus button, missing focus-visible on 3 new buttons, copy feedback state, Trash2 layout-shift transition, and prop rename.",
+  "issue_id": "ISS-20260502-003",
+  "issue_refs": ["ISS-20260502-003","ISS-20260502-012","ISS-20260502-016","ISS-20260502-019","ISS-20260502-020","ISS-20260502-058"],
+  "type": "fix",
+  "priority": "high",
+  "effort": "small",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "wave": 1,
+  "executor": "agent",
+
+  "action": "Apply 5 surgical fixes to src/components/ChatAreaComposer.tsx: (1) Add 'useState' import from 'react'. (2) Add 'Check' to lucide-react imports. (3) Rename prop 'onOpenKnowledgePanel' → 'onToggleKnowledgePanel' in interface and destructure. (4) Add 'const [copied, setCopied] = useState(false)' at top of component body. (5) Update copyLastReply to: navigator.clipboard?.writeText(lastAssistantContent).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }).catch(() => {}). (6) Wrap BookmarkPlus button in: {onToggleKnowledgePanel && (...)}. (7) Add focus-visible classes to all 3 new buttons: append 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50' to their className. (8) Replace Trash2 conditional mount {input.length > 0 && onClearDraft && (<button>)} with always-rendered button: className includes 'transition-opacity' plus conditional 'opacity-0 pointer-events-none' when !input.length or !onClearDraft. (9) Replace Copy <Copy size={15}/> with conditional icon: {copied ? <Check size={15} className='text-green-500' /> : <Copy size={15} />}. (10) Update Copy button aria-label to {copied ? 'copied!' : 'copy last reply'}.",
+
+  "scope": "src/components/ChatAreaComposer.tsx",
+  "focus_paths": ["src/components/ChatAreaComposer.tsx"],
+
+  "read_first": [
+    "src/components/ChatAreaComposer.tsx",
+    "src/components/ChatArea.tsx"
+  ],
+
+  "depends_on": [],
+
+  "files": [
+    {
+      "path": "src/components/ChatAreaComposer.tsx",
+      "action": "modify",
+      "target": "ChatAreaComposer component",
+      "change": "Add useState, Check imports; rename onOpenKnowledgePanel→onToggleKnowledgePanel; add copied state; update copyLastReply; fix BookmarkPlus conditional; add focus-visible to 3 buttons; replace Trash2 conditional mount with opacity transition; add copy feedback icon"
+    }
+  ],
+
+  "implementation": [
+    "Read src/components/ChatAreaComposer.tsx fully before editing.",
+    "Update import line 1: change 'import type { RefObject } from \\'react\\'' to 'import { useState } from \\'react\\'; import type { RefObject } from \\'react\\''",
+    "Update import line 2: add 'Check' to lucide-react imports: 'import { BookmarkPlus, Check, Copy, MicOff, Paperclip, Send, Square, Trash2 } from \\'lucide-react\\''",
+    "In ChatAreaComposerProps interface: rename 'onOpenKnowledgePanel?: () => void' to 'onToggleKnowledgePanel?: () => void'",
+    "In destructure list: rename 'onOpenKnowledgePanel,' to 'onToggleKnowledgePanel,'",
+    "At top of component body (after destructure, before return): add 'const [copied, setCopied] = useState(false)'",
+    "Replace copyLastReply function with: const copyLastReply = () => { navigator.clipboard?.writeText(lastAssistantContent!).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }).catch(() => {}) }",
+    "Wrap the BookmarkPlus button (lines ~96-104) in: {onToggleKnowledgePanel && (<button onClick={onToggleKnowledgePanel} aria-label='open knowledge panel' title='open knowledge panel' className='rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50' type='button'><BookmarkPlus size={15} /></button>)}",
+    "Replace the Trash2 conditional block {input.length > 0 && onClearDraft && (<button...>)} with always-rendered: <button onClick={onClearDraft} aria-label='clear draft' title='clear draft' className={`rounded-lg p-1.5 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${(!input.length || !onClearDraft) ? 'opacity-0 pointer-events-none' : ''}`} type='button'><Trash2 size={15} /></button>",
+    "Replace the Copy conditional block {lastAssistantContent && (<button...><Copy/></button>)} with: {lastAssistantContent && (<button onClick={copyLastReply} aria-label={copied ? 'copied!' : 'copy last reply'} title='copy last reply' className='rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50' type='button'>{copied ? <Check size={15} className='text-green-500' /> : <Copy size={15} />}</button>)}"
+  ],
+
+  "convergence": {
+    "criteria": [
+      "src/components/ChatAreaComposer.tsx contains 'onToggleKnowledgePanel'",
+      "src/components/ChatAreaComposer.tsx does NOT contain 'onOpenKnowledgePanel'",
+      "src/components/ChatAreaComposer.tsx contains 'const [copied, setCopied] = useState(false)'",
+      "src/components/ChatAreaComposer.tsx contains 'Check size={15}'",
+      "src/components/ChatAreaComposer.tsx contains 'focus-visible:ring-2' at least 3 times (one per new button)",
+      "src/components/ChatAreaComposer.tsx contains 'opacity-0 pointer-events-none'",
+      "src/components/ChatAreaComposer.tsx contains '{onToggleKnowledgePanel && ('",
+      "pnpm test src/components/ChatAreaComposer.test.tsx exits 0"
+    ],
+    "verification": "grep -c 'focus-visible:ring-2' src/components/ChatAreaComposer.tsx (expect >= 3); grep 'onToggleKnowledgePanel' src/components/ChatAreaComposer.tsx",
+    "definition_of_done": "BookmarkPlus only renders when prop provided; all 3 new buttons have focus rings; Trash2 fades instead of popping; Copy button shows checkmark after success; prop renamed consistently."
+  },
+
+  "test": {
+    "commands": ["pnpm test src/components/ChatAreaComposer.test.tsx"],
+    "unit": ["existing toolbar button tests should pass after prop rename fix in test file"],
+    "success_metrics": ["All existing ChatAreaComposer tests pass"]
+  },
+
+  "rationale": {
+    "chosen_approach": "Single-file surgical fix with no new abstractions. All 5 issues are localized to ChatAreaComposer.tsx.",
+    "decision_factors": ["Minimal blast radius", "Each fix is independent", "No test changes needed in Wave 1 (TASK-004 handles tests)"],
+    "tradeoffs": "Trash2 uses opacity approach (renders always, hides visually) to avoid layout shift — slightly increases DOM; trade-off is acceptable."
+  },
+
+  "meta": { "estimated_time": "30 min", "risk": "low", "autonomous": true, "checkpoint": false }
+}

@@ -1,0 +1,63 @@
+{
+  "id": "TASK-007",
+  "title": "ChatAreaComposer + ChatAreaModeControls: update and add tests",
+  "description": "Update ChatAreaComposer.test.tsx to cover the three new toolbar buttons (attach context, clear draft, copy last reply) and useDraftCache integration. Update ChatAreaModeControls.test.tsx to match the simplified component (remove tests for the deleted advanced section, add test for presets-only render).",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "test",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "In ChatAreaComposer.test.tsx: add test cases for (1) BookmarkPlus button renders and calls onOpenKnowledgePanel, (2) Trash2 button only renders when input is non-empty and calls onClearDraft, (3) Copy button only renders when lastAssistantContent is non-empty. In ChatAreaModeControls.test.tsx: remove tests that reference showAdvanced / onSetChatMode / onSetWorkflowLevel / comparisonModels; add test that component renders modePresets row and no advanced section.",
+  "status": "completed",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src/components/ChatAreaComposer.test.tsx, src/components/ChatAreaModeControls.test.tsx",
+  "focus_paths": [
+    "src/components/ChatAreaComposer.test.tsx",
+    "src/components/ChatAreaModeControls.test.tsx"
+  ],
+  "read_first": [
+    "src/components/ChatAreaComposer.test.tsx",
+    "src/components/ChatAreaModeControls.test.tsx",
+    "src/components/ChatAreaComposer.tsx",
+    "src/components/ChatAreaModeControls.tsx"
+  ],
+  "depends_on": ["TASK-002", "TASK-003"],
+  "wave": 3,
+  "parallel_group": "tests",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/ChatAreaComposer.test.tsx contains 'attach context'",
+      "src/components/ChatAreaComposer.test.tsx contains 'clear draft'",
+      "src/components/ChatAreaComposer.test.tsx contains 'copy last reply'",
+      "src/components/ChatAreaModeControls.test.tsx does NOT contain 'showAdvanced'",
+      "pnpm test -- --run src/components/ChatAreaComposer.test.tsx exits 0",
+      "pnpm test -- --run src/components/ChatAreaModeControls.test.tsx exits 0"
+    ],
+    "verification": "pnpm test -- --run src/components/ChatAreaComposer.test.tsx src/components/ChatAreaModeControls.test.tsx",
+    "definition_of_done": "Test suite covers all new toolbar buttons and the simplified ChatAreaModeControls. All tests pass."
+  },
+  "files": [
+    {"path": "src/components/ChatAreaComposer.test.tsx", "action": "modify", "target": "test suite", "change": "Add 3 new it() blocks for toolbar buttons; update prop setup to include onOpenKnowledgePanel, onClearDraft, lastAssistantContent"},
+    {"path": "src/components/ChatAreaModeControls.test.tsx", "action": "modify", "target": "test suite", "change": "Remove tests for deleted props/sections; add test for presets-only render"}
+  ],
+  "implementation": [
+    "Step 1 — Read ChatAreaComposer.test.tsx to understand existing test structure and prop defaults.",
+    "Step 2 — Add to the default props object: onOpenKnowledgePanel: vi.fn(), onClearDraft: vi.fn(), lastAssistantContent: ''.",
+    "Step 3 — Add test: 'renders attach context button and calls onOpenKnowledgePanel on click' — render with default props, find button by aria-label='attach context', fireEvent.click, expect onOpenKnowledgePanel.toHaveBeenCalled().",
+    "Step 4 — Add test: 'clear draft button only visible when input is non-empty' — render with input='', expect no button with aria-label='clear draft'; re-render with input='hello', expect button present, click calls onClearDraft.",
+    "Step 5 — Add test: 'copy last reply button only visible when lastAssistantContent is non-empty' — render with lastAssistantContent='', no copy button; render with lastAssistantContent='hello world', copy button present.",
+    "Step 6 — Read ChatAreaModeControls.test.tsx. Remove any tests that reference props removed in TASK-003 (onSetChatMode, comparisonModels, showAdvanced, onSetWorkflowLevel).",
+    "Step 7 — Add test: 'renders mode presets row' — render with modePresets=[{id:'focusWriting',label:'Focus'}], expect screen.getByText('Focus') to be in document.",
+    "Step 8 — Run pnpm test -- --run to confirm all pass."
+  ],
+  "test": {"commands": ["pnpm test -- --run src/components/ChatAreaComposer.test.tsx src/components/ChatAreaModeControls.test.tsx"], "unit": [], "integration": [], "success_metrics": ["All test cases pass with 0 failures"]},
+  "reference": {"pattern": "Existing ChatAreaComposer.test.tsx test structure (renderHook or render + userEvent pattern)", "files": ["src/components/ChatAreaComposer.test.tsx"], "examples": null},
+  "rationale": {"chosen_approach": "Update existing test files rather than creating new ones — keeps tests co-located with components.", "decision_factors": ["Existing test files already cover component basics"], "tradeoffs": null},
+  "risks": ["navigator.clipboard is not in jsdom — mock with vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn() } }) if copy button test needs clipboard verification."],
+  "code_skeleton": null,
+  "doc_context": {"affected_features": ["FT-010", "FT-011"], "affected_components": ["TC-011", "TC-013"], "affected_requirements": ["REQ-A"], "adr_ids": []},
+  "meta": {"estimated_time": "45 min", "risk": "low", "autonomous": true, "checkpoint": false}
+}

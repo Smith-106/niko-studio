@@ -1,0 +1,112 @@
+{
+  "id": "TASK-003",
+  "title": "ChatAreaModeControls: compact refactor — remove duplicate mode/level controls",
+  "description": "Simplify ChatAreaModeControls.tsx by removing the internal showAdvanced state and the advanced section (mode buttons, workflow-level buttons, comparison model selector). Those controls are already inline in the ChatAreaComposer toolbar chips. The expanded panel retains only the mode presets row and the skill packs row. Update the ChatArea toggle label to 'Presets' instead of 'Advanced'.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "In ChatAreaModeControls.tsx: (1) remove the useState(showAdvanced) state, (2) remove the showMore/showLess toggle button, (3) remove the advanced section div that contains the mode/comparison/workflow-level controls, (4) remove props that are only used by the advanced section: chatModeNormalLabel, chatModeAgentLabel, chatModeComparisonLabel, comparisonModelLabel, comparisonModel, comparisonModels, workflowQuickLabel, workflowLiteLabel, workflowStandardLabel, workflowBrainstormLabel, workflowCoordinatorLabel, showMoreLabel, showLessLabel, onSetChatMode, onToggleModelComparison, onSetComparisonModel, onSetWorkflowLevel; (5) keep: modeLabel (for screen-reader summary), modePresetsLabel, selectedSkillsLabel, availableSkillIds, selectedSkillIds, skillPacksLabel, chatMode, agentAction, enableModelComparison, workflowLevel, templateLibraryEntryLabel, chatAgentActionWriteLabel, chatAgentActionReviseLabel, chatAgentActionContextLabel, modePresets, onOpenTemplateLibrary, onApplyPreset, onToggleSkill. Update ChatArea.tsx to pass only the remaining props.",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/components/ChatAreaModeControls.tsx, src/components/ChatArea.tsx",
+  "focus_paths": [
+    "src/components/ChatAreaModeControls.tsx",
+    "src/components/ChatArea.tsx"
+  ],
+
+  "read_first": [
+    "src/components/ChatAreaModeControls.tsx",
+    "src/components/ChatArea.tsx",
+    "src/components/ChatAreaModeControls.test.tsx"
+  ],
+
+  "depends_on": ["TASK-002"],
+  "wave": 2,
+  "parallel_group": "composer",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/components/ChatAreaModeControls.tsx does NOT contain 'showAdvanced'",
+      "src/components/ChatAreaModeControls.tsx does NOT contain 'setShowAdvanced'",
+      "src/components/ChatAreaModeControls.tsx does NOT contain 'onSetChatMode'",
+      "src/components/ChatAreaModeControls.tsx does NOT contain 'onSetWorkflowLevel'",
+      "src/components/ChatAreaModeControls.tsx does NOT contain 'comparisonModels'",
+      "src/components/ChatAreaModeControls.tsx contains 'modePresets.map'",
+      "pnpm test -- --run exits 0"
+    ],
+    "verification": "grep -n 'showAdvanced\\|onSetChatMode\\|onSetWorkflowLevel' src/components/ChatAreaModeControls.tsx | wc -l (should be 0)",
+    "definition_of_done": "ChatAreaModeControls renders only a compact two-row panel: mode presets and skill packs. All duplicate mode/level controls are gone. No prop or render errors."
+  },
+
+  "files": [
+    {
+      "path": "src/components/ChatAreaModeControls.tsx",
+      "action": "modify",
+      "target": "ChatAreaModeControlsProps interface and component body",
+      "change": "Remove: useState(showAdvanced), showMore/showLess button, entire advanced section div (lines 173-273). Remove from props interface: chatModeNormalLabel, chatModeAgentLabel, chatModeComparisonLabel, comparisonModelLabel, comparisonModel, comparisonModels, workflowQuickLabel, workflowLiteLabel, workflowStandardLabel, workflowBrainstormLabel, workflowCoordinatorLabel, showMoreLabel, showLessLabel, onSetChatMode, onToggleModelComparison, onSetComparisonModel, onSetWorkflowLevel. Also remove the useEffect that auto-sets showAdvanced. Keep the active mode summary span and template library button as optional (or remove them too since they are in the composer toolbar already)."
+    },
+    {
+      "path": "src/components/ChatArea.tsx",
+      "action": "modify",
+      "target": "ChatAreaModeControls JSX props (lines 1200-1239)",
+      "change": "Remove the props that no longer exist in ChatAreaModeControls: chatModeNormalLabel, chatModeAgentLabel, chatModeComparisonLabel, comparisonModelLabel, comparisonModel, comparisonModels, workflowQuickLabel through workflowCoordinatorLabel, showMoreLabel, showLessLabel, onSetChatMode, onToggleModelComparison, onSetComparisonModel, onSetWorkflowLevel."
+    }
+  ],
+
+  "implementation": [
+    "Step 1 — Read ChatAreaModeControls.tsx carefully, noting all props and the component structure.",
+    "Step 2 — Identify the 'showAdvanced && (...)' conditional block (lines 173-273) that wraps the mode/workflow/comparison controls. Delete this entire block.",
+    "Step 3 — Delete the useState(showAdvanced) declaration (line 87) and the useEffect that sets showAdvanced=true (lines 101-105).",
+    "Step 4 — Delete the showMore/showLess toggle button from the header row (line 126-130).",
+    "Step 5 — Consider whether to keep the active mode summary span (line 111-113) and templateLibraryEntryLabel button (lines 114-122): the template button is already in the composer toolbar, so remove it. The mode summary span can stay as a compact status indicator — keep it.",
+    "Step 6 — Update the ChatAreaModeControlsProps interface: remove all props that were only used by the deleted sections. The minimal remaining props are: modeLabel, modePresetsLabel, selectedSkillsLabel, availableSkillIds, selectedSkillIds, skillPacksLabel, chatMode, agentAction, enableModelComparison, workflowLevel, chatAgentActionWriteLabel, chatAgentActionReviseLabel, chatAgentActionContextLabel, modePresets, onApplyPreset, onToggleSkill. Remove optional templateLibraryEntryLabel and onOpenTemplateLibrary since the button is removed.",
+    "Step 7 — Update ChatArea.tsx: remove all props that no longer exist in ChatAreaModeControls from the JSX call site (lines 1200-1239). TypeScript errors will highlight exactly which props to remove.",
+    "Step 8 — Run pnpm test -- --run to verify no regressions."
+  ],
+
+  "test": {
+    "commands": ["pnpm test -- --run"],
+    "unit": ["ChatAreaModeControls renders presets row and skills row without errors"],
+    "integration": [],
+    "success_metrics": ["ChatAreaModeControls.test.tsx passes", "No TypeScript errors"]
+  },
+
+  "reference": {
+    "pattern": "The ChatAreaComposer toolbar chips (CHIP_BASE/CHIP_ACTIVE/CHIP_DEFAULT) are the reference style for mode/level display. After this refactor, ChatAreaModeControls only needs to render the presets and skills rows.",
+    "files": ["src/components/ChatAreaModeControls.tsx", "src/components/ChatAreaComposer.tsx"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Remove duplicate controls rather than coordinate them. The ChatAreaComposer toolbar already has mode chips with dropdowns — showing them again in the expanded panel causes user confusion about which control is authoritative.",
+    "decision_factors": ["ChatAreaComposer chips are always visible and interactive", "ChatAreaModeControls advanced section duplicates those controls exactly"],
+    "tradeoffs": "Some advanced users may miss the large workflow-level button panel — but the chip dropdown in the toolbar provides the same functionality."
+  },
+
+  "risks": [
+    "ChatAreaModeControls.test.tsx may test the removed advanced section — update tests in TASK-007 to reflect the simplified component."
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["FT-011 Agent Write/Revise/Context Modes"],
+    "affected_components": ["TC-013 ChatAreaModeControls"],
+    "affected_requirements": ["REQ-A"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "30 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

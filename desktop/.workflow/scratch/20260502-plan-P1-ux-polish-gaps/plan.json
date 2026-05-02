@@ -1,0 +1,63 @@
+{
+  "summary": "Fix Phase 1-introduced issues from quality review: toolbar button correctness, draft lifecycle race condition, debounced persistence, CSS dark-mode gap, and accessibility cleanup. Targets BLOCK verdict's 9 actionable high-severity findings; defers major architectural refactors (ARC-001, ARC-002) to Phase 2.",
+  "approach": "Surgical gap-fix across 3 parallel Wave 1 tasks (each owns a distinct file set), followed by Wave 2 test update. No new features. No architectural rewrites. Minimal blast radius — each task independently verifiable.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"],
+  "task_count": 4,
+  "complexity": "low",
+  "estimated_time": "2-3 hours",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Parallel gap fixes — distinct file sets, no conflicts",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"]
+    },
+    {
+      "wave": 2,
+      "label": "Test updates",
+      "tasks": ["TASK-004"]
+    }
+  ],
+
+  "deferred": [
+    "ISS-20260502-006 (ARC-001): Extract draft concern from ChatArea — Phase 2 architectural work",
+    "ISS-20260502-007 (ARC-002): PanelContext refactor — Phase 2 architectural work",
+    "ISS-20260502-008 (ARC-003): ChatArea decomposition — large scope, Phase 2",
+    "ISS-20260502-002 (CORR-002): clearDraft before send confirmation — needs send flow analysis",
+    "ISS-20260502-011 (MNT-002): DRAFT_KEY_PREFIX constant — pre-existing, minor"
+  ],
+
+  "issues_addressed": [
+    "ISS-20260502-001", "ISS-20260502-003", "ISS-20260502-004", "ISS-20260502-005",
+    "ISS-20260502-012", "ISS-20260502-013", "ISS-20260502-014", "ISS-20260502-015",
+    "ISS-20260502-016", "ISS-20260502-017", "ISS-20260502-018", "ISS-20260502-019",
+    "ISS-20260502-020", "ISS-20260502-021", "ISS-20260502-058"
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "Existing toolbar buttons use className: 'rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text'",
+      "Focus ring pattern used throughout codebase: 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50'",
+      "Conditional render guard pattern (Trash2, Copy): {condition && <button ...>}",
+      "No debounce utility exists in project — implement with useRef-based closure"
+    ],
+    "conventions": [
+      "No lodash — project has no debounce utility; use a 3-line useRef-based debounce",
+      "Rename: onOpenKnowledgePanel → onToggleKnowledgePanel in all 3 files (TASK-001, TASK-002, TASK-003)"
+    ],
+    "dependencies": [
+      "TASK-001 and TASK-002 both rename onOpenKnowledgePanel → onToggleKnowledgePanel in their respective files",
+      "TASK-004 depends on TASK-001 and TASK-002 completing first"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-02T00:00:00.000Z",
+    "source": "maestro-plan --gaps",
+    "planning_mode": "gap-fix",
+    "plan_type": "fix",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

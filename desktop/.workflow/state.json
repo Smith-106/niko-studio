@@ -1,0 +1,139 @@
+{
+  "version": "2.0",
+  "project_name": "Niko-Studio Desktop",
+  "status": "idle",
+  "current_milestone": "M1",
+  "current_task_id": null,
+  "milestones": [
+    {
+      "id": "M1",
+      "name": "UX & Stability Sprint",
+      "status": "active",
+      "phases": [1, 2]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "PLN-001",
+      "type": "plan",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260502-plan-P1-frontend-ux-polish",
+      "status": "completed",
+      "depends_on": [],
+      "created_at": "2026-05-02T00:00:00.000Z"
+    },
+    {
+      "id": "EXC-001",
+      "type": "execute",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260502-plan-P1-frontend-ux-polish",
+      "status": "completed",
+      "depends_on": "PLN-001",
+      "harvested": true,
+      "created_at": "2026-05-02T00:00:00.000Z",
+      "completed_at": "2026-05-02T00:00:00.000Z"
+    },
+    {
+      "id": "VRF-001",
+      "type": "verify",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260502-plan-P1-frontend-ux-polish",
+      "status": "passed",
+      "depends_on": "EXC-001",
+      "created_at": "2026-05-02T00:00:00.000Z",
+      "completed_at": "2026-05-02T00:00:00.000Z"
+    },
+    {
+      "id": "REV-001",
+      "type": "review",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260502-review-P1-frontend-ux-polish",
+      "status": "completed",
+      "depends_on": "EXC-001",
+      "harvested": false,
+      "created_at": "2026-05-02T00:00:00.000Z",
+      "completed_at": "2026-05-02T00:00:00.000Z"
+    },
+    {
+      "id": "PLN-002",
+      "type": "plan",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260502-plan-P1-ux-polish-gaps",
+      "status": "completed",
+      "depends_on": "REV-001",
+      "harvested": false,
+      "created_at": "2026-05-02T00:00:00.000Z",
+      "completed_at": "2026-05-02T00:00:00.000Z"
+    },
+    {
+      "id": "EXC-002",
+      "type": "execute",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260502-plan-P1-ux-polish-gaps",
+      "status": "completed",
+      "depends_on": "PLN-002",
+      "harvested": true,
+      "created_at": "2026-05-02T00:00:00.000Z",
+      "completed_at": "2026-05-02T00:00:00.000Z"
+    },
+    {
+      "id": "VRF-002",
+      "type": "verify",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260502-plan-P1-ux-polish-gaps",
+      "status": "passed",
+      "depends_on": "EXC-002",
+      "created_at": "2026-05-02T00:00:00.000Z",
+      "completed_at": "2026-05-02T00:00:00.000Z"
+    },
+    {
+      "id": "REV-002",
+      "type": "review",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260502-review-P1-ux-polish-gaps",
+      "status": "completed",
+      "verdict": "WARN",
+      "depends_on": "EXC-002",
+      "harvested": false,
+      "created_at": "2026-05-02T00:00:00.000Z",
+      "completed_at": "2026-05-02T00:00:00.000Z"
+    },
+    {
+      "id": "TST-001",
+      "type": "test",
+      "milestone": "M1",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260502-plan-P1-ux-polish-gaps",
+      "status": "in_progress",
+      "depends_on": "EXC-002",
+      "harvested": false,
+      "created_at": "2026-05-02T00:00:00.000Z"
+    }
+  ],
+  "last_updated": "2026-05-02T00:00:00.000Z",
+  "last_codebase_rebuild": "2026-05-02T00:00:00.000Z",
+  "accumulated_context": {
+    "key_decisions": [],
+    "blockers": [],
+    "deferred": []
+  },
+  "transition_history": [],
+  "milestone_history": []
+}

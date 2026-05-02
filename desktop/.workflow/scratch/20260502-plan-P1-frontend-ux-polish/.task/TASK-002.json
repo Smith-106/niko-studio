@@ -1,0 +1,139 @@
+{
+  "id": "TASK-002",
+  "title": "ChatArea + ChatAreaComposer: useDraftCache integration and 3 new toolbar quick-action buttons",
+  "description": "1) Wire useDraftCache(conversationId) into ChatArea so chat input persists to localStorage (survives refresh, clears on send). 2) Add three new toolbar quick-action buttons to ChatAreaComposer: 'Attach context' (opens KnowledgeModal via onOpenKnowledgePanel callback), 'Clear draft' (only visible when input is non-empty), and 'Copy last reply' (copies latest assistant message to clipboard). 3) Thread the onOpenKnowledgePanel callback from useAppShellViewModel.ts through chatAreaProps.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "Four-file change: (A) useAppShellViewModel.ts: add 'onOpenKnowledgePanel: () => panelOrchestration.toggleRightPanel(\"knowledge\")' to chatSidebarProps.chatAreaProps. (B) ChatArea.tsx: import useDraftCache from '../hooks/useDraftCache', replace useState('') with useState(persistedText) + useEffect sync + persist on change + clearDraft on send; add onOpenKnowledgePanel prop; compute lastAssistantContent (from useLatestAssistantMessageContent selector, already imported in useAppViewModel context but needs adding to ChatArea); pass onOpenKnowledgePanel, onClearDraft=clearDraft, lastAssistantContent to ChatAreaComposer. (C) ChatAreaComposer.tsx: add three new props (onOpenKnowledgePanel, onClearDraft, lastAssistantContent) and render three icon buttons in the toolbar: BookmarkPlus (context attach), Trash2 (clear draft, conditional on input.length>0), Copy (copy last reply, conditional on lastAssistantContent).",
+  "status": "completed",
+  "completed_at": "2026-05-02T00:00:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/components/ChatArea.tsx, src/components/ChatAreaComposer.tsx, src/hooks/useAppShellViewModel.ts",
+  "focus_paths": [
+    "src/components/ChatArea.tsx",
+    "src/components/ChatAreaComposer.tsx",
+    "src/hooks/useAppShellViewModel.ts"
+  ],
+
+  "read_first": [
+    "src/components/ChatArea.tsx",
+    "src/components/ChatAreaComposer.tsx",
+    "src/hooks/useAppShellViewModel.ts",
+    "src/hooks/useDraftCache.ts",
+    "src/stores/selectors.ts",
+    "src/components/ChatSidebar.tsx"
+  ],
+
+  "depends_on": ["TASK-001"],
+  "wave": 2,
+  "parallel_group": "composer",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/components/ChatArea.tsx contains 'useDraftCache'",
+      "src/components/ChatArea.tsx contains 'clearDraft'",
+      "src/components/ChatArea.tsx contains 'onOpenKnowledgePanel'",
+      "src/components/ChatAreaComposer.tsx contains 'onOpenKnowledgePanel'",
+      "src/components/ChatAreaComposer.tsx contains 'onClearDraft'",
+      "src/components/ChatAreaComposer.tsx contains 'lastAssistantContent'",
+      "src/components/ChatAreaComposer.tsx contains 'BookmarkPlus'",
+      "src/components/ChatAreaComposer.tsx contains 'Trash2'",
+      "src/components/ChatAreaComposer.tsx contains 'Copy'",
+      "src/hooks/useAppShellViewModel.ts contains 'onOpenKnowledgePanel'",
+      "pnpm test -- --run exits 0"
+    ],
+    "verification": "pnpm test -- --run src/components/ChatArea && grep -n 'useDraftCache' src/components/ChatArea.tsx",
+    "definition_of_done": "Chat composer draft persists to localStorage. Three new toolbar buttons render (context attach opens KnowledgeModal, clear draft removes draft, copy last reply copies assistant content to clipboard). All existing ChatArea tests still pass."
+  },
+
+  "files": [
+    {
+      "path": "src/hooks/useAppShellViewModel.ts",
+      "action": "modify",
+      "target": "chatSidebarProps.chatAreaProps object (around line 172-177)",
+      "change": "Add property: onOpenKnowledgePanel: () => panelOrchestration.toggleRightPanel('knowledge')"
+    },
+    {
+      "path": "src/components/ChatArea.tsx",
+      "action": "modify",
+      "target": "top-level imports and component body",
+      "change": "1. Import useDraftCache from '../hooks/useDraftCache'. 2. Import useLatestAssistantMessageContent from '../stores/selectors'. 3. Add 'onOpenKnowledgePanel?: () => void' to ChatAreaProps interface. 4. Call const { persistedText, persist, clearDraft } = useDraftCache(currentConversationId). 5. Change useState('') to useState(persistedText). 6. Add useEffect(() => { setInput(persistedText) }, [persistedText]). 7. Replace onInputChange={setInput} with an inline handler that calls setInput(v) and persist(v). 8. Call clearDraft() in handleSend after resetting input. 9. Call const latestAssistantContent = useLatestAssistantMessageContent(). 10. Pass onOpenKnowledgePanel, onClearDraft={clearDraft}, lastAssistantContent={latestAssistantContent} to ChatAreaComposer."
+    },
+    {
+      "path": "src/components/ChatAreaComposer.tsx",
+      "action": "modify",
+      "target": "ChatAreaComposerProps interface and toolbar JSX (around line 183-400)",
+      "change": "1. Import BookmarkPlus, Trash2, Copy from 'lucide-react'. 2. Add to ChatAreaComposerProps: onOpenKnowledgePanel?: () => void, onClearDraft?: () => void, lastAssistantContent?: string. 3. In toolbar JSX, after the Paperclip button, add BookmarkPlus button (aria-label='attach context', onClick=onOpenKnowledgePanel, same className as Paperclip button: h-7 w-7 icon buttons). 4. After BookmarkPlus, add Trash2 button with conditional render: {input.length > 0 && onClearDraft && <button...Trash2...>}. 5. After Trash2, add Copy button: {lastAssistantContent && <button...Copy...onClick=copyLastReply>}. 6. Add local handler: const copyLastReply = () => { if (lastAssistantContent) navigator.clipboard.writeText(lastAssistantContent).catch(()=>{}) }."
+    }
+  ],
+
+  "implementation": [
+    "Step 1 — useAppShellViewModel.ts: In the chatSidebarProps object (lines 169-178), add 'onOpenKnowledgePanel: () => panelOrchestration.toggleRightPanel(\"knowledge\")' inside chatAreaProps.",
+    "Step 2 — ChatArea.tsx imports: Add 'import { useDraftCache } from \"../hooks/useDraftCache\"' and add useLatestAssistantMessageContent to the existing selectors import.",
+    "Step 3 — ChatArea.tsx props: Add 'onOpenKnowledgePanel?: () => void' to ChatAreaProps interface and destructure it in the component.",
+    "Step 4 — ChatArea.tsx draft integration: After 'const currentConversationId = useCurrentConversationId()', add: 'const { persistedText, persist, clearDraft } = useDraftCache(currentConversationId)'. Change 'const [input, setInput] = useState(\\'\\')' to 'const [input, setInput] = useState(persistedText)'. Add 'useEffect(() => { setInput(persistedText) }, [persistedText])' after the useState.",
+    "Step 5 — ChatArea.tsx input handler: Wrap setInput calls in onInputChange: change 'onInputChange={setInput}' in the ChatAreaComposer JSX to 'onInputChange={(v) => { setInput(v); persist(v) }}'.",
+    "Step 6 — ChatArea.tsx clear on send: In handleSend, find the line 'setInput(\\'\\')' and add 'clearDraft()' on the next line.",
+    "Step 7 — ChatArea.tsx latest assistant: Add 'const latestAssistantContent = useLatestAssistantMessageContent()' after the existing useLatestAssistantMessageContent check in useAppViewModel. IMPORTANT: useLatestAssistantMessageContent is imported from '../stores/selectors' — add it to the existing selectors import in ChatArea.tsx.",
+    "Step 8 — ChatArea.tsx pass to composer: Add to the ChatAreaComposer JSX props: onOpenKnowledgePanel={onOpenKnowledgePanel} onClearDraft={clearDraft} lastAssistantContent={latestAssistantContent}",
+    "Step 9 — ChatAreaComposer.tsx imports: Add BookmarkPlus, Trash2, Copy to the lucide-react import.",
+    "Step 10 — ChatAreaComposer.tsx props: Add three optional props to ChatAreaComposerProps and destructure them: onOpenKnowledgePanel?: () => void, onClearDraft?: () => void, lastAssistantContent?: string.",
+    "Step 11 — ChatAreaComposer.tsx buttons: After the Paperclip button JSX (line ~194), insert the three new buttons using the same className as the Paperclip button ('flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-dark-bg dark:hover:text-dark-text shrink-0'): (a) <button onClick={onOpenKnowledgePanel} aria-label='attach context' title='Attach context' type='button' className={...}><BookmarkPlus size={14} /></button>, (b) {input.length > 0 && onClearDraft && <button onClick={onClearDraft} aria-label='clear draft' title='Clear draft' type='button' className={...}><Trash2 size={14} /></button>}, (c) {lastAssistantContent && <button onClick={copyLastReply} aria-label='copy last reply' title='Copy last reply' type='button' className={...}><Copy size={14} /></button>}.",
+    "Step 12 — ChatAreaComposer.tsx handler: Add 'const copyLastReply = () => { if (lastAssistantContent) { navigator.clipboard.writeText(lastAssistantContent).catch(() => {}) } }' before the return statement.",
+    "Step 13 — Verify: Run pnpm test -- --run to confirm no regressions."
+  ],
+
+  "test": {
+    "commands": ["pnpm test -- --run"],
+    "unit": [
+      "ChatArea renders without errors with useDraftCache wired",
+      "ChatAreaComposer renders BookmarkPlus, conditionally renders Trash2 and Copy"
+    ],
+    "integration": [],
+    "success_metrics": ["All existing ChatArea.test.tsx assertions pass", "No TypeScript errors (pnpm tsc --noEmit)"]
+  },
+
+  "reference": {
+    "pattern": "useDraftCache usage in src/components/DocumentEditor.tsx (lines 8, 23): const { persistedText, persist } = useDraftCache(currentConversationId)",
+    "files": [
+      "src/hooks/useDraftCache.ts",
+      "src/components/DocumentEditor.tsx",
+      "src/hooks/useAppShellViewModel.ts"
+    ],
+    "examples": "The onTemplatePanelOpenChange prop is the reference pattern for threading panel-open callbacks: added to chatAreaProps in useAppShellViewModel, received by ChatArea, passed to child components."
+  },
+
+  "rationale": {
+    "chosen_approach": "Thread onOpenKnowledgePanel through chatAreaProps (same pattern as onTemplatePanelOpenChange) rather than reading from Zustand directly — keeps ChatArea and ChatAreaComposer as pure-ish components that depend on props rather than global state. Draft cache follows DocumentEditor pattern exactly.",
+    "decision_factors": ["Consistency with existing onTemplatePanelOpenChange wiring", "User confirmed: separate context button, not replacing Paperclip", "User confirmed: persist draft to localStorage"],
+    "tradeoffs": "4-file change for a single button feature — but each file change is minimal and follows existing patterns."
+  },
+
+  "risks": [
+    "useEffect sync between persistedText and input state: if useLatestAssistantMessageContent is not yet imported in ChatArea.tsx, add it to the import from '../stores/selectors'.",
+    "navigator.clipboard is not available in jsdom tests — wrap in try/catch (already shown in implementation)."
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["FT-010 Chat Mode Conversation", "FT-006 Draft Cache", "FT-030 Knowledge Modal"],
+    "affected_components": ["TC-011 ChatAreaComposer", "TC-010 ChatArea", "TC-006 useDraftCache"],
+    "affected_requirements": ["REQ-A"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "60 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}
