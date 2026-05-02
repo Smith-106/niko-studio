@@ -40,6 +40,7 @@ export function useChatStreaming() {
   const [streamDone, setStreamDone] = useState(true)
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamRequestIdRef = useRef(0)
+  const retryCountRef = useRef(0)
 
   const { addChunk, reset } = useSmoothStream({
     onUpdate: setStreamingContent,
@@ -51,104 +52,123 @@ export function useChatStreaming() {
   }, [])
 
   const startStream = useCallback(async (request: ChatRequest, options: StartStreamOptions): Promise<{ phase: StreamPhase; meta: StreamRuntimeMeta | null }> => {
-    let streamFailed = false
-    let hasStreamContent = false
-    let streamText = ''
-    let streamWriterMetadata: StreamDonePayload['writer_metadata']
-    let streamEvaluation: { score?: number; feedback?: string } | undefined
-    let finalPhase: StreamPhase | null = null
-    let finalized = false
-    let streamDoneFlag = false
-    let streamMeta: StreamRuntimeMeta | null = null
+    let retries = 0
+    const maxRetries = 2
 
-    const requestId = ++streamRequestIdRef.current
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
-    setStreamDone(false)
-    options.onStreamPhase('streaming')
+    for (;;) {
+      let streamFailed = false
+      let hasStreamContent = false
+      let streamText = ''
+      let streamWriterMetadata: StreamDonePayload['writer_metadata']
+      let streamEvaluation: { score?: number; feedback?: string } | undefined
+      let finalPhase: StreamPhase | null = null
+      let finalized = false
+      let streamDoneFlag = false
+      let streamMeta: StreamRuntimeMeta | null = null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let streamErrorPayload: any = null
 
-    const finalize = (phase: StreamPhase, meta?: StreamRuntimeMeta) => {
-      if (finalized || requestId !== streamRequestIdRef.current) return
-      finalized = true
-      finalPhase = phase
-      streamMeta = meta ?? streamMeta
-      options.onStreamPhase(phase)
-    }
+      const requestId = ++streamRequestIdRef.current
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+      setStreamDone(false)
+      options.onStreamPhase('streaming')
 
-    await chatStream(
-      request,
-      {
-        onContent: (chunk) => {
-          hasStreamContent = true
-          streamText += chunk
-          addChunk(chunk)
-        },
-        onEvaluation: (payload) => {
-          streamEvaluation = payload
-        },
-        onDone: (payload) => {
-          streamDoneFlag = true
-          setStreamDone(true)
-          streamWriterMetadata = mergeWriterMetadataGovernance(
-            payload.writer_metadata,
-            buildConsistencyGovernanceMetadata({
-              decision: payload.decision,
-              evaluation: streamEvaluation,
-            }),
-          )
-          options.maybeShowGateHint(payload)
-          const terminal = options.normalizeTerminal(payload)
-          finalize(terminal, { terminal, decision: payload.decision, diagnostics: payload.diagnostics })
-        },
-        onError: (error, payload) => {
-          const terminal = payload?.terminal === 'interrupted' ? 'interrupted' : 'error'
-          if (abortController.signal.aborted || terminal === 'interrupted' || error.toLowerCase().includes('abort')) {
-            finalize('interrupted', { terminal: 'interrupted', diagnostics: payload?.diagnostics })
-            return
-          }
-          streamFailed = true
-          finalize('error', { terminal: 'error', diagnostics: payload?.diagnostics })
-        },
-      },
-      { signal: abortController.signal }
-    )
-
-    if (abortControllerRef.current === abortController) {
-      abortControllerRef.current = null
-    }
-
-    if (!finalized) {
-      if (abortController.signal.aborted) {
-        finalize('interrupted', { terminal: 'interrupted' })
-      } else if (streamDoneFlag || hasStreamContent) {
-        finalize('done', { terminal: 'done' })
-      } else if (streamFailed) {
-        finalize('error', { terminal: 'error' })
-      } else {
-        finalize('error', { terminal: 'error' })
+      const finalize = (phase: StreamPhase, meta?: StreamRuntimeMeta) => {
+        if (finalized || requestId !== streamRequestIdRef.current) return
+        finalized = true
+        finalPhase = phase
+        streamMeta = meta ?? streamMeta
+        options.onStreamPhase(phase)
       }
-    }
 
-    if ((finalPhase === 'done' || finalPhase === 'recovered') && hasStreamContent) {
-      options.onCommitAssistantMessage({
-        content: streamText || options.t.processingCompleted,
-        writerMetadata: streamWriterMetadata,
-      })
-      if (finalPhase === 'recovered') {
-        options.onRecoverStatus({ type: 'success', message: options.t.streamRecovered })
+      await chatStream(
+        request,
+        {
+          onContent: (chunk) => {
+            hasStreamContent = true
+            streamText += chunk
+            addChunk(chunk)
+          },
+          onEvaluation: (payload) => {
+            streamEvaluation = payload
+          },
+          onDone: (payload) => {
+            streamDoneFlag = true
+            setStreamDone(true)
+            streamWriterMetadata = mergeWriterMetadataGovernance(
+              payload.writer_metadata,
+              buildConsistencyGovernanceMetadata({
+                decision: payload.decision,
+                evaluation: streamEvaluation,
+              }),
+            )
+            options.maybeShowGateHint(payload)
+            const terminal = options.normalizeTerminal(payload)
+            finalize(terminal, { terminal, decision: payload.decision, diagnostics: payload.diagnostics })
+          },
+          onError: (error, payload) => {
+            streamErrorPayload = payload ?? null
+            const terminal = payload?.terminal === 'interrupted' ? 'interrupted' : 'error'
+            if (abortController.signal.aborted || terminal === 'interrupted' || error.toLowerCase().includes('abort')) {
+              finalize('interrupted', { terminal: 'interrupted', diagnostics: payload?.diagnostics })
+              return
+            }
+            streamFailed = true
+            finalize('error', { terminal: 'error', diagnostics: payload?.diagnostics })
+          },
+        },
+        { signal: abortController.signal }
+      )
+
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null
       }
-      return { phase: finalPhase, meta: streamMeta }
-    }
 
-    if (finalPhase === 'interrupted') {
-      options.onInterrupted()
-      return { phase: 'interrupted', meta: streamMeta }
-    }
+      if (!finalized) {
+        if (abortController.signal.aborted) {
+          finalize('interrupted', { terminal: 'interrupted' })
+        } else if (streamDoneFlag || hasStreamContent) {
+          finalize('done', { terminal: 'done' })
+        } else if (streamFailed) {
+          finalize('error', { terminal: 'error' })
+        } else {
+          finalize('error', { terminal: 'error' })
+        }
+      }
 
-    return { phase: 'error', meta: streamMeta }
-  }, [addChunk])
+      if ((finalPhase === 'done' || finalPhase === 'recovered') && hasStreamContent) {
+        options.onCommitAssistantMessage({
+          content: streamText || options.t.processingCompleted,
+          writerMetadata: streamWriterMetadata,
+        })
+        if (finalPhase === 'recovered') {
+          options.onRecoverStatus({ type: 'success', message: options.t.streamRecovered })
+        }
+        return { phase: finalPhase, meta: streamMeta }
+      }
+
+      if (finalPhase === 'interrupted') {
+        options.onInterrupted()
+        return { phase: 'interrupted', meta: streamMeta }
+      }
+
+      if (finalPhase === 'error' && streamErrorPayload?.recoverable && retries < maxRetries) {
+        retries++
+        const delay = (streamErrorPayload.retry_after ?? 5) * 1000
+        options.onRecoverStatus({ type: 'info', message: `Retrying (${retries}/${maxRetries})...` })
+        if (delay > 0) {
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+        continue
+      }
+
+      return { phase: 'error', meta: streamMeta }
+    }
+  }, [addChunk, reset])
 
   const resetStream = useCallback(() => {
+    retryCountRef.current = 0
     reset('')
     setStreamDone(true)
   }, [reset])

@@ -4,6 +4,9 @@ interface ChatAreaStatus {
   type: 'success' | 'error' | 'info'
   message: string
   detail?: string
+  error_class?: string
+  recoverable?: boolean
+  retry_after?: number
 }
 
 type UploadStage = 'reading' | 'uploading' | 'injecting' | 'done' | 'error'
@@ -69,7 +72,13 @@ export const ChatAreaStreamStatus = React.memo(function ChatAreaStreamStatus({
               )}
             </div>
             {recoverStatus.type === 'error' && (
-              <div className="flex flex-wrap items-center gap-2">
+              <>
+                {recoverStatus.error_class && (
+                  <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                    {errorCategoryLabel}: {recoverStatus.error_class.replace(/_/g, ' ')}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={onRetryLastSend}
                   className="px-3 py-1.5 rounded-lg bg-white/80 dark:bg-dark-surface dark:text-dark-text border border-gray-200 dark:border-dark-border hover:bg-white dark:hover:bg-dark-surface2 transition-all active:scale-95 shadow-sm font-semibold"
@@ -96,6 +105,7 @@ export const ChatAreaStreamStatus = React.memo(function ChatAreaStreamStatus({
                   {copyErrorLabel}
                 </button>
               </div>
+              </>
             )}
           </div>
         </div>

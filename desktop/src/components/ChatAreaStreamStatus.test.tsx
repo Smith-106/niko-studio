@@ -143,6 +143,26 @@ describe('ChatAreaStreamStatus', () => {
       )
       expect(hasDanger).toBe(true)
     })
+
+    it('renders error class badge when error_class is present', () => {
+      render(
+        <ChatAreaStreamStatus
+          {...defaultProps}
+          recoverStatus={{ type: 'error', message: 'Auth failed', error_class: 'auth_failure' }}
+        />,
+      )
+      expect(screen.getByText(/auth failure/)).toBeInTheDocument()
+    })
+
+    it('does not render error class badge when error_class is absent', () => {
+      render(
+        <ChatAreaStreamStatus
+          {...defaultProps}
+          recoverStatus={{ type: 'error', message: 'Unknown error' }}
+        />,
+      )
+      expect(screen.queryByText(/Category/)).not.toBeInTheDocument()
+    })
   })
 
   describe('upload status', () => {

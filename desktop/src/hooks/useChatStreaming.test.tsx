@@ -290,4 +290,102 @@ describe('useChatStreaming', () => {
       expect.objectContaining({ content: 'Second stream' }),
     )
   })
+
+  // -----------------------------------------------------------------------
+  // 8. Auto-retry on recoverable errors
+  // -----------------------------------------------------------------------
+  it('auto-retries on recoverable error and succeeds on second attempt', async () => {
+    const { result } = renderHook(() => useChatStreaming())
+    const options = makeOptions()
+    let callCount = 0
+
+    mockChatStream.mockImplementation(async (_req, callbacks) => {
+      callCount++
+      capturedCallbacks = callbacks as typeof capturedCallbacks
+      if (callCount === 1) {
+        capturedCallbacks.onError?.('Rate limited', {
+          terminal: 'error',
+          status: 'failed',
+          recoverable: true,
+          retry_after: 0,
+          error_class: 'rate_limit',
+        })
+      } else {
+        capturedCallbacks.onContent?.('Success after retry', 0)
+        capturedCallbacks.onDone?.({
+          terminal: 'done',
+          skills_used: [],
+          writer_metadata: {},
+        })
+      }
+    })
+
+    let phase: string | undefined
+    await act(async () => {
+      const res = await result.current.startStream(baseRequest, options)
+      phase = res.phase
+    })
+
+    expect(mockChatStream).toHaveBeenCalledTimes(2)
+    expect(phase).toBe('done')
+    expect(options.onCommitAssistantMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ content: 'Success after retry' }),
+    )
+  })
+
+  // -----------------------------------------------------------------------
+  // 9. Max retries exhausted
+  // -----------------------------------------------------------------------
+  it('stops retrying after max 2 attempts and returns error', async () => {
+    const { result } = renderHook(() => useChatStreaming())
+    const options = makeOptions()
+
+    mockChatStream.mockImplementation(async (_req, callbacks) => {
+      capturedCallbacks = callbacks as typeof capturedCallbacks
+      capturedCallbacks.onError?.('Rate limited', {
+        terminal: 'error',
+        status: 'failed',
+        recoverable: true,
+        retry_after: 0,
+        error_class: 'rate_limit',
+      })
+    })
+
+    let phase: string | undefined
+    await act(async () => {
+      const res = await result.current.startStream(baseRequest, options)
+      phase = res.phase
+    })
+
+    expect(mockChatStream).toHaveBeenCalledTimes(3) // initial + 2 retries
+    expect(phase).toBe('error')
+    expect(options.onCommitAssistantMessage).not.toHaveBeenCalled()
+  })
+
+  // -----------------------------------------------------------------------
+  // 10. Non-recoverable error does not trigger retry
+  // -----------------------------------------------------------------------
+  it('does not retry non-recoverable errors', async () => {
+    const { result } = renderHook(() => useChatStreaming())
+    const options = makeOptions()
+
+    mockChatStream.mockImplementation(async (_req, callbacks) => {
+      capturedCallbacks = callbacks as typeof capturedCallbacks
+      capturedCallbacks.onError?.('Auth failure', {
+        terminal: 'error',
+        status: 'failed',
+        recoverable: false,
+        error_class: 'auth_failure',
+      })
+    })
+
+    let phase: string | undefined
+    await act(async () => {
+      const res = await result.current.startStream(baseRequest, options)
+      phase = res.phase
+    })
+
+    expect(mockChatStream).toHaveBeenCalledTimes(1)
+    expect(phase).toBe('error')
+  })
 })

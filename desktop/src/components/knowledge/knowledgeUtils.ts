@@ -144,4 +144,12 @@ export function buildWorkspaceNotice(language: 'zh' | 'en'): string[] {
   ]
 }
 
+export function buildGraphDeleteMutation(
+  entityType: string,
+  name: string,
+  workspaceId: string,
+): string {
+  return `MATCH (n:${entityType} {name: ${JSON.stringify(name)}, workspaceId: ${JSON.stringify(workspaceId)}}) DETACH DELETE n`
+}
+
 export const WORKSPACE_KNOWLEDGE_CHANGED_EVENT = 'niko:workspace-knowledge-changed'

@@ -2,7 +2,13 @@ import { FileText } from 'lucide-react'
 
 import { useI18n } from '../../i18n'
 import type { KnowledgeItem, OperationStatus } from './KnowledgeTypes'
+import type { FieldConfig } from './KnowledgeTypes'
 import { PersistedEntityTab } from './PersistedEntityTab'
+
+const PLOT_FIELDS: FieldConfig[] = [
+  { key: 'chapter', label: 'Chapter', type: 'text' },
+  { key: 'act', label: 'Act', type: 'text' },
+]
 
 interface PlotTabProps {
   items: KnowledgeItem[]
@@ -26,6 +32,7 @@ export function PlotTab(props: PlotTabProps) {
       itemKind="plot"
       itemLabel={t.knowledgeTabPlots}
       itemIcon={FileText}
+      extraFields={PLOT_FIELDS}
     />
   )
 }

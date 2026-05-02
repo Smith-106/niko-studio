@@ -127,6 +127,51 @@ vi.mock('../../api/client', () => ({
       return { success: true, data: [{ n: existing }] }
     }
 
+    if (cypher.includes('DETACH DELETE')) {
+      const entityMatch = /MATCH \(n:(\w+)\s+\{name:/.exec(cypher)
+      const entityType = entityMatch?.[1] as 'Character' | 'Location' | 'Event' | undefined
+      const nameMatch = /name:\s*"([^"]+)"/.exec(cypher)
+      const name = nameMatch?.[1]
+
+      if (entityType && name) {
+        const collection =
+          entityType === 'Character'
+            ? persistedGraph.characters
+            : entityType === 'Location'
+              ? persistedGraph.locations
+              : persistedGraph.events
+        const index = collection.findIndex((item) => item.name === name)
+        if (index !== -1) {
+          collection.splice(index, 1)
+        }
+      }
+      return { success: true, data: [] }
+    }
+
+    if (cypher.startsWith('MATCH (n:') && cypher.includes('SET n.name')) {
+      // Rename mutation
+      const entityMatch = /MATCH \(n:(\w+)\s+\{name:/.exec(cypher)
+      const oldNameMatch = /name:\s*"([^"]+)"/.exec(cypher)
+      const newNameMatch = /SET n\.name\s*=\s*"([^"]+)"/.exec(cypher)
+      const entityType = entityMatch?.[1] as 'Character' | 'Location' | 'Event' | undefined
+      const oldName = oldNameMatch?.[1]
+      const newName = newNameMatch?.[1]
+
+      if (entityType && oldName && newName) {
+        const collection =
+          entityType === 'Character'
+            ? persistedGraph.characters
+            : entityType === 'Location'
+              ? persistedGraph.locations
+              : persistedGraph.events
+        const existing = collection.find((item) => item.name === oldName)
+        if (existing) {
+          existing.name = newName
+        }
+      }
+      return { success: true, data: [] }
+    }
+
     if (cypher.includes('MATCH (n:Character)')) {
       if (persistedGraph.failEntityType === 'Character') {
         return { success: false, error: 'graph unavailable', data: [] }
@@ -336,5 +381,80 @@ describe('persisted knowledge authoring tabs', () => {
     })
 
     expect(await screen.findByText('Alice')).toBeInTheDocument()
+  })
+
+  it('shows delete button when editing an existing character', async () => {
+    const user = userEvent.setup()
+    render(<CharacterHarness />)
+
+    await user.type(await screen.findByLabelText('角色名称'), 'Bob')
+    await user.type(screen.getByLabelText('角色描述'), '配角')
+    await user.click(screen.getByRole('button', { name: '添加角色' }))
+
+    expect(await screen.findByText('Bob')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Bob/ }))
+    expect(screen.getByText('删除')).toBeInTheDocument()
+  })
+
+  it('shows confirmation before delete and cancels', async () => {
+    const user = userEvent.setup()
+    render(<CharacterHarness />)
+
+    await user.type(await screen.findByLabelText('角色名称'), 'Eve')
+    await user.type(screen.getByLabelText('角色描述'), '反派')
+    await user.click(screen.getByRole('button', { name: '添加角色' }))
+
+    expect(await screen.findByText('Eve')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Eve/ }))
+    await user.click(screen.getByText('删除'))
+
+    expect(screen.getByText(/确定删除/)).toBeInTheDocument()
+    expect(screen.getByText('确认')).toBeInTheDocument()
+    expect(screen.getByText('取消')).toBeInTheDocument()
+
+    await user.click(screen.getByText('取消'))
+    expect(screen.queryByText('确认')).not.toBeInTheDocument()
+    expect(screen.getByText('Eve')).toBeInTheDocument()
+  })
+
+  it('deletes entity after confirmation', async () => {
+    const user = userEvent.setup()
+    render(<CharacterHarness />)
+
+    await user.type(await screen.findByLabelText('角色名称'), 'Mallory')
+    await user.type(screen.getByLabelText('角色描述'), '反派')
+    await user.click(screen.getByRole('button', { name: '添加角色' }))
+
+    expect(await screen.findByText('Mallory')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Mallory/ }))
+    await user.click(screen.getByText('删除'))
+    await user.click(screen.getByText('确认'))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Mallory')).not.toBeInTheDocument()
+    })
+  })
+
+  it('renders extra fields for Character (role, traits)', async () => {
+    render(<CharacterHarness />)
+
+    expect(await screen.findByLabelText('Role')).toBeInTheDocument()
+    expect(screen.getByLabelText('Traits')).toBeInTheDocument()
+  })
+
+  it('renders extra fields for Location (geography)', async () => {
+    render(<LocationHarness />)
+
+    expect(await screen.findByLabelText('Geography')).toBeInTheDocument()
+  })
+
+  it('renders extra fields for Plot (chapter, act)', async () => {
+    render(<PlotHarness />)
+
+    expect(await screen.findByLabelText('Chapter')).toBeInTheDocument()
+    expect(screen.getByLabelText('Act')).toBeInTheDocument()
   })
 })

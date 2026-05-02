@@ -2,7 +2,12 @@ import { MapPin } from 'lucide-react'
 
 import { useI18n } from '../../i18n'
 import type { KnowledgeItem, OperationStatus } from './KnowledgeTypes'
+import type { FieldConfig } from './KnowledgeTypes'
 import { PersistedEntityTab } from './PersistedEntityTab'
+
+const LOCATION_FIELDS: FieldConfig[] = [
+  { key: 'geography', label: 'Geography', type: 'textarea' },
+]
 
 interface LocationTabProps {
   items: KnowledgeItem[]
@@ -26,6 +31,7 @@ export function LocationTab(props: LocationTabProps) {
       itemKind="location"
       itemLabel={t.knowledgeTabLocations}
       itemIcon={MapPin}
+      extraFields={LOCATION_FIELDS}
     />
   )
 }

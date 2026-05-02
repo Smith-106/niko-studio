@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Folder, RotateCcw, Save } from 'lucide-react'
+import { Folder, RotateCcw, Save, Trash2 } from 'lucide-react'
 
 import { queryGraph } from '../../api/client'
 import { useI18n } from '../../i18n'
 import { useAppStore } from '../../stores/appStore'
-import type { KnowledgeItem, OperationStatus } from './KnowledgeTypes'
+import type { FieldConfig, KnowledgeItem, OperationStatus } from './KnowledgeTypes'
 import {
+  buildGraphDeleteMutation,
   buildGraphMergeMutation,
   filterWorkspaceKnowledgeItems,
   readGraphMutationError,
@@ -28,6 +29,7 @@ interface PersistedEntityTabProps {
   selectedItem: KnowledgeItem | null
   searchQuery: string
   onStatusChange: (status: OperationStatus | null) => void
+  extraFields?: FieldConfig[]
 }
 
 function readString(value: unknown): string {
@@ -86,6 +88,7 @@ export function PersistedEntityTab({
   selectedItem,
   searchQuery,
   onStatusChange,
+  extraFields,
 }: PersistedEntityTabProps) {
   const { language, t } = useI18n()
   const backendStatus = useAppStore((state) => state.backendStatus)
@@ -95,6 +98,8 @@ export function PersistedEntityTab({
   const [matchName, setMatchName] = useState<string | null>(null)
   const [matchWorkspaceId, setMatchWorkspaceId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [draftExtraFields, setDraftExtraFields] = useState<Record<string, string>>({})
 
   const copy = buildEditorCopy(itemKind ?? entityType.toLowerCase(), itemLabel, language)
 
@@ -144,6 +149,13 @@ export function PersistedEntityTab({
     setDraftDescription(readString(selectedItem.description) || readString(selectedItem.content))
     setMatchName(readString(selectedItem.name))
     setMatchWorkspaceId(readString(selectedItem.workspaceId) || null)
+    if (extraFields) {
+      const extra: Record<string, string> = {}
+      for (const field of extraFields) {
+        extra[field.key] = readString(selectedItem[field.key])
+      }
+      setDraftExtraFields(extra)
+    }
   }, [entityType, selectedItem])
 
   const clearEditor = useCallback(() => {
@@ -151,6 +163,8 @@ export function PersistedEntityTab({
     setDraftDescription('')
     setMatchName(null)
     setMatchWorkspaceId(null)
+    setDeleteConfirm(false)
+    setDraftExtraFields({})
     onStatusChange(null)
   }, [onStatusChange])
 
@@ -164,27 +178,40 @@ export function PersistedEntityTab({
       return
     }
 
-    const matchProps: Record<string, unknown> = {
-      name: matchName ?? name,
-    }
-    if (matchWorkspaceId) {
-      matchProps.workspaceId = matchWorkspaceId
-    } else if (!matchName) {
-      matchProps.workspaceId = currentWorkspace.identity.workspaceId
-    }
-
-    const setProps: Record<string, unknown> = {
-      name,
-      description: draftDescription.trim(),
-      content: draftDescription.trim(),
-      workspaceId: currentWorkspace.identity.workspaceId,
-      projectId: currentWorkspace.identity.projectId,
-      workspaceRoot: currentWorkspace.identity.workspaceRoot,
-      itemKind: itemKind ?? entityType.toLowerCase(),
-    }
-
     setSaving(true)
     try {
+      // Fix rename: if name changed, update via MATCH+SET first
+      if (matchName && matchName !== name) {
+        const wid = matchWorkspaceId || currentWorkspace.identity.workspaceId
+        const renameQuery = `MATCH (n:${entityType} {name: ${JSON.stringify(matchName)}, workspaceId: ${JSON.stringify(wid)}}) SET n.name = ${JSON.stringify(name)} RETURN n`
+        await queryGraph(renameQuery, { workspace: currentWorkspace })
+      }
+
+      const effectiveMatchName = (matchName && matchName !== name) ? name : (matchName ?? name)
+      const matchProps: Record<string, unknown> = {
+        name: effectiveMatchName,
+      }
+      if (matchWorkspaceId) {
+        matchProps.workspaceId = matchWorkspaceId
+      } else if (!matchName) {
+        matchProps.workspaceId = currentWorkspace.identity.workspaceId
+      }
+
+      const setProps: Record<string, unknown> = {
+        name,
+        description: draftDescription.trim(),
+        content: draftDescription.trim(),
+        workspaceId: currentWorkspace.identity.workspaceId,
+        projectId: currentWorkspace.identity.projectId,
+        workspaceRoot: currentWorkspace.identity.workspaceRoot,
+        itemKind: itemKind ?? entityType.toLowerCase(),
+      }
+      if (extraFields) {
+        for (const field of extraFields) {
+          setProps[field.key] = draftExtraFields[field.key]?.trim() ?? ''
+        }
+      }
+
       const response = await queryGraph(buildGraphMergeMutation(entityType, matchProps, setProps), {
         workspace: currentWorkspace,
       })
@@ -228,8 +255,10 @@ export function PersistedEntityTab({
     copy.saveSuccess,
     currentWorkspace,
     draftDescription,
+    draftExtraFields,
     draftName,
     entityType,
+    extraFields,
     itemKind,
     loadItems,
     matchName,
@@ -237,6 +266,27 @@ export function PersistedEntityTab({
     onItemClick,
     onStatusChange,
   ])
+
+  const handleDelete = useCallback(async () => {
+    if (!matchName || !matchWorkspaceId) return
+    try {
+      const response = await queryGraph(
+        buildGraphDeleteMutation(entityType, matchName, matchWorkspaceId),
+        { workspace: currentWorkspace },
+      )
+      const graphError = readGraphMutationError(response.data)
+      if (!response.success || graphError) {
+        throw new Error(graphError || 'Delete failed')
+      }
+      window.dispatchEvent(new CustomEvent(WORKSPACE_KNOWLEDGE_CHANGED_EVENT))
+      clearEditor()
+      await loadItems()
+    } catch (error) {
+      console.error(`Failed to delete ${entityType}:`, error)
+      onStatusChange({ type: 'error', message: String(error) })
+      setDeleteConfirm(false)
+    }
+  }, [clearEditor, currentWorkspace, entityType, loadItems, matchName, matchWorkspaceId, onStatusChange])
 
   const filteredItems = filterWorkspaceKnowledgeItems(items, currentWorkspace, { itemKind }).filter((item) =>
     JSON.stringify(item).toLowerCase().includes(searchQuery.toLowerCase()),
@@ -270,6 +320,28 @@ export function PersistedEntityTab({
               className="min-h-24 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text"
             />
           </label>
+          {extraFields?.map((field) => (
+            <label key={field.key} className="grid gap-1 text-xs font-medium text-gray-600 dark:text-dark-text-secondary">
+              <span>{field.label}</span>
+              {field.type === 'textarea' ? (
+                <textarea
+                  value={draftExtraFields[field.key] ?? ''}
+                  onChange={(e) => setDraftExtraFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                  placeholder={field.label}
+                  aria-label={field.label}
+                  className="min-h-16 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text"
+                />
+              ) : (
+                <input
+                  value={draftExtraFields[field.key] ?? ''}
+                  onChange={(e) => setDraftExtraFields((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                  placeholder={field.label}
+                  aria-label={field.label}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text"
+                />
+              )}
+            </label>
+          ))}
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -280,6 +352,39 @@ export function PersistedEntityTab({
               <Save size={16} />
               {matchName ? copy.saveLabel : copy.addLabel}
             </button>
+            {matchName && (
+              deleteConfirm ? (
+                <>
+                  <span className="text-xs text-danger-600 dark:text-danger-400 font-medium">
+                    {language === 'zh' ? `确定删除"${matchName}"？` : `Delete "${matchName}"?`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-lg bg-danger-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-danger-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {language === 'zh' ? '确认' : 'Confirm'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirm(false)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:border-dark-border dark:text-dark-text-secondary dark:hover:bg-dark-bg"
+                  >
+                    {language === 'zh' ? '取消' : 'Cancel'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-danger-200 px-4 py-2 text-sm font-medium text-danger-600 transition hover:bg-danger-50 dark:border-danger-500/30 dark:text-danger-400 dark:hover:bg-danger-900/20"
+                >
+                  <Trash2 size={16} />
+                  {language === 'zh' ? '删除' : 'Delete'}
+                </button>
+              )
+            )}
             <button
               type="button"
               onClick={clearEditor}

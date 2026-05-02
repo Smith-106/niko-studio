@@ -10,6 +10,12 @@ export interface TabConfig {
   icon: LucideIcon
 }
 
+export interface FieldConfig {
+  key: string
+  label: string
+  type: 'text' | 'textarea'
+}
+
 export interface OperationStatus {
   type: 'success' | 'error'
   message: string

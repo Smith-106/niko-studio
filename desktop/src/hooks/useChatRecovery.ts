@@ -8,6 +8,9 @@ type RecoverStatus = {
   type: 'error' | 'success' | 'info'
   message: string
   detail?: string
+  error_class?: string
+  recoverable?: boolean
+  retry_after?: number
 }
 
 interface UseChatRecoveryOptions {
