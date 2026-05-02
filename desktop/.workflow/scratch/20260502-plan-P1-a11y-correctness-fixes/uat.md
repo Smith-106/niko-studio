@@ -8,10 +8,10 @@ updated: "2026-05-02T00:00:00.000Z"
 
 ## Current Test
 
-number: 1
-name: Trash2 excluded from keyboard tab order when input empty
+number: 3
+name: Sent message does not reappear as draft
 expected: |
-  When composer input is empty, pressing Tab should skip the clear-draft button. When input has text, Tab should land on it and show a focus ring
+  Type a message and send it immediately (within 1 second). Switch conversations and come back. The sent message should NOT appear as a draft in the composer
 awaiting: user response
 
 ## Tests
@@ -22,7 +22,10 @@ result: [pending]
 
 ### 2. Send button responds to mouse click
 expected: Clicking the send button with the mouse should send the message. The button should visually respond to hover and click
-result: [pending]
+result: issue
+reported: "点击右下角的发送按钮，无反应"
+severity: major
+note: z-10 fix from TASK-001 did not resolve the issue. ISS-065 remains unresolved.
 
 ### 3. Sent message does not reappear as draft
 expected: Type a message and send it immediately (within 1 second). Switch conversations and come back. The sent message should NOT appear as a draft in the composer
@@ -46,4 +49,9 @@ skipped: 0
 
 ## Gaps
 
-[none yet]
+- test: 2
+  truth: "Send button responds to mouse click"
+  status: failed
+  reason: "z-10 fix ineffective — clicking send button still has no response"
+  severity: major
+  issue_id: ISS-20260502-065
