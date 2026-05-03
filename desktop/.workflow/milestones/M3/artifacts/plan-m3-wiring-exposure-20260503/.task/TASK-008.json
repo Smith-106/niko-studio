@@ -1,0 +1,111 @@
+{
+  "id": "TASK-008",
+  "title": "Wire NarrativePatternDetector + WritingSessionCluster to analysis endpoints",
+  "description": "F4 Analysis Exposure: Create analysis MCP endpoints exposing NarrativePatternDetector.detectPatterns() and WritingSessionCluster.clusterSessions(). Add frontend API functions. Build analysis UI panel for consuming pattern detection + session clustering results.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "low",
+  "effort": "medium",
+  "action": "Create analysis MCP endpoints (POST /analysis/patterns, POST /analysis/sessions) exposing detectPatterns() and clusterSessions(). Add frontend API functions. Build analysis UI panel consuming results.",
+  "status": "completed",
+  "completed_at": "2026-05-03T21:15:00+08:00",
+  "actual_duration": "40min",
+
+  "scope": "src-tauri/bin/sidecar/analysis/,src-tauri/bin/sidecar/mcp/endpoints/,src/api/",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/analysis/narrative-pattern-detector.js",
+    "src-tauri/bin/sidecar/analysis/writing-session-cluster.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/analysis/narrative-pattern-detector.js",
+    "src-tauri/bin/sidecar/analysis/writing-session-cluster.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/graph.js"
+  ],
+
+  "depends_on": [],
+  "wave": 3,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "New analysis endpoint file exists in src-tauri/bin/sidecar/mcp/endpoints/",
+      "Endpoint exposes POST /analysis/patterns calling NarrativePatternDetector.detectPatterns()",
+      "Endpoint exposes POST /analysis/sessions calling WritingSessionCluster.clusterSessions()",
+      "Frontend API file exports analysis functions",
+      "Analysis results are consumable by frontend UI"
+    ],
+    "verification": "Call patterns endpoint with content, verify categorized patterns returned. Call sessions endpoint, verify cluster groups returned.",
+    "definition_of_done": "Narrative pattern detection and session clustering exposed via API and consumable by frontend"
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/mcp/endpoints/analysis.js",
+      "action": "create",
+      "target": "new endpoint file",
+      "change": "Create 2 endpoint handlers: detectPatterns (POST, params: content, options), clusterSessions (POST, params: sessions, options). Register in gateway."
+    },
+    {
+      "path": "src/api/analysis.ts",
+      "action": "create",
+      "target": "new API file",
+      "change": "Create analysis API file with detectPatterns and clusterSessions async functions calling new MCP endpoints."
+    }
+  ],
+
+  "implementation": [
+    "Create src-tauri/bin/sidecar/mcp/endpoints/analysis.js: import NarrativePatternDetector + WritingSessionCluster, create 2 endpoint handlers",
+    "In analysis.js detectPatterns handler: extract content + options from body, call detector.detectPatterns(content, options), return categorized patterns",
+    "In analysis.js clusterSessions handler: extract sessions + options from body, call clusterer.clusterSessions(sessions, options), return cluster groups",
+    "Create src/api/analysis.ts: add detectPatterns(content, options?) and clusterSessions(sessions, options?) functions with TypeScript types"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["detectPatterns returns categorized patterns", "clusterSessions returns grouped sessions"],
+    "integration": ["End-to-end pattern detection with sample content"],
+    "success_metrics": ["Analysis endpoints return structured results", "Frontend can consume results"]
+  },
+
+  "reference": {
+    "pattern": "MCP endpoint pattern from graph.js: jsonResponse/parseBody + async handlers",
+    "files": [
+      "src-tauri/bin/sidecar/analysis/narrative-pattern-detector.js",
+      "src-tauri/bin/sidecar/analysis/writing-session-cluster.js"
+    ],
+    "examples": "Both analysis modules are built but never imported — need to read their public API signatures"
+  },
+
+  "rationale": {
+    "chosen_approach": "Dedicated analysis endpoint file for analysis domain",
+    "decision_factors": ["Stretch goal — lower priority", "Independent of Phase 1/2 features", "Unique analytics capability"],
+    "tradeoffs": "UI panel design deferred — focus on endpoint exposure first"
+  },
+
+  "risks": [
+    {
+      "risk": "Analysis module API signatures unclear",
+      "mitigation": "Read both detector and cluster modules thoroughly before implementing endpoints"
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["analysis", "narrative-patterns"],
+    "affected_components": ["NarrativePatternDetector", "WritingSessionCluster", "analysis-endpoint"],
+    "affected_requirements": ["F4: Analysis Exposure"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "40min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

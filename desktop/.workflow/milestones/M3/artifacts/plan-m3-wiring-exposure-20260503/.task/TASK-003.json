@@ -1,0 +1,98 @@
+{
+  "id": "TASK-003",
+  "title": "Resolve M2 deferred items (ISS-066, HV-001, F-001)",
+  "description": "F7 M2 Deferrals: Fix L5 executeChain interrupt edge case (currentUnitIndex preservation), add manual fastembed e2e test with model availability check, remove dead renameSkill import in SkillTab.tsx.",
+
+  "issue_id": null,
+  "issue_refs": ["ISS-20260502-066", "HV-001", "F-001"],
+  "type": "bugfix",
+  "priority": "medium",
+  "effort": "low",
+  "action": "Fix currentUnitIndex preservation in workflow.js executeChain interrupt handler, add manual fastembed e2e test that checks model availability before running, remove dead renameSkill import in SkillTab.tsx",
+  "status": "completed",
+  "completed_at": "2026-05-03T19:55:00+08:00",
+  "actual_duration": "15min",
+
+  "scope": "src-tauri/bin/sidecar/mcp/services/workflow.js,src/components/knowledge/SkillTab.tsx",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/mcp/services/workflow.js",
+    "src/components/knowledge/SkillTab.tsx"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/mcp/services/workflow.js",
+    "src/components/knowledge/SkillTab.tsx"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "phase1",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "workflow.js executeChain preserves currentUnitIndex on interrupt (grep for currentUnitIndex preservation logic near interrupt/abort handling)",
+      "SkillTab.tsx does NOT contain 'renameSkill' import statement",
+      "Fastembed e2e test file exists and includes model availability check"
+    ],
+    "verification": "Grep for currentUnitIndex preservation in workflow.js interrupt path. Verify no renameSkill import in SkillTab.tsx. Check e2e test file exists.",
+    "definition_of_done": "All 3 M2 deferred items resolved: interrupt edge case fixed, dead import removed, e2e test added"
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/mcp/services/workflow.js",
+      "action": "modify",
+      "target": "executeChain interrupt handler",
+      "change": "Save currentUnitIndex before interrupt/abort so execution can resume from correct position"
+    },
+    {
+      "path": "src/components/knowledge/SkillTab.tsx",
+      "action": "modify",
+      "target": "import statements",
+      "change": "Remove dead 'renameSkill' import from import block"
+    }
+  ],
+
+  "implementation": [
+    "In workflow.js: locate executeChain interrupt/abort handler, add currentUnitIndex = this.currentUnitIndex preservation before interrupt return/throw so chain can resume",
+    "In SkillTab.tsx: find and remove the unused renameSkill import from the import block at top of file",
+    "Add manual fastembed e2e test: create test file that checks if embedding model is available before running assertions, skip gracefully if model not found"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["executeChain preserves index on interrupt", "SkillTab compiles without renameSkill import"],
+    "integration": ["Fastembed e2e test runs with model availability guard"],
+    "success_metrics": ["All 3 deferrals resolved", "No regressions in existing tests"]
+  },
+
+  "reference": {
+    "pattern": "Existing interrupt handling in workflow.js executeChain",
+    "files": ["src-tauri/bin/sidecar/mcp/services/workflow.js"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Fix each deferred item individually — they are independent",
+    "decision_factors": ["ISS-066 is a known edge case in L5 interrupt", "F-001 is a 1-line dead import cleanup", "HV-001 needs model availability guard in test"],
+    "tradeoffs": null
+  },
+
+  "risks": [],
+
+  "doc_context": {
+    "affected_features": ["workflow-execution", "skill-management"],
+    "affected_components": ["workflow-service", "SkillTab"],
+    "affected_requirements": ["F7: M2 Deferrals"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "20min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

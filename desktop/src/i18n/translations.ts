@@ -166,6 +166,19 @@ export interface Translations {
   knowledgeCharacterAction: string
   knowledgeCharacterNameRequired: string
   knowledgeCharacterLoaded: string
+  knowledgeDepthTitle: string
+  knowledgeDepthAnalyze: string
+  knowledgeDepthLevel: string
+  knowledgeDepthScores: string
+  knowledgeDepthSuggestions: string
+  knowledgeProfileTitle: string
+  knowledgeProfileLoad: string
+  knowledgeProfileNotFound: string
+  knowledgeRelationshipsTitle: string
+  knowledgeRelationshipsLoad: string
+  knowledgeConsistencyTitle: string
+  knowledgeConsistencyValid: string
+  knowledgeConsistencyIssues: string
   knowledgeForeshadowTitle: string
   knowledgeForeshadowStatusPlaceholder: string
   knowledgeForeshadowStatusPending: string
@@ -174,6 +187,14 @@ export interface Translations {
   knowledgeForeshadowChapterPlaceholder: string
   knowledgeForeshadowAction: string
   knowledgeForeshadowsLoaded: string
+  knowledgeForeshadowPlantDescPlaceholder: string
+  knowledgeForeshadowPlantAction: string
+  knowledgeForeshadowHintAction: string
+  knowledgeForeshadowHarvestAction: string
+  knowledgeForeshadowPlanted: string
+  knowledgeForeshadowHinted: string
+  knowledgeForeshadowHarvested: string
+  knowledgeForeshadowStatsLoaded: string
   knowledgeMemoryTitle: string
   knowledgeMemoryContentPlaceholder: string
   knowledgeMemoryLayerPlaceholder: string
@@ -200,6 +221,7 @@ export interface Translations {
   evaluationNoContent: string
   evaluationOverallScore: string
   evaluationDimensionAnalysis: string
+  evaluationModuleBreakdown: string
   evaluationSuggestions: string
   evaluationBatchApply: string
   evaluationBatchUndo: string
@@ -1045,6 +1067,19 @@ export const translations: Record<Language, Translations> = {
     knowledgeCharacterAction: '查询角色详情',
     knowledgeCharacterNameRequired: '请输入角色名。',
     knowledgeCharacterLoaded: '角色详情加载完成。',
+    knowledgeDepthTitle: '深度分析',
+    knowledgeDepthAnalyze: '分析深度',
+    knowledgeDepthLevel: '深度等级',
+    knowledgeDepthScores: '五维评分',
+    knowledgeDepthSuggestions: '改进建议',
+    knowledgeProfileTitle: '角色档案',
+    knowledgeProfileLoad: '加载档案',
+    knowledgeProfileNotFound: '未找到角色档案。',
+    knowledgeRelationshipsTitle: '关系网络',
+    knowledgeRelationshipsLoad: '加载关系',
+    knowledgeConsistencyTitle: '一致性检查',
+    knowledgeConsistencyValid: '角色一致',
+    knowledgeConsistencyIssues: '问题',
     knowledgeForeshadowTitle: '伏笔筛选',
     knowledgeForeshadowStatusPlaceholder: '状态',
     knowledgeForeshadowStatusPending: '待处理',
@@ -1053,6 +1088,14 @@ export const translations: Record<Language, Translations> = {
     knowledgeForeshadowChapterPlaceholder: '章节',
     knowledgeForeshadowAction: '查询伏笔',
     knowledgeForeshadowsLoaded: '伏笔查询完成。',
+    knowledgeForeshadowPlantDescPlaceholder: '伏笔描述',
+    knowledgeForeshadowPlantAction: '埋设伏笔',
+    knowledgeForeshadowHintAction: '暗示',
+    knowledgeForeshadowHarvestAction: '回收',
+    knowledgeForeshadowPlanted: '已埋设',
+    knowledgeForeshadowHinted: '已暗示',
+    knowledgeForeshadowHarvested: '已回收',
+    knowledgeForeshadowStatsLoaded: '伏笔统计已加载。',
     knowledgeMemoryTitle: '添加记忆',
     knowledgeMemoryContentPlaceholder: '记忆内容',
     knowledgeMemoryLayerPlaceholder: '会话',
@@ -1079,6 +1122,7 @@ export const translations: Record<Language, Translations> = {
     evaluationNoContent: '还没有可评估的助手回复',
     evaluationOverallScore: '综合评分',
     evaluationDimensionAnalysis: '维度分析',
+    evaluationModuleBreakdown: '一致性模块评分',
     evaluationSuggestions: '改进建议',
     evaluationBatchApply: '批量应用',
     evaluationBatchUndo: '批量撤销',
@@ -1919,6 +1963,19 @@ export const translations: Record<Language, Translations> = {
     knowledgeCharacterAction: 'Load character details',
     knowledgeCharacterNameRequired: 'Please enter character name.',
     knowledgeCharacterLoaded: 'Character details loaded.',
+    knowledgeDepthTitle: 'Depth Analysis',
+    knowledgeDepthAnalyze: 'Analyze depth',
+    knowledgeDepthLevel: 'Depth Level',
+    knowledgeDepthScores: 'Five-Dimension Scores',
+    knowledgeDepthSuggestions: 'Suggestions',
+    knowledgeProfileTitle: 'Character Profile',
+    knowledgeProfileLoad: 'Load profile',
+    knowledgeProfileNotFound: 'Character profile not found.',
+    knowledgeRelationshipsTitle: 'Relationship Network',
+    knowledgeRelationshipsLoad: 'Load relationships',
+    knowledgeConsistencyTitle: 'Consistency Check',
+    knowledgeConsistencyValid: 'Character is consistent',
+    knowledgeConsistencyIssues: 'Issues',
     knowledgeForeshadowTitle: 'Foreshadow Filters',
     knowledgeForeshadowStatusPlaceholder: 'status',
     knowledgeForeshadowStatusPending: 'pending',
@@ -1927,6 +1984,14 @@ export const translations: Record<Language, Translations> = {
     knowledgeForeshadowChapterPlaceholder: 'chapter',
     knowledgeForeshadowAction: 'Query foreshadows',
     knowledgeForeshadowsLoaded: 'Foreshadows loaded.',
+    knowledgeForeshadowPlantDescPlaceholder: 'Foreshadow description',
+    knowledgeForeshadowPlantAction: 'Plant',
+    knowledgeForeshadowHintAction: 'Hint',
+    knowledgeForeshadowHarvestAction: 'Harvest',
+    knowledgeForeshadowPlanted: 'Planted',
+    knowledgeForeshadowHinted: 'Hinted',
+    knowledgeForeshadowHarvested: 'Harvested',
+    knowledgeForeshadowStatsLoaded: 'Foreshadow stats loaded.',
     knowledgeMemoryTitle: 'Add Memory',
     knowledgeMemoryContentPlaceholder: 'Memory content',
     knowledgeMemoryLayerPlaceholder: 'layer',
@@ -1953,6 +2018,7 @@ export const translations: Record<Language, Translations> = {
     evaluationNoContent: 'No assistant reply to review yet',
     evaluationOverallScore: 'Overall Score',
     evaluationDimensionAnalysis: 'Dimension Analysis',
+    evaluationModuleBreakdown: 'Module Scores',
     evaluationSuggestions: 'Suggestions',
     evaluationBatchApply: 'Batch Apply',
     evaluationBatchUndo: 'Batch Undo',

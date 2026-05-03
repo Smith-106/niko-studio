@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getTemporalFacts, getCharacter, getForeshadows, addMemory } from '../../api/client'
+import { plantForeshadow, getForeshadowStats, type ForeshadowStats } from '../../api/knowledge'
 import { useI18n } from '../../i18n'
 import { useAppStore } from '../../stores/appStore'
 import type { OperationStatus, KnowledgeItem } from './KnowledgeTypes'
@@ -18,6 +19,8 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
   const [characterName, setCharacterName] = useState('')
   const [foreshadowStatus, setForeshadowStatus] = useState('pending')
   const [foreshadowChapter, setForeshadowChapter] = useState('')
+  const [foreshadowPlantDesc, setForeshadowPlantDesc] = useState('')
+  const [foreshadowStats, setForeshadowStats] = useState<ForeshadowStats | null>(null)
   const [memoryContent, setMemoryContent] = useState('')
   const [memoryLayer, setMemoryLayer] = useState('session')
   const [memoryDimension, setMemoryDimension] = useState('context')
@@ -124,6 +127,32 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
     }
   }
 
+  const handlePlantForeshadow = async () => {
+    const description = foreshadowPlantDesc.trim()
+    if (!description) {
+      onStatusChange({ type: 'error', message: t.knowledgeForeshadowPlantDescPlaceholder })
+      return
+    }
+    const response = await plantForeshadow(description)
+    if (response.success && response.data?.data) {
+      setForeshadowPlantDesc('')
+      onStatusChange({ type: 'success', message: t.knowledgeForeshadowPlanted })
+      loadForeshadowStats()
+    } else {
+      onStatusChange({ type: 'error', message: (response.error as string) || t.knowledgeRequestFailed })
+    }
+  }
+
+  const loadForeshadowStats = async () => {
+    const response = await getForeshadowStats()
+    if (response.success && response.data?.data) {
+      setForeshadowStats(response.data.data)
+      onStatusChange({ type: 'success', message: t.knowledgeForeshadowStatsLoaded })
+    } else {
+      onStatusChange({ type: 'error', message: (response.error as string) || t.knowledgeRequestFailed })
+    }
+  }
+
   return (
     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
       <div className="p-2 border border-gray-200 dark:border-dark-border rounded space-y-2">
@@ -196,6 +225,38 @@ export function MemoryForm({ onStatusChange, onItemsChange }: MemoryFormProps) {
           type="button"
         >
           {t.knowledgeForeshadowAction}
+        </button>
+
+        <div className="border-t border-gray-200 dark:border-dark-border pt-2 mt-2">
+          <input
+            value={foreshadowPlantDesc}
+            onChange={(event) => setForeshadowPlantDesc(event.target.value)}
+            placeholder={t.knowledgeForeshadowPlantDescPlaceholder}
+            aria-label={t.knowledgeForeshadowPlantDescPlaceholder}
+            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-dark-border dark:bg-dark-bg dark:text-dark-text rounded"
+          />
+          <button
+            onClick={handlePlantForeshadow}
+            className="mt-1 px-2 py-1 text-xs bg-green-600 text-white rounded"
+            type="button"
+          >
+            {t.knowledgeForeshadowPlantAction}
+          </button>
+        </div>
+
+        {foreshadowStats && (
+          <div className="flex gap-2 text-xs text-gray-600 dark:text-dark-text-secondary">
+            <span>{t.knowledgeForeshadowPlanted}: {foreshadowStats.by_state.planted}</span>
+            <span>{t.knowledgeForeshadowHinted}: {foreshadowStats.by_state.hinted}</span>
+            <span>{t.knowledgeForeshadowHarvested}: {foreshadowStats.by_state.harvested}</span>
+          </div>
+        )}
+        <button
+          onClick={loadForeshadowStats}
+          className="px-2 py-1 text-xs bg-gray-100 dark:bg-dark-border dark:text-dark-text rounded"
+          type="button"
+        >
+          Stats
         </button>
       </div>
 

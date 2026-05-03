@@ -1,0 +1,123 @@
+{
+  "id": "TASK-007",
+  "title": "Wire CharacterManager depth system to endpoints + profile UI",
+  "description": "F6 Character Depth: Expose CharacterManager + CharacterDepthSystem via MCP endpoints. Create frontend API functions. Build character depth profile panel in CharacterTab.tsx with Personality/Motivation/Growth/Relationships sections.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "high",
+  "action": "Create character depth MCP endpoints exposing analyzeDepth(), getProfile(), getRelationships() from CharacterManager. Add frontend API functions in knowledge.ts. Build tabbed profile panel in CharacterTab.tsx with Personality/Motivation/Growth/Relationships tabs.",
+  "status": "completed",
+  "completed_at": "2026-05-03T20:30:00+08:00",
+  "actual_duration": "35min",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "src-tauri/bin/sidecar/narrative/character-manager.js,src-tauri/bin/sidecar/mcp/endpoints/,src/api/knowledge.ts,src/components/knowledge/CharacterTab.tsx",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/narrative/character-manager.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/",
+    "src/api/knowledge.ts",
+    "src/components/knowledge/CharacterTab.tsx"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/narrative/character-manager.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+    "src/api/knowledge.ts",
+    "src/components/knowledge/CharacterTab.tsx"
+  ],
+
+  "depends_on": ["TASK-004"],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "New character depth endpoint file exists in src-tauri/bin/sidecar/mcp/endpoints/",
+      "Endpoint exposes analyzeDepth for character depth analysis",
+      "Endpoint exposes getProfile for character profile retrieval",
+      "knowledge.ts exports character depth API functions",
+      "CharacterTab.tsx renders depth profile panel with multiple sections"
+    ],
+    "verification": "Call analyzeDepth endpoint with character ID, verify 5-dimension scoring returns. Call getProfile, verify structured profile. Check UI renders profile panel.",
+    "definition_of_done": "Character depth analysis accessible via API and displayed in profile UI panel"
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/mcp/endpoints/character.js",
+      "action": "create",
+      "target": "new endpoint file",
+      "change": "Create endpoint handlers: analyzeDepth (POST, params: characterId), getProfile (POST, params: characterId), getRelationships (POST, params: characterId). Register in gateway."
+    },
+    {
+      "path": "src/api/knowledge.ts",
+      "action": "modify",
+      "target": "character API functions",
+      "change": "Add analyzeCharacterDepth, getCharacterProfile, getCharacterRelationships async functions calling new MCP endpoints."
+    },
+    {
+      "path": "src/components/knowledge/CharacterTab.tsx",
+      "action": "modify",
+      "target": "character detail section",
+      "change": "Add depth profile panel with Personality/Motivation/Growth/Relationships tab sections consuming character depth API data."
+    }
+  ],
+
+  "implementation": [
+    "Create src-tauri/bin/sidecar/mcp/endpoints/character.js: import CharacterManager, create 3 endpoint handlers following foreshadow.js pattern",
+    "In character.js analyzeDepth handler: extract characterId, call characterManager.analyzeDepth(characterId), return 5-dimension scores",
+    "In character.js getProfile handler: extract characterId, call characterManager.getProfile(characterId), return structured profile with personality type + traits",
+    "In character.js getRelationships handler: extract characterId, call characterManager.getRelationships(characterId), return relationship map",
+    "In knowledge.ts: add 3 async functions with TypeScript types matching endpoint signatures",
+    "In CharacterTab.tsx: add depth profile panel below existing character list, with tabs for Personality (type + traits), Motivation (goals + conflicts), Growth (arc analysis), Relationships (character map)"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["Endpoint handlers validate characterId", "Depth analysis returns 5 dimensions"],
+    "integration": ["Select character in UI, verify depth profile loads with all tabs"],
+    "success_metrics": ["Character depth analysis works end-to-end", "Profile UI renders all 4 sections"]
+  },
+
+  "reference": {
+    "pattern": "MCP endpoint pattern from graph.js + foreshadow.js: jsonResponse/parseBody + async handlers",
+    "files": [
+      "src-tauri/bin/sidecar/narrative/character-manager.js",
+      "src-tauri/bin/sidecar/mcp/endpoints/graph.js"
+    ],
+    "examples": "character-manager.js has 8 personality types, 5-dimension scoring, DepthLevel enum — all ready to expose"
+  },
+
+  "rationale": {
+    "chosen_approach": "New endpoint file (character.js) for character domain, tabbed UI in CharacterTab",
+    "decision_factors": ["CharacterManager is a standalone domain module", "Top user request per external research", "Tabbed layout for progressive disclosure of depth data"],
+    "tradeoffs": "New endpoint file adds to file count, but domain separation is cleaner than extending graph.js"
+  },
+
+  "risks": [
+    {
+      "risk": "CharacterManager methods may have different signatures than expected",
+      "mitigation": "Read character-manager.js method signatures carefully before implementing endpoints"
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["character-management", "knowledge-management"],
+    "affected_components": ["CharacterManager", "character-endpoint", "CharacterTab"],
+    "affected_requirements": ["F6: Character Depth UI"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "50min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": true
+  }
+}

@@ -89,3 +89,28 @@ Milestone: M2 Phase 2 (TASK-007)
 Track exact test counts at each phase boundary (Phase 1: 860/860 frontend baseline). At Phase 2, verify `baseline_match=true` with exact count comparison. Classify sidecar failures as pre-existing (verified via `git stash` at baseline commit + re-run) or environmental (missing LLM provider) rather than new regressions. This three-tier classification (baseline match / pre-existing / environmental) prevents false regression alarms during multi-phase milestones.
 Milestone: M2 Phase 2 (TASK-008)
 </spec-entry>
+
+<spec-entry category="coding" keywords="service-singleton,lazy-init,MCP-endpoint,manager-pattern" date="2026-05-03" source="execute/EXC-008/TASK-005">
+For MCP services wrapping manager classes not in the DI container (ForeshadowingManager, CharacterManager), use module-level singleton with lazy `getManager()` init. Pattern: `let instance = null; function getManager() { if (!instance) { instance = new ManagerClass(); } return instance; }`. This avoids import-time construction while keeping the service layer simple. Each service file exports async functions that call `getManager()` then delegate to the manager.
+Milestone: M3 (TASK-005, TASK-007, TASK-008)
+</spec-entry>
+
+<spec-entry category="coding" keywords="store-adapter,Cypher,graph-engine,NarrativePatternDetector" date="2026-05-03" source="execute/EXC-008/TASK-008">
+When a module requires a `store` interface (e.g., NarrativePatternDetector needing `getEntitiesByTypes()`), create a lightweight adapter that translates calls to the graph engine's `executeCypher()`. The adapter lives in the service layer, not the module itself, keeping the module's dependency on an abstract store interface while the service provides the concrete implementation. This allows the module to remain testable with mock stores.
+Milestone: M3 (TASK-008)
+</spec-entry>
+
+<spec-entry category="learning" keywords="dual-transport,backward-compat,module-scores,additive-fields" date="2026-05-03" source="milestone-complete/M3">
+When adding per-module score breakdowns to an existing evaluation API, use additive fields (`module_scores?`) rather than replacing the existing aggregate scores. The dual transport pattern: existing `lock_score/style_score/logic_score` remain unchanged for backward compat, while `module_scores` is an optional addition. Frontend code checks for `module_scores` presence before rendering the breakdown. This lets existing consumers continue working without modification while new consumers opt into richer data.
+Milestone: M3 (TASK-001, TASK-006)
+</spec-entry>
+
+<spec-entry category="learning" keywords="deferral-validation,codebase-evolution,stale-deferred,N/A-resolution" date="2026-05-03" source="milestone-complete/M3">
+Deferred items from prior milestones may become inapplicable when the codebase evolves. Before implementing a deferred fix, verify the referenced code still exists. ISS-066 deferred `executeChain` interrupt edge case, but by M3 the function no longer exists in workflow.js. Similarly, F-001 referenced a `renameSkill` import that had already been removed. Always re-validate deferred items against current code rather than assuming they remain relevant.
+Milestone: M3 (TASK-003)
+</spec-entry>
+
+<spec-entry category="learning" keywords="evaluator-pattern,BaseEvaluator,weighted-subscores,Chinese-markers" date="2026-05-03" source="milestone-complete/M3">
+When creating new CriticEngine evaluators, follow the BaseEvaluator pattern: extend BaseEvaluator, implement `evaluate(content)` returning `{ name, score, issues, suggestions, subscores }`, and use Chinese marker arrays for content analysis. Each evaluator gets a weight in CriticEngine's weights map (sum must equal 1.0). The `relatedSkill` property links evaluators to writing skills for the skill system. Weights are redistributed when adding evaluators — reduce existing weights proportionally.
+Milestone: M3 (gap-fix TASK-001)
+</spec-entry>

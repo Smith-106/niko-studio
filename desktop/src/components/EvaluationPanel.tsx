@@ -65,15 +65,22 @@ const buildDimensions = (
     style_score: number
     logic_score: number
     actionable_feedback: string
+    module_scores?: Record<string, number>
   },
   fallbackFeedback: string,
   t: Translations,
 ) => {
-  return [
+  const core = [
     { name: t.evaluationDimensionLock, score: Number((data.lock_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
     { name: t.evaluationDimensionStyle, score: Number((data.style_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
     { name: t.evaluationDimensionLogic, score: Number((data.logic_score / 4).toFixed(1)), feedback: data.actionable_feedback || fallbackFeedback },
   ]
+  const modules = Object.entries(data.module_scores ?? {}).map(([name, score]) => ({
+    name,
+    score: Number(score.toFixed(1)),
+    feedback: '',
+  }))
+  return { core, modules }
 }
 
 const toRecommendationPayload = (
@@ -495,21 +502,26 @@ export function EvaluationPanel({
       failureMessageConnection: t.failureMessageConnection,
     },
     translateSuggestions: (rawSuggestions) => normalizeSuggestionPayloads(rawSuggestions, translate),
-    buildViewModel: (data) => ({
-      score: Number((data.total_score / 10).toFixed(1)),
-      dimensions: buildDimensions(
+    buildViewModel: (data) => {
+      const { core, modules } = buildDimensions(
         {
           lock_score: data.lock_score as number,
           style_score: data.style_score as number,
           logic_score: data.logic_score as number,
           actionable_feedback: data.actionable_feedback as string,
+          module_scores: data.module_scores as Record<string, number> | undefined,
         },
         t.evaluationNoFeedback,
         t,
-      ),
-      suggestions: data.suggestions,
-      decision: data.decision,
-    }),
+      )
+      return {
+        score: Number((data.total_score / 10).toFixed(1)),
+        dimensions: core,
+        modules,
+        suggestions: data.suggestions,
+        decision: data.decision,
+      }
+    },
   })
   const {
     suggestionStates,
@@ -1220,6 +1232,28 @@ export function EvaluationPanel({
                 </div>
               </div>
 
+              {result.modules.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.evaluationModuleBreakdown}</h3>
+                  <div className="space-y-2">
+                    {result.modules.map((mod) => (
+                      <div key={mod.name} className="flex items-center gap-3 p-2 bg-white dark:bg-dark-surface rounded-lg border border-gray-200 dark:border-dark-border">
+                        <span className="text-sm font-medium text-gray-700 dark:text-dark-text flex-1">{mod.name}</span>
+                        <span className={`text-sm font-medium ${mod.score >= 7 ? 'text-green-700 dark:text-green-400' : mod.score >= 5 ? 'text-amber-800 dark:text-amber-300' : 'text-red-700 dark:text-red-400'}`}>
+                          {mod.score}/10
+                        </span>
+                        <div className="w-24 bg-gray-300 dark:bg-dark-border2 rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full ${mod.score >= 7 ? 'bg-green-600 dark:bg-green-500' : mod.score >= 5 ? 'bg-amber-700 dark:bg-amber-500' : 'bg-red-600 dark:bg-red-500'}`}
+                            style={{ width: `${mod.score * 10}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {result.suggestions.length > 0 && (
                 <div>
                   <div className="mb-3 flex items-center gap-2">
@@ -1355,6 +1389,25 @@ export function EvaluationPanel({
                     <div>{t.evaluationConsistencyScore}: {consistencyCheckResult.combined.overallScore}</div>
                     <div>{t.evaluationConsistencyConflicts}: {consistencyCheckResult.combined.totalConflicts}</div>
                     <div className="mt-1">{t.evaluationConsistencySummary}: {consistencyCheckResult.combined.summary}</div>
+                    {consistencyCheckResult.combined.moduleScores && (
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-dark-border">
+                        <div className="font-medium text-gray-800 dark:text-dark-text mb-1">{t.evaluationModuleBreakdown}</div>
+                        {Object.entries(consistencyCheckResult.combined.moduleScores).map(([name, score]) => (
+                          <div key={name} className="flex items-center gap-2 py-0.5">
+                            <span className="flex-1">{name}</span>
+                            <span className={`font-medium ${Number(score) >= 7 ? 'text-green-700 dark:text-green-400' : Number(score) >= 5 ? 'text-amber-800 dark:text-amber-300' : 'text-red-700 dark:text-red-400'}`}>
+                              {Number(score).toFixed(1)}
+                            </span>
+                            <div className="w-16 bg-gray-300 dark:bg-dark-border2 rounded-full h-1">
+                              <div
+                                className={`h-1 rounded-full ${Number(score) >= 7 ? 'bg-green-600 dark:bg-green-500' : Number(score) >= 5 ? 'bg-amber-700 dark:bg-amber-500' : 'bg-red-600 dark:bg-red-500'}`}
+                                style={{ width: `${Number(score) * 10}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

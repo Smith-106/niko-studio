@@ -1,0 +1,104 @@
+{
+  "summary": "M3 Wiring & Exposure — register 5 dormant evaluators, wire WritingStyle 8D to backend, resolve M2 deferrals, add graph write operations, expose foreshadowing lifecycle + character depth + consistency dashboard, wire narrative analysis endpoints",
+  "approach": "Three-phase wiring strategy. Phase 1 establishes shared infrastructure (evaluator registration, structured score transport, style integration, M2 deferrals). Phase 2 builds on Phase 1 with graph write operations and high-value feature exposure (foreshadowing lifecycle, consistency dashboard, character depth). Phase 3 is independent stretch (narrative pattern analysis). All features follow the same pattern: backend module → MCP endpoint → frontend API function → UI component.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008"],
+  "task_count": 8,
+  "complexity": "medium",
+  "estimated_time": "3-4 sessions",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Phase 1: Foundation Wiring",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"]
+    },
+    {
+      "wave": 2,
+      "label": "Phase 2: Rich Exposure",
+      "tasks": ["TASK-004", "TASK-005", "TASK-006", "TASK-007"]
+    },
+    {
+      "wave": 3,
+      "label": "Phase 3: Analytics",
+      "tasks": ["TASK-008"]
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "Wave1(F1:evaluators,F3:style,F7:deferrals) → Wave2(F2:foreshadowing,F5:consistency,F6:character) → Wave3(F4:analysis)",
+    "stages": [
+      {
+        "stage": "Phase 1",
+        "input": "Dormant evaluator classes, WritingStyle 8D types, M2 deferred items",
+        "output": "10 registered evaluators with per-module scores, structured style transport, resolved deferrals",
+        "shared_infrastructure": ["MCP endpoint registration pattern", "Structured score transport layer"]
+      },
+      {
+        "stage": "Phase 2",
+        "input": "Phase 1 score transport, GraphManager read ops, ForeshadowingManager, CharacterManager",
+        "output": "Graph write ops with validation, foreshadowing lifecycle endpoints + UI, per-module consistency dashboard, character depth UI",
+        "shared_infrastructure": ["Graph engine write operations"]
+      },
+      {
+        "stage": "Phase 3",
+        "input": "NarrativePatternDetector, WritingSessionCluster",
+        "output": "Analysis endpoints + frontend consumption",
+        "shared_infrastructure": []
+      }
+    ]
+  },
+
+  "design_decisions": [
+    {
+      "id": "DD-001",
+      "decision": "Three-phase wiring strategy",
+      "reason": "Phase 1 establishes shared infrastructure that Phase 2 features consume. Phase 3 is independent stretch."
+    },
+    {
+      "id": "DD-002",
+      "decision": "Backward-compatible dual score transport",
+      "reason": "Existing 3-score UI must continue working. Structured per-module scores are additive, not replacing."
+    },
+    {
+      "id": "DD-003",
+      "decision": "Graph engine write ops as shared infrastructure module",
+      "reason": "Single validation layer, consistent behavior, avoids duplication across F2 and F6."
+    },
+    {
+      "id": "DD-004",
+      "decision": "Follow existing MCP endpoint pattern",
+      "reason": "Established pattern in graph.js/critic.js works. No new abstractions."
+    }
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "MCP endpoint pattern: import { jsonResponse, parseBody } from '../utils.js'; async handler returning jsonResponse(result)",
+      "Graph scope resolution: resolveGraphScope(body) → { workspaceId, projectId }",
+      "Frontend API pattern: async function → invoke MCP endpoint → return typed result",
+      "Evaluator pattern: BaseEvaluator subclass with name/description/relatedSkill getters + evaluate() method"
+    ],
+    "conventions": [
+      "No new external dependencies — use existing React, Zustand, TailwindCSS, Tauri stack",
+      "Backward compatibility — never break existing 3-score evaluation UI",
+      "Follow coding philosophy: simplicity, existing patterns, no premature abstractions"
+    ],
+    "dependencies": [
+      "TASK-005 depends on TASK-004 (graph write ops needed for foreshadowing persistence)",
+      "TASK-006 depends on TASK-001 (per-module scores from evaluator expansion)",
+      "TASK-007 depends on TASK-004 (graph write ops needed for character depth storage)"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-03T14:00:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "milestone",
+    "schema_version": "2.0",
+    "git_commit": null,
+    "upstream_analysis": "ANL-002",
+    "scope": "M3"
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "id": "TASK-004",
+  "title": "Add graph engine write operations with validation",
+  "description": "Shared infrastructure: Add createNode, updateNode, deleteNode, createRelation write operations to graph-engine.js with input validation and concurrency protection. Wire write operations to new MCP endpoints in graph.js. Integration test with VectorSearch embedding support.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "high",
+  "action": "Add write methods (createNode, updateNode, deleteNode, createRelation) to graph-engine.js with input validation. Register write endpoints in graph.js MCP endpoint file. Add frontend API functions in knowledge.ts for graph writes.",
+  "status": "completed",
+  "completed_at": "2026-05-03T20:15:00+08:00",
+  "actual_duration": "30min",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "src-tauri/bin/sidecar/graph/,src-tauri/bin/sidecar/mcp/endpoints/graph.js,src/api/knowledge.ts",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/graph/graph-engine.js",
+    "src-tauri/bin/sidecar/graph/graph-manager.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+    "src/api/knowledge.ts"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/graph/graph-engine.js",
+    "src-tauri/bin/sidecar/graph/graph-manager.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+    "src/api/knowledge.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "graph-engine.js contains method 'createNode'",
+      "graph-engine.js contains method 'updateNode'",
+      "graph-engine.js contains method 'deleteNode'",
+      "graph-engine.js contains method 'createRelation'",
+      "graph-engine.js write methods validate input parameters (type, properties required)",
+      "graph.js registers POST endpoints for graph write operations",
+      "knowledge.ts exports graph write API functions",
+      "Write operations maintain consistency with existing read operations"
+    ],
+    "verification": "Call createNode endpoint, verify node appears in subsequent graphQuery. Delete node, verify removed. Check validation rejects invalid input.",
+    "definition_of_done": "Graph engine supports validated CRUD write operations exposed via MCP endpoints and frontend API"
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/graph/graph-engine.js",
+      "action": "modify",
+      "target": "class GraphEngine methods",
+      "change": "Add createNode(type, properties, id?), updateNode(id, properties), deleteNode(id), createRelation(fromId, toId, type, properties) methods with input validation (required fields, type checking, existence verification)."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+      "action": "modify",
+      "target": "endpoint registration",
+      "change": "Add POST /graph/node/create, POST /graph/node/update, POST /graph/node/delete, POST /graph/relation/create endpoints following existing jsonResponse pattern with resolveGraphScope."
+    },
+    {
+      "path": "src/api/knowledge.ts",
+      "action": "modify",
+      "target": "graph API functions",
+      "change": "Add createGraphNode, updateGraphNode, deleteGraphNode, createGraphRelation async functions calling new MCP endpoints."
+    }
+  ],
+
+  "implementation": [
+    "In graph-engine.js: add createNode(type, properties) method — validate type is string, properties is object, generate UUID if no id provided, add to nodes Map, emit change event",
+    "In graph-engine.js: add updateNode(id, properties) method — validate node exists, merge properties, update timestamp",
+    "In graph-engine.js: add deleteNode(id) method — validate node exists, remove from nodes Map, remove all associated relations",
+    "In graph-engine.js: add createRelation(fromId, toId, type, properties) method — validate both nodes exist, validate type string, add to relations Map",
+    "In graph.js: register 4 new POST endpoints following existing pattern with resolveGraphScope, parseBody, jsonResponse",
+    "In knowledge.ts: add 4 API functions calling new endpoints with proper TypeScript types"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["createNode validates required fields", "deleteNode removes associated relations", "createRelation validates node existence"],
+    "integration": ["Full CRUD cycle: create → query → update → query → delete → verify gone"],
+    "success_metrics": ["Write operations persist correctly", "Validation rejects bad input", "Existing read operations unaffected"]
+  },
+
+  "reference": {
+    "pattern": "Existing graph.js endpoint pattern: resolveGraphScope → graphManager.method → jsonResponse",
+    "files": [
+      "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+      "src-tauri/bin/sidecar/graph/graph-manager.js"
+    ],
+    "examples": "graph.js lines 10-66 show 3 read-only endpoints with scope resolution pattern"
+  },
+
+  "rationale": {
+    "chosen_approach": "Add write operations directly to GraphEngine class, validate at engine level, expose via new endpoints",
+    "decision_factors": ["GraphEngine is the single source of truth for graph data", "Single validation layer prevents inconsistency", "Desktop app = low contention, simple validation sufficient"],
+    "tradeoffs": "Adding to GraphEngine increases class size, but write ops are natural extensions of read architecture"
+  },
+
+  "risks": [
+    {
+      "risk": "Write operations corrupt knowledge graph",
+      "mitigation": "Input validation at engine level, existence checks before mutations, node deletion cascades to relations"
+    },
+    {
+      "risk": "VectorSearch embedding not triggered on write",
+      "mitigation": "Reuse existing setVectorSearch() DI pattern, trigger embedding in createNode/createRelation"
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["knowledge-graph", "graph-operations"],
+    "affected_components": ["GraphEngine", "graph-endpoint", "knowledge-api"],
+    "affected_requirements": ["Shared infrastructure for F2 and F6"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "60min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": true
+  }
+}

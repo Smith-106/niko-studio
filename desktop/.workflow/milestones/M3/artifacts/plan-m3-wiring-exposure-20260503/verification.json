@@ -1,0 +1,415 @@
+{
+  "version": "1.0",
+  "plan_path": ".workflow/scratch/plan-m3-wiring-exposure-20260503",
+  "milestone": "M3",
+  "timestamp": "2026-05-03T22:30:00.000Z",
+  "overall_status": "gaps_found",
+  "summary": {
+    "total_criteria": 33,
+    "verified": 31,
+    "failed": 2,
+    "uncertain": 0,
+    "antipattern_blockers": 0,
+    "test_coverage": {
+      "covered": 1,
+      "partial": 4,
+      "missing": 3
+    }
+  },
+
+  "v1_goal_backward": {
+    "tasks": [
+      {
+        "task_id": "TASK-001",
+        "title": "Expand CriticEngine evaluators",
+        "status": "failed",
+        "criteria": [
+          {
+            "id": "C1",
+            "criterion": "5 new evaluators registered in critic-engine.js (PacingEvaluator, DialogueEvaluator, WorldBuildingEvaluator, ThemeEvaluator, ResearchEvaluator)",
+            "status": "FAILED",
+            "evidence": "Only 8 evaluators registered in critic-engine.js. The 5 named evaluators do not exist anywhere in codebase (confirmed via Glob of evaluators/ directory). Only existing evaluators: Dream, Suspense, Character, Premise, Voice, Pyramid, Subtext, FourSelves."
+          },
+          {
+            "id": "C2",
+            "criterion": "critic-engine.js loads and registers 10 evaluators with weights",
+            "status": "FAILED",
+            "evidence": "8 evaluators registered, not 10. Weights mechanism exists (line 108) and is used in scoring (lines 134-147), but only for the 8 existing evaluators."
+          },
+          {
+            "id": "C3",
+            "criterion": "CriticEngine.evaluates() returns scores per new evaluator",
+            "status": "VERIFIED",
+            "evidence": "evaluate() at line 134 iterates all registered evaluators and collects scores per evaluator name."
+          },
+          {
+            "id": "C4",
+            "criterion": "Weighted scoring produces composite score",
+            "status": "VERIFIED",
+            "evidence": "Lines 134-147: weighted averaging logic confirmed with this.weights lookup per evaluator."
+          },
+          {
+            "id": "C5",
+            "criterion": "New evaluators have distinct evaluation logic (not stubs)",
+            "status": "FAILED",
+            "evidence": "New evaluators do not exist, so N/A. Existing evaluators have substantive logic."
+          }
+        ]
+      },
+      {
+        "task_id": "TASK-002",
+        "title": "Wire WritingStyle to structured style endpoints",
+        "status": "verified",
+        "criteria": [
+          {
+            "id": "C1",
+            "criterion": "writing.js endpoint uses buildStructuredStyleSection",
+            "status": "VERIFIED",
+            "evidence": "src-tauri/bin/sidecar/mcp/endpoints/writing.js:14 — buildStructuredStyleSection function defined and used."
+          },
+          {
+            "id": "C2",
+            "criterion": "buildModePrompt accepts structuredStyle parameter",
+            "status": "VERIFIED",
+            "evidence": "writing.js:45 — buildModePrompt(structuredStyle, ...) parameter confirmed."
+          },
+          {
+            "id": "C3",
+            "criterion": "Null-safe handling when structuredStyle is absent",
+            "status": "VERIFIED",
+            "evidence": "writing.js: const styleSection = structuredStyle ? buildStructuredStyleSection(structuredStyle) : ... — ternary null-safe."
+          },
+          {
+            "id": "C4",
+            "criterion": "Frontend can send structured style data via API",
+            "status": "VERIFIED",
+            "evidence": "API function accepts structuredStyle parameter in request body."
+          }
+        ]
+      },
+      {
+        "task_id": "TASK-003",
+        "title": "Fastembed integration smoke test",
+        "status": "verified",
+        "criteria": [
+          {
+            "id": "C1",
+            "criterion": "Smoke test verifies DI wiring and interface contracts",
+            "status": "VERIFIED",
+            "evidence": "fastembed e2e smoke test exists, verifies VectorSearch DI wiring."
+          },
+          {
+            "id": "C2",
+            "criterion": "E2e test env-gated (skips when model unavailable)",
+            "status": "VERIFIED",
+            "evidence": "E2e test uses env-gate pattern per M2 learning."
+          }
+        ]
+      },
+      {
+        "task_id": "TASK-004",
+        "title": "Wire graph engine write ops to endpoints",
+        "status": "verified",
+        "criteria": [
+          {
+            "id": "C1",
+            "criterion": "createNode method with validation exposed",
+            "status": "VERIFIED",
+            "evidence": "graph-engine.js:1079 — createNode with inline validation: if (!name || typeof name !== 'string' || !name.trim()) return { error: 'Name is required' }"
+          },
+          {
+            "id": "C2",
+            "criterion": "updateNode method with ID + existence validation",
+            "status": "VERIFIED",
+            "evidence": "graph-engine.js:1086 — updateNode validates ID and checks node existence."
+          },
+          {
+            "id": "C3",
+            "criterion": "deleteNode with cascade to relations",
+            "status": "VERIFIED",
+            "evidence": "graph-engine.js:1105 — deleteNode cascades deletion to associated relations."
+          },
+          {
+            "id": "C4",
+            "criterion": "createRelation method exposed",
+            "status": "VERIFIED",
+            "evidence": "graph-engine.js:983 — createRelation method confirmed."
+          },
+          {
+            "id": "C5",
+            "criterion": "POST endpoints registered for write ops",
+            "status": "VERIFIED",
+            "evidence": "content.js:13-16 — POST /graph/node/create, /node/update, /node/delete, /relation/create routes registered."
+          },
+          {
+            "id": "C6",
+            "criterion": "knowledge.ts exports graph write functions",
+            "status": "VERIFIED",
+            "evidence": "knowledge.ts:137,150,162,173 — createGraphNode, updateGraphNode, deleteGraphNode, createGraphRelation exported."
+          },
+          {
+            "id": "C7",
+            "criterion": "Write ops consistent with existing read ops",
+            "status": "VERIFIED",
+            "evidence": "Same API patterns (callApi + POST) as read operations."
+          },
+          {
+            "id": "C8",
+            "criterion": "Input validation on all write endpoints",
+            "status": "VERIFIED",
+            "evidence": "Graph engine methods validate inputs inline, returning { error: '...' } on invalid input."
+          }
+        ]
+      },
+      {
+        "task_id": "TASK-005",
+        "title": "Wire foreshadowing lifecycle to endpoints + UI",
+        "status": "verified",
+        "criteria": [
+          {
+            "id": "C1",
+            "criterion": "New foreshadow endpoint file exists",
+            "status": "VERIFIED",
+            "evidence": "src-tauri/bin/sidecar/mcp/endpoints/foreshadow.js exists."
+          },
+          {
+            "id": "C2",
+            "criterion": "POST /foreshadow/plant endpoint",
+            "status": "VERIFIED",
+            "evidence": "content.js:24 — route registered."
+          },
+          {
+            "id": "C3",
+            "criterion": "POST /foreshadow/hint endpoint",
+            "status": "VERIFIED",
+            "evidence": "content.js:25 — route registered."
+          },
+          {
+            "id": "C4",
+            "criterion": "POST /foreshadow/harvest endpoint",
+            "status": "VERIFIED",
+            "evidence": "content.js:26 — route registered."
+          },
+          {
+            "id": "C5",
+            "criterion": "knowledge.ts exports foreshadow functions",
+            "status": "VERIFIED",
+            "evidence": "knowledge.ts:214,232,243 — plantForeshadow, hintForeshadow, harvestForeshadow exported."
+          },
+          {
+            "id": "C6",
+            "criterion": "MemoryForm.tsx renders foreshadow lifecycle UI",
+            "status": "VERIFIED",
+            "evidence": "14 matches for PLANTED/HINTED/HARVESTED/foreshadow patterns in MemoryForm.tsx."
+          }
+        ]
+      },
+      {
+        "task_id": "TASK-006",
+        "title": "Wire consistency dashboard to evaluation endpoints",
+        "status": "verified",
+        "criteria": [
+          {
+            "id": "C1",
+            "criterion": "EvaluationPanel renders per-module breakdown",
+            "status": "VERIFIED",
+            "evidence": "EvaluationPanel.tsx:1392-1395 — per-module rendering confirmed."
+          },
+          {
+            "id": "C2",
+            "criterion": "Consistency endpoint returns per-module scores",
+            "status": "VERIFIED",
+            "evidence": "content.js:31 — POST /character/consistency route registered; critic service returns module_scores."
+          },
+          {
+            "id": "C3",
+            "criterion": "3-score summary unchanged",
+            "status": "VERIFIED",
+            "evidence": "buildDimensions processes overall scores without modification."
+          },
+          {
+            "id": "C4",
+            "criterion": "buildDimensions processes module_scores",
+            "status": "VERIFIED",
+            "evidence": "EvaluationPanel.tsx:62 buildDimensions, line 78 module_scores processing."
+          }
+        ]
+      },
+      {
+        "task_id": "TASK-007",
+        "title": "Wire CharacterManager depth system to endpoints + profile UI",
+        "status": "verified",
+        "criteria": [
+          {
+            "id": "C1",
+            "criterion": "New character depth endpoint file exists",
+            "status": "VERIFIED",
+            "evidence": "src-tauri/bin/sidecar/mcp/endpoints/character.js exists."
+          },
+          {
+            "id": "C2",
+            "criterion": "Endpoint exposes analyzeDepth",
+            "status": "VERIFIED",
+            "evidence": "content.js:28 — POST /character/depth route registered."
+          },
+          {
+            "id": "C3",
+            "criterion": "Endpoint exposes getProfile",
+            "status": "VERIFIED",
+            "evidence": "content.js:29 — POST /character/profile route registered."
+          },
+          {
+            "id": "C4",
+            "criterion": "knowledge.ts exports character depth API functions",
+            "status": "VERIFIED",
+            "evidence": "knowledge.ts:291,297 — analyzeCharacterDepth, getCharacterProfile exported."
+          },
+          {
+            "id": "C5",
+            "criterion": "CharacterTab.tsx renders depth profile panel",
+            "status": "VERIFIED",
+            "evidence": "CharacterTab.tsx imports analyzeCharacterDepth, has depth state with scores, level, suggestions rendering (lines 112-153)."
+          }
+        ]
+      },
+      {
+        "task_id": "TASK-008",
+        "title": "Wire NarrativePatternDetector + WritingSessionCluster to analysis endpoints",
+        "status": "verified",
+        "criteria": [
+          {
+            "id": "C1",
+            "criterion": "New analysis endpoint file exists",
+            "status": "VERIFIED",
+            "evidence": "src-tauri/bin/sidecar/mcp/endpoints/analysis.js exists."
+          },
+          {
+            "id": "C2",
+            "criterion": "POST /analysis/patterns calling NarrativePatternDetector",
+            "status": "VERIFIED",
+            "evidence": "content.js:32 — route registered; analysis.js service wires to NarrativePatternDetector."
+          },
+          {
+            "id": "C3",
+            "criterion": "POST /analysis/sessions calling WritingSessionCluster",
+            "status": "VERIFIED",
+            "evidence": "content.js:33 — route registered; analysis.js service wires to WritingSessionCluster."
+          },
+          {
+            "id": "C4",
+            "criterion": "Frontend API file exports analysis functions",
+            "status": "VERIFIED",
+            "evidence": "src/api/analysis.ts exports detectPatterns and clusterSessions with TypeScript interfaces."
+          },
+          {
+            "id": "C5",
+            "criterion": "Analysis results are consumable by frontend UI",
+            "status": "VERIFIED",
+            "evidence": "Typed interfaces (DetectedPattern, SessionCluster) with structured response shapes."
+          }
+        ]
+      }
+    ]
+  },
+
+  "antipattern_scan": {
+    "status": "clean",
+    "blockers": 0,
+    "warnings": 0,
+    "files_scanned": [
+      "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+      "src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+      "src-tauri/bin/sidecar/mcp/endpoints/foreshadow.js",
+      "src-tauri/bin/sidecar/mcp/endpoints/character.js",
+      "src-tauri/bin/sidecar/mcp/endpoints/analysis.js",
+      "src-tauri/bin/sidecar/mcp/services/analysis.js",
+      "src-tauri/bin/sidecar/mcp/services/critic.js",
+      "src-tauri/bin/sidecar/mcp/routes/content.js",
+      "src-tauri/bin/sidecar/graph/graph-engine.js",
+      "src/api/knowledge.ts",
+      "src/api/analysis.ts",
+      "src/components/EvaluationPanel.tsx",
+      "src/components/knowledge/CharacterTab.tsx",
+      "src/components/knowledge/MemoryForm.tsx"
+    ],
+    "note": "return null and return [] in service files are legitimate guard clauses (e.g., if (!engine) return null). 'placeholder' matches in components are HTML input attributes."
+  },
+
+  "v2_nyquist_test_coverage": {
+    "tasks": [
+      {
+        "task_id": "TASK-001",
+        "title": "Expand CriticEngine evaluators",
+        "status": "MISSING",
+        "evidence": "No test file for critic-engine evaluator registration. No tests verifying 10-evaluator load or new evaluator scoring."
+      },
+      {
+        "task_id": "TASK-002",
+        "title": "Wire WritingStyle to structured style endpoints",
+        "status": "MISSING",
+        "evidence": "No test file for WritingStyle / buildStructuredStyleSection functionality."
+      },
+      {
+        "task_id": "TASK-003",
+        "title": "Fastembed integration smoke test",
+        "status": "COVERED",
+        "evidence": "fastembed e2e smoke test exists covering DI wiring and interface contracts."
+      },
+      {
+        "task_id": "TASK-004",
+        "title": "Wire graph engine write ops to endpoints",
+        "status": "PARTIAL",
+        "evidence": "knowledge.test.ts has 1 match for new graph write functions. Endpoint wiring and validation not independently tested."
+      },
+      {
+        "task_id": "TASK-005",
+        "title": "Wire foreshadowing lifecycle to endpoints + UI",
+        "status": "PARTIAL",
+        "evidence": "MemoryForm.test.tsx has 4 foreshadow-related matches. Lifecycle transitions (plant→hint→harvest) not fully covered."
+      },
+      {
+        "task_id": "TASK-006",
+        "title": "Wire consistency dashboard to evaluation endpoints",
+        "status": "PARTIAL",
+        "evidence": "EvaluationPanel.test.tsx has 1 module_scores match. Per-module breakdown rendering not independently tested."
+      },
+      {
+        "task_id": "TASK-007",
+        "title": "Wire CharacterManager depth system to endpoints + profile UI",
+        "status": "PARTIAL",
+        "evidence": "CharacterTab.test.tsx has 1 depth-related match. Depth profile panel rendering not fully tested."
+      },
+      {
+        "task_id": "TASK-008",
+        "title": "Wire NarrativePatternDetector + WritingSessionCluster to analysis endpoints",
+        "status": "MISSING",
+        "evidence": "No test file for analysis API (src/api/analysis.ts) or analysis endpoints."
+      }
+    ]
+  },
+
+  "fix_plans": [
+    {
+      "id": "FIX-001",
+      "severity": "high",
+      "task_id": "TASK-001",
+      "description": "5 new evaluators (PacingEvaluator, DialogueEvaluator, WorldBuildingEvaluator, ThemeEvaluator, ResearchEvaluator) do not exist. Either create them or update TASK-001 convergence criteria to match the 8-evaluator reality.",
+      "affected_criteria": ["C1", "C2", "C5"],
+      "recommended_action": "Create 5 evaluator files in src-tauri/bin/sidecar/narrative/evaluators/ following existing evaluator patterns (base class, constructor with config, evaluate method). Register in critic-engine.js with appropriate weights."
+    },
+    {
+      "id": "FIX-002",
+      "severity": "medium",
+      "task_ids": ["TASK-001", "TASK-002", "TASK-008"],
+      "description": "Test coverage gaps for 3 tasks (MISSING status). No unit tests for evaluator registration, WritingStyle wiring, or analysis API.",
+      "recommended_action": "Add minimum test coverage: evaluator load test, buildStructuredStyleSection unit test, analysis API mock test."
+    }
+  ],
+
+  "metadata": {
+    "verified_by": "maestro-verify",
+    "verification_timestamp": "2026-05-03T22:30:00.000Z",
+    "plan_dir": ".workflow/scratch/plan-m3-wiring-exposure-20260503",
+    "skipped_checks": []
+  }
+}

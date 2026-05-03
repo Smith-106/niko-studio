@@ -1,0 +1,126 @@
+{
+  "id": "TASK-005",
+  "title": "Wire ForeshadowingManager lifecycle to MCP endpoints + UI",
+  "description": "F2 Foreshadowing Lifecycle: Expose plant(), hint(), harvest(), getStats() methods from 662-line ForeshadowingManager via MCP endpoints. Create frontend API functions. Build foreshadowing lifecycle UI panel replacing minimal status filter in MemoryForm.tsx.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "high",
+  "action": "Create foreshadowing MCP endpoints (POST /foreshadow/plant, POST /foreshadow/hint, POST /foreshadow/harvest, GET /foreshadow/stats), add frontend API functions in knowledge.ts, build lifecycle UI panel in MemoryForm.tsx with PLANTED/HINTED/HARVESTED status columns",
+  "status": "completed",
+  "completed_at": "2026-05-03T16:30:00+08:00",
+  "actual_duration": "45min",
+
+  "scope": "src-tauri/bin/sidecar/narrative/foreshadowing.js,src-tauri/bin/sidecar/mcp/endpoints/,src/api/knowledge.ts,src/components/knowledge/MemoryForm.tsx",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/narrative/foreshadowing.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/",
+    "src/api/knowledge.ts",
+    "src/components/knowledge/MemoryForm.tsx"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/narrative/foreshadowing.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+    "src/api/knowledge.ts",
+    "src/components/knowledge/MemoryForm.tsx"
+  ],
+
+  "depends_on": ["TASK-004"],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "New foreshadow endpoint file exists in src-tauri/bin/sidecar/mcp/endpoints/",
+      "Endpoint handles POST /foreshadow/plant calling ForeshadowingManager.plant()",
+      "Endpoint handles POST /foreshadow/hint calling ForeshadowingManager.hint()",
+      "Endpoint handles POST /foreshadow/harvest calling ForeshadowingManager.harvest()",
+      "knowledge.ts exports plantForeshadow, hintForeshadow, harvestForeshadow functions",
+      "MemoryForm.tsx contains lifecycle management UI with PLANTED/HINTED/HARVESTED status display"
+    ],
+    "verification": "Call plant endpoint, verify response. Call hint with planted item id, verify status transition. Call harvest, verify completion. Check UI renders lifecycle stages.",
+    "definition_of_done": "Foreshadowing lifecycle (plant→hint→harvest) exposed via API and consumable by UI"
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/mcp/endpoints/foreshadow.js",
+      "action": "create",
+      "target": "new endpoint file",
+      "change": "Create 4 endpoint handlers: plant (POST, params: content, chapter, metadata), hint (POST, params: id, hintContent), harvest (POST, params: id, harvestContent), stats (GET, returns lifecycle counts). Register in gateway."
+    },
+    {
+      "path": "src/api/knowledge.ts",
+      "action": "modify",
+      "target": "foreshadow API functions",
+      "change": "Add plantForeshadow, hintForeshadow, harvestForeshadow, getForeshadowStats async functions calling new MCP endpoints."
+    },
+    {
+      "path": "src/components/knowledge/MemoryForm.tsx",
+      "action": "modify",
+      "target": "foreshadow section",
+      "change": "Replace minimal status/chapter filter (lines 172-200) with lifecycle management panel showing PLANTED/HINTED/HARVESTED status columns with action buttons for state transitions."
+    }
+  ],
+
+  "implementation": [
+    "Create src-tauri/bin/sidecar/mcp/endpoints/foreshadow.js: import ForeshadowingManager, create 4 endpoint handlers following graph.js pattern with jsonResponse/parseBody",
+    "In foreshadow.js plant handler: extract content/chapter/metadata from body, call foreshadowingManager.plant(), return planted item with id and status",
+    "In foreshadow.js hint handler: extract id + hintContent, call foreshadowingManager.hint(id, hintContent), return updated item",
+    "In foreshadow.js harvest handler: extract id + harvestContent, call foreshadowingManager.harvest(id, harvestContent), return completed item",
+    "In knowledge.ts: add 4 async functions with TypeScript types matching endpoint signatures",
+    "In MemoryForm.tsx: replace foreshadow filter section with lifecycle panel using existing UI patterns (columns for each status, cards for items, action buttons for transitions)"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["Endpoint handlers validate required params", "Status transitions follow plant→hint→harvest order"],
+    "integration": ["Full lifecycle: plant → query → hint → query → harvest → verify complete"],
+    "success_metrics": ["Lifecycle transitions work end-to-end", "UI displays status correctly"]
+  },
+
+  "reference": {
+    "pattern": "MCP endpoint pattern from graph.js: jsonResponse/parseBody + async handlers",
+    "files": [
+      "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+      "src-tauri/bin/sidecar/narrative/foreshadowing.js"
+    ],
+    "examples": "graph.js shows endpoint registration pattern; foreshadowing.js has plant/hint/harvest/getStats methods ready to call"
+  },
+
+  "rationale": {
+    "chosen_approach": "New endpoint file (foreshadow.js) rather than extending graph.js — foreshadowing is a distinct domain",
+    "decision_factors": ["ForeshadowingManager is 662-line standalone module", "Lifecycle (plant→hint→harvest) is distinct from generic graph queries", "Key market differentiator warrants dedicated endpoint file"],
+    "tradeoffs": "New file vs extending graph.js — slightly more files but cleaner separation"
+  },
+
+  "risks": [
+    {
+      "risk": "ForeshadowingManager internal API may not match expected signatures",
+      "mitigation": "Read foreshadowing.js method signatures carefully before implementing endpoints"
+    },
+    {
+      "risk": "UI complexity exceeds estimate",
+      "mitigation": "Start with simple status columns, iterate. No new UI libraries."
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["foreshadowing", "knowledge-management"],
+    "affected_components": ["ForeshadowingManager", "foreshadow-endpoint", "MemoryForm"],
+    "affected_requirements": ["F2: Foreshadowing Lifecycle"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "60min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": true
+  }
+}

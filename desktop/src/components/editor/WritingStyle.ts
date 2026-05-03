@@ -326,6 +326,32 @@ export function buildStyleInstruction(style: WritingStyle, isZh: boolean): strin
   return lines.join('；')
 }
 
+// ── Structured Style Export ─────────────────────────────────────
+
+export interface StructuredStyle {
+  tone: string
+  perspective: string
+  sentenceStyle: string
+  rhythm: string
+  languageStyle: LanguageStyle
+  narrativeDistance: number
+  emotionalResonance: EmotionStyle
+  thematicDepth: number
+}
+
+export function buildStructuredStyle(style: WritingStyle): StructuredStyle {
+  return {
+    tone: style.tone,
+    perspective: style.perspective,
+    sentenceStyle: style.sentenceStyle,
+    rhythm: style.rhythm,
+    languageStyle: style.language,
+    narrativeDistance: style.narrativeDistance,
+    emotionalResonance: style.emotion,
+    thematicDepth: style.thinking.depth,
+  }
+}
+
 // ── Tag input helper ────────────────────────────────────────────
 
 export function addTag(tags: string[], tag: string): string[] {

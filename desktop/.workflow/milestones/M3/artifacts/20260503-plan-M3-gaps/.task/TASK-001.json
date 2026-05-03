@@ -1,0 +1,167 @@
+{
+  "id": "TASK-001",
+  "title": "Create 5 missing CriticEngine evaluators + register in engine",
+  "description": "FIX-001 (HIGH): 5 evaluators planned but never created — PacingEvaluator, DialogueEvaluator, WorldBuildingEvaluator, ThemeEvaluator, ResearchEvaluator. Create each following the BaseEvaluator pattern, register in critic-engine.js with weights, add barrel exports to index.js.",
+
+  "issue_id": null,
+  "issue_refs": ["FIX-001"],
+  "type": "fix",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create 5 evaluator files in src-tauri/bin/sidecar/narrative/evaluators/ (pacing-evaluator.js, dialogue-evaluator.js, worldbuilding-evaluator.js, theme-evaluator.js, research-evaluator.js) each extending BaseEvaluator with static MARKER arrays, evaluate() returning EvaluationResult, and quickScan(). Register all 5 in critic-engine.js constructor (this.evaluators + this.weights). Add 5 barrel exports to index.js.",
+  "status": "completed",
+  "completed_at": "2026-05-03T21:25:00.000Z",
+  "actual_duration": "15min",
+
+  "scope": "src-tauri/bin/sidecar/narrative/evaluators/",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/narrative/evaluators/pacing-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/dialogue-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/worldbuilding-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/theme-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/research-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/index.js"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/narrative/evaluators/base.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/character-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/suspense-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/index.js"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "pacing-evaluator.js exists in src-tauri/bin/sidecar/narrative/evaluators/ and contains 'extends BaseEvaluator'",
+      "dialogue-evaluator.js exists in src-tauri/bin/sidecar/narrative/evaluators/ and contains 'extends BaseEvaluator'",
+      "worldbuilding-evaluator.js exists in src-tauri/bin/sidecar/narrative/evaluators/ and contains 'extends BaseEvaluator'",
+      "theme-evaluator.js exists in src-tauri/bin/sidecar/narrative/evaluators/ and contains 'extends BaseEvaluator'",
+      "research-evaluator.js exists in src-tauri/bin/sidecar/narrative/evaluators/ and contains 'extends BaseEvaluator'",
+      "critic-engine.js contains 'PacingEvaluator' and 'this.evaluators[\\'pacing\\']'",
+      "critic-engine.js contains 'DialogueEvaluator' and 'this.evaluators[\\'dialogue\\']'",
+      "critic-engine.js contains 'WorldBuildingEvaluator' and 'this.evaluators[\\'worldbuilding\\']'",
+      "critic-engine.js contains 'ThemeEvaluator' and 'this.evaluators[\\'theme\\']'",
+      "critic-engine.js contains 'ResearchEvaluator' and 'this.evaluators[\\'research\\']'",
+      "critic-engine.js this.evaluators has exactly 13 entries (8 existing + 5 new, verified by counting this.evaluators[key] lines)",
+      "index.js contains 'export { PacingEvaluator }' and 'export { DialogueEvaluator }' and 'export { WorldBuildingEvaluator }' and 'export { ThemeEvaluator }' and 'export { ResearchEvaluator }'",
+      "Each evaluator file contains async evaluate(content, context) method returning new EvaluationResult",
+      "Each evaluator file contains quickScan(content) method",
+      "npx vitest run exits 0 (no regressions)"
+    ],
+    "verification": "Grep for each evaluator class name in critic-engine.js. Count this.evaluators registrations. Verify barrel exports in index.js. Run test suite.",
+    "definition_of_done": "All 5 evaluators created with substantive evaluation logic, registered in CriticEngine with weights, and exported from barrel file"
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/narrative/evaluators/pacing-evaluator.js",
+      "action": "create",
+      "target": "PacingEvaluator class",
+      "change": "Create evaluator extending BaseEvaluator with MARKER arrays for pacing patterns (fast-slow transitions, scene breaks, time jumps, chapter beats). evaluate() scores rhythm variation, scene balance, tension pacing. Weight suggestion: 0.10."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/narrative/evaluators/dialogue-evaluator.js",
+      "action": "create",
+      "target": "DialogueEvaluator class",
+      "change": "Create evaluator extending BaseEvaluator with MARKER arrays for dialogue patterns (attribution variation, subtext indicators, speech tags, dialogue beats). evaluate() scores naturalism, attribution diversity, subtext density. Weight suggestion: 0.10."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/narrative/evaluators/worldbuilding-evaluator.js",
+      "action": "create",
+      "target": "WorldBuildingEvaluator class",
+      "change": "Create evaluator extending BaseEvaluator with MARKER arrays for worldbuilding patterns (setting descriptions, sensory details, cultural references, place names). evaluate() scores setting density, sensory engagement, cultural depth. Weight suggestion: 0.08."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/narrative/evaluators/theme-evaluator.js",
+      "action": "create",
+      "target": "ThemeEvaluator class",
+      "change": "Create evaluator extending BaseEvaluator with MARKER arrays for thematic patterns (motif recurrence, symbolic language, philosophical terms, thematic contrasts). evaluate() scores thematic coherence, motif consistency, symbolic depth. Weight suggestion: 0.08."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/narrative/evaluators/research-evaluator.js",
+      "action": "create",
+      "target": "ResearchEvaluator class",
+      "change": "Create evaluator extending BaseEvaluator with MARKER arrays for research quality (factual indicators, specificity markers, citation patterns, technical terminology). evaluate() scores factual grounding, specificity, terminology accuracy. Weight suggestion: 0.08."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+      "action": "modify",
+      "target": "constructor",
+      "change": "Add 5 import statements at top for new evaluator classes. Add 5 this.evaluators[key] = new EvaluatorClass(config) registrations. Add 5 this.weights[key] = decimal entries (pacing: 0.10, dialogue: 0.10, worldbuilding: 0.08, theme: 0.08, research: 0.08)."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/narrative/evaluators/index.js",
+      "action": "modify",
+      "target": "barrel exports",
+      "change": "Add 5 export lines: export { PacingEvaluator } from './pacing-evaluator.js', export { DialogueEvaluator } from './dialogue-evaluator.js', export { WorldBuildingEvaluator } from './worldbuilding-evaluator.js', export { ThemeEvaluator } from './theme-evaluator.js', export { ResearchEvaluator } from './research-evaluator.js'."
+    }
+  ],
+
+  "implementation": [
+    "Read base.js to confirm BaseEvaluator API: constructor(config), get name(), get description(), get relatedSkill(), scoreToLevel(), EvaluationResult constructor(evaluatorName, score, level, issues, metrics, summary)",
+    "Read character-evaluator.js as reference implementation pattern (MARKER arrays, evaluate, quickScan, private scoring methods)",
+    "Create pacing-evaluator.js: class PacingEvaluator extends BaseEvaluator with name='pacing', static RHYTHM_MARKERS/SCENE_MARKERS/TENSION_MARKERS, evaluate() scoring rhythm_variation/scene_balance/tension_pacing → weighted totalScore, quickScan() returning lightweight scan",
+    "Create dialogue-evaluator.js: class DialogueEvaluator extends BaseEvaluator with name='dialogue', static ATTRIBUTION_MARKERS/SUBTEXT_MARKERS/SPEECH_MARKERS, evaluate() scoring naturalism/attribution_diversity/subtext_density, quickScan()",
+    "Create worldbuilding-evaluator.js: class WorldBuildingEvaluator extends BaseEvaluator with name='worldbuilding', static SETTING_MARKERS/SENSORY_MARKERS/CULTURAL_MARKERS, evaluate() scoring setting_density/sensory_engagement/cultural_depth, quickScan()",
+    "Create theme-evaluator.js: class ThemeEvaluator extends BaseEvaluator with name='theme', static MOTIF_MARKERS/SYMBOLIC_MARKERS/PHILOSOPHICAL_MARKERS, evaluate() scoring thematic_coherence/motif_consistency/symbolic_depth, quickScan()",
+    "Create research-evaluator.js: class ResearchEvaluator extends BaseEvaluator with name='research', static FACTUAL_MARKERS/SPECIFICITY_MARKERS/TECHNICAL_MARKERS, evaluate() scoring factual_grounding/specificity/terminology_accuracy, quickScan()",
+    "Modify critic-engine.js: add 5 import lines after existing imports, add 5 this.evaluators entries in constructor, add 5 this.weights entries",
+    "Modify index.js: add 5 barrel export lines after existing exports",
+    "Run npx vitest run to verify no regressions"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["Each evaluator returns EvaluationResult with score/level/issues/metrics/summary", "quickScan returns EvaluationResult without errors"],
+    "integration": ["CriticEngine.evaluate() runs all 13 evaluators without errors"],
+    "success_metrics": ["All tests pass", "13 evaluators registered in critic-engine.js"]
+  },
+
+  "reference": {
+    "pattern": "BaseEvaluator subclass pattern from character-evaluator.js: static MARKER arrays, evaluate() with weighted subscores, quickScan() with lightweight scan",
+    "files": [
+      "src-tauri/bin/sidecar/narrative/evaluators/base.js",
+      "src-tauri/bin/sidecar/narrative/evaluators/character-evaluator.js",
+      "src-tauri/bin/sidecar/narrative/evaluators/premise-evaluator.js",
+      "src-tauri/bin/sidecar/narrative/evaluators/suspense-evaluator.js",
+      "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+      "src-tauri/bin/sidecar/narrative/evaluators/index.js"
+    ],
+    "examples": "CharacterEvaluator: MARKER arrays (PERSONALITY_MARKERS, RELATIONSHIP_MARKERS, etc.), evaluate() scoring personality/consistency/depth/arc with weighted combination, quickScan() returning quick scan result"
+  },
+
+  "rationale": {
+    "chosen_approach": "Create 5 substantive evaluators following exact BaseEvaluator pattern, not stubs",
+    "decision_factors": ["Verification C1/C2/C5 require evaluators with 'distinct evaluation logic (not stubs)'", "Existing evaluators have 100-200 lines with real MARKER arrays and scoring logic", "Weights kept low (0.08-0.10) since these supplement existing evaluators"],
+    "tradeoffs": "Each evaluator has MARKER-based heuristic scoring rather than LLM-based evaluation — consistent with existing pattern but less sophisticated than ML approaches"
+  },
+
+  "risks": [
+    {
+      "risk": "Evaluator scoring logic may produce unexpected results for edge cases",
+      "mitigation": "Follow marker-matching pattern from existing evaluators; run vitest to catch syntax/import errors"
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["critic-engine", "narrative-evaluation"],
+    "affected_components": ["CriticEngine", "PacingEvaluator", "DialogueEvaluator", "WorldBuildingEvaluator", "ThemeEvaluator", "ResearchEvaluator"],
+    "affected_requirements": ["F1: CriticEngine expansion"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "50min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

@@ -600,6 +600,11 @@ describe('EvaluationPanel actions', () => {
           infoCount: 0,
           conflicts: [],
           overallScore: 8.2,
+          moduleScores: {
+            character: 9.0,
+            timeline: 7.5,
+            worldview: 8.1,
+          },
           summary: 'Found one major conflict.',
         },
         analyzedAt: '2026-04-25T12:00:00.000Z',

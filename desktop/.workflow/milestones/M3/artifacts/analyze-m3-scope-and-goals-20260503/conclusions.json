@@ -1,0 +1,296 @@
+{
+  "session_id": "ANL-m3-scope-and-goals-2026-05-03",
+  "date": "2026-05-03",
+  "recommendation": "GO",
+  "confidence": "high",
+  "overall_score": 4.2,
+  "dimension_scores": {
+    "feasibility": { "score": 4, "confidence": "high" },
+    "impact": { "score": 5, "confidence": "high" },
+    "risk": { "score": 4, "confidence": "high" },
+    "complexity": { "score": 3, "confidence": "medium" },
+    "dependencies": { "score": 3, "confidence": "high" },
+    "alternatives": { "chosen": "A: 3-Phase Wiring", "compared": ["B: Big-Bang Release", "C: Feature-by-Feature"] }
+  },
+  "intent_coverage": [
+    { "intent": "Feature candidates identified", "status": "addressed", "evidence": "6 features + M2 deferrals" },
+    { "intent": "Architecture evolution mapped", "status": "addressed", "evidence": "Dependency graph + shared infrastructure" },
+    { "intent": "Deferred items from M2 tracked", "status": "addressed", "evidence": "ISS-066, HV-001, F-001" },
+    { "intent": "Natural progression from M2", "status": "addressed", "evidence": "VectorSearch/GraphManager integration paths mapped" },
+    { "intent": "Decisions extracted for plan", "status": "addressed", "evidence": "context.md with Locked/Free/Deferred" }
+  ],
+  "key_conclusions": [
+    {
+      "id": "C1",
+      "conclusion": "M3 is a wiring and exposure milestone — backend modules are 55-80% complete, only integration work remains",
+      "evidence": "25+ files examined, all follow 'backend built, not wired' pattern",
+      "confidence": "high",
+      "priority": "high"
+    },
+    {
+      "id": "C2",
+      "conclusion": "Three-phase strategy optimally resolves feature dependencies",
+      "evidence": "Dependency graph analysis: F5→F1, F2/F6→graph writes, F3/F4 independent",
+      "confidence": "high",
+      "priority": "high"
+    },
+    {
+      "id": "C3",
+      "conclusion": "Phase 1 (F1, F3, F7) is low-risk and establishes shared patterns",
+      "evidence": "F1/F3 are self-contained, F7 is trivial carry-over, no graph writes needed",
+      "confidence": "high",
+      "priority": "high"
+    },
+    {
+      "id": "C4",
+      "conclusion": "Graph engine write operations are the main new infrastructure investment",
+      "evidence": "graph-engine.js:932-956 only has read ops, F2 and F6 need plant/hint/harvest/create writes",
+      "confidence": "high",
+      "priority": "medium"
+    },
+    {
+      "id": "C5",
+      "conclusion": "Structured score transport layer needed to bridge backend per-module scores and frontend 3-score UI",
+      "evidence": "critic.js:35-54 maps moduleScores to 3 flat scores, EvaluationPanel.tsx:62-77 renders only 3",
+      "confidence": "high",
+      "priority": "medium"
+    },
+    {
+      "id": "C6",
+      "conclusion": "Foreshadowing lifecycle (F2) is the key market differentiator",
+      "evidence": "No competitor offers plant→hint→harvest lifecycle management. External research confirms.",
+      "confidence": "high",
+      "priority": "medium"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "R1",
+      "title": "Establish MCP endpoint registration pattern in Phase 1",
+      "priority": "high",
+      "rationale": "All 7 features need MCP endpoints. Standardizing the pattern in Phase 1 (F1, F3) gives Phase 2/3 a template.",
+      "steps": [
+        "Create endpoint registration helper following existing graph.js/critic.js pattern",
+        "Register F1 evaluator endpoints + F3 style transport endpoint",
+        "Document pattern for Phase 2/3 features"
+      ],
+      "target_files": ["src-tauri/bin/sidecar/mcp/endpoints/"],
+      "review_status": "accepted"
+    },
+    {
+      "id": "R2",
+      "title": "Build structured score transport layer",
+      "priority": "high",
+      "rationale": "Backend has per-module scores from 10 evaluators. Frontend needs structured data. Replace flat 3-score mapping.",
+      "steps": [
+        "Define score transport interface (per-module + aggregate)",
+        "Update critic.js to transport structured scores alongside existing 3-score fallback",
+        "Update src/api/evaluation.ts with new structured endpoint",
+        "Upgrade EvaluationPanel.tsx to consume per-module data"
+      ],
+      "target_files": [
+        "src-tauri/bin/sidecar/mcp/services/critic.js",
+        "src/api/evaluation.ts",
+        "src/components/EvaluationPanel.tsx"
+      ],
+      "review_status": "accepted"
+    },
+    {
+      "id": "R3",
+      "title": "Wire WritingStyle 8D to backend prompt builder",
+      "priority": "high",
+      "rationale": "340-line 8D style system outputs flat string. Backend prompt builder should consume structured style.",
+      "steps": [
+        "Update WritingStyle.ts to export structured style object alongside flat string",
+        "Create style transport API endpoint",
+        "Update writing.js to consume structured style object for prompt assembly"
+      ],
+      "target_files": [
+        "src/components/editor/WritingStyle.ts",
+        "src-tauri/bin/sidecar/mcp/endpoints/writing.js"
+      ],
+      "review_status": "accepted"
+    },
+    {
+      "id": "R4",
+      "title": "Build graph engine write operations",
+      "priority": "high",
+      "rationale": "F2 (foreshadowing) and F6 (character) need create/update/delete operations on graph. Currently read-only.",
+      "steps": [
+        "Add write methods to graph-engine.js (createNode, updateNode, deleteNode, createRelation)",
+        "Add validation + concurrency protection",
+        "Wire write operations to MCP endpoints",
+        "Integration test with existing VectorSearch embedding support"
+      ],
+      "target_files": [
+        "src-tauri/bin/sidecar/graph/graph-engine.js",
+        "src-tauri/bin/sidecar/mcp/endpoints/graph.js"
+      ],
+      "review_status": "accepted"
+    },
+    {
+      "id": "R5",
+      "title": "Wire ForeshadowingManager lifecycle to endpoints + UI",
+      "priority": "medium",
+      "rationale": "662-line lifecycle manager is fully functional but zero endpoint exposure. Key market differentiator.",
+      "steps": [
+        "Create foreshadowing MCP endpoints (plant, hint, harvest, stats)",
+        "Create frontend API functions in src/api/knowledge.ts",
+        "Build foreshadowing lifecycle UI panel (replacing minimal status filter)",
+        "Integrate with graph engine write ops for persistence"
+      ],
+      "target_files": [
+        "src-tauri/bin/sidecar/narrative/foreshadowing.js",
+        "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+        "src/api/knowledge.ts",
+        "src/components/knowledge/MemoryForm.tsx"
+      ],
+      "review_status": "accepted"
+    },
+    {
+      "id": "R6",
+      "title": "Resolve M2 deferred items (F7)",
+      "priority": "medium",
+      "rationale": "Mandatory carry-over: ISS-066 (L5 interrupt edge case), HV-001 (fastembed e2e), F-001 (1-line cleanup).",
+      "steps": [
+        "Fix L5 executeChain interrupt currentUnitIndex preservation",
+        "Add manual fastembed e2e test with model availability check",
+        "Remove dead renameSkill import in SkillTab.tsx"
+      ],
+      "target_files": [
+        "src-tauri/bin/sidecar/mcp/services/workflow.js",
+        "src/components/knowledge/SkillTab.tsx"
+      ],
+      "review_status": "accepted"
+    },
+    {
+      "id": "R7",
+      "title": "Build Character Depth UI with per-module profile panel",
+      "priority": "medium",
+      "rationale": "CharacterManager + CharacterDepthSystem fully built. Need endpoints + profile UI panel.",
+      "steps": [
+        "Create character depth MCP endpoints",
+        "Create frontend API functions",
+        "Enhance CharacterTab.tsx with depth profile panel (personality, motivation, growth, relationships)"
+      ],
+      "target_files": [
+        "src-tauri/bin/sidecar/narrative/character-manager.js",
+        "src/api/knowledge.ts",
+        "src/components/knowledge/CharacterTab.tsx"
+      ],
+      "review_status": "accepted"
+    },
+    {
+      "id": "R8",
+      "title": "Upgrade Consistency Dashboard with per-module scores",
+      "priority": "low",
+      "rationale": "Cross-chapter consistency check works but UI shows only 3 flat scores. Per-module view enhances usability.",
+      "steps": [
+        "Update consistency endpoint to include per-module breakdown",
+        "Upgrade EvaluationPanel or create new ConsistencyPanel component",
+        "Add per-module drill-down UI"
+      ],
+      "target_files": [
+        "src-tauri/bin/sidecar/mcp/services/critic.js",
+        "src/components/EvaluationPanel.tsx"
+      ],
+      "review_status": "accepted"
+    },
+    {
+      "id": "R9",
+      "title": "Wire NarrativePatternDetector + WritingSessionCluster to analysis endpoints",
+      "priority": "low",
+      "rationale": "Stretch goal. Built but never imported. Adds unique analytics capability.",
+      "steps": [
+        "Create analysis MCP endpoints (pattern detection, session clustering)",
+        "Create frontend API + analysis UI panel",
+        "Integrate with HybridSearch for pattern-based search"
+      ],
+      "target_files": [
+        "src-tauri/bin/sidecar/analysis/narrative-pattern-detector.js",
+        "src-tauri/bin/sidecar/analysis/writing-session-cluster.js"
+      ],
+      "review_status": "accepted"
+    }
+  ],
+  "decision_trail": [
+    {
+      "decision": "Three-phase strategy for M3",
+      "context": "6 features with interdependencies + M2 deferrals",
+      "chosen": "Phase 1 (F1,F3,F7) → Phase 2 (F2,F5,F6) → Phase 3 (F4)",
+      "reason": "Phase 1 establishes shared infrastructure, Phase 2 builds on it, Phase 3 is independent stretch",
+      "round": 1
+    },
+    {
+      "decision": "Graph engine write ops as shared infrastructure",
+      "context": "F2 and F6 both need graph write operations",
+      "chosen": "Build write ops as Phase 2 shared infrastructure, not per-feature",
+      "reason": "Avoids duplication, single validation layer, consistent behavior",
+      "round": 1
+    },
+    {
+      "decision": "Backward-compatible score transport",
+      "context": "Frontend expects 3 flat scores, backend has per-module scores",
+      "chosen": "Transport both structured + flat scores, progressive UI upgrade",
+      "reason": "Never break backward compatibility — existing UI works during migration",
+      "round": 1
+    }
+  ],
+  "implementation_scope": [
+    {
+      "objective": "Phase 1: Foundation Wiring — evaluator expansion + style integration + M2 deferrals",
+      "rationale": "Establishes MCP endpoint pattern and structured transport layer for Phase 2/3",
+      "priority": "high",
+      "target_files": [
+        "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+        "src-tauri/bin/sidecar/mcp/services/critic.js",
+        "src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+        "src/components/editor/WritingStyle.ts",
+        "src/api/evaluation.ts",
+        "src/components/EvaluationPanel.tsx"
+      ],
+      "acceptance_criteria": [
+        "5 dormant evaluators registered and producing per-module scores",
+        "Structured style object consumed by backend prompt builder",
+        "M2 deferred items resolved (ISS-066, HV-001, F-001)",
+        "Existing 3-score UI still works (backward compat)",
+        "New per-module score data available via API"
+      ]
+    },
+    {
+      "objective": "Phase 2: Rich Exposure — foreshadowing lifecycle + consistency dashboard + character depth",
+      "rationale": "High-value features that depend on Phase 1 infrastructure",
+      "priority": "high",
+      "target_files": [
+        "src-tauri/bin/sidecar/graph/graph-engine.js",
+        "src-tauri/bin/sidecar/mcp/endpoints/graph.js",
+        "src-tauri/bin/sidecar/narrative/foreshadowing.js",
+        "src-tauri/bin/sidecar/narrative/character-manager.js",
+        "src/api/knowledge.ts",
+        "src/components/knowledge/MemoryForm.tsx",
+        "src/components/knowledge/CharacterTab.tsx"
+      ],
+      "acceptance_criteria": [
+        "Graph engine supports write operations (create/update/delete) with validation",
+        "Foreshadowing lifecycle (plant→hint→harvest) exposed via endpoints",
+        "Character depth profile accessible via API",
+        "Consistency dashboard shows per-module score breakdown",
+        "VectorSearch integration works for character + foreshadow entities"
+      ]
+    },
+    {
+      "objective": "Phase 3: Analytics — narrative pattern detection + writing session clustering",
+      "rationale": "Independent stretch goal with unique analytics value",
+      "priority": "low",
+      "target_files": [
+        "src-tauri/bin/sidecar/analysis/narrative-pattern-detector.js",
+        "src-tauri/bin/sidecar/analysis/writing-session-cluster.js"
+      ],
+      "acceptance_criteria": [
+        "Narrative pattern detection endpoint returns categorized patterns",
+        "Writing session clustering groups sessions by style similarity",
+        "Analysis results consumable by frontend UI"
+      ]
+    }
+  ]
+}

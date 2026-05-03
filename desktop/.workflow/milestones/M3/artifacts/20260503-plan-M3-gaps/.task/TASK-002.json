@@ -1,0 +1,132 @@
+{
+  "id": "TASK-002",
+  "title": "Add test coverage for evaluator registration, WritingStyle, and analysis API",
+  "description": "FIX-002 (MEDIUM): Verification found MISSING test coverage for TASK-001 (evaluator registration), TASK-002 (buildStructuredStyleSection), TASK-008 (analysis API). Add minimum test coverage for all three areas.",
+
+  "issue_id": null,
+  "issue_refs": ["FIX-002"],
+  "type": "fix",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Create 3 test files: (1) critic-engine.test.js verifying evaluator load/registration/count, (2) writing-style.test.js testing buildStructuredStyleSection with various inputs, (3) analysis-api.test.ts testing detectPatterns/clusterSessions API calls with mocked fetch.",
+  "status": "completed",
+  "completed_at": "2026-05-03T21:38:00.000Z",
+  "actual_duration": "20min",
+
+  "scope": "src-tauri/bin/sidecar/narrative/evaluators/,src-tauri/bin/sidecar/mcp/endpoints/,src/api/",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+    "src/api/analysis.ts"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/base.js",
+    "src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+    "src/api/analysis.ts",
+    "src-tauri/bin/sidecar/narrative/evaluators/pacing-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/dialogue-evaluator.js"
+  ],
+
+  "depends_on": ["TASK-001"],
+  "wave": 1,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "Test file exists for critic-engine evaluator registration and contains 'describe' block with 'evaluator' or 'registration' in description",
+      "Test file for critic-engine verifies evaluator count matches expected (13 after TASK-001)",
+      "Test file exists for buildStructuredStyleSection with at least 2 test cases (with style data, without style data)",
+      "Test file exists for analysis API (analysis.ts) with mocked API calls testing detectPatterns and clusterSessions",
+      "npx vitest run exits 0 (all new + existing tests pass)"
+    ],
+    "verification": "Run npx vitest run, verify all tests pass including new test files. Grep for test file existence.",
+    "definition_of_done": "Minimum test coverage added for 3 MISSING-coverage areas from verification"
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/tests/critic-engine.test.js",
+      "action": "create",
+      "target": "CriticEngine evaluator registration tests",
+      "change": "Create test file: import CriticEngine, verify constructor creates evaluators object with 13 keys, verify weights object has 13 entries, verify each evaluator name is a non-empty string, verify evaluate() runs without error on sample content."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/tests/writing-style.test.js",
+      "action": "create",
+      "target": "buildStructuredStyleSection unit tests",
+      "change": "Create test file: import buildStructuredStyleSection from writing.js endpoint, test with structured style data (voice, tone, vocabulary), test with null/undefined input, test with empty object, verify output contains expected sections."
+    },
+    {
+      "path": "src/api/__tests__/analysis.test.ts",
+      "action": "create",
+      "target": "Analysis API mock tests",
+      "change": "Create test file: mock fetch/API layer, test detectPatterns(content, options) calls correct endpoint with correct body, test clusterSessions(sessions, options) calls correct endpoint, test error handling on failed requests."
+    }
+  ],
+
+  "implementation": [
+    "Read critic-engine.js to confirm exact evaluator keys and structure for assertions",
+    "Create src-tauri/bin/sidecar/tests/critic-engine.test.js: describe('CriticEngine registration'), test('registers all evaluators') checking Object.keys(engine.evaluators).length === 13, test('each evaluator has name property'), test('weights defined for all evaluators'), test('evaluate returns results for all evaluators')",
+    "Read writing.js to find buildStructuredStyleSection function signature and output format",
+    "Create src-tauri/bin/sidecar/tests/writing-style.test.js: describe('buildStructuredStyleSection'), test('returns formatted sections with style data'), test('returns empty/null-safe output without style data'), test('handles partial style data')",
+    "Read analysis.ts to confirm detectPatterns and clusterSessions signatures and API paths",
+    "Create src/api/__tests__/analysis.test.ts: describe('analysis API'), test('detectPatterns calls POST /analysis/patterns'), test('clusterSessions calls POST /analysis/sessions'), test('handles API errors gracefully')",
+    "Run npx vitest run to verify all tests pass"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": [
+      "CriticEngine has 13 registered evaluators",
+      "buildStructuredStyleSection returns formatted output with style data",
+      "detectPatterns calls correct API endpoint"
+    ],
+    "integration": [],
+    "success_metrics": ["All tests pass", "3 new test files created"]
+  },
+
+  "reference": {
+    "pattern": "Vitest test pattern: import { describe, test, expect } from 'vitest'",
+    "files": [
+      "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+      "src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+      "src/api/analysis.ts"
+    ],
+    "examples": "Existing test files in src-tauri/bin/sidecar/tests/ for test pattern reference"
+  },
+
+  "rationale": {
+    "chosen_approach": "Targeted test files for each MISSING area rather than one monolithic test file",
+    "decision_factors": ["Each test area has different dependencies and mock requirements", "Separate files make test failures easier to diagnose", "TASK-001 dependency ensures evaluators exist before testing registration"],
+    "tradeoffs": "Test file paths may need adjustment if existing test convention differs — read existing tests first"
+  },
+
+  "risks": [
+    {
+      "risk": "Test file location may not match existing vitest convention",
+      "mitigation": "Read existing test files first to confirm location pattern (co-located vs tests/ directory)"
+    },
+    {
+      "risk": "buildStructuredStyleSection may be non-exportable from endpoint file",
+      "mitigation": "If not directly importable, test via endpoint handler with mock request/response objects"
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["test-coverage", "critic-engine", "writing-style", "analysis-api"],
+    "affected_components": ["CriticEngine", "buildStructuredStyleSection", "detectPatterns", "clusterSessions"],
+    "affected_requirements": ["Verification FIX-002: test coverage gaps"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "40min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "summary": "Fix M3 verification gaps: create 5 missing CriticEngine evaluators + add test coverage for evaluator registration, WritingStyle wiring, and analysis API",
+  "approach": "Two independent fix tasks. FIX-001 creates 5 new evaluator files following the BaseEvaluator pattern, registers them in critic-engine.js, and adds barrel exports. FIX-002 adds minimum test coverage for the three MISSING-coverage tasks from verification.",
+  "task_ids": ["TASK-001", "TASK-002"],
+  "task_count": 2,
+  "complexity": "medium",
+  "estimated_time": "90min",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002"]
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "TASK-001 creates evaluator files → critic-engine.js registers them. TASK-002 tests are independent.",
+    "stages": [
+      {
+        "name": "evaluator-creation",
+        "tasks": ["TASK-001"],
+        "description": "5 new evaluator JS files + registration in critic-engine.js + barrel exports"
+      },
+      {
+        "name": "test-coverage",
+        "tasks": ["TASK-002"],
+        "description": "Unit tests for evaluator load, buildStructuredStyleSection, analysis API"
+      }
+    ]
+  },
+
+  "design_decisions": [
+    {
+      "decision": "Follow existing evaluator pattern (BaseEvaluator subclass with MARKER arrays, evaluate, quickScan)",
+      "rationale": "Consistency with 3 existing evaluators (Character, Premise, Suspense)"
+    },
+    {
+      "decision": "Suggested weights for new evaluators: 0.08-0.12 range",
+      "rationale": "New evaluators supplement existing ones; lower initial weights prevent them from dominating the composite score"
+    },
+    {
+      "decision": "Test files placed alongside source or in tests/ following vitest conventions",
+      "rationale": "Match existing test file organization"
+    }
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "BaseEvaluator subclass: get name(), get description(), get relatedSkill(), static MARKER arrays, async evaluate(content, context) → EvaluationResult, quickScan(content) → EvaluationResult",
+      "CriticEngine registration: this.evaluators[key] = new EvaluatorClass(config), this.weights[key] = decimal",
+      "Barrel export: export { EvaluatorClass } from './evaluator-file.js'"
+    ],
+    "conventions": [
+      "No lodash or external dependencies — pure JS",
+      "Marker-based scoring: content.includes(marker) for keyword detection",
+      "Weighted subscores combined with arithmetic (e.g., causality * 0.4 + irony * 0.3 + consistency * 0.3)"
+    ],
+    "dependencies": [
+      "src-tauri/bin/sidecar/narrative/evaluators/base.js — BaseEvaluator, EvaluationResult, Severity, ScoreLevel",
+      "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js — central registration point",
+      "src-tauri/bin/sidecar/narrative/evaluators/index.js — barrel exports"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-03T23:15:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "gaps",
+    "plan_type": "fix",
+    "schema_version": "2.0",
+    "source_verification": ".workflow/scratch/plan-m3-wiring-exposure-20260503/verification.json",
+    "fix_plans": ["FIX-001", "FIX-002"]
+  }
+}

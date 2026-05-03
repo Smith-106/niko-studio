@@ -44,7 +44,7 @@ Niko Studio 是一款面向中文作家的本地 AI 写作助手桌面应用，�
 
 ## Context
 
-- **版本**: 9.2.5（成熟产品，持续迭代中）
+- **版本**: 9.3.0（成熟产品，持续迭代中）
 - **前端**: React 18 + TypeScript + Vite + Zustand + TailwindCSS
 - **桌面壳**: Tauri 2 / Rust
 - **网关**: Node.js + TypeScript (`src-ts/`)，本地 SQLite 向量库（fastembed + better-sqlite3）
@@ -74,6 +74,20 @@ Two-phase sprint delivering frontend UX polish and backend stability/knowledge C
 
 **Key patterns established**: Inline makeDebounce with cancel, local-variable retry tracking in React useCallback, MATCH+SET-before-MERGE for safe graph renames, `<span role="status">` for screen reader announcements.
 
+### M2: Backend Intelligence (completed 2026-05-03)
+
+Backend-focused milestone delivering narrative intelligence modules, vector search, and consistency checking. All M1 deferrals resolved.
+
+**Deliverables**: NarrativeEngine (7 modules), VectorSearch with fastembed, CriticEngine with 10 evaluators, ConsistencyDashboard, WritingSessionCluster, NarrativePatternDetector, knowledge graph read endpoints, L1–L5 workflow integration tests.
+
+### M3: Wiring & Exposure (completed 2026-05-03)
+
+Connected backend intelligence to frontend via MCP endpoints and API layer. Expanded evaluator system and resolved all M2 deferrals.
+
+**Main deliverables**: 15 CriticEngine evaluators (5 new), 4 endpoint groups (graph writes, foreshadowing, character depth, analysis), frontend API coverage for all endpoints, consistency dashboard wiring.
+
+**Key patterns**: Dual-transport for backward-compatible score fields, BaseEvaluator pattern for extensible evaluation.
+
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
@@ -89,4 +103,4 @@ Two-phase sprint delivering frontend UX polish and backend stability/knowledge C
 - 开发者: Niko（sole developer）
 
 ---
-*Last updated: 2026-05-02 after brownfield init*
+*Last updated: 2026-05-03 after M3 milestone completion*

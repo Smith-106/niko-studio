@@ -1,0 +1,107 @@
+{
+  "id": "TASK-006",
+  "title": "Upgrade Consistency Dashboard with per-module score breakdown",
+  "description": "F5 Consistency Dashboard: Upgrade evaluation UI to show per-module score breakdown from structured transport. Add drill-down panel below existing 3-score summary showing individual evaluator scores.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Add per-module score breakdown display to EvaluationPanel.tsx. Extend consistency endpoint to include per-module breakdown. Show drill-down panel below existing 3-score summary with individual evaluator scores.",
+  "status": "completed",
+  "completed_at": "2026-05-03T21:00:00+08:00",
+  "actual_duration": "20min",
+
+  "scope": "src/components/EvaluationPanel.tsx,src-tauri/bin/sidecar/mcp/services/critic.js",
+  "focus_paths": [
+    "src/components/EvaluationPanel.tsx",
+    "src-tauri/bin/sidecar/mcp/services/critic.js",
+    "src/api/evaluation.ts"
+  ],
+
+  "read_first": [
+    "src/components/EvaluationPanel.tsx",
+    "src-tauri/bin/sidecar/mcp/services/critic.js",
+    "src/api/evaluation.ts"
+  ],
+
+  "depends_on": ["TASK-001"],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "EvaluationPanel.tsx renders per-module score breakdown section",
+      "Consistency endpoint response includes per-module breakdown field",
+      "Existing 3-score summary display renders unchanged",
+      "buildDimensions() in EvaluationPanel.tsx processes module_scores data"
+    ],
+    "verification": "Run consistency check, verify response includes per-module scores. Open UI, verify 3-score summary still visible + per-module breakdown appears below.",
+    "definition_of_done": "Users can see individual evaluator scores below the existing 3-score summary in consistency dashboard"
+  },
+
+  "files": [
+    {
+      "path": "src/components/EvaluationPanel.tsx",
+      "action": "modify",
+      "target": "buildDimensions function + render section",
+      "change": "Extend buildDimensions() to process module_scores data. Add per-module breakdown render section below existing 3-score display showing each evaluator name + score as expandable detail."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/mcp/services/critic.js",
+      "action": "modify",
+      "target": "consistency check endpoint",
+      "change": "Add per-module breakdown to consistency check response, reusing moduleScores from structured transport added in TASK-001."
+    }
+  ],
+
+  "implementation": [
+    "In critic.js consistency handler: add module_scores breakdown to consistency response object, sourced from existing moduleScores data",
+    "In evaluation.ts: add module_scores field to consistency check response type",
+    "In EvaluationPanel.tsx buildDimensions(): when module_scores available, create per-module dimension entries for each evaluator",
+    "In EvaluationPanel.tsx render: add collapsible per-module section below existing 3-score summary, show evaluator name + score bar for each module"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["buildDimensions handles module_scores data", "Consistency response includes module breakdown"],
+    "integration": ["Full consistency check shows per-module breakdown in UI"],
+    "success_metrics": ["Per-module scores visible in UI", "Existing 3-score display unchanged"]
+  },
+
+  "reference": {
+    "pattern": "Existing EvaluationPanel.tsx buildDimensions() at lines 62-77 maps to 3 scores",
+    "files": ["src/components/EvaluationPanel.tsx"],
+    "examples": "EvaluationPanel.tsx:62-77 shows current 3-score rendering pattern to extend"
+  },
+
+  "rationale": {
+    "chosen_approach": "Progressive disclosure: keep 3-score summary, add expandable per-module detail below",
+    "decision_factors": ["Users familiar with 3-score view", "Per-module data already available from TASK-001", "Progressive disclosure reduces cognitive load"],
+    "tradeoffs": "More complex EvaluationPanel, but strictly additive rendering"
+  },
+
+  "risks": [
+    {
+      "risk": "Module score count overwhelms UI",
+      "mitigation": "Start collapsed by default, user clicks to expand per-module detail"
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["evaluation", "consistency-check"],
+    "affected_components": ["EvaluationPanel", "critic-service"],
+    "affected_requirements": ["F5: Consistency Dashboard"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "40min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

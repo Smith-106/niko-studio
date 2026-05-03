@@ -1,0 +1,106 @@
+{
+  "id": "TASK-002",
+  "title": "Wire WritingStyle 8D structured style to backend prompt builder",
+  "description": "F3 WritingStyle Integration: Export structured 8D style object from WritingStyle.ts alongside existing flat string. Create MCP endpoint to accept structured style. Update writing.js prompt builder to consume structured style object for richer prompt assembly.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Add buildStructuredStyle() export to WritingStyle.ts returning 8D object, create POST /writing/style-structured MCP endpoint in writing.js consuming structured style for prompt assembly, update frontend api/evaluation.ts or create new api/style.ts to call structured endpoint",
+  "status": "completed",
+  "completed_at": "2026-05-03T19:45:00+08:00",
+  "actual_duration": "30min",
+
+  "scope": "src/components/editor/WritingStyle.ts,src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+  "focus_paths": [
+    "src/components/editor/WritingStyle.ts",
+    "src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+    "src/api/"
+  ],
+
+  "read_first": [
+    "src/components/editor/WritingStyle.ts",
+    "src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+    "src/api/evaluation.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "phase1",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "WritingStyle.ts exports function 'buildStructuredStyle' or 'exportStyleObject'",
+      "writing.js contains endpoint handler for structured style input",
+      "writing.js buildModePrompt consumes structured style object with 8D fields",
+      "Existing buildStyleInstruction() flat-string path still works unchanged"
+    ],
+    "verification": "Call writing endpoint with structured style object, verify prompt contains 8D style fields. Call with flat string instruction, verify backward compat.",
+    "definition_of_done": "Backend prompt builder consumes 8D structured style; flat-string fallback still works"
+  },
+
+  "files": [
+    {
+      "path": "src/components/editor/WritingStyle.ts",
+      "action": "modify",
+      "target": "buildStyleInstruction function area",
+      "change": "Add export function buildStructuredStyle(style: WritingStyleConfig) returning { tone, perspective, sentenceStyle, rhythm, languageStyle, narrativeDistance, emotionalResonance, thematicDepth } object mirroring the TypeScript interface types."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/mcp/endpoints/writing.js",
+      "action": "modify",
+      "target": "buildModePrompt function + endpoint registration",
+      "change": "Add handling for structured_style field in request body. When structured_style present, build prompt from individual dimensions instead of flat string. Keep existing instruction string path as fallback."
+    }
+  ],
+
+  "implementation": [
+    "In WritingStyle.ts: add export function buildStructuredStyle(style) that returns the 8D style object { tone: style.tone, perspective: style.perspective, sentenceStyle: style.sentenceStyle, rhythm: style.rhythm, languageStyle: style.languageStyle, narrativeDistance: style.narrativeDistance, emotionalResonance: style.emotionalResonance, thematicDepth: style.thematicDepth }",
+    "In writing.js buildModePrompt(): check for structured_style in addition to instruction string. If structured_style present, build richer prompt section from individual fields: `风格要求：\n基调：${structured_style.tone}\n视角：${structured_style.perspective}...`",
+    "In writing.js endpoint registration: add new endpoint or extend existing writing endpoint to accept structured_style POST body"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["buildStructuredStyle returns object with all 8 dimensions", "buildModePrompt handles structured_style input"],
+    "integration": ["POST to writing endpoint with structured_style, verify prompt contains 8D fields"],
+    "success_metrics": ["Structured style round-trips to backend", "Flat string fallback still works"]
+  },
+
+  "reference": {
+    "pattern": "MCP endpoint pattern in writing.js: async function returning jsonResponse(result)",
+    "files": ["src-tauri/bin/sidecar/mcp/endpoints/writing.js"],
+    "examples": "writing.js line 14-30 shows current styleSection = instruction flat string consumption"
+  },
+
+  "rationale": {
+    "chosen_approach": "Add structured export alongside flat string, consume both in backend",
+    "decision_factors": ["8D style system is 340 lines but outputs only flat string", "Backend prompt builder can use individual dimensions for richer prompts", "Backward compat requires keeping flat string path"],
+    "tradeoffs": "Two code paths in buildModePrompt, but structured path is strictly additive"
+  },
+
+  "risks": [
+    {
+      "risk": "Structured style fields not matching TypeScript interface exactly",
+      "mitigation": "Mirror WritingStyle.ts interface types exactly in transport object"
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["writing-style", "writing-endpoints"],
+    "affected_components": ["WritingStyle", "writing-endpoint", "prompt-builder"],
+    "affected_requirements": ["F3: WritingStyle 8D Integration"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "40min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

@@ -9,6 +9,11 @@ export interface EvaluationViewModel {
     score: number
     feedback: string
   }[]
+  modules: {
+    name: string
+    score: number
+    feedback: string
+  }[]
   suggestions: RecommendationPayload[]
   decision: 'APPROVED' | 'REVISE' | 'REWRITE' | 'HUMAN_REVIEW'
 }

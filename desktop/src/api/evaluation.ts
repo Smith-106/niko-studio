@@ -12,6 +12,7 @@ export interface EvaluationResult {
   logic_score: number
   actionable_feedback: string
   suggestions: RecommendationInput[]
+  module_scores?: Record<string, number>
 }
 
 export interface NovelQualityCheckResult {
@@ -46,12 +47,32 @@ export interface ConsistencyCheckResult {
     infoCount: number
     conflicts: ConsistencyConflict[]
     overallScore: number
+    moduleScores: {
+      character: number
+      timeline: number
+      worldview: number
+    }
     summary: string
   }
   analyzedAt: string
   runId: string
   workspace: ProjectWorkspaceContext
   narrativeAuthority: Record<string, unknown>
+}
+
+export async function evaluateWithModules(
+  content: string,
+  sceneCard?: Record<string, unknown>,
+  dimensions?: string[],
+  qualityGoals?: QualityGoalsPayload
+): Promise<ApiResponse<EvaluationResult>> {
+  return callApi('/critic/evaluate', 'POST', {
+    content,
+    scene_card: sceneCard,
+    dimensions,
+    quality_goals: qualityGoals,
+    include_module_scores: true,
+  })
 }
 
 export async function evaluateContent(

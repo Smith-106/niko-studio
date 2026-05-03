@@ -1,0 +1,132 @@
+{
+  "id": "TASK-001",
+  "title": "Register 5 dormant evaluators + structured score transport",
+  "description": "F1 Evaluator Expansion: Register pyramid, subtext, four_selves, cliche, deadly_sins evaluators in CriticEngine. Add structured per-module score transport alongside existing 3-score mapping in critic.js service. Add per-module evaluation endpoint to frontend API.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Register 5 evaluator classes (PyramidEvaluator, SubtextEvaluator, FourSelvesEvaluator, ClicheDetector, DeadlySinsChecker) in critic-engine.js this.evaluators map, update weights, modify critic.js to transport structured moduleScores alongside existing 3 flat scores, add getModuleScores endpoint to evaluation.ts",
+  "status": "completed",
+  "completed_at": "2026-05-03T19:30:00+08:00",
+  "actual_duration": "45min",
+
+  "scope": "src-tauri/bin/sidecar/narrative/evaluators/,src-tauri/bin/sidecar/mcp/services/critic.js,src/api/evaluation.ts",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+    "src-tauri/bin/sidecar/mcp/services/critic.js",
+    "src/api/evaluation.ts"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/pyramid-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/subtext-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/four-selves-evaluator.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/cliche-detector.js",
+    "src-tauri/bin/sidecar/narrative/evaluators/deadly-sins-checker.js",
+    "src-tauri/bin/sidecar/mcp/services/critic.js",
+    "src/api/evaluation.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "phase1",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "critic-engine.js contains 'pyramid: new PyramidEvaluator'",
+      "critic-engine.js contains 'subtext: new SubtextEvaluator'",
+      "critic-engine.js contains 'four_selves: new FourSelvesEvaluator'",
+      "critic-engine.js contains 'cliche: new ClicheDetector'",
+      "critic-engine.js contains 'deadly_sins: new DeadlySinsChecker'",
+      "critic-engine.js this.weights has 10 entries (5 existing + 5 new)",
+      "critic.js evaluate function returns object containing 'module_scores' key alongside 'lock_score', 'style_score', 'logic_score'",
+      "src/api/evaluation.ts exports function named 'getModuleScores' or 'evaluateWithModules'",
+      "Existing test suite passes (3-score backward compat)"
+    ],
+    "verification": "Run existing test suite. Call critic evaluate endpoint and verify response contains both flat 3-score fields AND structured module_scores field with 10 evaluator keys.",
+    "definition_of_done": "All 10 evaluators registered, per-module scores transportable via API, existing 3-score UI continues working"
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/narrative/evaluators/critic-engine.js",
+      "action": "modify",
+      "target": "constructor this.evaluators",
+      "change": "Add 5 new evaluator entries: pyramid: new PyramidEvaluator(llmClient), subtext: new SubtextEvaluator(llmClient), four_selves: new FourSelvesEvaluator(llmClient), cliche: new ClicheDetector(llmClient), deadly_sins: new DeadlySinsChecker(llmClient). Update this.weights to include pyramid: 0.12, subtext: 0.10, four_selves: 0.10, cliche: 0.08, deadly_sins: 0.08."
+    },
+    {
+      "path": "src-tauri/bin/sidecar/mcp/services/critic.js",
+      "action": "modify",
+      "target": "evaluate function return values",
+      "change": "Add module_scores field to evaluate return object at lines 49-56 and lines 188-198. module_scores = raw moduleScores object from CriticEngine, keeping existing lock_score/style_score/logic_score fields unchanged."
+    },
+    {
+      "path": "src/api/evaluation.ts",
+      "action": "modify",
+      "target": "EvaluationResult interface + new endpoint",
+      "change": "Add module_scores: Record<string, number> to EvaluationResult interface. Add evaluateWithModules() function calling POST /critic/evaluate with include_modules=true query param."
+    }
+  ],
+
+  "implementation": [
+    "In critic-engine.js constructor: import 5 dormant evaluator classes, add them to this.evaluators map after voice entry at line 97",
+    "In critic-engine.js constructor: add 5 new weight entries to this.weights object after line 104, distributing weight from existing entries (reduce dream from 0.25 to 0.20, voice from 0.20 to 0.15 to make room)",
+    "In critic.js evaluate() method (line 49-56): add 'module_scores: moduleScores' to the return object alongside existing lockScore/styleScore/logicScore",
+    "In critic.js fallback path (line 188-198): add 'module_scores: moduleScores' to the fallback return object",
+    "In evaluation.ts: add 'module_scores?: Record<string, number>' to EvaluationResult interface",
+    "In evaluation.ts: add evaluateWithModules() function that calls POST /critic/evaluate with { content, context, include_module_scores: true }"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run --reporter=verbose"],
+    "unit": ["Verify critic-engine.js evaluator count is 10", "Verify critic.js returns module_scores field"],
+    "integration": ["Call evaluate endpoint, verify response has both flat scores and module_scores with 10 keys"],
+    "success_metrics": ["All existing tests pass", "New endpoint returns structured per-module data"]
+  },
+
+  "reference": {
+    "pattern": "BaseEvaluator subclass pattern: get name(), get description(), get relatedSkill(), evaluate(content, context) → { score, details }",
+    "files": [
+      "src-tauri/bin/sidecar/narrative/evaluators/pyramid-evaluator.js",
+      "src-tauri/bin/sidecar/narrative/evaluators/dream-evaluator.js"
+    ],
+    "examples": "critic-engine.js lines 84-104 show existing 5-evaluator registration + weights pattern"
+  },
+
+  "rationale": {
+    "chosen_approach": "Register all 5 dormant evaluators at once in CriticEngine constructor, transport structured scores alongside flat scores",
+    "decision_factors": ["All 5 evaluators follow identical BaseEvaluator pattern", "No inter-dependencies between evaluators", "Backward compatibility requires keeping flat scores"],
+    "tradeoffs": "Adding all 5 at once increases change surface, but evaluators are isolated units with no coupling"
+  },
+
+  "risks": [
+    {
+      "risk": "New evaluator weights unbalanced vs existing",
+      "mitigation": "Start with conservative weights (0.08-0.12), can tune after deployment"
+    },
+    {
+      "risk": "module_scores key name collision in response",
+      "mitigation": "Use distinct key name 'module_scores' that doesn't exist in current response"
+    }
+  ],
+
+  "doc_context": {
+    "affected_features": ["evaluation", "critic"],
+    "affected_components": ["CriticEngine", "critic-service", "evaluation-api"],
+    "affected_requirements": ["F1: Evaluator Expansion"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "45min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}
