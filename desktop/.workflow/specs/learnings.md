@@ -59,3 +59,33 @@ When adding graph CRUD features (delete, rename), update the test mock's queryGr
 <spec-entry category="learning" keywords="vitest,globalSetup,sidecar,compiled-tree,globalTeardown" date="2026-05-03" source="execute/EXC-{pending}/TASK-002">
 Sidecar vitest's globalSetup references `tests/globalTeardown.ts`, but the compiled `src-tauri/bin/sidecar/` tree may ship without it (the canonical copy lives in `src-ts/tests/`). When `npx vitest run` from `src-tauri/bin/sidecar/` fails to start with a missing-globalSetup error, recreate the shim by copying from `src-ts/tests/globalTeardown.ts`. A sidecar rebuild can re-introduce the gap.
 </spec-entry>
+
+<spec-entry category="learning" keywords="vector-search,DI,embedding,fire-and-forget,graceful-degradation" date="2026-05-03" source="milestone-complete/M2">
+Inject optional services (VectorSearch) into core components (GraphManager) via method injection (`setVectorSearch()`) rather than constructor coupling. Embedding failures in `_embedEntity` are fire-and-forget — graph CRUD operations continue without blocking on embedding. When VectorSearch is unavailable, all graph operations degrade to non-embedded mode transparently. This pattern lets heavy ML dependencies be optional without complicating core data paths.
+Milestone: M2 Phase 1 (TASK-004)
+</spec-entry>
+
+<spec-entry category="learning" keywords="hybrid-search,semantic-search,keyword-fallback,transparent-backend" date="2026-05-03" source="milestone-complete/M2">
+When upgrading search from keyword-only to hybrid (keyword + vector RRF fusion), keep the API shape identical (`searchEntities()` → ranked entity array) and make the search mode an internal implementation detail. Frontend consumers need zero changes. The async hybrid path falls back to keyword-only when VectorSearch is null, preserving existing behavior. This "transparent backend upgrade" pattern avoids breaking API contracts while adding capability.
+Milestone: M2 Phase 1 (TASK-005)
+</spec-entry>
+
+<spec-entry category="learning" keywords="stress-test,harness,reusable,mock-container,timeout-guard" date="2026-05-03" source="milestone-complete/M2">
+Build a reusable stress test harness (`createMockContainer`, `withTimeout`, `validateNoUnhandledRejections`, `assertSessionState`) before writing workflow-specific stress tests. The harness self-test catches harness bugs before stress tests depend on it. This DRY investment pays back when multiple test suites (L4, L5, future L6+) build on the same foundation without duplicating fixture/cleanup code.
+Milestone: M2 Phase 2 (TASK-002)
+</spec-entry>
+
+<spec-entry category="learning" keywords="parallelism,sequential-bottleneck,Promise.race,timeout,async-fix" date="2026-05-03" source="milestone-complete/M2">
+L4 Brainstorm's `generateArtifacts()` was sequential despite `max_parallel` config — a 37500ms baseline for 5 rounds. Fix: make `execute()` async with `generateArtifactsAsync` + `Promise.race` timeout per role, yielding 5x speedup to 7534ms. Root cause: the original loop iterated roles sequentially without honoring parallelism config. Always verify that parallelism configs are actually used in hot loops, not just documented.
+Milestone: M2 Phase 2 (TASK-005)
+</spec-entry>
+
+<spec-entry category="learning" keywords="integration-test,smoke,e2e,env-gate,optional-dependency" date="2026-05-03" source="milestone-complete/M2">
+For integration tests involving optional ML dependencies (fastembed model), use two tiers: smoke test (unconditional, verifies DI wiring and interface contracts) + e2e test (env-gated, skips when model unavailable). The smoke test catches DI miswiring in CI; the e2e test proves the full pipeline when run in an environment with the model. This prevents false CI failures from missing optional dependencies while still validating integration contracts.
+Milestone: M2 Phase 2 (TASK-007)
+</spec-entry>
+
+<spec-entry category="learning" keywords="regression-baseline,test-count,phase-boundary,classification" date="2026-05-03" source="milestone-complete/M2">
+Track exact test counts at each phase boundary (Phase 1: 860/860 frontend baseline). At Phase 2, verify `baseline_match=true` with exact count comparison. Classify sidecar failures as pre-existing (verified via `git stash` at baseline commit + re-run) or environmental (missing LLM provider) rather than new regressions. This three-tier classification (baseline match / pre-existing / environmental) prevents false regression alarms during multi-phase milestones.
+Milestone: M2 Phase 2 (TASK-008)
+</spec-entry>
