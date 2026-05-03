@@ -1,4 +1,5 @@
 import { ConfigManager } from '../config';
+import { GraphManager, type IEntityVectorSearch } from '../graph/graph-manager';
 import { setConfigAccess } from '../mcp/endpoints/config';
 import { resolveUiBridgeEnabled, setLlmAvailabilityProbe } from '../mcp/config';
 import { setGatewayDeps } from '../mcp/endpoints/health';
@@ -61,12 +62,41 @@ function bindUiBridgeConfigRuntime(configManager: ConfigManager): void {
   syncUiBridgeRuntime();
 }
 
+/**
+ * Wire the container's VectorSearch into GraphManager so semantic-search
+ * embedding hooks fire on entity create/update/delete.
+ *
+ * Closes the deferred Phase 1 DI step from PLN-005 verification.json:
+ *   "Backend gateway wiring (VectorSearch → GraphManager injection at sidecar
+ *    startup) documented but deferred to Phase 2 or runtime integration."
+ *
+ * Failures (e.g., container not yet bound to VectorSearch, or embedding model
+ * unavailable) are logged but never throw — the sidecar must still start even
+ * without semantic search. The runtime instance bound at ServiceTypes.VectorSearch
+ * is the concrete `VectorSearch` class which exposes the richer `add(id, content,
+ * metadata, type)` signature required by `IEntityVectorSearch`.
+ */
+function wireVectorSearchIntoGraphManager(container: ServiceContainer): void {
+  try {
+    const vectorSearch = container.vectorSearch as unknown as IEntityVectorSearch;
+    if (!vectorSearch || typeof vectorSearch.add !== 'function') {
+      GraphManager.setDefaultVectorSearch(null);
+      return;
+    }
+    GraphManager.setDefaultVectorSearch(vectorSearch);
+  } catch (error) {
+    console.warn('VectorSearch → GraphManager wiring skipped:', error);
+    GraphManager.setDefaultVectorSearch(null);
+  }
+}
+
 export function initializeGatewayControlPlane(
   container: ServiceContainer = getContainer(),
 ): GatewayControlPlaneState {
   const state = createGatewayRuntimeState();
 
   bindWorkflowRuntimeProvider(container);
+  wireVectorSearchIntoGraphManager(container);
   setGatewayDeps(buildGatewayDeps(container, state));
   setConfigAccess(buildConfigAccess(syncUiBridgeRuntime));
   setMcpServiceState(state.mcpConfigs, state.healthCache);

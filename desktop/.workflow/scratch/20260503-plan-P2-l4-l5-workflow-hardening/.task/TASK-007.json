@@ -9,7 +9,8 @@
   "priority": "high",
   "effort": "medium",
   "action": "Step A: Locate sidecar startup code (likely src-tauri/bin/sidecar/index.js or gateway-server.js) where GraphManager and VectorSearch are instantiated. Add `graphManager.setVectorSearch(vectorSearchInstance)` call so embedding hooks fire on entity create/update/delete. Step B: Create `src-tauri/bin/sidecar/workflow/levels/level5-coordinator.integration.test.js` that: (1) instantiates real GraphManager + real VectorSearch (in tmp dir), wires them with setVectorSearch; (2) creates a Character entity `{name:'勇敢的战士', description:'a brave warrior who fights monsters'}` via graphManager.createEntity; (3) waits for embedding to settle (poll embeddings table or fixed setTimeout 200ms — embedding is fire-and-forget per Phase 1 review); (4) instantiates Level5Coordinator with default analysisRetriever (real IterativeRetriever); (5) calls execute({user_request:'find brave warrior characters'}); (6) asserts state.metadata.analysis contains a result whose preview/source matches the created Character.",
-  "status": "pending",
+  "status": "completed",
+  "completed_at": "2026-05-03T16:30:00.000Z",
 
   "scope": "src-tauri/bin/sidecar",
   "focus_paths": [

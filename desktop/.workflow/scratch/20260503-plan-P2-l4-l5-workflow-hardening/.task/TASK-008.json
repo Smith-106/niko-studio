@@ -9,7 +9,8 @@
   "priority": "high",
   "effort": "small",
   "action": "Run three test commands in order: (1) `cd desktop && npm test` (frontend Vitest, baseline 860/860 from Phase 1); (2) `cd desktop/src-tauri/bin/sidecar && npx vitest run` (sidecar default config — picks up new stress + integration tests); (3) Optional: `npx vitest run --config vitest.phase2.config.js` if Phase 2 config covers different scope. Capture output of each in `.workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/regression-report.json` with shape `{frontend: {total, passed, failed, files}, sidecar_default: {...}, sidecar_phase2: {...}, baseline_match: bool, regressions: []}`. baseline_match is true iff frontend total >= 860 AND frontend.failed === 0.",
-  "status": "pending",
+  "status": "completed",
+  "completed_at": "2026-05-03T16:40:00.000Z",
 
   "scope": "test-suite-validation",
   "focus_paths": [

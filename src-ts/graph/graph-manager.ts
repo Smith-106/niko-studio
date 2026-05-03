@@ -17,6 +17,30 @@ import { join, dirname } from 'node:path';
 import { mkdirSync } from 'node:fs';
 
 // ---------------------------------------------------------------------------
+// Vector search integration (semantic search DI hook from PLN-005 Phase 1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal vector-search surface required by GraphManager for entity embedding.
+ * Decoupled from the concrete VectorSearch class so the graph layer does not
+ * depend on the search layer at compile time (avoids cycles). Mirrors the
+ * concrete `VectorSearch.add` signature so metadata is routed correctly at
+ * runtime (the container's `IVectorSearch.index` shape uses positional
+ * metadata which is incompatible with the concrete impl's `options.metadata`).
+ */
+export interface IEntityVectorSearch {
+  add(
+    id: string,
+    content: string,
+    metadata?: Record<string, unknown>,
+    type?: string,
+  ): Promise<void>;
+  delete(id: string): Promise<boolean>;
+}
+
+let defaultEntityVectorSearch: IEntityVectorSearch | null = null;
+
+// ---------------------------------------------------------------------------
 // Types (mirrored from graph_contracts)
 // ---------------------------------------------------------------------------
 
@@ -299,6 +323,7 @@ export class GraphManager {
 
   private _conn: Database.Database | null = null;
   private _lock = { locked: false };
+  private _vectorSearch: IEntityVectorSearch | null = null;
 
   constructor(dbPath?: string | null) {
     const resolved = dbPath ?? join(homedir(), '.niko', 'graph_manager.db');
@@ -307,7 +332,78 @@ export class GraphManager {
 
     this._initDb();
 
+    // Pick up the bootstrap-registered default vector search if present.
+    // Per-instance override via setVectorSearch() takes precedence at call time.
+    this._vectorSearch = defaultEntityVectorSearch;
+
     console.info(`GraphManager initialized: ${this.db_path}`);
+  }
+
+  // -----------------------------------------------------------------------
+  // Vector search wiring (semantic search hook)
+  // -----------------------------------------------------------------------
+
+  /**
+   * Inject the VectorSearch adapter used to embed entities on create/update
+   * and remove embeddings on delete. Pass `null` to detach.
+   *
+   * Closes the deferred Phase 1 DI step from PLN-005 verification.json.
+   */
+  setVectorSearch(vectorSearch: IEntityVectorSearch | null): void {
+    this._vectorSearch = vectorSearch;
+  }
+
+  /**
+   * Register a process-wide default vector search adapter. Any GraphManager
+   * instantiated after this call (with no per-instance override) will pick it
+   * up. Called by the gateway control plane at sidecar startup.
+   */
+  static setDefaultVectorSearch(vectorSearch: IEntityVectorSearch | null): void {
+    defaultEntityVectorSearch = vectorSearch;
+  }
+
+  /**
+   * Fire-and-forget entity embedding. Callers MUST NOT await; embedding errors
+   * are logged and never propagate (per Phase 1 review F-003: keeps entity CRUD
+   * synchronous even when the embedding model is slow or unavailable).
+   */
+  private _embedEntity(entity: Entity): void {
+    const vs = this._vectorSearch;
+    if (!vs) return;
+
+    const content = this._buildEmbeddingContent(entity);
+    vs.add(entity.id, content, this._buildEmbeddingMetadata(entity), 'entity').catch((err) => {
+      console.warn(`Entity embedding failed for ${entity.id}: ${err instanceof Error ? err.message : String(err)}`);
+    });
+  }
+
+  /** Fire-and-forget removal of an entity's embedding. */
+  private _removeEntityEmbedding(entityId: string): void {
+    const vs = this._vectorSearch;
+    if (!vs) return;
+
+    vs.delete(entityId).catch((err) => {
+      console.warn(`Entity embedding delete failed for ${entityId}: ${err instanceof Error ? err.message : String(err)}`);
+    });
+  }
+
+  /** Build the text content used to embed an entity. */
+  private _buildEmbeddingContent(entity: Entity): string {
+    const parts: string[] = [`${entity.type}: ${entity.name}`];
+    const description = entity.properties?.description;
+    if (typeof description === 'string' && description.trim()) {
+      parts.push(description.trim());
+    }
+    return parts.join(' — ');
+  }
+
+  /** Build the metadata stored alongside the embedding. */
+  private _buildEmbeddingMetadata(entity: Entity): Record<string, unknown> {
+    return {
+      entity_id: entity.id,
+      entity_type: entity.type,
+      entity_name: entity.name,
+    };
   }
 
   // -----------------------------------------------------------------------
@@ -833,6 +929,10 @@ export class GraphManager {
     );
 
     console.info(`Created entity: ${entity.type}/${entity.name} (${entity.id})`);
+
+    // Fire-and-forget semantic embedding (no await — keeps CRUD synchronous).
+    this._embedEntity(entity);
+
     return entity.id;
   }
 
@@ -860,6 +960,8 @@ export class GraphManager {
     const success = info.changes > 0;
     if (success) {
       console.info(`Updated entity: ${entity.id}`);
+      // Re-embed on update so semantic search reflects the new content.
+      this._embedEntity(entity);
     }
     return success;
   }
@@ -879,6 +981,8 @@ export class GraphManager {
     const success = info.changes > 0;
     if (success) {
       console.info(`Deleted entity: ${entityId}`);
+      // Drop the corresponding embedding so stale vectors don't surface.
+      this._removeEntityEmbedding(entityId);
     }
     return success;
   }

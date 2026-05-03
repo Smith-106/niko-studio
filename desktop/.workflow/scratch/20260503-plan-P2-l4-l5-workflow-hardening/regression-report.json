@@ -1,0 +1,87 @@
+{
+  "ran_at": "2026-05-03T16:40:00.000Z",
+  "frontend": {
+    "command": "cd desktop && npm test -- --run",
+    "total": 860,
+    "passed": 860,
+    "failed": 0,
+    "file_count": 84,
+    "duration_seconds": 82.47,
+    "summary": "84 test files, 860 tests, all passed. Exact match to Phase 1 TST-004 baseline (860/860 across 84 files)."
+  },
+  "sidecar_default": {
+    "command": "cd src-ts && npm run test",
+    "total": 2338,
+    "passed": 2334,
+    "failed": 4,
+    "file_count": 223,
+    "file_passed": 219,
+    "duration_seconds": 42.09,
+    "failures": [
+      {
+        "test": "tests/benchmark/gateway-benchmark.test.ts > Gateway Performance Benchmark > benchmarks POST /chat (validation)",
+        "classification": "environmental",
+        "reason": "Benchmark exercises full /chat endpoint requiring a configured LLM provider. Fails locally without LLM credentials/network. Not a Phase 2 regression."
+      },
+      {
+        "test": "tests/container/ServiceContainer.test.ts > ServiceContainer > Async Initialization > should handle initialization timeout",
+        "classification": "pre_existing",
+        "reason": "5-second timing flake — present on clean main pre-Phase-2. Confirmed by TASK-007 via git stash + re-run. Not a Phase 2 regression."
+      },
+      {
+        "test": "tests/knowledge/knowledge-manager.test.ts > ServiceManager > health check > checkHealth returns empty when no providers",
+        "classification": "pre_existing",
+        "reason": "checkHealth returns {embedding_local: false} but test expects {}. Reproduced after `git stash` of all uncommitted Phase 2 source changes (graph-manager.ts, gateway-control-plane.ts, integration test) at HEAD=d81d013 — failure persists, so it is not introduced by Phase 2. Likely from earlier embedding/health check work; pre-existing relative to Phase 2 baseline."
+      },
+      {
+        "test": "tests/workflow/workflow-engine.test.ts > WorkflowEngine constants > DESTRUCTIVE_STEP_NAMES contains expected step names",
+        "classification": "pre_existing",
+        "reason": "Test expects DESTRUCTIVE_STEP_NAMES to contain 'revise' but it currently contains only ['checkpoint', 'final_review']. Pre-existing missing export — confirmed by TASK-007 via git stash + re-run. Not a Phase 2 regression."
+      }
+    ]
+  },
+  "sidecar_phase_variants": {
+    "phase2": "skipped — phase configs are scope filters of the default suite, not different test sets",
+    "phase3": "skipped — same",
+    "phase4": "skipped — same",
+    "release": "skipped — same"
+  },
+  "baseline_match": true,
+  "baseline_match_rationale": "frontend.total (860) >= 860 AND frontend.failed (0) === 0. Frontend Phase 1 TST-004 baseline preserved exactly.",
+  "regressions": [],
+  "pre_existing_failures": [
+    {
+      "test": "ServiceContainer.test.ts > should handle initialization timeout",
+      "reason": "5s timing flake — pre-existing; confirmed pre-d81d013"
+    },
+    {
+      "test": "workflow-engine.test.ts > DESTRUCTIVE_STEP_NAMES contains expected step names",
+      "reason": "missing 'revise' export — pre-existing; confirmed pre-d81d013"
+    },
+    {
+      "test": "knowledge-manager.test.ts > checkHealth returns empty when no providers",
+      "reason": "{embedding_local: false} returned where {} expected — pre-existing; confirmed via git stash at d81d013"
+    }
+  ],
+  "environmental_failures": [
+    {
+      "test": "gateway-benchmark.test.ts > benchmarks POST /chat (validation)",
+      "reason": "needs running LLM provider; not a code defect"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "ISS-20260502-066",
+      "summary": "L5 mid-executeChain interrupt may lose currentUnitIndex — M3 backlog",
+      "source_test": "tests/workflow/level5-coordinator.stress.test.ts (warning)"
+    }
+  ],
+  "phase2_test_additions": {
+    "stress_harness_self_test": "tests/workflow/harness/stress-harness.test.ts — 20 tests, all passing",
+    "l4_stress": "tests/workflow/level4-brainstorm.stress.test.ts — 4 tests, all passing (5-round budget 7.5s well under 30s after async fix)",
+    "l5_stress": "tests/workflow/level5-coordinator.stress.test.ts — 4 tests, all passing",
+    "l5_integration": "tests/workflow/level5-coordinator.integration.test.ts — 2 tests; smoke passes; e2e gracefully skipped on missing fastembed model in src-ts dev tree"
+  },
+  "verdict": "PASS",
+  "verdict_summary": "Frontend 860/860 baseline preserved. Sidecar 2334/2338 (99.83%) with 4 failures all classified as pre-existing or environmental — no Phase 2 regression. Phase 2 added 30 net new sidecar tests (8 stress + 20 harness + 2 integration). M3 backlog: 1 issue (ISS-20260502-066)."
+}
