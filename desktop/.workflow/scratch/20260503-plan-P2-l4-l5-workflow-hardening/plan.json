@@ -1,0 +1,92 @@
+{
+  "id": "PLN-006",
+  "phase": 2,
+  "milestone": "M2",
+  "title": "L4/L5 Workflow Hardening",
+  "summary": "Stress-test L4 Brainstorm and L5 Coordinator under multi-round, concurrent, and interrupt scenarios. Fix discovered reliability issues. Wire VectorSearch DI deferred from Phase 1 and verify Phase 1 → Phase 2 integration end-to-end.",
+  "approach": "4 waves: Audit + harness (parallel) → L4 + L5 stress execution (parallel) → fix + document (sequential) → DI wire + integration + regression (sequential). Tests use mocked agents but real SessionManager/IterativeRetriever paths to catch state-machine and persistence bugs without flaky LLM calls. L4 5-round semantics = 5 sequential re-invocations of execute() with accumulating state.context.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008"],
+  "task_count": 8,
+  "complexity": "large",
+  "estimated_time": "12-18 hours",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Foundation: Audit & Harness",
+      "tasks": ["TASK-001", "TASK-002"],
+      "parallel": true
+    },
+    {
+      "wave": 2,
+      "label": "Stress Execution",
+      "tasks": ["TASK-003", "TASK-004"],
+      "parallel": true
+    },
+    {
+      "wave": 3,
+      "label": "Fix & Document",
+      "tasks": ["TASK-005", "TASK-006"],
+      "parallel": false
+    },
+    {
+      "wave": 4,
+      "label": "Integration & Regression",
+      "tasks": ["TASK-007", "TASK-008"],
+      "parallel": false
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "TASK-001 (audit doc) → TASK-002 (harness) → [TASK-003 L4 results, TASK-004 L5 results] → TASK-005 (fixes) → TASK-006 (issues.jsonl) → TASK-007 (DI + integration test) → TASK-008 (full regression)",
+    "stages": [
+      "Audit produces state-machine map + known failure modes → harness builds fixtures",
+      "Stress runs produce results.json with failures listed → fixes target failures",
+      "Fixes harvested → remaining gaps documented as issues",
+      "DI wiring enables real semantic search → regression validates no Phase 1 break"
+    ]
+  },
+
+  "design_decisions": [
+    "L4 5-round = 5 sequential execute() calls accumulating state.context (no class refactor)",
+    "Test fidelity = mocked agents + real SessionManager + real IterativeRetriever (catches state/persistence bugs without LLM flakiness)",
+    "Phase 1 deferred DI wiring (VectorSearch → GraphManager) folds into TASK-007 with integration verification",
+    "Concurrent session test exercises shared graph state via two L4 sessions hitting same .writing/sessions root"
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "Sidecar test pattern: vitest .test.js next to source (e.g. search/hybrid-search.test.js)",
+      "SessionManager test boundary: use tmp dir per test, cleanup in afterEach",
+      "Mock agent pattern: stub container.getAgent() to return deterministic .generate() responses"
+    ],
+    "conventions": [
+      "Test file location: `<source-dir>/<source-base>.test.js`",
+      "Async tests: use `await` not `.then()`, assert via vitest expect",
+      "Concurrent test: use Promise.all + separate session IDs, NOT shared state"
+    ],
+    "dependencies": [
+      "Vitest configs: vitest.config.js (default), vitest.phase2.config.js, vitest.phase3.config.js, vitest.phase4.config.js",
+      "Phase 1 outputs: graph-manager.js setVectorSearch DI, search/index.js createIterativeRetriever",
+      "node:fs, node:path, node:crypto for harness fixtures"
+    ]
+  },
+
+  "context_path": "../../milestones/M2/audit-report.md",
+
+  "_metadata": {
+    "timestamp": "2026-05-03T11:30:00.000Z",
+    "source": "maestro-plan",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": null,
+    "depends_on": ["PLN-005"],
+    "user_decisions": {
+      "l4_round_model": "sequential_reinvocations",
+      "di_wiring_scope": "fold_into_task_2_8",
+      "test_fidelity": "unit_integration_mix"
+    }
+  }
+}

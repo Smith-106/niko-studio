@@ -1,0 +1,118 @@
+{
+  "id": "TASK-007",
+  "title": "Wire VectorSearch DI + integration verification (entity → embedded → retrieved)",
+  "description": "Wire the VectorSearch → GraphManager DI at sidecar startup that was deferred from Phase 1, then verify Phase 1 → Phase 2 integration end-to-end: a Character entity created via GraphManager gets embedded automatically and is retrievable through L5 Coordinator's analyze phase via real IterativeRetriever. This closes SC-3 from Phase 2 success criteria.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "integration",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Step A: Locate sidecar startup code (likely src-tauri/bin/sidecar/index.js or gateway-server.js) where GraphManager and VectorSearch are instantiated. Add `graphManager.setVectorSearch(vectorSearchInstance)` call so embedding hooks fire on entity create/update/delete. Step B: Create `src-tauri/bin/sidecar/workflow/levels/level5-coordinator.integration.test.js` that: (1) instantiates real GraphManager + real VectorSearch (in tmp dir), wires them with setVectorSearch; (2) creates a Character entity `{name:'勇敢的战士', description:'a brave warrior who fights monsters'}` via graphManager.createEntity; (3) waits for embedding to settle (poll embeddings table or fixed setTimeout 200ms — embedding is fire-and-forget per Phase 1 review); (4) instantiates Level5Coordinator with default analysisRetriever (real IterativeRetriever); (5) calls execute({user_request:'find brave warrior characters'}); (6) asserts state.metadata.analysis contains a result whose preview/source matches the created Character.",
+  "status": "pending",
+
+  "scope": "src-tauri/bin/sidecar",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/index.js",
+    "src-tauri/bin/sidecar/gateway-server.js",
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.integration.test.js"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/index.js",
+    "src-tauri/bin/sidecar/gateway-server.js",
+    "src-tauri/bin/sidecar/graph/graph-manager.js",
+    "src-tauri/bin/sidecar/search/index.js",
+    "src-tauri/bin/sidecar/search/hybrid-search.js",
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.js",
+    ".workflow/scratch/20260503-plan-P1-semantic-search-skill-crud/verification.json"
+  ],
+
+  "depends_on": ["TASK-005"],
+  "wave": 4,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-tauri/bin/sidecar/index.js OR gateway-server.js contains 'setVectorSearch(' call",
+      "Wired call passes a real VectorSearch instance, not null/undefined (grep -A2 'setVectorSearch' shows non-null arg)",
+      "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.integration.test.js exists",
+      "Integration test contains 'createEntity' AND 'execute(' AND a Character with name '勇敢的战士'",
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level5-coordinator.integration.test.js exits 0",
+      "Test asserts state.metadata.analysis is non-empty array and at least one entry preview/source references the created Character"
+    ],
+    "verification": "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level5-coordinator.integration.test.js -t 'integration'",
+    "definition_of_done": "Sidecar startup wires VectorSearch into GraphManager; integration test proves entity → embedding → retrieval pipeline works end-to-end through L5."
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/index.js",
+      "action": "modify",
+      "target": "sidecar bootstrap (or gateway-server.js if container assembled there)",
+      "change": "After GraphManager and VectorSearch construction, call `graphManager.setVectorSearch(vectorSearch)` (the exact insertion point depends on existing wiring — read first)"
+    },
+    {
+      "path": "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.integration.test.js",
+      "action": "create",
+      "target": "integration test",
+      "change": "Real GraphManager + VectorSearch + Level5Coordinator E2E test for entity-create → embed → retrieve via L5 analyze phase"
+    }
+  ],
+
+  "implementation": [
+    "Read src-tauri/bin/sidecar/index.js and gateway-server.js to find where GraphManager and VectorSearch are constructed/registered. Look for `new GraphManager(` and `new VectorSearch(`.",
+    "Insert `graphManager.setVectorSearch(vectorSearch)` at the point both instances exist. If they live in different scopes, refactor to a shared bootstrap function — keep the change minimal.",
+    "Verify with grep: `grep -n 'setVectorSearch' src-tauri/bin/sidecar/index.js src-tauri/bin/sidecar/gateway-server.js`",
+    "Write integration test: tmp dir for db, real GraphManager (constructor needs db + optional VectorSearch), real VectorSearch (constructor needs vector store path), wire via setVectorSearch.",
+    "createEntity({type:'character', name:'勇敢的战士', description:'a brave warrior who fights monsters'}). Wait 200ms (embedding is fire-and-forget per phase 1 F-003).",
+    "Instantiate Level5Coordinator with no analysisRetriever override so it uses createDefaultAnalysisRetriever (which calls createIterativeRetriever). Override projectRoot to tmp dir.",
+    "Call l5.execute({user_request:'find brave warrior characters', domain:'novel'}). Assert state.metadata.analysis.length > 0 and at least one entry has source matching the created entity (e.g., source contains 'character' or preview contains 'warrior').",
+    "Cleanup tmp dir in afterEach."
+  ],
+
+  "test": {
+    "commands": [
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level5-coordinator.integration.test.js"
+    ],
+    "unit": [],
+    "integration": ["level5-coordinator.integration.test.js"],
+    "success_metrics": ["Integration test passes", "Phase 1 → Phase 2 pipeline proven via assertion on retrieval results"]
+  },
+
+  "reference": {
+    "pattern": "Phase 1 PLN-005 noted DI wiring as deferred (verification.json notes[0])",
+    "files": [
+      ".workflow/scratch/20260503-plan-P1-semantic-search-skill-crud/verification.json",
+      "src-tauri/bin/sidecar/graph/graph-manager.js"
+    ],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Folding DI wiring into the integration test ensures both halves of SC-3 (Phase 1 → Phase 2 connection) are proven by a single artifact.",
+    "decision_factors": ["Closes Phase 1 deferred work", "Single source of truth for integration", "User-confirmed approach (clarification Q2 = fold)"],
+    "tradeoffs": "If DI wiring is non-trivial (e.g., needs container refactor), this task may grow — keep insertion minimal and surgical."
+  },
+
+  "risks": [
+    "Sidecar startup may not have a single bootstrap point — DI may need to happen at gateway-server.js request handler level instead. Read first before patching.",
+    "Real VectorSearch may need a small embedding model (BAAI/bge-small-en-v1.5) downloaded — test may need to skip if model not present in CI"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["Semantic Search (Phase 1)", "L5 Coordinator (Phase 2)"],
+    "affected_components": ["graph-manager", "vector-search", "level5-coordinator", "sidecar bootstrap"],
+    "affected_requirements": ["REQ-E", "REQ-I"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "120-180 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": true
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "plan_id": "PLN-005",
+  "phase": 1,
+  "milestone": "M2",
+  "tested_at": "2026-05-03T11:12:00.000Z",
+  "status": "completed",
+  "test_scenarios": [
+    {
+      "id": "TS-001",
+      "category": "unit",
+      "name": "useChatStreaming tests",
+      "source": "TASK-012",
+      "result": "pass",
+      "detail": "10/10 useChatStreaming tests pass after retryCountRef removal and StreamErrorPayload typing"
+    },
+    {
+      "id": "TS-002",
+      "category": "unit",
+      "name": "SkillTab CRUD operations",
+      "source": "TASK-011",
+      "result": "pass",
+      "detail": "14/14 SkillTab tests pass (10 original + 4 new CRUD tests)"
+    },
+    {
+      "id": "TS-003",
+      "category": "unit",
+      "name": "Drag-drop file attachments",
+      "source": "TASK-010",
+      "result": "pass",
+      "detail": "15/15 ChatAreaComposer tests pass (11 original + 4 new drag-drop tests)"
+    },
+    {
+      "id": "TS-004",
+      "category": "regression",
+      "name": "Full test suite",
+      "source": "automated",
+      "result": "pass",
+      "detail": "860/860 tests pass across 84 test files — zero regressions"
+    }
+  ],
+  "issues": [],
+  "coverage": {
+    "total_tests": 860,
+    "new_tests": 8,
+    "regressions": 0
+  }
+}

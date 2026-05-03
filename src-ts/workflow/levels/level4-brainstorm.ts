@@ -265,7 +265,7 @@ export class Level4Brainstorm {
    * 4. Specification: generate guidance-specification
    * 5. Verify: verify specification completeness
    */
-  execute(state: BaseState, kwargs?: Record<string, unknown>): BaseState {
+  async execute(state: BaseState, kwargs?: Record<string, unknown>): Promise<BaseState> {
     const config = { ...this.getDefaultConfig(), ...this.config };
 
     // Resolve roles
@@ -282,9 +282,9 @@ export class Level4Brainstorm {
     const context = state.context ?? '';
 
     try {
-      // Phase 1: parallel role analysis
+      // Phase 1: parallel role analysis (async, with per-role timeout)
       state.current_step = 'brainstorm';
-      const analyses = this.generateArtifacts(topic, roles, context);
+      const analyses = await this.generateArtifactsAsync(topic, roles, context);
       (state as Record<string, unknown>).role_analyses = analyses.map(roleAnalysisToDict);
 
       // Phase 2: synthesis
@@ -374,14 +374,34 @@ export class Level4Brainstorm {
   }
 
   /**
-   * Async variant: generate role analysis artifacts in parallel
+   * Async variant: generate role analysis artifacts in parallel.
+   *
+   * Each role analysis is raced against a per-role timeout
+   * (`config.timeout_per_role` seconds, default 60). On timeout the role's
+   * promise rejects and Promise.allSettled records the failure, producing
+   * a placeholder analysis identical to the synchronous catch path.
    */
   async generateArtifactsAsync(
     topic: string,
     roles: BrainstormRole[],
     context: string = '',
   ): Promise<RoleAnalysis[]> {
-    const tasks = roles.map(role => this._analyzeAsRoleAsync(role, topic, context));
+    const timeoutMs = ((this.config.timeout_per_role as number) ?? 60) * 1000;
+
+    const tasks = roles.map(role => {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const timeoutPromise = new Promise<RoleAnalysis>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`Role ${role} timeout after ${timeoutMs}ms`)),
+          timeoutMs,
+        );
+      });
+      const analysisPromise = this._analyzeAsRoleAsync(role, topic, context);
+      return Promise.race([analysisPromise, timeoutPromise]).finally(() => {
+        if (timer != null) clearTimeout(timer);
+      });
+    });
+
     const results = await Promise.allSettled(tasks);
 
     const analyses: RoleAnalysis[] = [];
@@ -391,10 +411,13 @@ export class Level4Brainstorm {
         analyses.push(result.value);
       } else {
         const role = roles[i];
-        console.warn(`Role ${getRoleDisplayName(role)} analysis failed: ${result.reason}`);
+        const reasonMsg = result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason);
+        console.warn(`Role ${getRoleDisplayName(role)} analysis failed: ${reasonMsg}`);
         analyses.push({
           role,
-          analysisContent: `分析失败: ${result.reason}`,
+          analysisContent: `分析失败: ${reasonMsg}`,
           keyPoints: [],
           recommendations: [],
           concerns: [],
@@ -550,8 +573,44 @@ export class Level4Brainstorm {
     topic: string,
     context: string,
   ): Promise<RoleAnalysis> {
-    // Run synchronous analysis in a microtask
-    return this._analyzeAsRole(role, topic, context);
+    const prompt = this._buildRolePrompt(role, topic, context);
+
+    try {
+      const writer = this.container.getAgent(AgentType.WRITER, { name: `brainstorm_${role}` }) as
+        & { run(input: Record<string, unknown>): Record<string, unknown> }
+        & {
+          generate?: (
+            prompt: string,
+            options?: Record<string, unknown>,
+          ) => Promise<string | { content?: string }>;
+        };
+
+      // Prefer the async writer API when available so role analyses can
+      // truly overlap under Promise.allSettled. Fall back to the sync
+      // run() path for writers that only expose the synchronous
+      // interface — preserves backward compatibility.
+      if (typeof writer.generate === 'function') {
+        const generated = await writer.generate(prompt, { mode: 'analysis', role });
+        const content =
+          typeof generated === 'string'
+            ? generated
+            : (generated?.content ?? '');
+        return this._parseAnalysisResult(role, content);
+      }
+      return this._analyzeAsRole(role, topic, context);
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      console.error(`Analysis failed for role ${getRoleDisplayName(role)}: ${errorMsg}`);
+      return {
+        role,
+        analysisContent: `分析过程中出错: ${errorMsg}`,
+        keyPoints: [],
+        recommendations: [],
+        concerns: [],
+        score: 0.0,
+        metadata: {},
+      };
+    }
   }
 
   private _buildRolePrompt(role: BrainstormRole, topic: string, context: string): string {

@@ -1,0 +1,98 @@
+{
+  "id": "TASK-006",
+  "title": "Document remaining issues for M3 follow-up",
+  "description": "For every entry still in stress-results-l4.json.failed[] or stress-results-l5.json.failed[] after TASK-005, create a structured issue record in .workflow/issues/issues.jsonl with root cause analysis, affected components, and suggested fix direction. These become the M3 backlog seeds.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "documentation",
+  "priority": "medium",
+  "effort": "small",
+  "action": "Read stress-results-l4.json and stress-results-l5.json. For each entry remaining in failed[]: append a JSONL line to `.workflow/issues/issues.jsonl` with shape `{id: 'ISS-<NNN>', source: 'stress-test', phase_ref: 'M2-P2', status: 'registered', severity, title, root_cause, affected_files: [], fix_direction, repro, created_at}`. Use existing IDs in issues.jsonl to determine next NNN. Add a `defer_reason` field explaining why this wasn't fixed in TASK-005 (out of scope, requires architectural change, depends on M3 work, etc.).",
+  "status": "completed",
+  "completed_at": "2026-05-03T07:58:47.243Z",
+
+  "scope": ".workflow/issues",
+  "focus_paths": [
+    ".workflow/issues/issues.jsonl"
+  ],
+
+  "read_first": [
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l4.json",
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l5.json",
+    ".workflow/issues/issues.jsonl"
+  ],
+
+  "depends_on": ["TASK-005"],
+  "wave": 3,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "For each entry in stress-results-l4.json.failed[] after TASK-005: a corresponding line in .workflow/issues/issues.jsonl with phase_ref:'M2-P2'",
+      "For each entry in stress-results-l5.json.failed[] after TASK-005: a corresponding line in .workflow/issues/issues.jsonl with phase_ref:'M2-P2'",
+      "Every new issues.jsonl line is valid JSON (jq . exits 0 per line)",
+      "Every new issue has fields: id, source, phase_ref, status, severity, title, root_cause, affected_files, fix_direction, defer_reason, created_at",
+      "If failed[] is empty after TASK-005: stress-results-l*.json contains a top-level field `m3_backlog: []` and no new issues are created (still passes)"
+    ],
+    "verification": "node -e \"require('fs').readFileSync('.workflow/issues/issues.jsonl','utf8').split('\\n').filter(Boolean).forEach(l=>JSON.parse(l))\" && echo OK",
+    "definition_of_done": "All deferred failures have an issue record with enough context for M3 to pick up without re-discovering the bug."
+  },
+
+  "files": [
+    {
+      "path": ".workflow/issues/issues.jsonl",
+      "action": "append",
+      "target": "issue records",
+      "change": "One JSONL line per remaining failure with full triage fields"
+    }
+  ],
+
+  "implementation": [
+    "Determine next ISS-NNN by scanning existing issues.jsonl: `tail -n 100 .workflow/issues/issues.jsonl | jq -r .id | sort -V | tail -1`",
+    "For each remaining failed[] entry, build issue object: id (next NNN), source: 'stress-test', phase_ref: 'M2-P2', status: 'registered', severity (from results), title (from test name), root_cause (from results.failed[].error + audit-l4-l5.md cross-reference), affected_files (from results), fix_direction (1 sentence from results), defer_reason ('out of scope: requires X' — must justify), created_at: now ISO.",
+    "Append each as a single line of valid JSON to .workflow/issues/issues.jsonl. Verify each line parses with `node -e \"JSON.parse(require('fs').readFileSync(...).split('\\n').slice(-N).join('\\n'))\"`",
+    "If failed[] is empty after TASK-005: write `m3_backlog: []` to both stress-results-l*.json and exit successfully — no issues to file."
+  ],
+
+  "test": {
+    "commands": [
+      "node -e \"require('fs').readFileSync('.workflow/issues/issues.jsonl','utf8').split('\\n').filter(Boolean).forEach((l,i)=>{ try{JSON.parse(l)} catch(e){console.error('Bad JSON line',i+1);process.exit(1)} })\""
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["All issues.jsonl lines parse", "Count of new issues matches remaining failed[] count"]
+  },
+
+  "reference": {
+    "pattern": "Existing issues.jsonl format (read first to match field naming)",
+    "files": [".workflow/issues/issues.jsonl"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Structured JSONL records preserve enough context for M3 to act without re-running stress tests. defer_reason forces explicit justification.",
+    "decision_factors": ["M3 traceability", "Avoids dropped knowledge", "Aligns with workflow:harvest pattern"],
+    "tradeoffs": "Some failures may not need formal issue records (test-flakiness) — handle via warnings[] field in stress-results JSON instead."
+  },
+
+  "risks": [
+    "issues.jsonl may have schema drift from earlier entries — read first 5 entries before appending"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["L4 Brainstorm", "L5 Coordinator"],
+    "affected_components": [],
+    "affected_requirements": ["REQ-I"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "30-60 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

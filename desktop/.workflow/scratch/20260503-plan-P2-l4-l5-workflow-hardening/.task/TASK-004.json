@@ -1,0 +1,116 @@
+{
+  "id": "TASK-004",
+  "title": "L5 Coordinator stress tests — 3-step chain + interrupt/resume",
+  "description": "Write and run stress tests for Level5Coordinator covering: 3-step command chain (analyze→plan→execute) end-to-end with state persistence (SC-2 from roadmap), mid-chain interrupt and clean resume from checkpoint, concurrent two-session isolation, and unhandled-rejection detection. Record findings in stress-results-l5.json.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "test",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create `src-tauri/bin/sidecar/workflow/levels/level5-coordinator.stress.test.js`. Test cases: (1) `executes 3-step chain end-to-end with persistState at each phase boundary` — instantiate Level5Coordinator with mock retriever, call execute({user_request: 'analyze plan execute'}); after each await persistState verify file `<persistDir>/<sessionId>.json` exists with phase ∈ {analyzing, planning, executing, completed}; (2) `resumes cleanly from mid-chain checkpoint` — start execute(), after phase==='planning' kill via Promise.race+abort, instantiate new Level5Coordinator, call execute() with same session_id, expect state.resumed===true and final phase==='completed'; (3) `concurrent two L5 sessions do not corrupt each other's persistState files` — Promise.all of 2 execute() calls with different session_ids, assert each persistDir/<id>.json has correct sessionId field; (4) `unhandled rejections are zero across all 3 cases`. Write findings to `stress-results-l5.json` with same shape as L4 results.",
+  "status": "completed",
+  "completed_at": "2026-05-03T15:44:00Z",
+
+  "scope": "src-tauri/bin/sidecar/workflow/levels",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.stress.test.js",
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l5.json"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.js",
+    "src-tauri/bin/sidecar/workflow/session/resume-strategy.js",
+    "src-tauri/bin/sidecar/workflow/__tests__/harness/stress-harness.js",
+    "src-tauri/bin/sidecar/workflow/__tests__/harness/scenarios.js",
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/audit-l4-l5.md"
+  ],
+
+  "depends_on": ["TASK-001", "TASK-002"],
+  "wave": 2,
+  "parallel_group": "wave2",
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.stress.test.js exists",
+      "level5-coordinator.stress.test.js contains 'executes 3-step chain end-to-end'",
+      "level5-coordinator.stress.test.js contains 'resumes cleanly from mid-chain checkpoint'",
+      "level5-coordinator.stress.test.js contains 'concurrent two L5 sessions'",
+      "level5-coordinator.stress.test.js imports from '../__tests__/harness/stress-harness.js'",
+      ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l5.json exists",
+      "stress-results-l5.json valid JSON with keys passed, failed, warnings",
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level5-coordinator.stress.test.js exits 0 (failures recorded in stress-results-l5.json, not thrown)"
+    ],
+    "verification": "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level5-coordinator.stress.test.js && cat .workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l5.json",
+    "definition_of_done": "All 4 scenarios run; passing tests in passed[], failures recorded with file:line and repro hint for TASK-005."
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.stress.test.js",
+      "action": "create",
+      "target": "L5 stress test suite",
+      "change": "4 vitest test cases: 3-step E2E, mid-chain interrupt+resume, concurrent isolation, no unhandled rejections"
+    },
+    {
+      "path": ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l5.json",
+      "action": "create",
+      "target": "results record",
+      "change": "{passed: [...], failed: [{test, error, file_line, repro}], warnings: []}"
+    }
+  ],
+
+  "implementation": [
+    "Import: `import { describe, test, expect } from 'vitest'; import { Level5Coordinator } from './level5-coordinator.js'; import { SessionManager } from '../session/session-manager.js'; import { createTempSessionRoot, validateNoUnhandledRejections } from '../__tests__/harness/stress-harness.js'; import { l5ThreeStepChain } from '../__tests__/harness/scenarios.js';`",
+    "Mock retriever: const mockRetriever = { hybridSearch: async () => [{id:'r1', source:'mock', score:0.9, content:'mock content'}], resolveContext: async (q) => q };",
+    "Test 1 (3-step E2E): const tmp = createTempSessionRoot(); const sm = new SessionManager(tmp.path); const l5 = new Level5Coordinator({persist_dir: tmp.path+'/persist'}, undefined, mockRetriever); const state = await l5.execute({user_request:'test', domain:'novel'}); expect(state.decision).toBe('APPROVED'); expect(fs.existsSync(path.join(tmp.path, 'persist', state.session_id+'.json'))).toBe(true); const persisted = JSON.parse(fs.readFileSync(...)); expect(persisted.phase).toBe('completed');",
+    "Test 2 (interrupt+resume): Run l5.execute() but intercept persistState after phase becomes 'planning' to drop the in-memory _coordinatorState. Spawn new Level5Coordinator with same persist_dir, call execute({session_id: <stored>}); expect state.resumed===true; expect final phase==='completed'.",
+    "Test 3 (concurrent): const [s1, s2] = await Promise.all([l5_a.execute({user_request:'a', session_id:'sess-a'}), l5_b.execute({user_request:'b', session_id:'sess-b'})]); expect(s1.session_id).toBe('sess-a'); expect(s2.session_id).toBe('sess-b'); read both persist files, assert they have distinct payloads.",
+    "Test 4 (no unhandled rejections): Wrap all 3 above in validateNoUnhandledRejections().stop(); expect pass===true.",
+    "After tests, write stress-results-l5.json. For interrupt+resume, if it fails, repro hint should reference resume-strategy.js HybridStrategy or coordinator's _tryResume at level5-coordinator.js:389.",
+    "Cleanup: tmp.cleanup() in afterEach."
+  ],
+
+  "test": {
+    "commands": [
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level5-coordinator.stress.test.js"
+    ],
+    "unit": ["level5-coordinator.stress.test.js"],
+    "integration": [],
+    "success_metrics": ["stress-results-l5.json exists and is parseable", "all 4 scenarios recorded"]
+  },
+
+  "reference": {
+    "pattern": "Test patterns from sidecar/services/__tests__/knowledge-service.test.js for async + tmp dir",
+    "files": ["src-tauri/bin/sidecar/services/__tests__/knowledge-service.test.js"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Direct exercise of L5 phase machine with real SessionManager + mocked retriever matches user's chosen test fidelity. Interrupt+resume is the most likely place to find bugs.",
+    "decision_factors": ["Catches state-machine bugs", "Independent of LLM availability", "Verifies Phase 1 → Phase 2 contract by exercising hybridSearch path"],
+    "tradeoffs": "Mock retriever bypasses real semantic search — full semantic path verified in TASK-007."
+  },
+
+  "risks": [
+    "Interrupt simulation is artificial (no real OS-level kill) — may miss true async crash bugs; flag in stress-results-l5.json.warnings",
+    "createIterativeRetriever default in level5-coordinator.js:39 may be invoked even when mock passed — verify analysisRetriever DI parameter actually overrides"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["L5 Coordinator"],
+    "affected_components": ["session-manager", "resume-strategy"],
+    "affected_requirements": ["REQ-I"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "120-180 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

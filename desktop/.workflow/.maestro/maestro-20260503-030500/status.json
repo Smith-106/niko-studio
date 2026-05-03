@@ -10,11 +10,12 @@
   "steps": [
     { "index": 0, "skill": "maestro-analyze", "args": "1 -y", "engine": "skill", "status": "completed", "started_at": "2026-05-03T03:05:00.000Z", "completed_at": "2026-05-03T03:08:00.000Z" },
     { "index": 1, "skill": "maestro-plan", "args": "1 --auto", "engine": "skill", "status": "completed", "started_at": "2026-05-03T03:08:00.000Z", "completed_at": "2026-05-03T03:10:00.000Z" },
-    { "index": 2, "skill": "maestro-execute", "args": "1", "engine": "skill", "status": "running", "started_at": "2026-05-03T03:10:00.000Z" },
-    { "index": 3, "skill": "maestro-verify", "args": "1", "engine": "skill", "status": "pending" },
-    { "index": 4, "skill": "quality-review", "args": "1", "engine": "skill", "status": "pending" },
-    { "index": 5, "skill": "quality-test", "args": "1 --auto-fix", "engine": "skill", "status": "pending" }
+    { "index": 2, "skill": "maestro-execute", "args": "1", "engine": "skill", "status": "completed", "started_at": "2026-05-03T03:10:00.000Z", "completed_at": "2026-05-03T03:30:00.000Z" },
+    { "index": 3, "skill": "maestro-verify", "args": "1", "engine": "skill", "status": "completed", "started_at": "2026-05-03T11:06:00.000Z", "completed_at": "2026-05-03T11:08:00.000Z" },
+    { "index": 4, "skill": "quality-review", "args": "1", "engine": "skill", "status": "completed", "started_at": "2026-05-03T11:09:00.000Z", "completed_at": "2026-05-03T11:10:00.000Z" },
+    { "index": 5, "skill": "quality-test", "args": "1 --auto-fix", "engine": "skill", "status": "completed", "started_at": "2026-05-03T11:11:00.000Z", "completed_at": "2026-05-03T11:12:00.000Z" }
   ],
-  "current_step": 2,
-  "status": "running"
+  "current_step": 5,
+  "status": "completed",
+  "completed_at": "2026-05-03T11:12:00.000Z"
 }

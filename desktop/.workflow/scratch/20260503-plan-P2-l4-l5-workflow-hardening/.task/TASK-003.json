@@ -1,0 +1,112 @@
+{
+  "id": "TASK-003",
+  "title": "L4 Brainstorm stress tests — 5 sequential rounds + concurrent sessions",
+  "description": "Write and run stress tests for Level4Brainstorm covering: 5 sequential execute() invocations with accumulating context (SC-1 from roadmap), concurrent two-session isolation against shared session root (SC-3), memory growth across long sessions, and unhandled-rejection detection. Record findings in stress-results-l4.json.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "test",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create `src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.stress.test.js`. Test cases: (1) `runs 5 sequential rounds without unhandled rejections` — instantiate Level4Brainstorm with mocked container, call execute() 5 times feeding round[i].context = round[i-1].synthesis, assert state.errors empty after each, validateNoUnhandledRejections passes; (2) `5 rounds complete within 30s total` using withTimeout; (3) `concurrent two L4 sessions on shared session root preserve isolation` — Promise.all of 2 execute() calls with different session_ids, assert each session.json has its own role_analyses; (4) `memory check: round 5 state.role_analyses length matches expected role count` (no leak/duplication). Write findings to `.workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l4.json` with shape `{passed: [], failed: [{test, error, file_line, repro}], warnings: []}`.",
+  "status": "completed",
+  "completed_at": "2026-05-03T15:39:30Z",
+
+  "scope": "src-tauri/bin/sidecar/workflow/levels",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.stress.test.js",
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l4.json"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.js",
+    "src-tauri/bin/sidecar/workflow/__tests__/harness/stress-harness.js",
+    "src-tauri/bin/sidecar/workflow/__tests__/harness/scenarios.js",
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/audit-l4-l5.md"
+  ],
+
+  "depends_on": ["TASK-001", "TASK-002"],
+  "wave": 2,
+  "parallel_group": "wave2",
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.stress.test.js exists",
+      "level4-brainstorm.stress.test.js contains 'runs 5 sequential rounds without unhandled rejections'",
+      "level4-brainstorm.stress.test.js contains 'concurrent two L4 sessions'",
+      "level4-brainstorm.stress.test.js imports from '../__tests__/harness/stress-harness.js'",
+      ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l4.json exists",
+      "stress-results-l4.json valid JSON with keys passed, failed, warnings",
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level4-brainstorm.stress.test.js exits 0 OR all failures are documented in stress-results-l4.json.failed[]"
+    ],
+    "verification": "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level4-brainstorm.stress.test.js && cat .workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l4.json",
+    "definition_of_done": "All 4 stress scenarios run; passing tests counted in stress-results-l4.json.passed[], failures recorded with file:line and repro hint for TASK-005 to consume."
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.stress.test.js",
+      "action": "create",
+      "target": "L4 stress test suite",
+      "change": "4 vitest test cases: 5-round sequential, 30s timeout guard, concurrent sessions, memory check"
+    },
+    {
+      "path": ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l4.json",
+      "action": "create",
+      "target": "results record",
+      "change": "{passed: [...], failed: [{test, error, file_line, repro}], warnings: []}"
+    }
+  ],
+
+  "implementation": [
+    "Import: `import { describe, test, expect, afterEach } from 'vitest'; import { Level4Brainstorm } from './level4-brainstorm.js'; import { createMockContainer, validateNoUnhandledRejections, withTimeout } from '../__tests__/harness/stress-harness.js'; import { l4SequentialRounds, concurrentL4Sessions } from '../__tests__/harness/scenarios.js';`",
+    "Test 1 (5 rounds): Mock container responses for 5 default roles. Loop i in 0..4: state = await level4.execute(prevState ?? {user_request:'topic-0', context:''}); expect(state.errors).toEqual([]); expect(state.role_analyses.length).toBeGreaterThanOrEqual(5); prevState = {user_request:`topic-${i+1}`, context: state.specification_markdown};",
+    "Test 2 (timeout): Wrap the 5-round loop in `await withTimeout(runFiveRounds(), 30000, 'L4-5-rounds')`; expect not to throw.",
+    "Test 3 (concurrent): const states = concurrentL4Sessions(2); await Promise.all(states.map(s => new Level4Brainstorm({}, container).execute(s))); expect(states[0].role_analyses).not.toEqual(states[1].role_analyses); expect new session.json present for each session_id.",
+    "Test 4 (memory/role count): const defaultRoles = getDefaultRoles(); after 5th round expect state.role_analyses.length === defaultRoles.length (no duplication, no drop).",
+    "After all tests, write stress-results-l4.json: collect each test's pass/fail, error message, and inferred fix direction (e.g., 'generateArtifacts is sequential at line 274 — recommend Promise.all').",
+    "If any test fails, do NOT throw — record in failed[] and let test suite still exit 0 so the task passes (fixes happen in TASK-005)."
+  ],
+
+  "test": {
+    "commands": [
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level4-brainstorm.stress.test.js"
+    ],
+    "unit": ["level4-brainstorm.stress.test.js"],
+    "integration": [],
+    "success_metrics": ["stress-results-l4.json exists and is parseable", "passed[] + failed[].length === 4"]
+  },
+
+  "reference": {
+    "pattern": "vitest async test pattern with afterEach cleanup",
+    "files": ["src-tauri/bin/sidecar/services/__tests__/knowledge-service.test.js"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Sequential re-invocations match user's chosen L4 round semantics. Recording results to JSON enables TASK-005 to consume programmatically.",
+    "decision_factors": ["Matches L4 round model decision", "Decouples test execution from fix execution"],
+    "tradeoffs": "Tolerating failed tests in this task means 'green' here doesn't mean 'works' — but TASK-005 closes the loop."
+  },
+
+  "risks": [
+    "Concurrent test may be inherently flaky if SessionManager has races (which is the bug we're hunting) — record in failed[] not as test infra problem"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["L4 Brainstorm"],
+    "affected_components": ["session-manager"],
+    "affected_requirements": ["REQ-I"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "90-120 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

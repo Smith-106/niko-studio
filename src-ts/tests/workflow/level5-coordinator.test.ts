@@ -111,7 +111,7 @@ describe('Level5Coordinator', () => {
       ...state,
       draft_content: 'standard-content',
     }));
-    const brainstormSpy = vi.spyOn(Level4Brainstorm.prototype, 'execute').mockImplementation((state) => ({
+    const brainstormSpy = vi.spyOn(Level4Brainstorm.prototype, 'execute').mockImplementation(async (state) => ({
       ...state,
       final_output: 'brainstorm-content',
     }));

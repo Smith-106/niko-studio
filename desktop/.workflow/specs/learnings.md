@@ -55,3 +55,7 @@ In custom Cypher-like graph engines, using MERGE with a match on the OLD name an
 <spec-entry category="learning" keywords="test-mock,queryGraph,DETACH-DELETE,graph-crud" date="2026-05-03" source="milestone-complete/M1">
 When adding graph CRUD features (delete, rename), update the test mock's queryGraph handler to recognize the new mutation patterns (MATCH+SET for rename, DETACH DELETE for delete). Without these handlers, tests will fall through to the generic LOAD query handler, causing false failures or silent no-ops.
 </spec-entry>
+
+<spec-entry category="learning" keywords="vitest,globalSetup,sidecar,compiled-tree,globalTeardown" date="2026-05-03" source="execute/EXC-{pending}/TASK-002">
+Sidecar vitest's globalSetup references `tests/globalTeardown.ts`, but the compiled `src-tauri/bin/sidecar/` tree may ship without it (the canonical copy lives in `src-ts/tests/`). When `npx vitest run` from `src-tauri/bin/sidecar/` fails to start with a missing-globalSetup error, recreate the shim by copying from `src-ts/tests/globalTeardown.ts`. A sidecar rebuild can re-introduce the gap.
+</spec-entry>

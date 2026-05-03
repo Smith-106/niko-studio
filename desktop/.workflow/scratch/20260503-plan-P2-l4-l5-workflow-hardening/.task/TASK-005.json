@@ -1,0 +1,121 @@
+{
+  "id": "TASK-005",
+  "title": "Fix discovered issues from L4/L5 stress runs",
+  "description": "Read stress-results-l4.json and stress-results-l5.json, address every entry in failed[] that is in-scope (hangs, state corruption, unhandled rejections, session isolation failures). Each fix lands in a small, scoped change with a corresponding test re-run to confirm green.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "fix",
+  "priority": "high",
+  "effort": "large",
+  "action": "For each entry in stress-results-l4.json.failed[] and stress-results-l5.json.failed[]: (1) read the file_line + repro hint; (2) make the smallest patch that addresses the root cause (NOT a symptom suppress like try/catch swallow); (3) re-run the corresponding stress test, expect that single test to now pass; (4) update stress-results-l4.json (or l5) moving the entry from failed[] to passed[] and adding a `fix_commit` ref. Out-of-scope or M3-deferred items stay in failed[] and feed TASK-006. Common expected fixes: enforce timeout_per_role in level4-brainstorm.js generateArtifacts (line 273); make _appendSnapshotIndex atomic in session-manager.js:348 (use renameSync swap); guard concurrent persistState in level5-coordinator.js:573 with a per-session write lock or sequence number.",
+  "status": "completed",
+  "completed_at": "2026-05-03T15:55:00Z",
+
+  "scope": "src-tauri/bin/sidecar/workflow",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.js",
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.js",
+    "src-tauri/bin/sidecar/workflow/session/session-manager.js",
+    "src-tauri/bin/sidecar/workflow/session/resume-strategy.js"
+  ],
+
+  "read_first": [
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l4.json",
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/stress-results-l5.json",
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/audit-l4-l5.md",
+    "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.js",
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.js",
+    "src-tauri/bin/sidecar/workflow/session/session-manager.js"
+  ],
+
+  "depends_on": ["TASK-003", "TASK-004"],
+  "wave": 3,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "After fixes: cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level4-brainstorm.stress.test.js exits 0 with all 4 tests passing OR remaining failures match stress-results-l4.json.failed[] (deferred to M3)",
+      "After fixes: cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level5-coordinator.stress.test.js exits 0 with all 4 tests passing OR remaining failures match stress-results-l5.json.failed[]",
+      "stress-results-l4.json.passed[] count >= initial_failed_count - documented_deferred",
+      "stress-results-l5.json.passed[] count >= initial_failed_count - documented_deferred",
+      "Each fix has a corresponding entry in stress-results-l*.json.passed[] with `fix_commit` and `fix_summary` fields",
+      "No new ts-ignore, eslint-disable, or test.skip introduced (grep -rn 'test.skip\\|@ts-ignore\\|eslint-disable' src-tauri/bin/sidecar/workflow/ returns 0 new lines vs baseline)"
+    ],
+    "verification": "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level4-brainstorm.stress.test.js workflow/levels/level5-coordinator.stress.test.js",
+    "definition_of_done": "Every fixable failure is fixed; remaining failures are explicitly marked deferred with reason. Stress tests are green or have documented deferrals only."
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.js",
+      "action": "modify",
+      "target": "generateArtifacts (line ~271) and execute (line ~207)",
+      "change": "Add timeout_per_role enforcement (Promise.race against setTimeout) and unhandled rejection containment around _analyzeAsRole calls"
+    },
+    {
+      "path": "src-tauri/bin/sidecar/workflow/session/session-manager.js",
+      "action": "modify",
+      "target": "_appendSnapshotIndex (line ~348)",
+      "change": "Replace read-modify-write with atomic write via temp file + renameSync, OR add per-session write queue"
+    },
+    {
+      "path": "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.js",
+      "action": "modify",
+      "target": "persistState (line ~573)",
+      "change": "Address any concurrent-write or resume-replay bug surfaced by stress-results-l5.json (concrete fix depends on findings)"
+    }
+  ],
+
+  "implementation": [
+    "Read stress-results-l4.json and stress-results-l5.json. For each failed[] entry, classify: in-scope (fix now) vs out-of-scope (defer to TASK-006).",
+    "For each in-scope entry: write a single Edit per file targeting the root cause. Do NOT use ts-ignore, .skip, or empty catch. If a fix needs >50 lines, split into sub-tasks.",
+    "After each fix, re-run the corresponding test: `cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level4-brainstorm.stress.test.js -t '<test name>'`. Expect green.",
+    "Move the entry from failed[] to passed[] in stress-results-l*.json. Add fields: fix_summary (1 sentence), fix_commit (will be set during commit phase).",
+    "Common fixes anticipated: (a) wrap each generateArtifacts iteration with Promise.race timeout; (b) atomic snapshot-index write via writeFileSync(tmp) + renameSync(tmp, target); (c) ensure persistState writes are awaited before next phase transition.",
+    "Stop after 3 attempts on the same failure — escalate to TASK-006 deferral."
+  ],
+
+  "test": {
+    "commands": [
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level4-brainstorm.stress.test.js",
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/levels/level5-coordinator.stress.test.js"
+    ],
+    "unit": ["all stress tests must remain runnable"],
+    "integration": [],
+    "success_metrics": ["passed[].length increases", "failed[].length decreases or remaining failures explicitly marked deferred"]
+  },
+
+  "reference": {
+    "pattern": "Coding philosophy: Fix root cause, not symptoms. No suppression mechanisms.",
+    "files": [".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/audit-l4-l5.md"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Iterate over failures from stress-results, fix smallest viable patch each, re-run test. Decoupling test execution (TASK-003/004) from fixes lets us see total failure surface before patching.",
+    "decision_factors": ["Avoids tunnel vision on first failure", "Makes deferrals explicit"],
+    "tradeoffs": "Wave-3 work is variable-length depending on how many failures stress runs surface."
+  },
+
+  "risks": [
+    "Fix may introduce new failure mode — re-run full stress suite after each fix, not just the targeted test",
+    "Some bugs may need cross-file changes (e.g., SessionManager + L5 coordinator) — keep atomic per concern"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["L4 Brainstorm", "L5 Coordinator"],
+    "affected_components": ["session-manager", "level4-brainstorm", "level5-coordinator"],
+    "affected_requirements": ["REQ-I"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "180-240 min",
+    "risk": "high",
+    "autonomous": true,
+    "checkpoint": true
+  }
+}

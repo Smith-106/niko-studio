@@ -859,11 +859,11 @@ export class Level5Coordinator {
       } else if (cmd.commandType === CommandType.PLAN) {
         result = this._executePlan(cmd, state);
       } else if (cmd.commandType === CommandType.EXECUTE) {
-        result = this._executeWrite(cmd, state);
+        result = await this._executeWrite(cmd, state);
       } else if (cmd.commandType === CommandType.VERIFY) {
         result = this._executeVerify(cmd, state);
       } else if (cmd.commandType === CommandType.REVISE) {
-        result = this._executeRevise(cmd, state);
+        result = await this._executeRevise(cmd, state);
       }
 
       completeUnit(unit, result);
@@ -958,7 +958,7 @@ export class Level5Coordinator {
     return 'standard';
   }
 
-  private _executeWrite(cmd: Command, state: BaseState): Record<string, unknown> {
+  private async _executeWrite(cmd: Command, state: BaseState): Promise<Record<string, unknown>> {
     const branch = this._selectExecutionBranch(cmd);
     const nextState: Record<string, unknown> = { ...state };
 
@@ -973,7 +973,7 @@ export class Level5Coordinator {
     } else if (branch === 'brainstorm') {
       try {
         const brainstorm = new Level4Brainstorm(this.config);
-        const updated = brainstorm.execute(nextState as BaseState);
+        const updated = await brainstorm.execute(nextState as BaseState);
         Object.assign(nextState, updated);
       } catch (exc) {
         state.warnings = [...(state.warnings ?? []), `L4 执行失败: ${exc}`];
@@ -1036,13 +1036,13 @@ export class Level5Coordinator {
     return { score, feedback, decision, status: 'completed' };
   }
 
-  private _executeRevise(cmd: Command, state: BaseState): Record<string, unknown> {
+  private async _executeRevise(cmd: Command, state: BaseState): Promise<Record<string, unknown>> {
     const reviseState: Record<string, unknown> = { ...state };
     const existingContext = (reviseState.context as string) ?? '';
     const feedbackContext = String((reviseState.feedback_context as string) ?? '');
     reviseState.context = `${existingContext}\n\n[REVISION_FEEDBACK]\n${feedbackContext}`.trim();
 
-    const result = this._executeWrite(cmd, reviseState as BaseState);
+    const result = await this._executeWrite(cmd, reviseState as BaseState);
     return { content: (result.content as string) ?? '', status: 'completed' };
   }
 

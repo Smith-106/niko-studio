@@ -1,0 +1,103 @@
+{
+  "id": "TASK-008",
+  "title": "Full regression suite — confirm zero regressions from Phase 1 + Phase 2 changes",
+  "description": "Run the full test suite (frontend Vitest 860 tests + sidecar Vitest stress + integration tests) end-to-end. Verify the 860+ baseline from Phase 1 still holds and the new stress + integration tests are green. Record final counts in regression-report.json.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "validation",
+  "priority": "high",
+  "effort": "small",
+  "action": "Run three test commands in order: (1) `cd desktop && npm test` (frontend Vitest, baseline 860/860 from Phase 1); (2) `cd desktop/src-tauri/bin/sidecar && npx vitest run` (sidecar default config — picks up new stress + integration tests); (3) Optional: `npx vitest run --config vitest.phase2.config.js` if Phase 2 config covers different scope. Capture output of each in `.workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/regression-report.json` with shape `{frontend: {total, passed, failed, files}, sidecar_default: {...}, sidecar_phase2: {...}, baseline_match: bool, regressions: []}`. baseline_match is true iff frontend total >= 860 AND frontend.failed === 0.",
+  "status": "pending",
+
+  "scope": "test-suite-validation",
+  "focus_paths": [
+    ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/regression-report.json"
+  ],
+
+  "read_first": [
+    ".workflow/scratch/20260503-plan-P1-semantic-search-skill-crud/test-results.json",
+    "desktop/package.json",
+    "desktop/src-tauri/bin/sidecar/package.json",
+    "desktop/src-tauri/bin/sidecar/vitest.config.js"
+  ],
+
+  "depends_on": ["TASK-007"],
+  "wave": 4,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/regression-report.json exists",
+      "regression-report.json contains 'baseline_match' field === true",
+      "regression-report.json.frontend.failed === 0",
+      "regression-report.json.frontend.total >= 860",
+      "regression-report.json.regressions is empty array OR each entry justified",
+      "regression-report.json.sidecar_default.failed === 0 OR all failures are documented as deferred in TASK-006"
+    ],
+    "verification": "cd desktop && npm test -- --run && cd src-tauri/bin/sidecar && npx vitest run",
+    "definition_of_done": "Frontend baseline preserved (860+ pass, 0 fail), sidecar tests green or deferrals explicit. Phase 2 ready to close."
+  },
+
+  "files": [
+    {
+      "path": ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/regression-report.json",
+      "action": "create",
+      "target": "regression record",
+      "change": "JSON report aggregating all test runs with baseline comparison"
+    }
+  ],
+
+  "implementation": [
+    "Run `cd desktop && npm test -- --run` (vitest run mode, no watch). Parse output for total/passed/failed counts and test file count.",
+    "Run `cd desktop/src-tauri/bin/sidecar && npx vitest run`. Parse same.",
+    "If a phase2/3/4 config exists and is materially different (different test scope), run that too. Skip if config is just a duplicate.",
+    "Build regression-report.json: copy counts from each run, set baseline_match = (frontend.total >= 860 AND frontend.failed === 0), set regressions = list of any test that was passing in PLN-005 TST-004 but is now failing (cross-reference Phase 1 test-results.json).",
+    "If regressions detected: STOP — flag back to TASK-005 for additional fixes. Do NOT mark task complete with regressions present.",
+    "If sidecar tests have remaining failures from TASK-006 deferrals, list them in regression-report.json.deferred[] not regressions[].",
+    "Update state.json or downstream verify hook is responsibility of PLN/EXC artifacts, not this task."
+  ],
+
+  "test": {
+    "commands": [
+      "cd desktop && npm test -- --run",
+      "cd desktop/src-tauri/bin/sidecar && npx vitest run"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["Frontend 860+ pass / 0 fail", "Sidecar tests green or deferrals explicit", "No new regressions vs Phase 1 baseline"]
+  },
+
+  "reference": {
+    "pattern": "Phase 1 TST-004 test-results.json structure",
+    "files": [".workflow/scratch/20260503-plan-P1-semantic-search-skill-crud/test-results.json"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Final regression gate ensures Phase 2 changes (especially fixes in level4-brainstorm.js, level5-coordinator.js, session-manager.js, and DI wiring at sidecar bootstrap) didn't break Phase 1's verified surface.",
+    "decision_factors": ["Clean Phase 2 close requires this", "Catches integration regressions DI might cause"],
+    "tradeoffs": "Quick task — value comes from running it last, after all changes are in."
+  },
+
+  "risks": [
+    "DI wiring change in TASK-007 could cause sidecar startup failure for other tests — regression-report must surface this"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["all"],
+    "affected_components": ["all"],
+    "affected_requirements": ["REQ-E", "REQ-I"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "30-45 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

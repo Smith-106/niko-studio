@@ -1,0 +1,105 @@
+{
+  "id": "TASK-001",
+  "title": "Audit L4/L5/SessionManager state machines and document failure modes",
+  "description": "Read level4-brainstorm.js, level5-coordinator.js, session-manager.js, resume-strategy.js end-to-end. Document state machine transitions, session isolation guarantees, error recovery paths, and SessionManager usage patterns. Identify suspected failure modes (race conditions, unhandled rejections, missing timeouts) that the stress harness must exercise.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "audit",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Produce `audit-l4-l5.md` documenting: (1) Level4Brainstorm.execute() 4-phase flow (brainstorm/synthesize/specification/verify) and where 5-round re-invocation accumulates state; (2) Level5Coordinator phase machine (init→analyzing→planning→executing→completed|failed) and which phase boundaries persistState() runs on; (3) SessionManager isolation guarantees (per-session dirs, snapshot-index.json append-write race window) and gaps; (4) ResumeStrategy modes (NATIVE/PROMPT_CONCAT/HYBRID/DISABLED) and which modes apply to L5 mid-chain interrupt; (5) Suspected failure modes table with file:line references.",
+  "status": "completed",
+  "completed_at": "2026-05-03T07:27:33Z",
+
+  "scope": "src-tauri/bin/sidecar/workflow",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.js",
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.js",
+    "src-tauri/bin/sidecar/workflow/session/session-manager.js",
+    "src-tauri/bin/sidecar/workflow/session/resume-strategy.js"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.js",
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.js",
+    "src-tauri/bin/sidecar/workflow/session/session-manager.js",
+    "src-tauri/bin/sidecar/workflow/session/resume-strategy.js",
+    "src-tauri/bin/sidecar/workflow/levels/base-level.js",
+    ".workflow/milestones/M2/audit-report.md"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "wave1",
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/audit-l4-l5.md exists",
+      "audit-l4-l5.md contains '## L4 Brainstorm State Machine'",
+      "audit-l4-l5.md contains '## L5 Coordinator Phase Machine'",
+      "audit-l4-l5.md contains '## SessionManager Isolation Guarantees'",
+      "audit-l4-l5.md contains '## Suspected Failure Modes'",
+      "audit-l4-l5.md references file:line for each suspected failure mode (grep -c 'level4-brainstorm.js:' audit-l4-l5.md returns >= 3)"
+    ],
+    "verification": "ls .workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/audit-l4-l5.md && grep -c '^## ' .workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/audit-l4-l5.md",
+    "definition_of_done": "Audit doc exists with all 4 required sections plus a failure-modes table; TASK-002 harness author can use it to pick fixtures."
+  },
+
+  "files": [
+    {
+      "path": ".workflow/scratch/20260503-plan-P2-l4-l5-workflow-hardening/audit-l4-l5.md",
+      "action": "create",
+      "target": "audit document",
+      "change": "New audit doc with sections: L4 State Machine, L5 Phase Machine, SessionManager Isolation, ResumeStrategy modes, Suspected Failure Modes table"
+    }
+  ],
+
+  "implementation": [
+    "Read level4-brainstorm.js fully (671 lines). Map execute() phases: brainstorm (line 220), synthesize (line 224), specification (line 228), verify (line 232). Note generateArtifacts() is sequential not parallel despite max_parallel config (line 274).",
+    "Read level5-coordinator.js fully (932 lines). Map phase machine: init→analyzing (line 399)→planning (line 405)→executing (line 411)→completed|failed (line 417, 432). Record persistState calls at each boundary (lines 402, 408, 414, 429, 440).",
+    "Read session-manager.js (376 lines). Document _appendSnapshotIndex() read-modify-write pattern at line 348 — flag as race candidate when concurrent writes hit same session.",
+    "Read resume-strategy.js (537 lines). Document HybridStrategy.resume() fallback flow at line 366. Note checkpoints capped at 10 (slice(-10) at line 218, 287).",
+    "Write audit-l4-l5.md with the 5 mandated sections. Failure-modes table: each row = {symptom, suspect_file_line, repro_hint, severity_guess}. Minimum 6 rows covering: L4 sequential bottleneck, L4 timeout_per_role unenforced, L5 mid-phase interrupt window, SessionManager snapshot-index race, concurrent L4 graph state collision, ResumeStrategy native session id loss across crashes."
+  ],
+
+  "test": {
+    "commands": [],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["Audit doc passes grep checks in convergence.criteria"]
+  },
+
+  "reference": {
+    "pattern": "M1 Phase 1 audit pattern (see scratch/20260502-plan-P1-frontend-ux-polish/) for section structure",
+    "files": [".workflow/milestones/M2/audit-report.md"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Read-only audit before harness build ensures fixtures target real failure modes, not guesses.",
+    "decision_factors": ["Avoids guessing", "Establishes shared vocabulary for TASK-002..TASK-005"],
+    "tradeoffs": "Adds a wave-1 task vs starting harness immediately, but harness quality depends on this."
+  },
+
+  "risks": [
+    "Audit may surface failure modes outside Phase 2 scope — flag and defer to M3"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["L4 Brainstorm", "L5 Coordinator"],
+    "affected_components": ["session-manager", "resume-strategy"],
+    "affected_requirements": ["REQ-I"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "60-90 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

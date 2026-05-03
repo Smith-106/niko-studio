@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Sparkles, Folder, Plus, Trash2, Save, Pencil } from 'lucide-react'
-import { listSkills, loadSkill, matchSkills, getSkillChain, createSkill, saveSkill, deleteSkill, renameSkill } from '../../api/client'
+import { listSkills, loadSkill, matchSkills, getSkillChain, createSkill, saveSkill, deleteSkill } from '../../api/client'
 import { useI18n } from '../../i18n'
 import type { KnowledgeItem, SkillMatch, SkillChainItem } from './KnowledgeTypes'
 

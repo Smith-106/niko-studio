@@ -98,7 +98,7 @@ describe('workflow/level4-brainstorm', () => {
     expect(analyses[0]?.analysisContent).toContain('分析过程中出错');
   });
 
-  it('synthesizes analyses into a guidance specification and approved execute result', () => {
+  it('synthesizes analyses into a guidance specification and approved execute result', async () => {
     const fakeContainer = {
       getAgent() {
         return {
@@ -126,12 +126,12 @@ describe('workflow/level4-brainstorm', () => {
       errors: [],
     } as Record<string, unknown>;
 
-    const result = brainstorm.execute(state as never, {
+    const result = (await brainstorm.execute(state as never, {
       roles: [
         BrainstormRole.PRODUCT_MANAGER,
         BrainstormRole.SYSTEM_ARCHITECT,
       ],
-    }) as Record<string, unknown>;
+    })) as Record<string, unknown>;
 
     expect(result.current_step).toBe('verify');
     expect(result.decision).toBe('APPROVED');

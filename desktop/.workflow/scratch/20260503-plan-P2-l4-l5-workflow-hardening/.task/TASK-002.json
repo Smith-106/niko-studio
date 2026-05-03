@@ -1,0 +1,130 @@
+{
+  "id": "TASK-002",
+  "title": "Build stress test harness — fixtures, validators, instrumentation",
+  "description": "Create reusable test harness for L4/L5 stress tests: deterministic mock-agent fixtures, multi-round/multi-step scenario builders, timeout guards, state validators, and concurrent-session helpers. The harness should be usable by both TASK-003 (L4) and TASK-004 (L5) without duplication.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "test_infra",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create `src-tauri/bin/sidecar/workflow/__tests__/harness/stress-harness.js` exporting: (1) `createMockContainer({responses, latency})` returning a ServiceContainer-shaped object whose getAgent(type, opts) returns an agent with deterministic .generate(prompt) → responses[type]; (2) `createTempSessionRoot()` returning a unique tmp dir under os.tmpdir() with auto-cleanup; (3) `withTimeout(promise, ms, label)` rejecting with `TimeoutError(label)` after ms; (4) `validateNoUnhandledRejections()` installing a `process.on('unhandledRejection')` listener returning {pass, errors}; (5) `assertSessionState(sessionMgr, sessionId, expectedShape)` asserting required keys exist on the persisted state. Also create `__tests__/harness/scenarios.js` exporting `l4SequentialRounds(n)`, `l5ThreeStepChain()`, `concurrentL4Sessions(count)`.",
+  "status": "completed",
+  "completed_at": "2026-05-03T15:30:00Z",
+
+  "scope": "src-tauri/bin/sidecar/workflow/__tests__",
+  "focus_paths": [
+    "src-tauri/bin/sidecar/workflow/__tests__/harness/stress-harness.js",
+    "src-tauri/bin/sidecar/workflow/__tests__/harness/scenarios.js"
+  ],
+
+  "read_first": [
+    "src-tauri/bin/sidecar/workflow/levels/level4-brainstorm.js",
+    "src-tauri/bin/sidecar/workflow/levels/level5-coordinator.js",
+    "src-tauri/bin/sidecar/workflow/session/session-manager.js",
+    "src-tauri/bin/sidecar/agents/base.js",
+    "src-tauri/bin/sidecar/search/hybrid-search.test.js",
+    "src-tauri/bin/sidecar/services/__tests__/knowledge-service.test.js"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "wave1",
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-tauri/bin/sidecar/workflow/__tests__/harness/stress-harness.js exists",
+      "src-tauri/bin/sidecar/workflow/__tests__/harness/scenarios.js exists",
+      "stress-harness.js exports 'createMockContainer'",
+      "stress-harness.js exports 'createTempSessionRoot'",
+      "stress-harness.js exports 'withTimeout'",
+      "stress-harness.js exports 'validateNoUnhandledRejections'",
+      "stress-harness.js exports 'assertSessionState'",
+      "scenarios.js exports 'l4SequentialRounds'",
+      "scenarios.js exports 'l5ThreeStepChain'",
+      "scenarios.js exports 'concurrentL4Sessions'",
+      "src-tauri/bin/sidecar/workflow/__tests__/harness/stress-harness.test.js exists (smoke test for harness itself)",
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/__tests__/harness/stress-harness.test.js exits 0"
+    ],
+    "verification": "cd src-tauri/bin/sidecar && npx vitest run workflow/__tests__/harness/",
+    "definition_of_done": "Harness is import-able and its self-test passes; TASK-003 and TASK-004 can build on it without modifying internals."
+  },
+
+  "files": [
+    {
+      "path": "src-tauri/bin/sidecar/workflow/__tests__/harness/stress-harness.js",
+      "action": "create",
+      "target": "test harness",
+      "change": "Export createMockContainer, createTempSessionRoot, withTimeout, validateNoUnhandledRejections, assertSessionState"
+    },
+    {
+      "path": "src-tauri/bin/sidecar/workflow/__tests__/harness/scenarios.js",
+      "action": "create",
+      "target": "scenario builders",
+      "change": "Export l4SequentialRounds(n), l5ThreeStepChain(), concurrentL4Sessions(count)"
+    },
+    {
+      "path": "src-tauri/bin/sidecar/workflow/__tests__/harness/stress-harness.test.js",
+      "action": "create",
+      "target": "harness self-test",
+      "change": "Smoke test that each export functions correctly on its own (no L4/L5 yet)"
+    }
+  ],
+
+  "implementation": [
+    "createMockContainer({responses, latency=0}): return { getAgent(type, opts){ return { generate: async (prompt)=>{ if(latency) await new Promise(r=>setTimeout(r,latency)); return responses[type] ?? `mock-${type}-response`; } }; } }",
+    "createTempSessionRoot(): const dir = path.join(os.tmpdir(), `niko-stress-${randomUUID()}`); fs.mkdirSync(dir, {recursive:true}); return { path: dir, cleanup: ()=>fs.rmSync(dir,{recursive:true,force:true}) };",
+    "withTimeout(promise, ms, label): return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error(`Timeout: ${label} after ${ms}ms`)), ms))]);",
+    "validateNoUnhandledRejections(): const errors=[]; const handler=(r)=>errors.push(r); process.on('unhandledRejection',handler); return { stop(){ process.off('unhandledRejection',handler); return {pass:errors.length===0, errors}; } };",
+    "assertSessionState(sessionMgr, sessionId, expectedShape): const stateStr = sessionMgr.read(sessionId, ContentType.STATE); const state = JSON.parse(stateStr||'{}'); for(const k of Object.keys(expectedShape)) { if(!(k in state)) throw new Error(`Missing key ${k}`); }",
+    "l4SequentialRounds(n): return n state objects {user_request: `topic-${i}`, context: i>0 ? `round-${i-1}-output` : ''} for sequential L4.execute() invocations",
+    "l5ThreeStepChain(): return state object {user_request: 'analyze plan execute', domain: 'novel', session_id: <new-uuid>}",
+    "concurrentL4Sessions(count): return count state objects with separate session_ids targeting same sessionRoot",
+    "Write stress-harness.test.js: test each export's contract (createMockContainer.getAgent returns object with generate, withTimeout rejects after ms, etc.)"
+  ],
+
+  "test": {
+    "commands": [
+      "cd src-tauri/bin/sidecar && npx vitest run workflow/__tests__/harness/"
+    ],
+    "unit": ["stress-harness.test.js"],
+    "integration": [],
+    "success_metrics": ["All harness self-tests pass"]
+  },
+
+  "reference": {
+    "pattern": "Existing sidecar test pattern: vitest with imports from node:fs, node:path, node:crypto",
+    "files": [
+      "src-tauri/bin/sidecar/search/hybrid-search.test.js",
+      "src-tauri/bin/sidecar/services/__tests__/knowledge-service.test.js"
+    ],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Reusable harness lets TASK-003 and TASK-004 run in parallel on top of a shared foundation rather than each duplicating fixture/cleanup code.",
+    "decision_factors": ["DRY", "Parallelizable wave-2 tasks", "Smoke-test harness before relying on it"],
+    "tradeoffs": "Harness self-test adds ~30min but pays back in TASK-003/TASK-004 stability."
+  },
+
+  "risks": [
+    "vitest version differences across vitest.config files — verify which config the new tests run under (default config is the workflow root one)"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["L4 Brainstorm", "L5 Coordinator"],
+    "affected_components": ["test infrastructure"],
+    "affected_requirements": ["REQ-I"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "90-120 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

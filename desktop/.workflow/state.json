@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "project_name": "Niko-Studio Desktop",
-  "status": "idle",
+  "status": "executing",
   "current_milestone": "M2",
   "current_task_id": null,
   "milestones": [
@@ -36,9 +36,74 @@
       "harvested": false,
       "created_at": "2026-05-03T03:08:00.000Z",
       "completed_at": "2026-05-03T03:10:00.000Z"
+    },
+    {
+      "id": "EXC-006",
+      "type": "execute",
+      "milestone": "M2",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260503-plan-P1-semantic-search-skill-crud",
+      "status": "completed",
+      "depends_on": "PLN-005",
+      "harvested": false,
+      "created_at": "2026-05-03T03:10:00.000Z",
+      "completed_at": "2026-05-03T03:30:00.000Z"
+    },
+    {
+      "id": "VRF-005",
+      "type": "verify",
+      "milestone": "M2",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260503-plan-P1-semantic-search-skill-crud",
+      "status": "passed",
+      "depends_on": "EXC-006",
+      "harvested": false,
+      "created_at": "2026-05-03T11:06:00.000Z",
+      "completed_at": "2026-05-03T11:08:00.000Z"
+    },
+    {
+      "id": "REV-005",
+      "type": "review",
+      "milestone": "M2",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260503-review-P1-semantic-search-skill-crud",
+      "status": "completed",
+      "depends_on": "VRF-005",
+      "harvested": false,
+      "created_at": "2026-05-03T11:09:00.000Z",
+      "completed_at": "2026-05-03T11:10:00.000Z"
+    },
+    {
+      "id": "TST-004",
+      "type": "test",
+      "milestone": "M2",
+      "phase": 1,
+      "scope": "phase",
+      "path": "scratch/20260503-test-P1-semantic-search-skill-crud",
+      "status": "completed",
+      "depends_on": "REV-005",
+      "harvested": false,
+      "created_at": "2026-05-03T11:11:00.000Z",
+      "completed_at": "2026-05-03T11:12:00.000Z"
+    },
+    {
+      "id": "PLN-006",
+      "type": "plan",
+      "milestone": "M2",
+      "phase": 2,
+      "scope": "phase",
+      "path": "scratch/20260503-plan-P2-l4-l5-workflow-hardening",
+      "status": "completed",
+      "depends_on": ["PLN-005"],
+      "harvested": false,
+      "created_at": "2026-05-03T11:30:00.000Z",
+      "completed_at": "2026-05-03T11:30:00.000Z"
     }
   ],
-  "last_updated": "2026-05-03T03:00:00.000Z",
+  "last_updated": "2026-05-03T11:30:00.000Z",
   "last_codebase_rebuild": "2026-05-02T00:00:00.000Z",
   "accumulated_context": {
     "key_decisions": [],
