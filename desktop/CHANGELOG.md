@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.4.0] — 2026-05-03
+
+### M3 — Wiring & Exposure
+
+#### Evaluator System
+
+- **feat(critic):** 5 new evaluators — pacing, dialogue, worldbuilding, theme, research (15 total)
+- **feat(critic):** Weighted sub-scores with `relatedSkill` field per evaluator
+- **test(critic):** CriticEngine registration + quickScan integration tests
+
+#### Endpoint Wiring
+
+- **feat(graph):** Write endpoints — node create/update/delete, relation create
+- **feat(foreshadow):** Lifecycle endpoints — plant, hint, harvest, stats
+- **feat(character):** Depth analysis, profile, relationships, consistency endpoints
+- **feat(analysis):** Pattern detection + session clustering endpoints
+
+#### Frontend API Coverage
+
+- **feat(api):** `knowledge.ts` — graph writes, foreshadowing, character depth/profile
+- **feat(api):** `analysis.ts` — detectPatterns, clusterSessions with error handling
+- **feat(ui):** CharacterTab depth indicator + profile panel
+- **feat(ui):** EvaluationPanel per-module scores (additive, backward-compatible)
+- **feat(ui):** MemoryForm + WritingStyle structured style sections
+- **feat(i18n):** 11 new translation keys for M3 features
+
+#### M2 Deferral Resolution
+
+- **fix:** ISS-066 (L5 interrupt edge case) — resolved as N/A (code evolved past issue)
+- **fix:** HV-001 (fastembed e2e test) — test created with model availability guard
+- **fix:** F-001 (dead renameSkill import) — import removed
+
 ## [9.3.0] — 2026-05-03
 
 ### M2 — Intelligence & Extensibility
