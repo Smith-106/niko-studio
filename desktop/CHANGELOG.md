@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.7.0] — 2026-05-05
+
+### M6 — Performance & Technical Debt
+
+#### Phase 1: Profiling & Bundle Audit
+
+- **perf:** Lighthouse baseline — Performance 72, FCP 3023ms, LCP 3974ms, TBT 408ms
+- **perf:** Bundle audit — 457KB (index.js)
+- **perf:** React render profile — 3 over-subscribed components, 574 DOM elements, 126ms forced reflows
+- **perf:** Optimization priority matrix P1–P4 established
+
+#### Phase 2: Optimization Implementation
+
+- **perf(components):** Lazy-load StoryBiblePanel via React.lazy + Suspense in DocumentEditor
+- **perf(components):** Lazy-load ChatArea via React.lazy + Suspense in ChatSidebar
+- **perf(store):** 3 new Zustand selectors — useSelectConversation, useCheckBackend, useBackendStatus
+- **perf(store):** Replaced bare useAppStore() in Sidebar, EvaluationPanel, SettingsModal, useAppViewModel
+- **test:** Selector test coverage (+4 tests)
+
+#### Test Baseline
+
+- 903 tests across 93 suites (all passing, 89.49s)
+
 ## [9.6.0] — 2026-05-04
 
 ### M5 — Writing Experience & Quality
