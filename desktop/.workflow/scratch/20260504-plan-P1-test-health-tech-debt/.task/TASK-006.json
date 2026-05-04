@@ -1,0 +1,17 @@
+{
+  "id": "TASK-006",
+  "wave": 3,
+  "title": "Add integration test for chat send → stream → render pipeline",
+  "action": "Create integration test verifying useChatStreaming hook + ChatArea + MessageBubble end-to-end with mock gateway",
+  "files": ["src/hooks/useChatStreaming.integration.test.tsx"],
+  "read_first": ["src/hooks/useChatStreaming.ts", "src/hooks/useChatStreaming.test.tsx", "src/components/ChatArea.tsx", "src/components/MessageBubble.tsx"],
+  "convergence": {
+    "criteria": [
+      "test file src/hooks/useChatStreaming.integration.test.tsx exists",
+      "npx vitest run src/hooks/useChatStreaming.integration.test.tsx — all tests pass",
+      "test covers: send message → receive stream chunks → render complete message"
+    ]
+  },
+  "implementation": "Create new integration test file. Test flow: (1) Render ChatArea with test wrapper and store provider, (2) Mock chatStream to return chunked response, (3) Trigger message send, (4) Assert streaming state transitions (loading → streaming → complete), (5) Assert MessageBubble renders final content. Follow existing test patterns from useChatStreaming.test.tsx for mocking.",
+  "status": "completed"
+}

@@ -1,0 +1,107 @@
+{
+  "id": "TASK-016",
+  "title": "Focus Mode (Distraction-Free Writing)",
+  "description": "Implement focus mode that hides sidebar and panels, expanding the editor to full width with smooth transitions",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create src/stores/uiSlice.ts with: State type { focusMode: boolean }, Actions type { toggleFocusMode: () => void; setFocusMode: (on: boolean) => void }. Use create*Slice pattern from existing slices (see backendSlice.ts). Add uiSlice to appStore.ts following the existing slice composition pattern. Add focus mode toggle button (keyboard icon or expand icon) in the editor area header. Add global keydown listener for Escape key that calls setFocusMode(false). When focusMode is true: add CSS class 'focus-mode' to the main layout container that hides sidebar and intelligence panels via Tailwind responsive utilities (hidden class). Add transition-all duration-300 for smooth animation. On entering focus mode, remember panel states; on exiting, restore them.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src/stores/, src/components/",
+  "focus_paths": ["src/stores/uiSlice.ts", "src/stores/appStore.ts"],
+  "read_first": [
+    "src/stores/appStore.ts",
+    "src/stores/app/backendSlice.ts",
+    "src/stores/shared.ts",
+    "src/components/NikoEditor.tsx"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": 1,
+  "execution_group": "wave1",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/stores/uiSlice.ts exists and contains 'focusMode'",
+      "src/stores/uiSlice.ts contains 'toggleFocusMode'",
+      "appStore.ts contains 'createUiSlice' or 'uiSlice'",
+      "grep -r 'focusMode' src/ returns at least 3 file matches",
+      "npx vitest run exits 0"
+    ],
+    "verification": "Run npx vitest run. Verify uiSlice test passes. Check that focusMode toggle can be called from components.",
+    "definition_of_done": "Focus mode can be toggled via store action, Escape key exits focus mode, sidebar and panels hide when active"
+  },
+  "files": [
+    {
+      "path": "src/stores/uiSlice.ts",
+      "action": "create",
+      "target": "uiSlice",
+      "change": "New Zustand slice with focusMode: boolean (default false), toggleFocusMode action, setFocusMode(boolean) action"
+    },
+    {
+      "path": "src/stores/appStore.ts",
+      "action": "modify",
+      "target": "AppState type and store creation",
+      "change": "Import createUiSlice from ./uiSlice, add UiSlice to AppState type, add createUiSlice to store creation"
+    },
+    {
+      "path": "src/components/NikoEditor.tsx",
+      "action": "modify",
+      "target": "Editor container",
+      "change": "Add useEffect for Escape key listener when focusMode is active. Add focus mode toggle button in editor header area."
+    }
+  ],
+  "implementation": [
+    "Create src/stores/uiSlice.ts following the pattern in src/stores/app/backendSlice.ts",
+    "Define UiSliceState { focusMode: boolean }",
+    "Define UiSliceActions { toggleFocusMode: () => void; setFocusMode: (on: boolean) => void }",
+    "Export createUiSlice as StateCreator<AppState, [], [], UiSliceState & UiSliceActions>",
+    "In appStore.ts: import createUiSlice, add UiSlice to AppState intersection type, add createUiSlice to store creation",
+    "In the main editor layout component: use useAppStore(s => s.focusMode) to conditionally hide sidebar/panels",
+    "Add a toggle button (keyboard shortcut F11 or button with Maximize2 icon) in the editor area",
+    "Add useEffect with document.addEventListener('keydown') for Escape key → setFocusMode(false)",
+    "Add 'focus-mode' CSS handling: when focusMode is true, add className to hide sidebar and panels with transition",
+    "Run: npx vitest run to verify no regressions"
+  ],
+  "test": {
+    "commands": ["npx vitest run"],
+    "unit": [
+      "uiSlice: initial state has focusMode false",
+      "uiSlice: toggleFocusMode toggles focusMode boolean",
+      "uiSlice: setFocusMode(true) sets focusMode to true",
+      "uiSlice: setFocusMode(false) sets focusMode to false"
+    ],
+    "integration": [],
+    "success_metrics": ["All 891+ tests pass", "No TypeScript compilation errors"]
+  },
+  "reference": {
+    "pattern": "Zustand slice pattern from backendSlice.ts",
+    "files": ["src/stores/app/backendSlice.ts", "src/stores/appStore.ts", "src/stores/shared.ts"],
+    "examples": "See createBackendSlice for the exact slice creation pattern"
+  },
+  "rationale": {
+    "chosen_approach": "Zustand slice for global state, Escape key for exit, CSS transitions for smooth UX",
+    "decision_factors": ["Locked decision: focus mode in Zustand store (context.md #3)", "Global layout state needs cross-component access", "Escape key is standard for exiting modes"],
+    "tradeoffs": "Adds global keydown listener — must be cleaned up on unmount"
+  },
+  "risks": [
+    "Focus mode state conflicts with panel open/close — mitigated by remembering panel states on enter, restoring on exit"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["Editor Layout", "UI State"],
+    "affected_components": ["appStore", "NikoEditor", "Layout Container"],
+    "affected_requirements": ["M5 Phase 2: Focus mode"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "60min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

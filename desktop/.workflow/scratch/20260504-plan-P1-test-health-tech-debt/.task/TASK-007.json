@@ -1,0 +1,17 @@
+{
+  "id": "TASK-007",
+  "wave": 3,
+  "title": "Add integration test for knowledge entity search flow",
+  "action": "Create integration test verifying PersistedEntityTab → knowledge API → store → render with mock backend",
+  "files": ["src/api/knowledge.integration.test.ts"],
+  "read_first": ["src/api/knowledge.ts", "src/components/knowledge/PersistedEntityTab.tsx", "src/stores/knowledgeStore.ts"],
+  "convergence": {
+    "criteria": [
+      "test file src/api/knowledge.integration.test.ts exists",
+      "npx vitest run src/api/knowledge.integration.test.ts — all tests pass",
+      "test covers: search query → API call → store update → result render"
+    ]
+  },
+  "implementation": "Create new integration test. Test flow: (1) Mock knowledge API endpoints (searchEntities, getCharacters), (2) Call searchEntities with query, (3) Assert response parsing and error handling, (4) Verify store receives and normalizes results. Follow existing test patterns from analysis.test.ts for API mocking.",
+  "status": "completed"
+}

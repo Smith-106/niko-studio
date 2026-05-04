@@ -1,0 +1,15 @@
+{
+  "id": "TASK-005",
+  "wave": 2,
+  "title": "Run full anti-pattern scan on src/",
+  "action": "Scan entire src/ directory for TODO, FIXME, HACK, XXX markers. Document or resolve any new findings beyond the 3 known TODOs already fixed.",
+  "files": [],
+  "read_first": [],
+  "convergence": {
+    "criteria": [
+      "grep -rc 'TODO\\|FIXME\\|HACK\\|XXX' src/ — if count > 0, each finding documented with justification"
+    ]
+  },
+  "implementation": "Run grep -rn 'TODO\\|FIXME\\|HACK\\|XXX' src/ after Wave 1 fixes are applied. Known items resolved by TASK-001 and TASK-003. For any new findings: if trivial, fix inline; if substantial, document in plan summary with justification for deferral.",
+  "status": "completed"
+}

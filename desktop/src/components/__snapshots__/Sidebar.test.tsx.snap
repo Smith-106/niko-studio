@@ -245,6 +245,207 @@ exports[`Sidebar > matches snapshot 1`] = `
     </button>
   </div>
   <div
+    class="px-3 pt-2 pb-1"
+  >
+    <div
+      class="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2"
+    >
+      Writer Intelligence
+    </div>
+  </div>
+  <div
+    class="border-t border-dark-border p-3 space-y-0.5 shrink-0"
+  >
+    <button
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      title="Foreshadowing"
+      type="button"
+    >
+      <svg
+        class="lucide lucide-eye "
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="18"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+      >
+        Foreshadowing
+      </span>
+    </button>
+    <button
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      title="Patterns"
+      type="button"
+    >
+      <svg
+        class="lucide lucide-layout-grid "
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="18"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect
+          height="7"
+          rx="1"
+          width="7"
+          x="3"
+          y="3"
+        />
+        <rect
+          height="7"
+          rx="1"
+          width="7"
+          x="14"
+          y="3"
+        />
+        <rect
+          height="7"
+          rx="1"
+          width="7"
+          x="14"
+          y="14"
+        />
+        <rect
+          height="7"
+          rx="1"
+          width="7"
+          x="3"
+          y="14"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+      >
+        Patterns
+      </span>
+    </button>
+    <button
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      title="Analytics"
+      type="button"
+    >
+      <svg
+        class="lucide lucide-pie-chart "
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="18"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M21.21 15.89A10 10 0 1 1 8 2.83"
+        />
+        <path
+          d="M22 12A10 10 0 0 0 12 2v10z"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+      >
+        Analytics
+      </span>
+    </button>
+    <button
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      title="Evaluation"
+      type="button"
+    >
+      <svg
+        class="lucide lucide-scaling "
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="18"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+        />
+        <path
+          d="M14 15H9v-5"
+        />
+        <path
+          d="M16 3h5v5"
+        />
+        <path
+          d="M21 3 9 15"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+      >
+        Evaluation
+      </span>
+    </button>
+    <button
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      title="Characters"
+      type="button"
+    >
+      <svg
+        class="lucide lucide-users "
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="18"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+        />
+        <circle
+          cx="9"
+          cy="7"
+          r="4"
+        />
+        <path
+          d="M22 21v-2a4 4 0 0 0-3-3.87"
+        />
+        <path
+          d="M16 3.13a4 4 0 0 1 0 7.75"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+      >
+        Characters
+      </span>
+    </button>
+  </div>
+  <div
     class="border-t border-dark-border p-3 flex flex-wrap gap-2 shrink-0 bg-dark-bg"
   >
     <button

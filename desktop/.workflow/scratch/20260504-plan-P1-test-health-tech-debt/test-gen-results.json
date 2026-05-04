@@ -1,0 +1,30 @@
+{
+  "generator": "quality-test-gen",
+  "milestone": "M5",
+  "phase": 1,
+  "plan_path": ".workflow/scratch/20260504-plan-P1-test-health-tech-debt",
+  "generated_at": "2026-05-04T06:22:00.000Z",
+  "assessment": "existing_coverage_sufficient",
+  "summary": "No additional tests generated. All modified files have comprehensive unit + integration coverage already.",
+  "coverage_map": [
+    {
+      "source_file": "src/hooks/useChatStreaming.ts",
+      "unit_tests": "src/hooks/useChatStreaming.test.tsx (10 tests)",
+      "integration_tests": "src/hooks/useChatStreaming.integration.test.tsx (5 tests)",
+      "coverage": "full — happy path, error, retry, abort, fallback"
+    },
+    {
+      "source_file": "src/api/knowledge.ts",
+      "unit_tests": "src/api/knowledge.test.ts (14 tests)",
+      "integration_tests": "src/api/knowledge.integration.test.ts (4 tests)",
+      "coverage": "full — search, character, graph, temporal, memory add, partial failure"
+    },
+    {
+      "source_file": "src/api/analysis.ts",
+      "unit_tests": "src/api/analysis.test.ts (6 tests)",
+      "integration_tests": null,
+      "coverage": "sufficient — pattern detection, session clustering, error propagation"
+    }
+  ],
+  "generated_files": []
+}

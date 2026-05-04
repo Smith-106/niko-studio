@@ -1,0 +1,15 @@
+{
+  "id": "TASK-004",
+  "wave": 2,
+  "title": "Resolve useChatStreaming.ts TODO marker",
+  "action": "Verify TODO at line 174 is resolved by TASK-001 (same code block). If any remaining TODO comment exists, remove it.",
+  "files": ["src/hooks/useChatStreaming.ts"],
+  "read_first": ["src/hooks/useChatStreaming.ts"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'TODO\\|FIXME\\|HACK\\|XXX' src/hooks/useChatStreaming.ts — count == 0"
+    ]
+  },
+  "implementation": "After TASK-001 uncomments the retry block, verify no TODO/FIXME/HACK/XXX markers remain in useChatStreaming.ts. If the '// TODO' comment at line 174 was part of the commented-out block, it should be gone. If any standalone TODO comments remain, remove them.",
+  "status": "completed"
+}

@@ -1,0 +1,54 @@
+{
+  "artifact_id": "BIZ-TEST-001",
+  "milestone": "M5",
+  "phase": 1,
+  "plan_path": ".workflow/scratch/20260504-plan-P1-test-health-tech-debt",
+  "executed_at": "2026-05-04T06:17:00.000Z",
+  "passed": true,
+  "summary": "All 891 tests across 92 files pass. Business-critical flows verified: chat streaming (retry logic), knowledge search, analysis pipeline, sidebar navigation.",
+  "critical_paths": [
+    {
+      "path": "Chat streaming with retry logic",
+      "files": ["src/hooks/useChatStreaming.ts", "src/hooks/useChatStreaming.test.tsx", "src/hooks/useChatStreaming.integration.test.tsx"],
+      "tests": 15,
+      "status": "pass"
+    },
+    {
+      "path": "Knowledge entity search",
+      "files": ["src/api/knowledge.ts", "src/api/knowledge.test.ts", "src/api/knowledge.integration.test.ts"],
+      "tests": 18,
+      "status": "pass"
+    },
+    {
+      "path": "Analysis pipeline",
+      "files": ["src/api/analysis.ts", "src/api/analysis.test.ts"],
+      "tests": 6,
+      "status": "pass"
+    },
+    {
+      "path": "Agent management",
+      "files": ["src/api/agents.ts", "src/api/agents.test.ts"],
+      "tests": 12,
+      "status": "pass"
+    },
+    {
+      "path": "Chat API",
+      "files": ["src/api/chat.ts", "src/api/chat.test.ts"],
+      "tests": 23,
+      "status": "pass"
+    },
+    {
+      "path": "Sidebar navigation",
+      "files": ["src/components/Sidebar.test.tsx"],
+      "tests": 15,
+      "status": "pass"
+    }
+  ],
+  "full_suite": {
+    "files": 92,
+    "tests": 891,
+    "passed": 891,
+    "failed": 0
+  },
+  "failures": []
+}

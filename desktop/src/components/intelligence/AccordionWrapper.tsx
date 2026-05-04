@@ -36,6 +36,8 @@ export const AccordionWrapper: React.FC<AccordionWrapperProps> = ({ items, mode 
             <button
               onClick={() => toggle(item.id)}
               className="w-full flex justify-between items-center py-2 text-left"
+              aria-expanded={isExpanded}
+              aria-controls={`accordion-content-${item.id}`}
             >
               {item.header}
               <ChevronDown
@@ -44,6 +46,8 @@ export const AccordionWrapper: React.FC<AccordionWrapperProps> = ({ items, mode 
               />
             </button>
             <div
+              id={`accordion-content-${item.id}`}
+              role="region"
               className="overflow-hidden transition-all duration-150 ease-in-out"
               style={{ maxHeight: isExpanded ? '1000px' : '0' }}
             >

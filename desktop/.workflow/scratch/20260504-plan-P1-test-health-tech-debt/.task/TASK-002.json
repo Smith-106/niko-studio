@@ -1,0 +1,15 @@
+{
+  "id": "TASK-002",
+  "wave": 1,
+  "title": "Update Sidebar snapshot",
+  "action": "Update Sidebar.test.tsx snapshot to reflect M4 additions (Characters button with SVG icon)",
+  "files": ["src/components/__snapshots__/Sidebar.test.tsx.snap"],
+  "read_first": ["src/components/Sidebar.test.tsx", "src/components/Sidebar.tsx"],
+  "convergence": {
+    "criteria": [
+      "npx vitest run src/components/Sidebar.test.tsx — all 15 tests pass"
+    ]
+  },
+  "implementation": "Run vitest -u src/components/Sidebar.test.tsx to update the snapshot. The diff is expected: M4 added CharacterRelationships panel trigger button (Characters label + SVG icon). No code changes needed — snapshot only.",
+  "status": "completed"
+}

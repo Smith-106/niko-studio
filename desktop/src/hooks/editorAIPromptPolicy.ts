@@ -1,7 +1,7 @@
 import type { Language } from '../i18n'
 
 export type EditorAIGenerateAction = 'generate' | 'full-article'
-export type EditorAIRewriteVariant = 'polish' | 'simplify' | 'expand' | 'formal' | 'casual'
+export type EditorAIRewriteVariant = 'polish' | 'simplify' | 'expand' | 'formal' | 'casual' | 'summarize'
 
 export type EditorAIRequest =
   | { action: EditorAIGenerateAction }
@@ -14,6 +14,7 @@ type RewriteLabelKey =
   | 'editorBubbleExpand'
   | 'editorBubbleFormal'
   | 'editorBubbleCasual'
+  | 'editorBubbleSummarize'
 
 export interface EditorAIRewriteOption {
   id: EditorAIRewriteVariant
@@ -51,6 +52,7 @@ const REWRITE_OPTIONS: EditorAIRewriteOption[] = [
   { id: 'expand', labelKey: 'editorBubbleExpand' },
   { id: 'formal', labelKey: 'editorBubbleFormal' },
   { id: 'casual', labelKey: 'editorBubbleCasual' },
+  { id: 'summarize', labelKey: 'editorBubbleSummarize' },
 ]
 
 const PROMPT_CATALOG: Record<Language, PromptCatalog> = {
@@ -65,6 +67,7 @@ const PROMPT_CATALOG: Record<Language, PromptCatalog> = {
       expand: '扩写选中文本，增加细节和深度。',
       formal: '将选中文本改写为正式书面风格。',
       casual: '将选中文本改写为口语化风格。',
+      summarize: '精炼总结选中文本的核心要点。',
     },
     continueInstruction: '请续写以下内容，保持风格和语气一致。',
     rewriteLead: '请根据以下要求改写文本。',
@@ -85,6 +88,7 @@ const PROMPT_CATALOG: Record<Language, PromptCatalog> = {
       expand: 'Expand the selected text with more detail and depth.',
       formal: 'Rewrite the selected text in a formal written style.',
       casual: 'Rewrite the selected text in a casual conversational style.',
+      summarize: 'Summarize the selected text into its key points concisely.',
     },
     continueInstruction: 'Continue the following text while keeping the style and tone consistent.',
     rewriteLead: 'Rewrite the text according to the following requirement.',

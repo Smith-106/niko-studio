@@ -11,6 +11,7 @@ import {
   type MessageComparisonItem,
 } from './app/shared'
 import { createWorkspaceSlice, type WorkspaceSlice } from './app/workspaceSlice'
+import { createUiSlice, type UiSlice } from './uiSlice'
 
 export type {
   Conversation,
@@ -25,6 +26,7 @@ export type AppState =
   & ConversationSlice
   & SkillsSlice
   & LoadingSlice
+  & UiSlice
 
 export type AppSlice<T> = StateCreator<AppState, [], [], T>
 
@@ -39,4 +41,5 @@ export const useAppStore = create<AppState>()((...args) => ({
   ...createConversationSlice(...args),
   ...createSkillsSlice(...args),
   ...createLoadingSlice(...args),
+  ...createUiSlice(...args),
 }))

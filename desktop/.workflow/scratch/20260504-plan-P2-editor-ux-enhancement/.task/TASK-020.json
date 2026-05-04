@@ -1,0 +1,104 @@
+{
+  "id": "TASK-020",
+  "title": "Phase 2 Regression Test Suite",
+  "description": "Write comprehensive tests for all Phase 2 features to maintain test coverage above current baseline",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "test",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Write tests for Phase 2 features: (1) AppContextFooter.test.tsx — renders word count and reading time, hides when 0. (2) uiSlice.test.ts — initial state, toggleFocusMode, setFocusMode, updateWordMetrics. (3) Update BubbleToolbar.test.tsx — verify summarize option renders, verify role='toolbar'. (4) AccordionWrapper test — verify aria-expanded, aria-controls, role='region'. Run full test suite to confirm all pass with zero regressions.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src/",
+  "focus_paths": ["src/components/AppContextFooter.test.tsx", "src/stores/uiSlice.test.ts"],
+  "read_first": [
+    "src/components/AppContextFooter.tsx",
+    "src/stores/uiSlice.ts",
+    "src/components/editor/BubbleToolbar.test.tsx",
+    "src/hooks/editorAIPromptPolicy.ts",
+    "src/components/intelligence/AccordionWrapper.tsx"
+  ],
+  "depends_on": ["TASK-015", "TASK-016", "TASK-017", "TASK-018", "TASK-019"],
+  "wave": 3,
+  "parallel_group": null,
+  "execution_group": "wave3",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src/components/AppContextFooter.test.tsx exists",
+      "src/stores/uiSlice.test.ts exists",
+      "AppContextFooter.test.tsx contains 'wordCount'",
+      "uiSlice.test.ts contains 'toggleFocusMode'",
+      "BubbleToolbar.test.tsx contains 'summarize'",
+      "npx vitest run exits 0 with all tests passing"
+    ],
+    "verification": "Run npx vitest run and verify all tests pass (891+ baseline + new Phase 2 tests)",
+    "definition_of_done": "All Phase 2 features have test coverage, full test suite passes with zero failures"
+  },
+  "files": [
+    {
+      "path": "src/components/AppContextFooter.test.tsx",
+      "action": "create",
+      "target": "AppContextFooter tests",
+      "change": "New test file: render with wordCount prop, render with readingTime, hide when wordCount is 0"
+    },
+    {
+      "path": "src/stores/uiSlice.test.ts",
+      "action": "create",
+      "target": "uiSlice tests",
+      "change": "New test file: initial state, toggle, setFocusMode, updateWordMetrics"
+    },
+    {
+      "path": "src/components/editor/BubbleToolbar.test.tsx",
+      "action": "modify",
+      "target": "Add summarize tests",
+      "change": "Add test for summarize option rendering, verify role='toolbar' attribute"
+    }
+  ],
+  "implementation": [
+    "Create src/components/AppContextFooter.test.tsx: test render with contextEstimatedText only, render with wordCount+readingTime, hides word count when 0",
+    "Create src/stores/uiSlice.test.ts: test initial focusMode=false, toggleFocusMode, setFocusMode(true/false), updateWordMetrics",
+    "Update src/components/editor/BubbleToolbar.test.tsx: add test that summarize option is available, test role='toolbar' attribute",
+    "If AccordionWrapper.test.tsx doesn't exist, create it: test aria-expanded, aria-controls, role='region'",
+    "Run: npx vitest run to verify all tests pass including new ones",
+    "Verify total test count is > 891 (baseline) + new Phase 2 tests"
+  ],
+  "test": {
+    "commands": ["npx vitest run"],
+    "unit": [
+      "AppContextFooter word count display",
+      "uiSlice focus mode toggle",
+      "uiSlice word metrics update",
+      "BubbleToolbar summarize option",
+      "AccordionWrapper ARIA attributes"
+    ],
+    "integration": [],
+    "success_metrics": ["All tests pass", "Test count > 891", "No TypeScript compilation errors"]
+  },
+  "reference": {
+    "pattern": "Vitest + @testing-library/react test patterns used in existing test files",
+    "files": ["src/components/editor/BubbleToolbar.test.tsx"],
+    "examples": "See existing BubbleToolbar.test.tsx for test structure and patterns"
+  },
+  "rationale": {
+    "chosen_approach": "Write tests after all features are implemented to test integration correctness",
+    "decision_factors": ["Wave 3 depends on all features being complete", "Tests verify both individual features and cross-cutting concerns", "Baseline of 891 tests must be maintained"],
+    "tradeoffs": "Testing after implementation risks missing edge cases — mitigated by comprehensive convergence criteria in each task"
+  },
+  "risks": [],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["All Phase 2 features"],
+    "affected_components": ["AppContextFooter", "uiSlice", "BubbleToolbar", "AccordionWrapper"],
+    "affected_requirements": ["M5 Phase 2: Test coverage"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

@@ -24,6 +24,7 @@ const rewriteOptions = [
   { id: 'expand', labelKey: 'editorBubbleExpand' },
   { id: 'formal', labelKey: 'editorBubbleFormal' },
   { id: 'casual', labelKey: 'editorBubbleCasual' },
+  { id: 'summarize', labelKey: 'editorBubbleSummarize' },
 ] as const satisfies ReadonlyArray<Pick<EditorAIRewriteOption, 'id' | 'labelKey'>>
 
 function createEditorStub(): Editor {

@@ -53,6 +53,8 @@ export function BubbleToolbar({ editor, position, onRewrite, onContinue, onClose
 
   return (
     <div
+      role="toolbar"
+      aria-label={t.editorBubbleRewrite}
       className="fixed z-50 flex items-center gap-0.5 px-1 py-1 rounded-lg bg-gray-900 dark:bg-dark-surface shadow-2xl border border-gray-700 dark:border-dark-border"
       style={{ left: position.x - 100, top: position.y - 52 }}
     >

@@ -11,6 +11,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Typography from '@tiptap/extension-typography'
+import CharacterCount from '@tiptap/extension-character-count'
 import { SlashCommandMenu, type SlashMenuItem } from './editor/SlashCommandMenu'
 import { BubbleToolbar, type RewriteOption } from './editor/BubbleToolbar'
 import { insertPlainText, replaceRange } from './editor/streamToEditor'
@@ -18,6 +19,7 @@ import { useEditorAI } from '../hooks/useEditorAI'
 import { useI18n, type Language } from '../i18n'
 import { setEditorHandle, type EditorHandle, type EditorSelectionSnapshot } from '../utils/editorHandle'
 import { getPersistedStyleRequirements } from './editor/WritingStyle'
+import { useAppStore } from '../stores/appStore'
 import {
   buildEditorAIStyleInstruction,
   getEditorActionInstruction,
@@ -90,6 +92,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       }),
       TextStyle,
       Typography,
+      CharacterCount,
     ],
     content: initialContent ?? '',
     editorProps: {
@@ -135,6 +138,11 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       const json = ed.getJSON()
       const text = ed.getText()
       onUpdate?.(json, text)
+
+      const charCount = ed.storage.characterCount?.characters() ?? text.length
+      const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0
+      const readingTime = wordCount / 300
+      useAppStore.getState().updateWordMetrics({ wordCount, charCount, readingTime })
 
       // Update slash command query (read from ref to get latest)
       const currentSlash = slashRef.current

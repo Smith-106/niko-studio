@@ -1,0 +1,62 @@
+{
+  "summary": "M5 Phase 1: Fix 3 pre-existing test failures, resolve 3 TODO markers, add 2 integration tests",
+  "approach": "3-wave execution: Wave 1 fixes all test failures and TODOs (uncomment retry logic, update snapshot, uncomment assertions), Wave 2 runs anti-pattern scan, Wave 3 adds integration tests for chat pipeline and knowledge entity search.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007"],
+  "task_count": 7,
+  "complexity": "low",
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Test Failure Fixes",
+      "description": "Fix all 3 pre-existing test failures: uncomment retry logic, update snapshot, uncomment assertions",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"],
+      "parallel": true
+    },
+    {
+      "wave": 2,
+      "label": "Code Quality",
+      "description": "Anti-pattern scan and TODO resolution verification",
+      "tasks": ["TASK-004", "TASK-005"],
+      "parallel": true
+    },
+    {
+      "wave": 3,
+      "label": "Integration Tests",
+      "description": "Add integration tests for chat pipeline and knowledge entity search",
+      "tasks": ["TASK-006", "TASK-007"],
+      "parallel": true
+    }
+  ],
+  "data_flow": {
+    "files_modified": {
+      "useChatStreaming": "src/hooks/useChatStreaming.ts — uncomment StreamErrorPayload, isStreamErrorPayload, retry block",
+      "analysis_test": "src/api/analysis.test.ts — uncomment assertions",
+      "sidebar_snapshot": "src/components/__snapshots__/Sidebar.test.tsx.snap — update"
+    },
+    "new_files": {
+      "chat_integration_test": "src/hooks/useChatStreaming.integration.test.tsx",
+      "knowledge_integration_test": "src/api/knowledge.integration.test.ts"
+    }
+  },
+  "design_decisions": [
+    "Uncomment existing retry logic rather than rewriting — the code was designed and tested, just disabled",
+    "Snapshot update is correct — M4 legitimately changed Sidebar rendering",
+    "TASK-001 resolves both test failures (tests 8 & 9) AND the TODO marker at line 174 in one change",
+    "Integration tests use mock gateway — no real backend calls",
+    "Anti-pattern scan covers full src/ directory"
+  ],
+  "shared_context": {
+    "analysis_ref": "scratch/analyze-m5-phase1-test-health-20260504",
+    "locked_decisions": 4,
+    "free_decisions": 3,
+    "deferred_items": 3
+  },
+  "_metadata": {
+    "milestone": "M5",
+    "scope": "phase",
+    "phase": 1,
+    "created": "2026-05-04T05:15:00.000Z",
+    "created_by": "maestro-plan",
+    "depends_on": ["ANL-005"]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "summary": "M5 Phase 2: Editor & UX Enhancement — word count, focus mode, AI inline actions, keyboard navigation, responsive layout, live metrics",
+  "approach": "Three-wave parallel execution. Wave 1: independent feature implementations (word count, focus mode, AI toolbar). Wave 2: cross-cutting polish (keyboard nav + ARIA, responsive + metrics). Wave 3: regression test suite covering all Phase 2 features.",
+  "task_ids": ["TASK-015", "TASK-016", "TASK-017", "TASK-018", "TASK-019", "TASK-020"],
+  "task_count": 6,
+  "complexity": "medium",
+  "estimated_time": "4-6h",
+  "recommended_execution": "Agent",
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-015", "TASK-016", "TASK-017"],
+      "label": "Core Features"
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-018", "TASK-019"],
+      "label": "Cross-cutting Polish"
+    },
+    {
+      "wave": 3,
+      "tasks": ["TASK-020"],
+      "label": "Regression Coverage"
+    }
+  ],
+  "data_flow": {
+    "diagram": "NikoEditor.onUpdate → wordStats → AppContextFooter + SessionAnalytics | uiSlice.focusMode → layout components | editorAIPromptPolicy → BubbleToolbar",
+    "stages": [
+      {"stage": "editor-events", "outputs": ["wordStats", "editorContent"]},
+      {"stage": "store-state", "outputs": ["focusMode", "wordMetrics"]},
+      {"stage": "ui-render", "outputs": ["AppContextFooter", "SessionAnalyticsPanel", "BubbleToolbar"]}
+    ]
+  },
+  "design_decisions": [
+    {"decision": "Focus mode in Zustand uiSlice", "rationale": "Global layout state needs cross-component access"},
+    {"decision": "Word stats via onUpdate callback", "rationale": "TipTap CharacterCount extension provides built-in stats"},
+    {"decision": "Summarize as rewrite variant", "rationale": "Reuses existing AI pipeline in editorAIPromptPolicy"}
+  ],
+  "shared_context": {
+    "patterns": [
+      "Zustand slice pattern: create*Slice function returning StateCreator",
+      "TipTap extension config in useEditor extensions array",
+      "AI actions via useEditorAI hook + editorAIPromptPolicy"
+    ],
+    "conventions": [
+      "React.memo for presentational components",
+      "Tailwind utility classes for styling",
+      "Vitest + @testing-library/react for tests"
+    ],
+    "dependencies": [
+      "@tiptap/extension-character-count@^3.22.0",
+      "zustand",
+      "@tiptap/react@^3.22.0"
+    ]
+  },
+  "_metadata": {
+    "timestamp": "2026-05-04T06:36:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": "d91aadd"
+  }
+}

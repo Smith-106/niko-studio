@@ -1,0 +1,118 @@
+{
+  "id": "TASK-018",
+  "title": "Panel Keyboard Navigation & ARIA Fix",
+  "description": "Implement keyboard navigation (Tab/Shift+Tab/Escape/Enter) across intelligence panels and fix AccordionWrapper ARIA attributes from M4 debt",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Fix AccordionWrapper.tsx first: add aria-expanded attribute to accordion triggers, add aria-controls linking trigger to panel content div, add id attributes to panel content divs matching aria-controls, add role='region' to accordion panel content areas. Then implement keyboard navigation for the panel container: use roving tabindex pattern where Tab moves focus between panels, Shift+Tab moves backward, Escape closes the currently focused panel, Enter/Space activates the panel's primary action. Add tabIndex={0} to each panel wrapper when it's the active panel in the roving sequence, tabIndex={-1} for inactive panels.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src/components/intelligence/",
+  "focus_paths": ["src/components/intelligence/AccordionWrapper.tsx", "src/components/intelligence/SessionAnalyticsPanel.tsx"],
+  "read_first": [
+    "src/components/intelligence/AccordionWrapper.tsx",
+    "src/components/intelligence/SessionAnalyticsPanel.tsx",
+    "src/components/intelligence/CharacterRelationshipsPanel.tsx",
+    "src/components/intelligence/ForeshadowingTrackerPanel.tsx",
+    "src/components/intelligence/PatternDashboardPanel.tsx"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": 2,
+  "execution_group": "wave2",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "AccordionWrapper.tsx contains 'aria-expanded'",
+      "AccordionWrapper.tsx contains 'aria-controls'",
+      "AccordionWrapper.tsx contains \"role='region'\" or 'role=\"region\"'",
+      "At least one intelligence panel file contains 'tabIndex'",
+      "At least one intelligence panel file contains 'onKeyDown'",
+      "npx vitest run exits 0"
+    ],
+    "verification": "Run npx vitest run. Verify ARIA attributes in AccordionWrapper. Check keyboard event handlers in panels.",
+    "definition_of_done": "AccordionWrapper has proper ARIA attributes, panels support Tab/Shift+Tab/Escape keyboard navigation"
+  },
+  "files": [
+    {
+      "path": "src/components/intelligence/AccordionWrapper.tsx",
+      "action": "modify",
+      "target": "Accordion trigger and content elements",
+      "change": "Add aria-expanded={isOpen} to trigger button, aria-controls={panelId} to trigger, id={panelId} and role='region' to content div"
+    },
+    {
+      "path": "src/components/intelligence/SessionAnalyticsPanel.tsx",
+      "action": "modify",
+      "target": "Panel wrapper",
+      "change": "Add tabIndex handling and onKeyDown for roving tabindex navigation"
+    },
+    {
+      "path": "src/components/intelligence/CharacterRelationshipsPanel.tsx",
+      "action": "modify",
+      "target": "Panel wrapper",
+      "change": "Add tabIndex handling and onKeyDown for roving tabindex navigation"
+    },
+    {
+      "path": "src/components/intelligence/ForeshadowingTrackerPanel.tsx",
+      "action": "modify",
+      "target": "Panel wrapper",
+      "change": "Add tabIndex handling and onKeyDown for roving tabindex navigation"
+    },
+    {
+      "path": "src/components/intelligence/PatternDashboardPanel.tsx",
+      "action": "modify",
+      "target": "Panel wrapper",
+      "change": "Add tabIndex handling and onKeyDown for roving tabindex navigation"
+    }
+  ],
+  "implementation": [
+    "In AccordionWrapper.tsx: generate unique panelId using React.useId(): const panelId = `accordion-panel-${useId()}`",
+    "In AccordionWrapper.tsx trigger: add aria-expanded={isOpen}, aria-controls={panelId}",
+    "In AccordionWrapper.tsx content: add id={panelId}, role='region', aria-labelledby={triggerId}",
+    "For each intelligence panel: add tabIndex={isActive ? 0 : -1} to outermost wrapper div",
+    "For each intelligence panel: add onKeyDown handler that handles Tab (focus next panel), Shift+Tab (focus prev), Escape (close panel)",
+    "Use a shared hook or utility if the keyboard handler is identical across panels",
+    "Run: npx vitest run to verify no regressions"
+  ],
+  "test": {
+    "commands": ["npx vitest run"],
+    "unit": [
+      "AccordionWrapper renders with aria-expanded matching open state",
+      "AccordionWrapper trigger has aria-controls matching content id",
+      "AccordionWrapper content has role='region'",
+      "Panel keyboard handler responds to Tab/Escape/Enter keys"
+    ],
+    "integration": [],
+    "success_metrics": ["All 891+ tests pass", "No TypeScript compilation errors"]
+  },
+  "reference": {
+    "pattern": "WAI-ARIA Accordion Pattern and roving tabindex",
+    "files": ["src/components/intelligence/AccordionWrapper.tsx"],
+    "examples": "Standard roving tabindex pattern with useRef for focus management"
+  },
+  "rationale": {
+    "chosen_approach": "Fix ARIA debt first (AccordionWrapper), then add keyboard navigation using roving tabindex",
+    "decision_factors": ["M4 TASK-010 ARIA debt acknowledged in analysis", "WCAG 2.1 AA target specified in context.md", "Standard keyboard nav pattern"],
+    "tradeoffs": "Roving tabindex requires managing focus state across dynamic panel list"
+  },
+  "risks": [
+    "Focus management across dynamically rendered panels requires careful useRef usage"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["Intelligence Panels", "Accessibility"],
+    "affected_components": ["AccordionWrapper", "All intelligence panels"],
+    "affected_requirements": ["M5 Phase 2: Keyboard navigation", "M4 TASK-010: ARIA attributes"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "60min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

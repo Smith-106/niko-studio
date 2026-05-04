@@ -1,0 +1,113 @@
+{
+  "plan_id": "PLN-012",
+  "plan_path": ".workflow/scratch/20260504-plan-P1-test-health-tech-debt",
+  "milestone": "M5",
+  "phase": 1,
+  "verified_at": "2026-05-04T06:15:00.000Z",
+  "verifier": "maestro-verify",
+  "passed": true,
+  "summary": "All 7 tasks verified. 891/891 tests pass. Anti-pattern scan clean. No gaps detected.",
+  "goal_backward": {
+    "layer_1_truths": {
+      "status": "pass",
+      "truths": [
+        {
+          "task": "TASK-001",
+          "criterion": "StreamErrorPayload interface used ≥2 times",
+          "evidence": "grep StreamErrorPayload → 4 matches in useChatStreaming.ts",
+          "status": "pass"
+        },
+        {
+          "task": "TASK-001",
+          "criterion": "isStreamErrorPayload guard used ≥2 times",
+          "evidence": "grep isStreamErrorPayload → 2 matches in useChatStreaming.ts",
+          "status": "pass"
+        },
+        {
+          "task": "TASK-001",
+          "criterion": "retries counter used ≥2 times",
+          "evidence": "grep retries → 4 matches in useChatStreaming.ts",
+          "status": "pass"
+        },
+        {
+          "task": "TASK-002",
+          "criterion": "Sidebar snapshot updated and passing",
+          "evidence": "Sidebar.test.tsx — 15 tests pass",
+          "status": "pass"
+        },
+        {
+          "task": "TASK-003",
+          "criterion": "Assertions uncommented in analysis.test.ts",
+          "evidence": "analysis.test.ts — 6 tests pass, no commented assertions remain",
+          "status": "pass"
+        },
+        {
+          "task": "TASK-004",
+          "criterion": "No TODO/FIXME/HACK/XXX in useChatStreaming.ts",
+          "evidence": "grep TODO|FIXME|HACK|XXX on file → 0 matches",
+          "status": "pass"
+        },
+        {
+          "task": "TASK-005",
+          "criterion": "No TODO/FIXME/HACK/XXX in src/",
+          "evidence": "grep TODO|FIXME|HACK|XXX on src/ → 0 matches",
+          "status": "pass"
+        },
+        {
+          "task": "TASK-006",
+          "criterion": "Integration test file exists with ≥5 tests",
+          "evidence": "useChatStreaming.integration.test.tsx — 5 tests pass",
+          "status": "pass"
+        },
+        {
+          "task": "TASK-007",
+          "criterion": "Integration test file exists with ≥4 tests",
+          "evidence": "knowledge.integration.test.ts — 4 tests pass",
+          "status": "pass"
+        }
+      ]
+    },
+    "layer_2_artifacts": {
+      "status": "pass",
+      "checks": [
+        {"artifact": "useChatStreaming.ts", "level": "L3_wired", "evidence": "retry logic wired into stream error handler, imports resolved"},
+        {"artifact": "useChatStreaming.integration.test.tsx", "level": "L2_substantive", "evidence": "5 integration tests covering stream lifecycle, error retry, interruption"},
+        {"artifact": "knowledge.integration.test.ts", "level": "L2_substantive", "evidence": "4 integration tests covering memory search, graph query, partial failures"},
+        {"artifact": "analysis.test.ts", "level": "L2_substantive", "evidence": "6 tests with uncommented assertions passing"},
+        {"artifact": "Sidebar.test.tsx", "level": "L2_substantive", "evidence": "15 tests passing with updated snapshot"}
+      ]
+    },
+    "layer_3_wiring": {
+      "status": "pass",
+      "checks": [
+        {"link": "StreamErrorPayload → stream error handler", "evidence": "interface used in catch block, guard function checks payload type"},
+        {"link": "retries → maxRetries → retry block", "evidence": "counter increments on error, conditionally retries up to maxRetries"},
+        {"link": "Integration tests → useChatStreaming hook", "evidence": "mock useSmoothStream + chatStream, verify hook behavior end-to-end"},
+        {"link": "Integration tests → knowledge API", "evidence": "mock callApi + workspace functions, verify multi-step search flows"}
+      ]
+    }
+  },
+  "anti_pattern_scan": {
+    "status": "pass",
+    "blockers": [],
+    "notes": [
+      "One pre-existing 'as any' in WritingHelperPanel.tsx:406 — not introduced by this phase",
+      "4 test files use 'as any' for mock typing — acceptable"
+    ]
+  },
+  "test_coverage": {
+    "status": "pass",
+    "affected_files_tested": [
+      {"file": "src/hooks/useChatStreaming.test.tsx", "tests": 10, "passed": 10},
+      {"file": "src/hooks/useChatStreaming.integration.test.tsx", "tests": 5, "passed": 5},
+      {"file": "src/api/analysis.test.ts", "tests": 6, "passed": 6},
+      {"file": "src/api/knowledge.integration.test.ts", "tests": 4, "passed": 4},
+      {"file": "src/components/Sidebar.test.tsx", "tests": 15, "passed": 15}
+    ],
+    "total_affected_tests": 40,
+    "total_passed": 40,
+    "full_suite": "891/891 pass"
+  },
+  "gaps": [],
+  "fix_plans": []
+}

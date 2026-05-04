@@ -22,6 +22,8 @@ describe('appStore', () => {
       availableSkills: DEFAULT_AVAILABLE_SKILLS.slice(0, 4),
       selectedSkills: [],
       loadingMap: {},
+      focusMode: false,
+      wordMetrics: { wordCount: 0, charCount: 0, readingTime: 0 },
     })
     vi.clearAllMocks()
   })

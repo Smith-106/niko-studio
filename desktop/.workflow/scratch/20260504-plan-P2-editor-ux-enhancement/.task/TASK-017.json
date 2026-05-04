@@ -1,0 +1,97 @@
+{
+  "id": "TASK-017",
+  "title": "AI Inline Actions Enhancement (Summarize)",
+  "description": "Add 'summarize' rewrite variant to the AI prompt policy and update BubbleToolbar with improved ARIA accessibility",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "In editorAIPromptPolicy.ts: Add 'summarize' to the EditorAIRewriteVariant union type ('polish' | 'simplify' | 'expand' | 'formal' | 'casual' | 'summarize'). Add a new RewriteLabelKey type for 'summarize'. Add { id: 'summarize', labelKey: 'summarize' } to the REWRITE_OPTIONS array. Add summarize rewriteInstructions in both zh and en PromptCatalogs with instructions: 'Condense the selected text to its core meaning, keeping key information while reducing word count by approximately 50%. Preserve the original tone and intent.' Add 'summarize' to the buildEditorAIPayload function's rewrite variant handling. In BubbleToolbar.tsx: Add role='toolbar' attribute to the toolbar container div. Add aria-label='Formatting toolbar' to the container. Ensure all buttons have aria-label attributes.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src/hooks/, src/components/editor/",
+  "focus_paths": ["src/hooks/editorAIPromptPolicy.ts", "src/components/editor/BubbleToolbar.tsx"],
+  "read_first": [
+    "src/hooks/editorAIPromptPolicy.ts",
+    "src/components/editor/BubbleToolbar.tsx",
+    "src/components/editor/BubbleToolbar.test.tsx"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": 1,
+  "execution_group": "wave1",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "editorAIPromptPolicy.ts contains 'summarize' in EditorAIRewriteVariant type",
+      "editorAIPromptPolicy.ts contains \"id: 'summarize'\" in REWRITE_OPTIONS",
+      "editorAIPromptPolicy.ts contains 'summarize' in zh PromptCatalog rewriteInstructions",
+      "editorAIPromptPolicy.ts contains 'summarize' in en PromptCatalog rewriteInstructions",
+      "BubbleToolbar.tsx contains 'role' and 'toolbar'",
+      "npx vitest run exits 0"
+    ],
+    "verification": "Run npx vitest run. Verify BubbleToolbar tests pass. Check that 'summarize' option appears in REWRITE_OPTIONS.",
+    "definition_of_done": "Summarize variant available as AI rewrite option, BubbleToolbar has proper ARIA role"
+  },
+  "files": [
+    {
+      "path": "src/hooks/editorAIPromptPolicy.ts",
+      "action": "modify",
+      "target": "EditorAIRewriteVariant type, REWRITE_OPTIONS, PromptCatalog",
+      "change": "Add 'summarize' to union type, add to REWRITE_OPTIONS array, add rewriteInstructions for summarize in zh and en catalogs"
+    },
+    {
+      "path": "src/components/editor/BubbleToolbar.tsx",
+      "action": "modify",
+      "target": "Toolbar container div",
+      "change": "Add role='toolbar' and aria-label='Formatting toolbar' to the main container div"
+    }
+  ],
+  "implementation": [
+    "In editorAIPromptPolicy.ts: add 'summarize' to EditorAIRewriteVariant union type: 'polish' | 'simplify' | 'expand' | 'formal' | 'casual' | 'summarize'",
+    "In editorAIPromptPolicy.ts: add { id: 'summarize' as EditorAIRewriteVariant, labelKey: 'summarize' as RewriteLabelKey } to REWRITE_OPTIONS array",
+    "In editorAIPromptPolicy.ts zh catalog: add summarize rewriteInstructions: '将选中文本精简为核心含义，保留关键信息的同时将字数减少约50%。保持原有的语气和意图。'",
+    "In editorAIPromptPolicy.ts en catalog: add summarize rewriteInstructions: 'Condense the selected text to its core meaning, keeping key information while reducing word count by approximately 50%. Preserve the original tone and intent.'",
+    "In BubbleToolbar.tsx: add role='toolbar' and aria-label='Formatting toolbar' to the outermost toolbar container div",
+    "Ensure all button elements in BubbleToolbar have aria-label attributes",
+    "Run: npx vitest run to verify no regressions"
+  ],
+  "test": {
+    "commands": ["npx vitest run"],
+    "unit": [
+      "editorAIPromptPolicy REWRITE_OPTIONS includes summarize",
+      "buildEditorAIPayload handles summarize variant",
+      "BubbleToolbar has role=toolbar attribute"
+    ],
+    "integration": [],
+    "success_metrics": ["All 891+ tests pass", "No TypeScript compilation errors"]
+  },
+  "reference": {
+    "pattern": "Existing rewrite variant pattern (polish, simplify, expand, formal, casual)",
+    "files": ["src/hooks/editorAIPromptPolicy.ts"],
+    "examples": "See how 'expand' variant is defined in REWRITE_OPTIONS and PromptCatalog"
+  },
+  "rationale": {
+    "chosen_approach": "Extend existing rewrite variant system — summarize is a natural addition to the existing 5 variants",
+    "decision_factors": ["Locked decision: AI actions via BubbleToolbar (context.md #2)", "Existing prompt policy handles all rewrite variants uniformly", "Minimal change surface"],
+    "tradeoffs": "Adds one more option to the rewrite menu — may need UI grouping if more variants added later"
+  },
+  "risks": [
+    "Summarize prompt quality depends on LLM — mitigated by clear instructions in both languages"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["AI Writing Tools", "BubbleToolbar"],
+    "affected_components": ["editorAIPromptPolicy", "BubbleToolbar"],
+    "affected_requirements": ["M5 Phase 2: AI inline actions"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "30min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

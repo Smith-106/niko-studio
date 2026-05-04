@@ -1,0 +1,103 @@
+{
+  "id": "TASK-015",
+  "title": "Word Count & Reading Time Display",
+  "description": "Add live word count and reading time to the editor footer using TipTap CharacterCount extension",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Install @tiptap/extension-character-count@^3.22.0. Add CharacterCount to NikoEditor useEditor extensions array. In the existing onUpdate callback, extract word count via editor.storage.characterCount.words() and character count via editor.storage.characterCount.characters(). Compute readingTime as Math.max(1, Math.ceil(wordCount / 200)). Pass wordCount and readingTime as new props to AppContextFooter. Update AppContextFooter interface to accept wordCount?: number and readingTime?: number. Display format: '{wordCount} words · {readingTime} min read' in the footer bar, only when wordCount > 0.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src/components/editor/, src/components/",
+  "focus_paths": ["src/components/NikoEditor.tsx", "src/components/AppContextFooter.tsx"],
+  "read_first": [
+    "src/components/NikoEditor.tsx",
+    "src/components/AppContextFooter.tsx",
+    "package.json"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": 1,
+  "execution_group": "wave1",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "package.json contains '@tiptap/extension-character-count'",
+      "NikoEditor.tsx contains 'CharacterCount'",
+      "AppContextFooter.tsx contains 'wordCount'",
+      "AppContextFooter.tsx contains 'readingTime'",
+      "npx vitest run exits 0"
+    ],
+    "verification": "Run npx vitest run to verify all tests pass. Check AppContextFooter renders word count when wordCount prop > 0.",
+    "definition_of_done": "Word count and reading time displayed in editor footer, updating live as user types"
+  },
+  "files": [
+    {
+      "path": "package.json",
+      "action": "modify",
+      "target": "dependencies",
+      "change": "Add @tiptap/extension-character-count: ^3.22.0 to dependencies"
+    },
+    {
+      "path": "src/components/NikoEditor.tsx",
+      "action": "modify",
+      "target": "useEditor extensions array",
+      "change": "Import CharacterCount from @tiptap/extension-character-count, add to extensions array. In onUpdate callback, extract word count via editor.storage.characterCount.words() and pass to parent via new callback prop."
+    },
+    {
+      "path": "src/components/AppContextFooter.tsx",
+      "action": "modify",
+      "target": "AppContextFooter component",
+      "change": "Add wordCount?: number and readingTime?: number to props interface. Display '{wordCount} words · {readingTime} min read' when wordCount > 0."
+    }
+  ],
+  "implementation": [
+    "Run: npm install @tiptap/extension-character-count@^3.22.0",
+    "In NikoEditor.tsx: import CharacterCount from '@tiptap/extension-character-count'",
+    "In NikoEditor.tsx: add CharacterCount to useEditor({ extensions: [StarterKit, ..., CharacterCount] })",
+    "In NikoEditor.tsx onUpdate: add const words = ed.storage.characterCount?.words() ?? 0; const readingTime = Math.max(1, Math.ceil(words / 200))",
+    "Pass words and readingTime to parent component via existing or new callback prop",
+    "In AppContextFooter.tsx: add wordCount?: number and readingTime?: number to AppContextFooterProps",
+    "In AppContextFooter.tsx: render word count section when wordCount > 0: '{wordCount} words · {readingTime} min read'",
+    "Run: npx vitest run to verify no regressions"
+  ],
+  "test": {
+    "commands": ["npx vitest run"],
+    "unit": [
+      "AppContextFooter renders word count when wordCount prop provided",
+      "AppContextFooter renders reading time when readingTime prop provided",
+      "AppContextFooter hides word count when wordCount is 0 or undefined"
+    ],
+    "integration": [],
+    "success_metrics": ["All 891+ tests pass", "No TypeScript compilation errors"]
+  },
+  "reference": {
+    "pattern": "TipTap extension integration pattern used in NikoEditor.tsx for Placeholder, TextStyle, Typography",
+    "files": ["src/components/NikoEditor.tsx"],
+    "examples": "See how Placeholder extension is added in the useEditor config"
+  },
+  "rationale": {
+    "chosen_approach": "Use TipTap's built-in CharacterCount extension for reliable word/character counting",
+    "decision_factors": ["Standard TipTap extension", "No custom implementation needed", "Performant built-in counting"],
+    "tradeoffs": "Adds one new package dependency (approved in context.md locked decision #5)"
+  },
+  "risks": [
+    "TipTap version mismatch — mitigated by using ^3.22.0 matching existing packages"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["Editor", "Footer"],
+    "affected_components": ["NikoEditor", "AppContextFooter"],
+    "affected_requirements": ["M5 Phase 2: Word count display"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

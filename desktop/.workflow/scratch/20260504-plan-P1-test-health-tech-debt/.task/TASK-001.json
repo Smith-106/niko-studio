@@ -1,0 +1,18 @@
+{
+  "id": "TASK-001",
+  "wave": 1,
+  "title": "Uncomment retry logic in useChatStreaming.ts",
+  "action": "Uncomment the StreamErrorPayload interface, isStreamErrorPayload type guard, retries counter, and retry block in useChatStreaming.ts to restore retry functionality",
+  "files": ["src/hooks/useChatStreaming.ts"],
+  "read_first": ["src/hooks/useChatStreaming.ts", "src/hooks/useChatStreaming.test.tsx"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'StreamErrorPayload' src/hooks/useChatStreaming.ts — count >= 2",
+      "grep -c 'isStreamErrorPayload' src/hooks/useChatStreaming.ts — count >= 2",
+      "grep -c 'retries' src/hooks/useChatStreaming.ts — count >= 2",
+      "npx vitest run src/hooks/useChatStreaming.test.tsx — all 10 tests pass"
+    ]
+  },
+  "implementation": "Uncomment lines 29-43 (StreamErrorPayload interface + isStreamErrorPayload type guard), lines 74-75 (retries variable initialization in for loop), and lines 174-183 (retry if-block with continue). Ensure the for(;;) loop uses retries correctly: let retries = 0 in the loop init, retries++ in the retry block, condition checks retries < maxRetries.",
+  "status": "completed"
+}

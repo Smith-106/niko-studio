@@ -871,6 +871,7 @@ export interface Translations {
   editorBubbleExpand: string
   editorBubbleFormal: string
   editorBubbleCasual: string
+  editorBubbleSummarize: string
   editorBubbleContinue: string
   // Export
   exportMarkdown: string
@@ -1811,6 +1812,7 @@ export const translations: Record<Language, Translations> = {
     editorBubbleExpand: '扩写',
     editorBubbleFormal: '正式化',
     editorBubbleCasual: '口语化',
+    editorBubbleSummarize: '总结',
     editorBubbleContinue: '续写',
     exportMarkdown: '导出 Markdown',
     exportHtml: '导出 HTML',
@@ -2748,6 +2750,7 @@ export const translations: Record<Language, Translations> = {
     editorBubbleExpand: 'Expand',
     editorBubbleFormal: 'Formal',
     editorBubbleCasual: 'Casual',
+    editorBubbleSummarize: 'Summarize',
     editorBubbleContinue: 'Continue',
     exportMarkdown: 'Export Markdown',
     exportHtml: 'Export HTML',

@@ -1,0 +1,16 @@
+{
+  "id": "TASK-003",
+  "wave": 1,
+  "title": "Uncomment assertions in analysis.test.ts",
+  "action": "Remove TODO comments and uncomment the two assertion lines in analysis.test.ts (lines 48-49 and 98-99)",
+  "files": ["src/api/analysis.test.ts"],
+  "read_first": ["src/api/analysis.test.ts", "src/api/analysis.ts"],
+  "convergence": {
+    "criteria": [
+      "grep -c 'TODO' src/api/analysis.test.ts — count == 0",
+      "npx vitest run src/api/analysis.test.ts — all tests pass"
+    ]
+  },
+  "implementation": "At line 48-49: remove '// TODO: Fix this test' comment and uncomment 'expect(result.data[0].name).toBe(\\'Recurring Motif\\')'. At line 98-99: remove '// TODO: Fix this test' comment and uncomment 'expect(result.data[0].members).toHaveLength(1)'. Mock data already contains these fields so assertions will pass.",
+  "status": "completed"
+}

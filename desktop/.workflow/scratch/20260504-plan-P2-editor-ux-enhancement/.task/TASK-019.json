@@ -1,0 +1,102 @@
+{
+  "id": "TASK-019",
+  "title": "Responsive Layout & Live Metrics in SessionAnalytics",
+  "description": "Add responsive breakpoints for panel collapse at narrow widths and connect live word count metrics to SessionAnalyticsPanel",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Add Tailwind responsive utilities to the intelligence panel container: panels should stack vertically below lg (1024px) breakpoint using flex-col class. Ensure no horizontal overflow at any viewport width. For live metrics: extend the uiSlice (from TASK-016) with wordMetrics: { wordCount: number, charCount: number, readingTime: number } state. Update NikoEditor onUpdate to dispatch word metrics to the store. Update SessionAnalyticsPanel to read wordMetrics from the store and display a live word count summary section.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+  "scope": "src/components/intelligence/, src/stores/, src/components/",
+  "focus_paths": ["src/components/intelligence/SessionAnalyticsPanel.tsx", "src/stores/uiSlice.ts"],
+  "read_first": [
+    "src/components/intelligence/SessionAnalyticsPanel.tsx",
+    "src/stores/uiSlice.ts",
+    "src/components/NikoEditor.tsx",
+    "src/stores/appStore.ts"
+  ],
+  "depends_on": ["TASK-015", "TASK-016"],
+  "wave": 2,
+  "parallel_group": 2,
+  "execution_group": "wave2",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "SessionAnalyticsPanel.tsx contains 'wordMetrics' or 'wordCount'",
+      "Panel container or layout has responsive Tailwind classes (lg:, flex-col, or similar)",
+      "uiSlice.ts contains 'wordMetrics' or 'updateWordMetrics'",
+      "npx vitest run exits 0"
+    ],
+    "verification": "Run npx vitest run. Verify SessionAnalyticsPanel shows live metrics. Check responsive classes in panel container.",
+    "definition_of_done": "Panels collapse gracefully at narrow widths, SessionAnalyticsPanel shows live word count updating as user types"
+  },
+  "files": [
+    {
+      "path": "src/stores/uiSlice.ts",
+      "action": "modify",
+      "target": "UiSlice state and actions",
+      "change": "Add wordMetrics: { wordCount: number, charCount: number, readingTime: number } to state, add updateWordMetrics action"
+    },
+    {
+      "path": "src/components/NikoEditor.tsx",
+      "action": "modify",
+      "target": "onUpdate callback",
+      "change": "Dispatch word metrics to uiSlice store in onUpdate callback"
+    },
+    {
+      "path": "src/components/intelligence/SessionAnalyticsPanel.tsx",
+      "action": "modify",
+      "target": "Panel content",
+      "change": "Read wordMetrics from useAppStore and display live word count section"
+    }
+  ],
+  "implementation": [
+    "In uiSlice.ts: add wordMetrics: { wordCount: 0, charCount: 0, readingTime: 0 } to initial state",
+    "In uiSlice.ts: add updateWordMetrics(metrics: Partial<typeof wordMetrics>) action",
+    "In NikoEditor.tsx onUpdate: call useAppStore.getState().updateWordMetrics({ wordCount: words, charCount: chars, readingTime })",
+    "In SessionAnalyticsPanel.tsx: add const wordMetrics = useAppStore(s => s.wordMetrics)",
+    "In SessionAnalyticsPanel.tsx: render word count stats section with live updating values",
+    "In panel container/layout: add responsive Tailwind classes (flex flex-col lg:flex-row) for graceful collapse",
+    "Ensure no element causes horizontal overflow at any viewport width",
+    "Run: npx vitest run to verify no regressions"
+  ],
+  "test": {
+    "commands": ["npx vitest run"],
+    "unit": [
+      "uiSlice updateWordMetrics updates wordMetrics state",
+      "SessionAnalyticsPanel renders word count from store"
+    ],
+    "integration": [],
+    "success_metrics": ["All 891+ tests pass", "No TypeScript compilation errors"]
+  },
+  "reference": {
+    "pattern": "Zustand store state updates from editor callbacks, Tailwind responsive utilities",
+    "files": ["src/stores/uiSlice.ts", "src/components/intelligence/SessionAnalyticsPanel.tsx"],
+    "examples": "See how other store slices update state from component callbacks"
+  },
+  "rationale": {
+    "chosen_approach": "Shared Zustand state for word metrics avoids prop drilling and excessive re-renders",
+    "decision_factors": ["Live metrics must update as user types without re-renders", "Zustand selectors prevent unnecessary renders", "Responsive layout uses Tailwind utilities already in the project"],
+    "tradeoffs": "Word metrics in global store — acceptable as they're needed by multiple components"
+  },
+  "risks": [
+    "Excessive re-renders from word count updates — mitigated by Zustand selector granularity and debounce if needed"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": ["Session Analytics", "Responsive Layout"],
+    "affected_components": ["SessionAnalyticsPanel", "uiSlice", "Panel Container"],
+    "affected_requirements": ["M5 Phase 2: Live metrics", "M5 Phase 2: Responsive layout"],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "45min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}
