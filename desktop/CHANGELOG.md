@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.6.0] — 2026-05-04
+
+### M5 — Writing Experience & Quality
+
+#### Phase 1: Test Health & Technical Debt
+
+- **fix(chat):** useChatStreaming retry logic
+- **fix(sidebar):** Sidebar snapshot tests updated
+- **fix(analysis):** analysis.test.ts assertion corrections
+- **chore:** TODO/FIXME cleanup across codebase
+- **chore:** Anti-pattern scan — clean
+- **test(chat):** Chat integration test
+- **test(knowledge):** Knowledge integration test
+
+#### Phase 2: Editor & UX Enhancement
+
+- **feat(editor):** Word count display with reading time estimation
+- **feat(editor):** Focus mode toggle (Zustand uiSlice)
+- **feat(editor):** AI summarize variant in BubbleToolbar
+- **feat(a11y):** ARIA keyboard accessibility for AccordionWrapper
+- **feat(css):** Scoped responsive layout adjustments
+- **test:** Regression test suite expansion (+8 tests)
+
+#### Test Baseline
+
+- 899 tests across 93 files (all passing)
+
 ## [9.5.0] — 2026-05-04
 
 ### M4 — Writer Intelligence Dashboard
