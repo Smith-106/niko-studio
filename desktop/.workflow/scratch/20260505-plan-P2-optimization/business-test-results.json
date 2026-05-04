@@ -1,0 +1,34 @@
+{
+  "phase": 2,
+  "milestone": "M6",
+  "tested_at": "2026-05-05T01:00:00.000Z",
+  "verdict": "pass",
+  "business_rules": [
+    {
+      "rule": "Named-export components use .then(m => ({ default: m.X })) pattern for React.lazy",
+      "files": ["src/components/DocumentEditor.tsx", "src/components/ChatSidebar.tsx"],
+      "status": "pass"
+    },
+    {
+      "rule": "Suspense fallback provided for every lazy-loaded component",
+      "files": ["src/components/DocumentEditor.tsx:106", "src/components/ChatSidebar.tsx:30"],
+      "status": "pass"
+    },
+    {
+      "rule": "Zustand selectors use single-state-slice subscription (not useShallow for scalar values)",
+      "files": ["src/stores/selectors.ts"],
+      "status": "pass"
+    },
+    {
+      "rule": "Consumer components import from selectors, not direct useAppStore() destructuring",
+      "files": ["src/components/Sidebar.tsx", "src/components/EvaluationPanel.tsx", "src/components/SettingsModal.tsx", "src/hooks/useAppViewModel.ts"],
+      "status": "pass"
+    },
+    {
+      "rule": "ChatArea props forwarded correctly through lazy boundary",
+      "files": ["src/components/ChatSidebar.tsx:31"],
+      "status": "pass"
+    }
+  ],
+  "failures": []
+}

@@ -1,0 +1,52 @@
+{
+  "plan_id": "PLN-017",
+  "phase": 2,
+  "milestone": "M6",
+  "generated_at": "2026-05-05T01:04:00.000Z",
+  "tests_generated": [
+    {
+      "file": "src/stores/selectors.test.ts",
+      "tests_added": 3,
+      "names": [
+        "action selectors > returns stable selectConversation action reference",
+        "action selectors > returns stable checkBackend action reference",
+        "useBackendStatus > returns initial backendStatus value",
+        "useBackendStatus > reflects backendStatus changes"
+      ],
+      "coverage_target": "useSelectConversation, useCheckBackend, useBackendStatus"
+    }
+  ],
+  "existing_coverage": [
+    {
+      "file": "src/components/DocumentEditor.test.tsx",
+      "tests": 4,
+      "note": "Tests work with mocked StoryBiblePanel — lazy boundary covered by mock"
+    },
+    {
+      "file": "src/components/ChatSidebar.test.tsx",
+      "tests": 6,
+      "note": "Tests work with mocked ChatArea — lazy boundary covered by mock"
+    },
+    {
+      "file": "src/components/Sidebar.test.tsx",
+      "tests": "existing",
+      "note": "Already tests sidebar with selector imports"
+    },
+    {
+      "file": "src/components/EvaluationPanel.test.tsx",
+      "tests": "existing",
+      "note": "Already tests with selector-based addMessage"
+    },
+    {
+      "file": "src/components/SettingsModal.test.tsx",
+      "tests": "existing",
+      "note": "Already tests with useCheckBackend selector"
+    },
+    {
+      "file": "src/hooks/useAppViewModel.test.tsx",
+      "tests": "existing",
+      "note": "Already tests with useBackendStatus + useCheckBackend selectors"
+    }
+  ],
+  "rationale": "Phase 2 changes are covered by existing test updates (made during execution) + 3 new selector tests. Lazy-load boundaries are tested through existing component mocks. No new test files needed."
+}

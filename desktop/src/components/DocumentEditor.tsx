@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useI18n } from '../i18n'
 import { countWords, countChars, readingTimeMinutes } from '../utils/wordCount'
 import { exportToMarkdown, exportToHtml } from '../utils/export'
-import { StoryBiblePanel } from './StoryBiblePanel'
+const StoryBiblePanel = React.lazy(() => import('./StoryBiblePanel').then(m => ({ default: m.StoryBiblePanel })))
 import { NikoEditor } from './NikoEditor'
 import { getEditorHandle } from '../utils/editorHandle'
 import { useDraftCache } from '../hooks/useDraftCache'
@@ -103,7 +103,9 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
           />
         </div>
 
-        <StoryBiblePanel />
+        <Suspense fallback={<div className="h-32" />}>
+          <StoryBiblePanel />
+        </Suspense>
       </div>
 
       {/* Status Bar */}

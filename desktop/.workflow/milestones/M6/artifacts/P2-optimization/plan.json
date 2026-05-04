@@ -1,0 +1,25 @@
+{
+  "plan_id": "PLN-017",
+  "milestone": "M6",
+  "phase": 2,
+  "scope": "phase",
+  "name": "Phase 2 Optimization Implementation",
+  "created_at": "2026-05-05T00:36:00.000Z",
+  "depends_on": ["ANL-008"],
+  "analysis_ref": "scratch/20260505-analyze-P2-optimization",
+  "summary": "Lazy-load StoryBiblePanel and ChatArea (remaining non-lazy heavy components), fix 4 useAppStore() over-subscription sites with targeted Zustand selectors, verify bundle size and test suite.",
+  "approach": "Two waves — Wave 1: code splitting (2 lazy-load conversions), Wave 2: render optimization (selector creation + 4 consumer fixes). Validation integrated into verify step. Total ~50 lines changed across 6 files.",
+  "task_ids": ["TASK-2.1", "TASK-2.2", "TASK-2.3", "TASK-2.4", "TASK-2.5"],
+  "waves": [
+    {
+      "name": "Wave 1 — Code Splitting",
+      "tasks": ["TASK-2.1", "TASK-2.2"],
+      "parallel": true
+    },
+    {
+      "name": "Wave 2 — Render Optimization",
+      "tasks": ["TASK-2.3", "TASK-2.4", "TASK-2.5"],
+      "parallel": true
+    }
+  ]
+}

@@ -1,5 +1,5 @@
-import type { ComponentProps } from 'react'
-import { ChatArea } from './ChatArea'
+import React, { Suspense, type ComponentProps } from 'react'
+const ChatArea = React.lazy(() => import('./ChatArea').then(m => ({ default: m.ChatArea })))
 import { PanelResizeHandle } from './PanelResizeHandle'
 import { useResizablePanel } from '../hooks/useResizablePanel'
 
@@ -27,7 +27,9 @@ export function ChatSidebar({ chatAreaProps, chatSidebarCollapsed }: ChatSidebar
       {!chatSidebarCollapsed && (
         <PanelResizeHandle side="left" onMouseDown={startResize} onDoubleClick={resetWidth} />
       )}
-      <ChatArea {...chatAreaProps} />
+      <Suspense fallback={<div className="flex-1" />}>
+        <ChatArea {...chatAreaProps} />
+      </Suspense>
     </aside>
   )
 }

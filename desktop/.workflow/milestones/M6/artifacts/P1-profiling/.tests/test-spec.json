@@ -1,0 +1,63 @@
+{
+  "phase": 1,
+  "milestone": "M6",
+  "generated_at": "2026-05-05T00:21:00.000Z",
+  "generator": "quality-test-gen",
+  "plan_dir": "scratch/20260504-plan-P1-profiling",
+  "tests": [
+    {
+      "id": "T-001",
+      "name": "lighthouse-baseline-completeness",
+      "type": "file-assertion",
+      "target": ".workflow/scratch/20260504-analyze-P1-profiling/lighthouse-baseline.json",
+      "assertions": [
+        { "field": "performance_score", "operator": "exists", "expected": true },
+        { "field": "fcp.value_ms", "operator": "gte", "expected": 0 },
+        { "field": "lcp.value_ms", "operator": "gte", "expected": 0 },
+        { "field": "tbt.value_ms", "operator": "gte", "expected": 0 },
+        { "field": "cls.value", "operator": "exists", "expected": true }
+      ]
+    },
+    {
+      "id": "T-002",
+      "name": "render-profile-completeness",
+      "type": "file-assertion",
+      "target": ".workflow/scratch/20260504-analyze-P1-profiling/render-profile.json",
+      "assertions": [
+        { "field": "over_subscribed_components", "operator": "array_length_gte", "expected": 3 },
+        { "field": "dom_stats.total_elements", "operator": "gt", "expected": 0 },
+        { "field": "performance_trace.forced_reflows", "operator": "exists", "expected": true }
+      ]
+    },
+    {
+      "id": "T-003",
+      "name": "audit-report-structure",
+      "type": "content-assertion",
+      "target": ".workflow/scratch/20260504-analyze-P1-profiling/phase1-audit-report.md",
+      "assertions": [
+        { "contains": "## Bundle Baseline" },
+        { "contains": "## Lighthouse Scores" },
+        { "contains": "## Render Hotspots" },
+        { "contains": "## Optimization Priority Matrix" },
+        { "contains": "## Phase 2 Targets" }
+      ]
+    },
+    {
+      "id": "T-004",
+      "name": "optimization-matrix-priorities",
+      "type": "content-assertion",
+      "target": ".workflow/scratch/20260504-analyze-P1-profiling/phase1-audit-report.md",
+      "assertions": [
+        { "contains": "**P1**" },
+        { "contains": "**P2**" },
+        { "contains": "**P3**" },
+        { "contains": "**P4**" },
+        { "contains": "StoryBiblePanel" },
+        { "contains": "ChatArea" },
+        { "contains": "Sidebar" }
+      ]
+    }
+  ],
+  "total_tests": 4,
+  "total_assertions": 19
+}

@@ -1,105 +1,119 @@
-# Roadmap: Niko-Studio Desktop — M5: Writing Experience & Quality
+# Roadmap: Niko-Studio Desktop — M6: Performance & Technical Debt
 
 ## Overview
 
-M5 shifts focus to the core writing experience and codebase health. After M1–M4 built out the intelligence pipeline, API surface, and dashboard panels, this milestone addresses accumulated technical debt (3 pre-existing test failures, 3 TODO markers), enhances the TipTap editor with writing-specific tools, and polishes the panel interaction layer that M4 introduced.
+M6 focuses on performance profiling and optimization. After M1–M5 built out the full application (MVP → Core Logic → Wiring → Intelligence Dashboard → Writing Experience), the bundle has grown to ~1.4MB uncompressed (~460KB gzip). The main chunk (index.js) is 457KB, and 6 major panels can be lazy-loaded to reduce initial load time. This milestone establishes performance baselines, implements code splitting, and optimizes the critical rendering path.
 
 ## Phases
 
-- [ ] **Phase 1: Test Health & Technical Debt** — Fix all pre-existing test failures, resolve TODO markers, add integration tests for key user flows
-- [ ] **Phase 2: Editor & UX Enhancement** — TipTap writing tools (word count, focus mode, AI inline actions), panel interaction polish, keyboard navigation
+- [ ] **Phase 1: Profiling & Bundle Audit** — Measure baselines, audit bundle composition, identify optimization targets
+- [ ] **Phase 2: Optimization Implementation** — Lazy loading, code splitting, render optimization, bundle size reduction
 
 ---
 
 ## Phase Details
 
-### Phase 1: Test Health & Technical Debt
+### Phase 1: Profiling & Bundle Audit
 
-**Goal**: Achieve a clean test suite (0 failures) and eliminate all TODO/FIXME markers in production code. Add integration tests for the critical chat-to-analysis pipeline that spans multiple modules.
+**Goal**: Establish concrete performance baselines (Lighthouse, bundle analysis) and create a prioritized optimization plan with measurable targets.
 
-**Depends on**: M4 complete (all panels and shared components in place)
+**Depends on**: M5 complete (899 tests, clean codebase)
+
+**Current Bundle Profile** (production build):
+
+| Chunk | Size | Gzip | Notes |
+|-------|------|------|-------|
+| index.js | 457KB | 135KB | Main app — too large |
+| vendor-editor.js | 299KB | 98KB | TipTap/ProseMirror |
+| vendor-editor-pm.js | 216KB | 67KB | ProseMirror core |
+| vendor-markdown.js | 118KB | 36KB | react-markdown |
+| vendor-lucide.js | 20KB | 7KB | Icon library |
+| vendor-virtual.js | 16KB | 5KB | @tanstack/react-virtual |
+
+**Lazy-load candidates** (loaded on demand):
+
+| Component | Size | Gzip | Trigger |
+|-----------|------|------|---------|
+| EvaluationPanel | 61KB | 16KB | Tab click |
+| SettingsModal | 57KB | 12KB | Settings open |
+| WritingHelperPanel | 44KB | 10KB | Tab click |
+| KnowledgeModal | 43KB | 10KB | Modal open |
+| AiTextOptimizer | 28KB | 11KB | Feature trigger |
+| McpStatusPanel | 21KB | 5KB | Tab click |
 
 **Success Criteria** (what must be TRUE):
-  1. `useChatStreaming.test.tsx` — all 10 tests pass (currently 2 failing)
-  2. `Sidebar.test.tsx` — all 15 tests pass (currently 1 failing)
-  3. All TODO markers resolved: `analysis.test.ts` lines 48-49 and 98-99 (incomplete assertions), `useChatStreaming.ts` line 174 (commented-out retry logic)
-  4. Integration test covering chat send → stream response → message render pipeline passes
-  5. Full test suite: 0 failures, 0 skipped
+  1. Lighthouse Performance score ≥ 80 (baseline current score first)
+  2. First Contentful Paint (FCP) measured and documented
+  3. Largest Contentful Paint (LCP) measured and documented
+  4. Total Blocking Time (TBT) measured and documented
+  5. Bundle analysis report generated with size breakdown per module
+  6. Priority optimization list created with expected impact estimates
 
 **Task Waves:**
 
-Wave 1 — Test Failure Root Causes:
-- [ ] TASK-1.1: Diagnose and fix 2 `useChatStreaming.test.tsx` failures — analyze test expectations vs actual hook behavior, fix either test setup or hook implementation
-- [ ] TASK-1.2: Diagnose and fix 1 `Sidebar.test.tsx` failure — analyze component render expectations, fix test or component
-- [ ] TASK-1.3: Resolve `analysis.test.ts` TODO markers — fix or remove the 2 commented-out assertions (lines 48-49, 98-99), ensure test coverage is not degraded
+Wave 1 — Baseline Measurement:
+- [ ] TASK-1.1: Run Lighthouse audit on current production build — capture Performance, FCP, LCP, TBT, CLS scores
+- [ ] TASK-1.2: Generate bundle analysis report — use rollup-plugin-visualizer or vite-bundle-visualizer for module-level breakdown
+- [ ] TASK-1.3: Profile React render cycles — identify components with excessive re-renders using React DevTools Profiler
 
-Wave 2 — Code Quality:
-- [ ] TASK-1.4: Resolve `useChatStreaming.ts` TODO at line 174 — either implement the commented-out retry logic or remove the dead code block with justification
-- [ ] TASK-1.5: Run full anti-pattern scan on `src/` — grep for TODO, FIXME, HACK, XXX markers; document or resolve any new findings
-
-Wave 3 — Integration Tests:
-- [ ] TASK-1.6: Add integration test for chat send → stream → render pipeline — verify `useChatStreaming` hook + `ChatArea` + `MessageBubble` end-to-end with mock gateway
-- [ ] TASK-1.7: Add integration test for knowledge entity search flow — verify `PersistedEntityTab` → API → store → render with mock backend
+Wave 2 — Analysis & Targeting:
+- [ ] TASK-1.4: Audit dynamic import opportunities — map all lazy-load candidates with current import patterns
+- [ ] TASK-1.5: Identify store subscription optimization targets — find components subscribed to entire store slices vs specific selectors
+- [ ] TASK-1.6: Create optimization plan with priority matrix — impact vs effort for each optimization, measurable targets
 
 ---
 
-### Phase 2: Editor & UX Enhancement
+### Phase 2: Optimization Implementation
 
-**Goal**: Enhance the TipTap editor with writing-centric tools that leverage the intelligence panels from M4. Polish panel interactions with keyboard navigation and responsive behavior.
+**Goal**: Implement the highest-impact optimizations from Phase 1 analysis. Target ≥30% reduction in initial bundle size and measurable improvement in FCP/LCP.
 
-**Depends on**: Phase 1 (clean test baseline before adding features)
+**Depends on**: Phase 1 (data-driven optimization targets)
 
 **Success Criteria** (what must be TRUE):
-  1. Editor displays live word count and estimated reading time in the status bar area
-  2. Focus mode (toggleable) hides sidebar and non-essential panels, expanding the editor to full width
-  3. AI inline actions work in the editor — select text → AI toolbar appears with rewrite/expand/summarize options
-  4. Intelligence panels (M4) are keyboard-navigable — Tab/Shift+Tab between panels, Escape to close
-  5. All existing tests + new tests pass (0 failures)
+  1. index.js chunk reduced by ≥30% (from 457KB to ≤320KB)
+  2. All 6 lazy-load candidate components use React.lazy + Suspense
+  3. Lighthouse Performance score improved by ≥15 points from baseline
+  4. FCP improved by ≥20% from baseline
+  5. No regressions: 899/899 tests still pass
+  6. No FOUC (Flash of Unstyled Content) from lazy loading — appropriate loading fallbacks in place
 
 **Task Waves:**
 
-Wave 1 — Editor Tools:
-- [ ] TASK-2.1: Add word count and reading time display to editor — use TipTap's `characterCount` extension, display in `AppContextFooter` or editor status bar
-- [ ] TASK-2.2: Implement focus/distraction-free mode — toggle to hide sidebar and secondary panels, expand editor; restore on toggle off or Escape key
-- [ ] TASK-2.3: Enhance AI toolbar in editor — wire `BubbleToolbar` with rewrite/expand/summarize actions that call the chat API with selected text context
+Wave 1 — Code Splitting:
+- [ ] TASK-2.1: Lazy-load heavy panels — EvaluationPanel, SettingsModal, WritingHelperPanel, KnowledgeModal, McpStatusPanel with React.lazy + Suspense
+- [ ] TASK-2.2: Lazy-load AiTextOptimizer — this is loaded on demand already, ensure it's properly code-split
+- [ ] TASK-2.3: Verify chunk output after lazy loading — confirm new chunk sizes and that shared dependencies are not duplicated
 
-Wave 2 — Panel Polish:
-- [ ] TASK-2.4: Add keyboard navigation to intelligence panels — Tab/Shift+Tab cycle through open panels, Escape closes focused panel, Enter activates panel action
-- [ ] TASK-2.5: Responsive panel layout — ensure M4 intelligence panels stack gracefully at narrow widths, no horizontal overflow
-- [ ] TASK-2.6: Connect editor word count to SessionAnalytics panel — surface live writing metrics in the M4 SessionAnalytics dashboard
+Wave 2 — Render Optimization:
+- [ ] TASK-2.4: Optimize Zustand subscriptions — convert broad selectors to precise selectors in frequently-rendering components
+- [ ] TASK-2.5: Add React.memo to pure components — identify and memo-ize components that re-render without prop changes
+- [ ] TASK-2.6: Optimize TipTap editor re-renders — ensure editor updates don't trigger parent re-renders
 
 Wave 3 — Validation:
-- [ ] TASK-2.7: Full regression suite — all tests pass (existing + new), no type errors, no lint warnings
-- [ ] TASK-2.8: Manual UI verification — focus mode toggle, AI toolbar, panel keyboard nav, responsive layout all work in dev build
+- [ ] TASK-2.7: Run Lighthouse audit on optimized build — compare against Phase 1 baseline
+- [ ] TASK-2.8: Regression test suite — verify all 899 tests pass, no visual regressions
+- [ ] TASK-2.9: Bundle size diff report — before/after comparison with module-level breakdown
 
 ---
 
-## Scope Decisions
+## Inherited Deferred Items (from M5)
 
-- **In scope**:
-  - Fixing all pre-existing test failures (useChatStreaming, Sidebar)
-  - Resolving all TODO/FIXME markers in production code
-  - Integration tests for chat and knowledge flows
-  - TipTap word count and reading time
-  - Focus/distraction-free mode
-  - AI inline toolbar enhancement (rewrite/expand/summarize)
-  - Keyboard navigation for M4 intelligence panels
-  - Responsive panel layout
-  - Connecting editor metrics to SessionAnalytics
+These items were deferred from M5 and remain out of scope for M6:
+- Custom TipTap extensions beyond characterCount (tables, math, collaborative cursors)
+- Export functionality (PDF, DOCX, Markdown file export)
+- Writing session persistence (save/restore draft state)
+- Dark mode / theme system
+- Localization beyond existing zh-CN/en-US support
 
-- **Deferred**:
-  - Custom TipTap extensions beyond characterCount (tables, math, collaborative cursors)
-  - Export functionality (PDF, DOCX, Markdown file export)
-  - Writing session persistence (save/restore draft state)
-  - Dark mode / theme system
-  - Performance profiling and optimization (lazy loading, code splitting)
-  - Localization beyond existing zh-CN/en-US support
+---
 
-- **Out of scope**:
-  - Backend changes (all work is frontend-only this milestone)
-  - New API endpoints or gateway modifications
-  - Changes to the Tauri Rust layer
-  - Breaking changes to store shape or component interfaces
+## Out of Scope
+
+- Backend changes (all work is frontend-only)
+- New API endpoints or gateway modifications
+- Changes to the Tauri Rust layer
+- New features or UI additions
+- Breaking changes to store shape or component interfaces
 
 ---
 
@@ -107,5 +121,5 @@ Wave 3 — Validation:
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Test Health & Technical Debt | ⬚ Not started | — |
-| 2. Editor & UX Enhancement | ⬚ Not started | — |
+| 1. Profiling & Bundle Audit | ⬚ Not started | — |
+| 2. Optimization Implementation | ⬚ Not started | — |

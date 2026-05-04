@@ -1,0 +1,20 @@
+{
+  "task_id": "TASK-2.3",
+  "plan_id": "PLN-017",
+  "wave": 2,
+  "title": "Add missing Zustand selectors",
+  "status": "completed",
+  "action": "Add 3 missing targeted selectors to stores/selectors.ts: useSelectConversation, useCheckBackend, useBackendStatus",
+  "implementation": "In src/stores/selectors.ts, add 3 new selector hooks following existing patterns:\n1. `export const useSelectConversation = () => useAppStore((s) => s.selectConversation)`\n2. `export const useCheckBackend = () => useAppStore((s) => s.checkBackend)`\n3. `export const useBackendStatus = () => useAppStore((s) => s.backendStatus)`",
+  "read_first": [
+    "src/stores/selectors.ts",
+    "src/stores/appStore.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -c 'useSelectConversation' src/stores/selectors.ts → ≥1",
+      "grep -c 'useCheckBackend' src/stores/selectors.ts → ≥1",
+      "grep -c 'useBackendStatus' src/stores/selectors.ts → ≥1"
+    ]
+  }
+}

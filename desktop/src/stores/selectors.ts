@@ -113,3 +113,15 @@ export function useCreateConversation(): AppState['createConversation'] {
 export function useAddMessage(): AppState['addMessage'] {
   return useAppStore((state) => state.addMessage)
 }
+
+export function useSelectConversation(): AppState['selectConversation'] {
+  return useAppStore((state) => state.selectConversation)
+}
+
+export function useCheckBackend(): AppState['checkBackend'] {
+  return useAppStore((state) => state.checkBackend)
+}
+
+export function useBackendStatus(): AppState['backendStatus'] {
+  return useAppStore((state) => state.backendStatus)
+}

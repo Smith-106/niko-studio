@@ -1,0 +1,68 @@
+{
+  "plan_id": "PLN-017",
+  "phase": 2,
+  "milestone": "M6",
+  "verified_at": "2026-05-05T00:58:00.000Z",
+  "verdict": "passed",
+  "tests": {
+    "total": 899,
+    "passed": 899,
+    "failed": 0
+  },
+  "layers": {
+    "L1_truths": {
+      "status": "passed",
+      "checks": [
+        { "truth": "StoryBiblePanel lazy-loaded in DocumentEditor", "evidence": "React.lazy present, direct import removed", "status": "pass" },
+        { "truth": "ChatArea lazy-loaded in ChatSidebar", "evidence": "React.lazy present, direct import removed", "status": "pass" },
+        { "truth": "3 new Zustand selectors added", "evidence": "useSelectConversation, useCheckBackend, useBackendStatus in selectors.ts", "status": "pass" },
+        { "truth": "useAppStore() removed from Sidebar", "evidence": "grep count 0", "status": "pass" },
+        { "truth": "useAppStore() removed from EvaluationPanel", "evidence": "grep count 0", "status": "pass" },
+        { "truth": "useAppStore() removed from SettingsModal", "evidence": "grep count 0", "status": "pass" },
+        { "truth": "useAppStore() removed from useAppViewModel", "evidence": "grep count 0", "status": "pass" }
+      ]
+    },
+    "L2_artifacts": {
+      "status": "passed",
+      "checks": [
+        { "artifact": "TASK-2.1 summary", "status": "pass" },
+        { "artifact": "TASK-2.2 summary", "status": "pass" },
+        { "artifact": "TASK-2.3 summary", "status": "pass" },
+        { "artifact": "TASK-2.4 summary", "status": "pass" },
+        { "artifact": "TASK-2.5 summary", "status": "pass" }
+      ]
+    },
+    "L3_wiring": {
+      "status": "passed",
+      "checks": [
+        { "link": "DocumentEditor → lazy StoryBiblePanel → Suspense fallback", "status": "pass" },
+        { "link": "ChatSidebar → lazy ChatArea → Suspense fallback", "status": "pass" },
+        { "link": "Sidebar → useCreateConversation + useSelectConversation from selectors", "status": "pass" },
+        { "link": "EvaluationPanel → useAddMessage from selectors", "status": "pass" },
+        { "link": "SettingsModal → useCheckBackend from selectors", "status": "pass" },
+        { "link": "useAppViewModel → useBackendStatus + useCheckBackend from selectors", "status": "pass" }
+      ]
+    }
+  },
+  "antipattern_scan": {
+    "status": "clean",
+    "files_scanned": [
+      "src/components/DocumentEditor.tsx",
+      "src/components/ChatSidebar.tsx",
+      "src/stores/selectors.ts",
+      "src/components/Sidebar.tsx",
+      "src/components/EvaluationPanel.tsx",
+      "src/components/SettingsModal.tsx",
+      "src/hooks/useAppViewModel.ts"
+    ],
+    "issues": []
+  },
+  "convergence": {
+    "TASK-2.1": { "all_criteria_met": true },
+    "TASK-2.2": { "all_criteria_met": true },
+    "TASK-2.3": { "all_criteria_met": true },
+    "TASK-2.4": { "all_criteria_met": true },
+    "TASK-2.5": { "all_criteria_met": true }
+  },
+  "gaps": []
+}

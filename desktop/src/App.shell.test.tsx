@@ -95,6 +95,8 @@ vi.mock('./stores/appStore', () => ({
 
 vi.mock('./stores/selectors', () => ({
   useLatestAssistantMessageContent: appShellMocks.useLatestAssistantMessageContentMock,
+  useBackendStatus: vi.fn(),
+  useCheckBackend: vi.fn(),
 }))
 
 vi.mock('./hooks/useAppRuntimeHealth', () => ({

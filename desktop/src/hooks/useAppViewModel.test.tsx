@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const hookMocks = vi.hoisted(() => ({
   useAppStoreMock: vi.fn(),
   useLatestAssistantMessageContentMock: vi.fn(),
+  useBackendStatusMock: vi.fn(),
+  useCheckBackendMock: vi.fn(),
   getCurrentEditorSelectionTextMock: vi.fn(),
   useAppRuntimeHealthMock: vi.fn(),
   useAppUiPersistenceMock: vi.fn(),
@@ -21,6 +23,8 @@ vi.mock('../stores/appStore', () => ({
 
 vi.mock('../stores/selectors', () => ({
   useLatestAssistantMessageContent: hookMocks.useLatestAssistantMessageContentMock,
+  useBackendStatus: hookMocks.useBackendStatusMock,
+  useCheckBackend: hookMocks.useCheckBackendMock,
 }))
 
 vi.mock('../utils/editorHandle', () => ({
@@ -151,6 +155,8 @@ describe('useAppViewModel', () => {
     }
 
     hookMocks.useAppStoreMock.mockReturnValue(backendStore)
+    hookMocks.useBackendStatusMock.mockReturnValue(backendStore.backendStatus)
+    hookMocks.useCheckBackendMock.mockReturnValue(backendStore.checkBackend)
     hookMocks.useAppUiPersistenceMock.mockReturnValue(uiPersistence)
     hookMocks.useLatestAssistantMessageContentMock.mockReturnValue('Latest assistant reply')
     hookMocks.getCurrentEditorSelectionTextMock.mockReturnValue('Selected text')
@@ -210,7 +216,10 @@ describe('useAppViewModel', () => {
   })
 
   it('skips editor selection reads while the evaluation panel is closed', () => {
-    hookMocks.useAppStoreMock.mockReturnValue({ backendStatus: false, checkBackend: vi.fn() })
+    const checkBackendFn = vi.fn()
+    hookMocks.useAppStoreMock.mockReturnValue({ backendStatus: false, checkBackend: checkBackendFn })
+    hookMocks.useBackendStatusMock.mockReturnValue(false)
+    hookMocks.useCheckBackendMock.mockReturnValue(checkBackendFn)
     hookMocks.useAppUiPersistenceMock.mockReturnValue({
       sidebarCollapsed: false,
       setSidebarCollapsed: vi.fn(),

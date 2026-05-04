@@ -11,6 +11,8 @@ import { useAppStore } from './appStore'
 import {
   useAddMessage,
   useAllowLlmFallback,
+  useBackendStatus,
+  useCheckBackend,
   useConversationList,
   useCreateConversation,
   useCurrentConversation,
@@ -18,6 +20,7 @@ import {
   useLatestAssistantMessageContent,
   useMessages,
   useQualityGoals,
+  useSelectConversation,
   useSelectedSkills,
   useWorkflowLevel,
 } from './selectors'
@@ -184,6 +187,42 @@ describe('selectors', () => {
       rerender()
 
       expect(result.current).toBe(firstReference)
+    })
+
+    it('returns stable selectConversation action reference', () => {
+      const { result, rerender } = renderHook(() => useSelectConversation())
+      const firstReference = result.current
+
+      rerender()
+
+      expect(result.current).toBe(firstReference)
+    })
+
+    it('returns stable checkBackend action reference', () => {
+      const { result, rerender } = renderHook(() => useCheckBackend())
+      const firstReference = result.current
+
+      rerender()
+
+      expect(result.current).toBe(firstReference)
+    })
+  })
+
+  describe('useBackendStatus', () => {
+    it('returns initial backendStatus value', () => {
+      const { result } = renderHook(() => useBackendStatus())
+      expect(result.current).toBe(false)
+    })
+
+    it('reflects backendStatus changes', () => {
+      const { result } = renderHook(() => useBackendStatus())
+      expect(result.current).toBe(false)
+
+      act(() => {
+        useAppStore.setState({ backendStatus: true })
+      })
+
+      expect(result.current).toBe(true)
     })
   })
 })

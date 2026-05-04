@@ -1,5 +1,4 @@
-import { useAppStore } from '../stores/appStore'
-import { type EvaluationSourceDescriptor, useLatestAssistantMessageContent } from '../stores/selectors'
+import { type EvaluationSourceDescriptor, useLatestAssistantMessageContent, useBackendStatus, useCheckBackend } from '../stores/selectors'
 import { useAppRuntimeHealth } from './useAppRuntimeHealth'
 import { useAppUiPersistence } from './useAppUiPersistence'
 import { useAppCheckpointMenu } from './useAppCheckpointMenu'
@@ -11,7 +10,8 @@ import { useI18n } from '../i18n'
 import { getCurrentEditorSelectionText } from '../utils/editorHandle'
 
 export function useAppViewModel() {
-  const { backendStatus, checkBackend } = useAppStore()
+  const backendStatus = useBackendStatus()
+  const checkBackend = useCheckBackend()
   const uiPersistence = useAppUiPersistence()
   const latestAssistantContent = useLatestAssistantMessageContent()
   const contextUsageView = useAppContextUsage()

@@ -1,0 +1,97 @@
+{
+  "id": "TASK-001",
+  "title": "Run Lighthouse performance audit on production build",
+  "description": "Capture Lighthouse Performance score, FCP, LCP, TBT, and CLS metrics using chrome-devtools MCP. These baselines are required by roadmap success criteria 1-4.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "measurement",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Start dev server, navigate to app via chrome-devtools MCP, run lighthouse_audit, capture Performance/FCP/LCP/TBT/CLS scores, write results to .workflow/scratch/20260504-analyze-P1-profiling/lighthouse-baseline.json",
+  "status": "completed",
+  "completed_at": "2026-05-04T08:45:00.000Z",
+  "actual_duration": "20min",
+
+  "scope": "src/",
+  "focus_paths": ["vite.config.ts", "src/App.tsx"],
+
+  "read_first": [
+    ".workflow/scratch/20260504-analyze-P1-profiling/analysis.md",
+    "vite.config.ts",
+    "package.json"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "lighthouse-baseline.json contains 'performance_score' field with numeric value",
+      "lighthouse-baseline.json contains 'fcp' field",
+      "lighthouse-baseline.json contains 'lcp' field",
+      "lighthouse-baseline.json contains 'tbt' field",
+      "lighthouse-baseline.json contains 'cls' field"
+    ],
+    "verification": "Read lighthouse-baseline.json and verify all 5 metric fields exist with numeric values",
+    "definition_of_done": "Lighthouse Performance audit completed with all 5 core metrics captured and saved"
+  },
+
+  "files": [
+    {
+      "path": ".workflow/scratch/20260504-analyze-P1-profiling/lighthouse-baseline.json",
+      "action": "create",
+      "target": "lighthouse metrics file",
+      "change": "Create JSON file with performance_score, fcp, lcp, tbt, cls fields from Lighthouse audit"
+    }
+  ],
+
+  "implementation": [
+    "Run 'npm run build' to create production build",
+    "Start dev server or preview server for the built app",
+    "Use chrome-devtools MCP: list_pages to find app page, or new_page + navigate_page to localhost",
+    "Run chrome-devtools lighthouse_audit on the page",
+    "Parse Lighthouse results and extract: performanceScore, first-contentful-paint, largest-contentful-paint, total-blocking-time, cumulative-layout-shift",
+    "Write structured JSON to lighthouse-baseline.json with all 5 metrics plus timestamp"
+  ],
+
+  "test": {
+    "commands": ["cat .workflow/scratch/20260504-analyze-P1-profiling/lighthouse-baseline.json"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["All 5 metrics present with numeric values"]
+  },
+
+  "reference": {
+    "pattern": "Lighthouse audit via MCP",
+    "files": [],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "chrome-devtools MCP provides programmatic Lighthouse access without manual browser interaction",
+    "decision_factors": ["MCP available", "Automated", "Reproducible"],
+    "tradeoffs": "Scores may vary slightly from manual Lighthouse run due to MCP overhead"
+  },
+
+  "risks": ["Dev server may not start in CI environment", "Lighthouse may timeout on Tauri desktop app"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": [],
+    "affected_components": [],
+    "affected_requirements": ["SC-1: Lighthouse Performance score >= 80", "SC-2: FCP measured", "SC-3: LCP measured", "SC-4: TBT measured"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "15min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

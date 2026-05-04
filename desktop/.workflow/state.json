@@ -16,6 +16,123 @@
   "milestone_history": [
     {
       "milestone": {
+        "id": "M6",
+        "name": "Performance & Technical Debt",
+        "status": "completed",
+        "phases": [1, 2],
+        "phase_1_completed_at": "2026-05-05T00:25:00.000Z",
+        "phase_2_completed_at": "2026-05-05T01:15:00.000Z"
+      },
+      "artifacts": [
+        {
+          "id": "ANL-007",
+          "type": "analyze",
+          "milestone": "M6",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M6/artifacts/P1-profiling",
+          "status": "completed",
+          "harvested": false,
+          "created_at": "2026-05-04T08:00:00.000Z",
+          "completed_at": "2026-05-04T08:30:00.000Z"
+        },
+        {
+          "id": "PLN-016",
+          "type": "plan",
+          "milestone": "M6",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M6/artifacts/P1-profiling",
+          "status": "confirmed",
+          "harvested": false,
+          "created_at": "2026-05-04T08:35:00.000Z",
+          "completed_at": "2026-05-04T08:40:00.000Z"
+        },
+        {
+          "id": "EXC-006",
+          "type": "execute",
+          "milestone": "M6",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M6/artifacts/P1-profiling",
+          "status": "completed",
+          "harvested": false,
+          "created_at": "2026-05-05T00:00:00.000Z",
+          "completed_at": "2026-05-05T00:10:00.000Z"
+        },
+        {
+          "id": "VRF-020",
+          "type": "verify",
+          "milestone": "M6",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M6/artifacts/P1-profiling",
+          "status": "passed",
+          "harvested": false,
+          "created_at": "2026-05-05T00:15:00.000Z",
+          "completed_at": "2026-05-05T00:15:00.000Z"
+        },
+        {
+          "id": "ANL-008",
+          "type": "analyze",
+          "milestone": "M6",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M6/artifacts/20260505-analyze-P2-optimization",
+          "status": "completed",
+          "harvested": false,
+          "created_at": "2026-05-05T00:30:00.000Z",
+          "completed_at": "2026-05-05T00:35:00.000Z"
+        },
+        {
+          "id": "PLN-017",
+          "type": "plan",
+          "milestone": "M6",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M6/artifacts/P2-optimization",
+          "status": "confirmed",
+          "depends_on": ["ANL-008"],
+          "harvested": false,
+          "created_at": "2026-05-05T00:36:00.000Z",
+          "completed_at": "2026-05-05T00:37:00.000Z"
+        },
+        {
+          "id": "EXC-007",
+          "type": "execute",
+          "milestone": "M6",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M6/artifacts/P2-optimization",
+          "status": "completed",
+          "depends_on": "PLN-017",
+          "harvested": false,
+          "created_at": "2026-05-05T00:38:00.000Z",
+          "completed_at": "2026-05-05T00:50:00.000Z"
+        },
+        {
+          "id": "VRF-021",
+          "type": "verify",
+          "milestone": "M6",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M6/artifacts/P2-optimization",
+          "status": "passed",
+          "depends_on": "EXC-007",
+          "harvested": false,
+          "created_at": "2026-05-05T00:58:00.000Z",
+          "completed_at": "2026-05-05T00:58:00.000Z"
+        }
+      ],
+      "completed_at": "2026-05-05T01:15:00.000Z",
+      "audit_verdict": "PASS",
+      "summary_path": "milestones/M6/summary.md",
+      "audit_path": "milestones/M6/audit-report.md",
+      "learnings_path": "milestones/M6/learnings.md",
+      "archive_path": "milestones/M6/"
+    },
+    {
+      "milestone": {
         "id": "M1",
         "name": "UX & Stability Sprint",
         "status": "completed",
@@ -766,7 +883,7 @@
       "archive_path": "milestones/M5/"
     }
   ],
-  "last_updated": "2026-05-04T07:30:00.000Z",
+  "last_updated": "2026-05-05T01:15:00.000Z",
   "last_release_version": "9.6.0",
   "last_release_at": "2026-05-04T07:30:00.000Z"
 }

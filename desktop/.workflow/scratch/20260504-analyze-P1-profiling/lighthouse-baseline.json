@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-04T08:45:00.000Z",
+  "tool": "lighthouse-cli",
+  "url": "http://localhost:4173",
+  "performance_score": 72,
+  "fcp": {
+    "value_ms": 3023,
+    "score": 0.49
+  },
+  "lcp": {
+    "value_ms": 3974,
+    "score": 0.50
+  },
+  "tbt": {
+    "value_ms": 408,
+    "score": 0.67
+  },
+  "cls": {
+    "value": 0,
+    "score": 1.0
+  },
+  "speed_index": {
+    "value_ms": 3023,
+    "score": 0.94
+  },
+  "tti": {
+    "value_ms": 3987,
+    "score": 0.88
+  },
+  "source_file": "lighthouse-raw.json"
+}

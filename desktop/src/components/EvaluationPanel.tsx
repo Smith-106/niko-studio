@@ -16,7 +16,7 @@ import { useEvaluationQualityCheck } from '../hooks/useEvaluationQualityCheck'
 import { useEvaluationData } from '../hooks/useEvaluationData'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import type { WritingHelperEvaluationHandoff } from '../hooks/useAppUiPersistence'
-import type { EvaluationSourceDescriptor } from '../stores/selectors'
+import { type EvaluationSourceDescriptor, useAddMessage } from '../stores/selectors'
 import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 import { RevisionPreviewCard } from './RevisionPreviewCard'
 import type { RevisionCandidate } from '../utils/revisionLoop'
@@ -537,7 +537,7 @@ export function EvaluationPanel({
     t,
     translate,
   })
-  const { addMessage } = useAppStore()
+  const addMessage = useAddMessage()
   const {
     checkpointDescription,
     checkpoints,

@@ -4,6 +4,7 @@ import type { BackendConfig } from '../api/config'
 import { isTauriRuntime, syncGatewayBaseOverride } from '../api/transport'
 import { useSettingsStore, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
+import { useCheckBackend } from '../stores/selectors'
 import { useI18n, syncI18nLanguage } from '../i18n'
 import { MASKED_SECRET_VALUE, formatBackendFieldValue, useSettingsBackendConfig } from '../hooks/useSettingsBackendConfig'
 import { useSettingsProviderModels } from '../hooks/useSettingsProviderModels'
@@ -77,7 +78,7 @@ export function SettingsModal({
     updateProvider,
     resetSettings,
   } = useSettingsStore()
-  const { checkBackend } = useAppStore()
+  const checkBackend = useCheckBackend()
   const [localSettings, setLocalSettings] = useState(settings)
   const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null)

@@ -1,0 +1,22 @@
+{
+  "task_id": "TASK-2.1",
+  "plan_id": "PLN-017",
+  "wave": 1,
+  "title": "Lazy-load StoryBiblePanel in DocumentEditor",
+  "status": "completed",
+  "action": "Replace direct import of StoryBiblePanel with React.lazy() + Suspense wrapper in DocumentEditor.tsx",
+  "implementation": "1. In src/components/DocumentEditor.tsx line 5, replace `import { StoryBiblePanel } from './StoryBiblePanel'` with `const StoryBiblePanel = React.lazy(() => import('./StoryBiblePanel'))`\n2. Wrap `<StoryBiblePanel />` at line 106 with `<Suspense fallback={<div className=\"flex items-center justify-center h-full\"><div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400\"/></div>}><StoryBiblePanel /></Suspense>`\n3. Add `import { Suspense } from 'react'` if not already imported",
+  "read_first": [
+    "src/components/DocumentEditor.tsx",
+    "src/components/AppRightPanels.tsx",
+    "src/components/StoryBiblePanel.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -c 'React.lazy' src/components/DocumentEditor.tsx → ≥1",
+      "grep -c 'import.*StoryBiblePanel.*from' src/components/DocumentEditor.tsx → 0",
+      "grep -c 'Suspense' src/components/DocumentEditor.tsx → ≥1",
+      "grep -c 'lazy.*StoryBiblePanel' src/components/DocumentEditor.tsx → ≥1"
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "task_id": "TASK-2.2",
+  "plan_id": "PLN-017",
+  "wave": 1,
+  "title": "Lazy-load ChatArea in ChatSidebar",
+  "status": "completed",
+  "action": "Replace direct import of ChatArea with React.lazy() + Suspense wrapper in ChatSidebar.tsx",
+  "implementation": "1. In src/components/ChatSidebar.tsx line 2, replace `import { ChatArea } from './ChatArea'` with `const ChatArea = React.lazy(() => import('./ChatArea'))`\n2. Wrap `<ChatArea {...chatAreaProps} />` at line 30 with `<Suspense fallback={<div className=\"flex items-center justify-center h-full\"><div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400\"/></div>}><ChatArea {...chatAreaProps} /></Suspense>`\n3. Add `import { Suspense } from 'react'` if not already imported",
+  "read_first": [
+    "src/components/ChatSidebar.tsx",
+    "src/components/AppRightPanels.tsx",
+    "src/components/ChatArea.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -c 'React.lazy' src/components/ChatSidebar.tsx → ≥1",
+      "grep -c 'import.*ChatArea.*from' src/components/ChatSidebar.tsx → 0",
+      "grep -c 'Suspense' src/components/ChatSidebar.tsx → ≥1",
+      "grep -c 'lazy.*ChatArea' src/components/ChatSidebar.tsx → ≥1"
+    ]
+  }
+}

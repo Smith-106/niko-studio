@@ -1,8 +1,7 @@
 import React from 'react'
 import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users } from 'lucide-react'
 
-import { useAppStore } from '../stores/appStore'
-import { useConversationList, useCurrentConversationId } from '../stores/selectors'
+import { useConversationList, useCurrentConversationId, useCreateConversation, useSelectConversation } from '../stores/selectors'
 import { useI18n } from '../i18n'
 import { useWriterWorkspaceSummary } from '../hooks/useWriterWorkspaceSummary'
 import { useResizablePanel } from '../hooks/useResizablePanel'
@@ -39,7 +38,8 @@ export const Sidebar = React.memo(function Sidebar({
 }: SidebarProps) {
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
-  const { createConversation, selectConversation } = useAppStore()
+  const createConversation = useCreateConversation()
+  const selectConversation = useSelectConversation()
   const { t, translate } = useI18n()
   const workspaceSummary = useWriterWorkspaceSummary()
   const writerWorkspaceTitle = translate('writerWorkspaceTitle')

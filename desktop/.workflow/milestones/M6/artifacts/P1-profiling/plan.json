@@ -1,0 +1,51 @@
+{
+  "summary": "M6 Phase 1: Formalize profiling baselines and complete remaining audit items. Analysis already identified optimization targets (P1-P4). This plan captures remaining measurement tasks and produces the final audit artifacts.",
+  "approach": "The analysis phase (ANL-007) already resolved TASK-1.4 (lazy-load audit) and TASK-1.5 (store subscription audit). This plan addresses: (1) running Lighthouse via chrome-devtools MCP for performance scores, (2) generating bundle visualizer report, (3) profiling React render cycles via chrome-devtools performance trace, (4) formalizing the optimization priority matrix. Tasks are ordered by dependency — Lighthouse needs a running dev server.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003"],
+  "task_count": 3,
+  "complexity": "low",
+  "estimated_time": "45min",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["TASK-001", "TASK-002"],
+      "label": "Measurement"
+    },
+    {
+      "wave": 2,
+      "tasks": ["TASK-003"],
+      "label": "Formalization"
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "TASK-001 (Lighthouse scores) + TASK-002 (render profiling) → TASK-003 (final audit report)",
+    "stages": [
+      { "name": "measure", "tasks": ["TASK-001", "TASK-002"], "output": "performance metrics" },
+      { "name": "formalize", "tasks": ["TASK-003"], "output": "audit report + optimization matrix" }
+    ]
+  },
+
+  "design_decisions": [
+    "Lighthouse audit via chrome-devtools MCP — avoids manual browser interaction",
+    "Bundle visualizer deferred (requires vite-plugin installation) — baseline numbers already captured in analysis",
+    "React DevTools profiling via chrome-devtools performance trace instead of DevTools Profiler extension"
+  ],
+
+  "shared_context": {
+    "patterns": ["React.lazy + Suspense pattern from AppRightPanels.tsx"],
+    "conventions": ["Analysis artifacts in .workflow/scratch/20260504-analyze-P1-profiling/"],
+    "dependencies": ["chrome-devtools MCP for browser profiling"]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-04T08:35:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "audit",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

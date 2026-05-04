@@ -1,0 +1,97 @@
+{
+  "id": "TASK-003",
+  "title": "Formalize Phase 1 audit report with optimization priority matrix",
+  "description": "Consolidate all Phase 1 findings (analysis, Lighthouse baselines, render profile) into a formal audit report. Create the optimization priority matrix with measurable targets for Phase 2.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "documentation",
+  "priority": "high",
+  "effort": "low",
+  "action": "Create phase1-audit-report.md consolidating: bundle baseline table, Lighthouse scores, render hotspot findings, optimization priority matrix with expected impact vs effort, measurable Phase 2 targets.",
+  "status": "completed",
+  "completed_at": "2026-05-05T00:10:00.000Z",
+  "actual_duration": "10min",
+
+  "scope": ".workflow/scratch/20260504-analyze-P1-profiling/",
+  "focus_paths": [],
+
+  "read_first": [
+    ".workflow/scratch/20260504-analyze-P1-profiling/analysis.md",
+    ".workflow/scratch/20260504-analyze-P1-profiling/conclusions.json",
+    ".workflow/scratch/20260504-analyze-P1-profiling/context.md"
+  ],
+
+  "depends_on": ["TASK-001", "TASK-002"],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "phase1-audit-report.md contains '## Bundle Baseline' section",
+      "phase1-audit-report.md contains '## Lighthouse Scores' section",
+      "phase1-audit-report.md contains '## Optimization Priority Matrix' section",
+      "phase1-audit-report.md contains '## Phase 2 Targets' section",
+      "Optimization matrix includes P1 (StoryBiblePanel lazy), P2 (ChatArea lazy), P3 (Sidebar store fix), P4 (other store fixes)"
+    ],
+    "verification": "Read phase1-audit-report.md and verify all required sections exist with content",
+    "definition_of_done": "Phase 1 audit report complete with all findings consolidated and Phase 2 targets defined"
+  },
+
+  "files": [
+    {
+      "path": ".workflow/scratch/20260504-analyze-P1-profiling/phase1-audit-report.md",
+      "action": "create",
+      "target": "Phase 1 audit report",
+      "change": "Create comprehensive audit report consolidating all Phase 1 findings"
+    }
+  ],
+
+  "implementation": [
+    "Read analysis.md for bundle baseline data and optimization targets",
+    "Read conclusions.json for optimization_priority array and key_findings",
+    "Read context.md for locked/free decisions that constrain Phase 2",
+    "Read lighthouse-baseline.json (from TASK-001) for performance scores",
+    "Read render-profile.json (from TASK-002) for render hotspot data",
+    "Write phase1-audit-report.md with sections: Bundle Baseline, Lighthouse Scores, Render Hotspots, Optimization Priority Matrix (P1-P4 with impact/effort), Phase 2 Targets (specific KB targets and metric improvements)"
+  ],
+
+  "test": {
+    "commands": ["grep -c '##' .workflow/scratch/20260504-analyze-P1-profiling/phase1-audit-report.md"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["Report contains >= 4 major sections", "Optimization matrix has 4 entries"]
+  },
+
+  "reference": {
+    "pattern": "Milestone audit report format from previous milestones",
+    "files": [],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Consolidate all findings into single report for Phase 2 planning reference",
+    "decision_factors": ["Single source of truth", "Phase 2 plan will reference this"],
+    "tradeoffs": null
+  },
+
+  "risks": [],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": [],
+    "affected_components": [],
+    "affected_requirements": ["SC-5: Bundle analysis report", "SC-6: Priority optimization list"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "15min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

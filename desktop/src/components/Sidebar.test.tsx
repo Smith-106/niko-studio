@@ -22,6 +22,8 @@ vi.mock('../stores/selectors', () => ({
     { id: 'conv-2', title: 'Character Notes', messages: [] },
   ],
   useCurrentConversationId: () => 'conv-1',
+  useCreateConversation: () => mockAppState.createConversation,
+  useSelectConversation: () => mockAppState.selectConversation,
 }))
 
 vi.mock('../hooks/useWriterWorkspaceSummary', () => ({

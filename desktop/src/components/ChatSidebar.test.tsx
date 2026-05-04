@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { ChatSidebar } from './ChatSidebar'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -114,7 +114,7 @@ describe('ChatSidebar', () => {
     })
   })
 
-  it('renders the ChatArea inside an aside element', () => {
+  it('renders the ChatArea inside an aside element', async () => {
     render(
       <ChatSidebar
         chatAreaProps={defaultChatAreaProps}
@@ -124,7 +124,9 @@ describe('ChatSidebar', () => {
 
     const aside = document.querySelector('aside')
     expect(aside).toBeInTheDocument()
-    expect(screen.getByTestId('chat-area')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('chat-area')).toBeInTheDocument()
+    })
   })
 
   it('applies collapsed width when chatSidebarCollapsed is true', () => {
@@ -167,7 +169,7 @@ describe('ChatSidebar', () => {
     expect(aside?.className).toContain('duration-300')
   })
 
-  it('forwards chatAreaProps to ChatArea', () => {
+  it('forwards chatAreaProps to ChatArea', async () => {
     render(
       <ChatSidebar
         chatAreaProps={{ ...defaultChatAreaProps, connectionState: 'disconnected' as const }}
@@ -175,7 +177,7 @@ describe('ChatSidebar', () => {
       />,
     )
 
-    const chatArea = screen.getByTestId('chat-area')
+    const chatArea = await screen.findByTestId('chat-area')
     expect(chatArea).toBeInTheDocument()
     const connectionProp = chatArea.querySelector('[data-prop="connectionState"]')
     expect(connectionProp?.textContent).toBe('disconnected')

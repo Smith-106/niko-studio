@@ -1,0 +1,96 @@
+{
+  "id": "TASK-002",
+  "title": "Profile React render cycles via performance trace",
+  "description": "Use chrome-devtools MCP to capture a performance trace while interacting with the app. Identify components with excessive re-renders, particularly Sidebar (known over-subscription), and quantify render frequency.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "measurement",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Start performance trace via chrome-devtools MCP, trigger common interactions (open conversation, switch tabs, type in editor), stop trace, analyze results to identify re-render hotspots. Write findings to render-profile.json.",
+  "status": "completed",
+  "completed_at": "2026-05-05T00:05:00.000Z",
+  "actual_duration": "15min",
+
+  "scope": "src/",
+  "focus_paths": ["src/components/Sidebar.tsx", "src/components/DocumentEditor.tsx", "src/components/ChatArea.tsx"],
+
+  "read_first": [
+    ".workflow/scratch/20260504-analyze-P1-profiling/analysis.md",
+    "src/components/Sidebar.tsx",
+    "src/store/selectors.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "render-profile.json exists with render_counts field",
+      "render-profile.json contains at least 3 components with render frequency data",
+      "Sidebar.tsx is listed in render hotspots if render count > 10 during trace"
+    ],
+    "verification": "Read render-profile.json and verify it contains component render data",
+    "definition_of_done": "React render cycle profile captured with re-render hotspots identified"
+  },
+
+  "files": [
+    {
+      "path": ".workflow/scratch/20260504-analyze-P1-profiling/render-profile.json",
+      "action": "create",
+      "target": "render profile data",
+      "change": "Create JSON file with component render counts and hotspot analysis"
+    }
+  ],
+
+  "implementation": [
+    "Ensure dev server is running (shared with TASK-001)",
+    "Use chrome-devtools MCP: performance_start_trace to begin profiling",
+    "Use chrome-devtools MCP: navigate/interact to trigger common user flows",
+    "Use chrome-devtools MCP: performance_stop_trace to capture trace",
+    "Use chrome-devtools MCP: performance_analyze_insight to extract render data",
+    "Parse trace data for React component render counts",
+    "Write structured findings to render-profile.json"
+  ],
+
+  "test": {
+    "commands": ["cat .workflow/scratch/20260504-analyze-P1-profiling/render-profile.json"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["Render profile contains data for >= 3 components"]
+  },
+
+  "reference": {
+    "pattern": "Chrome DevTools Performance API via MCP",
+    "files": [],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "chrome-devtools performance trace provides actual render timing without needing React DevTools extension",
+    "decision_factors": ["MCP available", "No extension install needed", "Captures real user interactions"],
+    "tradeoffs": "Less detailed than React DevTools Profiler (no component-level render causes)"
+  },
+
+  "risks": ["Performance trace may not capture React-specific render data", "Trace overhead may distort measurements"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": [],
+    "affected_components": ["Sidebar", "DocumentEditor", "ChatArea"],
+    "affected_requirements": ["SC-6: Priority optimization list with impact estimates"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "15min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

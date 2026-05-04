@@ -1,0 +1,105 @@
+{
+  "timestamp": "2026-05-05T00:00:00.000Z",
+  "tool": "chrome-devtools-mcp + evaluate_script",
+  "url": "http://localhost:4173",
+  "render_counts": {
+    "note": "Production build - React DevTools not available. Measured via fiber tree walk and DOM analysis.",
+    "fiber_tree": {
+      "total_component_instances": 33,
+      "unique_components": 19,
+      "max_depth": 43,
+      "note": "Minified names in production. Dc (Memo) appears 11 times - likely list items."
+    },
+    "over_subscribed_components": [
+      {
+        "component": "Sidebar",
+        "file": "src/components/Sidebar.tsx:42",
+        "issue": "useAppStore() without selector - subscribes to entire store",
+        "impact": "Re-renders on ANY state change across all slices (backend, workspace, conversation, skills, loading, UI)",
+        "severity": "high",
+        "fix": "Replace with useAppStore((state) => ({ createConversation: state.createConversation, selectConversation: state.selectConversation })) or use selectors from selectors.ts"
+      },
+      {
+        "component": "EvaluationPanel",
+        "file": "src/components/EvaluationPanel.tsx:540",
+        "issue": "useAppStore() without selector",
+        "impact": "Lazy-loaded so less critical, but still over-subscribed when mounted",
+        "severity": "medium",
+        "fix": "Replace with useAppStore((state) => state.addMessage)"
+      },
+      {
+        "component": "SettingsModal",
+        "file": "src/components/SettingsModal.tsx:80",
+        "issue": "useAppStore() without selector",
+        "impact": "Lazy-loaded, modal - least critical",
+        "severity": "low",
+        "fix": "Replace with useAppStore((state) => state.checkBackend)"
+      }
+    ]
+  },
+  "dom_stats": {
+    "total_elements": 574,
+    "sidebar_elements": 85,
+    "main_content_elements": 245,
+    "editor_elements": 2,
+    "total_buttons": 90,
+    "total_inputs": 12,
+    "dom_depth": 14,
+    "most_children": 15,
+    "layout_update_ms": 94,
+    "layout_nodes_affected": 580
+  },
+  "performance_trace": {
+    "lcp_ms": 261,
+    "lcp_breakdown": {
+      "ttfb_ms": 3,
+      "render_delay_ms": 258
+    },
+    "cls": 0,
+    "forced_reflows": {
+      "total_ms": 126,
+      "sources": [
+        { "source": "vendor-editor (TipTap)", "function": "Ne", "time_ms": 1, "file": "vendor-editor-jZug3CZX.js:1:3249" },
+        { "source": "ProseMirror updateStateInner", "time_ms": 117, "file": "vendor-editor-pm-D7ULiztj.js:9:45230" },
+        { "source": "index.js anonymous", "time_ms": 17, "file": "index-D7KGpurT.js:77:9606" },
+        { "source": "ProseMirror eq", "time_ms": 15, "file": "vendor-editor-pm-D7ULiztj.js:9:28518" },
+        { "source": "react-virtual", "time_ms": 0.1, "file": "vendor-virtual-CdbaKIvy.js:3:421" }
+      ]
+    }
+  },
+  "memory": {
+    "js_heap_used_mb": 7,
+    "note": "Measured on idle state after load"
+  },
+  "resource_loading": {
+    "js_resource_count": 7,
+    "total_js_transfer_kb": 11,
+    "page_load": {
+      "dom_interactive_ms": 20,
+      "dom_complete_ms": 65
+    }
+  },
+  "hotspots": [
+    {
+      "rank": 1,
+      "component": "Sidebar",
+      "issue": "Full store subscription causes re-render on every state change",
+      "evidence": "useAppStore() at line 42 with no selector, store has 6 slices",
+      "render_frequency": "On every store mutation (conversations, messages, skills, UI state, etc.)"
+    },
+    {
+      "rank": 2,
+      "component": "ProseMirror editor",
+      "issue": "Forced synchronous reflows during state updates",
+      "evidence": "updateStateInner causes 117ms forced reflow",
+      "render_frequency": "On every editor keystroke/content change"
+    },
+    {
+      "rank": 3,
+      "component": "StoryBiblePanel",
+      "issue": "1788 LOC component in main bundle via direct import in DocumentEditor",
+      "evidence": "Static import chain: DocumentEditor → StoryBiblePanel",
+      "render_frequency": "Mounted in DOM (conditionally visible, not lazy)"
+    }
+  ]
+}
