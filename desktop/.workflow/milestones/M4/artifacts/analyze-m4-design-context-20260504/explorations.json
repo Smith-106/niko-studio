@@ -1,0 +1,81 @@
+{
+  "session_id": "ANL-m4-design-context-2026-05-04",
+  "timestamp": "2026-05-04T01:32:00.000Z",
+  "explorations": [
+    {
+      "type": "codebase",
+      "source": "exploration-codebase.json",
+      "scope": "Panel infrastructure, design token compatibility, existing API hooks, theme system",
+      "verdict": "All 5 exploration areas show full compatibility. No blockers found.",
+      "key_findings": [
+        "RightPanelType extension is straightforward (7 → ~12 types)",
+        "All design tokens map to existing CSS custom properties across 9 themes",
+        "CharacterTab already has relationship API integration — extend or reuse",
+        "EvaluationPanel provides the hook pattern for drill-down data access",
+        "Lazy-loading + Suspense pattern is established and well-documented in code"
+      ]
+    },
+    {
+      "type": "design_context",
+      "source": "UID-001 artifacts (MASTER.md, design-tokens.json, animation-tokens.json)",
+      "scope": "Locked design direction, component specs, layout specs, animation tokens",
+      "verdict": "Design spec is concrete and implementable. No ambiguities that would block planning.",
+      "key_findings": [
+        "5 panels have specific layout structures (timeline_table, categorized_grid, metric_row_grid, expandable_table, structured_list)",
+        "Animation tokens are production-ready with specific durations and easing curves",
+        "Badge semantic colors (success/warning/danger) use fixed rgba — no theme dependency needed",
+        "Spacing tokens (section_gap=16px, card_gap=10px, row_gap=0px, inner_padding=14px) are simple values",
+        "Accordion behavior specified: single-expand for Evaluation, multi-expand for Foreshadowing"
+      ]
+    }
+  ],
+  "resolved_decisions": [
+    {
+      "decision": "Visualization library",
+      "prior_status": "Free",
+      "new_status": "Locked",
+      "resolution": "CSS-based only — design spec uses no external visualization library. All layouts achievable with CSS Grid, Flexbox, and standard HTML elements.",
+      "evidence": "design-tokens.json layout section uses CSS grid-template, flex, and standard HTML patterns"
+    },
+    {
+      "decision": "Panel placement",
+      "prior_status": "Free",
+      "new_status": "Locked",
+      "resolution": "Right panel at 400px width, following existing AppRightPanels pattern",
+      "evidence": "design brief constraint + AppRightPanels.tsx existing architecture"
+    },
+    {
+      "decision": "Accordion behavior",
+      "prior_status": "Free",
+      "new_status": "Locked",
+      "resolution": "Single-expand for Evaluation Drill-Down, multi-expand for Foreshadowing Tracker",
+      "evidence": "MASTER.md Interaction Patterns section specifies per-panel behavior"
+    }
+  ],
+  "still_open": [
+    {
+      "decision": "i18n key structure",
+      "status": "Free",
+      "notes": "Need to decide on key naming convention for panel labels, section headers, metric labels. Should follow existing i18n patterns in codebase."
+    },
+    {
+      "decision": "State management approach",
+      "status": "Free",
+      "notes": "Local component state vs Zustand store for panel data. Most panels consume API data directly — may only need local state for UI concerns (expand/collapse, filters)."
+    }
+  ],
+  "new_gray_areas": [
+    {
+      "area": "Panel vs Tab integration",
+      "description": "Character Relationships could be a standalone right panel OR an enhanced tab within existing KnowledgePanel. Design spec says 'structured_list' in right panel, but CharacterTab already has relationship data. Need to decide integration point.",
+      "impact": "medium",
+      "recommendation": "Standalone panel that reuses existing API hooks from CharacterTab — keeps panel architecture clean"
+    },
+    {
+      "area": "Evaluation Drill-Down scope",
+      "description": "Design spec shows evaluator drill-down as a separate panel, but EvaluationPanel already exists with evaluation data. Need to clarify if this is a new panel or an enhancement to the existing evaluation view.",
+      "impact": "medium",
+      "recommendation": "New panel type that focuses specifically on drill-down/score analysis, distinct from the existing evaluation workflow"
+    }
+  ]
+}

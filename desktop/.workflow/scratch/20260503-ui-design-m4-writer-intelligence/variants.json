@@ -1,0 +1,11 @@
+{
+  "id": "DES-M4-001",
+  "type": "ui-design",
+  "milestone": "M4",
+  "scope": "milestone",
+  "status": "in_progress",
+  "created_at": "2026-05-03",
+  "variants": ["observatory", "narrative", "analyst"],
+  "targets": ["foreshadowing-tracker", "pattern-dashboard", "session-analytics", "evaluation-drilldown", "character-relationships"],
+  "brief": "design-brief.md"
+}

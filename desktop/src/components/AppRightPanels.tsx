@@ -39,6 +39,31 @@ const AiTextOptimizer = lazy(async () => {
   return { default: module.AiTextOptimizer }
 })
 
+const ForeshadowingTrackerPanel = lazy(async () => {
+  const module = await import('./ForeshadowingTrackerPanel')
+  return { default: module.ForeshadowingTrackerPanel }
+})
+
+const PatternDashboardPanel = lazy(async () => {
+  const module = await import('./PatternDashboardPanel')
+  return { default: module.PatternDashboardPanel }
+})
+
+const SessionAnalyticsPanel = lazy(async () => {
+  const module = await import('./SessionAnalyticsPanel')
+  return { default: module.SessionAnalyticsPanel }
+})
+
+const EvaluationDrillDownPanel = lazy(async () => {
+  const module = await import('./EvaluationDrillDownPanel')
+  return { default: module.EvaluationDrillDownPanel }
+})
+
+const CharacterRelationshipsPanel = lazy(async () => {
+  const module = await import('./CharacterRelationshipsPanel')
+  return { default: module.CharacterRelationshipsPanel }
+})
+
 
 interface AppRightPanelsProps {
   activeRightPanel: RightPanelType
@@ -131,6 +156,12 @@ export function AppRightPanels({
           onOpenSettings={openSettingsFromTextOptimizer}
         />
       )}
+
+      {activeRightPanel === 'foreshadowingTracker' && <ForeshadowingTrackerPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'patternDashboard' && <PatternDashboardPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'sessionAnalytics' && <SessionAnalyticsPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'evaluationDrillDown' && <EvaluationDrillDownPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'characterRelationships' && <CharacterRelationshipsPanel onClose={closeRightPanel} />}
     </Suspense>
   )
 }

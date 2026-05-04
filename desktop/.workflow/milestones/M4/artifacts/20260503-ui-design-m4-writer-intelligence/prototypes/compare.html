@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M4 UI Design — Variant Comparison</title>
+<style>
+  :root {
+    --primary-cta: #4808d1;
+    --primary-cta-hover: #6530d8;
+    --grey-0: #f8fafc;
+    --grey-1: #e2e8f0;
+    --grey-2: #94a3b8;
+    --grey-3: #64748b;
+    --grey-4: #334155;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --surface-base: #f8fafc;
+    --surface-elevated: #ffffff;
+    --surface-sunken: #f1f5f9;
+    --border-default: #e2e8f0;
+    --border-subtle: #cbd5e1;
+    --shadow-tiny: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-default: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-card: 0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-pill: 20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    background: var(--surface-base);
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--surface-elevated);
+    border-bottom: 1px solid var(--border-default);
+    padding: 20px 32px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 4px; }
+  .header p { font-size: 0.8125rem; color: var(--text-muted); }
+
+  /* ── Tab Switcher ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    background: var(--surface-sunken);
+    border-bottom: 1px solid var(--border-default);
+    padding: 0 32px;
+  }
+  .tab {
+    padding: 10px 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 150ms, border-color 150ms;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { color: var(--primary-cta); border-bottom-color: var(--primary-cta); }
+
+  /* ── Panel Targets ── */
+  .target-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 16px 32px;
+    background: var(--surface-elevated);
+    border-bottom: 1px solid var(--border-default);
+  }
+  .target-tab {
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--surface-sunken);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 150ms;
+  }
+  .target-tab:hover { background: var(--grey-1); }
+  .target-tab.active {
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--primary-cta);
+    border-color: rgba(79, 70, 229, 0.2);
+  }
+
+  /* ── Content ── */
+  .content { padding: 24px 32px; max-width: 1400px; }
+  .variant-panel { display: none; }
+  .variant-panel.active { display: block; }
+  .target-section { display: none; }
+  .target-section.active { display: block; }
+
+  /* ── Variant A: Observatory ── */
+  .obs-section-header {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  .obs-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-default);
+    font-size: 0.8125rem;
+    gap: 10px;
+  }
+  .obs-row:hover { background: var(--surface-sunken); }
+  .obs-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+  .obs-badge.planted { background: rgba(16,185,129,0.12); color: #059669; }
+  .obs-badge.hinted { background: rgba(245,158,11,0.12); color: #d97706; }
+  .obs-badge.harvested { background: rgba(79,70,229,0.12); color: #4338ca; }
+  .obs-badge.high { background: rgba(239,68,68,0.12); color: #dc2626; }
+  .obs-badge.medium { background: rgba(245,158,11,0.12); color: #d97706; }
+  .obs-badge.low { background: rgba(16,185,129,0.12); color: #059669; }
+  .obs-metric { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+  .obs-metric-label { font-size: 0.6875rem; color: var(--text-muted); margin-top: 2px; }
+  .obs-progress { height: 4px; background: var(--surface-sunken); border-radius: 2px; overflow: hidden; }
+  .obs-progress-fill { height: 100%; border-radius: 2px; background: var(--primary-cta); }
+  .obs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .obs-card {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    box-shadow: var(--shadow-tiny);
+  }
+  .obs-card:hover { box-shadow: var(--shadow-default); }
+  .obs-score-bar { display: flex; align-items: center; gap: 8px; }
+  .obs-score-track { flex: 1; height: 6px; background: var(--surface-sunken); border-radius: 3px; }
+  .obs-score-fill { height: 100%; border-radius: 3px; }
+  .obs-expand-btn {
+    font-size: 0.6875rem; color: var(--primary-cta); background: none; border: none;
+    cursor: pointer; padding: 4px 0; font-weight: 500;
+  }
+
+  /* ── Variant B: Narrative ── */
+  .nar-card {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    box-shadow: var(--shadow-default);
+    margin-bottom: 12px;
+  }
+  .nar-card:hover { box-shadow: var(--shadow-card); transform: translateY(-1px); transition: all 200ms; }
+  .nar-section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+  .nar-excerpt {
+    background: var(--surface-sunken);
+    border-left: 3px solid var(--primary-cta);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 10px 14px;
+    font-style: italic;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    font-family: Georgia, serif;
+  }
+  .nar-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    background: rgba(79,70,229,0.1);
+    color: #4338ca;
+  }
+  .nar-metric { font-size: 1.75rem; font-weight: 700; line-height: 1; color: var(--primary-cta); }
+  .nar-metric-label { font-size: 0.8125rem; color: var(--text-secondary); margin-top: 4px; }
+  .nar-chapter-ref { font-size: 0.75rem; color: var(--primary-cta); cursor: pointer; }
+  .nar-chapter-ref:hover { text-decoration: underline; }
+
+  /* ── Variant C: Analyst ── */
+  .ana-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-default);
+    font-size: 0.8125rem;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .ana-row:hover { background: var(--surface-sunken); }
+  .ana-row-expanded {
+    background: var(--surface-sunken);
+    border-bottom: 1px solid var(--border-default);
+    padding: 12px 14px;
+    font-size: 0.8125rem;
+  }
+  .ana-section-header {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-default);
+  }
+  .ana-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    background: var(--surface-sunken);
+    color: var(--text-secondary);
+  }
+  .ana-badge.accent { background: rgba(79,70,229,0.08); color: var(--primary-cta); }
+  .ana-metric { font-size: 1.375rem; font-weight: 700; line-height: 1; }
+  .ana-metric-label { font-size: 0.6875rem; color: var(--text-muted); margin-top: 3px; }
+  .ana-card {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-tiny);
+  }
+  .ana-expand-chevron { color: var(--text-muted); font-size: 0.75rem; transition: transform 150ms; }
+  .ana-expand-chevron.open { transform: rotate(90deg); }
+
+  /* ── Shared ── */
+  .metrics-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .metric-card {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    flex: 1;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .status-dot.green { background: #10b981; }
+  .status-dot.amber { background: #f59e0b; }
+  .status-dot.violet { background: #7c3aed; }
+  .status-dot.grey { background: var(--grey-3); }
+
+  /* ── 6D Radar (simplified) ── */
+  .radar-container { display: flex; gap: 24px; margin-bottom: 24px; }
+  .radar-item { text-align: center; }
+  .radar-bar {
+    width: 60px; height: 6px; background: var(--grey-1); border-radius: 3px; margin: 4px auto;
+    overflow: hidden; position: relative;
+  }
+  .radar-fill { height: 100%; border-radius: 3px; background: var(--primary-cta); }
+  .radar-label { font-size: 0.625rem; color: var(--text-muted); }
+  .radar-value { font-size: 0.625rem; font-weight: 600; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>M4 Writer Intelligence Dashboard — Design Variants</h1>
+  <p>3 style directions for 5 intelligence panels. Click tabs to switch variants, targets to switch panels.</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-variant="a">A — Observatory</button>
+  <button class="tab" data-variant="b">B — Narrative</button>
+  <button class="tab" data-variant="c">C — Analyst</button>
+</div>
+
+<div class="target-tabs">
+  <button class="target-tab active" data-target="foreshadow">Foreshadowing Tracker</button>
+  <button class="target-tab" data-target="pattern">Pattern Dashboard</button>
+  <button class="target-tab" data-target="session">Session Analytics</button>
+  <button class="target-tab" data-target="eval">Evaluation Drill-Down</button>
+  <button class="target-tab" data-target="character">Character Relationships</button>
+</div>
+
+<div class="content">
+
+<!-- ═══════════════ VARIANT A: OBSERVATORY ═══════════════ -->
+<div class="variant-panel active" id="variant-a">
+
+  <!-- A: Foreshadowing Tracker -->
+  <div class="target-section active" data-target="foreshadow">
+    <div class="radar-container">
+      <div class="radar-item"><div class="radar-label">Temp</div><div class="radar-bar"><div class="radar-fill" style="width:30%"></div></div><div class="radar-value">Cool</div></div>
+      <div class="radar-item"><div class="radar-label">Contrast</div><div class="radar-bar"><div class="radar-fill" style="width:90%"></div></div><div class="radar-value">High</div></div>
+      <div class="radar-item"><div class="radar-label">Density</div><div class="radar-bar"><div class="radar-fill" style="width:90%"></div></div><div class="radar-value">Dense</div></div>
+      <div class="radar-item"><div class="radar-label">Rounding</div><div class="radar-bar"><div class="radar-fill" style="width:60%"></div></div><div class="radar-value">Soft</div></div>
+      <div class="radar-item"><div class="radar-label">Motion</div><div class="radar-bar"><div class="radar-fill" style="width:40%"></div></div><div class="radar-value">Subtle</div></div>
+      <div class="radar-item"><div class="radar-label">Personality</div><div class="radar-bar"><div class="radar-fill" style="width:80%"></div></div><div class="radar-value">Professional</div></div>
+    </div>
+
+    <div class="obs-section-header">Foreshadowing Timeline — 3 active threads</div>
+    <div style="border:1px solid var(--border-default); border-radius:var(--radius-sm); overflow:hidden;">
+      <div class="obs-row" style="background:var(--surface-sunken); font-weight:600; font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">
+        <span style="width:24px"></span><span style="flex:1">Description</span><span style="width:70px">Status</span><span style="width:50px">Ch.</span><span style="width:80px">Progress</span>
+      </div>
+      <div class="obs-row">
+        <span class="status-dot green"></span>
+        <span style="flex:1">The old pendant grandmother gave her</span>
+        <span><span class="obs-badge planted">PLANTED</span></span>
+        <span style="color:var(--text-muted); font-size:0.75rem">Ch.3</span>
+        <span><div class="obs-progress"><div class="obs-progress-fill" style="width:33%"></div></div></span>
+      </div>
+      <div class="obs-row">
+        <span class="status-dot amber"></span>
+        <span style="flex:1">The scar on his left hand — "an old story"</span>
+        <span><span class="obs-badge hinted">HINTED</span></span>
+        <span style="color:var(--text-muted); font-size:0.75rem">Ch.5,7</span>
+        <span><div class="obs-progress"><div class="obs-progress-fill" style="width:66%"></div></div></span>
+      </div>
+      <div class="obs-row">
+        <span class="status-dot violet"></span>
+        <span style="flex:1">The prophecy about the twin bloodlines</span>
+        <span><span class="obs-badge harvested">HARVESTED</span></span>
+        <span style="color:var(--text-muted); font-size:0.75rem">Ch.2,4,8</span>
+        <span><div class="obs-progress"><div class="obs-progress-fill" style="width:100%"></div></div></span>
+      </div>
+      <div class="obs-row">
+        <span class="status-dot green"></span>
+        <span style="flex:1">The broken mirror in the hallway</span>
+        <span><span class="obs-badge planted">PLANTED</span></span>
+        <span style="color:var(--text-muted); font-size:0.75rem">Ch.6</span>
+        <span><div class="obs-progress"><div class="obs-progress-fill" style="width:33%"></div></div></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- A: Pattern Dashboard -->
+  <div class="target-section" data-target="pattern">
+    <div class="obs-section-header">Detected Patterns — 4 types, 12 occurrences</div>
+    <div class="obs-grid">
+      <div class="obs-card">
+        <div style="font-weight:600; font-size:0.8125rem; margin-bottom:4px">Repetition Loop</div>
+        <div style="display:flex; gap:4px; margin-bottom:6px">
+          <span class="obs-badge high">5 occurrences</span>
+        </div>
+        <div style="font-size:0.6875rem; color:var(--text-muted)">Ch.2, 3, 5, 7, 9</div>
+      </div>
+      <div class="obs-card">
+        <div style="font-weight:600; font-size:0.8125rem; margin-bottom:4px">Pacing Shift</div>
+        <div style="display:flex; gap:4px; margin-bottom:6px">
+          <span class="obs-badge medium">3 occurrences</span>
+        </div>
+        <div style="font-size:0.6875rem; color:var(--text-muted)">Ch.4, 6, 8</div>
+      </div>
+      <div class="obs-card">
+        <div style="font-weight:600; font-size:0.8125rem; margin-bottom:4px">Motif Echo</div>
+        <div style="display:flex; gap:4px; margin-bottom:6px">
+          <span class="obs-badge low">2 occurrences</span>
+        </div>
+        <div style="font-size:0.6875rem; color:var(--text-muted)">Ch.1, 7</div>
+      </div>
+      <div class="obs-card">
+        <div style="font-weight:600; font-size:0.8125rem; margin-bottom:4px">Tone Shift</div>
+        <div style="display:flex; gap:4px; margin-bottom:6px">
+          <span class="obs-badge medium">2 occurrences</span>
+        </div>
+        <div style="font-size:0.6875rem; color:var(--text-muted)">Ch.3, 9</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- A: Session Analytics -->
+  <div class="target-section" data-target="session">
+    <div class="obs-section-header">Writing Sessions — Last 30 days</div>
+    <div class="metrics-row">
+      <div class="metric-card"><div class="obs-metric">24</div><div class="obs-metric-label">Sessions</div></div>
+      <div class="metric-card"><div class="obs-metric">1.8h</div><div class="obs-metric-label">Avg Length</div></div>
+      <div class="metric-card"><div class="obs-metric">42.6k</div><div class="obs-metric-label">Total Words</div></div>
+    </div>
+    <div style="border:1px solid var(--border-default); border-radius:var(--radius-sm); overflow:hidden;">
+      <div class="obs-row" style="background:var(--surface-sunken); font-weight:600; font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">
+        <span style="width:100px">Date</span><span style="width:70px">Duration</span><span style="width:70px">Words</span><span style="flex:1">Chapter</span>
+      </div>
+      <div class="obs-row"><span style="width:100px">May 2</span><span style="width:70px">2.3h</span><span style="width:70px">2,847</span><span>Ch.9 — The Revelation</span></div>
+      <div class="obs-row"><span style="width:100px">May 1</span><span style="width:70px">1.5h</span><span style="width:70px">1,892</span><span>Ch.9 — The Revelation</span></div>
+      <div class="obs-row"><span style="width:100px">Apr 29</span><span style="width:70px">3.1h</span><span style="width:70px">4,210</span><span>Ch.8 — Echoes</span></div>
+    </div>
+  </div>
+
+  <!-- A: Evaluation Drill-Down -->
+  <div class="target-section" data-target="eval">
+    <div class="obs-section-header">Evaluator Scores — 15 evaluators</div>
+    <div style="border:1px solid var(--border-default); border-radius:var(--radius-sm); overflow:hidden;">
+      <div class="obs-row" style="background:var(--surface-sunken); font-weight:600; font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">
+        <span style="flex:1">Evaluator</span><span style="width:200px">Score</span><span style="width:30px"></span>
+      </div>
+      <div class="obs-row">
+        <span style="flex:1; font-weight:500">Pacing Consistency</span>
+        <span class="obs-score-bar" style="width:200px"><span class="obs-badge low">82</span><div class="obs-score-track"><div class="obs-score-fill" style="width:82%; background:#10b981"></div></div></span>
+        <span><button class="obs-expand-btn">▸</button></span>
+      </div>
+      <div class="obs-row">
+        <span style="flex:1; font-weight:500">Character Consistency</span>
+        <span class="obs-score-bar" style="width:200px"><span class="obs-badge medium">64</span><div class="obs-score-track"><div class="obs-score-fill" style="width:64%; background:#f59e0b"></div></div></span>
+        <span><button class="obs-expand-btn">▸</button></span>
+      </div>
+      <div class="obs-row">
+        <span style="flex:1; font-weight:500">Dialogue Authenticity</span>
+        <span class="obs-score-bar" style="width:200px"><span class="obs-badge low">91</span><div class="obs-score-track"><div class="obs-score-fill" style="width:91%; background:#10b981"></div></div></span>
+        <span><button class="obs-expand-btn">▸</button></span>
+      </div>
+      <div class="obs-row">
+        <span style="flex:1; font-weight:500">Scene Structure</span>
+        <span class="obs-score-bar" style="width:200px"><span class="obs-badge high">38</span><div class="obs-score-track"><div class="obs-score-fill" style="width:38%; background:#ef4444"></div></div></span>
+        <span><button class="obs-expand-btn">▸</button></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- A: Character Relationships -->
+  <div class="target-section" data-target="character">
+    <div class="obs-section-header">Character Relationships — 6 connections</div>
+    <div style="border:1px solid var(--border-default); border-radius:var(--radius-sm); overflow:hidden;">
+      <div class="obs-row" style="background:var(--surface-sunken); font-weight:600; font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">
+        <span style="width:120px">Character</span><span style="width:90px">Type</span><span style="width:120px">Target</span><span style="flex:1">Evidence</span>
+      </div>
+      <div class="obs-row">
+        <span style="width:120px; font-weight:500">林晓月</span>
+        <span><span class="obs-badge hinted">Mentor</span></span>
+        <span style="width:120px">苏明</span>
+        <span style="flex:1; color:var(--text-muted); font-size:0.75rem">Ch.2,3,5 — guiding advice scenes</span>
+      </div>
+      <div class="obs-row">
+        <span style="width:120px; font-weight:500">苏明</span>
+        <span><span class="obs-badge planted">Rival</span></span>
+        <span style="width:120px">陈霆</span>
+        <span style="flex:1; color:var(--text-muted); font-size:0.75rem">Ch.4,7 — confrontation</span>
+      </div>
+      <div class="obs-row">
+        <span style="width:120px; font-weight:500">林晓月</span>
+        <span><span class="obs-badge harvested">Ally</span></span>
+        <span style="width:120px">叶芝</span>
+        <span style="flex:1; color:var(--text-muted); font-size:0.75rem">Ch.1,6,8 — shared mission</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ VARIANT B: NARRATIVE ═══════════════ -->
+<div class="variant-panel" id="variant-b">
+
+  <!-- B: Foreshadowing Tracker -->
+  <div class="target-section active" data-target="foreshadow">
+    <div class="radar-container">
+      <div class="radar-item"><div class="radar-label">Temp</div><div class="radar-bar"><div class="radar-fill" style="width:80%; background:#f59e0b"></div></div><div class="radar-value">Warm</div></div>
+      <div class="radar-item"><div class="radar-label">Contrast</div><div class="radar-bar"><div class="radar-fill" style="width:60%; background:#f59e0b"></div></div><div class="radar-value">Medium</div></div>
+      <div class="radar-item"><div class="radar-label">Density</div><div class="radar-bar"><div class="radar-fill" style="width:50%; background:#f59e0b"></div></div><div class="radar-value">Balanced</div></div>
+      <div class="radar-item"><div class="radar-label">Rounding</div><div class="radar-bar"><div class="radar-fill" style="width:80%; background:#f59e0b"></div></div><div class="radar-value">Round</div></div>
+      <div class="radar-item"><div class="radar-label">Motion</div><div class="radar-bar"><div class="radar-fill" style="width:80%; background:#f59e0b"></div></div><div class="radar-value">Expressive</div></div>
+      <div class="radar-item"><div class="radar-label">Personality</div><div class="radar-bar"><div class="radar-fill" style="width:70%; background:#f59e0b"></div></div><div class="radar-value">Artistic</div></div>
+    </div>
+
+    <div class="nar-section-title">Foreshadowing Threads</div>
+
+    <div class="nar-card">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+        <span class="status-dot green" style="width:10px; height:10px"></span>
+        <span style="font-weight:600; font-size:0.875rem">The old pendant grandmother gave her</span>
+      </div>
+      <div class="nar-excerpt" style="margin-bottom:10px">
+        "This was your great-grandmother's," she said, pressing the cold jade pendant into her palm. "Keep it close. It knows things."
+      </div>
+      <div style="display:flex; gap:8px; align-items:center">
+        <span class="nar-badge">Planted</span>
+        <span class="nar-chapter-ref">Chapter 3 — The Inheritance</span>
+      </div>
+    </div>
+
+    <div class="nar-card">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+        <span class="status-dot amber" style="width:10px; height:10px"></span>
+        <span style="font-weight:600; font-size:0.875rem">The scar on his left hand — "an old story"</span>
+      </div>
+      <div class="nar-excerpt" style="margin-bottom:10px">
+        He rubbed the jagged line across his palm again, that unconscious habit she'd noticed weeks ago. "An old story," he'd said, and changed the subject. Just like he'd done yesterday.
+      </div>
+      <div style="display:flex; gap:8px; align-items:center">
+        <span class="nar-badge">Hinted</span>
+        <span class="nar-chapter-ref">Ch.5, Ch.7 — Echoes of the Past</span>
+      </div>
+    </div>
+
+    <div class="nar-card">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+        <span class="status-dot violet" style="width:10px; height:10px"></span>
+        <span style="font-weight:600; font-size:0.875rem">The prophecy about the twin bloodlines</span>
+      </div>
+      <div class="nar-excerpt" style="margin-bottom:10px">
+        "Two lines from one root, one light and one shadow. When the pillar falls, only blood remembers." The prophecy had seemed so abstract when she first read it. Now it described everyone she knew.
+      </div>
+      <div style="display:flex; gap:8px; align-items:center">
+        <span class="nar-badge">Harvested</span>
+        <span class="nar-chapter-ref">Ch.2 → Ch.4 → Ch.8 — The Revelation</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: Pattern Dashboard -->
+  <div class="target-section" data-target="pattern">
+    <div class="nar-section-title">Narrative Patterns Detected</div>
+
+    <div class="nar-card">
+      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px">
+        <span style="font-weight:600; font-size:0.9375rem">Repetition Loop</span>
+        <span class="nar-badge">5 found</span>
+      </div>
+      <div class="nar-excerpt" style="margin-bottom:10px">
+        The phrase "she felt the weight of" appears across chapters 2, 3, 5, 7, and 9 — each time describing a different emotional burden, but the identical phrasing may feel redundant to readers.
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap">
+        <span class="nar-badge" style="background:var(--surface-sunken); color:var(--text-secondary)">Ch.2</span>
+        <span class="nar-badge" style="background:var(--surface-sunken); color:var(--text-secondary)">Ch.3</span>
+        <span class="nar-badge" style="background:var(--surface-sunken); color:var(--text-secondary)">Ch.5</span>
+        <span class="nar-badge" style="background:var(--surface-sunken); color:var(--text-secondary)">Ch.7</span>
+        <span class="nar-badge" style="background:var(--surface-sunken); color:var(--text-secondary)">Ch.9</span>
+      </div>
+    </div>
+
+    <div class="nar-card">
+      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px">
+        <span style="font-weight:600; font-size:0.9375rem">Pacing Shift</span>
+        <span class="nar-badge">3 found</span>
+      </div>
+      <div class="nar-excerpt" style="margin-bottom:10px">
+        Chapters 4, 6, and 8 show abrupt tempo changes — long descriptive passages followed by sudden action sequences. Consider smoother transitions.
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap">
+        <span class="nar-badge" style="background:var(--surface-sunken); color:var(--text-secondary)">Ch.4</span>
+        <span class="nar-badge" style="background:var(--surface-sunken); color:var(--text-secondary)">Ch.6</span>
+        <span class="nar-badge" style="background:var(--surface-sunken); color:var(--text-secondary)">Ch.8</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: Session Analytics -->
+  <div class="target-section" data-target="session">
+    <div class="nar-section-title">Your Writing Journey</div>
+    <div class="metrics-row">
+      <div class="metric-card" style="text-align:center; border-radius:var(--radius-md)">
+        <div class="nar-metric">24</div><div class="nar-metric-label">Sessions this month</div>
+      </div>
+      <div class="metric-card" style="text-align:center; border-radius:var(--radius-md)">
+        <div class="nar-metric">1.8h</div><div class="nar-metric-label">Average flow time</div>
+      </div>
+      <div class="metric-card" style="text-align:center; border-radius:var(--radius-md)">
+        <div class="nar-metric">42.6k</div><div class="nar-metric-label">Words written</div>
+      </div>
+    </div>
+
+    <div class="nar-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+        <span style="font-weight:600; font-size:0.875rem">May 2 — Deep dive into the revelation</span>
+        <span style="font-size:0.75rem; color:var(--text-muted)">2.3h · 2,847 words</span>
+      </div>
+      <div style="font-size:0.8125rem; color:var(--text-secondary)">
+        Worked on Chapter 9, focusing on the climactic confrontation. Peak productivity at 10pm.
+      </div>
+    </div>
+    <div class="nar-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+        <span style="font-weight:600; font-size:0.875rem">May 1 — Building tension</span>
+        <span style="font-size:0.75rem; color:var(--text-muted)">1.5h · 1,892 words</span>
+      </div>
+      <div style="font-size:0.8125rem; color:var(--text-secondary)">
+        Continued Chapter 9, setting up the foreshadowing payoff. Steady pace throughout.
+      </div>
+    </div>
+  </div>
+
+  <!-- B: Evaluation Drill-Down -->
+  <div class="target-section" data-target="eval">
+    <div class="nar-section-title">Evaluation Insights</div>
+
+    <div class="nar-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <span style="font-weight:600; font-size:0.9375rem">Pacing Consistency</span>
+        <span style="font-size:1.25rem; font-weight:700; color:#059669">82</span>
+      </div>
+      <div style="font-size:0.8125rem; color:var(--text-secondary); margin-bottom:8px">
+        Your story maintains good pacing overall. The middle chapters (4-6) show slight slowdown in action density, but recover well by chapter 7.
+      </div>
+      <div class="nar-excerpt">
+        "The long hallway stretched before her, each step echoing against stone walls that had witnessed centuries of secrets. She walked. And walked. And kept walking." — Consider tightening this passage.
+      </div>
+    </div>
+
+    <div class="nar-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <span style="font-weight:600; font-size:0.9375rem">Scene Structure</span>
+        <span style="font-size:1.25rem; font-weight:700; color:#dc2626">38</span>
+      </div>
+      <div style="font-size:0.8125rem; color:var(--text-secondary); margin-bottom:8px">
+        Several scenes lack clear turning points. A scene should shift the emotional or informational state — ask: what changed because of this scene?
+      </div>
+      <div class="nar-excerpt">
+        Chapter 3's opening scene reads smoothly but doesn't advance the plot. The information revealed about the family history could be merged with the Chapter 4 conversation.
+      </div>
+    </div>
+  </div>
+
+  <!-- B: Character Relationships -->
+  <div class="target-section" data-target="character">
+    <div class="nar-section-title">Character Connections</div>
+
+    <div class="nar-card">
+      <div style="font-weight:600; font-size:0.9375rem; margin-bottom:10px">林晓月</div>
+      <div style="margin-bottom:12px; padding-left:12px; border-left:2px solid var(--border-default)">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+          <span style="font-weight:500">→ 苏明</span>
+          <span class="nar-badge">Mentor</span>
+        </div>
+        <div class="nar-excerpt" style="margin-bottom:6px">
+          "You have your grandmother's eyes," she said, her voice carrying the weight of someone who remembered what those eyes had seen.
+        </div>
+        <span class="nar-chapter-ref">Ch.2, Ch.3, Ch.5</span>
+      </div>
+      <div style="padding-left:12px; border-left:2px solid var(--border-default)">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+          <span style="font-weight:500">→ 叶芝</span>
+          <span class="nar-badge">Ally</span>
+        </div>
+        <div class="nar-excerpt" style="margin-bottom:6px">
+          They moved through the market like two threads in the same weave — separate but always close enough to catch each other.
+        </div>
+        <span class="nar-chapter-ref">Ch.1, Ch.6, Ch.8</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ VARIANT C: ANALYST ═══════════════ -->
+<div class="variant-panel" id="variant-c">
+
+  <!-- C: Foreshadowing Tracker -->
+  <div class="target-section active" data-target="foreshadow">
+    <div class="radar-container">
+      <div class="radar-item"><div class="radar-label">Temp</div><div class="radar-bar"><div class="radar-fill" style="width:50%; background:var(--grey-3)"></div></div><div class="radar-value">Neutral</div></div>
+      <div class="radar-item"><div class="radar-label">Contrast</div><div class="radar-bar"><div class="radar-fill" style="width:60%; background:var(--grey-3)"></div></div><div class="radar-value">Medium</div></div>
+      <div class="radar-item"><div class="radar-label">Density</div><div class="radar-bar"><div class="radar-fill" style="width:50%; background:var(--grey-3)"></div></div><div class="radar-value">Balanced</div></div>
+      <div class="radar-item"><div class="radar-label">Rounding</div><div class="radar-bar"><div class="radar-fill" style="width:60%; background:var(--grey-3)"></div></div><div class="radar-value">Soft</div></div>
+      <div class="radar-item"><div class="radar-label">Motion</div><div class="radar-bar"><div class="radar-fill" style="width:40%; background:var(--grey-3)"></div></div><div class="radar-value">Subtle</div></div>
+      <div class="radar-item"><div class="radar-label">Personality</div><div class="radar-bar"><div class="radar-fill" style="width:30%; background:var(--grey-3)"></div></div><div class="radar-value">Minimal</div></div>
+    </div>
+
+    <div class="ana-section-header">Foreshadowing — 4 threads, 3 in progress</div>
+    <div style="border:1px solid var(--border-default); border-radius:var(--radius-sm); overflow:hidden;">
+      <div class="ana-row" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+        <span class="ana-expand-chevron">▸</span>
+        <span class="status-dot green"></span>
+        <span style="flex:1; font-weight:500">The old pendant grandmother gave her</span>
+        <span class="ana-badge accent">Planted</span>
+        <span style="color:var(--text-muted); font-size:0.75rem">1/3 · Ch.3</span>
+      </div>
+      <div class="ana-row-expanded" style="display:none">
+        <div style="font-size:0.8125rem; color:var(--text-secondary); margin-bottom:6px">
+          First planted in Chapter 3. Needs hint and harvest events to complete the arc.
+        </div>
+        <div style="font-size:0.75rem; color:var(--primary-cta); cursor:pointer">Jump to Chapter 3 →</div>
+      </div>
+
+      <div class="ana-row" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+        <span class="ana-expand-chevron">▸</span>
+        <span class="status-dot amber"></span>
+        <span style="flex:1; font-weight:500">The scar on his left hand — "an old story"</span>
+        <span class="ana-badge accent">Hinted</span>
+        <span style="color:var(--text-muted); font-size:0.75rem">2/3 · Ch.5,7</span>
+      </div>
+      <div class="ana-row-expanded" style="display:none">
+        <div style="font-size:0.8125rem; color:var(--text-secondary); margin-bottom:6px">
+          Hinted twice (Ch.5, Ch.7). One more reference needed before harvest. The mystery is building well.
+        </div>
+        <div style="font-size:0.75rem; color:var(--primary-cta); cursor:pointer">Jump to Chapter 7 →</div>
+      </div>
+
+      <div class="ana-row" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+        <span class="ana-expand-chevron">▸</span>
+        <span class="status-dot violet"></span>
+        <span style="flex:1; font-weight:500">The prophecy about the twin bloodlines</span>
+        <span class="ana-badge accent">Harvested</span>
+        <span style="color:var(--text-muted); font-size:0.75rem">3/3 · Ch.2→8</span>
+      </div>
+      <div class="ana-row-expanded" style="display:none">
+        <div style="font-size:0.8125rem; color:var(--text-secondary); margin-bottom:6px">
+          Complete arc: planted Ch.2, hinted Ch.4, harvested Ch.8. Satisfying payoff.
+        </div>
+        <div style="font-size:0.75rem; color:var(--primary-cta); cursor:pointer">View full arc →</div>
+      </div>
+
+      <div class="ana-row">
+        <span class="ana-expand-chevron">▸</span>
+        <span class="status-dot green"></span>
+        <span style="flex:1; font-weight:500">The broken mirror in the hallway</span>
+        <span class="ana-badge">Planted</span>
+        <span style="color:var(--text-muted); font-size:0.75rem">1/3 · Ch.6</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- C: Pattern Dashboard -->
+  <div class="target-section" data-target="pattern">
+    <div class="ana-section-header">Detected Patterns — 12 occurrences across 4 types</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px; margin-bottom:16px">
+      <div class="ana-card" style="cursor:pointer">
+        <div style="font-weight:600; font-size:0.8125rem; margin-bottom:4px">Repetition Loop</div>
+        <span class="ana-badge accent">5</span>
+        <div style="font-size:0.6875rem; color:var(--text-muted); margin-top:4px">Last: Ch.9</div>
+      </div>
+      <div class="ana-card" style="cursor:pointer">
+        <div style="font-weight:600; font-size:0.8125rem; margin-bottom:4px">Pacing Shift</div>
+        <span class="ana-badge accent">3</span>
+        <div style="font-size:0.6875rem; color:var(--text-muted); margin-top:4px">Last: Ch.8</div>
+      </div>
+      <div class="ana-card" style="cursor:pointer">
+        <div style="font-weight:600; font-size:0.8125rem; margin-bottom:4px">Motif Echo</div>
+        <span class="ana-badge">2</span>
+        <div style="font-size:0.6875rem; color:var(--text-muted); margin-top:4px">Last: Ch.7</div>
+      </div>
+      <div class="ana-card" style="cursor:pointer">
+        <div style="font-weight:600; font-size:0.8125rem; margin-bottom:4px">Tone Shift</div>
+        <span class="ana-badge">2</span>
+        <div style="font-size:0.6875rem; color:var(--text-muted); margin-top:4px">Last: Ch.9</div>
+      </div>
+    </div>
+    <div class="ana-card" style="background:var(--surface-sunken)">
+      <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px">Click a pattern to expand details</div>
+      <div style="font-size:0.8125rem; color:var(--text-muted)">Expanded view shows chapter list, occurrence context, and related patterns.</div>
+    </div>
+  </div>
+
+  <!-- C: Session Analytics -->
+  <div class="target-section" data-target="session">
+    <div class="ana-section-header">Writing Sessions — Last 30 days</div>
+    <div class="metrics-row">
+      <div class="ana-card" style="flex:1; text-align:center">
+        <div class="ana-metric">24</div><div class="ana-metric-label">Sessions</div>
+      </div>
+      <div class="ana-card" style="flex:1; text-align:center">
+        <div class="ana-metric">1.8h</div><div class="ana-metric-label">Avg Length</div>
+      </div>
+      <div class="ana-card" style="flex:1; text-align:center">
+        <div class="ana-metric">42.6k</div><div class="ana-metric-label">Words</div>
+      </div>
+      <div class="ana-card" style="flex:1; text-align:center">
+        <div class="ana-metric">10pm</div><div class="ana-metric-label">Peak Hour</div>
+      </div>
+    </div>
+    <div style="border:1px solid var(--border-default); border-radius:var(--radius-sm); overflow:hidden;">
+      <div class="ana-row" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+        <span class="ana-expand-chevron">▸</span>
+        <span style="width:80px">May 2</span>
+        <span style="width:60px">2.3h</span>
+        <span style="width:70px">2,847w</span>
+        <span style="flex:1; color:var(--text-secondary)">Ch.9 — The Revelation</span>
+      </div>
+      <div class="ana-row-expanded" style="display:none">
+        <div style="font-size:0.8125rem; color:var(--text-secondary)">
+          Peak productivity between 9:30-11pm. Focused on the confrontation scene. 3 foreshadowing threads referenced.
+        </div>
+      </div>
+      <div class="ana-row">
+        <span class="ana-expand-chevron" style="color:transparent">▸</span>
+        <span style="width:80px">May 1</span>
+        <span style="width:60px">1.5h</span>
+        <span style="width:70px">1,892w</span>
+        <span style="flex:1; color:var(--text-secondary)">Ch.9 — The Revelation</span>
+      </div>
+      <div class="ana-row">
+        <span class="ana-expand-chevron" style="color:transparent">▸</span>
+        <span style="width:80px">Apr 29</span>
+        <span style="width:60px">3.1h</span>
+        <span style="width:70px">4,210w</span>
+        <span style="flex:1; color:var(--text-secondary)">Ch.8 — Echoes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- C: Evaluation Drill-Down -->
+  <div class="target-section" data-target="eval">
+    <div class="ana-section-header">Evaluator Scores — 15 evaluators</div>
+    <div style="border:1px solid var(--border-default); border-radius:var(--radius-sm); overflow:hidden;">
+      <div class="ana-row" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+        <span class="ana-expand-chevron">▸</span>
+        <span style="flex:1; font-weight:500">Pacing Consistency</span>
+        <div class="obs-score-bar" style="width:120px"><div class="obs-score-track"><div class="obs-score-fill" style="width:82%; background:#10b981"></div></div></div>
+        <span style="width:30px; text-align:right; font-weight:600; color:#059669">82</span>
+        <span style="font-size:0.6875rem; color:var(--text-muted)">↑3</span>
+      </div>
+      <div class="ana-row-expanded" style="display:none">
+        <div style="font-size:0.8125rem; color:var(--text-secondary); margin-bottom:4px">Good pacing maintained. Middle chapters show slight slowdown. Consider adding tension beats in Ch.4-6.</div>
+      </div>
+      <div class="ana-row" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+        <span class="ana-expand-chevron">▸</span>
+        <span style="flex:1; font-weight:500">Character Consistency</span>
+        <div class="obs-score-bar" style="width:120px"><div class="obs-score-track"><div class="obs-score-fill" style="width:64%; background:#f59e0b"></div></div></div>
+        <span style="width:30px; text-align:right; font-weight:600; color:#d97706">64</span>
+        <span style="font-size:0.6875rem; color:var(--text-muted)">→0</span>
+      </div>
+      <div class="ana-row-expanded" style="display:none">
+        <div style="font-size:0.8125rem; color:var(--text-secondary)">Character voice drift detected in Ch.5 and Ch.7. 苏明's dialogue shifts register unexpectedly.</div>
+      </div>
+      <div class="ana-row">
+        <span class="ana-expand-chevron" style="color:transparent">▸</span>
+        <span style="flex:1; font-weight:500">Dialogue Authenticity</span>
+        <div class="obs-score-bar" style="width:120px"><div class="obs-score-track"><div class="obs-score-fill" style="width:91%; background:#10b981"></div></div></div>
+        <span style="width:30px; text-align:right; font-weight:600; color:#059669">91</span>
+        <span style="font-size:0.6875rem; color:var(--text-muted)">↑7</span>
+      </div>
+      <div class="ana-row">
+        <span class="ana-expand-chevron" style="color:transparent">▸</span>
+        <span style="flex:1; font-weight:500">Scene Structure</span>
+        <div class="obs-score-bar" style="width:120px"><div class="obs-score-track"><div class="obs-score-fill" style="width:38%; background:#ef4444"></div></div></div>
+        <span style="width:30px; text-align:right; font-weight:600; color:#dc2626">38</span>
+        <span style="font-size:0.6875rem; color:var(--text-muted)">↓5</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- C: Character Relationships -->
+  <div class="target-section" data-target="character">
+    <div class="ana-section-header">Character Relationships — 3 characters, 6 connections</div>
+
+    <div style="margin-bottom:12px">
+      <div class="ana-row" style="font-weight:600; background:var(--surface-sunken); border-radius:var(--radius-sm) var(--radius-sm) 0 0">
+        <span style="flex:1">林晓月</span>
+        <span class="ana-badge">2 connections</span>
+      </div>
+      <div style="border:1px solid var(--border-default); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); overflow:hidden">
+        <div class="ana-row" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">
+          <span class="ana-expand-chevron">▸</span>
+          <span style="flex:1">→ 苏明</span>
+          <span class="ana-badge accent">Mentor</span>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Ch.2,3,5</span>
+        </div>
+        <div class="ana-row-expanded" style="display:none">
+          <div style="font-size:0.8125rem; color:var(--text-secondary)">"You have your grandmother's eyes." Guidance scenes in chapters 2, 3, and 5.</div>
+        </div>
+        <div class="ana-row">
+          <span class="ana-expand-chevron" style="color:transparent">▸</span>
+          <span style="flex:1">→ 叶芝</span>
+          <span class="ana-badge">Ally</span>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Ch.1,6,8</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="ana-row" style="font-weight:600; background:var(--surface-sunken); border-radius:var(--radius-sm) var(--radius-sm) 0 0">
+        <span style="flex:1">苏明</span>
+        <span class="ana-badge">1 connection</span>
+      </div>
+      <div style="border:1px solid var(--border-default); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); overflow:hidden">
+        <div class="ana-row">
+          <span class="ana-expand-chevron" style="color:transparent">▸</span>
+          <span style="flex:1">→ 陈霆</span>
+          <span class="ana-badge accent">Rival</span>
+          <span style="font-size:0.75rem; color:var(--text-muted)">Ch.4,7</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// Variant tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.variant-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('variant-' + tab.dataset.variant).classList.add('active');
+  });
+});
+
+// Target tabs
+document.querySelectorAll('.target-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.target-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.target-section').forEach(s => s.classList.remove('active'));
+    // Show matching target in all variants
+    document.querySelectorAll(`.target-section[data-target="${tab.dataset.target}"]`).forEach(s => s.classList.add('active'));
+  });
+});
+</script>
+
+</body>
+</html>

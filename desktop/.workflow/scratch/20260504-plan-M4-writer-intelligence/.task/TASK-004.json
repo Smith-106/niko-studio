@@ -1,0 +1,44 @@
+{
+  "id": "TASK-004",
+  "title": "Add i18n keys for all 5 M4 intelligence panels",
+  "description": "Add translation keys for panel titles, section headers, metric labels, status labels, and button labels across all 5 intelligence panels to translations.ts, zh-CN.json, and en-US.json.",
+  "type": "i18n",
+  "priority": "high",
+  "action": "Add ~30 new translation keys to Translations interface in translations.ts. Add corresponding zh-CN values and en-US values. Keys cover: 5 panel titles, section headers (foreshadowing states, pattern categories, session metrics, evaluation dimensions, relationship types), action labels (filter, expand, collapse), and status labels (planted/hinted/harvested, confidence levels).",
+  "read_first": [
+    "desktop/src/i18n/translations.ts",
+    "desktop/src/i18n/locales/zh-CN.json",
+    "desktop/src/i18n/locales/en-US.json",
+    "desktop/src/i18n/index.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -c 'foreshadowingTrackerTitle\\|patternDashboardTitle\\|sessionAnalyticsTitle\\|evaluationDrillDownTitle\\|characterRelationshipsTitle' desktop/src/i18n/translations.ts → ≥5",
+      "grep -c 'foreshadowingTrackerTitle\\|patternDashboardTitle\\|sessionAnalyticsTitle\\|evaluationDrillDownTitle\\|characterRelationshipsTitle' desktop/src/i18n/locales/zh-CN.json → ≥5",
+      "grep -c 'foreshadowingTrackerTitle\\|patternDashboardTitle\\|sessionAnalyticsTitle\\|evaluationDrillDownTitle\\|characterRelationshipsTitle' desktop/src/i18n/locales/en-US.json → ≥5"
+    ],
+    "verification": "ensureTranslationShape() passes (no key mismatch between zh and en). TypeScript compilation passes.",
+    "definition_of_done": "All M4 panel translation keys added to Translations interface, zh-CN.json, and en-US.json with no key mismatches."
+  },
+  "files": [
+    "desktop/src/i18n/translations.ts",
+    "desktop/src/i18n/locales/zh-CN.json",
+    "desktop/src/i18n/locales/en-US.json"
+  ],
+  "implementation": [
+    "In translations.ts Translations interface: add ~30 new keys with 'intelligence' prefix grouping. Examples: intelligenceForeshadowingTrackerTitle, intelligenceForeshadowingPlanted, intelligenceForeshadowingHinted, intelligenceForeshadowingHarvested, intelligencePatternDashboardTitle, intelligencePatternOccurrences, intelligenceSessionAnalyticsTitle, intelligenceSessionTotalSessions, intelligenceSessionAvgDuration, intelligenceSessionTotalWords, intelligenceEvaluationDrillDownTitle, intelligenceEvaluationReasoning, intelligenceEvaluationSuggestion, intelligenceCharacterRelationshipsTitle, intelligenceRelationshipType, intelligenceFilterAll, intelligenceExpandAll, intelligenceCollapseAll",
+    "In zh-CN translations object: add corresponding Chinese values (e.g., intelligenceForeshadowingTrackerTitle: '伏笔追踪', intelligencePatternDashboardTitle: '模式仪表盘', intelligenceSessionAnalyticsTitle: '会话分析', intelligenceEvaluationDrillDownTitle: '评估深入', intelligenceCharacterRelationshipsTitle: '角色关系')",
+    "In en-US translations object: add English values",
+    "In zh-CN.json: add flat key versions matching the translations.ts key names",
+    "In en-US.json: add flat key versions"
+  ],
+  "reference": {
+    "design": "scratch/20260503-ui-design-m4-writer-intelligence/MASTER.md — Panel titles and labels from wireframes"
+  },
+  "rationale": {
+    "why": "Existing codebase uses useI18n + translations.ts consistently. All new panels must follow this pattern.",
+    "alternatives": "Hardcoded strings — rejected because existing panels all use the i18n system"
+  },
+  "risks": ["Key count growth — but ~30 keys is modest and follows existing growth pattern"],
+  "meta": { "wave": 1, "estimated_files": 3, "depends_on": [] }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "TASK-005",
+  "title": "Implement Foreshadowing Tracker panel",
+  "description": "Build the Foreshadowing Tracker right panel with timeline-table layout. Displays foreshadow arcs grouped by ID, each showing plant/hint/harvest events in a collapsible tree. Uses AccordionWrapper in multi-expand mode.",
+  "type": "component",
+  "priority": "high",
+  "action": "Create desktop/src/components/ForeshadowingTrackerPanel.tsx. Import ForeshadowItem, ForeshadowStats from knowledge.ts. Import AccordionWrapper, IntelligenceBadge, SectionHeader from intelligence/. On mount, call getForeshadowStats() for summary metrics and getForeshadows() for item list. Group items by foreshadow ID and render as accordion with multi-expand mode. Each item shows status badge (planted=success, hinted=warning, harvested=danger variant), description (truncated), hints count, and date. Filter bar at top with status filter chips.",
+  "read_first": [
+    "desktop/src/components/ForeshadowingTrackerPanel.tsx",
+    "desktop/src/api/knowledge.ts",
+    "desktop/src/components/intelligence/AccordionWrapper.tsx",
+    "desktop/src/components/intelligence/IntelligenceBadge.tsx",
+    "desktop/src/components/intelligence/SectionHeader.tsx",
+    "desktop/src/components/intelligence/MetricValue.tsx",
+    "desktop/src/components/EvaluationPanel.tsx",
+    "desktop/.workflow/scratch/20260503-ui-design-m4-writer-intelligence/MASTER.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -c 'getForeshadows\\|getForeshadowStats\\|ForeshadowItem\\|ForeshadowStats' desktop/src/components/ForeshadowingTrackerPanel.tsx → ≥4",
+      "grep -c 'AccordionWrapper\\|IntelligenceBadge\\|SectionHeader\\|MetricValue' desktop/src/components/ForeshadowingTrackerPanel.tsx → ≥3",
+      "grep -c 'multi' desktop/src/components/ForeshadowingTrackerPanel.tsx → ≥1",
+      "grep -c 'foreshadowingTrackerTitle\\|foreshadowingPlanted\\|foreshadowingHinted\\|foreshadowingHarvested' desktop/src/components/ForeshadowingTrackerPanel.tsx → ≥3"
+    ],
+    "verification": "Panel renders in right sidebar when sidebar button clicked. Stats summary shows total/planted/hinted/harvested counts. Accordion expands/collapses multiple items. Filter chips toggle status visibility.",
+    "definition_of_done": "Foreshadowing Tracker panel fully functional with data loading, stats summary, multi-expand accordion, status badges, and filter chips."
+  },
+  "files": [
+    "desktop/src/components/ForeshadowingTrackerPanel.tsx"
+  ],
+  "implementation": [
+    "Create ForeshadowingTrackerPanel.tsx with props { onClose: () => void }",
+    "Import useI18n from i18n, useDialogFocusTrap from hooks, AccordionWrapper/IntelligenceBadge/SectionHeader/MetricValue from intelligence/",
+    "Import getForeshadows, getForeshadowStats, ForeshadowItem, ForeshadowStats from api/knowledge",
+    "State: items (ForeshadowItem[]), stats (ForeshadowStats | null), loading, error, statusFilter ('all' | 'planted' | 'hinted' | 'harvested')",
+    "useEffect: fetch stats and items on mount, set loading/error states",
+    "Render: panel container with useDialogFocusTrap, panel title from t.intelligenceForeshadowingTrackerTitle",
+    "Stats row: 4 MetricValue components showing stats.total, stats.by_state.planted, stats.by_state.hinted, stats.by_state.harvested",
+    "Filter bar: 'all', 'planted', 'hinted', 'harvested' filter chips using IntelligenceBadge variants (all=default, planted=success, hinted=warning, harvested=danger)",
+    "Filter items by statusFilter before grouping",
+    "Group items by id, transform into AccordionWrapper items array. renderHeader shows status badge + truncated description + hints count. renderContent shows full description, planted_time, hints list (scene_id + description + timestamp), harvested_time",
+    "Pass mode='multi' to AccordionWrapper for multi-expand behavior",
+    "Style: use CSS classes .intelligence-card, .intelligence-data-row, .intelligence-section-header from globals.css"
+  ],
+  "reference": {
+    "design": "scratch/20260503-ui-design-m4-writer-intelligence/MASTER.md — Foreshadowing Tracker wireframe",
+    "api": "api/knowledge.ts — ForeshadowItem, ForeshadowStats, getForeshadows(), getForeshadowStats()"
+  },
+  "rationale": {
+    "why": "Foreshadowing is a core novelist tool. Timeline table layout matches MASTER.md spec for tracking planted/hinted/harvested arcs.",
+    "alternatives": "Flat list without grouping — rejected because grouped accordion provides better narrative arc visibility"
+  },
+  "risks": ["Large foreshadow lists may need virtualization — defer to Wave 3 if performance is an issue"],
+  "meta": { "wave": 2, "estimated_files": 1, "depends_on": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"] }
+}

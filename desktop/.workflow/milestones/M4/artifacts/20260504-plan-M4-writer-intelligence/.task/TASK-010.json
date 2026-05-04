@@ -1,0 +1,73 @@
+{
+  "id": "TASK-010",
+  "title": "Animation tokens integration, accessibility pass, and panel tests",
+  "description": "Integrate animation tokens from animation-tokens.json into all 5 panels (panel enter, accordion expand, card hover, row highlight, list stagger). Add accessibility attributes (ARIA labels, keyboard navigation, focus management). Add unit tests for shared intelligence components and integration smoke tests for all 5 panels.",
+  "type": "polish",
+  "priority": "medium",
+  "action": "Read animation-tokens.json and apply CSS transitions to all 5 panels. Add aria-label to icon-only buttons, role attributes to accordion items, keyboard event handlers for Enter/Space on clickable rows. Create test files for IntelligenceBadge, SectionHeader, MetricValue, ProgressBar, AccordionWrapper. Create smoke tests for each panel verifying they render without crashing.",
+  "read_first": [
+    "desktop/.workflow/scratch/20260503-ui-design-m4-writer-intelligence/animation-tokens.json",
+    "desktop/src/components/intelligence/IntelligenceBadge.tsx",
+    "desktop/src/components/intelligence/SectionHeader.tsx",
+    "desktop/src/components/intelligence/MetricValue.tsx",
+    "desktop/src/components/intelligence/ProgressBar.tsx",
+    "desktop/src/components/intelligence/AccordionWrapper.tsx",
+    "desktop/src/components/ForeshadowingTrackerPanel.tsx",
+    "desktop/src/components/PatternDashboardPanel.tsx",
+    "desktop/src/components/SessionAnalyticsPanel.tsx",
+    "desktop/src/components/EvaluationDrillDownPanel.tsx",
+    "desktop/src/components/CharacterRelationshipsPanel.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -r 'cubic-bezier(0.16, 1, 0.3, 1)' desktop/src/components/intelligence/ desktop/src/components/ForeshadowingTrackerPanel.tsx desktop/src/components/PatternDashboardPanel.tsx desktop/src/components/SessionAnalyticsPanel.tsx desktop/src/components/EvaluationDrillDownPanel.tsx desktop/src/components/CharacterRelationshipsPanel.tsx → ≥3",
+      "grep -r 'aria-label\\|role=' desktop/src/components/intelligence/ → ≥5",
+      "grep -r 'onKeyDown\\|onKeyUp' desktop/src/components/intelligence/AccordionWrapper.tsx → ≥1",
+      "test -f desktop/src/components/intelligence/__tests__/IntelligenceBadge.test.tsx → 0 exit code",
+      "test -f desktop/src/components/intelligence/__tests__/AccordionWrapper.test.tsx → 0 exit code"
+    ],
+    "verification": "All animation transitions are smooth. Keyboard navigation works for all interactive elements. Screen reader can identify panel sections. All tests pass.",
+    "definition_of_done": "Animation tokens applied, accessibility attributes added to all interactive elements, shared component tests passing, panel smoke tests passing."
+  },
+  "files": [
+    "desktop/src/components/intelligence/IntelligenceBadge.tsx",
+    "desktop/src/components/intelligence/AccordionWrapper.tsx",
+    "desktop/src/components/ForeshadowingTrackerPanel.tsx",
+    "desktop/src/components/PatternDashboardPanel.tsx",
+    "desktop/src/components/SessionAnalyticsPanel.tsx",
+    "desktop/src/components/EvaluationDrillDownPanel.tsx",
+    "desktop/src/components/CharacterRelationshipsPanel.tsx",
+    "desktop/src/components/intelligence/__tests__/IntelligenceBadge.test.tsx",
+    "desktop/src/components/intelligence/__tests__/SectionHeader.test.tsx",
+    "desktop/src/components/intelligence/__tests__/MetricValue.test.tsx",
+    "desktop/src/components/intelligence/__tests__/ProgressBar.test.tsx",
+    "desktop/src/components/intelligence/__tests__/AccordionWrapper.test.tsx"
+  ],
+  "implementation": [
+    "Read animation-tokens.json for exact timing values: panel_enter 200ms, accordion 120ms, card_hover 150ms, row_highlight 1200ms, stagger 15ms/item max 300ms",
+    "Add panel enter animation to all 5 panel components: CSS transition on container opacity 0→1 and transform translateY(8px)→translateY(0), duration 200ms, cubic-bezier(0.16,1,0.3,1)",
+    "Add card hover transition to .intelligence-card: transition box-shadow 150ms ease-out",
+    "Add row highlight: on data row click/mount, brief background highlight animation 1200ms ease-out (rgba highlight that fades to transparent)",
+    "Add list stagger in AccordionWrapper: CSS animation-delay incrementing 15ms per item, capped at 300ms",
+    "Accessibility — AccordionWrapper: add role='button' and tabIndex=0 to accordion headers, onKeyDown handler for Enter/Space to toggle expand, aria-expanded attribute tracking expand state, aria-controls linking header to content region",
+    "Accessibility — IntelligenceBadge: ensure text content is present (not icon-only) for screen readers",
+    "Accessibility — filter chips: add aria-pressed attribute for active state, aria-label describing filter action",
+    "Accessibility — all 5 panels: verify useDialogFocusTrap is applied, add aria-label to close button, heading hierarchy (h2 for panel title, h3 for sections)",
+    "Create __tests__/ directory in intelligence/",
+    "IntelligenceBadge.test.tsx: render with each variant, verify background color, verify children text renders",
+    "SectionHeader.test.tsx: render with title, verify uppercase text, verify border-bottom style",
+    "MetricValue.test.tsx: render with value and label, verify both render correctly",
+    "ProgressBar.test.tsx: render with various values (0, 50, 100), verify width percentage, verify clamps to 0-100",
+    "AccordionWrapper.test.tsx: render in single mode, verify only one expands; render in multi mode, verify multiple expand; verify keyboard Enter/Space toggles; verify aria-expanded updates"
+  ],
+  "reference": {
+    "animation": "scratch/20260503-ui-design-m4-writer-intelligence/animation-tokens.json — All timing values",
+    "design": "scratch/20260503-ui-design-m4-writer-intelligence/MASTER.md — Animation Tokens and Accessibility sections"
+  },
+  "rationale": {
+    "why": "Polish and testing after all panels are built ensures consistent animation behavior and accessibility compliance across the full M4 feature set.",
+    "alternatives": "Add animations inline during panel creation — rejected because centralized animation pass ensures consistency and avoids merge conflicts during Wave 2 parallel work"
+  },
+  "risks": ["Test framework setup may differ from expectations — check existing test patterns in __tests__ directories first"],
+  "meta": { "wave": 3, "estimated_files": 12, "depends_on": ["TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009"] }
+}

@@ -1,0 +1,115 @@
+{
+  "variant": "B — Narrative",
+  "attributes": {
+    "color_temperature": "warm",
+    "contrast_level": "medium",
+    "visual_density": "balanced",
+    "rounding": "round",
+    "animation": "expressive",
+    "theme_personality": "artistic"
+  },
+  "description": "Story-oriented cards with embedded prose excerpts. Warm accent tones, generous whitespace, contextual flow. Each intelligence item is presented as a story element, not a data point.",
+  "rationale": "Matches the creative writing context. Writers think in narrative terms — panels should feel like reading notes about their story, not like looking at analytics. Prioritizes context and meaning over density.",
+  "component_styles": {
+    "card": {
+      "bg": "var(--surface-elevated)",
+      "border": "1px solid var(--border-default)",
+      "border_radius": "var(--radius-md)",
+      "padding": "16px",
+      "shadow": "var(--shadow-default)",
+      "hover_shadow": "var(--shadow-card)"
+    },
+    "data_row": {
+      "bg": "var(--surface-elevated)",
+      "border": "1px solid var(--border-default)",
+      "border_radius": "var(--radius-sm)",
+      "padding": "14px 16px",
+      "font_size": "var(--shell-font-ui)",
+      "line_height": "var(--shell-line-ui)",
+      "margin_bottom": "8px"
+    },
+    "badge": {
+      "bg_accent": "rgba(79, 70, 229, 0.1)",
+      "color_accent": "#4338ca",
+      "bg_subtle": "var(--surface-sunken)",
+      "color_subtle": "var(--text-secondary)",
+      "border_radius": "var(--radius-pill)",
+      "padding": "3px 12px",
+      "font_size": "var(--shell-font-label)",
+      "font_weight": "500"
+    },
+    "section_header": {
+      "font_size": "var(--shell-font-ui)",
+      "font_weight": "600",
+      "text_transform": "none",
+      "letter_spacing": "normal",
+      "color": "var(--text-primary)",
+      "margin_bottom": "12px",
+      "border_bottom": "none"
+    },
+    "metric_value": {
+      "font_size": "1.75rem",
+      "font_weight": "700",
+      "line_height": "1",
+      "color": "var(--primary-cta)"
+    },
+    "metric_label": {
+      "font_size": "var(--shell-font-compact)",
+      "color": "var(--text-secondary)",
+      "margin_top": "4px"
+    },
+    "excerpt_block": {
+      "bg": "var(--surface-sunken)",
+      "border_left": "3px solid var(--primary-cta)",
+      "border_radius": "0 var(--radius-sm) var(--radius-sm) 0",
+      "padding": "10px 14px",
+      "font_family": "'Merriweather', serif",
+      "font_size": "0.8125rem",
+      "line_height": "1.6",
+      "color": "var(--text-secondary)",
+      "font_style": "italic"
+    }
+  },
+  "layout": {
+    "foreshadowing_tracker": {
+      "structure": "timeline_cards",
+      "card_content": ["status_dot", "event_type_label", "prose_excerpt_block", "chapter_ref_link"],
+      "grouping": "chronological",
+      "interaction": "click_opens_chapter_at_excerpt"
+    },
+    "pattern_dashboard": {
+      "structure": "story_context_cards",
+      "card_content": ["pattern_name_as_title", "occurrence_count_as_subtitle", "representative_excerpt", "chapter_badges"],
+      "grouping": "narrative_flow_order"
+    },
+    "session_analytics": {
+      "structure": "warm_summary_cards",
+      "layout": "2x2_summary_grid + session_story_timeline",
+      "metrics": ["writing_time_display", "words_written_display", "chapters_touched", "peak_productivity_time"],
+      "session_timeline": ["date_display", "narrative_summary", "word_flow"]
+    },
+    "evaluation_drilldown": {
+      "structure": "insight_cards",
+      "card_content": ["evaluator_name_as_title", "score_as_visual_gauge", "reasoning_as_prose", "excerpt_with_highlight"],
+      "interaction": "expand_to_see_full_context"
+    },
+    "character_relationships": {
+      "structure": "character_profile_cards",
+      "card_content": ["character_name_avatar", "relationship_description", "evidence_excerpt_block", "evolution_timeline"],
+      "grouping": "by_character",
+      "interaction": "click_to_jump_to_scene"
+    }
+  },
+  "spacing": {
+    "section_gap": "20px",
+    "card_gap": "12px",
+    "row_gap": "8px",
+    "inner_padding": "16px"
+  },
+  "typography": {
+    "panel_title": { "size": "1rem", "weight": "700" },
+    "section_title": { "size": "var(--shell-font-ui)", "weight": "600", "transform": "none" },
+    "body": { "size": "var(--shell-font-ui)", "weight": "400" },
+    "caption": { "size": "var(--shell-font-compact)", "weight": "400" }
+  }
+}

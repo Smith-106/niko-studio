@@ -1,0 +1,19 @@
+{
+  "design_id": "DES-M4-001",
+  "selected_variant": "A — Observatory",
+  "selected_at": "2026-05-04T00:15:00.000Z",
+  "selection_method": "interactive_user_choice",
+  "candidates_evaluated": 3,
+  "rationale": "User selected Variant A for its data-dense dashboard approach with scientific clarity, maximizing information per viewport",
+  "artifacts": {
+    "master_spec": "MASTER.md",
+    "design_tokens": "design-tokens.json",
+    "animation_tokens": "animation-tokens.json",
+    "prototype": "prototypes/compare.html",
+    "variants": [
+      "variant-a-observatory.json",
+      "variant-b-narrative.json",
+      "variant-c-analyst.json"
+    ]
+  }
+}

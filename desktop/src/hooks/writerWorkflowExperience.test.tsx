@@ -318,6 +318,11 @@ describe('writer workflow experience', () => {
           onOpenPrompts={vi.fn()}
           onOpenSettings={vi.fn()}
           onOpenEvaluation={onOpenEvaluation}
+          onOpenForeshadowingTracker={vi.fn()}
+          onOpenPatternDashboard={vi.fn()}
+          onOpenSessionAnalytics={vi.fn()}
+          onOpenEvaluationDrillDown={vi.fn()}
+          onOpenCharacterRelationships={vi.fn()}
         />
       </>,
     )

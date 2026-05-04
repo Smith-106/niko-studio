@@ -1,0 +1,62 @@
+{
+  "summary": "M4 Writer Intelligence Dashboard — 5 intelligence panels surfacing existing backend data through right-panel UI",
+  "approach": "3-wave execution: Wave 1 builds shared foundation (panel infrastructure, shared components, CSS tokens, i18n keys), Wave 2 implements 5 panels in parallel, Wave 3 integrates animations, accessibility, and tests. All panels follow Variant A — Observatory design direction with CSS-only layouts (no external libs).",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009", "TASK-010"],
+  "task_count": 10,
+  "complexity": "medium",
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Foundation",
+      "description": "Extend panel infrastructure, create shared components, add CSS tokens and i18n keys",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"],
+      "parallel": true
+    },
+    {
+      "wave": 2,
+      "label": "Panel Implementation",
+      "description": "Implement 5 intelligence panels in parallel using shared components from Wave 1",
+      "tasks": ["TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009"],
+      "parallel": true
+    },
+    {
+      "wave": 3,
+      "label": "Polish & Tests",
+      "description": "Animation tokens integration, accessibility pass, and panel tests",
+      "tasks": ["TASK-010"],
+      "parallel": false
+    }
+  ],
+  "data_flow": {
+    "backend_apis": {
+      "foreshadowing": "getForeshadows(), getForeshadowStats() from knowledge.ts",
+      "patterns": "detectPatterns() from analysis.ts",
+      "sessions": "clusterSessions() from analysis.ts",
+      "evaluation": "evaluateWithModules(), evaluateContent(), runConsistencyCheck(), getImprovementSuggestions() from evaluation.ts",
+      "characters": "getCharacterRelationships() from knowledge.ts"
+    },
+    "panel_infrastructure": "RightPanelType union → AppRightPanels lazy loading → useAppPanelOrchestration → Sidebar trigger buttons"
+  },
+  "design_decisions": [
+    "Variant A — Observatory: data-dense, cool/high-contrast/dense/soft/subtle/professional",
+    "CSS-only implementation: no external visualization library",
+    "Right-panel placement: 400px width, following existing AppRightPanels.tsx pattern",
+    "Standalone panels: Character Relationships and Evaluation Drill-Down are new right panels (not tabs)",
+    "Accordion: single-expand for Evaluation Drill-Down, multi-expand for Foreshadowing Tracker",
+    "No i18n framework: follow existing useI18n + translations.ts pattern"
+  ],
+  "shared_context": {
+    "analysis_ref": "scratch/analyze-m4-design-context-20260504",
+    "design_ref": "scratch/20260503-ui-design-m4-writer-intelligence",
+    "locked_decisions": 10,
+    "free_decisions": 0,
+    "deferred_items": 6
+  },
+  "_metadata": {
+    "milestone": "M4",
+    "scope": "milestone",
+    "created": "2026-05-04T02:00:00.000Z",
+    "created_by": "maestro-plan",
+    "depends_on": ["ANL-004", "UID-001"]
+  }
+}

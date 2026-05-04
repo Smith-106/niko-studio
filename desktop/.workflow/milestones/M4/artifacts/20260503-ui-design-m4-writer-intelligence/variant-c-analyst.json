@@ -1,0 +1,112 @@
+{
+  "variant": "C — Analyst",
+  "attributes": {
+    "color_temperature": "neutral",
+    "contrast_level": "medium",
+    "visual_density": "balanced",
+    "rounding": "soft",
+    "animation": "subtle",
+    "theme_personality": "minimal"
+  },
+  "description": "Clean, balanced presentation. Summary cards with expandable detail rows. Mixes data density with contextual depth — starts collapsed, expands on demand. Neutral palette with selective accent highlights.",
+  "rationale": "Best of both worlds — scannable overview like Observatory but with narrative depth like Narrative when expanded. Minimizes initial visual complexity while preserving access to full context. Matches how existing Niko Studio panels work.",
+  "component_styles": {
+    "card": {
+      "bg": "var(--surface-elevated)",
+      "border": "1px solid var(--border-default)",
+      "border_radius": "var(--radius-sm)",
+      "padding": "14px 16px",
+      "shadow": "var(--shadow-tiny)",
+      "hover_shadow": "var(--shadow-default)"
+    },
+    "data_row": {
+      "bg": "transparent",
+      "border_bottom": "1px solid var(--border-default)",
+      "padding": "10px 14px",
+      "font_size": "var(--shell-font-compact)",
+      "line_height": "var(--shell-line-compact)",
+      "hover_bg": "var(--surface-sunken)"
+    },
+    "badge": {
+      "bg": "var(--surface-sunken)",
+      "color": "var(--text-secondary)",
+      "bg_accent": "rgba(79, 70, 229, 0.08)",
+      "color_accent": "var(--primary-cta)",
+      "border_radius": "var(--radius-pill)",
+      "padding": "2px 10px",
+      "font_size": "var(--shell-font-label)",
+      "font_weight": "500"
+    },
+    "section_header": {
+      "font_size": "var(--shell-font-compact)",
+      "font_weight": "600",
+      "text_transform": "none",
+      "letter_spacing": "normal",
+      "color": "var(--text-primary)",
+      "margin_bottom": "10px",
+      "padding_bottom": "8px",
+      "border_bottom": "1px solid var(--border-default)"
+    },
+    "metric_value": {
+      "font_size": "1.375rem",
+      "font_weight": "700",
+      "line_height": "1",
+      "color": "var(--text-primary)"
+    },
+    "metric_label": {
+      "font_size": "var(--shell-font-label)",
+      "color": "var(--text-muted)",
+      "margin_top": "3px"
+    },
+    "expandable_detail": {
+      "bg": "var(--surface-sunken)",
+      "border_top": "1px solid var(--border-default)",
+      "padding": "12px 14px",
+      "font_size": "var(--shell-font-compact)"
+    }
+  },
+  "layout": {
+    "foreshadowing_tracker": {
+      "structure": "collapsible_timeline",
+      "summary_row": ["status_icon", "foreshadow_label", "progress_dots", "chapter_count"],
+      "expanded": ["full_description", "all_events_timeline", "prose_excerpt_condensed"],
+      "grouping": "by_foreshadow_id",
+      "interaction": "accordion_expand_collapse"
+    },
+    "pattern_dashboard": {
+      "structure": "summary_grid_expandable",
+      "summary_card": ["pattern_name", "count_badge", "last_detected"],
+      "expanded": ["chapter_list", "occurrence_details", "related_patterns"],
+      "grid_template": "repeat(auto-fill, minmax(160px, 1fr))"
+    },
+    "session_analytics": {
+      "structure": "top_metrics_collapsible_list",
+      "metrics_bar": ["total_sessions", "avg_length", "total_words", "peak_hour"],
+      "session_list": ["date", "duration", "word_count", "expand_for_chapter_detail"]
+    },
+    "evaluation_drilldown": {
+      "structure": "score_table_expandable_rows",
+      "summary_columns": ["evaluator_name", "score_bar", "trend_arrow"],
+      "expanded": ["detailed_reasoning", "affected_text_highlight", "suggestion"],
+      "interaction": "row_expand"
+    },
+    "character_relationships": {
+      "structure": "grouped_list_expandable",
+      "summary": ["character_name", "relationship_count_badge"],
+      "expanded": ["relationship_list", "evidence_excerpt", "chapter_refs"],
+      "grouping": "by_character"
+    }
+  },
+  "spacing": {
+    "section_gap": "18px",
+    "card_gap": "10px",
+    "row_gap": "0px",
+    "inner_padding": "14px"
+  },
+  "typography": {
+    "panel_title": { "size": "0.9375rem", "weight": "700" },
+    "section_title": { "size": "var(--shell-font-compact)", "weight": "600", "transform": "none" },
+    "body": { "size": "var(--shell-font-compact)", "weight": "400" },
+    "caption": { "size": "var(--shell-font-label)", "weight": "400" }
+  }
+}

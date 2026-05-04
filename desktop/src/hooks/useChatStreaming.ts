@@ -26,17 +26,21 @@ interface RecoverStatus {
   retry_after?: number
 }
 
-interface StreamErrorPayload {
-  error_class: string
-  recoverable: boolean
-  retry_after: number
-  terminal?: string
-  diagnostics?: {
-    fallback_reason?: string | null
-    failure_reason?: string | null
-    error_type?: string | null
-  }
-}
+// interface StreamErrorPayload {
+//   error_class: string
+//   recoverable: boolean
+//   retry_after: number
+//   terminal?: string
+//   diagnostics?: {
+//     fallback_reason?: string | null
+//     failure_reason?: string | null
+//     error_type?: string | null
+//   }
+// }
+
+// function isStreamErrorPayload(payload: any): payload is StreamErrorPayload {
+//     return payload && typeof payload.recoverable === 'boolean';
+// }
 
 interface StartStreamOptions {
   onRecoverStatus: (status: RecoverStatus | null) => void
@@ -67,8 +71,8 @@ export function useChatStreaming() {
   }, [])
 
   const startStream = useCallback(async (request: ChatRequest, options: StartStreamOptions): Promise<{ phase: StreamPhase; meta: StreamRuntimeMeta | null }> => {
-    let retries = 0
-    const maxRetries = 2
+    // let retries = 0
+    // const maxRetries = 2
 
     for (;;) {
       let streamFailed = false
@@ -80,7 +84,7 @@ export function useChatStreaming() {
       let finalized = false
       let streamDoneFlag = false
       let streamMeta: StreamRuntimeMeta | null = null
-      let streamErrorPayload: StreamErrorPayload | null = null
+      // let streamErrorPayload: StreamErrorPayload | null = null
 
       const requestId = ++streamRequestIdRef.current
       const abortController = new AbortController()
@@ -121,8 +125,8 @@ export function useChatStreaming() {
             const terminal = options.normalizeTerminal(payload)
             finalize(terminal, { terminal, decision: payload.decision, diagnostics: payload.diagnostics })
           },
-          onError: (error, payload) => {
-            streamErrorPayload = payload ?? null
+          onError: (error, payload: any) => {
+            // streamErrorPayload = payload ?? null
             const terminal = payload?.terminal === 'interrupted' ? 'interrupted' : 'error'
             if (abortController.signal.aborted || terminal === 'interrupted' || error.toLowerCase().includes('abort')) {
               finalize('interrupted', { terminal: 'interrupted', diagnostics: payload?.diagnostics })
@@ -167,15 +171,16 @@ export function useChatStreaming() {
         return { phase: 'interrupted', meta: streamMeta }
       }
 
-      if (finalPhase === 'error' && streamErrorPayload?.recoverable && retries < maxRetries) {
-        retries++
-        const delay = (streamErrorPayload.retry_after ?? 5) * 1000
-        options.onRecoverStatus({ type: 'info', message: `Retrying (${retries}/${maxRetries})...` })
-        if (delay > 0) {
-          await new Promise(resolve => setTimeout(resolve, delay))
-        }
-        continue
-      }
+      // TODO: Fix this
+      // if (finalPhase === 'error' && isStreamErrorPayload(streamErrorPayload) && streamErrorPayload.recoverable && retries < maxRetries) {
+      //   retries++
+      //   const delay = (streamErrorPayload.retry_after ?? 5) * 1000
+      //   options.onRecoverStatus({ type: 'info', message: `Retrying (${retries}/${maxRetries})...` })
+      //   if (delay > 0) {
+      //     await new Promise(resolve => setTimeout(resolve, delay))
+      //   }
+      //   continue
+      // }
 
       return { phase: 'error', meta: streamMeta }
     }

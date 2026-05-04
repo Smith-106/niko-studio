@@ -1,0 +1,96 @@
+{
+  "description": "Animation tokens for M4 Writer Intelligence Dashboard panels",
+  "base_unit": "ms",
+  "transitions": {
+    "panel_enter": {
+      "duration": 250,
+      "easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "property": "transform, opacity",
+      "initial": "translateX(100%), opacity(0)",
+      "final": "translateX(0), opacity(1)"
+    },
+    "panel_exit": {
+      "duration": 200,
+      "easing": "cubic-bezier(0.4, 0, 1, 1)",
+      "property": "transform, opacity",
+      "initial": "translateX(0), opacity(1)",
+      "final": "translateX(100%), opacity(0)"
+    },
+    "accordion_expand": {
+      "duration": 180,
+      "easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "property": "max-height, opacity",
+      "overflow": "hidden"
+    },
+    "accordion_collapse": {
+      "duration": 150,
+      "easing": "cubic-bezier(0.4, 0, 1, 1)",
+      "property": "max-height, opacity"
+    },
+    "badge_pulse": {
+      "duration": 600,
+      "easing": "ease-out",
+      "property": "box-shadow",
+      "trigger": "status_change",
+      "value": "0 0 0 0 rgba(79, 70, 229, 0.4) → 0 0 0 8px rgba(79, 70, 229, 0)"
+    },
+    "row_highlight": {
+      "duration": 1200,
+      "easing": "ease-out",
+      "property": "background-color",
+      "trigger": "new_data_arrival",
+      "value": "rgba(79, 70, 229, 0.08) → transparent"
+    },
+    "score_change": {
+      "duration": 400,
+      "easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "property": "transform",
+      "value": "scale(1.05) → scale(1)"
+    },
+    "card_hover": {
+      "duration": 150,
+      "easing": "ease-out",
+      "property": "box-shadow, transform",
+      "value": "shadow-default → shadow-card, translateY(-1px)"
+    }
+  },
+  "loading_states": {
+    "skeleton_shimmer": {
+      "duration": 1500,
+      "easing": "ease-in-out",
+      "iteration": "infinite",
+      "gradient": "90deg, var(--surface-sunken) 25%, var(--surface-base) 50%, var(--surface-sunken) 75%"
+    },
+    "spinner_rotation": {
+      "duration": 800,
+      "easing": "linear",
+      "iteration": "infinite"
+    }
+  },
+  "stagger": {
+    "list_item_enter": {
+      "delay_per_item": 30,
+      "max_total": 300,
+      "animation": "fadeIn",
+      "item_duration": 150
+    },
+    "card_grid_enter": {
+      "delay_per_item": 50,
+      "max_total": 500,
+      "animation": "fadeIn + translateY(8px → 0)",
+      "item_duration": 200
+    }
+  },
+  "variant_overrides": {
+    "narrative": {
+      "panel_enter.duration": 300,
+      "accordion_expand.duration": 220,
+      "card_hover.duration": 200
+    },
+    "observatory": {
+      "panel_enter.duration": 200,
+      "accordion_expand.duration": 120,
+      "stagger.list_item_enter.delay_per_item": 15
+    }
+  }
+}

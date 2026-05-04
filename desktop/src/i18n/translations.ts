@@ -898,6 +898,47 @@ export interface Translations {
   writerContextTitle: string
   writerContextHint: string
   currentDocumentFallback: string
+
+  // Intelligence panels
+  intelligenceLoading: string
+  intelligenceError: string
+  intelligenceClose: string
+  intelligenceAll: string
+
+  // Foreshadowing Tracker
+  foreshadowTitle: string
+  foreshadowSummary: string
+  foreshadowTotal: string
+  foreshadowPlanted: string
+  foreshadowHinted: string
+  foreshadowHarvested: string
+  foreshadowHints: string
+  foreshadowImportance: string
+  foreshadowNoData: string
+
+  // Pattern Dashboard
+  patternTitle: string
+  patternOccurrences: string
+
+  // Session Analytics
+  sessionTitle: string
+  sessionSummary: string
+  sessionTotalSessions: string
+  sessionAvgDuration: string
+  sessionTotalWords: string
+  sessionClusters: string
+  sessionNoData: string
+
+  // Evaluation Drill-Down
+  evalDrillTitle: string
+  evalDrillOverall: string
+  evalDrillDimensions: string
+  evalDrillDetailFor: string
+  evalDrillNoData: string
+
+  // Character Relationships
+  charRelTitle: string
+  charRelNoData: string
 }
 
 export const translations: Record<Language, Translations> = {
@@ -1796,6 +1837,47 @@ export const translations: Record<Language, Translations> = {
     writerContextTitle: '当前写作上下文',
     writerContextHint: '聊天、模板和评估会优先沿用这组项目范围。需要路由、对比或回滚时，展开"更多"。',
     currentDocumentFallback: '当前文档',
+
+    // Intelligence shared
+    intelligenceLoading: '加载中…',
+    intelligenceError: '加载失败，请稍后重试。',
+    intelligenceClose: '关闭',
+    intelligenceAll: '全部',
+
+    // Foreshadowing Tracker
+    foreshadowTitle: '伏笔追踪',
+    foreshadowSummary: '概览',
+    foreshadowTotal: '总计',
+    foreshadowPlanted: '已埋设',
+    foreshadowHinted: '已暗示',
+    foreshadowHarvested: '已回收',
+    foreshadowHints: '线索',
+    foreshadowImportance: '重要度',
+    foreshadowNoData: '暂无伏笔数据 — 在故事中埋设伏笔后这里会自动显示。',
+
+    // Pattern Dashboard
+    patternTitle: '叙事模式',
+    patternOccurrences: '出现次数',
+
+    // Session Analytics
+    sessionTitle: '会话分析',
+    sessionSummary: '概览',
+    sessionTotalSessions: '总会话',
+    sessionAvgDuration: '平均时长',
+    sessionTotalWords: '总字数',
+    sessionClusters: '话题聚类',
+    sessionNoData: '暂无会话数据 — 开始写作后这里会自动显示。',
+
+    // Evaluation Drill-Down
+    evalDrillTitle: '评估详情',
+    evalDrillOverall: '综合评分',
+    evalDrillDimensions: '维度评分',
+    evalDrillDetailFor: '评估详情 —',
+    evalDrillNoData: '暂无评估数据 — 完成一次评估后这里会自动显示。',
+
+    // Character Relationships
+    charRelTitle: '角色关系',
+    charRelNoData: '暂无角色关系 — 添加角色后这里会自动显示。',
   },
   en: {
     // App
@@ -2692,5 +2774,46 @@ export const translations: Record<Language, Translations> = {
     writerContextTitle: 'Current writing context',
     writerContextHint: 'Chat, templates, and review flows will stay anchored to this project scope. Open "More" for routing, comparison, or rollback.',
     currentDocumentFallback: 'the current document',
+
+    // Intelligence shared
+    intelligenceLoading: 'Loading…',
+    intelligenceError: 'Failed to load. Please try again.',
+    intelligenceClose: 'Close',
+    intelligenceAll: 'All',
+
+    // Foreshadowing Tracker
+    foreshadowTitle: 'Foreshadowing Tracker',
+    foreshadowSummary: 'Summary',
+    foreshadowTotal: 'Total',
+    foreshadowPlanted: 'Planted',
+    foreshadowHinted: 'Hinted',
+    foreshadowHarvested: 'Harvested',
+    foreshadowHints: 'Hints',
+    foreshadowImportance: 'Importance',
+    foreshadowNoData: 'No foreshadowing data yet — plant foreshadowing in your story and it will appear here.',
+
+    // Pattern Dashboard
+    patternTitle: 'Narrative Patterns',
+    patternOccurrences: 'Occurrences',
+
+    // Session Analytics
+    sessionTitle: 'Session Analytics',
+    sessionSummary: 'Summary',
+    sessionTotalSessions: 'Total Sessions',
+    sessionAvgDuration: 'Avg Duration',
+    sessionTotalWords: 'Total Words',
+    sessionClusters: 'Topic Clusters',
+    sessionNoData: 'No session data yet — start writing and sessions will appear here.',
+
+    // Evaluation Drill-Down
+    evalDrillTitle: 'Evaluation Details',
+    evalDrillOverall: 'Overall Score',
+    evalDrillDimensions: 'Dimension Scores',
+    evalDrillDetailFor: 'Evaluation for',
+    evalDrillNoData: 'No evaluation data yet — complete an evaluation and results will appear here.',
+
+    // Character Relationships
+    charRelTitle: 'Character Relationships',
+    charRelNoData: 'No character relationships — add characters to your story first.',
   },
 }

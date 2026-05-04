@@ -1,0 +1,114 @@
+{
+  "variant": "A — Observatory",
+  "version": "1.0.0",
+  "description": "Production design tokens for M4 Writer Intelligence Dashboard panels",
+  "attributes": {
+    "color_temperature": "cool",
+    "contrast_level": "high",
+    "visual_density": "dense",
+    "rounding": "soft",
+    "animation": "subtle",
+    "theme_personality": "professional"
+  },
+  "colors": {
+    "badge": {
+      "success": { "bg": "rgba(16, 185, 129, 0.12)", "text": "#059669" },
+      "warning": { "bg": "rgba(245, 158, 11, 0.12)", "text": "#d97706" },
+      "danger": { "bg": "rgba(239, 68, 68, 0.12)", "text": "#dc2626" }
+    }
+  },
+  "components": {
+    "card": {
+      "background": "var(--surface-elevated)",
+      "border": "1px solid var(--border-default)",
+      "border_radius": "var(--radius-sm)",
+      "padding": "12px 14px",
+      "shadow": "var(--shadow-tiny)",
+      "hover_shadow": "var(--shadow-default)"
+    },
+    "data_row": {
+      "background": "transparent",
+      "border_bottom": "1px solid var(--border-default)",
+      "padding": "8px 12px",
+      "font_size": "var(--shell-font-compact)",
+      "line_height": "var(--shell-line-compact)"
+    },
+    "badge": {
+      "border_radius": "var(--radius-pill)",
+      "padding": "2px 10px",
+      "font_size": "0.6875rem",
+      "font_weight": "600"
+    },
+    "section_header": {
+      "font_size": "var(--shell-font-label)",
+      "font_weight": "700",
+      "text_transform": "uppercase",
+      "letter_spacing": "0.05em",
+      "color": "var(--text-secondary)",
+      "margin_bottom": "8px",
+      "padding_bottom": "6px",
+      "border_bottom": "1px solid var(--border-default)"
+    },
+    "metric_value": {
+      "font_size": "1.5rem",
+      "font_weight": "700",
+      "line_height": "1",
+      "color": "var(--text-primary)"
+    },
+    "metric_label": {
+      "font_size": "var(--shell-font-label)",
+      "color": "var(--text-muted)",
+      "margin_top": "2px"
+    },
+    "progress_bar": {
+      "height": "4px",
+      "background": "var(--surface-sunken)",
+      "fill": "var(--primary-cta)",
+      "border_radius": "2px"
+    }
+  },
+  "spacing": {
+    "section_gap": "16px",
+    "card_gap": "10px",
+    "row_gap": "0px",
+    "inner_padding": "14px"
+  },
+  "typography": {
+    "panel_title": { "size": "0.9375rem", "weight": "700", "transform": "none" },
+    "section_title": { "size": "var(--shell-font-label)", "weight": "700", "transform": "uppercase", "spacing": "0.05em" },
+    "body": { "size": "var(--shell-font-compact)", "weight": "400", "transform": "none" },
+    "caption": { "size": "var(--shell-font-label)", "weight": "400", "transform": "none" }
+  },
+  "layout": {
+    "foreshadowing_tracker": {
+      "structure": "timeline_table",
+      "columns": ["status_icon", "event_type", "description_truncated", "chapter_ref", "date"],
+      "grouping": "by_foreshadow_id",
+      "interaction": "click_to_expand_full_excerpt"
+    },
+    "pattern_dashboard": {
+      "structure": "categorized_grid",
+      "grid_template": "repeat(auto-fill, minmax(180px, 1fr))",
+      "card_content": ["pattern_name", "occurrence_count", "chapter_list_badges", "severity_indicator"],
+      "grouping": "by_pattern_type"
+    },
+    "session_analytics": {
+      "structure": "metric_row_grid",
+      "layout": "top_summary_cards_3col + scrollable_session_list",
+      "metrics": ["total_sessions", "avg_session_length", "total_words"],
+      "session_list": ["date", "duration", "word_count", "chapter_context"]
+    },
+    "evaluation_drilldown": {
+      "structure": "expandable_table",
+      "columns": ["evaluator_name", "score_badge", "status_indicator"],
+      "expand_row": ["reasoning_text", "affected_excerpts", "suggested_fix"],
+      "interaction": "accordion_expand"
+    },
+    "character_relationships": {
+      "structure": "structured_list",
+      "row_content": ["character_name", "relationship_type_badge", "target_name", "evidence_excerpt"],
+      "grouping": "by_character",
+      "interaction": "click_to_navigate_chapter"
+    }
+  }
+}

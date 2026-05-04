@@ -1,5 +1,5 @@
 import React from 'react'
-import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library } from 'lucide-react'
+import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users } from 'lucide-react'
 
 import { useAppStore } from '../stores/appStore'
 import { useConversationList, useCurrentConversationId } from '../stores/selectors'
@@ -16,6 +16,11 @@ interface SidebarProps {
   onOpenPrompts: () => void
   onOpenSettings: () => void
   onOpenEvaluation: () => void
+  onOpenForeshadowingTracker: () => void
+  onOpenPatternDashboard: () => void
+  onOpenSessionAnalytics: () => void
+  onOpenEvaluationDrillDown: () => void
+  onOpenCharacterRelationships: () => void
 }
 
 export const Sidebar = React.memo(function Sidebar({
@@ -26,6 +31,11 @@ export const Sidebar = React.memo(function Sidebar({
   onOpenPrompts,
   onOpenSettings,
   onOpenEvaluation,
+  onOpenForeshadowingTracker,
+  onOpenPatternDashboard,
+  onOpenSessionAnalytics,
+  onOpenEvaluationDrillDown,
+  onOpenCharacterRelationships,
 }: SidebarProps) {
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
@@ -213,6 +223,34 @@ export const Sidebar = React.memo(function Sidebar({
         >
           <Settings size={18} />
           {!collapsed && <span className="text-sm font-medium">{t.settings}</span>}
+        </button>
+      </div>
+
+      {!collapsed && (
+        <div className="px-3 pt-2 pb-1">
+          <div className="shell-text-ui font-semibold uppercase tracking-wider text-dark-text-muted px-2 py-2">Writer Intelligence</div>
+        </div>
+      )}
+      <div className="border-t border-dark-border p-3 space-y-0.5 shrink-0">
+        <button onClick={onOpenForeshadowingTracker} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Foreshadowing" type="button">
+          <Eye size={18} />
+          {!collapsed && <span className="text-sm font-medium">Foreshadowing</span>}
+        </button>
+        <button onClick={onOpenPatternDashboard} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Patterns" type="button">
+          <LayoutGrid size={18} />
+          {!collapsed && <span className="text-sm font-medium">Patterns</span>}
+        </button>
+        <button onClick={onOpenSessionAnalytics} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Analytics" type="button">
+          <PieChart size={18} />
+          {!collapsed && <span className="text-sm font-medium">Analytics</span>}
+        </button>
+        <button onClick={onOpenEvaluationDrillDown} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Evaluation" type="button">
+          <Scaling size={18} />
+          {!collapsed && <span className="text-sm font-medium">Evaluation</span>}
+        </button>
+        <button onClick={onOpenCharacterRelationships} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Characters" type="button">
+          <Users size={18} />
+          {!collapsed && <span className="text-sm font-medium">Characters</span>}
         </button>
       </div>
 

@@ -65,6 +65,11 @@ const defaultSidebarProps = {
   onOpenPrompts: vi.fn(),
   onOpenSettings: vi.fn(),
   onOpenEvaluation: vi.fn(),
+  onOpenForeshadowingTracker: vi.fn(),
+  onOpenPatternDashboard: vi.fn(),
+  onOpenSessionAnalytics: vi.fn(),
+  onOpenEvaluationDrillDown: vi.fn(),
+  onOpenCharacterRelationships: vi.fn(),
 }
 
 describe('Sidebar', () => {

@@ -495,3 +495,36 @@ select:disabled {
 .dark .niko-editor-content .ProseMirror ::selection {
   background: rgba(99, 102, 241, 0.3);
 }
+
+/* M4 Intelligence Panel Styles */
+.intelligence-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-tiny);
+  transition: box-shadow 0.2s ease-in-out;
+}
+.intelligence-card:hover {
+  box-shadow: var(--shadow-default);
+}
+.intelligence-data-row {
+  border-bottom: 1px solid var(--border-default);
+  padding: 8px 12px;
+  font-size: var(--shell-font-compact);
+  line-height: var(--shell-line-compact);
+}
+.intelligence-panel-title {
+  font-size: var(--intelligence-panel-title-size);
+  font-weight: 700;
+}
+.intelligence-section-header {
+  font-size: var(--shell-font-label);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-default);
+}

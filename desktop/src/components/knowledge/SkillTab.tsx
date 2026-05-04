@@ -68,16 +68,6 @@ export function SkillTab({
     loadSkillsList()
   }, [loadSkillsList])
 
-  const loadSkillDetails = async () => {
-    if (!selectedSkillId) return
-    const response = await loadSkill(selectedSkillId)
-    if (response?.success && response.data?.content) {
-      setSkillDetails(response.data.content)
-    } else {
-      setSkillDetails(t.knowledgeSkillDetailsLoadFailed)
-    }
-  }
-
   const handleEdit = async () => {
     if (!selectedSkillId) return
     if (!isEditing) {

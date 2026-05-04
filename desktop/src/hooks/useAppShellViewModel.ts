@@ -94,6 +94,11 @@ export function useAppShellViewModel({
     onOpenPrompts: panelOrchestration.openPrompts,
     onOpenSettings: panelOrchestration.openSettings,
     onOpenEvaluation: () => panelOrchestration.toggleRightPanel('evaluation'),
+    onOpenForeshadowingTracker: () => panelOrchestration.toggleRightPanel('foreshadowingTracker'),
+    onOpenPatternDashboard: () => panelOrchestration.toggleRightPanel('patternDashboard'),
+    onOpenSessionAnalytics: () => panelOrchestration.toggleRightPanel('sessionAnalytics'),
+    onOpenEvaluationDrillDown: () => panelOrchestration.toggleRightPanel('evaluationDrillDown'),
+    onOpenCharacterRelationships: () => panelOrchestration.toggleRightPanel('characterRelationships'),
   }
 
   const appRightPanelsProps: ComponentProps<typeof AppRightPanels> = {
