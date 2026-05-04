@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.5.0] — 2026-05-04
+
+### M4 — Writer Intelligence Dashboard
+
+#### Intelligence Panels
+
+- **feat(ui):** ForeshadowingTracker panel — track planted hints, payoff status, and narrative threads (186L)
+- **feat(ui):** PatternDashboard panel — recurring motif and theme analysis (110L)
+- **feat(ui):** SessionAnalytics panel — writing session metrics and productivity insights (92L)
+- **feat(ui):** EvaluationDrillDown panel — per-module score breakdown with weighted sub-scores (107L)
+- **feat(ui):** CharacterRelationships panel — character depth, profile, and relationship mapping (130L)
+
+#### Shared Components
+
+- **feat(ui):** IntelligenceBadge — status indicator (success/warning/danger variants)
+- **feat(ui):** MetricValue — labeled metric display
+- **feat(ui):** SectionHeader — consistent panel section headers
+- **feat(ui):** AccordionWrapper — expandable sections with single/multi mode
+- **feat(ui):** ProgressBar — clamped 0-100 progress visualization
+
+#### Infrastructure
+
+- **feat(i18n):** 30 translation keys across zh-CN/en-US with dual-language support
+- **feat(css):** Opacity transitions on all intelligence panels
+- **feat(a11y):** ARIA role=region and aria-label on all panels and close buttons
+- **test:** 16 unit tests for shared intelligence components
+
 ## [9.4.0] — 2026-05-03
 
 ### M3 — Wiring & Exposure
