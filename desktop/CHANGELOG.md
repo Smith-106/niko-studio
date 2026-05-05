@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.10.0] — 2026-05-05
+
+### M9 — Intelligence & Workflows
+
+#### Phase 1 — Intelligence & Templates
+
+- **feat(intelligence):** Intelligence service with content-hash-based incremental caching (SHA-256) and per-module analysis agents
+- **feat(intelligence):** Analysis API integration for pacing, character_arc, consistency, world_building modules
+- **feat(intelligence):** Zustand intelligence slice with analysis state, progress tracking, cached result loading
+- **feat(ui):** AnalysisPanel for triggering and displaying analysis results
+- **feat(template):** Template service with CRUD, placeholder extraction/substitution, 5 built-in templates, user persistence
+- **feat(template):** Zustand template slice with loading, saving, deleting, duplicating
+- **feat(ui):** TemplateBrowserPanel for browsing, filtering, previewing, and applying templates
+- **test:** 36 new tests (intelligenceService 9, templateService 14, intelligenceSlice 6, templateSlice 7)
+
+#### Phase 2 — Agent Workflows
+
+- **feat(workflow):** Workflow type definitions — AgentMode, InputSource, CheckpointType, WorkflowStep, WorkflowExecution
+- **feat(workflow):** Workflow service with CRUD + execution orchestration, checkpoint pause/resume, approve/reject flow
+- **feat(workflow):** Zustand workflow slice with lifecycle management
+- **feat(ui):** WorkflowEditorPanel with list/edit/execution views and checkpoint review UI
+- **feat(workflow):** 3 built-in workflow templates — chapter-pipeline, revision-pass, style-analysis
+- **test:** 33 new tests (workflowService 21, workflowSlice 12)
+
+#### Quality
+
+- 69/69 new tests passing (36 P1 + 33 P2)
+- 35/35 business tests across both phases
+- All quality gates passed (verify, business-test, review, test)
+- 0 anti-patterns, 0 blockers
+
 ## [9.9.0] — 2026-05-05
 
 ### M8 — Infrastructure & Export

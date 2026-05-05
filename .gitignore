@@ -106,3 +106,4 @@ src-ts/integrations/index.js
 src-ts/memory/query-cache.js
 src-ts/memory/unified-memory.js
 src-ts/local_cache/
+coverage/
