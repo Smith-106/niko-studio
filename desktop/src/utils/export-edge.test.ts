@@ -6,7 +6,7 @@ vi.stubGlobal('URL', {
   revokeObjectURL: vi.fn(),
 })
 
-import { exportToMarkdown, exportToHtml, exportToPdf } from './export'
+import { exportToMarkdown, exportToHtml } from './export'
 
 function captureDownload() {
   const calls: Array<{ content: string; filename: string; mimeType: string }> = []

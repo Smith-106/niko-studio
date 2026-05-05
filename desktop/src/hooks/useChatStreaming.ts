@@ -171,14 +171,17 @@ export function useChatStreaming() {
         return { phase: 'interrupted', meta: streamMeta }
       }
 
-      if (finalPhase === 'error' && isStreamErrorPayload(streamErrorPayload) && streamErrorPayload.recoverable && retries < maxRetries) {
-        retries++
-        const delay = (streamErrorPayload.retry_after ?? 5) * 1000
-        options.onRecoverStatus({ type: 'info', message: `Retrying (${retries}/${maxRetries})...` })
-        if (delay > 0) {
-          await new Promise(resolve => setTimeout(resolve, delay))
+      if (finalPhase === 'error') {
+        const errPayload = streamErrorPayload as StreamErrorPayload | null
+        if (isStreamErrorPayload(errPayload) && errPayload.recoverable && retries < maxRetries) {
+          retries++
+          const delay = (errPayload.retry_after ?? 5) * 1000
+          options.onRecoverStatus({ type: 'info', message: `Retrying (${retries}/${maxRetries})...` })
+          if (delay > 0) {
+            await new Promise(resolve => setTimeout(resolve, delay))
+          }
+          continue
         }
-        continue
       }
 
       return { phase: 'error', meta: streamMeta }

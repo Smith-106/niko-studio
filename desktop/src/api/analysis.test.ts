@@ -44,8 +44,8 @@ describe('detectPatterns', () => {
 
     expect(callApiMock).toHaveBeenCalledWith('/analysis/patterns', 'POST', { category: 'symbolism' })
     expect(result.success).toBe(true)
-    expect(result.data).toHaveLength(1)
-    expect(result.data[0].name).toBe('Recurring Motif')
+    expect(result.data!.data).toHaveLength(1)
+    expect(result.data!.data[0].name).toBe('Recurring Motif')
   })
 
   it('propagates API errors', async () => {
@@ -93,8 +93,8 @@ describe('clusterSessions', () => {
 
     expect(callApiMock).toHaveBeenCalledWith('/analysis/sessions', 'POST', { sessions })
     expect(result.success).toBe(true)
-    expect(result.data).toHaveLength(1)
-    expect(result.data[0].members).toHaveLength(1)
+    expect(result.data!.data).toHaveLength(1)
+    expect(result.data!.data[0].members).toHaveLength(1)
   })
 
   it('handles empty session list', async () => {
