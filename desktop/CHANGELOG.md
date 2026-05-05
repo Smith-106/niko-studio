@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.8.0] — 2026-05-05
+
+### M7 — Export & Delivery
+
+#### Phase 1 — Export Pipeline
+
+- **feat(export):** PDF export via `window.print()` with `@media print` CSS rules
+- **feat(export):** ExportDialog component with MD/HTML/PDF format selector and filename input
+- **feat(export):** Wire ExportDialog into DocumentEditor toolbar
+- **test(export):** 34 new tests for export pipeline and edge cases
+
+#### Phase 2 — Session Persistence & Polish
+
+- **feat(export):** `useExportHistory` hook with localStorage-backed FIFO history (50 entries)
+- **feat(export):** Last 5 export history entries displayed in ExportDialog
+- **feat(editor):** Auto-save status indicator with idle→saving→saved states (1500ms debounce)
+- **feat(editor):** Draft recovery notification banner with 5s auto-dismiss
+- **feat(editor):** `useDraftCache` with conversation-scoped keys and 24h TTL
+- **feat(i18n):** 5 new keys for zh-CN and en-US locales
+- **test:** 6 new unit tests for export history
+
+#### Quality
+
+- 943/943 tests passing across 98 files
+- All quality gates passed (verification, business test, review, test suite)
+
 ## [9.7.0] — 2026-05-05
 
 ### M6 — Performance & Technical Debt
