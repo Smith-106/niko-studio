@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import * as Sentry from '@sentry/react'
 import { translations } from '../i18n/translations'
 import { useSettingsStore } from '../stores/settingsStore'
 
@@ -17,10 +18,6 @@ function getT() {
   return translations[lang]
 }
 
-/**
- * Error boundary with recovery UI.
- * Adapted from Cherry Studio's ErrorBoundary pattern.
- */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props)
@@ -29,6 +26,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (import.meta.env.VITE_SENTRY_DSN) {
+      Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } })
+    }
   }
 
   handleReload = () => {

@@ -2,9 +2,23 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      release: { name: process.env.npm_package_version },
+      sourcemaps: { filesToDeleteAfterUpload: ['dist/**/*.map'] },
+      disable: !process.env.SENTRY_AUTH_TOKEN,
+    }),
+  ],
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -17,6 +31,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    sourcemap: true,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -46,11 +61,6 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     globals: true,
     css: true,
-    // Exclude build artifacts that vitest default discovery picks up but that
-    // are not source tests:
-    //   src-tauri/bin/sidecar/**  — build:sidecar staging (Node 20 ABI native
-    //                               modules + transitive node_modules test fixtures)
-    //   src-tauri/target/**       — cargo outputs + bin/sidecar mirror
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -71,8 +81,6 @@ export default defineConfig({
         'src/styles/**',
       ],
       thresholds: {
-        // Baseline: stmts 79.2%, branches 74.6%, funcs 73.4%, lines 79.2%
-        // Floored to nearest 5% below baseline as non-regression gate
         lines: 75,
         functions: 70,
         branches: 70,

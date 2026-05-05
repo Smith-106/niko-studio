@@ -10,6 +10,19 @@ use gateway_commands::{
 use gateway_runtime::GatewayState;
 
 fn main() {
+    let _sentry_guard = option_env!("SENTRY_DSN").and_then(|dsn| {
+        if dsn.is_empty() {
+            None
+        } else {
+            let guard = sentry::init(sentry::ClientOptions {
+                dsn: Some(dsn.parse().expect("invalid SENTRY_DSN")),
+                release: Some(env!("CARGO_PKG_VERSION").into()),
+                ..Default::default()
+            });
+            if guard.is_enabled() { Some(guard) } else { None }
+        }
+    });
+
     tauri::Builder::default()
         .manage(GatewayState::new())
         .plugin(tauri_plugin_shell::init())
