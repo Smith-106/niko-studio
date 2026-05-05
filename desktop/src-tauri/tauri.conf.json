@@ -36,6 +36,12 @@
       "iconAsTemplate": true
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://niko-studio.github.io/niko-studio-updates/latest.json"],
+      "pubkey": ""
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

@@ -54,6 +54,7 @@ vi.mock('./hooks/useAppStartup', () => ({
 vi.mock('./hooks/useToast', () => ({
   useToast: () => ({
     toasts: [],
+    addToast: vi.fn(),
     removeToast: vi.fn(),
   }),
 }))

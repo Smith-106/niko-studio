@@ -30,6 +30,8 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .on_window_event(shell_setup::handle_window_event)
         .setup(shell_setup::setup_shell)
         .invoke_handler(tauri::generate_handler![
