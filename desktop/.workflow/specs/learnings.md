@@ -124,3 +124,43 @@ Milestone: M7 Phase 1 (TASK-101)
 For testing file download functions that create Blob URLs and trigger anchor clicks, use a `captureDownload()` helper: `vi.spyOn(document.body, 'appendChild').mockImplementation((node) => { calls.push({ filename: (node as HTMLAnchorElement).download }); return node })`. Also stub `URL.createObjectURL`/`revokeObjectURL` at module level. This avoids jsdom Blob/navigation issues while verifying correct filename and MIME type.
 Milestone: M7 Phase 1 (TASK-104)
 </spec-entry>
+
+<spec-entry category="coding" keywords="idempotent-migration,localStorage,filesystem,backup-restore,migration-service" date="2026-05-05" source="milestone-complete/M8-P1">
+Migration from localStorage to filesystem must be idempotent — re-running the migration should be a no-op if data already exists on disk. Store a migration flag and keep a backup of the original localStorage data for rollback. Test with both fresh-install and already-migrated scenarios.
+Milestone: M8 Phase 1 (TASK-003)
+</spec-entry>
+
+<spec-entry category="coding" keywords="tiptap,json-persistence,end-to-end,editor-state,prosemirror" date="2026-05-05" source="milestone-complete/M8-P1">
+TipTap editor content must be persisted as JSON (ProseMirror doc) not HTML — this preserves node attributes, marks, and custom extension data that HTML serialization loses. The JSON round-trip (editor→store→disk→store→editor) must be lossless. Test by creating content with all extension types and verifying JSON equality after round-trip.
+Milestone: M8 Phase 1 (TASK-005)
+</spec-entry>
+
+<spec-entry category="coding" keywords="myers-diff,version-history,snapshot,diff-algorithm" date="2026-05-05" source="milestone-complete/M8-P1">
+Use the `diff` npm package for Myers diff in version history — it provides both character-level and line-level diffing with minimal dependencies. Store snapshots as full content (not deltas) to avoid reconstruction complexity, but display diffs by comparing consecutive snapshots. This trades disk space for simplicity and reliability.
+Milestone: M8 Phase 1 (TASK-006)
+</spec-entry>
+
+<spec-entry category="architecture" keywords="adapter-pattern,chapter-adapter,editor-wiring,useDraftCache-replacement" date="2026-05-05" source="milestone-complete/M8-P1">
+When replacing a legacy data layer (useDraftCache) with a new service (projectFileService), use an adapter module that translates between the two APIs. The adapter keeps the editor component interface unchanged while routing reads/writes through the new service. This enables incremental migration without touching every consumer.
+Milestone: M8 Phase 1 (TASK-005)
+</spec-entry>
+
+<spec-entry category="ux" keywords="collapsible-ui,progressive-disclosure,sidebar-defaults,history-panel" date="2026-05-05" source="milestone-complete/M8-P1">
+New UI panels (sidebar tree, history rail) should default to collapsed. Users discover features progressively — panels open on demand and don't clutter the initial writing experience. Store panel state in Zustand so it persists within the session but resets on reload.
+Milestone: M8 Phase 1 (TASK-004, TASK-007)
+</spec-entry>
+
+<spec-entry category="coding" keywords="docx-export,nodeToDocx,recursive-converter,style-mapping,docx-js" date="2026-05-05" source="milestone-complete/M8-P2">
+DOCX export with docx.js requires a recursive nodeToDocx converter that maps each TipTap node type to the corresponding docx.js construct (Paragraph, TextRun, Table, etc.). Style mapping tables should be data-driven (a lookup object), not switch/case — this makes adding new node types trivial. Handle unknown nodes by falling through to their children.
+Milestone: M8 Phase 2 (TASK-002)
+</spec-entry>
+
+<spec-entry category="coding" keywords="katex,dynamic-import,math-extension,tiptap,ssr-compat" date="2026-05-05" source="milestone-complete/M8-P2">
+KaTeX must be dynamically imported (`import('katex')`) in TipTap math extensions to avoid bundling the full KaTeX library when math is never used. The MathView component loads KaTeX only on mount and shows a fallback during loading. This keeps initial bundle size down while supporting math rendering.
+Milestone: M8 Phase 2 (TASK-001)
+</spec-entry>
+
+<spec-entry category="architecture" keywords="slash-command,extensibility,tiptap,command-menu,plugin-registration" date="2026-05-05" source="milestone-complete/M8-P2">
+Slash command menu items should be registered as a flat array of command objects, each with `title`, `description`, `command` (editor chain method), and optional `icon`. New extensions add their commands by pushing to this array during extension initialization. This avoids hardcoding commands and makes extensions self-documenting.
+Milestone: M8 Phase 2 (TASK-001)
+</spec-entry>

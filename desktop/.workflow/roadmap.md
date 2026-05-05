@@ -1,122 +1,91 @@
-# Roadmap: Niko-Studio Desktop — M7: Export & Delivery
+# Roadmap: Niko-Studio Desktop — M8: Infrastructure & Export
 
 ## Overview
 
-M7 focuses on getting content out of the app and persisting writing sessions. After M1–M6 built the full application (MVP → Intelligence → Wiring → Dashboard → Writing Experience → Performance), the most critical missing capability is **document export** — authors need to deliver their work. The app has TipTap `JSONContent` internally, translation keys for export (`exportMarkdown`, `exportHtml`), and a settings export JSON mechanism, but no actual document export pipeline. Writing session persistence is also absent — closing the app loses editor state.
+M8 builds the project infrastructure layer: multi-document project management (F-001), version history & revision tracking (F-002), DOCX & advanced export (F-003), and custom TipTap extensions (F-005). This milestone establishes the structural foundation that future intelligence features (M9) depend on — 4 of 8 planned features require F-001 as a prerequisite.
+
+**Source**: brainstorm-next-phase-direction-20260505 (BRN-001)
 
 ## Phases
 
-- [ ] **Phase 1: Export Pipeline** — Markdown, HTML, and PDF export with format selection UI
-- [ ] **Phase 2: Session Persistence & Polish** — Auto-save, draft persistence, and batch export
+- [ ] **Phase 1: Project Structure & Safety** — Multi-document project management + version history (F-001, F-002)
+- [ ] **Phase 2: Export & Editor Extensions** — DOCX export + TipTap custom extensions (F-003, F-005)
 
 ---
 
 ## Phase Details
 
-### Phase 1: Export Pipeline
+### Phase 1: Project Structure & Safety
 
-**Goal**: Implement document export from TipTap editor content to Markdown, HTML, and PDF. Provide a unified export dialog with format selection, filename input, and preview.
+**Goal**: Introduce multi-document project management with Project→Volume→Chapter hierarchy, and version history with snapshot-based revision tracking.
 
-**Depends on**: M6 complete (903 tests passing, codebase clean)
+**Depends on**: M7 complete (9.8.0, 937 tests passing)
 
-**Current State**:
-- TipTap `JSONContent` is the internal editor format (`NikoEditor.tsx`)
-- Translation keys exist: `exportMarkdown`, `exportHtml`, `exportSettings`
-- Settings export already works (JSON blob download in `SettingsModal.tsx`)
-- No export libraries installed (no jspdf, file-saver, docx, etc.)
-- `@tiptap/starter-kit` includes HTML serialization via `editor.getHTML()`
-
-**Success Criteria** (what must be TRUE):
-  1. Export dialog accessible from editor toolbar with format selector (MD/HTML/PDF)
-  2. Markdown export produces clean Markdown from TipTap content
-  3. HTML export produces styled standalone HTML document
-  4. PDF export produces paginated PDF via browser print or library
-  5. Exported files download with correct MIME type and filename
-  6. All 903 existing tests still pass
-  7. Export i18n keys wired to zh-CN and en-US translations
-
-**Task Waves:**
-
-Wave 1 — Export Infrastructure:
-- [ ] TASK-1.1: Create export utility module (`src/utils/export.ts`) — functions for `toMarkdown(JSONContent)`, `toHTML(JSONContent)`, `toPDF(JSONContent)` with proper error handling
-- [ ] TASK-1.2: Implement Markdown export — convert TipTap JSON to clean Markdown using `@tiptap/pm` serialization or `turndown` library
-- [ ] TASK-1.3: Implement HTML export — generate standalone HTML document with inline styles from TipTap HTML output
-
-Wave 2 — PDF & UI:
-- [ ] TASK-1.4: Implement PDF export — use browser `window.print()` with print-specific CSS media queries, or integrate lightweight PDF library
-- [ ] TASK-1.5: Create ExportDialog component — format selector (MD/HTML/PDF), filename input, preview pane, export button
-- [ ] TASK-1.6: Wire ExportDialog into editor toolbar and document context menu
-
-Wave 3 — Validation:
-- [ ] TASK-1.7: Unit tests for export utilities (Markdown/HTML output correctness)
-- [ ] TASK-1.8: Component tests for ExportDialog (format selection, download trigger)
-- [ ] TASK-1.9: Manual verification — export sample documents in all formats, check quality
-
----
-
-### Phase 2: Session Persistence & Polish
-
-**Goal**: Persist writing sessions so authors don't lose work. Add auto-save, draft recovery, and polish the export workflow.
-
-**Depends on**: Phase 1 (export pipeline functional)
+**Features**: F-001 (Project Management), F-002 (Version History)
 
 **Current State**:
-- No session persistence mechanism exists
-- `useAppUiPersistence` hook saves UI state but not editor content
-- Focus mode and word count exist in `uiSlice` but no content save/restore
-- No auto-save timer or recovery mechanism
+- Single-document editing model via TipTap editor
+- SQLite (better-sqlite3) available through niko-gateway
+- Zustand stores for UI state, no project-level data model
+- No version history or revision tracking
 
 **Success Criteria** (what must be TRUE):
-  1. Editor content auto-saves to local storage at configurable interval (default 30s)
-  2. App restores last editor content on restart
-  3. Draft recovery prompt appears if unsaved changes detected
-  4. Export history tracked — user can re-export previous documents
-  5. No regressions: all existing + new tests pass
-  6. No performance degradation from auto-save (debounced, non-blocking)
-
-**Task Waves:**
-
-Wave 1 — Auto-Save & Recovery:
-- [ ] TASK-2.1: Create session persistence module (`src/utils/sessionPersistence.ts`) — save/load TipTap JSONContent to localStorage or IndexedDB
-- [ ] TASK-2.2: Implement auto-save hook (`useAutoSave`) — debounced save of editor content with dirty tracking
-- [ ] TASK-2.3: Implement draft recovery UI — prompt on app start when unsaved content detected, with restore/discard options
-
-Wave 2 — Polish & Integration:
-- [ ] TASK-2.4: Add export history — track recent exports with format, filename, timestamp in settings store
-- [ ] TASK-2.5: Integrate auto-save status indicator in editor toolbar (saved/saving/unsaved state)
-- [ ] TASK-2.6: Update i18n translations for all new UI strings (zh-CN + en-US)
-
-Wave 3 — Validation:
-- [ ] TASK-2.7: Unit tests for session persistence module (save/load/clear)
-- [ ] TASK-2.8: Hook tests for auto-save (debounce timing, dirty tracking)
-- [ ] TASK-2.9: Integration test — create content, close app, reopen, verify recovery
+  1. Project→Volume→Chapter hierarchy created and navigable via sidebar tree
+  2. Existing documents auto-migrate to a Default Project on first launch
+  3. Chapter CRUD operations work (create, rename, reorder, delete)
+  4. Version snapshots created on manual save + auto-save (throttled)
+  5. Snapshot diff view shows changes between revisions
+  6. All existing 937+ tests still pass
+  7. Progressive disclosure: sidebar and history rail collapsed by default
 
 ---
 
-## Inherited Deferred Items (from M6)
+### Phase 2: Export & Editor Extensions
 
-These items were deferred from M6 and remain out of scope for M7:
-- Custom TipTap extensions beyond characterCount (tables, math, collaborative cursors)
-- DOCX export (requires heavy `docx` library — defer to M8 if needed)
-- Localization beyond existing zh-CN/en-US support
-- Multi-document project management (chapters, volumes)
+**Goal**: Add DOCX export using docx.js, and extend the TipTap editor with table, math (KaTeX), and callout block extensions.
+
+**Depends on**: Phase 1 (project management for multi-chapter export)
+
+**Features**: F-003 (DOCX Export), F-005 (TipTap Extensions)
+
+**Current State**:
+- Markdown, HTML, PDF export functional from M7
+- TipTap starter-kit provides basic extensions
+- No DOCX support
+- No table, math, or callout extensions
+
+**Success Criteria** (what must be TRUE):
+  1. DOCX export produces formatted Word document from single chapter or full project
+  2. Style mapping table converts TipTap formatting to DOCX styles
+  3. Table extension renders and edits tables in the editor
+  4. Math/KaTeX extension renders inline and block equations
+  5. Callout block extension provides info/warning/error/danger block types
+  6. All extensions are collapsible/progressive — don't overwhelm the writing flow
+  7. All existing + new tests pass
 
 ---
+
+## Feature Specs
+
+| Feature | Spec | Priority | Phase |
+|---------|------|----------|-------|
+| F-001: Multi-Document Project Management | `scratch/brainstorm-.../feature-specs/F-001-project-management.md` | HIGH | P1 |
+| F-002: Version History & Revision Tracking | `scratch/brainstorm-.../feature-specs/F-002-version-history.md` | HIGH | P1 |
+| F-003: DOCX & Advanced Export | `scratch/brainstorm-.../feature-specs/F-003-docx-export.md` | MEDIUM | P2 |
+| F-005: Custom TipTap Extensions | `scratch/brainstorm-.../feature-specs/F-005-tiptap-extensions.md` | MEDIUM | P2 |
 
 ## Out of Scope
 
-- Backend changes (all work is frontend-only)
-- New API endpoints or gateway modifications
-- Changes to the Tauri Rust layer
-- DOCX export (library too heavy for this milestone)
+- Writing intelligence features (F-004, M9)
+- Template system (F-006, M9)
+- Agent workflows (F-007, M9)
+- Localization expansion (F-008, M10+)
 - Cloud sync or multi-device features
-- Breaking changes to store shape or component interfaces
-
----
+- Breaking changes to existing store shape or component interfaces
 
 ## Progress
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Export Pipeline | ⬚ Not started | — |
-| 2. Session Persistence & Polish | ⬚ Not started | — |
+| 1. Project Structure & Safety | ✓ Complete | 2026-05-05 |
+| 2. Export & Editor Extensions | ✓ Complete | 2026-05-05 |

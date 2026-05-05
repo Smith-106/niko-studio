@@ -1,0 +1,69 @@
+{
+  "id": "TASK-001",
+  "title": "Project Slice & Data Model",
+  "description": "Create the Project data model types and Zustand ProjectSlice. Define Project, Volume, Chapter interfaces with all required fields. Add ProjectSlice to appStore composition.",
+  "issue_id": null,
+  "type": "feature",
+  "priority": "P0",
+  "effort": "medium",
+  "action": "Create desktop/src/types/project.ts with Project, Volume, Chapter interfaces. Create desktop/src/stores/app/projectSlice.ts with ProjectSlice (CRUD for projects/volumes/chapters, currentChapterId, currentProjectId). Modify desktop/src/stores/appStore.ts to compose ProjectSlice.",
+  "status": "pending",
+  "scope": "phase",
+  "focus_paths": [
+    "desktop/src/types/project.ts",
+    "desktop/src/stores/app/projectSlice.ts",
+    "desktop/src/stores/appStore.ts"
+  ],
+  "read_first": [
+    "desktop/src/stores/appStore.ts",
+    "desktop/src/stores/app/conversationSlice.ts",
+    "desktop/src/stores/uiSlice.ts",
+    "src-ts/project/workspace-model.ts",
+    "desktop/src/stores/app/shared.ts"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "convergence": {
+    "criteria": [
+      "grep -c 'export interface Project ' desktop/src/types/project.ts → >= 1",
+      "grep -c 'export interface Volume ' desktop/src/types/project.ts → >= 1",
+      "grep -c 'export interface Chapter ' desktop/src/types/project.ts → >= 1",
+      "grep -c 'export interface ProjectSlice ' desktop/src/stores/app/projectSlice.ts → >= 1",
+      "grep 'projectSlice' desktop/src/stores/appStore.ts → matches",
+      "grep 'currentChapterId' desktop/src/stores/app/projectSlice.ts → matches",
+      "grep 'currentProjectId' desktop/src/stores/app/projectSlice.ts → matches"
+    ],
+    "verification": "TypeScript compiles without errors, store accesses useAppStore(state => state.projects) returns initial empty state",
+    "definition_of_done": "ProjectSlice is composed in appStore, all interfaces exported, CRUD actions (createProject, createVolume, createChapter, deleteChapter) are functional"
+  },
+  "files": [
+    {
+      "path": "desktop/src/types/project.ts",
+      "action": "create",
+      "target": "Project, Volume, Chapter, ChapterContent type definitions",
+      "change": "New file with TypeScript interfaces for the 3-level hierarchy"
+    },
+    {
+      "path": "desktop/src/stores/app/projectSlice.ts",
+      "action": "create",
+      "target": "ProjectSlice interface and creator function",
+      "change": "New Zustand slice with projects[], volumes[], chapters[], currentProjectId, currentChapterId, and CRUD actions"
+    },
+    {
+      "path": "desktop/src/stores/appStore.ts",
+      "action": "modify",
+      "target": "AppState type and store creation",
+      "change": "Add ProjectSlice to intersection type and spread into store creation"
+    }
+  ],
+  "implementation": [
+    "1. Create desktop/src/types/project.ts: define Project { id, title, createdAt, updatedAt, volumes: string[] }, Volume { id, projectId, title, position, chapters: string[] }, Chapter { id, volumeId, projectId, title, position, wordCount, createdAt, updatedAt }, ChapterContent { content: JSONContent, version: number }",
+    "2. Create desktop/src/stores/app/projectSlice.ts: interface ProjectSlice with state (projects, volumes, chapters, currentProjectId, currentChapterId) and actions (createProject, deleteProject, createVolume, deleteVolume, createChapter, deleteChapter, updateChapter, setCurrentProject, setCurrentChapter)",
+    "3. Use nanoid for ID generation (import { nanoid } from 'nanoid')",
+    "4. Add ProjectSlice to appStore.ts: import projectSlice, add to AppState intersection type, spread createProjectSlice(...args) into store"
+  ],
+  "test": "Unit tests for ProjectSlice: create/delete project, create/delete volume, create/delete chapter, setCurrentProject/Chapter, updateChapter content",
+  "reference": "ConversationSlice pattern from conversationSlice.ts, simple slice pattern from uiSlice.ts",
+  "rationale": "Data model and store are the foundation — all other tasks depend on these types and the ProjectSlice for state management",
+  "risks": ["Store shape change may affect existing components — mitigated by L-006 adapter pattern in TASK-005"]
+}

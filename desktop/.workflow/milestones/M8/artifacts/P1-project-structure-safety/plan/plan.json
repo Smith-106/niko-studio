@@ -1,0 +1,88 @@
+{
+  "summary": "M8 Phase 1: Project Structure & Safety — Implement multi-document project management (F-001) with Project→Volume→Chapter hierarchy, filesystem persistence via Tauri FS plugin, and version history (F-002) with full content snapshots and diff viewer",
+  "approach": "Three-wave execution. Wave 1 establishes the data model (ProjectSlice) and filesystem persistence layer in parallel. Wave 2 integrates them with data migration from localStorage, builds the sidebar tree UI, and wires the editor to load/save from the project filesystem. Wave 3 adds version snapshots and the history rail UI. Metadata stored as JSON files via Tauri FS plugin (SQLite deferred to future optimization).",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007"],
+  "task_count": 7,
+  "complexity": "high",
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Foundation",
+      "tasks": ["TASK-001", "TASK-002"],
+      "rationale": "Data model and persistence layer have no mutual dependencies and form the foundation for all subsequent tasks"
+    },
+    {
+      "wave": 2,
+      "label": "Integration",
+      "tasks": ["TASK-003", "TASK-004", "TASK-005"],
+      "rationale": "Migration, sidebar, and editor integration all depend on Wave 1 but can proceed in parallel with each other"
+    },
+    {
+      "wave": 3,
+      "label": "Version History",
+      "tasks": ["TASK-006", "TASK-007"],
+      "rationale": "Version snapshots depend on editor integration (TASK-005) for save triggers; history rail depends on snapshot storage"
+    }
+  ],
+  "data_flow": {
+    "storage": "TipTap JSON files at {appDataDir}/projects/{projectId}/chapters/{chapterId}.json via Tauri FS plugin",
+    "metadata": "JSON files at {appDataDir}/projects/{projectId}/project.json and {appDataDir}/projects/index.json",
+    "snapshots": "Compressed JSON at {appDataDir}/projects/{projectId}/chapters/{chapterId}/versions/{timestamp}.json.gz",
+    "migration": "localStorage → filesystem with backup, plain text → TipTap JSON conversion"
+  },
+  "design_decisions": [
+    {
+      "id": "DD-001",
+      "decision": "Filesystem JSON for project metadata instead of gateway SQLite",
+      "rationale": "Simpler implementation, avoids cross-directory changes to src-ts/mcp/, all operations via Tauri FS plugin. SQLite optimization deferred to future phase when query complexity warrants it.",
+      "locked_by": "L-001 (modified — SQLite deferred)",
+      "impact": "Eliminates dependency on gateway for metadata, reduces scope"
+    },
+    {
+      "id": "DD-002",
+      "decision": "Direct Tauri FS plugin usage (no custom Rust IPC commands)",
+      "rationale": "tauri_plugin_fs already loaded, provides all needed file I/O. Custom IPC commands only needed for operations the plugin can't handle.",
+      "locked_by": "L-001",
+      "impact": "Simpler architecture, no Rust changes needed for file operations"
+    },
+    {
+      "id": "DD-003",
+      "decision": "Custom tree component (not headless UI library)",
+      "rationale": "Matches existing codebase patterns (all components are hand-built TailwindCSS). Consistent styling, no new dependency.",
+      "locked_by": "F-001 (guidance)",
+      "impact": "More implementation effort for tree, but consistent with codebase"
+    },
+    {
+      "id": "DD-004",
+      "decision": "nanoid for chapter/volume ID generation",
+      "rationale": "Short, URL-safe, matches existing simplicity preference. Better than Date.now() but not as heavy as UUID.",
+      "locked_by": "F-006 (guidance)",
+      "impact": "New dependency (nanoid), but widely used and tiny"
+    }
+  ],
+  "shared_context": {
+    "patterns": [
+      "Zustand slice pattern: interface + create function + spread into store",
+      "Tauri FS plugin: import from @tauri-apps/plugin-fs, use readFile/writeFile/mkdir/exists",
+      "Component pattern: TailwindCSS classes, no CSS modules, no UI library",
+      "Store composition: AppState = Slice1 & Slice2 & ... via intersection type"
+    ],
+    "conventions": [
+      "Store files at desktop/src/stores/app/{sliceName}Slice.ts",
+      "Types at desktop/src/types/{domain}.ts",
+      "Services at desktop/src/services/{serviceName}.ts",
+      "Components at desktop/src/components/{ComponentName}.tsx"
+    ],
+    "dependencies": [
+      "@tauri-apps/plugin-fs (already installed)",
+      "nanoid (new — for ID generation)",
+      "diff (new — for Myers diff in TASK-007)"
+    ]
+  },
+  "_metadata": {
+    "schema_version": "2.0",
+    "milestone": "M8",
+    "phase": 1,
+    "created_from": "20260505-analyze-P1-project-structure-safety"
+  }
+}

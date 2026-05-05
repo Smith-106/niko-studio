@@ -1,0 +1,52 @@
+/* Callout Styles */
+[data-type='callout'] {
+  margin: 1em 0;
+  padding: 1em;
+  border-radius: 8px;
+  border-left-width: 4px;
+}
+
+[data-type='callout'][data-variant='info'] {
+  background-color: #eef2ff; /* bg-blue-50 */
+  border-color: #60a5fa; /* border-blue-400 */
+  color: #1e3a8a; /* text-blue-900 */
+}
+
+[data-type='callout'][data-variant='warning'] {
+  background-color: #fefce8; /* bg-yellow-50 */
+  border-color: #facc15; /* border-yellow-400 */
+  color: #713f12; /* text-yellow-900 */
+}
+
+[data-type='callout'][data-variant='tip'] {
+  background-color: #f0fdf4; /* bg-green-50 */
+  border-color: #4ade80; /* border-green-400 */
+  color: #14532d; /* text-green-900 */
+}
+
+[data-type='callout'][data-variant='important'] {
+  background-color: #fef2f2; /* bg-red-50 */
+  border-color: #f87171; /* border-red-400 */
+  color: #7f1d1d; /* text-red-900 */
+}
+
+/* Math Input styles */
+.math-input {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: monospace;
+}
+
+.math-inline-container {
+  display: inline-block;
+}
+
+.math-block-container {
+  margin: 1em 0;
+  padding: 1em;
+  background: #f9f9f9;
+  border-radius: 4px;
+  text-align: center;
+  overflow-x: auto;
+}

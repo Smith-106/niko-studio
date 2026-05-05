@@ -12,6 +12,16 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { TextStyle } from '@tiptap/extension-text-style'
 import Typography from '@tiptap/extension-typography'
 import CharacterCount from '@tiptap/extension-character-count'
+import Underline from '@tiptap/extension-underline'
+import {
+  Table,
+  TableRow,
+  TableCell,
+  TableHeader,
+} from '@tiptap/extension-table'
+import { MathInline } from './editor/extensions/MathInline'
+import { MathBlock } from './editor/extensions/MathBlock'
+import { Callout } from './editor/extensions/Callout'
 import { SlashCommandMenu, type SlashMenuItem } from './editor/SlashCommandMenu'
 import { BubbleToolbar, type RewriteOption } from './editor/BubbleToolbar'
 import { insertPlainText, replaceRange } from './editor/streamToEditor'
@@ -93,6 +103,16 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       TextStyle,
       Typography,
       CharacterCount,
+      Underline,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      MathInline,
+      MathBlock,
+      Callout,
     ],
     content: initialContent ?? '',
     editorProps: {
@@ -362,6 +382,22 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
         case 'horizontal-rule':
           clearSlashMenu()
           editor.chain().focus().setHorizontalRule().run()
+          break
+        case 'table':
+          clearSlashMenu()
+          editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+          break
+        case 'math':
+          clearSlashMenu()
+          editor.chain().focus().insertContent({ type: 'mathInline', attrs: { latex: '' } }).run()
+          break
+        case 'math-block':
+          clearSlashMenu()
+          editor.chain().focus().insertContent({ type: 'mathBlock', attrs: { latex: '' } }).run()
+          break
+        case 'callout':
+          clearSlashMenu()
+          editor.chain().focus().toggleCallout('info').run()
           break
       }
     },

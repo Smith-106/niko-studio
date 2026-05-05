@@ -1,0 +1,64 @@
+{
+  "id": "TASK-006",
+  "title": "Version Snapshot System",
+  "description": "Implement full content snapshot version history for chapters. Auto-save snapshots throttled to 1 per 5 minutes, manual named snapshots, 50 per chapter retention, compressed storage.",
+  "issue_id": null,
+  "type": "feature",
+  "priority": "P1",
+  "effort": "medium",
+  "action": "Create desktop/src/services/versionService.ts with snapshot CRUD, auto-save throttling, retention enforcement, and text diff generation. Store snapshots as compressed JSON files in version directory.",
+  "status": "completed",
+  "scope": "phase",
+  "focus_paths": [
+    "desktop/src/services/versionService.ts",
+    "desktop/src/components/DocumentEditor.tsx"
+  ],
+  "read_first": [
+    "desktop/src/services/projectFileService.ts",
+    "desktop/src/components/DocumentEditor.tsx",
+    "desktop/src/stores/app/projectSlice.ts",
+    "desktop/src/types/project.ts"
+  ],
+  "depends_on": ["TASK-005"],
+  "wave": 3,
+  "convergence": {
+    "criteria": [
+      "grep -c 'createSnapshot\\|listSnapshots\\|getSnapshot' desktop/src/services/versionService.ts → >= 3",
+      "grep -c 'autoSaveSnapshot\\|shouldAutoSave' desktop/src/services/versionService.ts → >= 2",
+      "grep -c 'enforceRetentionPolicy\\|pruneSnapshots' desktop/src/services/versionService.ts → >= 1",
+      "grep -c 'diffSnapshots\\|computeTextDiff' desktop/src/services/versionService.ts → >= 1"
+    ],
+    "verification": "Snapshots created on content change (throttled), manual snapshots supported, retention policy enforced, diff between two snapshots produces readable output",
+    "definition_of_done": "Auto-save creates snapshots (max 1 per 5 min), manual snapshots with names, 50 per chapter cap, compressed storage, text diff between versions"
+  },
+  "files": [
+    {
+      "path": "desktop/src/services/versionService.ts",
+      "action": "create",
+      "target": "Version snapshot service",
+      "change": "New service with createSnapshot, listSnapshots, getSnapshot, restoreSnapshot, diffSnapshots, enforceRetentionPolicy"
+    },
+    {
+      "path": "desktop/src/components/DocumentEditor.tsx",
+      "action": "modify",
+      "target": "Editor update handler",
+      "change": "Add auto-save snapshot trigger after debounced save, throttled to 1 per 5 minutes"
+    }
+  ],
+  "implementation": [
+    "1. Create desktop/src/services/versionService.ts",
+    "2. Define Snapshot type: { id, chapterId, timestamp, label (optional), contentHash, textContent, fileSize }",
+    "3. Implement createSnapshot(projectId, chapterId, content, label?): write TipTap JSON to 'projects/{projectId}/chapters/{chapterId}/versions/{timestamp}.json', store metadata in 'projects/{projectId}/chapters/{chapterId}/versions/index.json'",
+    "4. Implement listSnapshots(projectId, chapterId): read version index, return sorted by timestamp DESC",
+    "5. Implement getSnapshot(projectId, chapterId, snapshotId): read snapshot file",
+    "6. Implement restoreSnapshot(projectId, chapterId, snapshotId): get snapshot content, write as current chapter content via projectFileService",
+    "7. Implement diffSnapshots(projectId, chapterId, fromId, toId): load both, extract textContent, run Myers diff, return diff result",
+    "8. Implement enforceRetentionPolicy(projectId, chapterId): if snapshots > 50, delete oldest (keeping named snapshots)",
+    "9. Implement shouldAutoSave(lastSnapshotTime): return true if Date.now() - lastSnapshotTime > 5 * 60 * 1000",
+    "10. Add auto-save trigger in DocumentEditor: after debounced save, check shouldAutoSave, call createSnapshot if true"
+  ],
+  "test": "Unit tests: create/list/get snapshots, retention policy enforcement, diff generation. Integration: auto-save throttle prevents duplicate snapshots within 5 min window",
+  "reference": "L-004 (Full Content Snapshots), F-003 (gzip compression guidance)",
+  "rationale": "Version history is a top user request and provides safety net for writers experimenting with content changes",
+  "risks": ["Snapshot file size growth — mitigated by retention policy", "Compression performance — start with uncompressed JSON, add gzip optimization if needed"]
+}

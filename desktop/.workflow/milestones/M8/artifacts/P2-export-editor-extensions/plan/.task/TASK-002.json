@@ -1,0 +1,46 @@
+{
+  "id": "TASK-002",
+  "plan_id": "PLN-020",
+  "wave": 2,
+  "status": "pending",
+  "title": "DOCX Export Pipeline — nodeToDocx + Dialog + Multi-chapter",
+  "feature": "F-003",
+  "description": "Build the DOCX export pipeline: create exportDocx.ts with nodeToDocx converter, extend export.ts with handlers for table/math/callout node types, extend ExportDialog with 'docx' format and 'current'/'project' scope selector, and wire multi-chapter export using projectSlice.",
+  "action": "Create src/utils/exportDocx.ts with nodeToDocx() recursive converter using docx.js Paragraph/TextRun/HeadingLevel/TableRow/TableCell for existing node types plus table/math/callout. Modify src/utils/export.ts to add node type cases for table, math (inline + block), and callout in both nodeToMarkdown and nodeToHtml. Modify ExportDialog.tsx to add 'docx' to ExportFormat union, add scope selector ('current' | 'project'), and wire handleExport for docx format using generateDocx from exportDocx.ts. Implement multi-chapter export by iterating getChaptersForProject() and concatenating DOCX output.",
+  "implementation": {
+    "steps": [
+      "Create src/utils/exportDocx.ts — import { Document, Packer, Paragraph, TextRun, HeadingLevel, TableRow, TableCell, WidthType, BorderStyle } from 'docx'. Export generateDocx(prosemirrorJSON, title) → Blob and generateProjectDocx(projectId, projectTitle) → Blob",
+      "Implement nodeToDocx(node) recursive converter with switch on node.type: doc→map children, paragraph→Paragraph, heading→Paragraph with HeadingLevel, text→TextRun with marks (bold/italic/underline/strike/code), bulletList/orderedList→Paragraph with bullet/number prefix, blockquote→Paragraph with indent, codeBlock→Paragraph with monospace font, horizontalRule→Paragraph with border, table→TableRow/TableCell grid, mathInline/mathBlock→TextRun with latex text, callout→Paragraph with background shading",
+      "Modify src/utils/export.ts — add table case to nodeToMarkdown (pipe-delimited rows) and nodeToHtml (<table>). Add mathInline case ($latex$), mathBlock case ($$latex$$), callout case (> [variant] content). Add import from exportDocx for generateDocx",
+      "Modify src/components/ExportDialog.tsx — extend ExportFormat type to include 'docx'. Add ExportScope type: 'current' | 'project'. Add scope radio group UI. Update handleExport to call generateDocx or generateProjectDocx based on scope",
+      "Wire multi-chapter export — in generateProjectDocx: call useAppStore.getState().getChaptersForProject(projectId), iterate chapters, read content via readChapterContent, convert each to DOCX sections, merge into single Document",
+      "Add downloadFile call for .docx extension with application/vnd.openxmlformats-officedocument.wordprocessingml.document MIME type"
+    ]
+  },
+  "files_to_create": [
+    "src/utils/exportDocx.ts"
+  ],
+  "files_to_modify": [
+    "src/utils/export.ts",
+    "src/components/ExportDialog.tsx"
+  ],
+  "read_first": [
+    "src/utils/export.ts",
+    "src/components/ExportDialog.tsx",
+    "src/stores/app/projectSlice.ts",
+    "src/utils/exportDocx.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -r 'generateDocx' src/utils/exportDocx.ts — function exists",
+      "grep -r 'nodeToDocx' src/utils/exportDocx.ts — recursive converter exists",
+      "grep -r 'generateProjectDocx' src/utils/exportDocx.ts — multi-chapter function exists",
+      "grep -r 'table\\|mathInline\\|mathBlock\\|callout' src/utils/export.ts — new node type handlers in markdown/html converters",
+      "grep -r 'docx' src/components/ExportDialog.tsx — docx format option present",
+      "grep -r 'scope' src/components/ExportDialog.tsx — scope selector present",
+      "grep -r 'getChaptersForProject' src/utils/exportDocx.ts — multi-chapter wiring exists"
+    ]
+  },
+  "depends_on": ["TASK-001"],
+  "estimated_duration": "45-60 min"
+}

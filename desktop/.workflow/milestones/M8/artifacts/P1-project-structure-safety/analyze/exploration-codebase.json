@@ -1,0 +1,183 @@
+{
+  "session_id": "20260505-analyze-P1-project-structure-safety",
+  "phase": 1,
+  "milestone": "M8",
+  "generated_at": "2026-05-05",
+  "layers": {
+    "module_discovery": {
+      "description": "Top-level module inventory relevant to F-001 and F-002",
+      "modules": [
+        {
+          "path": "desktop/src/stores/appStore.ts",
+          "role": "Central Zustand store — 6 slices (Backend, Workspace, Conversation, Skills, Loading, UI)",
+          "relevance": "F-001 must add ProjectSlice or extend existing slices"
+        },
+        {
+          "path": "desktop/src/stores/app/conversationSlice.ts",
+          "role": "Conversation CRUD — all state in-memory, no persistence",
+          "relevance": "F-001 migration: conversations → chapters in project hierarchy"
+        },
+        {
+          "path": "desktop/src/stores/app/workspaceSlice.ts",
+          "role": "Workspace context tied to conversations",
+          "relevance": "F-001: workspace context must resolve from project, not conversation"
+        },
+        {
+          "path": "desktop/src/stores/uiSlice.ts",
+          "role": "UI state: focusMode, wordMetrics",
+          "relevance": "F-001/F-002: needs sidebar visibility, history rail state"
+        },
+        {
+          "path": "desktop/src/components/DocumentEditor.tsx",
+          "role": "Main document editor — single document per conversation",
+          "relevance": "F-001: must load from project/chapter, not localStorage; F-002: snapshot triggers"
+        },
+        {
+          "path": "desktop/src/components/NikoEditor.tsx",
+          "role": "TipTap editor with extensions, AI integration, editor handle",
+          "relevance": "F-002: onUpdate hooks for snapshot creation; F-005: extension additions"
+        },
+        {
+          "path": "desktop/src/hooks/useDraftCache.ts",
+          "role": "localStorage-based draft caching, 24h TTL",
+          "relevance": "F-001: replace with filesystem persistence; migration source"
+        },
+        {
+          "path": "desktop/src/api/tauri-contract.ts",
+          "role": "5 Tauri IPC commands for gateway communication",
+          "relevance": "F-001: needs new IPC commands for project/chapter CRUD + file I/O"
+        },
+        {
+          "path": "desktop/src-tauri/src/main.rs",
+          "role": "Tauri app entry — registers 5 invoke handlers + plugins",
+          "relevance": "F-001: register new project/file IPC handlers"
+        },
+        {
+          "path": "desktop/src-tauri/src/gateway_commands.rs",
+          "role": "Rust IPC commands — call_api proxies HTTP to gateway",
+          "relevance": "F-001: could add direct file I/O commands or route through gateway"
+        },
+        {
+          "path": "desktop/src-tauri/src/gateway_runtime.rs",
+          "role": "Gateway sidecar lifecycle (Node.js/Python), health checks",
+          "relevance": "F-001: gateway may need project API endpoints"
+        },
+        {
+          "path": "src-ts/project/workspace-model.ts",
+          "role": "Canonical workspace model with normalization and legacy migration",
+          "relevance": "F-001: manuscript.chapterId already exists; identity.projectId already exists"
+        },
+        {
+          "path": "desktop/src/stores/app/shared.ts",
+          "role": "Conversation/workspace shared utilities",
+          "relevance": "F-001: workspace resolution must change from conversation-scoped to project-scoped"
+        }
+      ]
+    },
+    "structure_tracing": {
+      "description": "Call chains and data flow for document persistence",
+      "chains": [
+        {
+          "name": "Document Save Flow (current)",
+          "steps": [
+            "NikoEditor.onUpdate → handleEditorUpdate (DocumentEditor.tsx:42)",
+            "handleEditorUpdate → persist(text) via useDraftCache",
+            "useDraftCache.persist → localStorage.setItem('niko.draft:{conversationId}', JSON.stringify({text, timestamp}))"
+          ]
+        },
+        {
+          "name": "Document Load Flow (current)",
+          "steps": [
+            "DocumentEditor mounts with currentConversationId",
+            "useDraftCache(currentConversationId) → load() from localStorage",
+            "NikoEditor receives persistedText as initialContent",
+            "Key = currentConversationId → remounts on conversation switch"
+          ]
+        },
+        {
+          "name": "Project Workspace Resolution (current)",
+          "steps": [
+            "conversationSlice.createConversation → createConversationWorkspaceSeed(currentWorkspace)",
+            "createConversationWorkspaceSeed → normalizeProjectWorkspaceContext → mergeProjectWorkspaceContext",
+            "workspaceSlice.syncConversationWorkspace → setCurrentWorkspace(merged)",
+            "Result: workspace tied to conversation lifecycle"
+          ]
+        },
+        {
+          "name": "Tauri IPC Flow (current)",
+          "steps": [
+            "Frontend → invoke('call_api', {endpoint, method, body})",
+            "gateway_commands.rs::call_api → reqwest → gateway HTTP",
+            "Gateway responds → {statusCode, body} → frontend",
+            "No local file I/O, no SQLite — all data through gateway API or localStorage"
+          ]
+        }
+      ]
+    },
+    "code_anchors": {
+      "description": "Exact insertion/modification points for F-001 and F-002",
+      "anchors": [
+        {
+          "file": "desktop/src/stores/appStore.ts",
+          "line": 10,
+          "change_type": "modify",
+          "purpose": "Add ProjectSlice to store composition"
+        },
+        {
+          "file": "desktop/src/components/DocumentEditor.tsx",
+          "line": 23,
+          "change_type": "modify",
+          "purpose": "Replace useDraftCache with project/chapter file loading"
+        },
+        {
+          "file": "desktop/src/components/DocumentEditor.tsx",
+          "line": 42,
+          "change_type": "modify",
+          "purpose": "Replace persist(text) with chapter save via project store"
+        },
+        {
+          "file": "desktop/src/api/tauri-contract.ts",
+          "line": 1,
+          "change_type": "modify",
+          "purpose": "Add project/chapter CRUD IPC command definitions"
+        },
+        {
+          "file": "desktop/src-tauri/src/main.rs",
+          "line": 37,
+          "change_type": "modify",
+          "purpose": "Register new project/file IPC handlers in invoke_handler"
+        },
+        {
+          "file": "desktop/src-tauri/src/gateway_commands.rs",
+          "line": 39,
+          "change_type": "extend",
+          "purpose": "Add project CRUD commands (create_project, list_projects, create_chapter, etc.)"
+        },
+        {
+          "file": "desktop/src/hooks/useDraftCache.ts",
+          "line": 1,
+          "change_type": "replace_or_bridge",
+          "purpose": "Bridge to filesystem persistence during migration"
+        },
+        {
+          "file": "src-ts/project/workspace-model.ts",
+          "line": 16,
+          "change_type": "extend",
+          "purpose": "ProjectWorkspaceManuscript may need volumeId field for hierarchy"
+        },
+        {
+          "file": "desktop/src/stores/uiSlice.ts",
+          "line": 1,
+          "change_type": "extend",
+          "purpose": "Add sidebarExpanded, historyRailOpen UI state"
+        },
+        {
+          "file": "desktop/src/stores/app/workspaceSlice.ts",
+          "line": 1,
+          "change_type": "modify",
+          "purpose": "Workspace resolution from project context instead of conversation"
+        }
+      ]
+    }
+  }
+}

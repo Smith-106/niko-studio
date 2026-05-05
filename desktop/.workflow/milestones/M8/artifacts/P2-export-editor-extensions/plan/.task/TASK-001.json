@@ -1,0 +1,52 @@
+{
+  "id": "TASK-001",
+  "plan_id": "PLN-020",
+  "wave": 1,
+  "status": "pending",
+  "title": "TipTap Editor Extensions — Table, Math, Callout",
+  "feature": "F-005",
+  "description": "Install 6 npm dependencies and create TipTap editor extensions for tables, inline/block math (KaTeX), and callout blocks. Register all extensions in NikoEditor and add slash commands to the menu.",
+  "action": "Install docx, katex, @tiptap/extension-table, @tiptap/extension-table-row, @tiptap/extension-table-cell, @tiptap/extension-table-header. Create MathInline.ts (inline node with KaTeX lazy render), MathBlock.ts (block node with KaTeX lazy render), Callout.ts (node with data-variant for info/warning/tip/important). Configure Table extension with community packages. Register all 5 new extensions (Table, TableRow, TableCell, TableHeader, MathInline, MathBlock, Callout) in NikoEditor.tsx extensions array. Add 4 slash command entries (table, math, math-block, callout) to SlashCommandMenu.tsx items array.",
+  "implementation": {
+    "steps": [
+      "Run pnpm add docx katex @tiptap/extension-table@^3.22.0 @tiptap/extension-table-row@^3.22.0 @tiptap/extension-table-cell@^3.22.0 @tiptap/extension-table-header@^3.22.0",
+      "Create src/components/editor/extensions/MathInline.ts — TipTap Node extension, inline: true, atom: true, addAttributes: { latex: { default: '' } }, addNodeView: lazy-load katex and renderToHTML",
+      "Create src/components/editor/extensions/MathBlock.ts — TipTap Node extension, inline: false, atom: true, group: 'block', addAttributes: { latex: { default: '' } }, addNodeView: lazy-load katex and renderToHTML",
+      "Create src/components/editor/extensions/Callout.ts — TipTap Node extension, group: 'block', content: 'block+', addAttributes: { variant: { default: 'info' } }, renderHTML with data-variant attribute",
+      "Add CSS styles for callout variants (info=blue, warning=yellow, tip=green, important=red) using data-variant selector",
+      "Modify NikoEditor.tsx — import and add Table, TableRow, TableCell, TableHeader, MathInline, MathBlock, Callout to useEditor extensions array",
+      "Modify SlashCommandMenu.tsx — add 4 entries to items: { id: 'table', label: '表格', description: '插入表格', icon: TableIcon, type: 'format' }, { id: 'math', label: '行内公式', icon: SigmaIcon, type: 'format' }, { id: 'math-block', label: '块级公式', icon: FunctionIcon, type: 'format' }, { id: 'callout', label: '提示块', icon: AlertCircleIcon, type: 'format' }",
+      "Add slash command handlers in NikoEditor.tsx handleSlashSelect — insertTable, insertContent for math nodes, insertContent for callout"
+    ]
+  },
+  "files_to_create": [
+    "src/components/editor/extensions/MathInline.ts",
+    "src/components/editor/extensions/MathBlock.ts",
+    "src/components/editor/extensions/Callout.ts"
+  ],
+  "files_to_modify": [
+    "package.json",
+    "src/components/NikoEditor.tsx",
+    "src/components/editor/SlashCommandMenu.tsx"
+  ],
+  "read_first": [
+    "src/components/NikoEditor.tsx",
+    "src/components/editor/SlashCommandMenu.tsx",
+    "package.json",
+    "src/utils/export.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -r 'MathInline' src/components/editor/extensions/MathInline.ts — file exists with Node.create",
+      "grep -r 'MathBlock' src/components/editor/extensions/MathBlock.ts — file exists with Node.create",
+      "grep -r 'Callout' src/components/editor/extensions/Callout.ts — file exists with Node.create",
+      "grep -r 'Table' src/components/NikoEditor.tsx — Table extension registered in extensions array",
+      "grep -r 'MathInline\\|MathBlock\\|Callout' src/components/NikoEditor.tsx — all new extensions registered",
+      "grep -r 'table\\|math\\|callout' src/components/editor/SlashCommandMenu.tsx — slash command entries added",
+      "grep -r '@tiptap/extension-table' package.json — table dependencies present",
+      "grep -r 'katex' package.json — katex dependency present"
+    ]
+  },
+  "depends_on": [],
+  "estimated_duration": "45-60 min"
+}

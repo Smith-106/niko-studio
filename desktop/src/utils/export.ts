@@ -6,16 +6,20 @@ import type { JSONContent } from '@tiptap/react'
 
 // ── TipTap JSON → Markdown ─────────────────────────────────────
 
+import { downloadBlob } from './download'
+
+// ── TipTap JSON → Markdown ─────────────────────────────────────
+
 function nodeToMarkdown(node: JSONContent): string {
   if (!node) return ''
 
   switch (node.type) {
     case 'doc': {
-      return (node.content ?? []).map(nodeToMarkdown).join('\n')
+      return (node.content ?? []).map(nodeToMarkdown).join('\n\n')
     }
     case 'paragraph': {
       const text = (node.content ?? []).map(nodeToMarkdown).join('')
-      return text
+      return text || ''
     }
     case 'heading': {
       const level = node.attrs?.level ?? 1
@@ -61,6 +65,40 @@ function nodeToMarkdown(node: JSONContent): string {
     case 'hardBreak': {
       return '  \n'
     }
+    case 'table': {
+      const rows = (node.content ?? []).map((rowNode, rowIndex) => {
+        const cells = (rowNode.content ?? []).map(cellNode => {
+          return (cellNode.content ?? []).map(nodeToMarkdown).join('').replace(/\|/g, '\\|')
+        })
+        const row = `| ${cells.join(' | ')} |`
+        if (rowIndex === 0 && (rowNode.content?.[0]?.type === 'tableHeader')) {
+          const separator = `| ${cells.map(() => '---').join(' | ')} |`
+          return [row, separator]
+        }
+        return [row]
+      })
+      return rows.flat().join('\n')
+    }
+    case 'tableRow': {
+      // handled in 'table'
+      return ''
+    }
+    case 'tableCell':
+    case 'tableHeader': {
+      // handled in 'table'
+      return (node.content ?? []).map(nodeToMarkdown).join('')
+    }
+    case 'mathInline': {
+      return `$${node.attrs?.latex}$`
+    }
+    case 'mathBlock': {
+      return `$$\n${node.attrs?.latex}\n$$`
+    }
+    case 'callout': {
+        const variant = node.attrs?.variant ?? 'info'
+        const inner = (node.content ?? []).map(nodeToMarkdown).join('\n')
+        return `> [!${variant.toUpperCase()}]\n` + inner.split('\n').map(l => '> ' + l).join('\n')
+    }
     default: {
       if (node.content) {
         return (node.content).map(nodeToMarkdown).join('')
@@ -86,7 +124,7 @@ function nodeToHtml(node: JSONContent): string {
     }
     case 'paragraph': {
       const inner = (node.content ?? []).map(nodeToHtml).join('')
-      return `<p>${inner}</p>`
+      return `<p>${inner || '<br>'}</p>`
     }
     case 'heading': {
       const level = node.attrs?.level ?? 1
@@ -134,6 +172,29 @@ function nodeToHtml(node: JSONContent): string {
     case 'hardBreak': {
       return '<br />'
     }
+    case 'table': {
+        return `<table>${(node.content ?? []).map(nodeToHtml).join('')}</table>`
+    }
+    case 'tableRow': {
+        return `<tr>${(node.content ?? []).map(nodeToHtml).join('')}</tr>`
+    }
+    case 'tableCell': {
+        return `<td>${(node.content ?? []).map(nodeToHtml).join('')}</td>`
+    }
+    case 'tableHeader': {
+        return `<th>${(node.content ?? []).map(nodeToHtml).join('')}</th>`
+    }
+    case 'mathInline': {
+        return `<span class="math-inline" data-latex="${escapeHtml(node.attrs?.latex ?? '')}">$${escapeHtml(node.attrs?.latex ?? '')}$</span>`
+    }
+    case 'mathBlock': {
+        return `<div class="math-block" data-latex="${escapeHtml(node.attrs?.latex ?? '')}">$$${escapeHtml(node.attrs?.latex ?? '')}$$</div>`
+    }
+    case 'callout': {
+        const variant = node.attrs?.variant ?? 'info'
+        const inner = (node.content ?? []).map(nodeToHtml).join('\n')
+        return `<div class="callout" data-variant="${variant}">${inner}</div>`
+    }
     default: {
       if (node.content) {
         return (node.content).map(nodeToHtml).join('')
@@ -157,6 +218,13 @@ export function exportToHtml(json: JSONContent, filename?: string): void {
     blockquote { border-left: 3px solid #ccc; padding-left: 1em; color: #666; }
     code { background: #f4f4f4; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
     pre code { display: block; padding: 1em; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; }
+    .callout { margin: 1em 0; padding: 1em; border-radius: 8px; border-left-width: 4px; }
+    .callout[data-variant='info'] { background-color: #eef2ff; border-color: #60a5fa; color: #1e3a8a; }
+    .callout[data-variant='warning'] { background-color: #fefce8; border-color: #facc15; color: #713f12; }
+    .callout[data-variant='tip'] { background-color: #f0fdf4; border-color: #4ade80; color: #14532d; }
+    .callout[data-variant='important'] { background-color: #fef2f2; border-color: #f87171; color: #7f1d1d; }
   </style>
 </head>
 <body>
@@ -182,16 +250,11 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;')
 }
 
-function downloadFile(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType + ';charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  setTimeout(() => {
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }, 100)
+export function downloadFile(content: string | Blob, filename: string, mimeType?: string): void {
+    if (typeof content === 'string') {
+        const blob = new Blob([content], { type: (mimeType || 'text/plain') + ';charset=utf-8' })
+        downloadBlob(blob, filename)
+    } else {
+        downloadBlob(content, filename)
+    }
 }

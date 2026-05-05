@@ -1,0 +1,112 @@
+{
+  "session_id": "20260505-analyze-P1-project-structure-safety",
+  "phase": 1,
+  "milestone": "M8",
+  "generated_at": "2026-05-05",
+  "recommendation": "GO",
+  "confidence": "High",
+  "summary": "Phase 1 is strategically essential — F-001 is prerequisite for 4 of 8 planned features. The workspace model types already define projectId/chapterId fields, tauri_plugin_fs is already loaded, and 937 tests provide a regression safety net. Main risks are data migration safety and store shape breaking, both manageable with careful execution.",
+  "scores": {
+    "feasibility": { "score": 7, "confidence": "High" },
+    "impact": { "score": 9, "confidence": "High" },
+    "risk": { "score": 6, "confidence": "Medium" },
+    "complexity": { "score": 7, "confidence": "High" },
+    "dependencies": { "score": 5, "confidence": "Medium" },
+    "alternatives": { "score": 3, "confidence": "Low" }
+  },
+  "decision_trail": [
+    {
+      "decision": "Hybrid storage: filesystem via Tauri FS plugin for TipTap JSON content, gateway SQLite for metadata",
+      "rationale": "Matches brainstorm ADR-001. Fast file I/O via Tauri (no gateway overhead for content), rich queries via SQLite. Avoids BLOB bloat with version history.",
+      "evidence": ["tauri_plugin_fs already loaded", "gateway already has Node.js sidecar", "brainstorm ADR-001 specifies filesystem + SQLite hybrid"],
+      "impact": "high"
+    },
+    {
+      "decision": "TipTap JSON as chapter file format (not plain text)",
+      "rationale": "Fixes current bug where TipTap JSON formatting is lost on reload. Preserves formatting, styles, and structure.",
+      "evidence": ["useDraftCache stores only text", "NikoEditor maintains JSONContent in React state but discards on unload"],
+      "impact": "high"
+    },
+    {
+      "decision": "Project→Volume→Chapter hierarchy (3 levels)",
+      "rationale": "Matches how writers organize work (book → part → chapter). Aligns with existing ProjectWorkspaceManuscript fields.",
+      "evidence": ["ProjectWorkspaceManuscript has chapterId, chapterTitle, chapterNumber", "brainstorm F-001 spec specifies 3-level hierarchy"],
+      "impact": "high"
+    },
+    {
+      "decision": "Full content snapshots for version history (not operational transforms)",
+      "rationale": "Simpler implementation, easier to debug, matches brainstorm F-002 spec. OT is overkill for single-user desktop app.",
+      "evidence": ["brainstorm F-002 spec specifies full snapshots", "Myers diff on textContent for user-facing display"],
+      "impact": "medium"
+    },
+    {
+      "decision": "Migration with localStorage backup and fallback",
+      "rationale": "Data loss is the highest risk. Backup localStorage before migration, validate each file write, keep localStorage as fallback for one version.",
+      "evidence": ["Current drafts have no backup mechanism", "Single-shot migration must not fail"],
+      "impact": "high"
+    },
+    {
+      "decision": "Adapter pattern for chapter→conversation resolution",
+      "rationale": "DocumentEditor, NikoEditor, StoryBiblePanel all depend on currentConversationId. Adapter layer resolves chapter to underlying conversation/document for backward compat.",
+      "evidence": ["33 files use localStorage", "DocumentEditor keyed by currentConversationId"],
+      "impact": "medium"
+    },
+    {
+      "decision": "Diff textContent for user-facing display, store full JSON for restoration",
+      "rationale": "TipTap JSON is structured — diffing raw JSON strings produces noisy diffs. textContent diff is readable. Full JSON stored for accurate restoration.",
+      "evidence": ["Myers diff on structured JSON is noisy", "brainstorm F-002 recommends text diff for display"],
+      "impact": "medium"
+    },
+    {
+      "decision": "Progressive disclosure: sidebar and history rail collapsed by default",
+      "rationale": "Matches success criteria. Existing users should not feel overwhelmed by new UI. Progressive disclosure reduces scope creep risk.",
+      "evidence": ["Roadmap success criterion #7", "Current UI has no sidebar/history rail"],
+      "impact": "low"
+    }
+  ],
+  "evidence_summary": {
+    "supporting": [
+      "ProjectWorkspaceContext already defines projectId, chapterId fields — extension points ready",
+      "tauri_plugin_fs loaded — zero-setup filesystem access",
+      "normalizeProjectWorkspaceContext handles legacy field migration robustly",
+      "937 tests provide regression safety net",
+      "createDefaultProjectWorkspaceContext() establishes default project concept",
+      "Zustand slice architecture is extensible — new ProjectSlice fits naturally"
+    ],
+    "against": [
+      "No SQLite integration exists — must be added to gateway",
+      "Complete persistence rewrite (localStorage → filesystem + SQLite)",
+      "TipTap JSON not currently persisted (only text) — format change for all documents",
+      "No tree/sidebar component exists — significant new UI",
+      "33 files reference localStorage — migration surface is broad",
+      "Sidebar tree with drag-reorder is complex UI"
+    ],
+    "gaps": [
+      "niko-gateway code not found in repo — SQLite integration location unclear",
+      "Current useDraftCache stores plain text only — migration must reconstruct TipTap JSON",
+      "No existing component patterns for tree rendering in this codebase"
+    ]
+  },
+  "risks": [
+    {
+      "area": "Data loss during migration",
+      "severity": "HIGH",
+      "mitigation": "Backup localStorage before migration, validate each file write, keep localStorage as fallback for one version"
+    },
+    {
+      "area": "Store shape breaking",
+      "severity": "HIGH",
+      "mitigation": "Adapter layer resolving chapter→conversation for backward compat"
+    },
+    {
+      "area": "Performance — file I/O on every save",
+      "severity": "MEDIUM",
+      "mitigation": "Async saves with debouncing (existing 1500ms timer), worker thread for snapshot compression"
+    },
+    {
+      "area": "Sidebar tree component complexity",
+      "severity": "MEDIUM",
+      "mitigation": "Phased approach: read-only tree first, CRUD second"
+    }
+  ]
+}

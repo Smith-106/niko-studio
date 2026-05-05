@@ -76,6 +76,10 @@ describe('SlashCommandMenu', () => {
     expect(screen.getByText('引用')).toBeInTheDocument()
     expect(screen.getByText('代码块')).toBeInTheDocument()
     expect(screen.getByText('分割线')).toBeInTheDocument()
+    expect(screen.getByText('表格')).toBeInTheDocument()
+    expect(screen.getByText('行内公式')).toBeInTheDocument()
+    expect(screen.getByText('块级公式')).toBeInTheDocument()
+    expect(screen.getByText('提示块')).toBeInTheDocument()
   })
 
   it('filters items by query matching label, description, or id', () => {
@@ -330,5 +334,77 @@ describe('SlashCommandMenu', () => {
 
     expect(buttons[2]?.className).toContain('bg-primary-50')
     expect(buttons[0]?.className).not.toContain('bg-primary-50')
+  })
+
+  it('filters new Phase 2 commands by Chinese labels', () => {
+    render(
+      <SlashCommandMenu
+        query="公式"
+        position={defaultPosition}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('行内公式')).toBeInTheDocument()
+    expect(screen.getByText('块级公式')).toBeInTheDocument()
+    expect(screen.queryByText('表格')).not.toBeInTheDocument()
+  })
+
+  it('selects table command and returns correct item', () => {
+    const onSelect = vi.fn()
+    render(
+      <SlashCommandMenu
+        query="表格"
+        position={defaultPosition}
+        onSelect={onSelect}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('表格'))
+
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'table',
+        label: '表格',
+        type: 'format',
+      }),
+    )
+  })
+
+  it('selects callout command and returns correct item', () => {
+    const onSelect = vi.fn()
+    render(
+      <SlashCommandMenu
+        query="提示"
+        position={defaultPosition}
+        onSelect={onSelect}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('提示块'))
+
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'callout',
+        type: 'format',
+      }),
+    )
+  })
+
+  it('filters math commands by id "math"', () => {
+    render(
+      <SlashCommandMenu
+        query="math"
+        position={defaultPosition}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('行内公式')).toBeInTheDocument()
+    expect(screen.getByText('块级公式')).toBeInTheDocument()
   })
 })

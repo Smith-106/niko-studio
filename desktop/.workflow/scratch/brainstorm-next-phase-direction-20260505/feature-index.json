@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-05-05T10:00:00+08:00",
+  "session_id": "brainstorm-next-phase-direction-20260505",
+  "features": [
+    {
+      "id": "F-001",
+      "title": "Multi-Document Project Management",
+      "priority": "HIGH",
+      "phase": "M8-P1",
+      "depends_on": [],
+      "roles": ["product-manager", "ux-expert", "system-architect"],
+      "spec": "feature-specs/F-001-project-management.md"
+    },
+    {
+      "id": "F-002",
+      "title": "Version History & Revision Tracking",
+      "priority": "HIGH",
+      "phase": "M8-P1",
+      "depends_on": ["F-001"],
+      "roles": ["product-manager", "ux-expert", "system-architect"],
+      "spec": "feature-specs/F-002-version-history.md"
+    },
+    {
+      "id": "F-003",
+      "title": "DOCX & Advanced Export",
+      "priority": "MEDIUM",
+      "phase": "M8-P2",
+      "depends_on": ["F-001"],
+      "roles": ["product-manager", "system-architect"],
+      "spec": "feature-specs/F-003-docx-export.md"
+    },
+    {
+      "id": "F-004",
+      "title": "Writing Intelligence Enhancement",
+      "priority": "MEDIUM",
+      "phase": "M9-P1",
+      "depends_on": ["F-001"],
+      "roles": ["product-manager", "ux-expert", "system-architect"],
+      "spec": "feature-specs/F-004-writing-intelligence.md"
+    },
+    {
+      "id": "F-005",
+      "title": "Custom TipTap Extensions",
+      "priority": "MEDIUM",
+      "phase": "M8-P2",
+      "depends_on": [],
+      "roles": ["ux-expert", "system-architect"],
+      "spec": "feature-specs/F-005-tiptap-extensions.md"
+    },
+    {
+      "id": "F-006",
+      "title": "Template & Scaffold System",
+      "priority": "LOW-MEDIUM",
+      "phase": "M9-P1",
+      "depends_on": ["F-001"],
+      "roles": ["product-manager", "ux-expert"],
+      "spec": "feature-specs/F-006-templates.md"
+    },
+    {
+      "id": "F-007",
+      "title": "Advanced AI Agent Workflows",
+      "priority": "MEDIUM",
+      "phase": "M9-P2",
+      "depends_on": ["F-004"],
+      "roles": ["product-manager", "system-architect"],
+      "spec": "feature-specs/F-007-agent-workflows.md"
+    },
+    {
+      "id": "F-008",
+      "title": "Localization Expansion",
+      "priority": "LOW",
+      "phase": "M10+",
+      "depends_on": [],
+      "roles": ["product-manager"],
+      "spec": "feature-specs/F-008-localization.md"
+    }
+  ],
+  "milestones": {
+    "M8": {
+      "phases": [
+        { "id": 1, "features": ["F-001", "F-002"], "theme": "Project Structure & Safety" },
+        { "id": 2, "features": ["F-003", "F-005"], "theme": "Export & Editor Extensions" }
+      ]
+    },
+    "M9": {
+      "phases": [
+        { "id": 1, "features": ["F-004", "F-006"], "theme": "Intelligence & Templates" },
+        { "id": 2, "features": ["F-007"], "theme": "Agent Workflows" }
+      ]
+    },
+    "M10": {
+      "phases": [
+        { "id": 1, "features": ["F-008"], "theme": "Localization & Polish" }
+      ]
+    }
+  }
+}

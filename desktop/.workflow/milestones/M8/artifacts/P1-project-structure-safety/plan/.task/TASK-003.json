@@ -1,0 +1,56 @@
+{
+  "id": "TASK-003",
+  "title": "Data Migration (localStorage → Filesystem)",
+  "description": "Implement one-shot migration from localStorage drafts to filesystem-based project structure. Backup localStorage, convert plain-text content to TipTap JSON, create default project from existing conversations.",
+  "issue_id": null,
+  "type": "feature",
+  "priority": "P0",
+  "effort": "high",
+  "action": "Create desktop/src/services/migrationService.ts with migrateFromLocalStorage() that backs up localStorage, reads all draft entries, creates a default project with chapters, writes chapter files as TipTap JSON, validates each write.",
+  "status": "completed",
+  "scope": "phase",
+  "focus_paths": [
+    "desktop/src/services/migrationService.ts",
+    "desktop/src/services/projectFileService.ts",
+    "desktop/src/hooks/useDraftCache.ts"
+  ],
+  "read_first": [
+    "desktop/src/hooks/useDraftCache.ts",
+    "desktop/src/services/projectFileService.ts",
+    "desktop/src/stores/app/projectSlice.ts",
+    "desktop/src/stores/app/conversationSlice.ts",
+    "desktop/src/stores/app/shared.ts"
+  ],
+  "depends_on": ["TASK-001", "TASK-002"],
+  "wave": 2,
+  "convergence": {
+    "criteria": [
+      "grep -c 'migrateFromLocalStorage' desktop/src/services/migrationService.ts → >= 1",
+      "grep -c 'backupLocalStorage\\|restoreFromBackup' desktop/src/services/migrationService.ts → >= 2",
+      "grep -c 'plainTextToTipTap' desktop/src/services/migrationService.ts → >= 1",
+      "grep -c 'validateMigration' desktop/src/services/migrationService.ts → >= 1"
+    ],
+    "verification": "Migration runs without errors, creates default project with chapters from existing drafts, localStorage backup preserved",
+    "definition_of_done": "Migration script executes atomically with rollback on failure, plain text converted to TipTap JSON paragraphs, localStorage kept as fallback"
+  },
+  "files": [
+    {
+      "path": "desktop/src/services/migrationService.ts",
+      "action": "create",
+      "target": "Migration service",
+      "change": "New service with migrateFromLocalStorage, backupLocalStorage, plainTextToTipTap, validateMigration"
+    }
+  ],
+  "implementation": [
+    "1. backupLocalStorage(): copy all 'niko.draft:*' entries to 'niko.draft.backup:*' keys",
+    "2. getDraftKeys(): scan localStorage for all 'niko.draft:*' keys, extract conversation IDs",
+    "3. plainTextToTipTap(text): convert plain text string to TipTap JSONContent { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] }",
+    "4. migrateFromLocalStorage(): (a) backup localStorage, (b) read all draft entries, (c) create default project 'My Project' via projectFileService, (d) for each draft: create chapter, write TipTap JSON content, (e) validate all files written, (f) write migration flag 'niko.migrated=true', (g) on any failure: log error, keep localStorage data, do not set migration flag",
+    "5. isMigrated(): check 'niko.migrated' flag in localStorage",
+    "6. validateMigration(projectId, chapterIds): read back each chapter file and verify content matches"
+  ],
+  "test": "Test migration with mock localStorage drafts: single draft, multiple drafts, empty drafts, special characters. Test rollback on simulated failure.",
+  "reference": "useDraftCache.ts for localStorage key format ('niko.draft:{conversationId}')",
+  "rationale": "Data loss is the highest risk (L-005). Migration must be atomic, validated, and reversible.",
+  "risks": ["Large number of drafts could cause slow migration — add progress callback", "localStorage quota exceeded during backup — check available space first"]
+}

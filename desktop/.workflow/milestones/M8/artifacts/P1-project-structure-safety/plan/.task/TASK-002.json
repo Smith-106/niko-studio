@@ -1,0 +1,56 @@
+{
+  "id": "TASK-002",
+  "title": "Filesystem Persistence Layer",
+  "description": "Create the filesystem persistence service using Tauri FS plugin. Handles reading/writing project metadata JSON files, chapter TipTap JSON files, and directory structure management.",
+  "issue_id": null,
+  "type": "feature",
+  "priority": "P0",
+  "effort": "medium",
+  "action": "Create desktop/src/services/projectFileService.ts with functions for project index read/write, project metadata read/write, chapter content read/write, directory creation. All operations use @tauri-apps/plugin-fs.",
+  "status": "pending",
+  "scope": "phase",
+  "focus_paths": [
+    "desktop/src/services/projectFileService.ts"
+  ],
+  "read_first": [
+    "desktop/src/api/tauri-contract.ts",
+    "desktop/src/hooks/useDraftCache.ts",
+    "desktop/src-tauri/src/gateway_commands.rs",
+    "desktop/src-tauri/src/main.rs"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "convergence": {
+    "criteria": [
+      "grep -c 'readProjectIndex\\|writeProjectIndex' desktop/src/services/projectFileService.ts → >= 2",
+      "grep -c 'readChapterContent\\|writeChapterContent' desktop/src/services/projectFileService.ts → >= 2",
+      "grep -c 'readDir\\|mkdir\\|writeFile\\|readFile' desktop/src/services/projectFileService.ts → >= 2",
+      "grep -c 'export ' desktop/src/services/projectFileService.ts → >= 5"
+    ],
+    "verification": "Service functions compile, path constants resolve to correct appDataDir structure",
+    "definition_of_done": "All CRUD operations for projects and chapters implemented with proper error handling, directory auto-creation, and path resolution"
+  },
+  "files": [
+    {
+      "path": "desktop/src/services/projectFileService.ts",
+      "action": "create",
+      "target": "Filesystem persistence service",
+      "change": "New service with project index, project metadata, chapter content read/write, directory management"
+    }
+  ],
+  "implementation": [
+    "1. Import from @tauri-apps/plugin-fs: readFile, writeFile, mkdir, exists, readDir, BaseDirectory",
+    "2. Define path constants: PROJECTS_DIR = 'projects', chapterPath = 'projects/{projectId}/chapters/{chapterId}.json', projectMetaPath = 'projects/{projectId}/project.json', projectIndexPath = 'projects/index.json'",
+    "3. Implement readProjectIndex(): read and parse index.json, return Project[] or empty array if not found",
+    "4. Implement writeProjectIndex(projects): stringify and write index.json",
+    "5. Implement readProjectMeta(projectId): read project.json, return project metadata",
+    "6. Implement writeProjectMeta(projectId, data): write project.json with mkdir for project dir",
+    "7. Implement readChapterContent(projectId, chapterId): read chapter JSON file, return TipTap JSONContent",
+    "8. Implement writeChapterContent(projectId, chapterId, content): write chapter JSON file with mkdir for chapters dir",
+    "9. Implement ensureProjectDir(projectId): mkdir -p for project directory structure"
+  ],
+  "test": "Integration tests: write and read back project index, chapter content, handle missing files gracefully",
+  "reference": "useDraftCache.ts for current localStorage persistence pattern (to be replaced)",
+  "rationale": "Decouples filesystem I/O from store/UI logic, enables TASK-003 (migration) and TASK-005 (editor integration) to use clean API",
+  "risks": ["Tauri FS plugin path resolution on different OS — use BaseDirectory.AppData for consistent paths"]
+}

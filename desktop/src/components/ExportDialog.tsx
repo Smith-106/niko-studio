@@ -1,12 +1,15 @@
 import { useRef, useCallback, useState } from 'react'
 import { X, Download, Clock } from 'lucide-react'
 import type { JSONContent } from '@tiptap/react'
-import { exportToMarkdown, exportToHtml, exportToPdf } from '../utils/export'
+import { exportToMarkdown, exportToHtml, exportToPdf, downloadFile } from '../utils/export'
+import { generateDocx, generateProjectDocx } from '../utils/exportDocx'
 import { useI18n } from '../i18n'
 import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap'
 import { useExportHistory } from '../hooks/useExportHistory'
+import { useAppStore } from '../stores/appStore'
 
-type ExportFormat = 'md' | 'html' | 'pdf'
+type ExportFormat = 'md' | 'html' | 'pdf' | 'docx'
+type ExportScope = 'current' | 'project'
 
 interface ExportDialogProps {
   editorJson: JSONContent
@@ -20,7 +23,11 @@ export function ExportDialog({ editorJson, title, onClose }: ExportDialogProps) 
   const dialogRef = useRef<HTMLDivElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const [format, setFormat] = useState<ExportFormat>('md')
+  const [scope, setScope] = useState<ExportScope>('current')
   const [filename, setFilename] = useState(title || 'document')
+  const currentProjectId = useAppStore((s) => s.currentProjectId)
+  const projectsById = useAppStore((s) => s.projectsById)
+  const currentProjectName = currentProjectId ? projectsById[currentProjectId]?.name : 'project'
 
   useDialogFocusTrap({
     containerRef: dialogRef,
@@ -32,15 +39,32 @@ export function ExportDialog({ editorJson, title, onClose }: ExportDialogProps) 
     if (e.target === e.currentTarget) onClose()
   }, [onClose])
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
+    const finalFilename = scope === 'project' ? currentProjectName : filename
+    
     switch (format) {
-      case 'md': exportToMarkdown(editorJson, filename); break
-      case 'html': exportToHtml(editorJson, filename); break
-      case 'pdf': exportToPdf(); break
+      case 'md': 
+        exportToMarkdown(editorJson, finalFilename)
+        break
+      case 'html': 
+        exportToHtml(editorJson, finalFilename)
+        break
+      case 'pdf': 
+        exportToPdf()
+        break
+      case 'docx':
+        if (scope === 'current') {
+            const blob = await generateDocx(editorJson, finalFilename)
+            downloadFile(blob, `${finalFilename}.docx`)
+        } else if (currentProjectId) {
+            const blob = await generateProjectDocx(currentProjectId, finalFilename)
+            downloadFile(blob, `${finalFilename}.docx`)
+        }
+        break
     }
-    recordExport(format, filename, 0)
+    recordExport(format as any, finalFilename, 0)
     onClose()
-  }, [format, editorJson, filename, onClose, recordExport])
+  }, [format, scope, editorJson, filename, currentProjectName, currentProjectId, onClose, recordExport])
 
   return (
     <div
@@ -80,10 +104,40 @@ export function ExportDialog({ editorJson, title, onClose }: ExportDialogProps) 
             </label>
             <input
               type="text"
-              value={filename}
+              value={scope === 'current' ? filename : currentProjectName}
               onChange={(e) => setFilename(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+              disabled={scope === 'project'}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-800 dark:text-dark-text text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/40 disabled:bg-gray-100 dark:disabled:bg-dark-surface2"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 dark:text-dark-text-muted mb-2">
+              导出范围
+            </label>
+            <div className="flex gap-3">
+              {(['current', 'project'] as ExportScope[]).map((s) => (
+                <label
+                  key={s}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-colors ${
+                    scope === s
+                      ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-400'
+                      : 'border-gray-200 dark:border-dark-border text-gray-600 dark:text-dark-text-muted hover:border-gray-300 dark:hover:border-dark-border'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="export-scope"
+                    value={s}
+                    checked={scope === s}
+                    onChange={() => setScope(s)}
+                    disabled={format === 'pdf' || !currentProjectId}
+                    className="sr-only"
+                  />
+                  {s === 'current' ? '当前文档' : '整个项目'}
+                </label>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -91,7 +145,7 @@ export function ExportDialog({ editorJson, title, onClose }: ExportDialogProps) 
               {t.exportFormat}
             </label>
             <div className="flex gap-3">
-              {(['md', 'html', 'pdf'] as ExportFormat[]).map((f) => (
+              {(['md', 'html', 'pdf', 'docx'] as ExportFormat[]).map((f) => (
                 <label
                   key={f}
                   className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-colors ${
@@ -158,3 +212,4 @@ export function ExportDialog({ editorJson, title, onClose }: ExportDialogProps) 
     </div>
   )
 }
+

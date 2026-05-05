@@ -1,0 +1,69 @@
+{
+  "id": "TASK-007",
+  "title": "History Rail & Diff Viewer",
+  "description": "Build the version history UI panel showing snapshot timeline, and a diff viewer for comparing two versions. Includes snapshot list with timestamps/labels, inline diff display with additions/deletions highlighted, and restore confirmation dialog.",
+  "issue_id": null,
+  "type": "feature",
+  "priority": "P1",
+  "effort": "high",
+  "action": "Create desktop/src/components/HistoryPanel.tsx with snapshot timeline and diff viewer. Use 'diff' npm package for Myers diff computation. Integrate into DocumentEditor layout as a collapsible side panel.",
+  "status": "completed",
+  "scope": "phase",
+  "focus_paths": [
+    "desktop/src/components/HistoryPanel.tsx",
+    "desktop/src/components/DocumentEditor.tsx"
+  ],
+  "read_first": [
+    "desktop/src/services/versionService.ts",
+    "desktop/src/components/DocumentEditor.tsx",
+    "desktop/src/stores/uiSlice.ts",
+    "desktop/src/types/project.ts"
+  ],
+  "depends_on": ["TASK-006"],
+  "wave": 3,
+  "convergence": {
+    "criteria": [
+      "grep -c 'HistoryPanel' desktop/src/components/HistoryPanel.tsx → >= 1",
+      "grep -c 'listSnapshots\\|diffSnapshots\\|restoreSnapshot' desktop/src/components/HistoryPanel.tsx → >= 3",
+      "grep -c 'DiffViewer\\|DiffLine' desktop/src/components/HistoryPanel.tsx → >= 2",
+      "grep -c 'historyPanelOpen' desktop/src/stores/uiSlice.ts → >= 2",
+      "grep -c 'HistoryPanel' desktop/src/components/DocumentEditor.tsx → >= 1"
+    ],
+    "verification": "History panel opens as side rail, lists snapshots with timestamps, selecting two snapshots shows inline diff with color-coded additions/deletions, restore button works with confirmation",
+    "definition_of_done": "History panel renders snapshot list, diff viewer shows text changes between versions, restore confirmed via dialog, panel toggles from editor toolbar"
+  },
+  "files": [
+    {
+      "path": "desktop/src/components/HistoryPanel.tsx",
+      "action": "create",
+      "target": "History panel with diff viewer",
+      "change": "New component with snapshot timeline, diff viewer, restore confirmation dialog"
+    },
+    {
+      "path": "desktop/src/stores/uiSlice.ts",
+      "action": "modify",
+      "target": "UI state for history panel",
+      "change": "Add historyPanelOpen (boolean, default false), toggleHistoryPanel action"
+    },
+    {
+      "path": "desktop/src/components/DocumentEditor.tsx",
+      "action": "modify",
+      "target": "Editor layout integration",
+      "change": "Add HistoryPanel to layout, toggle button in toolbar, conditional rendering"
+    }
+  ],
+  "implementation": [
+    "1. Extend uiSlice.ts: add historyPanelOpen: boolean (default false), toggleHistoryPanel(), setHistoryPanelOpen(value) actions",
+    "2. Create HistoryPanel.tsx: main container component with two views — snapshot list and diff viewer",
+    "3. Snapshot list: call listSnapshots(projectId, chapterId), render as timeline with timestamp, label (if named), file size",
+    "4. Diff viewer: accept fromSnapshotId and toSnapshotId, call diffSnapshots(), render inline diff with additions (green bg) and deletions (red bg)",
+    "5. DiffLine component: renders single diff line with type (added/removed/unchanged), line number, content",
+    "6. Restore button: on click, show confirmation dialog (modal), on confirm call restoreSnapshot(), update editor content",
+    "7. Integrate into DocumentEditor.tsx: add HistoryPanel to right side of layout (width 320px), toggle button in toolbar using clock/history icon",
+    "8. Install 'diff' npm package: npm install diff (for Myers diff algorithm, used by versionService.diffSnapshots)"
+  ],
+  "test": "Component tests: renders empty history, renders snapshot list, selects two snapshots shows diff, restore triggers confirmation. Integration: history panel toggles, diff display accurate, restore updates editor content",
+  "reference": "F-002 (Version History & Revision Tracking), versionService.ts API surface",
+  "rationale": "Completes the version history feature by providing user-facing UI for browsing and comparing snapshots",
+  "risks": ["Large diffs could cause rendering lag — add virtualization for very long diffs", "Diff package size — diff.js is ~30KB gzipped, acceptable for desktop app"]
+}

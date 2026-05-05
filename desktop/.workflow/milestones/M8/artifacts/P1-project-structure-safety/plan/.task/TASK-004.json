@@ -1,0 +1,68 @@
+{
+  "id": "TASK-004",
+  "title": "Sidebar Tree Component",
+  "description": "Build a custom collapsible sidebar tree component showing Project → Volume → Chapter hierarchy. Read-only navigation first (drag-reorder deferred per D-001). Collapsed by default (L-007).",
+  "issue_id": null,
+  "type": "feature",
+  "priority": "P1",
+  "effort": "high",
+  "action": "Create desktop/src/components/ProjectSidebar.tsx with tree rendering, expand/collapse, chapter selection, context menu for CRUD. Modify desktop/src/stores/uiSlice.ts to add sidebarExpanded state (default false).",
+  "status": "completed",
+  "scope": "phase",
+  "focus_paths": [
+    "desktop/src/components/ProjectSidebar.tsx",
+    "desktop/src/stores/uiSlice.ts",
+    "desktop/src/App.tsx"
+  ],
+  "read_first": [
+    "desktop/src/stores/uiSlice.ts",
+    "desktop/src/stores/app/projectSlice.ts",
+    "desktop/src/types/project.ts",
+    "desktop/src/components/DocumentEditor.tsx"
+  ],
+  "depends_on": ["TASK-001"],
+  "wave": 2,
+  "convergence": {
+    "criteria": [
+      "grep -c 'ProjectSidebar' desktop/src/components/ProjectSidebar.tsx → >= 1",
+      "grep -c 'sidebarExpanded' desktop/src/stores/uiSlice.ts → >= 2",
+      "grep -c 'toggleSidebar\\|setSidebarExpanded' desktop/src/stores/uiSlice.ts → >= 1",
+      "grep 'ProjectSidebar' desktop/src/App.tsx → matches"
+    ],
+    "verification": "Sidebar renders project tree, clicking chapter triggers setCurrentChapter, collapsed by default",
+    "definition_of_done": "Tree component renders hierarchy, supports expand/collapse nodes, chapter selection, CRUD context menu, integrated into App layout"
+  },
+  "files": [
+    {
+      "path": "desktop/src/components/ProjectSidebar.tsx",
+      "action": "create",
+      "target": "Sidebar tree component",
+      "change": "New component with tree rendering, node expansion, chapter selection, context menu"
+    },
+    {
+      "path": "desktop/src/stores/uiSlice.ts",
+      "action": "modify",
+      "target": "UiSlice interface",
+      "change": "Add sidebarExpanded (boolean, default false), toggleSidebar, setSidebarExpanded actions"
+    },
+    {
+      "path": "desktop/src/App.tsx",
+      "action": "modify",
+      "target": "Layout structure",
+      "change": "Add ProjectSidebar to layout, conditional rendering based on sidebarExpanded"
+    }
+  ],
+  "implementation": [
+    "1. Extend uiSlice.ts: add sidebarExpanded: boolean (default false), toggleSidebar(), setSidebarExpanded(value) to UiSlice interface",
+    "2. Create ProjectSidebar.tsx: accept projects, volumes, chapters from ProjectSlice state",
+    "3. Implement TreeNode component: renders item with expand/collapse icon, title, click handler",
+    "4. Tree structure: Project (root) → Volume (expandable) → Chapter (leaf, clickable)",
+    "5. Chapter click: calls setCurrentChapter(chapterId) from ProjectSlice",
+    "6. Context menu: right-click shows options (Add Volume, Add Chapter, Rename, Delete)",
+    "7. Integrate into App.tsx: add sidebar panel to left of main content area, fixed width 256px, toggle button in toolbar"
+  ],
+  "test": "Component tests: renders empty state, renders project with volumes/chapters, expand/collapse works, chapter selection fires action, context menu appears",
+  "reference": "Existing component patterns in desktop/src/components/ — TailwindCSS, no UI library",
+  "rationale": "Sidebar provides the primary navigation for multi-document workspace, prerequisite for user-facing project management",
+  "risks": ["Custom tree component is significant UI work — phased approach (read-only first) reduces scope"]
+}

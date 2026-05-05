@@ -42,6 +42,11 @@ export function SlashCommandMenu({ query, position, onSelect, onClose }: SlashCo
     { id: 'blockquote', label: t.editorCmdBlockquote, description: t.editorCmdBlockquoteDesc, icon: '"', type: 'format' as const },
     { id: 'code-block', label: t.editorCmdCodeBlock, description: t.editorCmdCodeBlockDesc, icon: '</>', type: 'format' as const },
     { id: 'horizontal-rule', label: t.editorCmdHorizontalRule, description: t.editorCmdHorizontalRuleDesc, icon: '—', type: 'format' as const },
+    // New format commands from TASK-001
+    { id: 'table', label: '表格', description: '插入一个表格', icon: '▦', type: 'format' as const },
+    { id: 'math', label: '行内公式', description: '插入一个行内 LaTeX 公式', icon: '∑', type: 'format' as const },
+    { id: 'math-block', label: '块级公式', description: '插入一个块级 LaTeX 公式', icon: '∬', type: 'format' as const },
+    { id: 'callout', label: '提示块', description: '插入一个提示块 (info, tip, etc.)', icon: '📣', type: 'format' as const },
   ], [t])
 
   const filtered = useMemo(() => {

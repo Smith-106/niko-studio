@@ -1,0 +1,62 @@
+{
+  "id": "TASK-005",
+  "title": "Editor Integration & Adapter Layer",
+  "description": "Wire DocumentEditor to load/save chapter content from filesystem via projectFileService. Create adapter layer resolving currentChapterId → currentConversationId for backward compatibility (L-006). Replace useDraftCache with filesystem persistence.",
+  "issue_id": null,
+  "type": "feature",
+  "priority": "P0",
+  "effort": "medium",
+  "action": "Modify DocumentEditor.tsx to load chapter content from projectFileService on mount, save on update. Create desktop/src/adapters/chapterAdapter.ts mapping chapter → conversation for existing components. Replace useDraftCache usage.",
+  "status": "completed",
+  "scope": "phase",
+  "focus_paths": [
+    "desktop/src/components/DocumentEditor.tsx",
+    "desktop/src/adapters/chapterAdapter.ts",
+    "desktop/src/hooks/useDraftCache.ts"
+  ],
+  "read_first": [
+    "desktop/src/components/DocumentEditor.tsx",
+    "desktop/src/components/NikoEditor.tsx",
+    "desktop/src/hooks/useDraftCache.ts",
+    "desktop/src/services/projectFileService.ts",
+    "desktop/src/stores/app/projectSlice.ts"
+  ],
+  "depends_on": ["TASK-001", "TASK-002"],
+  "wave": 2,
+  "convergence": {
+    "criteria": [
+      "grep -c 'projectFileService\\|readChapterContent\\|writeChapterContent' desktop/src/components/DocumentEditor.tsx → >= 2",
+      "grep -c 'currentChapterId' desktop/src/components/DocumentEditor.tsx → >= 1",
+      "grep -c 'chapterAdapter' desktop/src/adapters/chapterAdapter.ts → >= 1",
+      "grep -c 'useDraftCache' desktop/src/components/DocumentEditor.tsx → 0"
+    ],
+    "verification": "Editor loads chapter content from filesystem, saves on edit, existing components (StoryBiblePanel etc.) still render via adapter",
+    "definition_of_done": "useDraftCache removed from DocumentEditor, chapter content loads from filesystem, save persists to filesystem, backward compat maintained via adapter"
+  },
+  "files": [
+    {
+      "path": "desktop/src/components/DocumentEditor.tsx",
+      "action": "modify",
+      "target": "Content loading and saving logic",
+      "change": "Replace useDraftCache with projectFileService read/write, key on currentChapterId instead of currentConversationId"
+    },
+    {
+      "path": "desktop/src/adapters/chapterAdapter.ts",
+      "action": "create",
+      "target": "Chapter-to-conversation adapter",
+      "change": "New adapter mapping currentChapterId to currentConversationId for existing component interfaces"
+    }
+  ],
+  "implementation": [
+    "1. Create desktop/src/adapters/chapterAdapter.ts: function resolveConversationForChapter(chapterId, chapters, conversations) → maps chapter to its linked conversation ID",
+    "2. Modify DocumentEditor.tsx: replace useDraftCache hook with useEffect that calls readChapterContent(projectId, chapterId) on mount",
+    "3. Modify handleEditorUpdate: replace persist(text) with writeChapterContent(projectId, chapterId, editor.getJSON())",
+    "4. Change component key from currentConversationId to currentChapterId for proper remounting",
+    "5. Pass TipTap JSON (not plain text) as initialContent to NikoEditor — fixes formatting loss bug",
+    "6. Add debounce for filesystem writes (reuse existing 1500ms pattern)"
+  ],
+  "test": "Integration test: load chapter from filesystem, edit content, verify save, switch chapters, verify content preserved",
+  "reference": "Current DocumentEditor save flow: NikoEditor.onUpdate → handleEditorUpdate → persist(text) via useDraftCache",
+  "rationale": "Fixes the core persistence bug (formatting lost on reload) and completes the data flow from project store through filesystem to editor",
+  "risks": ["Breaking existing component interfaces — mitigated by adapter layer", "Performance of filesystem writes on every keystroke — mitigated by debouncing"]
+}

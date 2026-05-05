@@ -1,0 +1,88 @@
+{
+  "phase": 1,
+  "milestone": "M8",
+  "reviewed_at": "2026-05-05T10:30:00Z",
+  "verdict": "PASS",
+  "summary": "Phase 1 implementation is solid. 7 tasks across 3 waves deliver a coherent project structure with filesystem persistence, migration, sidebar navigation, editor integration, and version history. Critical snapshot content bug was caught by business testing and fixed inline. Remaining findings are minor — none block progression.",
+  "files_reviewed": [
+    "src/types/project.ts",
+    "src/stores/app/projectSlice.ts",
+    "src/stores/app/appStore.ts",
+    "src/services/projectFileService.ts",
+    "src/services/migrationService.ts",
+    "src/services/versionService.ts",
+    "src/components/ProjectSidebar.tsx",
+    "src/components/DocumentEditor.tsx",
+    "src/components/HistoryPanel.tsx",
+    "src/stores/uiSlice.ts",
+    "src/adapters/chapterAdapter.ts"
+  ],
+  "issues": [
+    {
+      "id": "RVW-001",
+      "severity": "medium",
+      "category": "ux",
+      "file": "src/components/HistoryPanel.tsx",
+      "lines": "149-154",
+      "title": "window.location.reload() after snapshot restore",
+      "description": "handleRestore uses window.location.reload() to refresh UI after restoring a snapshot. This causes full page reload, losing all in-memory state (other open panels, unsaved sidebar state, etc.).",
+      "recommendation": "Replace with store dispatch to update currentChapterContent + re-render. Low urgency — works correctly, just jarring UX."
+    },
+    {
+      "id": "RVW-002",
+      "severity": "low",
+      "category": "type-safety",
+      "file": "src/services/projectFileService.ts",
+      "lines": "146-157",
+      "title": "getSnapshot returns untyped any",
+      "description": "getSnapshot returns JSON.parse(raw) without type annotation. Should return Snapshot | null for consistency with the rest of the typed codebase.",
+      "recommendation": "Add explicit return type annotation: Promise<Snapshot | null>."
+    },
+    {
+      "id": "RVW-003",
+      "severity": "low",
+      "category": "performance",
+      "file": "src/services/projectFileService.ts",
+      "lines": "128",
+      "title": "SnapshotIndex stores full Snapshot objects including content",
+      "description": "index.json stores complete Snapshot objects (including potentially large content fields) in the array. For chapters with many snapshots, this file could become large.",
+      "recommendation": "Consider storing only metadata in index.json and loading content on demand from individual snapshot files. Low urgency — 50-snapshot cap with enforceRetentionPolicy mitigates this."
+    },
+    {
+      "id": "RVW-004",
+      "severity": "low",
+      "category": "coupling",
+      "file": "src/services/migrationService.ts",
+      "lines": "various",
+      "title": "Migration service directly imports useAppStore",
+      "description": "migrateFromLocalStorage calls useAppStore.getState() and useAppStore.setState() directly, creating tight coupling between the service layer and the store.",
+      "recommendation": "Accept store actions as parameters (dependency injection) for testability. Low urgency — migration is a one-time operation."
+    },
+    {
+      "id": "RVW-005",
+      "severity": "low",
+      "category": "edge-case",
+      "file": "src/services/migrationService.ts",
+      "lines": "plainTextToTipTap",
+      "title": "plainTextToTipTap creates empty paragraph nodes for blank lines",
+      "description": "When converting plain text with blank lines, creates { type: 'paragraph' } without a content array. TipTap handles this gracefully but it's technically invalid per the TipTap doc schema.",
+      "recommendation": "Add empty content: [] array to paragraph nodes for schema compliance."
+    }
+  ],
+  "strengths": [
+    "Clean separation of concerns: types → services → stores → components",
+    "Consistent use of Tauri FS plugin (readTextFile/writeTextFile) throughout persistence layer",
+    "Atomic project creation (project + volume + chapter in single set() call) prevents partial state",
+    "Backup-before-write migration pattern is robust and includes validation step",
+    "Auto-save throttling (5 min) and retention policy (50 max, preserve named) are well-implemented",
+    "TipTap JSON preservation through snapshot content field fix ensures faithful restoration",
+    "ID generation with crypto.randomUUID().slice(0,8) is simple and collision-resistant enough for the scale"
+  ],
+  "architecture_notes": {
+    "pattern": "Service → Store → Component (unidirectional data flow)",
+    "persistence": "Tauri FS plugin with JSON files under projects/{id}/ structure",
+    "state_management": "Zustand with slice composition (projectSlice + uiSlice)",
+    "migration": "localStorage → filesystem with backup/restore capability",
+    "versioning": "Snapshot files with SHA-256 content hash, Myers diff for text comparison"
+  }
+}

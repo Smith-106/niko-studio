@@ -1,0 +1,112 @@
+{
+  "phase": 2,
+  "milestone": "M8",
+  "tested_at": "2026-05-05T11:15:00Z",
+  "passed": true,
+  "test_cases": [
+    {
+      "id": "BT-001",
+      "category": "editor-extensions",
+      "description": "MathInline extension: correct TipTap Node config (group: inline, atom: true, latex attr)",
+      "result": "pass",
+      "evidence": "MathInline.ts: group='inline', inline=true, atom=true, latex attr with default ''. ReactNodeViewRenderer(MathView) wired."
+    },
+    {
+      "id": "BT-002",
+      "category": "editor-extensions",
+      "description": "MathBlock extension: correct TipTap Node config (group: block, atom: true, latex attr)",
+      "result": "pass",
+      "evidence": "MathBlock.ts: group='block', atom=true, latex attr with default ''. ReactNodeViewRenderer(MathView) wired."
+    },
+    {
+      "id": "BT-003",
+      "category": "editor-extensions",
+      "description": "Callout extension: correct Node config (group: block, content: 'block+', variant attr with commands)",
+      "result": "pass",
+      "evidence": "Callout.ts: group='block', content='block+', variant attr default='info'. Commands: setCallout, toggleCallout, unsetCallout all implemented."
+    },
+    {
+      "id": "BT-004",
+      "category": "editor-extensions",
+      "description": "MathView component: editing/rendering lifecycle (KaTeX lazy load, Enter/Escape/Blur handling)",
+      "result": "pass",
+      "evidence": "MathView.tsx: isEditing state toggle, dynamic import('katex'), Enter→updateAttributes+setIsEditing(false), Escape→setIsEditing(false), Blur→updateAttributes+deleteNode if empty, double-click to re-edit."
+    },
+    {
+      "id": "BT-005",
+      "category": "editor-extensions",
+      "description": "All Phase 2 extensions registered in NikoEditor useEditor config",
+      "result": "pass",
+      "evidence": "NikoEditor.tsx:107-115: Table configured (resizable:true), TableRow, TableHeader, TableCell, MathInline, MathBlock, Callout all in extensions array."
+    },
+    {
+      "id": "BT-006",
+      "category": "editor-extensions",
+      "description": "Slash command entries for table, math, math-block, callout in SlashCommandMenu",
+      "result": "pass",
+      "evidence": "SlashCommandMenu.tsx:46-49: table(表格), math(行内公式), math-block(块级公式), callout(提示块). NikoEditor.tsx:386-401: handlers call insertTable, insertContent mathInline/mathBlock, toggleCallout."
+    },
+    {
+      "id": "BT-007",
+      "category": "export-pipeline",
+      "description": "DOCX export: nodeToDocx handles all node types (paragraph, heading, lists, blockquote, codeBlock, table, math, callout)",
+      "result": "pass",
+      "evidence": "exportDocx.ts: nodeHandlers covers doc, paragraph, heading, bulletList, orderedList, blockquote, codeBlock, horizontalRule, table, mathInline, mathBlock, callout. textNodeToDocx handles bold, italic, underline, strike, code marks."
+    },
+    {
+      "id": "BT-008",
+      "category": "export-pipeline",
+      "description": "DOCX export: generateDocx creates Document with title, styles, numbering",
+      "result": "pass",
+      "evidence": "exportDocx.ts:167-181: generateDocx creates Document with creator='Niko-Studio', title param, defaultStyles (SourceCode, IntenseQuote), defaultNumbering, section with TITLE heading + children. Returns Packer.toBlob."
+    },
+    {
+      "id": "BT-009",
+      "category": "export-pipeline",
+      "description": "DOCX export: generateProjectDocx reads chapters from store and produces multi-section document",
+      "result": "pass",
+      "evidence": "exportDocx.ts:183-222: getChaptersForProject + volumesByProjectId from store. Loops volumes→chapters, readChapterContent per chapter, creates sections per volume with H1 + per-chapter H2 + content. Falls back to empty section if no volumes."
+    },
+    {
+      "id": "BT-010",
+      "category": "export-pipeline",
+      "description": "ExportDialog: docx format option with scope selector (current/project) wired to generateDocx/generateProjectDocx",
+      "result": "pass",
+      "evidence": "ExportDialog.tsx:11-12: ExportFormat includes 'docx', ExportScope 'current'|'project'. Lines 56-62: scope='current'→generateDocx+downloadFile, scope='project'→generateProjectDocx+downloadFile. Scope selector at lines 118-141 with disabled when format=pdf or no projectId."
+    },
+    {
+      "id": "BT-011",
+      "category": "export-pipeline",
+      "description": "Markdown export: new node types (mathInline, mathBlock, callout) produce correct markdown",
+      "result": "pass",
+      "evidence": "export.ts:91-101: mathInline→$latex$, mathBlock→$$latex$$, callout→> [!VARIANT]\\n> content. Uses GitHub-style callout syntax."
+    },
+    {
+      "id": "BT-012",
+      "category": "export-pipeline",
+      "description": "HTML export: new node types produce correct HTML with escape safety",
+      "result": "pass",
+      "evidence": "export.ts:187-197: mathInline→span.math-inline with data-latex (escaped), mathBlock→div.math-block, callout→div.callout with data-variant. CSS styles for callout variants in export HTML template (lines 223-228)."
+    },
+    {
+      "id": "BT-013",
+      "category": "integration",
+      "description": "TypeScript compilation: no Phase 2 errors",
+      "result": "pass",
+      "evidence": "tsc --noEmit: 8 errors total, all in versionService.test.ts (5) and projectSlice.test.ts (3). Zero errors in Phase 2 files."
+    },
+    {
+      "id": "BT-014",
+      "category": "integration",
+      "description": "No missing imports or broken module references",
+      "result": "pass",
+      "evidence": "All Phase 2 imports verified: MathInline→MathView, MathBlock→MathView, Callout standalone, NikoEditor→Table/TableRow/TableCell/TableHeader/MathInline/MathBlock/Callout, ExportDialog→generateDocx/generateProjectDocx, exportDocx→docx/useAppStore/readChapterContent."
+    }
+  ],
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0
+  },
+  "notes": "All business logic verified. MathView handles KaTeX rendering + editing lifecycle correctly. DOCX export pipeline handles all node types with proper styling. ExportDialog correctly routes current vs project scope. Markdown/HTML export covers new node types. TypeScript clean for Phase 2. Pre-existing test type errors unrelated."
+}

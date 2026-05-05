@@ -1,6 +1,6 @@
 [package]
 name = "niko-studio-desktop"
-version = "9.8.0"
+version = "9.9.0"
 description = "Niko-Studio Desktop - AI Writing Assistant"
 authors = ["Niko-Studio Team"]
 edition = "2021"
@@ -12,13 +12,13 @@ default-run = "niko-studio-desktop"
 name = "niko_studio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
-# ISS-20260430-001 â€” replacement for the stale 128 MB Python compat sidecar.
+# ISS-20260430-001 â€?replacement for the stale 128 MB Python compat sidecar.
 # This binary is the only file Tauri externalBin resolves at packaging time;
 # it spawns the staged Node TS gateway from <install>/sidecar/.
 [[bin]]
 name = "niko-gateway-launcher"
 path = "src/bin/niko-gateway-launcher.rs"
-# Keep the launcher binary minimal â€” no Tauri / reqwest deps; just std spawn.
+# Keep the launcher binary minimal â€?no Tauri / reqwest deps; just std spawn.
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

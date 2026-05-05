@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.9.0] — 2026-05-05
+
+### M8 — Infrastructure & Export
+
+#### Phase 1 — Project Structure & Safety
+
+- **feat(project):** Project/Volume/Chapter types + Zustand slice with full CRUD
+- **feat(project):** Tauri filesystem persistence via `projectFileService`
+- **feat(migration):** localStorage → filesystem migration service with idempotent backup/restore
+- **feat(ui):** Project sidebar tree — 3-level collapsible Project→Volume→Chapter navigation
+- **feat(editor):** Editor-chapter wiring via `chapterAdapter`, replacing `useDraftCache`
+- **feat(version):** Version snapshots with Myers diff auto-save (throttled)
+- **feat(ui):** History panel with snapshot timeline, DiffViewer, RestoreConfirmDialog
+- **test:** 68 new tests (projectFileService 24, projectSlice 17, migrationService 12, versionService 5, project 5, chapterAdapter 5)
+
+#### Phase 2 — Export & Editor Extensions
+
+- **feat(editor):** TipTap extensions — Table, MathInline (KaTeX), MathBlock (KaTeX), Callout (info/warning/tip/important)
+- **feat(export):** DOCX export pipeline with recursive `nodeToDocx` converter + ExportDialog scope selector
+- **feat(editor):** Slash command menu extended with table, math, and callout commands
+- **test:** 63 new tests (exportDocx 25, export 18, SlashCommandMenu 20)
+
+#### Quality
+
+- 131/131 new tests passing (68 P1 + 63 P2)
+- 14/14 success criteria met, audit verdict PASS
+- 9 cross-artifact interfaces verified
+- 5 non-blocking issues deferred (1 medium, 4 low)
+
+#### Commits since v9.8.0
+
+- feat: add release workflow and Rust lint to CI
+- feat: add Tauri auto-update with toast notifications
+- feat(sentry): add error monitoring for frontend and Rust backend
+- fix: correct mock data structure in analysis.test.ts
+- fix: resolve TS compilation errors for release build
+
 ## [9.8.0] — 2026-05-05
 
 ### M7 — Export & Delivery

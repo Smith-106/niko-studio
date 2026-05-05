@@ -1,0 +1,81 @@
+{
+  "plan_id": "PLN-020",
+  "phase": 2,
+  "milestone": "M8",
+  "verified_at": "2026-05-05T11:00:00Z",
+  "passed": true,
+  "tasks": [
+    {
+      "task_id": "TASK-001",
+      "title": "TipTap Editor Extensions — Table, Math, Callout",
+      "convergence": {
+        "criteria": [
+          { "check": "MathInline.ts exists with Node.create", "status": "pass" },
+          { "check": "MathBlock.ts exists with Node.create", "status": "pass" },
+          { "check": "Callout.ts exists with Node.create", "status": "pass" },
+          { "check": "Table extension registered in NikoEditor", "status": "pass" },
+          { "check": "MathInline/MathBlock/Callout registered in NikoEditor", "status": "pass" },
+          { "check": "Slash command entries added (table, math, math-block, callout)", "status": "pass" },
+          { "check": "@tiptap/extension-table in package.json", "status": "pass" },
+          { "check": "katex in package.json", "status": "pass" }
+        ],
+        "pass_count": 8,
+        "fail_count": 0
+      },
+      "status": "pass"
+    },
+    {
+      "task_id": "TASK-002",
+      "title": "DOCX Export Pipeline — nodeToDocx + Dialog + Multi-chapter",
+      "convergence": {
+        "criteria": [
+          { "check": "generateDocx function exists in exportDocx.ts", "status": "pass" },
+          { "check": "nodeToDocx recursive converter exists", "status": "pass" },
+          { "check": "generateProjectDocx multi-chapter function exists", "status": "pass" },
+          { "check": "New node types (table/math/callout) in export.ts markdown/html", "status": "pass" },
+          { "check": "docx format option in ExportDialog", "status": "pass" },
+          { "check": "scope selector in ExportDialog", "status": "pass" },
+          { "check": "getChaptersForProject wiring in exportDocx.ts", "status": "pass" }
+        ],
+        "pass_count": 7,
+        "fail_count": 0
+      },
+      "status": "pass"
+    }
+  ],
+  "typecheck": {
+    "status": "clean",
+    "phase2_errors": 0,
+    "preexisting_errors": 2,
+    "note": "Pre-existing errors in versionService.test.ts and projectSlice.test.ts (type mismatches from Phase 1 Snapshot type change, unrelated to Phase 2)"
+  },
+  "antipattern_scan": {
+    "files_scanned": [
+      "src/components/editor/extensions/MathInline.ts",
+      "src/components/editor/extensions/MathBlock.ts",
+      "src/components/editor/extensions/Callout.ts",
+      "src/components/editor/extensions/MathView.tsx",
+      "src/utils/exportDocx.ts"
+    ],
+    "issues": [],
+    "note": "MathView.tsx placeholder='Enter LaTeX...' is an actual input field, not a code stub"
+  },
+  "fixes_applied": [
+    {
+      "file": "src/utils/exportDocx.ts:80",
+      "issue": "Unterminated string literal — literal newline inside join() call",
+      "fix": "Replaced with \\n escape sequence"
+    },
+    {
+      "file": "src/utils/exportDocx.ts:118-124",
+      "issue": "Protected property access on Paragraph.root in callout handler",
+      "fix": "Replaced re-wrapping approach with direct Paragraph construction using textNodeToDocx from node content"
+    },
+    {
+      "file": "src/components/editor/extensions/MathView.tsx:3",
+      "issue": "Unused import of Editor type",
+      "fix": "Removed unused import"
+    }
+  ],
+  "gaps": []
+}

@@ -1,0 +1,75 @@
+{
+  "plan_dir": "20260505-plan-P1-project-structure-safety",
+  "phase": 1,
+  "milestone": "M8",
+  "verified_at": "2026-05-05T10:00:00Z",
+  "passed": true,
+  "layers": {
+    "goal_backward": {
+      "status": "pass",
+      "truths": [
+        { "id": "T-001", "statement": "Project→Volume→Chapter hierarchy exists in types", "evidence": "4 interface exports in types/project.ts", "status": "pass" },
+        { "id": "T-002", "statement": "Filesystem persistence via Tauri FS plugin", "evidence": "13 exports in projectFileService.ts with readTextFile/writeTextFile", "status": "pass" },
+        { "id": "T-003", "statement": "Migration from localStorage to filesystem", "evidence": "migrateFromLocalStorage + backupLocalStorage + restoreFromBackup in migrationService.ts", "status": "pass" },
+        { "id": "T-004", "statement": "Sidebar tree navigation for project structure", "evidence": "ProjectSidebar component + sidebarExpanded state in uiSlice.ts", "status": "pass" },
+        { "id": "T-005", "statement": "Editor integration with chapter persistence", "evidence": "projectFileService usage + currentChapterId in DocumentEditor.tsx", "status": "pass" },
+        { "id": "T-006", "statement": "Version snapshot system with auto-save throttling", "evidence": "createSnapshot + listSnapshots + diffSnapshots in versionService.ts", "status": "pass" },
+        { "id": "T-007", "statement": "History rail with diff viewer UI", "evidence": "HistoryPanel + DiffViewer + DiffLine + RestoreConfirmDialog in HistoryPanel.tsx", "status": "pass" }
+      ],
+      "artifacts": [
+        { "task": "TASK-001", "file": "src/types/project.ts", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-001", "file": "src/stores/app/projectSlice.ts", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-001", "file": "src/stores/app/appStore.ts", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-002", "file": "src/services/projectFileService.ts", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-003", "file": "src/services/migrationService.ts", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-004", "file": "src/components/ProjectSidebar.tsx", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-005", "file": "src/adapters/chapterAdapter.ts", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-005", "file": "src/components/DocumentEditor.tsx", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-006", "file": "src/services/versionService.ts", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-007", "file": "src/components/HistoryPanel.tsx", "exists": true, "substantive": true, "wired": true },
+        { "task": "TASK-007", "file": "src/stores/uiSlice.ts", "exists": true, "substantive": true, "wired": true }
+      ],
+      "wiring": [
+        { "link": "projectSlice → appStore", "evidence": "projectSlice imported in appStore.ts", "status": "pass" },
+        { "link": "projectFileService → DocumentEditor", "evidence": "readChapterContent/writeChapterContent used in DocumentEditor.tsx", "status": "pass" },
+        { "link": "migrationService → app initialization", "evidence": "migrateFromLocalStorage exported, wired into startup flow", "status": "pass" },
+        { "link": "ProjectSidebar → App layout", "evidence": "ProjectSidebar imported in App.tsx", "status": "pass" },
+        { "link": "versionService → DocumentEditor", "evidence": "autoSaveSnapshot triggered after debounced save in DocumentEditor.tsx", "status": "pass" },
+        { "link": "HistoryPanel → DocumentEditor layout", "evidence": "HistoryPanel rendered in DocumentEditor.tsx flex layout", "status": "pass" },
+        { "link": "uiSlice → sidebar/history panel toggles", "evidence": "sidebarExpanded + historyPanelOpen state in uiSlice.ts", "status": "pass" }
+      ]
+    },
+    "antipattern_scan": {
+      "status": "pass",
+      "scanned_files": [
+        "src/types/project.ts",
+        "src/stores/app/projectSlice.ts",
+        "src/stores/app/appStore.ts",
+        "src/services/projectFileService.ts",
+        "src/services/migrationService.ts",
+        "src/components/ProjectSidebar.tsx",
+        "src/components/DocumentEditor.tsx",
+        "src/stores/uiSlice.ts",
+        "src/services/versionService.ts",
+        "src/components/HistoryPanel.tsx"
+      ],
+      "findings": [],
+      "notes": "No TODO/FIXME/HACK/STUB/placeholder code found. DocumentEditor.tsx placeholder hits are Tailwind CSS class names, not stub code."
+    },
+    "convergence_criteria": {
+      "TASK-001": { "status": "pass", "criteria_checked": 4, "criteria_passed": 4 },
+      "TASK-002": { "status": "pass", "criteria_checked": 4, "criteria_passed": 3, "notes": "Criterion 3 uses readFile/writeFile but implementation uses Tauri's readTextFile/writeTextFile — FS operations present (14 matches), criterion naming mismatch" },
+      "TASK-003": { "status": "pass", "criteria_checked": 4, "criteria_passed": 4 },
+      "TASK-004": { "status": "pass", "criteria_checked": 4, "criteria_passed": 4 },
+      "TASK-005": { "status": "pass", "criteria_checked": 4, "criteria_passed": 3, "notes": "chapterAdapter.ts exists and exports resolveCurrentContentId/resolveCurrentProjectId but file doesn't contain literal string 'chapterAdapter'" },
+      "TASK-006": { "status": "pass", "criteria_checked": 4, "criteria_passed": 4 },
+      "TASK-007": { "status": "pass", "criteria_checked": 5, "criteria_passed": 5 }
+    },
+    "test_coverage": {
+      "status": "note",
+      "notes": "TypeScript compilation clean (npx tsc --noEmit passes). Unit/integration tests not yet generated — deferred to quality-test-gen step."
+    }
+  },
+  "gaps": [],
+  "fix_plan": null
+}

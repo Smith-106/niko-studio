@@ -1,0 +1,77 @@
+{
+  "phase": 1,
+  "milestone": "M8",
+  "mode": "degraded",
+  "mode_reason": "No spec package (REQ-*.md) found — using plan.json success_criteria + code analysis",
+  "timestamp": "2026-05-05T10:10:00Z",
+  "layers": {
+    "L1_interface_contract": {
+      "status": "pass",
+      "scenarios": [
+        { "id": "L1-001", "name": "projectFileService API surface", "status": "pass", "evidence": "13 exported functions with correct signatures (readProjectMeta, writeProjectMeta, readChapterContent, writeChapterContent, createSnapshot, listSnapshots, getSnapshot, restoreSnapshot, shouldAutoSave, enforceRetentionPolicy, listProjectIds, projectExists, deleteChapterDir)" },
+        { "id": "L1-002", "name": "projectSlice store interface", "status": "pass", "evidence": "15 exported actions covering CRUD for projects/volumes/chapters + content management" },
+        { "id": "L1-003", "name": "migrationService API surface", "status": "pass", "evidence": "5 exported functions (migrateFromLocalStorage, backupLocalStorage, restoreFromBackup, isMigrated, plainTextToTipTap)" },
+        { "id": "L1-004", "name": "versionService API surface", "status": "pass", "evidence": "Re-exports projectFileService functions + adds diffSnapshots and autoSaveSnapshot" }
+      ]
+    },
+    "L2_business_rule": {
+      "status": "fail",
+      "scenarios": [
+        { "id": "L2-001", "name": "Project→Volume→Chapter hierarchy enforced", "status": "pass", "evidence": "createProject/createVolume/createChapter in project.ts correctly set parent IDs" },
+        { "id": "L2-002", "name": "Filesystem persistence paths correct", "status": "pass", "evidence": "projects/{id}/meta.json, projects/{id}/chapters/{chId}/content.json, projects/{id}/chapters/{chId}/versions/{snapId}.json" },
+        { "id": "L2-003", "name": "Migration backup-then-write pattern", "status": "pass", "evidence": "migrateFromLocalStorage calls backupLocalStorage() before any writes, validates after with validateMigration" },
+        { "id": "L2-004", "name": "Auto-save throttling (5 min)", "status": "pass", "evidence": "shouldAutoSave checks Date.now() - lastSnapshotTime > 5*60*1000" },
+        { "id": "L2-005", "name": "Retention policy (50 max, preserve named)", "status": "pass", "evidence": "enforceRetentionPolicy keeps named snapshots, removes oldest unnamed first" },
+        { "id": "L2-006", "name": "Snapshot stores original content for restoration", "status": "fail", "priority": "critical", "evidence": "Snapshot type (project.ts:32-40) has textContent but no content field. createSnapshot (projectFileService.ts:96-131) receives TipTap JSON but only extracts plain text via extractText(). Original content is NOT stored in snapshot file.", "impact": "Faithful restoration of rich text (bold, italic, links) impossible — only plain text recoverable" },
+        { "id": "L2-007", "name": "restoreSnapshot writes correct content", "status": "fail", "priority": "critical", "evidence": "restoreSnapshot (projectFileService.ts:159-168) reads raw snapshot file JSON string via readTextFile and writes it as chapter content. This writes the snapshot wrapper {id,chapterId,timestamp,contentHash,textContent,fileSize} as the chapter's TipTap content, corrupting the chapter.", "impact": "Restoring any snapshot corrupts the chapter — editor shows raw JSON instead of formatted content" }
+      ]
+    },
+    "L3_business_scenario": {
+      "status": "fail",
+      "scenarios": [
+        { "id": "L3-001", "name": "Create project → add volume → add chapter → write content → read back", "status": "pass", "evidence": "createNewProject in projectSlice creates project+volume+chapter atomically. writeChapterContent + readChapterContent round-trip verified in projectFileService" },
+        { "id": "L3-002", "name": "Migration: localStorage drafts → filesystem project", "status": "pass", "evidence": "migrateFromLocalStorage handles: empty drafts (early return), backup → create project structure → write TipTap JSON → validate → update store → set flag" },
+        { "id": "L3-003", "name": "Snapshot creation → diff → restore cycle", "status": "fail", "priority": "critical", "evidence": "createSnapshot writes snapshot file. diffSnapshots correctly uses textContent for line diff. But restoreSnapshot writes snapshot wrapper JSON instead of original content — restores corrupts the chapter. HistoryPanel triggers window.location.reload() after restore (line 153), making corruption immediately visible." }
+      ]
+    }
+  },
+  "summary": {
+    "total": 15,
+    "passed": 12,
+    "failed": 3,
+    "critical": 3,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "failures": [
+    {
+      "id": "BT-001",
+      "scenario": "L2-006",
+      "priority": "critical",
+      "rule": "Snapshot must store original TipTap JSON content for faithful restoration",
+      "actual": "Snapshot type has no content field. createSnapshot discards original content, keeps only textContent (plain text extracted from TipTap)",
+      "fix": "Add content: string field to Snapshot interface. Store raw content parameter in createSnapshot.",
+      "files": ["src/types/project.ts:32-40", "src/services/projectFileService.ts:96-131"]
+    },
+    {
+      "id": "BT-002",
+      "scenario": "L2-007",
+      "priority": "critical",
+      "rule": "restoreSnapshot must write the original chapter content, not the snapshot wrapper",
+      "actual": "restoreSnapshot reads raw snapshot JSON file and writes it as chapter content, corrupting the chapter",
+      "fix": "Extract content field from parsed snapshot object and write that as chapter content.",
+      "files": ["src/services/projectFileService.ts:159-168"]
+    },
+    {
+      "id": "BT-003",
+      "scenario": "L3-003",
+      "priority": "critical",
+      "rule": "End-to-end snapshot restore must leave chapter in valid state",
+      "actual": "Restore cycle corrupts chapter content with snapshot wrapper JSON. HistoryPanel reloads page after restore, showing corrupted content.",
+      "fix": "Fix BT-001 + BT-002. Also consider replacing window.location.reload() with store update + content refresh.",
+      "files": ["src/services/projectFileService.ts:159-168", "src/components/HistoryPanel.tsx:149-154"]
+    }
+  ],
+  "note": "BT-001, BT-002, BT-003 are the same root cause reported at different granularity. Fix requires: (1) add content field to Snapshot type, (2) store content in createSnapshot, (3) fix restoreSnapshot to extract content from parsed snapshot."
+}

@@ -1,0 +1,40 @@
+{
+  "id": "PLN-020",
+  "type": "plan",
+  "milestone": "M8",
+  "phase": 2,
+  "scope": "phase",
+  "status": "pending",
+  "created_at": "2026-05-05T09:00:00Z",
+  "summary": "Phase 2 — Export & Editor Extensions: DOCX export (F-003) + TipTap table/math/callout extensions (F-005)",
+  "approach": "Two-wave execution. Wave 1 installs dependencies and builds all TipTap editor extensions (table, math inline, math block, callout) with slash command integration. Wave 2 builds the DOCX export pipeline on top of the new node types, extends the export dialog, and wires multi-chapter export.",
+  "source_analysis": "20260505-analyze-P2-export-editor-extensions",
+  "task_ids": ["TASK-001", "TASK-002"],
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Editor Extensions",
+      "tasks": ["TASK-001"]
+    },
+    {
+      "wave": 2,
+      "label": "Export Pipeline",
+      "tasks": ["TASK-002"]
+    }
+  ],
+  "locked_decisions": [
+    "L-001: docx npm package for DOCX generation",
+    "L-002: Extend existing ExportDialog for DOCX + scope",
+    "L-003: Parallel nodeToDocx() converter in export.ts",
+    "L-004: Community @tiptap/extension-table packages",
+    "L-005: KaTeX with lazy loading for math rendering",
+    "L-006: Custom TipTap Node extension for callout blocks",
+    "L-007: Multi-chapter export via projectSlice.getChaptersForProject()"
+  ],
+  "free_decisions": [
+    "F-001: Callout styling via CSS classes with data-variant attribute",
+    "F-002: Separate MathInline + MathBlock extensions",
+    "F-003: Extend existing slashItems array in SlashCommandMenu",
+    "F-004: DOCX style mapping — table→Word table, math→text, callout→styled paragraph"
+  ]
+}

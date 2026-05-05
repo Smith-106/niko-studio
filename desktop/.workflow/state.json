@@ -9,10 +9,51 @@
       "id": "M7",
       "name": "Export & Delivery",
       "status": "completed",
-      "phases": [1, 2]
+      "phases": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "M8",
+      "name": "Infrastructure & Export",
+      "status": "completed",
+      "phases": [
+        1,
+        2
+      ],
+      "phase_1_completed_at": "2026-05-05T10:24:00.000Z",
+      "phase_2_completed_at": "2026-05-05T18:04:00.000Z"
     }
   ],
-  "artifacts": [],
+  "artifacts": [
+    {
+      "id": "BRN-001",
+      "type": "brainstorm",
+      "milestone": null,
+      "phase": null,
+      "scope": "standalone",
+      "path": "brainstorm-next-phase-direction-20260505",
+      "status": "completed",
+      "created_at": "2026-05-05T10:00:00.000Z",
+      "title": "Niko-Studio 下一阶段方向",
+      "features": [
+        "F-001",
+        "F-002",
+        "F-003",
+        "F-004",
+        "F-005",
+        "F-006",
+        "F-007",
+        "F-008"
+      ],
+      "roles": [
+        "product-manager",
+        "ux-expert",
+        "system-architect"
+      ]
+    }
+  ],
   "last_codebase_rebuild": "2026-05-02T00:00:00.000Z",
   "accumulated_context": {
     "key_decisions": [],
@@ -26,7 +67,10 @@
         "id": "M7",
         "name": "Export & Delivery",
         "status": "completed",
-        "phases": [1, 2],
+        "phases": [
+          1,
+          2
+        ],
         "phase_1_completed_at": "2026-05-05T03:05:00.000Z",
         "phase_2_completed_at": "2026-05-05T04:12:00.000Z"
       },
@@ -145,7 +189,10 @@
         "id": "M6",
         "name": "Performance & Technical Debt",
         "status": "completed",
-        "phases": [1, 2],
+        "phases": [
+          1,
+          2
+        ],
         "phase_1_completed_at": "2026-05-05T00:25:00.000Z",
         "phase_2_completed_at": "2026-05-05T01:15:00.000Z"
       },
@@ -218,7 +265,9 @@
           "scope": "phase",
           "path": "milestones/M6/artifacts/P2-optimization",
           "status": "confirmed",
-          "depends_on": ["ANL-008"],
+          "depends_on": [
+            "ANL-008"
+          ],
           "harvested": false,
           "created_at": "2026-05-05T00:36:00.000Z",
           "completed_at": "2026-05-05T00:37:00.000Z"
@@ -262,7 +311,10 @@
         "id": "M1",
         "name": "UX & Stability Sprint",
         "status": "completed",
-        "phases": [1, 2]
+        "phases": [
+          1,
+          2
+        ]
       },
       "artifacts": [
         {
@@ -520,7 +572,10 @@
         "id": "M2",
         "name": "Intelligence & Extensibility",
         "status": "completed",
-        "phases": [1, 2]
+        "phases": [
+          1,
+          2
+        ]
       },
       "artifacts": [
         {
@@ -607,7 +662,9 @@
           "scope": "phase",
           "path": "milestones/M2/artifacts/20260503-plan-P2-l4-l5-workflow-hardening",
           "status": "completed",
-          "depends_on": ["PLN-005"],
+          "depends_on": [
+            "PLN-005"
+          ],
           "harvested": false,
           "created_at": "2026-05-03T11:30:00.000Z",
           "completed_at": "2026-05-03T11:30:00.000Z"
@@ -672,7 +729,9 @@
           "scope": "milestone",
           "path": "milestones/M3/artifacts/plan-m3-wiring-exposure-20260503",
           "status": "completed",
-          "depends_on": ["ANL-002"],
+          "depends_on": [
+            "ANL-002"
+          ],
           "harvested": false,
           "created_at": "2026-05-03T14:30:00.000Z",
           "completed_at": "2026-05-03T21:15:00.000Z"
@@ -711,7 +770,9 @@
           "scope": "milestone",
           "path": "milestones/M3/artifacts/20260503-plan-M3-gaps",
           "status": "confirmed",
-          "depends_on": ["VRF-009"],
+          "depends_on": [
+            "VRF-009"
+          ],
           "harvested": false,
           "created_at": "2026-05-03T23:15:00.000Z",
           "completed_at": null
@@ -775,7 +836,9 @@
           "scope": "milestone",
           "path": "milestones/M4/artifacts/20260503-ui-design-m4-writer-intelligence",
           "status": "completed",
-          "depends_on": ["ANL-003"],
+          "depends_on": [
+            "ANL-003"
+          ],
           "harvested": false,
           "created_at": "2026-05-03T23:55:00.000Z",
           "completed_at": "2026-05-04T00:15:00.000Z"
@@ -788,7 +851,10 @@
           "scope": "adhoc",
           "path": "milestones/M4/artifacts/analyze-m4-design-context-20260504",
           "status": "completed",
-          "depends_on": ["ANL-003", "UID-001"],
+          "depends_on": [
+            "ANL-003",
+            "UID-001"
+          ],
           "harvested": false,
           "created_at": "2026-05-04T01:00:00.000Z",
           "completed_at": "2026-05-04T01:45:00.000Z"
@@ -801,7 +867,10 @@
           "scope": "milestone",
           "path": "milestones/M4/artifacts/20260504-plan-M4-writer-intelligence",
           "status": "confirmed",
-          "depends_on": ["ANL-004", "UID-001"],
+          "depends_on": [
+            "ANL-004",
+            "UID-001"
+          ],
           "harvested": false,
           "created_at": "2026-05-04T02:00:00.000Z",
           "completed_at": "2026-05-04T02:30:00.000Z"
@@ -870,7 +939,10 @@
         "id": "M5",
         "name": "Writing Experience & Quality",
         "status": "completed",
-        "phases": [1, 2]
+        "phases": [
+          1,
+          2
+        ]
       },
       "artifacts": [
         {
@@ -893,7 +965,9 @@
           "scope": "phase",
           "path": "phases/01-test-health",
           "status": "completed",
-          "depends_on": ["ANL-005"],
+          "depends_on": [
+            "ANL-005"
+          ],
           "harvested": false,
           "created_at": "2026-05-04T04:35:00.000Z",
           "completed_at": "2026-05-04T04:40:00.000Z"
@@ -944,7 +1018,9 @@
           "scope": "phase",
           "path": "phases/02-editor-ux",
           "status": "completed",
-          "depends_on": ["ANL-006"],
+          "depends_on": [
+            "ANL-006"
+          ],
           "harvested": false,
           "created_at": "2026-05-04T05:10:00.000Z",
           "completed_at": "2026-05-04T05:15:00.000Z"
@@ -1007,9 +1083,138 @@
       "audit_verdict": "PASS",
       "summary_path": "milestones/M5/summary.md",
       "archive_path": "milestones/M5/"
+    },
+    {
+      "milestone": {
+        "id": "M8",
+        "name": "Infrastructure & Export",
+        "status": "completed",
+        "phases": [
+          1,
+          2
+        ],
+        "phase_1_completed_at": "2026-05-05T10:24:00.000Z",
+        "phase_2_completed_at": "2026-05-05T18:04:00.000Z"
+      },
+      "artifacts": [
+        {
+          "id": "ANL-010",
+          "type": "analyze",
+          "milestone": "M8",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M8/artifacts/P1-project-structure-safety/analyze",
+          "status": "completed",
+          "depends_on": [
+            "BRN-001"
+          ],
+          "harvested": false,
+          "created_at": "2026-05-05T06:45:00.000Z",
+          "completed_at": "2026-05-05T07:30:00.000Z"
+        },
+        {
+          "id": "PLN-019",
+          "type": "plan",
+          "milestone": "M8",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M8/artifacts/P1-project-structure-safety/plan",
+          "status": "confirmed",
+          "depends_on": "ANL-010",
+          "harvested": false,
+          "created_at": "2026-05-05T07:30:00.000Z",
+          "completed_at": "2026-05-05T08:00:00.000Z"
+        },
+        {
+          "id": "EXC-020",
+          "type": "execute",
+          "milestone": "M8",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M8/artifacts/P1-project-structure-safety/plan",
+          "status": "completed",
+          "depends_on": "PLN-019",
+          "harvested": false,
+          "created_at": "2026-05-05T08:00:00.000Z",
+          "completed_at": "2026-05-05T09:30:00.000Z"
+        },
+        {
+          "id": "VRF-023",
+          "type": "verify",
+          "milestone": "M8",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M8/artifacts/P1-project-structure-safety/plan",
+          "status": "passed",
+          "depends_on": "EXC-020",
+          "harvested": false,
+          "created_at": "2026-05-05T10:00:00.000Z",
+          "completed_at": "2026-05-05T10:00:00.000Z"
+        },
+        {
+          "id": "ANL-011",
+          "type": "analyze",
+          "milestone": "M8",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M8/artifacts/P2-export-editor-extensions/analyze",
+          "status": "completed",
+          "depends_on": [
+            "BRN-001"
+          ],
+          "harvested": false,
+          "created_at": "2026-05-05T08:40:00.000Z",
+          "completed_at": "2026-05-05T08:55:00.000Z"
+        },
+        {
+          "id": "PLN-020",
+          "type": "plan",
+          "milestone": "M8",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M8/artifacts/P2-export-editor-extensions/plan",
+          "status": "confirmed",
+          "depends_on": "ANL-011",
+          "harvested": false,
+          "created_at": "2026-05-05T09:00:00.000Z",
+          "completed_at": "2026-05-05T09:05:00.000Z"
+        },
+        {
+          "id": "EXC-021",
+          "type": "execute",
+          "milestone": "M8",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M8/artifacts/P2-export-editor-extensions/plan",
+          "status": "completed",
+          "depends_on": "PLN-020",
+          "harvested": false,
+          "created_at": "2026-05-05T09:05:00.000Z",
+          "completed_at": "2026-05-05T09:20:00.000Z"
+        },
+        {
+          "id": "VRF-024",
+          "type": "verify",
+          "milestone": "M8",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M8/artifacts/P2-export-editor-extensions/plan",
+          "status": "completed",
+          "depends_on": "EXC-021",
+          "harvested": false,
+          "created_at": "2026-05-05T11:00:00.000Z",
+          "completed_at": "2026-05-05T11:00:00.000Z"
+        }
+      ],
+      "completed_at": "2026-05-05T19:00:00.000Z",
+      "phase_note": "All phases complete",
+      "audit_verdict": "PASS",
+      "audit_path": "milestones/M8/audit-report.md",
+      "summary_path": "milestones/M8/summary.md",
+      "archive_path": "milestones/M8/"
     }
   ],
-  "last_updated": "2026-05-05T04:20:00.000Z",
+  "last_updated": "2026-05-05T19:00:00.000Z",
   "last_release_version": "9.8.0",
   "last_release_at": "2026-05-05T04:20:00.000Z"
 }

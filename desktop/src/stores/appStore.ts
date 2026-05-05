@@ -4,6 +4,7 @@ import type { ProjectWorkspaceContext } from '@/types/workspace'
 import { createBackendSlice, type BackendSlice } from './app/backendSlice'
 import { createConversationSlice, type ConversationSlice } from './app/conversationSlice'
 import { createLoadingSlice, type LoadingSlice } from './app/loadingSlice'
+import { createProjectSlice, type ProjectSlice } from './app/projectSlice'
 import { createSkillsSlice, type SkillsSlice } from './app/skillsSlice'
 import {
   type Conversation,
@@ -27,6 +28,7 @@ export type AppState =
   & SkillsSlice
   & LoadingSlice
   & UiSlice
+  & ProjectSlice
 
 export type AppSlice<T> = StateCreator<AppState, [], [], T>
 
@@ -42,4 +44,5 @@ export const useAppStore = create<AppState>()((...args) => ({
   ...createSkillsSlice(...args),
   ...createLoadingSlice(...args),
   ...createUiSlice(...args),
+  ...createProjectSlice(...args),
 }))

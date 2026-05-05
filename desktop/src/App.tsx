@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react'
 
 import { Sidebar } from './components/Sidebar'
+import { ProjectSidebar } from './components/ProjectSidebar'
 import { AppRightPanels } from './components/AppRightPanels'
 import { AppMainContent } from './components/AppMainContent'
 import { ChatSidebar } from './components/ChatSidebar'
@@ -45,6 +46,8 @@ function App() {
         data-font-size={fontSize}
       >
         <Sidebar {...sidebarProps} />
+
+        <ProjectSidebar />
 
         <AppMainContent {...appMainContentProps} />
 

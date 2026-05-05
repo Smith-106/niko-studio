@@ -1,0 +1,65 @@
+{
+  "review_id": "REV-P2-001",
+  "phase": 2,
+  "milestone": "M8",
+  "reviewed_at": "2026-05-05T11:20:00Z",
+  "verdict": "PASS",
+  "scope": [
+    "src/components/editor/extensions/MathInline.ts",
+    "src/components/editor/extensions/MathBlock.ts",
+    "src/components/editor/extensions/Callout.ts",
+    "src/components/editor/extensions/MathView.tsx",
+    "src/utils/exportDocx.ts",
+    "src/utils/export.ts",
+    "src/components/ExportDialog.tsx",
+    "src/components/editor/SlashCommandMenu.tsx",
+    "src/components/NikoEditor.tsx"
+  ],
+  "issues": [
+    {
+      "id": "ISS-R01",
+      "severity": "medium",
+      "file": "src/components/editor/SlashCommandMenu.tsx:46-49",
+      "description": "New slash command labels are hardcoded Chinese strings instead of using i18n t() function. Existing entries use t.editorCmdXxx but new ones have raw strings.",
+      "recommendation": "Add i18n keys for table/math/math-block/callout labels and descriptions in a follow-up"
+    },
+    {
+      "id": "ISS-R02",
+      "severity": "low",
+      "file": "src/components/ExportDialog.tsx:116",
+      "description": "Scope label '导出范围' is a hardcoded Chinese string, not i18n'd",
+      "recommendation": "Add to i18n keys"
+    },
+    {
+      "id": "ISS-R03",
+      "severity": "low",
+      "file": "src/components/editor/extensions/MathBlock.ts:9",
+      "description": "MathBlock has both 'atom: true' and 'content: text*' — these are somewhat contradictory. Atom nodes typically have no editable content. The content spec works because the ReactNodeViewRenderer overrides the DOM, but the TipTap schema declares text* which won't be used.",
+      "recommendation": "Consider removing 'content: text*' for clarity, or document the intentional override"
+    },
+    {
+      "id": "ISS-R04",
+      "severity": "low",
+      "file": "src/utils/export.ts:98-100",
+      "description": "Callout markdown export uses GitHub-style > [!VARIANT] syntax but doesn't prefix inner content lines with > on the first line after the marker when inner is single-line",
+      "recommendation": "Edge case only — multi-line callouts work correctly"
+    },
+    {
+      "id": "ISS-R05",
+      "severity": "low",
+      "file": "src/components/editor/extensions/MathView.tsx:9",
+      "description": "isEditing defaults to true — every new math node starts in edit mode. This is intentional (user just inserted it) but means no rendered output until first interaction",
+      "recommendation": "Consider starting in render mode if latex attr is pre-populated (e.g. from paste/import)"
+    }
+  ],
+  "positive_observations": [
+    "Clean extension architecture: MathInline/MathBlock share MathView component via ReactNodeViewRenderer",
+    "KaTeX loaded via dynamic import() — no bundle bloat for non-math users",
+    "exportDocx.ts nodeHandlers pattern is extensible and well-structured",
+    "Callout uses standard TipTap command pattern with TypeScript module augmentation",
+    "ExportDialog scope selector correctly disables for PDF and when no projectId",
+    "HTML export properly escapes LaTeX in data attributes",
+    "Markdown callout uses GitHub-compatible syntax for interoperability"
+  ],
+  "summary": "Phase 2 implementation is solid. Architecture is clean and follows established patterns. 1 medium issue (i18n for new slash commands), 4 low-severity observations. No blockers."
+}
