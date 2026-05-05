@@ -496,6 +496,42 @@ select:disabled {
   background: rgba(99, 102, 241, 0.3);
 }
 
+/* ── Print / PDF Export ──────────────────────────────────────── */
+
+@media print {
+  body > *:not(.niko-editor-content) {
+    display: none !important;
+  }
+
+  .niko-editor-content .ProseMirror {
+    max-width: 100%;
+    padding: 0;
+    font-size: 12pt;
+    line-height: 1.6;
+  }
+
+  .niko-editor-content .ProseMirror pre {
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd;
+    break-inside: avoid;
+  }
+
+  .niko-editor-content .ProseMirror blockquote {
+    border-left-color: #999;
+    break-inside: avoid;
+  }
+
+  .niko-editor-content .ProseMirror h1,
+  .niko-editor-content .ProseMirror h2,
+  .niko-editor-content .ProseMirror h3 {
+    break-after: avoid;
+  }
+
+  .niko-editor-content .ProseMirror img {
+    max-width: 100% !important;
+  }
+}
+
 /* M4 Intelligence Panel Styles */
 .intelligence-card {
   background: var(--surface-elevated);

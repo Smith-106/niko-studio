@@ -1,0 +1,14 @@
+{
+  "phase": 1,
+  "milestone": "M7",
+  "tested_at": "2026-05-05T02:52:00.000Z",
+  "passed": true,
+  "tests": [
+    { "id": "BT1", "name": "Dialog accessibility attributes", "passed": true, "evidence": "role=dialog, aria-modal=true, aria-labelledby=export-dialog-title" },
+    { "id": "BT2", "name": "Dismiss mechanisms (backdrop, cancel, X)", "passed": true, "evidence": "ExportDialog.tsx lines 29-31, 65, 117" },
+    { "id": "BT3", "name": "All 3 export formats callable", "passed": true, "evidence": "export.ts:73 (MD), 146 (HTML), 171 (PDF)" },
+    { "id": "BT4", "name": "onClose called after export", "passed": true, "evidence": "ExportDialog.tsx:39 — onClose() in handleExport" },
+    { "id": "BT5", "name": "Blob download for MD/HTML", "passed": true, "evidence": "export.ts:185 downloadFile helper, called by exportToMarkdown and exportToHtml" }
+  ],
+  "failures": []
+}

@@ -1,0 +1,30 @@
+{
+  "task_id": "TASK-102",
+  "plan_id": "PLN-20260505-P1",
+  "title": "Create ExportDialog component",
+  "status": "pending",
+  "action": "Create src/components/ExportDialog.tsx with format selector, filename input, and export button",
+  "implementation": {
+    "file": "src/components/ExportDialog.tsx",
+    "changes": [
+      "Create modal dialog with format selector (MD/HTML/PDF radio buttons)",
+      "Add filename input field with default from document title",
+      "Add export button that calls appropriate exportTo* function",
+      "Add cancel/close button",
+      "Style consistently with existing modals (SettingsModal pattern)"
+    ]
+  },
+  "read_first": [
+    "src/utils/export.ts",
+    "src/components/DocumentEditor.tsx",
+    "src/components/SettingsModal.tsx",
+    "src/i18n/translations.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "test -f src/components/ExportDialog.tsx",
+      "grep -q 'ExportDialog' src/components/DocumentEditor.tsx",
+      "grep -q 'exportDialogTitle' src/i18n/translations.ts"
+    ]
+  }
+}

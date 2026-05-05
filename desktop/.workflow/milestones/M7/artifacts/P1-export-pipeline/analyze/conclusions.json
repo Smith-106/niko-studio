@@ -1,0 +1,42 @@
+{
+  "analysis_id": "ANL-20260505-P1",
+  "milestone": "M7",
+  "phase": 1,
+  "recommendation": "GO",
+  "confidence": "high",
+  "overall_score": 39,
+  "max_score": 60,
+  "key_findings": [
+    "Roadmap overestimates Phase 1 effort by ~60% — Markdown/HTML export already fully implemented",
+    "PDF export is the only significant new code needed (~50 lines using window.print + print CSS)",
+    "ExportDialog is optional but recommended for UX consistency",
+    "No new npm dependencies required",
+    "useDraftCache already provides text-level auto-save (reduces Phase 2 scope)"
+  ],
+  "decisions": {
+    "locked": 7,
+    "free": 5,
+    "deferred": 5
+  },
+  "risk_level": "very-low",
+  "estimated_effort": "S — much smaller than roadmap suggests",
+  "roadmap_adjustments": [
+    "TASK-1.1 (export utility module): ALREADY EXISTS — src/utils/export.ts (192 lines)",
+    "TASK-1.2 (Markdown export): COMPLETE — exportToMarkdown() working",
+    "TASK-1.3 (HTML export): COMPLETE — exportToHtml() working with standalone HTML",
+    "TASK-1.6 (wire into toolbar): COMPLETE — DocumentEditor.tsx lines 127-138",
+    "TASK-2.1 (session persistence): PARTIALLY EXISTS — useDraftCache provides text persistence",
+    "TASK-2.2 (auto-save hook): PARTIALLY EXISTS — useDraftCache + persist() on every update",
+    "TASK-2.5 (auto-save indicator): PARTIALLY EXISTS — showSaved with 1.5s debounce"
+  ],
+  "actual_remaining_work": [
+    "TASK-1.4: PDF export (window.print + print CSS, ~50 lines)",
+    "TASK-1.5: ExportDialog component (unified format selector, ~100 lines)",
+    "TASK-1.7/1.8: Tests for existing export utils (nodeToMarkdown/nodeToHtml unit tests)",
+    "TASK-2.3: Draft recovery prompt (unsaved changes detection on app start)",
+    "TASK-2.4: Export history (Zustand slice with localStorage)",
+    "TASK-2.5-enhanced: Three-state save indicator (unsaved/saving/saved)",
+    "TASK-2.6: i18n keys for new UI strings (exportPdf, draftRecovery, exportHistory)"
+  ],
+  "go_reason": "Phase 1 is 70% complete in codebase. Remaining work is low-complexity, low-risk, and requires no new dependencies. Strong return on minimal effort."
+}

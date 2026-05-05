@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useI18n } from '../i18n'
 import { countWords, countChars, readingTimeMinutes } from '../utils/wordCount'
-import { exportToMarkdown, exportToHtml } from '../utils/export'
 const StoryBiblePanel = React.lazy(() => import('./StoryBiblePanel').then(m => ({ default: m.StoryBiblePanel })))
 import { NikoEditor } from './NikoEditor'
+import { ExportDialog } from './ExportDialog'
 import { getEditorHandle } from '../utils/editorHandle'
 import { useDraftCache } from '../hooks/useDraftCache'
 import { useAppStore } from '../stores/appStore'
@@ -25,8 +25,11 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const [title, setTitle] = useState(fallbackTitle)
   const [editorText, setEditorText] = useState('')
   const [editorJson, setEditorJson] = useState<JSONContent | null>(null)
-  const [showSaved, setShowSaved] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [saveTime, setSaveTime] = useState<string>('')
   const [aiGenerating, setAiGenerating] = useState(false)
+  const [showRecovered, setShowRecovered] = useState(false)
+  const [showExportDialog, setShowExportDialog] = useState(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const titleFieldLabel = language === 'zh' ? '文档标题' : 'Document title'
 
@@ -40,10 +43,15 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
     setEditorJson(json)
     setEditorText(text)
     persist(text)
+    setSaveStatus('saving')
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      setShowSaved(true)
-      setTimeout(() => setShowSaved(false), 2000)
+      const now = new Date()
+      const h = now.getHours().toString().padStart(2, '0')
+      const m = now.getMinutes().toString().padStart(2, '0')
+      setSaveTime(`${h}:${m}`)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 4000)
     }, 1500)
   }, [persist])
 
@@ -76,8 +84,16 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   useEffect(() => {
     setEditorText(persistedText)
     setEditorJson(null)
-    setShowSaved(false)
+    setSaveStatus('idle')
   }, [persistedText, currentConversationId])
+
+  useEffect(() => {
+    if (persistedText) {
+      setShowRecovered(true)
+      const timer = setTimeout(() => setShowRecovered(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   return (
     <div className="flex-1 flex flex-col bg-transparent z-0 min-w-0 h-full">
@@ -95,6 +111,11 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
             placeholder={titleFieldLabel}
           />
           <div className="w-full h-px bg-gray-100 dark:bg-dark-border/50 my-8" />
+          {showRecovered && (
+            <div className="flex items-center gap-2 px-3 py-2 mb-4 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 text-sm animate-fade-in">
+              <span>{saveTime ? t.editorDraftRestoredAt.replace('{time}', saveTime) : t.editorDraftRestored}</span>
+            </div>
+          )}
           <NikoEditor
             key={currentConversationId ?? '__global__'}
             initialContent={persistedText}
@@ -125,21 +146,27 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
           {editorJson && (
             <>
               <button
-                onClick={() => exportToMarkdown(editorJson, title)}
+                onClick={() => setShowExportDialog(true)}
                 className="hover:text-primary-500 transition-colors"
               >
-                {t.exportMarkdown}
+                {t.exportDialogTitle}
               </button>
-              <button
-                onClick={() => exportToHtml(editorJson, title)}
-                className="hover:text-primary-500 transition-colors"
-              >
-                {t.exportHtml}
-              </button>
+              {showExportDialog && (
+                <ExportDialog
+                  editorJson={editorJson}
+                  title={title}
+                  onClose={() => setShowExportDialog(false)}
+                />
+              )}
             </>
           )}
-          {showSaved && (
-            <span className="text-green-500 dark:text-green-400 animate-fade-in">{t.editorAutoSaved}</span>
+          {saveStatus === 'saving' && (
+            <span>{t.editorStatusSaving}</span>
+          )}
+          {saveStatus === 'saved' && saveTime && (
+            <span className="text-green-500 dark:text-green-400 animate-fade-in">
+              {t.editorStatusSavedAt.replace('{time}', saveTime)}
+            </span>
           )}
         </div>
       </div>

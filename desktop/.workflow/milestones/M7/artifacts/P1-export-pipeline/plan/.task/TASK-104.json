@@ -1,0 +1,31 @@
+{
+  "task_id": "TASK-104",
+  "plan_id": "PLN-20260505-P1",
+  "title": "Unit tests for export utilities and ExportDialog",
+  "status": "pending",
+  "action": "Add tests for nodeToMarkdown, nodeToHtml, exportToPdf, and ExportDialog component",
+  "implementation": {
+    "files": [
+      "src/utils/export.test.ts",
+      "src/components/ExportDialog.test.tsx"
+    ],
+    "changes": [
+      "Create export.test.ts with unit tests for Markdown conversion (headings, lists, code blocks, marks)",
+      "Add tests for HTML conversion (document structure, escaping, list nesting)",
+      "Create ExportDialog.test.tsx with component tests (format selection, filename input, export trigger)",
+      "Mock downloadFile and window.print for testing"
+    ]
+  },
+  "read_first": [
+    "src/utils/export.ts",
+    "src/components/ExportDialog.tsx",
+    "src/components/DocumentEditor.test.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "test -f src/utils/export.test.ts",
+      "test -f src/components/ExportDialog.test.tsx",
+      "npm test exits 0 with new tests passing"
+    ]
+  }
+}

@@ -114,3 +114,13 @@ Milestone: M3 (TASK-003)
 When creating new CriticEngine evaluators, follow the BaseEvaluator pattern: extend BaseEvaluator, implement `evaluate(content)` returning `{ name, score, issues, suggestions, subscores }`, and use Chinese marker arrays for content analysis. Each evaluator gets a weight in CriticEngine's weights map (sum must equal 1.0). The `relatedSkill` property links evaluators to writing skills for the skill system. Weights are redistributed when adding evaluators — reduce existing weights proportionally.
 Milestone: M3 (gap-fix TASK-001)
 </spec-entry>
+
+<spec-entry category="learning" keywords="pdf-export,window.print,media-print,css,browser-native" date="2026-05-05" source="milestone-complete/M7-P1">
+For PDF export in web apps, use `window.print()` with dedicated `@media print` CSS instead of external libraries (jsPDF, puppeteer). The print CSS hides all UI except target content (`.niko-editor-content .ProseMirror`), sets print-optimized typography (12pt font, 1.6 line-height, break-inside/after rules), and delegates PDF generation to the browser's native print dialog. Zero dependencies, full platform support.
+Milestone: M7 Phase 1 (TASK-101)
+</spec-entry>
+
+<spec-entry category="coding" keywords="test-helper,blob-download,captureDownload,mock-anchor,file-export" date="2026-05-05" source="milestone-complete/M7-P1">
+For testing file download functions that create Blob URLs and trigger anchor clicks, use a `captureDownload()` helper: `vi.spyOn(document.body, 'appendChild').mockImplementation((node) => { calls.push({ filename: (node as HTMLAnchorElement).download }); return node })`. Also stub `URL.createObjectURL`/`revokeObjectURL` at module level. This avoids jsdom Blob/navigation issues while verifying correct filename and MIME type.
+Milestone: M7 Phase 1 (TASK-104)
+</spec-entry>

@@ -1,0 +1,53 @@
+{
+  "phase": 1,
+  "milestone": "M7",
+  "reviewed_at": "2026-05-05T02:55:00.000Z",
+  "verdict": "PASS",
+  "files_reviewed": [
+    "src/utils/export.ts",
+    "src/components/ExportDialog.tsx",
+    "src/components/DocumentEditor.tsx",
+    "src/styles/globals.css",
+    "src/i18n/translations.ts",
+    "src/utils/export.test.ts",
+    "src/components/ExportDialog.test.tsx",
+    "src/hooks/useDialogFocusTrap.ts"
+  ],
+  "categories": {
+    "code_quality": {
+      "score": "good",
+      "notes": "Clean separation of concerns: export logic in utils, UI in component, integration in editor. Consistent with project patterns (useDialogFocusTrap, useI18n, TailwindCSS dark mode classes)."
+    },
+    "accessibility": {
+      "score": "good",
+      "notes": "role=dialog, aria-modal=true, aria-labelledby correctly wired. Focus trap via useDialogFocusTrap with initialFocusRef on heading. Radio inputs use sr-only for accessible labeling. Escape key closes dialog."
+    },
+    "security": {
+      "score": "good",
+      "notes": "escapeHtml() in export.ts properly escapes &, <, >, \" — prevents XSS in HTML export output. No user input injection vectors. Blob URLs are revoked after download."
+    },
+    "testing": {
+      "score": "good",
+      "notes": "14 new tests across 2 files. captureDownload() helper pattern avoids jsdom Blob issues. Covers headings, marks, lists, code blocks, blockquotes, custom filenames, PDF via window.print, dialog rendering, dismiss, and format selection."
+    },
+    "i18n": {
+      "score": "good",
+      "notes": "All 6 keys (exportDialogTitle, exportFilename, exportFormat, exportButton, exportCancel, exportPdf) present in interface, zh, and en translations. exportMarkdown/exportHtml keys also present though unused by new dialog."
+    },
+    "integration": {
+      "score": "good",
+      "notes": "ExportDialog cleanly wired into DocumentEditor with conditional rendering (editorJson guard). State managed with single boolean. Props passed correctly."
+    }
+  },
+  "issues": [
+    {
+      "id": "R1",
+      "severity": "minor",
+      "file": "src/components/DocumentEditor.tsx",
+      "line": 4,
+      "description": "Unused imports: exportToMarkdown, exportToHtml, exportToPdf are imported but no longer called directly — export is now handled through ExportDialog.",
+      "recommendation": "Remove the three unused imports from line 4."
+    }
+  ],
+  "summary": "Clean implementation with good separation of concerns. Export utilities are pure functions with proper HTML escaping. ExportDialog follows project accessibility patterns with focus trap, ARIA attributes, and keyboard navigation. Print CSS is well-structured for PDF output. 14 tests provide solid coverage. One minor dead import in DocumentEditor."
+}

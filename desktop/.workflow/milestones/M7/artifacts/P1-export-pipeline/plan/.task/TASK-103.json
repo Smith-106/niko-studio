@@ -1,0 +1,31 @@
+{
+  "task_id": "TASK-103",
+  "plan_id": "PLN-20260505-P1",
+  "title": "Wire ExportDialog into editor toolbar and add i18n keys",
+  "status": "pending",
+  "action": "Replace inline export buttons in DocumentEditor with ExportDialog trigger, add missing i18n keys",
+  "implementation": {
+    "files": [
+      "src/components/DocumentEditor.tsx",
+      "src/i18n/translations.ts"
+    ],
+    "changes": [
+      "Replace the two inline export buttons with single Export button that opens ExportDialog",
+      "Pass editorJson and title as props to ExportDialog",
+      "Add i18n keys: exportPdf, exportDialogTitle, exportFilename, exportFormat, exportButton, cancel"
+    ]
+  },
+  "read_first": [
+    "src/components/DocumentEditor.tsx",
+    "src/components/ExportDialog.tsx",
+    "src/i18n/translations.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'ExportDialog' src/components/DocumentEditor.tsx",
+      "grep -q 'exportPdf' src/i18n/translations.ts",
+      "grep -q 'exportDialogTitle' src/i18n/translations.ts",
+      "npm test exits 0"
+    ]
+  }
+}

@@ -4,7 +4,14 @@
   "status": "active",
   "current_milestone": null,
   "current_task_id": null,
-  "milestones": [],
+  "milestones": [
+    {
+      "id": "M7",
+      "name": "Export & Delivery",
+      "status": "completed",
+      "phases": [1, 2]
+    }
+  ],
   "artifacts": [],
   "last_codebase_rebuild": "2026-05-02T00:00:00.000Z",
   "accumulated_context": {
@@ -14,6 +21,125 @@
   },
   "transition_history": [],
   "milestone_history": [
+    {
+      "milestone": {
+        "id": "M7",
+        "name": "Export & Delivery",
+        "status": "completed",
+        "phases": [1, 2],
+        "phase_1_completed_at": "2026-05-05T03:05:00.000Z",
+        "phase_2_completed_at": "2026-05-05T04:12:00.000Z"
+      },
+      "artifacts": [
+        {
+          "id": "ANL-008",
+          "type": "analyze",
+          "milestone": "M7",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M7/artifacts/P1-export-pipeline/analyze",
+          "status": "completed",
+          "harvested": false,
+          "created_at": "2026-05-05T02:10:00.000Z",
+          "completed_at": "2026-05-05T02:20:00.000Z"
+        },
+        {
+          "id": "PLN-017",
+          "type": "plan",
+          "milestone": "M7",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M7/artifacts/P1-export-pipeline/plan",
+          "status": "completed",
+          "depends_on": "ANL-008",
+          "harvested": false,
+          "created_at": "2026-05-05T02:22:00.000Z",
+          "completed_at": "2026-05-05T02:30:00.000Z"
+        },
+        {
+          "id": "EXC-018",
+          "type": "execute",
+          "milestone": "M7",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M7/artifacts/P1-export-pipeline/plan",
+          "status": "completed",
+          "depends_on": "PLN-017",
+          "harvested": false,
+          "created_at": "2026-05-05T02:30:00.000Z",
+          "completed_at": "2026-05-05T02:45:00.000Z"
+        },
+        {
+          "id": "VRF-022",
+          "type": "verify",
+          "milestone": "M7",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M7/artifacts/P1-export-pipeline/plan",
+          "status": "passed",
+          "depends_on": "EXC-018",
+          "harvested": false,
+          "created_at": "2026-05-05T02:50:00.000Z",
+          "completed_at": "2026-05-05T02:50:00.000Z"
+        },
+        {
+          "id": "ANL-009",
+          "type": "analyze",
+          "milestone": "M7",
+          "phase": 2,
+          "scope": "phase",
+          "path": "20260505-analyze-P2-session-persistence",
+          "status": "completed",
+          "harvested": true,
+          "created_at": "2026-05-05T03:15:00.000Z",
+          "completed_at": "2026-05-05T03:20:00.000Z"
+        },
+        {
+          "id": "PLN-018",
+          "type": "plan",
+          "milestone": "M7",
+          "phase": 2,
+          "scope": "phase",
+          "path": "20260505-plan-P2-session-persistence",
+          "status": "confirmed",
+          "depends_on": "ANL-009",
+          "harvested": true,
+          "created_at": "2026-05-05T03:22:00.000Z",
+          "completed_at": "2026-05-05T03:25:00.000Z"
+        },
+        {
+          "id": "EXC-019",
+          "type": "execute",
+          "milestone": "M7",
+          "phase": 2,
+          "scope": "phase",
+          "path": "20260505-plan-P2-session-persistence",
+          "status": "completed",
+          "depends_on": "PLN-018",
+          "harvested": true,
+          "created_at": "2026-05-05T03:25:00.000Z",
+          "completed_at": "2026-05-05T03:50:00.000Z"
+        },
+        {
+          "id": "VRF-020",
+          "type": "verify",
+          "milestone": "M7",
+          "phase": 2,
+          "scope": "phase",
+          "path": "20260505-plan-P2-session-persistence",
+          "status": "passed",
+          "depends_on": "EXC-019",
+          "harvested": true,
+          "created_at": "2026-05-05T04:00:00.000Z",
+          "completed_at": "2026-05-05T04:00:00.000Z"
+        }
+      ],
+      "completed_at": "2026-05-05T04:12:00.000Z",
+      "phase_note": "All phases complete",
+      "audit_verdict": "PASS",
+      "audit_path": "milestones/M7/audit-report.md",
+      "archive_path": "milestones/M7/"
+    },
     {
       "milestone": {
         "id": "M6",
@@ -883,7 +1009,7 @@
       "archive_path": "milestones/M5/"
     }
   ],
-  "last_updated": "2026-05-05T01:15:00.000Z",
+  "last_updated": "2026-05-05T04:15:00.000Z",
   "last_release_version": "9.7.0",
   "last_release_at": "2026-05-05T01:30:00.000Z"
 }

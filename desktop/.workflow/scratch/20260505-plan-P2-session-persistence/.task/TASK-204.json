@@ -1,0 +1,25 @@
+{
+  "id": "TASK-204",
+  "plan_ref": "PLN-P2-001",
+  "wave": 2,
+  "title": "Add draft recovery notification banner in DocumentEditor",
+  "action": "Show a dismissible 'Draft restored' banner when the editor loads with recovered content from useDraftCache.",
+  "implementation": "In DocumentEditor.tsx, after useDraftCache loads persistedText and it is non-empty on mount, show a small banner above the editor: 'Draft restored — {relative time since last save}'. Use a showRecovered state that auto-hides after 5 seconds or on dismiss click. Add i18n keys: editorDraftRestored, editorDraftRestoredAt. Do not show if the text matches current conversation content (already saved). Style with existing Tailwind utility classes, matching the existing status bar aesthetic.",
+  "read_first": [
+    "src/components/DocumentEditor.tsx",
+    "src/hooks/useDraftCache.ts"
+  ],
+  "files_to_modify": [
+    "src/components/DocumentEditor.tsx",
+    "src/components/DocumentEditor.test.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'showRecovered' src/components/DocumentEditor.tsx",
+      "grep -q 'editorDraftRestored' src/i18n/translations.ts",
+      "grep -q 'editorDraftRestoredAt' src/i18n/translations.ts"
+    ]
+  },
+  "depends_on": [],
+  "status": "pending"
+}

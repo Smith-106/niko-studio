@@ -1,0 +1,40 @@
+{
+  "plan_ref": "PLN-P2-001",
+  "verified_at": "2026-05-05T04:00:00.000Z",
+  "passed": true,
+  "gaps": [],
+  "layers": {
+    "goal_backward": {
+      "truths": [
+        { "id": "T1", "statement": "Export history tracked via localStorage-backed hook", "status": "verified", "evidence": "useExportHistory.ts uses niko.export-history-v1 key with recordExport/getHistory/clearHistory" },
+        { "id": "T2", "statement": "Save status shows idle→saving→saved with timestamp", "status": "verified", "evidence": "DocumentEditor.tsx saveStatus state machine with 1500ms debounce" },
+        { "id": "T3", "statement": "Draft recovery banner shows on mount with persisted content", "status": "verified", "evidence": "showRecovered state + persistedText useEffect in DocumentEditor.tsx" },
+        { "id": "T4", "statement": "i18n strings for all new features in both locales", "status": "verified", "evidence": "translations.ts has editorStatusSaving, editorStatusSavedAt, exportHistoryTitle, editorDraftRestored, editorDraftRestoredAt in zh-CN and en" },
+        { "id": "T5", "statement": "Unit tests cover new hook and component integration", "status": "verified", "evidence": "useExportHistory.test.ts has 6 tests, all 943 tests pass" }
+      ],
+      "all_passed": true
+    },
+    "artifact_substantive": {
+      "tasks": [
+        { "id": "TASK-201", "title": "Create useExportHistory hook", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "evidence": "src/hooks/useExportHistory.ts exists, 6 test cases pass, wired into ExportDialog" },
+        { "id": "TASK-202", "title": "Integrate export history into ExportDialog", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "evidence": "ExportDialog imports useExportHistory, calls recordExport, renders history list" },
+        { "id": "TASK-203", "title": "Improve auto-save status indicator", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "evidence": "saveStatus state machine with idle/saving/saved states and timestamp display" },
+        { "id": "TASK-204", "title": "Add draft recovery notification banner", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "evidence": "showRecovered state with auto-dismiss and i18n strings" },
+        { "id": "TASK-205", "title": "Add i18n strings", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "evidence": "All 8 new keys present in both zh-CN and en locales" },
+        { "id": "TASK-206", "title": "Validation", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "evidence": "98 test files, 943 tests all passing" }
+      ],
+      "all_passed": true
+    },
+    "anti_pattern_scan": {
+      "files_scanned": [
+        "src/hooks/useExportHistory.ts",
+        "src/hooks/useExportHistory.test.ts",
+        "src/components/ExportDialog.tsx",
+        "src/components/DocumentEditor.tsx",
+        "src/i18n/translations.ts"
+      ],
+      "issues": [],
+      "all_clean": true
+    }
+  }
+}

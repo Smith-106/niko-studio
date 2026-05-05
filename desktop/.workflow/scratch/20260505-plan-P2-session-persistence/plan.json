@@ -1,0 +1,25 @@
+{
+  "id": "PLN-P2-001",
+  "milestone": "M7",
+  "phase": 2,
+  "scope": "phase",
+  "name": "Session Persistence & Polish",
+  "summary": "Add export history tracking, improve auto-save status indicator, add draft recovery notification, and update i18n strings. Auto-save already works via useDraftCache — focus is on UX polish and the missing export history feature.",
+  "approach": "Incremental feature addition building on existing hooks pattern. New useExportHistory hook follows useDraftCache/useAppUiPersistence conventions. Minimal changes to DocumentEditor for status indicator and recovery banner.",
+  "analysis_ref": "20260505-analyze-P2-session-persistence",
+  "task_ids": ["TASK-201", "TASK-202", "TASK-203", "TASK-204", "TASK-205", "TASK-206"],
+  "waves": [
+    {
+      "label": "Wave 1 — Export History",
+      "tasks": ["TASK-201", "TASK-202"]
+    },
+    {
+      "label": "Wave 2 — UX Polish",
+      "tasks": ["TASK-203", "TASK-204", "TASK-205"]
+    },
+    {
+      "label": "Wave 3 — Validation",
+      "tasks": ["TASK-206"]
+    }
+  ]
+}

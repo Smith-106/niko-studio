@@ -166,6 +166,12 @@ ${body}
   downloadFile(html, (filename || 'document') + '.html', 'text/html')
 }
 
+// ── PDF Export (browser print) ────────────────────────────────
+
+export function exportToPdf(): void {
+  window.print()
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 function escapeHtml(text: string): string {

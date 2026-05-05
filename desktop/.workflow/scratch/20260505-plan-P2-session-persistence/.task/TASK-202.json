@@ -1,0 +1,26 @@
+{
+  "id": "TASK-202",
+  "plan_ref": "PLN-P2-001",
+  "wave": 1,
+  "title": "Integrate export history into ExportDialog",
+  "action": "Wire useExportHistory into ExportDialog — record each export event and display recent history below the format selector.",
+  "implementation": "Import useExportHistory in ExportDialog. Call recordExport(format, title, wordCount) inside handleExport after the export call. Display last 5 exports as a small list below the format selector with format badge, title, and relative time. Use existing i18n pattern for new strings (exportHistoryTitle, exportHistoryEmpty, exportHistoryFormat). Update ExportDialog.test.tsx to verify recording.",
+  "read_first": [
+    "src/components/ExportDialog.tsx",
+    "src/hooks/useExportHistory.ts"
+  ],
+  "files_to_modify": [
+    "src/components/ExportDialog.tsx",
+    "src/components/ExportDialog.test.tsx",
+    "src/components/ExportDialog-interaction.test.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'useExportHistory' src/components/ExportDialog.tsx",
+      "grep -q 'recordExport' src/components/ExportDialog.tsx",
+      "grep -q 'exportHistory' src/i18n/translations.ts"
+    ]
+  },
+  "depends_on": ["TASK-201"],
+  "status": "pending"
+}

@@ -1,0 +1,19 @@
+{
+  "plan_ref": "PLN-018",
+  "phase": 2,
+  "milestone": "M7",
+  "tested_at": "2026-05-05T04:02:00.000Z",
+  "passed": true,
+  "requirements": [
+    { "id": "BR-01", "requirement": "Export history tracked via localStorage-backed hook", "status": "pass", "evidence": "useExportHistory.ts uses niko.export-history-v1 key, FIFO at 50 entries" },
+    { "id": "BR-02", "requirement": "History displayed in ExportDialog with last 5 entries", "status": "pass", "evidence": "ExportDialog.tsx:117-139 renders history list with format badge, title, time" },
+    { "id": "BR-03", "requirement": "History recorded on each export action", "status": "pass", "evidence": "ExportDialog.tsx:41 calls recordExport(format, filename, 0) on export" },
+    { "id": "BR-04", "requirement": "Auto-save status indicator with idle→saving→saved states", "status": "pass", "evidence": "DocumentEditor.tsx:28-55 state machine with 1500ms debounce, 4s auto-hide" },
+    { "id": "BR-05", "requirement": "Save timestamp displayed to user", "status": "pass", "evidence": "DocumentEditor.tsx:167-169 shows editorStatusSavedAt with HH:MM timestamp" },
+    { "id": "BR-06", "requirement": "Draft recovery banner shows on mount with persisted content", "status": "pass", "evidence": "DocumentEditor.tsx:91-96 showRecovered state, auto-dismiss 5s, i18n strings" },
+    { "id": "BR-07", "requirement": "Draft cache with conversation-scoped keys and 24h TTL", "status": "pass", "evidence": "useDraftCache.ts:4 DRAFT_TTL_MS=24h, key=niko.draft:{conversationId}" },
+    { "id": "BR-08", "requirement": "i18n strings for all new features in zh-CN and en", "status": "pass", "evidence": "5 new keys in both locales: editorStatusSaving, editorStatusSavedAt, exportHistoryTitle, editorDraftRestored, editorDraftRestoredAt" },
+    { "id": "BR-09", "requirement": "Unit tests cover new hook and integration", "status": "pass", "evidence": "6 tests in useExportHistory.test.ts, 943 total tests all passing" }
+  ],
+  "failures": []
+}

@@ -148,7 +148,10 @@
       "PowerShell(Start-Process python -ArgumentList @\\(\"scripts/start_gateway.py\", \"--host\", \"127.0.0.1\", \"--port\", \"8010\"\\) -WorkingDirectory \"D:\\\\工作目录\\\\niko-studio\" -RedirectStandardOutput \"D:\\\\工作目录\\\\niko-studio\\\\.codex-run\\\\gateway-8010.out.log\" -RedirectStandardError \"D:\\\\工作目录\\\\niko-studio\\\\.codex-run\\\\gateway-8010.err.log\" -PassThru | Select-Object Id)",
       "mcp__awesun-mcp-server__control_connect",
       "mcp__awesun-mcp-server__control_screenshot",
-      "Bash(maestro delegate *)"
+      "Bash(maestro delegate *)",
+      "mcp__chrome-devtools__lighthouse_audit",
+      "mcp__chrome-devtools__performance_start_trace",
+      "mcp__chrome-devtools__performance_analyze_insight"
     ]
   },
   "hooks": {

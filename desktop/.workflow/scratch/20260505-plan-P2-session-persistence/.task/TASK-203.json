@@ -1,0 +1,25 @@
+{
+  "id": "TASK-203",
+  "plan_ref": "PLN-P2-001",
+  "wave": 2,
+  "title": "Improve auto-save status indicator in DocumentEditor",
+  "action": "Replace the temporary 'Saved' text with a proper status showing save state: idle → saving → saved with timestamp.",
+  "implementation": "In DocumentEditor.tsx, replace the showSaved boolean state with a saveStatus state: 'idle' | 'saving' | 'saved'. Update handleEditorUpdate to set 'saving' immediately, then 'saved' after 1500ms debounce. Display shows last save time when saved (e.g. 'Saved at 10:45'). Add i18n keys: editorStatusSaving, editorStatusSavedAt, editorStatusIdle. Keep existing 2-second auto-hide behavior for 'saved' state but show timestamp briefly.",
+  "read_first": [
+    "src/components/DocumentEditor.tsx",
+    "src/i18n/translations.ts"
+  ],
+  "files_to_modify": [
+    "src/components/DocumentEditor.tsx",
+    "src/components/DocumentEditor.test.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'saveStatus' src/components/DocumentEditor.tsx",
+      "grep -q 'editorStatusSaving' src/i18n/translations.ts",
+      "grep -q 'editorStatusSavedAt' src/i18n/translations.ts"
+    ]
+  },
+  "depends_on": [],
+  "status": "pending"
+}

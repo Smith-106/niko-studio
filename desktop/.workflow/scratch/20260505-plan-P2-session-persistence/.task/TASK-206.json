@@ -1,0 +1,27 @@
+{
+  "id": "TASK-206",
+  "plan_ref": "PLN-P2-001",
+  "wave": 3,
+  "title": "Validation: unit tests for new hooks and integration tests",
+  "action": "Write unit tests for useExportHistory hook and update component tests for ExportDialog and DocumentEditor to cover new features.",
+  "implementation": "Create src/hooks/useExportHistory.test.ts covering: recordExport adds entry, getHistory returns sorted DESC, 50-entry cap with FIFO eviction, clearHistory empties all, localStorage key format. Update ExportDialog.test.tsx to verify recordExport is called on handleExport with correct args (format, title, wordCount). Update DocumentEditor.test.tsx to verify saveStatus transitions (idle→saving→saved) and draft recovery banner appears when persistedText is non-empty on mount. Follow existing test patterns (vitest + @testing-library/react).",
+  "read_first": [
+    "src/hooks/useDraftCache.test.ts",
+    "src/components/ExportDialog.test.tsx",
+    "src/components/DocumentEditor.test.tsx"
+  ],
+  "files_to_modify": [
+    "src/hooks/useExportHistory.test.ts",
+    "src/components/ExportDialog.test.tsx",
+    "src/components/DocumentEditor.test.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'recordExport' src/hooks/useExportHistory.test.ts",
+      "grep -q 'useExportHistory' src/components/ExportDialog.test.tsx",
+      "grep -q 'saveStatus' src/components/DocumentEditor.test.tsx"
+    ]
+  },
+  "depends_on": ["TASK-201", "TASK-202", "TASK-203", "TASK-204", "TASK-205"],
+  "status": "pending"
+}

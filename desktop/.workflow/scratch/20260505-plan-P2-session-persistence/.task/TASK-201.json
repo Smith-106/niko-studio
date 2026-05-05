@@ -1,0 +1,26 @@
+{
+  "id": "TASK-201",
+  "plan_ref": "PLN-P2-001",
+  "wave": 1,
+  "title": "Create useExportHistory hook",
+  "action": "Create src/hooks/useExportHistory.ts — a localStorage-backed hook that tracks export events.",
+  "implementation": "Follow the useDraftCache pattern. Storage key: 'niko.export-history-v1'. Store array of { id: string, exportedAt: number, format: 'md'|'html'|'pdf', title: string, wordCount: number }. Export: recordExport(format, title, wordCount), getHistory() returning array sorted by exportedAt DESC, clearHistory(). Cap at 50 entries (FIFO eviction). Include unit tests in useExportHistory.test.ts.",
+  "read_first": [
+    "src/hooks/useDraftCache.ts",
+    "src/components/ExportDialog.tsx"
+  ],
+  "files_to_modify": [
+    "src/hooks/useExportHistory.ts",
+    "src/hooks/useExportHistory.test.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'useExportHistory' src/hooks/useExportHistory.ts",
+      "grep -q 'niko.export-history-v1' src/hooks/useExportHistory.ts",
+      "grep -q 'recordExport' src/hooks/useExportHistory.ts",
+      "grep -q 'recordExport' src/hooks/useExportHistory.test.ts"
+    ]
+  },
+  "depends_on": [],
+  "status": "pending"
+}

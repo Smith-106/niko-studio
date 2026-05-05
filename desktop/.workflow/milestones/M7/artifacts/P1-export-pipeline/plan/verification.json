@@ -1,0 +1,53 @@
+{
+  "plan_dir": "scratch/20260505-plan-P1-export-pipeline",
+  "phase": 1,
+  "milestone": "M7",
+  "verified_at": "2026-05-05T02:50:00.000Z",
+  "passed": true,
+  "layers": {
+    "goal_backward": {
+      "truths": [
+        { "id": "T1", "truth": "PDF export available via browser print", "verified": true, "evidence": "src/utils/export.ts:171 — exportToPdf() calls window.print()" },
+        { "id": "T2", "truth": "Unified export dialog replaces inline buttons", "verified": true, "evidence": "src/components/ExportDialog.tsx:16 — modal with MD/HTML/PDF format selector" },
+        { "id": "T3", "truth": "ExportDialog wired into DocumentEditor", "verified": true, "evidence": "src/components/DocumentEditor.tsx:7,31,130,136 — import, state, trigger, render" },
+        { "id": "T4", "truth": "All i18n keys present for zh and en", "verified": true, "evidence": "src/i18n/translations.ts:879-884 (interface), 1825-1830 (zh), 2769-2774 (en)" },
+        { "id": "T5", "truth": "Print CSS hides UI and optimizes editor for print", "verified": true, "evidence": "src/styles/globals.css:501 — @media print block" }
+      ],
+      "artifacts": [
+        { "id": "A1", "file": "src/utils/export.ts", "l1_exists": true, "l2_substantive": true, "l3_wired": true },
+        { "id": "A2", "file": "src/components/ExportDialog.tsx", "l1_exists": true, "l2_substantive": true, "l3_wired": true },
+        { "id": "A3", "file": "src/components/DocumentEditor.tsx", "l1_exists": true, "l2_substantive": true, "l3_wired": true },
+        { "id": "A4", "file": "src/i18n/translations.ts", "l1_exists": true, "l2_substantive": true, "l3_wired": true },
+        { "id": "A5", "file": "src/styles/globals.css", "l1_exists": true, "l2_substantive": true, "l3_wired": true }
+      ],
+      "wiring": [
+        { "link": "ExportDialog → export utils", "verified": true, "evidence": "ExportDialog.tsx:4 imports exportToMarkdown, exportToHtml, exportToPdf" },
+        { "link": "DocumentEditor → ExportDialog", "verified": true, "evidence": "DocumentEditor.tsx:7 imports ExportDialog, :135 renders with props" },
+        { "link": "ExportDialog → useDialogFocusTrap", "verified": true, "evidence": "ExportDialog.tsx:6 imports and uses at :23" },
+        { "link": "ExportDialog → useI18n", "verified": true, "evidence": "ExportDialog.tsx:5 imports, :18 destructures t" }
+      ]
+    },
+    "antipattern_scan": {
+      "scanned_files": [
+        "src/utils/export.ts",
+        "src/components/ExportDialog.tsx"
+      ],
+      "blockers": [],
+      "warnings": [],
+      "passed": true
+    },
+    "test_coverage": {
+      "new_tests": 14,
+      "test_files": [
+        "src/utils/export.test.ts (10 tests)",
+        "src/components/ExportDialog.test.tsx (4 tests)"
+      ],
+      "total_suite": "917 tests across 95 files — all passing",
+      "gaps": [],
+      "passed": true
+    }
+  },
+  "gaps": [],
+  "must_have_failures": [],
+  "summary": "All 4 tasks (TASK-101 through TASK-104) verified. PDF export via window.print() with print CSS, unified ExportDialog with format selector, full i18n support, 14 new tests all passing. No anti-patterns, no gaps."
+}

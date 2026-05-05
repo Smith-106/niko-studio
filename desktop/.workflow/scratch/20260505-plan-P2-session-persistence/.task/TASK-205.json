@@ -1,0 +1,24 @@
+{
+  "id": "TASK-205",
+  "plan_ref": "PLN-P2-001",
+  "wave": 2,
+  "title": "Add i18n strings for export history, save status, and draft recovery",
+  "action": "Add all new translation keys to src/i18n/translations.ts for both en and zh-CN locales.",
+  "implementation": "Add the following keys to both locales in translations.ts:\n- editorStatusSaving: 'Saving...' / '保存中...'\n- editorStatusSavedAt: 'Saved at {time}' / '已于 {time} 保存'\n- editorStatusIdle: '' (empty, no display when idle)\n- exportHistoryTitle: 'Recent Exports' / '最近导出'\n- exportHistoryEmpty: 'No exports yet' / '暂无导出记录'\n- exportHistoryFormat: '{format} export' / '{format} 导出'\n- editorDraftRestored: 'Draft restored' / '草稿已恢复'\n- editorDraftRestoredAt: 'Draft restored — saved {time}' / '草稿已恢复 — {time}保存'\nFollow existing i18n pattern: flat key structure, no nesting. Add after existing export/editor keys.",
+  "read_first": [
+    "src/i18n/translations.ts"
+  ],
+  "files_to_modify": [
+    "src/i18n/translations.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'editorStatusSaving' src/i18n/translations.ts",
+      "grep -q 'exportHistoryTitle' src/i18n/translations.ts",
+      "grep -q 'editorDraftRestored' src/i18n/translations.ts",
+      "grep -c 'editorStatusSaving' src/i18n/translations.ts | grep -q '2'"
+    ]
+  },
+  "depends_on": [],
+  "status": "pending"
+}

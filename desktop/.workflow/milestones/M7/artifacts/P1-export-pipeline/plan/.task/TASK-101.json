@@ -1,0 +1,26 @@
+{
+  "task_id": "TASK-101",
+  "plan_id": "PLN-20260505-P1",
+  "title": "Add PDF export via browser print",
+  "status": "pending",
+  "action": "Add exportToPdf function to src/utils/export.ts using window.print() with print-specific CSS",
+  "implementation": {
+    "file": "src/utils/export.ts",
+    "changes": [
+      "Add print CSS string constant with @media print rules to hide everything except .ProseMirror editor content",
+      "Add exportToPdf() function that injects print stylesheet and calls window.print()",
+      "Export the new function"
+    ]
+  },
+  "read_first": [
+    "src/utils/export.ts",
+    "src/components/DocumentEditor.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep -q 'exportToPdf' src/utils/export.ts",
+      "grep -q '@media print' src/App.css or equivalent global CSS",
+      "grep -q 'exportPdf' src/i18n/translations.ts"
+    ]
+  }
+}

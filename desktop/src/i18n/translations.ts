@@ -876,6 +876,20 @@ export interface Translations {
   // Export
   exportMarkdown: string
   exportHtml: string
+  exportPdf: string
+  exportDialogTitle: string
+  exportFilename: string
+  exportFormat: string
+  exportButton: string
+  exportCancel: string
+  exportHistoryTitle: string
+  exportHistoryEmpty: string
+
+  // Editor status
+  editorStatusSaving: string
+  editorStatusSavedAt: string
+  editorDraftRestored: string
+  editorDraftRestoredAt: string
 
   // Sidebar writer workspace (extracted hardcoded strings)
   writerWorkspaceTitle: string
@@ -1816,6 +1830,19 @@ export const translations: Record<Language, Translations> = {
     editorBubbleContinue: '续写',
     exportMarkdown: '导出 Markdown',
     exportHtml: '导出 HTML',
+    exportPdf: '导出 PDF',
+    exportDialogTitle: '导出文档',
+    exportFilename: '文件名',
+    exportFormat: '格式',
+    exportButton: '导出',
+    exportCancel: '取消',
+    exportHistoryTitle: '最近导出',
+    exportHistoryEmpty: '暂无导出记录',
+
+    editorStatusSaving: '保存中...',
+    editorStatusSavedAt: '已于 {time} 保存',
+    editorDraftRestored: '草稿已恢复',
+    editorDraftRestoredAt: '草稿已恢复 — {time}保存',
 
     // Sidebar writer workspace
     writerWorkspaceTitle: '当前写作项目',
@@ -2754,6 +2781,19 @@ export const translations: Record<Language, Translations> = {
     editorBubbleContinue: 'Continue',
     exportMarkdown: 'Export Markdown',
     exportHtml: 'Export HTML',
+    exportPdf: 'Export PDF',
+    exportDialogTitle: 'Export Document',
+    exportFilename: 'Filename',
+    exportFormat: 'Format',
+    exportButton: 'Export',
+    exportCancel: 'Cancel',
+    exportHistoryTitle: 'Recent Exports',
+    exportHistoryEmpty: 'No exports yet',
+
+    editorStatusSaving: 'Saving...',
+    editorStatusSavedAt: 'Saved at {time}',
+    editorDraftRestored: 'Draft restored',
+    editorDraftRestoredAt: 'Draft restored — saved {time}',
 
     // Sidebar writer workspace
     writerWorkspaceTitle: 'Current writing project',

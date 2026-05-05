@@ -1,0 +1,18 @@
+{
+  "phase": 1,
+  "milestone": "M7",
+  "tested_at": "2026-05-05T03:00:00.000Z",
+  "verdict": "PASS",
+  "total_tests": 937,
+  "total_files": 97,
+  "new_tests": 34,
+  "new_test_files": [
+    "src/utils/export.test.ts (10 tests)",
+    "src/components/ExportDialog.test.tsx (4 tests)",
+    "src/utils/export-edge.test.ts (14 tests)",
+    "src/components/ExportDialog-interaction.test.tsx (6 tests)"
+  ],
+  "passed": 937,
+  "failed": 0,
+  "failures": []
+}
