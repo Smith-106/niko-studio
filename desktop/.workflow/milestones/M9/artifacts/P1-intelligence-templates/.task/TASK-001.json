@@ -1,0 +1,138 @@
+{
+  "id": "TASK-001",
+  "title": "Intelligence Service + API + Slice (F-004 Core)",
+  "description": "Build the writing intelligence backend: analysis orchestration service, intelligence API module, Zustand slice, and filesystem caching layer. The service orchestrates chapter-by-chapter analysis via existing gateway agent endpoints (agentGetContext), caches results with content_hash invalidation.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "Create src/services/intelligenceService.ts with orchestration logic (chapter-by-chapter analysis via gateway, content_hash caching in Tauri appDataDir). Create src/api/intelligence.ts with analysis API functions. Create src/stores/app/intelligenceSlice.ts with analysis state (results, loading, progress). Add types for AnalysisModule, AnalysisResult, CharacterArcData, PacingData, ConsistencyData, ReadabilityData.",
+  "status": "completed",
+  "completed_at": "2026-05-05T12:30:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/services/intelligenceService.ts",
+  "focus_paths": ["src/services/", "src/api/", "src/stores/app/"],
+
+  "read_first": [
+    "src/services/projectFileService.ts",
+    "src/api/agents.ts",
+    "src/api/analysis.ts",
+    "src/api/core.ts",
+    "src/stores/app/projectSlice.ts",
+    "src/stores/app/appStore.ts",
+    "src/types/project.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "service-layer",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/services/intelligenceService.ts exists and exports analyzeProject, getCachedAnalysis, invalidateAnalysis functions",
+      "src/api/intelligence.ts exists and exports callAnalysisAgent function",
+      "src/stores/app/intelligenceSlice.ts exists and exports createIntelligenceSlice and IntelligenceSlice type",
+      "src/stores/app/appStore.ts contains createIntelligenceSlice and IntelligenceSlice in AppState type",
+      "intelligenceService.ts contains hashContent or imports hashContent from projectFileService",
+      "intelligenceSlice.ts contains state fields: analysisResults, isAnalyzing, analysisProgress, analysisError"
+    ],
+    "verification": "Run npx tsc --noEmit and verify no type errors in new files. Grep for all exported functions and verify they exist.",
+    "definition_of_done": "Intelligence service can orchestrate multi-chapter analysis, cache results per chapter with content_hash, and Zustand slice exposes analysis state to the app"
+  },
+
+  "files": [
+    {
+      "path": "src/services/intelligenceService.ts",
+      "action": "create",
+      "target": "IntelligenceService",
+      "change": "New file: orchestrate chapter-by-chapter analysis via gateway agent, cache results to Tauri filesystem with content_hash, provide getCachedAnalysis and invalidateAnalysis"
+    },
+    {
+      "path": "src/api/intelligence.ts",
+      "action": "create",
+      "target": "Intelligence API",
+      "change": "New file: callAnalysisAgent function that sends analysis prompt to gateway agentGetContext endpoint with module-specific prompt templates"
+    },
+    {
+      "path": "src/stores/app/intelligenceSlice.ts",
+      "action": "create",
+      "target": "IntelligenceSlice",
+      "change": "New file: Zustand slice with analysisResults (per module), isAnalyzing, analysisProgress (chapters processed/total), analysisError, startAnalysis, clearAnalysis actions"
+    },
+    {
+      "path": "src/stores/app/appStore.ts",
+      "action": "modify",
+      "target": "AppState",
+      "change": "Import and spread createIntelligenceSlice, add IntelligenceSlice to AppState union type"
+    },
+    {
+      "path": "src/types/project.ts",
+      "action": "modify",
+      "target": "Analysis types",
+      "change": "Add AnalysisModule type ('character_arc'|'pacing'|'consistency'|'readability'), AnalysisResult, AnalysisCache types"
+    }
+  ],
+
+  "implementation": [
+    "1. Add types to src/types/project.ts: AnalysisModule = 'character_arc'|'pacing'|'consistency'|'readability', AnalysisResult {module, projectId, chaptersAnalyzed, result, createdAt, contentHashes}, AnalysisCacheEntry {module, result, contentHashes, updatedAt}",
+    "2. Create src/api/intelligence.ts: callAnalysisAgent(module: AnalysisModule, chapterContent: string, storyBibleContext?: string) that builds module-specific analysis prompt and calls agentGetContext with {scene_info: {content: chapterContent, analysis_type: module}, context_types: ['analysis']}",
+    "3. Create src/services/intelligenceService.ts: (a) analyzeProject(projectId, module, chapterIds?, forceRefresh?) — reads all chapter contents via projectFileService, computes content_hash per chapter, checks cache for unchanged chapters, calls callAnalysisAgent for each changed chapter sequentially, aggregates results, writes cache. (b) getCachedAnalysis(projectId, module) — reads from Tauri appDataDir analysis/{projectId}/{module}.json. (c) invalidateAnalysis(projectId) — removes cached results. Cache path: projects/{projectId}/analysis/{module}.json. Use ensureDir + writeTextFile pattern from projectFileService.",
+    "4. Create src/stores/app/intelligenceSlice.ts: state = {analysisResults: Record<AnalysisModule, AnalysisResult|null>, isAnalyzing: boolean, analysisProgress: {processed: number, total: number}, analysisError: string|null}. Actions: startAnalysis(projectId, module) — sets isAnalyzing, calls intelligenceService.analyzeProject with progress callback updating analysisProgress, stores result in analysisResults, clears isAnalyzing. clearResults() — resets all state.",
+    "5. Modify src/stores/app/appStore.ts: import {createIntelligenceSlice, IntelligenceSlice} from './app/intelligenceSlice', add ...createIntelligenceSlice(...args) to create<AppState>(), add IntelligenceSlice to AppState type union"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run src/services/intelligenceService.test.ts src/stores/app/intelligenceSlice.test.ts"],
+    "unit": [
+      "intelligenceService.analyzeProject with mocked projectFileService and callAnalysisAgent returns aggregated results",
+      "intelligenceService uses cached results for unchanged chapters (skips API call)",
+      "intelligenceService re-analyzes when forceRefresh=true",
+      "intelligenceSlice startAnalysis sets isAnalyzing=true then false on completion",
+      "intelligenceSlice stores results keyed by AnalysisModule"
+    ],
+    "integration": [],
+    "success_metrics": ["All unit tests pass", "npx tsc --noEmit has no errors in new files"]
+  },
+
+  "reference": {
+    "pattern": "projectFileService.ts pattern: Tauri filesystem operations with hashContent caching",
+    "files": ["src/services/projectFileService.ts", "src/stores/app/projectSlice.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Frontend-orchestrated analysis via existing gateway avoids sidecar changes. Filesystem caching matches established projectFileService pattern.",
+    "decision_factors": [
+      "No new sidecar endpoints needed (locked decision from analysis)",
+      "Content hashing already implemented in projectFileService.ts",
+      "Zustand slice pattern consistent with all other slices"
+    ],
+    "tradeoffs": "Frontend orchestration means all chapters processed sequentially (no server-side parallelism), but acceptable for on-demand analysis"
+  },
+
+  "risks": [
+    "LLM context window limits for long chapters — mitigate by truncating to ~4000 chars per analysis call",
+    "Analysis prompt engineering quality — start with structured prompts, iterate based on results"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-004"],
+    "affected_components": ["intelligenceService", "intelligenceSlice", "intelligence API"],
+    "affected_requirements": ["character arc tracking", "pacing analysis", "consistency checking", "readability scoring"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "45-60 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

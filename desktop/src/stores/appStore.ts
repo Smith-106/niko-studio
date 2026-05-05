@@ -3,9 +3,12 @@ import type { ProjectWorkspaceContext } from '@/types/workspace'
 
 import { createBackendSlice, type BackendSlice } from './app/backendSlice'
 import { createConversationSlice, type ConversationSlice } from './app/conversationSlice'
+import { createIntelligenceSlice, type IntelligenceSlice } from './app/intelligenceSlice'
 import { createLoadingSlice, type LoadingSlice } from './app/loadingSlice'
 import { createProjectSlice, type ProjectSlice } from './app/projectSlice'
 import { createSkillsSlice, type SkillsSlice } from './app/skillsSlice'
+import { createTemplateSlice, type TemplateSlice } from './app/templateSlice'
+import { createWorkflowSlice, type WorkflowSlice } from './app/workflowSlice'
 import {
   type Conversation,
   type MessageComparison,
@@ -29,6 +32,9 @@ export type AppState =
   & LoadingSlice
   & UiSlice
   & ProjectSlice
+  & IntelligenceSlice
+  & TemplateSlice
+  & WorkflowSlice
 
 export type AppSlice<T> = StateCreator<AppState, [], [], T>
 
@@ -45,4 +51,7 @@ export const useAppStore = create<AppState>()((...args) => ({
   ...createLoadingSlice(...args),
   ...createUiSlice(...args),
   ...createProjectSlice(...args),
+  ...createIntelligenceSlice(...args),
+  ...createTemplateSlice(...args),
+  ...createWorkflowSlice(...args),
 }))

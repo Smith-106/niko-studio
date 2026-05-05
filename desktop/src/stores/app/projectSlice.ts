@@ -23,7 +23,7 @@ export interface ProjectSlice {
   renameVolume: (volumeId: string, title: string) => void
   deleteVolume: (volumeId: string) => void
 
-  addChapter: (volumeId: string, title: string) => void
+  addChapter: (volumeId: string, title: string, templateContent?: string) => void
   selectChapter: (id: string) => void
   renameChapter: (chapterId: string, title: string) => void
   deleteChapter: (chapterId: string) => void
@@ -168,7 +168,7 @@ export const createProjectSlice: AppSlice<ProjectSlice> = (set, get) => ({
     })
   },
 
-  addChapter: (volumeId, title) => {
+  addChapter: (volumeId, title, templateContent) => {
     const chapters = get().chaptersByVolumeId[volumeId] ?? []
     const chapter = createChapter(volumeId, title, chapters.length)
     set((state) => ({
@@ -176,6 +176,9 @@ export const createProjectSlice: AppSlice<ProjectSlice> = (set, get) => ({
         ...state.chaptersByVolumeId,
         [volumeId]: [...(state.chaptersByVolumeId[volumeId] ?? []), chapter],
       },
+      ...(templateContent != null && state.currentChapterId === null
+        ? { currentChapterId: chapter.id, currentChapterContent: templateContent }
+        : {}),
     }))
   },
 

@@ -1,0 +1,70 @@
+{
+  "verified_at": "2026-05-05T12:40:00.000Z",
+  "plan_dir": "20260505-plan-P1-intelligence-templates",
+  "phase": 1,
+  "milestone": "M9",
+  "verifier": "maestro-verify (in-session)",
+
+  "passed": true,
+  "summary": "All 4 tasks completed and verified. No anti-patterns detected. TypeScript compilation passes.",
+
+  "layers": {
+    "layer_1_truths": {
+      "description": "Verify all goals/truths from the plan are achieved",
+      "checks": [
+        { "truth": "Intelligence service can orchestrate multi-chapter analysis", "status": "pass", "evidence": "analyzeProject() in intelligenceService.ts reads chapters, calls agent per chapter, caches results" },
+        { "truth": "Analysis results cached with content_hash invalidation", "status": "pass", "evidence": "hashContent imported from projectFileService, used in analyzeProject for incremental caching" },
+        { "truth": "Template service provides CRUD for TipTap JSON templates", "status": "pass", "evidence": "listTemplates, getTemplate, saveTemplate, deleteTemplate, duplicateTemplate all exported" },
+        { "truth": "5 built-in templates bundled with the app", "status": "pass", "evidence": "builtins.ts exports 5 templates: basic-chapter, three-act, hero-journey, parallel-timeline, epistolary" },
+        { "truth": "Analysis panel renders in right panel with 4 module tabs", "status": "pass", "evidence": "AnalysisPanel.tsx with tabs: character_arc, pacing, consistency, readability" },
+        { "truth": "Template browser renders in right panel with category filtering", "status": "pass", "evidence": "TemplateBrowserPanel.tsx with category filter: all, structure, genre, format, custom" },
+        { "truth": "Template application creates chapter with substituted content", "status": "pass", "evidence": "projectSlice.addChapter accepts templateContent, CustomEvent dispatch for template:apply" }
+      ]
+    },
+    "layer_2_artifacts": {
+      "description": "Verify all expected artifacts exist and are substantive",
+      "checks": [
+        { "artifact": "src/api/intelligence.ts", "exists": true, "substantive": true, "exports": ["callAnalysisAgent", "AnalysisModule", "AnalysisPromptMap"] },
+        { "artifact": "src/services/intelligenceService.ts", "exists": true, "substantive": true, "exports": ["analyzeProject", "getCachedAnalysis", "invalidateAnalysis", "AnalysisResult"] },
+        { "artifact": "src/stores/app/intelligenceSlice.ts", "exists": true, "substantive": true, "exports": ["createIntelligenceSlice", "IntelligenceSlice"] },
+        { "artifact": "src/types/template.ts", "exists": true, "substantive": true, "exports": ["Template", "TemplatePlaceholder", "TemplateCategory"] },
+        { "artifact": "src/services/templates/builtins.ts", "exists": true, "substantive": true, "exports": ["BUILTIN_TEMPLATES"] },
+        { "artifact": "src/services/templateService.ts", "exists": true, "substantive": true, "exports": ["listTemplates", "getTemplate", "saveTemplate", "deleteTemplate", "duplicateTemplate", "substitutePlaceholders"] },
+        { "artifact": "src/stores/app/templateSlice.ts", "exists": true, "substantive": true, "exports": ["createTemplateSlice", "TemplateSlice"] },
+        { "artifact": "src/components/AnalysisPanel.tsx", "exists": true, "substantive": true, "exports": ["AnalysisPanel"] },
+        { "artifact": "src/components/TemplateBrowserPanel.tsx", "exists": true, "substantive": true, "exports": ["TemplateBrowserPanel"] }
+      ]
+    },
+    "layer_3_wiring": {
+      "description": "Verify key integration links between components",
+      "checks": [
+        { "link": "appStore.ts → intelligenceSlice", "status": "pass", "evidence": "createIntelligenceSlice imported and spread in store creation" },
+        { "link": "appStore.ts → templateSlice", "status": "pass", "evidence": "createTemplateSlice imported and spread in store creation" },
+        { "link": "AnalysisPanel → intelligenceSlice", "status": "pass", "evidence": "useAppStore destructures analysisResults, isAnalyzing, startAnalysis, etc." },
+        { "link": "TemplateBrowserPanel → templateSlice", "status": "pass", "evidence": "useAppStore destructures templates, loadTemplates, saveAsTemplate, etc." },
+        { "link": "RightPanelType includes 'analysis'", "status": "pass", "evidence": "useAppUiPersistence.ts updated with 'analysis' in union type and isRightPanelType" },
+        { "link": "RightPanelType includes 'templateBrowser'", "status": "pass", "evidence": "useAppUiPersistence.ts updated with 'templateBrowser' in union type and isRightPanelType" },
+        { "link": "AppRightPanels lazy-loads both panels", "status": "pass", "evidence": "Both lazy imports + conditional render blocks present" },
+        { "link": "projectSlice.addChapter templateContent", "status": "pass", "evidence": "Optional templateContent param sets chapter content when currentChapterId is null" }
+      ]
+    }
+  },
+
+  "antipattern_scan": {
+    "scanned_files": [
+      "src/services/intelligenceService.ts",
+      "src/api/intelligence.ts",
+      "src/stores/app/intelligenceSlice.ts",
+      "src/services/templateService.ts",
+      "src/stores/app/templateSlice.ts",
+      "src/types/template.ts",
+      "src/services/templates/builtins.ts",
+      "src/components/AnalysisPanel.tsx",
+      "src/components/TemplateBrowserPanel.tsx"
+    ],
+    "patterns_checked": ["TODO", "FIXME", "HACK", "XXX", "@ts-ignore", "@ts-nocheck", "as any", "empty catch"],
+    "findings": []
+  },
+
+  "gaps": []
+}

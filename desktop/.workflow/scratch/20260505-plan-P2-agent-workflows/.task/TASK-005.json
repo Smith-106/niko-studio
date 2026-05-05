@@ -1,0 +1,99 @@
+{
+  "id": "TASK-005",
+  "title": "Pre-built workflow templates",
+  "description": "Create 3 built-in workflow templates (chapter pipeline, revision pass, style analysis) with builtin- prefix. These are embedded as constants in the service and merged with user workflows on load.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "small",
+  "action": "Add builtinWorkflows constant array to workflowService.ts containing 3 pre-built Workflow objects with builtin- prefixed IDs: builtin-chapter-pipeline, builtin-revision-pass, builtin-style-analysis. Each has 3-5 steps with appropriate agentModes and prompts.",
+  "status": "completed",
+  "completed_at": "2026-05-05T20:35:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/services/",
+  "focus_paths": ["src/services/workflowService.ts"],
+
+  "read_first": [
+    "src/services/workflowService.ts",
+    "src/services/templateService.ts",
+    "src/types/workflow.ts"
+  ],
+
+  "depends_on": ["TASK-001", "TASK-002"],
+  "wave": 3,
+  "parallel_group": "wave-3",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "workflowService.ts contains builtinWorkflows array with 3 entries",
+      "Template IDs: builtin-chapter-pipeline, builtin-revision-pass, builtin-style-analysis",
+      "builtin-chapter-pipeline has ≥3 steps: outline review (analysis), draft writing (writing), revision (writing)",
+      "builtin-revision-pass has ≥3 steps: content analysis (analysis), targeted revision (writing), consistency check (evaluation)",
+      "builtin-style-analysis has ≥3 steps: style extraction (analysis), comparison (analysis), recommendations (evaluation)",
+      "All templates have isBuiltin: true",
+      "loadWorkflows() merges builtin templates with user workflows"
+    ],
+    "verification": "npx tsc --noEmit exits 0; builtinWorkflows array contains 3 valid Workflow objects",
+    "definition_of_done": "3 built-in workflow templates embedded in service, merged with user workflows on load"
+  },
+
+  "files": [
+    {
+      "path": "src/services/workflowService.ts",
+      "action": "modify",
+      "target": "builtinWorkflows constant",
+      "change": "Add builtinWorkflows array with 3 pre-built Workflow definitions, update loadWorkflows to prepend them"
+    }
+  ],
+
+  "implementation": [
+    "Define builtinWorkflows: Workflow[] constant in workflowService.ts",
+    "Create builtin-chapter-pipeline: { id: 'builtin-chapter-pipeline', name: 'Chapter Pipeline', steps: [outline review (analysis, checkpoint: review), draft writing (writing, checkpoint: review), final revision (writing, checkpoint: approve)], isBuiltin: true }",
+    "Create builtin-revision-pass: { id: 'builtin-revision-pass', name: 'Revision Pass', steps: [content analysis (analysis, checkpoint: none), targeted revision (writing, checkpoint: review), consistency check (evaluation, checkpoint: approve)], isBuiltin: true }",
+    "Create builtin-style-analysis: { id: 'builtin-style-analysis', name: 'Style Analysis', steps: [style extraction (analysis, checkpoint: none), comparison (analysis, checkpoint: review), recommendations (evaluation, checkpoint: approve)], isBuiltin: true }",
+    "Update loadWorkflows to prepend builtinWorkflows before user-loaded workflows",
+    "Ensure saveWorkflow rejects saves for builtin- prefixed IDs"
+  ],
+
+  "test": {
+    "commands": ["npx tsc --noEmit"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["Templates compile and contain valid Workflow objects with correct step configurations"]
+  },
+
+  "reference": {
+    "pattern": "Follow templateService.ts builtin- prefix pattern for built-in items",
+    "files": ["src/services/templateService.ts", "src/services/workflowService.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "3 templates match brainstorm spec requirements and demonstrate all agent modes (writing, analysis, evaluation)",
+    "decision_factors": ["Chapter pipeline is the primary use case from F-007 spec", "Revision pass demonstrates multi-step writing workflow", "Style analysis showcases analysis + evaluation agent modes"],
+    "tradeoffs": null
+  },
+
+  "risks": [],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-007 Agent Workflows"],
+    "affected_components": ["services"],
+    "affected_requirements": ["F-007: Pre-built workflow templates", "F-007: Chapter pipeline template"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "20min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

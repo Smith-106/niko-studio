@@ -1,0 +1,153 @@
+{
+  "id": "TASK-004",
+  "title": "Template UI + Integration (F-006 UI + Chapter Creation)",
+  "description": "Build the template browser UI, template preview, placeholder form, and save-as-template dialog. Integrate template application with chapter creation flow via projectSlice.addChapter. Register template browser in right panel system.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "Create src/components/templates/TemplateBrowserPanel.tsx with category filter and template grid. Create TemplatePreview.tsx for template content preview. Create PlaceholderForm.tsx for filling template placeholders. Create SaveAsTemplateDialog.tsx for saving chapter content as template. Add 'templateBrowser' to RightPanelType. Integrate template application with addChapter in projectSlice.",
+  "status": "completed",
+  "completed_at": "2026-05-05T12:30:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/components/templates/TemplateBrowserPanel.tsx",
+  "focus_paths": ["src/components/templates/", "src/hooks/", "src/components/", "src/stores/app/"],
+
+  "read_first": [
+    "src/hooks/useAppUiPersistence.ts",
+    "src/components/AppRightPanels.tsx",
+    "src/stores/app/templateSlice.ts",
+    "src/stores/app/projectSlice.ts",
+    "src/services/templateService.ts",
+    "src/types/project.ts"
+  ],
+
+  "depends_on": ["TASK-002"],
+  "wave": 2,
+  "parallel_group": "ui-layer",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/components/templates/TemplateBrowserPanel.tsx exists and exports TemplateBrowserPanel component",
+      "src/components/templates/TemplatePreview.tsx exists and exports TemplatePreview component",
+      "src/components/templates/PlaceholderForm.tsx exists and exports PlaceholderForm component",
+      "src/components/templates/SaveAsTemplateDialog.tsx exists and exports SaveAsTemplateDialog component",
+      "src/hooks/useAppUiPersistence.ts RightPanelType includes 'templateBrowser'",
+      "src/components/AppRightPanels.tsx imports and renders TemplateBrowserPanel when activeRightPanel === 'templateBrowser'",
+      "Template application flow: select template → fill placeholders → creates chapter with template content via projectSlice.addChapter"
+    ],
+    "verification": "Run npx tsc --noEmit and verify no type errors. Grep for 'templateBrowser' in useAppUiPersistence.ts and AppRightPanels.tsx.",
+    "definition_of_done": "Template browser panel renders in right panel, templates can be browsed by category, selected template shows preview with placeholder form, applying template creates a new chapter with substituted content"
+  },
+
+  "files": [
+    {
+      "path": "src/components/templates/TemplateBrowserPanel.tsx",
+      "action": "create",
+      "target": "TemplateBrowserPanel",
+      "change": "New file: Right panel component with category filter tabs, template card grid, template selection → preview flow. Uses templateSlice for state."
+    },
+    {
+      "path": "src/components/templates/TemplatePreview.tsx",
+      "action": "create",
+      "target": "TemplatePreview",
+      "change": "New file: Read-only TipTap editor rendering template content with {{placeholder}} highlights. Takes Template as prop."
+    },
+    {
+      "path": "src/components/templates/PlaceholderForm.tsx",
+      "action": "create",
+      "target": "PlaceholderForm",
+      "change": "New file: Form component that renders input fields for each TemplatePlaceholder. Text/number inputs and select dropdowns. Returns substituted content on submit."
+    },
+    {
+      "path": "src/components/templates/SaveAsTemplateDialog.tsx",
+      "action": "create",
+      "target": "SaveAsTemplateDialog",
+      "change": "New file: Modal dialog for saving current chapter content as a new user template. Fields: title, description, category, placeholder extraction from {{}} patterns."
+    },
+    {
+      "path": "src/hooks/useAppUiPersistence.ts",
+      "action": "modify",
+      "target": "RightPanelType",
+      "change": "Add 'templateBrowser' to RightPanelType union type"
+    },
+    {
+      "path": "src/components/AppRightPanels.tsx",
+      "action": "modify",
+      "target": "AppRightPanels",
+      "change": "Add lazy import for TemplateBrowserPanel, render conditionally when activeRightPanel === 'templateBrowser'"
+    },
+    {
+      "path": "src/stores/app/projectSlice.ts",
+      "action": "modify",
+      "target": "addChapter enhancement",
+      "change": "Add optional templateContent parameter to addChapter: when provided, sets chapter initial content to the substituted template TipTap JSON instead of empty content"
+    }
+  ],
+
+  "implementation": [
+    "1. Modify src/hooks/useAppUiPersistence.ts: add 'templateBrowser' to RightPanelType union",
+    "2. Create src/components/templates/PlaceholderForm.tsx: component accepting placeholders: TemplatePlaceholder[] and onSubmit: (values: Record<string,string>) => void props. Render form fields based on placeholder type (text→input, number→input[type=number], select→select with options). Submit button calls onSubmit with mapped values.",
+    "3. Create src/components/templates/TemplatePreview.tsx: component accepting template: Template prop. Use TipTap EditorContent in editable={false} mode to render template.content. Highlight {{placeholder_name}} text with a distinct background color using a custom TipTap mark or CSS class.",
+    "4. Create src/components/templates/SaveAsTemplateDialog.tsx: modal dialog accepting currentContent: Record<string,unknown> (TipTap JSON) and onSave: (template) => void. Fields: title (text), description (textarea), category (select from TemplateCategory values). Extract placeholders by scanning content for {{variable_name}} patterns. Save button calls templateSlice.saveAsTemplate.",
+    "5. Create src/components/templates/TemplateBrowserPanel.tsx: right panel with onClose prop. Top: category filter tabs (All | Structure | Genre | Format | Custom). Body: template cards in a grid, each showing title, description, category badge. Click card → shows TemplatePreview + PlaceholderForm below. Apply button → calls projectSlice.addChapter with template content substituted with placeholder values. Bottom: 'Save as Template' button that opens SaveAsTemplateDialog with current chapter content.",
+    "6. Modify src/stores/app/projectSlice.ts: update addChapter action to accept optional templateContent?: Record<string,unknown> parameter. When provided, write templateContent as chapter content instead of empty default. Content substitution: replace {{placeholder_name}} text nodes in TipTap JSON with user-provided values.",
+    "7. Modify src/components/AppRightPanels.tsx: add lazy import for TemplateBrowserPanel, add conditional render block for activeRightPanel === 'templateBrowser'"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run src/components/templates/TemplateBrowserPanel.test.tsx src/components/templates/PlaceholderForm.test.tsx"],
+    "unit": [
+      "TemplateBrowserPanel renders template cards from templateSlice",
+      "TemplateBrowserPanel filters templates by category",
+      "PlaceholderForm renders correct input types for each placeholder type",
+      "PlaceholderForm submit returns mapped values",
+      "SaveAsTemplateDialog extracts {{placeholders}} from content",
+      "addChapter with templateContent sets chapter content to provided JSON",
+      "Template substitution replaces {{name}} with user values in TipTap JSON"
+    ],
+    "integration": [],
+    "success_metrics": ["All unit tests pass", "npx tsc --noEmit has no errors", "Template → placeholder fill → new chapter flow works end-to-end"]
+  },
+
+  "reference": {
+    "pattern": "Right panel pattern + projectSlice.addChapter for chapter creation",
+    "files": ["src/hooks/useAppUiPersistence.ts", "src/components/AppRightPanels.tsx", "src/stores/app/projectSlice.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Single browser panel with inline preview/form (not separate panels) for streamlined template selection and application flow.",
+    "decision_factors": [
+      "Right panel shows one panel at a time — template flow must be self-contained",
+      "addChapter is the existing chapter creation entry point — extend rather than replace",
+      "TipTap JSON substitution is straightforward text replacement in content nodes"
+    ],
+    "tradeoffs": "Inline preview/form makes the panel taller but avoids panel-switching friction"
+  },
+
+  "risks": [
+    "TipTap JSON node traversal for placeholder substitution needs careful handling of nested content arrays",
+    "Template preview rendering depends on TipTap EditorContent compatibility with read-only mode"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-006"],
+    "affected_components": ["TemplateBrowserPanel", "TemplatePreview", "PlaceholderForm", "SaveAsTemplateDialog"],
+    "affected_requirements": ["template browsing by category", "template preview", "placeholder form", "save as template", "template-to-chapter flow"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "60-75 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

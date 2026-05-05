@@ -1,0 +1,71 @@
+{
+  "summary": "Build writing intelligence engine (F-004) and template/scaffold system (F-006) for M9 Phase 1",
+  "approach": "Two parallel service layers (Wave 1) followed by two parallel UI layers (Wave 2). Intelligence service uses frontend-orchestrated analysis via existing gateway agent endpoints with filesystem-based caching. Template service provides CRUD for TipTap JSON templates with placeholder substitution. Both features are orthogonal and can be built independently.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004"],
+  "task_count": 4,
+  "complexity": "medium",
+  "estimated_time": "3-4 hours",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Service Layer",
+      "tasks": ["TASK-001", "TASK-002"]
+    },
+    {
+      "wave": 2,
+      "label": "UI Layer",
+      "tasks": ["TASK-003", "TASK-004"]
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "User clicks Analyze → intelligenceSlice dispatches → intelligenceService orchestrates chapter-by-chapter calls via agentGetContext/agentWrite gateway → results cached with content_hash → UI renders analysis panels",
+    "stages": [
+      "intelligenceService reads all chapter contents from projectFileService",
+      "For each chapter, calls gateway agent with analysis prompt (character_arc/pacing/consistency/readability)",
+      "Results cached to Tauri filesystem with SHA-256 content_hash for invalidation",
+      "Template service reads built-in JSON + user templates from Tauri appDataDir",
+      "UI panels read from Zustand slices (intelligenceSlice, templateSlice)"
+    ]
+  },
+
+  "design_decisions": [
+    "Frontend-orchestrated analysis (no new sidecar endpoints) — intelligenceService calls existing gateway agent endpoints",
+    "Filesystem-based caching (not SQLite) — consistent with projectFileService pattern",
+    "TipTap JSON as template format — zero conversion when applying to editor",
+    "Built-in templates bundled as static JSON imports — user templates via Tauri appDataDir",
+    "On-demand analysis (user-triggered) — no auto-analysis on save",
+    "Chinese readability: adapted sentence/paragraph length ratio (no standard formula exists)"
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "Zustand slice pattern: createXxxSlice in src/stores/app/, registered in appStore.ts",
+      "Tauri filesystem: readTextFile/writeTextFile/exists/mkdir from @tauri-apps/plugin-fs",
+      "API calls: callApi() from src/api/core.ts with ApiResponse<T> wrapper",
+      "Content hashing: SHA-256 via crypto.subtle.digest in projectFileService.ts:hashContent()"
+    ],
+    "conventions": [
+      "Right panel type union in useAppUiPersistence.ts: RightPanelType",
+      "Lazy-loaded panels in AppRightPanels.tsx with Suspense fallback",
+      "Service files in src/services/, API files in src/api/",
+      "Intelligence shared components in src/components/intelligence/"
+    ],
+    "dependencies": [
+      "projectFileService.ts for reading chapter contents",
+      "agents.ts for gateway AI calls (agentGetContext, agentWrite)",
+      "projectSlice.ts for project/chapter data and addChapter()"
+    ]
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-05T12:10:00.000Z",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "feature",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

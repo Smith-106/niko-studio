@@ -1,0 +1,99 @@
+{
+  "verified_at": "2026-05-05T12:50:00.000Z",
+  "plan_dir": "20260505-plan-P1-intelligence-templates",
+  "phase": 1,
+  "milestone": "M9",
+  "verifier": "quality-business-test (in-session)",
+
+  "passed": true,
+  "summary": "All business logic validated. Intelligence service correctly orchestrates chapter-by-chapter analysis with content_hash caching. Template service provides full CRUD with placeholder substitution. Both UI panels properly wired to slices and right panel system.",
+
+  "tests": [
+    {
+      "id": "BT-001",
+      "feature": "F-004 Intelligence Service",
+      "scenario": "analyzeProject reads chapters, hashes content, skips unchanged from cache, calls API per changed chapter",
+      "checks": [
+        { "check": "readChapterContent called per chapterId", "passed": true, "evidence": "intelligenceService.ts:70-74 loops chapterIds, calls readChapterContent + hashContent" },
+        { "check": "Cache skip when all hashes match", "passed": true, "evidence": "intelligenceService.ts:80-85 checks unchanged with every(), returns cached.result" },
+        { "check": "Incremental re-analysis for changed chapters only", "passed": true, "evidence": "intelligenceService.ts:89-92 filters chapterIds where hashes differ from cached" },
+        { "check": "Progress callback invoked per chapter", "passed": true, "evidence": "intelligenceService.ts:103-104 increments processed, calls onProgress" },
+        { "check": "Results persisted to Tauri filesystem", "passed": true, "evidence": "intelligenceService.ts:122-127 ensureDir + writeTextFile with AnalysisCacheEntry" },
+        { "check": "Content truncated to 4000 chars", "passed": true, "evidence": "intelligence.ts:27 chapterContent.slice(0, 4000)" }
+      ]
+    },
+    {
+      "id": "BT-002",
+      "feature": "F-004 Analysis API",
+      "scenario": "callAnalysisAgent sends module-specific prompts to gateway",
+      "checks": [
+        { "check": "4 module prompts defined", "passed": true, "evidence": "intelligence.ts:5-14 MODULE_PROMPTS with character_arc, pacing, consistency, readability" },
+        { "check": "API call to /agent/context endpoint", "passed": true, "evidence": "intelligence.ts:23 callApi('/agent/context', 'POST', ...)" },
+        { "check": "scene_info includes content, analysis_type, prompt", "passed": true, "evidence": "intelligence.ts:24-28 scene_info object structure" },
+        { "check": "story_bible context optional", "passed": true, "evidence": "intelligence.ts:29 storyBibleContext ?? null" }
+      ]
+    },
+    {
+      "id": "BT-003",
+      "feature": "F-004 Intelligence Slice",
+      "scenario": "Zustand slice manages analysis state lifecycle",
+      "checks": [
+        { "check": "startAnalysis sets isAnalyzing, calls analyzeProject, stores result", "passed": true, "evidence": "intelligenceSlice.ts:22-37 try/catch with progress callback" },
+        { "check": "loadCachedResult loads from filesystem cache", "passed": true, "evidence": "intelligenceSlice.ts:40-47 calls getCachedAnalysis, sets results" },
+        { "check": "Error handling sets analysisError", "passed": true, "evidence": "intelligenceSlice.ts:33-36 catch block sets error message" },
+        { "check": "clearAnalysis resets all state", "passed": true, "evidence": "intelligenceSlice.ts:49-56 sets all fields to initial values" }
+      ]
+    },
+    {
+      "id": "BT-004",
+      "feature": "F-006 Template Service",
+      "scenario": "Template CRUD with placeholder substitution",
+      "checks": [
+        { "check": "listTemplates merges builtins + user templates", "passed": true, "evidence": "templateService.ts:21-31 [...builtins, ...filtered]" },
+        { "check": "getTemplate checks builtin first, then filesystem", "passed": true, "evidence": "templateService.ts:55-64 ALL_BUILTINS.find fallback to readTextFile" },
+        { "check": "saveTemplate sets isBuiltIn=false, updates timestamps", "passed": true, "evidence": "templateService.ts:67-77 overrides isBuiltIn/updatedAt" },
+        { "check": "duplicateTemplate generates new ID, sets category=custom", "passed": true, "evidence": "templateService.ts:86-103 crypto.randomUUID, category: 'custom'" },
+        { "check": "substitutePlaceholders replaces {{name}} patterns in JSON", "passed": true, "evidence": "templateService.ts:105-114 JSON.stringify + regex replace + parse" },
+        { "check": "extractPlaceholders finds unique {{}} patterns", "passed": true, "evidence": "templateService.ts:116-121 regex match + Set dedup" },
+        { "check": "deleteTemplate only removes user templates", "passed": true, "evidence": "templateService.ts:79-83 checks exists before remove" }
+      ]
+    },
+    {
+      "id": "BT-005",
+      "feature": "F-006 Template Browser Panel",
+      "scenario": "UI browses, filters, previews, and applies templates",
+      "checks": [
+        { "check": "Category filter: all, structure, genre, format, custom", "passed": true, "evidence": "TemplateBrowserPanel.tsx:108 category buttons" },
+        { "check": "Template selection shows preview + placeholder form", "passed": true, "evidence": "TemplateBrowserPanel.tsx:130-139 selectedTemplate conditional render" },
+        { "check": "PlaceholderForm renders text/number/select inputs", "passed": true, "evidence": "TemplateBrowserPanel.tsx:253-287 input type switching" },
+        { "check": "Apply dispatches CustomEvent with substituted content", "passed": true, "evidence": "TemplateBrowserPanel.tsx:63-71 template:apply CustomEvent" },
+        { "check": "SaveAsTemplateDialog creates template with empty content", "passed": true, "evidence": "TemplateBrowserPanel.tsx:299-314 new Template object" },
+        { "check": "Duplicate uses prompt() for new title", "passed": true, "evidence": "TemplateBrowserPanel.tsx:75 prompt('输入新模板标题')" }
+      ]
+    },
+    {
+      "id": "BT-006",
+      "feature": "F-004 Analysis Panel",
+      "scenario": "UI shows analysis tabs, triggers analysis, renders results",
+      "checks": [
+        { "check": "4 tabs: character_arc, pacing, consistency, readability", "passed": true, "evidence": "AnalysisPanel.tsx:10-24 TAB_LABELS + TAB_ICONS" },
+        { "check": "Auto-loads cached result on tab switch", "passed": true, "evidence": "AnalysisPanel.tsx:42-46 useEffect on [currentProjectId, activeTab]" },
+        { "check": "Progress bar during analysis", "passed": true, "evidence": "AnalysisPanel.tsx:109 ProgressBar component" },
+        { "check": "Result view renders score, summary, details", "passed": true, "evidence": "AnalysisPanel.tsx:134-196 AnalysisResultView with MetricValue, AccordionWrapper" }
+      ]
+    },
+    {
+      "id": "BT-007",
+      "feature": "Integration: Right Panel System",
+      "scenario": "Both panels registered in right panel type and lazy-loaded",
+      "checks": [
+        { "check": "RightPanelType includes 'analysis' and 'templateBrowser'", "passed": true, "evidence": "useAppUiPersistence.ts updated with both types" },
+        { "check": "AppRightPanels lazy-loads both panels", "passed": true, "evidence": "AppRightPanels.tsx lazy imports with Suspense fallback" },
+        { "check": "Both slices registered in appStore", "passed": true, "evidence": "appStore.ts imports and spreads both createXxxSlice" }
+      ]
+    }
+  ],
+
+  "failures": [],
+  "warnings": []
+}

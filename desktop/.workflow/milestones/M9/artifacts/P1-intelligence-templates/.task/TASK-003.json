@@ -1,0 +1,10 @@
+{
+  "id": "TASK-003",
+  "title": "Analysis Panel UI (F-004 UI)",
+  "description": "Build the analysis panel UI component with tab-based navigation for four analysis modules (character_arc, pacing, consistency, readability). Integrates with intelligenceSlice for state management and displays analysis results with shared intelligence components.",
+  "status": "completed",
+  "completed_at": "2026-05-05T12:30:00.000Z",
+  "wave": 2,
+  "depends_on": ["TASK-001"],
+  "parallel_group": "ui-layer"
+}

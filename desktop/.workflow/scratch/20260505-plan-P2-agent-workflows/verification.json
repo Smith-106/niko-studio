@@ -1,0 +1,60 @@
+{
+  "plan_id": "20260505-plan-P2-agent-workflows",
+  "verified_at": "2026-05-05T20:42:00.000Z",
+  "verifier": "maestro-verify",
+  "passed": true,
+  "layers": {
+    "truths": [
+      { "truth": "Workflow type definitions exist with all required types", "status": "pass", "evidence": "src/types/workflow.ts exports AgentMode, InputSource, CheckpointType, WorkflowStep, Workflow, WorkflowStepResult, WorkflowExecution" },
+      { "truth": "Workflow service provides CRUD and execution orchestration", "status": "pass", "evidence": "src/services/workflowService.ts exports loadWorkflows, getWorkflow, saveWorkflow, deleteWorkflow, executeWorkflow, approveStep, rejectStep" },
+      { "truth": "Workflow slice manages client state", "status": "pass", "evidence": "src/stores/app/workflowSlice.ts exports createWorkflowSlice with WorkflowSlice interface" },
+      { "truth": "Workflow editor panel provides UI", "status": "pass", "evidence": "src/components/WorkflowEditorPanel.tsx exports WorkflowEditorPanel component" },
+      { "truth": "Panel is registered in AppRightPanels", "status": "pass", "evidence": "WorkflowEditorPanel lazy-loaded and rendered when activeRightPanel === 'workflowEditor'" },
+      { "truth": "RightPanelType includes workflowEditor", "status": "pass", "evidence": "src/hooks/useAppUiPersistence.ts line 4 includes 'workflowEditor' in union" },
+      { "truth": "Three builtin workflow templates exist", "status": "pass", "evidence": "builtin-chapter-pipeline, builtin-revision-pass, builtin-style-analysis in BUILTIN_WORKFLOWS" },
+      { "truth": "Unit tests pass", "status": "pass", "evidence": "28/28 tests pass (17 service + 11 slice)" }
+    ],
+    "artifacts": [
+      { "file": "src/types/workflow.ts", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "note": "All types used by service, slice, panel" },
+      { "file": "src/services/workflowService.ts", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "note": "Imported by workflowSlice and test" },
+      { "file": "src/stores/app/workflowSlice.ts", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "note": "Imported by WorkflowEditorPanel and appStore" },
+      { "file": "src/components/WorkflowEditorPanel.tsx", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "note": "Lazy-loaded in AppRightPanels.tsx" },
+      { "file": "src/services/workflowService.test.ts", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "note": "17 tests all pass" },
+      { "file": "src/stores/app/workflowSlice.test.ts", "l1_exists": true, "l2_substantive": true, "l3_wired": true, "note": "11 tests all pass" }
+    ],
+    "wiring": [
+      { "link": "types/workflow.ts → services/workflowService.ts", "verified": true },
+      { "link": "types/workflow.ts → stores/app/workflowSlice.ts", "verified": true },
+      { "link": "types/workflow.ts → components/WorkflowEditorPanel.tsx", "verified": true },
+      { "link": "services/workflowService.ts → stores/app/workflowSlice.ts", "verified": true },
+      { "link": "stores/app/workflowSlice.ts → components/WorkflowEditorPanel.tsx", "verified": true },
+      { "link": "components/WorkflowEditorPanel.tsx → AppRightPanels.tsx", "verified": true }
+    ]
+  },
+  "antipatterns": {
+    "scan_performed": true,
+    "files_scanned": [
+      "src/services/workflowService.ts",
+      "src/stores/app/workflowSlice.ts",
+      "src/components/WorkflowEditorPanel.tsx",
+      "src/types/workflow.ts"
+    ],
+    "blockers": [],
+    "warnings": []
+  },
+  "test_coverage": {
+    "service_tests": 17,
+    "slice_tests": 11,
+    "total": 28,
+    "all_passing": true
+  },
+  "gaps": [],
+  "task_verification": [
+    { "task_id": "TASK-001", "status": "completed", "criteria_met": "6/6" },
+    { "task_id": "TASK-002", "status": "completed", "criteria_met": "6/6" },
+    { "task_id": "TASK-003", "status": "completed", "criteria_met": "all" },
+    { "task_id": "TASK-004", "status": "completed", "criteria_met": "all" },
+    { "task_id": "TASK-005", "status": "completed", "criteria_met": "10/10" },
+    { "task_id": "TASK-006", "status": "completed", "criteria_met": "6/6" }
+  ]
+}

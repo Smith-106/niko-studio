@@ -1,0 +1,112 @@
+{
+  "id": "TASK-002",
+  "title": "Workflow service — CRUD + execution orchestration",
+  "description": "Create workflowService.ts that handles workflow CRUD (load/save/delete/list) via Tauri filesystem and execution orchestration (step chaining with checkpoint gates between steps). Thin wrapper over existing agent APIs.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create src/services/workflowService.ts with loadWorkflows, saveWorkflow, deleteWorkflow, executeWorkflow, executeNextStep, approveStep, rejectStep functions. Uses Tauri FS for storage and delegates to agentWrite/agentRevise/callAnalysisAgent for step execution.",
+  "status": "completed",
+  "completed_at": "2026-05-05T20:00:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/services/",
+  "focus_paths": ["src/services/workflowService.ts"],
+
+  "read_first": [
+    "src/services/templateService.ts",
+    "src/api/agents.ts",
+    "src/api/intelligence.ts",
+    "src/api/workflow/plans.ts",
+    "src/api/workflow/checkpoints.ts",
+    "src/types/workflow.ts"
+  ],
+
+  "depends_on": ["TASK-001"],
+  "wave": 1,
+  "parallel_group": "wave-1",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/services/workflowService.ts exists and exports workflowService object",
+      "workflowService has loadWorkflows(): Promise<Workflow[]>",
+      "workflowService has saveWorkflow(workflow: Workflow): Promise<void>",
+      "workflowService has deleteWorkflow(id: string): Promise<void>",
+      "workflowService has executeWorkflow(workflowId: string, chapterId: string): Promise<WorkflowExecution>",
+      "workflowService has executeNextStep(execution: WorkflowExecution): Promise<WorkflowExecution>",
+      "workflowService has approveStep(execution: WorkflowExecution, modifiedOutput?: string): Promise<WorkflowExecution>",
+      "workflowService has rejectStep(execution: WorkflowExecution): Promise<WorkflowExecution>",
+      "File uses Tauri FS readFile/writeFile for workflow JSON storage",
+      "File uses agentWrite or callAnalysisAgent based on step.agentMode"
+    ],
+    "verification": "npx tsc --noEmit exits 0; service imports resolve correctly",
+    "definition_of_done": "Workflow service provides full CRUD and step-by-step execution orchestration with checkpoint gates"
+  },
+
+  "files": [
+    {
+      "path": "src/services/workflowService.ts",
+      "action": "create",
+      "target": "workflowService",
+      "change": "New service module with CRUD functions and execution orchestration"
+    }
+  ],
+
+  "implementation": [
+    "Create src/services/workflowService.ts",
+    "Import types from src/types/workflow.ts",
+    "Import agentWrite, agentRevise, agentGetContext from src/api/agents.ts",
+    "Import callAnalysisAgent from src/api/intelligence.ts",
+    "Define WORKFLOWS_DIR constant for Tauri FS path (app data dir + '/workflows/')",
+    "Implement loadWorkflows(): read all JSON files from WORKFLOWS_DIR, parse as Workflow[], merge with builtin templates",
+    "Implement saveWorkflow(workflow): write workflow JSON to WORKFLOWS_DIR/{id}.json, skip if isBuiltin",
+    "Implement deleteWorkflow(id): delete JSON file, reject if isBuiltin or id starts with 'builtin-'",
+    "Implement executeWorkflow(workflowId, chapterId): find workflow, create WorkflowExecution with status='idle', call executeNextStep",
+    "Implement executeNextStep(execution): get current WorkflowStep, assemble input from inputSource (previous_step → last stepResult.output, chapter_content → editor content, story_bible → project data, outline → outline data), call appropriate agent function based on step.agentMode ('writing' → agentWrite, 'analysis' → callAnalysisAgent, 'evaluation' → callAnalysisAgent, 'custom' → agentWrite), store result in stepResults, if step.checkpoint !== 'none' set status='paused' and return, else advance currentStepIndex and continue or set status='completed'",
+    "Implement approveStep(execution, modifiedOutput?): advance to next step, use modifiedOutput if provided, call executeNextStep",
+    "Implement rejectStep(execution): set execution status='failed'",
+    "Export workflowService object with all functions"
+  ],
+
+  "test": {
+    "commands": ["npx tsc --noEmit"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["Service compiles without errors", "All functions properly typed with Workflow/WorkflowExecution types"]
+  },
+
+  "reference": {
+    "pattern": "Follow templateService.ts pattern for Tauri FS read/write with builtin- prefix detection. Follow existing service export pattern (object with methods).",
+    "files": ["src/services/templateService.ts", "src/api/agents.ts", "src/api/intelligence.ts", "src/api/workflow/plans.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Thin orchestration service wraps existing agent APIs rather than reimplementing AI capabilities. Sequential execution with checkpoint gates between steps keeps V1 simple.",
+    "decision_factors": ["Existing agent APIs provide all AI capabilities", "Tauri FS consistent with template storage pattern", "Sequential execution matches locked decision"],
+    "tradeoffs": "No parallel step execution in V1 — deferred per analysis"
+  },
+
+  "risks": [],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-007 Agent Workflows"],
+    "affected_components": ["services"],
+    "affected_requirements": ["F-007: Execute workflow steps sequentially", "F-007: Human checkpoint between steps", "F-007: Step input from previous output"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "45min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

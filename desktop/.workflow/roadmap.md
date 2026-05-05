@@ -1,67 +1,88 @@
-# Roadmap: Niko-Studio Desktop — M8: Infrastructure & Export
+# Roadmap: Niko-Studio Desktop — M9: Intelligence & Workflows
 
 ## Overview
 
-M8 builds the project infrastructure layer: multi-document project management (F-001), version history & revision tracking (F-002), DOCX & advanced export (F-003), and custom TipTap extensions (F-005). This milestone establishes the structural foundation that future intelligence features (M9) depend on — 4 of 8 planned features require F-001 as a prerequisite.
+M9 transforms Niko-Studio from a writing tool into an intelligent writing partner. Three features: Writing Intelligence Enhancement (F-004) provides cross-chapter narrative analysis, Template & Scaffold System (F-006) offers reusable document structures, and Advanced AI Agent Workflows (F-007) enables multi-step automated pipelines with human checkpoints.
 
 **Source**: brainstorm-next-phase-direction-20260505 (BRN-001)
 
+**Depends on**: M8 complete (9.9.0, 1062 tests passing, project management + version history + DOCX export)
+
 ## Phases
 
-- [ ] **Phase 1: Project Structure & Safety** — Multi-document project management + version history (F-001, F-002)
-- [ ] **Phase 2: Export & Editor Extensions** — DOCX export + TipTap custom extensions (F-003, F-005)
+- [ ] **Phase 1: Intelligence & Templates** — Writing intelligence engine + template system (F-004, F-006)
+- [ ] **Phase 2: Agent Workflows** — Multi-step AI agent pipelines with checkpoints (F-007)
 
 ---
 
 ## Phase Details
 
-### Phase 1: Project Structure & Safety
+### Phase 1: Intelligence & Templates
 
-**Goal**: Introduce multi-document project management with Project→Volume→Chapter hierarchy, and version history with snapshot-based revision tracking.
+**Goal**: Build the writing intelligence engine (character arc tracking, pacing analysis, consistency checking, readability scoring) and a template/scaffold system for reusable document structures.
 
-**Depends on**: M7 complete (9.8.0, 937 tests passing)
+**Depends on**: M8 complete (project management for cross-chapter analysis, F-001)
 
-**Features**: F-001 (Project Management), F-002 (Version History)
+**Features**: F-004 (Writing Intelligence Enhancement), F-006 (Template & Scaffold System)
 
 **Current State**:
-- Single-document editing model via TipTap editor
-- SQLite (better-sqlite3) available through niko-gateway
-- Zustand stores for UI state, no project-level data model
-- No version history or revision tracking
+- Single-document AI analysis exists via gateway
+- Story Bible (knowledge graph) provides character/location/plot data
+- Project→Volume→Chapter hierarchy from M8
+- No cross-chapter narrative analysis
+- No template system
+- EvaluationPanel with per-module scores from M4
 
 **Success Criteria** (what must be TRUE):
-  1. Project→Volume→Chapter hierarchy created and navigable via sidebar tree
-  2. Existing documents auto-migrate to a Default Project on first launch
-  3. Chapter CRUD operations work (create, rename, reorder, delete)
-  4. Version snapshots created on manual save + auto-save (throttled)
-  5. Snapshot diff view shows changes between revisions
-  6. All existing 937+ tests still pass
-  7. Progressive disclosure: sidebar and history rail collapsed by default
+  1. Character arc timeline tracks appearances and development across all chapters
+  2. Pacing analyzer generates tension curve per chapter and across project
+  3. Consistency checker detects plot holes, timeline errors, character contradictions using Story Bible as ground truth
+  4. Readability scoring produces per-chapter metrics (Chinese text adapted)
+  5. Analysis results cached in SQLite with content_hash invalidation (only re-analyze changed chapters)
+  6. Built-in template library: novel chapter, short story, essay, script, academic paper
+  7. Users can create templates from existing chapters with placeholder variables
+  8. Template application: browse → preview → fill variables → create chapter
+  9. All existing 1062+ tests still pass
+  10. Progressive disclosure: analysis on-demand (not automatic), templates optional
+
+**Design Decisions**:
+  - Prompt-based extraction via existing gateway (no custom ML models)
+  - On-demand analysis (user-triggered, not auto-on-save)
+  - Analysis stored in project metadata (SQLite `project.analysis` column)
+  - Templates = TipTap JSON + metadata envelope (consistent with editor format)
+  - Placeholder syntax: `{{variable_name}}` with form-based fill
+  - User templates in `~/.niko-studio/templates/`, built-in bundled with app
 
 ---
 
-### Phase 2: Export & Editor Extensions
+### Phase 2: Agent Workflows
 
-**Goal**: Add DOCX export using docx.js, and extend the TipTap editor with table, math (KaTeX), and callout block extensions.
+**Goal**: Extend single-shot AI agents into multi-step workflow chains with human checkpoints. Writers define pipelines (outline → draft → revise → polish) that execute step-by-step with approval gates.
 
-**Depends on**: Phase 1 (project management for multi-chapter export)
+**Depends on**: Phase 1 (intelligence layer F-004 for analysis steps in workflows)
 
-**Features**: F-003 (DOCX Export), F-005 (TipTap Extensions)
+**Features**: F-007 (Advanced AI Agent Workflows)
 
 **Current State**:
-- Markdown, HTML, PDF export functional from M7
-- TipTap starter-kit provides basic extensions
-- No DOCX support
-- No table, math, or callout extensions
+- Single-shot AI chat via gateway
+- No workflow chaining or step orchestration
+- No human checkpoint mechanism between AI steps
 
 **Success Criteria** (what must be TRUE):
-  1. DOCX export produces formatted Word document from single chapter or full project
-  2. Style mapping table converts TipTap formatting to DOCX styles
-  3. Table extension renders and edits tables in the editor
-  4. Math/KaTeX extension renders inline and block equations
-  5. Callout block extension provides info/warning/error/danger block types
-  6. All extensions are collapsible/progressive — don't overwhelm the writing flow
-  7. All existing + new tests pass
+  1. Workflow defined as ordered sequence of agent steps (JSON definition)
+  2. Each step has configurable agent mode, prompt, input/output mapping
+  3. Human checkpoint between steps (review output before proceeding)
+  4. Workflow execution history with step outputs persisted
+  5. Pre-built workflow templates: novel chapter pipeline, revision pass, style adaptation
+  6. Workflow pause and resume works correctly
+  7. Step output diff (before/after comparison) available
+  8. All existing + new tests pass
+
+**Design Decisions**:
+  - Workflow as JSON array of step objects (serializable, editable)
+  - Sequential execution with checkpoints (no background execution in V1)
+  - Step input = previous step output (simple data flow)
+  - Leverage existing gateway agent modes (no new AI capabilities)
 
 ---
 
@@ -69,23 +90,15 @@ M8 builds the project infrastructure layer: multi-document project management (F
 
 | Feature | Spec | Priority | Phase |
 |---------|------|----------|-------|
-| F-001: Multi-Document Project Management | `scratch/brainstorm-.../feature-specs/F-001-project-management.md` | HIGH | P1 |
-| F-002: Version History & Revision Tracking | `scratch/brainstorm-.../feature-specs/F-002-version-history.md` | HIGH | P1 |
-| F-003: DOCX & Advanced Export | `scratch/brainstorm-.../feature-specs/F-003-docx-export.md` | MEDIUM | P2 |
-| F-005: Custom TipTap Extensions | `scratch/brainstorm-.../feature-specs/F-005-tiptap-extensions.md` | MEDIUM | P2 |
+| F-004: Writing Intelligence Enhancement | `scratch/brainstorm-next-phase-direction-20260505/feature-specs/F-004-writing-intelligence.md` | MEDIUM | P1 |
+| F-006: Template & Scaffold System | `scratch/brainstorm-next-phase-direction-20260505/feature-specs/F-006-template-scaffold.md` | LOW-MEDIUM | P1 |
+| F-007: Advanced AI Agent Workflows | `scratch/brainstorm-next-phase-direction-20260505/feature-specs/F-007-agent-workflows.md` | MEDIUM | P2 |
 
 ## Out of Scope
 
-- Writing intelligence features (F-004, M9)
-- Template system (F-006, M9)
-- Agent workflows (F-007, M9)
 - Localization expansion (F-008, M10+)
+- Conditional workflow branching or parallel step execution
+- Workflow scheduling (run overnight)
+- Template marketplace
+- Genre-specific AI writing advice beyond analysis
 - Cloud sync or multi-device features
-- Breaking changes to existing store shape or component interfaces
-
-## Progress
-
-| Phase | Status | Completed |
-|-------|--------|-----------|
-| 1. Project Structure & Safety | ✓ Complete | 2026-05-05 |
-| 2. Export & Editor Extensions | ✓ Complete | 2026-05-05 |

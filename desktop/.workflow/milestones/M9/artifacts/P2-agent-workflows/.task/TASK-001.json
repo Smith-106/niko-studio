@@ -1,0 +1,108 @@
+{
+  "id": "TASK-001",
+  "title": "Workflow type definitions",
+  "description": "Define TypeScript types for Workflow, WorkflowStep, WorkflowExecution, and supporting enums. Establish the data contract that all other tasks depend on.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "small",
+  "action": "Create src/types/workflow.ts with AgentMode, InputSource, CheckpointType enums, WorkflowStep, Workflow, WorkflowStepResult, WorkflowExecution interfaces, and builtin workflow template type. Export from src/types/index.ts barrel.",
+  "status": "completed",
+  "completed_at": "2026-05-05T19:45:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/types/",
+  "focus_paths": ["src/types/workflow.ts", "src/types/index.ts"],
+
+  "read_first": [
+    "src/types/index.ts",
+    "src/api/workflow/contracts.ts",
+    "src/api/agents.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "wave-1",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/types/workflow.ts exists and exports AgentMode, InputSource, CheckpointType, WorkflowStep, Workflow, WorkflowStepResult, WorkflowExecution",
+      "src/types/index.ts contains re-export of workflow types",
+      "AgentMode is 'writing' | 'analysis' | 'evaluation' | 'custom'",
+      "InputSource is 'previous_step' | 'chapter_content' | 'story_bible' | 'outline'",
+      "WorkflowStep has fields: id, name, agentMode, prompt, inputSource, checkpoint, enabled",
+      "Workflow has fields: id, name, description, steps[], isBuiltin, createdAt, updatedAt",
+      "WorkflowExecution has fields: id, workflowId, chapterId, status, currentStepIndex, stepResults[], startedAt, completedAt"
+    ],
+    "verification": "npx tsc --noEmit exits 0 with no type errors in workflow.ts",
+    "definition_of_done": "All workflow-related TypeScript types defined and exported, compilable without errors"
+  },
+
+  "files": [
+    {
+      "path": "src/types/workflow.ts",
+      "action": "create",
+      "target": "module",
+      "change": "New file with AgentMode, InputSource, CheckpointType union types, WorkflowStep, Workflow, WorkflowStepResult, WorkflowExecution interfaces"
+    },
+    {
+      "path": "src/types/index.ts",
+      "action": "modify",
+      "target": "barrel exports",
+      "change": "Add export * from './workflow'"
+    }
+  ],
+
+  "implementation": [
+    "Create src/types/workflow.ts",
+    "Define AgentMode = 'writing' | 'analysis' | 'evaluation' | 'custom' matching existing agent modes from src/api/agents.ts",
+    "Define InputSource = 'previous_step' | 'chapter_content' | 'story_bible' | 'outline' per F-007 spec",
+    "Define CheckpointType = 'none' | 'review' | 'approve' for step checkpoint configuration",
+    "Define WorkflowStep interface: { id: string; name: string; agentMode: AgentMode; prompt: string; inputSource: InputSource; checkpoint: CheckpointType; enabled: boolean }",
+    "Define Workflow interface: { id: string; name: string; description: string; steps: WorkflowStep[]; isBuiltin: boolean; createdAt: string; updatedAt: string }",
+    "Define WorkflowStepResult interface: { stepIndex: number; input: string; output: string; status: 'completed' | 'failed' | 'skipped'; timestamp: string }",
+    "Define WorkflowExecution interface: { id: string; workflowId: string; chapterId: string; status: 'idle' | 'running' | 'paused' | 'completed' | 'failed'; currentStepIndex: number; stepResults: WorkflowStepResult[]; startedAt: string; completedAt: string | null }",
+    "Add 'export * from ./workflow' to src/types/index.ts"
+  ],
+
+  "test": {
+    "commands": ["npx tsc --noEmit"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["TypeScript compilation succeeds with no errors"]
+  },
+
+  "reference": {
+    "pattern": "Type union exports in src/types/ — see existing pattern in src/types/index.ts and src/api/workflow/contracts.ts for naming conventions",
+    "files": ["src/types/index.ts", "src/api/workflow/contracts.ts", "src/api/agents.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Separate workflow.ts file in types/ follows the project pattern of domain-specific type files re-exported from index.ts",
+    "decision_factors": ["AgentMode must match existing agent modes in agents.ts", "InputSource from F-007 brainstorm spec", "WorkflowExecution status values cover full lifecycle"],
+    "tradeoffs": null
+  },
+
+  "risks": [],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-007 Agent Workflows"],
+    "affected_components": ["types"],
+    "affected_requirements": ["F-007: Workflow definition as ordered steps", "F-007: Configurable agent mode per step"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "20min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

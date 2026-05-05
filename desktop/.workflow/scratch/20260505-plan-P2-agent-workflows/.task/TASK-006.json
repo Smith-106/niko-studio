@@ -1,0 +1,123 @@
+{
+  "id": "TASK-006",
+  "title": "Unit tests — workflowService + workflowSlice",
+  "description": "Write unit tests for workflowService.ts (CRUD operations, execution orchestration) and workflowSlice.ts (state management, async actions). Use vi.hoisted() + vi.mock for Tauri FS mocking.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Create src/services/__tests__/workflowService.test.ts and src/stores/app/__tests__/workflowSlice.test.ts with comprehensive unit tests covering CRUD, execution flow, checkpoint gates, and slice state transitions.",
+  "status": "completed",
+  "completed_at": "2026-05-05T20:35:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/",
+  "focus_paths": ["src/services/__tests__/workflowService.test.ts", "src/stores/app/__tests__/workflowSlice.test.ts"],
+
+  "read_first": [
+    "src/services/__tests__/templateService.test.ts",
+    "src/stores/app/__tests__/intelligenceSlice.test.ts",
+    "src/services/workflowService.ts",
+    "src/stores/app/workflowSlice.ts",
+    "src/types/workflow.ts"
+  ],
+
+  "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
+  "wave": 3,
+  "parallel_group": "wave-3",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/services/__tests__/workflowService.test.ts exists with ≥5 test cases",
+      "src/stores/app/__tests__/workflowSlice.test.ts exists with ≥5 test cases",
+      "Service tests cover: loadWorkflows returns builtin + user workflows, saveWorkflow writes JSON, deleteWorkflow removes file, executeWorkflow chains steps, checkpoint pauses execution",
+      "Slice tests cover: fetchWorkflows populates state, startExecution sets activeExecution, approveStep advances step, rejectStep clears execution",
+      "All tests use vi.hoisted() + vi.mock('@tauri-apps/plugin-fs') pattern",
+      "npx vitest run --reporter=verbose passes all tests"
+    ],
+    "verification": "npx vitest run src/services/__tests__/workflowService.test.ts src/stores/app/__tests__/workflowSlice.test.ts exits 0",
+    "definition_of_done": "All service and slice unit tests pass with proper Tauri FS mocking"
+  },
+
+  "files": [
+    {
+      "path": "src/services/__tests__/workflowService.test.ts",
+      "action": "create",
+      "target": "test suite",
+      "change": "New test file covering workflow CRUD and execution orchestration"
+    },
+    {
+      "path": "src/stores/app/__tests__/workflowSlice.test.ts",
+      "action": "create",
+      "target": "test suite",
+      "change": "New test file covering slice state management and async actions"
+    }
+  ],
+
+  "implementation": [
+    "Create src/services/__tests__/workflowService.test.ts",
+    "Mock '@tauri-apps/plugin-fs' using vi.hoisted() + vi.mock() pattern from templateService.test.ts",
+    "Mock src/api/agents.ts and src/api/intelligence.ts for execution tests",
+    "Test: loadWorkflows returns builtinWorkflows when no user files exist",
+    "Test: loadWorkflows merges user workflows with builtin templates",
+    "Test: saveWorkflow writes JSON to filesystem",
+    "Test: saveWorkflow rejects builtin- prefixed IDs",
+    "Test: deleteWorkflow removes file and rejects builtin- IDs",
+    "Test: executeWorkflow creates execution and runs first step",
+    "Test: executeNextStep pauses at checkpoint gate",
+    "Create src/stores/app/__tests__/workflowSlice.test.ts",
+    "Mock workflowService and Tauri FS",
+    "Test: fetchWorkflows populates workflows array and clears loading",
+    "Test: saveWorkflow calls service then refreshes list",
+    "Test: startExecution sets activeExecution in state",
+    "Test: approveStep updates activeExecution with next step result",
+    "Test: rejectStep clears activeExecution",
+    "Test: error handling sets error state on service failure"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run src/services/__tests__/workflowService.test.ts src/stores/app/__tests__/workflowSlice.test.ts"],
+    "unit": [
+      "workflowService CRUD tests",
+      "workflowService execution tests",
+      "workflowSlice state management tests",
+      "workflowSlice async action tests"
+    ],
+    "integration": [],
+    "success_metrics": ["All tests pass", "≥10 total test cases across both files"]
+  },
+
+  "reference": {
+    "pattern": "Follow templateService.test.ts for Tauri FS mock pattern (vi.hoisted + vi.mock). Follow intelligenceSlice.test.ts for slice testing pattern.",
+    "files": ["src/services/__tests__/templateService.test.ts", "src/stores/app/__tests__/intelligenceSlice.test.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Phase 1 established the Tauri FS mock pattern with vi.hoisted() — reuse exactly for consistency",
+    "decision_factors": ["Same mock pattern proven in Phase 1", "Co-located test files follow project convention"],
+    "tradeoffs": null
+  },
+
+  "risks": [],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-007 Agent Workflows"],
+    "affected_components": ["tests"],
+    "affected_requirements": ["F-007: Testable workflow operations"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "40min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

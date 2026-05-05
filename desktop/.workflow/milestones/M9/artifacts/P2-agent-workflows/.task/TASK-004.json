@@ -1,0 +1,115 @@
+{
+  "id": "TASK-004",
+  "title": "Workflow editor panel + AppRightPanels integration",
+  "description": "Create WorkflowEditorPanel.tsx with form-based workflow editor (step list + detail editor), execution controls, and inline checkpoint UI. Register in AppRightPanels.tsx as lazy-loaded panel.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "Create src/components/panels/WorkflowEditorPanel.tsx with workflow list view, step editor form, execution panel with step progress, and inline checkpoint review (approve/modify/reject buttons). Add 'workflow-editor' to RightPanelType union in AppRightPanels.tsx with lazy loading.",
+  "status": "completed",
+  "completed_at": "2026-05-05T20:35:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/components/",
+  "focus_paths": ["src/components/panels/WorkflowEditorPanel.tsx", "src/components/AppRightPanels.tsx"],
+
+  "read_first": [
+    "src/components/AppRightPanels.tsx",
+    "src/components/AutomationPanel.tsx",
+    "src/components/panels/AnalysisPanel.tsx",
+    "src/stores/app/workflowSlice.ts",
+    "src/types/workflow.ts"
+  ],
+
+  "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
+  "wave": 2,
+  "parallel_group": "wave-2",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/components/panels/WorkflowEditorPanel.tsx exists",
+      "Component renders workflow list from store.workflows",
+      "Step editor form with fields: name, agentMode (dropdown), prompt (textarea), inputSource (dropdown), checkpoint (dropdown), enabled (toggle)",
+      "Execution panel shows current step progress with stepResults",
+      "Checkpoint UI shows approve/modify/reject buttons when activeExecution.status === 'paused'",
+      "src/components/AppRightPanels.tsx has 'workflow-editor' in RightPanelType",
+      "WorkflowEditorPanel is lazy-loaded via React.lazy in AppRightPanels.tsx"
+    ],
+    "verification": "npx tsc --noEmit exits 0; panel renders without runtime errors",
+    "definition_of_done": "Workflow editor panel provides full CRUD UI for workflows and step-by-step execution with checkpoint controls"
+  },
+
+  "files": [
+    {
+      "path": "src/components/panels/WorkflowEditorPanel.tsx",
+      "action": "create",
+      "target": "WorkflowEditorPanel",
+      "change": "New panel component with workflow list, step editor, execution controls, checkpoint UI"
+    },
+    {
+      "path": "src/components/AppRightPanels.tsx",
+      "action": "modify",
+      "target": "RightPanelType + lazy panel map",
+      "change": "Add 'workflow-editor' to RightPanelType union, add lazy-loaded WorkflowEditorPanel to panel map"
+    }
+  ],
+
+  "implementation": [
+    "Create src/components/panels/WorkflowEditorPanel.tsx",
+    "Import workflow store actions from useAppStore (fetchWorkflows, saveWorkflow, deleteWorkflow, startExecution, executeNextStep, approveStep, rejectStep)",
+    "Import Workflow, WorkflowStep, AgentMode, InputSource, CheckpointType from types",
+    "Build three sub-views with tab or section layout: Workflow List, Step Editor, Execution View",
+    "Workflow List: map store.workflows with name + step count, click to select, create new button, delete button (disabled for builtin-)",
+    "Step Editor: show steps[] of selected workflow as reorderable list, click step to edit detail form, add/remove step buttons",
+    "Step form fields: name (input), agentMode (select: writing/analysis/evaluation/custom), prompt (textarea), inputSource (select: previous_step/chapter_content/story_bible/outline), checkpoint (select: none/review/approve), enabled (checkbox)",
+    "Execution View: when activeExecution exists, show step progress list with status indicators, current step highlighted, completed steps show truncated output",
+    "Checkpoint UI: when activeExecution.status === 'paused', show last step output in a readonly textarea with approve, modify (with editable textarea), and reject buttons",
+    "Use existing UI components from the project (Button, Input, Select, Textarea patterns from AutomationPanel.tsx)",
+    "In AppRightPanels.tsx: add 'workflow-editor' to RightPanelType union type",
+    "In AppRightPanels.tsx: add WorkflowEditorPanel = React.lazy(() => import('./panels/WorkflowEditorPanel')) and map to 'workflow-editor' key"
+  ],
+
+  "test": {
+    "commands": ["npx tsc --noEmit"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["Panel compiles without errors", "All store actions wired to UI controls"]
+  },
+
+  "reference": {
+    "pattern": "Follow AutomationPanel.tsx for panel structure and UI component usage. Follow AnalysisPanel.tsx for store-connected panel pattern.",
+    "files": ["src/components/AutomationPanel.tsx", "src/components/panels/AnalysisPanel.tsx", "src/components/AppRightPanels.tsx"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Form-based step editor (not node-based) matches existing panel patterns and keeps complexity low for V1",
+    "decision_factors": ["Existing panel patterns well-established", "Form-based editor lower complexity than visual node editor", "Inline checkpoint UI keeps workflow interaction in one panel"],
+    "tradeoffs": "No visual node-based editor in V1 — deferred per analysis"
+  },
+
+  "risks": [
+    "UI complexity is highest in this task — may need to simplify initial implementation"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-007 Agent Workflows"],
+    "affected_components": ["components", "panels"],
+    "affected_requirements": ["F-007: Workflow editor UI", "F-007: Human checkpoint UI", "F-007: Step execution progress"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "60min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

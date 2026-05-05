@@ -1,0 +1,168 @@
+{
+  "id": "TASK-002",
+  "title": "Template Service + Built-in Templates + Slice (F-006 Core)",
+  "description": "Build the template/scaffold backend: template service with CRUD operations for TipTap JSON templates, 5 built-in templates bundled as static JSON, filesystem-based user template storage, and Zustand slice for template state management.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "Create src/services/templateService.ts with CRUD logic (listTemplates, getTemplate, saveTemplate, deleteTemplate, duplicateTemplate). Create 5 built-in templates as static JSON in src/templates/builtins/. Create src/stores/app/templateSlice.ts with template state. Add types for Template, TemplatePlaceholder, TemplateCategory to src/types/project.ts.",
+  "status": "completed",
+  "completed_at": "2026-05-05T12:30:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/services/templateService.ts",
+  "focus_paths": ["src/services/", "src/templates/", "src/stores/app/", "src/types/"],
+
+  "read_first": [
+    "src/services/projectFileService.ts",
+    "src/stores/app/projectSlice.ts",
+    "src/stores/app/appStore.ts",
+    "src/types/project.ts",
+    "feature-specs/F-006-templates.md"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "service-layer",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/services/templateService.ts exists and exports listTemplates, getTemplate, saveTemplate, deleteTemplate functions",
+      "src/templates/builtins/ directory contains at least 5 JSON files (basic-chapter.json, three-act.json, hero-journey.json, parallel-timeline.json, epistolary.json)",
+      "src/stores/app/templateSlice.ts exists and exports createTemplateSlice and TemplateSlice type",
+      "src/stores/app/appStore.ts contains createTemplateSlice and TemplateSlice in AppState type",
+      "src/types/project.ts contains Template and TemplatePlaceholder type definitions",
+      "Each built-in template JSON has required fields: id, title, description, category, content, placeholders, isBuiltIn"
+    ],
+    "verification": "Run npx tsc --noEmit and verify no type errors. Grep for all exported functions and verify they exist. Check each built-in template JSON for required fields.",
+    "definition_of_done": "Template service can CRUD templates from filesystem and bundled built-ins, built-in templates have correct schema, and Zustand slice exposes template state to the app"
+  },
+
+  "files": [
+    {
+      "path": "src/services/templateService.ts",
+      "action": "create",
+      "target": "TemplateService",
+      "change": "New file: listTemplates (merged builtins + user templates), getTemplate by id, saveTemplate (writes user template to Tauri appDataDir), deleteTemplate (user templates only), duplicateTemplate (clone builtin as user template). Cache path: projects/{projectId}/templates/{templateId}.json"
+    },
+    {
+      "path": "src/templates/builtins/basic-chapter.json",
+      "action": "create",
+      "target": "Basic Chapter Template",
+      "change": "New file: Simple chapter template with title and body paragraphs. Placeholders: chapter_title, opening_line"
+    },
+    {
+      "path": "src/templates/builtins/three-act.json",
+      "action": "create",
+      "target": "Three-Act Structure Template",
+      "change": "New file: Setup/Confrontation/Resolution structure with headings and placeholder prompts. Placeholders: protagonist_name, central_conflict, resolution_type"
+    },
+    {
+      "path": "src/templates/builtins/hero-journey.json",
+      "action": "create",
+      "target": "Hero's Journey Template",
+      "change": "New file: 12-stage hero's journey with section headings. Placeholders: hero_name, mentor_name, ordeal_description, reward_description"
+    },
+    {
+      "path": "src/templates/builtins/parallel-timeline.json",
+      "action": "create",
+      "target": "Parallel Timeline Template",
+      "change": "New file: Two-timeline structure with alternating sections. Placeholders: timeline_a_label, timeline_b_label, convergence_point"
+    },
+    {
+      "path": "src/templates/builtins/epistolary.json",
+      "action": "create",
+      "target": "Epistolary Template",
+      "change": "New file: Letter/diary entry format with date and salutation. Placeholders: sender_name, recipient_name, date, closing"
+    },
+    {
+      "path": "src/templates/builtins/index.ts",
+      "action": "create",
+      "target": "Built-in Template Index",
+      "change": "New file: Imports all 5 built-in JSON templates and exports as BUILTIN_TEMPLATES: Template[] array"
+    },
+    {
+      "path": "src/stores/app/templateSlice.ts",
+      "action": "create",
+      "target": "TemplateSlice",
+      "change": "New file: Zustand slice with templates (Template[]), selectedTemplateId (string|null), isLoadingTemplates, loadTemplates(projectId), selectTemplate(id), saveAsTemplate(template), deleteTemplate(id) actions"
+    },
+    {
+      "path": "src/stores/app/appStore.ts",
+      "action": "modify",
+      "target": "AppState",
+      "change": "Import and spread createTemplateSlice, add TemplateSlice to AppState union type"
+    },
+    {
+      "path": "src/types/project.ts",
+      "action": "modify",
+      "target": "Template types",
+      "change": "Add Template {id, title, description, category: TemplateCategory, content: Record<string,unknown>, placeholders: TemplatePlaceholder[], isBuiltIn: boolean, createdAt, updatedAt}, TemplatePlaceholder {name, label, defaultValue, type: 'text'|'number'|'select', options?: string[]}, TemplateCategory = 'structure'|'genre'|'format'|'custom'"
+    }
+  ],
+
+  "implementation": [
+    "1. Add types to src/types/project.ts: TemplateCategory = 'structure'|'genre'|'format'|'custom', TemplatePlaceholder {name: string, label: string, defaultValue: string, type: 'text'|'number'|'select', options?: string[]}, Template {id: string, title: string, description: string, category: TemplateCategory, content: Record<string,unknown>, placeholders: TemplatePlaceholder[], isBuiltIn: boolean, createdAt: string, updatedAt: string}",
+    "2. Create 5 built-in template JSON files in src/templates/builtins/: each with id (e.g. 'builtin-basic-chapter'), title, description, category, content (TipTap JSON with {{placeholder}} text nodes), placeholders array, isBuiltIn: true. Content uses simple TipTap doc structure: {type:'doc', content:[{type:'heading',attrs:{level:2},content:[{type:'text',text:'{{chapter_title}}'}]},{type:'paragraph',content:[{type:'text',text:'{{opening_line}}'}]}]}",
+    "3. Create src/templates/builtins/index.ts: import all 5 JSON files, export const BUILTIN_TEMPLATES: Template[] = [basicChapter, threeAct, heroJourney, parallelTimeline, epistolary]",
+    "4. Create src/services/templateService.ts: (a) listTemplates(projectId?) — returns [...BUILTIN_TEMPLATES, ...userTemplates] where userTemplates are read from Tauri appDataDir projects/{projectId}/templates/ directory. (b) getTemplate(id, projectId?) — check builtins first by id, then user templates. (c) saveTemplate(template, projectId) — write to projects/{projectId}/templates/{template.id}.json with updatedAt timestamp. (d) deleteTemplate(id, projectId) — remove file from user templates (builtins cannot be deleted). (e) duplicateTemplate(sourceId, projectId) — clone a builtin as user template with new id and isBuiltIn:false. Use ensureDir + writeTextFile/readTextFile from projectFileService pattern.",
+    "5. Create src/stores/app/templateSlice.ts: state = {templates: Template[], selectedTemplateId: string|null, isLoadingTemplates: boolean}. Actions: loadTemplates(projectId) — calls templateService.listTemplates, stores result. selectTemplate(id) — sets selectedTemplateId. saveAsTemplate(template, projectId) — calls templateService.saveTemplate, reloads. deleteTemplate(id, projectId) — calls templateService.deleteTemplate, reloads.",
+    "6. Modify src/stores/app/appStore.ts: import {createTemplateSlice, TemplateSlice} from './app/templateSlice', add ...createTemplateSlice(...args) to create<AppState>(), add TemplateSlice to AppState type union"
+  ],
+
+  "test": {
+    "commands": ["npx vitest run src/services/templateService.test.ts src/stores/app/templateSlice.test.ts"],
+    "unit": [
+      "templateService.listTemplates returns builtin templates when no user templates exist",
+      "templateService.listTemplates merges builtin + user templates",
+      "templateService.saveTemplate writes to filesystem and reload returns saved template",
+      "templateService.deleteTemplate removes user template but not builtin",
+      "templateService.duplicateTemplate creates user copy of builtin with isBuiltIn:false",
+      "templateSlice loadTemplates populates templates array",
+      "templateSlice selectTemplate sets selectedTemplateId"
+    ],
+    "integration": [],
+    "success_metrics": ["All unit tests pass", "npx tsc --noEmit has no errors in new files", "All 5 built-in templates have valid JSON with required fields"]
+  },
+
+  "reference": {
+    "pattern": "projectFileService.ts pattern: Tauri filesystem operations with hashContent caching",
+    "files": ["src/services/projectFileService.ts", "src/stores/app/projectSlice.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Static JSON imports for builtins (zero runtime cost) + Tauri filesystem for user templates. TipTap JSON content means zero conversion when applying template to editor.",
+    "decision_factors": [
+      "TipTap JSON as template format (locked decision from analysis)",
+      "Built-in templates bundled as static JSON imports (locked decision)",
+      "Filesystem storage matches projectFileService pattern"
+    ],
+    "tradeoffs": "Static imports increase bundle size slightly (~5KB for 5 templates) but avoids async loading complexity"
+  },
+
+  "risks": [
+    "TipTap JSON schema version changes between upgrades — mitigate by keeping template content simple (heading + paragraph nodes only)",
+    "User template corruption on filesystem — mitigate with JSON.parse validation on read"
+  ],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-006"],
+    "affected_components": ["templateService", "templateSlice", "built-in templates"],
+    "affected_requirements": ["5 built-in templates", "template CRUD", "placeholder substitution", "template categories"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "45-60 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

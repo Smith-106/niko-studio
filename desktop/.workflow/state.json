@@ -2,7 +2,7 @@
   "version": "2.0",
   "project_name": "Niko-Studio Desktop",
   "status": "active",
-  "current_milestone": null,
+  "current_milestone": "M9",
   "current_task_id": null,
   "milestones": [
     {
@@ -24,36 +24,25 @@
       ],
       "phase_1_completed_at": "2026-05-05T10:24:00.000Z",
       "phase_2_completed_at": "2026-05-05T18:04:00.000Z"
-    }
-  ],
-  "artifacts": [
+    },
     {
-      "id": "BRN-001",
-      "type": "brainstorm",
-      "milestone": null,
-      "phase": null,
-      "scope": "standalone",
-      "path": "brainstorm-next-phase-direction-20260505",
+      "id": "M9",
+      "name": "Intelligence & Workflows",
       "status": "completed",
-      "created_at": "2026-05-05T10:00:00.000Z",
-      "title": "Niko-Studio 下一阶段方向",
-      "features": [
-        "F-001",
-        "F-002",
-        "F-003",
-        "F-004",
-        "F-005",
-        "F-006",
-        "F-007",
-        "F-008"
+      "phases": [
+        1,
+        2
       ],
-      "roles": [
-        "product-manager",
-        "ux-expert",
-        "system-architect"
-      ]
+      "created_at": "2026-05-05T10:51:43.755Z",
+      "phase_1_completed_at": "2026-05-05T20:00:00.000Z",
+      "phase_2_completed_at": "2026-05-05T21:15:00.000Z",
+      "phase_names": {
+        "1": "Intelligence & Templates",
+        "2": "Agent Workflows"
+      }
     }
   ],
+  "artifacts": [],
   "last_codebase_rebuild": "2026-05-02T00:00:00.000Z",
   "accumulated_context": {
     "key_decisions": [],
@@ -1212,9 +1201,131 @@
       "audit_path": "milestones/M8/audit-report.md",
       "summary_path": "milestones/M8/summary.md",
       "archive_path": "milestones/M8/"
+    },
+    {
+      "milestone": {
+        "id": "M9",
+        "name": "Intelligence & Workflows",
+        "status": "completed",
+        "phases": [1, 2],
+        "phase_1_completed_at": "2026-05-05T20:00:00.000Z",
+        "phase_2_completed_at": "2026-05-05T21:15:00.000Z"
+      },
+      "artifacts": [
+        {
+          "id": "ANL-012",
+          "type": "analyze",
+          "milestone": "M9",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M9/artifacts/P1-intelligence-templates",
+          "status": "completed",
+          "harvested": true,
+          "created_at": "2026-05-05T11:30:00.000Z",
+          "completed_at": "2026-05-05T12:00:00.000Z"
+        },
+        {
+          "id": "PLN-021",
+          "type": "plan",
+          "milestone": "M9",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M9/artifacts/P1-intelligence-templates",
+          "status": "completed",
+          "depends_on": "ANL-012",
+          "harvested": true,
+          "created_at": "2026-05-05T12:10:00.000Z",
+          "completed_at": "2026-05-05T12:15:00.000Z"
+        },
+        {
+          "id": "EXC-022",
+          "type": "execute",
+          "milestone": "M9",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M9/artifacts/P1-intelligence-templates",
+          "status": "completed",
+          "depends_on": "PLN-021",
+          "harvested": false,
+          "created_at": "2026-05-05T12:20:00.000Z",
+          "completed_at": "2026-05-05T13:00:00.000Z"
+        },
+        {
+          "id": "VRF-025",
+          "type": "verify",
+          "milestone": "M9",
+          "phase": 1,
+          "scope": "phase",
+          "path": "milestones/M9/artifacts/P1-intelligence-templates",
+          "status": "passed",
+          "depends_on": "EXC-022",
+          "harvested": false,
+          "created_at": "2026-05-05T13:05:00.000Z",
+          "completed_at": "2026-05-05T13:05:00.000Z"
+        },
+        {
+          "id": "ANL-013",
+          "type": "analyze",
+          "milestone": "M9",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M9/artifacts/P2-agent-workflows",
+          "status": "completed",
+          "depends_on": "ANL-012",
+          "harvested": false,
+          "created_at": "2026-05-05T20:05:00.000Z",
+          "completed_at": "2026-05-05T20:15:00.000Z"
+        },
+        {
+          "id": "PLN-008",
+          "type": "plan",
+          "milestone": "M9",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M9/artifacts/P2-agent-workflows",
+          "status": "completed",
+          "depends_on": "ANL-013",
+          "harvested": false,
+          "created_at": "2026-05-05T20:20:00.000Z",
+          "completed_at": "2026-05-05T20:30:00.000Z"
+        },
+        {
+          "id": "EXC-023",
+          "type": "execute",
+          "milestone": "M9",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M9/artifacts/P2-agent-workflows",
+          "status": "completed",
+          "depends_on": "PLN-008",
+          "harvested": false,
+          "created_at": "2026-05-05T20:30:00.000Z",
+          "completed_at": "2026-05-05T20:50:00.000Z"
+        },
+        {
+          "id": "VRF-026",
+          "type": "verify",
+          "milestone": "M9",
+          "phase": 2,
+          "scope": "phase",
+          "path": "milestones/M9/artifacts/P2-agent-workflows",
+          "status": "passed",
+          "depends_on": "EXC-023",
+          "harvested": false,
+          "created_at": "2026-05-05T20:55:00.000Z",
+          "completed_at": "2026-05-05T20:55:00.000Z"
+        }
+      ],
+      "completed_at": "2026-05-05T21:15:00.000Z",
+      "phase_note": "All phases complete",
+      "audit_verdict": "PASS",
+      "audit_path": "milestones/M9/audit-report.md",
+      "summary_path": "milestones/M9/summary.md",
+      "learnings_path": "milestones/M9/learnings.md",
+      "archive_path": "milestones/M9/"
     }
   ],
-  "last_updated": "2026-05-05T19:00:00.000Z",
-  "last_release_version": "9.8.0",
-  "last_release_at": "2026-05-05T04:20:00.000Z"
+  "last_updated": "2026-05-05T21:15:00.000Z",
+  "last_release_version": "9.9.0",
+  "last_release_at": "2026-05-05T10:44:35.934Z"
 }

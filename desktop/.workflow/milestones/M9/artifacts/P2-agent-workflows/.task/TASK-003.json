@@ -1,0 +1,116 @@
+{
+  "id": "TASK-003",
+  "title": "Workflow Zustand slice",
+  "description": "Create workflowSlice.ts following the AppSlice<T> pattern established by intelligenceSlice.ts. Manages workflow list, current execution state, and step results on the client side.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create src/stores/app/workflowSlice.ts with WorkflowSliceState interface and createWorkflowSlice() function. Manages workflows[], activeExecution, loading states. Register in appStore.ts root store.",
+  "status": "completed",
+  "completed_at": "2026-05-05T20:30:00.000Z",
+  "actual_duration": null,
+
+  "scope": "src/stores/app/",
+  "focus_paths": ["src/stores/app/workflowSlice.ts", "src/stores/app/appStore.ts"],
+
+  "read_first": [
+    "src/stores/app/intelligenceSlice.ts",
+    "src/stores/app/appStore.ts",
+    "src/types/workflow.ts"
+  ],
+
+  "depends_on": ["TASK-001", "TASK-002"],
+  "wave": 2,
+  "parallel_group": "wave-2",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src/stores/app/workflowSlice.ts exists and exports createWorkflowSlice and WorkflowSliceState",
+      "WorkflowSliceState has workflows: Workflow[], activeExecution: WorkflowExecution | null, isLoading: boolean, error: string | null",
+      "Slice has fetchWorkflows() action that calls workflowService.loadWorkflows()",
+      "Slice has saveWorkflow(workflow) action",
+      "Slice has deleteWorkflow(id) action",
+      "Slice has startExecution(workflowId, chapterId) action",
+      "Slice has executeNextStep() action",
+      "Slice has approveStep(modifiedOutput?) action",
+      "Slice has rejectStep() action",
+      "appStore.ts integrates workflow slice via createWorkflowSlice()"
+    ],
+    "verification": "npx tsc --noEmit exits 0; slice actions callable from store",
+    "definition_of_done": "Workflow slice manages all workflow and execution state, registered in root store"
+  },
+
+  "files": [
+    {
+      "path": "src/stores/app/workflowSlice.ts",
+      "action": "create",
+      "target": "createWorkflowSlice",
+      "change": "New Zustand slice with workflow state management and async actions"
+    },
+    {
+      "path": "src/stores/app/appStore.ts",
+      "action": "modify",
+      "target": "root store composition",
+      "change": "Import and integrate createWorkflowSlice into root store"
+    }
+  ],
+
+  "implementation": [
+    "Create src/stores/app/workflowSlice.ts",
+    "Import types from src/types/workflow.ts",
+    "Import workflowService from src/services/workflowService.ts",
+    "Define WorkflowSliceState: { workflows: Workflow[]; activeExecution: WorkflowExecution | null; isLoading: boolean; error: string | null }",
+    "Follow intelligenceSlice.ts pattern: define createWorkflowSlice(set, get) returning AppSlice<WorkflowSliceState>",
+    "Implement fetchWorkflows: set isLoading true → workflowService.loadWorkflows() → set workflows + isLoading false",
+    "Implement saveWorkflow: workflowService.saveWorkflow(w) → fetchWorkflows() to refresh list",
+    "Implement deleteWorkflow: workflowService.deleteWorkflow(id) → fetchWorkflows()",
+    "Implement startExecution: workflowService.executeWorkflow(wid, cid) → set activeExecution",
+    "Implement executeNextStep: workflowService.executeNextStep(activeExecution) → set activeExecution",
+    "Implement approveStep: workflowService.approveStep(activeExecution, mod?) → set activeExecution",
+    "Implement rejectStep: workflowService.rejectStep(activeExecution) → set activeExecution to null",
+    "Export WorkflowSliceState type and createWorkflowSlice function",
+    "In appStore.ts: import createWorkflowSlice, add to store composition"
+  ],
+
+  "test": {
+    "commands": ["npx tsc --noEmit"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["Slice compiles without errors", "Actions properly typed with async returns"]
+  },
+
+  "reference": {
+    "pattern": "Follow intelligenceSlice.ts exactly: AppSlice<WorkflowSliceState> with set/get pattern, same loading/error state shape",
+    "files": ["src/stores/app/intelligenceSlice.ts", "src/stores/app/appStore.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Single flat slice follows intelligenceSlice pattern — simpler than nested sub-slices, proven in Phase 1",
+    "decision_factors": ["Consistency with Phase 1 slice architecture", "Single slice sufficient for workflow + execution state"],
+    "tradeoffs": null
+  },
+
+  "risks": [],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["F-007 Agent Workflows"],
+    "affected_components": ["stores"],
+    "affected_requirements": ["F-007: Workflow state management", "F-007: Execution tracking"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "30min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

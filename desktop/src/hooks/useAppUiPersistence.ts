@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { WritingHelperMode } from '../api/client'
 
-export type RightPanelType = 'none' | 'knowledge' | 'evaluation' | 'automation' | 'mcpStatus' | 'writingHelper' | 'textOptimizer' | 'foreshadowingTracker' | 'patternDashboard' | 'sessionAnalytics' | 'evaluationDrillDown' | 'characterRelationships'
+export type RightPanelType = 'none' | 'knowledge' | 'evaluation' | 'automation' | 'mcpStatus' | 'writingHelper' | 'textOptimizer' | 'foreshadowingTracker' | 'patternDashboard' | 'sessionAnalytics' | 'evaluationDrillDown' | 'characterRelationships' | 'analysis' | 'templateBrowser' | 'workflowEditor'
 
 export interface WritingHelperEvaluationHandoff {
   source: 'evaluation'
@@ -151,7 +151,7 @@ const loadChatSidebarCollapsed = (): boolean => {
 }
 
 const isRightPanelType = (value: unknown): value is RightPanelType => {
-  return value === 'none' || value === 'knowledge' || value === 'evaluation' || value === 'automation' || value === 'mcpStatus' || value === 'writingHelper' || value === 'textOptimizer' || value === 'foreshadowingTracker' || value === 'patternDashboard' || value === 'sessionAnalytics' || value === 'evaluationDrillDown' || value === 'characterRelationships'
+  return value === 'none' || value === 'knowledge' || value === 'evaluation' || value === 'automation' || value === 'mcpStatus' || value === 'writingHelper' || value === 'textOptimizer' || value === 'foreshadowingTracker' || value === 'patternDashboard' || value === 'sessionAnalytics' || value === 'evaluationDrillDown' || value === 'characterRelationships' || value === 'analysis' || value === 'templateBrowser'
 }
 
 const loadActiveRightPanel = (): RightPanelType => {

@@ -64,6 +64,21 @@ const CharacterRelationshipsPanel = lazy(async () => {
   return { default: module.CharacterRelationshipsPanel }
 })
 
+const AnalysisPanel = lazy(async () => {
+  const module = await import('./AnalysisPanel')
+  return { default: module.AnalysisPanel }
+})
+
+const TemplateBrowserPanel = lazy(async () => {
+  const module = await import('./TemplateBrowserPanel')
+  return { default: module.TemplateBrowserPanel }
+})
+
+const WorkflowEditorPanel = lazy(async () => {
+  const module = await import('./WorkflowEditorPanel')
+  return { default: module.WorkflowEditorPanel }
+})
+
 
 interface AppRightPanelsProps {
   activeRightPanel: RightPanelType
@@ -162,6 +177,9 @@ export function AppRightPanels({
       {activeRightPanel === 'sessionAnalytics' && <SessionAnalyticsPanel onClose={closeRightPanel} />}
       {activeRightPanel === 'evaluationDrillDown' && <EvaluationDrillDownPanel onClose={closeRightPanel} />}
       {activeRightPanel === 'characterRelationships' && <CharacterRelationshipsPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'analysis' && <AnalysisPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'templateBrowser' && <TemplateBrowserPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'workflowEditor' && <WorkflowEditorPanel onClose={closeRightPanel} />}
     </Suspense>
   )
 }
