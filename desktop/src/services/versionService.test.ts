@@ -35,9 +35,9 @@ describe('versionService', () => {
         .mockResolvedValueOnce({ id: 'v2', textContent: 'line1\nline3' })
 
       vi.mocked(Diff.diffLines).mockReturnValue([
-        { value: 'line1\n', added: undefined, removed: undefined },
-        { value: 'line2\n', added: undefined, removed: true },
-        { value: 'line3', added: true, removed: undefined },
+        { value: 'line1\n', added: false, removed: false, count: 1 },
+        { value: 'line2\n', added: false, removed: true, count: 1 },
+        { value: 'line3', added: true, removed: false, count: 1 },
       ])
 
       const result = await diffSnapshots('p1', 'c1', 'v1', 'v2')
@@ -50,8 +50,8 @@ describe('versionService', () => {
   describe('autoSaveSnapshot', () => {
     it('skips when auto-save not needed', async () => {
       vi.mocked(fs.listSnapshots).mockResolvedValue({
-        snapshots: [{ timestamp: new Date().toISOString() }],
-      })
+        snapshots: [{ id: 's1', chapterId: 'c1', contentHash: 'h1', content: '', textContent: '', timestamp: new Date().toISOString() }],
+      } as any)
       vi.mocked(fs.shouldAutoSave).mockResolvedValue(false)
 
       const result = await autoSaveSnapshot('p1', 'c1')

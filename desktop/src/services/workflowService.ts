@@ -123,7 +123,7 @@ export async function executeWorkflow(
 }
 
 function resolveStepInput(
-  stepIndex: number,
+  _stepIndex: number,
   inputSource: string,
   stepResults: WorkflowStepResult[],
   getChapterContent: () => string,

@@ -18,12 +18,12 @@ function createStore(): IntelligenceSlice {
   const state = { ...initialState }
 
   const set: SetFn = (partial) => {
-    const next = typeof partial === 'function' ? partial(state) : partial
+    const next = typeof partial === 'function' ? partial(state as any) : partial
     Object.assign(state, next)
   }
   const get = () => state
 
-  const slice = createIntelligenceSlice(set as never, get as never, {} as never)
+  const slice = createIntelligenceSlice(set as any, get as any, {} as any)
   Object.assign(state, slice)
   return state
 }

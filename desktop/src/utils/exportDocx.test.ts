@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { JSONContent } from '@tiptap/react'
 
 vi.mock('../stores/appStore', () => ({
@@ -287,7 +287,7 @@ describe('generateProjectDocx', () => {
 
     vi.mocked(readChapterContent).mockImplementation((_pid: string, cid: string) => {
       if (cid === 'ch-1') return Promise.resolve(JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Content 1' }] }] }))
-      return Promise.resolve(null)
+      return Promise.resolve('' as any)
     })
 
     const blob = await generateProjectDocx('proj-1', 'Project with Chapters')

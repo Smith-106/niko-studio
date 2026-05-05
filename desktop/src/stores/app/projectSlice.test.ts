@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ProjectMeta } from '../../types/project'
-import { emptyProjectMeta } from '../../types/project'
+import { emptyProjectMeta, type ProjectMeta } from '../../types/project'
 import { createProjectSlice, type ProjectSlice } from './projectSlice'
-import type { AppStore } from '../appStore'
 
 type SetFn = Parameters<typeof createProjectSlice>[0]
 
@@ -32,12 +30,12 @@ function createStore(): ProjectSlice {
   }
 
   const set: SetFn = (partial) => {
-    const next = typeof partial === 'function' ? partial(state) : partial
+    const next = typeof partial === 'function' ? partial(state as any) : partial
     state = { ...state, ...next }
   }
   const get = () => state
 
-  const slice = createProjectSlice(set as never, get as never, {} as AppStore)
+  const slice = createProjectSlice(set as any, get as any, {} as any)
   state = { ...state, ...slice }
   return state
 }
@@ -45,11 +43,11 @@ function createStore(): ProjectSlice {
 function getLiveStore() {
   let state = createStore()
   const set: SetFn = (partial) => {
-    const next = typeof partial === 'function' ? partial(state) : partial
+    const next = typeof partial === 'function' ? partial(state as any) : partial
     state = { ...state, ...next }
   }
   const get = () => state
-  const slice = createProjectSlice(set as never, get as never, {} as AppStore)
+  const slice = createProjectSlice(set as any, get as any, {} as any)
   Object.assign(state, slice)
   return { getState: () => state }
 }
