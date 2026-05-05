@@ -113,6 +113,24 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Rust format check
+        run: cargo fmt --all -- --check
+        working-directory: desktop/src-tauri
+
+      - name: Rust clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+        working-directory: desktop/src-tauri
+
       - name: Install desktop dependencies
         run: npm ci
         working-directory: desktop

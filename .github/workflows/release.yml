@@ -1,0 +1,229 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 9.8.0). Tag must already exist.'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Build sidecar
+        run: npm run build:sidecar
+        working-directory: desktop
+
+      - name: Validate sidecar contract
+        run: npm run validate:sidecar-contract
+        working-directory: desktop
+
+      - name: Lint
+        run: npm run lint
+        working-directory: desktop
+
+      - name: Format check
+        run: npm run format:check
+        working-directory: desktop
+
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: desktop
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: desktop
+
+      - name: Run tests
+        run: npm run test:ci
+        working-directory: desktop
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Version consistency check
+        run: python scripts/check_versions.py
+
+      - name: Delivery gate
+        run: python scripts/delivery_gate.py
+
+  build-windows:
+    runs-on: windows-latest
+    needs: [validate]
+
+    env:
+      VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "push") {
+            $tag = "${{ github.ref_name }}"
+            $ver = $tag.TrimStart('v')
+          } else {
+            $ver = "${{ inputs.version }}"
+          }
+          "version=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "tag=v$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Releasing $ver"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
+
+      - name: Build sidecar
+        run: npm run build:sidecar
+        working-directory: desktop
+
+      - name: Build Tauri app
+        run: npm run tauri -- build
+        working-directory: desktop
+
+      - name: List build outputs
+        id: artifacts
+        shell: pwsh
+        run: |
+          $bundleDir = "desktop/src-tauri/target/release/bundle"
+          Write-Host "=== Bundle contents ==="
+          Get-ChildItem -Recurse $bundleDir -File | ForEach-Object { Write-Host $_.FullName }
+
+          $nsisZip = Get-ChildItem "$bundleDir/nsis/*.nsis.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
+          $msi = Get-ChildItem "$bundleDir/msisync/*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $msi) { $msi = Get-ChildItem "$bundleDir/msi/*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1 }
+          $nsisExe = Get-ChildItem "$bundleDir/nsis/*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+
+          if ($nsisZip) { "nsis_zip=$($nsisZip.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8 }
+          if ($msi) { "msi=$($msi.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8 }
+          if ($nsisExe) { "nsis_exe=$($nsisExe.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8 }
+
+      - name: Generate update manifest
+        id: manifest
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.version }}"
+          $nsisZip = "${{ steps.artifacts.outputs.nsis_zip }}"
+          $nsisZipSig = "$nsisZip.sig"
+
+          if (-not (Test-Path $nsisZip)) {
+            Write-Host "::warning::No .nsis.zip found, skipping update manifest generation"
+            "has_manifest=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            return
+          }
+
+          $sig = ""
+          if (Test-Path $nsisZipSig) {
+            $sig = (Get-Content $nsisZipSig -Raw).Trim()
+          }
+
+          $zipName = Split-Path $nsisZip -Leaf
+          $manifest = @{
+            version = $ver
+            date = (Get-Date).ToString("yyyy-MM-dd")
+            platforms = @{
+              "windows-x86_64" = @{
+                url = "https://github.com/Smith-106/niko-studio/releases/download/v$ver/$zipName"
+                signature = $sig
+              }
+            }
+          } | ConvertTo-Json -Depth 5
+
+          $manifest | Out-File -FilePath "latest.json" -Encoding utf8
+          "has_manifest=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "=== latest.json ==="
+          Get-Content latest.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Niko-Studio ${{ steps.version.outputs.tag }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            ${{ steps.artifacts.outputs.nsis_exe }}
+            ${{ steps.artifacts.outputs.nsis_zip }}
+            ${{ steps.artifacts.outputs.nsis_zip }}.sig
+            ${{ steps.artifacts.outputs.msi }}
+            latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.version }}"
+          $manifestStatus = if ("${{ steps.manifest.outputs.has_manifest }}" -eq "true") { "generated" } else { "skipped" }
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value @"
+          ## Release v$ver
+
+          | Item | Status |
+          |------|--------|
+          | Version | ``$ver`` |
+          | NSIS installer | ${{ steps.artifacts.outputs.nsis_exe != '' && 'uploaded' || 'missing' }} |
+          | NSIS update bundle | ${{ steps.artifacts.outputs.nsis_zip != '' && 'uploaded' || 'missing' }} |
+          | MSI installer | ${{ steps.artifacts.outputs.msi != '' && 'uploaded' || 'missing' }} |
+          | Update manifest | $manifestStatus |
+          | Sentry source maps | ``$($env:SENTRY_AUTH_TOKEN ? 'uploaded' : 'skipped')`` |
+          | Release state | **draft** (publish manually) |
+
+          ### Next steps
+          1. Review the draft release on GitHub
+          2. Publish the release when ready
+          3. Update ``https://niko-studio.github.io/niko-studio-updates/latest.json`` with the published manifest
+          "@
