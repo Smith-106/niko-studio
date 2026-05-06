@@ -6,9 +6,9 @@ M12 focuses on polish, robustness, and production readiness. With core features 
 
 ## Phases
 
-- [ ] **Phase 1: UX Polish & Empty States** — Add meaningful empty states, loading indicators, and guidance text for all M10-M11 features
-- [ ] **Phase 2: Error Handling & Robustness** — Add error boundaries around intelligence panels, graceful degradation when backend is unavailable, retry logic for API calls
-- [ ] **Phase 3: Performance & Large Project Support** — Virtualize long lists in consistency reports, debounce style extraction, optimize re-renders in AnalysisPanel/EvaluationPanel
+- [x] **Phase 1: UX Polish & Empty States** — Add meaningful empty states, loading indicators, and guidance text for all M10-M11 features
+- [x] **Phase 2: Error Handling & Robustness** — Add error boundaries around intelligence panels, graceful degradation when backend is unavailable, retry logic for API calls
+- [x] **Phase 3: Performance & Large Project Support** — Virtualize long lists in consistency reports, debounce style extraction, optimize re-renders in AnalysisPanel/EvaluationPanel
 
 ## Phase Details
 
@@ -63,6 +63,6 @@ M12 focuses on polish, robustness, and production readiness. With core features 
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. UX Polish & Empty States | Not started | - |
-| 2. Error Handling & Robustness | Not started | - |
-| 3. Performance & Large Project Support | Not started | - |
+| 1. UX Polish & Empty States | Done | 2026-05-06 |
+| 2. Error Handling & Robustness | Done | 2026-05-06 |
+| 3. Performance & Large Project Support | Done | 2026-05-06 |
