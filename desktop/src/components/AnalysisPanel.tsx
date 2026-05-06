@@ -174,13 +174,37 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
                     <p className="text-xs font-medium text-orange-400 mb-1">未解决线索</p>
                     {((crossChapterResult.unresolvedThreads || []) as Array<Record<string, unknown>>).map((ut, i) => (
                       <div key={i} className="text-xs text-dark-text-muted bg-dark-card rounded p-2 mb-1">
-                        第 {String(ut.introducedInChapter || '?')} 章引入: {String(ut.description || '')}
+                        第 {String(ut.lastMentioned || '?')} 章引入: {String(ut.description || '')}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {((crossChapterResult.timelineIssues || []) as Array<Record<string, unknown>>).length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-blue-400 mb-1">时间线问题</p>
+                    {((crossChapterResult.timelineIssues || []) as Array<Record<string, unknown>>).map((ti, i) => (
+                      <div key={i} className="text-xs text-dark-text-muted bg-dark-card rounded p-2 mb-1">
+                        <IntelligenceBadge variant="warning">Ch.{String(ti.chapter1)}→Ch.{String(ti.chapter2)}</IntelligenceBadge>
+                        {' '}{String(ti.description || '')}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {((crossChapterResult.traitDrifts || []) as Array<Record<string, unknown>>).length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-purple-400 mb-1">角色特征漂移</p>
+                    {((crossChapterResult.traitDrifts || []) as Array<Record<string, unknown>>).map((td, i) => (
+                      <div key={i} className="text-xs text-dark-text-muted bg-dark-card rounded p-2 mb-1">
+                        <IntelligenceBadge variant="danger">{String(td.character || '')}</IntelligenceBadge>
+                        {' '}{String(td.description || '')}
                       </div>
                     ))}
                   </div>
                 )}
                 {!((crossChapterResult.nameConflicts || []) as unknown[]).length &&
-                 !((crossChapterResult.unresolvedThreads || []) as unknown[]).length && (
+                 !((crossChapterResult.unresolvedThreads || []) as unknown[]).length &&
+                 !((crossChapterResult.timelineIssues || []) as unknown[]).length &&
+                 !((crossChapterResult.traitDrifts || []) as unknown[]).length && (
                   <p className="text-xs text-green-400">未发现跨章一致性问题</p>
                 )}
               </div>

@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { runCrossChapterConsistency, detectNameConflicts, detectUnresolvedThreads } from './consistencyEngine'
 import type { ChapterContent } from './consistencyEngine'
 
+// detectTimelineIssues and detectTraitDrifts are internal — tested via runCrossChapterConsistency
+
 describe('detectNameConflicts', () => {
   it('detects similar character names across chapters', () => {
     const chapters: ChapterContent[] = [
@@ -70,5 +72,46 @@ describe('runCrossChapterConsistency', () => {
       { chapterNumber: 1, title: 'Only', content: 'Hello world.' },
     ])
     expect(report.chaptersChecked).toBe(1)
+  })
+
+  it('detects timeline issues from relative day references across chapters', () => {
+    const chapters: ChapterContent[] = [
+      { chapterNumber: 1, title: 'Ch1', content: '今天天气很好。昨天发生了很多事情。' },
+      { chapterNumber: 2, title: 'Ch2', content: '他们继续旅程。今天阳光明媚，昨天也下了雨。' },
+    ]
+    const report = runCrossChapterConsistency(chapters)
+    expect(report.timelineIssues.length).toBeGreaterThan(0)
+  })
+
+  it('detects timeline regression when years go backwards', () => {
+    const chapters: ChapterContent[] = [
+      { chapterNumber: 1, title: 'Ch1', content: '那是2025年的故事。' },
+      { chapterNumber: 2, title: 'Ch2', content: '回到了2020年的回忆。' },
+    ]
+    const report = runCrossChapterConsistency(chapters)
+    expect(report.timelineIssues.length).toBeGreaterThanOrEqual(1)
+    const yearIssue = report.timelineIssues.find((ti) => ti.event1.includes('2025'))
+    expect(yearIssue).toBeTruthy()
+  })
+
+  it('detects trait drifts when character traits shift unexpectedly', () => {
+    const chapters: ChapterContent[] = [
+      { chapterNumber: 1, title: 'Ch1', content: '张三笑了笑，态度很温柔。' },
+      { chapterNumber: 2, title: 'Ch2', content: '张三看着大家，眼神冷酷，非常冷漠。' },
+    ]
+    const report = runCrossChapterConsistency(chapters)
+    expect(report.traitDrifts.length).toBeGreaterThanOrEqual(1)
+    const drift = report.traitDrifts.find((td) => td.character === '张三')
+    expect(drift).toBeTruthy()
+  })
+
+  it('returns no timeline issues for chapters without time conflicts', () => {
+    const chapters: ChapterContent[] = [
+      { chapterNumber: 1, title: 'Ch1', content: 'Alice walked to the store.' },
+      { chapterNumber: 2, title: 'Ch2', content: 'Bob went home.' },
+    ]
+    const report = runCrossChapterConsistency(chapters)
+    expect(report.timelineIssues).toEqual([])
+    expect(report.traitDrifts).toEqual([])
   })
 })
