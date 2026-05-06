@@ -97,6 +97,7 @@ export function useAppShellViewModel({
     onOpenForeshadowingTracker: () => panelOrchestration.toggleRightPanel('foreshadowingTracker'),
     onOpenPatternDashboard: () => panelOrchestration.toggleRightPanel('patternDashboard'),
     onOpenSessionAnalytics: () => panelOrchestration.toggleRightPanel('sessionAnalytics'),
+    onOpenAnalysis: () => panelOrchestration.toggleRightPanel('analysis'),
     onOpenEvaluationDrillDown: () => panelOrchestration.toggleRightPanel('evaluationDrillDown'),
     onOpenCharacterRelationships: () => panelOrchestration.toggleRightPanel('characterRelationships'),
   }

@@ -70,6 +70,7 @@ const defaultSidebarProps = {
   onOpenForeshadowingTracker: vi.fn(),
   onOpenPatternDashboard: vi.fn(),
   onOpenSessionAnalytics: vi.fn(),
+  onOpenAnalysis: vi.fn(),
   onOpenEvaluationDrillDown: vi.fn(),
   onOpenCharacterRelationships: vi.fn(),
 }

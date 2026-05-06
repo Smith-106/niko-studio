@@ -321,6 +321,7 @@ describe('writer workflow experience', () => {
           onOpenForeshadowingTracker={vi.fn()}
           onOpenPatternDashboard={vi.fn()}
           onOpenSessionAnalytics={vi.fn()}
+          onOpenAnalysis={vi.fn()}
           onOpenEvaluationDrillDown={vi.fn()}
           onOpenCharacterRelationships={vi.fn()}
         />

@@ -1,5 +1,5 @@
 import React from 'react'
-import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users } from 'lucide-react'
+import { FilePlus, BookOpen, Settings, ChevronLeft, ChevronRight, Sparkles, BarChart3, Library, Eye, LayoutGrid, PieChart, Scaling, Users, Brain } from 'lucide-react'
 
 import { useConversationList, useCurrentConversationId, useCreateConversation, useSelectConversation } from '../stores/selectors'
 import { useI18n } from '../i18n'
@@ -18,6 +18,7 @@ interface SidebarProps {
   onOpenForeshadowingTracker: () => void
   onOpenPatternDashboard: () => void
   onOpenSessionAnalytics: () => void
+  onOpenAnalysis: () => void
   onOpenEvaluationDrillDown: () => void
   onOpenCharacterRelationships: () => void
 }
@@ -33,6 +34,7 @@ export const Sidebar = React.memo(function Sidebar({
   onOpenForeshadowingTracker,
   onOpenPatternDashboard,
   onOpenSessionAnalytics,
+  onOpenAnalysis,
   onOpenEvaluationDrillDown,
   onOpenCharacterRelationships,
 }: SidebarProps) {
@@ -243,6 +245,10 @@ export const Sidebar = React.memo(function Sidebar({
         <button onClick={onOpenSessionAnalytics} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Analytics" type="button">
           <PieChart size={18} />
           {!collapsed && <span className="text-sm font-medium">Analytics</span>}
+        </button>
+        <button onClick={onOpenAnalysis} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="智能分析" type="button">
+          <Brain size={18} />
+          {!collapsed && <span className="text-sm font-medium">智能分析</span>}
         </button>
         <button onClick={onOpenEvaluationDrillDown} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Evaluation" type="button">
           <Scaling size={18} />
