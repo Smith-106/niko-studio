@@ -82,13 +82,13 @@ jobs:
         working-directory: src-ts
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-xml
           path: src-ts/coverage/cobertura-coverage.xml
 
       - name: Upload integration report artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vitest-integration-report
           path: vitest-integration.xml
@@ -158,7 +158,7 @@ jobs:
         working-directory: desktop
 
       - name: Upload desktop test report artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-vitest-report
           path: desktop/test-results/vitest.junit.xml
@@ -200,7 +200,7 @@ jobs:
           python scripts/check_authority_alignment.py > authority-alignment.json
 
       - name: Upload authority alignment artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: authority-alignment-report
           path: authority-alignment.json
@@ -302,14 +302,14 @@ jobs:
 
       - name: Upload desktop packaging dry-run artifact (advisory lane)
         if: ${{ hashFiles('desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe') != '' }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-packaging-dry-run
           path: desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe
 
       - name: Upload desktop packaging advisory log
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-packaging-advisory-log
           path: desktop/desktop-packaging-advisory.log
@@ -554,7 +554,7 @@ jobs:
 
       - name: Upload cargo-audit report artifact
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: cargo-audit-report
           path: desktop/src-tauri/cargo-audit-report.json
@@ -656,7 +656,7 @@ jobs:
 
       - name: Upload packaged-app-smoke report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: packaged-app-smoke-report
           path: .workflow/evidence/release/packaged-app-smoke.json
@@ -689,7 +689,7 @@ jobs:
 
       - name: Upload benchmark report artifact
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-report
           path: src-ts/tests/benchmark/
