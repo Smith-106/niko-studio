@@ -1,0 +1,57 @@
+{
+  "summary": "Enhance niko-studio's writing analysis with principles from 54 writing craft books, 4 suspense learning paths, and 5 volumes of Chinese web novel trend research. Three tasks: enhance suspense-analyzer with Bell/蔡骏/爽点 methods, create reader-satisfaction-analyzer for web novel optimization, enhance foreshadowing with fair-play rules and information asymmetry.",
+  "approach": "Three tasks in two waves. Wave 1 enhances suspense-analyzer and creates reader-satisfaction-analyzer (parallel, independent). Wave 2 enhances foreshadowing (uses concepts from both Wave 1 tasks). All changes are additive extensions to existing modules.",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003"],
+  "task_count": 3,
+  "complexity": "medium",
+  "estimated_time": "2-3 hours",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "label": "Core Enhancement",
+      "tasks": ["TASK-001", "TASK-002"],
+      "rationale": "Parallel — suspense enhancement and reader satisfaction are independent"
+    },
+    {
+      "wave": 2,
+      "label": "Foreshadow Enhancement",
+      "tasks": ["TASK-003"],
+      "rationale": "Uses information asymmetry concepts from both Wave 1 tasks"
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "chapters → [suspense-analyzer+] → structure_score + satisfaction_density\n              → [reader-satisfaction-analyzer] → hook_score + rhythm_score\n              → [foreshadowing+] → fair_play_score + info_asymmetry",
+    "stages": [
+      "Enhanced suspense-analyzer checks Bell三幕结构, 蔡骏设局-解局, and 爽点密度 alongside existing Frey pillars",
+      "New reader-satisfaction-analyzer provides 爽点密度检测, 章节钩子评分, and 期待-延迟-释放节奏分析",
+      "Enhanced foreshadowing adds 公平线索规则, 信息不对称度, and 兑现间隔建议"
+    ]
+  },
+
+  "design_decisions": [
+    {
+      "decision": "Extend existing suspense-analyzer rather than create separate structure checker",
+      "reason": "Suspense and structure are tightly coupled — Bell三幕 integrates with Frey pillars naturally"
+    },
+    {
+      "decision": "Create new reader-satisfaction-analyzer as standalone module",
+      "reason": "Reader satisfaction is a distinct concern from suspense analysis, especially for web novels"
+    },
+    {
+      "decision": "Enhance foreshadowing in Wave 2 rather than Wave 1",
+      "reason": "Information asymmetry scoring benefits from suspense and satisfaction patterns defined first"
+    }
+  ],
+
+  "_metadata": {
+    "timestamp": "2026-05-07T03:35:00+08:00",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "enhancement",
+    "schema_version": "2.0",
+    "git_commit": "78c3761"
+  }
+}

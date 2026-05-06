@@ -136,6 +136,7 @@ export {
 export * from './foreshadowing';
 export * from './narrative-voice';
 export * from './premise-validator';
+export * from './reader-satisfaction-analyzer';
 export * from './scene-coherence';
 export * from './style-system';
 export * from './suspense-analyzer';

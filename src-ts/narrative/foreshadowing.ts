@@ -811,4 +811,215 @@ export class EnhancedForeshadowingManager extends ForeshadowingManager {
     return recommendations;
   }
 
+  // ============================================================
+  // M13: \u516C\u5E73\u7EBF\u7D22\u89C4\u5219 + \u4FE1\u606F\u4E0D\u5BF9\u79F0\u5EA6 + \u5151\u73B0\u95F4\u9694
+  // ============================================================
+
+  /**
+   * Check fair-play clue rules (\u672C\u683C\u63A8\u7406 fair-play principle):
+   * All critical clues must be planted before the reveal, and
+   * the reader must have enough information to solve the mystery.
+   */
+  checkFairPlayRules(): FairPlayReport {
+    const foreshadows = Array.from(this.foreshadows.values());
+    const harvested = foreshadows.filter(f => f.state === ForeshadowState.HARVESTED);
+    const planted = foreshadows.filter(f => f.state === ForeshadowState.PLANTED);
+
+    const violations: string[] = [];
+    const passed: string[] = [];
+
+    for (const f of harvested) {
+      if (f.hints.length === 0) {
+        violations.push(`"${f.description}" \u88AB\u56DE\u6536\u4F46\u7F3A\u5C11\u4EFB\u4F55\u6697\u793A\u2014\u2014\u8BFB\u8005\u65E0\u6CD5\u63D0\u524D\u63A8\u7406`);
+      } else {
+        passed.push(`"${f.description}" \u6709${f.hints.length}\u4E2A\u6697\u793A\uFF0C\u516C\u5E73\u7EBF\u7D22\u89C4\u5219\u6EE1\u8DB3`);
+      }
+    }
+
+    const highImportanceUnresolved = planted.filter(f => f.importance >= 7);
+    if (highImportanceUnresolved.length > 3) {
+      violations.push(`\u6709${highImportanceUnresolved.length}\u4E2A\u9AD8\u91CD\u8981\u6027\u4F0F\u7B14\u672A\u56DE\u6536\uFF0C\u53EF\u80FD\u9020\u6210\u7EBF\u7D22\u8FC7\u8F7D`);
+    }
+
+    const fairPlayScore = harvested.length > 0
+      ? (passed.length / harvested.length) * 100
+      : 100;
+
+    return {
+      violations,
+      passed,
+      fairPlayScore,
+      harvestedWithClues: passed.length,
+      harvestedWithoutClues: violations.filter(v => v.includes('\u7F3A\u5C11')).length,
+    };
+  }
+
+  /**
+   * Analyze information asymmetry between reader and characters.
+   * Measures how much the reader knows vs how much characters know
+   * at each point \u2014 key for suspense and dramatic irony.
+   */
+  analyzeInformationAsymmetry(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): InformationAsymmetryReport {
+    const timeline: AsymmetryPoint[] = [];
+
+    const readerOnlyPatterns = [
+      { keyword: '\u5176\u5B9E', label: '\u8BFB\u8005\u77E5/\u89D2\u8272\u4E0D\u77E5' },
+      { keyword: '\u6697\u5730\u91CC', label: '\u8BFB\u8005\u77E5/\u89D2\u8272\u4E0D\u77E5' },
+      { keyword: '\u5B9E\u9645\u4E0A', label: '\u8BFB\u8005\u77E5/\u89D2\u8272\u4E0D\u77E5' },
+    ];
+
+    const characterOnlyPatterns = [
+      { keyword: '\u79D8\u5BC6', label: '\u89D2\u8272\u77E5/\u8BFB\u8005\u4E0D\u77E5' },
+      { keyword: '\u9690\u7792', label: '\u89D2\u8272\u77E5/\u8BFB\u8005\u4E0D\u77E5' },
+      { keyword: '\u4E0D\u544A\u8BC9', label: '\u89D2\u8272\u77E5/\u8BFB\u8005\u4E0D\u77E5' },
+    ];
+
+    for (const chapter of chapters) {
+      for (const p of readerOnlyPatterns) {
+        if (chapter.content.includes(p.keyword)) {
+          timeline.push({
+            chapterIndex: chapter.chapterIndex,
+            type: 'reader_ahead',
+            description: p.label,
+            asymmetryLevel: 7,
+          });
+        }
+      }
+
+      for (const p of characterOnlyPatterns) {
+        if (chapter.content.includes(p.keyword)) {
+          timeline.push({
+            chapterIndex: chapter.chapterIndex,
+            type: 'character_ahead',
+            description: p.label,
+            asymmetryLevel: 5,
+          });
+        }
+      }
+    }
+
+    const readerAhead = timeline.filter(t => t.type === 'reader_ahead').length;
+    const characterAhead = timeline.filter(t => t.type === 'character_ahead').length;
+    const balance = readerAhead > 0 && characterAhead > 0
+      ? Math.min(readerAhead, characterAhead) / Math.max(readerAhead, characterAhead)
+      : 0;
+
+    const overallAsymmetry = timeline.length > 0
+      ? timeline.reduce((s, t) => s + t.asymmetryLevel, 0) / timeline.length
+      : 0;
+
+    const suggestions: string[] = [];
+    if (timeline.length === 0) {
+      suggestions.push('\u672A\u68C0\u6D4B\u5230\u4FE1\u606F\u4E0D\u5BF9\u79F0\uFF0C\u8BFB\u8005\u548C\u89D2\u8272\u638C\u63E1\u76F8\u540C\u4FE1\u606F\u2014\u2014\u7F3A\u5C11\u620F\u5267\u6027\u53CD\u8BBD\u6216\u60AC\u5FF5');
+    }
+    if (readerAhead > characterAhead * 3) {
+      suggestions.push('\u8BFB\u8005\u8FDC\u6BD4\u89D2\u8272\u77E5\u9053\u5F97\u591A\uFF0C\u8003\u8651\u589E\u52A0\u89D2\u8272\u89C6\u89D2\u7684\u9650\u5236\u6765\u5236\u9020\u7D27\u5F20\u611F');
+    }
+    if (characterAhead > readerAhead * 3) {
+      suggestions.push('\u89D2\u8272\u77E5\u9053\u592A\u591A\u8BFB\u8005\u4E0D\u77E5\u9053\u7684\uFF0C\u53EF\u80FD\u5728\u63ED\u79D8\u65F6\u7F3A\u4E4F\u94FA\u57AB');
+    }
+
+    return {
+      timeline,
+      readerAheadCount: readerAhead,
+      characterAheadCount: characterAhead,
+      balanceScore: balance * 10,
+      overallAsymmetry,
+      suggestions,
+    };
+  }
+
+  /**
+   * Suggest optimal harvest intervals for planted foreshadows.
+   * Based on importance and elapsed time.
+   */
+  suggestHarvestIntervals(currentSceneIndex: number): HarvestSuggestion[] {
+    const foreshadows = Array.from(this.foreshadows.values());
+    const pending = foreshadows.filter(f => f.state !== ForeshadowState.HARVESTED);
+
+    return pending.map(f => {
+      const plantedAt = parseInt(f.plantedAt.replace(/\D/g, ''), 10) || 0;
+      const elapsedScenes = Math.max(currentSceneIndex - plantedAt, 0);
+
+      let urgency: 'low' | 'medium' | 'high' | 'overdue';
+      let maxScenes: number;
+
+      if (f.importance >= 8) {
+        maxScenes = 10;
+      } else if (f.importance >= 5) {
+        maxScenes = 20;
+      } else {
+        maxScenes = 30;
+      }
+
+      if (elapsedScenes > maxScenes) {
+        urgency = 'overdue';
+      } else if (elapsedScenes > maxScenes * 0.7) {
+        urgency = 'high';
+      } else if (elapsedScenes > maxScenes * 0.4) {
+        urgency = 'medium';
+      } else {
+        urgency = 'low';
+      }
+
+      return {
+        foreshadowId: f.id,
+        description: f.description,
+        importance: f.importance,
+        elapsedScenes,
+        maxRecommendedScenes: maxScenes,
+        urgency,
+        hintCount: f.hints.length,
+        suggestion: urgency === 'overdue'
+          ? `"${f.description}" \u5DF2\u8D85\u8FC7\u5EFA\u8BAE\u56DE\u6536\u65F6\u95F4(${elapsedScenes}/${maxScenes}\u573A\u666F)\uFF0C\u5E94\u5C3D\u5FEB\u56DE\u6536`
+          : urgency === 'high'
+            ? `"${f.description}" \u63A5\u8FD1\u5EFA\u8BAE\u56DE\u6536\u65F6\u95F4(${elapsedScenes}/${maxScenes})\uFF0C\u53EF\u5F00\u59CB\u51C6\u5907\u56DE\u6536`
+            : `"${f.description}" \u5C1A\u5728\u5408\u7406\u7B49\u5F85\u671F(${elapsedScenes}/${maxScenes})`,
+      };
+    }).sort((a, b) => {
+      const urgencyOrder = { overdue: 0, high: 1, medium: 2, low: 3 };
+      return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+    });
+  }
+}
+
+// ============================================================
+// M13 Types
+// ============================================================
+
+export interface FairPlayReport {
+  violations: string[];
+  passed: string[];
+  fairPlayScore: number;
+  harvestedWithClues: number;
+  harvestedWithoutClues: number;
+}
+
+export interface AsymmetryPoint {
+  chapterIndex: number;
+  type: 'reader_ahead' | 'character_ahead';
+  description: string;
+  asymmetryLevel: number;
+}
+
+export interface InformationAsymmetryReport {
+  timeline: AsymmetryPoint[];
+  readerAheadCount: number;
+  characterAheadCount: number;
+  balanceScore: number;
+  overallAsymmetry: number;
+  suggestions: string[];
+}
+
+export interface HarvestSuggestion {
+  foreshadowId: string;
+  description: string;
+  importance: number;
+  elapsedScenes: number;
+  maxRecommendedScenes: number;
+  urgency: 'low' | 'medium' | 'high' | 'overdue';
+  hintCount: number;
+  suggestion: string;
 }
