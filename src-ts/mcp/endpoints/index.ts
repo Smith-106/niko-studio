@@ -117,3 +117,18 @@ export {
   probeMcpServiceHealth,
   setMcpServiceState,
 } from './mcp-admin';
+
+export {
+  reviseMultiPassEndpoint,
+} from './m10-revision';
+
+export {
+  styleExtractEndpoint,
+  styleProfileEndpoint,
+  styleApplyEndpoint,
+} from './m10-style';
+
+export {
+  crossChapterConsistencyEndpoint,
+  contextAwareSuggestionsEndpoint,
+} from './m10-consistency';

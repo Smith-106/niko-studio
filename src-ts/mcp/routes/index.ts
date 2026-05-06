@@ -2,6 +2,7 @@ import type { GatewayRoute, GatewayRouteMatch } from '../gateway-route-types';
 import { adminRoutes } from './admin';
 import { agentRoutes } from './agents';
 import { contentRoutes } from './content';
+import { m10Routes } from './m10';
 import { platformRoutes } from './platform';
 import { workflowRoutes } from './workflow';
 
@@ -12,6 +13,7 @@ export function createGatewayRoutes(): GatewayRoute[] {
     ...agentRoutes,
     ...workflowRoutes,
     ...adminRoutes,
+    ...m10Routes,
   ];
 }
 
