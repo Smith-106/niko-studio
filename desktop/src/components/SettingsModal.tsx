@@ -1416,6 +1416,10 @@ export function SettingsModal({
               <section>
                 <h3 className="text-sm font-semibold mb-4">{t.styleProfileTitle}</h3>
                 <div className="space-y-3">
+                  {!useAppStore.getState().currentProjectId ? (
+                    <p className="text-xs text-gray-500 dark:text-dark-text-muted">打开一个项目后，即可提取和查看该项目的写作风格档案。</p>
+                  ) : (
+                  <>
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
@@ -1468,6 +1472,8 @@ export function SettingsModal({
                         </div>
                       </div>
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
               </section>

@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react'
+import { ErrorBoundary } from './ErrorBoundary'
 
 import type { SettingsSectionId } from '../hooks/useAppPanelOrchestration'
 import type { RightPanelType, WritingHelperDraftState, WritingHelperEvaluationHandoff } from '../hooks/useAppUiPersistence'
@@ -177,7 +178,11 @@ export function AppRightPanels({
       {activeRightPanel === 'sessionAnalytics' && <SessionAnalyticsPanel onClose={closeRightPanel} />}
       {activeRightPanel === 'evaluationDrillDown' && <EvaluationDrillDownPanel onClose={closeRightPanel} />}
       {activeRightPanel === 'characterRelationships' && <CharacterRelationshipsPanel onClose={closeRightPanel} />}
-      {activeRightPanel === 'analysis' && <AnalysisPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'analysis' && (
+        <ErrorBoundary fallback={<div className="p-4 text-dark-text-muted text-sm">分析面板加载失败，请关闭后重试。</div>}>
+          <AnalysisPanel onClose={closeRightPanel} />
+        </ErrorBoundary>
+      )}
       {activeRightPanel === 'templateBrowser' && <TemplateBrowserPanel onClose={closeRightPanel} />}
       {activeRightPanel === 'workflowEditor' && <WorkflowEditorPanel onClose={closeRightPanel} />}
     </Suspense>

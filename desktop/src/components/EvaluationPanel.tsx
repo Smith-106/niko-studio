@@ -1392,6 +1392,12 @@ export function EvaluationPanel({
                 <h4 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2">
                   {isZh ? '多轮修订' : 'Multi-Pass Revision'}
                 </h4>
+                {!content.trim() ? (
+                  <p className="text-xs text-gray-400 dark:text-dark-text-muted">
+                    {isZh ? '加载文档后即可使用多轮修订功能，自动迭代提升写作质量。' : 'Load a document to use multi-pass revision — automatically iterate to improve writing quality.'}
+                  </p>
+                ) : (
+                <>
                 <div className="flex items-center gap-3 mb-2">
                   <label className="text-xs text-gray-600 dark:text-dark-text-secondary">
                     {isZh ? '目标分数' : 'Target Score'}
@@ -1424,12 +1430,14 @@ export function EvaluationPanel({
                     {multiPassRunning ? (isZh ? '修订中...' : 'Revising...') : (isZh ? '开始多轮修订' : 'Run Multi-Pass')}
                   </button>
                 </div>
-                {multiPassResult && (
-                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary bg-gray-50 dark:bg-dark-card rounded p-2">
-                    <div>{isZh ? '轮次' : 'Iterations'}: {multiPassResult.iterations}</div>
-                    <div>{isZh ? '初始分数' : 'Initial Score'}: {multiPassResult.initialScore.toFixed(1)} → {isZh ? '最终分数' : 'Final Score'}: {multiPassResult.finalScore.toFixed(1)}</div>
-                    <div>{isZh ? '结束原因' : 'Reason'}: {multiPassResult.reason}</div>
-                  </div>
+	                {multiPassResult && (
+	                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary bg-gray-50 dark:bg-dark-card rounded p-2">
+	                    <div>{isZh ? '轮次' : 'Iterations'}: {multiPassResult.iterations}</div>
+	                    <div>{isZh ? '初始分数' : 'Initial Score'}: {multiPassResult.initialScore.toFixed(1)} → {isZh ? '最终分数' : 'Final Score'}: {multiPassResult.finalScore.toFixed(1)}</div>
+	                    <div>{isZh ? '结束原因' : 'Reason'}: {multiPassResult.reason}</div>
+	                  </div>
+	                )}
+                </>
                 )}
               </div>
 

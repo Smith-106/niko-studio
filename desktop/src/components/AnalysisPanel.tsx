@@ -41,10 +41,12 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
   const chapters = currentProjectId ? getChaptersForProject(currentProjectId) : []
   const [crossChapterResult, setCrossChapterResult] = useState<Record<string, unknown> | null>(null)
   const [crossChapterLoading, setCrossChapterLoading] = useState(false)
+  const [crossChapterError, setCrossChapterError] = useState<string | null>(null)
 
   const handleCrossChapterConsistency = useCallback(async () => {
     if (chapters.length < 2) return
     setCrossChapterLoading(true)
+    setCrossChapterError(null)
     try {
       const chapterData = chapters.map((c, i) => ({
         chapterNumber: i + 1,
@@ -52,9 +54,13 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
         content: '',
       }))
       const res = await runCrossChapterConsistency({ chapters: chapterData })
-      setCrossChapterResult(res.success && res.data ? res.data : null)
+      if (res.success && res.data) {
+        setCrossChapterResult(res.data)
+      } else {
+        setCrossChapterError(res.error || '检测失败，请重试')
+      }
     } catch {
-      setCrossChapterResult(null)
+      setCrossChapterError('网络错误，请检查连接后重试')
     } finally {
       setCrossChapterLoading(false)
     }
@@ -113,9 +119,13 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
       </div>
 
       <div className="p-4 flex-shrink-0">
+        {chapters.length === 0 ? (
+          <p className="text-center text-dark-text-muted text-xs py-2">打开包含章节的项目后即可使用智能分析功能</p>
+        ) : (
+        <>
         <button
           onClick={handleAnalyze}
-          disabled={isAnalyzing || chapters.length === 0}
+          disabled={isAnalyzing}
           className="w-full py-2 px-4 bg-primary-cta text-white text-sm font-medium rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
         >
           {isAnalyzing ? (
@@ -128,6 +138,8 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
           )}
         </button>
         {isAnalyzing && <ProgressBar value={(analysisProgress.processed / Math.max(analysisProgress.total, 1)) * 100} />}
+        </>
+        )}
       </div>
 
       {analysisError && (
@@ -153,8 +165,23 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
             >
               {crossChapterLoading ? '检测中...' : `跨章一致性检测 (${chapters.length} 章)`}
             </button>
+            {crossChapterError && (
+              <div className="mt-2 flex items-center gap-2">
+                <p className="text-xs text-danger-500">{crossChapterError}</p>
+                <button
+                  onClick={() => { void handleCrossChapterConsistency() }}
+                  className="text-xs text-indigo-400 hover:text-indigo-300"
+                >
+                  重试
+                </button>
+              </div>
+            )}
             {chapters.length < 2 && (
-              <p className="text-xs text-dark-text-muted mt-1">需要至少 2 个章节才能执行跨章检测</p>
+              <p className="text-xs text-dark-text-muted mt-1">
+                {chapters.length === 0
+                  ? '在项目中添加章节后，即可启用跨章一致性检测、时间线分析和角色特征漂移检测。'
+                  : '需要至少 2 个章节才能执行跨章检测'}
+              </p>
             )}
             {crossChapterResult && (
               <div className="mt-3 space-y-2">
