@@ -6,6 +6,7 @@ import {
   type RecommendationPayload,
 } from '../api/client'
 import { processWritingHelper } from '../api/writing'
+import { RevisionOrchestrator } from '../services/revisionOrchestrator'
 import { useAppStore } from '../stores/appStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useI18n, type Translations } from '../i18n'
@@ -357,6 +358,12 @@ export function EvaluationPanel({
     tone: 'error' | 'success' | 'info'
     text: string
   } | null>(null)
+  const [multiPassTarget, setMultiPassTarget] = useState(8.0)
+  const [multiPassMaxIter, setMultiPassMaxIter] = useState(5)
+  const [multiPassRunning, setMultiPassRunning] = useState(false)
+  const [multiPassResult, setMultiPassResult] = useState<{
+    iterations: number; initialScore: number; finalScore: number; reason: string
+  } | null>(null)
   const activeEvaluationSource = availableEvaluationSources.find((source) => source.kind === selectedSourceKind)
     ?? availableEvaluationSources[0]
     ?? null
@@ -629,6 +636,29 @@ export function EvaluationPanel({
     return provider
       ? { api_key: provider.apiKey, base_url: provider.baseUrl, model: provider.defaultModel, provider: provider.id }
       : {}
+  }
+
+  const handleMultiPassRevision = async () => {
+    if (!content.trim()) return
+    setMultiPassRunning(true)
+    setMultiPassResult(null)
+    try {
+      const orchestrator = new RevisionOrchestrator({
+        targetScore: multiPassTarget,
+        maxIterations: multiPassMaxIter,
+      })
+      const result = await orchestrator.run(content)
+      setMultiPassResult({
+        iterations: result.iterations,
+        initialScore: result.initialScore,
+        finalScore: result.finalScore,
+        reason: result.reason,
+      })
+    } catch {
+      setMultiPassResult({ iterations: 0, initialScore: 0, finalScore: 0, reason: 'error' })
+    } finally {
+      setMultiPassRunning(false)
+    }
   }
 
   const buildRevisionInstruction = (suggestion: RecommendationPayload) => (
@@ -1354,6 +1384,51 @@ export function EvaluationPanel({
                     <div>{t.evaluationQualityCheckStyle}: {qualityCheckResult.styleScore}</div>
                     <div>{t.evaluationQualityCheckLogic}: {qualityCheckResult.logicScore}</div>
                     <div className="mt-1">{t.evaluationQualityCheckFeedback}: {qualityCheckResult.feedback}</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-dark-border pt-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-2">
+                  {isZh ? '多轮修订' : 'Multi-Pass Revision'}
+                </h4>
+                <div className="flex items-center gap-3 mb-2">
+                  <label className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                    {isZh ? '目标分数' : 'Target Score'}
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      step={0.5}
+                      value={multiPassTarget}
+                      onChange={(e) => setMultiPassTarget(parseFloat(e.target.value) || 8)}
+                      className="ml-1 w-16 px-1 py-0.5 text-xs border rounded bg-white dark:bg-dark-bg dark:border-dark-border dark:text-dark-text"
+                    />
+                  </label>
+                  <label className="text-xs text-gray-600 dark:text-dark-text-secondary">
+                    {isZh ? '最大轮次' : 'Max Iterations'}
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={multiPassMaxIter}
+                      onChange={(e) => setMultiPassMaxIter(parseInt(e.target.value) || 5)}
+                      className="ml-1 w-16 px-1 py-0.5 text-xs border rounded bg-white dark:bg-dark-bg dark:border-dark-border dark:text-dark-text"
+                    />
+                  </label>
+                  <button
+                    onClick={() => { void handleMultiPassRevision() }}
+                    disabled={multiPassRunning || !content.trim()}
+                    className="px-3 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
+                  >
+                    {multiPassRunning ? (isZh ? '修订中...' : 'Revising...') : (isZh ? '开始多轮修订' : 'Run Multi-Pass')}
+                  </button>
+                </div>
+                {multiPassResult && (
+                  <div className="text-xs text-gray-600 dark:text-dark-text-secondary bg-gray-50 dark:bg-dark-card rounded p-2">
+                    <div>{isZh ? '轮次' : 'Iterations'}: {multiPassResult.iterations}</div>
+                    <div>{isZh ? '初始分数' : 'Initial Score'}: {multiPassResult.initialScore.toFixed(1)} → {isZh ? '最终分数' : 'Final Score'}: {multiPassResult.finalScore.toFixed(1)}</div>
+                    <div>{isZh ? '结束原因' : 'Reason'}: {multiPassResult.reason}</div>
                   </div>
                 )}
               </div>

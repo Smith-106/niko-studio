@@ -167,6 +167,7 @@
   "settings.retrieval": "检索设置",
   "settings.templates": "模板库",
   "settings.llmConfig": "LLM 模型配置",
+  "settings.styleProfileTitle": "风格档案",
   "settings.uiSettings": "界面设置",
   "settings.backendService": "连接与本地服务",
   "settings.diagnostics": "连接帮助",

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { RightPanelType } from './useAppUiPersistence'
 
-export type SettingsSectionId = 'backend' | 'workflow' | 'retrieval' | 'templates' | 'models' | 'ui' | 'diagnostics'
+export type SettingsSectionId = 'backend' | 'workflow' | 'retrieval' | 'templates' | 'models' | 'style' | 'ui' | 'diagnostics'
 type SettingsReturnPanel = Extract<RightPanelType, 'writingHelper' | 'textOptimizer' | 'automation'>
 
 interface SettingsReturnRoute {

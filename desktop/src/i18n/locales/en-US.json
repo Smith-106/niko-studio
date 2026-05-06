@@ -167,6 +167,7 @@
   "settings.retrieval": "Retrieval settings",
   "settings.templates": "Template Library",
   "settings.llmConfig": "LLM Configuration",
+  "settings.styleProfileTitle": "Style Profile",
   "settings.uiSettings": "UI Settings",
   "settings.backendService": "Connection & local service",
   "settings.diagnostics": "Connection help",

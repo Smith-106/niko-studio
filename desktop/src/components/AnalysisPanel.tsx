@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
 import type { AnalysisModule } from '../api/intelligence'
+import { runCrossChapterConsistency } from '../api/m10-apis'
 import { AccordionWrapper, IntelligenceBadge, MetricValue, ProgressBar, SectionHeader } from './intelligence'
 
 interface PanelProps {
@@ -38,6 +39,26 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
   } = useAppStore()
 
   const chapters = currentProjectId ? getChaptersForProject(currentProjectId) : []
+  const [crossChapterResult, setCrossChapterResult] = useState<Record<string, unknown> | null>(null)
+  const [crossChapterLoading, setCrossChapterLoading] = useState(false)
+
+  const handleCrossChapterConsistency = useCallback(async () => {
+    if (chapters.length < 2) return
+    setCrossChapterLoading(true)
+    try {
+      const chapterData = chapters.map((c, i) => ({
+        chapterNumber: i + 1,
+        title: c.title || '',
+        content: '',
+      }))
+      const res = await runCrossChapterConsistency({ chapters: chapterData })
+      setCrossChapterResult(res.success && res.data ? res.data : null)
+    } catch {
+      setCrossChapterResult(null)
+    } finally {
+      setCrossChapterLoading(false)
+    }
+  }, [chapters])
 
   useEffect(() => {
     if (currentProjectId) {
@@ -120,6 +141,51 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
           <p className="text-center text-dark-text-muted text-sm">
             {chapters.length === 0 ? '暂无章节可分析' : '点击按钮开始分析'}
           </p>
+        )}
+
+        {activeTab === 'consistency' && (
+          <div className="mt-4 border-t border-dark-border pt-4">
+            <SectionHeader title="跨章一致性检测" />
+            <button
+              onClick={() => { void handleCrossChapterConsistency() }}
+              disabled={crossChapterLoading || chapters.length < 2}
+              className="w-full py-2 px-4 bg-indigo-600 text-white text-xs font-medium rounded hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {crossChapterLoading ? '检测中...' : `跨章一致性检测 (${chapters.length} 章)`}
+            </button>
+            {chapters.length < 2 && (
+              <p className="text-xs text-dark-text-muted mt-1">需要至少 2 个章节才能执行跨章检测</p>
+            )}
+            {crossChapterResult && (
+              <div className="mt-3 space-y-2">
+                {((crossChapterResult.nameConflicts || []) as Array<Record<string, unknown>>).length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-yellow-400 mb-1">命名冲突</p>
+                    {((crossChapterResult.nameConflicts || []) as Array<Record<string, unknown>>).map((nc, i) => (
+                      <div key={i} className="text-xs text-dark-text-muted bg-dark-card rounded p-2 mb-1">
+                        <IntelligenceBadge variant="warning">{String(nc.similarity || '')}</IntelligenceBadge>
+                        {' '}{String(nc.name1 || '')} ↔ {String(nc.name2 || '')}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {((crossChapterResult.unresolvedThreads || []) as Array<Record<string, unknown>>).length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-orange-400 mb-1">未解决线索</p>
+                    {((crossChapterResult.unresolvedThreads || []) as Array<Record<string, unknown>>).map((ut, i) => (
+                      <div key={i} className="text-xs text-dark-text-muted bg-dark-card rounded p-2 mb-1">
+                        第 {String(ut.introducedInChapter || '?')} 章引入: {String(ut.description || '')}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!((crossChapterResult.nameConflicts || []) as unknown[]).length &&
+                 !((crossChapterResult.unresolvedThreads || []) as unknown[]).length && (
+                  <p className="text-xs text-green-400">未发现跨章一致性问题</p>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

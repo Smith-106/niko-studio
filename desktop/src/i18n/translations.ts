@@ -637,6 +637,16 @@ export interface Translations {
   optimizerFeatureNatural: string
   sidebarTextOptimizer: string
 
+  styleProfileTitle: string
+  styleProfileExtract: string
+  styleProfileExtracting: string
+  styleProfileNotFound: string
+  styleProfileAvgSentenceLen: string
+  styleProfileVocabRichness: string
+  styleProfileDialogueRatio: string
+  styleProfileTense: string
+  styleProfilePOV: string
+
   uiSettings: string
   theme: string
   themeLight: string
@@ -1594,6 +1604,16 @@ export const translations: Record<Language, Translations> = {
     optimizerFeatureNatural: '自然语言',
     sidebarTextOptimizer: 'AI 文本优化',
 
+    styleProfileTitle: '风格档案',
+    styleProfileExtract: '提取风格',
+    styleProfileExtracting: '提取中...',
+    styleProfileNotFound: '未找到风格档案，请先提取',
+    styleProfileAvgSentenceLen: '平均句长',
+    styleProfileVocabRichness: '词汇丰富度',
+    styleProfileDialogueRatio: '对话占比',
+    styleProfileTense: '时态偏好',
+    styleProfilePOV: '叙事视角',
+
     uiSettings: '界面设置',
     theme: '主题',
     themeLight: '浅色',
@@ -2544,6 +2564,16 @@ export const translations: Record<Language, Translations> = {
     optimizerFeatureDetection: 'Anti-Detection',
     optimizerFeatureNatural: 'Natural Language',
     sidebarTextOptimizer: 'Text Optimizer',
+
+    styleProfileTitle: 'Style Profile',
+    styleProfileExtract: 'Extract Style',
+    styleProfileExtracting: 'Extracting...',
+    styleProfileNotFound: 'No style profile found. Extract first.',
+    styleProfileAvgSentenceLen: 'Avg Sentence Length',
+    styleProfileVocabRichness: 'Vocabulary Richness',
+    styleProfileDialogueRatio: 'Dialogue Ratio',
+    styleProfileTense: 'Tense Preference',
+    styleProfilePOV: 'Narrative POV',
 
     uiSettings: 'UI Settings',
     theme: 'Theme',

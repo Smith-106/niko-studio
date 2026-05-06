@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, Save, RotateCcw, Eye, EyeOff, Check, AlertCircle, Download, Upload, Settings, ChevronDown, ChevronRight } from 'lucide-react'
 import type { BackendConfig } from '../api/config'
 import { isTauriRuntime, syncGatewayBaseOverride } from '../api/transport'
+import { getStyleProfile } from '../api/m10-apis'
 import { useSettingsStore, QUALITY_GOAL_METRIC_FIELDS, QUALITY_PRESET_TEMPLATES, QualityGoalsSettings, QualityPresetId, ContextType, RetrievalSearchMode, WorkflowBackendMode, SendShortcut } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
 import { useCheckBackend } from '../stores/selectors'
@@ -92,6 +93,7 @@ export function SettingsModal({
     { id: 'retrieval', label: t.settingsRetrieval },
     { id: 'templates', label: t.templateLibraryTitle },
     { id: 'models', label: t.llmConfig },
+    { id: 'style', label: t.styleProfileTitle },
     { id: 'ui', label: t.uiSettings },
     { id: 'backend', label: t.backendService },
     { id: 'diagnostics', label: t.settingsDiagnostics },
@@ -101,6 +103,9 @@ export function SettingsModal({
   const isAdvancedSection = (sectionId: SettingsSectionId) => sectionId === 'backend' || sectionId === 'diagnostics'
 
   const [activeSection, setActiveSection] = useState<SettingsSectionId>('workflow')
+  const [styleProfileData, setStyleProfileData] = useState<Record<string, unknown> | null>(null)
+  const [styleProfileLoading, setStyleProfileLoading] = useState(false)
+  const [styleProfileError, setStyleProfileError] = useState<string | null>(null)
   const [showAdvancedSupport, setShowAdvancedSupport] = useState(false)
   const {
     backendConfigState,
@@ -1405,6 +1410,67 @@ export function SettingsModal({
                   </div>
                 </section>
               </>
+            </div>
+
+            <div className={activeSection === 'style' ? 'block' : 'hidden'}>
+              <section>
+                <h3 className="text-sm font-semibold mb-4">{t.styleProfileTitle}</h3>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const projectId = useAppStore.getState().currentProjectId || ''
+                        if (!projectId) return
+                        setStyleProfileLoading(true)
+                        setStyleProfileError(null)
+                        void getStyleProfile(projectId)
+                          .then((res) => {
+                            if (res.success && res.data) {
+                              setStyleProfileData(res.data)
+                            } else {
+                              setStyleProfileError(t.styleProfileNotFound)
+                            }
+                          })
+                          .catch(() => setStyleProfileError(t.styleProfileNotFound))
+                          .finally(() => setStyleProfileLoading(false))
+                      }}
+                      disabled={styleProfileLoading}
+                      className="px-3 py-1.5 text-xs bg-primary-cta text-white rounded hover:opacity-90 disabled:opacity-50"
+                    >
+                      {styleProfileLoading ? t.styleProfileExtracting : t.styleProfileExtract}
+                    </button>
+                  </div>
+                  {styleProfileError && (
+                    <p className="text-xs text-danger-500">{styleProfileError}</p>
+                  )}
+                  {styleProfileData && (
+                    <div className="space-y-2 bg-dark-card rounded p-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="text-xs">
+                          <span className="text-dark-text-muted">{t.styleProfileAvgSentenceLen}:</span>
+                          <span className="ml-1 text-dark-text">{Number(styleProfileData.avgSentenceLength || 0).toFixed(1)}</span>
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-dark-text-muted">{t.styleProfileVocabRichness}:</span>
+                          <span className="ml-1 text-dark-text">{Number(styleProfileData.vocabRichness || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-dark-text-muted">{t.styleProfileDialogueRatio}:</span>
+                          <span className="ml-1 text-dark-text">{Number(styleProfileData.dialogueRatio || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-dark-text-muted">{t.styleProfileTense}:</span>
+                          <span className="ml-1 text-dark-text">{String(styleProfileData.tensePreference || '—')}</span>
+                        </div>
+                        <div className="text-xs col-span-2">
+                          <span className="text-dark-text-muted">{t.styleProfilePOV}:</span>
+                          <span className="ml-1 text-dark-text">{String(styleProfileData.dominantPOV || '—')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
 
             <div className={activeSection === 'ui' ? 'block' : 'hidden'}>
