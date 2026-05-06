@@ -46,10 +46,10 @@
     {
       "id": "M10",
       "name": "Deep Writing Intelligence",
-      "status": "active",
+      "status": "completed",
       "phases": [1]
     }
   ],
   "project": "niko-studio",
-  "last_updated": "2026-05-06T13:30:00+08:00"
+  "last_updated": "2026-05-06T15:42:00+08:00"
 }
