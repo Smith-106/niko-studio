@@ -85,6 +85,10 @@ vi.mock('./components/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
+vi.mock('./components/ProjectSidebar', () => ({
+  ProjectSidebar: () => <aside data-testid="project-sidebar" />,
+}))
+
 vi.mock('./components/ToastContainer', () => ({
   ToastContainer: () => null,
 }))

@@ -1,0 +1,22 @@
+{
+  "passed": [
+    {
+      "test": "runs 5 sequential rounds without unhandled rejections",
+      "notes": "5 sequential rounds completed cleanly"
+    },
+    {
+      "test": "5 rounds complete within 30s total",
+      "notes": "5 rounds finished in 7642ms (under 30s budget)"
+    },
+    {
+      "test": "concurrent two L4 sessions on shared session root preserve isolation",
+      "notes": "two concurrent sessions kept role_analyses arrays distinct"
+    },
+    {
+      "test": "memory check: round 5 state.role_analyses length matches expected role count",
+      "notes": "round 5 role_analyses length=5 matches getDefaultRoles().length=5"
+    }
+  ],
+  "failed": [],
+  "warnings": []
+}

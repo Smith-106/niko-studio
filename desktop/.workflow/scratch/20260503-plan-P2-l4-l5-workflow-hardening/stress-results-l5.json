@@ -1,0 +1,24 @@
+{
+  "passed": [
+    {
+      "test": "executes 3-step chain end-to-end with persistState at each phase boundary",
+      "notes": "decision=APPROVED phase=completed sessionId=0f73ca12-90db-44bb-a9ad-6fe9ad277c7d"
+    },
+    {
+      "test": "resumes cleanly from mid-chain checkpoint",
+      "notes": "pre-seeded phase=planning, resumed=true, final phase=completed, decision=APPROVED"
+    },
+    {
+      "test": "concurrent two L5 sessions do not corrupt each other persistState files",
+      "notes": "two concurrent sessions persisted to distinct files with correct sessionIds (A=concurrent-a-1778059469309, B=concurrent-b-1778059469309)"
+    },
+    {
+      "test": "unhandled rejections are zero across all 3 L5 stress cases",
+      "notes": "0 unhandled rejections across 3 scenarios"
+    }
+  ],
+  "failed": [],
+  "warnings": [
+    "Test 2 simulates interrupt by pre-writing a planning-phase CoordinatorState file rather than killing a real process. Sufficient to exercise _tryResume + loadState resume path; does not detect mid-process state-machine races (FM-3 secondary aspects)."
+  ]
+}

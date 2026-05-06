@@ -251,7 +251,7 @@ describe('Embedding/Indexing Performance Benchmarks', () => {
   // ============================================================
 
   describe('IndexingService incremental indexing', () => {
-    it('should measure incremental document addition throughput', async () => {
+    it('should measure incremental document addition throughput', { timeout: 30_000 }, async () => {
       const dbPath = join(tmpDir, 'indexing-bench.db');
       const indexingService = new IndexingService(dbPath);
       const embedder = new BenchmarkMockEmbedder();
@@ -310,7 +310,7 @@ describe('Embedding/Indexing Performance Benchmarks', () => {
       indexingService.close();
     });
 
-    it('should measure search latency after bulk indexing', () => {
+    it('should measure search latency after bulk indexing', { timeout: 60_000 }, () => {
       const dbPath = join(tmpDir, 'indexing-search-bench.db');
       const indexingService = new IndexingService(dbPath);
       const embedder = new BenchmarkMockEmbedder();

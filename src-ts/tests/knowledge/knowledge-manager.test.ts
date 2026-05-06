@@ -119,7 +119,7 @@ describe('ServiceManager', () => {
       const sm = ServiceManager.getInstance(createServiceConfig());
       await sm.initialize();
       const health = await sm.checkHealth();
-      expect(health).toEqual({});
+      expect(health).toEqual({ embedding_local: false });
     });
 
     it('isHealthy returns false when no providers', async () => {

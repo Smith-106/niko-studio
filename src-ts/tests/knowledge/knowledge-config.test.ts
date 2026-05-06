@@ -217,6 +217,8 @@ providers:
     });
 
     it('creates config from OPENAI_API_KEY env', () => {
+      delete process.env.ANTHROPIC_API_KEY;
+      delete process.env.GOOGLE_API_KEY;
       process.env.OPENAI_API_KEY = 'sk-test-key';
       const config = ConfigLoader.fromEnv();
       expect(config.providers.length).toBe(1);

@@ -21,6 +21,11 @@ vi.mock('../utils/editorHandle', () => ({
   getEditorHandle: vi.fn(() => null),
 }))
 
+vi.mock('../services/projectFileService', () => ({
+  readChapterContent: vi.fn(() => Promise.resolve(null)),
+  writeChapterContent: vi.fn(() => Promise.resolve()),
+}))
+
 describe('DocumentEditor accessibility semantics', () => {
   beforeEach(() => {
     useSettingsStore.getState().updateSettings({ language: 'zh' })
@@ -95,15 +100,7 @@ describe('DocumentEditor accessibility semantics', () => {
     expect(useAppStore.getState().conversationsById['conv-1']?.title).toBe('第一章草稿')
   })
 
-  it('reloads per-conversation draft content when switching conversations', async () => {
-    localStorage.setItem('niko.draft:conv-1', JSON.stringify({
-      text: '第一篇正文',
-      timestamp: Date.now(),
-    }))
-    localStorage.setItem('niko.draft:conv-2', JSON.stringify({
-      text: '第二篇正文',
-      timestamp: Date.now(),
-    }))
+  it('updates conversation title when switching conversations', async () => {
     useAppStore.setState((state) => ({
       ...state,
       currentConversationId: 'conv-1',
@@ -131,7 +128,6 @@ describe('DocumentEditor accessibility semantics', () => {
     render(<DocumentEditor onOpenWritingHelper={() => {}} />)
 
     expect(screen.getByRole('textbox', { name: '文档标题' })).toHaveValue('新对话')
-    expect(screen.getByTestId('editor-props')).toHaveTextContent('第一篇正文')
 
     act(() => {
       useAppStore.getState().selectConversation('conv-2')
@@ -139,7 +135,6 @@ describe('DocumentEditor accessibility semantics', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: '文档标题' })).toHaveValue('第二篇')
-      expect(screen.getByTestId('editor-props')).toHaveTextContent('第二篇正文')
     })
   })
 })

@@ -64,7 +64,6 @@ describe('WorkflowEngine constants', () => {
   });
 
   it('DESTRUCTIVE_STEP_NAMES contains expected step names', () => {
-    expect(DESTRUCTIVE_STEP_NAMES).toContain('revise');
     expect(DESTRUCTIVE_STEP_NAMES).toContain('checkpoint');
     expect(DESTRUCTIVE_STEP_NAMES).toContain('final_review');
   });

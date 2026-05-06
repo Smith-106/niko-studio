@@ -2,9 +2,9 @@
   "session_id": "ralph-20260506-131226",
   "source": "ralph",
   "created_at": "2026-05-06T13:12:26+08:00",
-  "updated_at": "2026-05-06T13:12:26+08:00",
+  "updated_at": "2026-05-06T15:43:30+08:00",
   "intent": "开发M10",
-  "status": "running",
+  "status": "completed",
   "chain_name": "ralph-lifecycle",
   "task_type": "lifecycle",
   "lifecycle_position": "roadmap",
@@ -39,8 +39,8 @@
     { "index": 11, "type": "skill", "skill": "quality-test", "args": "1", "status": "completed", "started_at": "2026-05-06T15:38:00+08:00", "completed_at": "2026-05-06T15:39:30+08:00", "error": null },
     { "index": 12, "type": "decision", "skill": "maestro-ralph", "args": "{\"decision\":\"post-test\",\"retry_count\":0,\"max_retries\":2}", "status": "completed", "started_at": "2026-05-06T15:39:30+08:00", "completed_at": "2026-05-06T15:39:45+08:00", "error": null },
     { "index": 13, "type": "skill", "skill": "maestro-milestone-audit", "args": "", "status": "completed", "started_at": "2026-05-06T15:39:45+08:00", "completed_at": "2026-05-06T15:41:00+08:00", "error": null },
-    { "index": 14, "type": "skill", "skill": "maestro-milestone-complete", "args": "", "status": "pending", "started_at": null, "completed_at": null, "error": null },
-    { "index": 15, "type": "decision", "skill": "maestro-ralph", "args": "{\"decision\":\"post-milestone\"}", "status": "pending", "started_at": null, "completed_at": null, "error": null }
+    { "index": 14, "type": "skill", "skill": "maestro-milestone-complete", "args": "", "status": "completed", "started_at": "2026-05-06T15:41:00+08:00", "completed_at": "2026-05-06T15:43:00+08:00", "error": null },
+    { "index": 15, "type": "decision", "skill": "maestro-ralph", "args": "{\"decision\":\"post-milestone\"}", "status": "completed", "started_at": "2026-05-06T15:43:00+08:00", "completed_at": "2026-05-06T15:43:30+08:00", "error": null }
   ],
   "waves": [],
   "current_step": 4

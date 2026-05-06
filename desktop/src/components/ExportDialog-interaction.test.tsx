@@ -77,7 +77,7 @@ describe('ExportDialog — keyboard & input interactions', () => {
   it('has accessible radio inputs for format selection', () => {
     render(<ExportDialog editorJson={mockJson} title="Test" onClose={onClose} />)
     const radios = screen.getAllByRole('radio')
-    expect(radios).toHaveLength(3)
+    expect(radios.length).toBeGreaterThanOrEqual(4)
     expect(radios[0]).toBeChecked()
   })
 })

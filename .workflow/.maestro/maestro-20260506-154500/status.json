@@ -1,0 +1,19 @@
+{
+  "session_id": "maestro-20260506-154500",
+  "source": "maestro",
+  "created_at": "2026-05-06T15:45:00+08:00",
+  "updated_at": "2026-05-06T15:45:00+08:00",
+  "intent": "批量处理: 修复测试失败 + 补齐M10后端端点 + 规划M11 + 推送远程",
+  "status": "running",
+  "chain_name": "batch-maintenance",
+  "task_type": "batch-execution",
+  "auto_mode": true,
+  "steps": [
+    { "index": 0, "type": "skill", "skill": "fix-desktop-tests", "args": "", "status": "pending", "started_at": null, "completed_at": null, "error": null },
+    { "index": 1, "type": "skill", "skill": "fix-src-ts-tests", "args": "", "status": "pending", "started_at": null, "completed_at": null, "error": null },
+    { "index": 2, "type": "skill", "skill": "create-backend-endpoints", "args": "", "status": "pending", "started_at": null, "completed_at": null, "error": null },
+    { "index": 3, "type": "skill", "skill": "maestro-roadmap", "args": "M11 -y", "status": "pending", "started_at": null, "completed_at": null, "error": null },
+    { "index": 4, "type": "skill", "skill": "git-push", "args": "", "status": "pending", "started_at": null, "completed_at": null, "error": null }
+  ],
+  "current_step": 0
+}

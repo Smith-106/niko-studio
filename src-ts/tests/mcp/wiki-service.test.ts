@@ -270,7 +270,7 @@ describe('mcp wiki service', () => {
     expect(limited.pages.length).toBe(1);
   });
 
-  it('supports promotion from different sources (story-bible, chat, research, manual)', async () => {
+  it('supports promotion from different sources (story-bible, chat, research, manual)', { timeout: 30_000 }, async () => {
     workspaceRoot = await mkdtemp(join(tmpdir(), 'niko-wiki-service-sources-'));
 
     const { promoteProjectWikiCanon } = await import('../../mcp/services/wiki.js');

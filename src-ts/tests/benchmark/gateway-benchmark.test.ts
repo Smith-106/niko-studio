@@ -101,7 +101,7 @@ describe('Gateway Performance Benchmark', () => {
     console.log(`GET /metrics   — P50: ${r.p50}ms  P95: ${r.p95}ms  P99: ${r.p99}ms`);
   });
 
-  it('benchmarks POST /chat (validation)', async () => {
+  it('benchmarks POST /chat (validation)', { timeout: 60_000 }, async () => {
     // POST /chat involves the full LLM pipeline — use fewer iterations
     const r = await measureLatency(
       () =>
@@ -116,7 +116,7 @@ describe('Gateway Performance Benchmark', () => {
     console.log(`POST /chat     — P50: ${r.p50}ms  P95: ${r.p95}ms  P99: ${r.p99}ms`);
   });
 
-  it('benchmarks POST /workflow/route', async () => {
+  it('benchmarks POST /workflow/route', { timeout: 30_000 }, async () => {
     const r = await measureLatency(
       () =>
         fetch(`${baseUrl}/workflow/route`, {

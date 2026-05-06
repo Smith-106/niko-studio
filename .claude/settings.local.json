@@ -151,7 +151,8 @@
       "Bash(maestro delegate *)",
       "mcp__chrome-devtools__lighthouse_audit",
       "mcp__chrome-devtools__performance_start_trace",
-      "mcp__chrome-devtools__performance_analyze_insight"
+      "mcp__chrome-devtools__performance_analyze_insight",
+      "mcp__chrome-devtools__drag"
     ]
   },
   "hooks": {
