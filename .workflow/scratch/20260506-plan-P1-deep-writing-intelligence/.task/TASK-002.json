@@ -1,0 +1,131 @@
+{
+  "id": "TASK-002",
+  "title": "Style Profile Module — Style Extraction, Storage, and Prompt Injection",
+  "description": "Create a style analysis module that extracts measurable writing patterns (sentence length, vocabulary richness, dialogue ratio, tense preference) from text samples, stores per-project style profiles, and injects style context into agent generation prompts. Register MCP endpoints /style/extract, /style/profile, /style/apply.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "Create src-ts/src/agents/style-profile.ts with StyleExtractor and StyleProfileStore classes. Create src-ts/src/mcp/endpoints/style-profile.ts with POST /style/extract, GET /style/profile, POST /style/apply endpoints. StyleExtractor computes: avgSentenceLength, vocabRichness (unique/total ratio), dialogueRatio, tensePreference, avgParagraphLength, sentenceLengthDistribution (histogram). StyleProfileStore persists to projects/{id}/style-profile.json.",
+  "status": "completed",
+  "completed_at": "2026-05-06T14:57:00+08:00",
+  "actual_duration": null,
+  "scope": "src-ts/src/agents/",
+  "focus_paths": [
+    "src-ts/src/agents/",
+    "src-ts/src/mcp/endpoints/"
+  ],
+  "read_first": [
+    "src-ts/src/agents/style-profile.ts (does not exist yet — create new)",
+    "desktop/src/services/workflowService.ts (reference: builtin-style-analysis workflow at lines 343-379, shows style extraction prompt pattern)",
+    "desktop/src/components/EvaluationPanel.tsx (reference: buildSuggestionActionTemplate function — where style context would be injected)",
+    "desktop/src/api/intelligence.ts (reference: callAnalysisAgent and MODULE_PROMPTS pattern)",
+    "src-ts/src/mcp/endpoints/chat.ts (reference: MCP endpoint pattern)"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "backend-services",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src-ts/src/agents/style-profile.ts contains 'export interface StyleProfile'",
+      "src-ts/src/agents/style-profile.ts contains 'avgSentenceLength'",
+      "src-ts/src/agents/style-profile.ts contains 'vocabRichness'",
+      "src-ts/src/agents/style-profile.ts contains 'dialogueRatio'",
+      "src-ts/src/mcp/endpoints/style-profile.ts contains '/style/extract'",
+      "src-ts/src/mcp/endpoints/style-profile.ts contains '/style/profile'",
+      "npm test --prefix src-ts -- --run style-profile exits 0"
+    ],
+    "verification": "Call /style/extract with sample text, verify StyleProfile output has all metrics. Store profile, retrieve via /style/profile, verify persistence. Call /style/apply and verify style_profile is included in prompt context.",
+    "definition_of_done": "Style extraction produces measurable metrics from text, profiles persist per-project, and style context can be injected into generation prompts."
+  },
+  "files": [
+    {
+      "path": "src-ts/src/agents/style-profile.ts",
+      "action": "create",
+      "target": "StyleExtractor + StyleProfileStore",
+      "change": "New file: StyleProfile interface, StyleExtractor class with extract(text) returning StyleProfile, StyleProfileStore with save/load methods"
+    },
+    {
+      "path": "src-ts/src/agents/style-profile.test.ts",
+      "action": "create",
+      "target": "tests",
+      "change": "Unit tests: extraction metrics are correct for known text, profile save/load round-trip, vocab richness calculation"
+    },
+    {
+      "path": "src-ts/src/mcp/endpoints/style-profile.ts",
+      "action": "create",
+      "target": "MCP endpoints",
+      "change": "POST /style/extract, GET /style/profile/{projectId}, POST /style/apply (accepts text + style_profile, returns text with style guidance injected)"
+    }
+  ],
+  "implementation": [
+    "Define StyleProfile interface: { avgSentenceLength: number; vocabRichness: number; dialogueRatio: number; tensePreference: 'past'|'present'|'mixed'; avgParagraphLength: number; sentenceLengthDistribution: number[]; dominantPOV: 'first'|'third'|'mixed'; sampleHash: string; extractedAt: string }",
+    "Implement StyleExtractor.extract(text: string): StyleProfile — compute each metric using pure string analysis (no LLM needed for metrics, LLM only for POV detection)",
+    "avgSentenceLength = total words / sentence count (split on .!?；。！？)",
+    "vocabRichness = unique words / total words (after removing punctuation, case-insensitive)",
+    "dialogueRatio = dialogue sentences / total sentences (detect quoted speech: 「」\"\"「」『』)",
+    "Implement StyleProfileStore.save(projectId, profile) and load(projectId) using fs read/write to projects/{id}/style-profile.json",
+    "Create MCP endpoints: /style/extract (accept text, return StyleProfile), /style/profile/{projectId} (GET, return stored profile), /style/apply (accept text + style_profile, return prompt context string with style instructions)",
+    "Write tests: known English text → verify sentence length, vocab richness. Known Chinese text → verify dialogue ratio. Profile save/load round-trip."
+  ],
+  "test": {
+    "commands": [
+      "npm test --prefix src-ts -- --run style-profile"
+    ],
+    "unit": [
+      "style-profile.test.ts: English text extraction metrics",
+      "style-profile.test.ts: Chinese text extraction metrics",
+      "style-profile.test.ts: Profile save and load round-trip"
+    ],
+    "integration": [
+      "MCP endpoint /style/extract returns valid StyleProfile"
+    ],
+    "success_metrics": [
+      "Test suite passes",
+      "No TypeScript compilation errors"
+    ]
+  },
+  "reference": {
+    "pattern": "builtin-style-analysis workflow in workflowService.ts uses LLM for style extraction — StyleExtractor adds deterministic metrics as a complement",
+    "files": [
+      "desktop/src/services/workflowService.ts:343-379"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Deterministic metrics (no LLM) for reproducible, fast style analysis. LLM used only for qualitative aspects (POV detection). Stored profiles enable consistent style matching across sessions.",
+    "decision_factors": [
+      "Deterministic metrics are reproducible and free",
+      "Analysis gap: style is extracted but never applied back",
+      "Style profiles must persist across sessions"
+    ],
+    "tradeoffs": "Deterministic metrics are less nuanced than LLM analysis, but are fast, free, and reproducible"
+  },
+  "risks": [
+    "Style metrics may not capture all aspects of writing style — start with core metrics, extend later"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "Style analysis",
+      "Writing generation"
+    ],
+    "affected_components": [
+      "src-ts/agents",
+      "src-ts/mcp"
+    ],
+    "affected_requirements": [
+      "M10-REQ-002: Style analysis and learning"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "60-90 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "id": "TASK-001",
+  "title": "RevisionOrchestrator Service — Autonomous Multi-Pass Revision Engine",
+  "description": "Create a backend service that autonomously revises text through multiple evaluate→revise→verify passes with configurable quality gates, convergence detection, and checkpoint-based safety. Register new MCP endpoint /agent/revise-multi-pass.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "Create src-ts/src/agents/revision-orchestrator.ts with RevisionOrchestrator class. Create src-ts/src/mcp/endpoints/revision-orchestrator.ts with POST /agent/revise-multi-pass endpoint. The orchestrator manages a text buffer in memory, calls existing evaluation (via /agent/context with module='evaluation'), uses the revision API to generate improved text, and loops until target_score is reached or max_iterations exceeded.",
+  "status": "completed",
+  "completed_at": "2026-05-06T14:57:00+08:00",
+  "actual_duration": null,
+  "scope": "src-ts/src/agents/",
+  "focus_paths": [
+    "src-ts/src/agents/",
+    "src-ts/src/mcp/endpoints/"
+  ],
+  "read_first": [
+    "src-ts/src/agents/revision-orchestrator.ts (does not exist yet — create new)",
+    "desktop/src/components/EvaluationPanel.tsx (reference: existing manual revision loop pattern at handleRunAutonomousRevision lines 909-952)",
+    "desktop/src/services/revisionOrchestrator.ts (reference: existing frontend RevisionOrchestrator class)",
+    "desktop/src/utils/revisionLoop.ts (reference: existing revision loop utilities)",
+    "src-ts/src/mcp/endpoints/chat.ts (reference: MCP endpoint pattern)",
+    "desktop/src/api/agents.ts (reference: agent API surface — agentWrite, agentRevise)",
+    "desktop/src/api/evaluation.ts (reference: evaluation API pattern)"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "backend-services",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "src-ts/src/agents/revision-orchestrator.ts contains 'export class RevisionOrchestrator'",
+      "src-ts/src/agents/revision-orchestrator.ts contains 'targetScore: number'",
+      "src-ts/src/agents/revision-orchestrator.ts contains 'maxIterations: number'",
+      "src-ts/src/mcp/endpoints/revision-orchestrator.ts contains '/agent/revise-multi-pass'",
+      "grep -r 'revision-orchestrator' src-ts/src/mcp/ finds the endpoint registration",
+      "npm test --prefix src-ts -- --run revision-orchestrator exits 0"
+    ],
+    "verification": "Import RevisionOrchestrator in a test, call run() with mock text, verify it iterates and converges. Call MCP endpoint with test payload, verify response structure.",
+    "definition_of_done": "Autonomous multi-pass revision works end-to-end: text goes in, orchestrator evaluates/revises in a loop, returns final text with score improvement metrics."
+  },
+  "files": [
+    {
+      "path": "src-ts/src/agents/revision-orchestrator.ts",
+      "action": "create",
+      "target": "RevisionOrchestrator",
+      "change": "New file: RevisionOrchestrator class with run() method implementing evaluate→revise→verify loop"
+    },
+    {
+      "path": "src-ts/src/agents/revision-orchestrator.test.ts",
+      "action": "create",
+      "target": "tests",
+      "change": "Unit tests for RevisionOrchestrator: convergence, max iterations, score degradation revert"
+    },
+    {
+      "path": "src-ts/src/mcp/endpoints/revision-orchestrator.ts",
+      "action": "create",
+      "target": "MCP endpoint",
+      "change": "POST /agent/revise-multi-pass accepting { text, target_score, max_iterations, workspace } returning { revised_text, iterations, initial_score, final_score }"
+    }
+  ],
+  "implementation": [
+    "Create src-ts/src/agents/revision-orchestrator.ts with interface RevisionOrchestratorConfig { targetScore: number (default 8.0); maxIterations: number (default 5); workspace?: ProjectWorkspaceContext }",
+    "Implement run(initialText: string) method: (1) Store initial text and create checkpoint, (2) Loop: evaluate current text via existing evaluation pipeline, (3) If score >= targetScore → break with success, (4) Select top suggestion, call revision API with suggestion as prompt, (5) Re-evaluate revised text, (6) If score degraded from previous → revert to previous text and break, (7) Update current text, (8) After max iterations, return best result",
+    "Return type: { completed: boolean; revisedContent: string; iterations: number; initialScore: number; finalScore: number; reason: string; history: Array<{iteration, score, suggestion}> }",
+    "Create MCP endpoint /agent/revise-multi-pass that accepts { text, target_score?, max_iterations?, workspace? } and delegates to RevisionOrchestrator",
+    "Register endpoint in MCP server setup (follow pattern from src-ts/src/mcp/endpoints/chat.ts)",
+    "Write unit tests: mock evaluation returning incremental scores, test convergence at target, test max-iterations stop, test score-degradation revert"
+  ],
+  "test": {
+    "commands": [
+      "npm test --prefix src-ts -- --run revision-orchestrator"
+    ],
+    "unit": [
+      "revision-orchestrator.test.ts: convergence stops when target reached",
+      "revision-orchestrator.test.ts: reverts on score degradation",
+      "revision-orchestrator.test.ts: respects max iterations"
+    ],
+    "integration": [
+      "MCP endpoint /agent/revise-multi-pass returns valid response structure"
+    ],
+    "success_metrics": [
+      "Test suite passes",
+      "No TypeScript compilation errors"
+    ]
+  },
+  "reference": {
+    "pattern": "Existing RevisionOrchestrator in desktop/src/services/revisionOrchestrator.ts — mirror the interface but implement as backend service",
+    "files": [
+      "desktop/src/services/revisionOrchestrator.ts",
+      "desktop/src/components/EvaluationPanel.tsx:909-952"
+    ],
+    "examples": "handleRunAutonomousRevision in EvaluationPanel shows the full UI-driven loop"
+  },
+  "rationale": {
+    "chosen_approach": "Backend-first orchestrator decoupled from UI state, following the gap recommendation to create a dedicated service managing text buffer and loop state without depending on React hooks or global stores.",
+    "decision_factors": [
+      "Analysis gap: current revision loop is manual and UI-driven",
+      "Safety: checkpoint-based revert prevents quality degradation",
+      "Performance: backend execution avoids React re-renders during long loops"
+    ],
+    "tradeoffs": "Backend orchestration means longer round-trip for progress updates, but eliminates UI coupling"
+  },
+  "risks": [
+    "LLM API calls may be slow for long revision loops — mitigate with configurable iteration count",
+    "Quality convergence not guaranteed — mitigate with score degradation detection and revert"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "Autonomous revision",
+      "Evaluation panel"
+    ],
+    "affected_components": [
+      "src-ts/agents",
+      "src-ts/mcp"
+    ],
+    "affected_requirements": [
+      "M10-REQ-001: Multi-pass autonomous revision"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "60-90 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

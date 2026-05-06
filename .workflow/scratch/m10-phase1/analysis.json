@@ -1,0 +1,144 @@
+{
+  "analysisId": "m10-phase1-deep-writing-intelligence",
+  "timestamp": "2026-05-06T13:25:00Z",
+  "scope": "Analysis of existing infrastructure for M10 Phase 1 (Deep Writing Intelligence) features: multi-pass revision, style learning, and consistency checking.",
+  "moduleInventory": [
+    {
+      "file": "desktop/src/services/workflowService.ts",
+      "role": "Core Workflow Engine",
+      "summary": "Defines, loads, and executes both built-in and user-defined multi-step workflows. Manages step execution order, input/output chaining, and checkpoints.",
+      "patterns": [
+        "Defines built-in workflows as a constant array of objects (`BUILTIN_WORKFLOWS`).",
+        "`executeWorkflow` initializes a workflow run.",
+        "`runNextStep` recursively processes the workflow's `enabledSteps`.",
+        "A `checkpoint` property ('review' or 'approve') on a step pauses execution, enabling quality gates (`approveStep` resumes)."
+      ]
+    },
+    {
+      "file": "desktop/src/components/EvaluationPanel.tsx",
+      "role": "Primary UI for Evaluation & Revision",
+      "summary": "A comprehensive UI component for displaying text evaluation scores, managing revision suggestions, and accessing related tools like consistency checks and checkpoints. This is the main hub for human-in-the-loop revision.",
+      "patterns": [
+        "Uses `useEvaluationData` hook to fetch scores and suggestions.",
+        "Implements a manual revision loop: `handleGenerateRevisionPreview` calls the `processWritingHelper` API, and `applyRevisionCandidateToEditor` updates the editor.",
+        "Integrates `runWorkspaceConsistencyCheck` for cross-document analysis.",
+        "Connects to a workflow system via `useEvaluationWorkflow` hook."
+      ]
+    },
+    {
+      "file": "desktop/src/api/intelligence.ts",
+      "role": "Analysis Agent API Client",
+      "summary": "Provides a typed client for calling backend analysis agents. Defines the available analysis modules and their corresponding prompts.",
+      "patterns": [
+        "`callAnalysisAgent` is the primary function, dispatching to the `/agent/context` MCP endpoint.",
+        "A `MODULE_PROMPTS` dictionary maps `AnalysisModule` enums (e.g., 'consistency', 'readability') to specific instruction prompts for the LLM."
+      ]
+    },
+    {
+      "file": "desktop/src/services/intelligenceService.ts",
+      "role": "Analysis Service & Caching Layer",
+      "summary": "Orchestrates project-wide analysis, handling chapter content fetching, caching, and result aggregation.",
+      "patterns": [
+        "`analyzeProject` manages the full analysis lifecycle for a set of chapters.",
+        "Implements a caching mechanism based on content hashes (`hashContent`) to avoid redundant API calls, storing results in `projects/{id}/analysis/{module}.json`."
+      ]
+    },
+    {
+      "file": "desktop/src/hooks/useEvaluationCheckpoints.ts",
+      "role": "State Checkpointing Hook",
+      "summary": "Provides functionality to create and restore snapshots of the current workspace and conversation state.",
+      "patterns": [
+        "`createCheckpoint` and `restoreCheckpoint` are the core API calls.",
+        "Provides a critical safety mechanism for an autonomous agent to revert to a known-good state after a failed revision pass."
+      ]
+    },
+    {
+      "file": "desktop/src/hooks/useChatStreaming.ts",
+      "role": "Core Streaming/Generation Hook",
+      "summary": "Manages the lifecycle of streaming LLM responses.",
+      "patterns": [
+        "The `onDone` callback receives `writer_metadata` which is then merged with `buildConsistencyGovernanceMetadata`. This shows evaluation/consistency data is part of the core generation metadata channel."
+      ]
+    }
+  ],
+  "integrationMap": {
+    "multiPassRevision": {
+      "description": "An autonomous multi-pass revision loop can be built by orchestrating existing components. The current system supports a manual, single-pass revision.",
+      "flow": [
+        "1. **Trigger**: An agent starts with initial text.",
+        "2. **Evaluate**: The agent calls the evaluation logic found in `useEvaluationData` (from EvaluationPanel.tsx).",
+        "3. **Select Suggestion**: The agent programmatically selects the most critical suggestion from the evaluation result.",
+        "4. **Generate Revision**: The agent calls the `processWritingHelper` API (used by `handleGenerateRevisionPreview` in EvaluationPanel.tsx) with the text and the selected suggestion as a prompt.",
+        "5. **Verify**: The agent evaluates the generated revision. If the quality score (from `useEvaluationData`) improves, the agent accepts the revision.",
+        "6. **Loop**: The agent replaces the original text with the revised text and repeats from step 2 until quality targets are met or no further improvements are found.",
+        "7. **Safety**: The agent can use `useEvaluationCheckpoints` to create a save point before starting the loop and restore it if the process fails."
+      ],
+      "keyFiles": [
+        "desktop/src/components/EvaluationPanel.tsx",
+        "desktop/src/services/workflowService.ts",
+        "desktop/src/hooks/useEvaluationCheckpoints.ts"
+      ]
+    },
+    "styleLearning": {
+      "description": "The foundation for style learning exists via a built-in workflow. The main task is to create an agent that can apply the extracted style.",
+      "flow": [
+        "1. **Extraction**: Execute the `builtin-style-analysis` workflow from `workflowService.ts`. The 'Style Extraction' step uses a prompt to extract stylistic characteristics.",
+        "2. **Store Profile**: The JSON output of the extraction step becomes the 'Style Profile' for the author or project.",
+        "3. **Application**: During new text generation or revision, this Style Profile is injected into the LLM prompt context with instructions to match the described style (e.g., sentence length distribution, vocabulary richness). The prompt templates in `EvaluationPanel.tsx`'s `buildSuggestionActionTemplate` are a good place to inject this.",
+        "4. **Verification**: The evaluation endpoint (used in EvaluationPanel.tsx) already calculates a `style_score`, which can be used to verify if the generated text conforms to the target style."
+      ],
+      "keyFiles": [
+        "desktop/src/services/workflowService.ts",
+        "desktop/src/components/EvaluationPanel.tsx"
+      ]
+    },
+    "consistencyChecking": {
+      "description": "Consistency checking is well-integrated and can be triggered programmatically.",
+      "flow": [
+        "1. **Manual Trigger**: The user can trigger a check from the `AnalysisPanel.tsx` or `EvaluationPanel.tsx`.",
+        "2. **Programmatic Trigger**: An agent can call `runWorkspaceConsistencyCheck` (from EvaluationPanel.tsx) or the underlying `runConsistencyCheck` API client function.",
+        "3. **Context**: The check is context-aware, using the `meaningfulWorkspace` object to access the full project scope (story bible, etc.).",
+        "4. **As Part of Workflow**: The `builtin-revision-pass` workflow in `workflowService.ts` already includes a 'Consistency Check' step, which can be used in an automated pipeline."
+      ],
+      "keyFiles": [
+        "desktop/src/api/intelligence.ts",
+        "desktop/src/components/EvaluationPanel.tsx",
+        "desktop/src/services/workflowService.ts"
+      ]
+    }
+  },
+  "gapAssessment": [
+    {
+      "feature": "Autonomous Multi-Pass Revision",
+      "gap": "The current revision loop is manual and UI-driven, operating on the editor state. An autonomous agent needs a dedicated service to manage the text buffer, evaluation scores, and loop state without depending on the UI.",
+      "recommendation": "Create a new `RevisionOrchestrator` service that encapsulates the 'evaluate -> revise -> verify' loop. It will use `intelligenceService` for evaluation and the `processWritingHelper` API for revision, managing the text content in memory."
+    },
+    {
+      "feature": "Style Learning Application",
+      "gap": "Style is extracted and analyzed, but there is no mechanism to automatically *apply* a learned style profile to new text generation. The system can identify style, but not yet mimic it.",
+      "recommendation": "Extend the agent prompts (e.g., in `processWritingHelper` or `chatStream` APIs) to accept an optional `style_profile` JSON object. The backend agent would then be responsible for augmenting the user's prompt with instructions to adhere to the given style."
+    },
+    {
+      "feature": "Agent State Management",
+      "gap": "While workflows exist, there is no persistent, long-running agent state for an autonomous process. A multi-pass revision might take a long time and needs to be pausable and resumable.",
+      "recommendation": "Leverage the existing `WorkflowExecution` model from `workflowService.ts`. Enhance it to store agent-specific state between steps, and ensure its state is persisted to disk regularly, potentially using the checkpointing system as a backend."
+    }
+  ],
+  "riskMatrix": [
+    {
+      "risk": "Performance of Multi-Pass Revision",
+      "description": "Repeatedly calling evaluation and revision APIs for a long document can be slow and expensive. Without careful optimization, the process may be too slow for practical use.",
+      "mitigation": "Aggressively leverage the existing caching in `intelligenceService.ts`. Implement partial document analysis to only re-evaluate changed sections. Use cheaper/faster models for intermediate revision steps and a high-quality model for the final pass."
+    },
+    {
+      "risk": "Quality Convergence Failure",
+      "description": "The revision loop may not converge; it could get stuck in a loop (swapping between two versions) or even degrade the text quality.",
+      "mitigation": "Implement a 'decay' or 'max attempts' mechanism to stop the loop if the quality score does not improve after N iterations. Use the checkpointing system (`useEvaluationCheckpoints`) to allow the agent to revert the entire process if the final score is lower than the initial score."
+    },
+    {
+      "risk": "Over-reliance on UI State",
+      "description": "Many hooks and services currently read from the UI state (e.g., `useAppStore`, editor content). An autonomous backend agent cannot rely on this.",
+      "mitigation": "When building the `RevisionOrchestrator` service, ensure it is fully decoupled from the UI. All necessary context (text content, project ID, story bible) should be passed explicitly as arguments, not read from a global UI store."
+    }
+  ]
+}

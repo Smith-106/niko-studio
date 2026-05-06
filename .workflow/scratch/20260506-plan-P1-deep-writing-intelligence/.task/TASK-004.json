@@ -1,0 +1,153 @@
+{
+  "id": "TASK-004",
+  "title": "Desktop UI Integration — Multi-Pass Revision Controls, Style Management, Enhanced Panels",
+  "description": "Integrate all M10 backend services into the desktop UI: add multi-pass revision controls to EvaluationPanel, style profile management to Settings/Knowledge tabs, enhanced cross-chapter consistency display in AnalysisPanel, and context-aware suggestion indicators in ChatArea.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "Create desktop/src/api/m10-apis.ts with typed API clients for all new MCP endpoints. Add multi-pass revision controls (target score input, max iterations, run button, progress display) to EvaluationPanel. Add style profile section to SettingsModal or KnowledgeModal. Enhance AnalysisPanel consistency tab to show cross-chapter results. Add context-aware indicators to ChatArea/ChatSidebar.",
+  "status": "completed",
+  "completed_at": "2026-05-06T14:57:00+08:00",
+  "actual_duration": null,
+  "scope": "desktop/src/",
+  "focus_paths": [
+    "desktop/src/api/",
+    "desktop/src/components/",
+    "desktop/src/hooks/"
+  ],
+  "read_first": [
+    "desktop/src/api/m10-apis.ts (does not exist yet — create new)",
+    "desktop/src/api/core.ts (reference: callApi pattern for HTTP calls)",
+    "desktop/src/components/EvaluationPanel.tsx (reference: existing evaluation UI, add multi-pass controls alongside existing autonomous revision button)",
+    "desktop/src/components/AnalysisPanel.tsx (reference: existing analysis tabs, enhance consistency tab)",
+    "desktop/src/components/SettingsModal.tsx (reference: settings UI pattern for style profile config)",
+    "desktop/src/components/KnowledgeModal.tsx (reference: knowledge tabs pattern)",
+    "desktop/src/api/client.ts (reference: existing API functions like runConsistencyCheck, processWritingHelper)",
+    "desktop/src/hooks/useEvaluationData.ts (reference: evaluation data hook pattern)",
+    "desktop/src/i18n/locales/zh-CN.json (reference: i18n keys)",
+    "desktop/src/i18n/locales/en-US.json (reference: i18n keys)"
+  ],
+  "depends_on": [
+    "TASK-001",
+    "TASK-002",
+    "TASK-003"
+  ],
+  "wave": 2,
+  "parallel_group": null,
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "desktop/src/api/m10-apis.ts contains 'export async function runMultiPassRevision'",
+      "desktop/src/api/m10-apis.ts contains 'export async function extractStyleProfile'",
+      "desktop/src/api/m10-apis.ts contains 'export async function runCrossChapterConsistency'",
+      "desktop/src/api/m10-apis.ts contains 'export async function getContextAwareSuggestions'",
+      "desktop/src/components/EvaluationPanel.tsx contains 'targetScore' or 'target_score'",
+      "desktop/src/components/EvaluationPanel.tsx contains 'maxIterations' or 'max_iterations'",
+      "desktop/src/components/AnalysisPanel.tsx contains 'crossChapter' or 'cross_chapter'",
+      "grep -r 'm10-apis' desktop/src/ finds the import in at least 2 component files",
+      "cd desktop && npx tsc --noEmit exits 0"
+    ],
+    "verification": "Launch dev server, verify EvaluationPanel shows multi-pass revision controls, AnalysisPanel shows enhanced consistency tab, no TypeScript compilation errors.",
+    "definition_of_done": "All M10 backend services are accessible from the desktop UI. Users can trigger multi-pass revision, view style profiles, run cross-chapter consistency checks, and see context-aware indicators."
+  },
+  "files": [
+    {
+      "path": "desktop/src/api/m10-apis.ts",
+      "action": "create",
+      "target": "M10 API clients",
+      "change": "New file: typed API clients for /agent/revise-multi-pass, /style/extract, /style/profile, /style/apply, /consistency/cross-chapter, /suggestions/context-aware using callApi from core.ts"
+    },
+    {
+      "path": "desktop/src/components/EvaluationPanel.tsx",
+      "action": "modify",
+      "target": "multi-pass revision UI",
+      "change": "Add configurable target score input, max iterations input, progress display showing iteration count and score improvement per pass. Replace or enhance existing handleRunAutonomousRevision to use new backend endpoint."
+    },
+    {
+      "path": "desktop/src/components/AnalysisPanel.tsx",
+      "action": "modify",
+      "target": "cross-chapter consistency tab",
+      "change": "Enhance consistency tab to support cross-chapter mode: show nameConflicts, timelineIssues, unresolvedThreads, traitDrifts with chapter references"
+    },
+    {
+      "path": "desktop/src/i18n/locales/zh-CN.json",
+      "action": "modify",
+      "target": "i18n keys",
+      "change": "Add M10-related i18n keys for multi-pass revision, style profile, cross-chapter consistency labels"
+    },
+    {
+      "path": "desktop/src/i18n/locales/en-US.json",
+      "action": "modify",
+      "target": "i18n keys",
+      "change": "Add matching English i18n keys"
+    }
+  ],
+  "implementation": [
+    "Create desktop/src/api/m10-apis.ts with typed interfaces and API client functions: runMultiPassRevision(text, options), extractStyleProfile(text), getStyleProfile(projectId), applyStyle(text, profile), runCrossChapterConsistency(chapters), getContextAwareSuggestions(text, workspace)",
+    "Modify EvaluationPanel.tsx: add config section for autonomous revision with targetScore (number input, default 8.0) and maxIterations (number input, default 5). Wire handleRunAutonomousRevision to call runMultiPassRevision API. Display iteration progress: current iteration, scores per pass, final result summary.",
+    "Modify AnalysisPanel.tsx: when consistency tab is active and multiple chapters exist, show 'Cross-Chapter Analysis' button that calls runCrossChapterConsistency. Display results in categorized sections: Name Conflicts, Timeline Issues, Unresolved Threads, Trait Drifts.",
+    "Add i18n keys to both locale files for all new UI labels. Follow existing key naming pattern (camelCase, prefixed by feature area).",
+    "Verify no TypeScript compilation errors with npx tsc --noEmit"
+  ],
+  "test": {
+    "commands": [
+      "cd desktop && npx tsc --noEmit"
+    ],
+    "unit": [
+      "m10-apis.test.ts: API client functions return correct types"
+    ],
+    "integration": [],
+    "success_metrics": [
+      "TypeScript compilation clean",
+      "All new i18n keys present in both locales"
+    ]
+  },
+  "reference": {
+    "pattern": "Follow existing API client pattern from desktop/src/api/client.ts and component pattern from EvaluationPanel.tsx",
+    "files": [
+      "desktop/src/api/client.ts",
+      "desktop/src/api/core.ts"
+    ],
+    "examples": "processWritingHelper in client.ts shows how to call backend with workspace context"
+  },
+  "rationale": {
+    "chosen_approach": "Single UI integration task because all frontend changes share the same API layer, i18n system, and component patterns. Separating by panel would create duplicated API client work.",
+    "decision_factors": [
+      "All UI changes depend on backend APIs being complete",
+      "Shared API client reduces duplication",
+      "Single i18n update pass is more efficient"
+    ],
+    "tradeoffs": "Larger task but avoids API client duplication and inconsistent i18n patterns"
+  },
+  "risks": [
+    "Backend API contracts may change during Wave 1 — mitigate by defining interfaces in m10-apis.ts first"
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "Evaluation panel",
+      "Analysis panel",
+      "Settings",
+      "Chat area"
+    ],
+    "affected_components": [
+      "desktop/src/api",
+      "desktop/src/components",
+      "desktop/src/hooks",
+      "desktop/src/i18n"
+    ],
+    "affected_requirements": [
+      "M10-REQ-005: Desktop UI integration for all new features"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "60-90 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}
