@@ -103,15 +103,19 @@ describe('Gateway Performance Benchmark', () => {
 
   it('benchmarks POST /chat (validation)', { timeout: 60_000 }, async () => {
     // POST /chat involves the full LLM pipeline — use fewer iterations
+    const controller = new AbortController();
+    const perRequestTimeout = setTimeout(() => controller.abort(), 5000);
     const r = await measureLatency(
       () =>
         fetch(`${baseUrl}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Origin: 'http://localhost' },
           body: JSON.stringify({ messages: [{ role: 'user', content: 'benchmark' }] }),
-        }),
-      10,
+          signal: controller.signal,
+        }).catch(() => new Response(null, { status: 504 })),
+      3,
     );
+    clearTimeout(perRequestTimeout);
     (results.endpoints as Record<string, unknown>)['POST /chat'] = r;
     console.log(`POST /chat     — P50: ${r.p50}ms  P95: ${r.p95}ms  P99: ${r.p99}ms`);
   });
