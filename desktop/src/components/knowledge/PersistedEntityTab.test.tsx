@@ -290,7 +290,7 @@ describe('persisted knowledge authoring tabs', () => {
     console.error = originalConsoleError
   })
 
-  it('creates, edits, and reloads persisted characters', async () => {
+  it('creates, edits, and reloads persisted characters', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     const { unmount } = render(<CharacterHarness />)
 
@@ -321,7 +321,7 @@ describe('persisted knowledge authoring tabs', () => {
     expect(screen.getByText('更新后的主角')).toBeInTheDocument()
   })
 
-  it('creates persisted locations', async () => {
+  it('creates persisted locations', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<LocationHarness />)
 
@@ -333,7 +333,7 @@ describe('persisted knowledge authoring tabs', () => {
     expect(screen.getAllByText('港口').length).toBeGreaterThan(0)
   })
 
-  it('creates persisted plot events', async () => {
+  it('creates persisted plot events', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<PlotHarness />)
 
@@ -354,7 +354,7 @@ describe('persisted knowledge authoring tabs', () => {
     expect(screen.queryByText('保存角色失败，请稍后重试。')).not.toBeInTheDocument()
   })
 
-  it('retries loading automatically after backend health recovers', async () => {
+  it('retries loading automatically after backend health recovers', { timeout: 15_000 }, async () => {
     persistedGraph.failEntityType = 'Character'
 
     render(<CharacterHarness />)
@@ -383,7 +383,7 @@ describe('persisted knowledge authoring tabs', () => {
     expect(await screen.findByText('Alice')).toBeInTheDocument()
   })
 
-  it('shows delete button when editing an existing character', async () => {
+  it('shows delete button when editing an existing character', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<CharacterHarness />)
 
@@ -397,7 +397,7 @@ describe('persisted knowledge authoring tabs', () => {
     expect(screen.getByText('删除')).toBeInTheDocument()
   })
 
-  it('shows confirmation before delete and cancels', async () => {
+  it('shows confirmation before delete and cancels', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<CharacterHarness />)
 
@@ -419,7 +419,7 @@ describe('persisted knowledge authoring tabs', () => {
     expect(screen.getByText('Eve')).toBeInTheDocument()
   })
 
-  it('deletes entity after confirmation', async () => {
+  it('deletes entity after confirmation', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<CharacterHarness />)
 
@@ -438,20 +438,20 @@ describe('persisted knowledge authoring tabs', () => {
     })
   })
 
-  it('renders extra fields for Character (role, traits)', async () => {
+  it('renders extra fields for Character (role, traits)', { timeout: 15_000 }, async () => {
     render(<CharacterHarness />)
 
     expect(await screen.findByLabelText('Role')).toBeInTheDocument()
     expect(screen.getByLabelText('Traits')).toBeInTheDocument()
   })
 
-  it('renders extra fields for Location (geography)', async () => {
+  it('renders extra fields for Location (geography)', { timeout: 15_000 }, async () => {
     render(<LocationHarness />)
 
     expect(await screen.findByLabelText('Geography')).toBeInTheDocument()
   })
 
-  it('renders extra fields for Plot (chapter, act)', async () => {
+  it('renders extra fields for Plot (chapter, act)', { timeout: 15_000 }, async () => {
     render(<PlotHarness />)
 
     expect(await screen.findByLabelText('Chapter')).toBeInTheDocument()

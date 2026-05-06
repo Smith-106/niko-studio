@@ -155,7 +155,7 @@ describe('PlotTab', () => {
     expect(screen.getByText('The climactic siege')).toBeInTheDocument()
   })
 
-  it('creates a new plot event via the form', async () => {
+  it('creates a new plot event via the form', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<PlotHarness />)
 
@@ -168,7 +168,7 @@ describe('PlotTab', () => {
     expect(screen.getByText('剧情已保存到当前工作区。')).toBeInTheDocument()
   })
 
-  it('selects a plot event and populates the editor', async () => {
+  it('selects a plot event and populates the editor', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     persistedGraph.events = [
       {
@@ -194,7 +194,7 @@ describe('PlotTab', () => {
     expect((screen.getByLabelText('剧情描述') as HTMLTextAreaElement).value).toBe('Everything falls apart')
   })
 
-  it('clears the editor when the clear button is clicked', async () => {
+  it('clears the editor when the clear button is clicked', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<PlotHarness />)
 

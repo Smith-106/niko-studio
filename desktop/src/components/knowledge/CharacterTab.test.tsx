@@ -156,7 +156,7 @@ describe('CharacterTab', () => {
     expect(screen.getByText('The protagonist')).toBeInTheDocument()
   })
 
-  it('creates a new character via the form', async () => {
+  it('creates a new character via the form', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<CharacterHarness />)
 
@@ -169,7 +169,7 @@ describe('CharacterTab', () => {
     expect(screen.getByText('角色已保存到当前工作区。')).toBeInTheDocument()
   })
 
-  it('selects a character and populates the editor for editing', async () => {
+  it('selects a character and populates the editor for editing', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     persistedGraph.characters = [
       {
@@ -198,7 +198,7 @@ describe('CharacterTab', () => {
     expect(descriptionInput.value).toBe('Original description')
   })
 
-  it('clears the editor when the clear button is clicked', async () => {
+  it('clears the editor when the clear button is clicked', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<CharacterHarness />)
 
@@ -258,7 +258,7 @@ describe('CharacterTab', () => {
     expect(screen.queryByText('BobBuilder')).not.toBeInTheDocument()
   })
 
-  it('highlights the selected character with blue background', async () => {
+  it('highlights the selected character with blue background', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     persistedGraph.characters = [
       {

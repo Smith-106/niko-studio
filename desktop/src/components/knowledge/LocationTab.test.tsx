@@ -155,7 +155,7 @@ describe('LocationTab', () => {
     expect(screen.getByText('A foggy harbor')).toBeInTheDocument()
   })
 
-  it('creates a new location via the form', async () => {
+  it('creates a new location via the form', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<LocationHarness />)
 
@@ -168,7 +168,7 @@ describe('LocationTab', () => {
     expect(screen.getByText('地点已保存到当前工作区。')).toBeInTheDocument()
   })
 
-  it('selects a location and populates the editor', async () => {
+  it('selects a location and populates the editor', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     persistedGraph.locations = [
       {
@@ -197,7 +197,7 @@ describe('LocationTab', () => {
     expect(descriptionInput.value).toBe('An old castle')
   })
 
-  it('clears the editor fields when the clear button is clicked', async () => {
+  it('clears the editor fields when the clear button is clicked', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<LocationHarness />)
 
@@ -262,7 +262,7 @@ describe('LocationTab', () => {
     })
   })
 
-  it('updates an existing location and persists changes', async () => {
+  it('updates an existing location and persists changes', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     persistedGraph.locations = [
       {

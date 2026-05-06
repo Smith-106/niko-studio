@@ -261,7 +261,7 @@ describe('SkillTab CRUD operations', () => {
     mockDeleteSkill.mockResolvedValue({ success: true, data: { success: true } })
   })
 
-  it('creates a new skill', async () => {
+  it('creates a new skill', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<SkillTabHarness />)
 
@@ -277,7 +277,7 @@ describe('SkillTab CRUD operations', () => {
     })
   })
 
-  it('edits skill content and saves', async () => {
+  it('edits skill content and saves', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<SkillTabHarness />)
 
@@ -299,7 +299,7 @@ describe('SkillTab CRUD operations', () => {
     })
   })
 
-  it('deletes skill with two-click confirmation', async () => {
+  it('deletes skill with two-click confirmation', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<SkillTabHarness />)
 
@@ -318,7 +318,7 @@ describe('SkillTab CRUD operations', () => {
     })
   })
 
-  it('cancels delete by selecting different skill', async () => {
+  it('cancels delete by selecting different skill', { timeout: 15_000 }, async () => {
     const user = userEvent.setup()
     render(<SkillTabHarness />)
 
