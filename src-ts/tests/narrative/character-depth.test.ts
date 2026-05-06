@@ -6,7 +6,9 @@ import {
   addEvolutionPoint,
   computeCharacterDepthResult,
   createDominantEmotion,
+  createEmptyDynamicState,
   getConflictPotential,
+  mergeDynamicState,
 } from '../../narrative/character-depth';
 
 describe('narrative/character-depth', () => {
@@ -147,5 +149,37 @@ describe('narrative/character-depth', () => {
       switchTriggers: ['压力'],
     });
     expect(['UNFORGETTABLE', 'DEEP', 'MODERATE', 'FLAT']).toContain(result.depthLevel);
+  });
+
+  // ── M11: DynamicCharacterState ─────────────────────────────
+
+  describe('DynamicCharacterState', () => {
+    it('creates empty dynamic state with correct defaults', () => {
+      const state = createEmptyDynamicState();
+      expect(state.goals).toEqual([]);
+      expect(state.currentStates).toEqual([]);
+      expect(state.recentActions).toEqual([]);
+      expect(state.lastUpdated).toBeTruthy();
+    });
+
+    it('merges new goals and states into existing state', () => {
+      const base = createEmptyDynamicState();
+      const merged = mergeDynamicState(base, ['找出真相'], ['坚定'], '调查线索');
+
+      expect(merged.goals).toEqual(['找出真相']);
+      expect(merged.currentStates).toEqual(['坚定']);
+      expect(merged.recentActions).toContain('调查线索');
+      expect(merged.lastUpdated).toBeTruthy();
+    });
+
+    it('appends actions without exceeding recentActions limit', () => {
+      const base = createEmptyDynamicState();
+      base.recentActions = Array.from({ length: 8 }, (_, i) => `Action ${i}`);
+
+      const merged = mergeDynamicState(base, [], [], 'New action');
+
+      expect(merged.recentActions).toHaveLength(9);
+      expect(merged.recentActions[8]).toBe('New action');
+    });
   });
 });

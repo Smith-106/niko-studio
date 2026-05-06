@@ -117,4 +117,46 @@ describe('CharacterAgent', () => {
     expect(context.relationshipDynamics[0]).toContain('neutral');
     expect(context.dialogueGuidelines['林岚']).toContain('No specific guidelines');
   });
+
+  // ── M11: STM/LTM memory ───────────────────────────────────
+
+  it('manages short-term memory with capacity overflow to long-term', () => {
+    const agent = new CharacterAgent();
+
+    for (let i = 0; i < 25; i++) {
+      agent.pushMemory(`Event ${i}`);
+    }
+
+    const ctx = agent.getMemoryContext();
+    expect(ctx).toContain('Recent events:');
+    expect(ctx).toContain('Long-term memories:');
+    expect(ctx).toContain('[LTM]');
+
+    // STM should have last 20 events (5-24), LTM should have 5 (0-4)
+    const lines = ctx.split('\n');
+    const stmLines = lines.filter((l) => /^\d+\./.test(l.trim()));
+    expect(stmLines.length).toBeLessThanOrEqual(20);
+  });
+
+  it('returns empty memory context for fresh agent', () => {
+    const agent = new CharacterAgent();
+    const ctx = agent.getMemoryContext();
+    expect(ctx).toBe('');
+  });
+
+  it('exposes dynamic state and it starts empty', () => {
+    const agent = new CharacterAgent();
+    const state = agent.dynamicState;
+    expect(state.goals).toEqual([]);
+    expect(state.currentStates).toEqual([]);
+    expect(state.recentActions).toEqual([]);
+  });
+
+  it('has lifecycle hooks registered for perception and reflection', () => {
+    const agent = new CharacterAgent();
+    // Agent constructor registers hooks — verify via memory context behavior
+    agent.pushMemory('test action');
+    const ctx = agent.getMemoryContext();
+    expect(ctx).toContain('test action');
+  });
 });

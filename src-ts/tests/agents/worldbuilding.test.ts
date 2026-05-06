@@ -71,4 +71,54 @@ describe('WorldbuildingAgent', () => {
     expect(context.activeRules).toEqual([]);
     expect(context.atmosphere).toBe('中性');
   });
+
+  // ── M11: BookWorld integration ─────────────────────────────
+
+  it('generates environmental response from worldview settings', async () => {
+    const agent = new WorldbuildingAgent();
+
+    const settings = [
+      { term: '灵力', nature: 'magic_system', detail: '灵力是修仙的基础', source: 'Ch.1' },
+      { term: '禁止出行', nature: 'social_norm', detail: '夜间禁止出行', source: 'Ch.1' },
+    ];
+
+    const response = await agent.generateEnvironmentalResponse(
+      '使用灵力',
+      '灵山',
+      settings as any,
+    );
+
+    expect(response).toContain('灵力');
+    expect(response).toContain('Environment Response');
+  });
+
+  it('generates stimulus event with character tensions', async () => {
+    const agent = new WorldbuildingAgent();
+
+    const settings = [
+      { term: '势力冲突', nature: 'political', detail: '两大门派争夺资源', source: 'Ch.2' },
+    ];
+
+    const event = await agent.generateStimulusEvent(
+      ['林岚: 内心挣扎', '周谨: 警惕'],
+      settings as any,
+    );
+
+    expect(event).toContain('Stimulus Event');
+    expect(event).toContain('林岚');
+  });
+
+  it('creates temporary NPC description', () => {
+    const agent = new WorldbuildingAgent();
+    const npc = agent.createTempNPC('一位白发老者，拄着拐杖');
+    expect(npc).toContain('Temporary NPC');
+    expect(npc).toContain('白发老者');
+  });
+
+  it('creates default NPC when no description given', () => {
+    const agent = new WorldbuildingAgent();
+    const npc = agent.createTempNPC('');
+    expect(npc).toContain('Temporary NPC');
+    expect(npc).toContain('unnamed');
+  });
 });

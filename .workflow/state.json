@@ -58,12 +58,12 @@
       "phase": 1,
       "milestone": "M11",
       "depends_on": "m11-phase1-external-integration-analysis",
-      "harvested": false,
+      "harvested": true,
       "created_at": "2026-05-07T01:05:00+08:00",
-      "completed_at": "2026-05-07T01:10:00+08:00"
+      "completed_at": "2026-05-07T03:05:00+08:00"
     }
   ],
-  "version": "9.13.0",
+  "version": "9.14.0",
   "current_milestone": "M11",
   "milestones": [
     {
@@ -74,11 +74,11 @@
     },
     {
       "id": "M11",
-      "name": "UI Integration & Analysis Completion",
-      "status": "active",
+      "name": "External Integration (BookWorld/OpenStory/MiroFish)",
+      "status": "completed",
       "phases": [1]
     }
   ],
   "project": "niko-studio",
-  "last_updated": "2026-05-07T01:10:00+08:00"
+  "last_updated": "2026-05-07T03:05:00+08:00"
 }
