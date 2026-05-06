@@ -132,3 +132,8 @@ export {
   crossChapterConsistencyEndpoint,
   contextAwareSuggestionsEndpoint,
 } from './m10-consistency';
+
+export {
+  worldviewExtractEndpoint,
+  worldviewGetEndpoint,
+} from './m11-worldview';

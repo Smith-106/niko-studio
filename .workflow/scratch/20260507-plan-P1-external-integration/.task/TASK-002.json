@@ -1,0 +1,132 @@
+{
+  "id": "TASK-002",
+  "title": "Worldview Data Extraction Pipeline",
+  "description": "Create a pipeline to extract structured worldview settings (term, nature, detail, source) from novel chapters. Inspired by BookWorld's term-based extraction method. Enables setting-aware agent prompts and worldview coherence validation.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Create src-ts/narrative/worldview-extractor.ts with extractWorldview(chapters) function implementing: chunk text → extract atomic facts via LLM → filter character actions + common sense → cluster similar entries → produce WorldviewSetting[] with term/nature/detail/source fields. Add src-ts/mcp/endpoints/m11-worldview.ts endpoint for extraction trigger and retrieval. Register in container/bindings.ts. Export from narrative/index.ts.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "src-ts/narrative/",
+  "focus_paths": ["src-ts/narrative/worldview-extractor.ts", "src-ts/mcp/endpoints/m11-worldview.ts", "src-ts/narrative/index.ts", "src-ts/container/bindings.ts"],
+
+  "read_first": [
+    "src-ts/narrative/worldview-coherence-validator.ts",
+    "src-ts/narrative/types.ts",
+    "src-ts/knowledge/manager.ts",
+    "src-ts/services/knowledge-service.ts",
+    "src-ts/mcp/endpoints/m10-style.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "foundation",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-ts/narrative/worldview-extractor.ts contains 'export interface WorldviewSetting'",
+      "src-ts/narrative/worldview-extractor.ts contains 'term:'",
+      "src-ts/narrative/worldview-extractor.ts contains 'nature:'",
+      "src-ts/narrative/worldview-extractor.ts contains 'detail:'",
+      "src-ts/narrative/worldview-extractor.ts contains 'source:'",
+      "src-ts/narrative/worldview-extractor.ts contains 'export async function extractWorldview'",
+      "src-ts/mcp/endpoints/m11-worldview.ts contains 'worldview'",
+      "src-ts/narrative/index.ts contains 'worldview-extractor'",
+      "cd src-ts && npx tsc --noEmit exits 0"
+    ],
+    "verification": "Import { extractWorldview, WorldviewSetting } from narrative/worldview-extractor. Call with mock chapter content, verify it returns WorldviewSetting[] with required fields.",
+    "definition_of_done": "Worldview extraction pipeline exists as a standalone module that accepts chapter content and produces structured worldview settings. MCP endpoint exposes extraction and retrieval."
+  },
+
+  "files": [
+    {
+      "path": "src-ts/narrative/worldview-extractor.ts",
+      "action": "create",
+      "target": "module",
+      "change": "New file: WorldviewSetting interface {term, nature, detail, source}, extractWorldview(chapters, llmService) function with chunk→extract→filter→cluster pipeline"
+    },
+    {
+      "path": "src-ts/mcp/endpoints/m11-worldview.ts",
+      "action": "create",
+      "target": "module",
+      "change": "New file: POST /worldview/extract (trigger extraction for project), GET /worldview/{projectId} (retrieve extracted worldview settings)"
+    },
+    {
+      "path": "src-ts/mcp/endpoints/index.ts",
+      "action": "modify",
+      "target": "exports",
+      "change": "Add worldview endpoint export"
+    },
+    {
+      "path": "src-ts/narrative/index.ts",
+      "action": "modify",
+      "target": "barrel exports",
+      "change": "Add re-export from worldview-extractor.ts"
+    },
+    {
+      "path": "src-ts/container/bindings.ts",
+      "action": "modify",
+      "target": "service registrations",
+      "change": "Register WorldviewExtractor as injectable service"
+    }
+  ],
+
+  "implementation": [
+    "Create src-ts/narrative/worldview-extractor.ts: define WorldviewSetting interface with term: string, nature: string (artifact|social_norm|custom|geography|magic_system|political), detail: string, source: string (chapter ref). Define WorldviewExtractor class with async extract(chapters: ChapterContent[]): Promise<WorldviewSetting[]> implementing 4-step pipeline: 1) split chapters into ~500-word chunks, 2) call LLM to extract worldview facts as {term, nature, detail}, 3) filter out character actions and common-sense items, 4) cluster similar entries by term similarity, merge details",
+    "Create src-ts/mcp/endpoints/m11-worldview.ts following pattern from m10-style.ts: define route handlers for POST /worldview/extract (accepts projectId, triggers extraction, returns settings count) and GET /worldview/{projectId} (returns cached settings). Use existing request/response types from gateway-route-types.ts",
+    "Update src-ts/mcp/endpoints/index.ts to export { registerWorldviewEndpoints } from m11-worldview.ts",
+    "Update src-ts/narrative/index.ts to add export { WorldviewSetting, WorldviewExtractor } from './worldview-extractor'",
+    "Update src-ts/container/bindings.ts to bind WorldviewExtractor to its interface, inject LLM service dependency",
+    "Verify: cd src-ts && npx tsc --noEmit passes"
+  ],
+
+  "test": {
+    "commands": ["cd src-ts && npx vitest run tests/narrative/worldview-extractor.test.ts"],
+    "unit": [
+      "WorldviewExtractor: extract from single chapter produces WorldviewSetting[] with required fields",
+      "WorldviewExtractor: filter removes character action sentences",
+      "WorldviewExtractor: cluster merges entries with similar terms",
+      "WorldviewExtractor: empty input returns empty array"
+    ],
+    "integration": [],
+    "success_metrics": ["All new tests pass", "tsc --noEmit clean"]
+  },
+
+  "reference": {
+    "pattern": "BookWorld worldview extraction: chunk → atomic facts → filter → cluster → terminology (term/nature/detail/source)",
+    "files": ["src-ts/narrative/worldview-coherence-validator.ts", "src-ts/mcp/endpoints/m10-style.ts", "src-ts/knowledge/manager.ts"],
+    "examples": "m10-style.ts shows pattern for MCP endpoints that trigger LLM-powered extraction and cache results"
+  },
+
+  "rationale": {
+    "chosen_approach": "Standalone module with its own class rather than extending knowledge-service",
+    "decision_factors": ["Domain-specific extraction logic (narrative worldview) differs from general knowledge CRUD", "BookWorld's validated extraction pipeline provides proven methodology", "Separation enables independent testing and iteration"],
+    "tradeoffs": "Extra module vs extending knowledge-service, but cleaner separation of concerns"
+  },
+
+  "risks": ["LLM extraction quality varies by model — cache results and allow manual edit"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["worldview-extraction", "knowledge-management"],
+    "affected_components": ["narrative pipeline", "MCP gateway"],
+    "affected_requirements": [],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "60 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

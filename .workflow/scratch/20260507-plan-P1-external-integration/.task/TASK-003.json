@@ -1,0 +1,121 @@
+{
+  "id": "TASK-003",
+  "title": "Role Agent Enhancement — Dynamic Attributes + STM/LTM",
+  "description": "Enhance the character agent with BookWorld's role agent pattern: separate static/dynamic attributes, open-domain natural language action space, and short-term + long-term memory with capacity limits and auto-abstraction. Integrate with lifecycle hooks from TASK-001.",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "Add dynamic attribute types to src-ts/narrative/character-depth.ts (goals, states evolving per scene). Add STM/LTM memory layer to src-ts/agents/character.ts using existing memory/six-dimensional-memory.ts infrastructure — STM stores recent events with capacity limit (default 20), overflow auto-abstracts to LTM via summarize(). Register perception and reflection lifecycle hooks for structured action generation. Add DynamicCharacterState interface.",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "src-ts/agents/ + src-ts/narrative/",
+  "focus_paths": ["src-ts/agents/character.ts", "src-ts/narrative/character-depth.ts", "src-ts/narrative/cross-chapter-character-tracker.ts"],
+
+  "read_first": [
+    "src-ts/agents/character.ts",
+    "src-ts/narrative/character-depth.ts",
+    "src-ts/narrative/cross-chapter-character-tracker.ts",
+    "src-ts/narrative/types.ts",
+    "src-ts/memory/six-dimensional-memory.ts",
+    "src-ts/memory/temporal-memory.ts",
+    "src-ts/agents/lifecycle-hooks.ts"
+  ],
+
+  "depends_on": ["TASK-001"],
+  "wave": 2,
+  "parallel_group": "agent-enhancement",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-ts/narrative/character-depth.ts contains 'export interface DynamicCharacterState'",
+      "src-ts/narrative/character-depth.ts contains 'goals:'",
+      "src-ts/narrative/character-depth.ts contains 'currentStates:'",
+      "src-ts/agents/character.ts contains 'shortTermMemory'",
+      "src-ts/agents/character.ts contains 'longTermMemory'",
+      "src-ts/agents/character.ts contains 'STM_CAPACITY'",
+      "src-ts/agents/character.ts contains 'addHook('",
+      "cd src-ts && npx tsc --noEmit exits 0"
+    ],
+    "verification": "Import CharacterAgent, verify it has STM/LTM fields, addHook calls for perception and reflection. Create instance with mock data, push events to STM until capacity exceeded, verify overflow to LTM via summarization.",
+    "definition_of_done": "Character agent separates static traits from dynamic evolving attributes. STM/LTM memory manages action history with auto-abstraction on overflow. Agent uses lifecycle hooks for structured reasoning."
+  },
+
+  "files": [
+    {
+      "path": "src-ts/narrative/character-depth.ts",
+      "action": "modify",
+      "target": "CharacterDepthAnalyzer or character types",
+      "change": "Add DynamicCharacterState interface {goals: string[], currentStates: string[], recentActions: string[], lastUpdated: string}. Add function to update dynamic state from scene results."
+    },
+    {
+      "path": "src-ts/agents/character.ts",
+      "action": "modify",
+      "target": "CharacterAgent",
+      "change": "Add private shortTermMemory: string[] with STM_CAPACITY=20. Add private longTermMemory: string[] for auto-abstracted summaries. Add pushMemory(event) method that appends to STM, on overflow calls summarize(oldest) and pushes summary to LTM. Register perception hook to gather context from STM+LTM. Register reflection hook to update dynamic attributes."
+    },
+    {
+      "path": "src-ts/narrative/cross-chapter-character-tracker.ts",
+      "action": "modify",
+      "target": "CrossChapterCharacterTracker",
+      "change": "Add method to load dynamic state for a character, integrate with DynamicCharacterState from character-depth.ts"
+    }
+  ],
+
+  "implementation": [
+    "In src-ts/narrative/character-depth.ts: add DynamicCharacterState interface with goals: string[], currentStates: string[], recentActions: string[], lastUpdated: string. Add updateDynamicState(current: DynamicCharacterState, sceneResult: string): Promise<DynamicCharacterState> that uses LLM to extract goal/state changes from scene result.",
+    "In src-ts/agents/character.ts: add private shortTermMemory: string[] = [] field with const STM_CAPACITY = 20. Add private longTermMemory: string[] = [] field. Add pushMemory(event: string): void — pushes to STM, if STM.length > STM_CAPACITY, pop oldest, summarize via LLM, push summary to LTM. Add getMemoryContext(): string method returning combined STM + LTM summary for prompt injection.",
+    "In src-ts/agents/character.ts constructor or init: register perception lifecycle hook that assembles context from STM+LTM+dynamic state. Register reflection lifecycle hook that calls updateDynamicState and pushMemory with execution results.",
+    "In src-ts/narrative/cross-chapter-character-tracker.ts: add getDynamicState(characterId: string): Promise<DynamicCharacterState> method that loads or initializes dynamic state for a character.",
+    "Verify: cd src-ts && npx tsc --noEmit passes"
+  ],
+
+  "test": {
+    "commands": ["cd src-ts && npx vitest run tests/agents/character.test.ts tests/narrative/character-depth.test.ts"],
+    "unit": [
+      "pushMemory: events under capacity stay in STM only",
+      "pushMemory: exceeding capacity triggers summarization to LTM",
+      "getMemoryContext: returns combined STM + LTM content",
+      "DynamicCharacterState: updateDynamicState extracts goal changes",
+      "Character agent with lifecycle hooks: perception hook assembles memory context"
+    ],
+    "integration": [],
+    "success_metrics": ["All existing character agent tests still pass", "New STM/LTM tests pass", "tsc --noEmit clean"]
+  },
+
+  "reference": {
+    "pattern": "BookWorld role agent: static attributes (unchanging) + dynamic attributes (goals/states evolving), STM with capacity limit + LTM via summarize()",
+    "files": ["src-ts/agents/character.ts", "src-ts/memory/six-dimensional-memory.ts", "src-ts/memory/temporal-memory.ts"],
+    "examples": "six-dimensional-memory.ts already has layered memory concept — STM/LTM adds capacity management and auto-abstraction"
+  },
+
+  "rationale": {
+    "chosen_approach": "Layer STM/LTM on existing memory infrastructure rather than new memory system",
+    "decision_factors": ["Reuses proven six-dimensional-memory patterns", "BookWorld validates that STM+LTM with capacity limits improves character consistency", "Integration with lifecycle hooks enables structured reasoning"],
+    "tradeoffs": "Tight coupling to six-dimensional-memory patterns, but avoids duplicating memory infrastructure"
+  },
+
+  "risks": ["STM_CAPACITY=20 is a starting default — may need tuning based on chapter length"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["character-agent", "narrative-analysis"],
+    "affected_components": ["CharacterAgent", "CharacterDepthAnalyzer", "CrossChapterCharacterTracker"],
+    "affected_requirements": [],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "50 min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

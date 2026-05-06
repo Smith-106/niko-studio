@@ -7,6 +7,8 @@
 
 import type { IAgentLLMService } from './base';
 import { AgentType } from './base';
+import type { AgentLifecycleHook } from './lifecycle-hooks';
+import { LifecycleStage } from './lifecycle-hooks';
 import { CommanderAgent } from './commander';
 import { ArchitectAgent } from './architect';
 import { WriterAgent } from './writer';
@@ -34,6 +36,7 @@ export class AgentFactory {
       name?: string;
       config?: Record<string, unknown>;
       llmService?: IAgentLLMService;
+      lifecycleHooks?: Array<{ stage: LifecycleStage; handler: AgentLifecycleHook }>;
     },
   ): unknown {
     // Check for mock first
@@ -47,6 +50,17 @@ export class AgentFactory {
     // Create new instance
     const agent = this.createAgent(agentType, options);
     this.instances.set(agentType, agent);
+
+    // Register lifecycle hooks if provided
+    if (options?.lifecycleHooks) {
+      const { BaseAgent } = require('./base');
+      if (agent instanceof BaseAgent) {
+        for (const { stage, handler } of options.lifecycleHooks) {
+          (agent as InstanceType<typeof BaseAgent>).addHook(stage, handler);
+        }
+      }
+    }
+
     return agent;
   }
 

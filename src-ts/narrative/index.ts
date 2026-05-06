@@ -88,6 +88,9 @@ export {
   type CharacterDepthResult,
   computeCharacterDepthResult,
   CharacterDepthSystem,
+  DynamicCharacterState as DynamicCharacterStateType,
+  createEmptyDynamicState,
+  mergeDynamicState,
 } from './character-depth';
 
 // character-manager (exclude CharacterState and DualPersonality, collide with analyzers/character-depth)
@@ -176,4 +179,14 @@ export type {
   WorldviewReport,
   IWorldviewGraphAdapter,
 } from './worldview-coherence-validator';
+
+// Worldview extractor (M11 — BookWorld integration)
+export {
+  WorldviewNature,
+  WorldviewExtractor,
+} from './worldview-extractor';
+export type {
+  WorldviewSetting,
+  ChapterContent as WorldviewChapterContent,
+} from './worldview-extractor';
 

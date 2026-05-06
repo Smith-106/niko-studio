@@ -134,6 +134,8 @@ export function tokenUsageToDict(u: TokenUsage): Record<string, unknown> {
 // BaseAgent abstract class
 // ============================================================
 
+import { LifecycleStage, type AgentLifecycleHook, type AgentContext, LifecycleHookRegistry } from './lifecycle-hooks';
+
 export abstract class BaseAgent {
   public readonly name: string;
   public readonly config: Record<string, unknown>;
@@ -142,6 +144,7 @@ export abstract class BaseAgent {
   protected _usageHistory: TokenUsage[];
   protected _sessionCost: number;
   protected _budgetConfig: BudgetConfig;
+  protected _hookRegistry: LifecycleHookRegistry;
 
   constructor(name: string, config?: Record<string, unknown>) {
     this.name = name;
@@ -150,6 +153,7 @@ export abstract class BaseAgent {
     this._modelName = (this.config["model"] as string) ?? "gpt-4o";
     this._usageHistory = [];
     this._sessionCost = 0.0;
+    this._hookRegistry = new LifecycleHookRegistry();
     this._budgetConfig = {
       maxCostPerRequest: (this.config["max_cost_per_request"] as number) ?? 1.0,
       maxCostPerSession: (this.config["max_cost_per_session"] as number) ?? 10.0,
@@ -301,6 +305,19 @@ export abstract class BaseAgent {
       `EXPECTED: ${expected}\n` +
       `RULES: ${rules}\n`
     );
+  }
+
+  // ---------- Lifecycle hooks ----------
+
+  addHook(stage: LifecycleStage, handler: AgentLifecycleHook): void {
+    this._hookRegistry.register(stage, handler);
+  }
+
+  protected async runLifecycle(
+    stage: LifecycleStage,
+    context: AgentContext,
+  ): Promise<AgentContext> {
+    return this._hookRegistry.execute(stage, context);
   }
 
   // ---------- Abstract run method ----------

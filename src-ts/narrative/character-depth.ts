@@ -12,7 +12,41 @@
 import type { INarrativeLLMClient } from './types.js';
 
 // ============================================================
-// Enums
+// Dynamic Character State (M11 — BookWorld integration)
+// ============================================================
+
+export interface DynamicCharacterState {
+  goals: string[];
+  currentStates: string[];
+  recentActions: string[];
+  lastUpdated: string;
+}
+
+export function createEmptyDynamicState(): DynamicCharacterState {
+  return {
+    goals: [],
+    currentStates: [],
+    recentActions: [],
+    lastUpdated: new Date().toISOString(),
+  };
+}
+
+export function mergeDynamicState(
+  current: DynamicCharacterState,
+  newGoals: string[],
+  newStates: string[],
+  newAction: string,
+): DynamicCharacterState {
+  return {
+    goals: [...new Set([...current.goals, ...newGoals])].slice(-10),
+    currentStates: newStates.length > 0 ? newStates : current.currentStates,
+    recentActions: [...current.recentActions, newAction].slice(-20),
+    lastUpdated: new Date().toISOString(),
+  };
+}
+
+// ============================================================
+// Enums (original)
 // ============================================================
 
 export enum CharacterTrait {

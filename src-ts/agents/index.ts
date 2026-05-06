@@ -100,3 +100,14 @@ export type {
 
 // factory.ts
 export { AgentFactory } from "./factory";
+
+// lifecycle-hooks.ts
+export {
+  LifecycleStage,
+  LifecycleHookRegistry,
+} from "./lifecycle-hooks";
+
+export type {
+  AgentLifecycleHook,
+  AgentContext,
+} from "./lifecycle-hooks";

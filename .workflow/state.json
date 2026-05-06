@@ -10,7 +10,8 @@
     "key_decisions": [
       "M10 single phase — no hard dependency boundary between deep writing features",
       "M10 builds on M9 agent/workflow infrastructure",
-      "M11 completes M10 by wiring UI + enriching analysis + activating external integrations"
+      "M11 completes M10 by wiring UI + enriching analysis + activating external integrations",
+      "M11 absorbs BookWorld worldview extraction + OpenStory lifecycle plugins + MiroFish swarm patterns"
     ],
     "blockers": []
   },
@@ -37,9 +38,32 @@
       "harvested": true,
       "created_at": "2026-05-06T13:27:00+08:00",
       "completed_at": "2026-05-06T13:30:00+08:00"
+    },
+    {
+      "id": "m11-phase1-external-integration-analysis",
+      "type": "analysis",
+      "status": "completed",
+      "path": ".workflow/scratch/20260507-analysis-P1",
+      "description": "Analysis of MiroFish/BookWorld/OpenStory integration into niko-studio for M11 Phase 1",
+      "phase": 1,
+      "milestone": "M11",
+      "created_at": "2026-05-07T01:01:00+08:00"
+    },
+    {
+      "id": "PLN-M11-P1",
+      "type": "plan",
+      "status": "completed",
+      "path": ".workflow/scratch/20260507-plan-P1-external-integration",
+      "description": "M11 Phase 1 plan: 4 tasks in 2 waves — lifecycle hooks, worldview extraction, role agent enhancement, world agent enhancement",
+      "phase": 1,
+      "milestone": "M11",
+      "depends_on": "m11-phase1-external-integration-analysis",
+      "harvested": false,
+      "created_at": "2026-05-07T01:05:00+08:00",
+      "completed_at": "2026-05-07T01:10:00+08:00"
     }
   ],
-  "version": "9.10.0",
+  "version": "9.13.0",
   "current_milestone": "M11",
   "milestones": [
     {
@@ -56,5 +80,5 @@
     }
   ],
   "project": "niko-studio",
-  "last_updated": "2026-05-06T17:10:00+08:00"
+  "last_updated": "2026-05-07T01:10:00+08:00"
 }

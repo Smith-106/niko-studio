@@ -12,6 +12,7 @@
  */
 
 import type { INarrativeLLMClient } from './types.js';
+import type { WorldviewSetting } from './worldview-extractor.js';
 
 // ============================================================
 // Types
@@ -176,9 +177,26 @@ export class WorldviewCoherenceValidator {
   constructor(options?: {
     llmClient?: INarrativeLLMClient;
     graphAdapter?: IWorldviewGraphAdapter;
+    worldviewSettings?: WorldviewSetting[];
   }) {
     this.llmClient = options?.llmClient ?? null;
     this.graphAdapter = options?.graphAdapter ?? null;
+
+    // Convert worldview settings to world rules for validation
+    if (options?.worldviewSettings) {
+      for (const setting of options.worldviewSettings) {
+        if (setting.term) {
+          this.worldRules.push({
+            id: `WVE-${setting.term.replace(/\s+/g, '-')}`,
+            category: setting.nature,
+            name: setting.term,
+            description: setting.detail,
+            constraints: setting.detail.split(/[。；;]/).filter((s) => s.trim().length > 0).slice(0, 5),
+            establishedIn: parseInt(setting.source.match(/Ch\.(\d+)/)?.[1] ?? '1', 10),
+          });
+        }
+      }
+    }
   }
 
   // ========================================

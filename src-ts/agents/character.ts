@@ -9,6 +9,11 @@
 
 import { BaseAgent } from './base';
 import type { IAgentGraphEngine } from './base';
+import { LifecycleStage } from './lifecycle-hooks';
+import type { DynamicCharacterState } from '../narrative/character-depth';
+import { createEmptyDynamicState, mergeDynamicState } from '../narrative/character-depth';
+
+const STM_CAPACITY = 20;
 
 // ── Interfaces (Pydantic BaseModel -> TS interface) ────────
 
@@ -48,6 +53,9 @@ export interface CharacterContext {
 
 export class CharacterAgent extends BaseAgent {
   private _graphEngine: IAgentGraphEngine | null;
+  private _shortTermMemory: string[] = [];
+  private _longTermMemory: string[] = [];
+  private _dynamicState: DynamicCharacterState = createEmptyDynamicState();
 
   constructor(
     deps?: {
@@ -57,6 +65,57 @@ export class CharacterAgent extends BaseAgent {
   ) {
     super('Character', deps?.config);
     this._graphEngine = deps?.graphEngine ?? null;
+
+    // Register lifecycle hooks for structured reasoning
+    this.addHook(LifecycleStage.PERCEPTION, async (ctx) => {
+      ctx.memoryContext = this.getMemoryContext();
+      ctx.dynamicState = this._dynamicState;
+      return ctx;
+    });
+
+    this.addHook(LifecycleStage.REFLECTION, async (ctx) => {
+      if (ctx.lastAction) {
+        this.pushMemory(ctx.lastAction as string);
+      }
+      if (ctx.newGoals || ctx.newStates) {
+        this._dynamicState = mergeDynamicState(
+          this._dynamicState,
+          (ctx.newGoals as string[]) ?? [],
+          (ctx.newStates as string[]) ?? [],
+          (ctx.lastAction as string) ?? '',
+        );
+      }
+      return ctx;
+    });
+  }
+
+  // ── STM / LTM Memory Management ───────────────────────────
+
+  pushMemory(event: string): void {
+    this._shortTermMemory.push(event);
+    if (this._shortTermMemory.length > STM_CAPACITY) {
+      const oldest = this._shortTermMemory.shift();
+      if (oldest) {
+        const summary = oldest.length > 100
+          ? oldest.slice(0, 97) + '...'
+          : oldest;
+        this._longTermMemory.push(`[LTM] ${summary}`);
+      }
+    }
+  }
+
+  getMemoryContext(): string {
+    const stmPart = this._shortTermMemory.length > 0
+      ? `Recent events:\n${this._shortTermMemory.map((e, i) => `${i + 1}. ${e}`).join('\n')}`
+      : '';
+    const ltmPart = this._longTermMemory.length > 0
+      ? `\nLong-term memories:\n${this._longTermMemory.slice(-10).join('\n')}`
+      : '';
+    return stmPart + ltmPart;
+  }
+
+  get dynamicState(): DynamicCharacterState {
+    return this._dynamicState;
   }
 
   // ── Lazy graph engine access ─────────────────────────────

@@ -9,6 +9,7 @@
 
 import { BaseAgent } from './base';
 import type { IAgentGraphEngine, IAgentMemoryEngine } from './base';
+import type { WorldviewSetting } from '../narrative/worldview-extractor.js';
 
 // ── Interfaces (Pydantic BaseModel -> TS interface) ────────
 
@@ -156,6 +157,70 @@ export class WorldbuildingAgent extends BaseAgent {
       suggestions,
       checkedRules: context.activeRules.length,
     };
+  }
+
+  /**
+   * Generate an environment-aware response based on worldview settings.
+   * Inspired by BookWorld's World Agent environmental response pattern.
+   */
+  async generateEnvironmentalResponse(
+    action: string,
+    locationContext: string,
+    worldviewSettings: WorldviewSetting[],
+  ): Promise<string> {
+    const relevantSettings = worldviewSettings.filter(
+      (s) =>
+        action.includes(s.term) ||
+        locationContext.includes(s.term) ||
+        s.nature === 'magic_system' ||
+        s.nature === 'social_norm',
+    );
+
+    const settingContext = relevantSettings.length > 0
+      ? relevantSettings.map((s) => `${s.term} (${s.nature}): ${s.detail}`).join('\n')
+      : 'No specific worldview constraints apply.';
+
+    const response = `[Environment Response for "${action}" at ${locationContext}]\nWorldview context:\n${settingContext}\n\nThe environment responds according to the established rules of this world.`;
+
+    this.logActivity(
+      `Generated environmental response: ${relevantSettings.length} settings applied`,
+    );
+    return response;
+  }
+
+  /**
+   * Generate a stimulus event for story progression.
+   * Produces conflict-rich events based on character tensions and world constraints.
+   */
+  async generateStimulusEvent(
+    characterStates: string[],
+    worldviewSettings: WorldviewSetting[],
+  ): Promise<string> {
+    const conflicts = worldviewSettings
+      .filter((s) => s.nature === 'social_norm' || s.nature === 'political')
+      .slice(0, 3)
+      .map((s) => s.detail);
+
+    const tension = characterStates.length > 0
+      ? `Character tensions: ${characterStates.join('; ')}`
+      : 'No active character tensions.';
+
+    const worldConstraint = conflicts.length > 0
+      ? `\nWorld constraints: ${conflicts.join('; ')}`
+      : '';
+
+    const event = `[Stimulus Event]\n${tension}${worldConstraint}\n\nAn unexpected event occurs that challenges the characters and disrupts the status quo.`;
+
+    this.logActivity('Generated stimulus event');
+    return event;
+  }
+
+  /**
+   * Create a temporary NPC persona description.
+   * For unnamed characters encountered during simulation.
+   */
+  createTempNPC(description: string): string {
+    return `[Temporary NPC] ${description || 'An unnamed individual the characters encounter briefly.'}`;
   }
 
   /**
