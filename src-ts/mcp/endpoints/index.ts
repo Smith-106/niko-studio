@@ -137,3 +137,7 @@ export {
   worldviewExtractEndpoint,
   worldviewGetEndpoint,
 } from './m11-worldview';
+
+export {
+  writingCraftAnalyzeEndpoint,
+} from './writing-craft';

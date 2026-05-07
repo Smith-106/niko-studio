@@ -3,3 +3,5 @@ export * from './SectionHeader';
 export * from './MetricValue';
 export * from './ProgressBar';
 export * from './AccordionWrapper';
+export * from './WritingDashboard';
+export * from './WritingDimensionDetail';

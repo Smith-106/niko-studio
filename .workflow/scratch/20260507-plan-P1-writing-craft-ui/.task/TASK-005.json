@@ -1,0 +1,24 @@
+{
+  "id": "TASK-005",
+  "title": "集成到 Intelligence 面板",
+  "status": "pending",
+  "target_module": "desktop/src/components/intelligence/index.ts",
+  "read_first": [
+    "desktop/src/components/intelligence/index.ts",
+    "desktop/src/components/intelligence/WritingDashboard.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'WritingDashboard' desktop/src/components/intelligence/index.ts → 存在 re-export"
+    ]
+  },
+  "action": {
+    "detailed_plan": "在 intelligence/index.ts 中 re-export WritingDashboard 和子组件。确保 WritingDashboard 可被主编辑器面板引用，作为新标签页添加到 AnalysisPanel。"
+  },
+  "implementation": [
+    { "step": 1, "action": "在 index.ts 中 export WritingDashboard, WritingDimensionDetail, AntiPatternWarning", "file": "desktop/src/components/intelligence/index.ts" }
+  ],
+  "priority": "medium",
+  "estimated_minutes": 15,
+  "_metadata": { "wave": 2 }
+}

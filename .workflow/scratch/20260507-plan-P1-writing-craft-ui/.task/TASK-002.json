@@ -1,0 +1,31 @@
+{
+  "id": "TASK-002",
+  "title": "Desktop API Bridge Layer",
+  "status": "pending",
+  "target_module": "desktop/src/api/writing-craft.ts",
+  "test_file": "desktop/src/api/writing-craft.test.ts",
+  "read_first": [
+    "desktop/src/api/intelligence.ts",
+    "desktop/src/api/core.ts",
+    "desktop/src/api/contracts.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'analyzeWritingCraft' desktop/src/api/writing-craft.ts → 存在导出函数",
+      "grep 'WritingCraftDimension' desktop/src/api/writing-craft.ts → 存在类型定义",
+      "grep 'WritingCraftResult' desktop/src/api/writing-craft.ts → 存在接口定义",
+      "npx vitest run desktop/src/api/writing-craft.test.ts → 所有测试通过"
+    ]
+  },
+  "action": {
+    "detailed_plan": "创建 desktop/src/api/writing-craft.ts，定义 WritingCraftDimension 类型（6 个值）、WritingCraftDimensionResult 接口、WritingCraftResult 接口，导出 analyzeWritingCraft(text: string, dimensions?: WritingCraftDimension[]) 函数，调用后端 /writing-craft/analyze 端点。"
+  },
+  "implementation": [
+    { "step": 1, "action": "定义 WritingCraftDimension = 'structure' | 'character' | 'suspense' | 'emotion' | 'dialogue' | 'webnovel' 类型和 WritingCraftDimensionResult { dimension, label, score, maxScore, evidence[], suggestions[], details } 接口", "file": "desktop/src/api/writing-craft.ts" },
+    { "step": 2, "action": "导出 analyzeWritingCraft(text, dimensions?) 函数，调用 POST /writing-craft/analyze，返回 ApiResponse<WritingCraftResult>", "file": "desktop/src/api/writing-craft.ts" },
+    { "step": 3, "action": "创建测试文件 mock callApi 验证请求参数和返回格式", "file": "desktop/src/api/writing-craft.test.ts" }
+  ],
+  "priority": "high",
+  "estimated_minutes": 25,
+  "_metadata": { "wave": 1 }
+}

@@ -24,7 +24,21 @@
       "M17 bridges M13-M16 knowledge engine to UI via API layer + dashboard components"
     ]
   },
-  "artifacts": [],
+  "artifacts": [
+    {
+      "id": "PLN-M17-P1-writing-craft-ui",
+      "type": "plan",
+      "milestone": "M17",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260507-plan-P1-writing-craft-ui",
+      "status": "completed",
+      "created_at": "2026-05-07T22:20:00+08:00",
+      "completed_at": "2026-05-07T22:20:00+08:00",
+      "description": "M17 P1 plan: 6 tasks in 3 waves — MCP endpoint, API bridge, WritingDashboard, dimension details, integration, e2e tests",
+      "harvested": false
+    }
+  ],
   "created_at": "2026-05-02T00:31:18.9393348+08:00",
   "current_milestone": "M17",
   "initialized": true,
