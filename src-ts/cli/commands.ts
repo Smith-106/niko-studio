@@ -423,7 +423,12 @@ async function gatewayRequest(
 
   const response = await fetch(url, { ...fetchOptions, signal: AbortSignal.timeout(options.timeout ?? 10000) });
   const body = await response.text();
-  return body ? JSON.parse(body) : {};
+  if (!body) return {};
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error(`Gateway returned non-JSON response (${response.status}): ${body.slice(0, 200)}`);
+  }
 }
 
 export const statusCommand: Command = {

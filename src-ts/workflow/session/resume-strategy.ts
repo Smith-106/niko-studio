@@ -149,6 +149,7 @@ export function checkpointStateFromDict(data: Record<string, unknown>): Checkpoi
 export abstract class ResumeStrategy {
   protected basePath: string;
   protected checkpointsPath: string;
+  private _writeChains = new Map<string, Promise<void>>();
 
   constructor(basePath: string = '.writing/sessions') {
     this.basePath = path.resolve(basePath);
@@ -176,6 +177,29 @@ export abstract class ResumeStrategy {
       console.warn(`Failed to load checkpoints for ${sessionId}: ${e}`);
       return [];
     }
+  }
+
+  protected appendCheckpointFile(sessionId: string, entry: Record<string, unknown>): void {
+    const checkpointFile = this.getCheckpointPath(sessionId);
+    const prev = this._writeChains.get(sessionId) ?? Promise.resolve();
+    const next = prev.then(() => {
+      let existing: Record<string, unknown> = { checkpoints: [] };
+      if (fs.existsSync(checkpointFile)) {
+        try {
+          existing = JSON.parse(fs.readFileSync(checkpointFile, 'utf-8'));
+        } catch { /* keep default */ }
+      }
+      const checkpoints = (existing['checkpoints'] as unknown[]) ?? [];
+      checkpoints.push(entry);
+      existing['checkpoints'] = checkpoints.slice(-10);
+      fs.writeFileSync(checkpointFile, JSON.stringify(existing, null, 2), 'utf-8');
+    }).catch(() => {});
+    this._writeChains.set(sessionId, next);
+    void next.then(() => {
+      if (this._writeChains.get(sessionId) === next) {
+        this._writeChains.delete(sessionId);
+      }
+    });
   }
 
   getLatestCheckpoint(sessionId: string): CheckpointState | null {
@@ -275,21 +299,7 @@ export class NativeResumeStrategy extends ResumeStrategy {
       history_snapshot: (state['history'] as ConversationTurn[]) ?? [],
     };
 
-    const checkpointFile = this.getCheckpointPath(sessionId);
-    let existing: Record<string, unknown> = { checkpoints: [] };
-    if (fs.existsSync(checkpointFile)) {
-      try {
-        existing = JSON.parse(fs.readFileSync(checkpointFile, 'utf-8'));
-      } catch {
-        // keep default
-      }
-    }
-
-    const checkpoints = (existing['checkpoints'] as unknown[]) ?? [];
-    checkpoints.push(checkpointStateToDict(checkpoint));
-    existing['checkpoints'] = checkpoints.slice(-10);
-
-    fs.writeFileSync(checkpointFile, JSON.stringify(existing, null, 2), 'utf-8');
+    this.appendCheckpointFile(sessionId, checkpointStateToDict(checkpoint));
     return checkpointId;
   }
 }
@@ -361,21 +371,7 @@ export class PromptConcatStrategy extends ResumeStrategy {
       history_snapshot: history,
     };
 
-    const checkpointFile = this.getCheckpointPath(sessionId);
-    let existing: Record<string, unknown> = { checkpoints: [] };
-    if (fs.existsSync(checkpointFile)) {
-      try {
-        existing = JSON.parse(fs.readFileSync(checkpointFile, 'utf-8'));
-      } catch {
-        // keep default
-      }
-    }
-
-    const checkpoints = (existing['checkpoints'] as unknown[]) ?? [];
-    checkpoints.push(checkpointStateToDict(checkpoint));
-    existing['checkpoints'] = checkpoints.slice(-10);
-
-    fs.writeFileSync(checkpointFile, JSON.stringify(existing, null, 2), 'utf-8');
+    this.appendCheckpointFile(sessionId, checkpointStateToDict(checkpoint));
     return checkpointId;
   }
 

@@ -114,6 +114,10 @@ export class FileWatcher {
         });
       });
 
+      watcher.on('error', (err) => {
+        console.warn(`FileWatcher error on ${dirResolved}: ${err.message}`);
+      });
+
       this.watchers.push(watcher);
       this.watchedDirs.add(dirResolved);
       this.running = true;
@@ -135,6 +139,8 @@ export class FileWatcher {
     }
     this.watchers = [];
     this.watchedDirs.clear();
+    this.callbacks = [];
+    this.lastEvents.clear();
     this.running = false;
     console.log('FileWatcher stopped');
   }

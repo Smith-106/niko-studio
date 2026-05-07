@@ -84,6 +84,7 @@ export class SessionManager {
   public readonly basePath: string;
   public readonly activePath: string;
   public readonly archivedPath: string;
+  private _writeChains = new Map<string, Promise<void>>();
 
   constructor(basePath: string = '.writing/sessions') {
     this.basePath = path.resolve(basePath);
@@ -435,25 +436,33 @@ export class SessionManager {
 
   private _appendSnapshotIndex(sessionId: string, contentType: ContentType, filePath: string): void {
     const indexPath = this._resolvePath(sessionId, ContentType.SNAPSHOT_INDEX, {});
-    fs.mkdirSync(path.dirname(indexPath), { recursive: true });
-
-    let snapshots: unknown[] = [];
-    if (fs.existsSync(indexPath)) {
-      try {
-        const parsed = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
-        if (Array.isArray(parsed)) snapshots = parsed;
-      } catch {
-        snapshots = [];
-      }
-    }
-
-    snapshots.push({
+    const entry = {
       ts: new Date().toISOString(),
       content_type: contentType,
       path: filePath,
-    });
+    };
 
-    fs.writeFileSync(indexPath, JSON.stringify(snapshots, null, 2), 'utf-8');
+    const prev = this._writeChains.get(sessionId) ?? Promise.resolve();
+    const next = prev.then(() => {
+      fs.mkdirSync(path.dirname(indexPath), { recursive: true });
+      let snapshots: unknown[] = [];
+      if (fs.existsSync(indexPath)) {
+        try {
+          const parsed = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+          if (Array.isArray(parsed)) snapshots = parsed;
+        } catch {
+          snapshots = [];
+        }
+      }
+      snapshots.push(entry);
+      fs.writeFileSync(indexPath, JSON.stringify(snapshots, null, 2), 'utf-8');
+    }).catch(() => {});
+    this._writeChains.set(sessionId, next);
+    void next.then(() => {
+      if (this._writeChains.get(sessionId) === next) {
+        this._writeChains.delete(sessionId);
+      }
+    });
   }
 
   private _updateTimestamp(sessionId: string): void {
