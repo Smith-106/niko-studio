@@ -11,6 +11,7 @@ import {
   Issue,
   Severity,
 } from './base';
+import { WebNovelGenre, GENRE_TEMPLATES } from '../writing-craft/genre-templates';
 
 interface ClicheEntry {
   pattern: string;
@@ -21,6 +22,17 @@ interface FoundCliche {
   pattern: string;
   label: string;
   count: number;
+}
+
+export interface GenreClicheMatch {
+  pattern: string;
+  count: number;
+}
+
+export interface GenreClicheResult {
+  genre: WebNovelGenre;
+  foundCliches: GenreClicheMatch[];
+  genreScore: number;
 }
 
 export class ClicheDetector extends BaseEvaluator {
@@ -99,6 +111,26 @@ export class ClicheDetector extends BaseEvaluator {
     ...ClicheDetector.DIALOGUE_CLICHES,
     ...ClicheDetector.DESCRIPTION_CLICHES,
   ];
+
+  detectGenreCliches(text: string, genre: WebNovelGenre): GenreClicheResult {
+    const template = GENRE_TEMPLATES[genre];
+    if (!template) {
+      return { genre, foundCliches: [], genreScore: 100 };
+    }
+
+    const foundCliches: GenreClicheMatch[] = [];
+    for (const pattern of template.cliches) {
+      const count = text.split(pattern).length - 1;
+      if (count > 0) {
+        foundCliches.push({ pattern, count });
+      }
+    }
+
+    const deduction = foundCliches.reduce((sum, c) => sum + c.count * 10, 0);
+    const genreScore = Math.max(0, 100 - deduction);
+
+    return { genre, foundCliches, genreScore };
+  }
 
   async evaluate(
     content: string,

@@ -1,0 +1,38 @@
+{
+  "session_id": "maestro-20260507-082000",
+  "source": "maestro",
+  "created_at": "2026-05-07T08:20:00+08:00",
+  "updated_at": "2026-05-07T08:20:00+08:00",
+  "intent": "开始规划 — 基于差距分析创建M13实施计划",
+  "task_type": "plan",
+  "chain_name": "plan",
+  "phase": 1,
+  "auto_mode": false,
+  "cli_tool": "gemini",
+  "exec_mode": "auto",
+  "milestone": "M13",
+  "context": {
+    "issue_id": null,
+    "milestone_num": 13,
+    "spec_session_id": null,
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": ".workflow/scratch/20260507-analysis-M13-P1",
+    "brainstorm_dir": null
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "skill",
+      "skill": "maestro-plan",
+      "args": "1",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "error": null
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "running"
+}

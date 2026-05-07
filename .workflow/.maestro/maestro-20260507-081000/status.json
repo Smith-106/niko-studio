@@ -1,0 +1,38 @@
+{
+  "session_id": "maestro-20260507-081000",
+  "source": "maestro",
+  "created_at": "2026-05-07T08:10:00+08:00",
+  "updated_at": "2026-05-07T08:10:00+08:00",
+  "intent": "根据这三个文件夹，改进nikostudio哪里比较好H:\\写作\\写作技巧，H:\\写作\\悬疑，H:\\写作\\中国网络文学阅读潮流研究",
+  "task_type": "analyze",
+  "chain_name": "analyze",
+  "phase": 1,
+  "auto_mode": false,
+  "cli_tool": "gemini",
+  "exec_mode": "auto",
+  "milestone": "M13",
+  "context": {
+    "issue_id": null,
+    "milestone_num": 13,
+    "spec_session_id": null,
+    "scratch_dir": null,
+    "plan_dir": null,
+    "analysis_dir": null,
+    "brainstorm_dir": null
+  },
+  "steps": [
+    {
+      "index": 0,
+      "type": "cli",
+      "skill": "maestro-analyze",
+      "args": "1",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "error": null
+    }
+  ],
+  "waves": [],
+  "current_step": 0,
+  "status": "running"
+}

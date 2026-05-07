@@ -197,6 +197,105 @@ export const FORESHADOW_RECOVERY_METHODS = [
 ] as const;
 
 // ============================================================
+// Suspense Subgenres
+// Source: H:\写作\悬疑 — 4条学习路径
+// ============================================================
+
+export enum SuspenseSubgenre {
+  HONKAKU = 'honkaku',           // 本格推理：公平线索、逻辑推演
+  SOCIETAL = 'societal',         // 社会派：社会批判、动机深度
+  HARD_BOILED = 'hard_boiled',   // 硬汉派：氛围优先、道德灰色
+  THRILLER = 'thriller',         // 惊悚悬疑：不可靠叙述者、心理操控
+}
+
+export interface SubgenreRules {
+  subgenre: SuspenseSubgenre;
+  label: string;
+  description: string;
+  coreRules: string[];
+  requiredElements: string[];
+  forbiddenElements: string[];
+  keywords: { typical: string[]; atypical: string[] };
+  referenceWorks: string[];
+}
+
+export const SUBGENRE_RULES: Record<SuspenseSubgenre, SubgenreRules> = {
+  [SuspenseSubgenre.HONKAKU]: {
+    subgenre: SuspenseSubgenre.HONKAKU,
+    label: '本格推理',
+    description: '以逻辑推理为核心，强调公平线索原则，读者可以和侦探同时推理',
+    coreRules: [
+      '公平线索规则：所有关键线索必须在揭晓前呈现给读者',
+      '逻辑自洽：推理过程必须严格遵循逻辑',
+      '不可能犯罪：犯罪手法看似不可能，但有合理解释',
+      '密室/暴风雪山庄：封闭空间，有限嫌疑人',
+    ],
+    requiredElements: ['侦探角色', '公平线索', '推理过程', '逻辑闭环', '嫌疑人列表'],
+    forbiddenElements: ['超自然解释', '未呈现的关键线索', '巧合破案', '天降灵感'],
+    keywords: {
+      typical: ['密室', '不在场证明', '线索', '推理', '嫌疑人', '诡计', '不可能', '真凶', '不在场'],
+      atypical: ['超自然', '鬼神', '灵异', '巧合'],
+    },
+    referenceWorks: ['阿加莎·克里斯蒂《无人生还》', '希区柯克悬念故事全集'],
+  },
+  [SuspenseSubgenre.SOCIETAL]: {
+    subgenre: SuspenseSubgenre.SOCIETAL,
+    label: '社会派',
+    description: '以社会问题为背景，深入挖掘犯罪动机和人性复杂面',
+    coreRules: [
+      '社会批判：犯罪动机与社会问题紧密关联',
+      '动机深度：每个角色都有复杂的动机，无纯粹善恶',
+      '人性描写：重点刻画人物心理和情感',
+      '现实背景：故事植根于真实的社会环境',
+    ],
+    requiredElements: ['社会问题', '复杂动机', '人性描写', '情感深度', '现实感'],
+    forbiddenElements: ['纯粹善恶', '脸谱化角色', '脱离社会的犯罪', '无动机的恶'],
+    keywords: {
+      typical: ['动机', '社会', '不公', '人性', '挣扎', '灰色', '苦衷', '不得已', '为什么'],
+      atypical: ['密室', '诡计', '纯粹', '天赋', '超能力'],
+    },
+    referenceWorks: ['东野圭吾《白夜行》', '山口雅也《生尸之死》'],
+  },
+  [SuspenseSubgenre.HARD_BOILED]: {
+    subgenre: SuspenseSubgenre.HARD_BOILED,
+    label: '硬汉派',
+    description: '以硬汉侦探为主角，氛围和风格优先，道德灰色地带',
+    coreRules: [
+      '氛围优先：环境的氛围描写与情节同等重要',
+      '硬汉侦探：主角坚韧、独立、有道德底线但不完美',
+      '道德灰色：没有绝对的正义和邪恶',
+      '暴力美学：动作和暴力描写直接而有力',
+      '第一人称：通常使用第一人称叙事',
+    ],
+    requiredElements: ['硬汉主角', '氛围描写', '道德灰色', '城市/黑暗背景', '暴力元素'],
+    forbiddenElements: ['温情过度', '纯粹正义', '完美主角', '轻松愉快'],
+    keywords: {
+      typical: ['侦探', '黑暗', '雨夜', '烟', '酒', '孤独', '正义', '街头', '危险', '枪'],
+      atypical: ['温馨', '阳光', '纯粹', '天真'],
+    },
+    referenceWorks: ['雷蒙德·钱德勒《漫长的告别》'],
+  },
+  [SuspenseSubgenre.THRILLER]: {
+    subgenre: SuspenseSubgenre.THRILLER,
+    label: '惊悚悬疑',
+    description: '以心理操控和叙述欺骗为核心，读者无法确定叙事者的可靠性',
+    coreRules: [
+      '不可靠叙述者：叙事者可能隐瞒、歪曲或遗忘事实',
+      '心理操控：通过信息控制操控读者的判断',
+      '反转设计：至少一个颠覆性的重大反转',
+      '选择性叙述：关键信息被故意延迟或隐藏',
+    ],
+    requiredElements: ['不可靠叙述', '心理操控', '重大反转', '信息不对称', '悬念持续'],
+    forbiddenElements: ['完全可靠的叙述者', '无反转', '线形叙事', '透明信息'],
+    keywords: {
+      typical: ['原来', '没想到', '被骗', '不可信', '记忆', '谎言', '反转', '真相', '隐藏'],
+      atypical: ['透明', '直接', '简单', '明确'],
+    },
+    referenceWorks: ['吉莉安·弗琳《消失的爱人》'],
+  },
+};
+
+// ============================================================
 // Dialogue Rules (对白规则)
 // Source: McKee《对白》+ 048-创作阶段-对话与潜台词
 // ============================================================

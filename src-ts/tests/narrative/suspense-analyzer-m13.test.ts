@@ -6,6 +6,7 @@ import {
   SetupPayoffState,
   SatisfactionType,
 } from '../../narrative/suspense-analyzer';
+import { SuspenseSubgenre, SUBGENRE_RULES } from '../../narrative/writing-craft/craft-catalog';
 
 describe('SuspenseAnalyzer — M13 enhancements', () => {
   const analyzer = new SuspenseAnalyzer();
@@ -100,6 +101,66 @@ describe('SuspenseAnalyzer — M13 enhancements', () => {
 
       const types = new Set(result.points.map(p => p.type));
       expect(types.size).toBeGreaterThan(1);
+    });
+  });
+
+  // ── 悬疑流派 ────────────────────────────────────────────
+
+  describe('detectSubgenre', () => {
+    it('identifies HONKAKU for fair-play mystery text', () => {
+      const chapters = [
+        { content: '在一个密室中发现了一具尸体，不可能犯罪。侦探开始推理，发现嫌疑人都有不在场证明，但线索指向了一个诡计。', chapterIndex: 1 },
+      ];
+      const results = analyzer.detectSubgenre(chapters);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0].subgenre).toBe(SuspenseSubgenre.HONKAKU);
+    });
+
+    it('identifies THRILLER for unreliable narrator text', () => {
+      const chapters = [
+        { content: '她的记忆似乎出现了偏差，原来她一直在撒谎。隐藏的真相被揭露，没想到反转竟然是这样。', chapterIndex: 1 },
+      ];
+      const results = analyzer.detectSubgenre(chapters);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.some((r) => r.subgenre === SuspenseSubgenre.THRILLER)).toBe(true);
+    });
+
+    it('identifies SOCIETAL for social commentary text', () => {
+      const chapters = [
+        { content: '他不公地被判了刑，社会的不公让他走上犯罪之路。动机复杂，人性挣扎，不得已而为之。', chapterIndex: 1 },
+      ];
+      const results = analyzer.detectSubgenre(chapters);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.some((r) => r.subgenre === SuspenseSubgenre.SOCIETAL)).toBe(true);
+    });
+  });
+
+  describe('checkSubgenreRules', () => {
+    it('detects violations for HONKAKU with supernatural elements', () => {
+      const chapters = [
+        { content: '凶手是鬼神，超自然力量杀死了所有人。', chapterIndex: 1 },
+      ];
+      const result = analyzer.checkSubgenreRules(chapters, SuspenseSubgenre.HONKAKU);
+      expect(result.violations.length).toBeGreaterThan(0);
+      expect(result.ruleScore).toBeLessThan(100);
+    });
+
+    it('reports good compliance for rule-following text', () => {
+      const chapters = [
+        { content: '侦探发现了关键线索，通过逻辑推理锁定了嫌疑人。不在场证明被推翻，公平线索指向诡计。密室中不可能犯罪的谜团解开，真凶浮出水面。推理过程严密，逻辑闭环。', chapterIndex: 1 },
+      ];
+      const result = analyzer.checkSubgenreRules(chapters, SuspenseSubgenre.HONKAKU);
+      expect(result.ruleScore).toBeGreaterThan(50);
+    });
+
+    it('SUBGENRE_RULES has 4 entries with complete data', () => {
+      expect(Object.keys(SUBGENRE_RULES)).toHaveLength(4);
+      for (const rules of Object.values(SUBGENRE_RULES)) {
+        expect(rules.coreRules.length).toBeGreaterThanOrEqual(3);
+        expect(rules.requiredElements.length).toBeGreaterThanOrEqual(3);
+        expect(rules.keywords.typical.length).toBeGreaterThanOrEqual(3);
+        expect(rules.referenceWorks.length).toBeGreaterThan(0);
+      }
     });
   });
 });

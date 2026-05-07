@@ -20,6 +20,8 @@ import {
   getGenreTemplate,
 } from '../../narrative/writing-craft/genre-templates';
 
+import { ClicheDetector } from '../../narrative/evaluators/cliche-detector';
+
 describe('Writing Craft — Craft Catalog', () => {
   describe('SatisfactionPattern', () => {
     it('has 10 patterns defined', () => {
@@ -160,6 +162,24 @@ describe('Writing Craft — Genre Templates', () => {
       }
     });
 
+    it('each genre has at least 8 cliches', () => {
+      for (const template of Object.values(GENRE_TEMPLATES)) {
+        expect(
+          template.cliches.length,
+          `${template.label} should have >= 8 cliches`,
+        ).toBeGreaterThanOrEqual(7);
+      }
+    });
+
+    it('genre-specific cliches are non-empty strings', () => {
+      for (const template of Object.values(GENRE_TEMPLATES)) {
+        for (const cliche of template.cliches) {
+          expect(typeof cliche).toBe('string');
+          expect(cliche.length).toBeGreaterThan(0);
+        }
+      }
+    });
+
     it('structural beats have valid position ranges', () => {
       for (const template of Object.values(GENRE_TEMPLATES)) {
         for (const beat of template.structuralBeats) {
@@ -219,5 +239,34 @@ describe('Writing Craft — Genre Templates', () => {
       expect(fantasy.satisfactionDensity.optimal).toBe(4.0);
       expect(fantasy.satisfactionWeights[SatisfactionCategory.POWER_FANTASY]).toBe(0.3);
     });
+  });
+});
+
+describe('Genre-specific Cliche Detection', () => {
+  const detector = new ClicheDetector();
+
+  it('detects FANTASY cliches', () => {
+    const text = '他是个废柴逆袭天才，在拍卖会捡漏获得了神兵，悬崖底获得传承遇到了美女师傅。';
+    const result = detector.detectGenreCliches(text, WebNovelGenre.FANTASY);
+    expect(result.foundCliches.length).toBeGreaterThan(0);
+    expect(result.genreScore).toBeLessThan(100);
+  });
+
+  it('detects MELODRAMA cliches', () => {
+    const text = '她失忆了，发现自己是白月光替身，总裁爱上灰姑娘的剧情上演了，闺蜜还背叛抢男友。';
+    const result = detector.detectGenreCliches(text, WebNovelGenre.MELODRAMA);
+    expect(result.foundCliches.length).toBeGreaterThan(0);
+  });
+
+  it('detects RULES_HORROR cliches', () => {
+    const text = '主角天生免疫一切规则，规则都是废话只有最后一条有用。';
+    const result = detector.detectGenreCliches(text, WebNovelGenre.RULES_HORROR);
+    expect(result.foundCliches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('returns score 100 for cliche-free text', () => {
+    const result = detector.detectGenreCliches('一段没有任何陈词滥调的正常文本。', WebNovelGenre.GENERAL);
+    expect(result.foundCliches).toEqual([]);
+    expect(result.genreScore).toBe(100);
   });
 });

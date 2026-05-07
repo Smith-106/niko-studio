@@ -6,5 +6,7 @@
  * 4 suspense learning paths, and 5 volumes of web novel research.
  */
 
+export * from './archetype-catalog';
 export * from './craft-catalog';
 export * from './genre-templates';
+export * from './plot-templates';

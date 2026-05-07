@@ -71,6 +71,19 @@
       "phase": 1,
       "milestone": "M13",
       "created_at": "2026-05-07T03:30:00+08:00"
+    },
+    {
+      "id": "PLN-M13-P1-enhancement",
+      "type": "plan",
+      "status": "completed",
+      "path": ".workflow/scratch/20260507-plan-P1-writing-craft-enhancement",
+      "description": "M13 Phase 1 plan: 4 tasks in 2 waves — plot templates, character archetypes, genre clichés, suspense subgenres",
+      "phase": 1,
+      "milestone": "M13",
+      "depends_on": "m13-phase1-writing-craft-analysis",
+      "harvested": false,
+      "created_at": "2026-05-07T08:20:00+08:00",
+      "completed_at": "2026-05-07T08:25:00+08:00"
     }
   ],
   "version": "9.14.0",
@@ -96,5 +109,5 @@
     }
   ],
   "project": "niko-studio",
-  "last_updated": "2026-05-07T03:20:00+08:00"
+  "last_updated": "2026-05-07T08:25:00+08:00"
 }

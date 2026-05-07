@@ -9,6 +9,7 @@
  */
 
 import type { INarrativeLLMClient } from './types.js';
+import { SuspenseSubgenre, SUBGENRE_RULES } from './writing-craft/craft-catalog';
 
 // ============================================================
 // Enums
@@ -701,5 +702,74 @@ export class SuspenseAnalyzer {
       issues: ['缺少时限压力'],
       suggestions: ['考虑增加deadline元素'],
     };
+  }
+
+  // ============================================================
+  // Suspense Subgenre Detection
+  // Source: H:\写作\悬疑 — 4条学习路径
+  // ============================================================
+
+  detectSubgenre(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): { subgenre: SuspenseSubgenre; label: string; confidence: number; evidence: string[] }[] {
+    const allText = chapters.map((c) => c.content).join('\n');
+    const results: Array<{ subgenre: SuspenseSubgenre; label: string; confidence: number; evidence: string[] }> = [];
+
+    for (const def of Object.values(SUBGENRE_RULES)) {
+      const typicalHits = def.keywords.typical.filter((kw) => allText.includes(kw));
+      const atypicalHits = def.keywords.atypical.filter((kw) => allText.includes(kw));
+      const requiredHits = def.requiredElements.filter((el) => allText.includes(el));
+
+      const typicalScore = typicalHits.length / Math.max(def.keywords.typical.length, 1);
+      const requiredScore = requiredHits.length / def.requiredElements.length;
+      const atypicalPenalty = atypicalHits.length * 0.15;
+
+      const confidence = Math.max(0, (typicalScore * 0.5 + requiredScore * 0.5) - atypicalPenalty);
+
+      if (confidence > 0.1) {
+        results.push({
+          subgenre: def.subgenre,
+          label: def.label,
+          confidence: Math.round(confidence * 100) / 100,
+          evidence: [...typicalHits],
+        });
+      }
+    }
+
+    return results.sort((a, b) => b.confidence - a.confidence);
+  }
+
+  checkSubgenreRules(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+    subgenre: SuspenseSubgenre,
+  ): { violations: string[]; suggestions: string[]; ruleScore: number } {
+    const rules = SUBGENRE_RULES[subgenre];
+    if (!rules) return { violations: [], suggestions: ['未知流派'], ruleScore: 0 };
+
+    const allText = chapters.map((c) => c.content).join('\n');
+    const violations: string[] = [];
+    const suggestions: string[] = [];
+
+    for (const rule of rules.coreRules) {
+      const ruleKeywords = rule.split(/[、，,：:]/).filter((w) => w.length >= 2);
+      const matched = ruleKeywords.some((kw) => allText.includes(kw));
+      if (!matched && ruleKeywords.length > 0) {
+        violations.push(`可能未遵守规则: ${rule}`);
+      }
+    }
+
+    for (const forbidden of rules.forbiddenElements) {
+      if (allText.includes(forbidden)) {
+        violations.push(`包含禁止元素: ${forbidden}`);
+      }
+    }
+
+    if (violations.length === 0) {
+      suggestions.push(`${rules.label}的核心规则遵守良好`);
+    }
+
+    const ruleScore = Math.max(0, Math.round((1 - violations.length / (rules.coreRules.length + rules.forbiddenElements.length)) * 100));
+
+    return { violations, suggestions, ruleScore };
   }
 }
