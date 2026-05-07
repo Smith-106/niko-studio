@@ -425,9 +425,9 @@ describe('ServiceContainer', () => {
       expect(mockMemory.initialize).toHaveBeenCalledTimes(1);
     });
 
-    it.skip('should handle initialization timeout', { timeout: 10_000 }, async () => {
+    it('should handle initialization timeout', { timeout: 5_000 }, async () => {
       const mockMemory = createMockMemoryEngine({
-        initialize: vi.fn().mockImplementation(() => new Promise(resolve => setTimeout(resolve, 30000))),
+        initialize: vi.fn().mockImplementation(() => new Promise(resolve => setTimeout(resolve, 3000))),
       });
 
       container.registerMock(ServiceTypes.MemoryEngine, mockMemory);
@@ -436,14 +436,11 @@ describe('ServiceContainer', () => {
       container.registerMock(ServiceTypes.SearchEngine, {} as any);
       container.registerMock(ServiceTypes.WorkflowEngine, {} as any);
 
-      // Start initialization (which creates the initPromises)
       const initPromise = container.initializeAll();
-      
-      // Try to ensure initialization with a shorter timeout
+
       await expect(container.ensureInitialized([ServiceTypes.MemoryEngine], 100))
         .rejects.toThrow('timeout');
-        
-      // Clean up - allow the initialization to complete
+
       await initPromise;
     });
   });
