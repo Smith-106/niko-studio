@@ -1035,7 +1035,7 @@ export class GraphEngine {
       id: row.id,
       type: row.type,
       name: row.name,
-      properties: typeof row.properties === 'string' ? JSON.parse(row.properties) : {},
+      properties: this._parseProperties(row.properties),
       created_at: row.created_at,
       updated_at: row.updated_at,
     }));
@@ -1073,7 +1073,7 @@ export class GraphEngine {
       id: row.id,
       type: row.type,
       name: row.name,
-      properties: typeof row.properties === 'string' ? JSON.parse(row.properties) : {},
+      properties: this._parseProperties(row.properties),
       created_at: row.created_at,
       updated_at: row.updated_at,
     };
@@ -1146,7 +1146,7 @@ export class GraphEngine {
     return rows.map((r) => ({
       id: r.id,
       type: r.type,
-      properties: typeof r.properties === 'string' ? JSON.parse(r.properties) : {},
+      properties: this._parseProperties(r.properties),
       from: r.from_name,
       to: r.to_name,
     }));
@@ -1175,7 +1175,7 @@ export class GraphEngine {
 
     return rows.map((row) => ({
       event: row.name,
-      properties: typeof row.properties === 'string' ? JSON.parse(row.properties) : {},
+      properties: this._parseProperties(row.properties),
       relation: row.relation,
     }));
   }
@@ -1215,7 +1215,7 @@ export class GraphEngine {
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
-      properties: typeof row.properties === 'string' ? JSON.parse(row.properties) : {},
+      properties: this._parseProperties(row.properties),
       created_at: row.created_at,
     }));
   }
@@ -1345,7 +1345,7 @@ export class GraphEngine {
       return { error: `Entity '${name}' not found` };
     }
 
-    const existing: Record<string, unknown> = typeof row.properties === 'string' ? JSON.parse(row.properties) : {};
+    const existing: Record<string, unknown> = this._parseProperties(row.properties);
     Object.assign(existing, properties);
 
     this.db

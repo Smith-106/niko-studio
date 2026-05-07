@@ -1521,14 +1521,18 @@ export class UnifiedMemoryEngine {
           row["updated_at"],
         ];
 
+    let sourceWeights: Record<string, unknown> = {};
+    try { sourceWeights = values[1] ? JSON.parse(values[1] as string) : {}; } catch { /* corrupted */ }
+    let thresholds: Record<string, unknown> = {};
+    try { thresholds = values[2] ? JSON.parse(values[2] as string) : {}; } catch { /* corrupted */ }
+    let budget: Record<string, unknown> = {};
+    try { budget = values[3] ? JSON.parse(values[3] as string) : {}; } catch { /* corrupted */ }
+
     return {
       profile_name: values[0],
-      source_weights_json:
-        values[1] ? JSON.parse(values[1] as string) : {},
-      thresholds_json:
-        values[2] ? JSON.parse(values[2] as string) : {},
-      budget_json:
-        values[3] ? JSON.parse(values[3] as string) : {},
+      source_weights_json: sourceWeights,
+      thresholds_json: thresholds,
+      budget_json: budget,
       enabled: Boolean(values[4]),
       updated_at: values[5],
     };
@@ -1643,8 +1647,11 @@ export class UnifiedMemoryEngine {
       )
       .run(cacheKey);
 
+    let payload: Record<string, unknown> = {};
+    try { payload = values[0] ? JSON.parse(values[0] as string) : {}; } catch { /* corrupted */ }
+
     return {
-      payload: values[0] ? JSON.parse(values[0] as string) : {},
+      payload,
       status: values[1],
       expires_at: values[2],
       hit_count: Number(values[3] ?? 0) + 1,

@@ -479,8 +479,12 @@ export class GraphManager {
 
   /** Convert a database row to an Entity object */
   private _rowToEntity(row: Record<string, unknown>): Entity {
-    const props =
-      typeof row.properties === 'string' ? JSON.parse(row.properties) : {};
+    let props: Record<string, unknown> = {};
+    try {
+      props = typeof row.properties === 'string' ? JSON.parse(row.properties) : {};
+    } catch {
+      // corrupted properties in DB
+    }
 
     let createdAt: Date | null = null;
     let updatedAt: Date | null = null;
@@ -673,31 +677,30 @@ export class GraphManager {
 
     const rows = this._conn!.prepare(sql).all(...params) as Record<string, unknown>[];
     for (const row of rows) {
+      let sourceProps: Record<string, unknown> = {};
+      try { sourceProps = typeof row.source_props === 'string' ? JSON.parse(row.source_props) : {}; } catch { /* corrupted */ }
+      let relProps: Record<string, unknown> = {};
+      try { relProps = typeof row.rel_props === 'string' ? JSON.parse(row.rel_props) : {}; } catch { /* corrupted */ }
+      let targetProps: Record<string, unknown> = {};
+      try { targetProps = typeof row.target_props === 'string' ? JSON.parse(row.target_props) : {}; } catch { /* corrupted */ }
       results.push({
         source: {
           id: row.source_id,
           name: row.source_name,
           type: row.source_type,
-          properties:
-            typeof row.source_props === 'string'
-              ? JSON.parse(row.source_props)
-              : {},
+          properties: sourceProps,
         },
         relationship: {
           id: row.rel_id,
           type: row.rel_type,
-          properties:
-            typeof row.rel_props === 'string' ? JSON.parse(row.rel_props) : {},
+          properties: relProps,
           weight: row.rel_weight,
         },
         target: {
           id: row.target_id,
           name: row.target_name,
           type: row.target_type,
-          properties:
-            typeof row.target_props === 'string'
-              ? JSON.parse(row.target_props)
-              : {},
+          properties: targetProps,
         },
       });
     }
