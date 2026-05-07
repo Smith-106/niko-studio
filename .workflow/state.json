@@ -13,45 +13,29 @@
       "《怎样讲好一个故事》— oral narrative, differs from writing analysis"
     ],
     "key_decisions": [
-      "M10 single phase — no hard dependency boundary between deep writing features",
-      "M10 builds on M9 agent/workflow infrastructure",
-      "M11 completes M10 by wiring UI + enriching analysis + activating external integrations",
-      "M11 absorbs BookWorld worldview extraction + OpenStory lifecycle plugins + MiroFish swarm patterns",
-      "M13 uses enum+interface+Record+detector pattern for all knowledge modules — data-driven, type-safe, extensible",
-      "M14 extends existing modules (craft-catalog, suspense-analyzer, character-depth, emotion-craft, premise-validator) rather than creating new module files"
+      "M13 uses enum+interface+Record+detector pattern for all knowledge modules",
+      "M14 extends existing modules rather than creating new files",
+      "M15 adds web-novel-specific analysis (upgrade systems, golden fingers) alongside traditional craft theory"
     ]
   },
   "artifacts": [],
   "created_at": "2026-05-02T00:31:18.9393348+08:00",
-  "current_milestone": "M15",
+  "current_milestone": null,
   "initialized": true,
-  "last_updated": "2026-05-07T21:10:00+08:00",
+  "last_updated": "2026-05-07T21:30:00+08:00",
   "milestone_history": [
-    {
-      "archive_path": "milestones/M13/",
-      "archived_artifacts": [],
-      "completed_at": "2026-05-07T15:40:00+08:00",
-      "id": "M13",
-      "name": "Writing Craft Knowledge Integration",
-      "status": "completed"
-    },
-    {
-      "archive_path": "milestones/M14/",
-      "archived_artifacts": [],
-      "completed_at": "2026-05-07T21:00:00+08:00",
-      "id": "M14",
-      "name": "Writing Craft Enhancement Phase 2",
-      "status": "completed"
-    }
+    {"archive_path": "milestones/M13/", "completed_at": "2026-05-07T15:40:00+08:00", "id": "M13", "name": "Writing Craft Knowledge Integration", "status": "completed"},
+    {"archive_path": "milestones/M14/", "completed_at": "2026-05-07T21:00:00+08:00", "id": "M14", "name": "Writing Craft Enhancement Phase 2", "status": "completed"},
+    {"archive_path": "milestones/M15/", "completed_at": "2026-05-07T21:30:00+08:00", "id": "M15", "name": "Web Novel Analysis + Structure + Character Enhancement", "status": "completed"}
   ],
   "milestones": [
     {"id": "M10", "name": "Deep Writing Intelligence", "phases": [1], "status": "completed"},
-    {"id": "M11", "name": "External Integration (BookWorld/OpenStory/MiroFish)", "phases": [1], "status": "completed"},
+    {"id": "M11", "name": "External Integration", "phases": [1], "status": "completed"},
     {"id": "M13", "name": "Writing Craft Knowledge Integration", "phases": [1], "status": "completed"},
     {"id": "M14", "name": "Writing Craft Enhancement Phase 2", "phases": [1], "status": "completed"},
-    {"id": "M15", "name": "Web Novel Analysis + Structure + Character Enhancement", "phases": [1], "status": "active"}
+    {"id": "M15", "name": "Web Novel Analysis + Structure + Character Enhancement", "phases": [1], "status": "completed"}
   ],
   "project": "niko-studio",
   "quick_tasks": [],
-  "version": "9.17.0"
+  "version": "9.18.0"
 }
