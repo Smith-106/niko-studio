@@ -328,7 +328,7 @@ export class MemoryService {
       role: row.role as string,
       content: row.content as string,
       timestamp: row.timestamp ? new Date(row.timestamp as string) : null,
-      metadata: JSON.parse((row.metadata as string) || 'null'),
+      metadata: (() => { try { return JSON.parse((row.metadata as string) || 'null'); } catch { return null; } })(),
     }));
   }
 
@@ -351,7 +351,7 @@ export class MemoryService {
       id: row.id as string,
       content: row.content as string,
       embedding: embedding.length > 0 ? embedding : null,
-      metadata: JSON.parse((row.metadata as string) || 'null'),
+      metadata: (() => { try { return JSON.parse((row.metadata as string) || 'null'); } catch { return null; } })(),
       createdAt: row.created_at ? new Date(row.created_at as string) : null,
       updatedAt: row.updated_at ? new Date(row.updated_at as string) : null,
     };
@@ -445,9 +445,9 @@ export class MemoryService {
 
     return {
       profileName: row.profile_name,
-      sourceWeights: JSON.parse((row.source_weights_json as string) || '{}'),
-      thresholds: JSON.parse((row.thresholds_json as string) || '{}'),
-      budget: JSON.parse((row.budget_json as string) || '{}'),
+      sourceWeights: (() => { try { return JSON.parse((row.source_weights_json as string) || '{}'); } catch { return {}; } })(),
+      thresholds: (() => { try { return JSON.parse((row.thresholds_json as string) || '{}'); } catch { return {}; } })(),
+      budget: (() => { try { return JSON.parse((row.budget_json as string) || '{}'); } catch { return {}; } })(),
       enabled: !!row.enabled,
       updatedAt: row.updated_at,
     };
@@ -512,7 +512,7 @@ export class MemoryService {
     db.prepare('UPDATE retrieval_cache SET hit_count = hit_count + 1 WHERE cache_key = ?').run(cacheKey);
 
     return {
-      payload: JSON.parse((row.payload_json as string) || '{}'),
+      payload: (() => { try { return JSON.parse((row.payload_json as string) || '{}'); } catch { return {}; } })(),
       status: row.status,
       expiresAt: row.expires_at,
       hitCount: Number(row.hit_count) + 1,
@@ -662,7 +662,8 @@ export class MemoryService {
       const score = matchCount / keywords.length;
 
       if (score > 0) {
-        const rowMetadata: Record<string, unknown> = JSON.parse((row.metadata as string) || '{}');
+        let rowMetadata: Record<string, unknown> = {};
+        try { rowMetadata = JSON.parse((row.metadata as string) || '{}'); } catch { /* skip corrupted metadata */ }
         rowMetadata['created_at'] ??= row.created_at;
         rowMetadata['expires_at'] ??= row.expires_at;
         rowMetadata['last_accessed_at'] ??= row.last_accessed_at;

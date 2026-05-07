@@ -582,7 +582,8 @@ export class CoreMemoryStore {
         return null;
       }
 
-      const meta = JSON.parse(row.metadata as string) as Record<string, unknown>;
+      let meta: Record<string, unknown> = {};
+      try { meta = JSON.parse(row.metadata as string) as Record<string, unknown>; } catch { /* corrupted metadata */ }
       const memory = new CoreMemory({
         id: row.id as string,
         content: row.content as string,
@@ -1239,7 +1240,8 @@ export class CoreMemoryStore {
 
       const memories: CoreMemory[] = [];
       for (const row of rows) {
-        const meta = JSON.parse(row.metadata as string) as Record<string, unknown>;
+        let meta: Record<string, unknown> = {};
+        try { meta = JSON.parse(row.metadata as string) as Record<string, unknown>; } catch { /* skip corrupted row */ continue; }
         const archived = (meta["archived"] as boolean) ?? false;
 
         if (archived && !includeArchived) {

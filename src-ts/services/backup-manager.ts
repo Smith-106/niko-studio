@@ -338,7 +338,7 @@ export class BackupManager {
       fileCount: row.file_count as number,
       checksum: row.checksum as string,
       createdAt: new Date(row.created_at as string),
-      metadata: JSON.parse((row.metadata as string) || '{}'),
+      metadata: (() => { try { return JSON.parse((row.metadata as string) || '{}'); } catch { return {}; } })(),
     };
   }
 
