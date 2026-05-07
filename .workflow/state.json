@@ -53,7 +53,7 @@
       "harvested": false
     }
   ], "2026-05-02T00:31:18.9393348+08:00",
-  "current_milestone": null,
+  "current_milestone": "M20",
   "initialized": true,
   "last_updated": "2026-05-07T23:45:00+08:00",
   "milestone_history": [
@@ -74,7 +74,8 @@
     {"id": "M16", "name": "Dialogue, Scene, Mystery Enhancement", "phases": [1], "status": "completed"},
     {"id": "M17", "name": "Writing Intelligence UI Integration", "phases": [1], "status": "completed"},
     {"id": "M18", "name": "Knowledge Expansion + UX Enhancement + LLM Analysis", "phases": [1], "status": "completed"},
-    {"id": "M19", "name": "UX Polish + Plugin Architecture", "phases": [1], "status": "completed"}
+    {"id": "M19", "name": "UX Polish + Plugin Architecture", "phases": [1], "status": "completed"},
+    {"id": "M20", "name": "Cloud Sync + Code Signing", "phases": [1], "status": "active"}
   ],
   "project": "niko-studio",
   "quick_tasks": [],

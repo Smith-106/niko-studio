@@ -1,49 +1,52 @@
-# Roadmap: Niko-Studio M19 — UX Polish + Plugin Architecture
+# Roadmap: Niko-Studio M20 — Cloud Sync + Code Signing
 
 ## Overview
 
-M13-M18 构建了完整的写作智能系统。M19 收尾 UX 闭环（PDF 导出、自定义模板）并引入 Plugin 架构让用户扩展分析能力。
+M20 完成最后两项基础设施：云同步数据层（工作区数据跨设备同步）和 Code signing 构建 pipeline 配置（Windows 代码签名集成到 Tauri 构建流程）。
 
 ## Phases
 
-- [ ] **Phase 1: PDF Export + Custom Templates + Plugin Architecture** — 三个独立方向并行，完善产品闭环
+- [ ] **Phase 1: Cloud Sync Layer + Code Signing Pipeline** — 数据同步核心 + 签名构建配置
 
 ## Phase Details
 
-### Phase 1: PDF Export + Custom Templates + Plugin Architecture
-**Goal**: PDF 报告导出、用户自定义分析模板、Plugin 扩展架构。
-**Depends on**: M18 (completed)
+### Phase 1: Cloud Sync Layer + Code Signing Pipeline
+**Goal**: 实现云同步数据层（存储抽象、冲突解决、同步引擎）和 Code signing 构建配置（Tauri bundle signing、CI 集成脚本）。
+**Depends on**: M19 (completed)
 
 **Requirements**:
-- REQ-001: PDF 报告导出 — 在 Markdown 导出基础上增加 PDF 渲染
-- REQ-002: 自定义分析模板 — 用户选择检测维度组合、自定义权重、保存/加载模板
-- REQ-003: Plugin 架构 — 用户创建自定义分析技能，注册到分析引擎
+- REQ-001: 存储抽象层 — 统一 local/remote 存储接口
+- REQ-002: 同步引擎 — 增量同步、冲突检测与解决
+- REQ-003: 同步 API 端点 — MCP 同步接口
+- REQ-004: Code Signing 配置 — Tauri bundle signing 配置 + CI 脚本
 
 **Success Criteria** (what must be TRUE):
-1. 一键导出 PDF 格式的完整分析报告，包含分数图表
-2. 用户可创建/保存/加载分析模板，选择维度 + 自定义权重
-3. Plugin 系统支持用户注册自定义检测函数，并在 Dashboard 中显示结果
-4. 所有新功能有测试覆盖
+1. StorageAdapter 接口支持 local/remote 两种实现
+2. SyncEngine 可检测数据变更、执行增量同步、解决冲突
+3. MCP 同步端点支持 push/pull/status 操作
+4. Tauri bundle 配置了 code signing 参数（env-driven），可 CI 构建
 
 ## Scope Decisions
 
 - **In scope**:
-  - PDF 导出（使用浏览器原生打印或 jsPDF）
-  - 分析模板 CRUD（创建、保存、加载、删除）
-  - Plugin 注册接口 + 生命周期 + 示例 Plugin
-  - Plugin 管理面板
+  - StorageAdapter 抽象 + localStorage/fileSystem 实现
+  - SyncEngine（增量 diff + last-write-wins 冲突解决）
+  - MCP 同步端点（push/pull/status）
+  - Code signing Tauri 配置 + PowerShell 签名脚本
+  - 测试覆盖
 
 - **Deferred**:
-  - Plugin 市场/分享
-  - 云端模板同步
-  - Plugin 沙箱安全隔离
+  - 实际云存储后端（S3/WebDAV）实现
+  - 用户认证系统
+  - 多用户协作
+  - 自动更新签名验证
 
 - **Out of scope**:
-  - 云同步 / 多设备
-  - Code signing
+  - 移动端适配
+  - 离线队列持久化
 
 ## Progress
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. PDF Export + Custom Templates + Plugin Architecture | Not started | - |
+| 1. Cloud Sync Layer + Code Signing Pipeline | Not started | - |

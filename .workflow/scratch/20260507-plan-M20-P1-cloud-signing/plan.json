@@ -1,0 +1,11 @@
+{
+  "summary": "M20 Phase 1: 云同步数据层 + Code Signing。5 个任务，2 波执行。",
+  "milestone": "M20",
+  "phase": 1,
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005"],
+  "waves": [
+    { "label": "云同步核心", "tasks": ["TASK-001", "TASK-002", "TASK-003"], "parallel": false },
+    { "label": "Code Signing + 测试", "tasks": ["TASK-004", "TASK-005"], "parallel": true }
+  ],
+  "approach": "Wave 1 构建同步引擎（存储抽象 → 同步引擎 → MCP 端点）；Wave 2 Code Signing 配置 + 集成测试。"
+}

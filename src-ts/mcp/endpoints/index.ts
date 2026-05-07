@@ -151,3 +151,10 @@ export {
   pluginExecuteEndpoint,
   pluginRegisterEndpoint,
 } from './plugins';
+
+export {
+  syncStatusEndpoint,
+  syncPushEndpoint,
+  syncPullEndpoint,
+  syncFullEndpoint,
+} from './sync';
