@@ -58,6 +58,72 @@ export enum CharacterTrait {
 }
 
 // ============================================================
+// M14: McKee Character Arc + OCEAN Personality Model
+// ============================================================
+
+export enum CharacterArcType {
+  POSITIVE_CHANGE = 'positive_change',
+  NEGATIVE_CHANGE = 'negative_change',
+  FLAT_ARC = 'flat_arc',
+  TRAGIC_ARC = 'tragic_arc',
+  REDEMPTION_ARC = 'redemption_arc',
+  CORRUPTION_ARC = 'corruption_arc',
+  MATURATION_ARC = 'maturation_arc',
+  DISILLUSIONMENT_ARC = 'disillusionment_arc',
+}
+
+export enum ArcStage {
+  SETUP = 'setup',
+  CATALYST = 'catalyst',
+  STRUGGLE = 'struggle',
+  TURNING_POINT = 'turning_point',
+  TRANSFORMATION = 'transformation',
+  NEW_EQUILIBRIUM = 'new_equilibrium',
+}
+
+export interface ArcStageDetection {
+  stage: ArcStage;
+  detected: boolean;
+  confidence: number;
+  evidence: string[];
+  position: number;
+}
+
+export interface ArcAssessment {
+  arcType: CharacterArcType;
+  arcTypeLabel: string;
+  stages: ArcStageDetection[];
+  transitionPoints: { from: ArcStage; to: ArcStage; evidence: string; position: number }[];
+  arcCompletionScore: number;
+  arcCoherenceScore: number;
+  suggestions: string[];
+}
+
+export enum OCEANDimension {
+  OPENNESS = 'openness',
+  CONSCIENTIOUSNESS = 'conscientiousness',
+  EXTRAVERSION = 'extraversion',
+  AGREEABLENESS = 'agreeableness',
+  NEUROTICISM = 'neuroticism',
+}
+
+export interface DimensionScore {
+  dimension: OCEANDimension;
+  label: string;
+  score: number;
+  confidence: number;
+  evidence: string[];
+  traits: string[];
+}
+
+export interface OCEANProfile {
+  characterName: string;
+  dimensions: DimensionScore[];
+  overallProfile: string;
+  suggestions: string[];
+}
+
+// ============================================================
 // Data Types
 // ============================================================
 
@@ -416,6 +482,161 @@ export class CharacterDepthSystem {
   }
 
   // ============================================================
+  // M14: Character Arc Assessment (McKee Model)
+  // ============================================================
+
+  async assessCharacterArc(
+    characterInfo: Record<string, unknown>,
+    content: string,
+  ): Promise<ArcAssessment> {
+    if (!this.llmClient) {
+      console.log('MOCK PATH: returning mockArcAssessment');
+      return this.mockArcAssessment();
+    }
+
+    console.log('LLM PATH: calling generateJson');
+    const prompt = `
+## 角色弧线评估 (Character Arc Assessment — McKee Model)
+
+分析以下角色在内容中呈现的弧线结构。
+
+**六个阶段**:
+1. SETUP — 角色初始状态和世界观的建立
+2. CATALYST — 打破平衡的催化事件
+3. STRUGGLE — 角色与内外冲突的对抗
+4. TURNING_POINT — 不可逆的转折点
+5. TRANSFORMATION — 角色发生根本性变化
+6. NEW_EQUILIBRIUM — 新的平衡状态
+
+**八种弧线类型**:
+- positive_change: 正向变化
+- negative_change: 负向变化
+- flat_arc: 平坦弧线
+- tragic_arc: 悲剧弧线
+- redemption_arc: 救赎弧线
+- corruption_arc: 堕落弧线
+- maturation_arc: 成长弧线
+- disillusionment_arc: 幻灭弧线
+
+**角色信息**:
+{character_info}
+
+**内容展示**:
+{content}
+
+请输出JSON格式:
+{
+  "arcType": "string (CharacterArcType value)",
+  "arcTypeLabel": "中文标签",
+  "stages": [
+    { "stage": "ArcStage value", "detected": boolean, "confidence": number, "evidence": ["文本证据"], "position": number }
+  ],
+  "transitionPoints": [
+    { "from": "ArcStage", "to": "ArcStage", "evidence": "转变证据", "position": number }
+  ],
+  "arcCompletionScore": number (0-100),
+  "arcCoherenceScore": number (0-100),
+  "suggestions": ["改进建议"]
+}
+`;
+
+    const result = await this.llmClient.generateJson<{
+      arcType: string;
+      arcTypeLabel: string;
+      stages: { stage: string; detected: boolean; confidence: number; evidence: string[]; position: number }[];
+      transitionPoints: { from: string; to: string; evidence: string; position: number }[];
+      arcCompletionScore: number;
+      arcCoherenceScore: number;
+      suggestions: string[];
+    }>(prompt.replace('{character_info}', JSON.stringify(characterInfo)).replace('{content}', content));
+
+    return {
+      arcType: (result.arcType as CharacterArcType) ?? CharacterArcType.FLAT_ARC,
+      arcTypeLabel: result.arcTypeLabel ?? '待定',
+      stages: (result.stages ?? []).map((s) => ({
+        stage: (s.stage as ArcStage) ?? ArcStage.SETUP,
+        detected: s.detected ?? false,
+        confidence: s.confidence ?? 0,
+        evidence: s.evidence ?? [],
+        position: s.position ?? 0,
+      })),
+      transitionPoints: (result.transitionPoints ?? []).map((tp) => ({
+        from: (tp.from as ArcStage) ?? ArcStage.SETUP,
+        to: (tp.to as ArcStage) ?? ArcStage.CATALYST,
+        evidence: tp.evidence ?? '',
+        position: tp.position ?? 0,
+      })),
+      arcCompletionScore: result.arcCompletionScore ?? 0,
+      arcCoherenceScore: result.arcCoherenceScore ?? 0,
+      suggestions: result.suggestions ?? [],
+    };
+  }
+
+  // ============================================================
+  // M14: OCEAN Personality Profiling (Big Five)
+  // ============================================================
+
+  async profileOCEAN(
+    characterName: string,
+    characterInfo: Record<string, unknown>,
+    content: string,
+  ): Promise<OCEANProfile> {
+    if (!this.llmClient) return this.mockOCEANProfile(characterName);
+
+    const prompt = `
+## OCEAN人格画像 (Big Five Personality Profile)
+
+基于大五人格模型 (OCEAN) 分析角色性格。
+
+**五个维度**:
+1. OPENNESS — 开放性：好奇心、创造力、对新鲜事物的接受度
+2. CONSCIENTIOUSNESS — 尽责性：自律、责任感、目标导向
+3. EXTRAVERSION — 外向性：社交倾向、活力、积极情绪
+4. AGREEABLENESS — 宜人性：合作、同理心、信任他人
+5. NEUROTICISM — 神经质：情绪稳定性、焦虑倾向、压力反应
+
+每个维度评分 0-10 (低→高)。
+
+**角色名称**: ${characterName}
+
+**角色信息**:
+{character_info}
+
+**内容展示**:
+{content}
+
+请输出JSON格式:
+{
+  "dimensions": [
+    { "dimension": "OCEANDimension value", "label": "中文标签", "score": number, "confidence": number, "evidence": ["文本证据"], "traits": ["特质标签"] }
+  ],
+  "overallProfile": "整体性格描述",
+  "suggestions": ["改进建议"]
+}
+`;
+
+    const result = await this.llmClient.generateJson<{
+      dimensions: { dimension: string; label: string; score: number; confidence: number; evidence: string[]; traits: string[] }[];
+      overallProfile: string;
+      suggestions: string[];
+    }>(prompt.replace('{character_info}', JSON.stringify(characterInfo)).replace('{content}', content));
+
+    return {
+      characterName,
+      dimensions: (result.dimensions ?? []).map((d) => ({
+        dimension: (d.dimension as OCEANDimension) ?? OCEANDimension.OPENNESS,
+        label: d.label ?? '',
+        score: d.score ?? 5,
+        confidence: d.confidence ?? 0,
+        evidence: d.evidence ?? [],
+        traits: d.traits ?? [],
+      })),
+      overallProfile: result.overallProfile ?? '未能生成整体人格画像',
+      suggestions: result.suggestions ?? [],
+    };
+  }
+
+  // ============================================================
   // Mock methods
   // ============================================================
 
@@ -466,6 +687,79 @@ export class CharacterDepthSystem {
       evidence: [],
       issues: ['角色与环境较为适应'],
       suggestions: ['考虑将角色置于更不适应的环境中'],
+    };
+  }
+
+  // ============================================================
+  // M14 mock methods
+  // ============================================================
+
+  private mockArcAssessment(): ArcAssessment {
+    return {
+      arcType: CharacterArcType.MATURATION_ARC,
+      arcTypeLabel: '成长弧线',
+      stages: [
+        { stage: ArcStage.SETUP, detected: true, confidence: 0.8, evidence: ['角色初始状态'], position: 0 },
+        { stage: ArcStage.CATALYST, detected: true, confidence: 0.7, evidence: ['催化事件'], position: 1 },
+        { stage: ArcStage.STRUGGLE, detected: true, confidence: 0.6, evidence: ['角色与冲突对抗'], position: 2 },
+        { stage: ArcStage.TURNING_POINT, detected: false, confidence: 0.3, evidence: [], position: 3 },
+        { stage: ArcStage.TRANSFORMATION, detected: false, confidence: 0.2, evidence: [], position: 4 },
+        { stage: ArcStage.NEW_EQUILIBRIUM, detected: false, confidence: 0.1, evidence: [], position: 5 },
+      ],
+      transitionPoints: [],
+      arcCompletionScore: 48,
+      arcCoherenceScore: 55,
+      suggestions: ['弧线尚处于早期阶段，后续章节需加强转折点和转变的描写'],
+    };
+  }
+
+  private mockOCEANProfile(characterName: string): OCEANProfile {
+    return {
+      characterName,
+      dimensions: [
+        {
+          dimension: OCEANDimension.OPENNESS,
+          label: '开放性',
+          score: 6,
+          confidence: 0.6,
+          evidence: ['角色对新事物保持适度好奇'],
+          traits: ['好奇心'],
+        },
+        {
+          dimension: OCEANDimension.CONSCIENTIOUSNESS,
+          label: '尽责性',
+          score: 7,
+          confidence: 0.6,
+          evidence: ['角色表现出较强的责任感'],
+          traits: ['自律'],
+        },
+        {
+          dimension: OCEANDimension.EXTRAVERSION,
+          label: '外向性',
+          score: 5,
+          confidence: 0.5,
+          evidence: ['角色在社交中表现适中'],
+          traits: ['温和'],
+        },
+        {
+          dimension: OCEANDimension.AGREEABLENESS,
+          label: '宜人性',
+          score: 6,
+          confidence: 0.5,
+          evidence: ['角色显示出合作倾向'],
+          traits: ['同理心'],
+        },
+        {
+          dimension: OCEANDimension.NEUROTICISM,
+          label: '神经质',
+          score: 5,
+          confidence: 0.5,
+          evidence: ['角色情绪总体平稳'],
+          traits: ['稳定'],
+        },
+      ],
+      overallProfile: '性格较为均衡，尽责性维度略高于其他维度',
+      suggestions: ['需更多文本内容以进行更准确的 OCEAN 分析'],
     };
   }
 }

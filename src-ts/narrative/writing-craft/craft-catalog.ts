@@ -296,6 +296,351 @@ export const SUBGENRE_RULES: Record<SuspenseSubgenre, SubgenreRules> = {
 };
 
 // ============================================================
+// Narrative Techniques (Frey高级叙事技巧)
+// Source: Frey《劲爆小说秘境游走》+《悬疑小说创作指导》
+// ============================================================
+
+export enum NarrativeTechnique {
+  ESCALATION_LADDER = 'escalation_ladder',
+  REVERSAL_TIMING = 'reversal_timing',
+  MULTI_THREAD_WEAVING = 'multi_thread_weaving',
+  READER_MANIPULATION = 'reader_manipulation',
+  FALSE_RESOLUTION = 'false_resolution',
+  TICKING_CLOCK = 'ticking_clock',
+  RED_HERRING = 'red_herring',
+  DRAMATIC_IRONY = 'dramatic_irony',
+}
+
+export interface NarrativeTechniqueDef {
+  technique: NarrativeTechnique;
+  label: string;
+  description: string;
+  source: string;
+  detectionKeywords: string[];
+  effectDescription: string;
+  applicationContext: string[];
+}
+
+export const NARRATIVE_TECHNIQUES: Record<NarrativeTechnique, NarrativeTechniqueDef> = {
+  [NarrativeTechnique.ESCALATION_LADDER]: {
+    technique: NarrativeTechnique.ESCALATION_LADDER,
+    label: '升级阶梯',
+    description: '威胁或冲突按阶梯式逐步升级，每一级都比前一级更危险，让读者的紧张感持续攀升',
+    source: 'Frey《劲爆小说秘境游走》',
+    detectionKeywords: ['升级', '更加', '进一步', '恶化', '加剧', '层层'],
+    effectDescription: '制造持续递增的紧张感，让读者无法放松',
+    applicationContext: ['悬疑', '恐怖', '动作', '灾难'],
+  },
+  [NarrativeTechnique.REVERSAL_TIMING]: {
+    technique: NarrativeTechnique.REVERSAL_TIMING,
+    label: '反转时机',
+    description: '精准控制反转的时机——在读者预期反转时推迟，在读者放松时突袭',
+    source: 'Frey《悬疑小说创作指导》',
+    detectionKeywords: ['原来', '竟然', '没想到', '反转', '出乎意料', '突然'],
+    effectDescription: '打破读者预期，制造最大的心理冲击力',
+    applicationContext: ['推理', '悬疑', '惊悚', '所有类型'],
+  },
+  [NarrativeTechnique.MULTI_THREAD_WEAVING]: {
+    technique: NarrativeTechnique.MULTI_THREAD_WEAVING,
+    label: '多线编织',
+    description: '多条叙事线在关键节点交汇，每条线单独推进但互相关联，最终编织成一个整体',
+    source: 'Frey《劲爆小说秘境游走》',
+    detectionKeywords: ['同时', '另一边', '视角切换', '回到', '与此同时', '交替'],
+    effectDescription: '增加故事层次感和复杂度，多线交汇时产生倍增的戏剧效果',
+    applicationContext: ['长篇', '史诗', '社会派', '多视角叙事'],
+  },
+  [NarrativeTechnique.READER_MANIPULATION]: {
+    technique: NarrativeTechnique.READER_MANIPULATION,
+    label: '读者操控',
+    description: '通过选择性呈现信息、控制叙述视角、操控信息落差来引导读者的判断和情绪',
+    source: 'Frey《悬疑小说创作指导》',
+    detectionKeywords: ['隐瞒', '视角限制', '不知道', '被误导', '以为', '实际'],
+    effectDescription: '制造信息不对称，让读者产生特定判断然后在揭示时产生冲击',
+    applicationContext: ['推理', '悬疑', '惊悚', '不可靠叙述'],
+  },
+  [NarrativeTechnique.FALSE_RESOLUTION]: {
+    technique: NarrativeTechnique.FALSE_RESOLUTION,
+    label: '虚假解决',
+    description: '在故事中段制造一个看似解决但实际未解决的假结局，让角色和读者暂时放松警惕',
+    source: 'Frey《劲爆小说秘境游走》',
+    detectionKeywords: ['终于', '一切结束', '以为安全', '风平浪静', '松一口气', '原来还没'],
+    effectDescription: '制造"安全"的假象然后打破它，在读者最放松时给予最大冲击',
+    applicationContext: ['恐怖', '悬疑', '惊悚', '冒险'],
+  },
+  [NarrativeTechnique.TICKING_CLOCK]: {
+    technique: NarrativeTechnique.TICKING_CLOCK,
+    label: '倒计时',
+    description: '设置明确的时限，让读者和角色都能感知到时间的紧迫感',
+    source: 'Frey《悬疑小说创作指导》',
+    detectionKeywords: ['时间', '倒计时', '还剩', '截止', '最后', '来不及', '紧迫'],
+    effectDescription: '以时间压力驱动节奏，让叙事自然加速',
+    applicationContext: ['惊悚', '动作', '冒险', '所有类型'],
+  },
+  [NarrativeTechnique.RED_HERRING]: {
+    technique: NarrativeTechnique.RED_HERRING,
+    label: '红鲱鱼',
+    description: '在叙事中故意布置误导性线索，将读者引向错误的结论',
+    source: 'Frey《劲爆小说秘境游走》',
+    detectionKeywords: ['怀疑', '误导', '线索', '看似', '指向', '嫌疑', '假象'],
+    effectDescription: '保护真正的谜底，同时增加解谜的趣味性和反转力度',
+    applicationContext: ['推理', '侦探', '悬疑', '间谍'],
+  },
+  [NarrativeTechnique.DRAMATIC_IRONY]: {
+    technique: NarrativeTechnique.DRAMATIC_IRONY,
+    label: '戏剧反讽',
+    description: '读者知道角色所不知道的信息，让读者为角色的无知感到焦虑或期待',
+    source: 'Frey《劲爆小说秘境游走》',
+    detectionKeywords: ['读者知道', '只有他不知道', '还在以为', '其实已经', '暗中', '浑然不觉'],
+    effectDescription: '制造"观众知情"的紧张感，读者在屏幕外为角色呐喊',
+    applicationContext: ['悬疑', '悲剧', '喜剧', '所有类型'],
+  },
+};
+
+// ============================================================
+// Genre Beat Templates (救猫咪2类型片节拍)
+// Source: Snyder《救猫咪2经典电影剧本解析》
+// ============================================================
+
+export enum GenreBeatType {
+  MONSTER_IN_THE_HOUSE = 'monster_in_the_house',
+  GOLDEN_FLEECE = 'golden_fleece',
+  OUT_OF_THE_BOTTLE = 'out_of_the_bottle',
+  DUDE_WITH_PROBLEM = 'dude_with_problem',
+  RITES_OF_PASSAGE = 'rites_of_passage',
+  BUDDY_LOVE = 'buddy_love',
+  WHYDUNIT = 'whydunit',
+  FOOL_TRIUMPHANT = 'fool_triumphant',
+  INSTITUTIONALIZED = 'institutionalized',
+  SUPERHERO = 'superhero',
+}
+
+export interface GenreBeatTemplate {
+  genreType: GenreBeatType;
+  label: string;
+  description: string;
+  beatSequence: { name: string; position: number; description: string; required: boolean }[];
+  characterArchetypes: string[];
+  keyScenes: string[];
+  typicalKeywords: string[];
+}
+
+export const GENRE_BEATS: Record<GenreBeatType, GenreBeatTemplate> = {
+  [GenreBeatType.MONSTER_IN_THE_HOUSE]: {
+    genreType: GenreBeatType.MONSTER_IN_THE_HOUSE,
+    label: '屋里有怪物',
+    description: '封闭空间+隐藏的怪物/杀手。核心规则：封闭空间不能轻易离开；怪物必须杀人或有致命威胁；罪人设定——角色有原罪',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '展示封闭空间和日常状态', required: true },
+      { name: '铺垫', position: 0.05, description: '建立角色关系和隐藏的罪', required: true },
+      { name: '催化事件', position: 0.1, description: '第一起死亡或怪物出现', required: true },
+      { name: '争论', position: 0.15, description: '角色犹豫是否相信危险存在', required: false },
+      { name: '进入第二幕', position: 0.25, description: '决定对抗/逃亡', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '逐一被怪物猎杀', required: true },
+      { name: '中点', position: 0.5, description: '怪物真正的力量和罪被揭露', required: true },
+      { name: '敌人逼近', position: 0.6, description: '怪物力量加强，空间进一步封闭', required: true },
+      { name: '失去一切', position: 0.75, description: '最后希望破灭', required: true },
+      { name: '高潮', position: 0.92, description: '直面怪物，利用罪的力量反杀', required: true },
+      { name: '终场画面', position: 0.99, description: '生存者状态，罪被偿还', required: false },
+    ],
+    characterArchetypes: ['罪人/幸存者', '怪物/杀手', '怀疑论者', '祭品角色', '知情者'],
+    keyScenes: ['封闭空间建立', '第一次袭击', '怀疑者被说服/被杀', '怪物动机揭露', '最终反杀'],
+    typicalKeywords: ['封闭', '怪物', '逃不出去', '死了', '只剩', '罪', '隐藏', '生存', '恐惧', '猎杀'],
+  },
+  [GenreBeatType.GOLDEN_FLEECE]: {
+    genreType: GenreBeatType.GOLDEN_FLEECE,
+    label: '金羊毛',
+    description: '公路冒险/征途故事。核心规则：旅程比目的地更重要；路上伙伴是成长催化剂；真正的奖赏是自我发现而非目标',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '主角的平凡/被困状态', required: true },
+      { name: '铺垫', position: 0.05, description: '显示主角的缺陷和渴望', required: true },
+      { name: '催化事件', position: 0.1, description: '踏上旅程的触发事件', required: true },
+      { name: '争论', position: 0.15, description: '犹豫是否出发', required: false },
+      { name: '进入第二幕', position: 0.25, description: '正式上路', required: true },
+      { name: 'B故事/伙伴', position: 0.27, description: '认识关键伙伴', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '路上的奇遇和考验', required: true },
+      { name: '中点', position: 0.5, description: '假目标实现/发现真正的目标', required: true },
+      { name: '敌人逼近', position: 0.6, description: '追兵或障碍加强', required: false },
+      { name: '失去一切', position: 0.75, description: '团队分裂或失去方向', required: true },
+      { name: '高潮', position: 0.92, description: '真正目标的达成/自我发现', required: true },
+      { name: '终场画面', position: 0.99, description: '回到起点但角色已不同', required: true },
+    ],
+    characterArchetypes: ['渴望者/旅人', '伙伴', '导师', '追兵', '路上偶遇者'],
+    keyScenes: ['出发场景', '伙伴加入', '路上的标志性地点', '假目标实现', '真正目标揭示'],
+    typicalKeywords: ['旅程', '出发', '路上', '伙伴', '寻找', '目标', '冒险', '奇遇', '回到', '改变'],
+  },
+  [GenreBeatType.OUT_OF_THE_BOTTLE]: {
+    genreType: GenreBeatType.OUT_OF_THE_BOTTLE,
+    label: '瓶子里的妖怪',
+    description: '愿望实现/诅咒。核心规则：愿望必须实现但附带代价；魔法/超能力有规则限制；最终要摆脱愿望的力量而非保留它',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '主角的不满足状态', required: true },
+      { name: '铺垫', position: 0.05, description: '建立主角想要改变的东西', required: true },
+      { name: '催化事件', position: 0.1, description: '获得愿望/诅咒', required: true },
+      { name: '争论', position: 0.15, description: '试探愿望的真实性', required: false },
+      { name: '进入第二幕', position: 0.25, description: '开始使用愿望的力量', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '愿望带来好处和乐趣', required: true },
+      { name: '中点', position: 0.5, description: '愿望开始显现代价', required: true },
+      { name: '敌人逼近', position: 0.6, description: '代价越来越大，失控', required: true },
+      { name: '失去一切', position: 0.75, description: '愿望带来的最坏结果', required: true },
+      { name: '高潮', position: 0.92, description: '放弃愿望/打破诅咒', required: true },
+      { name: '终场画面', position: 0.99, description: '接受原来的自己/生活', required: true },
+    ],
+    characterArchetypes: ['许愿者', '愿望来源/瓶子', '受益者', '代价承担者', '警告者'],
+    keyScenes: ['获得愿望', '第一次使用', '代价初现', '尝试放弃', '最终破除'],
+    typicalKeywords: ['愿望', '代价', '诅咒', '魔法', '规则', '失控', '回到', '原来', '放弃', '接受'],
+  },
+  [GenreBeatType.DUDE_WITH_PROBLEM]: {
+    genreType: GenreBeatType.DUDE_WITH_PROBLEM,
+    label: '遇到问题的家伙',
+    description: '普通人vs极端困境。核心规则：主角能力越普通冲突越精彩；困境必须不断升级；英雄出于生存本能而非英雄主义',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '普通人的普通生活', required: true },
+      { name: '铺垫', position: 0.05, description: '建立主角的平凡和局限', required: true },
+      { name: '催化事件', position: 0.1, description: '问题降临', required: true },
+      { name: '争论', position: 0.15, description: '主角试图回避/否认问题', required: true },
+      { name: '进入第二幕', position: 0.25, description: '被迫面对问题', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '用普通人的智慧对付困境', required: true },
+      { name: '中点', position: 0.5, description: '问题比想的更严重', required: true },
+      { name: '敌人逼近', position: 0.6, description: '困境全面爆发', required: true },
+      { name: '失去一切', position: 0.75, description: '所有退路被封死', required: true },
+      { name: '高潮', position: 0.92, description: '以普通人的方式力挽狂澜', required: true },
+      { name: '终场画面', position: 0.99, description: '回到普通但有变化的生活', required: true },
+    ],
+    characterArchetypes: ['普通人', '困境制造者', '帮手', '怀疑者', '背后黑手'],
+    keyScenes: ['困境降临', '第一次尝试失败', '升级困境', '绝地反击'],
+    typicalKeywords: ['普通', '突然', '没办法', '必须', '不可能', '只好', '拼命', '拼尽', '化解', '回到'],
+  },
+  [GenreBeatType.RITES_OF_PASSAGE]: {
+    genreType: GenreBeatType.RITES_OF_PASSAGE,
+    label: '成人礼',
+    description: '成长转变。核心规则：主角必须经历"死亡"（象征或实际）才能重生；转变不可逆；导师/向导可以牺牲但不可缺席',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '主角的少年状态', required: true },
+      { name: '铺垫', position: 0.05, description: '显示主角的不成熟', required: true },
+      { name: '催化事件', position: 0.1, description: '被迫离开舒适区', required: true },
+      { name: '争论', position: 0.15, description: '抗拒成长', required: false },
+      { name: '进入第二幕', position: 0.25, description: '接受挑战/进入新世界', required: true },
+      { name: 'B故事/导师', position: 0.27, description: '遇到导师', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '在新世界摸索学习', required: true },
+      { name: '中点', position: 0.5, description: '象征性死亡/重大失败', required: true },
+      { name: '敌人逼近', position: 0.6, description: '旧我不断被挑战', required: true },
+      { name: '失去一切', position: 0.75, description: '导师可能死亡/旧我彻底崩塌', required: true },
+      { name: '高潮', position: 0.92, description: '重生/象征性成年礼', required: true },
+      { name: '终场画面', position: 0.99, description: '新我回归', required: true },
+    ],
+    characterArchetypes: ['成长者', '导师', '对手', '同龄伙伴', '父母角色'],
+    keyScenes: ['离开舒适区', '导师传授', '象征性死亡', '独自面对', '重生仪式'],
+    typicalKeywords: ['成长', '转变', '以前', '现在', '学会', '懂得', '放下', '成熟', '逝去', '重生'],
+  },
+  [GenreBeatType.BUDDY_LOVE]: {
+    genreType: GenreBeatType.BUDDY_LOVE,
+    label: '哥们之爱',
+    description: '两个截然不同的角色从冲突到互补。核心规则：两人必须有明显差异；关系曲线：互相讨厌→被迫合作→真正理解→互补',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '分别展示两人各自的生活', required: true },
+      { name: '铺垫', position: 0.05, description: '建立两人性格对比', required: true },
+      { name: '催化事件', position: 0.1, description: '被迫相遇/合作', required: true },
+      { name: '争论', position: 0.15, description: '互相排斥/争吵', required: true },
+      { name: '进入第二幕', position: 0.25, description: '达成暂时联盟', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '互补优势显现', required: true },
+      { name: '中点', position: 0.5, description: '关系加深但暗藏裂痕', required: true },
+      { name: '敌人逼近', position: 0.6, description: '外部压力和内部矛盾', required: true },
+      { name: '失去一切', position: 0.75, description: '分裂/决裂', required: true },
+      { name: '高潮', position: 0.92, description: '重新联手/互相拯救', required: true },
+      { name: '终场画面', position: 0.99, description: '真正的伙伴关系', required: true },
+    ],
+    characterArchetypes: ['主动者', '被动者/互补者', '催化剂角色', '反对者', '共同敌人'],
+    keyScenes: ['初次冲突', '被迫合作', '第一次欣赏对方', '分裂时刻', '重新联手'],
+    typicalKeywords: ['搭档', '合作', '看不惯', '只好', '发现', '原来', '分裂', '合力', '彼此', '互补'],
+  },
+  [GenreBeatType.WHYDUNIT]: {
+    genreType: GenreBeatType.WHYDUNIT,
+    label: '谁的尸体',
+    description: '探寻黑暗人性。核心规则：侦探自身被案件改变；核心问题是"为什么人变成这样"；调查者自身的人性也被审视',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '调查者的正常状态', required: true },
+      { name: '铺垫', position: 0.05, description: '展示调查者的世界观', required: true },
+      { name: '催化事件', position: 0.1, description: '案件降临——第一具尸体', required: true },
+      { name: '争论', position: 0.15, description: '犹豫是否深入', required: false },
+      { name: '进入第二幕', position: 0.25, description: '正式调查开始', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '追踪线索，探索嫌疑人', required: true },
+      { name: '中点', position: 0.5, description: '触及人性的黑暗面', required: true },
+      { name: '敌人逼近', position: 0.6, description: '调查威胁到自己', required: true },
+      { name: '失去一切', position: 0.75, description: '调查者自身迷失', required: true },
+      { name: '高潮', position: 0.92, description: '揭示人性真相', required: true },
+      { name: '终场画面', position: 0.99, description: '调查者被永久改变', required: true },
+    ],
+    characterArchetypes: ['调查者', '受害者', '嫌疑人', '知情人', '幕后真凶'],
+    keyScenes: ['案件发现', '调查者世界观动摇', '人性质疑', '调查者被改变'],
+    typicalKeywords: ['为什么', '动机', '人性', '黑暗', '过去', '隐藏', '渐渐', '原先', '改变', '真相'],
+  },
+  [GenreBeatType.FOOL_TRIUMPHANT]: {
+    genreType: GenreBeatType.FOOL_TRIUMPHANT,
+    label: '愚者胜',
+    description: '被低估的角色最终证明所有人错了。核心规则：主角被世界低估是故事核心；愚者必须以自己的"不聪明"方式获胜；胜利证明的是不同价值的合理性',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '展示主角被世界忽视', required: true },
+      { name: '铺垫', position: 0.05, description: '建立主角的"愚蠢"和世界的"聪明"', required: true },
+      { name: '催化事件', position: 0.1, description: '意外的机会', required: true },
+      { name: '争论', position: 0.15, description: '主角不确定/被嘲笑', required: true },
+      { name: '进入第二幕', position: 0.25, description: '用自己独特的方式行动', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '愚者的方法意外有效', required: true },
+      { name: '中点', position: 0.5, description: '虚伪胜利/暂时的认可', required: true },
+      { name: '敌人逼近', position: 0.6, description: '聪明人的规则开始反击', required: true },
+      { name: '失去一切', position: 0.75, description: '被完全否定', required: true },
+      { name: '高潮', position: 0.92, description: '以愚者的方式彻底证明', required: true },
+      { name: '终场画面', position: 0.99, description: '获得真正的尊重', required: true },
+    ],
+    characterArchetypes: ['愚者', '嘲笑者', '伪装者/内奸', '真正相信者', '被颠覆者'],
+    keyScenes: ['被嘲笑', '意外成果', '被否定', '方式获得胜利'],
+    typicalKeywords: ['傻', '天真', '不懂', '嘲笑', '看不起', '竟然', '原来', '证明', '认同', '独特'],
+  },
+  [GenreBeatType.INSTITUTIONALIZED]: {
+    genreType: GenreBeatType.INSTITUTIONALIZED,
+    label: '体制内',
+    description: '个体vs体制的两难。核心规则：体制有不合理的规则但也有存在的理由；角色必须在改变体制前理解体制；结局是体制微调而非彻底推翻',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '展示体制和个体的位置', required: true },
+      { name: '铺垫', position: 0.05, description: '建立体制的正常/不公', required: true },
+      { name: '催化事件', position: 0.1, description: '个体的利益被体制伤害', required: true },
+      { name: '争论', position: 0.15, description: '犹豫是否挑战体制', required: true },
+      { name: '进入第二幕', position: 0.25, description: '开始挑战/融入体制', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '在体制规则下博弈', required: true },
+      { name: '中点', position: 0.5, description: '体制奖励个体', required: true },
+      { name: '敌人逼近', position: 0.6, description: '体制的反噬', required: true },
+      { name: '失去一切', position: 0.75, description: '被体制驱逐/自己选择离开', required: true },
+      { name: '高潮', position: 0.92, description: '以体制的方式改变体制', required: true },
+      { name: '终场画面', position: 0.99, description: '体制微变/个体获得自主', required: true },
+    ],
+    characterArchetypes: ['个体/反叛者', '体制代表', '体制受益者', '体制受害者', '调停者'],
+    keyScenes: ['体制展示', '个体被伤害', '尝试融入', '被驱逐', '体制改变'],
+    typicalKeywords: ['体制', '规则', '服从', '反抗', '融入', '异化', '权力', '选择', '坚守', '适应'],
+  },
+  [GenreBeatType.SUPERHERO]: {
+    genreType: GenreBeatType.SUPERHERO,
+    label: '超级英雄',
+    description: '能力越大责任越大。核心规则：特殊能力同时是诅咒和孤独之源；真正战斗是与自己内心的对抗；最终必须做出个人牺牲',
+    beatSequence: [
+      { name: '开场画面', position: 0.01, description: '展示非凡能力和对其的隐藏', required: true },
+      { name: '铺垫', position: 0.05, description: '建立能力的孤独', required: true },
+      { name: '催化事件', position: 0.1, description: '被迫使用能力/敌人出现', required: true },
+      { name: '争论', position: 0.15, description: '犹豫是否承担英雄角色', required: true },
+      { name: '进入第二幕', position: 0.25, description: '接受英雄身份', required: true },
+      { name: 'B故事/常人身份', position: 0.27, description: '与常人世界的关系', required: true },
+      { name: '游戏乐趣', position: 0.35, description: '使用能力的快感和代价', required: true },
+      { name: '中点', position: 0.5, description: '能力无法解决根本问题', required: true },
+      { name: '敌人逼近', position: 0.6, description: '敌人利用主角的弱点', required: true },
+      { name: '失去一切', position: 0.75, description: '能力失去/最重要的东西被夺走', required: true },
+      { name: '高潮', position: 0.92, description: '不求能力只求牺牲', required: true },
+      { name: '终场画面', position: 0.99, description: '接受孤独/找到平衡', required: true },
+    ],
+    characterArchetypes: ['英雄', '克星/宿敌', '常人伙伴', '导师', '公众/民众代表'],
+    keyScenes: ['能力展示', '拒绝召唤', '第一次公开行动', '敌人反击', '牺牲与孤独'],
+    typicalKeywords: ['能力', '责任', '孤独', '敌人', '牺牲', '保护', '害怕', '必须', '普通人', '隐藏'],
+  },
+};
+
+// ============================================================
 // Dialogue Rules (对白规则)
 // Source: McKee《对白》+ 048-创作阶段-对话与潜台词
 // ============================================================

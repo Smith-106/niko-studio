@@ -326,3 +326,175 @@ export class PremiseValidator {
     };
   }
 }
+
+// ============================================================
+// M14: Outline Quality Assessment
+// Source: 《小说的骨架:好提纲成就好故事》
+// ============================================================
+
+export enum OutlineQualityDimension {
+  CHARACTER_ARC_CLARITY = 'character_arc_clarity',
+  CONFLICT_SUSTAINABILITY = 'conflict_sustainability',
+  PACING_STRUCTURE = 'pacing_structure',
+  THEMATIC_COHERENCE = 'thematic_coherence',
+  HOOK_STRENGTH = 'hook_strength',
+}
+
+export interface DimensionAssessment {
+  dimension: OutlineQualityDimension;
+  label: string;
+  score: number;
+  confidence: number;
+  evidence: string[];
+  issues: string[];
+  suggestions: string[];
+}
+
+export interface OutlineAssessment {
+  outlineText: string;
+  dimensions: DimensionAssessment[];
+  overallQualityScore: number;
+  qualityLevel: string;
+  criticalGaps: string[];
+  actionableSuggestions: {
+    dimension: OutlineQualityDimension;
+    suggestion: string;
+    priority: 'high' | 'medium' | 'low';
+  }[];
+}
+
+export const DIMENSION_THRESHOLDS: Record<
+  OutlineQualityDimension,
+  { threshold: number; weight: number; description: string }
+> = {
+  [OutlineQualityDimension.CHARACTER_ARC_CLARITY]: {
+    threshold: 5,
+    weight: 0.25,
+    description: '大纲是否清晰展示了主角的成长/变化轨迹',
+  },
+  [OutlineQualityDimension.CONFLICT_SUSTAINABILITY]: {
+    threshold: 5,
+    weight: 0.25,
+    description: '核心冲突是否能支撑完整故事长度',
+  },
+  [OutlineQualityDimension.PACING_STRUCTURE]: {
+    threshold: 5,
+    weight: 0.2,
+    description: '情节节奏是否有合理的高低起伏',
+  },
+  [OutlineQualityDimension.THEMATIC_COHERENCE]: {
+    threshold: 5,
+    weight: 0.15,
+    description: '主题是否贯穿始终且一致',
+  },
+  [OutlineQualityDimension.HOOK_STRENGTH]: {
+    threshold: 6,
+    weight: 0.15,
+    description: '开篇钩子是否有足够的吸引力',
+  },
+};
+
+export const OUTLINE_QUALITY_PATTERNS: Record<
+  OutlineQualityDimension,
+  { positive: string[]; negative: string[] }
+> = {
+  [OutlineQualityDimension.CHARACTER_ARC_CLARITY]: {
+    positive: ['成长', '改变', '转变', '成为', '学会', '认识到', '觉醒', '蜕变', '不再', '后来'],
+    negative: ['一成不变', '始终如一', '依然', '照旧'],
+  },
+  [OutlineQualityDimension.CONFLICT_SUSTAINABILITY]: {
+    positive: ['对抗', '冲突', '矛盾', '阻碍', '升级', '加剧', '反复', '多次', '层层', '一波三折'],
+    negative: ['轻易', '轻松', '顺利', '毫无阻挡', '一帆风顺'],
+  },
+  [OutlineQualityDimension.HOOK_STRENGTH]: {
+    positive: ['悬念', '意外', '发现', '谜团', '危机', '转折', '突然', '秘密', '不该', '竟然'],
+    negative: ['日常', '平常', '惯例'],
+  },
+  [OutlineQualityDimension.PACING_STRUCTURE]: {
+    positive: ['高潮', '低谷', '转折', '平静', '爆发', '铺垫', '伏笔', '前后', '呼应'],
+    negative: ['平铺直叙', '流水账', '平淡'],
+  },
+  [OutlineQualityDimension.THEMATIC_COHERENCE]: {
+    positive: ['主题', '核心', '主线', '围绕', '贯穿', '呼应', '照应'],
+    negative: ['偏离', '跑题', '断裂'],
+  },
+};
+
+export function assessOutlineQuality(outlineText: string): OutlineAssessment {
+  const dimensions: DimensionAssessment[] = [];
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const dim of Object.values(OutlineQualityDimension)) {
+    const patterns = OUTLINE_QUALITY_PATTERNS[dim];
+    const threshold = DIMENSION_THRESHOLDS[dim];
+
+    const positiveHits = patterns.positive.filter((kw) => outlineText.includes(kw));
+    const negativeHits = patterns.negative.filter((kw) => outlineText.includes(kw));
+
+    const rawScore = positiveHits.length * 2;
+    const penalty = negativeHits.length * 1.0;
+    const score = Math.max(0, Math.min(10, Math.round((rawScore - penalty) * 10) / 10));
+
+    const confidence = positiveHits.length > 0
+      ? Math.min(1, positiveHits.length / patterns.positive.length + 0.2)
+      : 0;
+
+    const issues: string[] = [];
+    const suggestions: string[] = [];
+
+    if (score < threshold.threshold) {
+      issues.push(`${threshold.description} — 得分 ${score} 低于阈值 ${threshold.threshold}`);
+      suggestions.push(`建议加强: ${threshold.description}`);
+    }
+    if (negativeHits.length > 0) {
+      issues.push(`检测到负面信号: ${negativeHits.join(', ')}`);
+    }
+
+    dimensions.push({
+      dimension: dim,
+      label: threshold.description,
+      score,
+      confidence: Math.round(confidence * 100) / 100,
+      evidence: positiveHits,
+      issues,
+      suggestions,
+    });
+
+    weightedSum += score * threshold.weight;
+    totalWeight += threshold.weight;
+  }
+
+  const overallQualityScore = totalWeight > 0
+    ? Math.round((weightedSum / totalWeight) * 10) / 10
+    : 0;
+
+  let qualityLevel: string;
+  if (overallQualityScore >= 8.5) qualityLevel = 'EXCELLENT';
+  else if (overallQualityScore >= 7.0) qualityLevel = 'GOOD';
+  else if (overallQualityScore >= 5.0) qualityLevel = 'ADEQUATE';
+  else qualityLevel = 'WEAK';
+
+  const criticalGaps = dimensions
+    .filter((d) => d.score < DIMENSION_THRESHOLDS[d.dimension].threshold)
+    .map((d) => d.label);
+
+  const actionableSuggestions = dimensions
+    .filter((d) => d.score < DIMENSION_THRESHOLDS[d.dimension].threshold)
+    .map((d) => ({
+      dimension: d.dimension,
+      suggestion: d.suggestions[0] ?? `提升 ${d.label}`,
+      priority: d.score < DIMENSION_THRESHOLDS[d.dimension].threshold / 2 ? 'high' as const
+        : d.score < DIMENSION_THRESHOLDS[d.dimension].threshold * 0.8 ? 'medium' as const
+        : 'low' as const,
+    }));
+
+  return {
+    outlineText,
+    dimensions,
+    overallQualityScore,
+    qualityLevel,
+    criticalGaps,
+    actionableSuggestions,
+  };
+}

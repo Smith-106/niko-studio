@@ -9,7 +9,7 @@
  */
 
 import type { INarrativeLLMClient } from './types.js';
-import { SuspenseSubgenre, SUBGENRE_RULES } from './writing-craft/craft-catalog';
+import { SuspenseSubgenre, SUBGENRE_RULES, NarrativeTechnique, NARRATIVE_TECHNIQUES, GenreBeatType, GENRE_BEATS } from './writing-craft/craft-catalog';
 
 // ============================================================
 // Enums
@@ -163,6 +163,48 @@ export interface SatisfactionDensityResult {
   density: number;           // satisfaction points per 1000 chars
   averageInterval: number;   // chars between satisfaction points
   balanceScore: number;      // how evenly distributed (0-10)
+  suggestions: string[];
+}
+
+// ============================================================
+// M14: Narrative Technique Detection
+// ============================================================
+
+export interface NarrativeTechniqueDetection {
+  technique: NarrativeTechnique;
+  label: string;
+  detected: boolean;
+  confidence: number;
+  evidence: string[];
+  position: number;
+}
+
+export interface NarrativeTechniqueResult {
+  detections: NarrativeTechniqueDetection[];
+  overallScore: number;
+  techniqueDensity: number;
+  recommendations: string[];
+}
+
+// ============================================================
+// M14: Genre Beat Analysis
+// ============================================================
+
+export interface GenreBeatAlignment {
+  beatName: string;
+  expectedPosition: number;
+  actualPosition: number | null;
+  aligned: boolean;
+  evidence: string;
+  deviation: number;
+}
+
+export interface GenreBeatAnalysisResult {
+  genreType: GenreBeatType;
+  label: string;
+  alignments: GenreBeatAlignment[];
+  overallAlignmentScore: number;
+  missingBeats: string[];
   suggestions: string[];
 }
 
@@ -830,5 +872,187 @@ export class SuspenseAnalyzer {
     const detected = confidence >= 0.3;
 
     return { detected, confidence: Math.round(confidence * 100) / 100, elements, missing };
+  }
+
+  // ============================================================
+  // M14: Narrative Technique Detection
+  // Source: Frey《劲爆小说秘境游走》+《悬疑小说创作指导》
+  // ============================================================
+
+  detectNarrativeTechniques(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): NarrativeTechniqueResult {
+    const allText = chapters.map((c) => c.content).join('\n');
+    const totalChapters = chapters.length;
+    const detections: NarrativeTechniqueDetection[] = [];
+
+    for (const def of Object.values(NARRATIVE_TECHNIQUES)) {
+      const matchedKeywords: string[] = [];
+      let matchPositions: number[] = [];
+
+      for (const keyword of def.detectionKeywords) {
+        let searchFrom = 0;
+        while (searchFrom < allText.length) {
+          const idx = allText.indexOf(keyword, searchFrom);
+          if (idx === -1) break;
+          matchedKeywords.push(keyword);
+          matchPositions.push(idx / Math.max(allText.length, 1));
+          searchFrom = idx + keyword.length;
+        }
+      }
+
+      const keywordHitRatio = matchedKeywords.length / Math.max(def.detectionKeywords.length, 1);
+      const uniqueHits = new Set(matchedKeywords).size;
+      const confidence = keywordHitRatio > 0
+        ? Math.min(1, keywordHitRatio * 0.7 + (uniqueHits / Math.max(def.detectionKeywords.length, 1)) * 0.3)
+        : 0;
+
+      const avgPosition = matchPositions.length > 0
+        ? matchPositions.reduce((s, p) => s + p, 0) / matchPositions.length
+        : 0;
+
+      detections.push({
+        technique: def.technique,
+        label: def.label,
+        detected: confidence > 0.1,
+        confidence: Math.round(confidence * 100) / 100,
+        evidence: [...new Set(matchedKeywords)],
+        position: Math.round(avgPosition * 100) / 100,
+      });
+    }
+
+    const detectedCount = detections.filter((d) => d.detected).length;
+    const overallScore = detections.length > 0
+      ? Math.round(detections.reduce((s, d) => s + d.confidence, 0) / detections.length * 10) / 10
+      : 0;
+    const techniqueDensity = totalChapters > 0
+      ? Math.round((detectedCount / totalChapters) * 100) / 100
+      : 0;
+
+    const recommendations: string[] = [];
+    for (const d of detections) {
+      if (!d.detected) {
+        recommendations.push(`${d.label}未检测到，建议加入${NARRATIVE_TECHNIQUES[d.technique].effectDescription}`);
+      }
+    }
+    if (overallScore < 0.3) {
+      recommendations.push('整体叙事技巧密度偏低，建议有意识地运用高级叙事技巧增强故事张力');
+    }
+
+    return { detections, overallScore, techniqueDensity, recommendations };
+  }
+
+  // ============================================================
+  // M14: Genre Beat Analysis
+  // Source: Snyder《救猫咪2经典电影剧本解析》
+  // ============================================================
+
+  analyzeGenreBeats(
+    chapters: Array<{ content: string; position: number }>,
+    genreType: GenreBeatType,
+  ): GenreBeatAnalysisResult {
+    const template = GENRE_BEATS[genreType];
+    if (!template) {
+      return {
+        genreType,
+        label: '未知类型',
+        alignments: [],
+        overallAlignmentScore: 0,
+        missingBeats: [],
+        suggestions: ['未找到该类型的节拍模板'],
+      };
+    }
+
+    const allText = chapters.map((c) => c.content).join('\n');
+    const alignments: GenreBeatAlignment[] = [];
+    const missingBeats: string[] = [];
+
+    for (const expectedBeat of template.beatSequence) {
+      let bestMatch: GenreBeatAlignment | null = null;
+      let bestEvidence = '';
+
+      for (const chapter of chapters) {
+        const tolerance = 0.08;
+        if (chapter.position >= expectedBeat.position - tolerance &&
+            chapter.position <= expectedBeat.position + tolerance) {
+          const beatNameLower = expectedBeat.name.toLowerCase();
+          const contentLower = chapter.content.toLowerCase();
+          const wordsInBeatName = expectedBeat.name.split(/[，,\s]+/).filter((w) => w.length >= 1);
+          const nameHits = wordsInBeatName.filter((w) => contentLower.includes(w));
+
+          const keywordHits = template.typicalKeywords.filter((kw) =>
+            chapter.content.includes(kw),
+          );
+
+          const combinedEvidence = [...nameHits, ...keywordHits.slice(0, 3)].join(', ');
+          const deviation = Math.abs(chapter.position - expectedBeat.position);
+
+          if (combinedEvidence.length > 0 && combinedEvidence.length > bestEvidence.length) {
+            bestEvidence = combinedEvidence;
+            bestMatch = {
+              beatName: expectedBeat.name,
+              expectedPosition: expectedBeat.position,
+              actualPosition: chapter.position,
+              aligned: true,
+              evidence: combinedEvidence,
+              deviation: Math.round(deviation * 1000) / 1000,
+            };
+          } else if (!bestMatch && deviation < 0.05) {
+            bestMatch = {
+              beatName: expectedBeat.name,
+              expectedPosition: expectedBeat.position,
+              actualPosition: chapter.position,
+              aligned: true,
+              evidence: '',
+              deviation: Math.round(deviation * 1000) / 1000,
+            };
+          }
+        }
+      }
+
+      if (bestMatch) {
+        alignments.push(bestMatch);
+      } else {
+        alignments.push({
+          beatName: expectedBeat.name,
+          expectedPosition: expectedBeat.position,
+          actualPosition: null,
+          aligned: false,
+          evidence: '',
+          deviation: 1,
+        });
+        if (expectedBeat.required) {
+          missingBeats.push(expectedBeat.name);
+        }
+      }
+    }
+
+    const alignedCount = alignments.filter((a) => a.aligned).length;
+    const requiredCount = template.beatSequence.filter((b) => b.required).length;
+    const overallAlignmentScore = requiredCount > 0
+      ? Math.round((alignedCount / template.beatSequence.length) * 10) / 10
+      : 0;
+
+    const suggestions: string[] = [];
+    if (missingBeats.length > 0) {
+      suggestions.push(
+        `缺少${missingBeats.length}个必要节拍: ${missingBeats.join(', ')}`,
+      );
+    }
+    if (overallAlignmentScore < 0.5) {
+      suggestions.push('节拍对齐度较低，建议参考救猫咪2调整故事节奏');
+    }
+    if (overallAlignmentScore >= 0.7) {
+      suggestions.push(`${template.label}类型节拍对齐良好`);
+    }
+
+    return {
+      genreType,
+      label: template.label,
+      alignments,
+      overallAlignmentScore,
+      missingBeats,
+      suggestions,
+    };
   }
 }

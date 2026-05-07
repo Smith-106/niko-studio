@@ -11,6 +11,78 @@ export enum EmotionMode {
   SHOW = 'show',   // 通过行为/细节间接表达
 }
 
+export enum EmotionLayer {
+  PHYSICAL_SENSATION = 'physical_sensation',
+  BEHAVIORAL_EXPRESSION = 'behavioral_expression',
+  INTERNAL_MONOLOGUE = 'internal_monologue',
+  METAPHORICAL = 'metaphorical',
+  SUBTEXT_UNDERSTATEMENT = 'subtext_understatement',
+}
+
+export interface LayerDetectionPattern {
+  layer: EmotionLayer;
+  label: string;
+  patterns: string[];
+  examplePhrases: string[];
+  difficultyWeight: number;
+}
+
+export const LAYER_DETECTION_PATTERNS: Record<EmotionLayer, LayerDetectionPattern> = {
+  [EmotionLayer.PHYSICAL_SENSATION]: {
+    layer: EmotionLayer.PHYSICAL_SENSATION,
+    label: '生理感受',
+    patterns: ['心跳', '呼吸', '颤抖', '发冷', '发热', '冒汗', '发麻', '绞痛', '窒息', '晕眩', '起鸡皮疙瘩', '头皮发麻', '血液', '冰凉', '滚烫'],
+    examplePhrases: ['心跳加速', '呼吸一滞', '手脚冰凉', '血液凝固'],
+    difficultyWeight: 0.5,
+  },
+  [EmotionLayer.BEHAVIORAL_EXPRESSION]: {
+    layer: EmotionLayer.BEHAVIORAL_EXPRESSION,
+    label: '行为表达',
+    patterns: ['攥紧', '咬紧', '后退', '转头', '握拳', '砸', '摔', '拥抱', '拍案', '踱步', '哽咽', '吼', '低声', '盯着', '避开目光'],
+    examplePhrases: ['攥紧了拳头', '后退一步', '一拳砸在桌上', '转过头去'],
+    difficultyWeight: 0.7,
+  },
+  [EmotionLayer.INTERNAL_MONOLOGUE]: {
+    layer: EmotionLayer.INTERNAL_MONOLOGUE,
+    label: '内心独白',
+    patterns: ['心想', '暗想', '告诉自己', '内心', '质问自己', '难道', '为什么总是', '如果当时', '或许', '是不是'],
+    examplePhrases: ['他心想', '暗暗告诉自己', '质问自己为什么要这样', '难道这一切都是徒劳'],
+    difficultyWeight: 1.0,
+  },
+  [EmotionLayer.METAPHORICAL]: {
+    layer: EmotionLayer.METAPHORICAL,
+    label: '隐喻描写',
+    patterns: ['像', '如', '仿佛', '好似', '如同', '犹如', '就像', '把...比作', '正如'],
+    examplePhrases: ['像被雷击中一般', '仿佛整个世界都安静了', '如同坠入冰窟'],
+    difficultyWeight: 1.3,
+  },
+  [EmotionLayer.SUBTEXT_UNDERSTATEMENT]: {
+    layer: EmotionLayer.SUBTEXT_UNDERSTATEMENT,
+    label: '潜台词/轻描淡写',
+    patterns: ['淡淡', '轻轻', '只说', '嗯', '哦', '沉默', '没说什么', '没再开口', '只是看着', '微微一笑', '不再说话', '装作', '岔开话题', '敷衍'],
+    examplePhrases: ['淡淡地说', '哦了一声', '只是微微一笑', '装作没听见'],
+    difficultyWeight: 1.5,
+  },
+};
+
+export interface LayerDetection {
+  layer: EmotionLayer;
+  label: string;
+  hitCount: number;
+  evidence: string[];
+  score: number;
+  richness: number;
+}
+
+export interface EmotionLayerResult {
+  detections: LayerDetection[];
+  totalLayersUsed: number;
+  layerDiversityScore: number;
+  overallRichness: number;
+  depthLevel: string;
+  suggestions: string[];
+}
+
 export interface EmotionDetection {
   mode: EmotionMode;
   text: string;
@@ -26,6 +98,8 @@ export interface EmotionCraftResult {
   score: number;
   detections: EmotionDetection[];
   suggestions: string[];
+  layerRichness?: number;
+  layerBreakdown?: Record<EmotionLayer, number>;
 }
 
 const TELL_PATTERNS: Array<{ pattern: string; emotion: string }> = [
@@ -123,5 +197,76 @@ export function analyzeEmotionCraft(text: string): EmotionCraftResult {
     suggestions.push('情感描写平衡良好，show与tell比例合理');
   }
 
-  return { totalDetections: total, tellCount, showCount, showRatio, score, detections, suggestions };
+  const layerResult = analyzeEmotionLayers(text);
+
+  return {
+    totalDetections: total,
+    tellCount,
+    showCount,
+    showRatio,
+    score,
+    detections,
+    suggestions,
+    layerRichness: layerResult.overallRichness,
+    layerBreakdown: Object.fromEntries(
+      layerResult.detections.map((d) => [d.layer, d.richness])
+    ) as Record<EmotionLayer, number>,
+  };
+}
+
+export function analyzeEmotionLayers(text: string): EmotionLayerResult {
+  const textLength = text.length || 1;
+  const detections: LayerDetection[] = [];
+
+  for (const layer of Object.values(LAYER_DETECTION_PATTERNS)) {
+    const evidence: string[] = [];
+    for (const pattern of layer.patterns) {
+      let pos = text.indexOf(pattern);
+      while (pos !== -1) {
+        evidence.push(pattern);
+        pos = text.indexOf(pattern, pos + pattern.length);
+      }
+    }
+    const hitCount = evidence.length;
+    const richness = Math.round((hitCount * layer.difficultyWeight / textLength) * 1000 * 100) / 100;
+    const score = Math.min(10, Math.round((richness / 5) * 10) / 10);
+    detections.push({
+      layer: layer.layer,
+      label: layer.label,
+      hitCount,
+      evidence,
+      score,
+      richness,
+    });
+  }
+
+  const layersWithHits = detections.filter((d) => d.hitCount > 0).length;
+  const totalLayersUsed = layersWithHits;
+  const layerDiversityScore = Math.round((layersWithHits / 5) * 10 * 10) / 10;
+  const overallRichness = Math.round(detections.reduce((sum, d) => sum + d.richness, 0) * 100) / 100;
+  const depthLevel =
+    overallRichness >= 8 ? '深' : overallRichness >= 4 ? '中' : '浅';
+
+  const suggestions: string[] = [];
+  for (const d of detections) {
+    if (d.hitCount === 0) {
+      if (d.layer === EmotionLayer.PHYSICAL_SENSATION) {
+        suggestions.push('缺少生理感受描写，建议加入心跳、呼吸、体温变化等细节');
+      } else if (d.layer === EmotionLayer.BEHAVIORAL_EXPRESSION) {
+        suggestions.push('缺少行为表达，建议加入手势、表情、身体动作等细节');
+      } else if (d.layer === EmotionLayer.INTERNAL_MONOLOGUE) {
+        suggestions.push('缺少内心独白，建议加入角色的内心思考和自我对话');
+      } else if (d.layer === EmotionLayer.METAPHORICAL) {
+        suggestions.push('缺少隐喻描写，建议使用比喻来丰富情感表达');
+      } else if (d.layer === EmotionLayer.SUBTEXT_UNDERSTATEMENT) {
+        suggestions.push('缺少潜台词/轻描淡写，建议用含蓄方式让读者自行体会情感');
+      }
+    }
+  }
+
+  if (suggestions.length === 0 && layersWithHits > 0) {
+    suggestions.push('情感描写层次丰富，各层表达方式均有体现');
+  }
+
+  return { detections, totalLayersUsed, layerDiversityScore, overallRichness, depthLevel, suggestions };
 }
