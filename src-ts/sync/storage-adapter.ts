@@ -133,7 +133,7 @@ export class RemoteStorageAdapter implements StorageAdapter {
     });
     if (resp.status === 404) return null;
     if (!resp.ok) throw new Error(`Remote get failed: ${resp.status}`);
-    return resp.json();
+    return resp.json() as Promise<SyncData>;
   }
 
   async set(key: string, data: unknown, deviceId: string): Promise<SyncData> {
@@ -143,7 +143,7 @@ export class RemoteStorageAdapter implements StorageAdapter {
       body: JSON.stringify({ data, deviceId }),
     });
     if (!resp.ok) throw new Error(`Remote set failed: ${resp.status}`);
-    return resp.json();
+    return resp.json() as Promise<SyncData>;
   }
 
   async delete(key: string): Promise<boolean> {
@@ -160,7 +160,7 @@ export class RemoteStorageAdapter implements StorageAdapter {
       headers: this.headers(),
     });
     if (!resp.ok) throw new Error(`Remote list failed: ${resp.status}`);
-    return resp.json();
+    return resp.json() as Promise<SyncData[]>;
   }
 
   async getMeta(): Promise<SyncMeta> {
@@ -168,7 +168,7 @@ export class RemoteStorageAdapter implements StorageAdapter {
       headers: this.headers(),
     });
     if (!resp.ok) throw new Error(`Remote getMeta failed: ${resp.status}`);
-    return resp.json();
+    return resp.json() as Promise<SyncMeta>;
   }
 
   async setMeta(partial: Partial<SyncMeta>): Promise<SyncMeta> {
@@ -178,6 +178,6 @@ export class RemoteStorageAdapter implements StorageAdapter {
       body: JSON.stringify(partial),
     });
     if (!resp.ok) throw new Error(`Remote setMeta failed: ${resp.status}`);
-    return resp.json();
+    return resp.json() as Promise<SyncMeta>;
   }
 }

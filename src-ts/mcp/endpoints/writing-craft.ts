@@ -250,7 +250,7 @@ function analyzeEmotion(text: string): DimensionResult {
     score,
     maxScore: 10,
     evidence: [
-      ...craftResult.detections.slice(0, 5).map((d) => `${d.type}: ${d.keyword}`),
+      ...craftResult.detections.slice(0, 5).map((d) => `${d.mode}: ${d.emotion}`),
       ...layerResult.detections.filter((d) => d.hitCount > 0).map((d) => d.label),
       ...descriptionResult.dimensions.filter((d) => d.score > 0).map((d) => d.label),
     ],

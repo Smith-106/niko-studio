@@ -62,6 +62,8 @@ export async function pluginRegisterEndpoint(request: HttpRequest): Promise<Http
     return jsonResponse({ success: false, error: 'id, name, and rules[] are required' }, 400);
   }
 
+  const rules = body.rules;
+
   const plugin: WritingPlugin = {
     id: body.id,
     name: body.name,
@@ -74,7 +76,7 @@ export async function pluginRegisterEndpoint(request: HttpRequest): Promise<Http
       const suggestions: string[] = [];
       let totalScore = 0;
 
-      for (const rule of body.rules) {
+      for (const rule of rules) {
         const matches = text.match(new RegExp(rule.keyword, 'g'));
         if (matches && matches.length > 0) {
           totalScore += rule.score * matches.length;
@@ -90,7 +92,7 @@ export async function pluginRegisterEndpoint(request: HttpRequest): Promise<Http
         maxScore: 10,
         evidence,
         suggestions,
-        details: { ruleCount: body.rules.length, source: 'user-registered' },
+        details: { ruleCount: rules.length, source: 'user-registered' },
       };
     },
   };

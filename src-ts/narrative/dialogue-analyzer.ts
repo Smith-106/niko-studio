@@ -173,7 +173,7 @@ export class DialogueAnalyzer {
   }
 
   private generateSuggestions(
-    scores: DialogueQuality[],
+    scores: DialogueQualityScore[],
     subtextRatio: number,
     voiceDistinctness: number,
   ): string[] {

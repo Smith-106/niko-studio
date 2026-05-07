@@ -136,7 +136,16 @@ export {
 export * from './foreshadowing';
 export * from './narrative-voice';
 export * from './premise-validator';
-export * from './reader-satisfaction-analyzer';
+export {
+  ReaderSatisfactionAnalyzer,
+  SatisfactionPoint as ReaderSatisfactionPoint,
+  SatisfactionLayer,
+  HookType,
+  ExpectPhase,
+  ChapterHook,
+  ExpectationCycle,
+  type ReaderSatisfactionResult,
+} from './reader-satisfaction-analyzer';
 export * from './scene-coherence';
 export * from './style-system';
 export * from './suspense-analyzer';

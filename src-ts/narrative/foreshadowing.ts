@@ -120,7 +120,7 @@ export class ForeshadowingManager {
     5: 20, 4: 25, 3: 30, 2: 40, 1: 50,
   };
 
-  private foreshadows: Map<string, Foreshadow>;
+  protected foreshadows: Map<string, Foreshadow>;
   private hints: Map<string, ForeshadowHint>; // hintId -> hint
   private foreshadowHints: Map<string, string[]>; // foreshadowId -> hintIds
   private sceneOrders: Map<string, number>; // "storyId:sceneId" -> sequence
