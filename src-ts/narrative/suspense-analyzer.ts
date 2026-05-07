@@ -772,4 +772,63 @@ export class SuspenseAnalyzer {
 
     return { violations, suggestions, ruleScore };
   }
+
+  // ============================================================
+  // Closed-Circle (暴风雪山庄) Detection
+  // ============================================================
+
+  detectClosedCircle(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): { detected: boolean; confidence: number; elements: string[]; missing: string[] } {
+    const allText = chapters.map((c) => c.content).join('\n');
+    const elements: string[] = [];
+    const missing: string[] = [];
+
+    const requiredPatterns: Array<{ pattern: string; label: string }> = [
+      { pattern: '孤岛', label: '孤岛/封闭地点' },
+      { pattern: '暴风雪', label: '暴风雪/天气封锁' },
+      { pattern: '大雪封山', label: '大雪封山' },
+      { pattern: '别墅', label: '别墅/庄园' },
+      { pattern: '庄园', label: '封闭场所' },
+      { pattern: '无法离开', label: '无法离开' },
+      { pattern: '出不去了', label: '封锁状态' },
+      { pattern: '断桥', label: '断桥/通道阻断' },
+      { pattern: '通讯中断', label: '通讯中断' },
+      { pattern: '信号', label: '信号问题' },
+      { pattern: '电话打不通', label: '通讯隔绝' },
+      { pattern: '与世隔绝', label: '与世隔绝' },
+      { pattern: '没有人能来', label: '外部援助不可达' },
+    ];
+
+    const characterPatterns = [
+      '嫌疑人', '在场的', '在场', '一共', '所有人', '剩下的', '每个人',
+    ];
+
+    const eliminationPatterns = [
+      '死了', '被杀', '尸体', '失踪', '消失', '不在了', '又死了一个',
+    ];
+
+    let closedLocationHits = 0;
+    for (const { pattern, label } of requiredPatterns) {
+      if (allText.includes(pattern)) {
+        elements.push(label);
+        closedLocationHits++;
+      }
+    }
+
+    const charHits = characterPatterns.filter((p) => allText.includes(p));
+    if (charHits.length >= 2) elements.push('有限角色群');
+
+    const elimHits = eliminationPatterns.filter((p) => allText.includes(p));
+    if (elimHits.length >= 2) elements.push('角色逐步消除');
+
+    if (closedLocationHits === 0) missing.push('封闭地点（孤岛/别墅/暴风雪封锁等）');
+    if (charHits.length < 2) missing.push('明确的有限嫌疑人群体');
+    if (elimHits.length < 2) missing.push('角色逐步被消除');
+
+    const confidence = Math.min(1, (closedLocationHits * 0.25 + charHits.length * 0.15 + elimHits.length * 0.15));
+    const detected = confidence >= 0.3;
+
+    return { detected, confidence: Math.round(confidence * 100) / 100, elements, missing };
+  }
 }

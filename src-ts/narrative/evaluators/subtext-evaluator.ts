@@ -11,6 +11,22 @@ import {
   Severity,
 } from './base';
 
+// McKee three functions: each dialogue line should serve >=2 of these
+const MCKEE_FUNCTIONS = {
+  plot: ['推动', '导致', '改变', '触发', '引起', '因为', '所以', '于是', '结果', '决定'],
+  character: ['性格', '习惯', '过去', '秘密', '恐惧', '渴望', '矛盾', '弱点', '固执', '骄傲'],
+  theme: ['命运', '选择', '正义', '自由', '牺牲', '信念', '价值', '意义', '到底', '本质'],
+  conflict: ['你凭什么', '不行', '不可能', '我不答应', '反对', '拒绝', '偏要', '绝不会'],
+} as const;
+
+export interface McKeeDialogueResult {
+  dialogueCount: number;
+  averageFunctions: number;
+  weakDialogues: number;
+  functionDistribution: Record<keyof typeof MCKEE_FUNCTIONS, number>;
+  suggestions: string[];
+}
+
 export class SubtextEvaluator extends BaseEvaluator {
   get name(): string {
     return '\u6f5c\u53f0\u8bcd\u8bc4\u4f30\u5668';
@@ -212,5 +228,47 @@ export class SubtextEvaluator extends BaseEvaluator {
     const longRatio = longDialogues / dialogues.length;
 
     return Math.max(0, 100 - longRatio * 100);
+  }
+
+  evaluateMcKeeFunctions(content: string): McKeeDialogueResult {
+    const dialogues = this.extractDialogues(content);
+    if (dialogues.length === 0) {
+      return { dialogueCount: 0, averageFunctions: 0, weakDialogues: 0, functionDistribution: { plot: 0, character: 0, theme: 0, conflict: 0 }, suggestions: ['未检测到对话内容'] };
+    }
+
+    const distribution: Record<keyof typeof MCKEE_FUNCTIONS, number> = { plot: 0, character: 0, theme: 0, conflict: 0 };
+    let totalFunctions = 0;
+    let weakCount = 0;
+    const suggestions: string[] = [];
+
+    for (const d of dialogues) {
+      const matched: string[] = [];
+      for (const [fn, keywords] of Object.entries(MCKEE_FUNCTIONS)) {
+        const hit = keywords.some((kw) => d.includes(kw));
+        if (hit) {
+          distribution[fn as keyof typeof distribution]++;
+          matched.push(fn);
+        }
+      }
+      totalFunctions += matched.length;
+      if (matched.length < 2) weakCount++;
+    }
+
+    const avg = totalFunctions / dialogues.length;
+
+    if (weakCount > dialogues.length * 0.5) {
+      suggestions.push('超过50%的对话仅满足一个McKee功能，建议让每句对话至少满足两个功能（推动情节/揭示角色/表达主题/制造冲突）');
+    }
+    if (distribution.theme < dialogues.length * 0.1) {
+      suggestions.push('对话中主题表达不足，可以通过角色的价值观冲突来体现主题');
+    }
+    if (distribution.conflict < dialogues.length * 0.15) {
+      suggestions.push('对话中冲突密度较低，增加角色间的立场对立');
+    }
+    if (suggestions.length === 0) {
+      suggestions.push('对话的McKee三功能表现良好');
+    }
+
+    return { dialogueCount: dialogues.length, averageFunctions: Math.round(avg * 100) / 100, weakDialogues: weakCount, functionDistribution: distribution, suggestions };
   }
 }

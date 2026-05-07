@@ -352,6 +352,33 @@ export const STORY_STRUCTURES = {
       { name: '终场画面', position: 0.99, description: '展示"之后"状态' },
     ],
   },
+  truby_22_steps: {
+    name: 'Truby 22步 (故事写作大师班)',
+    beats: [
+      { name: '1.幽灵/过去伤口', position: 0.02, description: '主角过去的创伤，影响当前行为' },
+      { name: '2.故事世界', position: 0.04, description: '建立故事发生的环境和规则' },
+      { name: '3.需求/弱点', position: 0.06, description: '主角的心理弱点，需要弥补的缺陷' },
+      { name: '4.引发事件', position: 0.08, description: '打破平衡的外部事件' },
+      { name: '5.欲望', position: 0.1, description: '主角明确的目标和追求' },
+      { name: '6.对手', position: 0.12, description: '直接阻碍主角的核心对手' },
+      { name: '7.计划', position: 0.15, description: '主角的初步行动计划' },
+      { name: '8.盟友', position: 0.17, description: '帮助主角的角色' },
+      { name: '9.对手的盟友', position: 0.19, description: '帮助对手的角色' },
+      { name: '10.第一次揭露', position: 0.22, description: '主角获得新信息，认知改变' },
+      { name: '11.驱动欲望', position: 0.26, description: '更强的行动动力' },
+      { name: '12.盟友的攻击', position: 0.3, description: '盟友质疑主角的计划' },
+      { name: '13.转向揭露', position: 0.35, description: '重大信息揭示，改变方向' },
+      { name: '14.看似落败', position: 0.4, description: '主角的虚假失败' },
+      { name: '15.批评者的抱怨', position: 0.44, description: '他人对主角的质疑和反对' },
+      { name: '16.看似胜利', position: 0.48, description: '主角的虚假成功' },
+      { name: '17.失控暴露', position: 0.55, description: '事态超出主角控制' },
+      { name: '18.第二次揭露', position: 0.6, description: '更深层的真相揭示' },
+      { name: '19.道德决定', position: 0.7, description: '主角面临道德抉择' },
+      { name: '20.最终揭露', position: 0.78, description: '最终的关键信息' },
+      { name: '21.道德自省', position: 0.85, description: '主角的内心转变' },
+      { name: '22.最终对决', position: 0.92, description: '主角与对手的最终较量' },
+    ],
+  },
 } as const;
 
 // ============================================================
