@@ -152,7 +152,11 @@
       "mcp__chrome-devtools__lighthouse_audit",
       "mcp__chrome-devtools__performance_start_trace",
       "mcp__chrome-devtools__performance_analyze_insight",
-      "mcp__chrome-devtools__drag"
+      "mcp__chrome-devtools__drag",
+      "Bash(mkdir -p \"/tmp/prompt-analysis\")",
+      "Read(//tmp/**)",
+      "Bash(rm -rf *)",
+      "Bash(unzip -o \"C:/Users/32852/Downloads/2525c586af9c57edc55fcf7a1fd2a7b93b3fb4c8.zip\")"
     ]
   },
   "hooks": {

@@ -181,6 +181,8 @@ export type {
   IWorldviewGraphAdapter,
 } from './worldview-coherence-validator';
 
+export * from './writing-craft';
+
 // Worldview extractor (M11 — BookWorld integration)
 export {
   WorldviewNature,
