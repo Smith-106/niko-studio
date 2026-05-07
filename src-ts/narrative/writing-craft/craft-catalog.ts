@@ -1107,3 +1107,69 @@ export const NARRATIVE_PRINCIPLES: Record<NarrativePrinciple, NarrativePrinciple
     detectionKeywords: ['更大的危机', '更强的对手', '更艰难', '前所未有的', '比之前更', '升级'],
   },
 };
+
+// ============================================================
+// M16: Mystery Sub-genre Details (悬疑细分类)
+// Source: H:\写作\悬疑 — 4条学习路径
+// ============================================================
+
+export enum MysterySubtype {
+  HONKAKU = 'honkaku',
+  SOCIAL_FACTION = 'social_faction',
+  HARDBOILED = 'hardboiled',
+  THRILLER_SUSPENSE = 'thriller_suspense',
+}
+
+export interface MysterySubtypeDef {
+  subtype: MysterySubtype;
+  label: string;
+  description: string;
+  coreRules: string[];
+  typicalElements: string[];
+  detectionKeywords: string[];
+  forbiddenElements: string[];
+  representativeWorks: string[];
+}
+
+export const MYSTERY_SUBTYPES: Record<MysterySubtype, MysterySubtypeDef> = {
+  [MysterySubtype.HONKAKU]: {
+    subtype: MysterySubtype.HONKAKU,
+    label: '本格推理',
+    description: '以逻辑解谜为核心，重视公平性和诡计设计',
+    coreRules: ['线索必须公平呈现给读者', '诡计必须有逻辑支撑', '真相揭示时读者应能回溯', '推理过程严密'],
+    typicalElements: ['密室', '不在场证明', '死亡留言', '连续杀人', '多重反转', '叙述性诡计'],
+    detectionKeywords: ['密室', '不在场证明', '诡计', '谜题', '推理', '线索', '逻辑', '真相', '犯人', '证据', '不在场', '作案手法'],
+    forbiddenElements: ['超自然力量直接破案', '凭空出现的线索', '未展示的关键证据'],
+    representativeWorks: ['《占星术杀人魔法》', '《狱门岛》', '《嫌疑人X的献身》'],
+  },
+  [MysterySubtype.SOCIAL_FACTION]: {
+    subtype: MysterySubtype.SOCIAL_FACTION,
+    label: '社会派',
+    description: '关注犯罪背后的社会原因和人性剖析',
+    coreRules: ['犯罪动机必须植根于社会现实', '人物塑造优先于诡计', '反映社会问题', '重视人性的灰色地带'],
+    typicalElements: ['社会不公', '家庭悲剧', '复仇动机', '权力斗争', '阶级矛盾', '人性挣扎'],
+    detectionKeywords: ['动机', '社会', '不公', '复仇', '悲剧', '权力', '压迫', '牺牲', '无奈', '人性', '命运', '底层'],
+    forbiddenElements: ['纯智力游戏式诡计', '与动机无关的复杂手法'],
+    representativeWorks: ['《白夜行》', '《砂之器》', '《人性的证明》'],
+  },
+  [MysterySubtype.HARDBOILED]: {
+    subtype: MysterySubtype.HARDBOILED,
+    label: '硬汉派',
+    description: '冷硬风格，注重氛围和行动，侦探深入社会黑暗面',
+    coreRules: ['主角亲力亲为调查', '面对暴力和危险', '道德界限模糊', '城市氛围浓厚'],
+    typicalElements: ['私人侦探', '黑帮', '腐败', '酒馆', '夜雨', '冷笑', '拳头'],
+    detectionKeywords: ['侦探', '酒吧', '黑帮', '腐败', '夜', '烟', '酒', '暴力', '冷笑', '枪', '雨夜', '暗巷', '私家'],
+    forbiddenElements: ['温室式推理', '坐而论道的解谜'],
+    representativeWorks: ['《漫长的告别》', '《长眠不醒》', '《马耳他之鹰》'],
+  },
+  [MysterySubtype.THRILLER_SUSPENSE]: {
+    subtype: MysterySubtype.THRILLER_SUSPENSE,
+    label: '惊悚悬疑',
+    description: '以紧张感和恐惧为核心，注重节奏和读者心理操控',
+    coreRules: ['持续制造紧张感', '不断升级的威胁', '读者焦虑管理', '高潮前的最后反转'],
+    typicalElements: ['倒计时', '追踪', '心理操控', '连环杀手', '不可靠叙述者', '不可能的处境'],
+    detectionKeywords: ['恐惧', '追踪', '危险', '逃亡', '倒计时', '杀手', '血', '黑暗', '尖叫', '脚步声', '背后', '门'],
+    forbiddenElements: ['冗长的推理过程', '缺乏紧迫感的情节'],
+    representativeWorks: ['《消失的爱人》', '《沉默的羔羊》', '《七宗罪》'],
+  },
+};

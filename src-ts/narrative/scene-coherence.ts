@@ -1017,4 +1017,78 @@ export class SceneCoherenceDetector {
       ],
     };
   }
+
+  // ============================================================
+  // M16: Scene Quality Assessment
+  // ============================================================
+
+  assessSceneQuality(
+    scenes: Array<{ content: string; sceneIndex: number }>,
+  ): {
+    dimensions: Array<{ dimension: string; label: string; score: number; evidence: string[] }>;
+    overallScore: number;
+    suggestions: string[];
+  } {
+    const allText = scenes.map((s) => s.content).join('\n');
+
+    const dimensionPatterns: Array<{ dimension: string; label: string; positive: string[]; negative: string[] }> = [
+      {
+        dimension: 'sensory_immersion',
+        label: '感官沉浸',
+        positive: ['看到', '听到', '闻到', '感觉', '触摸', '冰冷', '温暖', '刺鼻', '刺耳', '柔软', '刺眼'],
+        negative: [],
+      },
+      {
+        dimension: 'conflict_presence',
+        label: '冲突张力',
+        positive: ['对抗', '冲突', '争论', '矛盾', '威胁', '危机', '爆发', '激烈', '紧张'],
+        negative: ['平静', '无事', '一切正常'],
+      },
+      {
+        dimension: 'change_occurred',
+        label: '状态变化',
+        positive: ['突然', '改变', '发现', '意识到', '震惊', '意外', '原来', '转折', '不同了', '不再'],
+        negative: [],
+      },
+      {
+        dimension: 'transition_quality',
+        label: '场景过渡',
+        positive: ['与此同时', '之后', '数天后', '回到', '转场', '镜头', '画面一转'],
+        negative: [],
+      },
+      {
+        dimension: 'dialogue_action_balance',
+        label: '对话行动平衡',
+        positive: ['说道', '喊道', '走了过去', '站起来', '转身', '抓住'],
+        negative: [],
+      },
+    ];
+
+    const dimensions = dimensionPatterns.map((dp) => {
+      const posHits = dp.positive.filter((kw) => allText.includes(kw));
+      const negHits = dp.negative.filter((kw) => allText.includes(kw));
+      const score = Math.max(0, Math.min(10, posHits.length * 1.5 - negHits.length * 2));
+
+      return {
+        dimension: dp.dimension,
+        label: dp.label,
+        score,
+        evidence: [...posHits, ...negHits],
+      };
+    });
+
+    const overallScore = dimensions.length > 0
+      ? Math.round((dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length) * 10) / 10
+      : 0;
+
+    const suggestions: string[] = [];
+    for (const dim of dimensions.filter((d) => d.score < 3)) {
+      suggestions.push(`${dim.label}不足，建议加强场景在此维度的表现`);
+    }
+    if (overallScore >= 7) {
+      suggestions.push('场景质量整体较高');
+    }
+
+    return { dimensions, overallScore, suggestions };
+  }
 }

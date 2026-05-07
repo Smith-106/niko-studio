@@ -9,7 +9,7 @@
  */
 
 import type { INarrativeLLMClient } from './types.js';
-import { SuspenseSubgenre, SUBGENRE_RULES, NarrativeTechnique, NARRATIVE_TECHNIQUES, GenreBeatType, GENRE_BEATS, STORY_STRUCTURES, AntiPattern, ANTI_PATTERNS } from './writing-craft/craft-catalog';
+import { SuspenseSubgenre, SUBGENRE_RULES, NarrativeTechnique, NARRATIVE_TECHNIQUES, GenreBeatType, GENRE_BEATS, STORY_STRUCTURES, AntiPattern, ANTI_PATTERNS, MysterySubtype, MYSTERY_SUBTYPES } from './writing-craft/craft-catalog';
 
 // ============================================================
 // Enums
@@ -1241,5 +1241,104 @@ export class SuspenseAnalyzer {
     }
 
     return { tricks, overallTrickScore: Math.round(overallTrickScore * 10) / 10, suggestions };
+  }
+
+  // ============================================================
+  // M16: Mystery Subtype Detection
+  // Source: H:\写作\悬疑 — 4条学习路径
+  // ============================================================
+
+  detectMysterySubtype(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): { subtype: MysterySubtype; label: string; confidence: number; evidence: string[] }[] {
+    const allText = chapters.map((c) => c.content).join('\n');
+    const results: Array<{ subtype: MysterySubtype; label: string; confidence: number; evidence: string[] }> = [];
+
+    for (const def of Object.values(MYSTERY_SUBTYPES)) {
+      const keywordHits = def.detectionKeywords.filter((kw) => allText.includes(kw));
+      const ruleHits = def.typicalElements.filter((el) => allText.includes(el));
+      const forbiddenHits = def.forbiddenElements.filter((el) => allText.includes(el));
+
+      const keywordScore = keywordHits.length / Math.max(def.detectionKeywords.length, 1);
+      const ruleScore = ruleHits.length / Math.max(def.typicalElements.length, 1);
+      const forbiddenPenalty = forbiddenHits.length * 0.1;
+
+      const confidence = Math.max(0, keywordScore * 0.5 + ruleScore * 0.5 - forbiddenPenalty);
+
+      if (confidence > 0.1) {
+        results.push({
+          subtype: def.subtype,
+          label: def.label,
+          confidence: Math.round(confidence * 100) / 100,
+          evidence: [...keywordHits.slice(0, 8)],
+        });
+      }
+    }
+
+    return results.sort((a, b) => b.confidence - a.confidence);
+  }
+
+  // ============================================================
+  // M16: Deduction Chain Analysis (推理逻辑链)
+  // ============================================================
+
+  analyzeDeductionChain(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): {
+    cluePresented: Array<{ clue: string; chapterIndex: number }>;
+    deductions: Array<{ statement: string; chapterIndex: number; type: 'clue' | 'inference' | 'conclusion' }>;
+    chainScore: number;
+    suggestions: string[];
+  } {
+    const allText = chapters.map((c) => c.content).join('\n');
+
+    const clueKeywords = ['线索', '证据', '发现', '注意到', '找到了', '痕迹', '指纹', '血迹', '遗落', '遗留', '细节', '可疑'];
+    const inferenceKeywords = ['推理', '推断', '分析', '所以', '因此', '意味着', '说明', '证明', '不可能是', '只能是'];
+    const conclusionKeywords = ['真相', '凶手是', '犯人', '原来是', '结果就是', '事实是', '终于明白'];
+
+    const cluePresented: Array<{ clue: string; chapterIndex: number }> = [];
+    const deductions: Array<{ statement: string; chapterIndex: number; type: 'clue' | 'inference' | 'conclusion' }> = [];
+
+    for (const chapter of chapters) {
+      for (const kw of clueKeywords) {
+        if (chapter.content.includes(kw)) {
+          cluePresented.push({ clue: kw, chapterIndex: chapter.chapterIndex });
+          deductions.push({ statement: kw, chapterIndex: chapter.chapterIndex, type: 'clue' });
+          break;
+        }
+      }
+
+      for (const kw of inferenceKeywords) {
+        if (chapter.content.includes(kw)) {
+          deductions.push({ statement: kw, chapterIndex: chapter.chapterIndex, type: 'inference' });
+          break;
+        }
+      }
+
+      for (const kw of conclusionKeywords) {
+        if (chapter.content.includes(kw)) {
+          deductions.push({ statement: kw, chapterIndex: chapter.chapterIndex, type: 'conclusion' });
+          break;
+        }
+      }
+    }
+
+    const hasClue = deductions.some((d) => d.type === 'clue');
+    const hasInference = deductions.some((d) => d.type === 'inference');
+    const hasConclusion = deductions.some((d) => d.type === 'conclusion');
+
+    let chainScore = 0;
+    if (hasClue) chainScore += 3;
+    if (hasInference) chainScore += 3;
+    if (hasConclusion) chainScore += 4;
+    if (hasClue && hasInference && hasConclusion) chainScore = 10;
+
+    const suggestions: string[] = [];
+    if (!hasClue) suggestions.push('未检测到线索呈现，推理需要公平地向读者展示证据');
+    if (!hasInference) suggestions.push('缺少推理过程，建议增加基于线索的逻辑分析');
+    if (!hasConclusion) suggestions.push('缺少真相揭示环节');
+    if (chainScore === 10) suggestions.push('推理逻辑链完整：线索→推理→结论');
+
+    return { cluePresented, deductions, chainScore, suggestions };
   }
 }
