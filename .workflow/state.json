@@ -10,19 +10,25 @@
       "《一个故事的99种讲法》— comic narrative form",
       "《网文成才21天》《写作高手速成手册》— practical guides",
       "《南周评论写作课》— commentary/argumentative writing",
-      "《怎样讲好一个故事》— oral narrative"
+      "《怎样讲好一个故事》— oral narrative",
+      "Inline editor annotations (标注问题位置)",
+      "Cross-chapter trend analysis charts",
+      "Analysis result export (PDF/Markdown)",
+      "Custom analysis templates",
+      "LLM-enhanced deep analysis"
     ],
     "key_decisions": [
       "M13-M16 follow enum+interface+Record+detector pattern consistently",
       "M15 adds web-novel-specific analysis alongside traditional craft theory",
-      "M16 fills functional gaps: dialogue analysis, scene quality, mystery subtypes"
+      "M16 fills functional gaps: dialogue analysis, scene quality, mystery subtypes",
+      "M17 bridges M13-M16 knowledge engine to UI via API layer + dashboard components"
     ]
   },
   "artifacts": [],
   "created_at": "2026-05-02T00:31:18.9393348+08:00",
-  "current_milestone": null,
+  "current_milestone": "M17",
   "initialized": true,
-  "last_updated": "2026-05-07T22:08:00+08:00",
+  "last_updated": "2026-05-07T22:15:00+08:00",
   "milestone_history": [
     {"archive_path": "milestones/M13/", "completed_at": "2026-05-07T15:40:00+08:00", "id": "M13", "name": "Writing Craft Knowledge Integration", "status": "completed"},
     {"archive_path": "milestones/M14/", "completed_at": "2026-05-07T21:00:00+08:00", "id": "M14", "name": "Writing Craft Enhancement Phase 2", "status": "completed"},
@@ -35,7 +41,8 @@
     {"id": "M13", "name": "Writing Craft Knowledge Integration", "phases": [1], "status": "completed"},
     {"id": "M14", "name": "Writing Craft Enhancement Phase 2", "phases": [1], "status": "completed"},
     {"id": "M15", "name": "Web Novel Analysis + Structure + Character Enhancement", "phases": [1], "status": "completed"},
-    {"id": "M16", "name": "Dialogue, Scene, Mystery Enhancement", "phases": [1], "status": "completed"}
+    {"id": "M16", "name": "Dialogue, Scene, Mystery Enhancement", "phases": [1], "status": "completed"},
+    {"id": "M17", "name": "Writing Intelligence UI Integration", "phases": [1], "status": "active"}
   ],
   "project": "niko-studio",
   "quick_tasks": [],
