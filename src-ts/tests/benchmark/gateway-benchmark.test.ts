@@ -9,7 +9,8 @@
  */
 
 import { afterEach, describe, it } from 'vitest';
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 import { buildGatewayDeps } from '../../gateway-server';
 import { ConfigManager } from '../../config';
@@ -135,8 +136,10 @@ describe('Gateway Performance Benchmark', () => {
   });
 
   it('saves baseline and shuts down', async () => {
-    writeFileSync('tests/benchmark/baseline.json', JSON.stringify(results, null, 2));
-    console.log('\nBaseline saved to tests/benchmark/baseline.json');
+    const baselinePath = resolve(__dirname, '..', '..', 'tests', 'benchmark', 'baseline.json');
+    mkdirSync(resolve(__dirname, '..', '..', 'tests', 'benchmark'), { recursive: true });
+    writeFileSync(baselinePath, JSON.stringify(results, null, 2));
+    console.log(`\nBaseline saved to ${baselinePath}`);
     server.close();
     ConfigManager.resetInstance();
   });

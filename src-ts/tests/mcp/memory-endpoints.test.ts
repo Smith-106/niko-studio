@@ -13,6 +13,15 @@ vi.mock('../../mcp/services/memory', () => ({
   memoryGetTemporal: vi.fn(),
 }));
 
+vi.mock('pdf-parse', () => ({
+  PDFParse: vi.fn().mockImplementation(function() {
+    return {
+      getText: pdfParseMock,
+      destroy: pdfDestroyMock,
+    };
+  }),
+}));
+
 function makeRequest(body: Record<string, unknown>): HttpRequest {
   return {
     method: 'POST',
@@ -30,7 +39,6 @@ describe('memory endpoints', () => {
     vi.restoreAllMocks();
     vi.resetModules();
     vi.unmock('mammoth');
-    vi.unmock('pdf-parse');
   });
 
   it('maps snake_case add payload fields into memory service parameters', async () => {
@@ -208,13 +216,6 @@ describe('memory endpoints', () => {
     pdfParseMock.mockResolvedValue({
       text: 'PDF paragraph one.\n\nPDF paragraph two.',
     });
-    vi.doMock('pdf-parse', () => ({
-      PDFParse: vi.fn().mockImplementation(() => ({
-        getText: pdfParseMock,
-        destroy: pdfDestroyMock,
-      })),
-    }));
-
     const payload = Buffer.from('fake-pdf-binary').toString('base64');
 
     const { memoryUploadEndpoint } = await import('../../mcp/endpoints/memory.js');

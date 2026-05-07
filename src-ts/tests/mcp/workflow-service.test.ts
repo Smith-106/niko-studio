@@ -15,25 +15,29 @@ const listCheckpointsMock = vi.fn();
 const checkpointsMock = new Map<string, Record<string, unknown>>();
 
 vi.mock('../../workflow/workflow-engine.js', () => ({
-  WorkflowEngine: vi.fn().mockImplementation(() => ({
-    route: routeMock,
-    plan: planMock,
-    execute: executeMock,
-    quickRollback: quickRollbackMock,
-    lifecycle: lifecycleMock,
-    createCheckpoint: createCheckpointMock,
-    restoreCheckpoint: restoreCheckpointMock,
-    listCheckpoints: listCheckpointsMock,
-    bindPlanSession: bindPlanSessionMock,
-    checkpoints: checkpointsMock,
-    getCheckpoint: (checkpointId: string) => checkpointsMock.get(checkpointId) ?? null,
-  })),
+  WorkflowEngine: vi.fn().mockImplementation(function() {
+    return {
+      route: routeMock,
+      plan: planMock,
+      execute: executeMock,
+      quickRollback: quickRollbackMock,
+      lifecycle: lifecycleMock,
+      createCheckpoint: createCheckpointMock,
+      restoreCheckpoint: restoreCheckpointMock,
+      listCheckpoints: listCheckpointsMock,
+      bindPlanSession: bindPlanSessionMock,
+      checkpoints: checkpointsMock,
+      getCheckpoint: (checkpointId: string) => checkpointsMock.get(checkpointId) ?? null,
+    };
+  }),
 }));
 
 describe('mcp workflow service', () => {
   afterEach(() => {
     vi.resetModules();
-    vi.clearAllMocks();
+    [routeMock, planMock, executeMock, quickRollbackMock, lifecycleMock,
+     createCheckpointMock, restoreCheckpointMock, listCheckpointsMock, bindPlanSessionMock,
+    ].forEach(m => m.mockClear());
     checkpointsMock.clear();
   });
 

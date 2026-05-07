@@ -18,18 +18,20 @@ const listCheckpointsMock = vi.fn();
 const checkpointsMock = new Map<string, Record<string, unknown>>();
 
 vi.mock('../../workflow/workflow-engine.js', () => ({
-  WorkflowEngine: vi.fn().mockImplementation(() => ({
-    route: routeMock,
-    plan: planMock,
-    execute: executeMock,
-    quickRollback: quickRollbackMock,
-    lifecycle: lifecycleMock,
-    createCheckpoint: createCheckpointMock,
-    restoreCheckpoint: restoreCheckpointMock,
-    listCheckpoints: listCheckpointsMock,
-    bindPlanSession: bindPlanSessionMock,
-    checkpoints: checkpointsMock,
-  })),
+  WorkflowEngine: vi.fn().mockImplementation(function() {
+    return {
+      route: routeMock,
+      plan: planMock,
+      execute: executeMock,
+      quickRollback: quickRollbackMock,
+      lifecycle: lifecycleMock,
+      createCheckpoint: createCheckpointMock,
+      restoreCheckpoint: restoreCheckpointMock,
+      listCheckpoints: listCheckpointsMock,
+      bindPlanSession: bindPlanSessionMock,
+      checkpoints: checkpointsMock,
+    };
+  }),
 }));
 
 function buildWorkspace(params: {
@@ -145,7 +147,9 @@ describe('workflow scheduler workspace concurrency isolation', () => {
 
   afterEach(async () => {
     vi.resetModules();
-    vi.clearAllMocks();
+    [routeMock, planMock, executeMock, quickRollbackMock, lifecycleMock,
+     createCheckpointMock, restoreCheckpointMock, listCheckpointsMock, bindPlanSessionMock,
+    ].forEach(m => m.mockClear());
     checkpointsMock.clear();
     await rm(workspaceRootA, { recursive: true, force: true });
     await rm(workspaceRootB, { recursive: true, force: true });

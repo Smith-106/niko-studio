@@ -31,21 +31,23 @@ const checkpointRecordsMock = new Map<string, {
 
 function mockWorkflowEngineRuntime() {
   vi.doMock('../workflow/workflow-engine.js', () => ({
-    WorkflowEngine: vi.fn().mockImplementation(() => ({
-      route: routeMock,
-      plan: planMock,
-      execute: executeMock,
-      quickRollback: quickRollbackMock,
-      lifecycle: lifecycleMock,
-      createCheckpoint: createCheckpointMock,
-      restoreCheckpoint: restoreCheckpointMock,
-      listCheckpoints: listCheckpointsMock,
-      bindPlanSession: bindPlanSessionMock,
-      bindPlanAuthority: bindPlanAuthorityMock,
-      getPlanAuthority: getPlanAuthorityMock,
-      checkpoints: checkpointRecordsMock,
-      getCheckpoint: (checkpointId: string) => checkpointRecordsMock.get(checkpointId) ?? null,
-    })),
+    WorkflowEngine: vi.fn().mockImplementation(function() {
+      return {
+        route: routeMock,
+        plan: planMock,
+        execute: executeMock,
+        quickRollback: quickRollbackMock,
+        lifecycle: lifecycleMock,
+        createCheckpoint: createCheckpointMock,
+        restoreCheckpoint: restoreCheckpointMock,
+        listCheckpoints: listCheckpointsMock,
+        bindPlanSession: bindPlanSessionMock,
+        bindPlanAuthority: bindPlanAuthorityMock,
+        getPlanAuthority: getPlanAuthorityMock,
+        checkpoints: checkpointRecordsMock,
+        getCheckpoint: (checkpointId: string) => checkpointRecordsMock.get(checkpointId) ?? null,
+      };
+    }),
   }));
 }
 
