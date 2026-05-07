@@ -151,8 +151,8 @@ function detectTimelineIssues(chapters: ChapterInput[]) {
       const lt = chapterTimelines[j];
       const laterYears = lt.events.filter(e => e.type === 'year');
       if (yearEvents.length > 0 && laterYears.length > 0) {
-        const fy = parseInt(yearEvents[0].text);
-        const ly = parseInt(laterYears[laterYears.length - 1].text);
+        const fy = parseInt(yearEvents[0].text, 10);
+        const ly = parseInt(laterYears[laterYears.length - 1].text, 10);
         if (!isNaN(fy) && !isNaN(ly) && fy > ly) {
           issues.push({
             event1: yearEvents[0].text, event2: laterYears[laterYears.length - 1].text,

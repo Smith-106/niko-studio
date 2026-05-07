@@ -187,9 +187,10 @@ export class GraphEngineAdapter implements IGraphEngine {
   }
 
   async traverse(startId: string, depth?: number): Promise<unknown[]> {
+    const escaped = startId.replace(/'/g, "\\'").replace(/\\/g, "\\\\");
     try {
       return await this.engine.executeCypher(
-        `MATCH (n)-[r*1..${depth ?? 3}]-(m) WHERE n.name CONTAINS '${startId}' RETURN m, r`
+        `MATCH (n)-[r*1..${depth ?? 3}]-(m) WHERE n.name CONTAINS '${escaped}' RETURN m, r`
       );
     } catch {
       return [];
