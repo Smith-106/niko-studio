@@ -635,7 +635,11 @@ metadata: ${JSON.stringify(metadata ?? {})}
     if (!existsSync(citationPath)) {
       return null;
     }
-    return JSON.parse(readFileSync(citationPath, 'utf-8'));
+    try {
+      return JSON.parse(readFileSync(citationPath, 'utf-8'));
+    } catch {
+      return null;
+    }
   }
 
   // -----------------------------------------------------------------------

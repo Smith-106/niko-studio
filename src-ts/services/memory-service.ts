@@ -245,7 +245,8 @@ export class MemoryService {
       const score = cosineSimilarityWithNorms(queryEmbedding, embedding, queryNorm, embeddingNorm);
 
       if (score >= threshold) {
-        const rowMetadata: Record<string, unknown> = JSON.parse((row.metadata as string) || '{}');
+        let rowMetadata: Record<string, unknown> = {};
+        try { rowMetadata = JSON.parse((row.metadata as string) || '{}'); } catch { /* skip corrupted metadata */ }
         rowMetadata['created_at'] ??= row.created_at;
         rowMetadata['expires_at'] ??= row.expires_at;
         rowMetadata['last_accessed_at'] ??= row.last_accessed_at;
