@@ -1,11 +1,12 @@
 import React, { useCallback, useState } from 'react';
-import { BarChart3, Loader2, AlertCircle, Download } from 'lucide-react';
+import { BarChart3, Loader2, AlertCircle, Download, FileText } from 'lucide-react';
 import { analyzeWritingCraft, type WritingCraftDimension, type WritingCraftResult, type DimensionResult } from '../../api/writing-craft';
 import { SectionHeader } from './SectionHeader';
 import { ProgressBar } from './ProgressBar';
 import { WritingDimensionDetail } from './WritingDimensionDetail';
 import { InlineAnnotation } from './InlineAnnotation';
 import { generateMarkdownReport, downloadAsFile } from '../../utils/export-analysis';
+import { generatePdfHtml, downloadPdfFile } from '../../utils/export-pdf';
 
 interface WritingDashboardProps {
   text: string;
@@ -63,6 +64,12 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
     downloadAsFile(md, `writing-analysis-${timestamp}.md`);
   }, [result]);
 
+  const handleExportPdf = useCallback(() => {
+    if (!result) return;
+    const html = generatePdfHtml(result);
+    downloadPdfFile(html, 'writing-analysis-report.html');
+  }, [result]);
+
   if (!visible) return null;
 
   const activeDimension = result?.dimensions.find((d) => d.dimension === activeTab) ?? null;
@@ -98,6 +105,13 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
                 title="导出 Markdown 报告"
               >
                 <Download size={14} />
+              </button>
+              <button
+                onClick={handleExportPdf}
+                className="px-2 py-1.5 text-xs rounded-md border border-dark-border text-dark-text-muted hover:bg-dark-surface-sunken transition-colors"
+                title="导出 PDF 报告"
+              >
+                <FileText size={14} />
               </button>
             </>
           )}

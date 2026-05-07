@@ -145,3 +145,9 @@ export {
 export {
   writingCraftLLMEndpoint,
 } from './writing-craft-llm';
+
+export {
+  pluginListEndpoint,
+  pluginExecuteEndpoint,
+  pluginRegisterEndpoint,
+} from './plugins';

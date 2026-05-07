@@ -7,3 +7,5 @@ export * from './WritingDashboard';
 export * from './WritingDimensionDetail';
 export * from './InlineAnnotation';
 export * from './TrendChart';
+export * from './TemplateManager';
+export * from './PluginPanel';

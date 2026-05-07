@@ -1,0 +1,26 @@
+{
+  "id": "TASK-005",
+  "title": "Plugin MCP 端点",
+  "status": "pending",
+  "target_module": "src-ts/mcp/endpoints/plugins.ts",
+  "read_first": [
+    "src-ts/plugins/plugin-engine.ts",
+    "src-ts/mcp/endpoints/writing-craft.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'pluginListEndpoint\\|pluginExecuteEndpoint\\|pluginRegisterEndpoint' src-ts/mcp/endpoints/plugins.ts → 存在端点",
+      "grep 'plugins' src-ts/mcp/endpoints/index.ts → 存在 re-export"
+    ]
+  },
+  "action": {
+    "detailed_plan": "创建 plugins.ts MCP 端点：pluginListEndpoint（GET 列出已注册 Plugin）、pluginExecuteEndpoint（POST 执行指定 Plugin 分析）、pluginRegisterEndpoint（POST 注册用户自定义 Plugin，接收检测规则 JSON）。在 index.ts re-export。"
+  },
+  "implementation": [
+    { "step": 1, "action": "创建 plugins.ts：三个端点（list/execute/register）+ PluginEngine 单例", "file": "src-ts/mcp/endpoints/plugins.ts" },
+    { "step": 2, "action": "在 index.ts re-export 三个端点，创建 Desktop API 层 plugin API", "file": "src-ts/mcp/endpoints/index.ts" }
+  ],
+  "priority": "high",
+  "estimated_minutes": 40,
+  "_metadata": { "wave": 2 }
+}

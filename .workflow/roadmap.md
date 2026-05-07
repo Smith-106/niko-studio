@@ -1,56 +1,49 @@
-# Roadmap: Niko-Studio M18 — Knowledge Expansion + UX Enhancement + LLM Analysis
+# Roadmap: Niko-Studio M19 — UX Polish + Plugin Architecture
 
 ## Overview
 
-M13-M17 构建了完整的写作知识引擎和 UI 集成。M18 从三个方向扩展：(1) 继续挖掘剩余写作书籍覆盖知识盲区，(2) 增强 UI 交互体验（内联标注、趋势图、导出），(3) 将关键词检测升级为 LLM 驱动的深度分析。三者相互独立，通过 Wave 并行执行。
+M13-M18 构建了完整的写作智能系统。M19 收尾 UX 闭环（PDF 导出、自定义模板）并引入 Plugin 架构让用户扩展分析能力。
 
 ## Phases
 
-- [ ] **Phase 1: Knowledge Expansion + UX Enhancement + LLM Analysis** — 三方向并行推进，扩展知识引擎覆盖面、提升 UI 交互质量、引入 LLM 深度分析能力
+- [ ] **Phase 1: PDF Export + Custom Templates + Plugin Architecture** — 三个独立方向并行，完善产品闭环
 
 ## Phase Details
 
-### Phase 1: Knowledge Expansion + UX Enhancement + LLM Analysis
-**Goal**: 完成剩余书籍知识挖掘、UI 交互增强、LLM 分析集成，让写作分析系统从关键词检测进化为智能写作助手。
-**Depends on**: M17 (completed)
+### Phase 1: PDF Export + Custom Templates + Plugin Architecture
+**Goal**: PDF 报告导出、用户自定义分析模板、Plugin 扩展架构。
+**Depends on**: M18 (completed)
 
 **Requirements**:
-- REQ-001: 剩余书籍知识挖掘 — 剧本游戏、游戏叙事、漫画叙事、实用指南、评论写作、口头叙事
-- REQ-002: 编辑器内联标注 — 在编辑器中直接标注分析问题位置
-- REQ-003: 跨章节趋势分析图 — 可视化展示各维度分数跨章节变化
-- REQ-004: 分析结果导出 — 支持 Markdown 报告导出
-- REQ-005: LLM 增强分析 — 用 LLM 替代/增强关键词检测，提供深度写作建议
+- REQ-001: PDF 报告导出 — 在 Markdown 导出基础上增加 PDF 渲染
+- REQ-002: 自定义分析模板 — 用户选择检测维度组合、自定义权重、保存/加载模板
+- REQ-003: Plugin 架构 — 用户创建自定义分析技能，注册到分析引擎
 
 **Success Criteria** (what must be TRUE):
-1. 新增 6 本写作书的知识模块，每个遵循 enum+interface+Record 模式
-2. 编辑器中问题文本位置有可视化标注，点击可查看详情
-3. 多章节分析后显示趋势折线图，可按维度筛选
-4. 一键导出完整分析报告为 Markdown 文件
-5. 至少 3 个维度支持 LLM 深度分析模式，返回比关键词检测更具体的建议
-6. 所有新增功能有对应测试覆盖
+1. 一键导出 PDF 格式的完整分析报告，包含分数图表
+2. 用户可创建/保存/加载分析模板，选择维度 + 自定义权重
+3. Plugin 系统支持用户注册自定义检测函数，并在 Dashboard 中显示结果
+4. 所有新功能有测试覆盖
 
 ## Scope Decisions
 
 - **In scope**:
-  - 6 本写作书知识挖掘（剧本游戏、游戏叙事、漫画叙事、实用指南、评论写作、口头叙事）
-  - 编辑器内联标注（Tiptap decorator/extension）
-  - 跨章节趋势图（简单折线图组件）
-  - Markdown 报告导出
-  - LLM 增强分析（对 3+ 维度的 LLM 深度分析 prompt 设计 + API 集成）
+  - PDF 导出（使用浏览器原生打印或 jsPDF）
+  - 分析模板 CRUD（创建、保存、加载、删除）
+  - Plugin 注册接口 + 生命周期 + 示例 Plugin
+  - Plugin 管理面板
 
 - **Deferred**:
-  - PDF 导出（后续接入 PDF 渲染库）
-  - 自定义分析模板（用户选择检测维度组合）
-  - 实时协作分析
-  - 多语言分析（当前仅中文）
+  - Plugin 市场/分享
+  - 云端模板同步
+  - Plugin 沙箱安全隔离
 
 - **Out of scope**:
-  - Plugin/extension 架构
-  - 云同步 / 多设备支持
+  - 云同步 / 多设备
   - Code signing
 
 ## Progress
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Knowledge Expansion + UX Enhancement + LLM Analysis | Not started | - |
+| 1. PDF Export + Custom Templates + Plugin Architecture | Not started | - |

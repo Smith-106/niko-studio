@@ -1,0 +1,25 @@
+{
+  "id": "TASK-003",
+  "title": "模板管理 UI",
+  "status": "pending",
+  "target_module": "desktop/src/components/intelligence/TemplateManager.tsx",
+  "read_first": [
+    "desktop/src/utils/analysis-templates.ts",
+    "desktop/src/components/intelligence/WritingDashboard.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'TemplateManager' desktop/src/components/intelligence/TemplateManager.tsx → 存在导出组件"
+    ]
+  },
+  "action": {
+    "detailed_plan": "创建 TemplateManager 组件：列出所有模板、创建新模板（选择维度 + 设置权重滑块）、编辑/删除模板。在 WritingDashboard 设置区域集成入口。"
+  },
+  "implementation": [
+    { "step": 1, "action": "创建 TemplateManager.tsx：模板列表 + 创建/编辑表单（维度 checkbox + 权重滑块 1-10）+ 删除确认", "file": "desktop/src/components/intelligence/TemplateManager.tsx" },
+    { "step": 2, "action": "在 index.ts re-export，在 WritingDashboard 添加模板管理入口按钮", "file": "desktop/src/components/intelligence/index.ts" }
+  ],
+  "priority": "medium",
+  "estimated_minutes": 35,
+  "_metadata": { "wave": 1 }
+}
