@@ -9,7 +9,7 @@
  */
 
 import type { INarrativeLLMClient } from './types.js';
-import { SuspenseSubgenre, SUBGENRE_RULES, NarrativeTechnique, NARRATIVE_TECHNIQUES, GenreBeatType, GENRE_BEATS } from './writing-craft/craft-catalog';
+import { SuspenseSubgenre, SUBGENRE_RULES, NarrativeTechnique, NARRATIVE_TECHNIQUES, GenreBeatType, GENRE_BEATS, STORY_STRUCTURES, AntiPattern, ANTI_PATTERNS } from './writing-craft/craft-catalog';
 
 // ============================================================
 // Enums
@@ -1054,5 +1054,192 @@ export class SuspenseAnalyzer {
       missingBeats,
       suggestions,
     };
+  }
+
+  // ============================================================
+  // M15: Edson 23-Sequence Analysis
+  // Source: 《故事策略——电影剧本必备的23个故事段落》(Edson)
+  // ============================================================
+
+  analyzeEdsonSequence(
+    chapters: Array<{ content: string; position: number }>,
+  ): {
+    alignments: Array<{ beatName: string; expectedPosition: number; actualPosition: number | null; aligned: boolean; evidence: string; deviation: number }>;
+    overallAlignmentScore: number;
+    missingBeats: string[];
+    suggestions: string[];
+  } {
+    const template = STORY_STRUCTURES.edson_23_sequence;
+    if (!template) {
+      return { alignments: [], overallAlignmentScore: 0, missingBeats: [], suggestions: ['Edson模板未找到'] };
+    }
+
+    const alignments: Array<{ beatName: string; expectedPosition: number; actualPosition: number | null; aligned: boolean; evidence: string; deviation: number }> = [];
+    const missingBeats: string[] = [];
+
+    for (const expectedBeat of template.beats) {
+      let bestMatch: { beatName: string; expectedPosition: number; actualPosition: number; aligned: boolean; evidence: string; deviation: number } | null = null;
+      let bestEvidence = '';
+
+      for (const chapter of chapters) {
+        const tolerance = 0.08;
+        if (chapter.position >= expectedBeat.position - tolerance &&
+            chapter.position <= expectedBeat.position + tolerance) {
+          const beatWords = expectedBeat.description.split(/[，,\s]+/).filter((w) => w.length >= 2);
+          const nameWords = expectedBeat.name.split(/[.。、\s]+/).filter((w) => w.length >= 2);
+          const allWords = [...beatWords, ...nameWords];
+          const hits = allWords.filter((w) => chapter.content.includes(w));
+          const evidence = hits.join(', ');
+
+          const deviation = Math.abs(chapter.position - expectedBeat.position);
+
+          if (evidence.length > bestEvidence.length) {
+            bestEvidence = evidence;
+            bestMatch = {
+              beatName: expectedBeat.name,
+              expectedPosition: expectedBeat.position,
+              actualPosition: chapter.position,
+              aligned: true,
+              evidence,
+              deviation: Math.round(deviation * 1000) / 1000,
+            };
+          } else if (!bestMatch && deviation < 0.05) {
+            bestMatch = {
+              beatName: expectedBeat.name,
+              expectedPosition: expectedBeat.position,
+              actualPosition: chapter.position,
+              aligned: true,
+              evidence: '',
+              deviation: Math.round(deviation * 1000) / 1000,
+            };
+          }
+        }
+      }
+
+      if (bestMatch) {
+        alignments.push(bestMatch);
+      } else {
+        alignments.push({
+          beatName: expectedBeat.name,
+          expectedPosition: expectedBeat.position,
+          actualPosition: null,
+          aligned: false,
+          evidence: '',
+          deviation: 1,
+        });
+        missingBeats.push(expectedBeat.name);
+      }
+    }
+
+    const alignedCount = alignments.filter((a) => a.aligned).length;
+    const overallAlignmentScore = alignments.length > 0
+      ? Math.round((alignedCount / alignments.length) * 10) / 10
+      : 0;
+
+    const suggestions: string[] = [];
+    if (missingBeats.length > 0) {
+      suggestions.push(`缺少${missingBeats.length}个Edson段落: ${missingBeats.slice(0, 5).join(', ')}`);
+    }
+    if (overallAlignmentScore >= 0.7) {
+      suggestions.push('Edson故事策略段落对齐良好');
+    }
+
+    return { alignments, overallAlignmentScore, missingBeats, suggestions };
+  }
+
+  // ============================================================
+  // M15: Anti-Pattern Detection
+  // Source: 《你的剧本逊毙了》100个化腐朽为神奇的对策
+  // ============================================================
+
+  detectAntiPatterns(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): {
+    detections: Array<{ pattern: AntiPattern; label: string; detected: boolean; severity: string; evidence: string[]; fixSuggestion: string }>;
+    criticalCount: number;
+    warningCount: number;
+    overallHealthScore: number;
+    suggestions: string[];
+  } {
+    const allText = chapters.map((c) => c.content).join('\n');
+    const detections: Array<{ pattern: AntiPattern; label: string; detected: boolean; severity: string; evidence: string[]; fixSuggestion: string }> = [];
+
+    for (const def of Object.values(ANTI_PATTERNS)) {
+      const hits = def.detectionKeywords.filter((kw) => allText.includes(kw));
+      detections.push({
+        pattern: def.pattern,
+        label: def.label,
+        detected: hits.length > 0,
+        severity: def.severity,
+        evidence: hits,
+        fixSuggestion: def.fixSuggestion,
+      });
+    }
+
+    const criticalCount = detections.filter((d) => d.detected && d.severity === 'critical').length;
+    const warningCount = detections.filter((d) => d.detected && d.severity === 'warning').length;
+    const detectedCount = detections.filter((d) => d.detected).length;
+
+    const overallHealthScore = Math.max(0, Math.round((1 - (criticalCount * 0.15 + warningCount * 0.05)) * 100) / 10);
+
+    const suggestions: string[] = [];
+    for (const d of detections.filter((d) => d.detected && d.severity === 'critical')) {
+      suggestions.push(`[严重] ${d.label}: ${d.fixSuggestion}`);
+    }
+    for (const d of detections.filter((d) => d.detected && d.severity === 'warning').slice(0, 3)) {
+      suggestions.push(`[警告] ${d.label}: ${d.fixSuggestion}`);
+    }
+    if (detectedCount === 0) {
+      suggestions.push('未检测到明显的写作反面模式，文本质量良好');
+    }
+
+    return { detections, criticalCount, warningCount, overallHealthScore, suggestions };
+  }
+
+  // ============================================================
+  // M15: Narrative Tricks Detection (许荣哲小说课)
+  // Source: 《小说课》Ⅰ/Ⅱ (许荣哲)
+  // ============================================================
+
+  detectNarrativeTricks(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): {
+    tricks: Array<{ name: string; detected: boolean; confidence: number; evidence: string[] }>;
+    overallTrickScore: number;
+    suggestions: string[];
+  } {
+    const allText = chapters.map((c) => c.content).join('\n');
+    const trickPatterns: Array<{ name: string; keywords: string[] }> = [
+      { name: '转折点', keywords: ['但是', '然而', '却', '不料', '突然', '竟然'] },
+      { name: '悬念制造', keywords: ['究竟', '到底', '难道', '秘密', '谜', '未知'] },
+      { name: '节奏控制', keywords: ['就在这时', '与此同时', '时间一分一秒', '终于', '漫长的等待'] },
+      { name: '对比反转', keywords: ['截然不同', '判若两人', '天壤之别', '相反', '反差'] },
+      { name: '伏笔回收', keywords: ['原来', '果真', '不出所料', '正如', '果然', '应验'] },
+      { name: '偷故事技巧', keywords: ['以小见大', '借题发挥', '侧面描写', '留白', '暗示'] },
+    ];
+
+    const tricks = trickPatterns.map((tp) => {
+      const hits = tp.keywords.filter((kw) => allText.includes(kw));
+      const confidence = hits.length / Math.max(tp.keywords.length, 1);
+      return {
+        name: tp.name,
+        detected: hits.length > 0,
+        confidence: Math.round(confidence * 100) / 100,
+        evidence: hits,
+      };
+    });
+
+    const detectedCount = tricks.filter((t) => t.detected).length;
+    const overallTrickScore = Math.min(10, detectedCount * 1.5 + tricks.reduce((s, t) => s + t.confidence, 0));
+
+    const suggestions: string[] = [];
+    for (const trick of tricks.filter((t) => !t.detected)) {
+      suggestions.push(`${trick.name}未检测到，建议运用此技巧增强叙事效果`);
+    }
+    if (overallTrickScore >= 7) {
+      suggestions.push('叙事技巧运用丰富，整体水平较高');
+    }
+
+    return { tricks, overallTrickScore: Math.round(overallTrickScore * 10) / 10, suggestions };
   }
 }

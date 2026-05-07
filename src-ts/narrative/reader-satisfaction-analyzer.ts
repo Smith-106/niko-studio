@@ -10,6 +10,7 @@
  */
 
 import type { INarrativeLLMClient } from './types.js';
+import { UpgradeSystem, UPGRADE_SYSTEMS, GoldenFingerType, GOLDEN_FINGERS } from './writing-craft/craft-catalog';
 
 // ============================================================
 // Enums
@@ -293,5 +294,121 @@ export class ReaderSatisfactionAnalyzer {
     }
 
     return suggestions;
+  }
+
+  // ============================================================
+  // M15: Upgrade System & Golden Finger Detection
+  // Source: 《网络文学创作原理》+ 中国网络文学阅读潮流研究
+  // ============================================================
+
+  detectUpgradePattern(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): { system: UpgradeSystem; label: string; confidence: number; evidence: string[] }[] {
+    const allText = chapters.map((c) => c.content).join('\n');
+    const results: Array<{ system: UpgradeSystem; label: string; confidence: number; evidence: string[] }> = [];
+
+    for (const def of Object.values(UPGRADE_SYSTEMS)) {
+      const keywordHits = def.detectionKeywords.filter((kw) => allText.includes(kw));
+      const markerHits = def.progressionMarkers.filter((kw) => allText.includes(kw));
+      const triggerHits = def.satisfactionTriggers.filter((kw) => allText.includes(kw));
+
+      const keywordScore = keywordHits.length / Math.max(def.detectionKeywords.length, 1);
+      const markerScore = markerHits.length / Math.max(def.progressionMarkers.length, 1);
+      const triggerScore = triggerHits.length / Math.max(def.satisfactionTriggers.length, 1);
+
+      const confidence = keywordScore * 0.5 + markerScore * 0.3 + triggerScore * 0.2;
+
+      if (confidence > 0.1) {
+        results.push({
+          system: def.system,
+          label: def.label,
+          confidence: Math.round(confidence * 100) / 100,
+          evidence: [...keywordHits, ...markerHits.slice(0, 3)],
+        });
+      }
+    }
+
+    return results.sort((a, b) => b.confidence - a.confidence);
+  }
+
+  analyzeGoldenFinger(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): { type: GoldenFingerType; label: string; confidence: number; evidence: string[]; growthPattern: string }[] {
+    const allText = chapters.map((c) => c.content).join('\n');
+    const results: Array<{ type: GoldenFingerType; label: string; confidence: number; evidence: string[]; growthPattern: string }> = [];
+
+    for (const def of Object.values(GOLDEN_FINGERS)) {
+      const keywordHits = def.detectionKeywords.filter((kw) => allText.includes(kw));
+      const manifestationHits = def.typicalManifestations.filter((kw) => allText.includes(kw));
+
+      const keywordScore = keywordHits.length / Math.max(def.detectionKeywords.length, 1);
+      const manifestationScore = manifestationHits.length / Math.max(def.typicalManifestations.length, 1);
+
+      const confidence = keywordScore * 0.6 + manifestationScore * 0.4;
+
+      if (confidence > 0.1) {
+        results.push({
+          type: def.type,
+          label: def.label,
+          confidence: Math.round(confidence * 100) / 100,
+          evidence: [...keywordHits],
+          growthPattern: def.powerGrowthPattern,
+        });
+      }
+    }
+
+    return results.sort((a, b) => b.confidence - a.confidence);
+  }
+
+  analyzeWebNovelCurve(
+    chapters: Array<{ content: string; chapterIndex: number }>,
+  ): {
+    upgradeDetections: ReturnType<ReaderSatisfactionAnalyzer['detectUpgradePattern']>;
+    goldenFingerDetections: ReturnType<ReaderSatisfactionAnalyzer['analyzeGoldenFinger']>;
+    upgradeNodes: { chapterIndex: number; keyword: string }[];
+    curveData: { chapterIndex: number; hookStrength: number; upgradePresent: boolean; density: number }[];
+    suggestions: string[];
+  } {
+    const upgradeDetections = this.detectUpgradePattern(chapters);
+    const goldenFingerDetections = this.analyzeGoldenFinger(chapters);
+
+    const upgradeNodes: { chapterIndex: number; keyword: string }[] = [];
+    const upgradeKeywords = Object.values(UPGRADE_SYSTEMS).flatMap((d) => d.satisfactionTriggers);
+
+    for (const chapter of chapters) {
+      for (const kw of upgradeKeywords) {
+        if (chapter.content.includes(kw)) {
+          upgradeNodes.push({ chapterIndex: chapter.chapterIndex, keyword: kw });
+          break;
+        }
+      }
+    }
+
+    const satisfactionResult = this.analyzeSatisfaction(chapters);
+
+    const curveData = chapters.map((ch, i) => {
+      const hook = satisfactionResult.hooks.find((h) => h.chapterIndex === ch.chapterIndex);
+      const hasUpgrade = upgradeNodes.some((u) => u.chapterIndex === ch.chapterIndex);
+      return {
+        chapterIndex: ch.chapterIndex,
+        hookStrength: hook?.strength ?? 0,
+        upgradePresent: hasUpgrade,
+        density: satisfactionResult.densityPerChapter[i] ?? 0,
+      };
+    });
+
+    const suggestions: string[] = [];
+    if (upgradeDetections.length === 0) {
+      suggestions.push('未检测到明确的升级体系，网文读者通常期望清晰的成长路径');
+    }
+    if (goldenFingerDetections.length === 0) {
+      suggestions.push('未检测到金手指设定，考虑给主角一个独特优势');
+    }
+    const lowHookChapters = curveData.filter((c) => c.hookStrength < 3).length;
+    if (lowHookChapters > chapters.length * 0.5) {
+      suggestions.push(`${lowHookChapters}章缺少有效的章末钩子，影响追读率`);
+    }
+
+    return { upgradeDetections, goldenFingerDetections, upgradeNodes, curveData, suggestions };
   }
 }

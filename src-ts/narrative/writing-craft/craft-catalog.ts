@@ -724,6 +724,27 @@ export const STORY_STRUCTURES = {
       { name: '22.最终对决', position: 0.92, description: '主角与对手的最终较量' },
     ],
   },
+  edson_23_sequence: {
+    name: 'Edson 23段故事策略',
+    beats: [
+      { name: '1.开场画面', position: 0.01, description: '展示主角的缺陷和现状' },
+      { name: '2.设定', position: 0.03, description: '建立主角的世界和关系' },
+      { name: '3.催化事件', position: 0.07, description: '打破平衡的突发事件' },
+      { name: '4.辩论', position: 0.12, description: '主角犹豫是否应对变化' },
+      { name: '5.进入第二幕', position: 0.17, description: '主角做出选择进入新世界' },
+      { name: '6.B故事', position: 0.2, description: '副线开始(通常是感情线)' },
+      { name: '7.游戏乐趣', position: 0.25, description: '主角在新世界探索和体验' },
+      { name: '8.中点', position: 0.35, description: '虚假胜利或虚假失败' },
+      { name: '9.敌人逼近', position: 0.4, description: '反方势力加强攻势' },
+      { name: '10.失去一切', position: 0.5, description: '主角跌入最低谷' },
+      { name: '11.灵魂黑夜', position: 0.55, description: '主角内心崩溃与反思' },
+      { name: '12.进入第三幕', position: 0.6, description: '主角找到新的解决方案' },
+      { name: '13.收网', position: 0.65, description: 'AB故事线开始交汇' },
+      { name: '14.风暴逼近', position: 0.7, description: '最终对决前的紧张积蓄' },
+      { name: '15.高潮', position: 0.8, description: '最终决战和核心冲突解决' },
+      { name: '16.终场画面', position: 0.95, description: '展示主角成长后的状态' },
+    ],
+  },
 } as const;
 
 // ============================================================
@@ -763,3 +784,326 @@ export const WEB_NOVEL_PSYCHOLOGY = {
     '黄金三章决定读者留存率',
   ],
 } as const;
+
+// ============================================================
+// M15: Upgrade Systems (升级体系)
+// Source: 《网络文学创作原理》(王祥) + 中国网络文学阅读潮流研究
+// ============================================================
+
+export enum UpgradeSystem {
+  LEVEL_BASED = 'level_based',
+  SKILL_TREE = 'skill_tree',
+  REALM_BREAKTHROUGH = 'realm_breakthrough',
+  RESOURCE_ACCUMULATION = 'resource_accumulation',
+  SOCIAL_RANK = 'social_rank',
+}
+
+export interface UpgradeSystemDef {
+  system: UpgradeSystem;
+  label: string;
+  description: string;
+  detectionKeywords: string[];
+  progressionMarkers: string[];
+  satisfactionTriggers: string[];
+}
+
+export const UPGRADE_SYSTEMS: Record<UpgradeSystem, UpgradeSystemDef> = {
+  [UpgradeSystem.LEVEL_BASED]: {
+    system: UpgradeSystem.LEVEL_BASED,
+    label: '等级制',
+    description: '明确的数值等级体系，从低到高逐级提升',
+    detectionKeywords: ['等级', 'Lv', '级别', '段位', '阶位', '品级', '星级', '级', '升级', '升到'],
+    progressionMarkers: ['经验值', '升级', '经验', '点数', '属性'],
+    satisfactionTriggers: ['连升', '突破', '暴涨', '飞跃'],
+  },
+  [UpgradeSystem.SKILL_TREE]: {
+    system: UpgradeSystem.SKILL_TREE,
+    label: '技能树',
+    description: '通过学习/觉醒获得新技能或技能升级',
+    detectionKeywords: ['技能', '功法', '武技', '术式', '天赋', '被动', '主动', '解锁'],
+    progressionMarkers: ['领悟', '修炼', '掌握', '学会', '觉醒', '突破'],
+    satisfactionTriggers: ['秒杀', '一招制敌', '威力暴涨', '领悟真谛'],
+  },
+  [UpgradeSystem.REALM_BREAKTHROUGH]: {
+    system: UpgradeSystem.REALM_BREAKTHROUGH,
+    label: '境界突破',
+    description: '修仙/玄幻类境界体系，需要悟道或突破瓶颈',
+    detectionKeywords: ['境界', '修为', '筑基', '金丹', '元婴', '化神', '渡劫', '大乘', '飞升', '突破'],
+    progressionMarkers: ['瓶颈', '感悟', '顿悟', '机缘', '天劫', '蜕变'],
+    satisfactionTriggers: ['一步登天', '脱胎换骨', '质的飞跃', '碾压同阶'],
+  },
+  [UpgradeSystem.RESOURCE_ACCUMULATION]: {
+    system: UpgradeSystem.RESOURCE_ACCUMULATION,
+    label: '资源积累',
+    description: '通过收集资源/财富/装备提升实力',
+    detectionKeywords: ['灵石', '金币', '装备', '丹药', '材料', '宝物', '道具', '资源', '财富'],
+    progressionMarkers: ['获得', '收集', '打造', '炼制', '收购', '掠夺'],
+    satisfactionTriggers: ['一夜暴富', '满载而归', '绝世神兵', '传世之宝'],
+  },
+  [UpgradeSystem.SOCIAL_RANK]: {
+    system: UpgradeSystem.SOCIAL_RANK,
+    label: '社会地位',
+    description: '通过势力扩张/声望提升/人际关系网提升地位',
+    detectionKeywords: ['势力', '帮派', '宗门', '城主', '郡守', '皇帝', '声望', '地位', '名望', '权势'],
+    progressionMarkers: ['招揽', '收服', '结盟', '征服', '封赏', '提拔'],
+    satisfactionTriggers: ['一人之下', '号令天下', '臣服', '俯首称臣'],
+  },
+};
+
+// ============================================================
+// M15: Golden Finger Types (金手指分类)
+// Source: 《网络文学创作原理》+ 中国网络文学阅读潮流研究
+// ============================================================
+
+export enum GoldenFingerType {
+  SYSTEM_CHEAT = 'system_cheat',
+  REBIRTH_KNOWLEDGE = 'rebirth_knowledge',
+  ANCIENT_INHERITANCE = 'ancient_inheritance',
+  SPACE_ARTIFACT = 'space_artifact',
+  SPECIAL_ABILITY = 'special_ability',
+  FORTUNE_REBIRTH = 'fortune_rebirth',
+}
+
+export interface GoldenFingerDef {
+  type: GoldenFingerType;
+  label: string;
+  description: string;
+  detectionKeywords: string[];
+  typicalManifestations: string[];
+  powerGrowthPattern: string;
+}
+
+export const GOLDEN_FINGERS: Record<GoldenFingerType, GoldenFingerDef> = {
+  [GoldenFingerType.SYSTEM_CHEAT]: {
+    type: GoldenFingerType.SYSTEM_CHEAT,
+    label: '系统流',
+    description: '获得一个系统辅助，提供任务、奖励、商店等功能',
+    detectionKeywords: ['系统', '叮', '任务', '奖励', '商店', '兑换', '宿主', '面板', '属性'],
+    typicalManifestations: ['任务奖励', '抽奖', '商店兑换', '成就系统'],
+    powerGrowthPattern: '任务驱动型 — 完成任务获得奖励逐步变强',
+  },
+  [GoldenFingerType.REBIRTH_KNOWLEDGE]: {
+    type: GoldenFingerType.REBIRTH_KNOWLEDGE,
+    label: '重生/穿越先知',
+    description: '凭借前世记忆或现代知识在异世界获得优势',
+    detectionKeywords: ['前世', '重生', '穿越', '记忆', '历史', '先知', '上一世', '上一辈', '再来一次'],
+    typicalManifestations: ['预知未来', '提前布局', '抢夺先机', '避免悲剧'],
+    powerGrowthPattern: '知识驱动型 — 利用先知信息抢占资源/避免错误',
+  },
+  [GoldenFingerType.ANCIENT_INHERITANCE]: {
+    type: GoldenFingerType.ANCIENT_INHERITANCE,
+    label: '远古传承',
+    description: '获得远古大能的传承/记忆/血脉觉醒',
+    detectionKeywords: ['传承', '血脉', '觉醒', '远古', '上古', '遗迹', '秘境', '前任', '遗留'],
+    typicalManifestations: ['功法传承', '血脉觉醒', '神器认主', '秘境收获'],
+    powerGrowthPattern: '传承驱动型 — 获得远超当前层次的功法/宝物',
+  },
+  [GoldenFingerType.SPACE_ARTIFACT]: {
+    type: GoldenFingerType.SPACE_ARTIFACT,
+    label: '空间法宝',
+    description: '拥有一个随身空间或特殊法宝',
+    detectionKeywords: ['空间', '储物', '戒指', '珠子', '随身', '法宝', '灵田', '炼丹炉'],
+    typicalManifestations: ['储物空间', '修炼加速', '炼丹/炼器', '灵田种植'],
+    powerGrowthPattern: '资源驱动型 — 空间提供资源产出和修炼加速',
+  },
+  [GoldenFingerType.SPECIAL_ABILITY]: {
+    type: GoldenFingerType.SPECIAL_ABILITY,
+    label: '异能/天赋',
+    description: '拥有与生俱来或意外获得的特殊能力',
+    detectionKeywords: ['异能', '天赋', '能力', '超能力', '变异', '觉醒', '特殊体质', '独特'],
+    typicalManifestations: ['时间操控', '复制能力', '透视', '预知', '治愈'],
+    powerGrowthPattern: '觉醒驱动型 — 能力逐步觉醒和解锁',
+  },
+  [GoldenFingerType.FORTUNE_REBIRTH]: {
+    type: GoldenFingerType.FORTUNE_REBIRTH,
+    label: '气运之子',
+    description: '运气逆天，关键节点总有奇遇',
+    detectionKeywords: ['运气', '气运', '奇遇', '机缘', '运气好', '天命', '命运', '天选', '造化'],
+    typicalManifestations: ['掉崖不死得宝', '随手买中大奖', '危难时贵人相助'],
+    powerGrowthPattern: '机缘驱动型 — 关键时刻触发奇遇/机缘',
+  },
+};
+
+// ============================================================
+// M15: Anti-Patterns (反面模式/常见写作错误)
+// Source: 《你的剧本逊毙了》100个化腐朽为神奇的对策
+// ============================================================
+
+export enum AntiPattern {
+  INFO_DUMP = 'info_dump',
+  PASSIVE_PROTAGONIST = 'passive_protagonist',
+  ON_THE_NOSE_DIALOGUE = 'on_the_nose_dialogue',
+  WALKING_TALKING = 'walking_talking',
+  DEUS_EX_MACHINA = 'deus_ex_machina',
+  REDUNDANT_DESCRIPTION = 'redundant_description',
+  TELL_NOT_SHOW = 'tell_not_show',
+  CONVENIENT_COINCIDENCE = 'convenient_coincidence',
+  STATIC_CHARACTER = 'static_character',
+  THREAD_ABANDONMENT = 'thread_abandonment',
+}
+
+export interface AntiPatternDef {
+  pattern: AntiPattern;
+  label: string;
+  description: string;
+  detectionKeywords: string[];
+  severity: 'critical' | 'warning' | 'minor';
+  fixSuggestion: string;
+}
+
+export const ANTI_PATTERNS: Record<AntiPattern, AntiPatternDef> = {
+  [AntiPattern.INFO_DUMP]: {
+    pattern: AntiPattern.INFO_DUMP,
+    label: '信息倾倒',
+    description: '大段背景/设定解释，中断叙事节奏',
+    detectionKeywords: ['众所周知', '在这个世界', '据说', '传说中', '根据记载', '话说回来', '这里需要说明'],
+    severity: 'critical',
+    fixSuggestion: '将背景信息分散到角色行动和对话中，每次只透露读者当下需要知道的',
+  },
+  [AntiPattern.PASSIVE_PROTAGONIST]: {
+    pattern: AntiPattern.PASSIVE_PROTAGONIST,
+    label: '被动主角',
+    description: '主角被事件推着走，缺乏主动决策',
+    detectionKeywords: ['只好', '只能', '无奈', '被迫', '别无选择', '身不由己', '不由自主', '不得不'],
+    severity: 'critical',
+    fixSuggestion: '让主角在每个关键节点做出主动选择，即使是错误的选择也比没有选择好',
+  },
+  [AntiPattern.ON_THE_NOSE_DIALOGUE]: {
+    pattern: AntiPattern.ON_THE_NOSE_DIALOGUE,
+    label: '直白对话',
+    description: '角色直说内心想法，缺少潜台词和言外之意',
+    detectionKeywords: ['我爱你', '我恨你', '我想要', '我害怕', '你知道吗', '让我告诉你', '我的意思是'],
+    severity: 'warning',
+    fixSuggestion: '让角色通过行动和间接表达传递情感，真正的情感往往在不说出口的话里',
+  },
+  [AntiPattern.WALKING_TALKING]: {
+    pattern: AntiPattern.WALKING_TALKING,
+    label: '走路聊天',
+    description: '角色无目的地走路并交换信息，缺乏戏剧冲突',
+    detectionKeywords: ['他们边走边说', '走在路上', '一边走一边', '沿路', '途中'],
+    severity: 'minor',
+    fixSuggestion: '给对话场景增加压力或冲突，在特定环境中让角色面临选择',
+  },
+  [AntiPattern.DEUS_EX_MACHINA]: {
+    pattern: AntiPattern.DEUS_EX_MACHINA,
+    label: '机械降神',
+    description: '关键时刻出现意外的力量/人物解决问题',
+    detectionKeywords: ['就在这时', '突然出现', '想不到', '意外地', '奇迹般地', '万没想到', '突然有人'],
+    severity: 'critical',
+    fixSuggestion: '解决问题的关键元素必须在前文铺垫过，读者应该能事后回溯到线索',
+  },
+  [AntiPattern.REDUNDANT_DESCRIPTION]: {
+    pattern: AntiPattern.REDUNDANT_DESCRIPTION,
+    label: '重复描写',
+    description: '对同一事物反复描写，拖慢节奏',
+    detectionKeywords: ['正如前文所述', '如上所述', '再次', '又一次', '还是那个', '同样的'],
+    severity: 'warning',
+    fixSuggestion: '信任读者的记忆力，只在需要强调变化时才重复提及',
+  },
+  [AntiPattern.TELL_NOT_SHOW]: {
+    pattern: AntiPattern.TELL_NOT_SHOW,
+    label: '告知而非展示',
+    description: '直接告知情感/状态而非通过行动展示',
+    detectionKeywords: ['他很伤心', '她很害怕', '他感到愤怒', '她非常紧张', '他很开心', '他觉得很'],
+    severity: 'warning',
+    fixSuggestion: '用具体的身体反应、行为变化、环境细节来传达情感状态',
+  },
+  [AntiPattern.CONVENIENT_COINCIDENCE]: {
+    pattern: AntiPattern.CONVENIENT_COINCIDENCE,
+    label: '巧合解决',
+    description: '用巧合而非角色努力解决冲突',
+    detectionKeywords: ['碰巧', '巧合', '恰好', '刚好', '正好', '刚好在那时', '不早不晚'],
+    severity: 'warning',
+    fixSuggestion: '巧合可以制造麻烦，但不应该解决麻烦。解决必须来自角色的行动',
+  },
+  [AntiPattern.STATIC_CHARACTER]: {
+    pattern: AntiPattern.STATIC_CHARACTER,
+    label: '静态角色',
+    description: '角色在整个故事中没有变化或成长',
+    detectionKeywords: ['依然如故', '一如既往', '从始至终', '永远都是', '始终没有改变', '还是那样'],
+    severity: 'critical',
+    fixSuggestion: '给角色一个需要克服的内在缺陷，让经历的事件真正改变角色',
+  },
+  [AntiPattern.THREAD_ABANDONMENT]: {
+    pattern: AntiPattern.THREAD_ABANDONMENT,
+    label: '线索弃置',
+    description: '设定了重要的伏笔或支线但从未回收',
+    detectionKeywords: ['之后再也没有提及', '后来再也没有', '这件事不了了之', '再也没有出现过'],
+    severity: 'warning',
+    fixSuggestion: '每个埋下的伏笔都必须有回应。如果无法回收，就不要铺垫',
+  },
+};
+
+// ============================================================
+// M15: Narrative Principles (叙事原则)
+// Source: 《畅销作家写作全技巧》(大泽在昌)
+// ============================================================
+
+export enum NarrativePrinciple {
+  SUPPORTING_CHARACTER_RULE = 'supporting_character_rule',
+  DIALOGUE_SUBTEXT = 'dialogue_subtext',
+  SCENE_CUTTING = 'scene_cutting',
+  REVERSAL_SURPRISE = 'reversal_surprise',
+  CHARACTER_TRANSFORMATION = 'character_transformation',
+  OBSTACLE_ESCALATION = 'obstacle_escalation',
+}
+
+export interface NarrativePrincipleDef {
+  principle: NarrativePrinciple;
+  label: string;
+  description: string;
+  source: string;
+  applicationGuide: string;
+  detectionKeywords: string[];
+}
+
+export const NARRATIVE_PRINCIPLES: Record<NarrativePrinciple, NarrativePrincipleDef> = {
+  [NarrativePrinciple.SUPPORTING_CHARACTER_RULE]: {
+    principle: NarrativePrinciple.SUPPORTING_CHARACTER_RULE,
+    label: '配角驱动法则',
+    description: '有趣的主角需要有趣的配角来衬托，每个配角都应有鲜明的说话方式和动机',
+    source: '大泽在昌',
+    applicationGuide: '确保每个出场角色有独特的说话方式、行为模式和明确动机',
+    detectionKeywords: ['语气', '口头禅', '习惯', '风格不同', '各有特色', '鲜明个性'],
+  },
+  [NarrativePrinciple.DIALOGUE_SUBTEXT]: {
+    principle: NarrativePrinciple.DIALOGUE_SUBTEXT,
+    label: '对话潜台词',
+    description: '角色说的和想的不一样，对话要隐藏真实意图',
+    source: '大泽在昌',
+    applicationGuide: '让对话包含表意和深意两层，角色的真实情感通过暗示而非直说表达',
+    detectionKeywords: ['言外之意', '暗示', '话里有话', '弦外之音', '欲言又止', '意有所指'],
+  },
+  [NarrativePrinciple.SCENE_CUTTING]: {
+    principle: NarrativePrinciple.SCENE_CUTTING,
+    label: '场景剪裁',
+    description: '只写有变化有冲突的场景，跳过无聊的过渡',
+    source: '大泽在昌',
+    applicationGuide: '进入场景时已经在发生冲突，离开时状态已经改变',
+    detectionKeywords: ['切入', '跳转', '直接进入', '时间跳过', '之后', '数天后'],
+  },
+  [NarrativePrinciple.REVERSAL_SURPRISE]: {
+    principle: NarrativePrinciple.REVERSAL_SURPRISE,
+    label: '反转惊喜',
+    description: '每章至少一个让读者意想不到的转折',
+    source: '大泽在昌',
+    applicationGuide: '在读者以为故事走向A时揭示其实是B，但回看又觉得合理',
+    detectionKeywords: ['竟然', '没想到', '出乎意料', '原来', '真相是', '并非如此', '大反转'],
+  },
+  [NarrativePrinciple.CHARACTER_TRANSFORMATION]: {
+    principle: NarrativePrinciple.CHARACTER_TRANSFORMATION,
+    label: '角色蜕变',
+    description: '角色在故事开始和结束时必须发生本质改变',
+    source: '大泽在昌',
+    applicationGuide: '开篇确立角色的初始状态和核心缺陷，结尾展示根本性的转变',
+    detectionKeywords: ['成长', '蜕变', '改变', '不再是', '终于明白', '重新认识', '变得不同'],
+  },
+  [NarrativePrinciple.OBSTACLE_ESCALATION]: {
+    principle: NarrativePrinciple.OBSTACLE_ESCALATION,
+    label: '障碍递增',
+    description: '每次解决问题后，下一个障碍必须更大更难',
+    source: '大泽在昌',
+    applicationGuide: '确保后出现的困难比前面的更复杂，读者永远感到压力在升级',
+    detectionKeywords: ['更大的危机', '更强的对手', '更艰难', '前所未有的', '比之前更', '升级'],
+  },
+};

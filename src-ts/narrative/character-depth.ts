@@ -762,4 +762,91 @@ export class CharacterDepthSystem {
       suggestions: ['需更多文本内容以进行更准确的 OCEAN 分析'],
     };
   }
+
+  // ============================================================
+  // M15: Character Creation Quality Assessment
+  // Source: 《创造难忘的人物》(琳达·西格)
+  // ============================================================
+
+  assessCharacterCreation(
+    characterInfo: Record<string, unknown>,
+    content: string,
+  ): {
+    dimensions: Array<{ dimension: string; label: string; score: number; evidence: string[] }>;
+    overallScore: number;
+    suggestions: string[];
+  } {
+    const dimensionPatterns: Array<{ dimension: string; label: string; keywords: string[] }> = [
+      { dimension: 'distinctiveness', label: '独特性', keywords: ['独特的', '与众不同', '标志性的', '独有', '特殊习惯', '口头禅', '特征'] },
+      { dimension: 'empathy_potential', label: '共情潜力', keywords: ['痛苦', '挣扎', '渴望', '恐惧', '脆弱', '温柔', '孤独', '无助'] },
+      { dimension: 'internal_conflict', label: '内在冲突', keywords: ['矛盾', '两难', '犹豫', '纠结', '内心挣扎', '左右为难', '进退维谷'] },
+      { dimension: 'growth_trajectory', label: '成长轨迹', keywords: ['成长', '改变', '学会', '领悟', '蜕变', '不再是', '变得不同'] },
+      { dimension: 'relationship_complexity', label: '关系复杂性', keywords: ['背叛', '信任', '暧昧', '亦敌亦友', '复杂关系', '爱恨交织', '依赖'] },
+      { dimension: 'moral_ambiguity', label: '道德模糊', keywords: ['灰色地带', '不完美', '有缺陷', '自私', '善良又残忍', '矛盾', '亦正亦邪'] },
+    ];
+
+    const dimensions = dimensionPatterns.map((dp) => {
+      const hits = dp.keywords.filter((kw) => content.includes(kw));
+      return {
+        dimension: dp.dimension,
+        label: dp.label,
+        score: Math.min(10, hits.length * 2),
+        evidence: hits,
+      };
+    });
+
+    const overallScore = dimensions.length > 0
+      ? Math.round((dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length) * 10) / 10
+      : 0;
+
+    const suggestions: string[] = [];
+    for (const dim of dimensions.filter((d) => d.score < 4)) {
+      suggestions.push(`${dim.label}得分偏低(${dim.score}/10)，建议加强角色在此维度的刻画`);
+    }
+    if (overallScore >= 7) {
+      suggestions.push('角色创造质量整体较高，多维度刻画充分');
+    }
+
+    return { dimensions, overallScore, suggestions };
+  }
+
+  // ============================================================
+  // M15: Plot-Character Balance Evaluation
+  // Source: 《情节与人物》(Jeff Gerke)
+  // ============================================================
+
+  evaluatePlotCharacterBalance(
+    plotElements: string[],
+    characterMoments: string[],
+  ): {
+    plotDensity: number;
+    characterDepth: number;
+    balanceScore: number;
+    recommendation: string;
+  } {
+    const plotDensity = Math.min(10, plotElements.length * 1.5);
+    const characterDepth = Math.min(10, characterMoments.length * 1.5);
+
+    const ratio = plotDensity > 0 ? characterDepth / plotDensity : 0;
+    let balanceScore: number;
+    let recommendation: string;
+
+    if (ratio > 0.7 && ratio < 1.4) {
+      balanceScore = 8 + Math.min(2, (1 - Math.abs(1 - ratio)) * 5);
+      recommendation = '情节与人物保持良好平衡';
+    } else if (ratio >= 1.4) {
+      balanceScore = 5;
+      recommendation = '角色刻画偏重，情节推动不足，建议增加外部冲突事件';
+    } else {
+      balanceScore = 5;
+      recommendation = '情节偏重而角色刻画不足，建议增加角色内心戏和关系发展';
+    }
+
+    return {
+      plotDensity: Math.round(plotDensity * 10) / 10,
+      characterDepth: Math.round(characterDepth * 10) / 10,
+      balanceScore: Math.round(Math.min(10, balanceScore) * 10) / 10,
+      recommendation,
+    };
+  }
 }

@@ -270,3 +270,71 @@ export function analyzeEmotionLayers(text: string): EmotionLayerResult {
 
   return { detections, totalLayersUsed, layerDiversityScore, overallRichness, depthLevel, suggestions };
 }
+
+// ============================================================
+// M15: Description Quality Assessment
+// Source: 《大师写作班》描写与背景 (罗恩·罗泽尔)
+// ============================================================
+
+export enum DescriptionQualityDimension {
+  SENSORY_DETAIL = 'sensory_detail',
+  SPECIFICITY = 'specificity',
+  ATMOSPHERE = 'atmosphere',
+  DYNAMIC_DESCRIPTION = 'dynamic_description',
+  SHOWING_ACTION = 'showing_action',
+}
+
+export interface DescriptionQualityResult {
+  dimensions: Array<{ dimension: DescriptionQualityDimension; label: string; score: number; evidence: string[] }>;
+  overallScore: number;
+  suggestions: string[];
+}
+
+const DESCRIPTION_PATTERNS: Record<DescriptionQualityDimension, { label: string; keywords: string[] }> = {
+  [DescriptionQualityDimension.SENSORY_DETAIL]: {
+    label: '感官细节',
+    keywords: ['刺鼻', '冰凉', '粗糙', '刺耳', '刺眼', '腥味', '甜腻', '柔软', '坚硬', '温暖', '潮湿', '干燥', '光滑', '沉闷', '清脆'],
+  },
+  [DescriptionQualityDimension.SPECIFICITY]: {
+    label: '具体性',
+    keywords: ['那把', '这个', '某个', '正好', '精确', '恰好', '一模一样', '确切', '分明'],
+  },
+  [DescriptionQualityDimension.ATMOSPHERE]: {
+    label: '氛围营造',
+    keywords: ['阴沉', '压抑', '温暖', '宁静', '喧嚣', '萧瑟', '诡异的', '祥和', '紧张', '沉闷', '明亮'],
+  },
+  [DescriptionQualityDimension.DYNAMIC_DESCRIPTION]: {
+    label: '动态描写',
+    keywords: ['摇曳', '翻滚', '流淌', '蔓延', '飞舞', '颤抖', '旋转', '闪烁', '流淌', '膨胀', '收缩'],
+  },
+  [DescriptionQualityDimension.SHOWING_ACTION]: {
+    label: '通过行动展示',
+    keywords: ['攥紧', '咬住', '后退', '往前', '抓住', '推开', '转身', '蹲下', '跳起', '奔向', '逃离'],
+  },
+};
+
+export function assessDescriptionQuality(text: string): DescriptionQualityResult {
+  const dimensions = Object.entries(DESCRIPTION_PATTERNS).map(([dim, pattern]) => {
+    const hits = pattern.keywords.filter((kw) => text.includes(kw));
+    return {
+      dimension: dim as DescriptionQualityDimension,
+      label: pattern.label,
+      score: Math.min(10, hits.length * 1.5),
+      evidence: hits,
+    };
+  });
+
+  const overallScore = dimensions.length > 0
+    ? Math.round((dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length) * 10) / 10
+    : 0;
+
+  const suggestions: string[] = [];
+  for (const dim of dimensions.filter((d) => d.score < 3)) {
+    suggestions.push(`${dim.label}不足，建议增加更多${dim.label === '感官细节' ? '五感描写' : dim.label === '具体性' ? '具体细节' : dim.label === '氛围营造' ? '环境氛围描写' : dim.label === '动态描写' ? '动态变化描写' : '行动展示'}`);
+  }
+  if (overallScore >= 7) {
+    suggestions.push('描写质量较高，多维度描写充分');
+  }
+
+  return { dimensions, overallScore, suggestions };
+}
