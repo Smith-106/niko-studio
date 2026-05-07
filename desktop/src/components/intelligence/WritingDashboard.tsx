@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { BarChart3, Loader2, AlertCircle, Download, FileText } from 'lucide-react';
-import { analyzeWritingCraft, type WritingCraftDimension, type WritingCraftResult, type DimensionResult } from '../../api/writing-craft';
+import { analyzeWritingCraft, type WritingCraftDimension, type WritingCraftResult } from '../../api/writing-craft';
 import { SectionHeader } from './SectionHeader';
 import { ProgressBar } from './ProgressBar';
 import { WritingDimensionDetail } from './WritingDimensionDetail';

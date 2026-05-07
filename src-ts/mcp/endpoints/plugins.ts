@@ -77,7 +77,9 @@ export async function pluginRegisterEndpoint(request: HttpRequest): Promise<Http
       let totalScore = 0;
 
       for (const rule of rules) {
-        const matches = text.match(new RegExp(rule.keyword, 'g'));
+        let regex: RegExp;
+        try { regex = new RegExp(rule.keyword, 'g'); } catch { continue; }
+        const matches = text.match(regex);
         if (matches && matches.length > 0) {
           totalScore += rule.score * matches.length;
           evidence.push(rule.evidence.replace('{count}', String(matches.length)));

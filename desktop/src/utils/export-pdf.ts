@@ -1,4 +1,4 @@
-import type { WritingCraftResult, DimensionResult } from '../api/writing-craft';
+import type { WritingCraftResult } from '../api/writing-craft';
 
 export function generatePdfHtml(result: WritingCraftResult): string {
   const dimSections = result.dimensions.map((dim) => {
@@ -66,7 +66,7 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-export function downloadPdfFile(html: string, filename: string): void {
+export function downloadPdfFile(html: string, _filename: string): void {
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const printWindow = window.open(url, '_blank');

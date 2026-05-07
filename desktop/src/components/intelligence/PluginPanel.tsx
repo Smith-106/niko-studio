@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Puzzle, Play, Loader2, Plus, Trash2 } from 'lucide-react';
-import type { PluginResult } from '../../../src-ts/plugins/plugin-engine';
+import { Puzzle, Play, Loader2, Plus } from 'lucide-react';
 import { SectionHeader } from './SectionHeader';
+
+interface PluginResult {
+  score: number;
+  maxScore: number;
+  evidence: string[];
+  suggestions: string[];
+}
 
 interface PluginInfo {
   id: string;
@@ -103,10 +109,10 @@ export const PluginPanel: React.FC<PluginPanelProps> = ({ text }) => {
                     {result.score}/{result.maxScore}
                   </span>
                 </div>
-                {result.evidence.map((e, i) => (
+                {result.evidence.map((e: string, i: number) => (
                   <div key={i} className="text-xs text-dark-text pl-2 border-l-2 border-dark-border mb-0.5">{e}</div>
                 ))}
-                {result.suggestions.map((s, i) => (
+                {result.suggestions.map((s: string, i: number) => (
                   <div key={i} className="text-xs text-dark-text bg-dark-surface-sunken rounded px-2 py-0.5 mt-0.5">{s}</div>
                 ))}
               </div>

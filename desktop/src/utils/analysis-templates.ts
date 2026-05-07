@@ -56,7 +56,7 @@ export function saveTemplate(template: Omit<AnalysisTemplate, 'id'>): AnalysisTe
 }
 
 export function updateTemplate(id: string, updates: Partial<Omit<AnalysisTemplate, 'id'>>): AnalysisTemplate | null {
-  if (id.startsWith('custom-')) {
+  if (!id.startsWith('custom-')) {
     return null;
   }
   const custom = loadCustomTemplates();

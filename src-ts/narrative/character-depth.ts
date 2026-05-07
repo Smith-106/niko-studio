@@ -490,11 +490,9 @@ export class CharacterDepthSystem {
     content: string,
   ): Promise<ArcAssessment> {
     if (!this.llmClient) {
-      console.log('MOCK PATH: returning mockArcAssessment');
       return this.mockArcAssessment();
     }
 
-    console.log('LLM PATH: calling generateJson');
     const prompt = `
 ## 角色弧线评估 (Character Arc Assessment — McKee Model)
 

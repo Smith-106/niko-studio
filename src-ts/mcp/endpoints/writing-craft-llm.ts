@@ -8,7 +8,6 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import type { WritingCraftDimension, DimensionResult } from './writing-craft';
-import { writingCraftAnalyzeEndpoint } from './writing-craft';
 
 const DIMENSION_LABELS: Record<WritingCraftDimension, string> = {
   structure: '结构分析',

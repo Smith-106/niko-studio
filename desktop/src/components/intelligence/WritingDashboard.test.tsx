@@ -83,7 +83,7 @@ describe('WritingDashboard', () => {
 
   it('disables analyze button when text is empty', () => {
     render(<WritingDashboard text="" visible={true} />)
-    const btn = screen.getByRole('button', { name: '开始分析' })
+    const btn = screen.getByRole('button', { name: '开始分析' }) as HTMLButtonElement
     expect(btn.disabled).toBe(true)
   })
 

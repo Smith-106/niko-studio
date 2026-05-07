@@ -1,4 +1,4 @@
-import type { WritingCraftResult, DimensionResult } from '../api/writing-craft';
+import type { WritingCraftResult } from '../api/writing-craft';
 
 export function generateMarkdownReport(result: WritingCraftResult): string {
   const lines: string[] = [];

@@ -129,7 +129,7 @@ function analyzeStructure(
   const threeAct = analyzer.analyzeThreeActStructure(positionedChapters);
 
   const scores: number[] = [];
-  if (edsonResult.overallAlignmentScore > 0) scores.push(edsonResult.overallAlignmentScore);
+  if (edsonResult.overallAlignmentScore > 0) scores.push(edsonResult.overallAlignmentScore * 10);
   if (threeAct.overallStructureScore > 0) scores.push(threeAct.overallStructureScore);
   scores.push(antiResult.overallHealthScore);
 
@@ -201,7 +201,7 @@ function analyzeSuspense(
   const mysteryResult = analyzer.detectMysterySubtype(chapters);
   const deductionResult = analyzer.analyzeDeductionChain(chapters);
 
-  const scores: number[] = [techniqueResult.overallScore, trickResult.overallTrickScore];
+  const scores: number[] = [techniqueResult.overallScore * 10, trickResult.overallTrickScore];
   if (deductionResult.chainScore > 0) scores.push(deductionResult.chainScore);
 
   const score = scores.length > 0
@@ -241,7 +241,7 @@ function analyzeEmotion(text: string): DimensionResult {
   const layerResult = analyzeEmotionLayers(text);
   const descriptionResult = assessDescriptionQuality(text);
 
-  const scores: number[] = [craftResult.score, layerResult.layerDiversityScore, descriptionResult.overallScore];
+  const scores: number[] = [craftResult.score / 10, layerResult.layerDiversityScore, descriptionResult.overallScore];
   const score = Math.min(10, Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10);
 
   return {
@@ -307,7 +307,7 @@ function analyzeWebNovel(
   if (outlineResult.overallQualityScore > 0) scores.push(outlineResult.overallQualityScore);
   if (curveResult.curveData.length > 0) {
     const avgHook = curveResult.curveData.reduce((s, c) => s + c.hookStrength, 0) / curveResult.curveData.length;
-    scores.push(avgHook);
+    scores.push(avgHook / 10);
   }
   const score = scores.length > 0
     ? Math.min(10, Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10)

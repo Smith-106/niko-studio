@@ -305,7 +305,7 @@ const DESCRIPTION_PATTERNS: Record<DescriptionQualityDimension, { label: string;
   },
   [DescriptionQualityDimension.DYNAMIC_DESCRIPTION]: {
     label: '动态描写',
-    keywords: ['摇曳', '翻滚', '流淌', '蔓延', '飞舞', '颤抖', '旋转', '闪烁', '流淌', '膨胀', '收缩'],
+    keywords: ['摇曳', '翻滚', '流淌', '蔓延', '飞舞', '颤抖', '旋转', '闪烁', '膨胀', '收缩'],
   },
   [DescriptionQualityDimension.SHOWING_ACTION]: {
     label: '通过行动展示',

@@ -35,7 +35,6 @@ const HOOK_PATTERNS: Array<{ pattern: string; weight: number }> = [
   { pattern: '然而', weight: 5 },
   { pattern: '不料', weight: 6 },
   { pattern: '竟然', weight: 6 },
-  { pattern: '就在这时', weight: 9 },
   { pattern: '一个惊人的', weight: 7 },
   { pattern: '不敢相信', weight: 5 },
   { pattern: '看到了一个', weight: 4 },

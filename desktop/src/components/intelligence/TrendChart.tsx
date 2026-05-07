@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import type { WritingCraftDimension, DimensionResult } from '../../api/writing-craft';
+import React, { useState } from 'react';
+import type { WritingCraftDimension } from '../../api/writing-craft';
 
 interface TrendDataPoint {
   chapterLabel: string;

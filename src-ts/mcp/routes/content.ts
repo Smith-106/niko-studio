@@ -15,6 +15,15 @@ import {
   workspaceContextEndpoint,
   writingHelperProcessEndpoint,
   writingStreamEndpoint,
+  writingCraftAnalyzeEndpoint,
+  writingCraftLLMEndpoint,
+  pluginListEndpoint,
+  pluginExecuteEndpoint,
+  pluginRegisterEndpoint,
+  syncStatusEndpoint,
+  syncPushEndpoint,
+  syncPullEndpoint,
+  syncFullEndpoint,
 } from '../endpoints';
 import type { GatewayRoute } from '../gateway-route-types';
 
@@ -36,4 +45,19 @@ export const contentRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/writing\/helper$/, handler: writingHelperProcessEndpoint },
   { method: 'POST', pattern: /^\/writing\/stream$/, handler: writingStreamEndpoint },
   { method: 'POST', pattern: /^\/writing-helper\/process$/, handler: writingHelperProcessEndpoint },
+
+  // Writing Craft Analysis (M18)
+  { method: 'POST', pattern: /^\/writing-craft\/analyze$/, handler: writingCraftAnalyzeEndpoint },
+  { method: 'POST', pattern: /^\/writing-craft\/llm-analyze$/, handler: writingCraftLLMEndpoint },
+
+  // Plugins (M19)
+  { method: 'GET', pattern: /^\/plugins\/list$/, handler: pluginListEndpoint },
+  { method: 'POST', pattern: /^\/plugins\/execute$/, handler: pluginExecuteEndpoint },
+  { method: 'POST', pattern: /^\/plugins\/register$/, handler: pluginRegisterEndpoint },
+
+  // Sync (M20)
+  { method: 'GET', pattern: /^\/sync\/status$/, handler: syncStatusEndpoint },
+  { method: 'POST', pattern: /^\/sync\/push$/, handler: syncPushEndpoint },
+  { method: 'POST', pattern: /^\/sync\/pull$/, handler: syncPullEndpoint },
+  { method: 'POST', pattern: /^\/sync\/full$/, handler: syncFullEndpoint },
 ];
