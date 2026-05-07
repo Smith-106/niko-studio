@@ -1,0 +1,26 @@
+{
+  "id": "TASK-004",
+  "title": "编辑器内联标注",
+  "status": "pending",
+  "target_module": "desktop/src/components/intelligence/InlineAnnotation.tsx",
+  "read_first": [
+    "desktop/src/components/intelligence/WritingDashboard.tsx",
+    "desktop/src/components/editor/BubbleToolbar.tsx"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'InlineAnnotation' desktop/src/components/intelligence/InlineAnnotation.tsx → 存在导出组件",
+      "grep 'annotation' desktop/src/components/intelligence/InlineAnnotation.tsx → 存在标注逻辑"
+    ]
+  },
+  "action": {
+    "detailed_plan": "创建 InlineAnnotation 组件：接收分析结果（evidence + suggestions），在文本中匹配关键词位置并高亮标注。点击标注弹出 Tooltip 显示详情。创建标注样式（黄色/红色/绿色对应建议/严重/良好）。"
+  },
+  "implementation": [
+    { "step": 1, "action": "创建 InlineAnnotation.tsx：根据 evidence keywords 在文本中定位并高亮，hover 显示 Tooltip", "file": "desktop/src/components/intelligence/InlineAnnotation.tsx" },
+    { "step": 2, "action": "集成到 WritingDashboard：分析完成后同步显示内联标注模式", "file": "desktop/src/components/intelligence/WritingDashboard.tsx" }
+  ],
+  "priority": "high",
+  "estimated_minutes": 45,
+  "_metadata": { "wave": 2 }
+}

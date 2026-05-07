@@ -1,0 +1,25 @@
+{
+  "id": "TASK-008",
+  "title": "LLM 分析 UI 集成",
+  "status": "pending",
+  "target_module": "desktop/src/components/intelligence/WritingDashboard.tsx",
+  "read_first": [
+    "desktop/src/components/intelligence/WritingDashboard.tsx",
+    "desktop/src/api/writing-craft.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'llm\\|deepAnalyze\\|LLM' desktop/src/components/intelligence/WritingDashboard.tsx → 存在 LLM 分析入口"
+    ]
+  },
+  "action": {
+    "detailed_plan": "在 WritingDashboard 维度详情面板中添加「深度分析」按钮。点击后调用 analyzeWritingCraftLLM API，显示 LLM 返回的深度建议。区分关键词分析结果和 LLM 分析结果（标签标记来源）。支持流式显示 LLM 响应。"
+  },
+  "implementation": [
+    { "step": 1, "action": "在 WritingDimensionDetail 添加「深度分析」按钮，调用 LLM API，显示增强建议", "file": "desktop/src/components/intelligence/WritingDimensionDetail.tsx" },
+    { "step": 2, "action": "添加 LLM 分析结果区分显示（来源标签 + 流式加载动画）", "file": "desktop/src/components/intelligence/WritingDimensionDetail.tsx" }
+  ],
+  "priority": "high",
+  "estimated_minutes": 40,
+  "_metadata": { "wave": 3 }
+}

@@ -141,3 +141,7 @@ export {
 export {
   writingCraftAnalyzeEndpoint,
 } from './writing-craft';
+
+export {
+  writingCraftLLMEndpoint,
+} from './writing-craft-llm';

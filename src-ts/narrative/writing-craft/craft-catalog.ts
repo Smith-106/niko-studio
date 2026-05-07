@@ -1173,3 +1173,412 @@ export const MYSTERY_SUBTYPES: Record<MysterySubtype, MysterySubtypeDef> = {
     representativeWorks: ['《消失的爱人》', '《沉默的羔羊》', '《七宗罪》'],
   },
 };
+
+// ============================================================
+// Interactive Narrative Types (互动叙事)
+// Source: 《剧本游戏写作入门》
+// ============================================================
+
+export enum InteractiveNarrativeType {
+  BRANCHING = 'branching',             // 分支叙事：关键选择分出不同剧情线
+  MULTI_ENDING = 'multi_ending',       // 多结局：根据累计选择导向不同结局
+  CHOICE_POINT = 'choice_point',       // 选择点：在剧情节点提供选择
+  ROLEPLAY_DIALOGUE = 'roleplay_dialogue', // 角色扮演对话：以对话形式推进剧情
+  CLUE_COLLECTION = 'clue_collection', // 线索收集：收集信息解锁新剧情
+  TIME_PRESSURE = 'time_pressure',     // 时间压力：限时决策增加紧迫感
+}
+
+export interface InteractiveNarrativeDef {
+  type: InteractiveNarrativeType;
+  label: string;
+  description: string;
+  designPrinciples: string[];
+  detectionKeywords: string[];
+  examples: string[];
+}
+
+export const INTERACTIVE_NARRATIVE_TYPES: Record<InteractiveNarrativeType, InteractiveNarrativeDef> = {
+  [InteractiveNarrativeType.BRANCHING]: {
+    type: InteractiveNarrativeType.BRANCHING,
+    label: '分支叙事',
+    description: '关键选择分出不同剧情线，每个选择都有后果',
+    designPrinciples: ['每个分支都有独特价值', '避免明显错误选项', '分支最终收敛或平等收尾', '选择要有情感分量'],
+    detectionKeywords: ['选择', '分支', '路线', '分歧', '决定', 'A线', 'B线', '结局'],
+    examples: ['选择信任A角色→获得线索但失去盟友', '选择逃跑→安全但错过真相'],
+  },
+  [InteractiveNarrativeType.MULTI_ENDING]: {
+    type: InteractiveNarrativeType.MULTI_ENDING,
+    label: '多结局',
+    description: '根据累计选择导向不同结局，结局数量与选择深度对应',
+    designPrinciples: ['每个结局都是完整的', '好结局需要付出代价', '坏结局要有逻辑', '真结局需要特殊条件'],
+    detectionKeywords: ['结局', '真结局', '普通结局', '坏结局', '隐藏结局', '完美', 'Good End', 'Bad End'],
+    examples: ['好感度满+收集全部线索→真结局', '关键选择失误→坏结局'],
+  },
+  [InteractiveNarrativeType.CHOICE_POINT]: {
+    type: InteractiveNarrativeType.CHOICE_POINT,
+    label: '选择点',
+    description: '在剧情节点提供选择，选择改变短期走向',
+    designPrinciples: ['选择要有真实差异', '不要假选择', '限制选择数量（2-4个）', '在紧张时刻设置选择'],
+    detectionKeywords: ['你会', '要不要', '是否', '选择', '决定', '接下来'],
+    examples: ['追捕嫌疑人还是保护证人', '说出真相还是保守秘密'],
+  },
+  [InteractiveNarrativeType.ROLEPLAY_DIALOGUE]: {
+    type: InteractiveNarrativeType.ROLEPLAY_DIALOGUE,
+    label: '角色扮演对话',
+    description: '以对话形式推进剧情，对话选项影响关系和剧情',
+    designPrinciples: ['对话选项体现角色性格', '不同态度有不同反馈', '对话中隐藏关键信息', 'NPC有独立动机'],
+    detectionKeywords: ['对话', '问答', '询问', '质问', '劝说', '威胁', '安慰', 'NPC'],
+    examples: ['温和询问→对方放松→获得信息', '强硬质问→对方抵抗→线索中断'],
+  },
+  [InteractiveNarrativeType.CLUE_COLLECTION]: {
+    type: InteractiveNarrativeType.CLUE_COLLECTION,
+    label: '线索收集',
+    description: '通过收集信息解锁新剧情，信息不完整会导致错误推理',
+    designPrinciples: ['线索分布合理不密集', '关键线索有保护机制', '线索组合产生新理解', '遗漏线索有替代路径'],
+    detectionKeywords: ['线索', '证据', '发现', '线索卡', '道具', '日记', '信件', '密码'],
+    examples: ['收集3封日记→解锁隐藏剧情', '遗漏关键证据→推理偏差'],
+  },
+  [InteractiveNarrativeType.TIME_PRESSURE]: {
+    type: InteractiveNarrativeType.TIME_PRESSURE,
+    label: '时间压力',
+    description: '限时决策增加紧迫感，时间耗尽有惩罚',
+    designPrinciples: ['时间限制要合理', '时间压力增加沉浸感', '超时后果可承受', '时间分配体现优先级'],
+    detectionKeywords: ['倒计时', '限时', '紧急', '来不及', '最后', '限时选择', '倒计时结束'],
+    examples: ['30秒内选择开门还是逃跑', '天亮前必须找到真相'],
+  },
+};
+
+// ============================================================
+// Game Narrative Structure (游戏叙事)
+// Source: 《游戏剧本怎么写》
+// ============================================================
+
+export enum GameNarrativeStructure {
+  QUEST_DRIVEN = 'quest_driven',       // 任务驱动：主线任务推进剧情
+  BRANCHING_MAIN = 'branching_main',   // 主线分支：主线有分叉点
+  SIDEWEAVE = 'sideweave',             // 支线交织：支线丰富世界观
+  DIALOGUE_TREE = 'dialogue_tree',     // 对话树：NPC对话有分支
+  WORLDSCAPE_FRAGMENT = 'worldscape_fragment', // 世界观碎片：环境叙事
+  CHARACTER_GROWTH = 'character_growth', // 角色成长路径：随剧情成长
+}
+
+export interface GameNarrativeDef {
+  structure: GameNarrativeStructure;
+  label: string;
+  description: string;
+  designRules: string[];
+  detectionKeywords: string[];
+}
+
+export const GAME_NARRATIVE_STRUCTURES: Record<GameNarrativeStructure, GameNarrativeDef> = {
+  [GameNarrativeStructure.QUEST_DRIVEN]: {
+    structure: GameNarrativeStructure.QUEST_DRIVEN,
+    label: '任务驱动',
+    description: '主线任务推进剧情，任务完成解锁新内容',
+    designRules: ['任务目标明确', '任务难度递增', '任务间有叙事连接', '完成任务有反馈奖励'],
+    detectionKeywords: ['任务', '主线', '目标', '完成', '解锁', '下一步'],
+  },
+  [GameNarrativeStructure.BRANCHING_MAIN]: {
+    structure: GameNarrativeStructure.BRANCHING_MAIN,
+    label: '主线分支',
+    description: '主线剧情有分叉点，玩家选择影响走向',
+    designRules: ['分支点要有意义', '每条线有独特体验', '分支可回溯', '主线不因分支断裂'],
+    detectionKeywords: ['转折点', '分叉', '路线', '选择影响', '不同走向'],
+  },
+  [GameNarrativeStructure.SIDEWEAVE]: {
+    structure: GameNarrativeStructure.SIDEWEAVE,
+    label: '支线交织',
+    description: '支线丰富世界观，与主线有交叉',
+    designRules: ['支线有独立起承转合', '支线反哺主线', '支线不影响主线推进', '支线有情感价值'],
+    detectionKeywords: ['支线', '副本', '额外', '隐藏剧情', '角色故事', '背景'],
+  },
+  [GameNarrativeStructure.DIALOGUE_TREE]: {
+    structure: GameNarrativeStructure.DIALOGUE_TREE,
+    label: '对话树',
+    description: 'NPC对话有分支，不同选择获取不同信息',
+    designRules: ['对话选项有差异', 'NPC有记忆', '关系影响对话', '对话可重复访问'],
+    detectionKeywords: ['对话选项', 'NPC', '好感度', '交谈', '询问'],
+  },
+  [GameNarrativeStructure.WORLDSCAPE_FRAGMENT]: {
+    structure: GameNarrativeStructure.WORLDSCAPE_FRAGMENT,
+    label: '世界观碎片',
+    description: '通过环境叙事碎片化展示世界观',
+    designRules: ['碎片可收集', '碎片间有逻辑', '碎片不强制', '碎片拼凑出完整图景'],
+    detectionKeywords: ['日记', '碑文', '传说', '遗迹', '背景故事', '世界观', '历史'],
+  },
+  [GameNarrativeStructure.CHARACTER_GROWTH]: {
+    structure: GameNarrativeStructure.CHARACTER_GROWTH,
+    label: '角色成长路径',
+    description: '角色随剧情成长，经历和选择塑造最终形态',
+    designRules: ['成长有阶段性', '成长与剧情挂钩', '成长可感知', '成长方向与选择一致'],
+    detectionKeywords: ['成长', '变化', '升级', '觉醒', '蜕变', '进化', '突破'],
+  },
+};
+
+// ============================================================
+// Comic Narrative Technique (漫画叙事)
+// Source: 《一个故事的99种讲法》
+// ============================================================
+
+export enum ComicNarrativeTechnique {
+  PANEL_TRANSITION = 'panel_transition', // 分镜转换：用分镜切换推进叙事
+  SILENT_NARRATIVE = 'silent_narrative', // 无声叙事：纯画面讲故事
+  MULTI_PERSPECTIVE = 'multi_perspective', // 多视角重构：同一事件不同视角
+  VISUAL_RHYTHM = 'visual_rhythm',     // 视觉节奏：通过画面大小/密度控制节奏
+  TIME_COMPRESS = 'time_compress',     // 时间压缩：用画面压缩/延展时间
+  MONTAGE = 'montage',                 // 蒙太奇：画面组合产生新含义
+}
+
+export interface ComicNarrativeDef {
+  technique: ComicNarrativeTechnique;
+  label: string;
+  description: string;
+  principles: string[];
+  detectionKeywords: string[];
+}
+
+export const COMIC_NARRATIVE_TECHNIQUES: Record<ComicNarrativeTechnique, ComicNarrativeDef> = {
+  [ComicNarrativeTechnique.PANEL_TRANSITION]: {
+    technique: ComicNarrativeTechnique.PANEL_TRANSITION,
+    label: '分镜转换',
+    description: '用分镜切换推进叙事，画面间留白让读者脑补',
+    principles: ['转换类型有6种：瞬间、动作、主体、场景、方面、非 sequitur', '留白是叙事工具', '读者参与填充空白'],
+    detectionKeywords: ['切镜', '转场', '画面', '镜头', '视角切换', '场景跳转'],
+  },
+  [ComicNarrativeTechnique.SILENT_NARRATIVE]: {
+    technique: ComicNarrativeTechnique.SILENT_NARRATIVE,
+    label: '无声叙事',
+    description: '纯画面讲故事，不依赖文字',
+    principles: ['表情和肢体语言是核心', '画面构图传递情绪', '留白传达沉默', '连续画面创造节奏'],
+    detectionKeywords: ['无声', '静默', '画面', '表情', '动作', '沉默'],
+  },
+  [ComicNarrativeTechnique.MULTI_PERSPECTIVE]: {
+    technique: ComicNarrativeTechnique.MULTI_PERSPECTIVE,
+    label: '多视角重构',
+    description: '同一事件从不同角色视角重新讲述',
+    principles: ['每个视角有独特信息', '视角差异制造悬念', '最终视角揭示真相', '角色偏见影响叙述'],
+    detectionKeywords: ['视角', '角度', '重新讲述', '不同看法', '另一个角度', '回忆'],
+  },
+  [ComicNarrativeTechnique.VISUAL_RHYTHM]: {
+    technique: ComicNarrativeTechnique.VISUAL_RHYTHM,
+    label: '视觉节奏',
+    description: '通过画面大小和密度控制阅读节奏',
+    principles: ['大画面=重要/停顿', '小密画面=快速/紧张', '留白=情绪呼吸', '不规则排版=混乱/冲击'],
+    detectionKeywords: ['节奏', '画面大小', '密集', '留白', '节奏控制', '阅读速度'],
+  },
+  [ComicNarrativeTechnique.TIME_COMPRESS]: {
+    technique: ComicNarrativeTechnique.TIME_COMPRESS,
+    label: '时间压缩',
+    description: '用画面压缩或延展时间感知',
+    principles: ['单帧=瞬间', '连续小帧=快速经过', '大跨页=延展时刻', '重复画面=停滞感'],
+    detectionKeywords: ['时间', '瞬间', '慢镜头', '快进', '时间流逝', '同时发生'],
+  },
+  [ComicNarrativeTechnique.MONTAGE]: {
+    technique: ComicNarrativeTechnique.MONTAGE,
+    label: '蒙太奇',
+    description: '画面组合产生新含义，整体大于部分之和',
+    principles: ['并列产生隐喻', '对比产生冲突', '重复产生强调', '碎片拼出全貌'],
+    detectionKeywords: ['并列', '对比', '蒙太奇', '组合', '碎片', '拼贴'],
+  },
+};
+
+// ============================================================
+// Writing Guide Rules (实用写作指南)
+// Source: 《网文成才21天》《写作高手速成手册》
+// ============================================================
+
+export enum WritingGuideRule {
+  DAILY_HABIT = 'daily_habit',         // 每日写作习惯：固定时间固定产出
+  OUTLINE_FIRST = 'outline_first',     // 大纲先行法：先列大纲再填充
+  CHARACTER_DRIVEN = 'character_driven', // 角色驱动法：从角色出发构建情节
+  SCENE_PRIORITY = 'scene_priority',   // 场景优先法：以场景为单位写作
+  REVISION_THREE = 'revision_three',   // 修改三遍法：结构→语言→细节三遍修改
+  READER_TEST = 'reader_test',         // 读者测试法：找目标读者试读反馈
+}
+
+export interface WritingGuideDef {
+  rule: WritingGuideRule;
+  label: string;
+  description: string;
+  steps: string[];
+  detectionKeywords: string[];
+}
+
+export const WRITING_GUIDE_RULES: Record<WritingGuideRule, WritingGuideDef> = {
+  [WritingGuideRule.DAILY_HABIT]: {
+    rule: WritingGuideRule.DAILY_HABIT,
+    label: '每日写作习惯',
+    description: '固定时间固定产出，养成写作节奏',
+    steps: ['设定固定写作时段', '设定每日最低字数', '写作时不修改', '记录每日产出'],
+    detectionKeywords: ['习惯', '每日', '固定时间', '字数', '坚持', '规律'],
+  },
+  [WritingGuideRule.OUTLINE_FIRST]: {
+    rule: WritingGuideRule.OUTLINE_FIRST,
+    label: '大纲先行法',
+    description: '先列大纲再填充，确保结构完整',
+    steps: ['确定主题和结局', '列出关键转折点', '分配章节篇幅', '标注伏笔和回收点'],
+    detectionKeywords: ['大纲', '提纲', '结构', '规划', '蓝图', '框架'],
+  },
+  [WritingGuideRule.CHARACTER_DRIVEN]: {
+    rule: WritingGuideRule.CHARACTER_DRIVEN,
+    label: '角色驱动法',
+    description: '从角色出发构建情节，角色决定走向',
+    steps: ['建立角色档案', '明确角色核心欲望', '设置角色间冲突', '让角色推动事件'],
+    detectionKeywords: ['角色驱动', '人物', '动机', '欲望', '冲突', '性格'],
+  },
+  [WritingGuideRule.SCENE_PRIORITY]: {
+    rule: WritingGuideRule.SCENE_PRIORITY,
+    label: '场景优先法',
+    description: '以场景为单位写作，每场景有明确目标',
+    steps: ['每个场景一个目标', '场景入口出口明确', '场景间有因果关系', '删除无推进的场景'],
+    detectionKeywords: ['场景', '场景目标', '因果关系', '推进', '场景链'],
+  },
+  [WritingGuideRule.REVISION_THREE]: {
+    rule: WritingGuideRule.REVISION_THREE,
+    label: '修改三遍法',
+    description: '结构→语言→细节三遍修改，每遍聚焦不同层面',
+    steps: ['第一遍改结构：删多余、补缺失、调顺序', '第二遍改语言：用词精准、句式多样', '第三遍改细节：错别字、标点、格式'],
+    detectionKeywords: ['修改', '三遍', '校对', '润色', '精简', '修改策略'],
+  },
+  [WritingGuideRule.READER_TEST]: {
+    rule: WritingGuideRule.READER_TEST,
+    label: '读者测试法',
+    description: '找目标读者试读收集反馈',
+    steps: ['找到3-5个目标读者', '提供阅读指引', '收集具体反馈', '识别共性问题优先修改'],
+    detectionKeywords: ['读者', '试读', '反馈', '测试', '读者反应', '用户体验'],
+  },
+};
+
+// ============================================================
+// Commentary Technique (评论写作)
+// Source: 《南周评论写作课》
+// ============================================================
+
+export enum CommentaryTechnique {
+  THESIS_FIRST = 'thesis_first',       // 论点先行：开篇亮明观点
+  DATA_SUPPORT = 'data_support',       // 数据支撑：用数据强化论证
+  COUNTER_ARGUMENT = 'counter_argument', // 反证法：先立论再驳论
+  ANALOGY = 'analogy',                 // 类比论证：用类比让抽象具象
+  PROGRESSIVE = 'progressive',         // 层层递进：从浅到深逐步论证
+  BALANCED_VIEW = 'balanced_view',     // 观点平衡：呈现多角度后给出判断
+}
+
+export interface CommentaryDef {
+  technique: CommentaryTechnique;
+  label: string;
+  description: string;
+  principles: string[];
+  detectionKeywords: string[];
+}
+
+export const COMMENTARY_TECHNIQUES: Record<CommentaryTechnique, CommentaryDef> = {
+  [CommentaryTechnique.THESIS_FIRST]: {
+    technique: CommentaryTechnique.THESIS_FIRST,
+    label: '论点先行',
+    description: '开篇亮明观点，再展开论证',
+    principles: ['首段亮明立场', '论点具体不空泛', '后文围绕论点展开', '结尾重申强化'],
+    detectionKeywords: ['我认为', '显然', '毋庸置疑', '核心观点', '关键在于', '首先'],
+  },
+  [CommentaryTechnique.DATA_SUPPORT]: {
+    technique: CommentaryTechnique.DATA_SUPPORT,
+    label: '数据支撑',
+    description: '用数据和事实强化论证说服力',
+    principles: ['数据来源可靠', '数据与论点直接相关', '数据有上下文', '不堆砌数据'],
+    detectionKeywords: ['数据显示', '据统计', '研究表明', '调查', '比例', '增长', '下降'],
+  },
+  [CommentaryTechnique.COUNTER_ARGUMENT]: {
+    technique: CommentaryTechnique.COUNTER_ARGUMENT,
+    label: '反证法',
+    description: '先承认对立观点，再有力驳斥',
+    principles: ['公平呈现对立面', '驳斥要有力', '承认合理部分增加说服力', '最终回归己方立场'],
+    detectionKeywords: ['有人认为', '表面上看', '然而', '但是', '实际上', '反过来说'],
+  },
+  [CommentaryTechnique.ANALOGY]: {
+    technique: CommentaryTechnique.ANALOGY,
+    label: '类比论证',
+    description: '用类比让抽象概念具象可感',
+    principles: ['类比要贴切', '类比对象读者熟悉', '类比不等同于论证', '类比引发思考'],
+    detectionKeywords: ['就像', '好比', '如同', '仿佛', '犹如', '类似于'],
+  },
+  [CommentaryTechnique.PROGRESSIVE]: {
+    technique: CommentaryTechnique.PROGRESSIVE,
+    label: '层层递进',
+    description: '从浅到深逐步论证，每步加深一层',
+    principles: ['逻辑层次清晰', '每层都有论据', '从事实到分析到判断', '结尾升华'],
+    detectionKeywords: ['首先', '其次', '最后', '更深层', '不仅如此', '进一步'],
+  },
+  [CommentaryTechnique.BALANCED_VIEW]: {
+    technique: CommentaryTechnique.BALANCED_VIEW,
+    label: '观点平衡',
+    description: '呈现多角度后给出独立判断',
+    principles: ['公平呈现各方', '不偏不倚不等于没有立场', '独立判断有理有据', '尊重读者判断力'],
+    detectionKeywords: ['一方面', '另一方面', '从不同角度看', '然而', '综合来看', '平衡'],
+  },
+};
+
+// ============================================================
+// Oral Narrative Skill (口头叙事)
+// Source: 《怎样讲好一个故事》
+// ============================================================
+
+export enum OralNarrativeSkill {
+  SUSPENSE_OPENING = 'suspense_opening', // 悬念开场：用悬念抓住听众
+  RHYTHM_CONTROL = 'rhythm_control',   // 节奏控制：快慢交替保持注意
+  INTERACTION = 'interaction',         // 互动引导：与听众互动保持参与
+  EMOTIONAL_RESONANCE = 'emotional_resonance', // 情感共鸣：触动听众情感
+  REPETITION = 'repetition',           // 重复强化：关键词重复加深印象
+  CLIMAX_ENDING = 'climax_ending',     // 结尾升华：在高潮处收尾留余韵
+}
+
+export interface OralNarrativeDef {
+  skill: OralNarrativeSkill;
+  label: string;
+  description: string;
+  principles: string[];
+  detectionKeywords: string[];
+}
+
+export const ORAL_NARRATIVE_SKILLS: Record<OralNarrativeSkill, OralNarrativeDef> = {
+  [OralNarrativeSkill.SUSPENSE_OPENING]: {
+    skill: OralNarrativeSkill.SUSPENSE_OPENING,
+    label: '悬念开场',
+    description: '用悬念或冲突抓住听众注意力',
+    principles: ['前30秒决定成败', '用问题或冲突开场', '制造好奇心缺口', '承诺故事价值'],
+    detectionKeywords: ['你知道', '有一天', '那次', '最不可思议的是', '我亲眼看到', '那天晚上'],
+  },
+  [OralNarrativeSkill.RHYTHM_CONTROL]: {
+    skill: OralNarrativeSkill.RHYTHM_CONTROL,
+    label: '节奏控制',
+    description: '快慢交替保持听众注意力',
+    principles: ['紧张时加快', '关键处放慢', '高潮前有停顿', '总体节奏有起伏'],
+    detectionKeywords: ['就在这时', '然后', '突然', '慢慢地', '就那样', '停顿'],
+  },
+  [OralNarrativeSkill.INTERACTION]: {
+    skill: OralNarrativeSkill.INTERACTION,
+    label: '互动引导',
+    description: '与听众互动保持参与感',
+    principles: ['问问题引导思考', '用"你"拉近距离', '预测听众反应', '回应听众反馈'],
+    detectionKeywords: ['你想想', '你会怎么做', '如果你', '猜猜', '对吧', '是不是'],
+  },
+  [OralNarrativeSkill.EMOTIONAL_RESONANCE]: {
+    skill: OralNarrativeSkill.EMOTIONAL_RESONANCE,
+    label: '情感共鸣',
+    description: '触动听众情感，让故事有温度',
+    principles: ['具体细节产生共鸣', '用感官描写', '情感要有变化', '真诚是最好的技巧'],
+    detectionKeywords: ['那一刻', '我感到', '心一紧', '眼泪', '笑了', '心疼'],
+  },
+  [OralNarrativeSkill.REPETITION]: {
+    skill: OralNarrativeSkill.REPETITION,
+    label: '重复强化',
+    description: '关键词或句式重复加深印象',
+    principles: ['重复要有变化', '三次重复最有效', '重复产生韵律', '关键信息用重复强调'],
+    detectionKeywords: ['一次又一次', '总是', '每一次', '反复', '不断', '一直'],
+  },
+  [OralNarrativeSkill.CLIMAX_ENDING]: {
+    skill: OralNarrativeSkill.CLIMAX_ENDING,
+    label: '结尾升华',
+    description: '在高潮处收尾，留有余韵',
+    principles: ['故事在情感最高点结束', '结尾呼应开头', '给听众思考空间', '不说教'],
+    detectionKeywords: ['从那以后', '我才明白', '这让我', '所以', '这就是', '永远记得'],
+  },
+};

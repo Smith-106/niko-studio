@@ -33,3 +33,25 @@ export async function analyzeWritingCraft(
     dimensions,
   })
 }
+
+export interface LLMAnalysisResult extends WritingCraftResult {
+  source: 'llm'
+}
+
+export interface LLMConfig {
+  api_key: string
+  base_url: string
+  model: string
+}
+
+export async function analyzeWritingCraftLLM(
+  text: string,
+  llmConfig: LLMConfig,
+  dimensions?: WritingCraftDimension[],
+): Promise<ApiResponse<LLMAnalysisResult>> {
+  return callApi<LLMAnalysisResult>('/writing-craft/llm-analyze', 'POST', {
+    text,
+    dimensions,
+    ...llmConfig,
+  })
+}

@@ -1,0 +1,26 @@
+{
+  "id": "TASK-007",
+  "title": "LLM 增强分析 API 端点",
+  "status": "pending",
+  "target_module": "src-ts/mcp/endpoints/writing-craft-llm.ts",
+  "read_first": [
+    "src-ts/mcp/endpoints/writing-craft.ts",
+    "src-ts/mcp/http-types.ts"
+  ],
+  "convergence": {
+    "criteria": [
+      "grep 'writingCraftLLMEndpoint\\|deepAnalyzeDimension' src-ts/mcp/endpoints/writing-craft-llm.ts → 存在端点",
+      "grep 'WritingCraftDimension' src-ts/mcp/endpoints/writing-craft-llm.ts → 使用维度类型"
+    ]
+  },
+  "action": {
+    "detailed_plan": "创建 writing-craft-llm.ts MCP 端点：接收 { text, dimension, llmConfig } → 为指定维度生成 LLM 分析 prompt → 调用 LLM API → 解析结构化响应 → 返回增强版 DimensionResult。为每个维度设计专用分析 prompt（结构、角色、悬疑、情感、对话、网文各一个）。支持流式响应（SSE）。"
+  },
+  "implementation": [
+    { "step": 1, "action": "创建 writing-craft-llm.ts：DIMENSION_PROMPTS Record + writingCraftLLMEndpoint + LLM 调用逻辑", "file": "src-ts/mcp/endpoints/writing-craft-llm.ts" },
+    { "step": 2, "action": "在 index.ts re-export，创建 Desktop API 层 analyzeWritingCraftLLM()", "file": "desktop/src/api/writing-craft.ts" }
+  ],
+  "priority": "high",
+  "estimated_minutes": 60,
+  "_metadata": { "wave": 3 }
+}
