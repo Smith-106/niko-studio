@@ -300,9 +300,9 @@ export class ConfigLoader {
       embeddingCacheTTL: parseInt(process.env.EMBEDDING_CACHE_TTL ?? '86400', 10),
       embeddingCacheMaxSize: parseInt(process.env.EMBEDDING_CACHE_MAX_SIZE ?? '10000', 10),
       retryMaxAttempts: parseInt(process.env.RETRY_MAX_ATTEMPTS ?? '3', 10),
-      retryInitialDelay: parseFloat(process.env.RETRY_INITIAL_DELAY ?? '1.0'),
-      retryMaxDelay: parseFloat(process.env.RETRY_MAX_DELAY ?? '60.0'),
-      retryExponentialBase: parseFloat(process.env.RETRY_EXPONENTIAL_BASE ?? '2.0'),
+      retryInitialDelay: parseFloat(process.env.RETRY_INITIAL_DELAY ?? '1.0') || 1.0,
+      retryMaxDelay: parseFloat(process.env.RETRY_MAX_DELAY ?? '60.0') || 60.0,
+      retryExponentialBase: parseFloat(process.env.RETRY_EXPONENTIAL_BASE ?? '2.0') || 2.0,
       healthCheckInterval: parseInt(process.env.HEALTH_CHECK_INTERVAL ?? '60', 10),
     });
   }

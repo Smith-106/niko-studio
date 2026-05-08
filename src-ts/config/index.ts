@@ -577,8 +577,14 @@ export class ConfigManager extends EventEmitter {
     if (env.NIKO_DEFAULT_MODEL) this.config.agent.defaultModel = env.NIKO_DEFAULT_MODEL
     if (env.GOOGLE_API_KEY) this.config.agent.googleApiKey = env.GOOGLE_API_KEY
     if (env.OPENAI_API_KEY) this.config.agent.openaiApiKey = env.OPENAI_API_KEY
-    if (env.NIKO_MAX_COST_PER_REQUEST) this.config.agent.maxCostPerRequest = parseFloat(env.NIKO_MAX_COST_PER_REQUEST)
-    if (env.NIKO_MAX_COST_PER_SESSION) this.config.agent.maxCostPerSession = parseFloat(env.NIKO_MAX_COST_PER_SESSION)
+    if (env.NIKO_MAX_COST_PER_REQUEST) {
+      const v = parseFloat(env.NIKO_MAX_COST_PER_REQUEST);
+      if (Number.isFinite(v)) this.config.agent.maxCostPerRequest = v;
+    }
+    if (env.NIKO_MAX_COST_PER_SESSION) {
+      const v = parseFloat(env.NIKO_MAX_COST_PER_SESSION);
+      if (Number.isFinite(v)) this.config.agent.maxCostPerSession = v;
+    }
 
     // Memory
     if (env.NIKO_VECTOR_DB_PATH) this.config.memory.vectorDbPath = env.NIKO_VECTOR_DB_PATH

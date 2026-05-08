@@ -113,7 +113,7 @@ export class RerankerFactory {
       apiKey,
       baseUrl,
       model: process.env.RERANKER_MODEL,
-      timeout: parseFloat(process.env.RERANKER_TIMEOUT ?? '30.0'),
+      timeout: parseFloat(process.env.RERANKER_TIMEOUT ?? '30.0') || 30.0,
       maxRetries: parseInt(process.env.RERANKER_MAX_RETRIES ?? '3', 10),
       batchSize: DEFAULT_RERANKER_CONFIG.batchSize,
     };
