@@ -23,9 +23,11 @@ export function parseQuery(url: string): Record<string, string> {
   const queryString = url.slice(queryIndex + 1);
   const params: Record<string, string> = {};
   for (const pair of queryString.split('&')) {
-    const [key, value] = pair.split('=');
+    const eqIndex = pair.indexOf('=');
+    const key = eqIndex === -1 ? pair : pair.slice(0, eqIndex);
+    const value = eqIndex === -1 ? '' : pair.slice(eqIndex + 1);
     if (key) {
-      params[decodeURIComponent(key)] = value ? decodeURIComponent(value) : '';
+      params[decodeURIComponent(key)] = decodeURIComponent(value);
     }
   }
   return params;
