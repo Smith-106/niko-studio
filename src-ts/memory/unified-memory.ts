@@ -521,6 +521,9 @@ export class EngineConflictResolver {
         reason: "Keeping existing information",
       };
     } else if (strategy === "merge") {
+      if (conflicts.length === 0) {
+        return { action: "update", obsolete_ids: [] };
+      }
       const merged = `${conflicts[0]["content"]}; \u66f4\u65b0: ${content}`;
       return {
         action: "merge",
