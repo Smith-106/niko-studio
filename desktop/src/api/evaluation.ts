@@ -141,3 +141,14 @@ export async function getImprovementSuggestions(
     max_suggestions: maxSuggestions,
   })
 }
+
+export async function runStandaloneConsistencyCheck(
+  content: string,
+  options?: { checkTypes?: string[]; workspace?: ProjectWorkspaceContext },
+): Promise<ApiResponse<{ valid: boolean; issues: string[]; score: number }>> {
+  return callApi('/consistency/check', 'POST', {
+    content,
+    check_types: options?.checkTypes,
+    workspace: options?.workspace,
+  })
+}

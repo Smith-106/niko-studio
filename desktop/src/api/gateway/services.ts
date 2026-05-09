@@ -35,3 +35,9 @@ export async function probeGatewayServiceHealth(
 ): Promise<ApiResponse<GatewayServiceProbeResult>> {
   return callApi(`/admin/mcp/services/${encodeURIComponent(serviceId)}/probe`, 'POST')
 }
+
+export async function deleteGatewayServiceConfig(
+  serviceId: string,
+): Promise<ApiResponse<{ success: boolean }>> {
+  return callApi(`/admin/mcp/services/${encodeURIComponent(serviceId)}`, 'DELETE')
+}

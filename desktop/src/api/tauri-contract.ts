@@ -6,7 +6,7 @@ export const TAURI_GATEWAY_COMMANDS = {
   callApi: 'call_api',
 } as const
 
-export type GatewayRequestMethod = 'GET' | 'POST' | 'PUT'
+export type GatewayRequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 export interface TauriGatewayApiRequest extends Record<string, unknown> {
   endpoint: string
