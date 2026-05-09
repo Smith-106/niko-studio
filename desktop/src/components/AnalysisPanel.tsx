@@ -1,20 +1,26 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
 import type { AnalysisModule } from '../api/intelligence'
+import { useSettingsStore } from '../stores/settingsStore'
 import { runCrossChapterConsistency } from '../api/m10-apis'
-import { AccordionWrapper, IntelligenceBadge, MetricValue, ProgressBar, SectionHeader } from './intelligence'
+import { AccordionWrapper, IntelligenceBadge, MetricValue, ProgressBar, SectionHeader, WritingDashboard } from './intelligence'
 
 interface PanelProps {
   onClose: () => void
 }
 
-type TabId = 'character_arc' | 'pacing' | 'consistency' | 'readability'
+type TabId = AnalysisModule | 'writing_craft'
+
+function isStandardAnalysisTab(tab: TabId): tab is AnalysisModule {
+  return tab !== 'writing_craft'
+}
 
 const TAB_LABELS: Record<TabId, string> = {
   character_arc: '角色弧线',
   pacing: '节奏分析',
   consistency: '一致性检查',
   readability: '可读性评分',
+  writing_craft: '写作工艺',
 }
 
 const TAB_ICONS: Record<TabId, string> = {
@@ -22,6 +28,7 @@ const TAB_ICONS: Record<TabId, string> = {
   pacing: '📈',
   consistency: '🔗',
   readability: '📖',
+  writing_craft: '✍️',
 }
 
 export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
@@ -35,10 +42,21 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
     loadCachedResult,
     clearAnalysis,
     currentProjectId,
+    currentChapterContent,
     getChaptersForProject,
   } = useAppStore()
+  const llmConfig = useSettingsStore((state) => {
+    const provider = state.settings.llmProviders.find(
+      (item) => item.id === state.settings.primaryProvider && item.enabled && item.apiKey,
+    )
+    return provider
+      ? { api_key: provider.apiKey, base_url: provider.baseUrl, model: provider.defaultModel }
+      : undefined
+  })
 
   const chapters = currentProjectId ? getChaptersForProject(currentProjectId) : []
+  const writingCraftText = currentChapterContent.trim()
+  const hasWritingCraftText = writingCraftText.length > 0
   const [crossChapterResult, setCrossChapterResult] = useState<Record<string, unknown> | null>(null)
   const [crossChapterLoading, setCrossChapterLoading] = useState(false)
   const [crossChapterError, setCrossChapterError] = useState<string | null>(null)
@@ -67,18 +85,18 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
   }, [chapters])
 
   useEffect(() => {
-    if (currentProjectId) {
+    if (currentProjectId && isStandardAnalysisTab(activeTab)) {
       loadCachedResult(currentProjectId, activeTab)
     }
   }, [currentProjectId, activeTab, loadCachedResult])
 
   const handleAnalyze = useCallback(() => {
-    if (!currentProjectId) return
+    if (!currentProjectId || !isStandardAnalysisTab(activeTab)) return
     const chapterIds = chapters.map((c) => c.id)
-    startAnalysis(currentProjectId, activeTab as AnalysisModule, chapterIds)
+    startAnalysis(currentProjectId, activeTab, chapterIds)
   }, [currentProjectId, activeTab, chapters, startAnalysis])
 
-  const result = analysisResults[activeTab as AnalysisModule]
+  const result = isStandardAnalysisTab(activeTab) ? analysisResults[activeTab] : null
 
   return (
     <div
@@ -119,7 +137,16 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
       </div>
 
       <div className="p-4 flex-shrink-0">
-        {chapters.length === 0 ? (
+        {activeTab === 'writing_craft' ? (
+          <div className="rounded border border-dark-border bg-dark-card px-3 py-2">
+            <p className="text-xs font-medium text-dark-text">写作工艺分析</p>
+            <p className="mt-1 text-xs text-dark-text-muted">
+              {hasWritingCraftText
+                ? `当前章节正文已接入该分析面板，可直接触发后端写作工艺分析。当前可用文本 ${writingCraftText.length} 字。`
+                : '请先在编辑器中输入或加载当前章节正文，再使用写作工艺分析。'}
+            </p>
+          </div>
+        ) : chapters.length === 0 ? (
           <p className="text-center text-dark-text-muted text-xs py-2">打开包含章节的项目后即可使用智能分析功能</p>
         ) : (
         <>
@@ -147,7 +174,13 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
       )}
 
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-        {result ? (
+        {activeTab === 'writing_craft' ? (
+          <WritingDashboard
+            text={writingCraftText}
+            visible={true}
+            llmConfig={llmConfig}
+          />
+        ) : result ? (
           <AnalysisResultView module={activeTab} result={result} />
         ) : (
           <p className="text-center text-dark-text-muted text-sm">
@@ -244,7 +277,7 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
 }
 
 interface AnalysisResultViewProps {
-  module: TabId
+  module: AnalysisModule
   result: { chaptersAnalyzed: string[]; result: Record<string, unknown>; createdAt: string }
 }
 

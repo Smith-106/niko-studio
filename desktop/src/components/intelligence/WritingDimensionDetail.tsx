@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { SectionHeader } from './SectionHeader';
 import { ProgressBar } from './ProgressBar';
+import { AntiPatternWarning } from './AntiPatternWarning';
 import { analyzeWritingCraftLLM, type DimensionResult, type LLMConfig } from '../../api/writing-craft';
 
 interface WritingDimensionDetailProps {
@@ -21,6 +22,9 @@ export const WritingDimensionDetail: React.FC<WritingDimensionDetailProps> = ({ 
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmAnalysis, setLlmAnalysis] = useState<string | null>(null);
   const [llmSuggestions, setLlmSuggestions] = useState<string[]>([]);
+  const detailMap = dimension.details as Record<string, unknown>;
+  const antiPatternHealth = typeof detailMap.antiPatternHealth === 'number' ? detailMap.antiPatternHealth : undefined;
+  const criticalAntiPatterns = typeof detailMap.criticalAntiPatterns === 'number' ? detailMap.criticalAntiPatterns : undefined;
 
   const handleDeepAnalyze = async () => {
     if (!text || !llmConfig) return;
@@ -47,6 +51,7 @@ export const WritingDimensionDetail: React.FC<WritingDimensionDetailProps> = ({ 
     <div className="flex flex-col gap-3">
       <SectionHeader title={`${dimension.label} · ${dimension.score}/${dimension.maxScore} · ${scoreLabel(dimension.score)}`} />
       <ProgressBar value={pct} />
+      <AntiPatternWarning antiPatternHealth={antiPatternHealth} criticalCount={criticalAntiPatterns} />
 
       {dimension.evidence.length > 0 && (
         <div>

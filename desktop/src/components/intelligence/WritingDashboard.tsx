@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { BarChart3, Loader2, AlertCircle, Download, FileText } from 'lucide-react';
-import { analyzeWritingCraft, type WritingCraftDimension, type WritingCraftResult } from '../../api/writing-craft';
+import { analyzeWritingCraft, type LLMConfig, type WritingCraftDimension, type WritingCraftResult } from '../../api/writing-craft';
 import { SectionHeader } from './SectionHeader';
 import { ProgressBar } from './ProgressBar';
 import { WritingDimensionDetail } from './WritingDimensionDetail';
@@ -11,6 +11,7 @@ import { generatePdfHtml, downloadPdfFile } from '../../utils/export-pdf';
 interface WritingDashboardProps {
   text: string;
   visible: boolean;
+  llmConfig?: LLMConfig;
 }
 
 const DIMENSION_ORDER: WritingCraftDimension[] = [
@@ -32,7 +33,7 @@ function scoreColor(score: number): string {
   return '#dc2626';
 }
 
-export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visible }) => {
+export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visible, llmConfig }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<WritingCraftResult | null>(null);
@@ -164,7 +165,7 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
               </div>
 
               {activeDimension ? (
-                <WritingDimensionDetail dimension={activeDimension} />
+                <WritingDimensionDetail dimension={activeDimension} text={text} llmConfig={llmConfig} />
               ) : (
                 <div className="text-sm text-dark-text-muted py-4 text-center">
                   未找到该维度的分析结果

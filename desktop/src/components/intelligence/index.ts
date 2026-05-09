@@ -5,6 +5,7 @@ export * from './ProgressBar';
 export * from './AccordionWrapper';
 export * from './WritingDashboard';
 export * from './WritingDimensionDetail';
+export * from './AntiPatternWarning';
 export * from './InlineAnnotation';
 export * from './TrendChart';
 export * from './TemplateManager';
