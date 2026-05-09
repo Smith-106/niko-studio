@@ -11,6 +11,9 @@ import {
   skillsListEndpoint,
   skillsLoadEndpoint,
   skillsMatchEndpoint,
+  skillsCreateEndpoint,
+  skillsSaveEndpoint,
+  skillsDeleteEndpoint,
 } from '../endpoints';
 import type { GatewayRoute } from '../gateway-route-types';
 
@@ -27,4 +30,7 @@ export const agentRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/skills\/load$/, handler: skillsLoadEndpoint },
   { method: 'POST', pattern: /^\/skills\/match$/, handler: skillsMatchEndpoint },
   { method: 'POST', pattern: /^\/skills\/chain$/, handler: skillsChainEndpoint },
+  { method: 'POST', pattern: /^\/skills\/create$/, handler: skillsCreateEndpoint },
+  { method: 'POST', pattern: /^\/skills\/save$/, handler: skillsSaveEndpoint },
+  { method: 'POST', pattern: /^\/skills\/delete$/, handler: skillsDeleteEndpoint },
 ];

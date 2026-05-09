@@ -24,6 +24,11 @@ import {
   syncPushEndpoint,
   syncPullEndpoint,
   syncFullEndpoint,
+  foreshadowPlantEndpoint,
+  foreshadowStatsEndpoint,
+  characterProfileEndpoint,
+  characterDepthEndpoint,
+  characterRelationshipsEndpoint,
 } from '../endpoints';
 import type { GatewayRoute } from '../gateway-route-types';
 
@@ -44,7 +49,6 @@ export const contentRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/writing\/quality$/, handler: novelQualityCheckEndpoint },
   { method: 'POST', pattern: /^\/writing\/helper$/, handler: writingHelperProcessEndpoint },
   { method: 'POST', pattern: /^\/writing\/stream$/, handler: writingStreamEndpoint },
-  { method: 'POST', pattern: /^\/writing-helper\/process$/, handler: writingHelperProcessEndpoint },
 
   // Writing Craft Analysis (M18)
   { method: 'POST', pattern: /^\/writing-craft\/analyze$/, handler: writingCraftAnalyzeEndpoint },
@@ -60,4 +64,13 @@ export const contentRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/sync\/push$/, handler: syncPushEndpoint },
   { method: 'POST', pattern: /^\/sync\/pull$/, handler: syncPullEndpoint },
   { method: 'POST', pattern: /^\/sync\/full$/, handler: syncFullEndpoint },
+
+  // Foreshadow CRUD
+  { method: 'POST', pattern: /^\/foreshadow\/plant$/, handler: foreshadowPlantEndpoint },
+  { method: 'GET', pattern: /^\/foreshadow\/stats$/, handler: foreshadowStatsEndpoint },
+
+  // Character analysis
+  { method: 'POST', pattern: /^\/character\/profile$/, handler: characterProfileEndpoint },
+  { method: 'POST', pattern: /^\/character\/depth$/, handler: characterDepthEndpoint },
+  { method: 'POST', pattern: /^\/character\/relationships$/, handler: characterRelationshipsEndpoint },
 ];

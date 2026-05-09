@@ -34,7 +34,3 @@ export async function saveSkill(skillId: string, content: string): Promise<ApiRe
 export async function deleteSkill(skillId: string): Promise<ApiResponse<{ success: boolean }>> {
   return callApi('/skills/delete', 'POST', { skill_id: skillId })
 }
-
-export async function renameSkill(oldName: string, newName: string): Promise<ApiResponse<{ success: boolean }>> {
-  return callApi('/skills/rename', 'POST', { old_name: oldName, new_name: newName })
-}

@@ -134,59 +134,6 @@ export async function getForeshadows(
   )
 }
 
-export async function createGraphNode(
-  type: string,
-  name: string,
-  properties?: Record<string, unknown>,
-  options?: { workspace?: ProjectWorkspaceContext },
-): Promise<ApiResponse<{ id: string; status: string }>> {
-  return callApi(
-    '/graph/node/create',
-    'POST',
-    appendWorkspacePayload({ type, name, properties }, options?.workspace),
-  )
-}
-
-export async function updateGraphNode(
-  id: string,
-  properties: Record<string, unknown>,
-  options?: { workspace?: ProjectWorkspaceContext },
-): Promise<ApiResponse<{ status: string; id: string; properties: Record<string, unknown> }>> {
-  return callApi(
-    '/graph/node/update',
-    'POST',
-    appendWorkspacePayload({ id, properties }, options?.workspace),
-  )
-}
-
-export async function deleteGraphNode(
-  id: string,
-  options?: { workspace?: ProjectWorkspaceContext },
-): Promise<ApiResponse<{ status: string; id: string }>> {
-  return callApi(
-    '/graph/node/delete',
-    'POST',
-    appendWorkspacePayload({ id }, options?.workspace),
-  )
-}
-
-export async function createGraphRelation(
-  fromName: string,
-  toName: string,
-  relationType: string,
-  properties?: Record<string, unknown>,
-  options?: { workspace?: ProjectWorkspaceContext },
-): Promise<ApiResponse<{ id: string; status: string }>> {
-  return callApi(
-    '/graph/relation/create',
-    'POST',
-    appendWorkspacePayload(
-      { from_name: fromName, to_name: toName, relation_type: relationType, properties },
-      options?.workspace,
-    ),
-  )
-}
-
 // ============ Foreshadow API ============
 
 export interface ForeshadowItem {
@@ -226,27 +173,6 @@ export async function plantForeshadow(
     importance: options?.importance,
     tags: options?.tags,
     metadata: options?.metadata,
-  })
-}
-
-export async function hintForeshadow(
-  id: string,
-  options?: { scene_id?: string; hint_description?: string },
-): Promise<ApiResponse<{ success: boolean; data: ForeshadowItem }>> {
-  return callApi('/foreshadow/hint', 'POST', {
-    id,
-    scene_id: options?.scene_id,
-    hint_description: options?.hint_description,
-  })
-}
-
-export async function harvestForeshadow(
-  id: string,
-  options?: { scene_id?: string },
-): Promise<ApiResponse<{ success: boolean; data: ForeshadowItem }>> {
-  return callApi('/foreshadow/harvest', 'POST', {
-    id,
-    scene_id: options?.scene_id,
   })
 }
 
@@ -304,10 +230,4 @@ export async function getCharacterRelationships(): Promise<
   ApiResponse<{ success: boolean; data: CharacterRelationshipNetwork }>
 > {
   return callApi('/character/relationships', 'POST')
-}
-
-export async function validateCharacterConsistency(
-  id: string,
-): Promise<ApiResponse<{ success: boolean; data: { valid: boolean; issues: string[]; warnings: string[]; score: number } }>> {
-  return callApi('/character/consistency', 'POST', { id })
 }

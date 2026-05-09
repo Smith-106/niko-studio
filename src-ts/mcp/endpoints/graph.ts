@@ -11,6 +11,8 @@ import {
   graphQuery,
   graphGetCharacter,
   graphGetForeshadows,
+  graphGetRelationships,
+  graphAddEntity,
 } from '../services/graph';
 import type { GraphReadScope } from '../services/graph';
 import { normalizeProjectWorkspaceContext } from '../../project/workspace-model.js';
@@ -90,4 +92,138 @@ export async function graphForeshadowsEndpoint(request: HttpRequest): Promise<Ht
     scope
   );
   return jsonResponse(result);
+}
+
+// ============================================================
+// Foreshadow CRUD endpoints
+// ============================================================
+
+export async function foreshadowPlantEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const description = String(body.description ?? '');
+  if (!description.trim()) {
+    return jsonResponse({ success: false, error: 'description is required' }, 400);
+  }
+  const properties: Record<string, unknown> = {
+    description,
+    state: 'planted',
+    planted_at: new Date().toISOString(),
+    importance: body.importance ?? 1,
+    ...(body.scene_id ? { scene_id: body.scene_id } : {}),
+    ...(Array.isArray(body.tags) ? { tags: body.tags } : {}),
+    ...(body.metadata && typeof body.metadata === 'object' ? { metadata: body.metadata } : {}),
+  };
+  const result = await graphAddEntity('foreshadow', `foreshadow-${Date.now()}`, properties);
+  return jsonResponse({ success: true, data: result });
+}
+
+export async function foreshadowStatsEndpoint(_request: HttpRequest): Promise<HttpResponse> {
+  const [planted, hinted, harvested] = await Promise.all([
+    graphGetForeshadows('planted'),
+    graphGetForeshadows('hinted'),
+    graphGetForeshadows('harvested'),
+  ]);
+  const plantedArr = Array.isArray(planted) ? planted : [];
+  const hintedArr = Array.isArray(hinted) ? hinted : [];
+  const harvestedArr = Array.isArray(harvested) ? harvested : [];
+  const total = plantedArr.length + hintedArr.length + harvestedArr.length;
+  const totalHints = hintedArr.length;
+  return jsonResponse({
+    success: true,
+    data: {
+      total,
+      by_state: { planted: plantedArr.length, hinted: hintedArr.length, harvested: harvestedArr.length },
+      total_hints: totalHints,
+      avg_hints_per_foreshadow: total > 0 ? totalHints / total : 0,
+      harvest_rate: total > 0 ? harvestedArr.length / total : 0,
+    },
+  });
+}
+
+// ============================================================
+// Character analysis endpoints
+// ============================================================
+
+export async function characterProfileEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const name = String(body.name ?? '').trim();
+  if (!name) {
+    return jsonResponse({ success: false, error: 'name is required' }, 400);
+  }
+  const scope = resolveGraphScope(body);
+  const characterData = await graphGetCharacter(name, true, false, scope);
+  const data = characterData && typeof characterData === 'object' ? characterData : {};
+  return jsonResponse({
+    success: true,
+    data: {
+      id: String((data as Record<string, unknown>).id ?? `char-${name}`),
+      name,
+      role: String((data as Record<string, unknown>).role ?? 'unknown'),
+      personality: (data as Record<string, unknown>).personality ?? {},
+      background: (data as Record<string, unknown>).background ?? {},
+      motivation: (data as Record<string, unknown>).motivation ?? {},
+      relationships: (data as Record<string, unknown>).relationships ?? {},
+      growth: (data as Record<string, unknown>).growth ?? {},
+      five_dimension_score: (data as Record<string, unknown>).five_dimension_score ?? {},
+      created_at: String((data as Record<string, unknown>).created_at ?? new Date().toISOString()),
+      updated_at: String((data as Record<string, unknown>).updated_at ?? new Date().toISOString()),
+    },
+  });
+}
+
+export async function characterDepthEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const id = String(body.id ?? '').trim();
+  if (!id) {
+    return jsonResponse({ success: false, error: 'id is required' }, 400);
+  }
+  const name = id.startsWith('char-') ? id.slice(5) : id;
+  const scope = resolveGraphScope(body);
+  const characterData = await graphGetCharacter(name, true, false, scope);
+  const data = characterData && typeof characterData === 'object' ? characterData as Record<string, unknown> : {};
+  const dimensionScores = (data as Record<string, unknown>).five_dimension_score ?? {};
+  const scores = dimensionScores && typeof dimensionScores === 'object'
+    ? dimensionScores as Record<string, number>
+    : {};
+  return jsonResponse({
+    success: true,
+    data: {
+      character: name,
+      scores: {
+        dynamicScore: scores.dynamicScore ?? 50,
+        competenceScore: scores.competenceScore ?? 50,
+        eccentricityScore: scores.eccentricityScore ?? 50,
+        contrastScore: scores.contrastScore ?? 50,
+        dualityScore: scores.dualityScore ?? 50,
+      },
+      depth_level: 'moderate',
+      suggestions: [],
+    },
+  });
+}
+
+export async function characterRelationshipsEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const scope = resolveGraphScope(body);
+  const name = String(body.name ?? '').trim();
+  const allRelationships = await graphGetRelationships(name || '', null, 2, scope);
+  const relationshipsArr = Array.isArray(allRelationships) ? allRelationships : [];
+  const nodeSet = new Map<string, { id: string; name: string; role: string }>();
+  const edges: Array<{ source: string; target: string; type: string; trust: number }> = [];
+  for (const rel of relationshipsArr) {
+    const r = rel as Record<string, unknown>;
+    const source = String(r.from ?? r.source ?? '');
+    const target = String(r.to ?? r.target ?? '');
+    const type = String(r.type ?? r.relation_type ?? 'related');
+    if (source && !nodeSet.has(source)) nodeSet.set(source, { id: source, name: source, role: 'character' });
+    if (target && !nodeSet.has(target)) nodeSet.set(target, { id: target, name: target, role: 'character' });
+    edges.push({ source, target, type, trust: Number(r.trust ?? r.weight ?? 0.5) });
+  }
+  if (name && !nodeSet.has(name)) {
+    nodeSet.set(name, { id: name, name, role: 'protagonist' });
+  }
+  return jsonResponse({
+    success: true,
+    data: { nodes: [...nodeSet.values()], edges },
+  });
 }

@@ -13,7 +13,6 @@ const mockGetSkillChain = vi.fn()
 const mockCreateSkill = vi.fn()
 const mockSaveSkill = vi.fn()
 const mockDeleteSkill = vi.fn()
-const mockRenameSkill = vi.fn()
 
 vi.mock('../../api/client', () => ({
   listSkills: (...args: unknown[]) => mockListSkills(...args),
@@ -23,7 +22,6 @@ vi.mock('../../api/client', () => ({
   createSkill: (...args: unknown[]) => mockCreateSkill(...args),
   saveSkill: (...args: unknown[]) => mockSaveSkill(...args),
   deleteSkill: (...args: unknown[]) => mockDeleteSkill(...args),
-  renameSkill: (...args: unknown[]) => mockRenameSkill(...args),
 }))
 
 const stableT = {
