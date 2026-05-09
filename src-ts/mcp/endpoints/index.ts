@@ -155,6 +155,11 @@ export {
 } from './writing-craft-llm';
 
 export {
+  analysisPatternsEndpoint,
+  analysisSessionsEndpoint,
+} from './analysis';
+
+export {
   pluginListEndpoint,
   pluginExecuteEndpoint,
   pluginRegisterEndpoint,

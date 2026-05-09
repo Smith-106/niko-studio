@@ -29,6 +29,8 @@ import {
   characterProfileEndpoint,
   characterDepthEndpoint,
   characterRelationshipsEndpoint,
+  analysisPatternsEndpoint,
+  analysisSessionsEndpoint,
 } from '../endpoints';
 import type { GatewayRoute } from '../gateway-route-types';
 
@@ -73,4 +75,8 @@ export const contentRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/character\/profile$/, handler: characterProfileEndpoint },
   { method: 'POST', pattern: /^\/character\/depth$/, handler: characterDepthEndpoint },
   { method: 'POST', pattern: /^\/character\/relationships$/, handler: characterRelationshipsEndpoint },
+
+  // Analysis
+  { method: 'POST', pattern: /^\/analysis\/patterns$/, handler: analysisPatternsEndpoint },
+  { method: 'POST', pattern: /^\/analysis\/sessions$/, handler: analysisSessionsEndpoint },
 ];
