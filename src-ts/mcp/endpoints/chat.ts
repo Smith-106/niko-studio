@@ -164,6 +164,15 @@ interface ChatBody {
     controlModel?: string;
     primaryModel?: string;
   };
+  qualityGoals?: Record<string, unknown>;
+  knowledge_retrieval?: boolean;
+  search_mode?: string;
+  profile?: string;
+  min_score?: number;
+  budget_tokens?: number;
+  rerank?: boolean;
+  max_iterations?: number;
+  confidence_threshold?: number;
 }
 
 interface ChatCanonContextMatch {

@@ -60,7 +60,7 @@ export async function processWritingHelper(
   payload: WritingHelperRequest
 ): Promise<ApiResponse<WritingHelperResponse>> {
   return callApi(
-    '/writing-helper/process',
+    '/writing/helper',
     'POST',
     appendWorkspacePayload(payload as unknown as Record<string, unknown>, payload.workspace),
   )

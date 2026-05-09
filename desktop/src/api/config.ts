@@ -116,13 +116,13 @@ export const SECRET_FIELDS: string[] = [
  * Returns all 10 config sections with modifiable_fields list.
  */
 export async function getConfig(): Promise<ApiResponse<ConfigResponse>> {
-  const response = await callApi<Omit<ConfigResponse, 'modifiable_fields'>>('/config', 'GET')
+  const response = await callApi<ConfigResponse>('/config', 'GET')
   if (response.success && response.data) {
     return {
       success: true,
       data: {
         ...response.data,
-        modifiable_fields: MODIFIABLE_FIELDS,
+        modifiable_fields: response.data.modifiable_fields ?? MODIFIABLE_FIELDS,
       },
     }
   }

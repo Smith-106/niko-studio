@@ -1300,7 +1300,7 @@ describe('writing helper API', () => {
     })
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/writing-helper/process'),
+      expect.stringContaining('/writing/helper'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ content: '第一段。', mode: 'outline', max_items: 1 }),
@@ -1325,7 +1325,7 @@ describe('writing helper API', () => {
     })
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/writing-helper/process'),
+      expect.stringContaining('/writing/helper'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ content: '原始文本。', mode: 'rewrite', instruction: '更简洁' }),
@@ -1350,7 +1350,7 @@ describe('writing helper API', () => {
     })
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/writing-helper/process'),
+      expect.stringContaining('/writing/helper'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ content: '原始文本。', mode: 'rewrite', skill_ids: ['character-forge'] }),
@@ -1377,7 +1377,7 @@ describe('writing helper API', () => {
     })
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/writing-helper/process'),
+      expect.stringContaining('/writing/helper'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
@@ -1412,7 +1412,7 @@ describe('writing helper API', () => {
     })
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/writing-helper/process'),
+      expect.stringContaining('/writing/helper'),
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({

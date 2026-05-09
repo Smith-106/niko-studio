@@ -263,6 +263,14 @@ function mergeQualitySidecar(
 }
 
 // ---------------------------------------------------------------
+// SSE helper
+// ---------------------------------------------------------------
+
+function formatSseEvent(event: string, data: Record<string, unknown>): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+}
+
+// ---------------------------------------------------------------
 // Endpoints
 // ---------------------------------------------------------------
 
@@ -427,23 +435,26 @@ export async function writingStreamEndpoint(
     const prompt = buildModePrompt(mode, content, combinedInstruction)
     const systemPrompt = '你是一位专业的写作助手。请确保输出文本具有人类写作的自然特征。'
 
-    // Collect streamed chunks
-    const events: Array<{ event: string; data: Record<string, unknown> }> = []
+    const sseEvents: string[] = []
     let index = 0
 
-    events.push({ event: 'start', data: { status: 'started' } })
+    sseEvents.push(formatSseEvent('start', { status: 'started' }))
 
     for await (const chunk of streamLLM(config, prompt, systemPrompt)) {
-      events.push({
-        event: 'content',
-        data: { chunk, index },
-      })
+      sseEvents.push(formatSseEvent('content', { chunk, index }))
       index++
     }
 
-    events.push({ event: 'done', data: { status: 'completed', chunks: index, skills_used: skillIds } })
+    sseEvents.push(formatSseEvent('done', { status: 'completed', chunks: index, skills_used: skillIds }))
 
-    return jsonResponse({ streaming: true, events })
+    return {
+      statusCode: 200,
+      body: sseEvents.join(''),
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+      },
+    }
   } catch (exc) {
     const message = exc instanceof Error ? exc.message : String(exc)
     return jsonResponse({ error: message }, 500)
