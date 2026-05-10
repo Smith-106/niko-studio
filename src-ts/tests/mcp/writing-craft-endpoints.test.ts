@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { writingCraftAnalyzeEndpoint } from '../../mcp/endpoints/writing-craft.js';
+import { writingCraftLLMEndpoint } from '../../mcp/endpoints/writing-craft-llm.js';
 import type { HttpResponse } from '../../mcp/http-types.js';
 
 function mockRequest(body: Record<string, unknown>) {
@@ -15,6 +16,19 @@ function mockRequest(body: Record<string, unknown>) {
 
 function getBody(response: HttpResponse) {
   return response.body as any;
+}
+
+function mockFetchResponse(content: string, ok = true) {
+  return new Response(JSON.stringify({
+    choices: [
+      {
+        message: { content },
+      },
+    ],
+  }), {
+    status: ok ? 200 : 500,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 const SAMPLE_TEXT = `林岚站在破旧的警局走廊尽头，灯光忽明忽暗。她紧握着那封匿名信，指节发白。
@@ -121,5 +135,89 @@ describe('writingCraftAnalyzeEndpoint', () => {
     const dim = body.data.dimensions[0];
     expect(typeof dim.details.subtextRatio).toBe('number');
     expect(typeof dim.details.voiceDistinctness).toBe('number');
+  });
+});
+
+describe('writingCraftLLMEndpoint', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns 400 when LLM config is missing', async () => {
+    const response = await writingCraftLLMEndpoint(
+      mockRequest({ text: SAMPLE_TEXT }),
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(getBody(response).success).toBe(false);
+  });
+
+  it('calls the provider with the expected payload and parses the response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockFetchResponse(JSON.stringify({
+        score: 8.4,
+        evidence: ['结构清晰'],
+        suggestions: ['补强转折'],
+        analysis: '结构层次完整',
+      })),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await writingCraftLLMEndpoint(
+      mockRequest({
+        text: SAMPLE_TEXT,
+        dimension: 'structure',
+        api_key: 'sk-test',
+        base_url: 'https://api.openai.com/v1',
+        model: 'gpt-4o',
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    const body = getBody(response);
+    expect(body.success).toBe(true);
+    expect(body.data.source).toBe('llm');
+    expect(body.data.dimensions).toHaveLength(1);
+    expect(body.data.dimensions[0].dimension).toBe('structure');
+    expect(body.data.dimensions[0].score).toBe(8.4);
+    expect(body.data.dimensions[0].details.analysis).toBe('结构层次完整');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.openai.com/v1/chat/completions',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer sk-test',
+        }),
+      }),
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const requestBody = JSON.parse(String(requestInit?.body ?? '{}'));
+    expect(requestBody.model).toBe('gpt-4o');
+    expect(requestBody.messages[0].role).toBe('system');
+    expect(requestBody.messages[1].role).toBe('user');
+  });
+
+  it('returns a structured fallback when the provider fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response('server error', { status: 500 }),
+    ));
+
+    const response = await writingCraftLLMEndpoint(
+      mockRequest({
+        text: SAMPLE_TEXT,
+        dimension: 'dialogue',
+        api_key: 'sk-test',
+        base_url: 'https://api.openai.com/v1',
+        model: 'gpt-4o',
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    const body = getBody(response);
+    expect(body.data.dimensions[0].score).toBe(0);
+    expect(body.data.dimensions[0].suggestions[0]).toContain('LLM 分析失败');
   });
 });
