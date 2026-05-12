@@ -27,7 +27,7 @@ export function TopBar() {
 
       <div className="ml-auto flex items-center gap-3">
         <a
-          href="https://github.com/niconi21/niko-studio"
+          href="https://github.com/Smith-106/niko-studio"
           target="_blank"
           rel="noopener noreferrer"
           className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"

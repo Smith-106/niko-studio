@@ -19,7 +19,7 @@ niko-studio-x.x.x.dmg</code></pre>
 
 <h3>开发环境搭建</h3>
 <pre><code># 克隆仓库
-git clone https://github.com/niconi21/niko-studio.git
+git clone https://github.com/Smith-106/niko-studio.git
 cd niko-studio/desktop
 
 # 安装依赖
