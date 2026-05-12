@@ -49,6 +49,7 @@ export const contentRoutes: GatewayRoute[] = [
   { method: 'POST', pattern: /^\/wiki\/list$/, handler: wikiListEndpoint },
   { method: 'POST', pattern: /^\/wiki\/page$/, handler: wikiReadPageEndpoint },
   { method: 'POST', pattern: /^\/writing\/quality$/, handler: novelQualityCheckEndpoint },
+  { method: 'POST', pattern: /^\/writing-helper\/process$/, handler: writingHelperProcessEndpoint },
   { method: 'POST', pattern: /^\/writing\/helper$/, handler: writingHelperProcessEndpoint },
   { method: 'POST', pattern: /^\/writing\/stream$/, handler: writingStreamEndpoint },
 

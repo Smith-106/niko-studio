@@ -171,6 +171,20 @@ describe('matchGatewayRoute', () => {
     });
   });
 
+  describe('writing helper routes', () => {
+    it('matches POST /writing-helper/process', () => {
+      const result = matchGatewayRoute('POST', '/writing-helper/process', allRoutes);
+      expect(result).not.toBeNull();
+      expect(result!.route.pattern.source).toBe('^\\/writing-helper\\/process$');
+    });
+
+    it('keeps POST /writing/helper as a compatibility alias', () => {
+      const result = matchGatewayRoute('POST', '/writing/helper', allRoutes);
+      expect(result).not.toBeNull();
+      expect(result!.route.pattern.source).toBe('^\\/writing\\/helper$');
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Admin routes
   // ---------------------------------------------------------------------------
