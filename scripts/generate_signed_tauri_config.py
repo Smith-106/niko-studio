@@ -38,14 +38,24 @@ def generate_signed_config() -> Path:
     # Use when the registry KitsRoot10 entry does not match the actual signtool location
     # (common when Windows SDK was installed via Visual Studio installer to the (x86) tree).
     if signtool_path:
-        # Tauri 2 splits signCommand via shlex-like parser before spawning.
-        # When the executable path contains spaces, the safest cross-platform pattern
-        # is to keep native OS separators and wrap the path in double-quotes so the
-        # parser treats it as a single token.
-        windows["signCommand"] = (
-            f'"{signtool_path}" sign /fd sha256 /sha1 {thumbprint} '
-            f'/tr {timestamp_url} /td sha256 %1'
-        )
+        # Tauri 2 supports an object form for signCommand.
+        # Use it on Windows so executable paths with spaces are passed as a
+        # single argv entry without relying on string splitting.
+        windows["signCommand"] = {
+            "cmd": signtool_path,
+            "args": [
+                "sign",
+                "/fd",
+                "sha256",
+                "/sha1",
+                thumbprint,
+                "/tr",
+                timestamp_url,
+                "/td",
+                "sha256",
+                "%1",
+            ],
+        }
 
     OUTPUT_CONFIG_PATH.write_text(
         json.dumps(config, ensure_ascii=False, indent=2) + "\n",
