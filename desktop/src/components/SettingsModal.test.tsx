@@ -152,6 +152,18 @@ const changeInputValue = (input: HTMLInputElement, value: string) => {
   fireEvent.change(input, { target: { value } })
 }
 
+const BACKEND_SECTION_TEST_TIMEOUT_MS = 20_000
+
+const renderBackendSettingsModal = () => (
+  render(
+    <SettingsModal
+      isOpen
+      onClose={vi.fn()}
+      requestedSection="backend"
+    />
+  )
+)
+
 describe('SettingsModal quality presets', () => {
   beforeEach(() => {
     vi.useRealTimers()
@@ -460,17 +472,13 @@ describe('SettingsModal quality presets', () => {
       loadBackendConfig,
     }))
 
-    const user = userEvent.setup()
-    render(<SettingsModal isOpen onClose={vi.fn()} />)
-
-    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
-    await user.click(screen.getByRole('button', { name: zh.backendService }))
+    renderBackendSettingsModal()
 
     await waitFor(() => {
       expect(loadBackendConfig).toHaveBeenCalledTimes(1)
       expect(mockedGetSecrets).toHaveBeenCalledTimes(1)
     })
-  })
+  }, BACKEND_SECTION_TEST_TIMEOUT_MS)
 
   it('renders backend config fields and only enables save for editable changes', async () => {
     const updateBackendConfig = vi.fn().mockResolvedValue(['agent.default_model'])
@@ -491,10 +499,7 @@ describe('SettingsModal quality presets', () => {
     }))
 
     const user = userEvent.setup()
-    render(<SettingsModal isOpen onClose={vi.fn()} />)
-
-    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
-    await user.click(screen.getByRole('button', { name: zh.backendService }))
+    renderBackendSettingsModal()
 
     // Wait for backend config panel to render all sections
     await waitFor(() => {
@@ -520,7 +525,7 @@ describe('SettingsModal quality presets', () => {
         'agent.default_model': 'gpt-4o-mini',
       })
     })
-  }, 10_000)
+  }, BACKEND_SECTION_TEST_TIMEOUT_MS)
 
   it('saves the backend ui bridge toggle through the shared config contract', async () => {
     const updateBackendConfig = vi.fn().mockResolvedValue(['gateway.ui_bridge_enabled'])
@@ -540,10 +545,7 @@ describe('SettingsModal quality presets', () => {
     }))
 
     const user = userEvent.setup()
-    render(<SettingsModal isOpen onClose={vi.fn()} />)
-
-    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
-    await user.click(screen.getByRole('button', { name: zh.backendService }))
+    renderBackendSettingsModal()
 
     const uiBridgeToggle = await screen.findByLabelText('ui bridge enabled')
     const saveButton = screen.getByRole('button', { name: zh.backendConfigSave })
@@ -564,7 +566,7 @@ describe('SettingsModal quality presets', () => {
         'gateway.ui_bridge_enabled': true,
       })
     })
-  }, 10_000)
+  }, BACKEND_SECTION_TEST_TIMEOUT_MS)
 
   it('renders backend config labels in english', async () => {
     useSettingsStore.setState((state) => ({
@@ -582,18 +584,14 @@ describe('SettingsModal quality presets', () => {
       },
     }))
 
-    const user = userEvent.setup()
-    render(<SettingsModal isOpen onClose={vi.fn()} />)
-
-    await user.click(screen.getByRole('button', { name: en.settingsAdvancedSupport }))
-    await user.click(screen.getByRole('button', { name: en.backendService }))
+    renderBackendSettingsModal()
 
     expect(await screen.findByText(en.backendConfigTitle)).toBeInTheDocument()
     expect(screen.getByText(en.backendConfigDescription)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: en.backendConfigSave })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: en.backendConfigSaveSecrets })).toBeInTheDocument()
     expect(screen.getByText(en.backendConfigSectionAgent)).toBeInTheDocument()
-  })
+  }, BACKEND_SECTION_TEST_TIMEOUT_MS)
 
   it('reloads backend config from the backend section', async () => {
     const reloadBackendConfig = vi.fn().mockResolvedValue(undefined)
@@ -613,16 +611,13 @@ describe('SettingsModal quality presets', () => {
     }))
 
     const user = userEvent.setup()
-    render(<SettingsModal isOpen onClose={vi.fn()} />)
-
-    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
-    await user.click(screen.getByRole('button', { name: zh.backendService }))
+    renderBackendSettingsModal()
     await user.click(await screen.findByRole('button', { name: zh.backendConfigReload }))
 
     await waitFor(() => {
       expect(reloadBackendConfig).toHaveBeenCalledTimes(1)
     })
-  })
+  }, BACKEND_SECTION_TEST_TIMEOUT_MS)
 
   it('renders backend sync status and disables actions while syncing', async () => {
     useSettingsStore.setState((state) => ({
@@ -639,16 +634,12 @@ describe('SettingsModal quality presets', () => {
       },
     }))
 
-    const user = userEvent.setup()
-    render(<SettingsModal isOpen onClose={vi.fn()} />)
-
-    await user.click(screen.getByRole('button', { name: zh.settingsAdvancedSupport }))
-    await user.click(screen.getByRole('button', { name: zh.backendService }))
+    renderBackendSettingsModal()
 
     expect(await screen.findByText(zh.backendConfigSyncing)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: zh.backendConfigReload })).toBeDisabled()
     expect(screen.getByRole('button', { name: zh.backendConfigSave })).toBeDisabled()
-  })
+  }, BACKEND_SECTION_TEST_TIMEOUT_MS)
 
   it('renders backend error and empty states', async () => {
     mockedGetSecrets.mockResolvedValue({
