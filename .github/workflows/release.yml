@@ -139,6 +139,13 @@ jobs:
         run: npm run build:sidecar
         working-directory: desktop
 
+      - name: Create temporary externalBin placeholders
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path desktop/src-tauri/bin | Out-Null
+          New-Item -ItemType File -Force -Path desktop/src-tauri/bin/niko-gateway.exe | Out-Null
+          New-Item -ItemType File -Force -Path desktop/src-tauri/bin/niko-gateway-x86_64-pc-windows-msvc.exe | Out-Null
+
       - name: Build gateway launcher
         run: cargo build --release --bin niko-gateway-launcher
         working-directory: desktop/src-tauri

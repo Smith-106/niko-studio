@@ -19,7 +19,7 @@ import { EventEmitter } from 'events'
 // Version - authoritative release version for cross-surface consistency checks
 // ---------------------------------------------------------------------------
 
-const APP_VERSION = '9.25.5'
+const APP_VERSION = '9.25.6'
 
 // ---------------------------------------------------------------------------
 // Enum & helper types

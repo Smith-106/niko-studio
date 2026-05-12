@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Niko-Studio",
-  "version": "9.25.5",
+  "version": "9.25.6",
   "identifier": "com.nikostudio.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
