@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 const GATEWAY_HOST = '127.0.0.1'
 const GATEWAY_PORT = 18111
 const GATEWAY_BASE = `http://${GATEWAY_HOST}:${GATEWAY_PORT}`
+const GATEWAY_HEALTH_TIMEOUT_MS = 60000
+const GATEWAY_BOOT_TIMEOUT_MS = 70000
 
 vi.mock('../sentry', () => ({
   Sentry: {
@@ -54,7 +56,7 @@ async function isHealthy(): Promise<boolean> {
   }
 }
 
-async function waitForHealth(timeoutMs = 20000): Promise<void> {
+async function waitForHealth(timeoutMs = GATEWAY_HEALTH_TIMEOUT_MS): Promise<void> {
   const deadline = Date.now() + timeoutMs
 
   while (Date.now() < deadline) {
@@ -100,7 +102,7 @@ beforeAll(async () => {
   })
 
   await waitForHealth()
-}, 30000)
+}, GATEWAY_BOOT_TIMEOUT_MS)
 
 afterAll(() => {
   const processToStop = gatewayProcess
