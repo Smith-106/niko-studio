@@ -2559,7 +2559,11 @@ def unresolved_triage_blocker_signal(sessions_root: Path) -> tuple[str, int, str
                     ("linked_triage_records", 0),
                     ("unresolved_triage_records", 0),
                     ("invalid_state_files", 0),
-                    ("blocker_semantics", "triage_state_not_in_{resolved,rejected}"),
+                    ("ignored_legacy_records", 0),
+                    (
+                        "blocker_semantics",
+                        "current_parseable_triage_state_not_in_{resolved,rejected}_and_not_legacy_noise",
+                    ),
                     ("decision", "go"),
                 ]
             ),
@@ -2569,6 +2573,7 @@ def unresolved_triage_blocker_signal(sessions_root: Path) -> tuple[str, int, str
     linked_count = 0
     unresolved_count = 0
     invalid_count = 0
+    ignored_legacy_count = 0
 
     for state_path in state_paths:
         try:
@@ -2579,6 +2584,11 @@ def unresolved_triage_blocker_signal(sessions_root: Path) -> tuple[str, int, str
 
         if not isinstance(payload, dict):
             invalid_count += 1
+            continue
+
+        session_status = str(payload.get("status") or "").strip().lower()
+        if session_status in {"completed", "archived", "superseded"}:
+            ignored_legacy_count += 1
             continue
 
         metadata = payload.get("metadata")
@@ -2593,6 +2603,10 @@ def unresolved_triage_blocker_signal(sessions_root: Path) -> tuple[str, int, str
             handoff = payload.get("handoff_package")
             if isinstance(handoff, dict):
                 triage_state = str(handoff.get("triage_state") or "").strip().lower()
+
+        if triage_state in {"legacy", "invalid", "superseded", "stale"}:
+            ignored_legacy_count += 1
+            continue
 
         if not triage_state:
             invalid_count += 1
@@ -2614,7 +2628,11 @@ def unresolved_triage_blocker_signal(sessions_root: Path) -> tuple[str, int, str
                 ("linked_triage_records", linked_count),
                 ("unresolved_triage_records", unresolved_count),
                 ("invalid_state_files", invalid_count),
-                ("blocker_semantics", "triage_state_not_in_{resolved,rejected}"),
+                ("ignored_legacy_records", ignored_legacy_count),
+                (
+                    "blocker_semantics",
+                    "current_parseable_triage_state_not_in_{resolved,rejected}_and_not_legacy_noise",
+                ),
                 ("decision", "no_go" if has_blocker else "go"),
             ]
         ),

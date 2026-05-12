@@ -17,6 +17,18 @@ from types import ModuleType
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+EXPECTED_DESKTOP_CAPABILITY_PERMISSIONS = [
+    "core:default",
+    "process:default",
+    "updater:default",
+    "fs:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
+    "fs:allow-read-dir",
+    "fs:allow-remove",
+]
 
 
 def load_script_module(relative_path: str, module_name: str) -> ModuleType:
@@ -302,11 +314,25 @@ def build_sidecar_contract_fixture(
         capability_path: {
             "identifier": "main-desktop",
             "windows": ["main"],
-            "permissions": capability_permissions or ["core:default"],
+            "permissions": list(capability_permissions or EXPECTED_DESKTOP_CAPABILITY_PERMISSIONS),
         },
     }
 
     return exists_paths, json_files
+
+
+def write_triage_state_fixture(
+    sessions_root: Path,
+    session_name: str,
+    payload: object,
+) -> Path:
+    state_path = sessions_root / "active" / session_name / ".data" / "state.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return state_path
 
 
 def test_authority_alignment_checker_passes_current_repo() -> None:
@@ -1203,6 +1229,116 @@ def test_local_selftest_enforcement_signal_returns_fail_for_non_green_release_ev
     assert "decision=run_local_selftest_before_go" in detail
 
 
+def test_unresolved_triage_blocker_signal_returns_pass_for_missing_sessions_root() -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_triage_missing_root",
+    )
+
+    status, exit_code, detail = module.unresolved_triage_blocker_signal(
+        PROJECT_ROOT / ".workflow" / "tests-do-not-create"
+    )
+
+    assert status == "PASS"
+    assert exit_code == 0
+    assert "state_files_scanned=0" in detail
+    assert "linked_triage_records=0" in detail
+    assert "unresolved_triage_records=0" in detail
+    assert "ignored_legacy_records=0" in detail
+    assert (
+        "blocker_semantics=current_parseable_triage_state_not_in_{resolved,rejected}_and_not_legacy_noise"
+        in detail
+    )
+    assert "decision=go" in detail
+
+
+def test_unresolved_triage_blocker_signal_ignores_legacy_noise_records(
+    tmp_path: Path,
+) -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_triage_legacy_noise",
+    )
+
+    sessions_root = tmp_path / ".writing" / "sessions"
+    write_triage_state_fixture(
+        sessions_root,
+        "completed-session",
+        {
+            "status": "completed",
+            "metadata": {"triage_state": "investigating"},
+        },
+    )
+    write_triage_state_fixture(
+        sessions_root,
+        "legacy-session",
+        {
+            "status": "active",
+            "metadata": {"triage_state": "legacy"},
+        },
+    )
+    write_triage_state_fixture(
+        sessions_root,
+        "stale-session",
+        {
+            "status": "active",
+            "handoff_package": {"triage_state": "stale"},
+        },
+    )
+
+    status, exit_code, detail = module.unresolved_triage_blocker_signal(sessions_root)
+
+    assert status == "PASS"
+    assert exit_code == 0
+    assert "state_files_scanned=3" in detail
+    assert "linked_triage_records=0" in detail
+    assert "unresolved_triage_records=0" in detail
+    assert "invalid_state_files=0" in detail
+    assert "ignored_legacy_records=3" in detail
+    assert "decision=go" in detail
+
+
+def test_unresolved_triage_blocker_signal_returns_fail_for_current_unresolved_state(
+    tmp_path: Path,
+) -> None:
+    module = load_script_module(
+        "scripts/release_check_summary.py",
+        "test_release_check_summary_triage_current_unresolved",
+    )
+
+    sessions_root = tmp_path / ".writing" / "sessions"
+    write_triage_state_fixture(
+        sessions_root,
+        "active-unresolved",
+        {
+            "status": "active",
+            "metadata": {"triage_state": "investigating"},
+        },
+    )
+    write_triage_state_fixture(
+        sessions_root,
+        "active-resolved",
+        {
+            "status": "active",
+            "metadata": {"triage_state": "resolved"},
+        },
+    )
+
+    status, exit_code, detail = module.unresolved_triage_blocker_signal(sessions_root)
+
+    assert status == "FAIL"
+    assert exit_code == 1
+    assert "state_files_scanned=2" in detail
+    assert "linked_triage_records=2" in detail
+    assert "unresolved_triage_records=1" in detail
+    assert "ignored_legacy_records=0" in detail
+    assert (
+        "blocker_semantics=current_parseable_triage_state_not_in_{resolved,rejected}_and_not_legacy_noise"
+        in detail
+    )
+    assert "decision=no_go" in detail
+
+
 def test_package_e2e_acceptance_signal_returns_pass_for_fresh_current_artifact() -> None:
     module = load_script_module(
         "scripts/release_check_summary.py",
@@ -1753,6 +1889,81 @@ def test_release_summary_and_sign_off_share_desktop_authoritative_gate() -> None
     assert "package:e2e:checklist" in desktop_readme
 
 
+def test_refresh_release_evidence_accepts_refreshed_no_go_summary(tmp_path: Path) -> None:
+    module = load_script_module(
+        "scripts/refresh_release_evidence.py",
+        "test_refresh_release_evidence_accepts_no_go",
+    )
+
+    report_path = tmp_path / "release-check-summary.md"
+    artifact_path = tmp_path / "release-readiness-artifact.json"
+    report_path.write_text("# Release Check Summary\n", encoding="utf-8")
+    artifact_path.write_text(
+        json.dumps({"decision": "NO_GO"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    decision = module._validate_consolidated_summary_refresh(
+        1,
+        report_path,
+        artifact_path,
+        None,
+        None,
+    )
+
+    assert decision == "NO_GO"
+
+
+def test_refresh_release_evidence_rejects_unexpected_summary_failure(tmp_path: Path) -> None:
+    module = load_script_module(
+        "scripts/refresh_release_evidence.py",
+        "test_refresh_release_evidence_rejects_unexpected_exit",
+    )
+
+    report_path = tmp_path / "release-check-summary.md"
+    artifact_path = tmp_path / "release-readiness-artifact.json"
+    report_path.write_text("# Release Check Summary\n", encoding="utf-8")
+    artifact_path.write_text(
+        json.dumps({"decision": "NO_GO"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="consolidated release summary failed"):
+        module._validate_consolidated_summary_refresh(
+            2,
+            report_path,
+            artifact_path,
+            None,
+            None,
+        )
+
+
+def test_refresh_release_evidence_requires_updated_artifacts(tmp_path: Path) -> None:
+    module = load_script_module(
+        "scripts/refresh_release_evidence.py",
+        "test_refresh_release_evidence_requires_updated_artifacts",
+    )
+
+    report_path = tmp_path / "release-check-summary.md"
+    artifact_path = tmp_path / "release-readiness-artifact.json"
+    report_path.write_text("# Release Check Summary\n", encoding="utf-8")
+    artifact_path.write_text(
+        json.dumps({"decision": "GO"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    previous_report_mtime_ns = report_path.stat().st_mtime_ns
+    previous_artifact_mtime_ns = artifact_path.stat().st_mtime_ns
+
+    with pytest.raises(RuntimeError, match="did not refresh"):
+        module._validate_consolidated_summary_refresh(
+            0,
+            report_path,
+            artifact_path,
+            previous_report_mtime_ns,
+            previous_artifact_mtime_ns,
+        )
+
+
 def test_signed_release_path_uses_generated_tauri_config_without_repo_config_edit() -> None:
     package_json = json.loads((PROJECT_ROOT / "desktop/package.json").read_text(encoding="utf-8"))
     signing_source = (PROJECT_ROOT / "scripts/generate_signed_tauri_config.py").read_text(
@@ -1933,6 +2144,7 @@ def test_sidecar_contract_validator_keeps_node_authority_and_python_packaging_co
     assert "authoritative local runtime remains node-first" in logs
     assert "packaged externalBin stays on the python compatibility sidecar" in logs
     assert "node sidecar is repo-local only and not claimed as a packaged binary" in logs
+    assert "frontend capability matches the explicit desktop permission contract" in logs
     assert "✅ All contracts validated successfully" in logs
 
 
@@ -2008,8 +2220,9 @@ def test_sidecar_contract_validator_fails_strict_mode_when_capability_boundary_e
 
     logs = "\n".join(result["logs"])
     errors = "\n".join(result["errors"])
+    expected_permissions = ", ".join(sorted(EXPECTED_DESKTOP_CAPABILITY_PERMISSIONS))
 
     assert result["exitCode"] == 1
-    assert "frontend capability is limited to core invoke access" in logs
-    assert "permissions=core:default, shell:allow-open" in logs
+    assert "frontend capability matches the explicit desktop permission contract" in logs
+    assert f"expected={expected_permissions}; actual=core:default, shell:allow-open" in logs
     assert "Contract validation FAILED (strict mode)" in errors

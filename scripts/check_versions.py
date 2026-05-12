@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+AUTHORITATIVE_VERSION_SOURCE = "src-ts/config/index.ts:APP_VERSION"
 
 
 def read_typescript_app_version() -> str:
@@ -45,7 +46,7 @@ def main() -> int:
     expected = read_typescript_app_version()
 
     checks = {
-        "src-ts/config/index.ts:APP_VERSION": expected,
+        AUTHORITATIVE_VERSION_SOURCE: expected,
         "src-ts/package.json": read_json_version(PROJECT_ROOT / "src-ts" / "package.json"),
         "config/niko-studio.yaml": read_yaml_version(PROJECT_ROOT / "config" / "niko-studio.yaml"),
         "config/niko-studio.production.yaml": read_yaml_version(
@@ -62,6 +63,7 @@ def main() -> int:
 
     mismatches = {name: value for name, value in checks.items() if value != expected}
 
+    print(f"authoritative source: {AUTHORITATIVE_VERSION_SOURCE}")
     print(f"expected version: {expected}")
     for name, value in checks.items():
         print(f"- {name}: {value}")

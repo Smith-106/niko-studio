@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -14,6 +15,10 @@ import urllib.request
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPORT_PATH = PROJECT_ROOT / "release-check-summary.md"
+RELEASE_READINESS_ARTIFACT_PATH = (
+    PROJECT_ROOT / ".workflow" / "evidence" / "release" / "release-readiness-artifact.json"
+)
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 18080
 DEFAULT_LOG_LEVEL = "warning"
@@ -37,7 +42,70 @@ def _format_command(command: list[str]) -> str:
     return " ".join(command)
 
 
-def run_step(label: str, command: list[str], env: dict[str, str] | None = None) -> None:
+def _mtime_ns(path: Path) -> int | None:
+    try:
+        return path.stat().st_mtime_ns
+    except OSError:
+        return None
+
+
+def _validate_consolidated_summary_refresh(
+    exit_code: int,
+    report_path: Path,
+    artifact_path: Path,
+    previous_report_mtime_ns: int | None,
+    previous_artifact_mtime_ns: int | None,
+) -> str:
+    if exit_code not in {0, 1}:
+        raise RuntimeError(f"consolidated release summary failed (exit={exit_code}).")
+
+    if not report_path.exists():
+        raise RuntimeError(f"consolidated release summary did not write {report_path}.")
+    if not artifact_path.exists():
+        raise RuntimeError(f"consolidated release summary did not write {artifact_path}.")
+
+    report_mtime_ns = _mtime_ns(report_path)
+    artifact_mtime_ns = _mtime_ns(artifact_path)
+    if previous_report_mtime_ns is not None and report_mtime_ns is not None:
+        if report_mtime_ns <= previous_report_mtime_ns:
+            raise RuntimeError(f"consolidated release summary did not refresh {report_path}.")
+    if previous_artifact_mtime_ns is not None and artifact_mtime_ns is not None:
+        if artifact_mtime_ns <= previous_artifact_mtime_ns:
+            raise RuntimeError(f"consolidated release summary did not refresh {artifact_path}.")
+
+    try:
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            f"consolidated release summary wrote an unreadable artifact: {artifact_path} ({exc})"
+        ) from exc
+
+    decision = str(payload.get("decision") or "").strip().upper()
+    if decision not in {"GO", "NO_GO"}:
+        raise RuntimeError(
+            "consolidated release summary produced an unknown decision: "
+            f"{decision or 'missing'}"
+        )
+    if exit_code == 0 and decision != "GO":
+        raise RuntimeError(
+            f"consolidated release summary exited 0 but artifact decision is {decision}."
+        )
+    if exit_code == 1 and decision != "NO_GO":
+        raise RuntimeError(
+            f"consolidated release summary exited 1 but artifact decision is {decision}."
+        )
+
+    return decision
+
+
+def run_step(
+    label: str,
+    command: list[str],
+    env: dict[str, str] | None = None,
+    *,
+    allowed_exit_codes: tuple[int, ...] = (0,),
+    announce_success: bool = True,
+) -> int:
     merged_env = os.environ.copy()
     if env:
         merged_env.update(env)
@@ -45,9 +113,11 @@ def run_step(label: str, command: list[str], env: dict[str, str] | None = None) 
     print(f"\n==> {label}")
     print(f"$ {_format_command(command)}")
     completed = subprocess.run(command, cwd=PROJECT_ROOT, env=merged_env, check=False)
-    if completed.returncode != 0:
+    if completed.returncode not in allowed_exit_codes:
         raise RuntimeError(f"{label} failed (exit={completed.returncode}).")
-    print(f"[PASS] {label}")
+    if announce_success:
+        print(f"[PASS] {label}")
+    return completed.returncode
 
 
 def _wait_for_gateway_health(host: str, port: int, timeout_seconds: int) -> None:
@@ -179,10 +249,22 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         _stop_gateway(gateway_process)
 
-    run_step(
+    previous_report_mtime_ns = _mtime_ns(REPORT_PATH)
+    previous_artifact_mtime_ns = _mtime_ns(RELEASE_READINESS_ARTIFACT_PATH)
+    summary_exit_code = run_step(
         "consolidated release summary",
         [sys.executable, "scripts/release_check_summary.py"],
+        allowed_exit_codes=(0, 1),
+        announce_success=False,
     )
+    decision = _validate_consolidated_summary_refresh(
+        summary_exit_code,
+        REPORT_PATH,
+        RELEASE_READINESS_ARTIFACT_PATH,
+        previous_report_mtime_ns,
+        previous_artifact_mtime_ns,
+    )
+    print(f"[PASS] consolidated release summary ({decision})")
 
     print("\nRelease evidence refresh: PASS")
     print("Primary artifacts:")
@@ -190,6 +272,8 @@ def main(argv: list[str] | None = None) -> int:
     print("- .workflow/evidence/release/authority-alignment.json")
     print("- .workflow/evidence/release/release-readiness-artifact.json")
     print("- release-check-summary.md")
+    if decision != "GO":
+        print("Current release decision remains NO_GO; retained evidence is refreshed and blockers are current-head accurate.")
     return 0
 
 

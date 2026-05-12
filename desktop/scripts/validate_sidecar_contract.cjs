@@ -48,6 +48,18 @@ const EXPECTED_EXTERNAL_BIN = 'bin/niko-gateway';
 const AUTHORITATIVE_RUNTIME = 'node';
 const PACKAGED_COMPAT_RUNTIME = 'python';
 const REQUIRE_PACKAGED_COMPAT_ARTIFACT = process.platform === 'win32';
+const EXPECTED_FRONTEND_PERMISSIONS = [
+  'core:default',
+  'process:default',
+  'updater:default',
+  'fs:default',
+  'fs:allow-read-text-file',
+  'fs:allow-write-text-file',
+  'fs:allow-exists',
+  'fs:allow-mkdir',
+  'fs:allow-read-dir',
+  'fs:allow-remove',
+];
 
 // Contract definitions
 const CONTRACTS = {
@@ -84,6 +96,10 @@ function checkFileExists(filename) {
 
 function readJson(filepath) {
   return JSON.parse(fs.readFileSync(filepath, 'utf8'));
+}
+
+function normalizePermissionList(permissions) {
+  return permissions.filter(Boolean).slice().sort();
 }
 
 function resolveCurrentTargetTriple() {
@@ -188,6 +204,8 @@ function validateSecurityBoundary() {
   const configuredCapabilities = Array.isArray(security.capabilities) ? security.capabilities : [];
   const capabilityPermissions = Array.isArray(capability.permissions) ? capability.permissions : [];
   const capabilityWindows = Array.isArray(capability.windows) ? capability.windows : [];
+  const expectedCapabilityPermissions = normalizePermissionList(EXPECTED_FRONTEND_PERMISSIONS);
+  const actualCapabilityPermissions = normalizePermissionList(capabilityPermissions);
 
   const checks = [
     {
@@ -235,11 +253,15 @@ function validateSecurityBoundary() {
       detail: `identifier=${capability.identifier}; windows=${capabilityWindows.join(', ') || '(none)'}`,
     },
     {
-      label: 'frontend capability is limited to core invoke access',
+      label: 'frontend capability matches the explicit desktop permission contract',
       pass:
-        capabilityPermissions.length === 1 &&
-        capabilityPermissions[0] === 'core:default',
-      detail: `permissions=${capabilityPermissions.join(', ') || '(none)'}`,
+        capabilityPermissions.length === EXPECTED_FRONTEND_PERMISSIONS.length &&
+        actualCapabilityPermissions.every(
+          (permission, index) => permission === expectedCapabilityPermissions[index],
+        ),
+      detail:
+        `expected=${expectedCapabilityPermissions.join(', ') || '(none)'}; ` +
+        `actual=${actualCapabilityPermissions.join(', ') || '(none)'}`,
     },
   ];
 

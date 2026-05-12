@@ -16,10 +16,10 @@ import * as path from 'path'
 import { EventEmitter } from 'events'
 
 // ---------------------------------------------------------------------------
-// Version - matches Python __version__
+// Version - authoritative release version for cross-surface consistency checks
 // ---------------------------------------------------------------------------
 
-const APP_VERSION = '9.2.5'
+const APP_VERSION = '9.13.0'
 
 // ---------------------------------------------------------------------------
 // Enum & helper types

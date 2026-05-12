@@ -1,10 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-desktop",
-  "description": "Writer-facing main window IPC boundary. The desktop webview only receives core invoke access; shell, dialog, fs, http, and notification plugin APIs stay unavailable to frontend code.",
+  "description": "Writer-facing main window IPC boundary. The desktop webview receives core invoke access plus updater, process relaunch, and filesystem plugin calls required by local template, workflow, and project storage; shell, dialog, http, and notification plugin APIs stay unavailable to frontend code.",
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "process:default",
     "updater:default",
     "fs:default",
     "fs:allow-read-text-file",

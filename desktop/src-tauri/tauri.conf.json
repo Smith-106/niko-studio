@@ -64,9 +64,9 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "certificateThumbprint": "",
+      "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": "http://timestamp.digicert.com",
+      "timestampUrl": "",
       "wix": {
         "language": [
           "zh-CN",

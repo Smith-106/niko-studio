@@ -147,6 +147,7 @@ class TestCheckVersionsMain:
         monkeypatch.setattr(check_versions, "PROJECT_ROOT", tmp_path)
         assert check_versions.main() == 0
         captured = capsys.readouterr()
+        assert check_versions.AUTHORITATIVE_VERSION_SOURCE in captured.out
         assert "9.9.9" in captured.out
         assert "通过" in captured.out
 
@@ -161,6 +162,23 @@ class TestCheckVersionsMain:
         captured = capsys.readouterr()
         assert "desktop/package.json" in captured.out
         assert "1.0.0" in captured.out
+
+    def test_treats_app_version_as_authoritative_release_source(
+        self, check_versions, tmp_path, monkeypatch, capsys
+    ) -> None:
+        _seed_consistent_repo(tmp_path, "9.13.0")
+        (tmp_path / "src-ts" / "config" / "index.ts").write_text(
+            'export const APP_VERSION = "9.2.5";\n', encoding="utf-8"
+        )
+        monkeypatch.setattr(check_versions, "PROJECT_ROOT", tmp_path)
+
+        assert check_versions.main() == 1
+
+        captured = capsys.readouterr()
+        assert check_versions.AUTHORITATIVE_VERSION_SOURCE in captured.out
+        assert "expected version: 9.2.5" in captured.out
+        assert "src-ts/package.json" in captured.out
+        assert "desktop/package.json" in captured.out
 
 
 # ---------------------------------------------------------------------------

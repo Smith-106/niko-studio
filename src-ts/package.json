@@ -1,6 +1,6 @@
 {
   "name": "niko-studio-backend",
-  "version": "9.2.5",
+  "version": "9.13.0",
   "description": "TypeScript backend for Niko Studio - migrated from Python",
   "type": "module",
   "scripts": {

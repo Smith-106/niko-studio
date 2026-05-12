@@ -154,6 +154,9 @@ const changeInputValue = (input: HTMLInputElement, value: string) => {
 
 describe('SettingsModal quality presets', () => {
   beforeEach(() => {
+    vi.useRealTimers()
+    vi.clearAllMocks()
+    mockedGetSecrets.mockReset()
     localStorage.clear()
     useSettingsStore.getState().resetSettings()
     useAppStore.setState({
