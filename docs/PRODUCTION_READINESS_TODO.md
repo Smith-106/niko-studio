@@ -1,7 +1,7 @@
 # Niko Studio 项目开发完成度评估 — 收口归档
 
 **当前状态日期**: 2026-05-12  
-**当前版本**: v9.13.0 Platform Edition  
+**当前版本**: v9.25.0 Platform Edition  
 **当前发布结论**: `Decision: GO`（见 `release-check-summary.md`）  
 **当前完成度评分**: 100/100（Release Ready）
 

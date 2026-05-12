@@ -1,5 +1,20 @@
 # Changelog
 
+## [9.25.0] - 2026-05-12
+
+### Changed
+- 同步全局版本号 `9.13.0 → 9.25.0`，统一 `desktop`、`src-ts`、Tauri manifest、Cargo manifest 与运行时配置的 release 口径，消除 `version_consistency` 门禁阻断。
+- 更新当前生产 readiness 归档到 `v9.25.0`，将项目完成度文档口径收敛到当前 `GO` 状态。
+
+### Fixed
+- 收口 release gate 阻断项，修复本地发布验收链路中的版本漂移问题，重新生成 `9.25.0` 安装包并通过 retained evidence 验证。
+- 为角色画像五维评分补齐空值兜底，避免评分字段缺失时造成前端异常或错误显示。
+- 补齐 `writing-helper/process` 兼容路由，恢复 writing helper 主流程与既有入口的兼容性。
+
+### Verification
+- `python scripts/check_versions.py`
+- 当前 retained release evidence 已刷新到 `v9.25.0`，并在本地 sign-off 下达到 `Decision: GO`。
+
 ## [9.2.5] - 2026-05-01
 
 ### Changed
