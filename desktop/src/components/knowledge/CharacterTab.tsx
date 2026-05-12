@@ -111,7 +111,7 @@ export function CharacterTab(props: CharacterTabProps) {
               <div className="text-gray-500 dark:text-dark-text-secondary mt-1">
                 {t.knowledgeDepthLevel}: {String(profile.five_dimension_score?.depth_level ?? '—')}
                 {' | '}
-                {t.knowledgeDepthScores}: {String(Math.round(Number(profile.five_dimension_score?.overall) ?? 0))}
+                {t.knowledgeDepthScores}: {String(Math.round(Number(profile.five_dimension_score?.overall ?? 0)))}
               </div>
             </div>
 

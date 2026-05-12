@@ -22,6 +22,12 @@ const persistedGraph = vi.hoisted(() => ({
   failEntityType: null as 'Character' | null,
 }))
 
+const knowledgeApiMocks = vi.hoisted(() => ({
+  getCharacterProfile: vi.fn(),
+  analyzeCharacterDepth: vi.fn(),
+  getCharacterRelationships: vi.fn(),
+}))
+
 function extractBalancedObject(text: string, startIndex: number) {
   let depth = 0
   let inString = false
@@ -90,6 +96,12 @@ vi.mock('../../api/client', () => ({
   }),
 }))
 
+vi.mock('../../api/knowledge', () => ({
+  getCharacterProfile: knowledgeApiMocks.getCharacterProfile,
+  analyzeCharacterDepth: knowledgeApiMocks.analyzeCharacterDepth,
+  getCharacterRelationships: knowledgeApiMocks.getCharacterRelationships,
+}))
+
 function CharacterHarness(props: { searchQuery?: string }) {
   const [items, setItems] = useState<KnowledgeItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -121,6 +133,9 @@ describe('CharacterTab', () => {
     console.error = vi.fn()
     persistedGraph.characters = []
     persistedGraph.failEntityType = null
+    knowledgeApiMocks.getCharacterProfile.mockReset()
+    knowledgeApiMocks.analyzeCharacterDepth.mockReset()
+    knowledgeApiMocks.getCharacterRelationships.mockReset()
     useAppStore.setState({
       backendStatus: false,
       currentWorkspace: createDefaultProjectWorkspaceContext(),
@@ -292,5 +307,30 @@ describe('CharacterTab', () => {
       // After loading completes, the empty state shows
       expect(screen.getByText('当前工作区还没有角色条目。')).toBeInTheDocument()
     })
+  })
+
+  it('falls back to 0 when profile overall score is missing', { timeout: 15_000 }, async () => {
+    const user = userEvent.setup()
+    knowledgeApiMocks.getCharacterProfile.mockResolvedValue({
+      success: true,
+      data: {
+        data: {
+          id: 'profile-1',
+          name: 'Alice',
+          role: '主角',
+          five_dimension_score: {
+            depth_level: 'A',
+          },
+        },
+      },
+    })
+
+    render(<CharacterHarness />)
+
+    await user.type(await screen.findByLabelText('角色名'), 'Alice')
+    await user.click(screen.getByRole('button', { name: '加载档案' }))
+
+    expect(await screen.findByText('Alice (主角)')).toBeInTheDocument()
+    expect(screen.getByText(/五维评分/)).toHaveTextContent('五维评分: 0')
   })
 })
