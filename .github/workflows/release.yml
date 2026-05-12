@@ -139,6 +139,14 @@ jobs:
         run: npm run build:sidecar
         working-directory: desktop
 
+      - name: Build gateway launcher
+        run: cargo build --release --bin niko-gateway-launcher
+        working-directory: desktop/src-tauri
+
+      - name: Hydrate packaged gateway artifact
+        run: npm run hydrate:packaged-compat
+        working-directory: desktop
+
       - name: Build Tauri app
         run: npm run tauri -- build
         working-directory: desktop
