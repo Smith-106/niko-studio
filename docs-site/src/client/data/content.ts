@@ -1,4 +1,5 @@
 import { gettingStartedContent } from './content-getting-started';
+import { guidesContent } from './content-guides';
 import { writingContent } from './content-writing';
 import { graphContent } from './content-graph';
 import { criticContent } from './content-critic';
@@ -13,6 +14,7 @@ import { apiContent } from './content-api';
 
 const contentMap: Record<string, string> = {
   ...gettingStartedContent,
+  ...guidesContent,
   ...writingContent,
   ...graphContent,
   ...criticContent,

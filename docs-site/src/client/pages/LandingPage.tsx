@@ -18,7 +18,7 @@ const tintColors: Record<string, string> = {
 };
 
 const quickLinks = [
-  { title: '先跑通桌面应用', description: '了解运行形态、安装方式和开发启动命令。', to: '/getting-started/installation' },
+  { title: '先选学习路径', description: '按写作者、开发者、集成者或维护者身份选择阅读顺序。', to: '/guides/learning-paths' },
   { title: '完成第一次分析', description: '从创建作品到查看证据和建议，快速进入可用状态。', to: '/getting-started/quickstart' },
   { title: '理解工作台', description: '查看编辑器、写作面板、Story Bible 和 AI 执行链路。', to: '/desktop/editor-integration' },
   { title: '查看架构与 API', description: '面向开发者理解 Gateway、数据流和服务端点。', to: '/architecture/system-overview' },

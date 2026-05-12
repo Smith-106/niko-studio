@@ -37,6 +37,15 @@ export const apiContent: Record<string, string> = {
     <tr><td>Workflow</td><td><code>POST /workflow/plan</code>、<code>POST /workflow/execute</code></td><td>规划、执行、生命周期。</td></tr>
   </tbody>
 </table>
+<h2>请求示例</h2>
+<pre><code>GET /health</code></pre>
+<pre><code>POST /chat
+{
+  "messages": [{ "role": "user", "content": "帮我检查这一章的节奏" }],
+  "workspace": {},
+  "allowLlmFallback": true
+}</code></pre>
+<p>从外部工具调用时，使用本地基址 <code>http://localhost:8000</code>，例如先访问 <code>GET http://localhost:8000/health</code> 确认 Gateway 存活，再提交写作请求。</p>
 <h2>请求流转</h2>
 <ol>
   <li>前端通过 service 层发起请求，并携带当前 workspace、selection 和 intent。</li>
@@ -44,6 +53,22 @@ export const apiContent: Record<string, string> = {
   <li>路由到分析引擎、知识引擎、Agent 或模型调用链。</li>
   <li>返回结构化结果，供 UI 渲染分数、证据和建议。</li>
 </ol>
+<h2>失败行为</h2>
+<table>
+  <thead><tr><th>现象</th><th>优先检查</th><th>相关页面</th></tr></thead>
+  <tbody>
+    <tr><td>Gateway 无响应</td><td>先查 <code>GET /health</code>，再确认本地启动脚本是否完成。</td><td>健康检查、配置 API。</td></tr>
+    <tr><td>模型列表为空</td><td>查看 <code>GET /config</code> 和 <code>GET /models</code>，确认 provider、default model 和密钥状态。</td><td>LLM 集成、配置 API。</td></tr>
+    <tr><td>上下文缺失</td><td><code>POST /workspace/context</code> 是否带有当前项目。</td><td>Workspace API。</td></tr>
+  </tbody>
+</table>
+<h2>相关页面</h2>
+<ul>
+  <li><code>/guides/capability-routing</code>：从用户意图选择 API、Agent、Wiki 或 Workflow 能力。</li>
+  <li><code>/api/health-api</code>：按 health、models、tools、metrics 顺序确认服务状态。</li>
+  <li><code>/api/config-api</code>：检查配置、masked secrets 和 reload 行为。</li>
+  <li><code>/desktop/llm-integration</code>：理解模型配置和 Gateway 调用链。</li>
+</ul>
   `,
   'writing-api': `
 <h2>写作 API</h2>
@@ -164,10 +189,14 @@ POST /sync/pull</code></pre>
 GET /metrics
 GET /tools
 GET /models</code></pre>
+<h2>失败行为</h2>
+<p>如果 <code>/health</code> 失败，优先确认本地 Gateway 是否启动；如果 <code>/models</code> 为空，优先检查 provider 配置、default model 和密钥；如果 <code>/tools</code> 缺少能力，确认当前 runtime 是否加载了对应模块。</p>
 <h2>排查顺序</h2>
 <ol>
   <li><code>/health</code> 确认 Gateway 是否存活。</li>
+  <li><code>/config</code> 确认 provider、default model 和 masked secrets 是否配置。</li>
   <li><code>/models</code> 确认模型配置是否可见。</li>
+  <li><code>/config/reload</code> 在配置变更后触发热重载。</li>
   <li><code>/tools</code> 确认可用能力是否注册。</li>
   <li><code>/metrics</code> 观察调用和错误趋势。</li>
 </ol>
@@ -182,6 +211,12 @@ PUT /config/secrets
 POST /config/reload</code></pre>
 <h2>配置边界</h2>
 <p>前端通过设置页表达偏好，Gateway 负责读取和应用配置。密钥类配置应避免进入日志、截图和公开文档示例。</p>
+<h2>失败行为</h2>
+<ul>
+  <li>配置读取失败时，先确认 Gateway 可通过 <code>GET /health</code> 访问。</li>
+  <li>密钥列表只应返回 masked secrets；不要把真实 secret 写入日志、截图或示例。</li>
+  <li>模型变更后如果 <code>GET /models</code> 未更新，执行 <code>POST /config/reload</code> 后再检查。</li>
+</ul>
   `,
   'plugin-api': `
 <h2>插件 API</h2>

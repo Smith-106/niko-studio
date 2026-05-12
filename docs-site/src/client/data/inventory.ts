@@ -26,6 +26,12 @@ export const categories: Category[] = [
     icon: '🚀',
   },
   {
+    id: 'guides',
+    name: '指南',
+    description: '能力路由、学习路径、状态矩阵和文档阅读指南',
+    icon: '🧭',
+  },
+  {
     id: 'writing',
     name: '写作智能',
     description: '写作技法分析、叙事结构、角色画像等 AI 辅助功能',
@@ -98,6 +104,11 @@ export const docPages: DocPage[] = [
   { id: 'installation', title: '安装指南', category: 'getting-started', description: '系统要求和安装步骤', slug: 'installation' },
   { id: 'quickstart', title: '快速上手', category: 'getting-started', description: '5 分钟内开始使用 Niko Studio', slug: 'quickstart' },
   { id: 'configuration', title: '配置说明', category: 'getting-started', description: '自定义设置和偏好配置', slug: 'configuration' },
+
+  // Guides
+  { id: 'capability-routing', title: '能力路由指南', category: 'guides', description: '从用户意图选择写作、知识、Agent、Wiki、Workflow 和 API 能力', slug: 'capability-routing' },
+  { id: 'learning-paths', title: '学习路径', category: 'guides', description: '按写作者、开发者、集成者和维护者角色选择阅读顺序', slug: 'learning-paths' },
+  { id: 'capability-status', title: '能力状态矩阵', category: 'guides', description: '说明文档站能力状态标签、覆盖范围和维护来源', slug: 'capability-status' },
 
   // Writing Intelligence
   { id: 'craft-analysis', title: '写作技法分析', category: 'writing', description: '叙事视角、节奏、张力等维度的智能分析', slug: 'craft-analysis' },

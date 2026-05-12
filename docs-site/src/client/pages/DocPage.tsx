@@ -219,7 +219,7 @@ function addHeadingIds(html: string): string {
 }
 
 function enhanceContent(html: string): string {
-  return html
+  return rewriteRootLinks(html)
     .replace(/<p>(注意点|使用建议|推荐使用方式|最佳实践|为什么这很重要|为什么它重要|为什么 MCP 重要|适用场景|常见问题|下一步推荐)([^<]*)<\/p>/g, (_, title: string, rest: string) => {
       return `<div class="doc-callout"><div class="doc-callout-title">${title}</div><p>${rest.trim()}</p></div>`;
     })
@@ -228,6 +228,15 @@ function enhanceContent(html: string): string {
       const detailHtml = details ? `<pre><code>${details}</code></pre>` : '';
       return `<div class="doc-endpoint"><div class="doc-endpoint-header"><span class="doc-endpoint-method">${method}</span><span class="doc-endpoint-path">${path.trim()}</span></div>${detailHtml}</div>`;
     });
+}
+
+function rewriteRootLinks(html: string): string {
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+  if (!basePath) {
+    return html;
+  }
+
+  return html.replace(/href="\/(?!\/)/g, `href="${basePath}/`);
 }
 
 function stripHtml(value: string): string {

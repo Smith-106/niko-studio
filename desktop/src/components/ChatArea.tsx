@@ -142,7 +142,6 @@ export function ChatArea({
     setInput(v)
     debouncedPersist.call(v)
   }, [debouncedPersist])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setInput(persistedText) }, [currentConversationId])
   const [isLoading, setIsLoading] = useState(false)
   const [streamPhase, setStreamPhase] = useState<StreamPhase>('idle')

@@ -24,6 +24,14 @@ export const desktopContent: Record<string, string> = {
   <li>在右侧查看证据和建议，决定是否回填正文。</li>
   <li>保存、继续写作或导出。</li>
 </ol>
+<h2>故障排查</h2>
+<ul>
+  <li>编辑器没有响应时，先确认当前项目和文档是否已打开。</li>
+  <li>右侧面板无结果时，检查 Gateway 健康状态和模型配置。</li>
+  <li>建议无法回填时，确认当前 selection 是否仍存在于正文中。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：能力路由指南、Gateway API、健康检查、写作面板。</p>
   `,
   'writing-dashboard': `
 <h2>写作面板</h2>
@@ -94,6 +102,14 @@ export const desktopContent: Record<string, string> = {
 </ul>
 <h2>结果约束</h2>
 <p>模型输出不会直接等同于最终修改。写作面板会尽量把结果拆成证据、判断和建议，作者仍然保留取舍权。</p>
+<h2>故障排查</h2>
+<ul>
+  <li>模型不可见：检查 <code>GET /models</code> 和配置 API。</li>
+  <li>流式输出中断：检查 Gateway 日志、网络代理和 provider 限流。</li>
+  <li>建议缺少上下文：确认 workspace、Wiki、Memory 是否已提供必要素材。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：Gateway API、配置 API、健康检查、能力路由指南。</p>
   `,
   'plugin-system': `
 <h2>插件系统</h2>
@@ -163,5 +179,13 @@ description: 检查章节开头钩子、冲突和追读动力
 <pre><code>POST /wiki/promote
 GET  /wiki/list
 GET  /wiki/page/:id</code></pre>
+<h2>故障排查</h2>
+<ul>
+  <li>Wiki 内容与图谱不一致时，以作者确认的 Wiki / canon 页面为准。</li>
+  <li>页面读取失败时，先确认条目是否已晋升，再检查 <code>GET /wiki/list</code>。</li>
+  <li>Agent 没有使用最新设定时，刷新 workspace context 和 Memory 检索。</li>
+</ul>
+<h2>相关页面</h2>
+<p>继续阅读：能力路由指南、素材 API、Wiki API、图谱 API。</p>
   `,
 };
