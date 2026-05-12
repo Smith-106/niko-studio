@@ -18,10 +18,18 @@ const tintColors: Record<string, string> = {
 };
 
 const quickLinks = [
-  { title: '先安装应用', description: '了解运行环境、下载方式和开发启动命令。', to: '/getting-started/installation' },
-  { title: '5 分钟快速上手', description: '从创建项目到第一次分析，快速进入可用状态。', to: '/getting-started/quickstart' },
-  { title: '核心写作能力', description: '直接查看写作技法、角色画像、场景质量等核心模块。', to: '/writing' },
-  { title: '查看 API 列表', description: '如果你更关心接口和服务能力，可以直接从 API 参考进入。', to: '/api' },
+  { title: '先跑通桌面应用', description: '了解运行形态、安装方式和开发启动命令。', to: '/getting-started/installation' },
+  { title: '完成第一次分析', description: '从创建作品到查看证据和建议，快速进入可用状态。', to: '/getting-started/quickstart' },
+  { title: '理解工作台', description: '查看编辑器、写作面板、Story Bible 和 AI 执行链路。', to: '/desktop/editor-integration' },
+  { title: '查看架构与 API', description: '面向开发者理解 Gateway、数据流和服务端点。', to: '/architecture/system-overview' },
+];
+
+const workflowSteps = [
+  { label: '写作', value: '创建作品、编辑章节、导入素材' },
+  { label: '分析', value: '技法、结构、角色、场景和网文节奏' },
+  { label: '修订', value: '基于证据选择建议并回填正文' },
+  { label: '沉淀', value: '把设定、角色和决策晋升到 Wiki / Story Bible' },
+  { label: '扩展', value: '通过 API、技能、插件和 Workflow 接入自动化' },
 ];
 
 const featuredDocs = [
@@ -51,7 +59,7 @@ export default function LandingPage() {
               Niko Studio 文档站
             </h1>
             <p className="mt-3 text-[15px] leading-7 text-[var(--color-text-secondary)]">
-              面向写作者与开发者的统一入口，覆盖安装接入、写作能力、桌面应用、系统架构，以及 API 端点与工作流能力。
+              面向写作者与开发者的统一入口：先帮助作者完成写作、分析、修订和知识沉淀，再为开发者说明桌面架构、Gateway、API、技能、插件与工作流扩展。
             </p>
           </div>
 
@@ -103,6 +111,28 @@ export default function LandingPage() {
             <CoverageItem label="系统能力" value="图谱、世界观、素材、同步、技能、Wiki" />
             <CoverageItem label="开发者信息" value="架构说明、模块设计、数据流、API 参考" />
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] p-6 shadow-[var(--shadow-sm)]">
+        <div className="mb-5 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">从创作到扩展的主路径</h2>
+            <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
+              文档站按真实使用路径组织：先完成创作闭环，再理解底层能力。
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-5">
+          {workflowSteps.map((step, index) => (
+            <div key={step.label} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-4">
+              <div className="mb-3 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-tint-purple)] text-[11px] font-semibold text-[var(--color-accent-purple)]">
+                {index + 1}
+              </div>
+              <h3 className="text-[13px] font-semibold text-[var(--color-text-primary)]">{step.label}</h3>
+              <p className="mt-2 text-[12px] leading-6 text-[var(--color-text-secondary)]">{step.value}</p>
+            </div>
+          ))}
         </div>
       </section>
 
