@@ -1,15 +1,17 @@
 import { Link } from 'react-router-dom';
 import { useSidebar } from './SidebarContext';
+import { SearchBox } from './SearchBox';
 
 export function TopBar() {
-  const { toggle } = useSidebar();
+  const { isOpen, toggle } = useSidebar();
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[var(--size-topbar-height)] bg-[var(--color-bg-card)] border-b border-[var(--color-border)] flex items-center px-5 z-50">
+    <header className="fixed top-0 left-0 right-0 z-50 flex h-[var(--size-topbar-height)] items-center gap-4 border-b border-[var(--color-border)] bg-[var(--color-bg-card)] px-5">
       <button
         onClick={toggle}
-        className="md:hidden mr-3 p-1.5 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors"
+        className="mr-1 rounded-lg p-1.5 transition-colors hover:bg-[var(--color-bg-hover)] md:hidden"
         aria-label="Toggle sidebar"
+        aria-expanded={isOpen}
       >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
           <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
@@ -17,20 +19,21 @@ export function TopBar() {
       </button>
 
       <Link to="/" className="flex items-center gap-2.5 no-underline">
-        <div className="w-7 h-7 rounded-md bg-[var(--color-accent-blue)] flex items-center justify-center">
-          <span className="text-white font-bold text-sm">N</span>
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--color-accent-blue)]">
+          <span className="text-sm font-bold text-white">N</span>
         </div>
-        <span className="font-semibold text-[var(--color-text-primary)] text-[15px]">
-          Niko Studio
-        </span>
+        <span className="text-[15px] font-semibold text-[var(--color-text-primary)]">Niko Studio</span>
       </Link>
 
+      <div className="hidden text-[12px] text-[var(--color-text-tertiary)] lg:block">文档中心</div>
+
       <div className="ml-auto flex items-center gap-3">
+        <SearchBox />
         <a
           href="https://github.com/Smith-106/niko-studio"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
           aria-label="GitHub"
         >
           <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">

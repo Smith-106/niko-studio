@@ -13,6 +13,11 @@ export interface DocPage {
   slug: string;
 }
 
+export interface ResolvedDocPage extends DocPage {
+  categoryInfo: Category;
+  path: string;
+}
+
 export const categories: Category[] = [
   {
     id: 'getting-started',
@@ -175,4 +180,25 @@ export const docPages: DocPage[] = [
 
 export function getPagesByCategory(categoryId: string): DocPage[] {
   return docPages.filter((p) => p.category === categoryId);
+}
+
+export function getCategoryById(categoryId: string): Category | undefined {
+  return categories.find((category) => category.id === categoryId);
+}
+
+export function getResolvedDocPages(): ResolvedDocPage[] {
+  return docPages
+    .map((page) => {
+      const categoryInfo = getCategoryById(page.category);
+      if (!categoryInfo) {
+        return null;
+      }
+
+      return {
+        ...page,
+        categoryInfo,
+        path: `/${page.category}/${page.slug}`,
+      };
+    })
+    .filter(Boolean) as ResolvedDocPage[];
 }

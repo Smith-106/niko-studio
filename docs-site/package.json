@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "npm run docs:lint && tsc && vite build",
+    "preview": "vite preview",
+    "docs:lint": "node scripts/docs-lint.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
