@@ -34,6 +34,10 @@ jobs:
         run: npm ci
         working-directory: desktop
 
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: src-ts
+
       - name: Build sidecar
         run: npm run build:sidecar
         working-directory: desktop
@@ -126,6 +130,10 @@ jobs:
       - name: Install desktop dependencies
         run: npm ci
         working-directory: desktop
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: src-ts
 
       - name: Build sidecar
         run: npm run build:sidecar
