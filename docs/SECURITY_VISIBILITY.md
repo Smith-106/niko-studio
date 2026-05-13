@@ -64,7 +64,10 @@
 - `authority-alignment-hard-fail` job：main 分支对 authority alignment 的阻断验证
 - `governance-scripts-report-*` artifact：治理脚本回归测试的 junit 结果
 - `coverage-xml` artifact：始终由 external release workflow 上传；Codecov 上传是否执行仅影响外部上传，不影响本地 artifact 留档
-- `desktop-build` / 其他 CI：作为补充观察点，不替代 external release authority
+- `ci-diagnostics-desktop-build-linux-deps-log` artifact：`desktop-build` 的 Linux 系统依赖安装日志
+- `ci-diagnostics-desktop-packaging-advisory-log` artifact：Windows 打包 advisory 干跑日志
+- `ci-diagnostics-packaged-app-smoke-report` / `ci-diagnostics-packaged-app-smoke-build-log` artifact：Windows 打包 smoke 的结构化结果与 NSIS 构建日志
+- `desktop-build` / 其他 CI：作为补充观察点，不替代 external release authority；优先从 `ci-diagnostics:*` summary 与对应 artifact 进入排障
 
 ## 5. 单命令可见化入口
 

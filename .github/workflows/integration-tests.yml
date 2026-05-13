@@ -130,6 +130,7 @@ jobs:
         working-directory: desktop/src-tauri
 
       - name: Install Linux desktop system dependencies
+        id: desktop-linux-deps
         timeout-minutes: 40
         shell: bash
         run: |
@@ -183,8 +184,18 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-build-linux-deps-log
+          name: ci-diagnostics-desktop-build-linux-deps-log
           path: .workflow/evidence/release/desktop-build-linux-deps.log
+
+      - name: Summarize desktop Linux dependency diagnostics
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.desktop-linux-deps.outcome }}" = "success" ]; then
+            echo 'ci-diagnostics: desktop-build-linux-deps PASS - Linux desktop system dependencies installed. Artifact: ci-diagnostics-desktop-build-linux-deps-log.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'ci-diagnostics: desktop-build-linux-deps FAIL - Linux desktop system dependency install failed. Artifact: ci-diagnostics-desktop-build-linux-deps-log.' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Create temporary externalBin placeholders
         run: |
@@ -370,26 +381,26 @@ jobs:
         working-directory: desktop
         run: |
           if ('${{ steps.packaging-advisory.outcome }}' -eq 'success') {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "desktop-packaging-advisory: packaging dry-run passed."
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "ci-diagnostics: desktop-packaging-advisory PASS - packaging dry-run passed. Artifact: ci-diagnostics-desktop-packaging-advisory-log."
             return
           }
 
-          $warning = 'desktop-packaging-advisory observed a non-blocking Windows packaging failure. Review the advisory log artifact before release sign-off.'
+          $warning = 'ci-diagnostics: desktop-packaging-advisory WARN - non-blocking Windows packaging failure observed. Review artifact: ci-diagnostics-desktop-packaging-advisory-log.'
           Write-Host "::warning::$warning"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "desktop-packaging-advisory: packaging dry-run failed in advisory mode and was downgraded to a warning. Review the uploaded advisory log artifact before release sign-off."
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "ci-diagnostics: desktop-packaging-advisory WARN - packaging dry-run failed in advisory mode. Review artifact: ci-diagnostics-desktop-packaging-advisory-log."
 
       - name: Upload desktop packaging dry-run artifact (advisory lane)
         if: ${{ hashFiles('desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe') != '' }}
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-packaging-dry-run
+          name: ci-diagnostics-desktop-packaging-dry-run-binary
           path: desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe
 
       - name: Upload desktop packaging advisory log
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-packaging-advisory-log
+          name: ci-diagnostics-desktop-packaging-advisory-log
           path: desktop/desktop-packaging-advisory.log
 
   desktop-packaging-hard-fail:
@@ -416,14 +427,14 @@ jobs:
 
           if ($legacyEntry -or $packagedCompatArtifact) {
             "strict_required=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging-hard-fail: strict Windows packaging gate enabled (Python compatibility sidecar prerequisite present).'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: desktop-packaging-hard-fail ENFORCING - strict Windows packaging gate enabled because the compatibility sidecar prerequisite is present.'
             return
           }
 
           "strict_required=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          $warning = 'Skipping strict Windows packaging hard gate because this checkout does not include the Python compatibility sidecar prerequisite. Advisory packaging logs remain authoritative until the compatibility artifact is hydrated.'
+          $warning = 'ci-diagnostics: desktop-packaging-hard-fail SKIPPED - strict Windows packaging gate not required in this checkout. Advisory artifact remains authoritative: ci-diagnostics-desktop-packaging-advisory-log.'
           Write-Host "::warning::$warning"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging-hard-fail: skipped strict Windows packaging gate because the Python compatibility sidecar prerequisite is not hydrated in this checkout; review the advisory packaging log instead.'
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: desktop-packaging-hard-fail SKIPPED - strict Windows packaging gate not required in this checkout. Review artifact: ci-diagnostics-desktop-packaging-advisory-log.'
 
       - name: Install Rust toolchain
         if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
@@ -734,19 +745,19 @@ jobs:
         shell: pwsh
         run: |
           if ('${{ steps.smoke.outcome }}' -eq 'success') {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke: PASS — sidecar contract honored after install+launch.'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: packaged-app-smoke PASS - sidecar contract honored after install and launch. Artifacts: ci-diagnostics-packaged-app-smoke-report, ci-diagnostics-packaged-app-smoke-build-log.'
           } elseif ('${{ steps.nsis-build.outcome }}' -ne 'success') {
-            Write-Host '::warning::packaged-app-smoke skipped — NSIS build failed earlier in pipeline (infra-level, not gating).'
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke: SKIPPED (NSIS build failed — infra issue, non-gating).'
+            Write-Host '::warning::ci-diagnostics: packaged-app-smoke SKIPPED - NSIS build failed earlier in pipeline. Review artifact: ci-diagnostics-packaged-app-smoke-build-log.'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: packaged-app-smoke SKIPPED - NSIS build failed earlier in pipeline. Review artifact: ci-diagnostics-packaged-app-smoke-build-log.'
           } else {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'packaged-app-smoke: FAIL — sidecar contract violation. Review .workflow/evidence/release/packaged-app-smoke.json.'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: packaged-app-smoke FAIL - sidecar contract violation. Review artifact: ci-diagnostics-packaged-app-smoke-report.'
           }
 
       - name: Upload packaged-app-smoke report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: packaged-app-smoke-report
+          name: ci-diagnostics-packaged-app-smoke-report
           path: .workflow/evidence/release/packaged-app-smoke.json
           if-no-files-found: ignore
 
@@ -754,7 +765,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: packaged-app-smoke-build-log
+          name: ci-diagnostics-packaged-app-smoke-build-log
           path: .workflow/evidence/release/packaged-app-smoke-build.log
           if-no-files-found: ignore
 

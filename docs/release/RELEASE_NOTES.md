@@ -74,7 +74,7 @@ npm --prefix src-ts exec -- vitest run tests/mcp/workflow-endpoints.integration.
 
 > 约定：external 冒烟以当前 `src-ts` MCP workflow/critic integration tests 为主，而不是缺失的 legacy Python `tests/integration/test_e2e_workflow.py`。
 
-5. 质量信号完整：覆盖率报告生成并上传成功，并且 CI 产出 `coverage-xml`、`vitest-production-guard-*`、`vitest-e2e-report-*` 工件可追溯。
+5. 质量信号完整：覆盖率报告生成并上传成功，并且 CI 产出 `coverage-xml`、`ci-diagnostics-desktop-build-linux-deps-log`、`ci-diagnostics-desktop-packaging-advisory-log`、`ci-diagnostics-packaged-app-smoke-report`、`ci-diagnostics-packaged-app-smoke-build-log` 等工件可追溯。
    - external 场景下：当已配置 `CODECOV_TOKEN` 且 `codecov_fail_ci_if_error=true` 时，Codecov 上传失败为 No-Go；当缺失 token 时允许降级并输出告警，必须在发布记录中登记风险。
 
 6. Desktop sidecar readiness 通过：

@@ -162,6 +162,30 @@ The release readiness artifact at `.workflow/evidence/release/release-readiness-
 Any retained evidence labeled `stale_*` or `*_superseded` is non-green and must not be reused for a `Decision: GO`, even if the file still exists on disk.
 The release summary now exposes this as a blocking `local_selftest_enforcement` signal: missing, stale, or superseded retained proof for the bound release-sign-off sources means rerun `npm --prefix desktop run local:selftest` before claiming `Decision: GO`.
 
+### 7.1 Integration Tests CI closure record
+
+The authoritative CI closure for the desktop integration lane is `.github/workflows/integration-tests.yml`.
+
+As of `2026-05-13`, the main-branch closure batch for the desktop/sidecar/packaged-smoke path is:
+
+- `25809229406` on HEAD `1b6f062b750e91dedcb96ba8bed42d81a22fe3e7` — `completed success`
+- `25810793894` on HEAD `73a5e45422d488df98746617139db8235a862f83` — `completed success`
+
+This batch closes the previously observed 3 CI blind spots:
+
+1. `src-ts` dependency hydration for sidecar and packaged smoke jobs
+2. long-running Linux desktop system dependency installation in `desktop-build`
+3. long-running Windows NSIS build in `packaged-app-smoke`
+
+The current diagnostics contract for this workflow is:
+
+- Linux desktop dependency leg emits artifact `ci-diagnostics-desktop-build-linux-deps-log`
+- Windows packaging advisory leg emits artifact `ci-diagnostics-desktop-packaging-advisory-log`
+- Windows packaged smoke leg emits artifacts `ci-diagnostics-packaged-app-smoke-report` and `ci-diagnostics-packaged-app-smoke-build-log`
+- workflow summaries use the unified `ci-diagnostics:` prefix so operator triage can correlate `PASS` / `WARN` / `SKIPPED` / `FAIL` with artifact names directly from `GITHUB_STEP_SUMMARY`
+
+When this workflow is used as release-adjacent evidence, treat these diagnostics artifacts as the first inspection surface before deeper runner or local reproduction.
+
 ### 8. Signed bundle attestation (when graduating beyond `unsigned_local_proof`)
 
 The consolidated snapshot above only certifies `unsigned_local_proof`. Graduating to `signed_external_release` (or capturing a `self_signed_dry_run` for pipeline regression) requires a separate attestation artifact. Capture it on the Windows release host immediately after `npm --prefix desktop run tauri:build:signed` completes.

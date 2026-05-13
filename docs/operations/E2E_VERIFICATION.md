@@ -125,3 +125,17 @@ The command is intentionally strict:
 
 Use this checklist after package generation proof and before external handoff language claims installed-package readiness.
 If package-generation proof is green but this checklist fails, treat the release as blocked for installed-package acceptance.
+
+## Related CI diagnostics
+
+When the CI path is used as the pre-handoff packaging proof, inspect these retained diagnostics before reproducing manually:
+
+- `ci-diagnostics-packaged-app-smoke-report`: structured result of the Windows packaged smoke lane
+- `ci-diagnostics-packaged-app-smoke-build-log`: NSIS build output for the same smoke lane
+- `ci-diagnostics-desktop-packaging-advisory-log`: Windows packaging advisory dry-run output
+
+These CI artifacts do not replace the installed-package checklist in this document, but they are the fastest way to separate:
+
+1. packaging infrastructure failure
+2. sidecar/runtime contract failure
+3. installed-package-only failure that still needs manual Windows verification
