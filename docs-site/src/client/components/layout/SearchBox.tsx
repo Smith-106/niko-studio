@@ -40,6 +40,11 @@ interface SearchResultItem {
   reasons: SearchReason[];
 }
 
+interface SearchMatchSegment {
+  text: string;
+  highlighted: boolean;
+}
+
 interface EmptyStateSuggestionSet {
   hint: string;
   docIds: string[];
@@ -90,6 +95,8 @@ const searchGroupMeta: Array<{
   { id: 'capability', label: '能力页', description: '写作、批评、图谱、世界观等能力说明' },
   { id: 'api', label: 'API', description: '端点、调用入口与接口参考' },
 ];
+
+const allSearchGroupId: SearchGroupId | 'all' = 'all';
 
 const searchReasonLabel: Record<SearchReason, string> = {
   title: '标题命中',
@@ -179,6 +186,53 @@ function inferPinnedBucket(categoryId: string): PinnedBucketId {
   return 'writing';
 }
 
+function buildHighlightSegments(text: string, query: string): SearchMatchSegment[] {
+  if (!query.trim()) {
+    return [{ text, highlighted: false }];
+  }
+
+  const normalizedText = text.toLowerCase();
+  const normalizedQuery = query.toLowerCase().trim();
+  const segments: SearchMatchSegment[] = [];
+  let cursor = 0;
+
+  while (cursor < text.length) {
+    const matchIndex = normalizedText.indexOf(normalizedQuery, cursor);
+    if (matchIndex < 0) {
+      segments.push({ text: text.slice(cursor), highlighted: false });
+      break;
+    }
+
+    if (matchIndex > cursor) {
+      segments.push({ text: text.slice(cursor, matchIndex), highlighted: false });
+    }
+
+    segments.push({
+      text: text.slice(matchIndex, matchIndex + normalizedQuery.length),
+      highlighted: true,
+    });
+    cursor = matchIndex + normalizedQuery.length;
+  }
+
+  return segments.filter((segment) => segment.text.length > 0);
+}
+
+function renderHighlightedText(text: string, query: string, keyPrefix: string) {
+  const segments = buildHighlightSegments(text, query);
+  return segments.map((segment, index) => (
+    segment.highlighted ? (
+      <mark
+        key={`${keyPrefix}-${index}`}
+        className="rounded-sm bg-[var(--color-tint-yellow)] px-0.5 text-[var(--color-text-primary)]"
+      >
+        {segment.text}
+      </mark>
+    ) : (
+      <span key={`${keyPrefix}-${index}`}>{segment.text}</span>
+    )
+  ));
+}
+
 export function SearchBox({ mobile = false, placeholder = '搜索文档、分类或 API...' }: SearchBoxProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -191,6 +245,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   const [collapsedPinnedGroups, setCollapsedPinnedGroups] = useState<PinnedBucketId[]>([]);
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const [recentDocIds, setRecentDocIds] = useState<RecentDocItem[]>([]);
+  const [activeFacet, setActiveFacet] = useState<SearchGroupId | 'all'>(allSearchGroupId);
   const docs = useMemo(() => getResolvedDocPages(), []);
   const normalizedQuery = normalize(query);
   const searchPanelId = mobile ? 'doc-search-panel-mobile' : 'doc-search-panel-desktop';
@@ -227,6 +282,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     setIsOpen(false);
     setQuery('');
     setActiveResultIndex(-1);
+    setActiveFacet(allSearchGroupId);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -271,6 +327,12 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       window.removeEventListener('niko-docs:search', handleSearchOpen as EventListener);
     };
   }, [mobile]);
+
+  useEffect(() => {
+    if (!normalizedQuery) {
+      setActiveFacet(allSearchGroupId);
+    }
+  }, [normalizedQuery]);
 
   const results = useMemo<SearchResultItem[]>(() => {
     if (!normalizedQuery) {
@@ -335,18 +397,47 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       .slice(0, 8);
   }, [docs, normalizedQuery]);
 
+  const facetOptions = useMemo(() => {
+    const counts = searchGroupMeta.reduce<Record<SearchGroupId, number>>((accumulator, group) => {
+      accumulator[group.id] = results.filter((item) => item.group === group.id).length;
+      return accumulator;
+    }, { topic: 0, capability: 0, api: 0 });
+
+    return [
+      {
+        id: allSearchGroupId,
+        label: '全部',
+        count: results.length,
+      },
+      ...searchGroupMeta.map((group) => ({
+        id: group.id,
+        label: group.label,
+        count: counts[group.id],
+      })),
+    ];
+  }, [results]);
+
+  const filteredResults = useMemo(() => {
+    if (activeFacet === allSearchGroupId) {
+      return results;
+    }
+
+    return results.filter((item) => item.group === activeFacet);
+  }, [activeFacet, results]);
+
   const groupedResults = useMemo(() => {
     return searchGroupMeta
       .map((group) => ({
         ...group,
-        items: results.filter((item) => item.group === group.id),
+        items: filteredResults.filter((item) => item.group === group.id),
       }))
       .filter((group) => group.items.length > 0);
-  }, [results]);
+  }, [filteredResults]);
 
-  const totalResults = results.length;
+  const matchedResultCount = results.length;
+  const totalResults = filteredResults.length;
   const emptyStateSuggestions = useMemo(() => {
-    if (!normalizedQuery || totalResults > 0) {
+    if (!normalizedQuery || matchedResultCount > 0) {
       return null;
     }
 
@@ -357,7 +448,18 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
         .map((id) => docs.find((doc) => doc.id === id))
         .filter((doc): doc is SearchDoc => Boolean(doc)),
     };
-  }, [docs, normalizedQuery, query, totalResults]);
+  }, [docs, matchedResultCount, normalizedQuery, query]);
+  const emptyFacetState = useMemo(() => {
+    if (!normalizedQuery || activeFacet === allSearchGroupId || matchedResultCount === 0 || totalResults > 0) {
+      return null;
+    }
+
+    const activeGroup = searchGroupMeta.find((group) => group.id === activeFacet);
+    return {
+      label: activeGroup?.label ?? '当前分面',
+      total: matchedResultCount,
+    };
+  }, [activeFacet, matchedResultCount, normalizedQuery, totalResults]);
   const pinnedDocs = useMemo<PinnedResolvedItem[]>(() => {
     return pinnedDocIds
       .map((item) => {
@@ -393,12 +495,12 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       return [];
     }
 
-    if (results.length > 0) {
-      return results.map((item) => ({ doc: item.doc, source: 'result' as const }));
+    if (filteredResults.length > 0) {
+      return filteredResults.map((item) => ({ doc: item.doc, source: 'result' as const }));
     }
 
     return (emptyStateSuggestions?.docs ?? []).map((doc) => ({ doc, source: 'fallback' as const }));
-  }, [emptyStateSuggestions, normalizedQuery, results]);
+  }, [emptyStateSuggestions, filteredResults, normalizedQuery]);
   const keyboardIndexByDocId = useMemo(() => {
     return new Map(keyboardItems.map((item, index) => [item.doc.id, index]));
   }, [keyboardItems]);
@@ -641,7 +743,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     ? 'relative w-full md:hidden'
     : 'relative hidden w-full max-w-[420px] md:block';
   const searchStatusMessage = normalizedQuery
-    ? `找到 ${totalResults} 条结果，按专题、能力页和 API 分组，可用上下箭头浏览并按 Enter 打开。`
+    ? `找到 ${matchedResultCount} 条结果；当前分面显示 ${totalResults} 条。可用上下箭头浏览并按 Enter 打开。`
     : '推荐入口、关键词与分组浏览。可用 Tab 在搜索面板操作间移动。';
 
   useEffect(() => {
@@ -761,7 +863,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
             className="border-b border-[var(--color-border-divider)] px-4 py-3 text-[11px] text-[var(--color-text-tertiary)]"
             data-search-status={mobile ? 'mobile' : 'desktop'}
           >
-            {normalizedQuery ? `找到 ${totalResults} 条结果，按专题 / 能力页 / API 分组，可用 ↑ ↓ 与 Enter 快速打开` : '推荐入口、关键词与分组浏览'}
+            {normalizedQuery ? `总命中 ${matchedResultCount} 条；当前分面 ${totalResults} 条，可用 ↑ ↓ 与 Enter 快速打开` : '推荐入口、关键词与分组浏览'}
           </div>
           <div className="max-h-[420px] overflow-y-auto p-2">
             {!normalizedQuery ? (
@@ -1030,6 +1132,41 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                 </div>
               </div>
             ) : null}
+            {normalizedQuery ? (
+              <div className="px-3 pb-2 pt-1">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">搜索分面</div>
+                  <div className="text-[10px] text-[var(--color-text-tertiary)]">按专题 / 能力页 / API 收窄结果</div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {facetOptions.map((facet) => {
+                    const isActive = facet.id === activeFacet;
+                    return (
+                      <button
+                        key={facet.id}
+                        type="button"
+                        data-search-facet={facet.id}
+                        data-search-facet-active={isActive ? 'true' : undefined}
+                        aria-label={`切换分面 ${facet.label}`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setActiveFacet(facet.id);
+                          setActiveResultIndex(-1);
+                        }}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                          isActive
+                            ? 'border-[var(--color-accent-blue)] bg-[var(--color-tint-blue)] text-[var(--color-accent-blue)]'
+                            : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
+                        }`}
+                        aria-pressed={isActive}
+                      >
+                        {facet.label} · {facet.count}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
             {groupedResults.length > 0 ? (
               groupedResults.map((group) => (
                 <section key={group.id} className="px-1 pb-2 pt-1">
@@ -1075,10 +1212,14 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                           >
                             <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--color-text-tertiary)]">
                               <span>{doc.categoryInfo.icon}</span>
-                              <span>{doc.categoryInfo.name}</span>
+                              <span>{renderHighlightedText(doc.categoryInfo.name, query, `${doc.id}-category`)}</span>
                             </div>
-                            <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
-                            <div className="mt-1 text-[12px] leading-6 text-[var(--color-text-secondary)]">{doc.description}</div>
+                            <div className="text-[13px] font-medium text-[var(--color-text-primary)]">
+                              {renderHighlightedText(doc.title, query, `${doc.id}-title`)}
+                            </div>
+                            <div className="mt-1 text-[12px] leading-6 text-[var(--color-text-secondary)]">
+                              {renderHighlightedText(doc.description, query, `${doc.id}-description`)}
+                            </div>
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {reasons.map((reason) => (
                                 <span
@@ -1110,6 +1251,15 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                   </div>
                 </section>
               ))
+            ) : emptyFacetState ? (
+              <div className="px-3 py-4">
+                <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)] px-4 py-4">
+                  <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{emptyFacetState.label} 暂无命中</div>
+                  <div className="mt-1 text-[11px] leading-6 text-[var(--color-text-tertiary)]">
+                    当前查询总共命中 {emptyFacetState.total} 条结果，但都落在其他分面。切回“全部”或改用别的分面继续筛。
+                  </div>
+                </div>
+              </div>
             ) : emptyStateSuggestions ? (
               <div className="px-3 py-4">
                 <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)] px-4 py-4">

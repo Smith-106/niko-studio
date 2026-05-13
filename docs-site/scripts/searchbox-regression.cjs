@@ -169,6 +169,37 @@ async function verifyPinnedManagement(page, mode) {
   }
 }
 
+async function verifyFacetAndHighlight(page, mode) {
+  const inputSelector = `[data-doc-search-input="${mode === 'mobile' ? 'mobile' : 'desktop'}"]`;
+  await openSearchPanel(page, mode);
+  await page.locator(inputSelector).fill('workflow');
+  await page.locator('[data-search-facet="all"][data-search-facet-active="true"]').waitFor({ state: 'visible' });
+  await page.locator('[data-search-facet="api"]').click();
+  await page.locator('[data-search-facet="api"][data-search-facet-active="true"]').waitFor({ state: 'visible' });
+  await page.locator('[data-search-option-type="result"][data-search-doc-id="workflow-api"]').waitFor({ state: 'visible' });
+  const nonApiVisible = await page.locator('[data-search-option-type="result"][data-search-doc-id="chapter-revision-playbook"]').isVisible().catch(() => false);
+  if (nonApiVisible) {
+    throw new Error('切换到 API 分面后仍显示非 API 结果。');
+  }
+
+  const titleMarkCount = await page.locator('[data-search-doc-id="workflow-api"] mark').count();
+  if (titleMarkCount < 1) {
+    throw new Error('搜索命中词未在结果中高亮。');
+  }
+}
+
+async function verifyLandingSearchExamples(page) {
+  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.locator('[data-search-example-grid="true"]').waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: '搜索关键词 workflow' }).waitFor({ state: 'visible' });
+  await page.locator('[data-search-example-query="workflow"]').click();
+  await page.locator('[data-search-status="desktop"]').waitFor({ state: 'visible' });
+  const queryValue = await page.locator('[data-doc-search-input="desktop"]').inputValue();
+  if (queryValue !== 'workflow') {
+    throw new Error(`首页示例查询未写入搜索框，实际值：${queryValue}`);
+  }
+}
+
 async function verifyRecentStateSections(page, mode) {
   const inputSelector = `[data-doc-search-input="${mode === 'mobile' ? 'mobile' : 'desktop'}"]`;
   await openSearchPanel(page, mode);
@@ -242,6 +273,7 @@ async function verifyShortcutAndFocusAccessibility(page) {
   await page.keyboard.press('Tab');
   const focusedAfterTab = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
   if (
+    !focusedAfterTab?.startsWith('切换分面 ') &&
     !focusedAfterTab?.startsWith('打开搜索结果 ') &&
     !focusedAfterTab?.startsWith('收藏 ') &&
     !focusedAfterTab?.startsWith('取消收藏 ')
@@ -301,6 +333,7 @@ async function verifyViewport(browser, name, viewport) {
   await verifyPinnedSections(page);
   await verifyPersistenceAfterReload(page, name);
   await verifyPinnedManagement(page, name);
+  await verifyFacetAndHighlight(page, name);
   await verifyRecentStateSections(page, name);
   await verifyKeyboardNavigation(page, name);
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
@@ -323,6 +356,7 @@ async function main() {
     await verifyViewport(browser, 'mobile', { width: 390, height: 844 });
     const shortcutPage = await browser.newPage({ viewport: { width: 1440, height: 960 } });
     try {
+      await verifyLandingSearchExamples(shortcutPage);
       await verifyShortcutAndFocusAccessibility(shortcutPage);
     } finally {
       await shortcutPage.close();

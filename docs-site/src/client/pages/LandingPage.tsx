@@ -70,6 +70,40 @@ const keywordShortcuts = [
   { keyword: 'canon', fallbackTo: '/guides/output-field-glossary' },
 ];
 
+const searchExampleQueries = [
+  {
+    query: '开头弱',
+    description: '查问题索引、案例页和修订路径。',
+  },
+  {
+    query: 'workflow',
+    description: '同时看到 Workflow API、相关能力页和专题入口。',
+  },
+  {
+    query: 'canon',
+    description: '跳字段词典、Wiki API 和设定相关页面。',
+  },
+  {
+    query: '伏笔',
+    description: '集中看图谱、批评和跨章收束文档。',
+  },
+];
+
+const searchHelpItems = [
+  {
+    label: '先输问题词',
+    value: '例如“开头弱”“对白平”“伏笔丢”，更容易直达案例和修订页。',
+  },
+  {
+    label: '再切分面',
+    value: '结果面板里可按“专题 / 能力页 / API”收窄，避免混排时来回跳。',
+  },
+  {
+    label: '善用字段词',
+    value: '输入 `score / evidence / suggestion / canon` 可反查统一语义与相关页面。',
+  },
+];
+
 const readerTracks = [
   { role: '写作者', docs: '快速上手 → 写作面板 → 写作技法分析', to: '/guides/learning-paths', status: 'Supported' },
   { role: '开发者', docs: '系统概览 → 数据流 → Gateway API', to: '/guides/request-lifecycle', status: 'Supported' },
@@ -253,7 +287,7 @@ export default function LandingPage() {
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">站内搜索 / 关键词直达</h2>
             <p className="mt-1 text-[13px] leading-6 text-[var(--color-text-secondary)]">
-              不确定该读哪一页时，直接点关键词，顶部搜索会展开并给出最接近的文档入口。
+              不确定该读哪一页时，直接点关键词，顶部搜索会展开并给出最接近的文档入口。桌面端支持快捷键打开、命中高亮与分面筛选。
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -281,14 +315,36 @@ export default function LandingPage() {
               </Link>
             ))}
           </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2" data-search-example-grid="true">
+            {searchExampleQueries.map((item) => (
+              <button
+                key={item.query}
+                type="button"
+                onClick={() => openSearchWithKeyword(item.query)}
+                data-search-example-query={item.query}
+                className="hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-3 text-left transition-all duration-150 hover:-translate-y-[1px] hover:border-[var(--color-text-placeholder)] hover:shadow-[var(--shadow-sm)] md:block"
+              >
+                <div className="text-[12px] font-semibold text-[var(--color-text-primary)]">{item.query}</div>
+                <div className="mt-1 text-[11px] leading-6 text-[var(--color-text-secondary)]">{item.description}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] p-6 shadow-[var(--shadow-sm)]">
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">搜索建议</h2>
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">搜索帮助与示例</h2>
           <div className="mt-4 space-y-4 text-[13px] text-[var(--color-text-secondary)]">
             <CoverageItem label="问题词" value="例如：开头弱、对白平、伏笔丢。适合快速定位案例和修订页。" />
             <CoverageItem label="能力词" value="例如：workflow、wiki、agent、desktop。适合找 API 与能力页。" />
             <CoverageItem label="字段词" value="例如：score、evidence、canon。适合跳到统一字段词典和相关输出页。" />
+          </div>
+          <div className="mt-5 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)] p-4">
+            <div className="mb-3 text-[12px] font-semibold text-[var(--color-text-primary)]">怎么用搜索更快</div>
+            <div className="space-y-3 text-[12px] text-[var(--color-text-secondary)]">
+              {searchHelpItems.map((item) => (
+                <CoverageItem key={item.label} label={item.label} value={item.value} />
+              ))}
+            </div>
           </div>
         </div>
       </section>

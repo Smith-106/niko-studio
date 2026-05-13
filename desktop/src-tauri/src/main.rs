@@ -19,7 +19,11 @@ fn main() {
                 release: Some(env!("CARGO_PKG_VERSION").into()),
                 ..Default::default()
             });
-            if guard.is_enabled() { Some(guard) } else { None }
+            if guard.is_enabled() {
+                Some(guard)
+            } else {
+                None
+            }
         }
     });
 

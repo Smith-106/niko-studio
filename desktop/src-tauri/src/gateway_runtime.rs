@@ -162,7 +162,10 @@ impl GatewayState {
         // smoke (and any other external probe) can pin the port. Falls back to an
         // ephemeral OS-assigned port for the normal user-launch path so multiple
         // installs / dev instances don't collide.
-        let port = match std::env::var("NIKO_GATEWAY_PORT").ok().and_then(|v| v.parse::<u16>().ok()) {
+        let port = match std::env::var("NIKO_GATEWAY_PORT")
+            .ok()
+            .and_then(|v| v.parse::<u16>().ok())
+        {
             Some(p) if p > 0 => p,
             _ => std::net::TcpListener::bind("127.0.0.1:0")
                 .map_err(|e| format!("Failed to bind ephemeral port: {e}"))?
@@ -218,7 +221,10 @@ impl GatewayState {
                     .env("NIKO_GATEWAY_RELOAD", "0")
                     .env("NIKO_ENV", "development")
                     .env("NIKO_GATEWAY_RUNTIME", runtime.as_env())
-                    .env("NIKO_CORS_DEV_ORIGINS", "tauri://localhost,http://localhost:5173")
+                    .env(
+                        "NIKO_CORS_DEV_ORIGINS",
+                        "tauri://localhost,http://localhost:5173",
+                    )
                     .env("NIKO_SKILLS_DIR", skills_dir.to_string_lossy().to_string());
 
                 if let Some(config_path) = &services_config_path {
