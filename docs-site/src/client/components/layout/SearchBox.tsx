@@ -81,6 +81,12 @@ const searchReasonLabel: Record<SearchReason, string> = {
   recommended: '推荐入口',
 };
 
+const searchGroupLabel: Record<SearchGroupId, string> = {
+  topic: '专题',
+  capability: '能力页',
+  api: 'API',
+};
+
 const RECENT_QUERIES_KEY = 'niko-docs:recent-queries';
 const RECENT_DOCS_KEY = 'niko-docs:recent-docs';
 const MAX_RECENT_ITEMS = 4;
@@ -282,6 +288,24 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     });
   };
 
+  const clearRecentQueries = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.removeItem(RECENT_QUERIES_KEY);
+    setRecentQueries([]);
+  };
+
+  const clearRecentDocs = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.removeItem(RECENT_DOCS_KEY);
+    setRecentDocIds([]);
+  };
+
   const wrapperClass = mobile
     ? 'relative w-full md:hidden'
     : 'relative hidden w-full max-w-[420px] md:block';
@@ -340,7 +364,17 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
               <div className="px-3 pb-2 pt-1">
                 {recentQueries.length > 0 ? (
                   <>
-                    <div className="mb-2 text-[11px] font-medium text-[var(--color-text-tertiary)]">最近使用</div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">最近使用</div>
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={clearRecentQueries}
+                        className="text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                      >
+                        清空
+                      </button>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {recentQueries.map((recentQuery) => (
                         <button
@@ -362,7 +396,17 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                 ) : null}
                 {recentDocs.length > 0 ? (
                   <>
-                    <div className="mb-2 mt-4 text-[11px] font-medium text-[var(--color-text-tertiary)]">最近点击</div>
+                    <div className="mb-2 mt-4 flex items-center justify-between gap-3">
+                      <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">最近点击</div>
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={clearRecentDocs}
+                        className="text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                      >
+                        清空
+                      </button>
+                    </div>
                     <div className="grid gap-2">
                       {recentDocs.map((doc) => (
                         <Link
@@ -374,7 +418,12 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                             setIsOpen(false);
                           }}
                         >
-                          <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                            <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
+                              {searchGroupLabel[getSearchGroupId(doc.category)]}
+                            </span>
+                          </div>
                           <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
                         </Link>
                       ))}
