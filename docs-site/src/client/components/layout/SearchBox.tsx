@@ -24,6 +24,7 @@ interface SearchPreset {
 interface RecentDocItem {
   id: string;
   path: string;
+  bucket?: PinnedBucketId;
 }
 
 interface PinnedResolvedItem {
@@ -373,7 +374,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
         return;
       }
 
-      const bucket = inferPinnedBucket(doc.category);
+      const bucket = item.bucket ?? inferPinnedBucket(doc.category);
       buckets[bucket].push(item);
     });
 
@@ -398,7 +399,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       const item = { id: doc.id, path: doc.path };
       const buckets = buildPinnedBuckets(current.filter((entry) => entry.id !== doc.id));
       const bucket = inferPinnedBucket(doc.category);
-      buckets[bucket] = [item, ...buckets[bucket]].slice(0, MAX_PINNED_ITEMS);
+      buckets[bucket] = [{ ...item, bucket }, ...buckets[bucket]].slice(0, MAX_PINNED_ITEMS);
       const next = flattenPinnedBuckets(buckets);
       persistPinnedDocIds(next);
       return next;
@@ -440,6 +441,35 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       currentBucketItems.splice(nextIndex, 0, target);
       buckets[bucket] = currentBucketItems;
       const next = flattenPinnedBuckets(buckets);
+      persistPinnedDocIds(next);
+      return next;
+    });
+  };
+
+  const movePinnedDocToBucket = (docId: string, targetBucket: PinnedBucketId) => {
+    setPinnedDocIds((current) => {
+      const currentBuckets = buildPinnedBuckets(current);
+      const sourceBucket = pinnedBucketMeta.find((bucket) => currentBuckets[bucket.id].some((item) => item.id === docId))?.id;
+      if (!sourceBucket) {
+        return current;
+      }
+
+      const sourceItems = currentBuckets[sourceBucket];
+      const itemIndex = sourceItems.findIndex((item) => item.id === docId);
+      if (itemIndex < 0) {
+        return current;
+      }
+
+      const [item] = sourceItems.splice(itemIndex, 1);
+      if (!item) {
+        return current;
+      }
+
+      const nextItem: RecentDocItem = { ...item, bucket: targetBucket };
+      currentBuckets[targetBucket] = [nextItem, ...currentBuckets[targetBucket].filter((entry) => entry.id !== docId)].slice(0, MAX_PINNED_ITEMS);
+      currentBuckets[sourceBucket] = sourceItems.filter((entry) => entry.id !== docId);
+
+      const next = flattenPinnedBuckets(currentBuckets);
       persistPinnedDocIds(next);
       return next;
     });
@@ -650,6 +680,18 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                                   <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
                                 </Link>
                                 <div className="flex flex-col items-end gap-1">
+                                  <select
+                                    value={bucket}
+                                    onChange={(event) => movePinnedDocToBucket(doc.id, event.target.value as PinnedBucketId)}
+                                    className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-card)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] outline-none"
+                                    aria-label={`调整分组 ${doc.title}`}
+                                  >
+                                    {pinnedBucketMeta.map((bucketOption) => (
+                                      <option key={bucketOption.id} value={bucketOption.id}>
+                                        {bucketOption.label}
+                                      </option>
+                                    ))}
+                                  </select>
                                   <div className="flex items-center gap-1">
                                     <button
                                       type="button"
