@@ -139,6 +139,12 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
+      - name: Create temporary externalBin placeholders
+        run: |
+          mkdir -p desktop/src-tauri/bin
+          touch desktop/src-tauri/bin/niko-gateway
+          touch desktop/src-tauri/bin/niko-gateway-x86_64-unknown-linux-gnu
+
       - name: Rust clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
         working-directory: desktop/src-tauri
