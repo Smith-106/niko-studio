@@ -14,6 +14,12 @@ interface SearchOpenDetail {
 type SearchGroupId = 'topic' | 'capability' | 'api';
 type SearchReason = 'title' | 'alias' | 'category' | 'description' | 'recommended';
 
+interface SearchPreset {
+  label: string;
+  query: string;
+  hint: string;
+}
+
 interface SearchResultItem {
   doc: ReturnType<typeof getResolvedDocPages>[number];
   score: number;
@@ -35,6 +41,13 @@ const keywordAliases: Record<string, string[]> = {
 };
 
 const featuredKeywords = ['开头弱', 'workflow', 'wiki', '伏笔', '对白', 'canon'];
+
+const searchPresets: SearchPreset[] = [
+  { label: '写作问题', query: '开头弱', hint: '开头、对白、节奏、伏笔' },
+  { label: 'API 接入', query: 'workflow', hint: 'workflow、wiki、agent、workspace' },
+  { label: '设定一致性', query: 'canon', hint: 'canon、wiki、设定' },
+  { label: '章节修订', query: '修订', hint: '批评、修订路径、改单章' },
+];
 
 const recommendedDocIds = [
   'chapter-revision-playbook',
@@ -267,6 +280,24 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                       className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
                     >
                       {keyword}
+                    </button>
+                  ))}
+                </div>
+                <div className="mb-2 mt-4 text-[11px] font-medium text-[var(--color-text-tertiary)]">高频问题预设</div>
+                <div className="grid gap-2">
+                  {searchPresets.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setQuery(preset.query);
+                        setIsOpen(true);
+                      }}
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-left transition-colors hover:bg-[var(--color-bg-hover)]"
+                    >
+                      <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{preset.label}</div>
+                      <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{preset.hint}</div>
                     </button>
                   ))}
                 </div>
