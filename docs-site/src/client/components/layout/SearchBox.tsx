@@ -87,8 +87,10 @@ const searchGroupLabel: Record<SearchGroupId, string> = {
   api: 'API',
 };
 
+const PINNED_DOCS_KEY = 'niko-docs:pinned-docs';
 const RECENT_QUERIES_KEY = 'niko-docs:recent-queries';
 const RECENT_DOCS_KEY = 'niko-docs:recent-docs';
+const MAX_PINNED_ITEMS = 6;
 const MAX_RECENT_ITEMS = 4;
 
 function normalize(value: string): string {
@@ -111,6 +113,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   const location = useLocation();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [pinnedDocIds, setPinnedDocIds] = useState<RecentDocItem[]>([]);
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const [recentDocIds, setRecentDocIds] = useState<RecentDocItem[]>([]);
   const docs = useMemo(() => getResolvedDocPages(), []);
@@ -122,11 +125,14 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     }
 
     try {
+      const storedPinnedDocs = JSON.parse(window.localStorage.getItem(PINNED_DOCS_KEY) ?? '[]');
       const storedQueries = JSON.parse(window.localStorage.getItem(RECENT_QUERIES_KEY) ?? '[]');
       const storedDocs = JSON.parse(window.localStorage.getItem(RECENT_DOCS_KEY) ?? '[]');
+      setPinnedDocIds(Array.isArray(storedPinnedDocs) ? storedPinnedDocs.filter((item): item is RecentDocItem => !!item && typeof item.id === 'string' && typeof item.path === 'string').slice(0, MAX_PINNED_ITEMS) : []);
       setRecentQueries(Array.isArray(storedQueries) ? storedQueries.filter((item): item is string => typeof item === 'string').slice(0, MAX_RECENT_ITEMS) : []);
       setRecentDocIds(Array.isArray(storedDocs) ? storedDocs.filter((item): item is RecentDocItem => !!item && typeof item.id === 'string' && typeof item.path === 'string').slice(0, MAX_RECENT_ITEMS) : []);
     } catch {
+      setPinnedDocIds([]);
       setRecentQueries([]);
       setRecentDocIds([]);
     }
@@ -256,12 +262,20 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   }, [results]);
 
   const totalResults = results.length;
+  const pinnedDocs = useMemo(() => {
+    return pinnedDocIds
+      .map((item) => docs.find((doc) => doc.id === item.id && doc.path === item.path))
+      .filter((doc): doc is ReturnType<typeof getResolvedDocPages>[number] => Boolean(doc))
+      .slice(0, MAX_PINNED_ITEMS);
+  }, [docs, pinnedDocIds]);
   const recentDocs = useMemo(() => {
     return recentDocIds
       .map((item) => docs.find((doc) => doc.id === item.id && doc.path === item.path))
       .filter((doc): doc is ReturnType<typeof getResolvedDocPages>[number] => Boolean(doc))
       .slice(0, MAX_RECENT_ITEMS);
   }, [docs, recentDocIds]);
+
+  const isPinnedDoc = (docId: string) => pinnedDocIds.some((item) => item.id === docId);
 
   const storeRecentQuery = (value: string) => {
     const trimmed = value.trim();
@@ -286,6 +300,36 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       window.localStorage.setItem(RECENT_DOCS_KEY, JSON.stringify(next));
       return next;
     });
+  };
+
+  const togglePinnedDoc = (docId: string, path: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    setPinnedDocIds((current) => {
+      const exists = current.some((item) => item.id === docId);
+      const next = exists
+        ? current.filter((item) => item.id !== docId)
+        : [{ id: docId, path }, ...current.filter((item) => item.id !== docId)].slice(0, MAX_PINNED_ITEMS);
+
+      if (next.length > 0) {
+        window.localStorage.setItem(PINNED_DOCS_KEY, JSON.stringify(next));
+      } else {
+        window.localStorage.removeItem(PINNED_DOCS_KEY);
+      }
+
+      return next;
+    });
+  };
+
+  const clearPinnedDocs = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.removeItem(PINNED_DOCS_KEY);
+    setPinnedDocIds([]);
   };
 
   const clearRecentQueries = () => {
@@ -371,6 +415,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={clearRecentQueries}
                         className="text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                        aria-label="清空最近使用"
                       >
                         清空
                       </button>
@@ -403,33 +448,105 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={clearRecentDocs}
                         className="text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                        aria-label="清空最近点击"
                       >
                         清空
                       </button>
                     </div>
                     <div className="grid gap-2">
                       {recentDocs.map((doc) => (
-                        <Link
+                        <div
                           key={doc.id}
-                          to={doc.path}
-                          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 no-underline transition-colors hover:bg-[var(--color-bg-hover)]"
-                          onClick={() => {
-                            storeRecentDoc(doc.id, doc.path);
-                            setIsOpen(false);
-                          }}
+                          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
-                            <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
-                              {searchGroupLabel[getSearchGroupId(doc.category)]}
-                            </span>
+                          <div className="flex items-start justify-between gap-3">
+                            <Link
+                              to={doc.path}
+                              className="min-w-0 flex-1 no-underline"
+                              onClick={() => {
+                                storeRecentDoc(doc.id, doc.path);
+                                setIsOpen(false);
+                              }}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                                <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
+                                  {searchGroupLabel[getSearchGroupId(doc.category)]}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
+                            </Link>
+                            <button
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => togglePinnedDoc(doc.id, doc.path)}
+                              className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                              aria-label={`${isPinnedDoc(doc.id) ? '取消收藏' : '收藏'} ${doc.title}`}
+                            >
+                              {isPinnedDoc(doc.id) ? '已收藏' : '收藏'}
+                            </button>
                           </div>
-                          <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
-                        </Link>
+                        </div>
                       ))}
                     </div>
                   </>
                 ) : null}
+                <div className="mb-2 mt-4 flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">固定入口 / 收藏入口</div>
+                  {pinnedDocs.length > 0 ? (
+                    <button
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={clearPinnedDocs}
+                      className="text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                      aria-label="清空固定入口"
+                    >
+                      清空
+                    </button>
+                  ) : null}
+                </div>
+                {pinnedDocs.length > 0 ? (
+                  <div className="grid gap-2">
+                    {pinnedDocs.map((doc) => (
+                      <div
+                        key={`pinned-${doc.id}`}
+                        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <Link
+                            to={doc.path}
+                            className="min-w-0 flex-1 no-underline"
+                            onClick={() => {
+                              storeRecentDoc(doc.id, doc.path);
+                              setIsOpen(false);
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                              <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
+                                {searchGroupLabel[getSearchGroupId(doc.category)]}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
+                          </Link>
+                          <button
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => togglePinnedDoc(doc.id, doc.path)}
+                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                            aria-label={`取消收藏 ${doc.title}`}
+                          >
+                            已收藏
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-3 text-[11px] leading-6 text-[var(--color-text-tertiary)]">
+                    在搜索结果或最近点击里点“收藏”，把常用文档固定在这里。
+                  </div>
+                )}
                 <div className="mb-2 text-[11px] font-medium text-[var(--color-text-tertiary)]">关键词直达</div>
                 <div className="flex flex-wrap gap-2">
                   {featuredKeywords.map((keyword) => (
@@ -478,35 +595,55 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                   </div>
                   <div className="space-y-1">
                     {group.items.map(({ doc, reasons }) => (
-                      <Link
+                      <div
                         key={doc.id}
-                        to={doc.path}
-                        className="block rounded-xl px-3 py-3 no-underline transition-colors hover:bg-[var(--color-bg-hover)]"
-                        onClick={() => {
-                          storeRecentDoc(doc.id, doc.path);
-                          if (query.trim()) {
-                            storeRecentQuery(query);
-                          }
-                          setIsOpen(false);
-                        }}
+                        className="rounded-xl px-3 py-3 transition-colors hover:bg-[var(--color-bg-hover)]"
                       >
-                        <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--color-text-tertiary)]">
-                          <span>{doc.categoryInfo.icon}</span>
-                          <span>{doc.categoryInfo.name}</span>
+                        <div className="flex items-start justify-between gap-3">
+                          <Link
+                            to={doc.path}
+                            className="min-w-0 flex-1 no-underline"
+                            onClick={() => {
+                              storeRecentDoc(doc.id, doc.path);
+                              if (query.trim()) {
+                                storeRecentQuery(query);
+                              }
+                              setIsOpen(false);
+                            }}
+                          >
+                            <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--color-text-tertiary)]">
+                              <span>{doc.categoryInfo.icon}</span>
+                              <span>{doc.categoryInfo.name}</span>
+                            </div>
+                            <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                            <div className="mt-1 text-[12px] leading-6 text-[var(--color-text-secondary)]">{doc.description}</div>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {reasons.map((reason) => (
+                                <span
+                                  key={reason}
+                                  className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]"
+                                >
+                                  {searchReasonLabel[reason]}
+                                </span>
+                              ))}
+                            </div>
+                          </Link>
+                          <button
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              togglePinnedDoc(doc.id, doc.path);
+                              if (query.trim()) {
+                                storeRecentQuery(query);
+                              }
+                            }}
+                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                            aria-label={`${isPinnedDoc(doc.id) ? '取消收藏' : '收藏'} ${doc.title}`}
+                          >
+                            {isPinnedDoc(doc.id) ? '已收藏' : '收藏'}
+                          </button>
                         </div>
-                        <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
-                        <div className="mt-1 text-[12px] leading-6 text-[var(--color-text-secondary)]">{doc.description}</div>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {reasons.map((reason) => (
-                            <span
-                              key={reason}
-                              className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]"
-                            >
-                              {searchReasonLabel[reason]}
-                            </span>
-                          ))}
-                        </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 </section>
