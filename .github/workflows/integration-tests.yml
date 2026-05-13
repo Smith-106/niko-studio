@@ -131,8 +131,6 @@ jobs:
 
       - name: Install Linux desktop system dependencies
         shell: bash
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: |
           packages=(
             libglib2.0-dev
@@ -146,17 +144,20 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Installing Linux desktop system dependencies (attempt ${attempt}/3)"
-            if sudo apt-get \
-              -o Acquire::Retries=3 \
-              -o Acquire::http::Timeout=30 \
-              -o Acquire::https::Timeout=30 \
-              update && \
-              sudo apt-get \
-                -o DPkg::Lock::Timeout=120 \
+            if timeout --kill-after=30s 5m \
+              sudo env DEBIAN_FRONTEND=noninteractive apt-get \
                 -o Acquire::Retries=3 \
                 -o Acquire::http::Timeout=30 \
                 -o Acquire::https::Timeout=30 \
-                install -y --no-install-recommends "${packages[@]}"; then
+                update && \
+              timeout --kill-after=30s 15m \
+                sudo env DEBIAN_FRONTEND=noninteractive apt-get \
+                  -o DPkg::Lock::Timeout=120 \
+                  -o Dpkg::Use-Pty=0 \
+                  -o Acquire::Retries=3 \
+                  -o Acquire::http::Timeout=30 \
+                  -o Acquire::https::Timeout=30 \
+                  install -y --no-install-recommends "${packages[@]}"; then
               exit 0
             fi
 
@@ -166,6 +167,7 @@ jobs:
             fi
 
             echo "::warning::Linux desktop system dependency install attempt ${attempt} failed; retrying in 15s"
+            sudo dpkg --configure -a || true
             sudo apt-get clean
             sleep 15
           done
