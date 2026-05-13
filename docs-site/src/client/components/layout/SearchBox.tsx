@@ -20,6 +20,11 @@ interface SearchPreset {
   hint: string;
 }
 
+interface RecentDocItem {
+  id: string;
+  path: string;
+}
+
 interface SearchResultItem {
   doc: ReturnType<typeof getResolvedDocPages>[number];
   score: number;
@@ -76,6 +81,10 @@ const searchReasonLabel: Record<SearchReason, string> = {
   recommended: '推荐入口',
 };
 
+const RECENT_QUERIES_KEY = 'niko-docs:recent-queries';
+const RECENT_DOCS_KEY = 'niko-docs:recent-docs';
+const MAX_RECENT_ITEMS = 4;
+
 function normalize(value: string): string {
   return value.toLowerCase().trim();
 }
@@ -96,8 +105,30 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   const location = useLocation();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [recentQueries, setRecentQueries] = useState<string[]>([]);
+  const [recentDocIds, setRecentDocIds] = useState<RecentDocItem[]>([]);
   const docs = useMemo(() => getResolvedDocPages(), []);
   const normalizedQuery = normalize(query);
+
+  const hydrateRecentState = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const storedQueries = JSON.parse(window.localStorage.getItem(RECENT_QUERIES_KEY) ?? '[]');
+      const storedDocs = JSON.parse(window.localStorage.getItem(RECENT_DOCS_KEY) ?? '[]');
+      setRecentQueries(Array.isArray(storedQueries) ? storedQueries.filter((item): item is string => typeof item === 'string').slice(0, MAX_RECENT_ITEMS) : []);
+      setRecentDocIds(Array.isArray(storedDocs) ? storedDocs.filter((item): item is RecentDocItem => !!item && typeof item.id === 'string' && typeof item.path === 'string').slice(0, MAX_RECENT_ITEMS) : []);
+    } catch {
+      setRecentQueries([]);
+      setRecentDocIds([]);
+    }
+  };
+
+  useEffect(() => {
+    hydrateRecentState();
+  }, []);
 
   useEffect(() => {
     setIsOpen(false);
@@ -130,6 +161,10 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     const handleSearchOpen = (event: Event) => {
       const customEvent = event as CustomEvent<SearchOpenDetail>;
       setQuery(customEvent.detail?.query ?? '');
+      if (customEvent.detail?.query?.trim()) {
+        storeRecentQuery(customEvent.detail.query);
+      }
+      hydrateRecentState();
       setIsOpen(true);
       focusDesktopInput();
     };
@@ -215,6 +250,37 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   }, [results]);
 
   const totalResults = results.length;
+  const recentDocs = useMemo(() => {
+    return recentDocIds
+      .map((item) => docs.find((doc) => doc.id === item.id && doc.path === item.path))
+      .filter((doc): doc is ReturnType<typeof getResolvedDocPages>[number] => Boolean(doc))
+      .slice(0, MAX_RECENT_ITEMS);
+  }, [docs, recentDocIds]);
+
+  const storeRecentQuery = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed || typeof window === 'undefined') {
+      return;
+    }
+
+    setRecentQueries((current) => {
+      const next = [trimmed, ...current.filter((item) => item !== trimmed)].slice(0, MAX_RECENT_ITEMS);
+      window.localStorage.setItem(RECENT_QUERIES_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const storeRecentDoc = (docId: string, path: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    setRecentDocIds((current) => {
+      const next = [{ id: docId, path }, ...current.filter((item) => item.id !== docId)].slice(0, MAX_RECENT_ITEMS);
+      window.localStorage.setItem(RECENT_DOCS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const wrapperClass = mobile
     ? 'relative w-full md:hidden'
@@ -237,11 +303,17 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
         <input
           data-doc-search-input={mobile ? 'mobile' : 'desktop'}
           value={query}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            hydrateRecentState();
+            setIsOpen(true);
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               setIsOpen(false);
               event.currentTarget.blur();
+            }
+            if (event.key === 'Enter' && query.trim()) {
+              storeRecentQuery(query);
             }
           }}
           onChange={(event) => {
@@ -266,6 +338,49 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
           <div className="max-h-[420px] overflow-y-auto p-2">
             {!normalizedQuery ? (
               <div className="px-3 pb-2 pt-1">
+                {recentQueries.length > 0 ? (
+                  <>
+                    <div className="mb-2 text-[11px] font-medium text-[var(--color-text-tertiary)]">最近使用</div>
+                    <div className="flex flex-wrap gap-2">
+                      {recentQueries.map((recentQuery) => (
+                        <button
+                          key={recentQuery}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setQuery(recentQuery);
+                        storeRecentQuery(recentQuery);
+                        setIsOpen(true);
+                      }}
+                      className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
+                        >
+                          {recentQuery}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+                {recentDocs.length > 0 ? (
+                  <>
+                    <div className="mb-2 mt-4 text-[11px] font-medium text-[var(--color-text-tertiary)]">最近点击</div>
+                    <div className="grid gap-2">
+                      {recentDocs.map((doc) => (
+                        <Link
+                          key={doc.id}
+                          to={doc.path}
+                          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 no-underline transition-colors hover:bg-[var(--color-bg-hover)]"
+                          onClick={() => {
+                            storeRecentDoc(doc.id, doc.path);
+                            setIsOpen(false);
+                          }}
+                        >
+                          <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                          <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
                 <div className="mb-2 text-[11px] font-medium text-[var(--color-text-tertiary)]">关键词直达</div>
                 <div className="flex flex-wrap gap-2">
                   {featuredKeywords.map((keyword) => (
@@ -275,6 +390,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         setQuery(keyword);
+                        storeRecentQuery(keyword);
                         setIsOpen(true);
                       }}
                       className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
@@ -292,6 +408,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         setQuery(preset.query);
+                        storeRecentQuery(preset.query);
                         setIsOpen(true);
                       }}
                       className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-left transition-colors hover:bg-[var(--color-bg-hover)]"
@@ -316,7 +433,13 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                         key={doc.id}
                         to={doc.path}
                         className="block rounded-xl px-3 py-3 no-underline transition-colors hover:bg-[var(--color-bg-hover)]"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => {
+                          storeRecentDoc(doc.id, doc.path);
+                          if (query.trim()) {
+                            storeRecentQuery(query);
+                          }
+                          setIsOpen(false);
+                        }}
                       >
                         <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--color-text-tertiary)]">
                           <span>{doc.categoryInfo.icon}</span>
