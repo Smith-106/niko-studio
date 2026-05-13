@@ -7,7 +7,9 @@ const docsRoot = process.cwd();
 const distRoot = join(docsRoot, 'dist');
 const host = '127.0.0.1';
 const port = 4175;
-const baseUrl = `http://${host}:${port}`;
+const configuredBasePath = process.env.NIKO_DOCS_BASE_PATH ?? '/';
+const normalizedBasePath = configuredBasePath === '/' ? '' : `/${configuredBasePath.replace(/^\/+|\/+$/g, '')}`;
+const baseUrl = `http://${host}:${port}${normalizedBasePath || ''}/`;
 
 const pinnedDocsKey = 'niko-docs:pinned-docs';
 const pinnedGroupsCollapsedKey = 'niko-docs:pinned-groups-collapsed';
@@ -40,7 +42,10 @@ function ensureDistExists() {
 function createStaticServer() {
   return createServer((request, response) => {
     const requestPath = request.url ? request.url.split('?')[0] : '/';
-    const safePath = normalize(requestPath || '/').replace(/^(\.\.[/\\])+/, '');
+    const strippedPath = normalizedBasePath && requestPath.startsWith(normalizedBasePath)
+      ? requestPath.slice(normalizedBasePath.length) || '/'
+      : requestPath;
+    const safePath = normalize(strippedPath || '/').replace(/^(\.\.[/\\])+/, '');
     let filePath = join(distRoot, safePath === '/' ? 'index.html' : safePath);
 
     if (!existsSync(filePath) || (existsSync(filePath) && extname(filePath) === '')) {
@@ -63,8 +68,7 @@ async function openSearchPanel(page, mode) {
   const inputSelector = `[data-doc-search-input="${mode === 'mobile' ? 'mobile' : 'desktop'}"]`;
 
   if (mode === 'mobile') {
-    await page.getByRole('button', { name: 'Toggle sidebar' }).click();
-    await page.waitForFunction((selector) => {
+    const isVisible = await page.evaluate((selector) => {
       const element = document.querySelector(selector);
       if (!(element instanceof HTMLElement)) {
         return false;
@@ -73,6 +77,19 @@ async function openSearchPanel(page, mode) {
       const rect = element.getBoundingClientRect();
       return rect.width > 0 && rect.x >= 0;
     }, inputSelector);
+
+    if (!isVisible) {
+      await page.getByRole('button', { name: 'Toggle sidebar' }).click();
+      await page.waitForFunction((selector) => {
+        const element = document.querySelector(selector);
+        if (!(element instanceof HTMLElement)) {
+          return false;
+        }
+
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.x >= 0;
+      }, inputSelector);
+    }
   } else {
     await page.locator(inputSelector).waitFor({ state: 'visible' });
   }
@@ -103,15 +120,68 @@ async function verifyPersistenceAfterReload(page, mode) {
   }
 }
 
+async function verifyPinnedManagement(page, mode) {
+  await openSearchPanel(page, mode);
+  await page.locator(`[data-doc-search-input="${mode === 'mobile' ? 'mobile' : 'desktop'}"]`).fill('workflow');
+  await page.locator('[data-search-option-type="result"][data-search-doc-id="workflow-api"]').waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: '取消收藏 Workflow API' }).click();
+  await page.getByRole('button', { name: '收藏 Workflow API' }).waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: '收藏 Workflow API' }).click();
+  await page.getByRole('button', { name: '取消收藏 Workflow API' }).waitFor({ state: 'visible' });
+  await page.locator(`[data-doc-search-input="${mode === 'mobile' ? 'mobile' : 'desktop'}"]`).fill('');
+  await page.getByText('固定入口 / 收藏入口').waitFor({ state: 'visible' });
+  const expandWritingButton = page.getByRole('button', { name: '展开 写作用' });
+  if (await expandWritingButton.isVisible().catch(() => false)) {
+    await expandWritingButton.click();
+  }
+  await page.locator('select[aria-label="调整分组 Workflow API"]').waitFor({ state: 'visible' });
+
+  await page.locator('select[aria-label="调整分组 Workflow API"]').selectOption('writing');
+  await page.locator('[data-pinned-group="writing"] [data-pinned-item="workflow-api"]').waitFor({ state: 'visible' });
+  const writingItems = page.locator('[data-pinned-group="writing"] [data-pinned-item]');
+  const firstWritingCard = await writingItems.first().getAttribute('data-pinned-item');
+  if (firstWritingCard !== 'workflow-api') {
+    throw new Error(`改组后未进入写作用首位，实际首项：${firstWritingCard}`);
+  }
+
+  await page.getByRole('button', { name: '下移 Workflow API' }).click();
+  const firstAfterDown = await writingItems.first().getAttribute('data-pinned-item');
+  if (firstAfterDown !== 'craft-analysis') {
+    throw new Error(`下移后排序未生效，当前首项：${firstAfterDown}`);
+  }
+
+  await page.getByRole('button', { name: '置顶 Workflow API' }).click();
+  const topAfterReorder = await writingItems.first().getAttribute('data-pinned-item');
+  if (topAfterReorder !== 'workflow-api') {
+    throw new Error(`置顶后排序未恢复，当前首项：${topAfterReorder}`);
+  }
+}
+
 async function verifyKeyboardNavigation(page, mode) {
   await page.locator(`[data-doc-search-input="${mode === 'mobile' ? 'mobile' : 'desktop'}"]`).fill('workflow');
-  await page.getByText('找到').waitFor({ state: 'visible' });
+  await page.locator(`#doc-search-panel-${mode} > div`).first().waitFor({ state: 'visible' });
   await page.locator('[data-search-option-type="result"][data-search-active="true"]').waitFor({ state: 'visible' });
   await page.keyboard.press('Enter');
   await page.waitForURL('**/api/workflow-api');
   const recentQueries = await page.evaluate(() => window.localStorage.getItem('niko-docs:recent-queries'));
   if (!recentQueries || !recentQueries.includes('workflow')) {
     throw new Error(`键盘打开后未记录最近搜索，实际值：${recentQueries}`);
+  }
+}
+
+async function verifyShortcutSelection(page) {
+  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.locator('[data-doc-search-input="desktop"]').fill('workflow');
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
+  const selectedText = await page.locator('[data-doc-search-input="desktop"]').evaluate((input) => {
+    if (!(input instanceof HTMLInputElement)) {
+      return '';
+    }
+    return input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0);
+  });
+
+  if (selectedText !== 'workflow') {
+    throw new Error(`Ctrl/Cmd+K 后未选中文本，实际选中：${selectedText}`);
   }
 }
 
@@ -148,6 +218,7 @@ async function verifyViewport(browser, name, viewport) {
   await openSearchPanel(page, name);
   await verifyPinnedSections(page);
   await verifyPersistenceAfterReload(page, name);
+  await verifyPinnedManagement(page, name);
   await verifyKeyboardNavigation(page, name);
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await verifyEmptyStateFallback(page, name);
@@ -167,6 +238,12 @@ async function main() {
   try {
     await verifyViewport(browser, 'desktop', { width: 1440, height: 960 });
     await verifyViewport(browser, 'mobile', { width: 390, height: 844 });
+    const shortcutPage = await browser.newPage({ viewport: { width: 1440, height: 960 } });
+    try {
+      await verifyShortcutSelection(shortcutPage);
+    } finally {
+      await shortcutPage.close();
+    }
     console.log('SearchBox regression passed.');
   } finally {
     await browser.close();

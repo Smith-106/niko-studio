@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
     paths: ['docs-site/**']
+  pull_request:
+    paths: ['docs-site/**']
   workflow_dispatch:
 
 permissions:
@@ -31,11 +33,17 @@ jobs:
         working-directory: docs-site
         env:
           VITE_BASE_URL: /niko-studio/
+      - run: npm run test:searchbox
+        working-directory: docs-site
+        env:
+          NIKO_DOCS_BASE_PATH: /niko-studio/
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: docs-site/dist
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

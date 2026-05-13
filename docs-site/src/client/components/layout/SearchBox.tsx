@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getResolvedDocPages } from '../../data/inventory';
 
@@ -144,6 +144,8 @@ const defaultEmptyStateSuggestionSet: EmptyStateSuggestionSet = {
   docIds: ['capability-routing', 'request-lifecycle', 'chapter-revision-playbook'],
 };
 
+const searchHighlightRingClass = 'bg-[var(--color-bg-hover)] ring-2 ring-[var(--color-accent-blue)] ring-offset-1 ring-offset-[var(--color-bg-card)]';
+
 function normalize(value: string): string {
   return value.toLowerCase().trim();
 }
@@ -180,6 +182,7 @@ function inferPinnedBucket(categoryId: string): PinnedBucketId {
 export function SearchBox({ mobile = false, placeholder = '搜索文档、分类或 API...' }: SearchBoxProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeResultIndex, setActiveResultIndex] = useState(-1);
@@ -230,8 +233,9 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
 
     const focusDesktopInput = () => {
       window.setTimeout(() => {
-        const input = document.querySelector<HTMLInputElement>('[data-doc-search-input="desktop"]');
+        const input = inputRef.current ?? document.querySelector<HTMLInputElement>('[data-doc-search-input="desktop"]');
         input?.focus();
+        input?.select();
       }, 0);
     };
 
@@ -361,7 +365,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
 
         return {
           doc,
-          bucket: inferPinnedBucket(doc.category),
+          bucket: item.bucket ?? inferPinnedBucket(doc.category),
         };
       })
       .filter((item): item is PinnedResolvedItem => Boolean(item))
@@ -499,7 +503,8 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
 
       const item = { id: doc.id, path: doc.path };
       const buckets = buildPinnedBuckets(current.filter((entry) => entry.id !== doc.id));
-      const bucket = inferPinnedBucket(doc.category);
+      const previousEntry = current.find((entry) => entry.id === doc.id && entry.path === doc.path);
+      const bucket = previousEntry?.bucket ?? inferPinnedBucket(doc.category);
       buckets[bucket] = [{ ...item, bucket }, ...buckets[bucket]].slice(0, MAX_PINNED_ITEMS);
       const next = flattenPinnedBuckets(buckets);
       persistPinnedDocIds(next);
@@ -621,6 +626,15 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     setActiveResultIndex(keyboardItems.length > 0 ? 0 : -1);
   }, [isOpen, keyboardItems.length, normalizedQuery]);
 
+  useEffect(() => {
+    if (!isOpen || !activeKeyboardDocId || typeof window === 'undefined') {
+      return;
+    }
+
+    const activeElement = window.document.getElementById(`${searchPanelId}-option-${activeKeyboardDocId}`);
+    activeElement?.scrollIntoView({ block: 'nearest' });
+  }, [activeKeyboardDocId, isOpen, searchPanelId]);
+
   return (
     <div
       className={wrapperClass}
@@ -636,6 +650,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
           <circle cx="7" cy="7" r="5.2" stroke="currentColor" strokeWidth="1.4" />
         </svg>
         <input
+          ref={inputRef}
           data-doc-search-input={mobile ? 'mobile' : 'desktop'}
           value={query}
           aria-autocomplete="list"
@@ -805,7 +820,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                 {pinnedDocs.length > 0 ? (
                   <div className="space-y-3">
                     {pinnedDocGroups.map((group) => (
-                      <section key={group.id}>
+                      <section key={group.id} data-pinned-group={group.id}>
                         <div className="mb-2 flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
                             <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">
@@ -828,6 +843,8 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                             {group.items.map(({ doc, bucket }, index) => (
                               <div
                                 key={`pinned-${doc.id}`}
+                                data-pinned-item={doc.id}
+                                data-pinned-bucket={bucket}
                                 className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
                               >
                                 <div className="flex items-start justify-between gap-3">
@@ -988,7 +1005,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                         }}
                         className={`rounded-xl px-3 py-3 transition-colors ${
                           isActive
-                            ? 'bg-[var(--color-bg-hover)] ring-1 ring-[var(--color-accent-blue)]'
+                            ? searchHighlightRingClass
                             : 'hover:bg-[var(--color-bg-hover)]'
                         }`}
                       >
@@ -1072,7 +1089,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                         }}
                         className={`rounded-xl px-3 py-3 transition-colors ${
                           isActive
-                            ? 'bg-[var(--color-bg-hover)] ring-1 ring-[var(--color-accent-blue)]'
+                            ? searchHighlightRingClass
                             : 'hover:bg-[var(--color-bg-hover)]'
                         }`}
                       >
