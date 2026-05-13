@@ -11,6 +11,14 @@ interface SearchOpenDetail {
   query?: string;
 }
 
+type SearchGroupId = 'topic' | 'capability' | 'api';
+
+interface SearchResultItem {
+  doc: ReturnType<typeof getResolvedDocPages>[number];
+  score: number;
+  group: SearchGroupId;
+}
+
 const keywordAliases: Record<string, string[]> = {
   'common-writing-problems': ['开头弱', '对白平', '设定乱', '节奏塌', '伏笔丢'],
   'chapter-revision-playbook': ['修订', '章节修订', '改单章'],
@@ -26,8 +34,39 @@ const keywordAliases: Record<string, string[]> = {
 
 const featuredKeywords = ['开头弱', 'workflow', 'wiki', '伏笔', '对白', 'canon'];
 
+const recommendedDocIds = [
+  'chapter-revision-playbook',
+  'outline-to-final-manuscript',
+  'craft-analysis',
+  'dialogue-analysis',
+  'workflow-api',
+  'wiki-api',
+];
+
+const searchGroupMeta: Array<{
+  id: SearchGroupId;
+  label: string;
+  description: string;
+}> = [
+  { id: 'topic', label: '专题', description: '专题路径、指南与起步页' },
+  { id: 'capability', label: '能力页', description: '写作、批评、图谱、世界观等能力说明' },
+  { id: 'api', label: 'API', description: '端点、调用入口与接口参考' },
+];
+
 function normalize(value: string): string {
   return value.toLowerCase().trim();
+}
+
+function getSearchGroupId(categoryId: string): SearchGroupId {
+  if (categoryId === 'api') {
+    return 'api';
+  }
+
+  if (categoryId === 'guides' || categoryId === 'getting-started') {
+    return 'topic';
+  }
+
+  return 'capability';
 }
 
 export function SearchBox({ mobile = false, placeholder = '搜索文档、分类或 API...' }: SearchBoxProps) {
@@ -80,9 +119,18 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     };
   }, [mobile]);
 
-  const results = useMemo(() => {
+  const results = useMemo<SearchResultItem[]>(() => {
     if (!normalizedQuery) {
-      return docs.slice(0, 8);
+      const recommendedDocs = recommendedDocIds
+        .map((id) => docs.find((doc) => doc.id === id))
+        .filter(Boolean)
+        .map((doc, index) => ({
+          doc: doc!,
+          score: recommendedDocIds.length - index,
+          group: getSearchGroupId(doc!.category),
+        }));
+
+      return recommendedDocs;
     }
 
     return docs
@@ -109,13 +157,23 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
           score += 4;
         }
 
-        return { doc, score };
+        return { doc, score, group: getSearchGroupId(doc.category) };
       })
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score || a.doc.title.localeCompare(b.doc.title, 'zh-CN'))
-      .slice(0, 8)
-      .map((item) => item.doc);
+      .slice(0, 8);
   }, [docs, normalizedQuery]);
+
+  const groupedResults = useMemo(() => {
+    return searchGroupMeta
+      .map((group) => ({
+        ...group,
+        items: results.filter((item) => item.group === group.id),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [results]);
+
+  const totalResults = results.length;
 
   const wrapperClass = mobile
     ? 'relative w-full md:hidden'
@@ -162,7 +220,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       {isOpen ? (
         <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] shadow-[var(--shadow-lg)]">
           <div className="border-b border-[var(--color-border-divider)] px-4 py-3 text-[11px] text-[var(--color-text-tertiary)]">
-            {normalizedQuery ? `找到 ${results.length} 条结果` : '推荐入口与关键词'}
+            {normalizedQuery ? `找到 ${totalResults} 条结果，按专题 / 能力页 / API 分组` : '推荐入口、关键词与分组浏览'}
           </div>
           <div className="max-h-[420px] overflow-y-auto p-2">
             {!normalizedQuery ? (
@@ -186,21 +244,31 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                 </div>
               </div>
             ) : null}
-            {results.length > 0 ? (
-              results.map((doc) => (
-                <Link
-                  key={doc.id}
-                  to={doc.path}
-                  className="block rounded-xl px-3 py-3 no-underline transition-colors hover:bg-[var(--color-bg-hover)]"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--color-text-tertiary)]">
-                    <span>{doc.categoryInfo.icon}</span>
-                    <span>{doc.categoryInfo.name}</span>
+            {groupedResults.length > 0 ? (
+              groupedResults.map((group) => (
+                <section key={group.id} className="px-1 pb-2 pt-1">
+                  <div className="mb-2 flex items-center justify-between px-2">
+                    <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">{group.label}</div>
+                    <div className="text-[10px] text-[var(--color-text-tertiary)]">{group.description}</div>
                   </div>
-                  <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
-                  <div className="mt-1 text-[12px] leading-6 text-[var(--color-text-secondary)]">{doc.description}</div>
-                </Link>
+                  <div className="space-y-1">
+                    {group.items.map(({ doc }) => (
+                      <Link
+                        key={doc.id}
+                        to={doc.path}
+                        className="block rounded-xl px-3 py-3 no-underline transition-colors hover:bg-[var(--color-bg-hover)]"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--color-text-tertiary)]">
+                          <span>{doc.categoryInfo.icon}</span>
+                          <span>{doc.categoryInfo.name}</span>
+                        </div>
+                        <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                        <div className="mt-1 text-[12px] leading-6 text-[var(--color-text-secondary)]">{doc.description}</div>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
               ))
             ) : (
               <div className="px-3 py-6 text-[12px] text-[var(--color-text-secondary)]">没有找到匹配项，试试分类名、功能名或 API 关键词。</div>
