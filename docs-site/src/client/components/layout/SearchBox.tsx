@@ -12,11 +12,13 @@ interface SearchOpenDetail {
 }
 
 type SearchGroupId = 'topic' | 'capability' | 'api';
+type SearchReason = 'title' | 'alias' | 'category' | 'description' | 'recommended';
 
 interface SearchResultItem {
   doc: ReturnType<typeof getResolvedDocPages>[number];
   score: number;
   group: SearchGroupId;
+  reasons: SearchReason[];
 }
 
 const keywordAliases: Record<string, string[]> = {
@@ -52,6 +54,14 @@ const searchGroupMeta: Array<{
   { id: 'capability', label: '能力页', description: '写作、批评、图谱、世界观等能力说明' },
   { id: 'api', label: 'API', description: '端点、调用入口与接口参考' },
 ];
+
+const searchReasonLabel: Record<SearchReason, string> = {
+  title: '标题命中',
+  alias: '别名命中',
+  category: '分类命中',
+  description: '描述命中',
+  recommended: '推荐入口',
+};
 
 function normalize(value: string): string {
   return value.toLowerCase().trim();
@@ -128,6 +138,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
           doc: doc!,
           score: recommendedDocIds.length - index,
           group: getSearchGroupId(doc!.category),
+          reasons: ['recommended' as const],
         }));
 
       return recommendedDocs;
@@ -144,20 +155,37 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
         ].join(' '));
 
         let score = 0;
-        if (normalize(doc.title).includes(normalizedQuery)) {
+        const reasons: SearchReason[] = [];
+        const titleMatched = normalize(doc.title).includes(normalizedQuery);
+        const categoryMatched = normalize(doc.categoryInfo.name).includes(normalizedQuery);
+        const descriptionMatched = normalize(doc.description).includes(normalizedQuery) || normalize(doc.categoryInfo.description).includes(normalizedQuery);
+        const aliasMatched = (keywordAliases[doc.id] ?? []).some((keyword) => normalize(keyword).includes(normalizedQuery) || normalizedQuery.includes(normalize(keyword)));
+
+        if (titleMatched) {
           score += 5;
+          reasons.push('title');
         }
-        if (normalize(doc.categoryInfo.name).includes(normalizedQuery)) {
+        if (categoryMatched) {
           score += 3;
+          reasons.push('category');
         }
         if (haystack.includes(normalizedQuery)) {
           score += 1;
         }
-        if ((keywordAliases[doc.id] ?? []).some((keyword) => normalize(keyword).includes(normalizedQuery) || normalizedQuery.includes(normalize(keyword)))) {
+        if (descriptionMatched) {
+          reasons.push('description');
+        }
+        if (aliasMatched) {
           score += 4;
+          reasons.push('alias');
         }
 
-        return { doc, score, group: getSearchGroupId(doc.category) };
+        return {
+          doc,
+          score,
+          group: getSearchGroupId(doc.category),
+          reasons: Array.from(new Set(reasons)),
+        };
       })
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score || a.doc.title.localeCompare(b.doc.title, 'zh-CN'))
@@ -252,7 +280,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                     <div className="text-[10px] text-[var(--color-text-tertiary)]">{group.description}</div>
                   </div>
                   <div className="space-y-1">
-                    {group.items.map(({ doc }) => (
+                    {group.items.map(({ doc, reasons }) => (
                       <Link
                         key={doc.id}
                         to={doc.path}
@@ -265,6 +293,16 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                         </div>
                         <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
                         <div className="mt-1 text-[12px] leading-6 text-[var(--color-text-secondary)]">{doc.description}</div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {reasons.map((reason) => (
+                            <span
+                              key={reason}
+                              className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]"
+                            >
+                              {searchReasonLabel[reason]}
+                            </span>
+                          ))}
+                        </div>
                       </Link>
                     ))}
                   </div>
