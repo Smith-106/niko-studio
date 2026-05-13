@@ -182,6 +182,8 @@ The current diagnostics contract for this workflow is:
 - Linux desktop dependency leg emits artifact `ci-diagnostics-desktop-build-linux-deps-log`
 - Windows packaging advisory leg emits artifact `ci-diagnostics-desktop-packaging-advisory-log`
 - Windows packaged smoke leg emits artifacts `ci-diagnostics-packaged-app-smoke-report` and `ci-diagnostics-packaged-app-smoke-build-log`
+- External release gate emits artifacts `ci-diagnostics-governance-scripts-report-*`, `ci-diagnostics-authority-alignment-report-*`, `ci-diagnostics-vitest-production-guard-report-*`, and `ci-diagnostics-vitest-e2e-report-*`
+- Writing-helper acceptance emits artifacts `ci-diagnostics-writing-helper-acceptance-evidence`, `ci-diagnostics-writing-helper-gateway-logs`, and `ci-diagnostics-writing-helper-failed-cases`
 - workflow summaries use the unified `ci-diagnostics:` prefix so operator triage can correlate `PASS` / `WARN` / `SKIPPED` / `FAIL` with artifact names directly from `GITHUB_STEP_SUMMARY`
 
 When this workflow is used as release-adjacent evidence, treat these diagnostics artifacts as the first inspection surface before deeper runner or local reproduction.

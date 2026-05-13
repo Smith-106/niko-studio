@@ -97,7 +97,7 @@ jobs:
       - name: Upload governance script regression report
         uses: actions/upload-artifact@v7
         with:
-          name: governance-scripts-report-${{ inputs.gate_label }}
+          name: ci-diagnostics-governance-scripts-report-${{ inputs.gate_label }}
           path: governance-scripts.junit.xml
 
       - name: Set up Node.js 20
@@ -158,7 +158,7 @@ jobs:
         if: ${{ steps.gate_mode.outputs.run_metrics_guard == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: vitest-production-guard-${{ inputs.gate_label }}
+          name: ci-diagnostics-vitest-production-guard-report-${{ inputs.gate_label }}
           path: vitest-production-guard.xml
 
       - name: Run external smoke (${{ inputs.gate_label }})
@@ -171,7 +171,7 @@ jobs:
         if: ${{ steps.gate_mode.outputs.run_e2e == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: vitest-e2e-report-${{ inputs.gate_label }}
+          name: ci-diagnostics-vitest-e2e-report-${{ inputs.gate_label }}
           path: vitest-e2e.xml
 
       - name: Check desktop sidecar readiness
@@ -189,7 +189,7 @@ jobs:
       - name: Upload authority alignment artifact
         uses: actions/upload-artifact@v7
         with:
-          name: authority-alignment-report-${{ inputs.gate_label }}
+          name: ci-diagnostics-authority-alignment-report-${{ inputs.gate_label }}
           path: authority-alignment.json
 
       - name: Resolve Codecov strict mode
@@ -238,14 +238,14 @@ jobs:
 
           if ($legacyEntry -or $packagedCompatArtifact) {
             "strict_required=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging: strict Windows packaging gate enabled (Python compatibility sidecar prerequisite present). release_state=unsigned_local_proof by default because tauri.conf keeps certificateThumbprint=null and timestampUrl=""; signed_external_release still requires release-private signing inputs on the Windows packaging host.'
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: external-release-desktop-packaging ENFORCING - strict Windows packaging gate enabled. release_state=unsigned_local_proof by default; signed_external_release still requires release-private signing inputs on the Windows packaging host. Artifact: ci-diagnostics-desktop-packaging-dry-run-binary-${{ inputs.gate_label }}.'
             return
           }
 
           "strict_required=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          $warning = 'Skipping strict Windows packaging gate because this checkout does not include the Python compatibility sidecar prerequisite. Sidecar readiness and advisory packaging logs remain authoritative until the compatibility artifact is hydrated.'
+          $warning = 'ci-diagnostics: external-release-desktop-packaging PREREQUISITE_MISSING_HOLD - strict Windows packaging gate skipped because the compatibility sidecar prerequisite is not hydrated.'
           Write-Host "::warning::$warning"
-          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'desktop-packaging: prerequisite_missing_hold because the Python compatibility sidecar prerequisite is not hydrated in this checkout; rely on sidecar readiness plus advisory packaging logs until the compatibility artifact is hydrated.'
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: external-release-desktop-packaging PREREQUISITE_MISSING_HOLD - compatibility sidecar prerequisite is not hydrated in this checkout. Rely on sidecar readiness plus advisory diagnostics until the artifact is hydrated.'
 
       - name: Install Rust toolchain
         if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
@@ -278,7 +278,7 @@ jobs:
         if: ${{ steps.packaging-prereq.outputs.strict_required == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: desktop-packaging-dry-run-${{ inputs.gate_label }}
+          name: ci-diagnostics-desktop-packaging-dry-run-binary-${{ inputs.gate_label }}
           path: desktop/src-tauri/target/x86_64-pc-windows-msvc/debug/niko-studio-desktop.exe
 
   writing-helper-acceptance:

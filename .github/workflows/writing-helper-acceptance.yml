@@ -108,6 +108,7 @@ jobs:
           }
 
       - name: Run writing-helper acceptance
+        id: writing-helper-acceptance
         shell: powershell
         run: |
           if ('${{ inputs.strict }}' -eq 'true') {
@@ -116,25 +117,38 @@ jobs:
             powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-writing-helper.ps1 -Port ${{ inputs.port }} -Host ${{ inputs.host }}
           }
 
+      - name: Summarize writing-helper acceptance diagnostics
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.writing-helper-acceptance.outcome }}' -eq 'success') {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: writing-helper-acceptance PASS - strict acceptance completed successfully. Artifact: ci-diagnostics-writing-helper-acceptance-evidence.'
+            return
+          }
+
+          $warning = 'ci-diagnostics: writing-helper-acceptance FAIL - acceptance failed. Review artifacts: ci-diagnostics-writing-helper-failed-cases and ci-diagnostics-writing-helper-gateway-logs.'
+          Write-Host "::warning::$warning"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value 'ci-diagnostics: writing-helper-acceptance FAIL - review artifacts: ci-diagnostics-writing-helper-failed-cases, ci-diagnostics-writing-helper-gateway-logs, ci-diagnostics-writing-helper-acceptance-evidence.'
+
       - name: Upload failed cases artifact
         if: failure() && hashFiles('failed-writing-helper-cases.json') != ''
         uses: actions/upload-artifact@v7
         with:
-          name: failed-writing-helper-cases
+          name: ci-diagnostics-writing-helper-failed-cases
           path: failed-writing-helper-cases.json
 
       - name: Upload writing-helper acceptance evidence
         if: always() && hashFiles('.workflow/evidence/release/writing-helper-acceptance.json') != ''
         uses: actions/upload-artifact@v7
         with:
-          name: writing-helper-acceptance-evidence
+          name: ci-diagnostics-writing-helper-acceptance-evidence
           path: .workflow/evidence/release/writing-helper-acceptance.json
 
       - name: Upload gateway logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: writing-helper-gateway-logs
+          name: ci-diagnostics-writing-helper-gateway-logs
           path: |
             gateway.log
             gateway.err

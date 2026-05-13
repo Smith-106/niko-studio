@@ -60,10 +60,12 @@
 ### CI 观察点
 - External authority workflow：`.github/workflows/external-release-gate.yml`
 - `gate` job：version + delivery gate + TS coverage baseline + external smoke + desktop sidecar readiness + authority alignment + production guard
-- `authority-alignment-advisory` job：workflow/runtime/docs 权威漂移观察信号与 `authority-alignment-report` artifact
+- `authority-alignment-advisory` job：workflow/runtime/docs 权威漂移观察信号；external release gate 归档为 `ci-diagnostics-authority-alignment-report-*` artifact
 - `authority-alignment-hard-fail` job：main 分支对 authority alignment 的阻断验证
-- `governance-scripts-report-*` artifact：治理脚本回归测试的 junit 结果
+- `ci-diagnostics-governance-scripts-report-*` artifact：治理脚本回归测试的 junit 结果
+- `ci-diagnostics-vitest-production-guard-report-*` / `ci-diagnostics-vitest-e2e-report-*` artifact：external release gate 的 runtime / e2e 诊断结果
 - `coverage-xml` artifact：始终由 external release workflow 上传；Codecov 上传是否执行仅影响外部上传，不影响本地 artifact 留档
+- `ci-diagnostics-writing-helper-acceptance-evidence` / `ci-diagnostics-writing-helper-gateway-logs` / `ci-diagnostics-writing-helper-failed-cases` artifact：writing-helper acceptance 的结构化证据与失败诊断
 - `ci-diagnostics-desktop-build-linux-deps-log` artifact：`desktop-build` 的 Linux 系统依赖安装日志
 - `ci-diagnostics-desktop-packaging-advisory-log` artifact：Windows 打包 advisory 干跑日志
 - `ci-diagnostics-packaged-app-smoke-report` / `ci-diagnostics-packaged-app-smoke-build-log` artifact：Windows 打包 smoke 的结构化结果与 NSIS 构建日志
