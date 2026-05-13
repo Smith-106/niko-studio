@@ -679,10 +679,16 @@ jobs:
       - name: Build NSIS installer (release, unsigned)
         id: nsis-build
         continue-on-error: true
+        timeout-minutes: 12
         shell: pwsh
         working-directory: desktop
         run: |
-          npm run tauri -- build --target x86_64-pc-windows-msvc
+          New-Item -ItemType Directory -Path ..\.workflow\evidence\release -Force | Out-Null
+          $logPath = Join-Path (Resolve-Path ..\.workflow\evidence\release) 'packaged-app-smoke-build.log'
+          & npm run tauri -- build --target x86_64-pc-windows-msvc *>&1 | Tee-Object -FilePath $logPath
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
 
       - name: Locate NSIS installer
         if: steps.nsis-build.outcome == 'success'
@@ -728,6 +734,14 @@ jobs:
         with:
           name: packaged-app-smoke-report
           path: .workflow/evidence/release/packaged-app-smoke.json
+          if-no-files-found: ignore
+
+      - name: Upload packaged-app-smoke build log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: packaged-app-smoke-build-log
+          path: .workflow/evidence/release/packaged-app-smoke-build.log
           if-no-files-found: ignore
 
   # Performance benchmark lane: advisory, non-blocking quality signal.
