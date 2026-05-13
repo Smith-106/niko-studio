@@ -275,7 +275,11 @@ def build_sidecar_contract_fixture(
     bin_dir = desktop_dir / "src-tauri" / "bin"
     tauri_config_path = desktop_dir / "src-tauri" / "tauri.conf.json"
     capability_path = desktop_dir / "src-tauri" / "capabilities" / "main-desktop.json"
+    desktop_package_path = desktop_dir / "package.json"
+    sidecar_manifest_path = bin_dir / "sidecar.manifest.json"
     legacy_python_entry = PROJECT_ROOT / "src" / "mcp" / "sidecar_entry.py"
+    desktop_package = json.loads(desktop_package_path.read_text(encoding="utf-8"))
+    desktop_version = str(desktop_package["version"])
 
     exists_paths: dict[Path, bool] = {
         bin_dir: True,
@@ -315,6 +319,13 @@ def build_sidecar_contract_fixture(
             "identifier": "main-desktop",
             "windows": ["main"],
             "permissions": list(capability_permissions or EXPECTED_DESKTOP_CAPABILITY_PERMISSIONS),
+        },
+        desktop_package_path: {
+            "version": desktop_version,
+        },
+        sidecar_manifest_path: {
+            "runtime": "node",
+            "version": desktop_version,
         },
     }
 
@@ -1981,10 +1992,7 @@ def test_signed_release_path_uses_generated_tauri_config_without_repo_config_edi
     )
     assert "parser.add_argument(" in signing_source
     assert '"--run-build"' in signing_source
-    assert (
-        'str(config_path.relative_to(DESKTOP_DIR)).replace("\\\\", "/")'
-        in signing_source
-    )
+    assert 'str(config_path.relative_to(DESKTOP_DIR)).replace("\\\\", "/")' in signing_source
     assert '"--config"' in signing_source
     assert '[_npm_cmd(), "run", "tauri", "--", "build"' in signing_source
     assert "desktop/src-tauri/tauri.signed.local.generated.json" in gitignore_text

@@ -216,7 +216,9 @@ def launch_app(executable: Path, report: SmokeReport, port: int) -> subprocess.P
     return process
 
 
-def http_get_json(url: str, timeout: float = 5.0) -> tuple[int, dict[str, Any] | None, dict[str, str]]:
+def http_get_json(
+    url: str, timeout: float = 5.0
+) -> tuple[int, dict[str, Any] | None, dict[str, str]]:
     req = urllib.request.Request(url, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -295,7 +297,9 @@ def assert_health_contract(port: int, expected_version: str, report: SmokeReport
             if name not in listed:
                 missing_services.append(name)
     else:
-        report.notes.append(f"/health services field has unexpected shape: {type(services).__name__}")
+        report.notes.append(
+            f"/health services field has unexpected shape: {type(services).__name__}"
+        )
 
     if missing_services:
         report.add_failure(f"missing services in /health: {', '.join(missing_services)}")
@@ -310,10 +314,7 @@ def assert_cors_contract(port: int, report: SmokeReport) -> None:
     status, headers = http_options_cors(url, WEBVIEW_ORIGIN, timeout=5.0)
     report.cors_response = {"status": status, "headers": headers}
     allow_origin = headers.get("access-control-allow-origin", "")
-    allowed = (
-        allow_origin == WEBVIEW_ORIGIN
-        or allow_origin == "*"
-    )
+    allowed = allow_origin == WEBVIEW_ORIGIN or allow_origin == "*"
     if status not in (200, 204):
         report.add_failure(
             f"CORS preflight returned status={status} (expected 200 or 204) for origin={WEBVIEW_ORIGIN}"
@@ -405,7 +406,9 @@ def main() -> int:
                     report.status = "SETUP_ERROR"
                     return EXIT_SETUP_ERROR
                 report.installer_path = str(args.installer_path)
-                install_dir = Path(os.environ.get("TEMP", "/tmp")) / f"niko-smoke-{int(time.time())}"
+                install_dir = (
+                    Path(os.environ.get("TEMP", "/tmp")) / f"niko-smoke-{int(time.time())}"
+                )
                 silent_install(args.installer_path.resolve(), install_dir, report)
                 executable = find_installed_executable(install_dir)
                 if executable is None:

@@ -1974,7 +1974,10 @@ def package_app_smoke_signal(
                     ("artifact", _trace_path(PACKAGED_APP_SMOKE_ARTIFACT_PATH)),
                     ("status", "advisory_unavailable"),
                     ("mode", "advisory_first"),
-                    ("note", "no smoke artifact yet — packaged-app-smoke CI lane is advisory until stability is observed"),
+                    (
+                        "note",
+                        "no smoke artifact yet — packaged-app-smoke CI lane is advisory until stability is observed",
+                    ),
                     ("decision", "advisory_pass"),
                 ]
             ),

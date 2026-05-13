@@ -83,8 +83,7 @@ def _validate_consolidated_summary_refresh(
     decision = str(payload.get("decision") or "").strip().upper()
     if decision not in {"GO", "NO_GO"}:
         raise RuntimeError(
-            "consolidated release summary produced an unknown decision: "
-            f"{decision or 'missing'}"
+            f"consolidated release summary produced an unknown decision: {decision or 'missing'}"
         )
     if exit_code == 0 and decision != "GO":
         raise RuntimeError(
@@ -273,7 +272,9 @@ def main(argv: list[str] | None = None) -> int:
     print("- .workflow/evidence/release/release-readiness-artifact.json")
     print("- release-check-summary.md")
     if decision != "GO":
-        print("Current release decision remains NO_GO; retained evidence is refreshed and blockers are current-head accurate.")
+        print(
+            "Current release decision remains NO_GO; retained evidence is refreshed and blockers are current-head accurate."
+        )
     return 0
 
 
