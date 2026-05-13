@@ -142,6 +142,7 @@ jobs:
       - name: Create temporary externalBin placeholders
         run: |
           mkdir -p desktop/src-tauri/bin
+          mkdir -p desktop/src-tauri/bin/sidecar
           touch desktop/src-tauri/bin/niko-gateway
           touch desktop/src-tauri/bin/niko-gateway-x86_64-unknown-linux-gnu
 
