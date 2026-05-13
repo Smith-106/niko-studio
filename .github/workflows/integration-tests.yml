@@ -267,11 +267,17 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: |
+            desktop/package-lock.json
+            src-ts/package-lock.json
 
       - name: Install desktop dependencies
         run: npm ci
         working-directory: desktop
+
+      - name: Install backend dependencies for sidecar hard gate
+        run: npm ci
+        working-directory: src-ts
 
       - name: Rebuild desktop sidecar artifact (main hard gate)
         run: npm run build:sidecar
@@ -293,7 +299,9 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: desktop/package-lock.json
+          cache-dependency-path: |
+            desktop/package-lock.json
+            src-ts/package-lock.json
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -628,6 +636,10 @@ jobs:
       - name: Install desktop dependencies
         run: npm ci
         working-directory: desktop
+
+      - name: Install backend dependencies for packaged-app smoke
+        run: npm ci
+        working-directory: src-ts
 
       - name: Build sidecar contract artifact
         run: npm run build:sidecar
