@@ -24,6 +24,42 @@ export const desktopContent: Record<string, string> = {
   <li>在右侧查看证据和建议，决定是否回填正文。</li>
   <li>保存、继续写作或导出。</li>
 </ol>
+<h2>UI 控制链</h2>
+<pre><code>sequenceDiagram
+  participant User as 写作者
+  participant Editor as 编辑器
+  participant Panel as 右侧面板
+  participant Service as 前端 Service
+  participant Gateway as Gateway
+
+  User->>Editor: 输入正文 / 选中段落
+  User->>Panel: 选择分析或修订动作
+  Panel->>Service: 发起带 selection 的请求
+  Service->>Gateway: 发送 intent + workspace
+  Gateway-->>Service: 返回 evidence + suggestion
+  Service-->>Panel: 渲染卡片和建议
+  Panel-->>Editor: 回填或定位到原文</code></pre>
+<h2>边界说明</h2>
+<table>
+  <thead><tr><th>位置</th><th>负责内容</th><th>不负责内容</th></tr></thead>
+  <tbody>
+    <tr><td>编辑器</td><td>正文输入、选区表达、定位和回填。</td><td>模型协议、上下文检索。</td></tr>
+    <tr><td>右侧面板</td><td>结果展示、建议选择、动作编排。</td><td>决定底层调用哪种 provider。</td></tr>
+    <tr><td>Service 层</td><td>把 UI 意图翻译为 Gateway 请求。</td><td>保存长期 canon。</td></tr>
+    <tr><td>Gateway</td><td>上下文、模型、规则和结构化结果。</td><td>替作者自动接受建议。</td></tr>
+  </tbody>
+</table>
+<h2>输入示例场景</h2>
+<pre><code>用户动作：
+1. 在编辑器中选中 3 段对白
+2. 点击“分析对白”
+3. 打开右侧面板查看结果</code></pre>
+<h2>期望输出形态</h2>
+<ul>
+  <li>右侧面板应显示与当前 selection 对应的分析，而不是整章泛评。</li>
+  <li>结果应可回跳到原文位置。</li>
+  <li>若 selection 失效，应有明确提示而不是静默失败。</li>
+</ul>
 <h2>故障排查</h2>
 <ul>
   <li>编辑器没有响应时，先确认当前项目和文档是否已打开。</li>
@@ -56,6 +92,32 @@ export const desktopContent: Record<string, string> = {
   <li>再看证据片段，确认系统判断是否命中真实问题。</li>
   <li>最后选择一个建议执行，重新分析验证变化。</li>
 </ol>
+<h2>面板结构图</h2>
+<pre><code>flowchart LR
+  Overview[总览分数] --> Dimensions[维度列表]
+  Dimensions --> Evidence[证据片段]
+  Dimensions --> Diagnosis[原因解释]
+  Diagnosis --> Suggestion[修订建议]
+  Suggestion --> Action[应用 / 忽略 / 继续追问]
+  Action --> Recheck[重新分析]</code></pre>
+<h2>什么结果值得优先看</h2>
+<table>
+  <thead><tr><th>信号</th><th>含义</th><th>建议动作</th></tr></thead>
+  <tbody>
+    <tr><td>低分维度集中</td><td>问题可能不是局部措辞，而是结构层面。</td><td>先看该维度的证据与解释。</td></tr>
+    <tr><td>证据片段重复命中同一区域</td><td>说明问题高度局部化。</td><td>优先小范围修改并复检。</td></tr>
+    <tr><td>建议很泛</td><td>上下文或任务目标不够清晰。</td><td>补充意图、选区或相关设定后再跑。</td></tr>
+  </tbody>
+</table>
+<h2>输入示例场景</h2>
+<pre><code>当前问题：章节开头 600 字读起来发闷
+操作：在写作面板查看总分、低分维度和证据片段</code></pre>
+<h2>期望输出形态</h2>
+<ul>
+  <li>总览先暴露最低分维度。</li>
+  <li>证据片段应命中开头区域，而不是跳去章节后半段。</li>
+  <li>建议应可转成下一步修订动作。</li>
+</ul>
   `,
   'local-storage': `
 <h2>本地存储</h2>
@@ -76,6 +138,26 @@ export const desktopContent: Record<string, string> = {
 </ul>
 <h2>使用建议</h2>
 <p>本地优先不等于不需要备份。长篇项目建议使用稳定目录，并定期通过系统备份、版本管理或云盘同步工作区。</p>
+<h2>哪些内容应该长期保留</h2>
+<ul>
+  <li>正文、章节结构和项目元数据应视为主数据。</li>
+  <li>Wiki / Story Bible 属于长期知识层，应和正文一起备份。</li>
+  <li>分析缓存可以重建，但在长篇项目里保留缓存能提升交互速度。</li>
+  <li>配置和模型偏好需要区分“项目级”与“用户级”作用域。</li>
+</ul>
+<h2>迁移边界</h2>
+<p>如果你只是把项目迁移到另一台机器，优先迁移 workspace、素材和 Wiki；缓存和局部索引可以后建。不要把临时运行状态误当成必须随项目漫游的数据。</p>
+<h2>输入示例场景</h2>
+<pre><code>迁移目标：
+- 把一个长篇项目从电脑 A 迁到电脑 B
+- 保留正文、Wiki、素材
+- 不要求保留所有缓存</code></pre>
+<h2>期望输出形态</h2>
+<ul>
+  <li>主数据应明确包括 workspace、素材和 Wiki。</li>
+  <li>缓存和索引应被识别为可重建项。</li>
+  <li>迁移说明应明确哪些内容是项目级，哪些是用户级。</li>
+</ul>
   `,
   'llm-integration': `
 <h2>LLM 集成</h2>
@@ -102,6 +184,26 @@ export const desktopContent: Record<string, string> = {
 </ul>
 <h2>结果约束</h2>
 <p>模型输出不会直接等同于最终修改。写作面板会尽量把结果拆成证据、判断和建议，作者仍然保留取舍权。</p>
+<h2>请求分层</h2>
+<table>
+  <thead><tr><th>层</th><th>内容</th><th>示例</th></tr></thead>
+  <tbody>
+    <tr><td>Intent</td><td>用户到底想写、改、查还是评估。</td><td>扩写场景、检查节奏、润色对白。</td></tr>
+    <tr><td>Context</td><td>当前正文、选区、Wiki、素材、风格约束。</td><td>角色关系、章节摘要、设定条目。</td></tr>
+    <tr><td>Provider Call</td><td>模型或规则的真实执行。</td><td>chat、stream、analyze。</td></tr>
+    <tr><td>Normalization</td><td>把响应变成 UI 可消费格式。</td><td>score、evidence、suggestion。</td></tr>
+  </tbody>
+</table>
+<h2>输入示例场景</h2>
+<pre><code>intent: 强化这段追逐戏的压迫感
+selection: 主角翻墙逃跑的 500 字
+workspace: 当前项目 + 角色设定 + 世界观限制</code></pre>
+<h2>期望输出形态</h2>
+<ul>
+  <li>结果应拆成 evidence、suggestion、可选动作，而不是直接一整段改写。</li>
+  <li>若使用流式输出，应有清晰的完成信号。</li>
+  <li>若模型不可用，应能退回到明确的错误说明或降级路径。</li>
+</ul>
 <h2>故障排查</h2>
 <ul>
   <li>模型不可见：检查 <code>GET /models</code> 和配置 API。</li>
@@ -123,6 +225,27 @@ export const desktopContent: Record<string, string> = {
 </ul>
 <h2>边界原则</h2>
 <p>插件应复用工作区上下文和 Gateway 能力，不应绕过配置、权限和健康检查边界。</p>
+<h2>插件执行链</h2>
+<pre><code>flowchart LR
+  User[用户动作] --> UI[插件入口]
+  UI --> Gateway[插件 API]
+  Gateway --> Context[Workspace / Config]
+  Context --> Plugin[Plugin Runtime]
+  Plugin --> Output[分析结果 / 导出文件 / UI 响应]</code></pre>
+<h2>适合做成插件的场景</h2>
+<ul>
+  <li>团队私有的导出格式或发布流程。</li>
+  <li>项目专属的质量检查或章节模板。</li>
+  <li>不适合进入核心应用，但需要稳定复用的自定义能力。</li>
+</ul>
+<h2>输入示例场景</h2>
+<pre><code>插件目标：导出“章节摘要 + 人物关系表 + 待回收伏笔”成团队审稿包</code></pre>
+<h2>期望输出形态</h2>
+<ul>
+  <li>输出应是明确的导出结果或结构化报告。</li>
+  <li>执行过程应复用 workspace 和 Gateway，而不是直接绕系统边界访问文件。</li>
+  <li>失败时应指出是插件逻辑、上下文还是权限问题。</li>
+</ul>
   `,
   'skill-system': `
 <h2>技能系统</h2>
@@ -149,6 +272,24 @@ description: 检查章节开头钩子、冲突和追读动力
   <li>特定作者风格的润色。</li>
   <li>网文节奏、爽点和断章检查。</li>
   <li>角色对话声线一致性检查。</li>
+</ul>
+<h2>技能与插件的区别</h2>
+<table>
+  <thead><tr><th>能力</th><th>技能</th><th>插件</th></tr></thead>
+  <tbody>
+    <tr><td>侧重点</td><td>提示词、规则和调用链编排。</td><td>系统扩展、导出、能力接入。</td></tr>
+    <tr><td>更适合谁</td><td>写作者、提示词工程、团队流程维护者。</td><td>开发者、集成者。</td></tr>
+    <tr><td>变更成本</td><td>较低。</td><td>较高，通常涉及更多系统边界。</td></tr>
+  </tbody>
+</table>
+<h2>输入示例场景</h2>
+<pre><code>技能目标：固定检查“开头钩子 + 对白张力 + 悬念保留”
+调用方式：链式执行 3 个技能，最后汇总结果</code></pre>
+<h2>期望输出形态</h2>
+<ul>
+  <li>每一步都应产出可继续传递的结构化结果。</li>
+  <li>最终输出应是汇总建议，而不是 3 段彼此无关的评论。</li>
+  <li>若其中一步缺上下文，应明确指出链路在哪断了。</li>
 </ul>
   `,
   'wiki-system': `
@@ -187,5 +328,14 @@ GET  /wiki/page/:id</code></pre>
 </ul>
 <h2>相关页面</h2>
 <p>继续阅读：能力路由指南、素材 API、Wiki API、图谱 API。</p>
+<h2>输入示例场景</h2>
+<pre><code>待晋升事实：林砚怕深水，但在危机中会强撑镇定
+来源：chapter-03 + 作者确认备注</code></pre>
+<h2>期望输出形态</h2>
+<ul>
+  <li>形成稳定可查询的 Wiki 条目。</li>
+  <li>后续 Agent、Graph、Memory 都能引用到这条事实。</li>
+  <li>若与旧条目冲突，应提示核对而不是静默覆盖。</li>
+</ul>
   `,
 };

@@ -1,4 +1,6 @@
-export const apiContent: Record<string, string> = {
+import { appendSectionToPages, outputFieldGlossaryMiniSection } from './shared-doc-fragments';
+
+const baseApiContent: Record<string, string> = {
   'mcp-endpoints': `
 <h2>MCP 端点</h2>
 <p>MCP 端点把内部写作能力标准化为可调用工具，便于接入 Agent、IDE 或自动化工作流。它更关注“工具语义”，Gateway API 更关注 HTTP 调用。</p>
@@ -69,6 +71,12 @@ export const apiContent: Record<string, string> = {
   <li><code>/api/config-api</code>：检查配置、masked secrets 和 reload 行为。</li>
   <li><code>/desktop/llm-integration</code>：理解模型配置和 Gateway 调用链。</li>
 </ul>
+<h2>集成建议</h2>
+<ol>
+  <li>外部工具先连 <code>GET /health</code>，再决定是否继续访问业务端点。</li>
+  <li>若你的场景不确定属于哪个模块，先看 <a href="/guides/capability-routing">能力路由指南</a>，不要直接猜端点。</li>
+  <li>把 Gateway 当作稳定入口，不要让外部脚本直接绕过它访问底层模型或本地索引。</li>
+</ol>
   `,
   'writing-api': `
 <h2>写作 API</h2>
@@ -85,6 +93,12 @@ POST /writing-craft/analyze</code></pre>
   <li><strong>结构化分析</strong>：分数、维度、证据、建议。</li>
   <li><strong>SSE 事件</strong>：用于流式渲染 token、状态和完成信号。</li>
 </ul>
+<h2>Related Scenarios</h2>
+<ul>
+  <li><a href="/writing/craft-analysis">写作技法分析</a>：当你要看节奏、张力、视角等结构化结果时。</li>
+  <li><a href="/writing/writing-stream">流式写作</a>：当你要实时续写和展开场景时。</li>
+  <li><a href="/guides/common-writing-problems">常见写作问题索引</a>：当你是从“稿子哪里出问题了”出发时。</li>
+</ul>
   `,
   'graph-api': `
 <h2>图谱 API</h2>
@@ -99,6 +113,12 @@ GET  /graph/foreshadows</code></pre>
   <li>检查伏笔是否埋设、推进和回收。</li>
   <li>为 Agent 提供结构化上下文。</li>
 </ul>
+<h2>Related Scenarios</h2>
+<ul>
+  <li><a href="/graph/graph-query">图谱查询</a>：当你记得关联但忘了出处时。</li>
+  <li><a href="/graph/foreshadow-tracking">伏笔追踪</a>：当你担心伏笔丢失或回收节奏失控时。</li>
+  <li><a href="/desktop/wiki-system">Wiki 系统</a>：当你需要把图谱发现回收到权威设定层时。</li>
+</ul>
   `,
   'critic-api': `
 <h2>批评 API</h2>
@@ -112,6 +132,12 @@ POST /m10/revise/multi-pass</code></pre>
   <li>一致性问题：时间线、设定、角色行为冲突。</li>
   <li>风格画像：语气、句式、节奏和词汇倾向。</li>
   <li>修订建议：按优先级组织的改写方向。</li>
+</ul>
+<h2>Related Scenarios</h2>
+<ul>
+  <li><a href="/critic/critic-evaluate">批评评估</a>：当你只知道“读起来不对劲”时。</li>
+  <li><a href="/critic/consistency-check">一致性检查</a>：当你怀疑是设定或跨章问题时。</li>
+  <li><a href="/critic/multi-pass-revision">多轮修订</a>：当你已经确定要系统改整章时。</li>
 </ul>
   `,
   'agent-api': `
@@ -128,6 +154,15 @@ POST /chat/stream</code></pre>
   Route --> Revise[/agent/revise]
   Route --> Context[/agent/context]
   Route --> Chat[/chat/stream]</code></pre>
+<h2>什么时候优先走 Agent</h2>
+<table>
+  <thead><tr><th>场景</th><th>原因</th><th>补充页面</th></tr></thead>
+  <tbody>
+    <tr><td>用户只给出自然语言目标</td><td>Agent 先做意图澄清和能力选择。</td><td>capability-routing、request-lifecycle</td></tr>
+    <tr><td>需要结合项目事实继续写</td><td>Agent 可同时使用上下文与写作能力。</td><td>memory-api、wiki-api</td></tr>
+    <tr><td>需要把分析和执行串起来</td><td>Agent 可作为 Workflow 的上层入口。</td><td>workflow-api</td></tr>
+  </tbody>
+</table>
   `,
   'memory-api': `
 <h2>素材 API</h2>
@@ -150,6 +185,33 @@ POST /memory/temporal</code></pre>
 POST /skills/match
 POST /skills/chain
 POST /skills/create</code></pre>
+<h2>调用示例</h2>
+<pre><code>POST /skills/match
+{
+  "intent": "检查这一章开头三段的钩子是否足够强",
+  "workspace": {}
+}</code></pre>
+<pre><code>POST /skills/chain
+{
+  "skillIds": ["chapter-hook-check", "dialogue-tension-check"],
+  "input": { "text": "..." },
+  "workspace": {}
+}</code></pre>
+<h2>输入输出语义</h2>
+<table>
+  <thead><tr><th>字段</th><th>作用</th><th>常见问题</th></tr></thead>
+  <tbody>
+    <tr><td><code>intent</code></td><td>描述用户目标，用于匹配技能。</td><td>太泛时容易匹配到错误技能。</td></tr>
+    <tr><td><code>skillIds</code></td><td>指定链式执行顺序。</td><td>顺序不合理会让后一步缺上下文。</td></tr>
+    <tr><td><code>workspace</code></td><td>限制技能作用域到当前项目。</td><td>缺失时结果容易脱离项目事实。</td></tr>
+  </tbody>
+</table>
+<h2>故障路径</h2>
+<ol>
+  <li>匹配不到技能：先检查技能名、描述和 intent 是否足够具体。</li>
+  <li>链式执行结果发散：检查前一个技能输出是否真的适合下一个技能输入。</li>
+  <li>技能能跑但结果不像项目：回到 <a href="/api/workspace-api">Workspace API</a> 确认上下文。</li>
+</ol>
   `,
   'wiki-api': `
 <h2>Wiki API</h2>
@@ -159,6 +221,42 @@ GET  /wiki/list
 GET  /wiki/page/:id</code></pre>
 <h2>权威顺序</h2>
 <p>作者明确决策和已晋升 Wiki 页面应优先于聊天临时结论；图谱和语义索引是派生视图。</p>
+<h2>调用示例</h2>
+<pre><code>POST /wiki/promote
+{
+  "title": "林砚人物设定",
+  "content": "林砚惧怕深水，但会在危机中强撑镇定。",
+  "source": "chapter-03",
+  "workspace": {}
+}</code></pre>
+<pre><code>GET /wiki/list?status=curated</code></pre>
+<h2>什么时候该晋升到 Wiki</h2>
+<table>
+  <thead><tr><th>内容类型</th><th>建议</th></tr></thead>
+  <tbody>
+    <tr><td>作者明确确认的角色事实</td><td>应晋升。</td></tr>
+    <tr><td>一次性脑暴方案</td><td>先保留在对话或草稿，不急着晋升。</td></tr>
+    <tr><td>反复被 Agent 或批评链路引用的设定</td><td>优先晋升，减少漂移。</td></tr>
+  </tbody>
+</table>
+<h2>故障路径</h2>
+<ol>
+  <li>页面找不到：先查 <code>GET /wiki/list</code>，确认条目是否真的存在。</li>
+  <li>Agent 没用到新设定：确认已晋升，再刷新 workspace context。</li>
+  <li>图谱和 Wiki 不一致：以 Wiki / canon 为准，再检查投影刷新链路。</li>
+</ol>
+<h2>期望输出形态</h2>
+<ul>
+  <li>晋升结果应返回可识别的页面或条目标识。</li>
+  <li>读取结果应区分已确认内容和待确认内容。</li>
+  <li>冲突场景应给出核对信号，而不是无提示覆盖旧事实。</li>
+</ul>
+<h2>Related Scenarios</h2>
+<ul>
+  <li><a href="/desktop/wiki-system">Wiki 系统</a>：面向作者的长期设定沉淀入口。</li>
+  <li><a href="/worldview/worldview-manage">设定管理</a>：当冲突来自世界观规则层时。</li>
+  <li><a href="/guides/chapter-revision-playbook">章节修订专题路径</a>：当修订结果需要沉淀为长期事实时。</li>
+</ul>
   `,
   'workflow-api': `
 <h2>Workflow API</h2>
@@ -172,6 +270,54 @@ POST /workflow/lifecycle</code></pre>
   Plan --> Execute[execute]
   Execute --> Verify[verify]
   Verify --> Lifecycle[lifecycle / checkpoint]</code></pre>
+<h2>工作流边界</h2>
+<p>Workflow API 适合自动化重复流程，不适合替代所有实时交互。作者的即时写作和局部修订应优先走写作或 Agent 路径；当任务需要多步计划、状态机或检查点时，再进入 Workflow。</p>
+<h2>调用示例</h2>
+<pre><code>POST /workflow/route
+{
+  "task": "检查第 5 章节奏并给出修订顺序",
+  "workspace": {}
+}</code></pre>
+<pre><code>POST /workflow/plan
+{
+  "task": "分析第 5 章 -> 修订对白 -> 重新检查一致性",
+  "workspace": {}
+}</code></pre>
+<pre><code>POST /workflow/execute
+{
+  "plan_id": "wf_123",
+  "step": 1,
+  "workspace": {}
+}</code></pre>
+<h2>典型故障链</h2>
+<table>
+  <thead><tr><th>阶段</th><th>失败表现</th><th>优先检查</th></tr></thead>
+  <tbody>
+    <tr><td>route</td><td>等级或能力判断明显不对。</td><td>task 描述是否太泛，是否缺 workspace。</td></tr>
+    <tr><td>plan</td><td>步骤顺序混乱。</td><td>是否把分析、修订、验证目标混写在一起。</td></tr>
+    <tr><td>execute</td><td>中途失败或结果偏题。</td><td>具体 step 输入、上下文和依赖产物。</td></tr>
+    <tr><td>lifecycle</td><td>暂停/恢复状态异常。</td><td>planId、checkpoint 和 workspace 作用域。</td></tr>
+  </tbody>
+</table>
+<h2>什么时候不该用 Workflow</h2>
+<ul>
+  <li>只想看一段文本的即时建议。</li>
+  <li>还没明确目标，只是在探索想法。</li>
+  <li>当前任务更适合人工快速判断，而不是编排多步状态。</li>
+</ul>
+<h2>期望输出形态</h2>
+<ul>
+  <li><code>route</code> 应给出合理的能力等级或下一步方向。</li>
+  <li><code>plan</code> 应产出可执行步骤，而不是重复原任务描述。</li>
+  <li><code>execute</code> 应明确当前完成的是哪一步，以及剩余步骤状态。</li>
+  <li><code>lifecycle</code> 应能表达暂停、恢复或取消后的新状态。</li>
+</ul>
+<h2>Related Scenarios</h2>
+<ul>
+  <li><a href="/guides/chapter-revision-playbook">章节修订专题路径</a>：把单章修订链条串起来。</li>
+  <li><a href="/guides/outline-to-final-manuscript">从大纲到完稿</a>：把整本书的长链路串起来。</li>
+  <li><a href="/desktop/skill-system">技能系统</a>：当你想把固定步骤封装成稳定入口时。</li>
+</ul>
   `,
   'sync-api': `
 <h2>同步 API</h2>
@@ -200,6 +346,16 @@ GET /models</code></pre>
   <li><code>/tools</code> 确认可用能力是否注册。</li>
   <li><code>/metrics</code> 观察调用和错误趋势。</li>
 </ol>
+<h2>健康信号怎么解读</h2>
+<table>
+  <thead><tr><th>信号</th><th>代表什么</th><th>下一步</th></tr></thead>
+  <tbody>
+    <tr><td><code>/health</code> 失败</td><td>服务本身不可达。</td><td>先排进程、端口和启动脚本。</td></tr>
+    <tr><td><code>/models</code> 为空</td><td>模型配置或 provider 有问题。</td><td>查看 config、reload 和 provider 密钥。</td></tr>
+    <tr><td><code>/tools</code> 缺项</td><td>能力未注册或当前 runtime 未加载。</td><td>确认模块装配和当前发布边界。</td></tr>
+    <tr><td><code>/metrics</code> 错误升高</td><td>调用链存在系统性异常。</td><td>结合请求生命周期与日志定位瓶颈。</td></tr>
+  </tbody>
+</table>
   `,
   'config-api': `
 <h2>配置 API</h2>
@@ -237,5 +393,38 @@ POST /plugins/register</code></pre>
   <li>项目素材、Wiki、角色和世界观摘要。</li>
   <li>用户偏好、模型配置和分析目标。</li>
 </ul>
+<h2>为什么它重要</h2>
+<p>Workspace API 是大多数高级能力的共同起点。如果这里缺项目、章节或设定，后续写作、批评、图谱和 Agent 结果都会偏泛。排查“为什么答案不像我的项目”时，优先回到 workspace context。</p>
+<h2>调用示例</h2>
+<pre><code>POST /workspace/context
+{
+  "workspace": {
+    "projectRoot": "D:/novels/project-a",
+    "activeDocument": "chapters/ch05.md",
+    "selection": "她把钥匙攥得太紧，指节发白。"
+  }
+}</code></pre>
+<h2>返回内容该怎么看</h2>
+<table>
+  <thead><tr><th>块</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td>active document</td><td>确认当前请求到底围绕哪份正文展开。</td></tr>
+    <tr><td>selection</td><td>决定分析或修订聚焦在哪段文本。</td></tr>
+    <tr><td>wiki / character / worldview 摘要</td><td>给 Agent、批评和图谱能力提供项目事实。</td></tr>
+    <tr><td>user preference / model config</td><td>解释为什么这次调用选择了某种策略。</td></tr>
+  </tbody>
+</table>
+<h2>故障路径</h2>
+<ol>
+  <li>结果像通用建议：先确认 active document 和 selection 是否正确。</li>
+  <li>角色或设定没被带进来：检查 Wiki / worldview 摘要是否存在。</li>
+  <li>不同项目串上下文：优先检查 workspace root 是否切错。</li>
+</ol>
   `,
 };
+
+export const apiContent = appendSectionToPages(
+  baseApiContent,
+  ['writing-api', 'graph-api', 'critic-api', 'agent-api', 'wiki-api', 'workflow-api', 'workspace-api'],
+  outputFieldGlossaryMiniSection
+);

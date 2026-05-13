@@ -9,6 +9,96 @@ interface HeadingItem {
   level: 'h2' | 'h3';
 }
 
+interface QuickLinkItem {
+  label: string;
+  to: string;
+  kind: 'scenario' | 'endpoint' | 'glossary';
+}
+
+const categoryAudience: Record<string, string> = {
+  'getting-started': '第一次接触 Niko Studio 的写作者或团队成员',
+  guides: '需要快速建立路径感的写作者、开发者与维护者',
+  writing: '日常进行创作分析和修订的写作者',
+  graph: '需要追踪关系、伏笔与结构连接的作者或分析者',
+  critic: '关注问题定位、证据和修订建议的作者',
+  worldview: '需要维护长期设定一致性的作者',
+  agent: '依赖自然语言入口来驱动多能力协作的用户',
+  knowledge: '需要理解评分依据和知识支撑的开发者或高级作者',
+  memory: '需要管理项目素材与证据来源的用户',
+  desktop: '需要理解桌面工作台与 UI 入口的用户',
+  sync: '关心多设备协作边界的维护者或高级用户',
+  architecture: '需要理解 runtime 边界和模块职责的开发者',
+  api: '需要接入、调试和验证接口边界的集成者与开发者',
+};
+
+const categoryQuickLinks: Record<string, QuickLinkItem[]> = {
+  guides: [
+    { label: '章节修订专题路径', to: '/guides/chapter-revision-playbook', kind: 'scenario' },
+    { label: '写作 API', to: '/api/writing-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  writing: [
+    { label: '常见写作问题索引', to: '/guides/common-writing-problems', kind: 'scenario' },
+    { label: '写作 API', to: '/api/writing-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  critic: [
+    { label: '章节修订专题路径', to: '/guides/chapter-revision-playbook', kind: 'scenario' },
+    { label: '批评 API', to: '/api/critic-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  graph: [
+    { label: '常见写作问题索引', to: '/guides/common-writing-problems', kind: 'scenario' },
+    { label: '图谱 API', to: '/api/graph-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  worldview: [
+    { label: '从大纲到完稿', to: '/guides/outline-to-final-manuscript', kind: 'scenario' },
+    { label: 'Wiki API', to: '/api/wiki-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  agent: [
+    { label: '章节修订专题路径', to: '/guides/chapter-revision-playbook', kind: 'scenario' },
+    { label: 'Agent API', to: '/api/agent-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  desktop: [
+    { label: '从大纲到完稿', to: '/guides/outline-to-final-manuscript', kind: 'scenario' },
+    { label: 'Workspace API', to: '/api/workspace-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  memory: [
+    { label: '常见写作问题索引', to: '/guides/common-writing-problems', kind: 'scenario' },
+    { label: '素材 API', to: '/api/memory-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  api: [
+    { label: '请求生命周期', to: '/guides/request-lifecycle', kind: 'scenario' },
+    { label: 'Workflow API', to: '/api/workflow-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  architecture: [
+    { label: '从大纲到完稿', to: '/guides/outline-to-final-manuscript', kind: 'scenario' },
+    { label: 'Gateway API', to: '/api/gateway-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  knowledge: [
+    { label: '章节修订专题路径', to: '/guides/chapter-revision-playbook', kind: 'scenario' },
+    { label: '写作 API', to: '/api/writing-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  sync: [
+    { label: '能力状态矩阵', to: '/guides/capability-status', kind: 'scenario' },
+    { label: '同步 API', to: '/api/sync-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+  'getting-started': [
+    { label: '三维入口矩阵', to: '/guides/entry-matrix', kind: 'scenario' },
+    { label: 'Workspace API', to: '/api/workspace-api', kind: 'endpoint' },
+    { label: '输出字段词典', to: '/guides/output-field-glossary', kind: 'glossary' },
+  ],
+};
+
 export default function DocPage() {
   const { categoryId, slug } = useParams<{ categoryId: string; slug: string }>();
   const category = categories.find((c) => c.id === categoryId);
@@ -41,6 +131,13 @@ export default function DocPage() {
 
       block.dataset.enhanced = 'true';
       block.classList.add('group', 'relative');
+      if (/flowchart|sequenceDiagram|graph TD|graph LR|graph TB|subgraph/.test(code.textContent ?? '')) {
+        block.classList.add('doc-mermaid-block');
+        const label = document.createElement('span');
+        label.textContent = 'Mermaid 图示';
+        label.className = 'doc-pre-label';
+        block.appendChild(label);
+      }
 
       const button = document.createElement('button');
       button.type = 'button';
@@ -86,6 +183,12 @@ export default function DocPage() {
   const headings = useMemo(() => extractHeadings(rawContent), [rawContent]);
   const content = useMemo(() => addHeadingIds(enhanceContent(rawContent)), [rawContent]);
   const readMinutes = Math.max(1, Math.round(stripHtml(rawContent).length / 260));
+  const quickLinks = categoryQuickLinks[category.id] ?? categoryQuickLinks.guides;
+  const quickLinkGroups: Array<{ title: string; items: QuickLinkItem[] }> = [
+    { title: 'Related scenarios', items: quickLinks.filter((item) => item.kind === 'scenario') },
+    { title: 'Related endpoints', items: quickLinks.filter((item) => item.kind === 'endpoint') },
+    { title: 'Field glossary', items: quickLinks.filter((item) => item.kind === 'glossary') },
+  ].filter((group) => group.items.length > 0);
 
   return (
     <div className="space-y-6">
@@ -108,6 +211,7 @@ export default function DocPage() {
               <span className="rounded-full bg-[var(--color-bg-secondary)] px-2.5 py-1">{category.name}</span>
               <span className="rounded-full bg-[var(--color-bg-secondary)] px-2.5 py-1">阅读约 {readMinutes} 分钟</span>
               <span className="rounded-full bg-[var(--color-bg-secondary)] px-2.5 py-1">共 {headings.length || 1} 个小节</span>
+              <span className="rounded-full bg-[var(--color-tint-blue)] px-2.5 py-1 text-[var(--color-accent-blue)]">含图示与交叉链接</span>
             </div>
             <h1 className="text-[28px] font-bold text-[var(--color-text-primary)]">{page.title}</h1>
             <p className="mt-3 text-[14px] leading-7 text-[var(--color-text-secondary)]">{page.description}</p>
@@ -134,6 +238,29 @@ export default function DocPage() {
 
         <aside className="space-y-4 xl:sticky xl:top-[88px] xl:self-start">
           <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 shadow-[var(--shadow-sm)]">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">关联入口</h2>
+              <span className="rounded-full bg-[var(--color-tint-blue)] px-2.5 py-1 text-[10px] font-semibold text-[var(--color-accent-blue)]">
+                Related
+              </span>
+            </div>
+            <div className="mt-4 space-y-4">
+              {quickLinkGroups.map((group) => (
+                <div key={group.title}>
+                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-tertiary)]">
+                    {group.title}
+                  </div>
+                  <div className="space-y-3">
+                    {group.items.map((item) => (
+                      <QuickLinkCard key={`${item.kind}-${item.to}`} item={item} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 shadow-[var(--shadow-sm)]">
             <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">本页目录</h2>
             {headings.length > 0 ? (
               <div className="mt-3 flex flex-col gap-2">
@@ -150,6 +277,13 @@ export default function DocPage() {
             ) : (
               <p className="mt-3 text-[12px] leading-6 text-[var(--color-text-secondary)]">当前页面没有可提取的章节标题。</p>
             )}
+          </section>
+
+          <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 shadow-[var(--shadow-sm)]">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">适合谁读</h2>
+            <p className="mt-3 text-[12px] leading-6 text-[var(--color-text-secondary)]">
+              {categoryAudience[category.id] ?? '需要理解这个模块边界和用途的读者'}
+            </p>
           </section>
 
           <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] p-5 shadow-[var(--shadow-sm)]">
@@ -201,6 +335,40 @@ function AdjacentLink({ label, to, title }: { label: string; to: string; title: 
   );
 }
 
+function QuickLinkCard({ item }: { item: QuickLinkItem }) {
+  const meta: Record<QuickLinkItem['kind'], { chip: string; chipClass: string }> = {
+    scenario: {
+      chip: 'Scenario',
+      chipClass: 'bg-[var(--color-tint-purple)] text-[var(--color-accent-purple)]',
+    },
+    endpoint: {
+      chip: 'Endpoint',
+      chipClass: 'bg-[var(--color-tint-yellow)] text-[var(--color-accent-orange)]',
+    },
+    glossary: {
+      chip: 'Glossary',
+      chipClass: 'bg-[var(--color-tint-green)] text-[var(--color-accent-green)]',
+    },
+  };
+
+  return (
+    <Link
+      to={item.to}
+      className="block rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-4 py-3 no-underline transition-all duration-150 hover:-translate-y-[1px] hover:border-[var(--color-text-placeholder)] hover:shadow-[var(--shadow-sm)]"
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-[12px] font-medium leading-6 text-[var(--color-text-primary)]">{item.label}</span>
+        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${meta[item.kind].chipClass}`}>
+          {meta[item.kind].chip}
+        </span>
+      </div>
+      <div className="text-[11px] text-[var(--color-text-tertiary)]">
+        {item.kind === 'scenario' ? '关联场景' : item.kind === 'endpoint' ? '关联端点' : '字段词典'}
+      </div>
+    </Link>
+  );
+}
+
 function extractHeadings(html: string): HeadingItem[] {
   const matches = Array.from(html.matchAll(/<(h2|h3)>(.*?)<\/\1>/g));
   return matches.map(([_, level, text]) => ({
@@ -220,6 +388,9 @@ function addHeadingIds(html: string): string {
 
 function enhanceContent(html: string): string {
   return rewriteRootLinks(html)
+    .replace(/\b(Supported|Partial|Experimental|Historical|Roadmap|supported|partial|experimental|historical|roadmap)\b/g, (match: string) => {
+      return `<span class="doc-status-chip" data-status="${match.toLowerCase()}">${match}</span>`;
+    })
     .replace(/<p>(注意点|使用建议|推荐使用方式|最佳实践|为什么这很重要|为什么它重要|为什么 MCP 重要|适用场景|常见问题|下一步推荐)([^<]*)<\/p>/g, (_, title: string, rest: string) => {
       return `<div class="doc-callout"><div class="doc-callout-title">${title}</div><p>${rest.trim()}</p></div>`;
     })

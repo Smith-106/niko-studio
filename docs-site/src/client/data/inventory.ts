@@ -109,6 +109,13 @@ export const docPages: DocPage[] = [
   { id: 'capability-routing', title: '能力路由指南', category: 'guides', description: '从用户意图选择写作、知识、Agent、Wiki、Workflow 和 API 能力', slug: 'capability-routing' },
   { id: 'learning-paths', title: '学习路径', category: 'guides', description: '按写作者、开发者、集成者和维护者角色选择阅读顺序', slug: 'learning-paths' },
   { id: 'capability-status', title: '能力状态矩阵', category: 'guides', description: '说明文档站能力状态标签、覆盖范围和维护来源', slug: 'capability-status' },
+  { id: 'request-lifecycle', title: '请求生命周期', category: 'guides', description: '从用户输入到分析结果回流 UI 的完整链路', slug: 'request-lifecycle' },
+  { id: 'doc-conventions', title: '文档阅读约定', category: 'guides', description: '图示、状态标签、证据边界和交叉链接的阅读规则', slug: 'doc-conventions' },
+  { id: 'chapter-revision-playbook', title: '章节修订专题路径', category: 'guides', description: '从发现问题到修完一章的跨页案例导航', slug: 'chapter-revision-playbook' },
+  { id: 'common-writing-problems', title: '常见写作问题索引', category: 'guides', description: '按问题类型快速跳到对应分析、修订和设定页面', slug: 'common-writing-problems' },
+  { id: 'outline-to-final-manuscript', title: '从大纲到完稿', category: 'guides', description: '把规划、写作、分析、修订和设定沉淀串成一条完整长链路', slug: 'outline-to-final-manuscript' },
+  { id: 'entry-matrix', title: '三维入口矩阵', category: 'guides', description: '按角色、问题和阶段三维组合选择最合适的文档入口', slug: 'entry-matrix' },
+  { id: 'output-field-glossary', title: '输出字段词典', category: 'guides', description: '统一说明 score、evidence、suggestion、status、canon 等字段语义', slug: 'output-field-glossary' },
 
   // Writing Intelligence
   { id: 'craft-analysis', title: '写作技法分析', category: 'writing', description: '叙事视角、节奏、张力等维度的智能分析', slug: 'craft-analysis' },

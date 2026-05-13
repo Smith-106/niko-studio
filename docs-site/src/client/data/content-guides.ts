@@ -69,6 +69,7 @@ export const guidesContent: Record<string, string> = {
 <ol>
   <li><a href="/getting-started/installation">安装指南</a>：确认桌面应用、Gateway 和本地运行环境。</li>
   <li><a href="/getting-started/quickstart">快速上手</a>：完成第一次创建作品、输入正文和触发分析。</li>
+  <li><a href="/guides/chapter-revision-playbook">章节修订专题路径</a>：如果你已经有一章草稿，直接按专题路径进入问题定位与修订闭环。</li>
   <li><a href="/desktop/writing-dashboard">写作面板</a>：理解分析结果、建议和证据如何回到创作流程。</li>
   <li><a href="/writing/craft-analysis">写作技法分析</a>：查看节奏、张力、视角和叙事技法维度。</li>
   <li><a href="/desktop/wiki-system">Wiki 系统</a>：把角色、设定和作者确认的事实沉淀为长期资料。</li>
@@ -144,5 +145,356 @@ export const guidesContent: Record<string, string> = {
   <li>如果某行降级为 historical，应从学习路径和首页推荐中移除。</li>
   <li>如果某行仍是 roadmap，不要在 API 页面写成已支持能力。</li>
 </ol>
+  `,
+  'request-lifecycle': `
+<h2>为什么要看请求生命周期</h2>
+<p>如果能力路由告诉你“该去哪”，请求生命周期则解释“系统内部到底发生了什么”。它把用户输入、UI 状态、Gateway 路由、知识上下文、LLM 调用和结果回流串成一条可验证的链，方便写作者理解延迟来源，也方便开发者定位故障边界。</p>
+
+<h2>端到端流程图</h2>
+<pre><code>flowchart LR
+  User[用户输入或选择文本] --> UI[Desktop UI]
+  UI --> Service[前端 Service 层]
+  Service --> Gateway[Node.js Gateway]
+  Gateway --> Intent{能力判断}
+  Intent --> Writing[Writing / Critic]
+  Intent --> Agent[Agent Router]
+  Intent --> Memory[Memory / Wiki / Graph]
+  Writing --> Context[Workspace Context]
+  Agent --> Context
+  Memory --> Context
+  Context --> Provider[Model / Rule Engine]
+  Provider --> Result[结构化结果]
+  Result --> View[WritingDashboard / Chat / Story Bible]
+  View --> User</code></pre>
+
+<h2>五个关键阶段</h2>
+<ol>
+  <li><strong>捕获意图</strong>：前端把用户点击、选中文本、当前项目和面板操作组装为请求。</li>
+  <li><strong>选择能力</strong>：Gateway 决定这次请求更像写作、批评、图谱、知识检索还是 Agent 工作。</li>
+  <li><strong>补足上下文</strong>：从 workspace、Wiki、Memory、Graph 或配置读取必要信息，避免只凭单段文本分析。</li>
+  <li><strong>执行分析</strong>：调用规则引擎、知识库或模型，得到分数、证据、建议、文本或状态。</li>
+  <li><strong>返回结果</strong>：前端把结构化结果渲染为卡片、表格、SSE 流或 Wiki 更新入口。</li>
+</ol>
+
+<h2>按角色理解这条链路</h2>
+<table>
+  <thead><tr><th>角色</th><th>最关心的节点</th><th>应优先阅读</th></tr></thead>
+  <tbody>
+    <tr><td>写作者</td><td>为什么会得到这个建议，能否回到正文继续写。</td><td>quickstart、writing-dashboard、craft-analysis</td></tr>
+    <tr><td>开发者</td><td>UI 是否正确表达意图，Gateway 是否返回稳定结构。</td><td>system-overview、data-flow、gateway-api</td></tr>
+    <tr><td>集成者</td><td>调用边界在哪，哪些端点代表稳定入口。</td><td>gateway-api、agent-api、workflow-api</td></tr>
+    <tr><td>维护者</td><td>哪一层负责失败恢复，哪些状态可以对外声明。</td><td>capability-status、health-api、config-api</td></tr>
+  </tbody>
+</table>
+
+<h2>常见断点</h2>
+<table>
+  <thead><tr><th>断点位置</th><th>表象</th><th>优先检查</th></tr></thead>
+  <tbody>
+    <tr><td>UI → Service</td><td>按钮有响应但无结果</td><td>前端请求参数、selection 是否为空、workspace 是否缺失。</td></tr>
+    <tr><td>Service → Gateway</td><td>请求超时或 5xx</td><td><code>GET /health</code>、Gateway 进程、端口占用。</td></tr>
+    <tr><td>Gateway → Context</td><td>结果泛化、缺少项目事实</td><td>workspace-api、memory-api、wiki-api 的上下文组装。</td></tr>
+    <tr><td>Context → Provider</td><td>模型不可用或结果波动大</td><td>config-api、health-api、模型列表和 provider 配置。</td></tr>
+    <tr><td>Result → UI</td><td>接口有数据但面板不完整</td><td>WritingDashboard、Chat、Doc 渲染组件的字段映射。</td></tr>
+  </tbody>
+</table>
+  `,
+  'doc-conventions': `
+<h2>这套文档如何组织</h2>
+<p>文档站不是纯 API 手册，而是一个带信息架构的产品知识入口。页面默认遵循统一结构：先说明用途，再给结构图或流程图，然后列出边界、状态、排障和继续阅读。这样既方便写作者快速理解，也方便开发者追踪到实现边界。</p>
+
+<h2>页面结构约定</h2>
+<table>
+  <thead><tr><th>结构块</th><th>作用</th><th>阅读建议</th></tr></thead>
+  <tbody>
+    <tr><td>概述</td><td>先回答“这个能力是做什么的”。</td><td>第一次进入某分类时优先看。</td></tr>
+    <tr><td>结构图 / 流程图</td><td>把组件关系或调用顺序可视化。</td><td>遇到复杂模块时先看图，再读正文。</td></tr>
+    <tr><td>边界表</td><td>说明负责什么、不负责什么。</td><td>避免把实验功能误判为稳定能力。</td></tr>
+    <tr><td>状态矩阵</td><td>声明 supported、partial、experimental 等状态。</td><td>做交付判断前必须核对。</td></tr>
+    <tr><td>继续阅读</td><td>把相邻页面串成学习路径。</td><td>需要系统理解时顺着读。</td></tr>
+  </tbody>
+</table>
+
+<h2>图示约定</h2>
+<ul>
+  <li>文档中的流程图以 Mermaid 代码块保存，便于复制到外部工具继续编辑。</li>
+  <li>若图示描述当前运行时，必须以 <code>desktop/</code> 和 <code>src-ts/</code> 为默认权威。</li>
+  <li>若图示描述历史方案，应明确写为 historical、legacy 或 design reference。</li>
+</ul>
+
+<h2>状态标签约定</h2>
+<p>页面中出现的状态标签遵循同一套语义，不单独发明新口径。</p>
+<table>
+  <thead><tr><th>标签</th><th>含义</th><th>是否可作为当前能力声明</th></tr></thead>
+  <tbody>
+    <tr><td>Supported</td><td>当前运行时已实现且有文档依据。</td><td>可以。</td></tr>
+    <tr><td>Partial</td><td>只覆盖部分场景，或 UI / 后端链路尚未完全闭环。</td><td>可以，但要写清缺口。</td></tr>
+    <tr><td>Experimental</td><td>仍在验证、接口可能变化。</td><td>可以，但不能当成交付承诺。</td></tr>
+    <tr><td>Historical</td><td>历史实现、兼容路径或迁移背景。</td><td>不可以。</td></tr>
+    <tr><td>Roadmap</td><td>计划中或设计中，尚无当前实现。</td><td>不可以。</td></tr>
+  </tbody>
+</table>
+
+<h2>交叉链接约定</h2>
+<ol>
+  <li>面向写作者的页面，至少应指回一个 UI 页面和一个原理页面。</li>
+  <li>面向开发者的页面，至少应指回一个架构页和一个 API 页。</li>
+  <li>面向维护者的页面，至少应提供状态矩阵或健康检查链接。</li>
+</ol>
+  `,
+  'chapter-revision-playbook': `
+<h2>这个专题路径解决什么问题</h2>
+<p>很多作者并不是不知道单个功能怎么用，而是不知道“先看哪里，再改哪里，最后怎么验证”。这个专题把“发现问题 -> 定位原因 -> 修订 -> 复检 -> 沉淀设定”串成一条跨页路径，适合拿一章真实稿子照着走。</p>
+
+<h2>主路径总览</h2>
+<pre><code>flowchart LR
+  Detect[发现问题] --> Diagnose[定位原因]
+  Diagnose --> Revise[选择修订动作]
+  Revise --> Verify[重新验证]
+  Verify --> Promote[沉淀设定 / 经验]</code></pre>
+
+<h2>专题步骤</h2>
+<ol>
+  <li><a href="/critic/critic-evaluate">批评评估</a>：先确认“不好”的感觉到底落在哪个维度。</li>
+  <li><a href="/writing/craft-analysis">写作技法分析</a>：把问题进一步细化为节奏、张力、视角或语言层。</li>
+  <li><a href="/critic/consistency-check">一致性检查</a>：如果怀疑是设定或跨章问题，切到一致性链路。</li>
+  <li><a href="/writing/scene-quality">场景质量</a> 或 <a href="/writing/dialogue-analysis">对话分析</a>：针对局部场景或对白做精修。</li>
+  <li><a href="/critic/multi-pass-revision">多轮修订</a>：需要系统改整章时，把结构、语言、风格拆开处理。</li>
+  <li><a href="/desktop/wiki-system">Wiki 系统</a> / <a href="/worldview/worldview-manage">设定管理</a>：把这次修订确认下来的角色事实或世界观规则沉淀下来。</li>
+</ol>
+
+<h2>案例 A：章节开头不抓人</h2>
+<table>
+  <thead><tr><th>步骤</th><th>推荐页面</th><th>为什么</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>critic-evaluate</td><td>先确认问题是节奏、情绪还是结构。</td></tr>
+    <tr><td>2</td><td>craft-analysis</td><td>看低分是否集中在节奏与张力。</td></tr>
+    <tr><td>3</td><td>scene-quality</td><td>检查场景目标、冲突和变化是否不足。</td></tr>
+    <tr><td>4</td><td>multi-pass-revision</td><td>先做结构轮，再做语言轮。</td></tr>
+  </tbody>
+</table>
+
+<h2>案例 B：角色说话越来越不像自己</h2>
+<table>
+  <thead><tr><th>步骤</th><th>推荐页面</th><th>为什么</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>dialogue-analysis</td><td>看区分度和自然度是否下降。</td></tr>
+    <tr><td>2</td><td>character-profile</td><td>检查角色辨识度和矛盾性是否不够清晰。</td></tr>
+    <tr><td>3</td><td>style-profile</td><td>确认是不是整体风格漂移带来的影响。</td></tr>
+    <tr><td>4</td><td>wiki-system</td><td>把角色声线和行为边界沉淀成长期事实。</td></tr>
+  </tbody>
+</table>
+
+<h2>案例 C：设定越来越乱</h2>
+<table>
+  <thead><tr><th>步骤</th><th>推荐页面</th><th>为什么</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>consistency-check</td><td>先查出具体冲突点。</td></tr>
+    <tr><td>2</td><td>worldview-extract</td><td>把散落在正文里的设定候选抽出来。</td></tr>
+    <tr><td>3</td><td>worldview-manage</td><td>按类别统一管理和修正。</td></tr>
+    <tr><td>4</td><td>wiki-api / wiki-system</td><td>把确认后的长期设定晋升到权威层。</td></tr>
+  </tbody>
+</table>
+
+<h2>配套输入模板</h2>
+<pre><code>目标：这一章开头不够抓人，想先定位问题再修
+当前文本：粘贴 400-800 字片段
+怀疑问题：节奏慢 / 冲突弱 / 对白平
+项目约束：主角仍需保持克制，不提前揭示真相</code></pre>
+
+<h2>如何判断这轮修订结束</h2>
+<ul>
+  <li>低分维度不再集中爆红。</li>
+  <li>证据片段不再反复命中同一类问题。</li>
+  <li>如果修订中引入了新设定，已经同步到 Wiki 或世界观管理。</li>
+  <li>你能用一句话说清“这一章现在比之前好在哪里”。</li>
+</ul>
+  `,
+  'common-writing-problems': `
+<h2>怎么使用这个索引</h2>
+<p>如果你不是从“功能”出发，而是从“稿子出问题了”出发，这页比分类导航更快。它按常见写作问题组织入口，直接告诉你先去哪里看、接着去哪修。</p>
+
+<h2>问题索引</h2>
+<table>
+  <thead><tr><th>问题</th><th>先看</th><th>再看</th><th>最后收口</th></tr></thead>
+  <tbody>
+    <tr><td>开头弱</td><td><a href="/critic/critic-evaluate">批评评估</a></td><td><a href="/writing/craft-analysis">写作技法分析</a>、<a href="/writing/scene-quality">场景质量</a></td><td><a href="/critic/multi-pass-revision">多轮修订</a></td></tr>
+    <tr><td>对白平</td><td><a href="/writing/dialogue-analysis">对话分析</a></td><td><a href="/writing/character-profile">角色画像</a>、<a href="/critic/style-profile">风格分析</a></td><td><a href="/desktop/wiki-system">Wiki 系统</a></td></tr>
+    <tr><td>设定乱</td><td><a href="/critic/consistency-check">一致性检查</a></td><td><a href="/worldview/worldview-extract">设定提取</a>、<a href="/worldview/worldview-manage">设定管理</a></td><td><a href="/api/wiki-api">Wiki API</a></td></tr>
+    <tr><td>节奏塌</td><td><a href="/writing/craft-analysis">写作技法分析</a></td><td><a href="/writing/narrative-structure">叙事结构</a>、<a href="/writing/scene-quality">场景质量</a></td><td><a href="/critic/multi-pass-revision">多轮修订</a></td></tr>
+    <tr><td>伏笔丢</td><td><a href="/graph/foreshadow-tracking">伏笔追踪</a></td><td><a href="/graph/graph-query">图谱查询</a>、<a href="/critic/consistency-check">一致性检查</a></td><td><a href="/desktop/wiki-system">Wiki 系统</a></td></tr>
+  </tbody>
+</table>
+
+<h2>常用专题入口</h2>
+<ul>
+  <li><a href="/guides/chapter-revision-playbook">章节修订专题路径</a>：适合整章系统修订。</li>
+  <li><a href="/guides/capability-routing">能力路由指南</a>：适合还不确定该走哪个模块时查看。</li>
+  <li><a href="/guides/request-lifecycle">请求生命周期</a>：适合排查“为什么结果不对”。</li>
+</ul>
+
+<h2>问题驱动输入模板</h2>
+<pre><code>问题类型：开头弱 / 对白平 / 设定乱 / 节奏塌 / 伏笔丢
+当前片段：粘贴 200-800 字
+项目约束：角色、设定、风格或禁止项
+目标：先定位，再给修订方向</code></pre>
+  `,
+  'outline-to-final-manuscript': `
+<h2>这条长链路适合谁</h2>
+<p>如果“章节修订专题”解决的是一章怎么修，这页解决的是一本书怎么从大纲一路走到可交付稿。它不是单点功能说明，而是把规划、草稿、分析、修订、设定沉淀和最终收口串成完整流程。</p>
+
+<h2>总流程图</h2>
+<pre><code>flowchart LR
+  Outline[大纲 / 结构规划] --> Draft[章节草稿]
+  Draft --> Analyze[问题分析]
+  Analyze --> Revise[多轮修订]
+  Revise --> Canon[设定沉淀]
+  Canon --> Verify[一致性与风格复检]
+  Verify --> Final[完稿 / 导出]</code></pre>
+
+<h2>阶段 1：规划大纲</h2>
+<ul>
+  <li><a href="/writing/narrative-structure">叙事结构</a>：确认主线结构和关键转折。</li>
+  <li><a href="/api/workflow-api">Workflow API</a>：如果你想把“大纲检查 -> 章节拆解”流程自动化，可以从这里入手。</li>
+</ul>
+
+<h2>阶段 2：写出章节草稿</h2>
+<ul>
+  <li><a href="/writing/writing-stream">流式写作</a>：适合快速拉出草稿。</li>
+  <li><a href="/agent/agent-write">AI 写作</a>：适合在有明确目标时续写、扩写或改写。</li>
+  <li><a href="/desktop/editor-integration">编辑器集成</a>：把草稿、选择和修订都放在统一工作台里完成。</li>
+</ul>
+
+<h2>阶段 3：发现问题</h2>
+<ul>
+  <li><a href="/critic/critic-evaluate">批评评估</a>：先找出“哪里不行”。</li>
+  <li><a href="/writing/craft-analysis">写作技法分析</a>：细化节奏、张力、视角和语言层的问题。</li>
+  <li><a href="/guides/common-writing-problems">常见写作问题索引</a>：如果你已经知道问题类型，直接从这里跳。</li>
+</ul>
+
+<h2>阶段 4：多轮修订</h2>
+<ul>
+  <li><a href="/critic/multi-pass-revision">多轮修订</a>：先结构，后语言，再风格和细节。</li>
+  <li><a href="/writing/scene-quality">场景质量</a>、<a href="/writing/dialogue-analysis">对话分析</a>：修局部问题。</li>
+  <li><a href="/agent/agent-revise">AI 修订</a>：用于边界清晰的小范围改动。</li>
+</ul>
+
+<h2>阶段 5：沉淀设定与知识</h2>
+<ul>
+  <li><a href="/worldview/worldview-extract">设定提取</a>、<a href="/worldview/worldview-manage">设定管理</a>：把世界观从正文中捞出来并统一维护。</li>
+  <li><a href="/desktop/wiki-system">Wiki 系统</a>、<a href="/api/wiki-api">Wiki API</a>：把确认后的角色事实和规则晋升到长期权威层。</li>
+  <li><a href="/memory/material-upload">素材上传</a>、<a href="/memory/semantic-search">语义搜索</a>：让后续写作和 Agent 能用到项目证据。</li>
+</ul>
+
+<h2>阶段 6：一致性与风格复检</h2>
+<ul>
+  <li><a href="/critic/consistency-check">一致性检查</a>：防止设定漂移和跨章漏洞。</li>
+  <li><a href="/critic/style-profile">风格分析</a>：确认完稿前后的风格没有散掉。</li>
+  <li><a href="/graph/foreshadow-tracking">伏笔追踪</a>：确认高价值伏笔没有丢。</li>
+</ul>
+
+<h2>阶段 7：完稿与交付</h2>
+<ul>
+  <li><a href="/desktop/plugin-system">插件系统</a>：适合做团队导出或审稿包。</li>
+  <li><a href="/api/plugin-api">插件 API</a>：如果你要做自定义交付链路，从这里接。</li>
+</ul>
+
+<h2>长链路输入模板</h2>
+<pre><code>作品阶段：大纲 / 草稿 / 修订中 / 完稿前
+当前目标：写下一章 / 修一章 / 统一设定 / 做最终复检
+项目约束：角色设定、世界观规则、风格要求
+输出目标：可继续写 / 可进入下一轮修订 / 可交付</code></pre>
+
+<h2>什么时候算走完整条链</h2>
+<ul>
+  <li>章节层问题已通过分析与修订闭环处理。</li>
+  <li>新增设定已沉淀到 Wiki / 世界观层。</li>
+  <li>风格、一致性、伏笔等跨章节问题已复检。</li>
+  <li>你能明确区分哪些还是草稿，哪些已经是当前 canon 和可交付稿。</li>
+</ul>
+  `,
+  'entry-matrix': `
+<h2>这块矩阵怎么用</h2>
+<p>如果你一时不知道该从“角色、问题，还是阶段”哪个维度切入，这块三维入口矩阵就是统一入口。你可以先选自己当前所在维度，再顺着推荐文档进入。</p>
+
+<h2>三维矩阵</h2>
+<table>
+  <thead><tr><th>角色</th><th>问题</th><th>阶段</th><th>推荐入口</th></tr></thead>
+  <tbody>
+    <tr><td>写作者</td><td>开头弱</td><td>草稿完成后</td><td><a href="/guides/chapter-revision-playbook">章节修订专题路径</a>、<a href="/writing/craft-analysis">写作技法分析</a></td></tr>
+    <tr><td>写作者</td><td>对白平</td><td>局部精修</td><td><a href="/writing/dialogue-analysis">对话分析</a>、<a href="/critic/style-profile">风格分析</a></td></tr>
+    <tr><td>写作者</td><td>设定乱</td><td>修订中后期</td><td><a href="/critic/consistency-check">一致性检查</a>、<a href="/worldview/worldview-manage">设定管理</a></td></tr>
+    <tr><td>写作者</td><td>节奏塌</td><td>整章复检</td><td><a href="/writing/scene-quality">场景质量</a>、<a href="/critic/multi-pass-revision">多轮修订</a></td></tr>
+    <tr><td>写作者</td><td>伏笔丢</td><td>中后期收束</td><td><a href="/graph/foreshadow-tracking">伏笔追踪</a>、<a href="/graph/graph-query">图谱查询</a></td></tr>
+    <tr><td>开发者</td><td>结果不对</td><td>排查阶段</td><td><a href="/guides/request-lifecycle">请求生命周期</a>、<a href="/api/workspace-api">Workspace API</a></td></tr>
+    <tr><td>集成者</td><td>能力接入</td><td>规划阶段</td><td><a href="/api/gateway-api">Gateway API</a>、<a href="/api/workflow-api">Workflow API</a></td></tr>
+    <tr><td>维护者</td><td>状态判断</td><td>发布前</td><td><a href="/guides/capability-status">能力状态矩阵</a>、<a href="/api/health-api">健康检查</a></td></tr>
+  </tbody>
+</table>
+
+<h2>按角色进入</h2>
+<ul>
+  <li>写作者：优先看 <a href="/guides/common-writing-problems">常见写作问题索引</a> 和 <a href="/guides/chapter-revision-playbook">章节修订专题路径</a>。</li>
+  <li>开发者：优先看 <a href="/guides/request-lifecycle">请求生命周期</a>、<a href="/api/gateway-api">Gateway API</a>、<a href="/guides/output-field-glossary">输出字段词典</a>。</li>
+  <li>集成者：优先看 <a href="/api/gateway-api">Gateway API</a>、<a href="/api/agent-api">Agent API</a>、<a href="/api/workflow-api">Workflow API</a>。</li>
+  <li>维护者：优先看 <a href="/guides/capability-status">能力状态矩阵</a>、<a href="/api/health-api">健康检查</a>、<a href="/guides/output-field-glossary">输出字段词典</a>。</li>
+</ul>
+
+<h2>按阶段进入</h2>
+<ul>
+  <li>大纲阶段：<a href="/guides/outline-to-final-manuscript">从大纲到完稿</a>、<a href="/writing/narrative-structure">叙事结构</a></li>
+  <li>草稿阶段：<a href="/writing/writing-stream">流式写作</a>、<a href="/agent/agent-write">AI 写作</a></li>
+  <li>分析阶段：<a href="/critic/critic-evaluate">批评评估</a>、<a href="/writing/craft-analysis">写作技法分析</a></li>
+  <li>修订阶段：<a href="/critic/multi-pass-revision">多轮修订</a>、<a href="/agent/agent-revise">AI 修订</a></li>
+  <li>收束阶段：<a href="/critic/consistency-check">一致性检查</a>、<a href="/graph/foreshadow-tracking">伏笔追踪</a>、<a href="/desktop/wiki-system">Wiki 系统</a></li>
+</ul>
+  `,
+  'output-field-glossary': `
+<h2>为什么需要统一词典</h2>
+<p>同一个词在不同页面里如果含义漂移，用户会误判结果。这个词典统一定义文档站最常见的输出字段，避免把 <code>score</code> 当真相、把 <code>suggestion</code> 当命令，或把 <code>canon</code> 和临时结论混在一起。</p>
+
+<h2>核心字段</h2>
+<table>
+  <thead><tr><th>字段</th><th>统一含义</th><th>不应该被理解成什么</th></tr></thead>
+  <tbody>
+    <tr><td><code>score</code></td><td>强弱、风险、优先级或完成度的信号分。</td><td>绝对真相或唯一结论。</td></tr>
+    <tr><td><code>evidence</code></td><td>支撑判断的文本片段、设定来源、结构化依据。</td><td>作者必须接受的结论。</td></tr>
+    <tr><td><code>suggestion</code></td><td>建议下一步动作、修订方向或可选方案。</td><td>必须照做的标准答案。</td></tr>
+    <tr><td><code>status</code></td><td>表示能力状态、执行状态或验证状态。</td><td>文本质量评分。</td></tr>
+    <tr><td><code>canon</code></td><td>作者确认后的长期事实与权威设定层。</td><td>任何自动抽取、语义搜索或聊天猜测。</td></tr>
+  </tbody>
+</table>
+
+<h2>字段之间的关系</h2>
+<pre><code>canon > evidence > suggestion
+score = 帮助排序和判断
+status = 说明当前状态，不替代内容判断</code></pre>
+
+<h2>如何正确使用这些字段</h2>
+<ul>
+  <li>看到 <code>score</code>：先把它当“哪里值得优先看”，而不是“系统已经替我做决定”。</li>
+  <li>看到 <code>evidence</code>：优先回到原文或来源核对。</li>
+  <li>看到 <code>suggestion</code>：把它当候选动作，而不是唯一修法。</li>
+  <li>看到 <code>status</code>：确认这是在说能力状态、执行状态，还是文档状态。</li>
+  <li>涉及 <code>canon</code>：一律优先于图谱投影、语义召回和聊天临时结论。</li>
+</ul>
+
+<h2>常见误解</h2>
+<table>
+  <thead><tr><th>误解</th><th>正确理解</th></tr></thead>
+  <tbody>
+    <tr><td>score 低 = 这段必须重写</td><td>score 低只是提示优先检查，不自动决定行动。</td></tr>
+    <tr><td>suggestion = 官方答案</td><td>suggestion 是候选方向，作者保留取舍权。</td></tr>
+    <tr><td>graph / search 结果 = canon</td><td>它们只是投影或候选证据，最终以 author-confirmed canon 为准。</td></tr>
+    <tr><td>status = 文本好坏</td><td>status 更多描述能力或流程状态。</td></tr>
+  </tbody>
+</table>
+
+<h2>Related Pages</h2>
+<ul>
+  <li><a href="/guides/request-lifecycle">请求生命周期</a>：理解这些字段是在哪一层产生的。</li>
+  <li><a href="/api/gateway-api">Gateway API</a>：理解字段如何从服务层返回。</li>
+  <li><a href="/desktop/wiki-system">Wiki 系统</a>：理解 <code>canon</code> 为什么高于投影层。</li>
+</ul>
   `,
 };

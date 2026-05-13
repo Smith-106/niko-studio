@@ -7,6 +7,25 @@ interface SearchBoxProps {
   placeholder?: string;
 }
 
+interface SearchOpenDetail {
+  query?: string;
+}
+
+const keywordAliases: Record<string, string[]> = {
+  'common-writing-problems': ['开头弱', '对白平', '设定乱', '节奏塌', '伏笔丢'],
+  'chapter-revision-playbook': ['修订', '章节修订', '改单章'],
+  'outline-to-final-manuscript': ['大纲', '完稿', '长链路', '规划'],
+  'output-field-glossary': ['score', 'evidence', 'suggestion', 'status', 'canon', '字段'],
+  'request-lifecycle': ['调用链', '链路', '请求', 'runtime'],
+  'workflow-api': ['workflow', '工作流', '编排'],
+  'wiki-api': ['wiki', '设定', 'canon'],
+  'agent-api': ['agent', '代理'],
+  'foreshadow-tracking': ['伏笔'],
+  'dialogue-analysis': ['对白', '对话'],
+};
+
+const featuredKeywords = ['开头弱', 'workflow', 'wiki', '伏笔', '对白', 'canon'];
+
 function normalize(value: string): string {
   return value.toLowerCase().trim();
 }
@@ -28,6 +47,13 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       return;
     }
 
+    const focusDesktopInput = () => {
+      window.setTimeout(() => {
+        const input = document.querySelector<HTMLInputElement>('[data-doc-search-input="desktop"]');
+        input?.focus();
+      }, 0);
+    };
+
     const handleKeydown = (event: KeyboardEvent) => {
       const isShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
       if (!isShortcut) {
@@ -36,14 +62,22 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
 
       event.preventDefault();
       setIsOpen(true);
-      window.setTimeout(() => {
-        const input = document.querySelector<HTMLInputElement>('[data-doc-search-input="desktop"]');
-        input?.focus();
-      }, 0);
+      focusDesktopInput();
+    };
+
+    const handleSearchOpen = (event: Event) => {
+      const customEvent = event as CustomEvent<SearchOpenDetail>;
+      setQuery(customEvent.detail?.query ?? '');
+      setIsOpen(true);
+      focusDesktopInput();
     };
 
     window.addEventListener('keydown', handleKeydown);
-    return () => window.removeEventListener('keydown', handleKeydown);
+    window.addEventListener('niko-docs:search', handleSearchOpen as EventListener);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+      window.removeEventListener('niko-docs:search', handleSearchOpen as EventListener);
+    };
   }, [mobile]);
 
   const results = useMemo(() => {
@@ -58,6 +92,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
           doc.description,
           doc.categoryInfo.name,
           doc.categoryInfo.description,
+          ...(keywordAliases[doc.id] ?? []),
         ].join(' '));
 
         let score = 0;
@@ -69,6 +104,9 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
         }
         if (haystack.includes(normalizedQuery)) {
           score += 1;
+        }
+        if ((keywordAliases[doc.id] ?? []).some((keyword) => normalize(keyword).includes(normalizedQuery) || normalizedQuery.includes(normalize(keyword)))) {
+          score += 4;
         }
 
         return { doc, score };
@@ -124,9 +162,30 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       {isOpen ? (
         <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] shadow-[var(--shadow-lg)]">
           <div className="border-b border-[var(--color-border-divider)] px-4 py-3 text-[11px] text-[var(--color-text-tertiary)]">
-            {normalizedQuery ? `找到 ${results.length} 条结果` : '推荐入口'}
+            {normalizedQuery ? `找到 ${results.length} 条结果` : '推荐入口与关键词'}
           </div>
           <div className="max-h-[420px] overflow-y-auto p-2">
+            {!normalizedQuery ? (
+              <div className="px-3 pb-2 pt-1">
+                <div className="mb-2 text-[11px] font-medium text-[var(--color-text-tertiary)]">关键词直达</div>
+                <div className="flex flex-wrap gap-2">
+                  {featuredKeywords.map((keyword) => (
+                    <button
+                      key={keyword}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setQuery(keyword);
+                        setIsOpen(true);
+                      }}
+                      className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
+                    >
+                      {keyword}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {results.length > 0 ? (
               results.map((doc) => (
                 <Link

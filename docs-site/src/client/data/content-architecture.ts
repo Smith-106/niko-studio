@@ -67,6 +67,12 @@ export const architectureContent: Record<string, string> = {
   <li><strong>写作者视角优先</strong>：技术能力最终落到编辑器、右侧面板、Story Bible 和导出路径。</li>
   <li><strong>可解释分析</strong>：分数必须连接到文本证据、知识规则和可执行建议。</li>
 </ul>
+<h2>理解顺序</h2>
+<ol>
+  <li>先看当前交付边界，确认什么是 runtime authority。</li>
+  <li>再看桌面前端、Gateway 和智能模块分别承担什么职责。</li>
+  <li>最后跳到 <a href="/architecture/data-flow">数据流</a> 和 <a href="/api/gateway-api">Gateway API</a>，把结构认知连接到真实调用边界。</li>
+</ol>
   `,
   'module-design': `
 <h2>模块设计</h2>
@@ -116,6 +122,15 @@ export const architectureContent: Record<string, string> = {
 </ul>
 <h2>扩展点</h2>
 <p>插件、技能、Wiki 和 Workflow 都是扩展点。它们不应绕过工作区和 Gateway 边界，而应复用同一套上下文、配置和健康检查路径。</p>
+<h2>模块依赖顺序</h2>
+<pre><code>flowchart TD
+  UI[UI Components] --> Services[Frontend Services]
+  Services --> Gateway[Gateway Routes]
+  Gateway --> Context[Workspace / Config / Memory Context]
+  Context --> Engines[Knowledge / Critic / Agent / Graph Engines]
+  Engines --> Providers[Rules / LLM Providers]
+  Engines --> Storage[Local Files / Cache / Index]</code></pre>
+<p>扩展点应接在已有服务层或 Gateway 层之后，而不是让 UI 直接跨层访问底层模块。这样可以保持桌面端、文档站和外部集成的边界一致。</p>
 <h2>历史架构边界</h2>
 <p>仓库中保留的历史架构、旧 Web entry、Python 兼容路径和迁移文档可以帮助理解演进过程，但不能覆盖当前 README、能力矩阵和发布说明中的运行时权威。新增文档若引用历史设计，必须明确标注 historical 或 design reference。</p>
 <table>
@@ -185,5 +200,11 @@ export const architectureContent: Record<string, string> = {
 </table>
 <h2>本地优先的数据边界</h2>
 <p>作品正文、素材和缓存默认留在本地工作区。需要模型调用时，由 Gateway 负责整理最小必要上下文并返回结构化结果，前端只消费结果，不直接管理模型协议。</p>
+<h2>继续阅读</h2>
+<ul>
+  <li><a href="/guides/request-lifecycle">请求生命周期</a>：用更贴近用户任务的视角重看同一条链路。</li>
+  <li><a href="/api/health-api">健康检查</a>：定位是 Gateway、模型还是上下文层出了问题。</li>
+  <li><a href="/desktop/writing-dashboard">写作面板</a>：查看这条数据流最终如何落到作者可见 UI。</li>
+</ul>
   `,
 };

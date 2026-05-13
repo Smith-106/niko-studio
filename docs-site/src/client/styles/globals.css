@@ -172,3 +172,59 @@ body {
     animation: none !important;
   }
 }
+
+.doc-mermaid-block {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.doc-pre-label {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(232, 229, 222, 0.86);
+}
+
+.doc-status-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  vertical-align: baseline;
+}
+
+.doc-status-chip[data-status="supported"] {
+  background: var(--color-tint-green);
+  color: var(--color-accent-green);
+}
+
+.doc-status-chip[data-status="partial"] {
+  background: var(--color-tint-yellow);
+  color: var(--color-accent-orange);
+}
+
+.doc-status-chip[data-status="experimental"] {
+  background: var(--color-tint-purple);
+  color: var(--color-accent-purple);
+}
+
+.doc-status-chip[data-status="historical"] {
+  background: var(--color-tint-gray);
+  color: var(--color-text-secondary);
+}
+
+.doc-status-chip[data-status="roadmap"] {
+  background: var(--color-tint-blue);
+  color: var(--color-accent-blue);
+}
