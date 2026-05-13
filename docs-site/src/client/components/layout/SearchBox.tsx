@@ -105,6 +105,7 @@ const pinnedBucketMeta: Array<{
 ];
 
 const PINNED_DOCS_KEY = 'niko-docs:pinned-docs';
+const PINNED_GROUP_COLLAPSE_KEY = 'niko-docs:pinned-groups-collapsed';
 const RECENT_QUERIES_KEY = 'niko-docs:recent-queries';
 const RECENT_DOCS_KEY = 'niko-docs:recent-docs';
 const MAX_PINNED_ITEMS = 6;
@@ -143,6 +144,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [pinnedDocIds, setPinnedDocIds] = useState<RecentDocItem[]>([]);
+  const [collapsedPinnedGroups, setCollapsedPinnedGroups] = useState<PinnedBucketId[]>([]);
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const [recentDocIds, setRecentDocIds] = useState<RecentDocItem[]>([]);
   const docs = useMemo(() => getResolvedDocPages(), []);
@@ -155,13 +157,16 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
 
     try {
       const storedPinnedDocs = JSON.parse(window.localStorage.getItem(PINNED_DOCS_KEY) ?? '[]');
+      const storedCollapsedPinnedGroups = JSON.parse(window.localStorage.getItem(PINNED_GROUP_COLLAPSE_KEY) ?? '[]');
       const storedQueries = JSON.parse(window.localStorage.getItem(RECENT_QUERIES_KEY) ?? '[]');
       const storedDocs = JSON.parse(window.localStorage.getItem(RECENT_DOCS_KEY) ?? '[]');
       setPinnedDocIds(Array.isArray(storedPinnedDocs) ? storedPinnedDocs.filter((item): item is RecentDocItem => !!item && typeof item.id === 'string' && typeof item.path === 'string').slice(0, MAX_PINNED_ITEMS) : []);
+      setCollapsedPinnedGroups(Array.isArray(storedCollapsedPinnedGroups) ? storedCollapsedPinnedGroups.filter((item): item is PinnedBucketId => pinnedBucketMeta.some((bucket) => bucket.id === item)) : []);
       setRecentQueries(Array.isArray(storedQueries) ? storedQueries.filter((item): item is string => typeof item === 'string').slice(0, MAX_RECENT_ITEMS) : []);
       setRecentDocIds(Array.isArray(storedDocs) ? storedDocs.filter((item): item is RecentDocItem => !!item && typeof item.id === 'string' && typeof item.path === 'string').slice(0, MAX_RECENT_ITEMS) : []);
     } catch {
       setPinnedDocIds([]);
+      setCollapsedPinnedGroups([]);
       setRecentQueries([]);
       setRecentDocIds([]);
     }
@@ -415,6 +420,20 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     setPinnedDocIds([]);
   };
 
+  const togglePinnedGroupCollapsed = (bucket: PinnedBucketId) => {
+    setCollapsedPinnedGroups((current) => {
+      const next = current.includes(bucket)
+        ? current.filter((item) => item !== bucket)
+        : [...current, bucket];
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(PINNED_GROUP_COLLAPSE_KEY, JSON.stringify(next));
+      }
+
+      return next;
+    });
+  };
+
   const reorderPinnedDocs = (docId: string, bucket: PinnedBucketId, direction: 'top' | 'up' | 'down') => {
     setPinnedDocIds((current) => {
       const buckets = buildPinnedBuckets(current);
@@ -653,91 +672,110 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                     {pinnedDocGroups.map((group) => (
                       <section key={group.id}>
                         <div className="mb-2 flex items-center justify-between gap-3">
-                          <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">{group.label}</div>
-                          <div className="text-[10px] text-[var(--color-text-tertiary)]">{group.description}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">
+                              {group.label} · {group.items.length} / {MAX_PINNED_ITEMS}
+                            </div>
+                            <div className="text-[10px] text-[var(--color-text-tertiary)]">{group.description}</div>
+                          </div>
+                          <button
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => togglePinnedGroupCollapsed(group.id)}
+                            className="text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                            aria-label={`${collapsedPinnedGroups.includes(group.id) ? '展开' : '折叠'} ${group.label}`}
+                          >
+                            {collapsedPinnedGroups.includes(group.id) ? '展开' : '折叠'}
+                          </button>
                         </div>
-                        <div className="grid gap-2">
-                          {group.items.map(({ doc, bucket }, index) => (
-                            <div
-                              key={`pinned-${doc.id}`}
-                              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <Link
-                                  to={doc.path}
-                                  className="min-w-0 flex-1 no-underline"
-                                  onClick={() => {
-                                    storeRecentDoc(doc.id, doc.path);
-                                    setIsOpen(false);
-                                  }}
-                                >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
-                                    <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
-                                      {searchGroupLabel[getSearchGroupId(doc.category)]}
-                                    </span>
-                                  </div>
-                                  <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
-                                </Link>
-                                <div className="flex flex-col items-end gap-1">
-                                  <select
-                                    value={bucket}
-                                    onChange={(event) => movePinnedDocToBucket(doc.id, event.target.value as PinnedBucketId)}
-                                    className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-card)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] outline-none"
-                                    aria-label={`调整分组 ${doc.title}`}
+                        {!collapsedPinnedGroups.includes(group.id) ? (
+                          <div className="grid gap-2">
+                            {group.items.map(({ doc, bucket }, index) => (
+                              <div
+                                key={`pinned-${doc.id}`}
+                                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <Link
+                                    to={doc.path}
+                                    className="min-w-0 flex-1 no-underline"
+                                    onClick={() => {
+                                      storeRecentDoc(doc.id, doc.path);
+                                      setIsOpen(false);
+                                    }}
                                   >
-                                    {pinnedBucketMeta.map((bucketOption) => (
-                                      <option key={bucketOption.id} value={bucketOption.id}>
-                                        {bucketOption.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <div className="flex items-center gap-1">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                                      <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
+                                        {searchGroupLabel[getSearchGroupId(doc.category)]}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
+                                  </Link>
+                                  <div className="flex flex-col items-end gap-1">
+                                    <select
+                                      value={bucket}
+                                      onChange={(event) => movePinnedDocToBucket(doc.id, event.target.value as PinnedBucketId)}
+                                      className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-card)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] outline-none"
+                                      aria-label={`调整分组 ${doc.title}`}
+                                    >
+                                      {pinnedBucketMeta.map((bucketOption) => (
+                                        <option key={bucketOption.id} value={bucketOption.id}>
+                                          {bucketOption.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={() => reorderPinnedDocs(doc.id, bucket, 'top')}
+                                        className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                        aria-label={`置顶 ${doc.title}`}
+                                        disabled={index === 0}
+                                      >
+                                        置顶
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={() => reorderPinnedDocs(doc.id, bucket, 'up')}
+                                        className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                        aria-label={`上移 ${doc.title}`}
+                                        disabled={index === 0}
+                                      >
+                                        上移
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={() => reorderPinnedDocs(doc.id, bucket, 'down')}
+                                        className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                        aria-label={`下移 ${doc.title}`}
+                                        disabled={index === group.items.length - 1}
+                                      >
+                                        下移
+                                      </button>
+                                    </div>
                                     <button
                                       type="button"
                                       onMouseDown={(event) => event.preventDefault()}
-                                      onClick={() => reorderPinnedDocs(doc.id, bucket, 'top')}
-                                      className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                      aria-label={`置顶 ${doc.title}`}
-                                      disabled={index === 0}
+                                      onClick={() => togglePinnedDoc(doc)}
+                                      className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                                      aria-label={`取消收藏 ${doc.title}`}
                                     >
-                                      置顶
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onMouseDown={(event) => event.preventDefault()}
-                                      onClick={() => reorderPinnedDocs(doc.id, bucket, 'up')}
-                                      className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                      aria-label={`上移 ${doc.title}`}
-                                      disabled={index === 0}
-                                    >
-                                      上移
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onMouseDown={(event) => event.preventDefault()}
-                                      onClick={() => reorderPinnedDocs(doc.id, bucket, 'down')}
-                                      className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                      aria-label={`下移 ${doc.title}`}
-                                      disabled={index === group.items.length - 1}
-                                    >
-                                      下移
+                                      已收藏
                                     </button>
                                   </div>
-                                  <button
-                                    type="button"
-                                    onMouseDown={(event) => event.preventDefault()}
-                                    onClick={() => togglePinnedDoc(doc)}
-                                    className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
-                                    aria-label={`取消收藏 ${doc.title}`}
-                                  >
-                                    已收藏
-                                  </button>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-[11px] text-[var(--color-text-tertiary)]">
+                            已折叠，当前共 {group.items.length} 条固定入口。
+                          </div>
+                        )}
                       </section>
                     ))}
                   </div>
