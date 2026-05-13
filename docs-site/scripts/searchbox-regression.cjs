@@ -92,10 +92,22 @@ async function openSearchPanel(page, mode) {
     }
   } else {
     await page.locator(inputSelector).waitFor({ state: 'visible' });
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('niko-docs:search', { detail: { query: '' } }));
+    });
   }
 
-  await page.locator(inputSelector).click();
-  await page.getByText('固定入口 / 收藏入口').waitFor({ state: 'visible' });
+  if (mode === 'mobile') {
+    await page.locator(inputSelector).evaluate((input) => {
+      if (input instanceof HTMLElement) {
+        input.blur();
+      }
+    }).catch(() => {});
+    await page.locator(inputSelector).focus();
+    await page.locator(inputSelector).click();
+    await page.locator(`${inputSelector}[aria-expanded="true"]`).waitFor({ state: 'visible' });
+  }
+  await page.locator(`[data-search-status="${mode}"]`).waitFor({ state: 'visible' });
 }
 
 async function verifyPinnedSections(page) {
@@ -157,6 +169,49 @@ async function verifyPinnedManagement(page, mode) {
   }
 }
 
+async function verifyRecentStateSections(page, mode) {
+  const inputSelector = `[data-doc-search-input="${mode === 'mobile' ? 'mobile' : 'desktop'}"]`;
+  await openSearchPanel(page, mode);
+  await page.locator(inputSelector).fill('workflow');
+  await page.locator('[data-search-option-type="result"][data-search-active="true"]').waitFor({ state: 'visible' });
+  await page.keyboard.press('Enter');
+  await page.waitForURL('**/api/workflow-api');
+
+  await openSearchPanel(page, mode);
+  await page.locator(inputSelector).fill('开头弱');
+  await page.locator('[data-search-option-type="result"][data-search-active="true"]').waitFor({ state: 'visible' });
+  await page.keyboard.press('Enter');
+  await page.waitForURL('**/guides/common-writing-problems');
+
+  await openSearchPanel(page, mode);
+  await page.locator('[data-search-status]').evaluate((element) => element.textContent);
+  await page.locator(inputSelector).fill('');
+  await page.locator('[data-recent-query-section="true"]').waitFor({ state: 'visible' });
+  await page.locator('[data-recent-query-item="workflow"]').waitFor({ state: 'visible' });
+  await page.locator('[data-recent-query-item="开头弱"]').waitFor({ state: 'visible' });
+  await page.locator('[data-recent-doc-section="true"]').waitFor({ state: 'visible' });
+  await page.locator('[data-recent-doc-item="workflow-api"]').waitFor({ state: 'visible' });
+  await page.locator('[data-recent-doc-item="common-writing-problems"]').waitFor({ state: 'visible' });
+
+  await page.getByRole('button', { name: '清空最近使用' }).click();
+  const recentQueries = await page.evaluate(() => window.localStorage.getItem('niko-docs:recent-queries'));
+  if (recentQueries !== null) {
+    throw new Error(`清空最近使用后 localStorage 未清除，实际值：${recentQueries}`);
+  }
+  if (await page.locator('[data-recent-query-section="true"]').isVisible().catch(() => false)) {
+    throw new Error('清空最近使用后最近使用区仍可见。');
+  }
+
+  await page.getByRole('button', { name: '清空最近点击' }).click();
+  const recentDocs = await page.evaluate(() => window.localStorage.getItem('niko-docs:recent-docs'));
+  if (recentDocs !== null) {
+    throw new Error(`清空最近点击后 localStorage 未清除，实际值：${recentDocs}`);
+  }
+  if (await page.locator('[data-recent-doc-section="true"]').isVisible().catch(() => false)) {
+    throw new Error('清空最近点击后最近点击区仍可见。');
+  }
+}
+
 async function verifyKeyboardNavigation(page, mode) {
   await page.locator(`[data-doc-search-input="${mode === 'mobile' ? 'mobile' : 'desktop'}"]`).fill('workflow');
   await page.locator(`#doc-search-panel-${mode} > div`).first().waitFor({ state: 'visible' });
@@ -169,7 +224,7 @@ async function verifyKeyboardNavigation(page, mode) {
   }
 }
 
-async function verifyShortcutSelection(page) {
+async function verifyShortcutAndFocusAccessibility(page) {
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.locator('[data-doc-search-input="desktop"]').fill('workflow');
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
@@ -182,6 +237,33 @@ async function verifyShortcutSelection(page) {
 
   if (selectedText !== 'workflow') {
     throw new Error(`Ctrl/Cmd+K 后未选中文本，实际选中：${selectedText}`);
+  }
+
+  await page.keyboard.press('Tab');
+  const focusedAfterTab = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
+  if (
+    !focusedAfterTab?.startsWith('打开搜索结果 ') &&
+    !focusedAfterTab?.startsWith('收藏 ') &&
+    !focusedAfterTab?.startsWith('取消收藏 ')
+  ) {
+    throw new Error(`Tab 后焦点未进入搜索面板可操作项，当前焦点：${focusedAfterTab}`);
+  }
+
+  await page.keyboard.press('Escape');
+  const panelVisible = await page.locator('[data-search-status="desktop"]').isVisible().catch(() => false);
+  if (panelVisible) {
+    throw new Error('按 Escape 后搜索面板仍然可见。');
+  }
+  const lingeringActivePanelControl = await page.evaluate(() => {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) {
+      return null;
+    }
+
+    return active.closest('[aria-label="搜索面板"]') ? active.getAttribute('aria-label') ?? active.tagName : null;
+  });
+  if (lingeringActivePanelControl) {
+    throw new Error(`按 Escape 后焦点仍停留在面板内部：${lingeringActivePanelControl}`);
   }
 }
 
@@ -219,6 +301,7 @@ async function verifyViewport(browser, name, viewport) {
   await verifyPinnedSections(page);
   await verifyPersistenceAfterReload(page, name);
   await verifyPinnedManagement(page, name);
+  await verifyRecentStateSections(page, name);
   await verifyKeyboardNavigation(page, name);
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await verifyEmptyStateFallback(page, name);
@@ -240,7 +323,7 @@ async function main() {
     await verifyViewport(browser, 'mobile', { width: 390, height: 844 });
     const shortcutPage = await browser.newPage({ viewport: { width: 1440, height: 960 } });
     try {
-      await verifyShortcutSelection(shortcutPage);
+      await verifyShortcutAndFocusAccessibility(shortcutPage);
     } finally {
       await shortcutPage.close();
     }

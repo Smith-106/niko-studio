@@ -183,6 +183,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   const location = useLocation();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const suppressNextFocusOpenRef = useRef(false);
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeResultIndex, setActiveResultIndex] = useState(-1);
@@ -193,6 +194,8 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   const docs = useMemo(() => getResolvedDocPages(), []);
   const normalizedQuery = normalize(query);
   const searchPanelId = mobile ? 'doc-search-panel-mobile' : 'doc-search-panel-desktop';
+  const searchHelpId = `${searchPanelId}-help`;
+  const searchStatusId = `${searchPanelId}-status`;
 
   const hydrateRecentState = () => {
     if (typeof window === 'undefined') {
@@ -476,6 +479,27 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     navigate(doc.path);
   };
 
+  const closeSearchPanel = (options?: { restoreFocus?: boolean; selectText?: boolean }) => {
+    const { restoreFocus = false, selectText = false } = options ?? {};
+    setIsOpen(false);
+    setActiveResultIndex(-1);
+
+    if (!restoreFocus || typeof window === 'undefined') {
+      return;
+    }
+
+    suppressNextFocusOpenRef.current = true;
+    window.setTimeout(() => {
+      inputRef.current?.focus();
+      if (selectText) {
+        inputRef.current?.select();
+      }
+      window.setTimeout(() => {
+        suppressNextFocusOpenRef.current = false;
+      }, 0);
+    }, 0);
+  };
+
   const moveActiveResult = (direction: 'next' | 'prev') => {
     if (keyboardItems.length === 0) {
       return;
@@ -616,6 +640,9 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   const wrapperClass = mobile
     ? 'relative w-full md:hidden'
     : 'relative hidden w-full max-w-[420px] md:block';
+  const searchStatusMessage = normalizedQuery
+    ? `找到 ${totalResults} 条结果，按专题、能力页和 API 分组，可用上下箭头浏览并按 Enter 打开。`
+    : '推荐入口、关键词与分组浏览。可用 Tab 在搜索面板操作间移动。';
 
   useEffect(() => {
     if (!isOpen || !normalizedQuery) {
@@ -638,12 +665,27 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   return (
     <div
       className={wrapperClass}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        closeSearchPanel({ restoreFocus: true });
+      }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
           setIsOpen(false);
         }
       }}
     >
+      <p id={searchHelpId} className="sr-only">
+        输入关键词后，使用上下箭头浏览结果，Enter 打开，Escape 关闭，Tab 在搜索面板操作间移动。
+      </p>
+      <p id={searchStatusId} className="sr-only" aria-live="polite" aria-atomic="true">
+        {searchStatusMessage}
+      </p>
       <label className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 focus-within:border-[var(--color-text-placeholder)]">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-[var(--color-text-tertiary)]">
           <path d="M11.5 11.5L15 15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -653,22 +695,23 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
           ref={inputRef}
           data-doc-search-input={mobile ? 'mobile' : 'desktop'}
           value={query}
+          role="combobox"
+          aria-label="文档搜索"
           aria-autocomplete="list"
+          aria-haspopup="listbox"
           aria-controls={searchPanelId}
           aria-expanded={isOpen}
           aria-activedescendant={activeKeyboardDocId ? `${searchPanelId}-option-${activeKeyboardDocId}` : undefined}
+          aria-describedby={`${searchHelpId} ${searchStatusId}`}
           onFocus={() => {
             hydrateRecentState();
+            if (suppressNextFocusOpenRef.current) {
+              suppressNextFocusOpenRef.current = false;
+              return;
+            }
             setIsOpen(true);
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setIsOpen(false);
-              setActiveResultIndex(-1);
-              event.currentTarget.blur();
-              return;
-            }
-
             if (event.key === 'ArrowDown') {
               event.preventDefault();
               setIsOpen(true);
@@ -710,9 +753,14 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       {isOpen ? (
         <div
           id={searchPanelId}
+          role="region"
+          aria-label="搜索面板"
           className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] shadow-[var(--shadow-lg)]"
         >
-          <div className="border-b border-[var(--color-border-divider)] px-4 py-3 text-[11px] text-[var(--color-text-tertiary)]">
+          <div
+            className="border-b border-[var(--color-border-divider)] px-4 py-3 text-[11px] text-[var(--color-text-tertiary)]"
+            data-search-status={mobile ? 'mobile' : 'desktop'}
+          >
             {normalizedQuery ? `找到 ${totalResults} 条结果，按专题 / 能力页 / API 分组，可用 ↑ ↓ 与 Enter 快速打开` : '推荐入口、关键词与分组浏览'}
           </div>
           <div className="max-h-[420px] overflow-y-auto p-2">
@@ -720,7 +768,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
               <div className="px-3 pb-2 pt-1">
                 {recentQueries.length > 0 ? (
                   <>
-                    <div className="mb-2 flex items-center justify-between gap-3">
+                    <div className="mb-2 flex items-center justify-between gap-3" data-recent-query-section="true">
                       <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">最近使用</div>
                       <button
                         type="button"
@@ -736,14 +784,16 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                       {recentQueries.map((recentQuery) => (
                         <button
                           key={recentQuery}
-                      type="button"
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => {
-                        setQuery(recentQuery);
-                        storeRecentQuery(recentQuery);
-                        setIsOpen(true);
-                      }}
-                      className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
+                          data-recent-query-item={recentQuery}
+                          type="button"
+                          aria-label={`使用最近搜索 ${recentQuery}`}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            setQuery(recentQuery);
+                            storeRecentQuery(recentQuery);
+                            setIsOpen(true);
+                          }}
+                          className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
                         >
                           {recentQuery}
                         </button>
@@ -753,7 +803,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                 ) : null}
                 {recentDocs.length > 0 ? (
                   <>
-                    <div className="mb-2 mt-4 flex items-center justify-between gap-3">
+                    <div className="mb-2 mt-4 flex items-center justify-between gap-3" data-recent-doc-section="true">
                       <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">最近点击</div>
                       <button
                         type="button"
@@ -769,11 +819,13 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                       {recentDocs.map((doc) => (
                         <div
                           key={doc.id}
+                          data-recent-doc-item={doc.id}
                           className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <Link
                               to={doc.path}
+                              aria-label={`打开最近文档 ${doc.title}`}
                               className="min-w-0 flex-1 no-underline"
                               onClick={() => {
                                 storeRecentDoc(doc.id, doc.path);
@@ -850,6 +902,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                                 <div className="flex items-start justify-between gap-3">
                                   <Link
                                     to={doc.path}
+                                    aria-label={`打开固定文档 ${doc.title}`}
                                     className="min-w-0 flex-1 no-underline"
                                     onClick={() => {
                                       storeRecentDoc(doc.id, doc.path);
@@ -942,6 +995,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                     <button
                       key={keyword}
                       type="button"
+                      aria-label={`搜索关键词 ${keyword}`}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         setQuery(keyword);
@@ -960,6 +1014,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                     <button
                       key={preset.label}
                       type="button"
+                      aria-label={`应用预设 ${preset.label}`}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         setQuery(preset.query);
@@ -1012,6 +1067,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                         <div className="flex items-start justify-between gap-3">
                           <Link
                             to={doc.path}
+                            aria-label={`打开搜索结果 ${doc.title}`}
                             className="min-w-0 flex-1 no-underline"
                             onClick={() => {
                               openDoc(doc);
@@ -1095,6 +1151,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                       >
                         <Link
                           to={doc.path}
+                          aria-label={`打开推荐跳转 ${doc.title}`}
                           className="block no-underline"
                           onClick={() => {
                             openDoc(doc);
