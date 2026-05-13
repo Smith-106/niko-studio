@@ -3,9 +3,15 @@ name: Docs Check
 on:
   push:
     branches: [main]
-    paths: ['docs-site/**']
+    paths:
+      - 'docs-site/**'
+      - '.github/workflows/docs-check.yml'
+      - '.github/workflows/deploy-docs.yml'
   pull_request:
-    paths: ['docs-site/**']
+    paths:
+      - 'docs-site/**'
+      - '.github/workflows/docs-check.yml'
+      - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
 permissions:
