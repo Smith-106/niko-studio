@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getResolvedDocPages } from '../../data/inventory';
 
 interface SearchBoxProps {
@@ -14,6 +14,7 @@ interface SearchOpenDetail {
 type SearchGroupId = 'topic' | 'capability' | 'api';
 type PinnedBucketId = 'writing' | 'api' | 'canon';
 type SearchReason = 'title' | 'alias' | 'category' | 'description' | 'recommended';
+type SearchDoc = ReturnType<typeof getResolvedDocPages>[number];
 
 interface SearchPreset {
   label: string;
@@ -28,15 +29,25 @@ interface RecentDocItem {
 }
 
 interface PinnedResolvedItem {
-  doc: ReturnType<typeof getResolvedDocPages>[number];
+  doc: SearchDoc;
   bucket: PinnedBucketId;
 }
 
 interface SearchResultItem {
-  doc: ReturnType<typeof getResolvedDocPages>[number];
+  doc: SearchDoc;
   score: number;
   group: SearchGroupId;
   reasons: SearchReason[];
+}
+
+interface EmptyStateSuggestionSet {
+  hint: string;
+  docIds: string[];
+}
+
+interface KeyboardSearchItem {
+  doc: SearchDoc;
+  source: 'result' | 'fallback';
 }
 
 const keywordAliases: Record<string, string[]> = {
@@ -111,8 +122,35 @@ const RECENT_DOCS_KEY = 'niko-docs:recent-docs';
 const MAX_PINNED_ITEMS = 6;
 const MAX_RECENT_ITEMS = 4;
 
+const emptyStateSuggestionSets: Array<{
+  matchers: string[];
+  hint: string;
+  docIds: string[];
+}> = [
+  {
+    matchers: ['workflow', 'api', '接口', 'agent', 'workspace', 'wiki', 'canon', '调用'],
+    hint: '像是接入或链路问题，先看这些稳定入口。',
+    docIds: ['workflow-api', 'workspace-api', 'wiki-api'],
+  },
+  {
+    matchers: ['开头', '对白', '节奏', '伏笔', '人物', '设定', '剧情', '修订'],
+    hint: '像是写作诊断问题，先从问题索引和对应能力页切入。',
+    docIds: ['common-writing-problems', 'craft-analysis', 'dialogue-analysis', 'foreshadow-tracking'],
+  },
+];
+
+const defaultEmptyStateSuggestionSet: EmptyStateSuggestionSet = {
+  hint: '先从总览路径进入，再收窄到能力页或 API。',
+  docIds: ['capability-routing', 'request-lifecycle', 'chapter-revision-playbook'],
+};
+
 function normalize(value: string): string {
   return value.toLowerCase().trim();
+}
+
+function resolveEmptyStateSuggestion(query: string): EmptyStateSuggestionSet {
+  const normalized = normalize(query);
+  return emptyStateSuggestionSets.find((item) => item.matchers.some((matcher) => normalized.includes(normalize(matcher)))) ?? defaultEmptyStateSuggestionSet;
 }
 
 function getSearchGroupId(categoryId: string): SearchGroupId {
@@ -141,14 +179,17 @@ function inferPinnedBucket(categoryId: string): PinnedBucketId {
 
 export function SearchBox({ mobile = false, placeholder = '搜索文档、分类或 API...' }: SearchBoxProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [activeResultIndex, setActiveResultIndex] = useState(-1);
   const [pinnedDocIds, setPinnedDocIds] = useState<RecentDocItem[]>([]);
   const [collapsedPinnedGroups, setCollapsedPinnedGroups] = useState<PinnedBucketId[]>([]);
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const [recentDocIds, setRecentDocIds] = useState<RecentDocItem[]>([]);
   const docs = useMemo(() => getResolvedDocPages(), []);
   const normalizedQuery = normalize(query);
+  const searchPanelId = mobile ? 'doc-search-panel-mobile' : 'doc-search-panel-desktop';
 
   const hydrateRecentState = () => {
     if (typeof window === 'undefined') {
@@ -179,6 +220,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   useEffect(() => {
     setIsOpen(false);
     setQuery('');
+    setActiveResultIndex(-1);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -296,6 +338,19 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   }, [results]);
 
   const totalResults = results.length;
+  const emptyStateSuggestions = useMemo(() => {
+    if (!normalizedQuery || totalResults > 0) {
+      return null;
+    }
+
+    const suggestion = resolveEmptyStateSuggestion(query);
+    return {
+      hint: suggestion.hint,
+      docs: suggestion.docIds
+        .map((id) => docs.find((doc) => doc.id === id))
+        .filter((doc): doc is SearchDoc => Boolean(doc)),
+    };
+  }, [docs, normalizedQuery, query, totalResults]);
   const pinnedDocs = useMemo<PinnedResolvedItem[]>(() => {
     return pinnedDocIds
       .map((item) => {
@@ -323,9 +378,25 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   const recentDocs = useMemo(() => {
     return recentDocIds
       .map((item) => docs.find((doc) => doc.id === item.id && doc.path === item.path))
-      .filter((doc): doc is ReturnType<typeof getResolvedDocPages>[number] => Boolean(doc))
+      .filter((doc): doc is SearchDoc => Boolean(doc))
       .slice(0, MAX_RECENT_ITEMS);
   }, [docs, recentDocIds]);
+  const keyboardItems = useMemo<KeyboardSearchItem[]>(() => {
+    if (!normalizedQuery) {
+      return [];
+    }
+
+    if (results.length > 0) {
+      return results.map((item) => ({ doc: item.doc, source: 'result' as const }));
+    }
+
+    return (emptyStateSuggestions?.docs ?? []).map((doc) => ({ doc, source: 'fallback' as const }));
+  }, [emptyStateSuggestions, normalizedQuery, results]);
+  const keyboardIndexByDocId = useMemo(() => {
+    return new Map(keyboardItems.map((item, index) => [item.doc.id, index]));
+  }, [keyboardItems]);
+  const activeKeyboardItem = activeResultIndex >= 0 ? keyboardItems[activeResultIndex] : null;
+  const activeKeyboardDocId = activeKeyboardItem?.doc.id ?? null;
 
   const isPinnedDoc = (docId: string) => pinnedDocIds.some((item) => item.id === docId);
 
@@ -392,7 +463,32 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       .slice(0, MAX_PINNED_ITEMS);
   };
 
-  const togglePinnedDoc = (doc: ReturnType<typeof getResolvedDocPages>[number]) => {
+  const openDoc = (doc: SearchDoc, trackedQuery = query) => {
+    storeRecentDoc(doc.id, doc.path);
+    if (trackedQuery.trim()) {
+      storeRecentQuery(trackedQuery);
+    }
+    setIsOpen(false);
+    navigate(doc.path);
+  };
+
+  const moveActiveResult = (direction: 'next' | 'prev') => {
+    if (keyboardItems.length === 0) {
+      return;
+    }
+
+    setActiveResultIndex((current) => {
+      if (current < 0) {
+        return direction === 'next' ? 0 : keyboardItems.length - 1;
+      }
+
+      return direction === 'next'
+        ? (current + 1) % keyboardItems.length
+        : (current - 1 + keyboardItems.length) % keyboardItems.length;
+    });
+  };
+
+  const togglePinnedDoc = (doc: SearchDoc) => {
     setPinnedDocIds((current) => {
       const exists = current.some((item) => item.id === doc.id);
       if (exists) {
@@ -516,6 +612,15 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     ? 'relative w-full md:hidden'
     : 'relative hidden w-full max-w-[420px] md:block';
 
+  useEffect(() => {
+    if (!isOpen || !normalizedQuery) {
+      setActiveResultIndex(-1);
+      return;
+    }
+
+    setActiveResultIndex(keyboardItems.length > 0 ? 0 : -1);
+  }, [isOpen, keyboardItems.length, normalizedQuery]);
+
   return (
     <div
       className={wrapperClass}
@@ -533,6 +638,10 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
         <input
           data-doc-search-input={mobile ? 'mobile' : 'desktop'}
           value={query}
+          aria-autocomplete="list"
+          aria-controls={searchPanelId}
+          aria-expanded={isOpen}
+          aria-activedescendant={activeKeyboardDocId ? `${searchPanelId}-option-${activeKeyboardDocId}` : undefined}
           onFocus={() => {
             hydrateRecentState();
             setIsOpen(true);
@@ -540,8 +649,31 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               setIsOpen(false);
+              setActiveResultIndex(-1);
               event.currentTarget.blur();
+              return;
             }
+
+            if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              setIsOpen(true);
+              moveActiveResult('next');
+              return;
+            }
+
+            if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              setIsOpen(true);
+              moveActiveResult('prev');
+              return;
+            }
+
+            if (event.key === 'Enter' && activeKeyboardItem) {
+              event.preventDefault();
+              openDoc(activeKeyboardItem.doc);
+              return;
+            }
+
             if (event.key === 'Enter' && query.trim()) {
               storeRecentQuery(query);
             }
@@ -561,9 +693,12 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
       </label>
 
       {isOpen ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] shadow-[var(--shadow-lg)]">
+        <div
+          id={searchPanelId}
+          className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] shadow-[var(--shadow-lg)]"
+        >
           <div className="border-b border-[var(--color-border-divider)] px-4 py-3 text-[11px] text-[var(--color-text-tertiary)]">
-            {normalizedQuery ? `找到 ${totalResults} 条结果，按专题 / 能力页 / API 分组` : '推荐入口、关键词与分组浏览'}
+            {normalizedQuery ? `找到 ${totalResults} 条结果，按专题 / 能力页 / API 分组，可用 ↑ ↓ 与 Enter 快速打开` : '推荐入口、关键词与分组浏览'}
           </div>
           <div className="max-h-[420px] overflow-y-auto p-2">
             {!normalizedQuery ? (
@@ -830,22 +965,39 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                     <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">{group.label}</div>
                     <div className="text-[10px] text-[var(--color-text-tertiary)]">{group.description}</div>
                   </div>
-                  <div className="space-y-1">
-                    {group.items.map(({ doc, reasons }) => (
+                  <div className="space-y-1" role="listbox" aria-label={`${group.label} 搜索结果`}>
+                    {group.items.map(({ doc, reasons }) => {
+                      const optionIndex = keyboardIndexByDocId.get(doc.id) ?? -1;
+                      const isActive = activeKeyboardDocId === doc.id;
+
+                      return (
                       <div
                         key={doc.id}
-                        className="rounded-xl px-3 py-3 transition-colors hover:bg-[var(--color-bg-hover)]"
+                        id={`${searchPanelId}-option-${doc.id}`}
+                        role="option"
+                        aria-selected={isActive}
+                        data-search-option={mobile ? 'mobile' : 'desktop'}
+                        data-search-option-type="result"
+                        data-search-doc-id={doc.id}
+                        data-search-option-index={optionIndex >= 0 ? optionIndex : undefined}
+                        data-search-active={isActive ? 'true' : undefined}
+                        onMouseEnter={() => {
+                          if (optionIndex >= 0) {
+                            setActiveResultIndex(optionIndex);
+                          }
+                        }}
+                        className={`rounded-xl px-3 py-3 transition-colors ${
+                          isActive
+                            ? 'bg-[var(--color-bg-hover)] ring-1 ring-[var(--color-accent-blue)]'
+                            : 'hover:bg-[var(--color-bg-hover)]'
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <Link
                             to={doc.path}
                             className="min-w-0 flex-1 no-underline"
                             onClick={() => {
-                              storeRecentDoc(doc.id, doc.path);
-                              if (query.trim()) {
-                                storeRecentQuery(query);
-                              }
-                              setIsOpen(false);
+                              openDoc(doc);
                             }}
                           >
                             <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--color-text-tertiary)]">
@@ -881,10 +1033,71 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                           </button>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 </section>
               ))
+            ) : emptyStateSuggestions ? (
+              <div className="px-3 py-4">
+                <div className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)] px-4 py-4">
+                  <div className="text-[12px] font-medium text-[var(--color-text-primary)]">没有找到直接匹配项</div>
+                  <div className="mt-1 text-[11px] leading-6 text-[var(--color-text-tertiary)]">
+                    试试分类名、功能名或 API 关键词。下面给你一组更稳妥的推荐跳转，可用 Enter 直接打开当前高亮项。
+                  </div>
+                </div>
+                <div className="mb-2 mt-4 flex items-center justify-between gap-3 px-1">
+                  <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">推荐跳转</div>
+                  <div className="text-[10px] text-[var(--color-text-tertiary)]">{emptyStateSuggestions.hint}</div>
+                </div>
+                <div className="space-y-1" role="listbox" aria-label="空结果推荐跳转">
+                  {emptyStateSuggestions.docs.map((doc) => {
+                    const optionIndex = keyboardIndexByDocId.get(doc.id) ?? -1;
+                    const isActive = activeKeyboardDocId === doc.id;
+
+                    return (
+                      <div
+                        key={doc.id}
+                        id={`${searchPanelId}-option-${doc.id}`}
+                        role="option"
+                        aria-selected={isActive}
+                        data-search-option={mobile ? 'mobile' : 'desktop'}
+                        data-search-option-type="fallback"
+                        data-search-doc-id={doc.id}
+                        data-search-option-index={optionIndex >= 0 ? optionIndex : undefined}
+                        data-search-active={isActive ? 'true' : undefined}
+                        onMouseEnter={() => {
+                          if (optionIndex >= 0) {
+                            setActiveResultIndex(optionIndex);
+                          }
+                        }}
+                        className={`rounded-xl px-3 py-3 transition-colors ${
+                          isActive
+                            ? 'bg-[var(--color-bg-hover)] ring-1 ring-[var(--color-accent-blue)]'
+                            : 'hover:bg-[var(--color-bg-hover)]'
+                        }`}
+                      >
+                        <Link
+                          to={doc.path}
+                          className="block no-underline"
+                          onClick={() => {
+                            openDoc(doc);
+                          }}
+                        >
+                          <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--color-text-tertiary)]">
+                            <span>{doc.categoryInfo.icon}</span>
+                            <span>{doc.categoryInfo.name}</span>
+                            <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
+                              推荐跳转
+                            </span>
+                          </div>
+                          <div className="text-[13px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                          <div className="mt-1 text-[12px] leading-6 text-[var(--color-text-secondary)]">{doc.description}</div>
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             ) : (
               <div className="px-3 py-6 text-[12px] text-[var(--color-text-secondary)]">没有找到匹配项，试试分类名、功能名或 API 关键词。</div>
             )}

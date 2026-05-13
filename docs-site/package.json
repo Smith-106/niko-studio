@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "npm run docs:lint && tsc && vite build",
     "preview": "vite preview",
-    "docs:lint": "node scripts/docs-lint.mjs"
+    "docs:lint": "node scripts/docs-lint.mjs",
+    "test:searchbox": "node scripts/searchbox-regression.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
@@ -21,6 +22,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "playwright": "^1.60.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.7"
