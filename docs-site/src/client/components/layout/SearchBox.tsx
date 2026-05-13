@@ -12,6 +12,7 @@ interface SearchOpenDetail {
 }
 
 type SearchGroupId = 'topic' | 'capability' | 'api';
+type PinnedBucketId = 'writing' | 'api' | 'canon';
 type SearchReason = 'title' | 'alias' | 'category' | 'description' | 'recommended';
 
 interface SearchPreset {
@@ -23,6 +24,11 @@ interface SearchPreset {
 interface RecentDocItem {
   id: string;
   path: string;
+}
+
+interface PinnedResolvedItem {
+  doc: ReturnType<typeof getResolvedDocPages>[number];
+  bucket: PinnedBucketId;
 }
 
 interface SearchResultItem {
@@ -87,6 +93,16 @@ const searchGroupLabel: Record<SearchGroupId, string> = {
   api: 'API',
 };
 
+const pinnedBucketMeta: Array<{
+  id: PinnedBucketId;
+  label: string;
+  description: string;
+}> = [
+  { id: 'writing', label: '写作用', description: '修订、分析、章节工作流' },
+  { id: 'api', label: 'API 用', description: '接口、链路、集成入口' },
+  { id: 'canon', label: '设定用', description: '世界观、素材、设定沉淀' },
+];
+
 const PINNED_DOCS_KEY = 'niko-docs:pinned-docs';
 const RECENT_QUERIES_KEY = 'niko-docs:recent-queries';
 const RECENT_DOCS_KEY = 'niko-docs:recent-docs';
@@ -107,6 +123,18 @@ function getSearchGroupId(categoryId: string): SearchGroupId {
   }
 
   return 'capability';
+}
+
+function inferPinnedBucket(categoryId: string): PinnedBucketId {
+  if (categoryId === 'api' || categoryId === 'architecture' || categoryId === 'desktop' || categoryId === 'agent') {
+    return 'api';
+  }
+
+  if (categoryId === 'worldview' || categoryId === 'memory' || categoryId === 'sync') {
+    return 'canon';
+  }
+
+  return 'writing';
 }
 
 export function SearchBox({ mobile = false, placeholder = '搜索文档、分类或 API...' }: SearchBoxProps) {
@@ -262,12 +290,30 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
   }, [results]);
 
   const totalResults = results.length;
-  const pinnedDocs = useMemo(() => {
+  const pinnedDocs = useMemo<PinnedResolvedItem[]>(() => {
     return pinnedDocIds
-      .map((item) => docs.find((doc) => doc.id === item.id && doc.path === item.path))
-      .filter((doc): doc is ReturnType<typeof getResolvedDocPages>[number] => Boolean(doc))
+      .map((item) => {
+        const doc = docs.find((candidate) => candidate.id === item.id && candidate.path === item.path);
+        if (!doc) {
+          return null;
+        }
+
+        return {
+          doc,
+          bucket: inferPinnedBucket(doc.category),
+        };
+      })
+      .filter((item): item is PinnedResolvedItem => Boolean(item))
       .slice(0, MAX_PINNED_ITEMS);
   }, [docs, pinnedDocIds]);
+  const pinnedDocGroups = useMemo(() => {
+    return pinnedBucketMeta
+      .map((bucket) => ({
+        ...bucket,
+        items: pinnedDocs.filter((item) => item.bucket === bucket.id),
+      }))
+      .filter((bucket) => bucket.items.length > 0);
+  }, [pinnedDocs]);
   const recentDocs = useMemo(() => {
     return recentDocIds
       .map((item) => docs.find((doc) => doc.id === item.id && doc.path === item.path))
@@ -302,23 +348,59 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     });
   };
 
-  const togglePinnedDoc = (docId: string, path: string) => {
+  const persistPinnedDocIds = (next: RecentDocItem[]) => {
     if (typeof window === 'undefined') {
       return;
     }
 
-    setPinnedDocIds((current) => {
-      const exists = current.some((item) => item.id === docId);
-      const next = exists
-        ? current.filter((item) => item.id !== docId)
-        : [{ id: docId, path }, ...current.filter((item) => item.id !== docId)].slice(0, MAX_PINNED_ITEMS);
+    if (next.length > 0) {
+      window.localStorage.setItem(PINNED_DOCS_KEY, JSON.stringify(next));
+    } else {
+      window.localStorage.removeItem(PINNED_DOCS_KEY);
+    }
+  };
 
-      if (next.length > 0) {
-        window.localStorage.setItem(PINNED_DOCS_KEY, JSON.stringify(next));
-      } else {
-        window.localStorage.removeItem(PINNED_DOCS_KEY);
+  const buildPinnedBuckets = (items: RecentDocItem[]) => {
+    const buckets: Record<PinnedBucketId, RecentDocItem[]> = {
+      writing: [],
+      api: [],
+      canon: [],
+    };
+
+    items.forEach((item) => {
+      const doc = docs.find((candidate) => candidate.id === item.id && candidate.path === item.path);
+      if (!doc) {
+        return;
       }
 
+      const bucket = inferPinnedBucket(doc.category);
+      buckets[bucket].push(item);
+    });
+
+    return buckets;
+  };
+
+  const flattenPinnedBuckets = (buckets: Record<PinnedBucketId, RecentDocItem[]>) => {
+    return pinnedBucketMeta
+      .flatMap((bucket) => buckets[bucket.id])
+      .slice(0, MAX_PINNED_ITEMS);
+  };
+
+  const togglePinnedDoc = (doc: ReturnType<typeof getResolvedDocPages>[number]) => {
+    setPinnedDocIds((current) => {
+      const exists = current.some((item) => item.id === doc.id);
+      if (exists) {
+        const next = current.filter((item) => item.id !== doc.id);
+        persistPinnedDocIds(next);
+        return next;
+      }
+
+      const item = { id: doc.id, path: doc.path };
+      const buckets = buildPinnedBuckets(current.filter((entry) => entry.id !== doc.id));
+      const bucket = inferPinnedBucket(doc.category);
+      buckets[bucket] = [item, ...buckets[bucket]].slice(0, MAX_PINNED_ITEMS);
+      const next = flattenPinnedBuckets(buckets);
+      persistPinnedDocIds(next);
       return next;
     });
   };
@@ -332,34 +414,33 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     setPinnedDocIds([]);
   };
 
-  const reorderPinnedDocs = (docId: string, direction: 'top' | 'up' | 'down') => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
+  const reorderPinnedDocs = (docId: string, bucket: PinnedBucketId, direction: 'top' | 'up' | 'down') => {
     setPinnedDocIds((current) => {
-      const index = current.findIndex((item) => item.id === docId);
+      const buckets = buildPinnedBuckets(current);
+      const currentBucketItems = [...buckets[bucket]];
+      const index = currentBucketItems.findIndex((item) => item.id === docId);
       if (index < 0) {
         return current;
       }
 
-      const next = [...current];
-      const [target] = next.splice(index, 1);
+      const [target] = currentBucketItems.splice(index, 1);
       if (!target) {
         return current;
       }
 
-      let newIndex = index;
+      let nextIndex = index;
       if (direction === 'top') {
-        newIndex = 0;
+        nextIndex = 0;
       } else if (direction === 'up') {
-        newIndex = Math.max(0, index - 1);
+        nextIndex = Math.max(0, index - 1);
       } else if (direction === 'down') {
-        newIndex = Math.min(next.length, index + 1);
+        nextIndex = Math.min(currentBucketItems.length, index + 1);
       }
 
-      next.splice(newIndex, 0, target);
-      window.localStorage.setItem(PINNED_DOCS_KEY, JSON.stringify(next));
+      currentBucketItems.splice(nextIndex, 0, target);
+      buckets[bucket] = currentBucketItems;
+      const next = flattenPinnedBuckets(buckets);
+      persistPinnedDocIds(next);
       return next;
     });
   };
@@ -511,7 +592,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                             <button
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => togglePinnedDoc(doc.id, doc.path)}
+                              onClick={() => togglePinnedDoc(doc)}
                               className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
                               aria-label={`${isPinnedDoc(doc.id) ? '取消收藏' : '收藏'} ${doc.title}`}
                             >
@@ -538,79 +619,89 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                   ) : null}
                 </div>
                 {pinnedDocs.length > 0 ? (
-                  <div className="grid gap-2">
-                    {pinnedDocs.map((doc, index) => (
-                      <div
-                        key={`pinned-${doc.id}`}
-                        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <Link
-                            to={doc.path}
-                            className="min-w-0 flex-1 no-underline"
-                            onClick={() => {
-                              storeRecentDoc(doc.id, doc.path);
-                              setIsOpen(false);
-                            }}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
-                              <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
-                                {searchGroupLabel[getSearchGroupId(doc.category)]}
-                              </span>
-                            </div>
-                            <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
-                          </Link>
-                          <div className="flex flex-col items-end gap-1">
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => reorderPinnedDocs(doc.id, 'top')}
-                                className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
-                                aria-label={`置顶 ${doc.title}`}
-                                disabled={index === 0}
-                              >
-                                置顶
-                              </button>
-                              <button
-                                type="button"
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => reorderPinnedDocs(doc.id, 'up')}
-                                className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                aria-label={`上移 ${doc.title}`}
-                                disabled={index === 0}
-                              >
-                                上移
-                              </button>
-                              <button
-                                type="button"
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => reorderPinnedDocs(doc.id, 'down')}
-                                className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                                aria-label={`下移 ${doc.title}`}
-                                disabled={index === pinnedDocs.length - 1}
-                              >
-                                下移
-                              </button>
-                            </div>
-                            <button
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => togglePinnedDoc(doc.id, doc.path)}
-                              className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
-                              aria-label={`取消收藏 ${doc.title}`}
-                            >
-                              已收藏
-                            </button>
-                          </div>
+                  <div className="space-y-3">
+                    {pinnedDocGroups.map((group) => (
+                      <section key={group.id}>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="text-[11px] font-medium text-[var(--color-text-tertiary)]">{group.label}</div>
+                          <div className="text-[10px] text-[var(--color-text-tertiary)]">{group.description}</div>
                         </div>
-                      </div>
+                        <div className="grid gap-2">
+                          {group.items.map(({ doc, bucket }, index) => (
+                            <div
+                              key={`pinned-${doc.id}`}
+                              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <Link
+                                  to={doc.path}
+                                  className="min-w-0 flex-1 no-underline"
+                                  onClick={() => {
+                                    storeRecentDoc(doc.id, doc.path);
+                                    setIsOpen(false);
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{doc.title}</div>
+                                    <span className="rounded-full bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[10px] text-[var(--color-text-tertiary)]">
+                                      {searchGroupLabel[getSearchGroupId(doc.category)]}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
+                                </Link>
+                                <div className="flex flex-col items-end gap-1">
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => reorderPinnedDocs(doc.id, bucket, 'top')}
+                                      className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                      aria-label={`置顶 ${doc.title}`}
+                                      disabled={index === 0}
+                                    >
+                                      置顶
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => reorderPinnedDocs(doc.id, bucket, 'up')}
+                                      className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                      aria-label={`上移 ${doc.title}`}
+                                      disabled={index === 0}
+                                    >
+                                      上移
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => reorderPinnedDocs(doc.id, bucket, 'down')}
+                                      className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                      aria-label={`下移 ${doc.title}`}
+                                      disabled={index === group.items.length - 1}
+                                    >
+                                      下移
+                                    </button>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => togglePinnedDoc(doc)}
+                                    className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                                    aria-label={`取消收藏 ${doc.title}`}
+                                  >
+                                    已收藏
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
                     ))}
                   </div>
                 ) : (
                   <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-3 text-[11px] leading-6 text-[var(--color-text-tertiary)]">
-                    在搜索结果或最近点击里点“收藏”，把常用文档固定在这里。
+                    在搜索结果或最近点击里点“收藏”，把常用文档固定在这里。固定入口会自动按写作用、API 用、设定用分层。
                   </div>
                 )}
                 <div className="mb-2 text-[11px] font-medium text-[var(--color-text-tertiary)]">关键词直达</div>
@@ -698,7 +789,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                             type="button"
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={() => {
-                              togglePinnedDoc(doc.id, doc.path);
+                              togglePinnedDoc(doc);
                               if (query.trim()) {
                                 storeRecentQuery(query);
                               }
