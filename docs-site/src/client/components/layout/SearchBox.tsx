@@ -332,6 +332,38 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
     setPinnedDocIds([]);
   };
 
+  const reorderPinnedDocs = (docId: string, direction: 'top' | 'up' | 'down') => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    setPinnedDocIds((current) => {
+      const index = current.findIndex((item) => item.id === docId);
+      if (index < 0) {
+        return current;
+      }
+
+      const next = [...current];
+      const [target] = next.splice(index, 1);
+      if (!target) {
+        return current;
+      }
+
+      let newIndex = index;
+      if (direction === 'top') {
+        newIndex = 0;
+      } else if (direction === 'up') {
+        newIndex = Math.max(0, index - 1);
+      } else if (direction === 'down') {
+        newIndex = Math.min(next.length, index + 1);
+      }
+
+      next.splice(newIndex, 0, target);
+      window.localStorage.setItem(PINNED_DOCS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const clearRecentQueries = () => {
     if (typeof window === 'undefined') {
       return;
@@ -507,7 +539,7 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                 </div>
                 {pinnedDocs.length > 0 ? (
                   <div className="grid gap-2">
-                    {pinnedDocs.map((doc) => (
+                    {pinnedDocs.map((doc, index) => (
                       <div
                         key={`pinned-${doc.id}`}
                         className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 transition-colors hover:bg-[var(--color-bg-hover)]"
@@ -529,15 +561,49 @@ export function SearchBox({ mobile = false, placeholder = '搜索文档、分类
                             </div>
                             <div className="mt-1 text-[11px] text-[var(--color-text-tertiary)]">{doc.categoryInfo.name}</div>
                           </Link>
-                          <button
-                            type="button"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => togglePinnedDoc(doc.id, doc.path)}
-                            className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
-                            aria-label={`取消收藏 ${doc.title}`}
-                          >
-                            已收藏
-                          </button>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => reorderPinnedDocs(doc.id, 'top')}
+                                className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                                aria-label={`置顶 ${doc.title}`}
+                                disabled={index === 0}
+                              >
+                                置顶
+                              </button>
+                              <button
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => reorderPinnedDocs(doc.id, 'up')}
+                                className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                aria-label={`上移 ${doc.title}`}
+                                disabled={index === 0}
+                              >
+                                上移
+                              </button>
+                              <button
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => reorderPinnedDocs(doc.id, 'down')}
+                                className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                aria-label={`下移 ${doc.title}`}
+                                disabled={index === pinnedDocs.length - 1}
+                              >
+                                下移
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => togglePinnedDoc(doc.id, doc.path)}
+                              className="rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)]"
+                              aria-label={`取消收藏 ${doc.title}`}
+                            >
+                              已收藏
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
