@@ -1,5 +1,21 @@
 # Changelog
 
+## [9.26.0] - 2026-05-14
+
+### Added
+- CAP-001 导入学习: DocumentParser → EntityExtractor → StyleExtractor → WorldviewExtractor → DistillationPipeline
+- CAP-002 自演进写作: ReflectionAgent (Generator-Reflector-Curator) + RuleEvolver + PreferenceTracker + StyleDriftDetector
+- CAP-003 阅读学习: SessionTracker → SpoilerGate (chapter-gated) → Light/HeavyExtractor → InsightDistiller (6-stage marginalia)
+- LearningOrchestrator 统一编排三大学习管线，支持按 capability 注册/启用/禁用
+- 7 个 MCP 学习端点 (import, styleFeedback, styleDrift, rules, readingSession, readingExtract, status)
+- DI 容器新增 4 个服务绑定 (LearningOrchestrator, ImportLearning, SelfEvolvingWriting, ReadingLearning)
+- 6 个测试套件覆盖学习模块 (extraction-utils, insight-distiller, integration, preference-tracker, rule-evolver, spoiler-gate)
+
+### Verification
+- python scripts/check_versions.py: 7/7 文件版本一致 9.26.0
+- npx tsc --noEmit (src-ts): 类型检查通过
+- 494 tests pass, TypeScript clean
+
 ## [9.25.8] - 2026-05-14
 
 ### Fixed
