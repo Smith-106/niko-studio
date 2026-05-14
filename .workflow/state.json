@@ -6,7 +6,8 @@
       "M13-M16 follow enum+interface+Record+detector pattern consistently",
       "M15 adds web-novel-specific analysis alongside traditional craft theory",
       "M16 fills functional gaps: dialogue analysis, scene quality, mystery subtypes",
-      "M17 bridges M13-M16 knowledge engine to UI via API layer + dashboard components"
+      "M17 bridges M13-M16 knowledge engine to UI via API layer + dashboard components",
+      "M22 adopts minimum-phase principle: three capabilities in one phase via shared interfaces"
     ]
   },
   "artifacts": [
@@ -74,7 +75,7 @@
       "depends_on": null,
       "created_at": "2026-05-12T01:40:42+08:00",
       "completed_at": "2026-05-12T03:05:00+08:00",
-      "description": "Scratch execute: close current-head release-readiness blockers. Version authority, desktop capability contract, packaged compatibility proof chain, and current-head writing-helper retained evidence are green; release summary remains NO_GO for stale packaged E2E evidence and unresolved triage blocker accounting.",
+      "description": "Scratch execute: close current-head release-readiness blockers.",
       "harvested": false
     },
     {
@@ -88,7 +89,7 @@
       "depends_on": null,
       "created_at": "2026-05-13T00:00:00+08:00",
       "completed_at": "2026-05-13T00:00:00+08:00",
-      "description": "Brainstorm: docs-site should become a detailed architecture/principles documentation hub with capability routing inspired by Maestro Flow role-routing.",
+      "description": "Brainstorm: docs-site detailed architecture/principles documentation hub.",
       "harvested": false
     },
     {
@@ -102,7 +103,7 @@
       "depends_on": "BRN-20260513-docs-site-detail-architecture-principles",
       "created_at": "2026-05-13T00:00:00+08:00",
       "completed_at": "2026-05-13T00:00:00+08:00",
-      "description": "Roadmap: one-phase docs-site second-wave enhancement from brainstorm specs F-001..F-005.",
+      "description": "Roadmap: one-phase docs-site second-wave enhancement from brainstorm specs.",
       "harvested": false
     },
     {
@@ -116,7 +117,7 @@
       "depends_on": "RMAP-20260513-docs-site-detail-architecture-principles",
       "created_at": "2026-05-13T00:00:00+08:00",
       "completed_at": "2026-05-13T00:00:00+08:00",
-      "description": "Plan: 5 tasks in 3 waves for docs-site capability routing, architecture deep dive, learning paths, status matrix, examples, and validation.",
+      "description": "Plan: 5 tasks in 3 waves for docs-site capability routing and architecture deep dive.",
       "harvested": false
     },
     {
@@ -128,9 +129,9 @@
       "path": ".workflow/scratch/20260513-plan-P1-docs-site-capability-routing-architecture",
       "status": "completed",
       "depends_on": "PLN-20260513-P1-docs-site-capability-routing-architecture",
-      "created_at": "2026-05-13T01:31:47.4659841+08:00",
-      "completed_at": "2026-05-13T01:31:47.4659841+08:00",
-      "description": "Execute: completed 5 tasks in 3 waves for docs-site capability routing, guides, architecture deep dive, API/desktop examples, and docs build validation.",
+      "created_at": "2026-05-13T01:31:47+08:00",
+      "completed_at": "2026-05-13T01:31:47+08:00",
+      "description": "Execute: completed 5 tasks for docs-site capability routing, guides, architecture deep dive.",
       "harvested": true
     },
     {
@@ -144,13 +145,41 @@
       "depends_on": "PLN-20260513-P1-docs-site-capability-routing-architecture",
       "created_at": "2026-05-13T00:00:00+08:00",
       "completed_at": "2026-05-13T00:00:00+08:00",
-      "description": "Verify: docs-site second-wave enhancement passed goal-backward checks, anti-pattern scan, and docs-site build/lint validation.",
+      "description": "Verify: docs-site second-wave enhancement passed validation.",
+      "harvested": false
+    },
+    {
+      "id": "RMAP-20260514-intelligent-learning-capabilities",
+      "type": "roadmap",
+      "milestone": "M22",
+      "phase": null,
+      "scope": "milestone",
+      "path": ".workflow/.roadmap/RMAP-intelligent-learning-capabilities-20260514",
+      "status": "completed",
+      "depends_on": null,
+      "created_at": "2026-05-14T12:00:00+08:00",
+      "completed_at": "2026-05-14T12:00:00+08:00",
+      "description": "Roadmap: single-phase intelligent learning pipelines — import learning, self-evolving writing, reading learning.",
+      "harvested": false
+    },
+    {
+      "id": "PLN-20260514-P1-intelligent-learning-pipelines",
+      "type": "plan",
+      "milestone": "M22",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260514-plan-P1-intelligent-learning-pipelines",
+      "status": "completed",
+      "depends_on": "RMAP-20260514-intelligent-learning-capabilities",
+      "created_at": "2026-05-14T20:00:00+08:00",
+      "completed_at": "2026-05-14T20:00:00+08:00",
+      "description": "Plan: 10 tasks in 4 waves — shared infra, three pipelines, MCP endpoints, unit tests.",
       "harvested": false
     }
   ],
-  "current_milestone": "M21",
+  "current_milestone": "M22",
   "initialized": true,
-  "last_updated": "2026-05-13T01:31:47.4659841+08:00",
+  "last_updated": "2026-05-14T20:00:00+08:00",
   "milestone_history": [
     {"archive_path": "milestones/M13/", "completed_at": "2026-05-07T15:40:00+08:00", "id": "M13", "name": "Writing Craft Knowledge Integration", "status": "completed"},
     {"archive_path": "milestones/M14/", "completed_at": "2026-05-07T21:00:00+08:00", "id": "M14", "name": "Writing Craft Enhancement Phase 2", "status": "completed"},
@@ -159,7 +188,8 @@
     {"archive_path": "milestones/M17/", "completed_at": "2026-05-07T22:50:00+08:00", "id": "M17", "name": "Writing Intelligence UI Integration", "status": "completed"},
     {"archive_path": "milestones/M18/", "completed_at": "2026-05-07T23:20:00+08:00", "id": "M18", "name": "Knowledge Expansion + UX Enhancement + LLM Analysis", "status": "completed"},
     {"archive_path": "milestones/M19/", "completed_at": "2026-05-07T23:45:00+08:00", "id": "M19", "name": "UX Polish + Plugin Architecture", "status": "completed"},
-    {"archive_path": "milestones/M20/", "completed_at": "2026-05-07T23:55:00+08:00", "id": "M20", "name": "Cloud Sync + Code Signing", "status": "completed"}
+    {"archive_path": "milestones/M20/", "completed_at": "2026-05-07T23:55:00+08:00", "id": "M20", "name": "Cloud Sync + Code Signing", "status": "completed"},
+    {"archive_path": "milestones/M21/", "completed_at": "2026-05-13T01:31:00+08:00", "id": "M21", "name": "Docs Site Capability Routing + Architecture Deep Dive", "status": "completed"}
   ],
   "milestones": [
     {"id": "M10", "name": "Deep Writing Intelligence", "phases": [1], "status": "completed"},
@@ -172,9 +202,10 @@
     {"id": "M18", "name": "Knowledge Expansion + UX Enhancement + LLM Analysis", "phases": [1], "status": "completed"},
     {"id": "M19", "name": "UX Polish + Plugin Architecture", "phases": [1], "status": "completed"},
     {"id": "M20", "name": "Cloud Sync + Code Signing", "phases": [1], "status": "completed"},
-    {"id": "M21", "name": "Docs Site Capability Routing + Architecture Deep Dive", "phases": [1], "status": "active"}
+    {"id": "M21", "name": "Docs Site Capability Routing + Architecture Deep Dive", "phases": [1], "status": "completed"},
+    {"id": "M22", "name": "Intelligent Learning Capabilities", "phases": [1], "status": "active"}
   ],
   "project": "niko-studio",
   "quick_tasks": [],
-  "version": "9.24.0"
+  "version": "9.25.8"
 }

@@ -19,6 +19,7 @@ import {
   type ISmartSearch,
   type IHybridSearch,
   type IVectorSearch,
+  type ILearningOrchestrator,
 } from './types';
 import {
   DistillationService,
@@ -46,6 +47,20 @@ import {
   ObsidianServiceAdapter,
   MCPGatewayAdapter,
 } from './adapters';
+import {
+  LearningOrchestrator,
+  ImportLearningPipeline,
+  SelfEvolvingAgent,
+  RuleEvolver,
+  PreferenceTracker,
+  ReadingLearningPipeline,
+  type LearningOrchestratorDeps,
+} from '../learning';
+import {
+  LearningCapability,
+  type ILearningPipeline,
+  type LearningConfig,
+} from '../learning/learning-types';
 import type {
   BatchEmbeddingResponse,
   EmbeddingProvider as VectorEmbeddingProvider,
@@ -221,5 +236,52 @@ export function registerCanonicalBindings(
   bindSingleton<IMCPGateway>(
     ServiceTypes.MCPGateway,
     () => new MCPGatewayAdapter(),
+  );
+
+  bindSingleton<ILearningOrchestrator>(
+    ServiceTypes.LearningOrchestrator,
+    (context) => {
+      const orchestrator = new LearningOrchestrator({
+        knowledgeService: context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+        graphEngine: context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
+      });
+      orchestrator.registerPipeline(new ImportLearningPipeline({
+        knowledgeService: context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+        graphEngine: context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
+      }));
+      orchestrator.registerPipeline(new SelfEvolvingAgent({
+        ruleEvolver: new RuleEvolver(),
+        preferenceTracker: new PreferenceTracker(),
+      }));
+      orchestrator.registerPipeline(new ReadingLearningPipeline({
+        knowledgeService: context.container.get<IKnowledgeService>(ServiceTypes.KnowledgeService),
+        graphEngine: context.container.get<IGraphEngine>(ServiceTypes.GraphEngine),
+      }));
+      return orchestrator;
+    },
+  );
+
+  bindSingleton<ILearningPipeline>(
+    ServiceTypes.ImportLearning,
+    (ctx) => {
+      const orchestrator = ctx.container.get<ILearningOrchestrator>(ServiceTypes.LearningOrchestrator);
+      return orchestrator.getPipeline(LearningCapability.IMPORT)!;
+    },
+  );
+
+  bindSingleton<ILearningPipeline>(
+    ServiceTypes.SelfEvolvingWriting,
+    (ctx) => {
+      const orchestrator = ctx.container.get<ILearningOrchestrator>(ServiceTypes.LearningOrchestrator);
+      return orchestrator.getPipeline(LearningCapability.SELF_EVOLVING)!;
+    },
+  );
+
+  bindSingleton<ILearningPipeline>(
+    ServiceTypes.ReadingLearning,
+    (ctx) => {
+      const orchestrator = ctx.container.get<ILearningOrchestrator>(ServiceTypes.LearningOrchestrator);
+      return orchestrator.getPipeline(LearningCapability.READING)!;
+    },
   );
 }

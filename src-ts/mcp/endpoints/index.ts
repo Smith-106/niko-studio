@@ -171,3 +171,13 @@ export {
   syncPullEndpoint,
   syncFullEndpoint,
 } from './sync';
+
+export {
+  learningImportEndpoint,
+  learningStyleFeedbackEndpoint,
+  learningStyleDriftEndpoint,
+  learningRulesEndpoint,
+  learningReadingSessionEndpoint,
+  learningReadingExtractEndpoint,
+  learningStatusEndpoint,
+} from './learning';

@@ -23,6 +23,10 @@ export const ServiceTypes = {
   SmartSearch: Symbol.for('SmartSearch'),
   HybridSearch: Symbol.for('HybridSearch'),
   VectorSearch: Symbol.for('VectorSearch'),
+  LearningOrchestrator: Symbol.for('LearningOrchestrator'),
+  ImportLearning: Symbol.for('ImportLearning'),
+  SelfEvolvingWriting: Symbol.for('SelfEvolvingWriting'),
+  ReadingLearning: Symbol.for('ReadingLearning'),
 } as const;
 
 export type ServiceIdentifier<T = unknown> = symbol;
@@ -788,4 +792,18 @@ export interface IVectorSearch {
    * Delete document
    */
   delete(id: string): Promise<boolean>;
+}
+
+/**
+ * Learning Orchestrator Interface
+ * Coordinates all learning pipelines
+ */
+export interface ILearningOrchestrator {
+  getPipeline(capability: import('../learning/learning-types').LearningCapability): import('../learning/learning-types').ILearningPipeline | undefined;
+  enable(capability: import('../learning/learning-types').LearningCapability): void;
+  disable(capability: import('../learning/learning-types').LearningCapability): void;
+  isEnabled(capability: import('../learning/learning-types').LearningCapability): boolean;
+  getStatus(): Record<string, import('../learning/learning-types').PipelineStatusInfo | null>;
+  getStatusSummary(): { totalPipelines: number; activePipelines: number; runningPipelines: number };
+  getConfig(): import('../learning/learning-types').LearningConfig;
 }

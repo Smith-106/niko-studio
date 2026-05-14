@@ -1,0 +1,32 @@
+{
+  "session_id": "RMAP-20260514-intelligent-learning-capabilities",
+  "source": "roadmap-light",
+  "created_at": "2026-05-14T12:00:00+08:00",
+  "completed_at": "2026-05-14T12:00:00+08:00",
+  "milestone": "M22",
+  "phases": 1,
+  "strategy": "direct",
+  "status": "completed",
+  "requirements": ["CAP-001", "CAP-002", "CAP-003"],
+  "scope_decisions": {
+    "in_scope": [
+      "src-ts/learning/ — three pipeline implementations",
+      "Shared infrastructure: types, orchestrator, extraction utils",
+      "MCP endpoint extensions",
+      "DI container registration",
+      "Unit and integration tests"
+    ],
+    "deferred": [
+      "TinyStyler audio style transfer",
+      "BookNLP deep NLP pipeline",
+      "Frontend UI panels (Learning Dashboard)",
+      "Cross-book knowledge transfer"
+    ],
+    "out_of_scope": [
+      "Modifying existing core module public interfaces",
+      "Rust/Tauri changes",
+      "CI/CD changes",
+      "Frontend React components"
+    ]
+  }
+}
