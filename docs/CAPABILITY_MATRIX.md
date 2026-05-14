@@ -26,6 +26,10 @@
 | Memory / search (single workspace)      |   ✅    | `src-ts/memory/unified-memory.ts`                            | Embedding fallback returns zero vector + warns; never throws.                                    |
 | Multi-workspace MCP cache isolation     |   ✅    | `src-ts/mcp/services/workflow.ts:87-128`                     | Per-workspace cache map; cross-workspace bleed prevented (ISS-20260426-004 closed via tests).    |
 | Workflow scheduler / lite-plan import   |   ✅    | `src-ts/mcp/services/workflow.ts` workflowSchedulerImportLitePlan | Authority-bound scheduler tasks; cross-workspace authority enforcement.                          |
+| Import Learning (CAP-001)               |   ✅    | `src-ts/learning/import-pipeline.ts`, `src-ts/learning/extraction-utils.ts` | DocumentParser → EntityExtractor → StyleExtractor → WorldviewExtractor → DistillationPipeline. |
+| Self-Evolving Writing (CAP-002)         |   ✅    | `src-ts/learning/self-evolving-agent.ts`, `src-ts/learning/rule-evolver.ts` | RuleEvolver + PreferenceTracker + StyleDriftDetector; Generator-Reflector-Curator loop.        |
+| Reading Learning (CAP-003)              |   ✅    | `src-ts/learning/reading-pipeline.ts`, `src-ts/learning/spoiler-gate.ts` | SessionTracker → SpoilerGate (chapter-gated) → Light/HeavyExtractor → InsightDistiller (6-stage). |
+| Learning Orchestrator                   |   ✅    | `src-ts/learning/learning-orchestrator.ts` | Unified pipeline orchestration; register/enable/disable by capability.                          |
 
 ## 2. External Integration Adapters
 

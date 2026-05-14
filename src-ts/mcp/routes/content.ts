@@ -31,6 +31,13 @@ import {
   characterRelationshipsEndpoint,
   analysisPatternsEndpoint,
   analysisSessionsEndpoint,
+  learningImportEndpoint,
+  learningStyleFeedbackEndpoint,
+  learningStyleDriftEndpoint,
+  learningRulesEndpoint,
+  learningReadingSessionEndpoint,
+  learningReadingExtractEndpoint,
+  learningStatusEndpoint,
 } from '../endpoints';
 import type { GatewayRoute } from '../gateway-route-types';
 
@@ -80,4 +87,13 @@ export const contentRoutes: GatewayRoute[] = [
   // Analysis
   { method: 'POST', pattern: /^\/analysis\/patterns$/, handler: analysisPatternsEndpoint },
   { method: 'POST', pattern: /^\/analysis\/sessions$/, handler: analysisSessionsEndpoint },
+
+  // Learning (M22)
+  { method: 'POST', pattern: /^\/learning\/import$/, handler: learningImportEndpoint },
+  { method: 'POST', pattern: /^\/learning\/style-feedback$/, handler: learningStyleFeedbackEndpoint },
+  { method: 'POST', pattern: /^\/learning\/style-drift$/, handler: learningStyleDriftEndpoint },
+  { method: 'GET', pattern: /^\/learning\/rules$/, handler: learningRulesEndpoint },
+  { method: 'POST', pattern: /^\/learning\/reading-session$/, handler: learningReadingSessionEndpoint },
+  { method: 'POST', pattern: /^\/learning\/reading-extract$/, handler: learningReadingExtractEndpoint },
+  { method: 'GET', pattern: /^\/learning\/status$/, handler: learningStatusEndpoint },
 ];

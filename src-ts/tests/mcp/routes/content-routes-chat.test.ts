@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { contentRoutes } from '../../../mcp/routes/content';
 
 describe('contentRoutes', () => {
-  it('should have 33 routes', () => {
-    expect(contentRoutes).toHaveLength(33);
+  it('should have 40 routes', () => {
+    expect(contentRoutes).toHaveLength(40);
   });
 
   it('every route has a valid method', () => {

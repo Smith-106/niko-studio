@@ -1,14 +1,14 @@
 # Niko Studio Gateway API Reference
 
-**Version**: 9.2.5
-**Updated**: 2026-05-02
+**Version**: 9.26.0
+**Updated**: 2026-05-14
 **Base URL**: `http://localhost:8000`
 
 ---
 
 ## Overview
 
-The Niko Studio Gateway exposes a REST API over HTTP, organized into 5 route groups with 69 endpoints total. All request/response bodies use JSON (`Content-Type: application/json`) unless noted otherwise.
+The Niko Studio Gateway exposes a REST API over HTTP, organized into 6 route groups with 76 endpoints total. All request/response bodies use JSON (`Content-Type: application/json`) unless noted otherwise.
 
 ### Common Patterns
 
@@ -864,6 +864,168 @@ Probe service health.
 **Response 200**:
 ```json
 { "service": { "id": "custom-service", "status": "healthy", "checked_at": "ISO-8601" } }
+```
+
+---
+
+## 7. Learning (7 endpoints)
+
+Intelligent learning capabilities for import learning, self-evolving writing, and reading learning.
+
+### POST /learning/import
+
+Trigger import learning pipeline to extract entities, style features, worldview elements, and insights from a document.
+
+**Request**:
+```json
+{
+  "content": "document text content",
+  "sourceType": "document",
+  "sourceName": "my-novel-chapter-1"
+}
+```
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Import learning pipeline triggered",
+    "sourceName": "my-novel-chapter-1",
+    "sourceType": "document",
+    "contentLength": 5000
+  }
+}
+```
+
+### POST /learning/style-feedback
+
+Record style preference feedback for self-evolving writing.
+
+**Request**:
+```json
+{
+  "dimension": "vocabulary_richness",
+  "action": "accept",
+  "value": 0.8,
+  "source": "manual"
+}
+```
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Feedback recorded",
+    "evidence": { "dimension": "vocabulary_richness", "action": "accept", "value": 0.8 }
+  }
+}
+```
+
+### POST /learning/style-drift
+
+Detect style drift by comparing current dimensions against learned rules.
+
+**Request**:
+```json
+{
+  "dimensions": { "vocabulary_richness": 0.3, "dialogue_ratio": 0.6 }
+}
+```
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Style drift detection triggered",
+    "dimensionCount": 2
+  }
+}
+```
+
+### GET /learning/rules
+
+Query currently active style rules evolved from accumulated feedback.
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Active style rules",
+    "rules": []
+  }
+}
+```
+
+### POST /learning/reading-session
+
+Update or create a reading session with chapter progress tracking.
+
+**Request**:
+```json
+{
+  "bookId": "book-001",
+  "currentChapter": 20,
+  "totalChapters": 50
+}
+```
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Reading session updated",
+    "session": { "bookId": "book-001", "currentChapter": 20, "totalChapters": 50 }
+  }
+}
+```
+
+### POST /learning/reading-extract
+
+Trigger reading extraction pipeline with spoiler-gated chapter awareness.
+
+**Request**:
+```json
+{
+  "content": "chapter text content",
+  "bookId": "book-001",
+  "currentChapter": 20,
+  "totalChapters": 50
+}
+```
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Reading extraction pipeline triggered",
+    "bookId": "book-001",
+    "contentLength": 3000
+  }
+}
+```
+
+### GET /learning/status
+
+Query learning pipeline status and enabled capabilities.
+
+**Response 200**:
+```json
+{
+  "success": true,
+  "data": {
+    "capabilities": [
+      { "id": "import", "enabled": true },
+      { "id": "self-evolving", "enabled": true },
+      { "id": "reading", "enabled": true }
+    ]
+  }
+}
 ```
 
 ---
