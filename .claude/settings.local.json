@@ -156,7 +156,16 @@
       "Bash(mkdir -p \"/tmp/prompt-analysis\")",
       "Read(//tmp/**)",
       "Bash(rm -rf *)",
-      "Bash(unzip -o \"C:/Users/32852/Downloads/2525c586af9c57edc55fcf7a1fd2a7b93b3fb4c8.zip\")"
+      "Bash(unzip -o \"C:/Users/32852/Downloads/2525c586af9c57edc55fcf7a1fd2a7b93b3fb4c8.zip\")",
+      "WebFetch(domain:catlog22.github.io)",
+      "PowerShell(gh api *)",
+      "PowerShell(gh run *)",
+      "PowerShell($env:PYTHONIOENCODING='utf-8'; python -c \"from pathlib import Path; p=Path\\(r'C:\\\\Users\\\\32852\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D-------niko-studio\\\\8be29dbf-8c78-4e02-8acc-7749d04d639a\\\\tasks\\\\bgch53v9h.output'\\); print\\(p.read_text\\(encoding='utf-8', errors='replace'\\)\\)\")",
+      "mcp__chrome-devtools__resize_page",
+      "PowerShell(npm *)",
+      "PowerShell(git check-ignore *)",
+      "PowerShell($urls = @\\('https://smith-106.github.io/niko-studio/','https://smith-106.github.io/niko-studio/api/gateway-api','https://smith-106.github.io/niko-studio/favicon.svg'\\); foreach \\($url in $urls\\) { try { $r = Invoke-WebRequest -Uri $url -Method Head -MaximumRedirection 0; \"$url -> $\\($r.StatusCode\\)\" } catch { \"$url -> $\\($_.Exception.Response.StatusCode.value__\\)\" } })",
+      "WebFetch(domain:skillsmp.com)"
     ]
   },
   "hooks": {
