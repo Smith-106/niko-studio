@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 9.2.0 (Platform Edition)
+> **Version**: 9.25.8 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -332,4 +332,4 @@ Built on concepts from:
 
 ---
 
-*Version 9.2.0 Platform Edition | Updated: 2026-04-30*
+*Version 9.25.8 Platform Edition | Updated: 2026-05-14*
