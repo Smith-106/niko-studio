@@ -1,5 +1,19 @@
 # Changelog
 
+## [9.25.8] - 2026-05-14
+
+### Fixed
+- 桌面端 gateway 连接诊断增强：错误信息包含实际 gateway URL，便于排查 `.env.local` 配置错误。
+- Rust 端 `get_configured_gateway_base()` 优先读取 `VITE_NIKO_GATEWAY_URL`（Vite 只暴露 `VITE_` 前缀变量），避免因缺前缀导致连接失败。
+- Gateway URL 不可达时，Rust 侧输出诊断日志（configured base / override base unhealthy），加速定位 fallback 链路问题。
+
+### Added
+- `desktop/.env.example` 模板文件，文档化 `VITE_` 前缀要求与开发环境配置方法。
+
+### Verification
+- `python scripts/check_versions.py` — 7/7 文件版本一致 `9.25.8`
+- `npx tsc --noEmit`（src-ts）— 类型检查通过
+
 ## [9.25.0] - 2026-05-12
 
 ### Changed

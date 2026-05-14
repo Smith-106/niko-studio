@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [9.25.8] — 2026-05-14
+
+### Fixed
+- Gateway 连接错误信息现在包含实际 gateway URL，便于排查 `.env.local` 配置问题。
+- Rust 端优先读取 `VITE_NIKO_GATEWAY_URL` 环境变量，匹配 Vite 前缀要求。
+- Gateway URL 不可达时输出诊断日志，加速定位 fallback 链路。
+
+### Added
+- `desktop/.env.example` 开发环境变量模板。
+
 ## [9.10.0] — 2026-05-05
 
 ### M9 — Intelligence & Workflows
