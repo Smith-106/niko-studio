@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use tauri::Manager;
 use tauri_plugin_shell::process::CommandChild;
@@ -9,6 +9,13 @@ use tokio::sync::Mutex as AsyncMutex;
 
 fn normalize_base_url(value: &str) -> String {
     value.trim_end_matches('/').to_string()
+}
+
+const BASE_CACHE_TTL: Duration = Duration::from_secs(30);
+
+struct CachedBase {
+    base: String,
+    resolved_at: Instant,
 }
 
 fn get_configured_gateway_base() -> Option<String> {
@@ -110,6 +117,7 @@ pub struct GatewayState {
     local_base: Mutex<Option<String>>,
     base_override: Mutex<Option<String>>,
     start_lock: AsyncMutex<()>,
+    cached_base: Mutex<Option<CachedBase>>,
 }
 
 impl GatewayState {
@@ -119,10 +127,31 @@ impl GatewayState {
             local_base: Mutex::new(None),
             base_override: Mutex::new(None),
             start_lock: AsyncMutex::new(()),
+            cached_base: Mutex::new(None),
         }
     }
 
     pub async fn resolve_base(&self, app: &tauri::AppHandle) -> Result<String, String> {
+        {
+            let cached = self.cached_base.lock().unwrap();
+            if let Some(ref entry) = *cached {
+                if entry.resolved_at.elapsed() < BASE_CACHE_TTL {
+                    return Ok(entry.base.clone());
+                }
+            }
+        }
+
+        let base = self.resolve_base_uncached(app).await?;
+
+        *self.cached_base.lock().unwrap() = Some(CachedBase {
+            base: base.clone(),
+            resolved_at: Instant::now(),
+        });
+
+        Ok(base)
+    }
+
+    async fn resolve_base_uncached(&self, app: &tauri::AppHandle) -> Result<String, String> {
         if let Some(env_base) = get_configured_gateway_base() {
             if is_gateway_healthy(&env_base).await {
                 return Ok(env_base);
@@ -314,10 +343,12 @@ impl GatewayState {
             let _ = child.kill();
         }
         *self.local_base.lock().unwrap() = None;
+        *self.cached_base.lock().unwrap() = None;
     }
 
     pub fn set_base_override(&self, base: Option<String>) {
         *self.base_override.lock().unwrap() = base.map(|value| normalize_base_url(value.trim()));
+        *self.cached_base.lock().unwrap() = None;
     }
 }
 

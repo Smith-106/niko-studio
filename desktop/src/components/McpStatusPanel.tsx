@@ -98,21 +98,18 @@ export function McpStatusPanel({ onClose }: McpStatusPanelProps) {
         setMetrics(metricsResult.value.data.metrics)
       } else {
         setMetrics(null)
-        hasError = true
       }
 
       if (toolsResult.status === 'fulfilled' && toolsResult.value.success && toolsResult.value.data) {
         setTools(toolsResult.value.data)
       } else {
         setTools(null)
-        hasError = true
       }
 
       if (serviceConfigsResult.status === 'fulfilled' && serviceConfigsResult.value.success && serviceConfigsResult.value.data?.services) {
         setServiceConfigs(serviceConfigsResult.value.data.services)
       } else {
         setServiceConfigs([])
-        hasError = true
       }
 
       if (hasError) {
