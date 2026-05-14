@@ -12,7 +12,7 @@ fn normalize_base_url(value: &str) -> String {
 }
 
 fn get_configured_gateway_base() -> Option<String> {
-    for key in ["NIKO_GATEWAY_URL", "VITE_NIKO_GATEWAY_URL"] {
+    for key in ["VITE_NIKO_GATEWAY_URL", "NIKO_GATEWAY_URL"] {
         if let Ok(env_value) = std::env::var(key) {
             let trimmed = env_value.trim();
             if !trimmed.is_empty() {
@@ -127,6 +127,10 @@ impl GatewayState {
             if is_gateway_healthy(&env_base).await {
                 return Ok(env_base);
             }
+            eprintln!(
+                "[gateway] configured base '{}' is unhealthy, falling back to override / sidecar",
+                env_base
+            );
         }
 
         let override_base = { self.base_override.lock().unwrap().clone() };
@@ -134,6 +138,10 @@ impl GatewayState {
             if is_gateway_healthy(&override_base).await {
                 return Ok(override_base);
             }
+            eprintln!(
+                "[gateway] override base '{}' is unhealthy, falling back to sidecar",
+                override_base
+            );
         }
 
         let local_base = { self.local_base.lock().unwrap().clone() };

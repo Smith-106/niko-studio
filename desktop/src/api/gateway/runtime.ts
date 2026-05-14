@@ -76,25 +76,27 @@ function buildFetchErrorResponse(error: unknown): GatewayHealthErrorResponse {
   const message = error instanceof Error && error.message.trim()
     ? error.message.trim()
     : 'Failed to fetch gateway health'
+  const resolvedBase = getResolvedApiBase()
+  const detail = `${message} (gateway: ${resolvedBase})`
   return {
-    error: message,
+    error: detail,
     status: 'error',
     diagnostic: {
       failure_class: 'runtime_unavailable',
       summary: message,
-      detail: message,
-      action: 'Start the local gateway runtime and retry the health check.',
+      detail,
+      action: `Check that the gateway is running at ${resolvedBase}/health`,
     },
     mcp_runtime: {
       connection_state: 'disconnected',
       reconnect_state: 'failed',
       reconnect_attempts: 0,
-      last_error: message,
+      last_error: detail,
       diagnostic: {
         failure_class: 'runtime_unavailable',
         summary: message,
-        detail: message,
-        action: 'Start the local gateway runtime and retry the health check.',
+        detail,
+        action: `Check that the gateway is running at ${resolvedBase}/health`,
       },
     },
   }
