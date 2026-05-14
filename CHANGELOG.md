@@ -1,5 +1,16 @@
 # Changelog
 
+## [9.26.1] - 2026-05-14
+
+### Fixed
+- 桌面端 `resolve_base()` 添加 30 秒 TTL 缓存，消除 McpStatusPanel 并行 API 请求的级联健康检查超时，修复"部分状态拉取失败"误报。
+- MCP 状态面板：非关键 API 失败（metrics / tools / serviceConfigs）不再触发全局错误提示，仅健康检查类失败显示警告。
+
+### Verification
+- `cargo check` — Rust 编译通过（CARGO_TARGET_DIR workaround）
+- `npx tsc --noEmit` — TypeScript 类型检查通过
+- 桌面应用启动验证：Gateway 7/7 服务 healthy，所有 API 端点返回 200
+
 ## [9.26.0] - 2026-05-14
 
 ### Added
