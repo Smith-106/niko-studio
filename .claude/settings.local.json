@@ -165,7 +165,12 @@
       "PowerShell(npm *)",
       "PowerShell(git check-ignore *)",
       "PowerShell($urls = @\\('https://smith-106.github.io/niko-studio/','https://smith-106.github.io/niko-studio/api/gateway-api','https://smith-106.github.io/niko-studio/favicon.svg'\\); foreach \\($url in $urls\\) { try { $r = Invoke-WebRequest -Uri $url -Method Head -MaximumRedirection 0; \"$url -> $\\($r.StatusCode\\)\" } catch { \"$url -> $\\($_.Exception.Response.StatusCode.value__\\)\" } })",
-      "WebFetch(domain:skillsmp.com)"
+      "WebFetch(domain:skillsmp.com)",
+      "Bash(gh run *)",
+      "Bash(gh api *)",
+      "Bash(grep -c \"Finished\\\\|error\\\\[\" .codex-run/desktop-8010.err.log)",
+      "Bash(tail -1 .codex-run/desktop-8010.err.log)",
+      "mcp__awesun-mcp-server__control_sessions"
     ]
   },
   "hooks": {

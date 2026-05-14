@@ -40,7 +40,7 @@ describe('createMockContainer', () => {
     expect(result).toBe('canned-output');
   });
 
-  test('.generate falls back to mock-${type}-response when not mapped', async () => {
+  test('.generate falls back to mock-type-response when not mapped', async () => {
     const container = createMockContainer({ responses: {} });
     const agent = container.getAgent('critic');
     const result = await agent.generate('any prompt');
