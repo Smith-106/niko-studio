@@ -194,6 +194,7 @@ export const docPages: DocPage[] = [
   { id: 'config-api', title: '配置 API', category: 'api', description: '配置读写和密钥管理', slug: 'config-api' },
   { id: 'plugin-api', title: '插件 API', category: 'api', description: '插件注册和执行端点', slug: 'plugin-api' },
   { id: 'workspace-api', title: 'Workspace API', category: 'api', description: '项目工作空间上下文', slug: 'workspace-api' },
+  { id: 'learning-api', title: '学习 API', category: 'api', description: '导入学习、自进化写作和阅读学习端点', slug: 'learning-api' },
 ];
 
 export function getPagesByCategory(categoryId: string): DocPage[] {

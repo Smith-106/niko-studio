@@ -37,6 +37,7 @@ const baseApiContent: Record<string, string> = {
     <tr><td>Content</td><td><code>POST /chat</code>、<code>POST /memory/search</code>、<code>POST /graph/query</code></td><td>写作、素材、图谱。</td></tr>
     <tr><td>Agent</td><td><code>POST /agent/route</code>、<code>POST /agent/write</code></td><td>路由、写作、修订。</td></tr>
     <tr><td>Workflow</td><td><code>POST /workflow/plan</code>、<code>POST /workflow/execute</code></td><td>规划、执行、生命周期。</td></tr>
+    <tr><td>Learning</td><td><code>POST /learning/import</code>、<code>POST /learning/style-feedback</code>、<code>POST /learning/reading-extract</code></td><td>导入学习、风格进化、阅读学习。</td></tr>
   </tbody>
 </table>
 <h2>请求示例</h2>
@@ -421,10 +422,89 @@ POST /plugins/register</code></pre>
   <li>不同项目串上下文：优先检查 workspace root 是否切错。</li>
 </ol>
   `,
+  'learning-api': `
+<h2>学习 API</h2>
+<p>学习 API 提供导入学习、自进化写作和阅读学习三种能力，帮助系统从外部文档、用户反馈和阅读材料中持续积累写作知识。</p>
+<pre><code>POST /learning/import
+POST /learning/style-feedback
+POST /learning/style-drift
+GET  /learning/rules
+POST /learning/reading-session
+POST /learning/reading-extract
+GET  /learning/status</code></pre>
+<pre><code>flowchart TD
+  Import[/learning/import] --> Memory[Memory Store]
+  Style[/learning/style-feedback] --> Rules[RuleEvolver]
+  StyleDrift[/learning/style-drift] --> Rules
+  Rules --> RulesQuery[/learning/rules]
+  Reading[/learning/reading-extract] --> SpoilerGate[SpoilerGate]
+  SpoilerGate --> Insights[InsightDistiller]
+  Orchestrator[Learning Orchestrator] --> Import
+  Orchestrator --> Style
+  Orchestrator --> Reading</code></pre>
+<h2>三种能力</h2>
+<table>
+  <thead><tr><th>能力</th><th>标识</th><th>核心流程</th></tr></thead>
+  <tbody>
+    <tr><td>导入学习</td><td>CAP-001</td><td>文档解析 → 实体提取 → 风格提取 → 世界观提取 → 蒸馏。</td></tr>
+    <tr><td>自进化写作</td><td>CAP-002</td><td>偏好追踪 → 规则进化 → 风格漂移检测 → 生成-反思-策展循环。</td></tr>
+    <tr><td>阅读学习</td><td>CAP-003</td><td>会话追踪 → 剧透门控 → 轻重提取 → 洞察蒸馏。</td></tr>
+  </tbody>
+</table>
+<h2>导入学习</h2>
+<p>导入学习管道从文档中提取实体、风格特征、世界观要素和写作洞察。适合批量导入参考作品或已有设定文档。</p>
+<ul>
+  <li><code>POST /learning/import</code> — 触发导入管道，传入文本内容和来源标识。</li>
+  <li>返回导入状态、来源名称和内容长度。</li>
+</ul>
+<h2>自进化写作</h2>
+<p>自进化写作通过用户反馈持续调整风格偏好规则，并检测当前文本是否偏离已学习风格。</p>
+<ul>
+  <li><code>POST /learning/style-feedback</code> — 记录风格偏好反馈。</li>
+  <li><code>POST /learning/style-drift</code> — 检测风格漂移。</li>
+  <li><code>GET /learning/rules</code> — 查询当前活跃风格规则。</li>
+</ul>
+<h2>阅读学习</h2>
+<p>阅读学习支持带章节进度的阅读会话和剧透门控的内容提取。只有已读章节的内容会被纳入分析。</p>
+<ul>
+  <li><code>POST /learning/reading-session</code> — 更新或创建阅读会话。</li>
+  <li><code>POST /learning/reading-extract</code> — 触发剧透门控的阅读提取管道。</li>
+</ul>
+<h2>调用示例</h2>
+<pre><code>POST /learning/import
+{
+  "content": "文档文本内容...",
+  "sourceType": "document",
+  "sourceName": "reference-novel-ch1"
+}</code></pre>
+<pre><code>POST /learning/style-feedback
+{
+  "dimension": "vocabulary_richness",
+  "action": "accept",
+  "value": 0.8,
+  "source": "manual"
+}</code></pre>
+<pre><code>POST /learning/reading-extract
+{
+  "content": "章节文本...",
+  "bookId": "book-001",
+  "currentChapter": 20,
+  "totalChapters": 50
+}</code></pre>
+<h2>状态查询</h2>
+<pre><code>GET /learning/status</code></pre>
+<p>返回学习管道状态和已启用的能力列表，用于确认各项学习功能是否就绪。</p>
+<h2>故障路径</h2>
+<ol>
+  <li>导入结果为空：检查内容长度和格式，确认 sourceType 是否被支持。</li>
+  <li>风格规则为空：先通过 style-feedback 积累足够反馈数据。</li>
+  <li>阅读提取跳过内容：确认 reading-session 的 currentChapter 是否已推进到目标章节。</li>
+</ol>
+  `,
 };
 
 export const apiContent = appendSectionToPages(
   baseApiContent,
-  ['writing-api', 'graph-api', 'critic-api', 'agent-api', 'wiki-api', 'workflow-api', 'workspace-api'],
+  ['writing-api', 'graph-api', 'critic-api', 'agent-api', 'wiki-api', 'workflow-api', 'workspace-api', 'learning-api'],
   outputFieldGlossaryMiniSection
 );
