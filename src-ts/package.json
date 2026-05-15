@@ -4,7 +4,7 @@
   "description": "TypeScript backend for Niko Studio - migrated from Python",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/postprocess_esm_imports.cjs",
     "lint": "eslint --config ../eslint.config.mjs \"**/*.{ts,tsx,mts}\" --max-warnings 0",
     "format": "prettier --config ../prettier.config.mjs --ignore-path ../.prettierignore --write \"package.json\" \"../eslint.config.mjs\" \"../prettier.config.mjs\"",
     "format:check": "prettier --config ../prettier.config.mjs --ignore-path ../.prettierignore --check \"package.json\" \"../eslint.config.mjs\" \"../prettier.config.mjs\"",
