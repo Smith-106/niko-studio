@@ -167,7 +167,7 @@ export async function restoreSnapshot(
   return snap.content
 }
 
-function extractText(content: string): string {
+export function extractText(content: string): string {
   try {
     const json = JSON.parse(content)
     return extractTextFromTipTap(json)

@@ -3,13 +3,16 @@ import { Plus, Trash2, Save } from 'lucide-react';
 import type { AnalysisTemplate } from '../../utils/analysis-templates';
 import type { WritingCraftDimension } from '../../api/writing-craft';
 
-const DIM_OPTIONS: { value: WritingCraftDimension; label: string }[] = [
+type WeightableDimension = Exclude<WritingCraftDimension, 'hook' | 'cliffhanger'>;
+
+const DIM_OPTIONS: { value: WeightableDimension; label: string }[] = [
   { value: 'structure', label: '结构' },
   { value: 'character', label: '角色' },
   { value: 'suspense', label: '悬疑' },
   { value: 'emotion', label: '情感' },
   { value: 'dialogue', label: '对话' },
   { value: 'webnovel', label: '网文' },
+  { value: 'show_tell', label: 'Show/Tell' },
 ];
 
 interface TemplateManagerProps {
@@ -22,12 +25,12 @@ interface TemplateManagerProps {
 export const TemplateManager: React.FC<TemplateManagerProps> = ({ templates, onSelect, onSave, onDelete }) => {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
-  const [selectedDims, setSelectedDims] = useState<Set<WritingCraftDimension>>(new Set());
-  const [weights, setWeights] = useState<Record<WritingCraftDimension, number>>({
-    structure: 1, character: 1, suspense: 1, emotion: 1, dialogue: 1, webnovel: 1,
+  const [selectedDims, setSelectedDims] = useState<Set<WeightableDimension>>(new Set());
+  const [weights, setWeights] = useState<Record<WeightableDimension, number>>({
+    structure: 1, character: 1, suspense: 1, emotion: 1, dialogue: 1, webnovel: 1, show_tell: 0,
   });
 
-  const toggleDim = (dim: WritingCraftDimension) => {
+  const toggleDim = (dim: WeightableDimension) => {
     setSelectedDims((prev) => {
       const next = new Set(prev);
       if (next.has(dim)) next.delete(dim); else next.add(dim);

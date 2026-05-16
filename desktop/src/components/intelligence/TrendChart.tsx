@@ -3,7 +3,7 @@ import type { WritingCraftDimension } from '../../api/writing-craft';
 
 interface TrendDataPoint {
   chapterLabel: string;
-  scores: Record<WritingCraftDimension, number>;
+  scores: Partial<Record<WritingCraftDimension, number>>;
 }
 
 interface TrendChartProps {
@@ -17,6 +17,9 @@ const DIMENSION_COLORS: Record<WritingCraftDimension, string> = {
   emotion: '#f59e0b',
   dialogue: '#10b981',
   webnovel: '#06b6d4',
+  show_tell: '#94a3b8',
+  hook: '#22c55e',
+  cliffhanger: '#ef4444',
 };
 
 const DIMENSION_LABELS: Record<WritingCraftDimension, string> = {
@@ -26,9 +29,20 @@ const DIMENSION_LABELS: Record<WritingCraftDimension, string> = {
   emotion: '情感',
   dialogue: '对话',
   webnovel: '网文',
+  show_tell: 'Show/Tell',
+  hook: '钩子',
+  cliffhanger: '悬念',
 };
 
-const ALL_DIMS: WritingCraftDimension[] = ['structure', 'character', 'suspense', 'emotion', 'dialogue', 'webnovel'];
+const ALL_DIMS: WritingCraftDimension[] = [
+  'structure',
+  'character',
+  'suspense',
+  'emotion',
+  'dialogue',
+  'webnovel',
+  'show_tell',
+];
 
 export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
   const [visibleDims, setVisibleDims] = useState<Set<WritingCraftDimension>>(
@@ -101,8 +115,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
         {ALL_DIMS.filter((dim) => visibleDims.has(dim)).map((dim) => {
           const points = data.map((dp, i) => {
             const x = data.length > 1 ? padding.left + i * xStep : padding.left + plotW / 2;
-            const y = padding.top + plotH - (dp.scores[dim] / 10) * plotH;
-            return { x, y, score: dp.scores[dim] };
+            const score = dp.scores[dim] ?? 0;
+            const y = padding.top + plotH - (score / 10) * plotH;
+            return { x, y, score };
           });
 
           const pathD = points
@@ -136,7 +151,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
             fill={DIMENSION_COLORS[hoverPoint.dim]}
             fontSize={10}
           >
-            {DIMENSION_LABELS[hoverPoint.dim]}: {data[hoverPoint.chapter].scores[hoverPoint.dim]}
+            {DIMENSION_LABELS[hoverPoint.dim]}: {data[hoverPoint.chapter].scores[hoverPoint.dim] ?? 0}
           </text>
         )}
       </svg>

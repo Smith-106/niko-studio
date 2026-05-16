@@ -57,7 +57,7 @@ describe('writing-craft browser bridge integration', () => {
     const response = await analyzeWritingCraft('章节正文', ['structure'])
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'http://127.0.0.1:8000/writing-craft/analyze',
+      expect.stringMatching(/\/writing-craft\/analyze$/),
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,9 +121,10 @@ describe('writing-craft browser bridge integration', () => {
     )
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'http://127.0.0.1:8000/writing-craft/llm-analyze',
+      expect.stringMatching(/\/writing-craft\/llm-analyze$/),
       expect.objectContaining({
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: '章节正文',
           dimensions: ['dialogue'],

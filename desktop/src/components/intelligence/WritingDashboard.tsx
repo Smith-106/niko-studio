@@ -5,6 +5,10 @@ import { SectionHeader } from './SectionHeader';
 import { ProgressBar } from './ProgressBar';
 import { WritingDimensionDetail } from './WritingDimensionDetail';
 import { InlineAnnotation } from './InlineAnnotation';
+import { EmotionalArcChart } from './EmotionalArcChart';
+import { ReaderImmersionDashboard } from './ReaderImmersionDashboard';
+import { PacingPrescriptionPanel } from './PacingPrescriptionPanel';
+import { analyzeEmotionalArc, type EmotionalArcResult } from '../../api/writing-craft';
 import { generateMarkdownReport, downloadAsFile } from '../../utils/export-analysis';
 import { generatePdfHtml, downloadPdfFile } from '../../utils/export-pdf';
 
@@ -12,10 +16,11 @@ interface WritingDashboardProps {
   text: string;
   visible: boolean;
   llmConfig?: LLMConfig;
+  chapters?: Array<{ content: string; chapterIndex: number }>;
 }
 
 const DIMENSION_ORDER: WritingCraftDimension[] = [
-  'structure', 'character', 'suspense', 'emotion', 'dialogue', 'webnovel',
+  'structure', 'character', 'suspense', 'emotion', 'dialogue', 'webnovel', 'show_tell', 'hook', 'cliffhanger',
 ];
 
 const DIMENSION_LABELS: Record<WritingCraftDimension, string> = {
@@ -25,6 +30,9 @@ const DIMENSION_LABELS: Record<WritingCraftDimension, string> = {
   emotion: '情感',
   dialogue: '对话',
   webnovel: '网文',
+  show_tell: 'Show/Tell',
+  hook: '钩子',
+  cliffhanger: '悬念',
 };
 
 function scoreColor(score: number): string {
@@ -33,12 +41,17 @@ function scoreColor(score: number): string {
   return '#dc2626';
 }
 
-export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visible, llmConfig }) => {
+export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visible, llmConfig, chapters }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<WritingCraftResult | null>(null);
   const [activeTab, setActiveTab] = useState<WritingCraftDimension>('structure');
   const [showAnnotation, setShowAnnotation] = useState(false);
+
+  const [mode, setMode] = useState<'single' | 'cross'>('single');
+  const [crossLoading, setCrossLoading] = useState(false);
+  const [crossError, setCrossError] = useState<string | null>(null);
+  const [emotionalArc, setEmotionalArc] = useState<EmotionalArcResult | null>(null);
 
   const handleAnalyze = useCallback(async () => {
     if (!text.trim()) return;
@@ -58,6 +71,26 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
     }
   }, [text]);
 
+  const handleAnalyzeCrossChapter = useCallback(async () => {
+    if (!chapters || chapters.length < 2) return;
+
+    setCrossLoading(true);
+    setCrossError(null);
+
+    try {
+      const arcRes = await analyzeEmotionalArc(chapters);
+      if (arcRes.success && arcRes.data) {
+        setEmotionalArc(arcRes.data);
+      } else {
+        setCrossError(arcRes.error ?? 'Analysis failed');
+      }
+    } catch (err) {
+      setCrossError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setCrossLoading(false);
+    }
+  }, [chapters]);
+
   const handleExport = useCallback(() => {
     if (!result) return;
     const md = generateMarkdownReport(result);
@@ -75,6 +108,9 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
 
   const activeDimension = result?.dimensions.find((d) => d.dimension === activeTab) ?? null;
 
+  const crossChapters = chapters ?? [];
+  const hasCrossData = crossChapters.length >= 2;
+
   return (
     <div className="flex flex-col gap-3 h-full overflow-y-auto p-3">
       <div className="flex items-center justify-between">
@@ -83,16 +119,51 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
           <h2 className="text-sm font-bold text-dark-text">写作质量分析</h2>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleAnalyze}
-            disabled={loading || !text.trim()}
-            className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary-cta text-white
+          <div className="flex items-center rounded-md border border-dark-border overflow-hidden">
+            <button
+              onClick={() => setMode('single')}
+              className={`px-2 py-1.5 text-xs transition-colors ${mode === 'single' ? 'bg-primary-cta/20 text-primary-cta font-semibold' : 'text-dark-text-muted hover:bg-dark-surface-sunken'}`}
+            >
+              单章
+            </button>
+            <button
+              onClick={() => {
+                setMode('cross');
+                if (hasCrossData && !emotionalArc && !crossLoading) {
+                  void handleAnalyzeCrossChapter();
+                }
+              }}
+              disabled={!hasCrossData}
+              className={`px-2 py-1.5 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${mode === 'cross' ? 'bg-primary-cta/20 text-primary-cta font-semibold' : 'text-dark-text-muted hover:bg-dark-surface-sunken'}`}
+              title={hasCrossData ? '跨章节分析' : '需要至少 2 章'}
+            >
+              跨章节
+            </button>
+          </div>
+
+          {mode === 'single' ? (
+            <button
+              onClick={handleAnalyze}
+              disabled={loading || !text.trim()}
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary-cta text-white
                        disabled:opacity-40 disabled:cursor-not-allowed
                        hover:bg-primary-cta-hover transition-colors"
-          >
-            {loading ? '分析中...' : '开始分析'}
-          </button>
-          {result && (
+            >
+              {loading ? '分析中...' : '开始分析'}
+            </button>
+          ) : (
+            <button
+              onClick={() => { void handleAnalyzeCrossChapter(); }}
+              disabled={crossLoading || !hasCrossData}
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary-cta text-white
+                       disabled:opacity-40 disabled:cursor-not-allowed
+                       hover:bg-primary-cta-hover transition-colors"
+            >
+              {crossLoading ? '分析中...' : '重新分析'}
+            </button>
+          )}
+
+          {mode === 'single' && result && (
             <>
               <button
                 onClick={() => setShowAnnotation(!showAnnotation)}
@@ -119,21 +190,66 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
         </div>
       </div>
 
-      {loading && (
+      {mode === 'cross' && !hasCrossData && (
+        <div className="text-xs text-dark-text-muted py-2">
+          需要至少 2 个章节才能执行跨章节分析。
+        </div>
+      )}
+
+      {mode === 'cross' && crossError && (
+        <div className="flex items-start gap-2 p-3 rounded-md bg-red-900/20 border border-red-800/40">
+          <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
+          <span className="text-sm text-red-300">{crossError}</span>
+        </div>
+      )}
+
+      {mode === 'cross' && crossLoading && (
+        <div className="flex items-center justify-center gap-2 py-8 text-dark-text-muted">
+          <Loader2 size={20} className="animate-spin" />
+          <span className="text-sm">正在分析跨章节数据...</span>
+        </div>
+      )}
+
+      {mode === 'cross' && !crossLoading && hasCrossData && (
+        <div className="flex flex-col gap-4">
+          {emotionalArc && (
+            <div className="rounded-lg border border-dark-border p-3 bg-dark-surface-sunken/10">
+              <SectionHeader title="情感弧线" />
+              <EmotionalArcChart result={emotionalArc} />
+            </div>
+          )}
+
+          <div className="rounded-lg border border-dark-border p-3 bg-dark-surface-sunken/10">
+            <ReaderImmersionDashboard chapters={crossChapters} visible={true} />
+          </div>
+
+          <div className="rounded-lg border border-dark-border p-3 bg-dark-surface-sunken/10">
+            <PacingPrescriptionPanel chapters={crossChapters} visible={true} />
+          </div>
+        </div>
+      )}
+
+      {mode === 'cross' && hasCrossData && !crossLoading && !emotionalArc && !crossError && (
+        <div className="text-sm text-dark-text-muted py-6 text-center">
+          点击「重新分析」生成跨章节报告。
+        </div>
+      )}
+
+      {mode === 'single' && loading && (
         <div className="flex items-center justify-center gap-2 py-8 text-dark-text-muted">
           <Loader2 size={20} className="animate-spin" />
           <span className="text-sm">正在分析文本...</span>
         </div>
       )}
 
-      {error && (
+      {mode === 'single' && error && (
         <div className="flex items-start gap-2 p-3 rounded-md bg-red-900/20 border border-red-800/40">
           <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
           <span className="text-sm text-red-300">{error}</span>
         </div>
       )}
 
-      {result && !loading && (
+      {mode === 'single' && result && !loading && (
         <>
           <SectionHeader title={`综合评分 · ${result.overallScore}/10`} />
           <ProgressBar value={(result.overallScore / 10) * 100} />
@@ -176,7 +292,7 @@ export const WritingDashboard: React.FC<WritingDashboardProps> = ({ text, visibl
         </>
       )}
 
-      {!result && !loading && !error && (
+      {mode === 'single' && !result && !loading && !error && (
         <div className="text-sm text-dark-text-muted py-8 text-center">
           输入文本后点击「开始分析」查看写作质量报告
         </div>

@@ -3,6 +3,7 @@ import { useAppStore } from '../stores/appStore'
 import type { AnalysisModule } from '../api/intelligence'
 import { useSettingsStore } from '../stores/settingsStore'
 import { runCrossChapterConsistency } from '../api/m10-apis'
+import { readChapterContent, extractText } from '../services/projectFileService'
 import { AccordionWrapper, IntelligenceBadge, MetricValue, ProgressBar, SectionHeader, WritingDashboard } from './intelligence'
 
 interface PanelProps {
@@ -61,15 +62,47 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
   const [crossChapterLoading, setCrossChapterLoading] = useState(false)
   const [crossChapterError, setCrossChapterError] = useState<string | null>(null)
 
+  const [chapterPayloads, setChapterPayloads] = useState<Array<{ content: string; chapterIndex: number }>>([])
+
+  useEffect(() => {
+    if (activeTab !== 'writing_craft') return
+    if (!currentProjectId || chapters.length < 2) {
+      setChapterPayloads([])
+      return
+    }
+
+    let cancelled = false
+
+    const run = async () => {
+      const payloads = await Promise.all(
+        chapters.map(async (ch, idx) => {
+          const raw = await readChapterContent(currentProjectId, ch.id)
+          return { content: extractText(raw), chapterIndex: idx }
+        }),
+      )
+      if (cancelled) return
+      setChapterPayloads(payloads)
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, chapters, currentProjectId])
+
   const handleCrossChapterConsistency = useCallback(async () => {
-    if (chapters.length < 2) return
+    if (chapters.length < 2 || !currentProjectId) return
     setCrossChapterLoading(true)
     setCrossChapterError(null)
     try {
-      const chapterData = chapters.map((c, i) => ({
-        chapterNumber: i + 1,
-        title: c.title || '',
-        content: '',
+      const chapterData = await Promise.all(chapters.map(async (c, i) => {
+        const raw = await readChapterContent(currentProjectId, c.id)
+        return {
+          chapterNumber: i + 1,
+          title: c.title || '',
+          content: extractText(raw),
+        }
       }))
       const res = await runCrossChapterConsistency({ chapters: chapterData })
       if (res.success && res.data) {
@@ -82,7 +115,7 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
     } finally {
       setCrossChapterLoading(false)
     }
-  }, [chapters])
+  }, [chapters, currentProjectId])
 
   useEffect(() => {
     if (currentProjectId && isStandardAnalysisTab(activeTab)) {
@@ -179,6 +212,7 @@ export const AnalysisPanel: React.FC<PanelProps> = ({ onClose }) => {
             text={writingCraftText}
             visible={true}
             llmConfig={llmConfig}
+            chapters={chapterPayloads}
           />
         ) : result ? (
           <AnalysisResultView module={activeTab} result={result} />

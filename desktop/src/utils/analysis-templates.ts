@@ -1,37 +1,39 @@
 import type { WritingCraftDimension } from '../api/writing-craft';
 
+type WeightableDimension = Exclude<WritingCraftDimension, 'hook' | 'cliffhanger'>;
+
 export interface AnalysisTemplate {
   id: string;
   name: string;
   dimensions: WritingCraftDimension[];
-  weights: Record<WritingCraftDimension, number>;
+  weights: Record<WeightableDimension, number>;
   builtin?: boolean;
 }
 
 const STORAGE_KEY = 'niko-writing-analysis-templates';
 
-const ALL_DIMS: WritingCraftDimension[] = ['structure', 'character', 'suspense', 'emotion', 'dialogue', 'webnovel'];
+const ALL_DIMS: WeightableDimension[] = ['structure', 'character', 'suspense', 'emotion', 'dialogue', 'webnovel', 'show_tell'];
 
 export const BUILTIN_TEMPLATES: AnalysisTemplate[] = [
   {
     id: 'full-analysis',
     name: '全面分析',
     dimensions: ALL_DIMS,
-    weights: { structure: 1, character: 1, suspense: 1, emotion: 1, dialogue: 1, webnovel: 1 },
+    weights: { structure: 1, character: 1, suspense: 1, emotion: 1, dialogue: 1, webnovel: 1, show_tell: 0 },
     builtin: true,
   },
   {
     id: 'quick-check',
     name: '快速检查',
     dimensions: ['structure', 'character', 'emotion'],
-    weights: { structure: 2, character: 1, emotion: 1, suspense: 0, dialogue: 0, webnovel: 0 },
+    weights: { structure: 2, character: 1, emotion: 1, suspense: 0, dialogue: 0, webnovel: 0, show_tell: 0 },
     builtin: true,
   },
   {
     id: 'webnovel-focus',
     name: '网文专用',
     dimensions: ['webnovel', 'structure', 'suspense', 'character'],
-    weights: { structure: 1, character: 1, suspense: 1, emotion: 0, dialogue: 0, webnovel: 2 },
+    weights: { structure: 1, character: 1, suspense: 1, emotion: 0, dialogue: 0, webnovel: 2, show_tell: 0 },
     builtin: true,
   },
 ];

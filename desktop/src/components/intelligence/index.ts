@@ -10,3 +10,8 @@ export * from './InlineAnnotation';
 export * from './TrendChart';
 export * from './TemplateManager';
 export * from './PluginPanel';
+export * from './EmotionalArcChart';
+export * from './ShowTellLegend';
+export * from './VoiceFingerprintPanel';
+export * from './ReaderImmersionDashboard';
+export * from './PacingPrescriptionPanel';

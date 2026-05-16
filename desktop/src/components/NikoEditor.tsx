@@ -22,6 +22,8 @@ import {
 import { MathInline } from './editor/extensions/MathInline'
 import { MathBlock } from './editor/extensions/MathBlock'
 import { Callout } from './editor/extensions/Callout'
+import { ShowTellMark } from './editor/extensions/ShowTellMark'
+import { ShowTellDecorations } from './editor/extensions/ShowTellDecorations'
 import { SlashCommandMenu, type SlashMenuItem } from './editor/SlashCommandMenu'
 import { BubbleToolbar, type RewriteOption } from './editor/BubbleToolbar'
 import { insertPlainText, replaceRange } from './editor/streamToEditor'
@@ -77,6 +79,7 @@ export function getEditorFullArticleInstruction(language: Language): string {
 }
 
 export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function NikoEditor({ initialContent, onUpdate, onOpenWritingHelper: _onOpenWritingHelper }, ref) {
+  const [showTellEnabled, setShowTellEnabled] = useState(false)
   const { t, language } = useI18n()
   const [slashState, setSlashState] = useState<SlashState>(EMPTY_SLASH)
   const [bubbleState, setBubbleState] = useState<BubbleState>(EMPTY_BUBBLE)
@@ -113,6 +116,7 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
       MathInline,
       MathBlock,
       Callout,
+      ShowTellMark,
     ],
     content: initialContent ?? '',
     editorProps: {
@@ -456,7 +460,17 @@ export const NikoEditor = forwardRef<NikoEditorHandle, NikoEditorProps>(function
 
   return (
     <div ref={editorRef} className="relative">
+      {editor && (
+        <ShowTellDecorations editor={editor} enabled={showTellEnabled} />
+      )}
       <EditorContent editor={editor} />
+      <button
+        type="button"
+        onClick={() => setShowTellEnabled((v) => !v)}
+        className="absolute top-2 left-2 translate-y-10 px-2 py-1 rounded-md text-[11px] border border-dark-border bg-white/85 dark:bg-dark-surface2/70 backdrop-blur text-dark-text-muted hover:bg-dark-surface-sunken transition-colors"
+      >
+        {showTellEnabled ? '关闭 Show/Tell' : '开启 Show/Tell'}
+      </button>
 
       {/* Slash Command Menu */}
       {slashState.active && (
