@@ -7,7 +7,8 @@
       "M15 adds web-novel-specific analysis alongside traditional craft theory",
       "M16 fills functional gaps: dialogue analysis, scene quality, mystery subtypes",
       "M17 bridges M13-M16 knowledge engine to UI via API layer + dashboard components",
-      "M22 adopts minimum-phase principle: three capabilities in one phase via shared interfaces"
+      "M22 adopts minimum-phase principle: three capabilities in one phase via shared interfaces",
+      "M23 extends WritingCraftDimension with hook/cliffhanger + reader-state model"
     ]
   },
   "artifacts": [
@@ -175,11 +176,149 @@
       "completed_at": "2026-05-14T20:00:00+08:00",
       "description": "Plan: 10 tasks in 4 waves — shared infra, three pipelines, MCP endpoints, unit tests.",
       "harvested": false
+    },
+    {
+      "id": "EXC-20260514-P1-intelligent-learning-pipelines",
+      "type": "execute",
+      "milestone": "M22",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260514-plan-P1-intelligent-learning-pipelines",
+      "status": "completed",
+      "depends_on": "PLN-20260514-P1-intelligent-learning-pipelines",
+      "created_at": "2026-05-14T20:05:00+08:00",
+      "completed_at": "2026-05-14T20:26:00+08:00",
+      "description": "Execute: completed 10 tasks — learning pipelines (import/self-evolving/reading), shared infra, MCP endpoints, tests.",
+      "harvested": false
+    },
+    {
+      "id": "VRF-20260514-P1-intelligent-learning-pipelines",
+      "type": "verify",
+      "milestone": "M22",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260514-plan-P1-intelligent-learning-pipelines",
+      "status": "completed",
+      "depends_on": "PLN-20260514-P1-intelligent-learning-pipelines",
+      "created_at": "2026-05-14T20:26:00+08:00",
+      "completed_at": "2026-05-14T20:50:00+08:00",
+      "description": "Verify: all quality gates passed (159 tests, TypeScript clean, review/review/test all clear).",
+      "harvested": false
+    },
+    {
+      "id": "BRN-20260515-novel-quality-reader-experience",
+      "type": "brainstorm",
+      "milestone": "M23",
+      "phase": null,
+      "scope": "standalone",
+      "status": "completed",
+      "depends_on": null,
+      "created_at": "2026-05-15T02:54:00+08:00",
+      "completed_at": "2026-05-15T02:56:00+08:00",
+      "description": "Brainstorm: 6 directions for novel quality improvement and reader experience.",
+      "harvested": false
+    },
+    {
+      "id": "RMAP-20260515-novel-quality-reader-experience",
+      "type": "roadmap",
+      "milestone": "M23",
+      "phase": null,
+      "scope": "milestone",
+      "status": "completed",
+      "depends_on": "BRN-20260515-novel-quality-reader-experience",
+      "created_at": "2026-05-15T03:10:00+08:00",
+      "completed_at": "2026-05-15T03:10:00+08:00",
+      "description": "Roadmap: single-phase novel quality & reader experience enhancement.",
+      "harvested": false
+    },
+    {
+      "id": "PLN-20260515-P1-novel-quality-reader-experience",
+      "type": "plan",
+      "milestone": "M23",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260515-plan-novel-quality-reader-experience",
+      "status": "completed",
+      "depends_on": "RMAP-20260515-novel-quality-reader-experience",
+      "created_at": "2026-05-15T03:10:00+08:00",
+      "completed_at": "2026-05-15T03:11:00+08:00",
+      "description": "Plan: 8 tasks in 3 waves — hook/cliffhanger, voice fingerprint, emotional arc, show/tell, immersion, pacing.",
+      "harvested": false
+    },
+    {
+      "id": "EXC-20260515-P1-novel-quality-reader-experience",
+      "type": "execute",
+      "milestone": "M23",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260515-plan-novel-quality-reader-experience",
+      "status": "completed",
+      "depends_on": "PLN-20260515-P1-novel-quality-reader-experience",
+      "created_at": "2026-05-15T03:11:00+08:00",
+      "completed_at": "2026-05-15T03:20:00+08:00",
+      "description": "Execute: 6 new services + 4 modified files, 114 tests, no regressions.",
+      "harvested": false
+    },
+    {
+      "id": "VRF-20260515-P1-novel-quality-reader-experience",
+      "type": "verify",
+      "milestone": "M23",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260515-plan-novel-quality-reader-experience",
+      "status": "completed",
+      "depends_on": "PLN-20260515-P1-novel-quality-reader-experience",
+      "created_at": "2026-05-15T03:20:00+08:00",
+      "completed_at": "2026-05-15T03:35:00+08:00",
+      "description": "Verify: 777 tests passed, all modules confirmed, no regressions.",
+      "harvested": false
+    },
+    {
+      "id": "VRF-20260515-deferred-ui-components",
+      "type": "verify",
+      "milestone": "M23",
+      "phase": null,
+      "scope": "standalone",
+      "path": ".workflow/scratch/plan-deferred-ui-tasks-20260515",
+      "status": "completed",
+      "depends_on": "PLN-20260515-P1-novel-quality-reader-experience",
+      "created_at": "2026-05-15T17:20:00+08:00",
+      "completed_at": "2026-05-15T17:20:00+08:00",
+      "description": "Verify: deferred UI components checked for presence and wiring; desktop typecheck passed.",
+      "harvested": false
+    },
+    {
+      "id": "REV-20260515-deferred-ui-components",
+      "type": "review",
+      "milestone": "M23",
+      "phase": null,
+      "scope": "standalone",
+      "path": ".workflow/scratch/20260515-review-deferred-ui-components",
+      "status": "completed",
+      "depends_on": "VRF-20260515-deferred-ui-components",
+      "created_at": "2026-05-15T17:39:46+08:00",
+      "completed_at": "2026-05-15T17:39:46+08:00",
+      "description": "Review: WARN — VoiceConsistencyDecorations placeholder; ShowTell marking may be costly on long docs; integration reachability needs confirmation.",
+      "harvested": false
+    },
+    {
+      "id": "TST-20260515-deferred-ui-components",
+      "type": "test",
+      "milestone": "M23",
+      "phase": null,
+      "scope": "standalone",
+      "path": ".workflow/scratch/plan-deferred-ui-tasks-20260515",
+      "status": "completed",
+      "depends_on": "VRF-20260515-deferred-ui-components",
+      "created_at": "2026-05-15T17:39:46+08:00",
+      "completed_at": "2026-05-15T19:11:46+08:00",
+      "description": "UAT: passed_with_skips (1/6 pass, 5 skipped). Automated: desktop build + full vitest pass; UI visual/manual checks skipped.",
+      "harvested": false
     }
   ],
   "current_milestone": "M22",
   "initialized": true,
-  "last_updated": "2026-05-14T20:00:00+08:00",
+  "last_updated": "2026-05-15T12:28:00+08:00",
   "milestone_history": [
     {
       "archive_path": "milestones/M13/",
@@ -243,104 +382,100 @@
       "id": "M21",
       "name": "Docs Site Capability Routing + Architecture Deep Dive",
       "status": "completed"
+    },
+    {
+      "archive_path": "milestones/M22/",
+      "completed_at": "2026-05-14T20:50:00+08:00",
+      "id": "M22",
+      "name": "Intelligent Learning Capabilities",
+      "status": "completed"
+    },
+    {
+      "archive_path": "milestones/M23/",
+      "completed_at": "2026-05-15T03:35:00+08:00",
+      "id": "M23",
+      "name": "Novel Quality & Reader Experience Enhancement",
+      "status": "completed"
     }
   ],
   "milestones": [
     {
       "id": "M10",
       "name": "Deep Writing Intelligence",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M11",
       "name": "External Integration",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M13",
       "name": "Writing Craft Knowledge Integration",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M14",
       "name": "Writing Craft Enhancement Phase 2",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M15",
       "name": "Web Novel Analysis + Structure + Character Enhancement",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M16",
       "name": "Dialogue, Scene, Mystery Enhancement",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M17",
       "name": "Writing Intelligence UI Integration",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M18",
       "name": "Knowledge Expansion + UX Enhancement + LLM Analysis",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M19",
       "name": "UX Polish + Plugin Architecture",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M20",
       "name": "Cloud Sync + Code Signing",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M21",
       "name": "Docs Site Capability Routing + Architecture Deep Dive",
-      "phases": [
-        1
-      ],
+      "phases": [1],
       "status": "completed"
     },
     {
       "id": "M22",
       "name": "Intelligent Learning Capabilities",
-      "phases": [
-        1
-      ],
-      "status": "active"
+      "phases": [1],
+      "status": "completed"
+    },
+    {
+      "id": "M23",
+      "name": "Novel Quality & Reader Experience Enhancement",
+      "phases": [1],
+      "status": "completed"
     }
   ],
   "project": "niko-studio",

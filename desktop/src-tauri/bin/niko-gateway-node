@@ -64,29 +64,40 @@ function tryLaunchRealGateway() {
   }
 
   const repoRoot = resolveRepoRoot();
-  const child = spawn(
-    process.execPath,
-    [
-      '--loader',
-      pathToFileURL(realGateway.loader).href,
-      '--experimental-specifier-resolution=node',
-      `./${path.relative(realGateway.cwd, realGateway.entry).replace(/\\/g, '/')}`,
-      '--host',
-      getListenHost(),
-      '--port',
-      String(getListenPort()),
-    ],
-    {
-      cwd: realGateway.cwd,
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        NIKO_GATEWAY_HOST: getListenHost(),
-        NIKO_GATEWAY_PORT: String(getListenPort()),
-        NIKO_WORKFLOW_WORKSPACE: process.env.NIKO_WORKFLOW_WORKSPACE || repoRoot,
-      },
-    }
+  const nodeMajor = Number.parseInt(String(process.versions.node || '0').split('.')[0] || '0', 10);
+  const entryPath = `./${path.relative(realGateway.cwd, realGateway.entry).replace(/\\/g, '/')}`;
+
+  const args = [];
+  if (Number.isFinite(nodeMajor) && nodeMajor >= 24) {
+    const loaderUrl = pathToFileURL(realGateway.loader).href;
+    const importScript =
+      "data:text/javascript,import { register } from 'node:module'; import { pathToFileURL } from 'node:url'; register(" +
+      JSON.stringify(loaderUrl) +
+      ", pathToFileURL('./'));";
+    args.push('--import', importScript);
+  } else {
+    args.push('--loader', pathToFileURL(realGateway.loader).href);
+  }
+
+  args.push(
+    '--experimental-specifier-resolution=node',
+    entryPath,
+    '--host',
+    getListenHost(),
+    '--port',
+    String(getListenPort()),
   );
+
+  const child = spawn(process.execPath, args, {
+    cwd: realGateway.cwd,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      NIKO_GATEWAY_HOST: getListenHost(),
+      NIKO_GATEWAY_PORT: String(getListenPort()),
+      NIKO_WORKFLOW_WORKSPACE: process.env.NIKO_WORKFLOW_WORKSPACE || repoRoot,
+    },
+  });
 
   child.on('exit', (code, signal) => {
     if (signal) {
@@ -110,6 +121,7 @@ function tryLaunchRealGateway() {
 
   console.log(`[niko-gateway-node] launched real TypeScript gateway on ${getListenHost()}:${getListenPort()}`);
   return child;
+
 }
 
 function writeJson(res, code, payload) {

@@ -1,8 +1,8 @@
-# Roadmap: Niko Studio Intelligent Learning Capabilities
+# Roadmap: Niko Studio Novel Quality & Reader Experience Enhancement
 
 ## Overview
 
-将 Niko Studio 从「写作工具」升级为「会学习的写作伙伴」。三大核心能力——导入作品自动学习、自主进化写作、阅读中自动学习——通过共享知识层（GraphManager + KnowledgeService + DistillationManager）在单阶段内并行落地。参考 AI-Reader-V2、ACE、novel-reading-assistant、marginalia 等开源实现，全部基于现有 TypeScript 架构（`src-ts/`）集成。
+基于对 Niko Studio 代码库的全面审计和头脑风暴，从"读者体验"和"写作质量"双维度出发，实现 6 大创新方向。核心思路：从"作者视角的工具"进化为"模拟读者心理的创作伙伴"。第一阶段优先实现章首钩子/章末悬念评分（网文粘性命脉）和角色声音指纹（一致性盲区），再逐步构建情感轨迹、展示讲述分析、读者代入感引擎和节奏导航器。全部基于现有 `writing-craft` / `intelligence` / `consistencyEngine` 架构扩展，无需重构。
 
 ## Phases
 
@@ -14,51 +14,55 @@
 
 Decimal phases count toward the total phase limit.
 
-- [ ] **Phase 1: Intelligent Learning Pipelines** - 导入学习 + 自主进化 + 阅读学习三条管线并行开发，通过共享接口与知识层集成
+- [x] **Phase 1: Novel Quality Enhancement Core** — 6 大方向 8 个任务通过 3 波次实现，扩展 writing-craft 维度 + 一致性引擎 + 分析面板
 
 ## Phase Details
 
-### Phase 1: Intelligent Learning Pipelines
+### Phase 1: Novel Quality Enhancement Core
 
-**Goal**: 实现三大智能学习能力：导入作品自动学习（文档解析→实体/风格/世界观提取→知识图谱沉淀）、自主进化写作（Generator-Reflector-Curator 反思循环→风格规则演化→偏好追踪）、阅读中自动学习（会话追踪→章节门控→轻/重提取→洞察蒸馏→交叉引用）。通过 MCP 端点暴露给桌面前端。
+**Goal**: 实现 6 大创新方向：章首钩子/章末悬念四维评分、角色声音指纹提取与一致性检查、跨章节情感弧线可视化、Show vs Tell 五感分析与热力图、读者沉浸度状态模型与流失风险评分、节奏导航器与处方生成。全部集成到现有写作工艺分析架构。
 
 **Depends on**: Nothing (first phase)
 
-**Requirements**: CAP-001, CAP-002, CAP-003
+**Requirements**: DIR-B, DIR-C, DIR-D, DIR-E, DIR-A, DIR-F
 
 **Success Criteria** (what must be TRUE):
-1. `ImportLearningPipeline` 接受 TXT/MD/PDF/DOCX 输入，自动提取实体、风格特征（30 维）、世界观元素并写入 GraphManager，关键路径有单元测试覆盖。
-2. `SelfEvolvingWritingAgent`（Generator-Reflector-Curator）在写作过程中积累反馈证据，证据阈值≥3 时自动演化风格规则，`StyleDriftDetector` 可检测并报告风格漂移。
-3. `ReadingLearningPipeline` 通过章节门控（SpoilerGate）分轻/重两级提取，蒸馏结果写入知识图谱，支持 `CrossReference` 跨作品引用。
-4. 三条管线均通过 DI Container 注册（inversify），可独立启用/禁用，不修改现有核心模块（narrative/memory/graph）的公共接口。
-5. 新增 MCP 端点（`POST /import/learn`、`POST /writing/evolve`、`POST /reading/learn`、`GET /learning/status`）注册到 `mcp/endpoints/index.ts`。
-6. `src-ts/` 下新增模块的测试覆盖率≥80%，`npm --prefix src-ts run check:local` 通过。
+1. `HookCliffhangerScorer` 对章节首尾 200 字进行四维评分（冲突暗示/信息差/感官冲击/节奏切入 + 未解问题/情感峰值/反转冲击/期待感），集成到 `WritingCraftDimension` 类型和 MCP 端点。
+2. `CharacterVoiceFingerprint` 从对话中提取声音指纹（句式偏好/口头禅/正式度/情感表达倾向/修辞习惯），检测对话偏离并标注 warning。
+3. `EmotionalArcTracker` 跨章节聚合情感维度评分，渲染交互式时间线，检测"张力荒漠"（连续 N 章无情感波动），匹配经典叙事曲线偏离度。
+4. `ShowTellAnalyzer` 分析五感覆盖率、抽象 vs 具体比例、情感表达方式，生成段落级热力图数据。
+5. `ReaderImmersionEngine` 建模读者心理状态（好奇心/情感投入/认知负荷/悬念张力/代入感），跨章节追踪并生成流失风险评分。
+6. `PacingNavigator` 提供前瞻性节奏分析，生成节奏处方（高潮/转折/喘息/伏笔回收时机），与 `ForeshadowingTracker` 协同推荐伏笔收获时机。
+7. 所有新模块通过 DI 注册，不修改现有核心模块公共接口。
+8. 新增测试覆盖率 ≥ 80%，现有测试无回归。
 
 ## Scope Decisions
 
 - **In scope**:
-  - `src-ts/learning/` 目录：三条管线的核心实现（import-pipeline、self-evolving-agent、reading-pipeline）
-  - 共享基础设施：`learning-types.ts`（类型定义）、`learning-orchestrator.ts`（管线协调）、`extraction-utils.ts`（提取工具）
-  - 风格规则演化器：`rule-evolver.ts`（证据阈值规则）、`preference-tracker.ts`（偏好追踪）
-  - 阅读学习专用：`spoiler-gate.ts`（章节门控）、`insight-distiller.ts`（洞察蒸馏）
-  - MCP 端点扩展：`src-ts/mcp/endpoints/learning.ts`
-  - DI Container 注册：`src-ts/container/` 扩展
-  - 单元测试与集成测试
+  - `src-ts/narrative/writing-craft/hook-cliffhanger-scorer.ts` — Hook & Cliffhanger 评分引擎
+  - `src-ts/narrative/character-voice-fingerprint.ts` — 角色声音指纹 + 一致性检查
+  - `src-ts/narrative/emotional-arc.ts` — 情感弧线时间线 + 沙漠检测 + 叙事曲线匹配
+  - `src-ts/narrative/show-tell-analyzer.ts` — Show vs Tell 五感分析 + 热力图
+  - `src-ts/narrative/reader-immersion-engine.ts` — 读者沉浸度状态模型 + 流失风险
+  - `src-ts/narrative/pacing-navigator.ts` — 节奏导航 + 处方生成
+  - MCP 端点扩展：`writing-craft.ts` 新增 `hook` / `cliffhanger` 维度
+  - LLM Prompt 扩展：`writing-craft-llm.ts` 新增对应 system prompt
+  - 单元测试（6 个测试文件）
 
 - **Deferred**:
-  - TinyStyler 音频风格迁移（需 native 依赖，单独评估）
-  - BookNLP 级别的深层 NLP 管线（可作为未来增强）
-  - 前端 UI 面板（Learning Dashboard、进度展示、手动触发）——本阶段只提供 API
-  - 跨作品知识迁移（CrossBookTransfer）——需单作品学习稳定后再开启
+  - 编辑器内 TipTap extension 行级色彩标记（Show vs Tell 热力图可视化）
+  - WritingDashboard UI 组件（EmotionalArcChart 交互式图表）
+  - 实时对话一致性 warning 标注（需编辑器集成）
+  - 前端面板（读者沉浸度仪表盘、节奏处方面板）
 
 - **Out of scope**:
-  - 修改现有核心模块（narrative/、memory/、graph/）的公共接口——仅通过继承/组合扩展
+  - 修改现有核心模块公共接口
   - Rust/Tauri 侧变更
   - CI/CD 流程变更
-  - 前端 React 组件
+  - TinyStyler 音频风格迁移
 
 ## Progress
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Intelligent Learning Pipelines | Not started | - |
+| 1. Novel Quality Enhancement Core | Completed | 2026-05-15 |
