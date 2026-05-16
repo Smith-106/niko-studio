@@ -7,6 +7,9 @@
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
+import { createLogger } from '../logger/index.js';
+
+const log = createLogger('context-providers');
 
 // ============================================================
 // Enums & Data Classes
@@ -149,7 +152,7 @@ export class MemoryContextProvider extends BaseContextProvider {
         }
       }
     } catch (e) {
-      console.error(`Failed to get memory context: ${e}`);
+      log.error(`Failed to get memory context`, { error: String(e) });
     }
 
     return items;
@@ -213,7 +216,7 @@ export class SkillContextProvider extends BaseContextProvider {
         }));
       }
     } catch (e) {
-      console.error(`Failed to get skill context: ${e}`);
+      log.error(`Failed to get skill context`, { error: String(e) });
     }
 
     return items;
@@ -305,7 +308,7 @@ export class ProjectContextProvider extends BaseContextProvider {
         }
       }
     } catch (e) {
-      console.error(`Failed to get project context: ${e}`);
+      log.error(`Failed to get project context`, { error: String(e) });
     }
 
     return items;

@@ -14,6 +14,9 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { EventEmitter } from 'events'
+import { createLogger } from '../logger/index.js'
+
+const log = createLogger('config')
 
 // ---------------------------------------------------------------------------
 // Version - authoritative release version for cross-surface consistency checks
@@ -648,7 +651,7 @@ export class ConfigManager extends EventEmitter {
       this.rawConfig = data
       this.applyDictToConfig(data)
     } catch (err) {
-      console.error(`Failed to load config from ${this.configPath}:`, err)
+      log.error(`Failed to load config from ${this.configPath}`, { error: String(err) })
     }
   }
 
@@ -817,7 +820,7 @@ integration:
         this.reloadFromSource()
       })
     } catch (err) {
-      console.error(`Failed to start config file watcher:`, err)
+      log.error(`Failed to start config file watcher`, { error: String(err) })
     }
   }
 
@@ -1016,7 +1019,7 @@ export function ensureEnvironment(strict: boolean = false): void {
   const msg = 'Environment pre-check issues:\n- ' + errors.join('\n- ')
 
   if (config.env === 'development' && !strict) {
-    console.warn(msg)
+    log.warn(msg)
   } else {
     throw new Error(msg)
   }
