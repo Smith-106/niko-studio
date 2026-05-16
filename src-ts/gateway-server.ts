@@ -12,10 +12,10 @@
 import 'reflect-metadata';
 import { pathToFileURL } from 'node:url';
 
-import { main } from './mcp/gateway-bootstrap';
+import { main } from './mcp/gateway-bootstrap.js';
 
-export { buildConfigAccess, buildGatewayDeps } from './mcp/gateway-state';
-export { type GatewayServerStartOptions, main, startGatewayServer } from './mcp/gateway-bootstrap';
+export { buildConfigAccess, buildGatewayDeps } from './mcp/gateway-state.js';
+export { type GatewayServerStartOptions, main, startGatewayServer } from './mcp/gateway-bootstrap.js';
 
 const runningAsMain = (() => {
   const entry = process.argv[1];

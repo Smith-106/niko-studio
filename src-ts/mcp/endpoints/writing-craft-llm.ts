@@ -16,6 +16,9 @@ const DIMENSION_LABELS: Record<WritingCraftDimension, string> = {
   emotion: '情感/描写',
   dialogue: '对话分析',
   webnovel: '网文专项',
+  hook: '钩子分析',
+  cliffhanger: '悬念分析',
+  show_tell: '展示/叙述',
 };
 
 const DIMENSION_SYSTEM_PROMPT: Record<WritingCraftDimension, string> = {
@@ -25,7 +28,13 @@ const DIMENSION_SYSTEM_PROMPT: Record<WritingCraftDimension, string> = {
   emotion: `你是一位情感描写专家。分析文本的情感表达质量，包括：Show vs Tell、情感层次、感官描写、比喻运用、情感节奏。返回JSON格式：{"score":0-10,"evidence":["证据1"],"suggestions":["建议1"],"analysis":"详细分析段落"}`,
   dialogue: `你是一位对话写作专家。分析文本的对话质量，包括：潜台词丰富度、角色声音区分、对话推动情节、冲突密度、信息量。返回JSON格式：{"score":0-10,"evidence":["证据1"],"suggestions":["建议1"],"analysis":"详细分析段落"}`,
   webnovel: `你是一位网文写作专家。分析文本的网文特质，包括：爽点设计、升级体系、金手指运用、节奏控制、读者留存、期待管理。返回JSON格式：{"score":0-10,"evidence":["证据1"],"suggestions":["建议1"],"analysis":"详细分析段落"}`,
+  hook: `你是一位章节钩子分析专家。分析文本的章节开头质量，关注以下维度：冲突暗示（是否有冲突或对峙暗示）、信息悬念（是否制造信息差或秘密）、感官冲击（是否通过感官描写抓住注意力）、节奏切入（是否用转折或节奏变化开场）。返回JSON格式：{"score":0-10,"evidence":["证据1"],"suggestions":["建议1"],"analysis":"详细分析段落"}`,
+  cliffhanger: `你是一位章节悬念分析专家。分析文本的章节结尾质量，关注以下维度：未解问题（是否留下悬而未决的问题）、情感高峰（是否在情绪高点断章）、反转冲击（是否有意料之外的转折）、期待感（是否让读者迫切想看下一章）。返回JSON格式：{"score":0-10,"evidence":["证据1"],"suggestions":["建议1"],"analysis":"详细分析段落"}`,
+  show_tell: `你是一位展示(show)与叙述(tell)分析专家。分析文本中展示/叙述比例、五感描写覆盖、抽象/具体表达，并给出可执行的改写建议。返回JSON格式：{"score":0-10,"evidence":["证据1"],"suggestions":["建议1"],"analysis":"详细分析段落"}`,
 };
+
+void DIMENSION_LABELS;
+void DIMENSION_SYSTEM_PROMPT;
 
 interface ProviderConfig {
   apiKey: string;

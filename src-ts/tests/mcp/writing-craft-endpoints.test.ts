@@ -136,6 +136,30 @@ describe('writingCraftAnalyzeEndpoint', () => {
     expect(typeof dim.details.subtextRatio).toBe('number');
     expect(typeof dim.details.voiceDistinctness).toBe('number');
   });
+
+  it('hook dimension returns hook analysis', async () => {
+    const response = await writingCraftAnalyzeEndpoint(
+      mockRequest({ text: SAMPLE_TEXT, dimensions: ['hook'] }),
+    );
+    const body = getBody(response);
+    const dim = body.data.dimensions[0];
+    expect(dim.dimension).toBe('hook');
+    expect(typeof dim.score).toBe('number');
+    expect(typeof dim.details.hookScore).toBe('number');
+    expect(dim.details.dimensions).toBeDefined();
+  });
+
+  it('cliffhanger dimension returns cliffhanger analysis', async () => {
+    const response = await writingCraftAnalyzeEndpoint(
+      mockRequest({ text: SAMPLE_TEXT, dimensions: ['cliffhanger'] }),
+    );
+    const body = getBody(response);
+    const dim = body.data.dimensions[0];
+    expect(dim.dimension).toBe('cliffhanger');
+    expect(typeof dim.score).toBe('number');
+    expect(typeof dim.details.cliffhangerScore).toBe('number');
+    expect(dim.details.dimensions).toBeDefined();
+  });
 });
 
 describe('writingCraftLLMEndpoint', () => {

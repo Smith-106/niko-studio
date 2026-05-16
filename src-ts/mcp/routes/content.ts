@@ -16,6 +16,10 @@ import {
   writingHelperProcessEndpoint,
   writingStreamEndpoint,
   writingCraftAnalyzeEndpoint,
+  writingCraftEmotionalArcEndpoint,
+  writingCraftVoiceConsistencyEndpoint,
+  writingCraftReaderImmersionEndpoint,
+  writingCraftPacingNavigatorEndpoint,
   writingCraftLLMEndpoint,
   pluginListEndpoint,
   pluginExecuteEndpoint,
@@ -63,6 +67,10 @@ export const contentRoutes: GatewayRoute[] = [
   // Writing Craft Analysis (M18)
   { method: 'POST', pattern: /^\/writing-craft\/analyze$/, handler: writingCraftAnalyzeEndpoint },
   { method: 'POST', pattern: /^\/writing-craft\/llm-analyze$/, handler: writingCraftLLMEndpoint },
+  { method: 'POST', pattern: /^\/writing-craft\/emotional-arc$/, handler: writingCraftEmotionalArcEndpoint },
+  { method: 'POST', pattern: /^\/writing-craft\/voice-consistency$/, handler: writingCraftVoiceConsistencyEndpoint },
+  { method: 'POST', pattern: /^\/writing-craft\/reader-immersion$/, handler: writingCraftReaderImmersionEndpoint },
+  { method: 'POST', pattern: /^\/writing-craft\/pacing-navigator$/, handler: writingCraftPacingNavigatorEndpoint },
 
   // Plugins (M19)
   { method: 'GET', pattern: /^\/plugins\/list$/, handler: pluginListEndpoint },

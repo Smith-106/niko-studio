@@ -148,6 +148,10 @@ export {
 
 export {
   writingCraftAnalyzeEndpoint,
+  writingCraftEmotionalArcEndpoint,
+  writingCraftVoiceConsistencyEndpoint,
+  writingCraftReaderImmersionEndpoint,
+  writingCraftPacingNavigatorEndpoint,
 } from './writing-craft';
 
 export {

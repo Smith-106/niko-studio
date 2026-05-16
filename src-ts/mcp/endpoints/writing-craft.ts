@@ -12,6 +12,12 @@ import { CharacterDepthSystem } from '../../narrative/character-depth';
 import { ReaderSatisfactionAnalyzer } from '../../narrative/reader-satisfaction-analyzer';
 import { DialogueAnalyzer } from '../../narrative/dialogue-analyzer';
 import { analyzeEmotionCraft, analyzeEmotionLayers, assessDescriptionQuality } from '../../narrative/writing-craft/emotion-craft';
+import { analyzeHookCliffhanger, scoreHook, scoreCliffhanger } from '../../narrative/writing-craft/hook-cliffhanger-scorer';
+import { extractVoiceFingerprints, checkVoiceConsistency } from '../../narrative/character-voice-fingerprint';
+import { analyzeShowTell } from '../../narrative/show-tell-analyzer';
+import { analyzeEmotionalArc } from '../../narrative/emotional-arc';
+import { analyzeReaderImmersion } from '../../narrative/reader-immersion-engine';
+import { navigatePacing } from '../../narrative/pacing-navigator';
 import { assessOutlineQuality } from '../../narrative/premise-validator';
 import { SceneCoherenceDetector } from '../../narrative/scene-coherence';
 
@@ -25,7 +31,10 @@ export type WritingCraftDimension =
   | 'suspense'
   | 'emotion'
   | 'dialogue'
-  | 'webnovel';
+  | 'webnovel'
+  | 'hook'
+  | 'cliffhanger'
+  | 'show_tell';
 
 export interface DimensionResult {
   dimension: WritingCraftDimension;
@@ -44,6 +53,9 @@ const DIMENSION_LABELS: Record<WritingCraftDimension, string> = {
   emotion: '情感/描写',
   dialogue: '对话分析',
   webnovel: '网文专项',
+  hook: '钩子分析',
+  cliffhanger: '悬念分析',
+  show_tell: '展示/叙述',
 };
 
 // ============================================================
@@ -114,6 +126,12 @@ function analyzeDimension(
       return analyzeDialogue(text);
     case 'webnovel':
       return analyzeWebNovel(text, chapters);
+    case 'hook':
+      return analyzeHookDimension(text);
+    case 'cliffhanger':
+      return analyzeCliffhangerDimension(text);
+    case 'show_tell':
+      return analyzeShowTellDimension(text);
     default:
       return emptyResult(dim);
   }
@@ -335,6 +353,53 @@ function analyzeWebNovel(
   };
 }
 
+function analyzeHookDimension(text: string): DimensionResult {
+  const hookResult = scoreHook(text);
+  const voiceResult = extractVoiceFingerprints(text);
+
+  const score = Math.min(10, Math.round(hookResult.overall / 10 * 10) / 10);
+
+  return {
+    dimension: 'hook',
+    label: DIMENSION_LABELS.hook,
+    score,
+    maxScore: 10,
+    evidence: hookResult.evidence,
+    suggestions: [
+      ...(hookResult.overall < 30 ? ['开头钩子强度不足，建议在前 200 字内加入冲突或悬念'] : []),
+      ...voiceResult.suggestions.slice(0, 2),
+    ],
+    details: {
+      hookScore: hookResult.overall,
+      dimensions: hookResult.dimensions,
+      voiceFingerprintCount: voiceResult.fingerprints.length,
+    },
+  };
+}
+
+function analyzeCliffhangerDimension(text: string): DimensionResult {
+  const cliffResult = scoreCliffhanger(text);
+  const hcResult = analyzeHookCliffhanger([{ content: text, chapterIndex: 0 }]);
+
+  const score = Math.min(10, Math.round(cliffResult.overall / 10 * 10) / 10);
+
+  return {
+    dimension: 'cliffhanger',
+    label: DIMENSION_LABELS.cliffhanger,
+    score,
+    maxScore: 10,
+    evidence: cliffResult.evidence,
+    suggestions: [
+      ...(cliffResult.overall < 30 ? ['结尾悬念不足，建议在末尾 200 字留下未解问题或情感高峰'] : []),
+      ...hcResult.suggestions.slice(0, 2),
+    ],
+    details: {
+      cliffhangerScore: cliffResult.overall,
+      dimensions: cliffResult.dimensions,
+    },
+  };
+}
+
 function emptyResult(dim: WritingCraftDimension): DimensionResult {
   return {
     dimension: dim,
@@ -345,4 +410,111 @@ function emptyResult(dim: WritingCraftDimension): DimensionResult {
     suggestions: [],
     details: {},
   };
+}
+
+function analyzeShowTellDimension(text: string): DimensionResult {
+  const result = analyzeShowTell(text);
+  const score = Math.min(10, Math.round(result.showTellRatio * 10 * 10) / 10);
+
+  return {
+    dimension: 'show_tell',
+    label: DIMENSION_LABELS.show_tell,
+    score,
+    maxScore: 10,
+    evidence: [
+      `展示: ${result.showCount} 处`,
+      `叙述: ${result.tellCount} 处`,
+      `感官覆盖: ${Math.round(result.sensoryCoverage.overall * 100)}%`,
+    ],
+    suggestions: result.suggestions.slice(0, 3),
+    details: {
+      showTellRatio: result.showTellRatio,
+      showCount: result.showCount,
+      tellCount: result.tellCount,
+      sensoryCoverage: result.sensoryCoverage,
+      abstractVsConcrete: result.abstractVsConcrete,
+      heatMap: result.heatMap,
+    },
+  };
+}
+
+// ============================================================
+// Dedicated Endpoints (multi-chapter analysis)
+// ============================================================
+
+export async function writingCraftEmotionalArcEndpoint(
+  request: HttpRequest,
+): Promise<HttpResponse> {
+  const body = parseBody(request) as {
+    chapters?: Array<{ content: string; chapterIndex: number }>;
+  };
+
+  const chapters = body.chapters ?? [];
+  if (chapters.length === 0) {
+    return jsonResponse({ success: false, error: 'chapters are required' }, 400);
+  }
+
+  const result = analyzeEmotionalArc(chapters);
+  return jsonResponse({ success: true, data: result });
+}
+
+export async function writingCraftVoiceConsistencyEndpoint(
+  request: HttpRequest,
+): Promise<HttpResponse> {
+  const body = parseBody(request) as { text?: string };
+  const text = body.text ?? '';
+  if (!text.trim()) {
+    return jsonResponse({ success: false, error: 'text is required' }, 400);
+  }
+
+  const fpResult = extractVoiceFingerprints(text);
+  const warnings: Array<{ character: string; line: string; issue: string; severity: 'low' | 'medium' | 'high' }> = [];
+  for (const fp of fpResult.fingerprints) {
+    for (const sample of fp.sampleDialogues) {
+      const warning = checkVoiceConsistency(fp, sample);
+      if (warning) warnings.push(warning);
+    }
+  }
+
+  return jsonResponse({
+    success: true,
+    data: {
+      fingerprints: fpResult.fingerprints,
+      voiceDistinctness: fpResult.voiceDistinctness,
+      warnings,
+      suggestions: fpResult.suggestions,
+    },
+  });
+}
+
+export async function writingCraftReaderImmersionEndpoint(
+  request: HttpRequest,
+): Promise<HttpResponse> {
+  const body = parseBody(request) as {
+    chapters?: Array<{ content: string; chapterIndex: number }>;
+  };
+
+  const chapters = body.chapters ?? [];
+  if (chapters.length === 0) {
+    return jsonResponse({ success: false, error: 'chapters are required' }, 400);
+  }
+
+  const result = analyzeReaderImmersion(chapters);
+  return jsonResponse({ success: true, data: result });
+}
+
+export async function writingCraftPacingNavigatorEndpoint(
+  request: HttpRequest,
+): Promise<HttpResponse> {
+  const body = parseBody(request) as {
+    chapters?: Array<{ content: string; chapterIndex: number }>;
+  };
+
+  const chapters = body.chapters ?? [];
+  if (chapters.length === 0) {
+    return jsonResponse({ success: false, error: 'chapters are required' }, 400);
+  }
+
+  const result = navigatePacing(chapters);
+  return jsonResponse({ success: true, data: result });
 }
