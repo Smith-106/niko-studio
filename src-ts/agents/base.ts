@@ -4,6 +4,8 @@
  * Migrated from src/agents/base.py
  */
 
+import { createLogger } from '../logger/index.js';
+
 // ============================================================
 // Enums
 // ============================================================
@@ -135,6 +137,7 @@ export function tokenUsageToDict(u: TokenUsage): Record<string, unknown> {
 // ============================================================
 
 import { LifecycleStage, type AgentLifecycleHook, type AgentContext, LifecycleHookRegistry } from './lifecycle-hooks';
+import type { Logger } from '../logger/index.js';
 
 export abstract class BaseAgent {
   public readonly name: string;
@@ -145,6 +148,7 @@ export abstract class BaseAgent {
   protected _sessionCost: number;
   protected _budgetConfig: BudgetConfig;
   protected _hookRegistry: LifecycleHookRegistry;
+  protected _logger: Logger;
 
   constructor(name: string, config?: Record<string, unknown>) {
     this.name = name;
@@ -154,6 +158,7 @@ export abstract class BaseAgent {
     this._usageHistory = [];
     this._sessionCost = 0.0;
     this._hookRegistry = new LifecycleHookRegistry();
+    this._logger = createLogger(`agent/${name}`);
     this._budgetConfig = {
       maxCostPerRequest: (this.config["max_cost_per_request"] as number) ?? 1.0,
       maxCostPerSession: (this.config["max_cost_per_session"] as number) ?? 10.0,
@@ -247,7 +252,7 @@ export abstract class BaseAgent {
 
     const warningMsg = warnings.length > 0 ? warnings.join("; ") : null;
     if (warningMsg) {
-      console.warn(warningMsg);
+      this._logger.warn(warningMsg);
     }
 
     return [true, warningMsg];
@@ -258,7 +263,7 @@ export abstract class BaseAgent {
   recordUsage(usage: TokenUsage): void {
     this._usageHistory.push(usage);
     this._sessionCost += usage.estimatedCost;
-    console.log(
+    this._logger.debug(
       `Token usage recorded: ${usage.totalTokens} tokens, ` +
       `$${usage.estimatedCost.toFixed(4)}, session total: $${this._sessionCost.toFixed(4)}`,
     );
@@ -284,7 +289,7 @@ export abstract class BaseAgent {
   resetSession(): void {
     this._usageHistory.length = 0;
     this._sessionCost = 0.0;
-    console.log("Session usage reset");
+    this._logger.info("Session usage reset");
   }
 
   // ---------- CCW 6-Field Prompt Protocol ----------
@@ -327,21 +332,18 @@ export abstract class BaseAgent {
   // ---------- Logging helper ----------
 
   logActivity(message: string, level: "INFO" | "WARNING" | "ERROR" | "DEBUG" = "INFO"): void {
-    const prefix = `[agent.${this.name}]`;
     switch (level) {
       case "WARNING":
-        console.warn(`${prefix} ${message}`);
+        this._logger.warn(message);
         break;
       case "ERROR":
-        console.error(`${prefix} ${message}`);
+        this._logger.error(message);
         break;
       case "DEBUG":
-        // console.debug is available in Node / browsers but may be silent by default.
-        // Use console.log so the message is always visible when needed.
-        console.log(`${prefix} [DEBUG] ${message}`);
+        this._logger.debug(message);
         break;
       default:
-        console.log(`${prefix} ${message}`);
+        this._logger.info(message);
         break;
     }
   }

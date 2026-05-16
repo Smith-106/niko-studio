@@ -31,6 +31,9 @@ import {
 } from './types';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
 import { registerCanonicalBindings } from './bindings';
+import { createLogger } from '../logger/index.js';
+
+const log = createLogger('container');
 
 /**
  * ServiceContainer - Lightweight DI Container with Lazy Initialization
@@ -303,7 +306,7 @@ export class ServiceContainer {
           ),
         ]);
       } catch (error) {
-        console.error('Engine initialization timed out or failed:', error);
+        log.error('Engine initialization timed out or failed', { error: String(error) });
         throw error;
       }
     }
@@ -317,7 +320,7 @@ export class ServiceContainer {
       return;
     }
 
-    console.log('Pre-warming engines...');
+    log.info('Pre-warming engines...');
     const startTime = Date.now();
 
     const services = [
@@ -336,7 +339,7 @@ export class ServiceContainer {
           this.initPromises.set(service.identifier, initPromise);
         }
       } catch (error) {
-        console.error(`Failed to initialize service ${String(service.identifier)}:`, error);
+        log.error(`Failed to initialize service ${String(service.identifier)}`, { error: String(error) });
       }
     }
 
@@ -346,7 +349,7 @@ export class ServiceContainer {
 
     this.initialized = true;
     const elapsed = (Date.now() - startTime) / 1000;
-    console.log(`Engines pre-warmed in ${elapsed.toFixed(2)}s`);
+    log.info(`Engines pre-warmed in ${elapsed.toFixed(2)}s`);
   }
 
   /**

@@ -15,6 +15,9 @@ import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { mkdirSync } from 'node:fs';
+import { createLogger } from '../logger/index.js';
+
+const log = createLogger('graph-manager');
 
 // ---------------------------------------------------------------------------
 // Vector search integration (semantic search DI hook from PLN-005 Phase 1)
@@ -373,7 +376,7 @@ export class GraphManager {
 
     const content = this._buildEmbeddingContent(entity);
     vs.add(entity.id, content, this._buildEmbeddingMetadata(entity), 'entity').catch((err) => {
-      console.warn(`Entity embedding failed for ${entity.id}: ${err instanceof Error ? err.message : String(err)}`);
+      log.warn(`Entity embedding failed for ${entity.id}`, { error: err instanceof Error ? err.message : String(err) });
     });
   }
 
@@ -383,7 +386,7 @@ export class GraphManager {
     if (!vs) return;
 
     vs.delete(entityId).catch((err) => {
-      console.warn(`Entity embedding delete failed for ${entityId}: ${err instanceof Error ? err.message : String(err)}`);
+      log.warn(`Entity embedding delete failed for ${entityId}`, { error: err instanceof Error ? err.message : String(err) });
     });
   }
 
@@ -579,7 +582,7 @@ export class GraphManager {
         const info = stmt.run();
         return [{ affected_rows: info.changes }];
       } catch (e) {
-        console.error(`Cypher execution error: ${e}`);
+        log.error(`Cypher execution error`, { error: String(e) });
         return [{ error: String(e) }];
       }
     }

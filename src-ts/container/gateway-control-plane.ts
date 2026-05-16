@@ -16,6 +16,9 @@ import {
   setWorkflowEngineRuntimeProvider,
   type IWorkflowEngineRuntime,
 } from './workflow-runtime-provider';
+import { createLogger } from '../logger/index.js';
+
+const log = createLogger('control-plane');
 
 export interface GatewayControlPlaneState extends GatewayRuntimeState {
   container: ServiceContainer;
@@ -85,7 +88,7 @@ function wireVectorSearchIntoGraphManager(container: ServiceContainer): void {
     }
     GraphManager.setDefaultVectorSearch(vectorSearch);
   } catch (error) {
-    console.warn('VectorSearch → GraphManager wiring skipped:', error);
+    log.warn('VectorSearch → GraphManager wiring skipped', { error: String(error) });
     GraphManager.setDefaultVectorSearch(null);
   }
 }
@@ -113,6 +116,6 @@ export async function prewarmGatewayControlPlane(container: ServiceContainer): P
   try {
     await container.initializeAll();
   } catch (error) {
-    console.warn('Engine pre-warm warning:', error);
+    log.warn('Engine pre-warm warning', { error: String(error) });
   }
 }

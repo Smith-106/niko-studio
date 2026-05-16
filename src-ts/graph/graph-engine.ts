@@ -19,6 +19,9 @@ import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { getConfigValue as getAppConfigValue } from '../config';
 import { createIntegrationAdapters, type IntegrationAdapterBundle } from '../integrations';
+import { createLogger } from '../logger/index.js';
+
+const log = createLogger('graph-engine');
 
 // ---------------------------------------------------------------------------
 // Data classes
@@ -213,7 +216,7 @@ export class GraphEngine {
         await plugin.load(this);
       } catch (exc) {
         const name = (plugin as EnginePlugin).name ?? 'unknown';
-        console.error(`Graph plugin load failed: ${name}: ${exc}`);
+        log.error(`Graph plugin load failed: ${name}`, { error: String(exc) });
         this._pluginHealth[name] = { status: 'error', error: String(exc) };
       }
     }
@@ -361,7 +364,7 @@ export class GraphEngine {
     scope?: GraphReadScope | null
   ): Promise<Record<string, unknown>[]> {
     if (typeof cypher !== 'string') {
-      console.warn('Blocked non-string graph query input');
+      log.warn('Blocked non-string graph query input');
       return [{ error: 'Invalid query input' }];
     }
 
@@ -371,7 +374,7 @@ export class GraphEngine {
     }
 
     if (cypher.length > GraphEngine.MAX_CYPHER_LENGTH) {
-      console.warn('Blocked oversized graph query');
+      log.warn('Blocked oversized graph query');
       return [{ error: 'Query too long' }];
     }
 
@@ -383,7 +386,7 @@ export class GraphEngine {
       return this._executeMergeMutation(cypher);
     }
 
-    console.warn('Blocked graph query outside MATCH/MERGE subset');
+    log.warn('Blocked graph query outside MATCH/MERGE subset');
     return [{ error: 'Only MATCH queries and scoped MERGE mutations are allowed' }];
   }
 
@@ -1014,7 +1017,7 @@ export class GraphEngine {
     }
 
     if (namePattern.length > GraphEngine.MAX_NAME_PATTERN_LENGTH) {
-      console.warn('Blocked oversized entity name pattern');
+      log.warn('Blocked oversized entity name pattern');
       return [];
     }
 
@@ -1315,7 +1318,7 @@ export class GraphEngine {
     try {
       await this._integrationAdapters.graphProjection.projectEntity(entity);
     } catch (exc) {
-      console.warn(`Neo4j entity projection failed, local-first path preserved: ${exc}`);
+      log.warn(`Neo4j entity projection failed, local-first path preserved`, { error: String(exc) });
     }
   }
 
@@ -1326,7 +1329,7 @@ export class GraphEngine {
     try {
       await this._integrationAdapters.graphProjection.projectRelation(relation);
     } catch (exc) {
-      console.warn(`Neo4j relation projection failed, local-first path preserved: ${exc}`);
+      log.warn(`Neo4j relation projection failed, local-first path preserved`, { error: String(exc) });
     }
   }
 

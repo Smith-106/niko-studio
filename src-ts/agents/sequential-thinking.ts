@@ -7,6 +7,9 @@
  */
 
 import * as crypto from "crypto";
+import { createLogger } from '../logger/index.js';
+
+const log = createLogger('sequential-thinking');
 
 // ============================================================
 // Enums
@@ -228,7 +231,7 @@ export class SequentialThinking {
 
     // Depth limit
     if (depth >= this.maxDepth) {
-      console.warn(`Reached max depth ${this.maxDepth}, cannot add more thoughts`);
+      log.warn(`Reached max depth ${this.maxDepth}, cannot add more thoughts`);
       throw new Error(`Maximum thought depth (${this.maxDepth}) reached`);
     }
 
