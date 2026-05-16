@@ -10,6 +10,9 @@ import {
   type LegacyDistillationData,
 } from '../services/distill-service';
 import { SequentialThinking, ThoughtType } from './sequential-thinking';
+import { createLogger } from '../logger/index.js';
+
+const log = createLogger('architect');
 
 // ============================================================
 // Interfaces (Pydantic models -> TS interfaces)
@@ -202,7 +205,7 @@ export class ArchitectAgent {
   private goldenDataset: Record<string, unknown>[];
   private enableSequentialThinking: boolean;
   private enableDistillation: boolean;
-  private knowledgeLayer: unknown;
+  private knowledgeLayer: GraphKnowledgeLayer | null;
   private thinkingEngine: SequentialThinking | null;
   private distillService: DistillationService | null;
 
@@ -220,7 +223,9 @@ export class ArchitectAgent {
     this.goldenDataset = [];
     this.enableSequentialThinking = normalizedOptions.enableSequentialThinking ?? true;
     this.enableDistillation = normalizedOptions.enableDistillation ?? true;
-    this.knowledgeLayer = normalizedOptions.knowledgeLayer ?? null;
+    this.knowledgeLayer = normalizedOptions.knowledgeLayer
+      ? this.asKnowledgeLayer(normalizedOptions.knowledgeLayer)
+      : null;
 
     // SequentialThinking engine
     if (this.enableSequentialThinking) {
@@ -267,7 +272,9 @@ export class ArchitectAgent {
         userPrompt,
         { systemPrompt: ARCHITECT_SYSTEM_PROMPT },
       );
-    } catch {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      log.warn('LLM generation failed, using heuristic fallback', { error: message, genre, targetChapters });
       result = this.buildFallbackBlueprint(userIdea, genre, targetChapters, targetWordcount);
     }
 
@@ -293,7 +300,9 @@ export class ArchitectAgent {
   ): Promise<StoryBlueprint | Record<string, unknown>> {
     try {
       return await this.plan(request, genre, chapterCount);
-    } catch {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      log.error('Blueprint generation failed completely', { error: message, genre, chapterCount });
       return {
         request,
         chapter_count: chapterCount,
@@ -356,7 +365,7 @@ export class ArchitectAgent {
     const distilledData = await this.distillService.distillChapter(content);
 
     if (this.knowledgeLayer) {
-      this.distillService.applyToGraph(this.asKnowledgeLayer(this.knowledgeLayer), distilledData);
+      this.distillService.applyToGraph(this.knowledgeLayer, distilledData);
     }
 
     if (this.thinkingEngine) {
@@ -592,10 +601,7 @@ export class ArchitectAgent {
     }
 
     if (warnings.length > 0) {
-      console.warn('Validation warnings:');
-      for (const w of warnings) {
-        console.warn(`  - ${w}`);
-      }
+      log.warn('Blueprint validation warnings', { warnings });
     }
   }
 }
