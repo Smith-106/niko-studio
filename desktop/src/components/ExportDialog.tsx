@@ -62,7 +62,7 @@ export function ExportDialog({ editorJson, title, onClose }: ExportDialogProps) 
         }
         break
     }
-    recordExport(format as any, finalFilename, 0)
+    recordExport(format, finalFilename, 0)
     onClose()
   }, [format, scope, editorJson, filename, currentProjectName, currentProjectId, onClose, recordExport])
 

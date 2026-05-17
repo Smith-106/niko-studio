@@ -1,0 +1,1350 @@
+{
+  "genreBeats": {
+    "monster_in_the_house": {
+      "genreType": "monster_in_the_house",
+      "label": "屋里有怪物",
+      "description": "封闭空间+隐藏的怪物/杀手。核心规则：封闭空间不能轻易离开；怪物必须杀人或有致命威胁；罪人设定——角色有原罪",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "展示封闭空间和日常状态",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "建立角色关系和隐藏的罪",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "第一起死亡或怪物出现",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "角色犹豫是否相信危险存在",
+          "required": false
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "决定对抗/逃亡",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "逐一被怪物猎杀",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "怪物真正的力量和罪被揭露",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "怪物力量加强，空间进一步封闭",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "最后希望破灭",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "直面怪物，利用罪的力量反杀",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "生存者状态，罪被偿还",
+          "required": false
+        }
+      ],
+      "characterArchetypes": [
+        "罪人/幸存者",
+        "怪物/杀手",
+        "怀疑论者",
+        "祭品角色",
+        "知情者"
+      ],
+      "keyScenes": [
+        "封闭空间建立",
+        "第一次袭击",
+        "怀疑者被说服/被杀",
+        "怪物动机揭露",
+        "最终反杀"
+      ],
+      "typicalKeywords": [
+        "封闭",
+        "怪物",
+        "逃不出去",
+        "死了",
+        "只剩",
+        "罪",
+        "隐藏",
+        "生存",
+        "恐惧",
+        "猎杀"
+      ]
+    },
+    "golden_fleece": {
+      "genreType": "golden_fleece",
+      "label": "金羊毛",
+      "description": "公路冒险/征途故事。核心规则：旅程比目的地更重要；路上伙伴是成长催化剂；真正的奖赏是自我发现而非目标",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "主角的平凡/被困状态",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "显示主角的缺陷和渴望",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "踏上旅程的触发事件",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "犹豫是否出发",
+          "required": false
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "正式上路",
+          "required": true
+        },
+        {
+          "name": "B故事/伙伴",
+          "position": 0.27,
+          "description": "认识关键伙伴",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "路上的奇遇和考验",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "假目标实现/发现真正的目标",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "追兵或障碍加强",
+          "required": false
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "团队分裂或失去方向",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "真正目标的达成/自我发现",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "回到起点但角色已不同",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "渴望者/旅人",
+        "伙伴",
+        "导师",
+        "追兵",
+        "路上偶遇者"
+      ],
+      "keyScenes": [
+        "出发场景",
+        "伙伴加入",
+        "路上的标志性地点",
+        "假目标实现",
+        "真正目标揭示"
+      ],
+      "typicalKeywords": [
+        "旅程",
+        "出发",
+        "路上",
+        "伙伴",
+        "寻找",
+        "目标",
+        "冒险",
+        "奇遇",
+        "回到",
+        "改变"
+      ]
+    },
+    "out_of_the_bottle": {
+      "genreType": "out_of_the_bottle",
+      "label": "瓶子里的妖怪",
+      "description": "愿望实现/诅咒。核心规则：愿望必须实现但附带代价；魔法/超能力有规则限制；最终要摆脱愿望的力量而非保留它",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "主角的不满足状态",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "建立主角想要改变的东西",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "获得愿望/诅咒",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "试探愿望的真实性",
+          "required": false
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "开始使用愿望的力量",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "愿望带来好处和乐趣",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "愿望开始显现代价",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "代价越来越大，失控",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "愿望带来的最坏结果",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "放弃愿望/打破诅咒",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "接受原来的自己/生活",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "许愿者",
+        "愿望来源/瓶子",
+        "受益者",
+        "代价承担者",
+        "警告者"
+      ],
+      "keyScenes": [
+        "获得愿望",
+        "第一次使用",
+        "代价初现",
+        "尝试放弃",
+        "最终破除"
+      ],
+      "typicalKeywords": [
+        "愿望",
+        "代价",
+        "诅咒",
+        "魔法",
+        "规则",
+        "失控",
+        "回到",
+        "原来",
+        "放弃",
+        "接受"
+      ]
+    },
+    "dude_with_problem": {
+      "genreType": "dude_with_problem",
+      "label": "遇到问题的家伙",
+      "description": "普通人vs极端困境。核心规则：主角能力越普通冲突越精彩；困境必须不断升级；英雄出于生存本能而非英雄主义",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "普通人的普通生活",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "建立主角的平凡和局限",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "问题降临",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "主角试图回避/否认问题",
+          "required": true
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "被迫面对问题",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "用普通人的智慧对付困境",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "问题比想的更严重",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "困境全面爆发",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "所有退路被封死",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "以普通人的方式力挽狂澜",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "回到普通但有变化的生活",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "普通人",
+        "困境制造者",
+        "帮手",
+        "怀疑者",
+        "背后黑手"
+      ],
+      "keyScenes": [
+        "困境降临",
+        "第一次尝试失败",
+        "升级困境",
+        "绝地反击"
+      ],
+      "typicalKeywords": [
+        "普通",
+        "突然",
+        "没办法",
+        "必须",
+        "不可能",
+        "只好",
+        "拼命",
+        "拼尽",
+        "化解",
+        "回到"
+      ]
+    },
+    "rites_of_passage": {
+      "genreType": "rites_of_passage",
+      "label": "成人礼",
+      "description": "成长转变。核心规则：主角必须经历\"死亡\"（象征或实际）才能重生；转变不可逆；导师/向导可以牺牲但不可缺席",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "主角的少年状态",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "显示主角的不成熟",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "被迫离开舒适区",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "抗拒成长",
+          "required": false
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "接受挑战/进入新世界",
+          "required": true
+        },
+        {
+          "name": "B故事/导师",
+          "position": 0.27,
+          "description": "遇到导师",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "在新世界摸索学习",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "象征性死亡/重大失败",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "旧我不断被挑战",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "导师可能死亡/旧我彻底崩塌",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "重生/象征性成年礼",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "新我回归",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "成长者",
+        "导师",
+        "对手",
+        "同龄伙伴",
+        "父母角色"
+      ],
+      "keyScenes": [
+        "离开舒适区",
+        "导师传授",
+        "象征性死亡",
+        "独自面对",
+        "重生仪式"
+      ],
+      "typicalKeywords": [
+        "成长",
+        "转变",
+        "以前",
+        "现在",
+        "学会",
+        "懂得",
+        "放下",
+        "成熟",
+        "逝去",
+        "重生"
+      ]
+    },
+    "buddy_love": {
+      "genreType": "buddy_love",
+      "label": "哥们之爱",
+      "description": "两个截然不同的角色从冲突到互补。核心规则：两人必须有明显差异；关系曲线：互相讨厌→被迫合作→真正理解→互补",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "分别展示两人各自的生活",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "建立两人性格对比",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "被迫相遇/合作",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "互相排斥/争吵",
+          "required": true
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "达成暂时联盟",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "互补优势显现",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "关系加深但暗藏裂痕",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "外部压力和内部矛盾",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "分裂/决裂",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "重新联手/互相拯救",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "真正的伙伴关系",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "主动者",
+        "被动者/互补者",
+        "催化剂角色",
+        "反对者",
+        "共同敌人"
+      ],
+      "keyScenes": [
+        "初次冲突",
+        "被迫合作",
+        "第一次欣赏对方",
+        "分裂时刻",
+        "重新联手"
+      ],
+      "typicalKeywords": [
+        "搭档",
+        "合作",
+        "看不惯",
+        "只好",
+        "发现",
+        "原来",
+        "分裂",
+        "合力",
+        "彼此",
+        "互补"
+      ]
+    },
+    "whydunit": {
+      "genreType": "whydunit",
+      "label": "谁的尸体",
+      "description": "探寻黑暗人性。核心规则：侦探自身被案件改变；核心问题是\"为什么人变成这样\"；调查者自身的人性也被审视",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "调查者的正常状态",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "展示调查者的世界观",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "案件降临——第一具尸体",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "犹豫是否深入",
+          "required": false
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "正式调查开始",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "追踪线索，探索嫌疑人",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "触及人性的黑暗面",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "调查威胁到自己",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "调查者自身迷失",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "揭示人性真相",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "调查者被永久改变",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "调查者",
+        "受害者",
+        "嫌疑人",
+        "知情人",
+        "幕后真凶"
+      ],
+      "keyScenes": [
+        "案件发现",
+        "调查者世界观动摇",
+        "人性质疑",
+        "调查者被改变"
+      ],
+      "typicalKeywords": [
+        "为什么",
+        "动机",
+        "人性",
+        "黑暗",
+        "过去",
+        "隐藏",
+        "渐渐",
+        "原先",
+        "改变",
+        "真相"
+      ]
+    },
+    "fool_triumphant": {
+      "genreType": "fool_triumphant",
+      "label": "愚者胜",
+      "description": "被低估的角色最终证明所有人错了。核心规则：主角被世界低估是故事核心；愚者必须以自己的\"不聪明\"方式获胜；胜利证明的是不同价值的合理性",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "展示主角被世界忽视",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "建立主角的\"愚蠢\"和世界的\"聪明\"",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "意外的机会",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "主角不确定/被嘲笑",
+          "required": true
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "用自己独特的方式行动",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "愚者的方法意外有效",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "虚伪胜利/暂时的认可",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "聪明人的规则开始反击",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "被完全否定",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "以愚者的方式彻底证明",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "获得真正的尊重",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "愚者",
+        "嘲笑者",
+        "伪装者/内奸",
+        "真正相信者",
+        "被颠覆者"
+      ],
+      "keyScenes": [
+        "被嘲笑",
+        "意外成果",
+        "被否定",
+        "方式获得胜利"
+      ],
+      "typicalKeywords": [
+        "傻",
+        "天真",
+        "不懂",
+        "嘲笑",
+        "看不起",
+        "竟然",
+        "原来",
+        "证明",
+        "认同",
+        "独特"
+      ]
+    },
+    "institutionalized": {
+      "genreType": "institutionalized",
+      "label": "体制内",
+      "description": "个体vs体制的两难。核心规则：体制有不合理的规则但也有存在的理由；角色必须在改变体制前理解体制；结局是体制微调而非彻底推翻",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "展示体制和个体的位置",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "建立体制的正常/不公",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "个体的利益被体制伤害",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "犹豫是否挑战体制",
+          "required": true
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "开始挑战/融入体制",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "在体制规则下博弈",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "体制奖励个体",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "体制的反噬",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "被体制驱逐/自己选择离开",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "以体制的方式改变体制",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "体制微变/个体获得自主",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "个体/反叛者",
+        "体制代表",
+        "体制受益者",
+        "体制受害者",
+        "调停者"
+      ],
+      "keyScenes": [
+        "体制展示",
+        "个体被伤害",
+        "尝试融入",
+        "被驱逐",
+        "体制改变"
+      ],
+      "typicalKeywords": [
+        "体制",
+        "规则",
+        "服从",
+        "反抗",
+        "融入",
+        "异化",
+        "权力",
+        "选择",
+        "坚守",
+        "适应"
+      ]
+    },
+    "superhero": {
+      "genreType": "superhero",
+      "label": "超级英雄",
+      "description": "能力越大责任越大。核心规则：特殊能力同时是诅咒和孤独之源；真正战斗是与自己内心的对抗；最终必须做出个人牺牲",
+      "beatSequence": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "展示非凡能力和对其的隐藏",
+          "required": true
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "建立能力的孤独",
+          "required": true
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "被迫使用能力/敌人出现",
+          "required": true
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "犹豫是否承担英雄角色",
+          "required": true
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "接受英雄身份",
+          "required": true
+        },
+        {
+          "name": "B故事/常人身份",
+          "position": 0.27,
+          "description": "与常人世界的关系",
+          "required": true
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "使用能力的快感和代价",
+          "required": true
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "能力无法解决根本问题",
+          "required": true
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "敌人利用主角的弱点",
+          "required": true
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "能力失去/最重要的东西被夺走",
+          "required": true
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "不求能力只求牺牲",
+          "required": true
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "接受孤独/找到平衡",
+          "required": true
+        }
+      ],
+      "characterArchetypes": [
+        "英雄",
+        "克星/宿敌",
+        "常人伙伴",
+        "导师",
+        "公众/民众代表"
+      ],
+      "keyScenes": [
+        "能力展示",
+        "拒绝召唤",
+        "第一次公开行动",
+        "敌人反击",
+        "牺牲与孤独"
+      ],
+      "typicalKeywords": [
+        "能力",
+        "责任",
+        "孤独",
+        "敌人",
+        "牺牲",
+        "保护",
+        "害怕",
+        "必须",
+        "普通人",
+        "隐藏"
+      ]
+    }
+  },
+  "storyStructures": {
+    "bell_three_act": {
+      "name": "Bell三幕结构",
+      "beats": [
+        {
+          "name": "扰动事件",
+          "position": 0.15,
+          "description": "打破日常平衡"
+        },
+        {
+          "name": "第一幕转折",
+          "position": 0.25,
+          "description": "主角被迫踏上旅程"
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "虚假胜利或虚假失败"
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "主角的最低谷"
+        },
+        {
+          "name": "高潮",
+          "position": 0.9,
+          "description": "最终决战/揭示"
+        }
+      ]
+    },
+    "snyder_beat_sheet": {
+      "name": "Snyder节拍表 (Save the Cat)",
+      "beats": [
+        {
+          "name": "开场画面",
+          "position": 0.01,
+          "description": "展示主角的\"之前\"状态"
+        },
+        {
+          "name": "铺垫",
+          "position": 0.05,
+          "description": "建立主角的世界和缺陷"
+        },
+        {
+          "name": "催化事件",
+          "position": 0.1,
+          "description": "不可逆的改变事件"
+        },
+        {
+          "name": "争论",
+          "position": 0.15,
+          "description": "主角犹豫是否行动"
+        },
+        {
+          "name": "进入第二幕",
+          "position": 0.25,
+          "description": "主角做出选择"
+        },
+        {
+          "name": "B故事",
+          "position": 0.27,
+          "description": "副线/感情线开始"
+        },
+        {
+          "name": "游戏乐趣",
+          "position": 0.35,
+          "description": "主角在新世界探索"
+        },
+        {
+          "name": "中点",
+          "position": 0.5,
+          "description": "虚假胜利或失败"
+        },
+        {
+          "name": "敌人逼近",
+          "position": 0.6,
+          "description": "反方力量加强"
+        },
+        {
+          "name": "失去一切",
+          "position": 0.75,
+          "description": "一切崩塌"
+        },
+        {
+          "name": "灵魂黑夜",
+          "position": 0.78,
+          "description": "主角的内心觉醒"
+        },
+        {
+          "name": "进入第三幕",
+          "position": 0.82,
+          "description": "找到解决方案"
+        },
+        {
+          "name": "高潮",
+          "position": 0.92,
+          "description": "最终决战"
+        },
+        {
+          "name": "终场画面",
+          "position": 0.99,
+          "description": "展示\"之后\"状态"
+        }
+      ]
+    },
+    "truby_22_steps": {
+      "name": "Truby 22步 (故事写作大师班)",
+      "beats": [
+        {
+          "name": "1.幽灵/过去伤口",
+          "position": 0.02,
+          "description": "主角过去的创伤，影响当前行为"
+        },
+        {
+          "name": "2.故事世界",
+          "position": 0.04,
+          "description": "建立故事发生的环境和规则"
+        },
+        {
+          "name": "3.需求/弱点",
+          "position": 0.06,
+          "description": "主角的心理弱点，需要弥补的缺陷"
+        },
+        {
+          "name": "4.引发事件",
+          "position": 0.08,
+          "description": "打破平衡的外部事件"
+        },
+        {
+          "name": "5.欲望",
+          "position": 0.1,
+          "description": "主角明确的目标和追求"
+        },
+        {
+          "name": "6.对手",
+          "position": 0.12,
+          "description": "直接阻碍主角的核心对手"
+        },
+        {
+          "name": "7.计划",
+          "position": 0.15,
+          "description": "主角的初步行动计划"
+        },
+        {
+          "name": "8.盟友",
+          "position": 0.17,
+          "description": "帮助主角的角色"
+        },
+        {
+          "name": "9.对手的盟友",
+          "position": 0.19,
+          "description": "帮助对手的角色"
+        },
+        {
+          "name": "10.第一次揭露",
+          "position": 0.22,
+          "description": "主角获得新信息，认知改变"
+        },
+        {
+          "name": "11.驱动欲望",
+          "position": 0.26,
+          "description": "更强的行动动力"
+        },
+        {
+          "name": "12.盟友的攻击",
+          "position": 0.3,
+          "description": "盟友质疑主角的计划"
+        },
+        {
+          "name": "13.转向揭露",
+          "position": 0.35,
+          "description": "重大信息揭示，改变方向"
+        },
+        {
+          "name": "14.看似落败",
+          "position": 0.4,
+          "description": "主角的虚假失败"
+        },
+        {
+          "name": "15.批评者的抱怨",
+          "position": 0.44,
+          "description": "他人对主角的质疑和反对"
+        },
+        {
+          "name": "16.看似胜利",
+          "position": 0.48,
+          "description": "主角的虚假成功"
+        },
+        {
+          "name": "17.失控暴露",
+          "position": 0.55,
+          "description": "事态超出主角控制"
+        },
+        {
+          "name": "18.第二次揭露",
+          "position": 0.6,
+          "description": "更深层的真相揭示"
+        },
+        {
+          "name": "19.道德决定",
+          "position": 0.7,
+          "description": "主角面临道德抉择"
+        },
+        {
+          "name": "20.最终揭露",
+          "position": 0.78,
+          "description": "最终的关键信息"
+        },
+        {
+          "name": "21.道德自省",
+          "position": 0.85,
+          "description": "主角的内心转变"
+        },
+        {
+          "name": "22.最终对决",
+          "position": 0.92,
+          "description": "主角与对手的最终较量"
+        }
+      ]
+    },
+    "edson_23_sequence": {
+      "name": "Edson 23段故事策略",
+      "beats": [
+        {
+          "name": "1.开场画面",
+          "position": 0.01,
+          "description": "展示主角的缺陷和现状"
+        },
+        {
+          "name": "2.设定",
+          "position": 0.03,
+          "description": "建立主角的世界和关系"
+        },
+        {
+          "name": "3.催化事件",
+          "position": 0.07,
+          "description": "打破平衡的突发事件"
+        },
+        {
+          "name": "4.辩论",
+          "position": 0.12,
+          "description": "主角犹豫是否应对变化"
+        },
+        {
+          "name": "5.进入第二幕",
+          "position": 0.17,
+          "description": "主角做出选择进入新世界"
+        },
+        {
+          "name": "6.B故事",
+          "position": 0.2,
+          "description": "副线开始(通常是感情线)"
+        },
+        {
+          "name": "7.游戏乐趣",
+          "position": 0.25,
+          "description": "主角在新世界探索和体验"
+        },
+        {
+          "name": "8.中点",
+          "position": 0.35,
+          "description": "虚假胜利或虚假失败"
+        },
+        {
+          "name": "9.敌人逼近",
+          "position": 0.4,
+          "description": "反方势力加强攻势"
+        },
+        {
+          "name": "10.失去一切",
+          "position": 0.5,
+          "description": "主角跌入最低谷"
+        },
+        {
+          "name": "11.灵魂黑夜",
+          "position": 0.55,
+          "description": "主角内心崩溃与反思"
+        },
+        {
+          "name": "12.进入第三幕",
+          "position": 0.6,
+          "description": "主角找到新的解决方案"
+        },
+        {
+          "name": "13.收网",
+          "position": 0.65,
+          "description": "AB故事线开始交汇"
+        },
+        {
+          "name": "14.风暴逼近",
+          "position": 0.7,
+          "description": "最终对决前的紧张积蓄"
+        },
+        {
+          "name": "15.高潮",
+          "position": 0.8,
+          "description": "最终决战和核心冲突解决"
+        },
+        {
+          "name": "16.终场画面",
+          "position": 0.95,
+          "description": "展示主角成长后的状态"
+        }
+      ]
+    }
+  },
+  "dialogueRules": {
+    "mckeeThreeFunctions": {
+      "functions": [
+        "推动情节",
+        "揭示角色",
+        "表达主题",
+        "制造冲突"
+      ],
+      "minimumRequired": 2
+    },
+    "showDontTell": {
+      "badPatterns": [
+        "我很难过",
+        "他很生气",
+        "我很害怕",
+        "我知道你在想什么"
+      ],
+      "goodPatterns": [
+        "动作+沉默",
+        "反问代替回答",
+        "转移话题",
+        "语气变化"
+      ]
+    },
+    "characterVoiceDifferentiation": {
+      "dimensions": [
+        "用词习惯",
+        "句式长短",
+        "口头禅",
+        "情绪表达方式",
+        "回避策略"
+      ]
+    }
+  }
+}

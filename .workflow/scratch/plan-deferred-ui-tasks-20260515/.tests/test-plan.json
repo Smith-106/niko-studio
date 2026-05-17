@@ -1,0 +1,52 @@
+{
+  "target": "plan-deferred-ui-tasks-20260515",
+  "generated_at": "2026-05-15T17:39:46+08:00",
+  "tests": [
+    {
+      "id": "T-001",
+      "name": "Show/Tell 高亮开关与渲染",
+      "category": "e2e",
+      "expected": "在编辑器页面点击‘开启 Show/Tell’，段落出现 Show(绿)/Tell(红)/Neutral(灰) 背景标记；再次点击可关闭且标记消失；不会明显卡顿或卡死。",
+      "requirement_ref": "SC-001"
+    },
+    {
+      "id": "T-002",
+      "name": "Show/Tell 比例与图例显示",
+      "category": "e2e",
+      "expected": "开启 Show/Tell 后左上角图例展示 Show/Tell/Neutral，并显示整体比例（Show xx% / Tell xx%）。",
+      "requirement_ref": "SC-001"
+    },
+    {
+      "id": "T-003",
+      "name": "EmotionalArcChart 可交互曲线与张力荒漠高亮",
+      "category": "integration",
+      "expected": "在情感弧线图表中能看到至少一条曲线；可通过 checkbox 切换曲线可见性；若后端返回 tensionDeserts，会看到半透明红色区间高亮。",
+      "requirement_ref": "SC-002"
+    },
+    {
+      "id": "T-004",
+      "name": "VoiceFingerprintPanel 指纹与告警展示",
+      "category": "integration",
+      "expected": "打开角色声音一致性面板时会自动分析并展示：声音区分度进度条、warnings 列表（若有）、角色指纹卡片（口头禅/修辞习惯/示例对话）。",
+      "requirement_ref": "SC-003"
+    },
+    {
+      "id": "T-005",
+      "name": "ReaderImmersionDashboard 曲线与风险条",
+      "category": "integration",
+      "expected": "打开读者沉浸度面板后展示：沉浸度折线图（svg）、dropout risk 热力条、trajectory badge；若有高风险章节，列表正确显示。",
+      "requirement_ref": "SC-004"
+    },
+    {
+      "id": "T-006",
+      "name": "PacingPrescriptionPanel 处方列表排序与展示",
+      "category": "integration",
+      "expected": "打开节奏处方面板后展示：节奏评分、处方卡片列表；按 priority（high/medium/low）排序；卡片包含 label、chapterIndex、reason。",
+      "requirement_ref": "SC-004"
+    }
+  ],
+  "coverage": {
+    "requirements_mapped": ["SC-001", "SC-002", "SC-003", "SC-004"],
+    "requirements_unmapped": []
+  }
+}

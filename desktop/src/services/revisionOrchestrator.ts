@@ -1,11 +1,8 @@
-// TODO: M10-TASK: Implement the RevisionOrchestrator service.
-// This service will encapsulate the autonomous multi-pass revision loop.
-// It should be decoupled from the UI and operate on in-memory text.
-
 import { callAnalysisAgent } from '../api/intelligence';
 import { processWritingHelper } from '../api/client';
 import { createCheckpoint, restoreCheckpoint } from '../api/workflow/checkpoints';
 import type { ProjectWorkspaceContext } from '../api/workspace';
+import { logger } from '../utils/logger';
 
 export type SuggestionFocus =
   | 'conflict'
@@ -86,7 +83,7 @@ export class RevisionOrchestrator {
       );
       if (cp.success && cp.data) {
         checkpointId = cp.data.checkpoint_id;
-        console.log(`Created checkpoint ${checkpointId}`);
+        logger.log(`Created checkpoint ${checkpointId}`);
       }
 
       const initialEval = await this.evaluate(currentContent);
@@ -102,7 +99,7 @@ export class RevisionOrchestrator {
 
       for (let i = 0; i < this.config.maxIterations; i++) {
         iterations = i + 1;
-        console.log(`Iteration ${iterations}, current score: ${lastScore}`);
+        logger.log(`Iteration ${iterations}, current score: ${lastScore}`);
 
         if (lastScore >= this.config.targetScore) {
           result = {
@@ -121,15 +118,14 @@ export class RevisionOrchestrator {
           return result;
         }
         
-      // TODO: Select the most critical suggestion. For now, just take the first.
-      const criticalSuggestion = this.selectNextSuggestion(currentEvaluation.suggestions);
-      if (!criticalSuggestion) {
-        result = {
-          initialContent: content, revisedContent: currentContent, initialScore,
-          finalScore: lastScore, iterations, completed: true, reason: 'no_improvement',
-        };
-        return result;
-      }
+        const criticalSuggestion = this.selectNextSuggestion(currentEvaluation.suggestions);
+        if (!criticalSuggestion) {
+          result = {
+            initialContent: content, revisedContent: currentContent, initialScore,
+            finalScore: lastScore, iterations, completed: true, reason: 'no_improvement',
+          };
+          return result;
+        }
 
       const revisedContent = await this.revise(currentContent, criticalSuggestion);
       if (revisedContent === currentContent) {
@@ -163,7 +159,7 @@ export class RevisionOrchestrator {
 
     } finally {
       if (result && checkpointId && result.finalScore < result.initialScore) {
-        console.warn(
+        logger.warn(
           `Revision degraded quality from ${result.initialScore} to ${result.finalScore}. Restoring checkpoint...`,
         );
         await restoreCheckpoint(checkpointId, this.config.workspace);
@@ -213,21 +209,21 @@ export class RevisionOrchestrator {
    */
   private async evaluate(content: string): Promise<{ score: number; suggestions: Suggestion[] } | null> {
     try {
-      console.log('Evaluating content snippet:', content.substring(0, 50));
+      logger.log('Evaluating content snippet:', content.substring(0, 50));
       const response = await callAnalysisAgent('readability', content);
 
       if (!response.success || !response.data) {
-        console.error('Evaluation failed:', response);
+        logger.error('Evaluation failed:', response);
         return null;
       }
 
       const score = (response.data.readability_score as number) / 10.0;
-      const rawSuggestions = (response.data.suggestions as any[]) || [];
+      const rawSuggestions = (response.data.suggestions as unknown[]) || [];
       const suggestions = this.mapToStructuredSuggestions(rawSuggestions);
 
       return { score, suggestions };
     } catch (error) {
-      console.error('Error during evaluation:', error);
+      logger.error('Error during evaluation:', error);
       return null;
     }
   }
@@ -237,15 +233,15 @@ export class RevisionOrchestrator {
    * @param rawSuggestions The array of raw suggestion objects.
    * @returns A structured array of Suggestions.
    */
-  private mapToStructuredSuggestions(rawSuggestions: any[]): Suggestion[] {
+  private mapToStructuredSuggestions(rawSuggestions: unknown[]): Suggestion[] {
     return rawSuggestions.map((raw) => {
-      const title = raw.title || 'Untitled Suggestion';
-      const reason = raw.reason || 'No reason provided.';
+      const item = raw as Record<string, unknown>;
+      const title = (typeof item.title === 'string' ? item.title : '') || 'Untitled Suggestion';
+      const reason = (typeof item.reason === 'string' ? item.reason : '') || 'No reason provided.';
       const focus = this.detectSuggestionFocus(title, reason);
-      
-      // Default severity to 'medium' if not provided
-      const severity = ['high', 'medium', 'low'].includes(raw.severity)
-        ? raw.severity
+
+      const severity = (['high', 'medium', 'low'] as const).includes(item.severity as 'high' | 'medium' | 'low')
+        ? (item.severity as 'high' | 'medium' | 'low')
         : 'medium';
 
       return { title, reason, severity, focus };
@@ -279,7 +275,7 @@ export class RevisionOrchestrator {
    */
   private async revise(content: string, suggestion: Suggestion): Promise<string> {
     try {
-      console.log(`Revising content based on '${suggestion.focus}' suggestion: ${suggestion.title}`);
+      logger.log(`Revising content based on '${suggestion.focus}' suggestion: ${suggestion.title}`);
       const instruction = `Rewrite the text according to the evaluation guidance below. Return only the revised full text with no explanation.\n\nSuggestion: ${suggestion.title}\nReason: ${suggestion.reason}`;
 
       const response = await processWritingHelper({
@@ -293,10 +289,10 @@ export class RevisionOrchestrator {
         return response.data.processed_text;
       }
 
-      console.error('Revision failed:', response.error);
+      logger.error('Revision failed:', response.error);
       return content; // Return original content if revision fails
     } catch (error) {
-      console.error('Error during revision:', error);
+      logger.error('Error during revision:', error);
       return content; // Return original content if revision fails
     }
   }

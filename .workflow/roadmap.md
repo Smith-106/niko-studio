@@ -1,68 +1,90 @@
-# Roadmap: Niko Studio Novel Quality & Reader Experience Enhancement
+# Roadmap: Niko Studio M24 — Tech Debt Cleanup + Narrative Visualization
 
 ## Overview
 
-基于对 Niko Studio 代码库的全面审计和头脑风暴，从"读者体验"和"写作质量"双维度出发，实现 6 大创新方向。核心思路：从"作者视角的工具"进化为"模拟读者心理的创作伙伴"。第一阶段优先实现章首钩子/章末悬念评分（网文粘性命脉）和角色声音指纹（一致性盲区），再逐步构建情感轨迹、展示讲述分析、读者代入感引擎和节奏导航器。全部基于现有 `writing-craft` / `intelligence` / `consistencyEngine` 架构扩展，无需重构。
+M24 聚焦两大目标：(1) 清理 M10-M23 积累的 6 项技术债（console 收口、巨型组件拆分、类型安全加固、翻译模块化、catalog 外置、workflow-engine 重构），(2) 在稳定代码基础上交付叙事结构可视化 MVP。技术债采用"接口冻结"策略——所有重构保持公共 API 不变；workflow-engine 采用 Strategy 模式分层；craft-catalog 外置为 JSON 热加载。Phase 1 通过 wave DAG 内部分 3 批次执行（P1 基础设施 → P2 独立重构 → P2 深度重构），Phase 2 在稳定基础上构建新功能。
 
 ## Phases
 
 **Minimum-phase principle:** Default 1 phase. Only add phases for hard dependencies (runtime + not parallelizable + full barrier). Wave DAG inside each phase handles task ordering.
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases count toward the total phase limit.
-
-- [x] **Phase 1: Novel Quality Enhancement Core** — 6 大方向 8 个任务通过 3 波次实现，扩展 writing-craft 维度 + 一致性引擎 + 分析面板
+- [ ] **Phase 1: Tech Debt Cleanup** — F-001~F-006 技术债清理，3 波次递进执行
+- [ ] **Phase 2: Narrative Visualization MVP** — F-007 叙事结构可视化核心功能
 
 ## Phase Details
 
-### Phase 1: Novel Quality Enhancement Core
+### Phase 1: Tech Debt Cleanup
 
-**Goal**: 实现 6 大创新方向：章首钩子/章末悬念四维评分、角色声音指纹提取与一致性检查、跨章节情感弧线可视化、Show vs Tell 五感分析与热力图、读者沉浸度状态模型与流失风险评分、节奏导航器与处方生成。全部集成到现有写作工艺分析架构。
+**Goal**: 完成 6 项技术债清理，提升代码健康度。Wave 1 建立基础设施模式（logger + 组件拆分），Wave 2 执行独立重构（as-any + translations），Wave 3 执行深度重构（catalog 外置 + workflow-engine Strategy 模式）。全程接口冻结，不破坏向后兼容。
 
 **Depends on**: Nothing (first phase)
 
-**Requirements**: DIR-B, DIR-C, DIR-D, DIR-E, DIR-A, DIR-F
+**Requirements**: F-001, F-002, F-003, F-004, F-005, F-006
 
 **Success Criteria** (what must be TRUE):
-1. `HookCliffhangerScorer` 对章节首尾 200 字进行四维评分（冲突暗示/信息差/感官冲击/节奏切入 + 未解问题/情感峰值/反转冲击/期待感），集成到 `WritingCraftDimension` 类型和 MCP 端点。
-2. `CharacterVoiceFingerprint` 从对话中提取声音指纹（句式偏好/口头禅/正式度/情感表达倾向/修辞习惯），检测对话偏离并标注 warning。
-3. `EmotionalArcTracker` 跨章节聚合情感维度评分，渲染交互式时间线，检测"张力荒漠"（连续 N 章无情感波动），匹配经典叙事曲线偏离度。
-4. `ShowTellAnalyzer` 分析五感覆盖率、抽象 vs 具体比例、情感表达方式，生成段落级热力图数据。
-5. `ReaderImmersionEngine` 建模读者心理状态（好奇心/情感投入/认知负荷/悬念张力/代入感），跨章节追踪并生成流失风险评分。
-6. `PacingNavigator` 提供前瞻性节奏分析，生成节奏处方（高潮/转折/喘息/伏笔回收时机），与 `ForeshadowingTracker` 协同推荐伏笔收获时机。
-7. 所有新模块通过 DI 注册，不修改现有核心模块公共接口。
-8. 新增测试覆盖率 ≥ 80%，现有测试无回归。
+1. 前端 17 个文件的 `console.*` 全部收口到结构化 logger，生产环境无信息泄露
+2. EvaluationPanel (1783行) 和 StoryBiblePanel (1788行) 各拆分为 ≤500 行的子组件，保持功能等价
+3. 4 个非测试文件的 `as any` 全部替换为正确类型，TypeScript strict 无报错
+4. translations.ts (2892行) 按模块拆分为独立文件，key 结构不变，i18n 流程无影响
+5. craft-catalog (1584行) 外置为 JSON 文件，支持热加载，现有引用透明迁移
+6. workflow-engine (1970行) 采用 Strategy 模式分层，编排逻辑与业务规则分离，公共 API 签名不变
+7. 所有现有测试通过，无回归
+
+### Phase 2: Narrative Visualization MVP
+
+**Goal**: 交付叙事结构可视化核心功能——故事线时间轴、角色关系图谱、情节张力曲线。基于 Phase 1 稳定的 workflow-engine 和 craft 数据层构建，集成到现有编辑器面板体系。
+
+**Depends on**: Phase 1 (workflow-engine refactored API + externalized craft-catalog)
+
+**Requirements**: F-007
+
+**Success Criteria** (what must be TRUE):
+1. 故事线时间轴组件渲染章节事件序列，支持缩放和筛选
+2. 角色关系图谱动态展示角色互动频率和关系类型变化
+3. 情节张力曲线基于 M23 reader-state 模型实时渲染，标注关键转折点
+4. 可视化面板集成到编辑器侧边栏，响应文档切换
+5. 新增测试覆盖率 ≥ 80%，现有测试无回归
+
+**Phase split justification (3-condition check):**
+1. Runtime dependency: F-007 可视化组件在运行时调用 workflow-engine 的分析编排 API 和 craft-catalog 数据
+2. Not parallelizable: workflow-engine 内部 Strategy 模式重构改变执行路径，F-007 集成测试需要稳定的重构后实现
+3. Full barrier: F-001~F-006 全部完成并验证后，F-007 才能可靠集成测试
 
 ## Scope Decisions
 
 - **In scope**:
-  - `src-ts/narrative/writing-craft/hook-cliffhanger-scorer.ts` — Hook & Cliffhanger 评分引擎
-  - `src-ts/narrative/character-voice-fingerprint.ts` — 角色声音指纹 + 一致性检查
-  - `src-ts/narrative/emotional-arc.ts` — 情感弧线时间线 + 沙漠检测 + 叙事曲线匹配
-  - `src-ts/narrative/show-tell-analyzer.ts` — Show vs Tell 五感分析 + 热力图
-  - `src-ts/narrative/reader-immersion-engine.ts` — 读者沉浸度状态模型 + 流失风险
-  - `src-ts/narrative/pacing-navigator.ts` — 节奏导航 + 处方生成
-  - MCP 端点扩展：`writing-craft.ts` 新增 `hook` / `cliffhanger` 维度
-  - LLM Prompt 扩展：`writing-craft-llm.ts` 新增对应 system prompt
-  - 单元测试（6 个测试文件）
+  - F-001: 前端 console 收口（17 文件）
+  - F-002: EvaluationPanel + StoryBiblePanel 拆分
+  - F-003: MathView, ExportDialog, WritingHelperPanel, revisionOrchestrator 类型加固
+  - F-004: translations.ts 按模块拆分
+  - F-005: craft-catalog 外置为 JSON + 热加载 loader
+  - F-006: workflow-engine Strategy 模式分层重构
+  - F-007: 叙事可视化 MVP（时间轴 + 关系图 + 张力曲线）
 
-- **Deferred**:
-  - 编辑器内 TipTap extension 行级色彩标记（Show vs Tell 热力图可视化）
-  - WritingDashboard UI 组件（EmotionalArcChart 交互式图表）
-  - 实时对话一致性 warning 标注（需编辑器集成）
-  - 前端面板（读者沉浸度仪表盘、节奏处方面板）
+- **Deferred (M25)**:
+  - F-008: 智能修订工作流增强
+  - 写作会话智能（行为模式分析）
+  - 写作知识个性化（风格推荐）
 
 - **Out of scope**:
-  - 修改现有核心模块公共接口
-  - Rust/Tauri 侧变更
-  - CI/CD 流程变更
-  - TinyStyler 音频风格迁移
+  - 重写 workflow-engine 架构（仅重构）
+  - 引入新 UI 框架或状态管理库
+  - 破坏现有 API 接口向后兼容性
+  - 多人协作功能
+  - Electron 框架迁移
+
+## Implementation Strategies
+
+| Strategy | Applies To | Description |
+|----------|-----------|-------------|
+| 接口冻结 | F-001~F-006 | 所有重构保持公共 API 签名不变，内部实现自由调整 |
+| JSON 外置 | F-005 | craft-catalog 数据提取为 JSON，TypeScript 仅保留 loader + 类型定义 |
+| Strategy 模式 | F-006 | workflow-engine 按职责拆分为 Strategy 接口 + 具体策略实现 |
+| 逐步拆分 | F-002 | 巨型组件先提取子组件，再调整 props 传递，最后验证渲染等价 |
 
 ## Progress
 
 | Phase | Status | Completed |
 |-------|--------|-----------|
-| 1. Novel Quality Enhancement Core | Completed | 2026-05-15 |
+| 1. Tech Debt Cleanup | In progress (verifying, gaps_found) | TASK-001, TASK-003, TASK-005 |
+| 2. Narrative Visualization MVP | Not started | - |

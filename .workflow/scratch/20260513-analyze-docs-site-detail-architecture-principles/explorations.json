@@ -1,0 +1,36 @@
+{
+  "session_id": "ANL-docs-site-detail-architecture-principles-2026-05-13",
+  "mode": "single_aggregated_from_codebase_and_perspectives",
+  "findings": [
+    {
+      "id": "FND-001",
+      "title": "docs-site content model is static registry + HTML strings",
+      "evidence_refs": ["docs-site/src/client/data/inventory.ts:96", "docs-site/src/client/data/content.ts:14", "docs-site/src/client/pages/DocPage.tsx:130"],
+      "impact": "新增文档主要是 registry + static content work，风险集中在内容准确性与 key mismatch。"
+    },
+    {
+      "id": "FND-002",
+      "title": "architecture pages already match diagram/code-block convention",
+      "evidence_refs": ["docs-site/src/client/data/content-architecture.ts:5", "docs-site/src/client/data/content-architecture.ts:87"],
+      "impact": "F-002/F-005 可以增量扩展，无需 Mermaid renderer。"
+    },
+    {
+      "id": "FND-003",
+      "title": "source-of-truth hierarchy is explicit outside docs-site",
+      "evidence_refs": ["README.md:118", "docs/CAPABILITY_MATRIX.md:2", "docs/API_REFERENCE.md:10"],
+      "impact": "docs-site 必须定位为导读/学习 hub，不能成为第二套 API 或 capability 权威。"
+    }
+  ],
+  "technical_solutions": [
+    {
+      "round": 1,
+      "solution": "Use architecture category as the second-wave docs hub extension point.",
+      "problem": "Need F-001..F-005 without broad UI/navigation refactor.",
+      "rationale": "Existing architecture category already contains system-overview/module-design/data-flow and is linked from homepage.",
+      "alternatives": "Add guides category; defer until user-facing IA demands it.",
+      "status": "validated",
+      "evidence_refs": ["docs-site/src/client/data/inventory.ts:83", "docs-site/src/client/data/inventory.ts:158", "docs-site/src/client/pages/LandingPage.tsx:24"],
+      "next_action": "Plan content pages and homepage path update."
+    }
+  ]
+}

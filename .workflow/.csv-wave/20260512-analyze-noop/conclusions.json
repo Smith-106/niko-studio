@@ -1,0 +1,89 @@
+{
+  "session_id": "20260512-analyze-noop",
+  "subject": "noop",
+  "mode": "full",
+  "recommendation": "Conditional",
+  "confidence": "high",
+  "head_sha": "1e75baf01c589a3306fb1f52f6a942c47d82cd66",
+  "dimensions": [
+    {
+      "name": "feasibility",
+      "score": 91,
+      "findings": "Runtime truth is already implemented and tested; remaining work is mostly documentation and decision alignment.",
+      "recommendations": "Update historical Stage 5 wording and keep future class-removal work separate from current cleanup."
+    },
+    {
+      "name": "impact",
+      "score": 62,
+      "findings": "Clarification mainly reduces future cleanup churn and keeps readiness narratives aligned with runtime truth.",
+      "recommendations": "Use the retained-interface strategy as the default description of disabled integrations."
+    },
+    {
+      "name": "risk",
+      "score": 57,
+      "findings": "Risk comes from reopening blanket noop removal before caller surfaces and types are intentionally simplified away.",
+      "recommendations": "Do not treat explicit disabled adapters as dead code while runtime callers still depend on them."
+    },
+    {
+      "name": "complexity",
+      "score": 38,
+      "findings": "Docs alignment is small; real adapter removal would require coordinated refactors across callers, bundle types, and tests.",
+      "recommendations": "Keep the near-term scope to decision and documentation alignment only."
+    },
+    {
+      "name": "alignment",
+      "score": 96,
+      "findings": "The retained noop-adapter contract matches the repo's local-first architecture and support-level policy.",
+      "recommendations": "Keep support-level signaling and deterministic fallback behavior as the source of truth."
+    },
+    {
+      "name": "maintainability",
+      "score": 76,
+      "findings": "Code and tests are coherent, but historical plan wording still points toward a competing strategy.",
+      "recommendations": "Reconcile the docs so future work does not fork into conflicting interpretations."
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Keep disabled adapters as explicit runtime boundaries",
+      "classification": "locked",
+      "rationale": "Current runtime callers and tests still rely on explicit disabled adapter surfaces, especially for graph projection."
+    },
+    {
+      "title": "Preserve the non-throwing local-first disabled contract",
+      "classification": "locked",
+      "rationale": "Disabled integrations currently return false, empty collections, or status objects and are already covered by tests."
+    },
+    {
+      "title": "Reconcile historical Stage 5 wording to the shipped retained-interface strategy",
+      "classification": "locked",
+      "rationale": "The remaining inconsistency is documentation drift rather than runtime behavior."
+    },
+    {
+      "title": "Treat any future noop-class removal as a separate refactor",
+      "classification": "free",
+      "rationale": "That work is not low-risk cleanup while callers, bundle types, and tests still depend on the boundary."
+    }
+  ],
+  "risk_matrix": [
+    {
+      "description": "Blanket noop-adapter removal is reopened before caller and type refactors",
+      "probability": "medium",
+      "impact": "high",
+      "mitigation": "Keep retained interfaces until runtime dependencies are explicitly removed."
+    },
+    {
+      "description": "Historical plan wording remains inconsistent with the shipped contract",
+      "probability": "high",
+      "impact": "medium",
+      "mitigation": "Update Stage 5 wording so it matches the current readiness notes and code."
+    },
+    {
+      "description": "Disabled integrations regain production-only throws",
+      "probability": "low",
+      "impact": "medium",
+      "mitigation": "Preserve the current support-level signaling and regression tests."
+    }
+  ],
+  "timestamp": "2026-05-12T01:48:02+08:00"
+}

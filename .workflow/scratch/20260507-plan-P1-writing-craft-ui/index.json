@@ -1,0 +1,17 @@
+{
+  "phase": "1",
+  "artifact_id": "PLN-M17-P1-writing-craft-ui",
+  "goal": "Bridge the writing-craft knowledge engine into the desktop UI through the main AnalysisPanel host, desktop API bridge, and MCP backend routes, including deep-analysis and anti-pattern detail flow.",
+  "success_criteria": [
+    "AnalysisPanel exposes a visible writing-craft control path from the primary desktop UI.",
+    "Desktop bridge posts to /writing-craft/analyze and /writing-craft/llm-analyze and unwraps backend envelopes.",
+    "WritingDashboard forwards text and llmConfig into WritingDimensionDetail so deep analysis is reachable.",
+    "AntiPatternWarning exists and renders as part of the nested detail chain.",
+    "Targeted desktop and MCP tests for the UI-backend control chain pass on current HEAD."
+  ],
+  "verification": {
+    "status": "passed",
+    "verified_at": "2026-05-10T08:14:45.9333199+08:00",
+    "session_path": ".workflow/.csv-wave/20260510-verify-P1-ui-backend-interface-control"
+  }
+}

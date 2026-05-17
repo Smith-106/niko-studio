@@ -17,7 +17,6 @@ import { promisify } from 'util';
 import { OpenAILLMProvider } from '../knowledge/providers/openai-llm.js';
 
 import { WorkflowLevel, WorkflowDecision, ensureContractPayload } from './types.js';
-import type { WorkflowLevelValue } from './types.js';
 import {
   type WorkflowAuthority,
 } from './engine/authority.js';
@@ -26,7 +25,6 @@ import {
   buildWorkflowRuntimeResponseContext,
   normalizeWorkflowExecuteRequest,
   normalizeWorkflowPlanRequest,
-  normalizeWorkflowRouteRequest,
   normalizeWorkflowRunRequest,
   normalizeWorkflowRunWithExecutionContextRequest,
   normalizeWorkflowStreamRequest,
@@ -89,7 +87,6 @@ import {
   buildWorkflowOperationError,
   buildWorkflowPlanResponse,
   buildWorkflowPlanStatusResponse,
-  buildWorkflowRouteResponse,
   buildWorkflowRunBlockedResponse,
   buildWorkflowRunCompletedResponse,
   buildWorkflowRunFailedResponse,
@@ -133,6 +130,18 @@ import {
 } from './engine/runtime-state.js';
 import { runWorkflowLifecycleTransition } from './engine/lifecycle.js';
 import { SessionManager } from './session/session-manager.js';
+import {
+  DefaultWorkflowCheckpointStrategy,
+  type WorkflowCheckpointStrategy,
+} from './strategies/checkpoint-strategy.js';
+import {
+  DefaultWorkflowExecutionStrategy,
+  type WorkflowExecutionStrategy,
+} from './strategies/execution-strategy.js';
+import {
+  DefaultWorkflowRoutingStrategy,
+  type WorkflowRoutingStrategy,
+} from './strategies/routing-strategy.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -360,173 +369,6 @@ export class Checkpoint {
 }
 
 // ============================================================
-// LevelRouter (lightweight feature-based routing)
-// ============================================================
-
-class LevelRouter {
-  private getLevelIndicators(): Record<number, string[]> {
-    return {
-      [WorkflowLevel.L1_RAPID]: ['回答', '解释', '什么是', '告诉我', '简单'],
-      [WorkflowLevel.L2_LITE]: ['写一段', '描写', '生成段落', '扩写'],
-      [WorkflowLevel.L3_STANDARD]: ['写一章', '创作章节', '完成场景', '第.*章'],
-      [WorkflowLevel.L4_BRAINSTORM]: ['连续写', '多章', '接着写', '继续'],
-      [WorkflowLevel.L5_COORDINATOR]: ['规划全书', '大纲', '整体设计', '完整故事'],
-    };
-  }
-
-  private getRoutingFeatureModel(): Record<string, unknown> {
-    return {
-      weights: { keyword: 3, structure: 2, history: 2, long_text_escalation: 2 },
-      thresholds: {
-        min_structured_score: 1,
-        long_text_escalation_min_length: 100,
-        long_text_target_floor: 'L3',
-        default_level: 'L2',
-      },
-      category_explanations: {
-        keyword: '命中层级关键词',
-        structure: '命中结构信号',
-        history: '命中历史反馈信号',
-        long_text_escalation: '长文本任务自动升级',
-      },
-      levels: {
-        [WorkflowLevel.L1_RAPID]: {
-          keyword: ['回答', '解释', '什么是', '告诉我', '简单'],
-          structure: [/\?|？/, /如何/, /为什么/, /一句话/, /简述/, /速答/].map(r => r.source),
-          history: [],
-        },
-        [WorkflowLevel.L2_LITE]: {
-          keyword: ['写一段', '描写', '生成段落', '扩写'],
-          structure: [/段落/, /片段/, /短文/, /示例/].map(r => r.source),
-          history: [],
-        },
-        [WorkflowLevel.L3_STANDARD]: {
-          keyword: ['写一章', '创作章节', '完成场景', '第.*章'],
-          structure: [/章节/, /第\s*\d+\s*章/, /场景/].map(r => r.source),
-          history: [/根据反馈/, /上次/, /继续修改/, /迭代/].map(r => r.source),
-        },
-        [WorkflowLevel.L4_BRAINSTORM]: {
-          keyword: ['连续写', '多章', '接着写', '继续'],
-          structure: [/同时/, /并且/, /先.*再/, /多线/].map(r => r.source),
-          history: [/汇总反馈/, /多轮/, /讨论/].map(r => r.source),
-        },
-        [WorkflowLevel.L5_COORDINATOR]: {
-          keyword: ['规划全书', '大纲', '整体设计', '完整故事'],
-          structure: [/全书/, /世界观/, /角色设定/, /路线图/, /里程碑/].map(r => r.source),
-          history: [/跨章节/, /长期/, /版本/].map(r => r.source),
-        },
-      },
-    };
-  }
-
-  scoreRouteFeatures(task: string): Record<string, unknown> {
-    const taskLower = (task ?? '').toLowerCase();
-    const model = this.getRoutingFeatureModel();
-    const weights = model.weights as Record<string, number>;
-    const thresholds = model.thresholds as Record<string, unknown>;
-
-    const structuredLevels = [
-      WorkflowLevel.L1_RAPID,
-      WorkflowLevel.L2_LITE,
-      WorkflowLevel.L3_STANDARD,
-      WorkflowLevel.L4_BRAINSTORM,
-      WorkflowLevel.L5_COORDINATOR,
-    ];
-
-    const structuredScores: Record<number, number> = {};
-    const legacyScores: Record<number, number> = {};
-    for (const level of structuredLevels) {
-      structuredScores[level] = 0;
-      legacyScores[level] = 0;
-    }
-    const matchedFeatures: Record<string, unknown>[] = [];
-
-    const levels = model.levels as Record<number, Record<string, string[]>>;
-    for (const level of structuredLevels) {
-      const levelFeatures = levels[level] ?? {};
-      for (const category of ['keyword', 'structure', 'history'] as const) {
-        for (const pattern of levelFeatures[category] ?? []) {
-          try {
-            if (new RegExp(pattern).test(taskLower)) {
-              const weight = weights[category] ?? 0;
-              structuredScores[level] += weight;
-              matchedFeatures.push({
-                level: levelToLabel(level),
-                category,
-                signal: pattern,
-                weight,
-                explanation: (model.category_explanations as Record<string, string>)[category] ?? '',
-              });
-            }
-          } catch { /* skip invalid regex */ }
-        }
-      }
-    }
-
-    for (const [level, indicators] of Object.entries(this.getLevelIndicators())) {
-      const lv = Number(level);
-      if (lv === 4) continue; // skip L5_BRAINSTORM alias
-      legacyScores[lv] = indicators.filter(pattern => {
-        try { return new RegExp(pattern).test(taskLower); } catch { return false; }
-      }).length;
-    }
-
-    const defaultLevel = WorkflowLevel.L3_STANDARD;
-
-    function pickLevel(scores: Record<number, number>, fallback: number): [number, number] {
-      const ordered = Object.entries(scores).sort((a, b) => {
-        const scoreDiff = b[1] - a[1];
-        if (scoreDiff !== 0) return scoreDiff;
-        return (legacyScores[Number(b[0])] ?? 0) - (legacyScores[Number(a[0])] ?? 0);
-      });
-      const [topLevelStr, topScore] = ordered[0];
-      const topLevel = Number(topLevelStr);
-      const minScore = Number(thresholds.min_structured_score ?? 1);
-      if (topScore < minScore) return [fallback, 0];
-      return [topLevel, topScore];
-    }
-
-    const [legacyLevel, legacyTopScore] = pickLevel(legacyScores, defaultLevel);
-    const [matchedLevel, structuredTopScore] = pickLevel(structuredScores, legacyLevel);
-
-    const escalationMinLength = Number(thresholds.long_text_escalation_min_length ?? 100);
-    const escalationFloor = WorkflowLevel.L3_STANDARD;
-    let finalMatchedLevel = matchedLevel;
-    let finalStructuredTopScore = structuredTopScore;
-
-    if ((task ?? '').length > escalationMinLength && matchedLevel < escalationFloor) {
-      finalMatchedLevel = escalationFloor;
-      const escalationWeight = weights.long_text_escalation ?? 0;
-      structuredScores[finalMatchedLevel] += escalationWeight;
-      matchedFeatures.push({
-        level: levelToLabel(finalMatchedLevel),
-        category: 'long_text_escalation',
-        signal: `len>${escalationMinLength}`,
-        weight: escalationWeight,
-        explanation: (model.category_explanations as Record<string, string>).long_text_escalation ?? '',
-      });
-      finalStructuredTopScore = Math.max(finalStructuredTopScore, structuredScores[finalMatchedLevel]);
-    }
-
-    return {
-      matched_level: finalMatchedLevel,
-      structured_scores: Object.fromEntries(Object.entries(structuredScores).map(([k, v]) => [levelToLabel(Number(k)), v])),
-      legacy_scores: Object.fromEntries(Object.entries(legacyScores).map(([k, v]) => [levelToLabel(Number(k)), v])),
-      matched_features: matchedFeatures,
-      structured_top_score: finalStructuredTopScore,
-      legacy_level: legacyLevel,
-      legacy_top_score: legacyTopScore,
-      feature_model: {
-        categories: ['keyword', 'structure', 'history', 'long_text_escalation'],
-        weights,
-        thresholds,
-        category_explanations: model.category_explanations,
-      },
-    };
-  }
-}
-
-// ============================================================
 // Helper functions
 // ============================================================
 
@@ -549,7 +391,9 @@ export class WorkflowEngine {
   private checkpoints: Map<string, Checkpoint> = new Map();
   private planSessions: Map<string, string> = new Map();
   private planAuthorities: Map<string, WorkflowAuthority> = new Map();
-  private router: LevelRouter;
+  private checkpointStrategy: WorkflowCheckpointStrategy<WorkflowPlan, Checkpoint>;
+  private executionStrategy: WorkflowExecutionStrategy<WorkflowPlan, WorkflowStep>;
+  private routingStrategy: WorkflowRoutingStrategy;
   private sessionManager: SessionManager;
   private _sessionNamespace: string;
   private _moduleLocks: Map<string, Promise<void>> = new Map();
@@ -557,7 +401,47 @@ export class WorkflowEngine {
 
   constructor(workspace?: string, sessionNamespace?: string) {
     this.workspace = workspace ?? process.cwd();
-    this.router = new LevelRouter();
+    this.checkpointStrategy = new DefaultWorkflowCheckpointStrategy({
+      workspace: this.workspace,
+      checkpoints: this.checkpoints,
+      plans: this.plans,
+      execFileAsync,
+      createId: generateId,
+      createCheckpointRecord: (data) => new Checkpoint(data),
+      withContract: (payload) => this._withContract(payload),
+      hasValidConfirmToken: (confirmToken) => this._hasValidConfirmToken(confirmToken),
+      canonicalizeRecommendations: (recommendations) => this._canonicalizeRecommendations(recommendations),
+      computePlanHash: (plan) => this._computePlanHash(plan),
+      persistPlanState: (plan, currentPhase, checkpointId) => this._persistPlanState(plan, currentPhase, checkpointId),
+    });
+    this.executionStrategy = new DefaultWorkflowExecutionStrategy({
+      resolveManagedPlan: (planId, authority, extraErrorFields) =>
+        this._resolveManagedPlan(planId, authority as WorkflowAuthority | null | undefined, extraErrorFields),
+      setRunnerState: (plan, targetState, checkpointId, transitionReason) =>
+        this._setRunnerState(plan, targetState, checkpointId, transitionReason),
+      canonicalizeRecommendations: (recommendations) => this._canonicalizeRecommendations(recommendations),
+      computePlanHash: (plan) => this._computePlanHash(plan),
+      freezeRecommendations: (plan) => this._freezeRecommendations(plan),
+      refreshPlanRuntime: (plan) => this._refreshPlanRuntime(plan),
+      canonicalStepStatus: (status) => this._canonicalStepStatus(status),
+      persistPlanState: (plan, currentPhase, checkpointId) => this._persistPlanState(plan, currentPhase, checkpointId),
+      executionResponseContext: (plan, runtime) => this._executionResponseContext(plan, runtime),
+      levelFromLabel: (label) => this._levelFromLabel(label),
+      evaluateRiskGate: (level, step, recommendations, confirmToken) =>
+        this._evaluateRiskGate(level, step, recommendations, confirmToken),
+      withContract: (payload) => this._withContract(payload),
+      transitionStepState: (plan, step, targetStatus, reason) =>
+        this._transitionStepState(plan, step, targetStatus, reason),
+      executeStep: (plan, step) => this._executeStep(plan, step),
+      completeExecutionStep: (plan, step, gate, result) =>
+        this._completeExecutionStep(plan, step, gate, result),
+      failExecutionStep: (plan, step, error, runtime) =>
+        this._failExecutionStep(plan, step, error, runtime),
+    });
+    this.routingStrategy = new DefaultWorkflowRoutingStrategy(
+      (level) => this._getWorkflowTemplate(level),
+      (payload) => this._withContract(payload),
+    );
     this.sessionManager = new SessionManager(path.join(this.workspace, '.writing', 'sessions'));
     this._sessionNamespace = this._deriveSessionNamespace(sessionNamespace);
   }
@@ -824,28 +708,7 @@ export class WorkflowEngine {
   // ---- Routing ----
 
   async route(taskOrRequest: string | WorkflowRouteRequest): Promise<WorkflowRouteResult> {
-    const request = normalizeWorkflowRouteRequest(taskOrRequest);
-    const routingScore = this.router.scoreRouteFeatures(request.task);
-    const matchedLevel = routingScore.matched_level as number;
-
-    const levelDescriptions: Record<number, string> = {
-      [WorkflowLevel.L1_RAPID]: '简单问答模式 - 直接回答，无需规划',
-      [WorkflowLevel.L2_LITE]: '段落生成模式 - 单次生成，可能需要技能包',
-      [WorkflowLevel.L3_STANDARD]: '章节创作模式 - Plan-Act 模式，需要检查点',
-      [WorkflowLevel.L4_BRAINSTORM]: '多章连续模式 - 状态管理，跨章节一致性',
-      [WorkflowLevel.L5_COORDINATOR]: '全书规划模式 - 完整工作流，大纲到成稿',
-    };
-
-    return this._withContract(buildWorkflowRouteResponse({
-      level: levelToLabel(matchedLevel),
-      description: levelDescriptions[matchedLevel],
-      suggestedWorkflow: this._getWorkflowTemplate(matchedLevel),
-      reason: `匹配关键词得分: ${routingScore.legacy_top_score} | 结构化得分: ${routingScore.structured_top_score}`,
-      matchedFeatures: routingScore.matched_features as Array<Record<string, unknown>>,
-      score: Number(routingScore.structured_top_score ?? 0),
-      finalLevel: levelToLabel(matchedLevel),
-      routingDiagnostics: routingScore,
-    }));
+    return this.routingStrategy.route(taskOrRequest);
   }
 
   private _getWorkflowTemplate(level: number): Array<{ name: string; description: string }> {
@@ -1188,17 +1051,11 @@ export class WorkflowEngine {
       confirmToken,
       authority,
     );
-    const preparation = this._prepareExecutionContext(
-      request.planId,
-      request.stepId,
-      request.recommendations,
-      request.confirmToken,
-      request.authority,
-    );
+    const preparation = this.executionStrategy.prepareExecution(request);
     if (preparation.response) {
       return preparation.response;
     }
-    return this._runExecutionStep(preparation.context!);
+    return this.executionStrategy.runExecution(preparation.context!);
   }
 
   // ---- Lifecycle ----
@@ -1271,34 +1128,20 @@ export class WorkflowEngine {
     stepId?: string,
     replayPayload?: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    const checkpointId = generateId();
-    let commitHash: string | null = null;
-
-    if (autoCommit) {
-      try {
-        await execFileAsync('git', ['add', this.workspace], { cwd: this.workspace });
-        const { stdout: commitOut } = await execFileAsync('git', ['commit', '-m', `[checkpoint:${checkpointId}] ${description || 'Auto checkpoint'}`], { cwd: this.workspace });
-        if (commitOut) {
-          const { stdout: hashOut } = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: this.workspace });
-          commitHash = hashOut.trim();
-        }
-      } catch {
-        // Git not available or no changes to commit
-      }
-    }
-
-    const checkpoint = new Checkpoint({ id: checkpointId, description, commit_hash: commitHash, plan_id: planId, step_id: stepId, replay_payload: replayPayload ? structuredClone(replayPayload) : {} });
-    this.checkpoints.set(checkpointId, checkpoint);
-
-    if (planId && this.plans.has(planId)) {
-      this._persistPlanState(this.plans.get(planId)!, undefined, checkpointId);
-    }
-
-    return { checkpoint_id: checkpointId, commit_hash: commitHash, description, plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay_payload: checkpoint.replay_payload, created_at: checkpoint.created_at };
+    return this.checkpointStrategy.createCheckpoint(
+      description,
+      autoCommit,
+      planId,
+      stepId,
+      replayPayload,
+    );
   }
 
   async restoreCheckpoint(checkpointId: string, confirmToken?: string): Promise<Record<string, unknown>> {
-    return this._withModuleLock(RECOVERY_WORKSPACE_LOCK, () => this._restoreCheckpointInternal(checkpointId, confirmToken));
+    return this._withModuleLock(
+      RECOVERY_WORKSPACE_LOCK,
+      () => this._restoreCheckpointInternal(checkpointId, confirmToken),
+    );
   }
 
   async quickRollback(
@@ -1314,7 +1157,10 @@ export class WorkflowEngine {
       }
       const { plan } = managedPlan.context!;
 
-      const restoreResult = await this._restoreCheckpointInternal(checkpointId, AUTO_ROLLBACK_CONFIRM_TOKEN);
+      const restoreResult = await this._restoreCheckpointInternal(
+        checkpointId,
+        AUTO_ROLLBACK_CONFIRM_TOKEN,
+      );
       const restored = restoreResult['status'] === 'restored';
       if (restored) {
         this._persistPlanState(
@@ -1329,10 +1175,7 @@ export class WorkflowEngine {
 
 
   async listCheckpoints(limit: number = 10): Promise<Record<string, unknown>[]> {
-    return Array.from(this.checkpoints.values())
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, limit)
-      .map(c => ({ id: c.id, description: c.description, commit_hash: c.commit_hash, created_at: c.created_at }));
+    return this.checkpointStrategy.listCheckpoints(limit);
   }
 
   getCheckpoint(checkpointId: string): {
@@ -1344,17 +1187,7 @@ export class WorkflowEngine {
     step_id?: string | null;
     replay_payload?: Record<string, unknown>;
   } | null {
-    const checkpoint = this.checkpoints.get(checkpointId);
-    if (!checkpoint) return null;
-    return {
-      id: checkpoint.id,
-      description: checkpoint.description,
-      commit_hash: checkpoint.commit_hash ?? null,
-      created_at: checkpoint.created_at,
-      plan_id: checkpoint.plan_id ?? null,
-      step_id: checkpoint.step_id ?? null,
-      replay_payload: checkpoint.replay_payload ?? {},
-    };
+    return this.checkpointStrategy.getCheckpoint(checkpointId);
   }
 
   getPlanStatus(planId: string): WorkflowPlanStatusResult | { error: string } {
@@ -1539,46 +1372,7 @@ export class WorkflowEngine {
     checkpointId: string,
     confirmToken?: string,
   ): Promise<Record<string, unknown>> {
-    const checkpoint = this.checkpoints.get(checkpointId);
-    if (!checkpoint) return { error: `Checkpoint '${checkpointId}' not found` };
-
-    const destructive = Object.keys(checkpoint.replay_payload).length > 0;
-    const confirmed = !destructive || this._hasValidConfirmToken(confirmToken);
-
-    if (destructive && !confirmed) {
-      return this._withContract({
-        status: 'waiting_confirmation',
-        error: 'destructive restore requires secondary confirmation',
-        checkpoint_id: checkpointId,
-        plan_id: checkpoint.plan_id,
-        step_id: checkpoint.step_id,
-        gate: { decision: WorkflowDecision.NO_GO, reason: 'destructive restore requires secondary confirmation', blocking: true },
-      });
-    }
-
-    const replayResult = this._applyReplayPayload(checkpoint);
-
-    if (checkpoint.commit_hash) {
-      try {
-        await execFileAsync('git', ['checkout', checkpoint.commit_hash], { cwd: this.workspace });
-        return this._withContract({ status: 'restored', checkpoint_id: checkpointId, commit_hash: checkpoint.commit_hash, plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult });
-      } catch (e) {
-        return { error: `Git restore failed: ${e}`, replay: replayResult };
-      }
-    }
-
-    if (replayResult['applied'] === true) {
-      return this._withContract({
-        status: 'restored',
-        checkpoint_id: checkpointId,
-        commit_hash: null,
-        plan_id: checkpoint.plan_id,
-        step_id: checkpoint.step_id,
-        replay: replayResult,
-      });
-    }
-
-    return { error: 'No commit hash available for this checkpoint', plan_id: checkpoint.plan_id, step_id: checkpoint.step_id, replay: replayResult };
+    return this.checkpointStrategy.restoreCheckpointInternal(checkpointId, confirmToken);
   }
 
   // ---- Observability ----
@@ -1864,35 +1658,7 @@ export class WorkflowEngine {
   }
 
   private _applyReplayPayload(checkpoint: Checkpoint): Record<string, unknown> {
-    const payload = checkpoint.replay_payload;
-    if (!payload || Object.keys(payload).length === 0) return { applied: false, reason: 'no_replay_payload' };
-
-    const planId = (payload['plan_id'] as string) ?? checkpoint.plan_id;
-    if (!planId) return { applied: false, reason: 'no_plan_id' };
-
-    const plan = this.plans.get(planId);
-    if (!plan) return { applied: false, reason: `plan_not_found:${planId}` };
-
-    const expectedHash = payload['plan_hash'];
-    if (typeof expectedHash !== 'string' || expectedHash.trim().length === 0) {
-      return { applied: false, reason: 'missing_plan_hash' };
-    }
-
-    const currentHash = this._computePlanHash(plan);
-    if (currentHash !== expectedHash) {
-      return {
-        applied: false,
-        reason: 'plan_hash_mismatch',
-        expected_plan_hash: expectedHash,
-        current_plan_hash: currentHash,
-      };
-    }
-
-    plan.recommendations = this._canonicalizeRecommendations(payload['recommendations'] as unknown[]);
-    plan.recommendations_frozen = Boolean(payload['recommendations_frozen'] ?? true);
-    plan.plan_hash = expectedHash;
-
-    return { applied: true, plan_id: planId, plan_hash: plan.plan_hash, recommendation_count: plan.recommendations.length };
+    return this.checkpointStrategy.applyReplayPayload(checkpoint);
   }
 
   // ---- State Persistence ----

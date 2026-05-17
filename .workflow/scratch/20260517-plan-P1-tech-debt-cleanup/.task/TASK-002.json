@@ -1,0 +1,109 @@
+{
+  "id": "TASK-002",
+  "title": "F-002: EvaluationPanel + StoryBiblePanel 巨型组件拆分",
+  "description": "将 EvaluationPanel (1783行) 和 StoryBiblePanel (1788行) 各拆分为 ≤500 行的子组件，保持功能等价和 props 接口不变。",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "refactor",
+  "priority": "medium",
+  "effort": "large",
+  "action": "1) EvaluationPanel.tsx → 提取子组件：EvaluationHeader, EvaluationScoreCard, EvaluationRecommendations, EvaluationWorkflow, EvaluationCheckpoints。主组件保留状态管理和组合逻辑。2) StoryBiblePanel.tsx → 提取子组件：StoryBibleHeader, StoryBibleEntityList, StoryBibleEntityEditor, StoryBibleImportExport, StoryBibleCanon。主组件保留状态管理和组合逻辑。3) 子组件放在同级 evaluation/ 和 story-bible/ 目录下。4) 主组件的 export default 不变。",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "desktop/src/components",
+  "focus_paths": [
+    "desktop/src/components/EvaluationPanel.tsx",
+    "desktop/src/components/StoryBiblePanel.tsx",
+    "desktop/src/components/evaluation/",
+    "desktop/src/components/story-bible/"
+  ],
+
+  "read_first": [
+    "desktop/src/components/EvaluationPanel.tsx",
+    "desktop/src/components/StoryBiblePanel.tsx",
+    "desktop/src/components/StoryBiblePanel.test.tsx",
+    "desktop/src/hooks/useEvaluationWorkflow.ts",
+    "desktop/src/hooks/useEvaluationData.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 3,
+  "parallel_group": "wave-3",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "wc -l desktop/src/components/EvaluationPanel.tsx returns <= 500",
+      "wc -l desktop/src/components/StoryBiblePanel.tsx returns <= 500",
+      "desktop/src/components/evaluation/ directory exists with >= 3 .tsx files",
+      "desktop/src/components/story-bible/ directory exists with >= 3 .tsx files",
+      "grep 'export default' desktop/src/components/EvaluationPanel.tsx returns 1 match",
+      "grep 'export default' desktop/src/components/StoryBiblePanel.tsx returns 1 match",
+      "npx tsc --noEmit --project desktop/tsconfig.json exits 0",
+      "cd desktop && npx vitest run exits 0"
+    ],
+    "verification": "cd desktop && npx tsc --noEmit && npx vitest run --reporter=verbose 2>&1 | tail -10",
+    "definition_of_done": "两个巨型组件各拆分为 ≤500 行主组件 + 子组件，功能等价，测试通过"
+  },
+
+  "files": [
+    { "path": "desktop/src/components/EvaluationPanel.tsx", "action": "modify", "target": "entire component", "change": "提取子组件后保留状态管理+组合逻辑，≤500行" },
+    { "path": "desktop/src/components/evaluation/EvaluationScoreCard.tsx", "action": "create", "target": "sub-component", "change": "评分卡片展示逻辑" },
+    { "path": "desktop/src/components/evaluation/EvaluationRecommendations.tsx", "action": "create", "target": "sub-component", "change": "建议列表展示逻辑" },
+    { "path": "desktop/src/components/evaluation/EvaluationWorkflowSection.tsx", "action": "create", "target": "sub-component", "change": "工作流控制区域" },
+    { "path": "desktop/src/components/StoryBiblePanel.tsx", "action": "modify", "target": "entire component", "change": "提取子组件后保留状态管理+组合逻辑，≤500行" },
+    { "path": "desktop/src/components/story-bible/StoryBibleEntityList.tsx", "action": "create", "target": "sub-component", "change": "实体列表展示" },
+    { "path": "desktop/src/components/story-bible/StoryBibleEntityEditor.tsx", "action": "create", "target": "sub-component", "change": "实体编辑器" },
+    { "path": "desktop/src/components/story-bible/StoryBibleImportExport.tsx", "action": "create", "target": "sub-component", "change": "导入导出功能" }
+  ],
+
+  "implementation": [
+    "读取 EvaluationPanel.tsx 完整内容，识别独立渲染区块（score card, recommendations, workflow controls, checkpoints）",
+    "为每个区块创建子组件，props 从父组件传入（状态+回调）",
+    "EvaluationPanel.tsx 保留所有 hooks 调用和状态管理，render 部分改为组合子组件",
+    "同样处理 StoryBiblePanel.tsx：识别 entity list, editor, import/export, canon 区块",
+    "确保 export default 不变，外部引用无需修改",
+    "运行 StoryBiblePanel.test.tsx 和完整测试套件确认无回归"
+  ],
+
+  "test": {
+    "commands": ["cd desktop && npx tsc --noEmit", "cd desktop && npx vitest run"],
+    "unit": [],
+    "integration": ["StoryBiblePanel.test.tsx passes", "full test suite passes"],
+    "success_metrics": ["both panels <= 500 lines", "all tests pass", "no export changes"]
+  },
+
+  "reference": {
+    "pattern": "desktop/src/components/ 中已有子目录组织模式（knowledge/, editor/）",
+    "files": ["desktop/src/components/knowledge/", "desktop/src/components/editor/"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "提取渲染子组件，状态管理留在父组件，最小化 props drilling",
+    "decision_factors": ["可维护性", "渲染性能（子组件可独立 memo）", "向后兼容"],
+    "tradeoffs": "props 传递增加但换来组件可读性和可测试性"
+  },
+
+  "risks": ["子组件边界划分需仔细分析渲染依赖", "测试可能依赖内部结构"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["evaluation", "story-bible"],
+    "affected_components": ["desktop/src/components"],
+    "affected_requirements": ["F-002"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "90min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": true
+  }
+}

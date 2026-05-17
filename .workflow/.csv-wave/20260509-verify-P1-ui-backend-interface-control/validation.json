@@ -1,0 +1,86 @@
+{
+  "phase": "1",
+  "status": "gaps_found",
+  "validated_at": "2026-05-09T22:56:34.2448472+08:00",
+  "test_framework": "vitest",
+  "coverage": {
+    "statements": null,
+    "branches": null,
+    "functions": null,
+    "lines": null
+  },
+  "test_runs": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run tests/mcp/writing-craft-endpoints.test.ts",
+      "workdir": "src-ts",
+      "status": "passed",
+      "test_files": 1,
+      "tests": 9
+    },
+    {
+      "command": "node node_modules/vitest/vitest.mjs run src/components/intelligence/WritingDashboard.test.tsx",
+      "workdir": "desktop",
+      "status": "passed",
+      "test_files": 1,
+      "tests": 7
+    }
+  ],
+  "requirement_coverage": [
+    {
+      "requirement": "Backend writing-craft endpoint responds with multi-dimension analysis",
+      "tests": [
+        "src-ts/tests/mcp/writing-craft-endpoints.test.ts"
+      ],
+      "status": "covered"
+    },
+    {
+      "requirement": "Desktop bridge contract for /writing-craft/analyze and /writing-craft/llm-analyze",
+      "tests": [],
+      "status": "missing"
+    },
+    {
+      "requirement": "Isolated WritingDashboard renders and handles result/error states",
+      "tests": [
+        "desktop/src/components/intelligence/WritingDashboard.test.tsx"
+      ],
+      "status": "covered"
+    },
+    {
+      "requirement": "Production-visible host UI exposes writing-craft control path",
+      "tests": [],
+      "status": "missing"
+    },
+    {
+      "requirement": "Deep-analysis LLM button path is wired end-to-end",
+      "tests": [],
+      "status": "missing"
+    },
+    {
+      "requirement": "Anti-pattern warning visualization exists and renders",
+      "tests": [],
+      "status": "missing"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "GAP-002",
+      "severity": "high",
+      "description": "Missing dedicated desktop API bridge test."
+    },
+    {
+      "id": "GAP-004",
+      "severity": "critical",
+      "description": "Missing host-level integration coverage for the visible UI control path."
+    },
+    {
+      "id": "GAP-005",
+      "severity": "high",
+      "description": "Missing deep-analysis LLM wiring and coverage."
+    },
+    {
+      "id": "GAP-003",
+      "severity": "high",
+      "description": "Missing AntiPatternWarning component and related coverage."
+    }
+  ]
+}

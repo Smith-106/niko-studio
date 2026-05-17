@@ -1,0 +1,2 @@
+id,skill_call,topic
+1,"$maestro-analyze --gaps ""current-head release readiness blockers: version consistency, desktop capability contract, desktop gates, stale release evidence, unresolved triage blocker, readiness docs alignment"" -y","Chain quality-fix step 1/4"

@@ -1,0 +1,120 @@
+{
+  "id": "TASK-003",
+  "title": "Add learning paths and capability status guide",
+  "description": "Add docs pages for persona-based learning paths and capability status matrix under the guides category.",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "Modify inventory.ts to add doc page ids 'learning-paths' and 'capability-status' in category 'guides'. Extend content-guides.ts with entries containing headings '写作者路径', '开发者路径', '集成者路径', '维护者路径', and status labels 'supported', 'partial', 'experimental', 'historical', 'roadmap'.",
+  "status": "completed",
+  "completed_at": "2026-05-12T17:20:33.0123578Z",
+  "actual_duration": null,
+  "scope": "docs-site/src/client/data",
+  "focus_paths": [
+    "docs-site/src/client/data/inventory.ts",
+    "docs-site/src/client/data/content-guides.ts",
+    "docs-site/src/client/pages/LandingPage.tsx"
+  ],
+  "read_first": [
+    "docs-site/src/client/data/inventory.ts",
+    "docs-site/src/client/pages/LandingPage.tsx",
+    "docs/CAPABILITY_MATRIX.md",
+    ".workflow/scratch/20260513-brainstorm-docs-site-detail-architecture-principles/feature-specs/F-003-docs-learning-paths.md",
+    ".workflow/scratch/20260513-brainstorm-docs-site-detail-architecture-principles/feature-specs/F-004-capability-status-matrix.md"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "navigation",
+  "execution_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "docs-site/src/client/data/inventory.ts contains id: 'learning-paths'",
+      "docs-site/src/client/data/inventory.ts contains id: 'capability-status'",
+      "docs-site/src/client/data/content-guides.ts contains '写作者路径'",
+      "docs-site/src/client/data/content-guides.ts contains 'supported'",
+      "docs-site/src/client/pages/LandingPage.tsx contains '/guides/learning-paths'"
+    ],
+    "verification": "npm --prefix docs-site run build",
+    "definition_of_done": "Readers can choose a persona learning path and inspect capability maturity status."
+  },
+  "files": [
+    {
+      "path": "docs-site/src/client/data/inventory.ts",
+      "action": "modify",
+      "target": "docPages",
+      "change": "Add learning-paths and capability-status pages."
+    },
+    {
+      "path": "docs-site/src/client/data/content-guides.ts",
+      "action": "modify",
+      "target": "guidesContent",
+      "change": "Add learning path and status matrix entries."
+    },
+    {
+      "path": "docs-site/src/client/pages/LandingPage.tsx",
+      "action": "modify",
+      "target": "quickLinks/featuredDocs",
+      "change": "Link to learning paths from homepage."
+    }
+  ],
+  "implementation": [
+    "Add learning-paths page in inventory.ts under guides category with title '学习路径'.",
+    "Add capability-status page in inventory.ts under guides category with title '能力状态矩阵'.",
+    "In content-guides.ts, add learning-paths content with four persona paths: writer, developer, integrator, maintainer, each with 4-6 linked steps.",
+    "In content-guides.ts, add capability-status content defining supported, partial, experimental, historical, roadmap and a table covering docs-site categories.",
+    "Update LandingPage quickLinks or featuredDocs to include '/guides/learning-paths'."
+  ],
+  "test": {
+    "commands": [
+      "npm --prefix docs-site run build"
+    ],
+    "unit": [],
+    "integration": [],
+    "success_metrics": [
+      "build exits 0"
+    ]
+  },
+  "reference": {
+    "pattern": "LandingPage quickLinks and featuredDocs",
+    "files": [
+      "docs-site/src/client/pages/LandingPage.tsx"
+    ],
+    "examples": null
+  },
+  "rationale": {
+    "chosen_approach": "Guides pages centralize orientation and capability maturity without bloating every category page.",
+    "decision_factors": [
+      "reader orientation",
+      "claim accuracy"
+    ],
+    "tradeoffs": "Requires maintaining status labels as capabilities evolve."
+  },
+  "risks": [
+    "Capability status can drift if not aligned with CAPABILITY_MATRIX."
+  ],
+  "code_skeleton": null,
+  "doc_context": {
+    "affected_features": [
+      "F-003",
+      "F-004"
+    ],
+    "affected_components": [
+      "homepage",
+      "guides docs"
+    ],
+    "affected_requirements": [
+      "Learning paths",
+      "Capability status matrix"
+    ],
+    "adr_ids": []
+  },
+  "meta": {
+    "estimated_time": "30-45 min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

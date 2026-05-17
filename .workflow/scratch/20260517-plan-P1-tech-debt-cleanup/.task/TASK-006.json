@@ -1,0 +1,111 @@
+{
+  "id": "TASK-006",
+  "title": "F-006: workflow-engine Strategy 模式分层重构",
+  "description": "将 1970 行的 workflow-engine.ts 采用 Strategy 模式分层，编排逻辑与业务规则分离，公共 API 签名不变。",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "refactor",
+  "priority": "medium",
+  "effort": "large",
+  "action": "1) 定义 Strategy 接口：WorkflowRoutingStrategy, WorkflowExecutionStrategy, WorkflowCheckpointStrategy。2) 提取具体策略实现到 src-ts/workflow/strategies/ 目录：routing-strategy.ts（L1-L5 路由逻辑）, execution-strategy.ts（Plan-Act 执行逻辑）, checkpoint-strategy.ts（Git checkpoint 管理）。3) workflow-engine.ts 保留 WorkflowEngine 类作为编排器，通过构造函数注入策略。4) 所有公共方法签名不变（route, plan, execute, run, stream 等）。5) 现有测试全部通过。",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "src-ts/workflow",
+  "focus_paths": [
+    "src-ts/workflow/workflow-engine.ts",
+    "src-ts/workflow/strategies/",
+    "src-ts/workflow/types.ts"
+  ],
+
+  "read_first": [
+    "src-ts/workflow/workflow-engine.ts",
+    "src-ts/workflow/types.ts",
+    "src-ts/workflow/engine/authority.ts",
+    "src-ts/tests/workflow/workflow-engine.test.ts",
+    "src-ts/tests/workflow/workflow-engine.integration.test.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 3,
+  "parallel_group": "wave-3",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "src-ts/workflow/strategies/ directory exists with >= 3 .ts files",
+      "wc -l src-ts/workflow/workflow-engine.ts returns <= 600",
+      "grep 'export class WorkflowEngine' src-ts/workflow/workflow-engine.ts returns 1 match",
+      "grep 'interface.*Strategy' src-ts/workflow/strategies/ returns >= 3 matches",
+      "npx vitest run src-ts/tests/workflow/workflow-engine.test.ts exits 0",
+      "npx vitest run src-ts/tests/workflow/workflow-engine.integration.test.ts exits 0",
+      "npx vitest run src-ts/tests/container/workflow-engine-adapter.test.ts exits 0",
+      "npx tsc --noEmit exits 0"
+    ],
+    "verification": "npx tsc --noEmit && npx vitest run src-ts/tests/workflow/ && npx vitest run src-ts/tests/container/workflow-engine-adapter.test.ts",
+    "definition_of_done": "workflow-engine 编排逻辑与业务规则分离，Strategy 模式实现，公共 API 不变"
+  },
+
+  "files": [
+    { "path": "src-ts/workflow/workflow-engine.ts", "action": "modify", "target": "WorkflowEngine class", "change": "保留编排逻辑，业务规则委托给 Strategy 实现" },
+    { "path": "src-ts/workflow/strategies/index.ts", "action": "create", "target": "barrel export", "change": "导出所有 Strategy 接口和实现" },
+    { "path": "src-ts/workflow/strategies/routing-strategy.ts", "action": "create", "target": "RoutingStrategy", "change": "L1-L5 复杂度路由逻辑" },
+    { "path": "src-ts/workflow/strategies/execution-strategy.ts", "action": "create", "target": "ExecutionStrategy", "change": "Plan-Act 执行逻辑" },
+    { "path": "src-ts/workflow/strategies/checkpoint-strategy.ts", "action": "create", "target": "CheckpointStrategy", "change": "Git checkpoint 管理逻辑" }
+  ],
+
+  "implementation": [
+    "读取 workflow-engine.ts 完整内容，识别三大职责区块：路由（route/detectLevel）、执行（plan/execute/run/stream）、检查点（checkpoint/restore）",
+    "定义 Strategy 接口：export interface WorkflowRoutingStrategy { route(req): WorkflowRouteResult; detectLevel(task): WorkflowLevelValue }",
+    "定义 export interface WorkflowExecutionStrategy { plan(req): WorkflowPlanResult; execute(req): WorkflowExecuteResult; run(req): WorkflowRunResult }",
+    "定义 export interface WorkflowCheckpointStrategy { create(id, state): void; restore(id): state; list(): CheckpointInfo[] }",
+    "提取各策略的具体实现到对应文件，保持内部逻辑不变",
+    "WorkflowEngine 构造函数接受 { routing, execution, checkpoint } 策略对象，默认使用具体实现",
+    "公共方法（route, plan, execute, run, stream 等）委托给对应策略",
+    "运行所有 workflow 相关测试确认无回归"
+  ],
+
+  "test": {
+    "commands": [
+      "npx tsc --noEmit",
+      "npx vitest run src-ts/tests/workflow/",
+      "npx vitest run src-ts/tests/container/workflow-engine-adapter.test.ts"
+    ],
+    "unit": ["各 Strategy 实现的单元测试"],
+    "integration": ["workflow-engine.integration.test.ts passes", "adapter test passes"],
+    "success_metrics": ["workflow-engine.ts <= 600 lines", "3 strategy files created", "all tests pass"]
+  },
+
+  "reference": {
+    "pattern": "src-ts/workflow/engine/authority.ts 已有子模块拆分先例",
+    "files": ["src-ts/workflow/engine/authority.ts", "src-ts/workflow/types.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "Strategy 模式：接口定义 + 具体实现 + 构造函数注入",
+    "decision_factors": ["可测试性（可 mock 策略）", "职责分离", "向后兼容（默认策略）"],
+    "tradeoffs": "增加文件数量但换来清晰的职责边界和可测试性"
+  },
+
+  "risks": ["策略边界划分需仔细分析方法间依赖", "内部状态共享可能需要 Context 对象"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["workflow-engine"],
+    "affected_components": ["src-ts/workflow"],
+    "affected_requirements": ["F-006"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "90min",
+    "risk": "medium",
+    "autonomous": true,
+    "checkpoint": true
+  }
+}

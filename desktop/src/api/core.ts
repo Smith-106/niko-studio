@@ -1,5 +1,6 @@
 import { readRuntimePreferences } from '@/runtime/preferences'
 import { Sentry } from '../sentry'
+import { logger } from '../utils/logger'
 
 import {
   callTauriApi,
@@ -133,7 +134,7 @@ export async function callApi<T, E = unknown>(
     return { success: true, data }
   } catch (error) {
     const errorName = error instanceof Error ? error.name : 'UnknownError'
-    console.error(`API call failed: ${endpoint} (${errorName})`)
+    logger.error(`API call failed: ${endpoint} (${errorName})`)
     if (import.meta.env.VITE_SENTRY_DSN) {
       Sentry.captureException(error, { tags: { api_endpoint: endpoint, api_method: method } })
     }

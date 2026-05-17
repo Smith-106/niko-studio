@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Sparkles, Folder, Plus, Trash2, Save, Pencil } from 'lucide-react'
 import { listSkills, loadSkill, matchSkills, getSkillChain, createSkill, saveSkill, deleteSkill } from '../../api/client'
 import { useI18n } from '../../i18n'
+import { logger } from '../../utils/logger'
 import type { KnowledgeItem, SkillMatch, SkillChainItem } from './KnowledgeTypes'
 
 interface SkillTabProps {
@@ -58,7 +59,7 @@ export function SkillTab({
         ])
       }
     } catch (error) {
-      console.error('Failed to load skills:', error)
+      logger.error('Failed to load skills:', error)
     } finally {
       onLoadingChange(false)
     }

@@ -1,0 +1,358 @@
+{
+  "webNovelPsychology": {
+    "satisfactionLayers": {
+      "physical": {
+        "label": "生理爽",
+        "description": "力量碾压、速度感、战斗爽快",
+        "keywords": [
+          "碾压",
+          "秒杀",
+          "一击",
+          "恐怖如斯"
+        ]
+      },
+      "psychological": {
+        "label": "心理爽",
+        "description": "智商碾压、计谋得逞、真相大白",
+        "keywords": [
+          "算计",
+          "看穿",
+          "原来如此",
+          "早有预谋"
+        ]
+      },
+      "social": {
+        "label": "社交爽",
+        "description": "被认可、被尊重、打脸众人",
+        "keywords": [
+          "刮目相看",
+          "震惊",
+          "佩服",
+          "目瞪口呆"
+        ]
+      },
+      "achievement": {
+        "label": "成就爽",
+        "description": "突破、升级、获得、征服",
+        "keywords": [
+          "突破",
+          "升级",
+          "获得",
+          "征服"
+        ]
+      }
+    },
+    "expectDelayRelease": {
+      "description": "建立期待→制造挫折/延迟→最终兑现释放",
+      "timing": {
+        "expectRatio": 0.3,
+        "delayRatio": 0.3,
+        "releaseRatio": 0.4
+      }
+    },
+    "chapterHooks": {
+      "cliffhanger": "在最紧张处断章",
+      "question": "抛出新问题让读者想知道答案",
+      "revelation_hint": "暗示即将揭示某个秘密",
+      "threat": "新的危险/敌人出现",
+      "promise": "暗示即将到来的满足感"
+    },
+    "retentionRules": [
+      "每章末尾必须有钩子",
+      "每3章一个小爽点，每10章一个大爽点",
+      "付费卡点前密度最高",
+      "黄金三章决定读者留存率"
+    ]
+  },
+  "upgradeSystems": {
+    "level_based": {
+      "system": "level_based",
+      "label": "等级制",
+      "description": "明确的数值等级体系，从低到高逐级提升",
+      "detectionKeywords": [
+        "等级",
+        "Lv",
+        "级别",
+        "段位",
+        "阶位",
+        "品级",
+        "星级",
+        "级",
+        "升级",
+        "升到"
+      ],
+      "progressionMarkers": [
+        "经验值",
+        "升级",
+        "经验",
+        "点数",
+        "属性"
+      ],
+      "satisfactionTriggers": [
+        "连升",
+        "突破",
+        "暴涨",
+        "飞跃"
+      ]
+    },
+    "skill_tree": {
+      "system": "skill_tree",
+      "label": "技能树",
+      "description": "通过学习/觉醒获得新技能或技能升级",
+      "detectionKeywords": [
+        "技能",
+        "功法",
+        "武技",
+        "术式",
+        "天赋",
+        "被动",
+        "主动",
+        "解锁"
+      ],
+      "progressionMarkers": [
+        "领悟",
+        "修炼",
+        "掌握",
+        "学会",
+        "觉醒",
+        "突破"
+      ],
+      "satisfactionTriggers": [
+        "秒杀",
+        "一招制敌",
+        "威力暴涨",
+        "领悟真谛"
+      ]
+    },
+    "realm_breakthrough": {
+      "system": "realm_breakthrough",
+      "label": "境界突破",
+      "description": "修仙/玄幻类境界体系，需要悟道或突破瓶颈",
+      "detectionKeywords": [
+        "境界",
+        "修为",
+        "筑基",
+        "金丹",
+        "元婴",
+        "化神",
+        "渡劫",
+        "大乘",
+        "飞升",
+        "突破"
+      ],
+      "progressionMarkers": [
+        "瓶颈",
+        "感悟",
+        "顿悟",
+        "机缘",
+        "天劫",
+        "蜕变"
+      ],
+      "satisfactionTriggers": [
+        "一步登天",
+        "脱胎换骨",
+        "质的飞跃",
+        "碾压同阶"
+      ]
+    },
+    "resource_accumulation": {
+      "system": "resource_accumulation",
+      "label": "资源积累",
+      "description": "通过收集资源/财富/装备提升实力",
+      "detectionKeywords": [
+        "灵石",
+        "金币",
+        "装备",
+        "丹药",
+        "材料",
+        "宝物",
+        "道具",
+        "资源",
+        "财富"
+      ],
+      "progressionMarkers": [
+        "获得",
+        "收集",
+        "打造",
+        "炼制",
+        "收购",
+        "掠夺"
+      ],
+      "satisfactionTriggers": [
+        "一夜暴富",
+        "满载而归",
+        "绝世神兵",
+        "传世之宝"
+      ]
+    },
+    "social_rank": {
+      "system": "social_rank",
+      "label": "社会地位",
+      "description": "通过势力扩张/声望提升/人际关系网提升地位",
+      "detectionKeywords": [
+        "势力",
+        "帮派",
+        "宗门",
+        "城主",
+        "郡守",
+        "皇帝",
+        "声望",
+        "地位",
+        "名望",
+        "权势"
+      ],
+      "progressionMarkers": [
+        "招揽",
+        "收服",
+        "结盟",
+        "征服",
+        "封赏",
+        "提拔"
+      ],
+      "satisfactionTriggers": [
+        "一人之下",
+        "号令天下",
+        "臣服",
+        "俯首称臣"
+      ]
+    }
+  },
+  "goldenFingers": {
+    "system_cheat": {
+      "type": "system_cheat",
+      "label": "系统流",
+      "description": "获得一个系统辅助，提供任务、奖励、商店等功能",
+      "detectionKeywords": [
+        "系统",
+        "叮",
+        "任务",
+        "奖励",
+        "商店",
+        "兑换",
+        "宿主",
+        "面板",
+        "属性"
+      ],
+      "typicalManifestations": [
+        "任务奖励",
+        "抽奖",
+        "商店兑换",
+        "成就系统"
+      ],
+      "powerGrowthPattern": "任务驱动型 — 完成任务获得奖励逐步变强"
+    },
+    "rebirth_knowledge": {
+      "type": "rebirth_knowledge",
+      "label": "重生/穿越先知",
+      "description": "凭借前世记忆或现代知识在异世界获得优势",
+      "detectionKeywords": [
+        "前世",
+        "重生",
+        "穿越",
+        "记忆",
+        "历史",
+        "先知",
+        "上一世",
+        "上一辈",
+        "再来一次"
+      ],
+      "typicalManifestations": [
+        "预知未来",
+        "提前布局",
+        "抢夺先机",
+        "避免悲剧"
+      ],
+      "powerGrowthPattern": "知识驱动型 — 利用先知信息抢占资源/避免错误"
+    },
+    "ancient_inheritance": {
+      "type": "ancient_inheritance",
+      "label": "远古传承",
+      "description": "获得远古大能的传承/记忆/血脉觉醒",
+      "detectionKeywords": [
+        "传承",
+        "血脉",
+        "觉醒",
+        "远古",
+        "上古",
+        "遗迹",
+        "秘境",
+        "前任",
+        "遗留"
+      ],
+      "typicalManifestations": [
+        "功法传承",
+        "血脉觉醒",
+        "神器认主",
+        "秘境收获"
+      ],
+      "powerGrowthPattern": "传承驱动型 — 获得远超当前层次的功法/宝物"
+    },
+    "space_artifact": {
+      "type": "space_artifact",
+      "label": "空间法宝",
+      "description": "拥有一个随身空间或特殊法宝",
+      "detectionKeywords": [
+        "空间",
+        "储物",
+        "戒指",
+        "珠子",
+        "随身",
+        "法宝",
+        "灵田",
+        "炼丹炉"
+      ],
+      "typicalManifestations": [
+        "储物空间",
+        "修炼加速",
+        "炼丹/炼器",
+        "灵田种植"
+      ],
+      "powerGrowthPattern": "资源驱动型 — 空间提供资源产出和修炼加速"
+    },
+    "special_ability": {
+      "type": "special_ability",
+      "label": "异能/天赋",
+      "description": "拥有与生俱来或意外获得的特殊能力",
+      "detectionKeywords": [
+        "异能",
+        "天赋",
+        "能力",
+        "超能力",
+        "变异",
+        "觉醒",
+        "特殊体质",
+        "独特"
+      ],
+      "typicalManifestations": [
+        "时间操控",
+        "复制能力",
+        "透视",
+        "预知",
+        "治愈"
+      ],
+      "powerGrowthPattern": "觉醒驱动型 — 能力逐步觉醒和解锁"
+    },
+    "fortune_rebirth": {
+      "type": "fortune_rebirth",
+      "label": "气运之子",
+      "description": "运气逆天，关键节点总有奇遇",
+      "detectionKeywords": [
+        "运气",
+        "气运",
+        "奇遇",
+        "机缘",
+        "运气好",
+        "天命",
+        "命运",
+        "天选",
+        "造化"
+      ],
+      "typicalManifestations": [
+        "掉崖不死得宝",
+        "随手买中大奖",
+        "危难时贵人相助"
+      ],
+      "powerGrowthPattern": "机缘驱动型 — 关键时刻触发奇遇/机缘"
+    }
+  }
+}

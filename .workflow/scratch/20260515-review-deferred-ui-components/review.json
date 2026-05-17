@@ -1,0 +1,99 @@
+{
+  "phase": null,
+  "level": "standard",
+  "verdict": "WARN",
+  "reviewed_at": "2026-05-15T17:39:46+08:00",
+  "reviewer": "manual-inline",
+  "dimensions_reviewed": [
+    "correctness",
+    "security",
+    "performance",
+    "architecture",
+    "maintainability",
+    "best-practices"
+  ],
+  "files_reviewed": [
+    "desktop/src/api/writing-craft.ts",
+    "desktop/src/components/NikoEditor.tsx",
+    "desktop/src/components/editor/extensions/ShowTellMark.ts",
+    "desktop/src/components/editor/extensions/ShowTellDecorations.tsx",
+    "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.tsx",
+    "desktop/src/components/intelligence/EmotionalArcChart.tsx",
+    "desktop/src/components/intelligence/VoiceFingerprintPanel.tsx",
+    "desktop/src/components/intelligence/ReaderImmersionDashboard.tsx",
+    "desktop/src/components/intelligence/PacingPrescriptionPanel.tsx",
+    "desktop/src/components/intelligence/index.ts"
+  ],
+  "severity_distribution": {
+    "critical": 0,
+    "high": 1,
+    "medium": 2,
+    "low": 2,
+    "total": 5
+  },
+  "critical_files": [],
+  "findings": [
+    {
+      "id": "CR-001",
+      "dimension": "correctness",
+      "severity": "high",
+      "title": "VoiceConsistencyDecorations 为占位实现（未生成任何 decorations）",
+      "file": "desktop/src/components/editor/extensions/VoiceConsistencyDecorations.tsx",
+      "line": 27,
+      "snippet": "function applyWarnings(editor: Editor, result: VoiceFingerprintResult): void { ... void docText; void warnings; void editor }",
+      "description": "当前 TASK-003 在编辑器侧仅触发分析，但没有实际渲染 wavy underline/tooltip，也没有与 NikoEditor 挂载集成；与任务描述的“编辑器 warning 标注”存在差距。",
+      "impact": "用户无法在编辑器中直观看到具体哪段对话不一致，只能在面板里查看 warnings（若面板被集成）。",
+      "suggestion": "最小修复：实现 ProseMirror Plugin + DecorationSet，将 warnings 的 line 定位到 doc text range 后用 Decoration.inline + style(wavy underline) 渲染，并在 NikoEditor 中挂载/开关。"
+    },
+    {
+      "id": "PRF-001",
+      "dimension": "performance",
+      "severity": "medium",
+      "title": "ShowTellDecorations 启用时对全文做一次请求与逐段 setTextSelection 标注",
+      "file": "desktop/src/components/editor/extensions/ShowTellDecorations.tsx",
+      "line": 32,
+      "snippet": "for (...) { editor.commands.setTextSelection(...); editor.commands.setShowTell(kind) }",
+      "description": "对每个段落调用 setTextSelection 会触发多次 transaction，文本长时可能造成明显卡顿。",
+      "impact": "长文或段落很多时，打开 Show/Tell 可能出现 UI 卡顿。",
+      "suggestion": "用 DecorationSet 一次性绘制（不改 selection），或把批量标注包在单次 transaction（需要 PM API）。"
+    },
+    {
+      "id": "SEC-001",
+      "dimension": "security",
+      "severity": "medium",
+      "title": "ShowTellMark 未定义 renderHTML 样式，依赖 UI 层逻辑隐式生效",
+      "file": "desktop/src/components/editor/extensions/ShowTellMark.ts",
+      "line": 13,
+      "snippet": "renderHTML merges attrs but no style/class",
+      "description": "Mark 自身不携带任何 style/class，当前高亮完全依赖于后续可能的 CSS/渲染层处理（目前看不到）。",
+      "impact": "如果没有对应 CSS，导出的 HTML 不含高亮信息；跨环境显示不一致。",
+      "suggestion": "在 Mark 里为不同 kind 输出 class（如 data-kind + className），并在编辑器 CSS 提供样式。"
+    },
+    {
+      "id": "ARCH-001",
+      "dimension": "architecture",
+      "severity": "low",
+      "title": "deferred UI 组件已导出但缺少统一入口/路由集成证据",
+      "file": "desktop/src/components/intelligence/index.ts",
+      "line": 12,
+      "snippet": "export * from './EmotionalArcChart' ...",
+      "description": "组件已在 barrel export 中暴露，但从现有阅读范围内未看到它们被实际页面/面板调用（除 NikoEditor 的 ShowTell）。",
+      "impact": "可能出现“代码存在但用户界面不可达”的情况。",
+      "suggestion": "补一个最小集成点（例如 WritingDashboard/某个 Panel 中增加 Tab 或入口），或在后续任务明确接线。"
+    },
+    {
+      "id": "MTN-001",
+      "dimension": "maintainability",
+      "severity": "low",
+      "title": "writing-craft.ts 中维度类型与旧组件映射扩展后的一致性需要持续维护",
+      "file": "desktop/src/api/writing-craft.ts",
+      "line": 2,
+      "snippet": "WritingCraftDimension includes show_tell/hook/cliffhanger",
+      "description": "WritingDashboard/TemplateManager/analysis-templates/TrendChart 等对维度枚举的映射需要同步维护，容易再度出现 typecheck break。",
+      "impact": "后续加维度时更容易引入编译错误。",
+      "suggestion": "对映射采用 Partial<Record<...>> 或集中常量定义，减少新增维度带来的爆炸式修改（保持最小改动原则下逐步演进）。"
+    }
+  ],
+  "deep_dives": [],
+  "issues_created": []
+}

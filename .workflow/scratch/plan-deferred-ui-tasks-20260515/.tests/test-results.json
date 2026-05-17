@@ -1,0 +1,48 @@
+{
+  "target": "plan-deferred-ui-tasks-20260515",
+  "completed_at": "2026-05-15T19:11:46+08:00",
+  "results": [
+    {
+      "id": "T-001",
+      "name": "Show/Tell 高亮开关与渲染",
+      "status": "pass",
+      "details": "自动化验证：desktop build 通过；NikoEditor focused tests 通过；ShowTellDecorations 在测试环境不再因 commands 缺失报错。"
+    },
+    {
+      "id": "T-002",
+      "name": "Show/Tell 比例与图例显示",
+      "status": "skipped",
+      "details": "需要在真实 UI 中开启 Show/Tell 后目视确认比例与图例内容。"
+    },
+    {
+      "id": "T-003",
+      "name": "EmotionalArcChart 可交互曲线与张力荒漠高亮",
+      "status": "skipped",
+      "details": "需要在有多章节输入与后端响应的 UI 场景中确认图表交互与 tensionDeserts 高亮。"
+    },
+    {
+      "id": "T-004",
+      "name": "VoiceFingerprintPanel 指纹与告警展示",
+      "status": "skipped",
+      "details": "需要在 UI 中打开面板，触发 analyzeVoiceConsistency 请求后确认卡片与 warnings 展示。"
+    },
+    {
+      "id": "T-005",
+      "name": "ReaderImmersionDashboard 曲线与风险条",
+      "status": "skipped",
+      "details": "需要在多章节输入与后端响应的 UI 场景中确认 svg 曲线、风险条与 badge。"
+    },
+    {
+      "id": "T-006",
+      "name": "PacingPrescriptionPanel 处方列表排序与展示",
+      "status": "skipped",
+      "details": "需要在后端返回 prescriptions 的 UI 场景中确认排序与字段渲染。"
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 1,
+    "issues": 0,
+    "skipped": 5
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "task_id": "TASK-002",
+  "title": "EmotionalArcChart 交互式图表组件",
+  "description": "基于 analyzeEmotionalArc() 的 timeline 数据，构建 SVG 交互式情感弧线图表。支持：多维度曲线叠加（emotionScore, showTellRatio, emotionalIntensity）、张力沙漠高亮区间、经典叙事曲线对比、hover 显示详情 tooltip。新增 MCP endpoint 暴露 emotional-arc 分析。",
+  "type": "feature",
+  "complexity": "medium",
+  "estimated_time": "30-45min",
+  "depends_on": [],
+  "files": [
+    "src-ts/mcp/endpoints/writing-craft.ts",
+    "desktop/src/api/writing-craft.ts",
+    "desktop/src/components/intelligence/EmotionalArcChart.tsx",
+    "desktop/src/components/intelligence/index.ts"
+  ],
+  "read_first": [
+    "src-ts/narrative/emotional-arc.ts",
+    "desktop/src/components/intelligence/TrendChart.tsx",
+    "desktop/src/components/intelligence/SectionHeader.tsx",
+    "desktop/src/api/writing-craft.ts",
+    "src-ts/mcp/endpoints/writing-craft.ts"
+  ],
+  "action": "1) 在 writing-craft.ts 添加 emotional_arc endpoint handler — 接受 chapters[] 输入，调用 analyzeEmotionalArc()，返回 EmotionalArcResult\n2) 在 frontend API 添加 analyzeEmotionalArc(chapters) 函数和类型定义\n3) 创建 EmotionalArcChart.tsx — SVG 交互式图表，复用 TrendChart.tsx 的 SVG 绘图模式\n4) 在 intelligence/index.ts 导出 EmotionalArcChart",
+  "implementation": [
+    "Backend: 在 writing-craft.ts 添加 analyzeEmotionalArcEndpoint handler，路由为 POST /writing-craft/emotional-arc，接受 { chapters: [{ content, chapterIndex }] }",
+    "Frontend API: 添加 EmotionalArcPoint, TensionDesert, CurveMatch, EmotionalArcResult 类型；添加 analyzeEmotionalArc(chapters) API 函数",
+    "EmotionalArcChart.tsx: SVG 折线图，X轴=chapterIndex，Y轴=0-1 normalized；3条可切换曲线：emotionalIntensity(主色), emotionScore(辅色), showTellRatio(淡色)；tensionDesert 区间用红色半透明矩形覆盖；curveMatches 显示最佳匹配曲线标签+相似度",
+    "交互：hover 显示 tooltip（chapterIndex + 各维度数值）；legend 切换曲线可见性；点击 tension desert 区间高亮",
+    "样式：遵循 TrendChart.tsx 的 SVG 模式，使用 Tailwind + inline style"
+  ],
+  "convergence": {
+    "criteria": [
+      "src-ts/mcp/endpoints/writing-craft.ts contains 'emotional-arc' or 'emotionalArc' endpoint handler",
+      "desktop/src/api/writing-craft.ts contains analyzeEmotionalArc function",
+      "desktop/src/components/intelligence/EmotionalArcChart.tsx exists",
+      "EmotionalArcChart.tsx contains '<svg' tag",
+      "EmotionalArcChart.tsx contains 'tensionDesert' or 'tension-desert' reference",
+      "desktop/src/components/intelligence/index.ts contains 'EmotionalArcChart' export"
+    ]
+  }
+}

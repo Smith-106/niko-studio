@@ -1,0 +1,94 @@
+{
+  "session_id": "20260512-analyze-release-readiness-closure-current-head-v2",
+  "subject": "Close current-head release-readiness blockers: unify version consistency, reconcile desktop capability contract, rerun desktop gates, refresh current-head release evidence, resolve unresolved triage blocker semantics, and align readiness docs.",
+  "mode": "full",
+  "recommendation": "No-Go",
+  "confidence": "high",
+  "head_sha": "1e75baf01c589a3306fb1f52f6a942c47d82cd66",
+  "dimensions": [
+    {
+      "name": "feasibility",
+      "score": 74,
+      "findings": "Closure is feasible because the blocker cluster is localized to explicit scripts, config files, and retained evidence artifacts.",
+      "recommendations": "Unify version authority first; then reconcile desktop validator/config policy."
+    },
+    {
+      "name": "impact",
+      "score": 93,
+      "findings": "This work directly determines whether the current head can move from NO_GO toward GO.",
+      "recommendations": "Prioritize changes that unlock multiple failing release signals."
+    },
+    {
+      "name": "risk",
+      "score": 82,
+      "findings": "Refreshing evidence too early or weakening triage semantics without precision could create false confidence.",
+      "recommendations": "Preserve strictness, but separate genuine blockers from stale/noisy artifact accounting."
+    },
+    {
+      "name": "complexity",
+      "score": 68,
+      "findings": "The work spans Python governance scripts, TypeScript package metadata, Tauri capabilities, and desktop packaging.",
+      "recommendations": "Execute in a fixed order to reduce backtracking."
+    },
+    {
+      "name": "alignment",
+      "score": 95,
+      "findings": "The requested closure path is fully aligned with the documented release contract and current authority docs.",
+      "recommendations": "Keep the current docs as the target truth; do not create parallel release semantics."
+    },
+    {
+      "name": "maintainability",
+      "score": 71,
+      "findings": "Maintainability improves if the repo ends with one authority per concept instead of split policy and implementation.",
+      "recommendations": "Add or retain regression coverage around version authority, desktop contract validation, and triage signal semantics."
+    }
+  ],
+  "decisions": [
+    {
+      "title": "Unify release version authority before refreshing evidence",
+      "classification": "locked",
+      "rationale": "Current head has split authority between src-ts 9.2.5 and desktop 9.13.0, which invalidates same-head release proof."
+    },
+    {
+      "title": "Reconcile desktop capability validator and checked-in capability file",
+      "classification": "locked",
+      "rationale": "Strict sidecar validation is red because policy expects core-only access while the capability file grants additional permissions."
+    },
+    {
+      "title": "Refresh retained release evidence only after gate failures are fixed",
+      "classification": "locked",
+      "rationale": "Stale retained artifacts are symptoms of the blocker chain, not the first repair target."
+    },
+    {
+      "title": "Separate true unresolved triage blockers from invalid or legacy state-file noise",
+      "classification": "free",
+      "rationale": "Current summary reports unresolved triage blockers that were not directly reproducible from parseable active-state files in this checkout."
+    },
+    {
+      "title": "Broader historical workflow-state cleanup",
+      "classification": "deferred",
+      "rationale": "This can follow after the release blocker semantics are made precise."
+    }
+  ],
+  "risk_matrix": [
+    {
+      "description": "Evidence refreshed before underlying gates are fixed",
+      "probability": "high",
+      "impact": "high",
+      "mitigation": "Refresh retained proof only after version + desktop gates pass."
+    },
+    {
+      "description": "Triage blocker semantics are weakened too broadly",
+      "probability": "medium",
+      "impact": "high",
+      "mitigation": "Keep unresolved real states blocking; isolate invalid/legacy artifacts separately."
+    },
+    {
+      "description": "Desktop validator and capability file remain inconsistent",
+      "probability": "high",
+      "impact": "medium",
+      "mitigation": "Choose one capability boundary and update validator/docs/config together."
+    }
+  ],
+  "timestamp": "2026-05-12T00:00:00+08:00"
+}

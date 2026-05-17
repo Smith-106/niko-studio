@@ -402,8 +402,7 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
   const updateSubStyle = useCallback(<K extends keyof WritingStyle>(key: K, sub: Partial<NonNullable<WritingStyle[K]>>) => {
     setStyle(prev => {
       const prevVal = prev[key]
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const merged = prevVal && typeof prevVal === 'object' ? { ...prevVal as any, ...sub as any } : sub
+      const merged = prevVal && typeof prevVal === 'object' ? { ...(prevVal as object), ...(sub as object) } : sub
       const next = { ...prev, [key]: merged } as WritingStyle
       saveStyle(next)
       return next

@@ -1,0 +1,46 @@
+{
+  "id": "TASK-002",
+  "title": "收束 desktop capability contract 为单一前端权限真相",
+  "status": "completed",
+  "target_module": "desktop/scripts/validate_sidecar_contract.cjs",
+  "read_first": [
+    "desktop/scripts/validate_sidecar_contract.cjs",
+    "desktop/src-tauri/capabilities/main-desktop.json",
+    "desktop/src-tauri/tauri.conf.json",
+    "desktop/package.json",
+    "tests/unit/scripts/test_governance_scripts.py",
+    "release-check-summary.md"
+  ],
+  "convergence": {
+    "criteria": [
+      "npm --prefix desktop run validate:sidecar-contract → Contract validation PASSED",
+      "grep 'core:default|updater:default|fs:default' desktop/src-tauri/capabilities/main-desktop.json desktop/scripts/validate_sidecar_contract.cjs → validator 与 capability file 只表达同一套 frontend boundary",
+      "python -m pytest tests/unit/scripts/test_governance_scripts.py -q -k sidecar_contract → 相关治理回归测试通过"
+    ]
+  },
+  "action": {
+    "detailed_plan": "在 capability file、strict validator 和相应的治理说明之间选定一个明确的 desktop frontend capability contract。可以选择收窄 capability，或保留更宽权限并更新 validator，但最终必须只剩一个 explicit truth。"
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "action": "对齐 desktop/src-tauri/capabilities/main-desktop.json 与 desktop/scripts/validate_sidecar_contract.cjs，使 strict validation 对 frontend capability boundary 的断言与 checked-in capability 完全一致。",
+      "file": "desktop/scripts/validate_sidecar_contract.cjs"
+    },
+    {
+      "step": 2,
+      "action": "若 release summary 或文档字符串仍引用旧 contract，补齐对应文本，使 deskop gate 解释与实际 contract 不冲突。",
+      "file": "release-check-summary.md"
+    },
+    {
+      "step": 3,
+      "action": "扩展 tests/unit/scripts/test_governance_scripts.py 中 sidecar contract 相关断言，保护所选 contract 不再漂移。",
+      "file": "tests/unit/scripts/test_governance_scripts.py"
+    }
+  ],
+  "priority": "critical",
+  "estimated_minutes": 50,
+  "_metadata": {
+    "wave": 1
+  }
+}

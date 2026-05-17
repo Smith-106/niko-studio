@@ -5,6 +5,7 @@ import { Folder, RotateCcw, Save, Trash2 } from 'lucide-react'
 import { queryGraph } from '../../api/client'
 import { useI18n } from '../../i18n'
 import { useAppStore } from '../../stores/appStore'
+import { logger } from '../../utils/logger'
 import type { FieldConfig, KnowledgeItem, OperationStatus } from './KnowledgeTypes'
 import {
   buildGraphDeleteMutation,
@@ -120,7 +121,7 @@ export function PersistedEntityTab({
         }),
       )
     } catch (error) {
-      console.error(`Failed to load ${entityType}:`, error)
+      logger.error(`Failed to load ${entityType}:`, error)
       onStatusChange({
         type: 'error',
         message: copy.loadError,
@@ -241,7 +242,7 @@ export function PersistedEntityTab({
       })
       window.dispatchEvent(new CustomEvent(WORKSPACE_KNOWLEDGE_CHANGED_EVENT))
     } catch (error) {
-      console.error(`Failed to save ${entityType}:`, error)
+      logger.error(`Failed to save ${entityType}:`, error)
       onStatusChange({
         type: 'error',
         message: copy.saveError,
@@ -282,7 +283,7 @@ export function PersistedEntityTab({
       clearEditor()
       await loadItems()
     } catch (error) {
-      console.error(`Failed to delete ${entityType}:`, error)
+      logger.error(`Failed to delete ${entityType}:`, error)
       onStatusChange({ type: 'error', message: String(error) })
       setDeleteConfirm(false)
     }

@@ -1,5 +1,6 @@
 import { type ApiResponse, callApi, getResolvedApiBase, getRuntimeGatewayBase, isTauriRuntime } from './core'
 import { appendLegacyChatWorkspacePayload, type ProjectWorkspaceContext } from './workspace'
+import { logger } from '../utils/logger'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -382,7 +383,7 @@ export async function chatStream(
             const data = JSON.parse(currentData)
             handleStreamEventOptimized(currentEvent, data, callbacks, scheduleContentUpdate)
           } catch (e) {
-            console.error('Failed to parse SSE data:', e)
+            logger.error('Failed to parse SSE data:', e)
           }
           currentEvent = ''
           currentData = ''
@@ -392,7 +393,7 @@ export async function chatStream(
   } catch (error) {
     // 确保刷新任何待处理的内容
     flushContentBuffer()
-    console.error('Stream error:', error)
+    logger.error('Stream error:', error)
     const message = String(error)
     const aborted = options?.signal?.aborted || message.toLowerCase().includes('abort')
     callbacks.onError?.(

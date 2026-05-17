@@ -8,7 +8,8 @@
       "M16 fills functional gaps: dialogue analysis, scene quality, mystery subtypes",
       "M17 bridges M13-M16 knowledge engine to UI via API layer + dashboard components",
       "M22 adopts minimum-phase principle: three capabilities in one phase via shared interfaces",
-      "M23 extends WritingCraftDimension with hook/cliffhanger + reader-state model"
+      "M23 extends WritingCraftDimension with hook/cliffhanger + reader-state model",
+      "M24 scope: F-001~F-006 tech debt + F-007 narrative visualization; F-008 deferred to M25"
     ]
   },
   "artifacts": [
@@ -314,11 +315,53 @@
       "completed_at": "2026-05-15T19:11:46+08:00",
       "description": "UAT: passed_with_skips (1/6 pass, 5 skipped). Automated: desktop build + full vitest pass; UI visual/manual checks skipped.",
       "harvested": false
+    },
+    {
+      "description": "Brainstorm: M24 milestone direction - tech debt cleanup + narrative visualization.",
+      "completed_at": "2026-05-17T04:10:00+08:00",
+      "id": "BRN-20260517-m24-milestone-direction",
+      "path": ".workflow/scratch/20260517-brainstorm-m24-milestone-direction",
+      "created_at": "2026-05-17T03:51:00+08:00",
+      "type": "brainstorm",
+      "harvested": false,
+      "scope": "standalone",
+      "phase": null,
+      "depends_on": null,
+      "milestone": "M24",
+      "status": "completed"
+    },
+    {
+      "id": "RMAP-20260517-m24-tech-debt-narrative-viz",
+      "type": "roadmap",
+      "milestone": "M24",
+      "phase": null,
+      "scope": "milestone",
+      "path": ".workflow/.roadmap/RMAP-m24-tech-debt-narrative-viz-20260517",
+      "status": "completed",
+      "depends_on": "BRN-20260517-m24-milestone-direction",
+      "created_at": "2026-05-17T04:15:00+08:00",
+      "completed_at": "2026-05-17T04:15:00+08:00",
+      "description": "Roadmap: 2-phase M24 — tech debt cleanup (F-001~F-006) + narrative visualization MVP (F-007).",
+      "harvested": false
+    },
+    {
+      "id": "PLN-20260517-P1-tech-debt-cleanup",
+      "type": "plan",
+      "milestone": "M24",
+      "phase": 1,
+      "scope": "phase",
+      "path": ".workflow/scratch/20260517-plan-P1-tech-debt-cleanup",
+      "status": "completed",
+      "depends_on": "RMAP-20260517-m24-tech-debt-narrative-viz",
+      "created_at": "2026-05-17T05:00:00+08:00",
+      "completed_at": "2026-05-17T05:00:00+08:00",
+      "description": "Plan: 6 tasks in 3 waves — console收口+as-any, translations+catalog, panels+workflow-engine.",
+      "harvested": false
     }
   ],
-  "current_milestone": "M22",
+  "current_milestone": "M24",
   "initialized": true,
-  "last_updated": "2026-05-15T12:28:00+08:00",
+  "last_updated": "2026-05-17T05:00:00+08:00",
   "milestone_history": [
     {
       "archive_path": "milestones/M13/",
@@ -402,80 +445,115 @@
     {
       "id": "M10",
       "name": "Deep Writing Intelligence",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M11",
       "name": "External Integration",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M13",
       "name": "Writing Craft Knowledge Integration",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M14",
       "name": "Writing Craft Enhancement Phase 2",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M15",
       "name": "Web Novel Analysis + Structure + Character Enhancement",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M16",
       "name": "Dialogue, Scene, Mystery Enhancement",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M17",
       "name": "Writing Intelligence UI Integration",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M18",
       "name": "Knowledge Expansion + UX Enhancement + LLM Analysis",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M19",
       "name": "UX Polish + Plugin Architecture",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M20",
       "name": "Cloud Sync + Code Signing",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M21",
       "name": "Docs Site Capability Routing + Architecture Deep Dive",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M22",
       "name": "Intelligent Learning Capabilities",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
     },
     {
       "id": "M23",
       "name": "Novel Quality & Reader Experience Enhancement",
-      "phases": [1],
+      "phases": [
+        1
+      ],
       "status": "completed"
+    },
+    {
+      "id": "M24",
+      "name": "Tech Debt Cleanup + Narrative Visualization",
+      "phases": [
+        1,
+        2
+      ],
+      "status": "active"
     }
   ],
   "project": "niko-studio",

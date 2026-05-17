@@ -6,7 +6,7 @@ const MAX_ENTRIES = 50
 export interface ExportEntry {
   id: string
   exportedAt: number
-  format: 'md' | 'html' | 'pdf'
+  format: 'md' | 'html' | 'pdf' | 'docx'
   title: string
   wordCount: number
 }

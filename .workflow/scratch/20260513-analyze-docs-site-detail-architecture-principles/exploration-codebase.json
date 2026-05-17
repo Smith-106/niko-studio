@@ -1,0 +1,77 @@
+{
+  "session_id": "ANL-docs-site-detail-architecture-principles-2026-05-13",
+  "topic": "文档站二次增强：docs-site 实现范围和风险",
+  "scope": "adhoc",
+  "source_brainstorm": ".workflow/scratch/20260513-brainstorm-docs-site-detail-architecture-principles",
+  "relevant_files": [
+    {
+      "path": "docs-site/src/client/data/inventory.ts",
+      "role": "page_registry",
+      "anchors": ["21: categories", "96: docPages", "189: getResolvedDocPages"],
+      "finding": "新增 docs 页面必须注册 id/category/slug；注册后自动进入分类页、搜索与侧栏。"
+    },
+    {
+      "path": "docs-site/src/client/data/content.ts",
+      "role": "content_map",
+      "anchors": ["14: contentMap", "29: getDocContent"],
+      "finding": "page.id 必须匹配 contentMap key，否则只显示占位文案。"
+    },
+    {
+      "path": "docs-site/src/client/data/content-architecture.ts",
+      "role": "primary_content_target",
+      "anchors": ["2: system-overview", "35: module-design", "84: data-flow"],
+      "finding": "已有架构页和 Mermaid-compatible code block，可承载 runtime layers、request lifecycle、data authority、boundary 深化。"
+    },
+    {
+      "path": "docs-site/src/client/pages/LandingPage.tsx",
+      "role": "learning_paths_entry",
+      "anchors": ["20: quickLinks", "27: workflowSteps", "35: featuredDocs", "181: categories.map"],
+      "finding": "首页已有入门与主路径区域，适合加入 writer/developer/integrator/maintainer compact learning paths。"
+    },
+    {
+      "path": "docs-site/src/client/pages/DocPage.tsx",
+      "role": "rendering_boundary",
+      "anchors": ["85: getDocContent", "87: enhanceContent", "130: dangerouslySetInnerHTML", "221: enhanceContent"],
+      "finding": "静态 HTML 字符串渲染支持目录、表格、code block、callout、endpoint card；F-005 应复用现有能力，避免新增 Mermaid renderer 依赖。"
+    }
+  ],
+  "call_chains": [
+    {
+      "name": "文档页渲染链路",
+      "steps": [
+        "App.tsx 路由匹配 /:categoryId/:slug",
+        "inventory.ts docPages 提供 page id/category/slug",
+        "DocPage.tsx 查找 page 并调用 getDocContent(page.id)",
+        "content.ts 从 contentMap 返回静态 HTML",
+        "DocPage.tsx enhanceContent/addHeadingIds 后通过 dangerouslySetInnerHTML 渲染"
+      ]
+    },
+    {
+      "name": "新增页面传播链路",
+      "steps": [
+        "inventory.ts 注册 docPages",
+        "CategoryPage.tsx getPagesByCategory 自动展示",
+        "SearchBox.tsx getResolvedDocPages 自动进入搜索",
+        "Sidebar.tsx 消费 categories/docPages 形成导航",
+        "LandingPage.tsx featuredDocs/quickLinks 需要手动加入重点入口"
+      ]
+    }
+  ],
+  "source_truth_refs": [
+    {
+      "path": "README.md",
+      "anchors": ["3: Architecture", "10: delivered runtime", "111: 当前状态权威来源", "118: 当前权威地图"],
+      "truth": "当前产品运行时权威是 desktop + Tauri + local src-ts Gateway；browser-first web removed；Python 主要是 release/helper/compatibility surface。"
+    },
+    {
+      "path": "docs/API_REFERENCE.md",
+      "anchors": ["2: Version 9.2.5", "10: 5 route groups with 69 endpoints", "14: workspace context", "16: streaming"],
+      "truth": "Gateway API 细节以 API_REFERENCE 为准，docs-site 只能做摘要和导读。"
+    },
+    {
+      "path": "docs/CAPABILITY_MATRIX.md",
+      "anchors": ["2: authoritative single-source matrix", "6: status legend", "89: Maintenance Rule"],
+      "truth": "能力状态单一真源，docs-site 状态页必须引用而不是替代。"
+    }
+  ]
+}

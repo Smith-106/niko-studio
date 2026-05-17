@@ -1,0 +1,99 @@
+{
+  "id": "TASK-004",
+  "title": "F-004: translations.ts 按模块拆分",
+  "description": "将 2892 行的 translations.ts 按功能模块拆分为独立文件，保持 key 结构和 Translations 接口不变。",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "refactor",
+  "priority": "medium",
+  "effort": "medium",
+  "action": "1) 按 Translations interface 中的注释分组（App, Sidebar, Chat, Settings, Knowledge, Editor, Export, Evaluation, StoryBible, WritingHelper, Workflow 等），每组提取为 desktop/src/i18n/modules/{group}.ts。2) 每个模块文件导出该分组的 zh/en 翻译对象片段。3) translations.ts 改为聚合入口：import 各模块并 spread 合并。4) Translations 接口保持原位不变。5) i18n/index.ts 的 export 不变。",
+  "status": "pending",
+  "completed_at": null,
+  "actual_duration": null,
+
+  "scope": "desktop/src/i18n",
+  "focus_paths": [
+    "desktop/src/i18n/translations.ts",
+    "desktop/src/i18n/modules/"
+  ],
+
+  "read_first": [
+    "desktop/src/i18n/translations.ts",
+    "desktop/src/i18n/index.ts"
+  ],
+
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": "wave-2",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "desktop/src/i18n/modules/ directory exists with >= 5 .ts files",
+      "desktop/src/i18n/translations.ts is <= 200 lines",
+      "grep 'export.*Translations' desktop/src/i18n/translations.ts returns match (interface preserved)",
+      "npx tsc --noEmit --project desktop/tsconfig.json exits 0",
+      "cd desktop && npx vitest run exits 0"
+    ],
+    "verification": "cd desktop && npx tsc --noEmit && npx vitest run",
+    "definition_of_done": "translations.ts 按模块拆分，key 结构不变，i18n 流程无影响"
+  },
+
+  "files": [
+    { "path": "desktop/src/i18n/translations.ts", "action": "modify", "target": "entire file", "change": "保留 Translations 接口 + Language 类型，翻译数据改为 import 聚合" },
+    { "path": "desktop/src/i18n/modules/app.ts", "action": "create", "target": "app translations", "change": "App/Sidebar/基础 UI 翻译" },
+    { "path": "desktop/src/i18n/modules/chat.ts", "action": "create", "target": "chat translations", "change": "Chat 相关翻译" },
+    { "path": "desktop/src/i18n/modules/editor.ts", "action": "create", "target": "editor translations", "change": "Editor 相关翻译" },
+    { "path": "desktop/src/i18n/modules/knowledge.ts", "action": "create", "target": "knowledge translations", "change": "Knowledge/StoryBible 翻译" },
+    { "path": "desktop/src/i18n/modules/workflow.ts", "action": "create", "target": "workflow translations", "change": "Workflow/Evaluation 翻译" }
+  ],
+
+  "implementation": [
+    "读取 translations.ts 完整内容，识别注释分组边界（// App, // Sidebar, // Chat 等）",
+    "创建 desktop/src/i18n/modules/ 目录",
+    "按分组提取 zh 和 en 翻译对象片段到各模块文件，每个文件 export const zhXxx = {...} 和 export const enXxx = {...}",
+    "重写 translations.ts：保留 Language 类型和 Translations 接口定义，zh/en 对象改为 spread 合并各模块",
+    "确认 i18n/index.ts 的 useI18n hook 和 export 不受影响",
+    "运行 tsc + vitest 验证"
+  ],
+
+  "test": {
+    "commands": ["cd desktop && npx tsc --noEmit", "cd desktop && npx vitest run"],
+    "unit": [],
+    "integration": [],
+    "success_metrics": ["translations.ts <= 200 lines", "all i18n keys preserved", "tests pass"]
+  },
+
+  "reference": {
+    "pattern": "desktop/src/i18n/locales/*.json 已有按语言拆分的模式",
+    "files": ["desktop/src/i18n/translations.ts", "desktop/src/i18n/index.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "按功能分组拆分为 TypeScript 模块，保留类型安全",
+    "decision_factors": ["类型安全", "IDE 自动补全", "向后兼容"],
+    "tradeoffs": "不使用 JSON 格式（保留 TypeScript 类型检查优势）"
+  },
+
+  "risks": ["分组边界需从注释推断，可能需要人工判断"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["i18n"],
+    "affected_components": ["desktop/src/i18n"],
+    "affected_requirements": ["F-004"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "40min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

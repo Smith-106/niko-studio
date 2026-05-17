@@ -44,7 +44,11 @@
       "mcp__chrome-devtools__wait_for",
       "mcp__exa__crawling_exa",
       "mcp__exa__get_code_context_exa",
-      "mcp__exa__web_search_exa"
+      "mcp__exa__web_search_exa",
+      "PowerShell(Set-Location \"D:\\\\工作目录\\\\niko-studio\\\\src-ts\"; $output = \\(npx vitest run --pool=forks 2>&1 | Out-String\\); $output -split \"`n\" | Where-Object { $_ -match \"Test Files|Tests\\\\s+\\\\d\" })",
+      "PowerShell(Set-Location \"D:\\\\工作目录\\\\niko-studio\\\\desktop\"; $out = npx vitest run 2>&1 | Out-String; \\($out -split \"`n\"\\)[-15..-1])",
+      "PowerShell(Set-Location \"D:\\\\工作目录\\\\niko-studio\\\\src-ts\"; $out = npx vitest run 2>&1 | Out-String; $lines = $out -split \"`n\"; $lines | Where-Object { $_ -match \"Test Files|Tests\\\\s+\\\\d|Duration\" })",
+      "PowerShell(npm *)"
     ]
   },
   "hooks": {

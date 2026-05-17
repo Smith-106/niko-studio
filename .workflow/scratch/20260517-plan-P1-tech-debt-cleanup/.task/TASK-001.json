@@ -1,0 +1,110 @@
+{
+  "id": "TASK-001",
+  "title": "F-001: 前端 console 收口到结构化 logger",
+  "description": "创建前端 logger 工具并将 17 个前端文件的 console.* 调用替换为结构化 logger，生产环境自动静默。",
+
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "refactor",
+  "priority": "high",
+  "effort": "medium",
+  "action": "1) 创建 desktop/src/utils/logger.ts，导出 logger 对象（log/warn/error/debug 方法），开发环境输出到 console，生产环境静默。2) 在 17 个文件中将 console.log/warn/error/info/debug 替换为 logger.log/warn/error/info/debug。3) 保持所有现有 export 不变。",
+  "status": "completed",
+  "completed_at": "2026-05-17T14:52:10+08:00",
+  "actual_duration": null,
+
+  "scope": "desktop/src",
+  "focus_paths": [
+    "desktop/src/utils/logger.ts",
+    "desktop/src/components/knowledge/SkillTab.tsx",
+    "desktop/src/components/knowledge/PersistedEntityTab.tsx",
+    "desktop/src/components/StoryBiblePanel.tsx",
+    "desktop/src/hooks/useEvaluationData.ts",
+    "desktop/src/hooks/useEditorAI.ts",
+    "desktop/src/api/chat.ts",
+    "desktop/src/api/core.ts",
+    "desktop/src/api/gateway/models.ts",
+    "desktop/src/services/revisionOrchestrator.ts"
+  ],
+
+  "read_first": [
+    "desktop/src/api/core.ts",
+    "desktop/src/hooks/useEditorAI.ts",
+    "src-ts/config/index.ts",
+    "desktop/src/components/knowledge/SkillTab.tsx"
+  ],
+
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "wave-1",
+  "execution_group": null,
+  "executor": "agent",
+
+  "convergence": {
+    "criteria": [
+      "desktop/src/utils/logger.ts exists and exports logger object with log/warn/error/debug/info methods",
+      "grep -r 'console\\.' desktop/src --include='*.ts' --include='*.tsx' | grep -v test | grep -v node_modules | grep -v logger.ts returns 0 matches",
+      "grep -r 'import.*logger' desktop/src --include='*.ts' --include='*.tsx' | grep -v test returns >= 10 matches",
+      "npx tsc --noEmit --project desktop/tsconfig.json exits 0"
+    ],
+    "verification": "cd desktop && npx tsc --noEmit && npx vitest run --reporter=verbose 2>&1 | tail -5",
+    "definition_of_done": "前端所有非测试文件的 console.* 已收口到 logger，生产构建无信息泄露"
+  },
+
+  "files": [
+    { "path": "desktop/src/utils/logger.ts", "action": "create", "target": "logger module", "change": "创建结构化 logger：开发环境 console 输出，生产环境 noop" },
+    { "path": "desktop/src/components/knowledge/SkillTab.tsx", "action": "modify", "target": "console calls", "change": "console.* → logger.*" },
+    { "path": "desktop/src/components/knowledge/PersistedEntityTab.tsx", "action": "modify", "target": "console calls", "change": "console.* → logger.*" },
+    { "path": "desktop/src/components/StoryBiblePanel.tsx", "action": "modify", "target": "console calls", "change": "console.* → logger.*" },
+    { "path": "desktop/src/hooks/useEvaluationData.ts", "action": "modify", "target": "console calls", "change": "console.* → logger.*" },
+    { "path": "desktop/src/hooks/useEditorAI.ts", "action": "modify", "target": "console calls", "change": "console.* → logger.*" },
+    { "path": "desktop/src/api/chat.ts", "action": "modify", "target": "console calls", "change": "console.* → logger.*" },
+    { "path": "desktop/src/api/core.ts", "action": "modify", "target": "console calls", "change": "console.* → logger.*" },
+    { "path": "desktop/src/api/gateway/models.ts", "action": "modify", "target": "console calls", "change": "console.* → logger.*" },
+    { "path": "desktop/src/services/revisionOrchestrator.ts", "action": "modify", "target": "console calls", "change": "console.* → logger.*" }
+  ],
+
+  "implementation": [
+    "创建 desktop/src/utils/logger.ts: const isDev = import.meta.env.DEV; const noop = () => {}; export const logger = { log: isDev ? console.log.bind(console) : noop, warn: isDev ? console.warn.bind(console) : noop, error: console.error.bind(console), debug: isDev ? console.debug.bind(console) : noop, info: isDev ? console.info.bind(console) : noop }",
+    "在每个目标文件顶部添加 import { logger } from '../utils/logger' (调整相对路径)",
+    "全局替换 console.log → logger.log, console.warn → logger.warn, console.error → logger.error, console.info → logger.info, console.debug → logger.debug",
+    "运行 TypeScript 编译检查 + 测试套件确认无回归"
+  ],
+
+  "test": {
+    "commands": ["cd desktop && npx tsc --noEmit", "cd desktop && npx vitest run"],
+    "unit": ["logger.ts 在 DEV 模式输出到 console", "logger.ts 在 PROD 模式静默"],
+    "integration": [],
+    "success_metrics": ["0 console.* in non-test source files", "all existing tests pass"]
+  },
+
+  "reference": {
+    "pattern": "src-ts logger pattern (config/index.ts, context/providers.ts)",
+    "files": ["src-ts/config/index.ts", "src-ts/context/providers.ts"],
+    "examples": null
+  },
+
+  "rationale": {
+    "chosen_approach": "简单 bind 模式而非复杂日志框架，匹配项目极简风格",
+    "decision_factors": ["生产环境安全", "零依赖", "向后兼容"],
+    "tradeoffs": "error 保留输出（生产环境也需要错误可见性）"
+  },
+
+  "risks": ["测试文件中的 console 不应被替换（仅处理非测试文件）"],
+
+  "code_skeleton": null,
+
+  "doc_context": {
+    "affected_features": ["logging", "frontend-infrastructure"],
+    "affected_components": ["desktop/src"],
+    "affected_requirements": ["F-001"],
+    "adr_ids": []
+  },
+
+  "meta": {
+    "estimated_time": "30min",
+    "risk": "low",
+    "autonomous": true,
+    "checkpoint": false
+  }
+}

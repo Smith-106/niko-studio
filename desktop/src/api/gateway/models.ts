@@ -1,4 +1,5 @@
 import { GENERIC_API_ERROR_MESSAGE, type ApiResponse, callApi, getErrorName, normalizeGatewayBaseUrl } from '../core'
+import { logger } from '../../utils/logger'
 
 export interface ModelFetchResult {
   models: string[]
@@ -98,7 +99,7 @@ export async function fetchProviderModels(
     }
   } catch (error) {
     gatewayReason = getErrorName(error)
-    console.error(`Gateway models fallback failed (${gatewayReason})`)
+    logger.error(`Gateway models fallback failed (${gatewayReason})`)
   }
 
   const normalizedBase = normalizeGatewayBaseUrl(baseUrl.trim())
@@ -157,7 +158,7 @@ export async function fetchProviderModels(
     return { success: true, data: { models, source: 'direct' } }
   } catch (error) {
     const directReason = error instanceof Error ? error.message : GENERIC_API_ERROR_MESSAGE
-    console.error(`Fetch provider models failed (${getErrorName(error)})`)
+    logger.error(`Fetch provider models failed (${getErrorName(error)})`)
     return {
       success: false,
       error: buildModelFetchError(gatewayReason, directReason),

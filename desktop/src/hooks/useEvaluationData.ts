@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { evaluateContent, getImprovementSuggestions, type RecommendationPayload } from '../api/client'
 import { buildFailurePresentation, type FailurePresentation } from '../utils/failurePresentation'
+import { logger } from '../utils/logger'
 
 export interface EvaluationViewModel {
   score: number
@@ -83,7 +84,7 @@ export function useEvaluationData({
         }))
       }
     } catch (error) {
-      console.error('Evaluation failed:', error)
+      logger.error('Evaluation failed:', error)
       setResult(null)
       setEvaluationError(buildFailurePresentation({
         t,
@@ -118,7 +119,7 @@ export function useEvaluationData({
       })
       setSuggestionsRefreshError(`${failure.label}：${failure.message}`)
     } catch (error) {
-      console.error('Refreshing suggestions failed:', error)
+      logger.error('Refreshing suggestions failed:', error)
       const failure = buildFailurePresentation({
         t,
         source: 'evaluation',

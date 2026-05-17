@@ -17,6 +17,7 @@ import { streamWritingHelper } from '../api/client'
 import type { Language } from '../i18n'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useAppStore } from '../stores/appStore'
+import { logger } from '../utils/logger'
 import {
   buildEditorAIPayload,
   type EditorAIGenerateAction,
@@ -210,7 +211,7 @@ export function useEditorAI({
                 return
               }
               streamError = err
-              console.error('AI stream error:', err)
+              logger.error('AI stream error:', err)
             },
           },
           { signal: controller.signal },
@@ -221,7 +222,7 @@ export function useEditorAI({
         }
 
         streamError = error instanceof Error ? error.message : String(error)
-        console.error('AI stream error:', error)
+        logger.error('AI stream error:', error)
       } finally {
         if (!isCurrentRequest()) {
           return

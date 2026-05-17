@@ -1,0 +1,340 @@
+{
+  "power_display": {
+    "pattern": "power_display",
+    "label": "装逼打脸",
+    "structure": [
+      "对方轻视/挑衅",
+      "主角展示碾压实力",
+      "旁观者震惊+对方后悔"
+    ],
+    "proportion": [
+      0.3,
+      0.4,
+      0.3
+    ],
+    "keywords": {
+      "setup": [
+        "不屑",
+        "冷笑",
+        "不过如此",
+        "不自量力",
+        "就这"
+      ],
+      "payoff": [
+        "一击",
+        "秒杀",
+        "碾压",
+        "恐怖如斯",
+        "震惊全场"
+      ],
+      "twist": [
+        "原来",
+        "竟然还",
+        "只是热身",
+        "不过"
+      ]
+    },
+    "informationGap": "reader_ahead"
+  },
+  "hidden_power": {
+    "pattern": "hidden_power",
+    "label": "扮猪吃虎",
+    "structure": [
+      "主角表面弱小/低调",
+      "关键时刻暴露实力",
+      "所有人重新审视"
+    ],
+    "proportion": [
+      0.35,
+      0.35,
+      0.3
+    ],
+    "keywords": {
+      "setup": [
+        "低调",
+        "平凡",
+        "不起眼",
+        "没什么特别"
+      ],
+      "payoff": [
+        "爆发",
+        "展现",
+        "原来",
+        "隐藏",
+        "竟然是"
+      ],
+      "twist": [
+        "真正的实力",
+        "还没用全力",
+        "不可思议"
+      ]
+    },
+    "informationGap": "reader_ahead"
+  },
+  "underdog_win": {
+    "pattern": "underdog_win",
+    "label": "越级反杀",
+    "structure": [
+      "实力差距明显，所有人看衰",
+      "主角逆袭翻盘",
+      "对手不敢置信"
+    ],
+    "proportion": [
+      0.3,
+      0.4,
+      0.3
+    ],
+    "keywords": {
+      "setup": [
+        "不可能",
+        "差距",
+        "毫无胜算",
+        "送死"
+      ],
+      "payoff": [
+        "逆袭",
+        "翻盘",
+        "战胜",
+        "打破"
+      ],
+      "twist": [
+        "还能更强",
+        "没用全力",
+        "底牌"
+      ]
+    },
+    "informationGap": "none"
+  },
+  "authority_slap": {
+    "pattern": "authority_slap",
+    "label": "打脸权威",
+    "structure": [
+      "权威质疑/否定",
+      "主角用实力证明",
+      "权威认可或尴尬"
+    ],
+    "proportion": [
+      0.3,
+      0.4,
+      0.3
+    ],
+    "keywords": {
+      "setup": [
+        "你不懂",
+        "不可能",
+        "凭你",
+        "资格"
+      ],
+      "payoff": [
+        "证明",
+        "做到了",
+        "不可能的事"
+      ],
+      "twist": [
+        "超越",
+        "打脸",
+        "哑口无言"
+      ]
+    },
+    "informationGap": "reader_ahead"
+  },
+  "villain_fail": {
+    "pattern": "villain_fail",
+    "label": "反派翻车",
+    "structure": [
+      "反派得计/得意的巅峰",
+      "计划被破解",
+      "反派狼狈不堪"
+    ],
+    "proportion": [
+      0.3,
+      0.35,
+      0.35
+    ],
+    "keywords": {
+      "setup": [
+        "得意",
+        "以为",
+        "掌控",
+        "计划"
+      ],
+      "payoff": [
+        "破灭",
+        "反被",
+        "自食其果",
+        "计划失败"
+      ],
+      "twist": [
+        "更惨",
+        "连锁崩溃",
+        "恶有恶报"
+      ]
+    },
+    "informationGap": "character_ahead"
+  },
+  "sweet_surprise": {
+    "pattern": "sweet_surprise",
+    "label": "甜蜜超预期",
+    "structure": [
+      "平淡日常/小期望",
+      "意外惊喜",
+      "情感升温"
+    ],
+    "proportion": [
+      0.35,
+      0.35,
+      0.3
+    ],
+    "keywords": {
+      "setup": [
+        "以为",
+        "本以为",
+        "只是"
+      ],
+      "payoff": [
+        "惊喜",
+        "没想到",
+        "竟然"
+      ],
+      "twist": [
+        "更甜蜜",
+        "还有",
+        "更特别"
+      ]
+    },
+    "informationGap": "none"
+  },
+  "mystery_solve": {
+    "pattern": "mystery_solve",
+    "label": "真相揭晓",
+    "structure": [
+      "迷团积累到顶点",
+      "关键证据/推理揭露真相",
+      "读者恍然大悟"
+    ],
+    "proportion": [
+      0.4,
+      0.35,
+      0.25
+    ],
+    "keywords": {
+      "setup": [
+        "谜团",
+        "秘密",
+        "疑问",
+        "不解"
+      ],
+      "payoff": [
+        "真相",
+        "原来是",
+        "终于明白",
+        "水落石出"
+      ],
+      "twist": [
+        "更深层的真相",
+        "还有隐情",
+        "不止如此"
+      ]
+    },
+    "informationGap": "character_ahead"
+  },
+  "level_up": {
+    "pattern": "level_up",
+    "label": "突破升级",
+    "structure": [
+      "瓶颈/修炼/积累",
+      "顿悟或获得机缘",
+      "实力飞跃+众人惊叹"
+    ],
+    "proportion": [
+      0.35,
+      0.3,
+      0.35
+    ],
+    "keywords": {
+      "setup": [
+        "瓶颈",
+        "停滞",
+        "修炼",
+        "积累"
+      ],
+      "payoff": [
+        "突破",
+        "晋级",
+        "觉醒",
+        "进化"
+      ],
+      "twist": [
+        "连升",
+        "超预期",
+        "天才"
+      ]
+    },
+    "informationGap": "none"
+  },
+  "recognition": {
+    "pattern": "recognition",
+    "label": "获得认可",
+    "structure": [
+      "被忽视/轻视",
+      "展现实力/价值",
+      "获得承认和尊重"
+    ],
+    "proportion": [
+      0.35,
+      0.35,
+      0.3
+    ],
+    "keywords": {
+      "setup": [
+        "忽视",
+        "看不起",
+        "不屑"
+      ],
+      "payoff": [
+        "刮目相看",
+        "震惊",
+        "佩服"
+      ],
+      "twist": [
+        "成为核心",
+        "被邀请",
+        "获得重用"
+      ]
+    },
+    "informationGap": "none"
+  },
+  "revenge": {
+    "pattern": "revenge",
+    "label": "复仇兑现",
+    "structure": [
+      "受辱/被害",
+      "隐忍积累",
+      "全力反击"
+    ],
+    "proportion": [
+      0.3,
+      0.3,
+      0.4
+    ],
+    "keywords": {
+      "setup": [
+        "屈辱",
+        "欺压",
+        "失去"
+      ],
+      "payoff": [
+        "反击",
+        "复仇",
+        "清算",
+        "以牙还牙"
+      ],
+      "twist": [
+        "更狠",
+        "加倍奉还",
+        "彻底"
+      ]
+    },
+    "informationGap": "none"
+  }
+}

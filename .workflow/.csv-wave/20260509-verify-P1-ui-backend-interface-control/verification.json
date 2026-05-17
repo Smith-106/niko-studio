@@ -1,0 +1,174 @@
+{
+  "phase": "1",
+  "status": "gaps_found",
+  "verified_at": "2026-05-09T22:56:34.2448472+08:00",
+  "verifier": "csv-wave-verifier",
+  "skill_call": "$maestro-verify 1 -y",
+  "target": "ui-backend-interface-control",
+  "must_haves": {
+    "truths": [
+      {
+        "claim": "Backend writing-craft analyze endpoint is available and operational",
+        "status": "verified",
+        "evidence": "src-ts/tests/mcp/writing-craft-endpoints.test.ts passed 9 tests against writingCraftAnalyzeEndpoint."
+      },
+      {
+        "claim": "Main desktop UI exposes writing-craft controls to users",
+        "status": "failed",
+        "evidence": "WritingDashboard is not mounted by AnalysisPanel or another visible production host."
+      }
+    ],
+    "artifacts": [
+      {
+        "path": "src-ts/mcp/endpoints/writing-craft.ts",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "src-ts/tests/mcp/writing-craft-endpoints.test.ts",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "desktop/src/api/writing-craft.ts",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "desktop/src/api/writing-craft.test.ts",
+        "status": "missing",
+        "substantive": false
+      },
+      {
+        "path": "desktop/src/components/intelligence/WritingDashboard.tsx",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "desktop/src/components/intelligence/WritingDimensionDetail.tsx",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "desktop/src/components/intelligence/AntiPatternWarning.tsx",
+        "status": "missing",
+        "substantive": false
+      }
+    ],
+    "key_links": [
+      {
+        "from": "desktop/src/api/writing-craft.ts",
+        "to": "src-ts/mcp/routes/content.ts#/writing-craft/analyze",
+        "status": "wired"
+      },
+      {
+        "from": "desktop/src/components/AnalysisPanel.tsx",
+        "to": "desktop/src/components/intelligence/WritingDashboard.tsx",
+        "status": "not_wired"
+      },
+      {
+        "from": "desktop/src/components/intelligence/WritingDashboard.tsx",
+        "to": "desktop/src/components/intelligence/WritingDimensionDetail.tsx#analyzeWritingCraftLLM",
+        "status": "not_wired"
+      }
+    ]
+  },
+  "gaps": [
+    {
+      "id": "GAP-001",
+      "type": "missing_feature",
+      "severity": "critical",
+      "description": "Main desktop analysis UI does not mount or route to WritingDashboard, so users cannot control the writing-craft backend from the primary interface.",
+      "fix_direction": "Integrate WritingDashboard into AnalysisPanel or another production-visible panel and wire visible navigation to it."
+    },
+    {
+      "id": "GAP-002",
+      "type": "missing_test",
+      "severity": "high",
+      "description": "desktop/src/api/writing-craft.test.ts does not exist even though TASK-002 requires a bridge-layer test.",
+      "fix_direction": "Add a dedicated API bridge test that mocks callApi and verifies /writing-craft/analyze and /writing-craft/llm-analyze requests."
+    },
+    {
+      "id": "GAP-003",
+      "type": "missing_feature",
+      "severity": "high",
+      "description": "desktop/src/components/intelligence/AntiPatternWarning.tsx is absent although TASK-004 requires it.",
+      "fix_direction": "Implement AntiPatternWarning.tsx and wire it into WritingDimensionDetail for surfaced anti-pattern signals."
+    },
+    {
+      "id": "GAP-004",
+      "type": "broken_wiring",
+      "severity": "critical",
+      "description": "WritingDashboard is exported from the barrel but is not imported or rendered by AnalysisPanel or any visible host component.",
+      "fix_direction": "Wire WritingDashboard into a visible desktop panel and add an integration test that covers the rendered host path."
+    },
+    {
+      "id": "GAP-005",
+      "type": "broken_wiring",
+      "severity": "high",
+      "description": "WritingDashboard does not pass text or llmConfig into WritingDimensionDetail, so the LLM deep-analysis backend control path is effectively disabled.",
+      "fix_direction": "Thread text and LLM config into WritingDimensionDetail, or remove the unreachable control until configuration is available."
+    },
+    {
+      "id": "GAP-006",
+      "type": "antipattern",
+      "severity": "high",
+      "description": "Feature code exists behind an unmounted component, creating dead UI capability that cannot be exercised by users.",
+      "fix_direction": "Eliminate dead-path components by wiring them into shipped UI or removing them until the host is ready."
+    },
+    {
+      "id": "GAP-007",
+      "type": "test_gap",
+      "severity": "high",
+      "description": "Test coverage does not include a dedicated desktop bridge test or a host-level integration test proving the production UI can invoke writing-craft controls.",
+      "fix_direction": "Add desktop/src/api/writing-craft.test.ts and an integration test for the mounted host panel entry point."
+    }
+  ],
+  "antipatterns": [
+    {
+      "location": "desktop/src/components/intelligence/WritingDashboard.tsx",
+      "pattern": "orphaned_feature_host",
+      "severity": "high",
+      "description": "Component contains real functionality but no production-visible parent mounts it."
+    },
+    {
+      "location": "desktop/src/components/intelligence/WritingDimensionDetail.tsx",
+      "pattern": "unreachable_control_path",
+      "severity": "high",
+      "description": "Deep-analysis action requires props never supplied by the parent."
+    }
+  ],
+  "fix_plans": [
+    {
+      "name": "restore-visible-ui-control",
+      "objective": "Expose the writing-craft feature through a shipped desktop panel and prove the end-to-end control path.",
+      "tasks": [
+        "Mount WritingDashboard from AnalysisPanel or another visible host",
+        "Add navigation/state plumbing for the writing-craft view",
+        "Add a host-level integration test"
+      ]
+    },
+    {
+      "name": "complete-planned-artifacts",
+      "objective": "Close implementation gaps called out by the phase tasks.",
+      "tasks": [
+        "Add desktop/src/api/writing-craft.test.ts",
+        "Add desktop/src/components/intelligence/AntiPatternWarning.tsx",
+        "Export any new component from desktop/src/components/intelligence/index.ts"
+      ]
+    },
+    {
+      "name": "repair-deep-analysis-wiring",
+      "objective": "Make the LLM deep-analysis UI path either functional or intentionally removed.",
+      "tasks": [
+        "Pass text and llmConfig to WritingDimensionDetail",
+        "Add a UI test for the deep-analysis button path"
+      ]
+    }
+  ],
+  "human_verification": [],
+  "coverage_score": 0.33,
+  "notes": [
+    "No phase index.json existed in the phase directory, so no phase index was updated."
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "summary": "M24 Phase 1 Tech Debt Cleanup: 6项技术债清理分3波次执行。Wave 1 基础清理（console收口+类型加固），Wave 2 模块拆分（translations+craft-catalog），Wave 3 深度重构（巨型组件拆分+workflow-engine Strategy模式）。全程接口冻结，公共API不变。",
+  "approach": "接口冻结策略：所有重构保持公共API签名不变，内部实现自由调整。Wave 1 建立模式（logger工具+类型修复），Wave 2 数据层重组（JSON外置+模块化），Wave 3 复杂重构（组件拆分+Strategy模式）。每个task独立可验证，wave内任务可并行。",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006"],
+  "task_count": 6,
+  "complexity": "high",
+  "estimated_time": "4-6h",
+  "recommended_execution": "Agent",
+
+  "waves": [
+    {
+      "wave": 1,
+      "label": "基础清理",
+      "tasks": ["TASK-001", "TASK-003"]
+    },
+    {
+      "wave": 2,
+      "label": "模块拆分",
+      "tasks": ["TASK-004", "TASK-005"]
+    },
+    {
+      "wave": 3,
+      "label": "深度重构",
+      "tasks": ["TASK-002", "TASK-006"]
+    }
+  ],
+
+  "data_flow": {
+    "diagram": "Wave1(logger+types) → Wave2(translations+catalog) → Wave3(components+engine)",
+    "stages": [
+      "Wave 1: 建立 frontend logger 工具 + 修复 4 个 as-any",
+      "Wave 2: translations.ts 按模块拆分 + craft-catalog 外置为 JSON",
+      "Wave 3: EvaluationPanel/StoryBiblePanel 拆分 + workflow-engine Strategy 模式"
+    ]
+  },
+
+  "design_decisions": [
+    "F-001: 创建 desktop/src/utils/logger.ts 作为前端结构化日志工具，生产环境自动静默",
+    "F-004: translations.ts 按 Translations interface 的注释分组拆分为独立模块文件",
+    "F-005: craft-catalog 数据提取为 JSON，保留 TypeScript loader + 类型定义",
+    "F-006: workflow-engine 按职责拆分为 Strategy 接口 + 具体策略实现类"
+  ],
+
+  "shared_context": {
+    "patterns": [
+      "src-ts 已有 logger 模式（config/index.ts, context/providers.ts 等）",
+      "i18n 已有 locales/*.json 模式可参考",
+      "workflow-engine 已有 engine/authority.ts 子模块拆分先例"
+    ],
+    "conventions": [
+      "接口冻结：公共 export 签名不变",
+      "向后兼容：现有测试必须全部通过",
+      "渐进式：每个 task 独立编译通过"
+    ],
+    "dependencies": [
+      "F-001 无依赖（创建新工具）",
+      "F-003 无依赖（类型修复）",
+      "F-004 无依赖（纯拆分）",
+      "F-005 无依赖（数据外置）",
+      "F-002 无依赖（组件拆分）",
+      "F-006 无依赖（内部重构）"
+    ]
+  },
+
+  "confidence": {
+    "overall": 0.88,
+    "dimensions": {
+      "requirements_coverage": 0.95,
+      "task_quality": 0.90,
+      "dependency_correctness": 0.92,
+      "estimation_accuracy": 0.80,
+      "collision_safety": 0.85
+    },
+    "pressure_pass": {
+      "target_task": "TASK-006",
+      "result": "pass",
+      "notes": "workflow-engine 已有 engine/ 子目录和 types.js 分离先例，Strategy 模式可行"
+    }
+  },
+
+  "_metadata": {
+    "timestamp": "2026-05-17T05:00:00+08:00",
+    "source": "workflow-planner",
+    "planning_mode": "full",
+    "plan_type": "tech-debt",
+    "schema_version": "2.0",
+    "git_commit": "1b989ab"
+  }
+}

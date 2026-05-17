@@ -28,6 +28,8 @@ import {
   insertRevisionAlternativeToEditor,
   undoLastRevisionApplyInEditor,
 } from '../utils/revisionLoop'
+import { EvaluationSourceSection } from './evaluation/EvaluationSourceSection'
+import { ToggleSectionShell } from './evaluation/ToggleSectionShell'
 
 interface EvaluationPanelProps {
   content?: string
@@ -1143,36 +1145,13 @@ export function EvaluationPanel({
       </div>
 
       <div className="p-4 border-b border-gray-200 dark:border-dark-border space-y-3">
-        <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 dark:border-blue-900/30 dark:bg-blue-950/20">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">
-            {evaluationSourceTitle}
-          </div>
-          <p className="mt-1 text-xs leading-relaxed text-blue-700/90 dark:text-blue-200/80">
-            {evaluationSourceHint}
-          </p>
-          {availableEvaluationSources.length > 1 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {availableEvaluationSources.map((source) => {
-                const isActive = source.kind === activeEvaluationSource?.kind
-                return (
-                  <button
-                    key={source.kind}
-                    type="button"
-                    onClick={() => setSelectedSourceKind(source.kind)}
-                    aria-pressed={isActive}
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                      isActive
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-blue-200 bg-white/80 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:bg-dark-surface dark:text-blue-200 dark:hover:bg-blue-900/30'
-                    }`}
-                  >
-                    {source.label}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        <EvaluationSourceSection
+          title={evaluationSourceTitle}
+          hint={evaluationSourceHint}
+          sources={availableEvaluationSources}
+          activeKind={activeEvaluationSource?.kind ?? null}
+          onSelect={setSelectedSourceKind}
+        />
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-gray-500 dark:text-dark-text-secondary">{t.evaluationOverallScore}</span>
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(result.score)}`}>
@@ -1215,30 +1194,13 @@ export function EvaluationPanel({
           </div>
         )}
 
-        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 p-3 dark:border-dark-border dark:bg-dark-bg/70">
-          <button
-            type="button"
-            onClick={() => setShowDetailedReview((prev) => !prev)}
-            className="flex w-full items-start justify-between gap-3 text-left"
-            aria-expanded={showDetailedReview}
-            aria-label={detailedReviewTitle}
-          >
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-dark-text-muted">
-                {detailedReviewTitle}
-              </div>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-dark-text-secondary">
-                {detailedReviewHint}
-              </p>
-            </div>
-            {showDetailedReview ? (
-              <ChevronDown size={16} className="mt-0.5 shrink-0 text-gray-400 dark:text-dark-text-secondary" />
-            ) : (
-              <ChevronRight size={16} className="mt-0.5 shrink-0 text-gray-400 dark:text-dark-text-secondary" />
-            )}
-          </button>
-          {showDetailedReview && (
-            <div className="mt-4 space-y-4">
+        <ToggleSectionShell
+          title={detailedReviewTitle}
+          hint={detailedReviewHint}
+          open={showDetailedReview}
+          onToggle={() => setShowDetailedReview((prev) => !prev)}
+        >
+          <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-700 dark:text-dark-text mb-3">{t.evaluationDimensionAnalysis}</h3>
                 <div className="space-y-3">
@@ -1331,8 +1293,7 @@ export function EvaluationPanel({
                 </div>
               )}
             </div>
-          )}
-        </div>
+        </ToggleSectionShell>
 
         <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/80 p-3 dark:border-dark-border dark:bg-dark-bg/70">
           <button

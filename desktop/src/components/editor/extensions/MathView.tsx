@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { NodeViewProps } from '@tiptap/react'
 import { NodeViewWrapper } from '@tiptap/react'
 import 'katex/dist/katex.min.css'
 
-export function MathView({ node: rawNode, editor, updateAttributes, deleteNode }: NodeViewProps) {
-  const node = rawNode as any
+export function MathView({ node, editor, updateAttributes, deleteNode }: NodeViewProps) {
   const [isEditing, setIsEditing] = useState(true)
   const [inputValue, setInputValue] = useState(node.attrs.latex || '')
   const katexContainerRef = useRef<HTMLDivElement>(null)

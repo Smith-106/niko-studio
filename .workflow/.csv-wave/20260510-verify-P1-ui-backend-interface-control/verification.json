@@ -1,0 +1,103 @@
+{
+  "phase": "1",
+  "status": "passed",
+  "verified_at": "2026-05-10T08:14:45.9333199+08:00",
+  "verifier": "csv-wave-verifier",
+  "session_path": ".workflow/.csv-wave/20260510-verify-P1-ui-backend-interface-control",
+  "head_sha": "eb3019612dbd540bc31c379f6f4199680e001acd",
+  "head_committed_at": "2026-05-09T23:43:00+08:00",
+  "contract_source": [
+    ".workflow/state.json",
+    ".workflow/scratch/20260507-plan-P1-writing-craft-ui/plan.json",
+    ".workflow/scratch/20260507-plan-P1-writing-craft-ui/.task/TASK-001.json",
+    ".workflow/scratch/20260507-plan-P1-writing-craft-ui/.task/TASK-002.json",
+    ".workflow/scratch/20260507-plan-P1-writing-craft-ui/.task/TASK-003.json",
+    ".workflow/scratch/20260507-plan-P1-writing-craft-ui/.task/TASK-004.json",
+    ".workflow/scratch/20260507-plan-P1-writing-craft-ui/.task/TASK-005.json",
+    ".workflow/scratch/20260507-plan-P1-writing-craft-ui/.task/TASK-006.json"
+  ],
+  "index_missing_fallback": true,
+  "summary": "Fresh current-head verify passed: the main AnalysisPanel host, desktop bridge, MCP routes, deep-analysis path, and targeted tests for the writing-craft UI/backend control chain all pass on HEAD eb301961.",
+  "must_haves": {
+    "truths": [
+      {
+        "claim": "Users can reach the writing-craft control path from the main desktop AnalysisPanel.",
+        "status": "verified",
+        "evidence": "AnalysisPanel mounts WritingDashboard with current chapter text and llmConfig, and the host-path test verifies the backend call."
+      },
+      {
+        "claim": "The desktop bridge can call analyze and deep-analysis endpoints and unwrap the backend envelope.",
+        "status": "verified",
+        "evidence": "desktop/src/api/writing-craft.ts uses unwrapWritingCraftResponse for both endpoints; desktop bridge unit, integration, and e2e tests passed."
+      },
+      {
+        "claim": "The MCP backend exposes analyze and llm analyze endpoints with structured responses and fallback behavior.",
+        "status": "verified",
+        "evidence": "content routes register both endpoints and backend endpoint tests passed 12 assertions."
+      }
+    ],
+    "artifacts": [
+      {
+        "path": "desktop/src/components/AnalysisPanel.tsx",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "desktop/src/api/writing-craft.ts",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "desktop/src/components/intelligence/WritingDashboard.tsx",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "desktop/src/components/intelligence/WritingDimensionDetail.tsx",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "desktop/src/components/intelligence/AntiPatternWarning.tsx",
+        "status": "exists",
+        "substantive": true
+      },
+      {
+        "path": "src-ts/mcp/routes/content.ts",
+        "status": "exists",
+        "substantive": true
+      }
+    ],
+    "key_links": [
+      {
+        "from": "AnalysisPanel",
+        "to": "WritingDashboard",
+        "status": "wired",
+        "evidence": "text={writingCraftText}, visible={true}, llmConfig={llmConfig}"
+      },
+      {
+        "from": "WritingDashboard",
+        "to": "WritingDimensionDetail",
+        "status": "wired",
+        "evidence": "dimension, text, and llmConfig props are forwarded to the nested detail view"
+      },
+      {
+        "from": "desktop/src/api/writing-craft.ts",
+        "to": "/writing-craft/analyze + /writing-craft/llm-analyze",
+        "status": "wired",
+        "evidence": "Desktop bridge posts to both endpoints through unwrapWritingCraftResponse"
+      },
+      {
+        "from": "src-ts/mcp/routes/content.ts",
+        "to": "writingCraftAnalyzeEndpoint + writingCraftLLMEndpoint",
+        "status": "wired",
+        "evidence": "Both POST route patterns are registered in contentRoutes"
+      }
+    ]
+  },
+  "gaps": [],
+  "antipatterns": [],
+  "fix_plans": [],
+  "human_verification": [],
+  "coverage_score": 1
+}

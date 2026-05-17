@@ -1,0 +1,71 @@
+{
+  "phase": "1",
+  "status": "passed",
+  "validated_at": "2026-05-10T08:14:45.9333199+08:00",
+  "session_path": ".workflow/.csv-wave/20260510-verify-P1-ui-backend-interface-control",
+  "test_framework": "vitest 3.2.4",
+  "commands": [
+    "desktop/node_modules/.bin/vitest.cmd run src/api/writing-craft.test.ts src/api/writing-craft.integration.test.ts src/api/writing-craft.e2e.test.ts src/components/AnalysisPanel.test.tsx src/components/intelligence/WritingDashboard.test.tsx",
+    "src-ts/node_modules/.bin/vitest.cmd run tests/mcp/writing-craft-endpoints.test.ts"
+  ],
+  "test_results": [
+    {
+      "scope": "desktop",
+      "files_passed": 5,
+      "tests_passed": 14,
+      "notes": "Bridge unit, bridge integration, live gateway e2e, visible host path, and dashboard behavior all passed."
+    },
+    {
+      "scope": "src-ts",
+      "files_passed": 1,
+      "tests_passed": 12,
+      "notes": "Backend endpoint contract tests passed, including provider payload parsing and structured fallback behavior."
+    }
+  ],
+  "coverage": {
+    "mode": "requirement-audit",
+    "statements": null,
+    "branches": null,
+    "functions": null,
+    "lines": null
+  },
+  "requirement_coverage": [
+    {
+      "requirement": "Visible writing-craft host path from AnalysisPanel",
+      "tests": [
+        "desktop/src/components/AnalysisPanel.test.tsx"
+      ],
+      "status": "covered"
+    },
+    {
+      "requirement": "Dashboard placeholder, render, tab switch, error, and 6-dimension UI behavior",
+      "tests": [
+        "desktop/src/components/intelligence/WritingDashboard.test.tsx"
+      ],
+      "status": "covered"
+    },
+    {
+      "requirement": "Desktop bridge payload contract for /writing-craft/analyze and /writing-craft/llm-analyze",
+      "tests": [
+        "desktop/src/api/writing-craft.test.ts",
+        "desktop/src/api/writing-craft.integration.test.ts"
+      ],
+      "status": "covered"
+    },
+    {
+      "requirement": "Live gateway end-to-end path and structured LLM fallback",
+      "tests": [
+        "desktop/src/api/writing-craft.e2e.test.ts"
+      ],
+      "status": "covered"
+    },
+    {
+      "requirement": "MCP endpoint contract, 6-dimension analysis, provider payload parsing, and fallback behavior",
+      "tests": [
+        "src-ts/tests/mcp/writing-craft-endpoints.test.ts"
+      ],
+      "status": "covered"
+    }
+  ],
+  "gaps": []
+}

@@ -1,0 +1,46 @@
+{
+  "id": "TASK-004",
+  "title": "在 corrected head 上刷新 release evidence 并精确化 triage blocker 语义",
+  "status": "completed",
+  "target_module": "scripts/release_check_summary.py",
+  "read_first": [
+    "scripts/release_check_summary.py",
+    "scripts/refresh_release_evidence.py",
+    ".workflow/evidence/release/release-readiness-artifact.json",
+    "release-check-summary.md",
+    ".workflow/active",
+    "tests/unit/scripts/test_governance_scripts.py"
+  ],
+  "convergence": {
+    "criteria": [
+      "python scripts/refresh_release_evidence.py → retained release evidence 刷新成功",
+      "python scripts/release_check_summary.py → release summary 在 current head 重新生成且 blocker 明细与修复后状态一致",
+      "python -m pytest tests/unit/scripts/test_governance_scripts.py -q -k 'release_check_summary or local_selftest or triage' → 相关治理回归测试通过"
+    ]
+  },
+  "action": {
+    "detailed_plan": "仅在前置 gate 转绿后刷新 retained evidence，并在 release_check_summary 中把真实 unresolved triage blocker 与 invalid or legacy workflow-state noise 清晰分离。不得 blanket disable unresolved triage，也不得继续依赖 stale superseded evidence。"
+  },
+  "implementation": [
+    {
+      "step": 1,
+      "action": "审查并修正 scripts/release_check_summary.py 中 unresolved_triage_blocker_signal、local_selftest_enforcement_signal、gate_score_or_critical_blocker_signal 的输入来源与判定逻辑，使真实 unresolved state 仍然阻塞，但无效或遗留噪音不会伪造 blocker。",
+      "file": "scripts/release_check_summary.py"
+    },
+    {
+      "step": 2,
+      "action": "必要时调整 scripts/refresh_release_evidence.py 的 operator path，确保 local:selftest、writing helper acceptance 和 release summary refresh 按 corrected head 顺序刷新 retained proof。",
+      "file": "scripts/refresh_release_evidence.py"
+    },
+    {
+      "step": 3,
+      "action": "扩展 tests/unit/scripts/test_governance_scripts.py，覆盖 fresh_current、stale_superseded、legacy_noise 与 real_unresolved 的区分场景。",
+      "file": "tests/unit/scripts/test_governance_scripts.py"
+    }
+  ],
+  "priority": "critical",
+  "estimated_minutes": 60,
+  "_metadata": {
+    "wave": 3
+  }
+}

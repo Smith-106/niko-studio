@@ -1,0 +1,388 @@
+{
+  "narrativeTechniques": {
+    "escalation_ladder": {
+      "technique": "escalation_ladder",
+      "label": "升级阶梯",
+      "description": "威胁或冲突按阶梯式逐步升级，每一级都比前一级更危险，让读者的紧张感持续攀升",
+      "source": "Frey《劲爆小说秘境游走》",
+      "detectionKeywords": [
+        "升级",
+        "更加",
+        "进一步",
+        "恶化",
+        "加剧",
+        "层层"
+      ],
+      "effectDescription": "制造持续递增的紧张感，让读者无法放松",
+      "applicationContext": [
+        "悬疑",
+        "恐怖",
+        "动作",
+        "灾难"
+      ]
+    },
+    "reversal_timing": {
+      "technique": "reversal_timing",
+      "label": "反转时机",
+      "description": "精准控制反转的时机——在读者预期反转时推迟，在读者放松时突袭",
+      "source": "Frey《悬疑小说创作指导》",
+      "detectionKeywords": [
+        "原来",
+        "竟然",
+        "没想到",
+        "反转",
+        "出乎意料",
+        "突然"
+      ],
+      "effectDescription": "打破读者预期，制造最大的心理冲击力",
+      "applicationContext": [
+        "推理",
+        "悬疑",
+        "惊悚",
+        "所有类型"
+      ]
+    },
+    "multi_thread_weaving": {
+      "technique": "multi_thread_weaving",
+      "label": "多线编织",
+      "description": "多条叙事线在关键节点交汇，每条线单独推进但互相关联，最终编织成一个整体",
+      "source": "Frey《劲爆小说秘境游走》",
+      "detectionKeywords": [
+        "同时",
+        "另一边",
+        "视角切换",
+        "回到",
+        "与此同时",
+        "交替"
+      ],
+      "effectDescription": "增加故事层次感和复杂度，多线交汇时产生倍增的戏剧效果",
+      "applicationContext": [
+        "长篇",
+        "史诗",
+        "社会派",
+        "多视角叙事"
+      ]
+    },
+    "reader_manipulation": {
+      "technique": "reader_manipulation",
+      "label": "读者操控",
+      "description": "通过选择性呈现信息、控制叙述视角、操控信息落差来引导读者的判断和情绪",
+      "source": "Frey《悬疑小说创作指导》",
+      "detectionKeywords": [
+        "隐瞒",
+        "视角限制",
+        "不知道",
+        "被误导",
+        "以为",
+        "实际"
+      ],
+      "effectDescription": "制造信息不对称，让读者产生特定判断然后在揭示时产生冲击",
+      "applicationContext": [
+        "推理",
+        "悬疑",
+        "惊悚",
+        "不可靠叙述"
+      ]
+    },
+    "false_resolution": {
+      "technique": "false_resolution",
+      "label": "虚假解决",
+      "description": "在故事中段制造一个看似解决但实际未解决的假结局，让角色和读者暂时放松警惕",
+      "source": "Frey《劲爆小说秘境游走》",
+      "detectionKeywords": [
+        "终于",
+        "一切结束",
+        "以为安全",
+        "风平浪静",
+        "松一口气",
+        "原来还没"
+      ],
+      "effectDescription": "制造\"安全\"的假象然后打破它，在读者最放松时给予最大冲击",
+      "applicationContext": [
+        "恐怖",
+        "悬疑",
+        "惊悚",
+        "冒险"
+      ]
+    },
+    "ticking_clock": {
+      "technique": "ticking_clock",
+      "label": "倒计时",
+      "description": "设置明确的时限，让读者和角色都能感知到时间的紧迫感",
+      "source": "Frey《悬疑小说创作指导》",
+      "detectionKeywords": [
+        "时间",
+        "倒计时",
+        "还剩",
+        "截止",
+        "最后",
+        "来不及",
+        "紧迫"
+      ],
+      "effectDescription": "以时间压力驱动节奏，让叙事自然加速",
+      "applicationContext": [
+        "惊悚",
+        "动作",
+        "冒险",
+        "所有类型"
+      ]
+    },
+    "red_herring": {
+      "technique": "red_herring",
+      "label": "红鲱鱼",
+      "description": "在叙事中故意布置误导性线索，将读者引向错误的结论",
+      "source": "Frey《劲爆小说秘境游走》",
+      "detectionKeywords": [
+        "怀疑",
+        "误导",
+        "线索",
+        "看似",
+        "指向",
+        "嫌疑",
+        "假象"
+      ],
+      "effectDescription": "保护真正的谜底，同时增加解谜的趣味性和反转力度",
+      "applicationContext": [
+        "推理",
+        "侦探",
+        "悬疑",
+        "间谍"
+      ]
+    },
+    "dramatic_irony": {
+      "technique": "dramatic_irony",
+      "label": "戏剧反讽",
+      "description": "读者知道角色所不知道的信息，让读者为角色的无知感到焦虑或期待",
+      "source": "Frey《劲爆小说秘境游走》",
+      "detectionKeywords": [
+        "读者知道",
+        "只有他不知道",
+        "还在以为",
+        "其实已经",
+        "暗中",
+        "浑然不觉"
+      ],
+      "effectDescription": "制造\"观众知情\"的紧张感，读者在屏幕外为角色呐喊",
+      "applicationContext": [
+        "悬疑",
+        "悲剧",
+        "喜剧",
+        "所有类型"
+      ]
+    }
+  },
+  "foreshadowHierarchy": {
+    "core": {
+      "label": "核心伏笔",
+      "description": "1-2个关键线索，影响主线剧情",
+      "maxCount": 2
+    },
+    "subplot": {
+      "label": "支线伏笔",
+      "description": "2-3个辅助线索，丰富故事层次",
+      "maxCount": 3
+    },
+    "decorative": {
+      "label": "装饰伏笔",
+      "description": "2-3个细节线索，增强真实感",
+      "maxCount": 3
+    }
+  },
+  "foreshadowRecoveryMethods": [
+    "direct",
+    "progressive",
+    "accidental",
+    "deduction"
+  ],
+  "subgenreRules": {
+    "honkaku": {
+      "subgenre": "honkaku",
+      "label": "本格推理",
+      "description": "以逻辑推理为核心，强调公平线索原则，读者可以和侦探同时推理",
+      "coreRules": [
+        "公平线索规则：所有关键线索必须在揭晓前呈现给读者",
+        "逻辑自洽：推理过程必须严格遵循逻辑",
+        "不可能犯罪：犯罪手法看似不可能，但有合理解释",
+        "密室/暴风雪山庄：封闭空间，有限嫌疑人"
+      ],
+      "requiredElements": [
+        "侦探角色",
+        "公平线索",
+        "推理过程",
+        "逻辑闭环",
+        "嫌疑人列表"
+      ],
+      "forbiddenElements": [
+        "超自然解释",
+        "未呈现的关键线索",
+        "巧合破案",
+        "天降灵感"
+      ],
+      "keywords": {
+        "typical": [
+          "密室",
+          "不在场证明",
+          "线索",
+          "推理",
+          "嫌疑人",
+          "诡计",
+          "不可能",
+          "真凶",
+          "不在场"
+        ],
+        "atypical": [
+          "超自然",
+          "鬼神",
+          "灵异",
+          "巧合"
+        ]
+      },
+      "referenceWorks": [
+        "阿加莎·克里斯蒂《无人生还》",
+        "希区柯克悬念故事全集"
+      ]
+    },
+    "societal": {
+      "subgenre": "societal",
+      "label": "社会派",
+      "description": "以社会问题为背景，深入挖掘犯罪动机和人性复杂面",
+      "coreRules": [
+        "社会批判：犯罪动机与社会问题紧密关联",
+        "动机深度：每个角色都有复杂的动机，无纯粹善恶",
+        "人性描写：重点刻画人物心理和情感",
+        "现实背景：故事植根于真实的社会环境"
+      ],
+      "requiredElements": [
+        "社会问题",
+        "复杂动机",
+        "人性描写",
+        "情感深度",
+        "现实感"
+      ],
+      "forbiddenElements": [
+        "纯粹善恶",
+        "脸谱化角色",
+        "脱离社会的犯罪",
+        "无动机的恶"
+      ],
+      "keywords": {
+        "typical": [
+          "动机",
+          "社会",
+          "不公",
+          "人性",
+          "挣扎",
+          "灰色",
+          "苦衷",
+          "不得已",
+          "为什么"
+        ],
+        "atypical": [
+          "密室",
+          "诡计",
+          "纯粹",
+          "天赋",
+          "超能力"
+        ]
+      },
+      "referenceWorks": [
+        "东野圭吾《白夜行》",
+        "山口雅也《生尸之死》"
+      ]
+    },
+    "hard_boiled": {
+      "subgenre": "hard_boiled",
+      "label": "硬汉派",
+      "description": "以硬汉侦探为主角，氛围和风格优先，道德灰色地带",
+      "coreRules": [
+        "氛围优先：环境的氛围描写与情节同等重要",
+        "硬汉侦探：主角坚韧、独立、有道德底线但不完美",
+        "道德灰色：没有绝对的正义和邪恶",
+        "暴力美学：动作和暴力描写直接而有力",
+        "第一人称：通常使用第一人称叙事"
+      ],
+      "requiredElements": [
+        "硬汉主角",
+        "氛围描写",
+        "道德灰色",
+        "城市/黑暗背景",
+        "暴力元素"
+      ],
+      "forbiddenElements": [
+        "温情过度",
+        "纯粹正义",
+        "完美主角",
+        "轻松愉快"
+      ],
+      "keywords": {
+        "typical": [
+          "侦探",
+          "黑暗",
+          "雨夜",
+          "烟",
+          "酒",
+          "孤独",
+          "正义",
+          "街头",
+          "危险",
+          "枪"
+        ],
+        "atypical": [
+          "温馨",
+          "阳光",
+          "纯粹",
+          "天真"
+        ]
+      },
+      "referenceWorks": [
+        "雷蒙德·钱德勒《漫长的告别》"
+      ]
+    },
+    "thriller": {
+      "subgenre": "thriller",
+      "label": "惊悚悬疑",
+      "description": "以心理操控和叙述欺骗为核心，读者无法确定叙事者的可靠性",
+      "coreRules": [
+        "不可靠叙述者：叙事者可能隐瞒、歪曲或遗忘事实",
+        "心理操控：通过信息控制操控读者的判断",
+        "反转设计：至少一个颠覆性的重大反转",
+        "选择性叙述：关键信息被故意延迟或隐藏"
+      ],
+      "requiredElements": [
+        "不可靠叙述",
+        "心理操控",
+        "重大反转",
+        "信息不对称",
+        "悬念持续"
+      ],
+      "forbiddenElements": [
+        "完全可靠的叙述者",
+        "无反转",
+        "线形叙事",
+        "透明信息"
+      ],
+      "keywords": {
+        "typical": [
+          "原来",
+          "没想到",
+          "被骗",
+          "不可信",
+          "记忆",
+          "谎言",
+          "反转",
+          "真相",
+          "隐藏"
+        ],
+        "atypical": [
+          "透明",
+          "直接",
+          "简单",
+          "明确"
+        ]
+      },
+      "referenceWorks": [
+        "吉莉安·弗琳《消失的爱人》"
+      ]
+    }
+  }
+}
