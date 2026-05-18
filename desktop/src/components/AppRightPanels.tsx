@@ -80,6 +80,11 @@ const WorkflowEditorPanel = lazy(async () => {
   return { default: module.WorkflowEditorPanel }
 })
 
+const NarrativeVisualizationPanel = lazy(async () => {
+  const module = await import('./NarrativeVisualizationPanel')
+  return { default: module.NarrativeVisualizationPanel }
+})
+
 
 interface AppRightPanelsProps {
   activeRightPanel: RightPanelType
@@ -185,6 +190,7 @@ export function AppRightPanels({
       )}
       {activeRightPanel === 'templateBrowser' && <TemplateBrowserPanel onClose={closeRightPanel} />}
       {activeRightPanel === 'workflowEditor' && <WorkflowEditorPanel onClose={closeRightPanel} />}
+      {activeRightPanel === 'narrativeVisualization' && <NarrativeVisualizationPanel onClose={closeRightPanel} />}
     </Suspense>
   )
 }

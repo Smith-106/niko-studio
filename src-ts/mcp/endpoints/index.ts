@@ -161,6 +161,7 @@ export {
 export {
   analysisPatternsEndpoint,
   analysisSessionsEndpoint,
+  analysisNarrativeVisualizationEndpoint,
 } from './analysis';
 
 export {

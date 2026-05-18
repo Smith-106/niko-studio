@@ -34,6 +34,7 @@ import {
   characterDepthEndpoint,
   characterRelationshipsEndpoint,
   analysisPatternsEndpoint,
+  analysisNarrativeVisualizationEndpoint,
   analysisSessionsEndpoint,
   learningImportEndpoint,
   learningStyleFeedbackEndpoint,
@@ -95,6 +96,7 @@ export const contentRoutes: GatewayRoute[] = [
   // Analysis
   { method: 'POST', pattern: /^\/analysis\/patterns$/, handler: analysisPatternsEndpoint },
   { method: 'POST', pattern: /^\/analysis\/sessions$/, handler: analysisSessionsEndpoint },
+  { method: 'POST', pattern: /^\/analysis\/narrative-visualization$/, handler: analysisNarrativeVisualizationEndpoint },
 
   // Learning (M22)
   { method: 'POST', pattern: /^\/learning\/import$/, handler: learningImportEndpoint },

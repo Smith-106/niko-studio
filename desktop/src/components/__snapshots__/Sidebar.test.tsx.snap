@@ -495,6 +495,42 @@ exports[`Sidebar > matches snapshot 1`] = `
         Characters
       </span>
     </button>
+    <button
+      class="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 "
+      title="Narrative Visualization"
+      type="button"
+    >
+      <svg
+        class="lucide lucide-bar-chart3 "
+        fill="none"
+        height="18"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        width="18"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M3 3v18h18"
+        />
+        <path
+          d="M18 17V9"
+        />
+        <path
+          d="M13 17V5"
+        />
+        <path
+          d="M8 17v-3"
+        />
+      </svg>
+      <span
+        class="text-sm font-medium"
+      >
+        Narrative Visualization
+      </span>
+    </button>
   </div>
   <div
     class="border-t border-dark-border p-3 flex flex-wrap gap-2 shrink-0 bg-dark-bg"

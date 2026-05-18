@@ -324,6 +324,7 @@ describe('writer workflow experience', () => {
           onOpenAnalysis={vi.fn()}
           onOpenEvaluationDrillDown={vi.fn()}
           onOpenCharacterRelationships={vi.fn()}
+          onOpenNarrativeVisualization={vi.fn()}
         />
       </>,
     )

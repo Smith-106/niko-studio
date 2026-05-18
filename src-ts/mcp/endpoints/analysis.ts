@@ -7,6 +7,15 @@
 import type { HttpRequest, HttpResponse } from '../http-types';
 import { jsonResponse, parseBody } from '../http-types';
 import { graphQuery } from '../services/graph';
+import { graphGetRelationships } from '../services/graph';
+import {
+  buildNarrativeVisualizationBundle,
+  type NarrativeVisualizationChapterInput,
+} from '../../narrative/narrative-visualization.js';
+import {
+  runConsistencyCheck,
+  type ConsistencyCheckRequest,
+} from './critic.js';
 
 export async function analysisPatternsEndpoint(request: HttpRequest): Promise<HttpResponse> {
   const body = parseBody(request) as Record<string, unknown>;
@@ -24,6 +33,69 @@ export async function analysisPatternsEndpoint(request: HttpRequest): Promise<Ht
 
 export async function analysisSessionsEndpoint(_request: HttpRequest): Promise<HttpResponse> {
   return jsonResponse({ success: true, data: [] });
+}
+
+export async function analysisNarrativeVisualizationEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Omit<ConsistencyCheckRequest, 'chapters'> & {
+    chapters?: Array<{ content?: string; chapterIndex?: number; chapterNumber?: number; title?: string }>;
+    chapterMeta?: Array<{ chapterNumber?: number; title?: string }>;
+    relationshipRoot?: string;
+  };
+
+  const chaptersInput = Array.isArray(body.chapters) ? body.chapters : [];
+  const chapterMeta = Array.isArray(body.chapterMeta) ? body.chapterMeta : [];
+
+  const normalizedChapters: NarrativeVisualizationChapterInput[] = chaptersInput.map((chapter, index) => ({
+    content: String(chapter.content ?? ''),
+    chapterIndex: Number(chapter.chapterIndex ?? index),
+    chapterNumber: Number(chapter.chapterNumber ?? chapterMeta[index]?.chapterNumber ?? index + 1),
+    title: String(chapter.title ?? chapterMeta[index]?.title ?? `Chapter ${index + 1}`),
+  }));
+
+  if (normalizedChapters.length === 0) {
+    return jsonResponse({
+      success: true,
+      data: buildNarrativeVisualizationBundle({ chapters: [] }),
+    });
+  }
+
+  const consistencyResult = await runConsistencyCheck({
+    ...body,
+    chapters: normalizedChapters.map((chapter) => chapter.content),
+    chapterMeta: normalizedChapters.map((chapter) => ({
+      chapterNumber: chapter.chapterNumber ?? chapter.chapterIndex + 1,
+      title: chapter.title ?? `Chapter ${chapter.chapterIndex + 1}`,
+    })),
+  });
+
+  const relationshipRoot = String(body.relationshipRoot ?? '').trim();
+  const relationshipData = await graphGetRelationships(relationshipRoot, null, 2);
+  const nodeSet = new Map<string, { id: string; name: string; role: string }>();
+  const edges = (Array.isArray(relationshipData) ? relationshipData : []).map((relationship) => {
+    const entry = relationship as Record<string, unknown>;
+    const source = String(entry.from ?? entry.source ?? '');
+    const target = String(entry.to ?? entry.target ?? '');
+    if (source && !nodeSet.has(source)) nodeSet.set(source, { id: source, name: source, role: 'character' });
+    if (target && !nodeSet.has(target)) nodeSet.set(target, { id: target, name: target, role: 'character' });
+    return {
+      source,
+      target,
+      type: String(entry.type ?? entry.relation_type ?? 'related'),
+      trust: Number(entry.trust ?? entry.weight ?? 0.5),
+    };
+  });
+
+  const bundle = buildNarrativeVisualizationBundle({
+    chapters: normalizedChapters,
+    timelineReport: consistencyResult.timeline,
+    characterReport: consistencyResult.character,
+    relationshipGraph: {
+      nodes: [...nodeSet.values()],
+      edges,
+    },
+  });
+
+  return jsonResponse({ success: true, data: bundle });
 }
 
 interface PatternTemplate {

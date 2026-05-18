@@ -43,6 +43,7 @@ type SidebarKeys =
   | 'sidebarWritingHelper'
   | 'sidebarMcpStatus'
   | 'sidebarEvaluationPanel'
+  | 'sidebarNarrativeVisualization'
   | 'skillGroupCore'
   | 'skillGroupStory'
   | 'skillGroupQuality'
@@ -123,6 +124,7 @@ export const zhSidebar: Translations = {
   sidebarWritingHelper: '写作助手',
   sidebarMcpStatus: '服务诊断',
   sidebarEvaluationPanel: '回复评估',
+  sidebarNarrativeVisualization: '叙事可视化',
   skillGroupCore: '核心',
   skillGroupStory: '故事',
   skillGroupQuality: '质量',
@@ -202,6 +204,7 @@ export const enSidebar: Translations = {
   sidebarWritingHelper: 'Writing Helper',
   sidebarMcpStatus: 'Service Diagnostics',
   sidebarEvaluationPanel: 'Reply Review',
+  sidebarNarrativeVisualization: 'Narrative Visualization',
   skillGroupCore: 'Core',
   skillGroupStory: 'Story',
   skillGroupQuality: 'Quality',

@@ -135,6 +135,7 @@ export {
 // Other standalone modules
 export * from './foreshadowing';
 export * from './narrative-voice';
+export * from './narrative-visualization';
 export * from './premise-validator';
 export {
   ReaderSatisfactionAnalyzer,
@@ -201,4 +202,3 @@ export type {
   WorldviewSetting,
   ChapterContent as WorldviewChapterContent,
 } from './worldview-extractor';
-

@@ -53,6 +53,7 @@ vi.mock('../i18n', () => ({
       knowledgeBase: 'Story Notes',
       settings: 'Settings',
       sidebarEvaluationPanel: 'Reply Review',
+      sidebarNarrativeVisualization: 'Narrative Visualization',
     },
     translate: (key: string) => key,
     language: 'zh',
@@ -73,6 +74,7 @@ const defaultSidebarProps = {
   onOpenAnalysis: vi.fn(),
   onOpenEvaluationDrillDown: vi.fn(),
   onOpenCharacterRelationships: vi.fn(),
+  onOpenNarrativeVisualization: vi.fn(),
 }
 
 describe('Sidebar', () => {
@@ -146,6 +148,14 @@ describe('Sidebar', () => {
     render(<Sidebar {...defaultSidebarProps} collapsed={false} />)
     expect(screen.getByTitle('Reply Review')).toBeInTheDocument()
     expect(screen.getByText('Reply Review')).toBeInTheDocument()
+  })
+
+  it('renders and opens the narrative visualization entry', () => {
+    render(<Sidebar {...defaultSidebarProps} collapsed={false} />)
+    const button = screen.getByTitle('Narrative Visualization')
+    expect(button).toBeInTheDocument()
+    fireEvent.click(button)
+    expect(defaultSidebarProps.onOpenNarrativeVisualization).toHaveBeenCalledOnce()
   })
 
   it('hides evaluation panel label when collapsed', () => {

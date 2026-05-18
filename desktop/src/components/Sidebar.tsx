@@ -21,6 +21,7 @@ interface SidebarProps {
   onOpenAnalysis: () => void
   onOpenEvaluationDrillDown: () => void
   onOpenCharacterRelationships: () => void
+  onOpenNarrativeVisualization: () => void
 }
 
 export const Sidebar = React.memo(function Sidebar({
@@ -37,6 +38,7 @@ export const Sidebar = React.memo(function Sidebar({
   onOpenAnalysis,
   onOpenEvaluationDrillDown,
   onOpenCharacterRelationships,
+  onOpenNarrativeVisualization,
 }: SidebarProps) {
   const conversations = useConversationList()
   const currentConversationId = useCurrentConversationId()
@@ -257,6 +259,10 @@ export const Sidebar = React.memo(function Sidebar({
         <button onClick={onOpenCharacterRelationships} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title="Characters" type="button">
           <Users size={18} />
           {!collapsed && <span className="text-sm font-medium">Characters</span>}
+        </button>
+        <button onClick={onOpenNarrativeVisualization} className={`w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-surface rounded-lg text-dark-text-secondary hover:text-dark-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 ${collapsed ? 'justify-center' : ''}`} title={t.sidebarNarrativeVisualization} type="button">
+          <BarChart3 size={18} />
+          {!collapsed && <span className="text-sm font-medium">{t.sidebarNarrativeVisualization}</span>}
         </button>
       </div>
 

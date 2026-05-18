@@ -207,6 +207,17 @@ vi.mock('./AutomationPanel', () => ({
   ),
 }))
 
+vi.mock('./NarrativeVisualizationPanel', () => ({
+  NarrativeVisualizationPanel: ({ onClose }: { onClose: () => void }) => (
+    <div>
+      <div>Narrative Visualization Shell</div>
+      <button type="button" onClick={onClose}>
+        close-narrative-visualization
+      </button>
+    </div>
+  ),
+}))
+
 vi.mock('./AiTextOptimizer', () => ({
   AiTextOptimizer: ({ onOpenSettings }: { onOpenSettings: () => void }) => (
     <button data-testid="text-optimizer-open-settings" onClick={onOpenSettings}>
@@ -431,6 +442,29 @@ describe('AppRightPanels writer handoff continuity', () => {
 
     await user.click(await screen.findByTestId('automation-open-settings'))
     expect(openSettingsFromAutomation).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the narrative visualization panel branch when requested', async () => {
+    render(
+      <AppRightPanels
+        activeRightPanel="narrativeVisualization"
+        settingsOpen={false}
+        evaluationSources={[]}
+        writingHelperDraft={defaultDraft}
+        closeRightPanel={() => {}}
+        closeSettings={() => {}}
+        openDetailedDiagnostics={() => {}}
+        openSettingsFromWritingHelper={() => {}}
+        openSettingsFromTextOptimizer={() => {}}
+        openSettingsFromAutomation={() => {}}
+        onOpenAutomationFromEvaluation={() => {}}
+        onOpenWritingHelperFromEvaluation={() => {}}
+        setWritingHelperDraft={() => {}}
+        clearWritingHelperDraft={() => {}}
+      />,
+    )
+
+    expect(await screen.findByText('Narrative Visualization Shell')).toBeInTheDocument()
   })
 })
 

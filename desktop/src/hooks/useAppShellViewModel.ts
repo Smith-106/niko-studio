@@ -100,6 +100,7 @@ export function useAppShellViewModel({
     onOpenAnalysis: () => panelOrchestration.toggleRightPanel('analysis'),
     onOpenEvaluationDrillDown: () => panelOrchestration.toggleRightPanel('evaluationDrillDown'),
     onOpenCharacterRelationships: () => panelOrchestration.toggleRightPanel('characterRelationships'),
+    onOpenNarrativeVisualization: () => panelOrchestration.toggleRightPanel('narrativeVisualization'),
   }
 
   const appRightPanelsProps: ComponentProps<typeof AppRightPanels> = {

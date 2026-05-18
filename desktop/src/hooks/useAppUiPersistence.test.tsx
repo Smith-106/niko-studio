@@ -40,6 +40,14 @@ describe('useAppUiPersistence', () => {
     expect(result.current.activeRightPanel).toBe('automation')
   })
 
+  it('restores narrative visualization as an active right panel from persisted storage', () => {
+    localStorage.setItem('niko.active-right-panel-v1', 'narrativeVisualization')
+
+    const { result } = renderHook(() => useAppUiPersistence())
+
+    expect(result.current.activeRightPanel).toBe('narrativeVisualization')
+  })
+
   it('restores writing helper guidance from persisted draft storage', () => {
     localStorage.setItem('niko.writing-helper-draft-v1', JSON.stringify({
       content: '正文',
