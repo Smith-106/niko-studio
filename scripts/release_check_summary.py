@@ -826,6 +826,7 @@ def _runtime_policy_contract() -> dict[str, object]:
     novel_quality_text = _read_project_text("src-ts/workflow/novel-quality.ts") or ""
     contract_text = _read_project_text("src-ts/mcp/contract.ts") or ""
     workflow_engine_text = _read_project_text("src-ts/workflow/workflow-engine.ts") or ""
+    workflow_engine_core_text = _read_project_text("src-ts/workflow/workflow-engine-core.ts") or ""
     workflow_risk_text = _read_project_text("src-ts/workflow/engine/risk.ts") or ""
 
     pass_score = _extract_first_float(
@@ -846,11 +847,12 @@ def _runtime_policy_contract() -> dict[str, object]:
     default_review_bound = bool(
         re.search(r"human_review_score:\s*NOVEL_HUMAN_REVIEW_SCORE\b", novel_state_text)
     )
+    public_entry_api_pattern = (
+        r"ENGINE_PUBLIC_ENTRY_API\s*=\s*\['route',\s*'plan',\s*'execute',\s*'run',\s*'(?:run_stream|runStream)'\]"
+    )
     public_entry_api_present = bool(
-        re.search(
-            r"ENGINE_PUBLIC_ENTRY_API\s*=\s*\['route',\s*'plan',\s*'execute',\s*'run',\s*'run_stream'\]",
-            workflow_engine_text,
-        )
+        re.search(public_entry_api_pattern, workflow_engine_text)
+        or re.search(public_entry_api_pattern, workflow_engine_core_text)
     )
     workflow_hard_gate_present = (
         "WorkflowDecision.NO_GO" in workflow_engine_text
@@ -2614,6 +2616,33 @@ def unresolved_triage_blocker_signal(sessions_root: Path) -> tuple[str, int, str
         if not triage_state:
             invalid_count += 1
             continue
+
+        steps = payload.get("steps")
+        if (
+            str(payload.get("plan_status") or "").strip().lower() == "running"
+            and str(payload.get("runner_state") or "").strip().lower() == "running"
+            and triage_state == "open"
+            and isinstance(steps, list)
+        ):
+            done_steps = [
+                step
+                for step in steps
+                if isinstance(step, dict) and str(step.get("status") or "").strip().lower() == "done"
+            ]
+            pending_checkpoint_only = all(
+                isinstance(step, dict)
+                and (
+                    str(step.get("status") or "").strip().lower() == "done"
+                    or (
+                        str(step.get("name") or "").strip().lower() == "checkpoint"
+                        and str(step.get("status") or "").strip().lower() == "planned"
+                    )
+                )
+                for step in steps
+            )
+            if done_steps and pending_checkpoint_only:
+                ignored_legacy_count += 1
+                continue
 
         linked_count += 1
         if triage_state not in {"resolved", "rejected"}:
