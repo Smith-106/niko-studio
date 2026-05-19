@@ -57,7 +57,7 @@ def test_sync_release_notes_updates_current_head_commit() -> None:
     assert "Current-head release commit：`f13df0f3f38ada475f55df300a96e1965f055287`" in updated
 
 
-def test_sync_getting_started_updates_short_commit() -> None:
+def test_sync_release_snapshot_fragment_updates_short_commit() -> None:
     module = _load()
     state = module.ReleaseState(
         head_sha="f13df0f3f38ada475f55df300a96e1965f055287",
@@ -65,8 +65,11 @@ def test_sync_getting_started_updates_short_commit() -> None:
         release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1",
         asset_names=(),
     )
-    text = '<li>Current release commit：<code>ee391ee</code></li>'
-    updated = module.sync_getting_started(text, state)
+    text = """
+<p><strong>当前推荐版本：</strong><code>v9.26.1</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1">Niko-Studio v9.26.1</a>。</p>
+<li>Current release commit：<code>ee391ee</code></li>
+"""
+    updated = module.sync_release_snapshot_fragment(text, state)
     assert "<code>f13df0f</code>" in updated
 
 
@@ -104,17 +107,17 @@ def test_check_mode_detects_old_commit_markers(tmp_path: Path, monkeypatch) -> N
     ))
     readme = tmp_path / "README.md"
     notes = tmp_path / "RELEASE_NOTES.md"
-    getting_started = tmp_path / "content-getting-started.ts"
+    release_snapshot_fragment = tmp_path / "shared-doc-fragments.ts"
     summary = tmp_path / "release-check-summary.md"
     artifact = tmp_path / "release-readiness-artifact.json"
     readme.write_text("- Current release commit: `ee391eea0088b0bc63b6b63ac0502f6296b8bf16`\n*Version 9.25.8 Platform Edition | Updated: 2026-05-14*\n", encoding="utf-8")
     notes.write_text("- Current-head release commit：`ee391eea0088b0bc63b6b63ac0502f6296b8bf16`\n", encoding="utf-8")
-    getting_started.write_text("<li>Current release commit：<code>ee391ee</code></li>", encoding="utf-8")
+    release_snapshot_fragment.write_text("<li>Current release commit：<code>ee391ee</code></li>", encoding="utf-8")
     summary.write_text("- current_head_sha: ee391eea0088b0bc63b6b63ac0502f6296b8bf16\n- generated_at: 2026-05-19T15:18:38.603581+00:00\n- GitHub release `v9.26.1` is aligned to commit `ee391eea0088b0bc63b6b63ac0502f6296b8bf16`.\n  \"generated_at\": \"2026-05-19T15:18:38.603581+00:00\",\n  \"head_sha\": \"ee391eea0088b0bc63b6b63ac0502f6296b8bf16\",\n", encoding="utf-8")
     artifact.write_text(json.dumps({"generated_at": "2026-05-19T15:18:38.603581+00:00", "head_sha": "ee391eea0088b0bc63b6b63ac0502f6296b8bf16", "release_evidence": {"head_sha": "ee391eea0088b0bc63b6b63ac0502f6296b8bf16", "generated_at": "2026-05-19T15:18:38.603581+00:00"}, "trace": {"trace_id": "release-readiness-old"}}, ensure_ascii=False), encoding="utf-8")
     monkeypatch.setattr(module, "README_PATH", readme)
     monkeypatch.setattr(module, "RELEASE_NOTES_PATH", notes)
-    monkeypatch.setattr(module, "DOCS_SITE_GETTING_STARTED_PATH", getting_started)
+    monkeypatch.setattr(module, "DOCS_SITE_RELEASE_SNAPSHOT_PATH", release_snapshot_fragment)
     monkeypatch.setattr(module, "LOCAL_SUMMARY_PATH", summary)
     monkeypatch.setattr(module, "LOCAL_ARTIFACT_PATH", artifact)
     rc = module.main(["--check"])

@@ -16,8 +16,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 README_PATH = PROJECT_ROOT / "README.md"
 RELEASE_NOTES_PATH = PROJECT_ROOT / "docs" / "release" / "RELEASE_NOTES.md"
-DOCS_SITE_GETTING_STARTED_PATH = (
-    PROJECT_ROOT / "docs-site" / "src" / "client" / "data" / "content-getting-started.ts"
+DOCS_SITE_RELEASE_SNAPSHOT_PATH = (
+    PROJECT_ROOT / "docs-site" / "src" / "client" / "data" / "shared-doc-fragments.ts"
 )
 LOCAL_SUMMARY_PATH = PROJECT_ROOT / "release-check-summary.md"
 LOCAL_ARTIFACT_PATH = (
@@ -128,11 +128,11 @@ def sync_release_notes(text: str, state: ReleaseState) -> str:
     return text
 
 
-def sync_getting_started(text: str, state: ReleaseState) -> str:
+def sync_release_snapshot_fragment(text: str, state: ReleaseState) -> str:
     short_sha = state.head_sha[:7]
     text = replace_optional(
         text,
-        r"Current release commit[^<]*<code>[^<]+</code>",
+        r"Current release commit：<code>[^<]+</code>",
         f"Current release commit：<code>{short_sha}</code>",
     )
     text = replace_optional(
@@ -205,13 +205,13 @@ def main(argv: list[str] | None = None) -> int:
 
     readme = read_text(README_PATH)
     release_notes = read_text(RELEASE_NOTES_PATH)
-    getting_started = read_text(DOCS_SITE_GETTING_STARTED_PATH)
+    release_snapshot_fragment = read_text(DOCS_SITE_RELEASE_SNAPSHOT_PATH)
     local_summary = read_text(LOCAL_SUMMARY_PATH)
     local_artifact = json.loads(LOCAL_ARTIFACT_PATH.read_text(encoding="utf-8"))
 
     next_readme = sync_readme(readme, state)
     next_release_notes = sync_release_notes(release_notes, state)
-    next_getting_started = sync_getting_started(getting_started, state)
+    next_release_snapshot_fragment = sync_release_snapshot_fragment(release_snapshot_fragment, state)
     next_local_summary = sync_local_summary(local_summary, state)
     next_local_artifact = sync_local_artifact(local_artifact, state)
 
@@ -229,8 +229,8 @@ def main(argv: list[str] | None = None) -> int:
             for pattern in check_drift(next_release_notes, [r"Current-head release commit：`ee391ee"])
         )
         failures.extend(
-            f"GETTING_STARTED:{pattern}"
-            for pattern in check_drift(next_getting_started, [r"Current release commit：<code>ee391ee</code>"])
+            f"RELEASE_SNAPSHOT_FRAGMENT:{pattern}"
+            for pattern in check_drift(next_release_snapshot_fragment, [r"Current release commit：<code>ee391ee</code>"])
         )
         failures.extend(
             f"LOCAL_ARTIFACT:{pattern}"
@@ -247,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
 
     write_text(README_PATH, next_readme)
     write_text(RELEASE_NOTES_PATH, next_release_notes)
-    write_text(DOCS_SITE_GETTING_STARTED_PATH, next_getting_started)
+    write_text(DOCS_SITE_RELEASE_SNAPSHOT_PATH, next_release_snapshot_fragment)
     write_text(LOCAL_SUMMARY_PATH, next_local_summary)
     LOCAL_ARTIFACT_PATH.write_text(json.dumps(next_local_artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": "PASS", "tag": state.release_tag, "head_sha": state.head_sha, "assets": list(state.asset_names)}, ensure_ascii=False, indent=2))

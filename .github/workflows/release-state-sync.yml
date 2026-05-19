@@ -2,7 +2,7 @@ name: Release State Sync
 
 on:
   release:
-    types: [published, edited]
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -35,12 +35,12 @@ jobs:
 
       - name: Commit synced release state
         run: |
-          if git diff --quiet -- README.md docs/release/RELEASE_NOTES.md docs-site/src/client/data/content-getting-started.ts release-check-summary.md .workflow/evidence/release/release-readiness-artifact.json; then
+          if git diff --quiet -- README.md docs/release/RELEASE_NOTES.md docs-site/src/client/data/shared-doc-fragments.ts release-check-summary.md .workflow/evidence/release/release-readiness-artifact.json; then
             echo "No release-state changes to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md docs/release/RELEASE_NOTES.md docs-site/src/client/data/content-getting-started.ts release-check-summary.md .workflow/evidence/release/release-readiness-artifact.json
+          git add README.md docs/release/RELEASE_NOTES.md docs-site/src/client/data/shared-doc-fragments.ts release-check-summary.md .workflow/evidence/release/release-readiness-artifact.json
           git commit -m "docs: sync release state for ${{ inputs.tag || github.event.release.tag_name }}"
           git push origin HEAD:main
