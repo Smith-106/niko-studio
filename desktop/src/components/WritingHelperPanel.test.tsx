@@ -500,4 +500,42 @@ describe('WritingHelperPanel mode options and payload', () => {
     await user.click(screen.getByRole('button', { name: zh.writingHelperInsertToEditor }))
     expect(editorHandle.insertText).toHaveBeenCalledWith('插入结果。')
   })
+
+  it('renders revision session metadata from the evaluation handoff', () => {
+    render(
+      <WritingHelperPanel
+        onClose={() => {}}
+        onOpenSettings={() => {}}
+        draftState={{
+          content: '已有草稿内容',
+          mode: 'rewrite',
+          maxSentences: 3,
+          maxItems: 6,
+          guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力',
+          handoff: {
+            source: 'evaluation',
+            suggestionTitle: '增加冲突',
+            suggestionReason: '提升张力',
+            guidance: '优先处理这条评估建议：增加冲突\n原因：提升张力',
+            carriedContent: 'revision-preview',
+            preset: {
+              mode: 'rewrite',
+              maxSentences: 4,
+              maxItems: 6,
+            },
+            revisionSession: {
+              id: 'revision-session-1',
+              chapterId: 'chapter-7',
+              state: 'COMPARED',
+              iteration: 2,
+              comparisonSummary: 'Score improved',
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(screen.getByText(/修订会话：revision-session-1/)).toBeInTheDocument()
+    expect(screen.getByText(/COMPARED/)).toBeInTheDocument()
+  })
 })

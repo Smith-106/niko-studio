@@ -161,6 +161,76 @@ describe('workflow endpoints integration', () => {
     expect((resumeResponse.body as Record<string, unknown>)['runner_state']).toBe('running');
   });
 
+  it('runs revision session endpoints through the workflow surface', async () => {
+    const {
+      workflowRevisionStartSessionEndpoint,
+      workflowRevisionAnalyzeEndpoint,
+      workflowRevisionSuggestEndpoint,
+      workflowRevisionMarkRevisedEndpoint,
+      workflowRevisionCompareEndpoint,
+      workflowRevisionHistoryEndpoint,
+    } = await import('../../mcp/endpoints/workflow.js');
+
+    const workspaceA = buildWorkspace('workflow-session-revision', 'atlas-workspace', 'atlas-project');
+    const originalText = '林岚攥着匿名信站在门口，她决定先等等再说。老陈只提醒她不要轻举妄动。';
+    const revisedText = '林岚攥着匿名信站在门口，雨声像倒计时一样压向走廊。老陈提醒她不要轻举妄动，她却从信纸背面看见了只有死者才知道的暗号。';
+
+    const started = await workflowRevisionStartSessionEndpoint(
+      makeRequest({
+        chapter_id: 'chapter-2',
+        content: originalText,
+        workspace: workspaceA,
+      }),
+    );
+    expect(started.statusCode).toBe(200);
+    const sessionId = String((started.body as Record<string, unknown>)['session_id']);
+    expect(sessionId).toBeTruthy();
+
+    const analyzed = await workflowRevisionAnalyzeEndpoint(
+      makeRequest({
+        session_id: sessionId,
+        workspace: workspaceA,
+      }),
+    );
+    expect((analyzed.body as Record<string, unknown>)['status']).toBe('ANALYZED');
+    expect(Array.isArray((analyzed.body as Record<string, unknown>)['weak_points'])).toBe(true);
+
+    const suggested = await workflowRevisionSuggestEndpoint(
+      makeRequest({
+        session_id: sessionId,
+        workspace: workspaceA,
+      }),
+    );
+    expect((suggested.body as Record<string, unknown>)['status']).toBe('SUGGESTED');
+    expect(Array.isArray((suggested.body as Record<string, unknown>)['suggestions'])).toBe(true);
+
+    const marked = await workflowRevisionMarkRevisedEndpoint(
+      makeRequest({
+        session_id: sessionId,
+        revised_text: revisedText,
+        workspace: workspaceA,
+      }),
+    );
+    expect((marked.body as Record<string, unknown>)['status']).toBe('REVISED');
+
+    const compared = await workflowRevisionCompareEndpoint(
+      makeRequest({
+        session_id: sessionId,
+        workspace: workspaceA,
+      }),
+    );
+    expect((compared.body as Record<string, unknown>)['status']).toBe('COMPARED');
+    expect(((compared.body as Record<string, unknown>)['comparison'] as Record<string, unknown>)['summary']).toBeTruthy();
+
+    const history = await workflowRevisionHistoryEndpoint(
+      makeRequest({
+        chapter_id: 'chapter-2',
+        workspace: workspaceA,
+      }),
+    );
+    expect((history.body as Record<string, unknown>)['total']).toBe(1);
+  });
+
   it('blocks destructive execute until confirm token is provided', async () => {
     const {
       workflowPlanEndpoint,

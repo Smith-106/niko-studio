@@ -7,6 +7,12 @@ export type WorkflowPlanEndpointPath =
   | '/plan'
   | '/execute'
   | '/lifecycle'
+  | '/revision/start-session'
+  | '/revision/analyze'
+  | '/revision/suggest'
+  | '/revision/mark-revised'
+  | '/revision/compare'
+  | '/revision/history'
 
 export type WorkflowSchedulerEndpointPath =
   | '/scheduler/register'

@@ -1,6 +1,13 @@
 import { callAnalysisAgent } from '../api/intelligence';
 import { processWritingHelper } from '../api/client';
 import { createCheckpoint, restoreCheckpoint } from '../api/workflow/checkpoints';
+import {
+  workflowRevisionAnalyze,
+  workflowRevisionCompare,
+  workflowRevisionMarkRevised,
+  workflowRevisionStartSession,
+  workflowRevisionGenerateSuggestions,
+} from '../api/workflow/revision';
 import type { ProjectWorkspaceContext } from '../api/workspace';
 import { logger } from '../utils/logger';
 
@@ -45,6 +52,14 @@ export interface RevisionResult {
   iterations: number;
   completed: boolean;
   reason: 'target_reached' | 'max_iterations' | 'no_improvement' | 'error';
+  sessionId?: string | null;
+  revisionSession?: {
+    id?: string | null;
+    chapterId: string;
+    state: string;
+    iteration: number;
+    comparisonSummary?: string | null;
+  } | null;
 }
 
 /**
@@ -74,8 +89,32 @@ export class RevisionOrchestrator {
     let iterations = 0;
     let checkpointId: string | null = null;
     let result: RevisionResult | null = null;
+    const chapterId = this.config.workspace?.manuscript?.chapterId ?? this.config.workspace?.workflow?.sessionId ?? 'chapter-unknown';
+    let revisionSession: RevisionResult['revisionSession'] = null;
+    let revisionSessionId: string | null = null;
 
     try {
+      const revisionSessionResponse = await workflowRevisionStartSession(
+        chapterId,
+        content,
+        undefined,
+        this.config.workspace,
+      );
+      if (revisionSessionResponse.success && revisionSessionResponse.data) {
+        const startData = revisionSessionResponse.data as NonNullable<typeof revisionSessionResponse.data> & {
+          session_id: string;
+          status: string;
+        };
+        revisionSessionId = startData.session_id;
+        revisionSession = {
+          id: revisionSessionId,
+          chapterId,
+          state: startData.status,
+          iteration: 0,
+          comparisonSummary: null,
+        };
+      }
+
       const cp = await createCheckpoint(
         `[Auto] Pre-revision checkpoint for orchestrator`,
         undefined,
@@ -90,7 +129,7 @@ export class RevisionOrchestrator {
       if (!initialEval) {
         result = {
           initialContent: content, revisedContent: content, initialScore: 0, finalScore: 0,
-          iterations: 0, completed: false, reason: 'error',
+          iterations: 0, completed: false, reason: 'error', sessionId: null, revisionSession: null,
         };
         return result;
       }
@@ -105,6 +144,8 @@ export class RevisionOrchestrator {
           result = {
             initialContent: content, revisedContent: currentContent, initialScore,
             finalScore: lastScore, iterations, completed: true, reason: 'target_reached',
+            sessionId: checkpointId,
+            revisionSession,
           };
           return result;
         }
@@ -114,8 +155,30 @@ export class RevisionOrchestrator {
           result = {
             initialContent: content, revisedContent: currentContent, initialScore,
             finalScore: lastScore, iterations, completed: true, reason: 'no_improvement',
+            sessionId: checkpointId,
+            revisionSession,
           };
           return result;
+        }
+
+        if (revisionSessionId) {
+          const analyzeResponse = await workflowRevisionAnalyze(revisionSessionId, currentContent, undefined, this.config.workspace);
+          if (analyzeResponse.success && analyzeResponse.data) {
+            const suggestResponse = await workflowRevisionGenerateSuggestions(revisionSessionId, undefined, undefined, this.config.workspace);
+            if (suggestResponse.success && suggestResponse.data) {
+              const suggestData = suggestResponse.data as NonNullable<typeof suggestResponse.data> & {
+                status: string;
+                iteration_number?: number;
+              };
+              revisionSession = {
+                id: revisionSessionId,
+                chapterId,
+                state: suggestData.status,
+                iteration: suggestData.iteration_number ?? iterations,
+                comparisonSummary: revisionSession?.comparisonSummary ?? null,
+              };
+            }
+          }
         }
         
         const criticalSuggestion = this.selectNextSuggestion(currentEvaluation.suggestions);
@@ -123,6 +186,8 @@ export class RevisionOrchestrator {
           result = {
             initialContent: content, revisedContent: currentContent, initialScore,
             finalScore: lastScore, iterations, completed: true, reason: 'no_improvement',
+            sessionId: checkpointId,
+            revisionSession,
           };
           return result;
         }
@@ -133,6 +198,8 @@ export class RevisionOrchestrator {
         result = {
           initialContent: content, revisedContent: currentContent, initialScore,
           finalScore: lastScore, iterations, completed: true, reason: 'no_improvement',
+          sessionId: checkpointId,
+          revisionSession,
         };
         return result;
       }
@@ -142,6 +209,8 @@ export class RevisionOrchestrator {
          result = {
             initialContent: content, revisedContent: currentContent, initialScore,
             finalScore: lastScore, iterations, completed: true, reason: 'no_improvement',
+            sessionId: checkpointId,
+            revisionSession,
         };
         return result;
       }
@@ -149,11 +218,48 @@ export class RevisionOrchestrator {
       // Improvement found, update content and score for the next loop.
       currentContent = revisedContent;
       lastScore = newEvaluation.score;
+      if (revisionSessionId) {
+        const markResult = await workflowRevisionMarkRevised(
+          revisionSessionId,
+          revisedContent,
+          undefined,
+          this.config.workspace,
+        );
+        const compareResult = await workflowRevisionCompare(
+          revisionSessionId,
+          revisedContent,
+          undefined,
+          this.config.workspace,
+        );
+        if (markResult.success && compareResult.success && compareResult.data) {
+          const compareData = compareResult.data as NonNullable<typeof compareResult.data> & {
+            status: string;
+            iteration_number?: number;
+            comparison?: { summary?: string | null } | null;
+          };
+          revisionSession = {
+            id: revisionSessionId,
+            chapterId,
+            state: compareData.status,
+            iteration: compareData.iteration_number ?? iterations,
+            comparisonSummary: compareData.comparison?.summary ?? null,
+          };
+        }
+      }
+      revisionSession = {
+        id: revisionSessionId,
+        chapterId,
+        state: revisionSession?.state ?? 'REVISED',
+        iteration: revisionSession?.iteration ?? iterations,
+        comparisonSummary: revisionSession?.comparisonSummary ?? `Iteration ${iterations}: ${lastScore.toFixed(1)} score`,
+      };
     }
 
     result = {
       initialContent: content, revisedContent: currentContent, initialScore,
       finalScore: lastScore, iterations, completed: true, reason: 'max_iterations',
+      sessionId: checkpointId,
+      revisionSession,
     };
     return result;
 

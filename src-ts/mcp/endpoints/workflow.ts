@@ -26,6 +26,14 @@ import {
   workflowSchedulerRunNow,
   workflowSchedulerImportLitePlan,
 } from '../services/workflow';
+import {
+  workflowRevisionAnalyzeWeakPoints,
+  workflowRevisionCompare,
+  workflowRevisionGenerateSuggestions,
+  workflowRevisionHistory,
+  workflowRevisionMarkRevised,
+  workflowRevisionStartSession,
+} from '../services/workflow-revision';
 
 // ---------------------------------------------------------------
 // Workflow endpoints
@@ -114,6 +122,74 @@ export async function workflowQuickRollbackEndpoint(request: HttpRequest): Promi
     planId: (body.plan_id as string) ?? '',
     checkpointId: (body.checkpoint_id as string) ?? '',
     reason: (body.reason as string) ?? '',
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowRevisionStartSessionEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowRevisionStartSession({
+    chapterId: (body.chapter_id as string) ?? '',
+    content: (body.content as string) ?? '',
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowRevisionAnalyzeEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowRevisionAnalyzeWeakPoints({
+    sessionId: (body.session_id as string) ?? '',
+    content: body.content as string | null | undefined,
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowRevisionSuggestEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const weakPointIds = Array.isArray(body.weak_point_ids)
+    ? body.weak_point_ids.filter((item): item is string => typeof item === 'string')
+    : null;
+  const result = await workflowRevisionGenerateSuggestions({
+    sessionId: (body.session_id as string) ?? '',
+    weakPointIds,
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowRevisionMarkRevisedEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowRevisionMarkRevised({
+    sessionId: (body.session_id as string) ?? '',
+    revisedText: (body.revised_text as string) ?? '',
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowRevisionCompareEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowRevisionCompare({
+    sessionId: (body.session_id as string) ?? '',
+    revisedText: body.revised_text as string | null | undefined,
+    workspace,
+  });
+  return jsonResponse({ ...result, workspace });
+}
+
+export async function workflowRevisionHistoryEndpoint(request: HttpRequest): Promise<HttpResponse> {
+  const body = parseBody(request) as Record<string, unknown>;
+  const workspace = resolveWorkspace(body);
+  const result = await workflowRevisionHistory({
+    chapterId: (body.chapter_id as string) ?? '',
     workspace,
   });
   return jsonResponse({ ...result, workspace });

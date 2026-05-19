@@ -20,6 +20,12 @@ describe('workflow barrel exports', () => {
     expect(mod.executePlan).toBeDefined()
     expect(mod.workflowLifecycle).toBeDefined()
     expect(mod.getPlanStatus).toBeDefined()
+    expect(mod.workflowRevisionStartSession).toBeDefined()
+    expect(mod.workflowRevisionAnalyze).toBeDefined()
+    expect(mod.workflowRevisionSuggest).toBeDefined()
+    expect(mod.workflowRevisionMarkRevised).toBeDefined()
+    expect(mod.workflowRevisionCompare).toBeDefined()
+    expect(mod.workflowRevisionHistory).toBeDefined()
   })
 
   it('re-exports ui-bridge plan functions', async () => {

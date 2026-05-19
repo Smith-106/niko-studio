@@ -88,7 +88,47 @@ describe('useAppUiPersistence', () => {
           maxSentences: 4,
           maxItems: 6,
         },
+        revisionSession: null,
       },
+    })
+  })
+
+  it('preserves revision session metadata in persisted evaluation handoff drafts', () => {
+    localStorage.setItem('niko.writing-helper-draft-v1', JSON.stringify({
+      content: '正文',
+      mode: 'rewrite',
+      maxSentences: 5,
+      maxItems: 7,
+      guidance: '优先强化冲突升级。',
+      handoff: {
+        source: 'evaluation',
+        suggestionTitle: '增加冲突',
+        suggestionReason: '提升张力',
+        guidance: '优先强化冲突升级。',
+        carriedContent: 'revision-preview',
+        preset: {
+          mode: 'rewrite',
+          maxSentences: 4,
+          maxItems: 6,
+        },
+        revisionSession: {
+          id: 'revision-session-1',
+          chapterId: 'chapter-7',
+          state: 'COMPARED',
+          iteration: 2,
+          comparisonSummary: 'Score improved',
+        },
+      },
+    }))
+
+    const { result } = renderHook(() => useAppUiPersistence())
+
+    expect(result.current.writingHelperDraft.handoff?.revisionSession).toEqual({
+      id: 'revision-session-1',
+      chapterId: 'chapter-7',
+      state: 'COMPARED',
+      iteration: 2,
+      comparisonSummary: 'Score improved',
     })
   })
 })

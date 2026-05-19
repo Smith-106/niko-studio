@@ -14,6 +14,13 @@ export interface WritingHelperEvaluationHandoff {
     maxSentences: number
     maxItems: number
   }
+  revisionSession?: {
+    id: string
+    chapterId?: string | null
+    state?: string | null
+    iteration?: number | null
+    comparisonSummary?: string | null
+  } | null
 }
 
 export interface WritingHelperDraftState {
@@ -98,6 +105,25 @@ const loadWritingHelperEvaluationHandoff = (value: unknown): WritingHelperEvalua
       maxSentences: toPositiveInteger(preset?.maxSentences, DEFAULT_WRITING_HELPER_DRAFT.maxSentences),
       maxItems: toPositiveInteger(preset?.maxItems, DEFAULT_WRITING_HELPER_DRAFT.maxItems),
     },
+    revisionSession: parsed.revisionSession && typeof parsed.revisionSession === 'object'
+      ? {
+          id: typeof (parsed.revisionSession as Record<string, unknown>).id === 'string'
+            ? String((parsed.revisionSession as Record<string, unknown>).id)
+            : '',
+          chapterId: typeof (parsed.revisionSession as Record<string, unknown>).chapterId === 'string'
+            ? String((parsed.revisionSession as Record<string, unknown>).chapterId)
+            : null,
+          state: typeof (parsed.revisionSession as Record<string, unknown>).state === 'string'
+            ? String((parsed.revisionSession as Record<string, unknown>).state)
+            : null,
+          iteration: typeof (parsed.revisionSession as Record<string, unknown>).iteration === 'number'
+            ? Number((parsed.revisionSession as Record<string, unknown>).iteration)
+            : null,
+          comparisonSummary: typeof (parsed.revisionSession as Record<string, unknown>).comparisonSummary === 'string'
+            ? String((parsed.revisionSession as Record<string, unknown>).comparisonSummary)
+            : null,
+        }
+      : null,
   }
 }
 

@@ -511,4 +511,111 @@ describe('mcp workflow service', () => {
       await rm(workspaceB, { recursive: true, force: true });
     }
   });
+
+  it('creates and progresses a revision session with persisted history', async () => {
+    const workspaceRoot = await mkdtemp(join(tmpdir(), 'workflow-revision-service-'));
+    const workspace = {
+      schemaVersion: '2026-04-08',
+      identity: {
+        workspaceId: 'atlas-workspace',
+        projectId: 'atlas-project',
+        projectName: 'Atlas Project',
+        workspaceRoot,
+      },
+      manuscript: {
+        manuscriptId: null,
+        title: null,
+        chapterId: 'chapter-9',
+        chapterTitle: null,
+        chapterNumber: 9,
+      },
+      storyBible: {
+        storyBibleId: null,
+        draftId: 'draft-9',
+        version: null,
+        storage: 'local-draft',
+      },
+      knowledge: {
+        focusEntityId: 'hero-1',
+        graphEntityIds: ['hero-1'],
+        memoryEntryIds: [],
+      },
+      authority: {
+        recordSetId: null,
+        activeSceneId: null,
+        activeEventId: null,
+        activeTimelineId: null,
+        consistencyRunId: null,
+      },
+      workflow: {
+        sessionId: 'workflow-session-revision-service',
+        planId: null,
+        level: 'L3',
+      },
+      chat: {
+        conversationId: 'workflow-session-revision-service',
+        comparisonEnabled: false,
+      },
+      compatibility: {
+        additiveContract: true,
+        migratedLegacyFields: [],
+        notes: [],
+      },
+    };
+
+    try {
+      const {
+        workflowRevisionStartSession,
+        workflowRevisionAnalyzeWeakPoints,
+        workflowRevisionGenerateSuggestions,
+        workflowRevisionMarkRevised,
+        workflowRevisionCompare,
+        workflowRevisionHistory,
+      } = await import('../../mcp/services/workflow-revision.js');
+
+      const started = await workflowRevisionStartSession({
+        chapterId: 'chapter-9',
+        content: '林岚站在门口看着风雨，最后什么都没有决定。',
+        workspace,
+      });
+      const sessionId = String(started['session_id']);
+      expect(started['status']).toBe('IDLE');
+
+      const analyzed = await workflowRevisionAnalyzeWeakPoints({
+        sessionId,
+        workspace,
+      });
+      expect(analyzed['status']).toBe('ANALYZED');
+      expect(Array.isArray(analyzed['weak_points'])).toBe(true);
+
+      const suggested = await workflowRevisionGenerateSuggestions({
+        sessionId,
+        workspace,
+      });
+      expect(suggested['status']).toBe('SUGGESTED');
+      expect(Array.isArray(suggested['suggestions'])).toBe(true);
+
+      const marked = await workflowRevisionMarkRevised({
+        sessionId,
+        revisedText: '林岚站在门口看着风雨，匿名信边角被她捏得发皱，而屋里忽然响起只有死者熟悉的暗号。',
+        workspace,
+      });
+      expect(marked['status']).toBe('REVISED');
+
+      const compared = await workflowRevisionCompare({
+        sessionId,
+        workspace,
+      });
+      expect(compared['status']).toBe('COMPARED');
+      expect(((compared['comparison'] as Record<string, unknown>)['resultScores'] as Record<string, unknown>)).toBeTruthy();
+
+      const history = await workflowRevisionHistory({
+        chapterId: 'chapter-9',
+        workspace,
+      });
+      expect(history['total']).toBe(1);
+    } finally {
+      await rm(workspaceRoot, { recursive: true, force: true });
+    }
+  });
 });

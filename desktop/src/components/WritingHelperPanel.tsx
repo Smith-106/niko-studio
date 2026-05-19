@@ -284,6 +284,11 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
       ? `携带：${handoff.carriedContent === 'revision-preview' ? '修改预览' : '原始回复'}`
       : `Carries: ${handoff.carriedContent === 'revision-preview' ? 'revision preview' : 'original reply'}`)
     : ''
+  const handoffRevisionSessionText = handoff?.revisionSession
+    ? (isZh
+      ? `修订会话：${handoff.revisionSession.id}${handoff.revisionSession.state ? ` · ${handoff.revisionSession.state}` : ''}`
+      : `Revision session: ${handoff.revisionSession.id}${handoff.revisionSession.state ? ` · ${handoff.revisionSession.state}` : ''}`)
+    : ''
   const guidanceTitle = isZh ? '交接说明' : 'Handoff guidance'
   const guidanceHint = isZh
     ? '这段说明会作为本次处理的附加指令，你可以保留它，也可以清除后按自己的思路继续。'
@@ -720,6 +725,11 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
                           <span className="rounded-full bg-amber-100/80 px-2.5 py-1 text-[11px] font-medium text-amber-900 dark:bg-amber-500/15 dark:text-amber-100">
                             {handoffCarryText}
                           </span>
+                          {handoffRevisionSessionText && (
+                            <span className="rounded-full bg-amber-100/80 px-2.5 py-1 text-[11px] font-medium text-amber-900 dark:bg-amber-500/15 dark:text-amber-100">
+                              {handoffRevisionSessionText}
+                            </span>
+                          )}
                         </div>
                         <p className="mt-2 text-[11px] leading-relaxed text-amber-800 dark:text-amber-100">
                           {handoffReasonText}
