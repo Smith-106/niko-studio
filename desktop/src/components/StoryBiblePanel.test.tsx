@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { StoryBiblePanel } from './StoryBiblePanel'
@@ -509,15 +509,21 @@ describe('StoryBiblePanel', () => {
     await screen.findByText(/当前时间线: timeline-default-project-主线时间/)
   }, 15000)
 
-  it('renders without errors', () => {
+  it('renders without errors', async () => {
     render(<StoryBiblePanel />)
+    await screen.findByText(zh.storyBiblePersistenceTitle)
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 400))
+    })
     expect(document.body).toBeTruthy()
   })
 
   it('matches snapshot', async () => {
     const { container } = render(<StoryBiblePanel />)
-    // Wait for async initial load to settle
     await screen.findByText(zh.storyBiblePersistenceTitle)
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 400))
+    })
     expect(container.firstChild).toMatchSnapshot()
   })
 

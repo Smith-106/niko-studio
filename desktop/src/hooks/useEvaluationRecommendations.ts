@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { applyRecommendation, batchApplyRecommendations, undoRecommendation, type RecommendationExecutionResult, type RecommendationPayload } from '../api/client'
 import type { Translations } from '../i18n'
 
@@ -61,25 +61,25 @@ export function useEvaluationRecommendations({
   const [suggestionStates, setSuggestionStates] = useState<Record<string, SuggestionActionState>>({})
   const [batchState, setBatchState] = useState<BatchActionState>(defaultBatchState())
 
-  const setSuggestionState = (id: string, next: SuggestionActionState) => {
+  const setSuggestionState = useCallback((id: string, next: SuggestionActionState) => {
     setSuggestionStates((prev) => ({
       ...prev,
       [id]: next,
     }))
-  }
+  }, [])
 
-  const resetSuggestionStates = (nextSuggestions: RecommendationPayload[]) => {
+  const resetSuggestionStates = useCallback((nextSuggestions: RecommendationPayload[]) => {
     const next: Record<string, SuggestionActionState> = {}
     for (const suggestion of nextSuggestions) {
       next[suggestion.id] = defaultSuggestionState()
     }
     setSuggestionStates(next)
-  }
+  }, [])
 
-  const resetRecommendationStates = (nextSuggestions: RecommendationPayload[]) => {
+  const resetRecommendationStates = useCallback((nextSuggestions: RecommendationPayload[]) => {
     resetSuggestionStates(nextSuggestions)
     setBatchState(defaultBatchState())
-  }
+  }, [resetSuggestionStates])
 
   const handleApplySuggestion = async (suggestion: RecommendationPayload) => {
     setSuggestionState(suggestion.id, {

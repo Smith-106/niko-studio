@@ -6,21 +6,24 @@ export function CollapsibleSection({
   icon,
   content,
   defaultOpen = false,
+  contentId,
 }: {
   title: string
   icon: ReactNode
   content: ReactNode
   defaultOpen?: boolean
+  contentId?: string
 }) {
   const [open, setOpen] = useState(defaultOpen)
-  const contentId = useId()
+  const generatedContentId = useId()
+  const resolvedContentId = contentId || generatedContentId
 
   return (
     <div className="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden">
       <button
         type="button"
         aria-expanded={open}
-        aria-controls={contentId}
+        aria-controls={resolvedContentId}
         onClick={() => setOpen((current) => !current)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
       >
@@ -31,7 +34,7 @@ export function CollapsibleSection({
           className={`text-[var(--text-muted)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
-      {open && <div id={contentId} className="px-4 py-3 border-t border-[var(--border-default)]">{content}</div>}
+      {open && <div id={resolvedContentId} className="px-4 py-3 border-t border-[var(--border-default)]">{content}</div>}
     </div>
   )
 }

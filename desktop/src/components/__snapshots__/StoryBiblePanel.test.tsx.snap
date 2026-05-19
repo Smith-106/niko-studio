@@ -179,7 +179,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r3p:"
+        aria-controls="story-bible-section-braindump"
         aria-expanded="true"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -231,7 +231,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       </button>
       <div
         class="px-4 py-3 border-t border-[var(--border-default)]"
-        id=":r3p:"
+        id="story-bible-section-braindump"
       >
         <div
           class="space-y-2"
@@ -255,7 +255,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r3q:"
+        aria-controls="story-bible-section-genre"
         aria-expanded="true"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -310,7 +310,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       </button>
       <div
         class="px-4 py-3 border-t border-[var(--border-default)]"
-        id=":r3q:"
+        id="story-bible-section-genre"
       >
         <div
           class="space-y-3"
@@ -320,76 +320,91 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
           >
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               奇幻
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               言情
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               悬疑
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               科幻
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               恐怖
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               历史
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               武侠
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               都市
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               青春
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               冒险
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               宫斗
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               末世
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               仙侠
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               推理
             </button>
             <button
               class="px-2.5 py-1 text-xs rounded-full border transition-all bg-[var(--surface-sunken)] text-[var(--text-secondary)] border-[var(--border-default)] hover:border-[var(--primary-cta)]/50"
+              type="button"
             >
               轻小说
             </button>
@@ -408,6 +423,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
             <button
               class="px-3 py-1.5 text-xs font-medium bg-[var(--primary-cta)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--primary-cta-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               disabled=""
+              type="button"
             >
               +
             </button>
@@ -419,7 +435,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r3r:"
+        aria-controls="story-bible-section-synopsis"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -483,7 +499,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r3s:"
+        aria-controls="story-bible-section-canon-review"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -538,7 +554,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r3t:"
+        aria-controls="story-bible-section-characters"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -601,7 +617,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r3u:"
+        aria-controls="story-bible-section-worldbuilding"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -665,7 +681,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r3v:"
+        aria-controls="story-bible-section-scenes"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -729,7 +745,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r40:"
+        aria-controls="story-bible-section-events"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -793,7 +809,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r41:"
+        aria-controls="story-bible-section-timelines"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -857,7 +873,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r42:"
+        aria-controls="story-bible-section-style"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"
@@ -921,7 +937,7 @@ exports[`StoryBiblePanel > matches snapshot 1`] = `
       class="border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden"
     >
       <button
-        aria-controls=":r43:"
+        aria-controls="story-bible-section-outline"
         aria-expanded="false"
         class="w-full flex items-center gap-3 px-4 py-3 text-left bg-[var(--surface-elevated)] hover:bg-[var(--surface-sunken)] transition-colors"
         type="button"

@@ -1,6 +1,10 @@
-import { analyzeWritingSessionIntelligence, type WritingSessionIntelligenceResult, type WritingSessionTelemetry } from '../../../src-ts/analysis/writing-session-intelligence'
+import {
+  analyzeWritingSessionIntelligenceCore,
+  type WritingSessionIntelligenceResult,
+  type WritingSessionTelemetry,
+} from '../../../src-ts/analysis/writing-session-intelligence-core'
 
-export type { WritingSessionTelemetry } from '../../../src-ts/analysis/writing-session-intelligence'
+export type { WritingSessionTelemetry } from '../../../src-ts/analysis/writing-session-intelligence-core'
 
 export interface WritingSessionTelemetryEvent {
   type: 'editor_update' | 'save' | 'history_open' | 'rewrite' | 'jump_edit'
@@ -61,5 +65,5 @@ export function applyTelemetryEvent(
 export function summarizeWritingSessionTelemetry(
   telemetry: WritingSessionTelemetry,
 ): WritingSessionIntelligenceResult {
-  return analyzeWritingSessionIntelligence(telemetry)
+  return analyzeWritingSessionIntelligenceCore(telemetry)
 }
