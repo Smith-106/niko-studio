@@ -21,11 +21,27 @@ export const gettingStartedContent: Record<string, string> = {
 </table>
 <h2>普通用户安装</h2>
 <p>下载桌面安装包后按向导安装。首次启动时优先确认工作目录、模型配置和本地服务状态。</p>
+<p><strong>当前推荐版本：</strong><code>v9.26.1</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1">Niko-Studio v9.26.1</a>。</p>
 <pre><code># Windows
 niko-studio-setup-x.x.x.exe
 
 # macOS
 niko-studio-x.x.x.dmg</code></pre>
+<h2>当前已发布 Windows 资产</h2>
+<table>
+  <thead><tr><th>资产</th><th>用途</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>Niko-Studio_9.26.1_x64-setup.exe</code></td><td>标准安装入口</td><td>推荐大多数 Windows 用户使用。</td></tr>
+    <tr><td><code>Niko-Studio_9.26.1_x64_en-US.msi</code></td><td>MSI 安装包（en-US）</td><td>适合企业环境或偏好 MSI 部署的场景。</td></tr>
+    <tr><td><code>Niko-Studio_9.26.1_x64_zh-CN.msi</code></td><td>MSI 安装包（zh-CN）</td><td>适合中文环境下的 MSI 部署。</td></tr>
+  </tbody>
+</table>
+<h2>当前交付状态</h2>
+<ul>
+  <li>Current-head local sign-off：<strong>GO</strong></li>
+  <li>GitHub release tag：<code>v9.26.1</code></li>
+  <li>Current release commit：<code>ee391ee</code></li>
+</ul>
 <h2>开发者启动</h2>
 <p>源码运行时以桌面目录为入口，依赖安装建议使用锁文件驱动的 <code>npm ci</code>，避免开发环境漂移。</p>
 <pre><code>git clone https://github.com/Smith-106/niko-studio.git

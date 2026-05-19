@@ -1,6 +1,6 @@
 # Niko Studio
 
-> **Version**: 9.25.8 (Platform Edition)
+> **Version**: 9.26.1 (Platform Edition)
 > **Architecture**: Writer-first Desktop + Tauri Shell + local Node/TypeScript Gateway
 > **Positioning**: Writer-first desktop studio for manuscript authoring, Story Bible work, knowledge browsing, and workflow-assisted drafting
 
@@ -34,6 +34,19 @@ Deprecated release surface (removed)
 - Compatibility surfaces: Streamlit and legacy Python runtime paths stay visible only as labeled compatibility surfaces, not as the primary shipped UI/runtime.
 
 ## 🚀 Quick Start
+
+## Current Release Snapshot
+
+- Current release tag: `v9.26.1`
+- Current release commit: `ee391eea0088b0bc63b6b63ac0502f6296b8bf16`
+- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1`
+- Published Windows assets:
+  - `Niko-Studio_9.26.1_x64-setup.exe`
+  - `Niko-Studio_9.26.1_x64_en-US.msi`
+  - `Niko-Studio_9.26.1_x64_zh-CN.msi`
+- Current local sign-off status: `GO` on current HEAD
+
+如果你只想下载当前正式发布版，直接进入 GitHub Releases 页面获取 Windows 安装包。
 
 ### Prerequisites
 

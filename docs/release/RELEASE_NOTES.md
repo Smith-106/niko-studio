@@ -1,5 +1,32 @@
 # RELEASE NOTES
 
+## v9.26.1
+
+### 发布结果
+
+- GitHub release：`https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1`
+- Release tag：`v9.26.1`
+- Current-head release commit：`ee391eea0088b0bc63b6b63ac0502f6296b8bf16`
+- 当前本地发布结论：`GO`
+
+### Current-head release closure
+
+- Rebound `v9.26.1` to the current `main` commit after current-head release closure.
+- Refreshed retained release evidence for writing-helper acceptance and installed-package acceptance on the same HEAD.
+- Published the Windows release asset set for the current-head GO snapshot.
+
+### 本次修复
+
+- 修正了 `workflow-engine.ts` 的 release gate 兼容锚点，避免 thin re-export 影响交付语义门禁。
+- 更新了 `scripts/release_check_summary.py` 对 workflow public entry API 的兼容识别。
+- 过滤了已完成但遗留为 `open` 的陈旧 `mcp-chat--workflow-*` 会话噪音，避免它们继续误阻断 current-head release sign-off。
+
+### 已发布资产
+
+- `Niko-Studio_9.26.1_x64-setup.exe`
+- `Niko-Studio_9.26.1_x64_en-US.msi`
+- `Niko-Studio_9.26.1_x64_zh-CN.msi`
+
 ## 发布级别矩阵
 
 | 级别 | 用途 | e2e 冒烟 | Codecov 上传失败 | 结论 |
