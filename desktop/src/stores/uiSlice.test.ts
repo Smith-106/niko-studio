@@ -39,4 +39,23 @@ describe('uiSlice', () => {
       readingTime: 1.5,
     })
   })
+
+  it('stores session intelligence visibility and summary independently', () => {
+    useAppStore.setState({
+      sessionIntelligenceEnabled: false,
+      sessionIntelligenceSummary: null,
+      sessionIntelligenceInsights: [],
+      sessionIntelligenceSessionId: null,
+    })
+
+    useAppStore.getState().setSessionIntelligenceEnabled(true)
+    useAppStore.getState().setSessionIntelligenceSummary('检测到轻微停滞风险。')
+    useAppStore.getState().setSessionIntelligenceInsights(['先完成一个最小段落目标。'])
+    useAppStore.getState().setSessionIntelligenceSessionId('session-1')
+
+    expect(useAppStore.getState().sessionIntelligenceEnabled).toBe(true)
+    expect(useAppStore.getState().sessionIntelligenceSummary).toBe('检测到轻微停滞风险。')
+    expect(useAppStore.getState().sessionIntelligenceInsights).toEqual(['先完成一个最小段落目标。'])
+    expect(useAppStore.getState().sessionIntelligenceSessionId).toBe('session-1')
+  })
 })

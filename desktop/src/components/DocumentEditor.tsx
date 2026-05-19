@@ -10,6 +10,12 @@ import { readChapterContent, writeChapterContent } from '../services/projectFile
 import { autoSaveSnapshot } from '../services/versionService'
 import { useAppStore } from '../stores/appStore'
 import type { JSONContent } from '@tiptap/react'
+import {
+  applyTelemetryEvent,
+  createWritingSessionTelemetry,
+  summarizeWritingSessionTelemetry,
+  type WritingSessionTelemetry,
+} from '../utils/writingSessionTelemetry'
 
 interface DocumentEditorProps {
   onOpenWritingHelper: () => void
@@ -26,6 +32,10 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const updateConversationTitle = useAppStore((state) => state.updateConversationTitle)
   const historyPanelOpen = useAppStore((state) => state.historyPanelOpen)
   const toggleHistoryPanel = useAppStore((state) => state.toggleHistoryPanel)
+  const sessionIntelligenceEnabled = useAppStore((state) => state.sessionIntelligenceEnabled)
+  const setSessionIntelligenceSummary = useAppStore((state) => state.setSessionIntelligenceSummary)
+  const setSessionIntelligenceInsights = useAppStore((state) => state.setSessionIntelligenceInsights)
+  const setSessionIntelligenceSessionId = useAppStore((state) => state.setSessionIntelligenceSessionId)
   const [chapterContent, setChapterContent] = useState<string>('')
   const [contentLoaded, setContentLoaded] = useState(false)
   const fallbackTitle = currentConversationTitle ?? t.appTitle ?? '未命名文档'
@@ -37,7 +47,41 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const [aiGenerating, setAiGenerating] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const telemetryRef = useRef<WritingSessionTelemetry | null>(null)
   const titleFieldLabel = language === 'zh' ? '文档标题' : 'Document title'
+
+  const updateSessionTelemetry = useCallback((event: {
+    type: 'editor_update' | 'save' | 'history_open'
+    characterFocus?: string[]
+    keywordFocus?: string[]
+  }) => {
+    const sessionKey = currentConversationId ?? currentChapterId ?? currentProjectId ?? 'session-global'
+    if (!telemetryRef.current || telemetryRef.current.sessionId !== sessionKey) {
+      telemetryRef.current = createWritingSessionTelemetry(sessionKey, currentChapterId)
+    }
+    telemetryRef.current = applyTelemetryEvent(telemetryRef.current, {
+      type: event.type,
+      timestamp: new Date().toISOString(),
+      chapterId: currentChapterId,
+      characterFocus: event.characterFocus,
+      keywordFocus: event.keywordFocus,
+    })
+
+    if (sessionIntelligenceEnabled) {
+      const intelligence = summarizeWritingSessionTelemetry(telemetryRef.current)
+      setSessionIntelligenceSessionId(intelligence.telemetry.sessionId)
+      setSessionIntelligenceSummary(intelligence.insights[0]?.summary ?? null)
+      setSessionIntelligenceInsights(intelligence.insights.map((item) => item.suggestion).slice(0, 3))
+    }
+  }, [
+    currentChapterId,
+    currentConversationId,
+    currentProjectId,
+    sessionIntelligenceEnabled,
+    setSessionIntelligenceInsights,
+    setSessionIntelligenceSessionId,
+    setSessionIntelligenceSummary,
+  ])
 
   // Load chapter content from filesystem when chapter changes
   useEffect(() => {
@@ -63,6 +107,10 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
     setEditorJson(json)
     setEditorText(text)
     setSaveStatus('saving')
+    updateSessionTelemetry({
+      type: 'editor_update',
+      keywordFocus: text.split(/[\s，。！？,.!?\n]+/).filter((item) => item.length >= 2).slice(0, 5),
+    })
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
       const now = new Date()
@@ -75,9 +123,16 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
         writeChapterContent(currentProjectId, currentChapterId, JSON.stringify(json))
         autoSaveSnapshot(currentProjectId, currentChapterId)
       }
+      updateSessionTelemetry({ type: 'save' })
       setTimeout(() => setSaveStatus('idle'), 4000)
     }, 1500)
-  }, [currentProjectId, currentChapterId])
+  }, [currentProjectId, currentChapterId, updateSessionTelemetry])
+
+  useEffect(() => {
+    if (historyPanelOpen) {
+      updateSessionTelemetry({ type: 'history_open' })
+    }
+  }, [historyPanelOpen, updateSessionTelemetry])
 
   const handleTitleChange = useCallback((value: string) => {
     setTitle(value)

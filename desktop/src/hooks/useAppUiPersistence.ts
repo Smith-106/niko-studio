@@ -36,6 +36,7 @@ const WRITING_HELPER_DRAFT_STORAGE_KEY = 'niko.writing-helper-draft-v1'
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'niko.sidebar-collapsed-v1'
 const ACTIVE_RIGHT_PANEL_STORAGE_KEY = 'niko.active-right-panel-v1'
 const CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY = 'niko.chat-sidebar-collapsed-v1'
+const SESSION_INTELLIGENCE_STORAGE_KEY = 'niko.session-intelligence-v1'
 
 const DEFAULT_WRITING_HELPER_DRAFT: WritingHelperDraftState = {
   content: '',
@@ -195,6 +196,33 @@ export function useAppUiPersistence() {
   const [chatSidebarCollapsed, setChatSidebarCollapsed] = useState(() => loadChatSidebarCollapsed())
   const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(() => loadActiveRightPanel())
   const [writingHelperDraft, setWritingHelperDraft] = useState<WritingHelperDraftState>(() => loadWritingHelperDraft())
+  const [sessionIntelligenceState, setSessionIntelligenceState] = useState<{
+    enabled: boolean
+    summary: string | null
+    insights: string[]
+    sessionId: string | null
+  }>(() => {
+    try {
+      const raw = localStorage.getItem(SESSION_INTELLIGENCE_STORAGE_KEY)
+      if (!raw) {
+        return { enabled: false, summary: null, insights: [], sessionId: null }
+      }
+      const parsed = JSON.parse(raw) as Partial<{
+        enabled: boolean
+        summary: string | null
+        insights: string[]
+        sessionId: string | null
+      }>
+      return {
+        enabled: parsed.enabled === true,
+        summary: typeof parsed.summary === 'string' ? parsed.summary : null,
+        insights: Array.isArray(parsed.insights) ? parsed.insights.filter((item): item is string => typeof item === 'string') : [],
+        sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : null,
+      }
+    } catch {
+      return { enabled: false, summary: null, insights: [], sessionId: null }
+    }
+  })
 
   useEffect(() => {
     const onResize = () => {
@@ -237,6 +265,14 @@ export function useAppUiPersistence() {
     }
   }, [chatSidebarCollapsed])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(SESSION_INTELLIGENCE_STORAGE_KEY, JSON.stringify(sessionIntelligenceState))
+    } catch {
+      // ignore localStorage write failures
+    }
+  }, [sessionIntelligenceState])
+
   const clearWritingHelperDraft = useCallback(() => {
     clearWritingHelperDraftStorage()
     setWritingHelperDraft(createWritingHelperDraft())
@@ -252,5 +288,7 @@ export function useAppUiPersistence() {
     writingHelperDraft,
     setWritingHelperDraft,
     clearWritingHelperDraft,
+    sessionIntelligenceState,
+    setSessionIntelligenceState,
   }
 }

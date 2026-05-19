@@ -100,6 +100,11 @@ export function HistoryPanel() {
   const currentChapterId = useAppStore((s) => s.currentChapterId)
   const historyPanelOpen = useAppStore((s) => s.historyPanelOpen)
   const toggleHistoryPanel = useAppStore((s) => s.toggleHistoryPanel)
+  const sessionIntelligenceEnabled = useAppStore((s) => s.sessionIntelligenceEnabled)
+  const sessionIntelligenceSummary = useAppStore((s) => s.sessionIntelligenceSummary)
+  const sessionIntelligenceInsights = useAppStore((s) => s.sessionIntelligenceInsights)
+  const sessionIntelligenceSessionId = useAppStore((s) => s.sessionIntelligenceSessionId)
+  const setSessionIntelligenceEnabled = useAppStore((s) => s.setSessionIntelligenceEnabled)
 
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -179,6 +184,35 @@ export function HistoryPanel() {
         />
       ) : (
         <>
+          <div className="px-3 py-2 border-b border-gray-100 dark:border-dark-border">
+            <label className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">
+              <span>Session Intelligence</span>
+              <input
+                type="checkbox"
+                checked={sessionIntelligenceEnabled}
+                onChange={(event) => setSessionIntelligenceEnabled(event.target.checked)}
+              />
+            </label>
+            {sessionIntelligenceEnabled && sessionIntelligenceSummary && (
+              <div className="mt-2 rounded border border-primary-200 bg-primary-50/70 px-2 py-2 text-[11px] text-primary-800 dark:border-primary-500/20 dark:bg-primary-900/10 dark:text-primary-200">
+                <div className="font-medium">
+                  {sessionIntelligenceSummary}
+                </div>
+                {sessionIntelligenceSessionId && (
+                  <div className="mt-1 text-[10px] opacity-80">
+                    Session: {sessionIntelligenceSessionId}
+                  </div>
+                )}
+                {sessionIntelligenceInsights.length > 0 && (
+                  <ul className="mt-1 list-disc pl-4">
+                    {sessionIntelligenceInsights.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
           {selectedArr.length === 2 && (
             <div className="px-3 py-2 border-b border-gray-100 dark:border-dark-border">
               <button

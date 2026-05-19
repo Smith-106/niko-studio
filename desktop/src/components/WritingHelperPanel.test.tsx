@@ -537,5 +537,6 @@ describe('WritingHelperPanel mode options and payload', () => {
 
     expect(screen.getByText(/修订会话：revision-session-1/)).toBeInTheDocument()
     expect(screen.getByText(/COMPARED/)).toBeInTheDocument()
+    expect(screen.getByText(/会话提示：Score improved/)).toBeInTheDocument()
   })
 })

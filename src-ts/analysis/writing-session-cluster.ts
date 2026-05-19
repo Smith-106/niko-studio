@@ -171,7 +171,7 @@ export class WritingSessionCluster {
     const clusters: SessionCluster[] = []
     const now = new Date().toISOString()
 
-    for (const [clusterIdx, memberIndices] of Object.entries(clusterAssignments)) {
+    for (const memberIndices of Object.values(clusterAssignments)) {
       const clusterId = randomUUID()
       const members = memberIndices.map((idx) => sessions[idx])
 

@@ -131,4 +131,22 @@ describe('useAppUiPersistence', () => {
       comparisonSummary: 'Score improved',
     })
   })
+
+  it('restores persisted session intelligence shell state', () => {
+    localStorage.setItem('niko.session-intelligence-v1', JSON.stringify({
+      enabled: true,
+      summary: '检测到轻微停滞风险。',
+      insights: ['先完成一个最小段落目标。'],
+      sessionId: 'session-1',
+    }))
+
+    const { result } = renderHook(() => useAppUiPersistence())
+
+    expect(result.current.sessionIntelligenceState).toEqual({
+      enabled: true,
+      summary: '检测到轻微停滞风险。',
+      insights: ['先完成一个最小段落目标。'],
+      sessionId: 'session-1',
+    })
+  })
 })

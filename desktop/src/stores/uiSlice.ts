@@ -11,6 +11,10 @@ export interface UiSlice {
   wordMetrics: WordMetrics
   sidebarExpanded: boolean
   historyPanelOpen: boolean
+  sessionIntelligenceEnabled: boolean
+  sessionIntelligenceSummary: string | null
+  sessionIntelligenceInsights: string[]
+  sessionIntelligenceSessionId: string | null
   toggleFocusMode: () => void
   setFocusMode: (value: boolean) => void
   updateWordMetrics: (metrics: Partial<WordMetrics>) => void
@@ -18,6 +22,10 @@ export interface UiSlice {
   setSidebarExpanded: (value: boolean) => void
   toggleHistoryPanel: () => void
   setHistoryPanelOpen: (value: boolean) => void
+  setSessionIntelligenceEnabled: (value: boolean) => void
+  setSessionIntelligenceSummary: (value: string | null) => void
+  setSessionIntelligenceInsights: (value: string[]) => void
+  setSessionIntelligenceSessionId: (value: string | null) => void
 }
 
 export const createUiSlice: AppSlice<UiSlice> = (set) => ({
@@ -25,6 +33,10 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   wordMetrics: { wordCount: 0, charCount: 0, readingTime: 0 },
   sidebarExpanded: false,
   historyPanelOpen: false,
+  sessionIntelligenceEnabled: false,
+  sessionIntelligenceSummary: null,
+  sessionIntelligenceInsights: [],
+  sessionIntelligenceSessionId: null,
   toggleFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
   setFocusMode: (value) => set({ focusMode: value }),
   updateWordMetrics: (metrics) =>
@@ -35,4 +47,8 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   setSidebarExpanded: (value) => set({ sidebarExpanded: value }),
   toggleHistoryPanel: () => set((state) => ({ historyPanelOpen: !state.historyPanelOpen })),
   setHistoryPanelOpen: (value) => set({ historyPanelOpen: value }),
+  setSessionIntelligenceEnabled: (value) => set({ sessionIntelligenceEnabled: value }),
+  setSessionIntelligenceSummary: (value) => set({ sessionIntelligenceSummary: value }),
+  setSessionIntelligenceInsights: (value) => set({ sessionIntelligenceInsights: value }),
+  setSessionIntelligenceSessionId: (value) => set({ sessionIntelligenceSessionId: value }),
 })

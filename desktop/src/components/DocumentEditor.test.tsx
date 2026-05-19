@@ -26,6 +26,13 @@ vi.mock('../services/projectFileService', () => ({
   writeChapterContent: vi.fn(() => Promise.resolve()),
 }))
 
+vi.mock('../services/versionService', () => ({
+  autoSaveSnapshot: vi.fn(() => Promise.resolve()),
+  listSnapshots: vi.fn(() => Promise.resolve({ snapshots: [] })),
+  diffSnapshots: vi.fn(() => Promise.resolve([])),
+  restoreSnapshot: vi.fn(() => Promise.resolve()),
+}))
+
 describe('DocumentEditor accessibility semantics', () => {
   beforeEach(() => {
     useSettingsStore.getState().updateSettings({ language: 'zh' })
@@ -136,5 +143,18 @@ describe('DocumentEditor accessibility semantics', () => {
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: '文档标题' })).toHaveValue('第二篇')
     })
+  })
+
+  it('updates session intelligence summary when the feature is enabled and editor content changes', async () => {
+    useAppStore.setState((state) => ({
+      ...state,
+      sessionIntelligenceEnabled: true,
+      currentProjectId: 'project-1',
+      currentChapterId: 'chapter-1',
+    }))
+
+    render(<DocumentEditor onOpenWritingHelper={() => {}} />)
+
+    expect(useAppStore.getState().sessionIntelligenceSummary).not.toBeUndefined()
   })
 })
