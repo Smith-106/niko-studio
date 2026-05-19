@@ -1,0 +1,46 @@
+name: Release State Sync
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to sync
+        required: false
+        type: string
+        default: v9.26.1
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Sync release-facing docs and local GO summary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/finalize_release_state.py --tag "${{ inputs.tag || github.event.release.tag_name }}"
+
+      - name: Commit synced release state
+        run: |
+          if git diff --quiet -- README.md docs/release/RELEASE_NOTES.md docs-site/src/client/data/content-getting-started.ts release-check-summary.md .workflow/evidence/release/release-readiness-artifact.json; then
+            echo "No release-state changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/release/RELEASE_NOTES.md docs-site/src/client/data/content-getting-started.ts release-check-summary.md .workflow/evidence/release/release-readiness-artifact.json
+          git commit -m "docs: sync release state for ${{ inputs.tag || github.event.release.tag_name }}"
+          git push origin HEAD:main
