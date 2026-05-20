@@ -16,16 +16,15 @@ export const releaseSnapshotMiniSection = `
 <table>
   <thead><tr><th>资产</th><th>用途</th><th>说明</th></tr></thead>
   <tbody>
-    <tr><td><code>Niko-Studio_9.26.2_x64-setup.exe</code></td><td>标准安装入口</td><td>推荐大多数 Windows 用户使用。</td></tr>
-    <tr><td><code>Niko-Studio_9.26.2_x64_en-US.msi</code></td><td>MSI 安装包（en-US）</td><td>适合企业环境或偏好 MSI 部署的场景。</td></tr>
-    <tr><td><code>Niko-Studio_9.26.2_x64_zh-CN.msi</code></td><td>MSI 安装包（zh-CN）</td><td>适合中文环境下的 MSI 部署。</td></tr>
+    <tr><td><code>Niko-Studio_9.26.2_x64-setup.exe</code></td><td>标准安装入口</td><td>推荐大多数 Windows 用户使用；已完成 packaged smoke 与 package E2E 验证。</td></tr>
+    <tr><td><code>MSI assets pending</code></td><td>后续补发</td><td>当前发布仅附带 NSIS 安装器；MSI 资产仍待修复本机 WiX <code>light.exe</code> 链接问题后补发。</td></tr>
   </tbody>
 </table>
 <h2>当前交付状态</h2>
 <ul>
   <li>Current-head local sign-off：<strong>GO</strong></li>
   <li>GitHub release tag：<code>v9.26.2</code></li>
-  <li>Current release commit：<code>0ed4bb9</code></li>
+  <li>Current release commit：<code>7578745</code></li>
 </ul>
 `;
 

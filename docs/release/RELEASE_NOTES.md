@@ -6,14 +6,14 @@
 
 - GitHub release：`https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2`
 - Release tag：`v9.26.2`
-- Current-head release commit：`0ed4bb92a0827eb99955a10f172d780ca2840d98`
+- Current-head release commit：`7578745ad309db7bb660dfa076ea0244713b77ad`
 - 当前本地发布结论：`GO`
 
 ### Current-head release closure
 
 - Cut `v9.26.2` from the current `main` commit after the desktop gate, retained evidence, and release alignment all converged to GO.
 - Refreshed retained release evidence for writing-helper acceptance and installed-package acceptance on the same HEAD.
-- Published the Windows release asset set for the current-head GO snapshot.
+- Published the verified NSIS installer for the current-head GO snapshot.
 
 ### 本次修复
 
@@ -24,8 +24,7 @@
 ### 已发布资产
 
 - `Niko-Studio_9.26.2_x64-setup.exe`
-- `Niko-Studio_9.26.2_x64_en-US.msi`
-- `Niko-Studio_9.26.2_x64_zh-CN.msi`
+- MSI assets are pending follow-up WiX `light.exe` repair and were not attached to the GitHub release.
 
 ## 发布级别矩阵
 

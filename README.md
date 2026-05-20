@@ -38,12 +38,11 @@ Deprecated release surface (removed)
 ## Current Release Snapshot
 
 - Current release tag: `v9.26.2`
-- Current release commit: `0ed4bb92a0827eb99955a10f172d780ca2840d98`
+- Current release commit: `7578745ad309db7bb660dfa076ea0244713b77ad`
 - GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2`
 - Published Windows assets:
   - `Niko-Studio_9.26.2_x64-setup.exe`
-  - `Niko-Studio_9.26.2_x64_en-US.msi`
-  - `Niko-Studio_9.26.2_x64_zh-CN.msi`
+- MSI assets pending follow-up WiX repair before publication.
 - Current local sign-off status: `GO` on current HEAD
 
 如果你只想下载当前正式发布版，直接进入 GitHub Releases 页面获取 Windows 安装包。
