@@ -46,9 +46,10 @@
     "preview": "vite preview",
     "tauri": "node ./node_modules/@tauri-apps/cli/tauri.js",
     "sign:prepare-config": "python ../scripts/generate_signed_tauri_config.py",
-    "tauri:build:signed": "npm run build:sidecar && python ../scripts/generate_signed_tauri_config.py --run-build",
+    "build:packaged-compat": "npm run build:sidecar && cargo build --release --bin niko-gateway-launcher --manifest-path src-tauri/Cargo.toml && npm run hydrate:packaged-compat",
+    "tauri:build:signed": "npm run build:packaged-compat && python ../scripts/generate_signed_tauri_config.py --run-build",
     "tauri:dev": "npm run build:sidecar && npm run tauri -- dev",
-    "tauri:build": "npm run build:sidecar && npm run tauri -- build"
+    "tauri:build": "npm run build:packaged-compat && npm run tauri -- build"
   },
   "engines": {
     "node": ">=20.0.0",
