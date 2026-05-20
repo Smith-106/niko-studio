@@ -149,4 +149,22 @@ describe('useAppUiPersistence', () => {
       sessionId: 'session-1',
     })
   })
+
+  it('restores persisted personalized craft shell state', () => {
+    localStorage.setItem('niko.personalized-craft-v1', JSON.stringify({
+      enabled: true,
+      summary: '近期角色塑造与节奏控制是你的主要个性化关注点。',
+      trajectory: '近期画像整体平稳，适合继续追踪并逐步强化薄弱维度。',
+      recommendations: ['优先针对角色动机与冲突可见性做小范围修订。'],
+    }))
+
+    const { result } = renderHook(() => useAppUiPersistence())
+
+    expect(result.current.personalizedCraftState).toEqual({
+      enabled: true,
+      summary: '近期角色塑造与节奏控制是你的主要个性化关注点。',
+      trajectory: '近期画像整体平稳，适合继续追踪并逐步强化薄弱维度。',
+      recommendations: ['优先针对角色动机与冲突可见性做小范围修订。'],
+    })
+  })
 })

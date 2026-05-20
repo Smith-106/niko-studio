@@ -294,6 +294,9 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
       ? `会话提示：${handoff.revisionSession.comparisonSummary}`
       : `Session note: ${handoff.revisionSession.comparisonSummary}`)
     : ''
+  const personalizedCraftSummary = useAppStore((state) => state.personalizedCraftSummary)
+  const personalizedCraftTrajectory = useAppStore((state) => state.personalizedCraftTrajectory)
+  const personalizedCraftRecommendations = useAppStore((state) => state.personalizedCraftRecommendations)
   const guidanceTitle = isZh ? '交接说明' : 'Handoff guidance'
   const guidanceHint = isZh
     ? '这段说明会作为本次处理的附加指令，你可以保留它，也可以清除后按自己的思路继续。'
@@ -744,6 +747,20 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
                         <p className="mt-2 text-[11px] leading-relaxed text-amber-800 dark:text-amber-100">
                           {handoffReasonText}
                         </p>
+                        {(personalizedCraftSummary || personalizedCraftTrajectory || personalizedCraftRecommendations.length > 0) && (
+                          <div className="mt-3 rounded-xl border border-amber-200/80 bg-white/80 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-500/20 dark:bg-dark-surface2 dark:text-amber-100">
+                            <div className="font-semibold">{isZh ? '个性化技巧画像' : 'Personalized craft profile'}</div>
+                            {personalizedCraftSummary && <div className="mt-1">{personalizedCraftSummary}</div>}
+                            {personalizedCraftTrajectory && <div className="mt-1 opacity-80">{personalizedCraftTrajectory}</div>}
+                            {personalizedCraftRecommendations.length > 0 && (
+                              <ul className="mt-1 list-disc pl-4">
+                                {personalizedCraftRecommendations.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

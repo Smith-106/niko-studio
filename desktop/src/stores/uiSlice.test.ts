@@ -58,4 +58,27 @@ describe('uiSlice', () => {
     expect(useAppStore.getState().sessionIntelligenceInsights).toEqual(['先完成一个最小段落目标。'])
     expect(useAppStore.getState().sessionIntelligenceSessionId).toBe('session-1')
   })
+
+  it('stores personalized craft state independently', () => {
+    useAppStore.setState({
+      personalizedCraftEnabled: false,
+      personalizedCraftSummary: null,
+      personalizedCraftTrajectory: null,
+      personalizedCraftRecommendations: [],
+    })
+
+    useAppStore.getState().setPersonalizedCraftEnabled(true)
+    useAppStore.getState().setPersonalizedCraftSummary('近期角色塑造与节奏控制是你的主要个性化关注点。')
+    useAppStore.getState().setPersonalizedCraftTrajectory('近期画像整体平稳，适合继续追踪并逐步强化薄弱维度。')
+    useAppStore.getState().setPersonalizedCraftRecommendations([
+      '优先针对角色动机与冲突可见性做小范围修订。',
+    ])
+
+    expect(useAppStore.getState().personalizedCraftEnabled).toBe(true)
+    expect(useAppStore.getState().personalizedCraftSummary).toBe('近期角色塑造与节奏控制是你的主要个性化关注点。')
+    expect(useAppStore.getState().personalizedCraftTrajectory).toBe('近期画像整体平稳，适合继续追踪并逐步强化薄弱维度。')
+    expect(useAppStore.getState().personalizedCraftRecommendations).toEqual([
+      '优先针对角色动机与冲突可见性做小范围修订。',
+    ])
+  })
 })

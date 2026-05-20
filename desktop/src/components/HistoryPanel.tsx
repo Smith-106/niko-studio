@@ -105,6 +105,11 @@ export function HistoryPanel() {
   const sessionIntelligenceInsights = useAppStore((s) => s.sessionIntelligenceInsights)
   const sessionIntelligenceSessionId = useAppStore((s) => s.sessionIntelligenceSessionId)
   const setSessionIntelligenceEnabled = useAppStore((s) => s.setSessionIntelligenceEnabled)
+  const personalizedCraftEnabled = useAppStore((s) => s.personalizedCraftEnabled)
+  const personalizedCraftSummary = useAppStore((s) => s.personalizedCraftSummary)
+  const personalizedCraftTrajectory = useAppStore((s) => s.personalizedCraftTrajectory)
+  const personalizedCraftRecommendations = useAppStore((s) => s.personalizedCraftRecommendations)
+  const setPersonalizedCraftEnabled = useAppStore((s) => s.setPersonalizedCraftEnabled)
 
   const [snapshots, setSnapshots] = useState<Snapshot[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -206,6 +211,35 @@ export function HistoryPanel() {
                 {sessionIntelligenceInsights.length > 0 && (
                   <ul className="mt-1 list-disc pl-4">
                     {sessionIntelligenceInsights.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="px-3 py-2 border-b border-gray-100 dark:border-dark-border">
+            <label className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">
+              <span>Personalized Craft</span>
+              <input
+                type="checkbox"
+                checked={personalizedCraftEnabled}
+                onChange={(event) => setPersonalizedCraftEnabled(event.target.checked)}
+              />
+            </label>
+            {personalizedCraftEnabled && personalizedCraftSummary && (
+              <div className="mt-2 rounded border border-amber-200 bg-amber-50/70 px-2 py-2 text-[11px] text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+                <div className="font-medium">
+                  {personalizedCraftSummary}
+                </div>
+                {personalizedCraftTrajectory && (
+                  <div className="mt-1 text-[10px] opacity-80">
+                    Trajectory: {personalizedCraftTrajectory}
+                  </div>
+                )}
+                {personalizedCraftRecommendations.length > 0 && (
+                  <ul className="mt-1 list-disc pl-4">
+                    {personalizedCraftRecommendations.map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>

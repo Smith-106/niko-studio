@@ -16,6 +16,10 @@ import {
   summarizeWritingSessionTelemetry,
   type WritingSessionTelemetry,
 } from '../utils/writingSessionTelemetry'
+import {
+  buildPersonalizedCraftProfile,
+  type PersonalizedCraftRecommendation,
+} from '../../../src-ts/analysis/personalized-craft-profile'
 
 interface DocumentEditorProps {
   onOpenWritingHelper: () => void
@@ -36,6 +40,10 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
   const setSessionIntelligenceSummary = useAppStore((state) => state.setSessionIntelligenceSummary)
   const setSessionIntelligenceInsights = useAppStore((state) => state.setSessionIntelligenceInsights)
   const setSessionIntelligenceSessionId = useAppStore((state) => state.setSessionIntelligenceSessionId)
+  const personalizedCraftEnabled = useAppStore((state) => state.personalizedCraftEnabled)
+  const setPersonalizedCraftSummary = useAppStore((state) => state.setPersonalizedCraftSummary)
+  const setPersonalizedCraftTrajectory = useAppStore((state) => state.setPersonalizedCraftTrajectory)
+  const setPersonalizedCraftRecommendations = useAppStore((state) => state.setPersonalizedCraftRecommendations)
   const [chapterContent, setChapterContent] = useState<string>('')
   const [contentLoaded, setContentLoaded] = useState(false)
   const fallbackTitle = currentConversationTitle ?? t.appTitle ?? '未命名文档'
@@ -73,11 +81,29 @@ export function DocumentEditor({ onOpenWritingHelper }: DocumentEditorProps) {
       setSessionIntelligenceSummary(intelligence.insights[0]?.summary ?? null)
       setSessionIntelligenceInsights(intelligence.insights.map((item) => item.suggestion).slice(0, 3))
     }
+
+    if (personalizedCraftEnabled) {
+      const telemetry = telemetryRef.current
+      const profile = buildPersonalizedCraftProfile({
+        sessionIntelligence: telemetry ? [summarizeWritingSessionTelemetry(telemetry)] : [],
+      })
+      setPersonalizedCraftSummary(profile.dominantWeaknesses[0]
+        ? `近期重点：${profile.dominantWeaknesses[0].dimensionId} · ${profile.dominantWeaknesses[0].latestStatus}`
+        : '个性化画像数据不足，先继续积累真实写作与修订行为。')
+      setPersonalizedCraftTrajectory(profile.growthTrajectory.summary)
+      setPersonalizedCraftRecommendations(
+        profile.recommendations.map((item: PersonalizedCraftRecommendation) => item.summary).slice(0, 3),
+      )
+    }
   }, [
     currentChapterId,
     currentConversationId,
     currentProjectId,
+    personalizedCraftEnabled,
     sessionIntelligenceEnabled,
+    setPersonalizedCraftRecommendations,
+    setPersonalizedCraftSummary,
+    setPersonalizedCraftTrajectory,
     setSessionIntelligenceInsights,
     setSessionIntelligenceSessionId,
     setSessionIntelligenceSummary,

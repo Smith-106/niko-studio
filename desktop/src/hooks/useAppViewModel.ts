@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { type EvaluationSourceDescriptor, useLatestAssistantMessageContent, useBackendStatus, useCheckBackend } from '../stores/selectors'
 import { useAppRuntimeHealth } from './useAppRuntimeHealth'
 import { useAppUiPersistence } from './useAppUiPersistence'
@@ -7,6 +8,7 @@ import { useAppHeaderViewModel } from './useAppHeaderViewModel'
 import { useAppContextUsage } from './useAppContextUsage'
 import { useAppShellViewModel } from './useAppShellViewModel'
 import { useI18n } from '../i18n'
+import { useAppStore } from '../stores/appStore'
 import { getCurrentEditorSelectionText } from '../utils/editorHandle'
 
 export function useAppViewModel() {
@@ -51,6 +53,18 @@ export function useAppViewModel() {
   const panelOrchestration = useAppPanelOrchestration({
     setActiveRightPanel: uiPersistence.setActiveRightPanel,
   })
+
+  useEffect(() => {
+    const store = useAppStore.getState()
+    store.setSessionIntelligenceEnabled(uiPersistence.sessionIntelligenceState.enabled)
+    store.setSessionIntelligenceSummary(uiPersistence.sessionIntelligenceState.summary)
+    store.setSessionIntelligenceInsights(uiPersistence.sessionIntelligenceState.insights)
+    store.setSessionIntelligenceSessionId(uiPersistence.sessionIntelligenceState.sessionId)
+    store.setPersonalizedCraftEnabled(uiPersistence.personalizedCraftState.enabled)
+    store.setPersonalizedCraftSummary(uiPersistence.personalizedCraftState.summary)
+    store.setPersonalizedCraftTrajectory(uiPersistence.personalizedCraftState.trajectory)
+    store.setPersonalizedCraftRecommendations(uiPersistence.personalizedCraftState.recommendations)
+  }, [uiPersistence.sessionIntelligenceState, uiPersistence.personalizedCraftState])
 
   const checkpointMenu = useAppCheckpointMenu({
     restoreFailedText: t.restoreFailed,

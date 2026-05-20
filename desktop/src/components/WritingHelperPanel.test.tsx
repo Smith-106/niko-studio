@@ -31,6 +31,9 @@ describe('WritingHelperPanel clear draft', () => {
       ...state,
       selectedSkills: ['character-forge'],
       availableSkills: ['character-forge', 'dialogue-system'],
+      personalizedCraftSummary: '近期重点：character · improving',
+      personalizedCraftTrajectory: '近期画像整体平稳，适合继续追踪并逐步强化薄弱维度。',
+      personalizedCraftRecommendations: ['优先针对角色动机与冲突可见性做小范围修订。'],
     }))
     mockGetEditorHandle.mockReturnValue(null)
   })
@@ -538,5 +541,8 @@ describe('WritingHelperPanel mode options and payload', () => {
     expect(screen.getByText(/修订会话：revision-session-1/)).toBeInTheDocument()
     expect(screen.getByText(/COMPARED/)).toBeInTheDocument()
     expect(screen.getByText(/会话提示：Score improved/)).toBeInTheDocument()
+    expect(screen.getByText('个性化技巧画像')).toBeInTheDocument()
+    expect(screen.getByText('近期重点：character · improving')).toBeInTheDocument()
+    expect(screen.getByText('优先针对角色动机与冲突可见性做小范围修订。')).toBeInTheDocument()
   })
 })

@@ -15,6 +15,10 @@ export interface UiSlice {
   sessionIntelligenceSummary: string | null
   sessionIntelligenceInsights: string[]
   sessionIntelligenceSessionId: string | null
+  personalizedCraftEnabled: boolean
+  personalizedCraftSummary: string | null
+  personalizedCraftTrajectory: string | null
+  personalizedCraftRecommendations: string[]
   toggleFocusMode: () => void
   setFocusMode: (value: boolean) => void
   updateWordMetrics: (metrics: Partial<WordMetrics>) => void
@@ -26,6 +30,10 @@ export interface UiSlice {
   setSessionIntelligenceSummary: (value: string | null) => void
   setSessionIntelligenceInsights: (value: string[]) => void
   setSessionIntelligenceSessionId: (value: string | null) => void
+  setPersonalizedCraftEnabled: (value: boolean) => void
+  setPersonalizedCraftSummary: (value: string | null) => void
+  setPersonalizedCraftTrajectory: (value: string | null) => void
+  setPersonalizedCraftRecommendations: (value: string[]) => void
 }
 
 export const createUiSlice: AppSlice<UiSlice> = (set) => ({
@@ -37,6 +45,10 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   sessionIntelligenceSummary: null,
   sessionIntelligenceInsights: [],
   sessionIntelligenceSessionId: null,
+  personalizedCraftEnabled: false,
+  personalizedCraftSummary: null,
+  personalizedCraftTrajectory: null,
+  personalizedCraftRecommendations: [],
   toggleFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
   setFocusMode: (value) => set({ focusMode: value }),
   updateWordMetrics: (metrics) =>
@@ -51,4 +63,8 @@ export const createUiSlice: AppSlice<UiSlice> = (set) => ({
   setSessionIntelligenceSummary: (value) => set({ sessionIntelligenceSummary: value }),
   setSessionIntelligenceInsights: (value) => set({ sessionIntelligenceInsights: value }),
   setSessionIntelligenceSessionId: (value) => set({ sessionIntelligenceSessionId: value }),
+  setPersonalizedCraftEnabled: (value) => set({ personalizedCraftEnabled: value }),
+  setPersonalizedCraftSummary: (value) => set({ personalizedCraftSummary: value }),
+  setPersonalizedCraftTrajectory: (value) => set({ personalizedCraftTrajectory: value }),
+  setPersonalizedCraftRecommendations: (value) => set({ personalizedCraftRecommendations: value }),
 })

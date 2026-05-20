@@ -37,6 +37,7 @@ const SIDEBAR_COLLAPSED_STORAGE_KEY = 'niko.sidebar-collapsed-v1'
 const ACTIVE_RIGHT_PANEL_STORAGE_KEY = 'niko.active-right-panel-v1'
 const CHAT_SIDEBAR_COLLAPSED_STORAGE_KEY = 'niko.chat-sidebar-collapsed-v1'
 const SESSION_INTELLIGENCE_STORAGE_KEY = 'niko.session-intelligence-v1'
+const PERSONALIZED_CRAFT_STORAGE_KEY = 'niko.personalized-craft-v1'
 
 const DEFAULT_WRITING_HELPER_DRAFT: WritingHelperDraftState = {
   content: '',
@@ -223,6 +224,35 @@ export function useAppUiPersistence() {
       return { enabled: false, summary: null, insights: [], sessionId: null }
     }
   })
+  const [personalizedCraftState, setPersonalizedCraftState] = useState<{
+    enabled: boolean
+    summary: string | null
+    trajectory: string | null
+    recommendations: string[]
+  }>(() => {
+    try {
+      const raw = localStorage.getItem(PERSONALIZED_CRAFT_STORAGE_KEY)
+      if (!raw) {
+        return { enabled: false, summary: null, trajectory: null, recommendations: [] }
+      }
+      const parsed = JSON.parse(raw) as Partial<{
+        enabled: boolean
+        summary: string | null
+        trajectory: string | null
+        recommendations: string[]
+      }>
+      return {
+        enabled: parsed.enabled === true,
+        summary: typeof parsed.summary === 'string' ? parsed.summary : null,
+        trajectory: typeof parsed.trajectory === 'string' ? parsed.trajectory : null,
+        recommendations: Array.isArray(parsed.recommendations)
+          ? parsed.recommendations.filter((item): item is string => typeof item === 'string')
+          : [],
+      }
+    } catch {
+      return { enabled: false, summary: null, trajectory: null, recommendations: [] }
+    }
+  })
 
   useEffect(() => {
     const onResize = () => {
@@ -273,6 +303,14 @@ export function useAppUiPersistence() {
     }
   }, [sessionIntelligenceState])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(PERSONALIZED_CRAFT_STORAGE_KEY, JSON.stringify(personalizedCraftState))
+    } catch {
+      // ignore localStorage write failures
+    }
+  }, [personalizedCraftState])
+
   const clearWritingHelperDraft = useCallback(() => {
     clearWritingHelperDraftStorage()
     setWritingHelperDraft(createWritingHelperDraft())
@@ -290,5 +328,7 @@ export function useAppUiPersistence() {
     clearWritingHelperDraft,
     sessionIntelligenceState,
     setSessionIntelligenceState,
+    personalizedCraftState,
+    setPersonalizedCraftState,
   }
 }

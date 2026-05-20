@@ -25,3 +25,14 @@ export {
   type ClusterMember,
   type ClusterConfig,
 } from './writing-session-cluster'
+
+export {
+  buildPersonalizedCraftProfile,
+  type PersonalizedCraftProfile,
+  type PersonalizedCraftProfileInput,
+  type PersonalizedCraftRecommendation,
+  type WeaknessTrend,
+  type GrowthTrajectory,
+  type GrowthTrajectoryPoint,
+  type PreferenceDimensionSummary,
+} from './personalized-craft-profile'
