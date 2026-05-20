@@ -1,5 +1,19 @@
 # Changelog
 
+## [9.26.2] - 2026-05-20
+
+### Fixed
+- sidecar 打包阶段现在会一并拷贝 `writing-craft/catalog-data` 运行时 JSON 目录，修复安装包内写作工艺链路因缺少目录数据而冒烟失败的问题。
+- desktop 正式发布门禁切换到 `test:serial`，并为长跑 `vitest` 显式增加 `--max-old-space-size=8192`，消除全量串行测试的 OOM / 挂尾不稳定性。
+- `AnalysisPanel` 的写作工艺 host 测试改为稳定 mock，并修正章节数组 mock 的引用稳定性，避免 `useEffect` 循环导致发布门禁卡死。
+- 多组 desktop / graph 回归测试补齐异步等待与结构化日志断言，使 current-head `desktop_check` 和 retained evidence 能稳定收敛到 `GO`。
+
+### Verification
+- `npm --prefix desktop run check:local`
+- `python scripts/release_check_summary.py`
+- `python scripts/refresh_release_evidence.py`
+- `python scripts/package_e2e_checklist.py --artifact-path "desktop/src-tauri/target/release/bundle/nsis/Niko-Studio_9.26.1_x64-setup.exe" --tester Codex --result pass --install-verified --launch-verified --core-flow-verified --shutdown-verified`
+
 ## [9.26.1] - 2026-05-14
 
 ### Fixed

@@ -12,20 +12,20 @@ export const outputFieldGlossaryMiniSection = `
 
 export const releaseSnapshotMiniSection = `
 <h2>当前发布快照</h2>
-<p><strong>当前推荐版本：</strong><code>v9.26.1</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1">Niko-Studio v9.26.1</a>。</p>
+<p><strong>当前推荐版本：</strong><code>v9.26.2</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2">Niko-Studio v9.26.2</a>。</p>
 <table>
   <thead><tr><th>资产</th><th>用途</th><th>说明</th></tr></thead>
   <tbody>
-    <tr><td><code>Niko-Studio_9.26.1_x64-setup.exe</code></td><td>标准安装入口</td><td>推荐大多数 Windows 用户使用。</td></tr>
-    <tr><td><code>Niko-Studio_9.26.1_x64_en-US.msi</code></td><td>MSI 安装包（en-US）</td><td>适合企业环境或偏好 MSI 部署的场景。</td></tr>
-    <tr><td><code>Niko-Studio_9.26.1_x64_zh-CN.msi</code></td><td>MSI 安装包（zh-CN）</td><td>适合中文环境下的 MSI 部署。</td></tr>
+    <tr><td><code>Niko-Studio_9.26.2_x64-setup.exe</code></td><td>标准安装入口</td><td>推荐大多数 Windows 用户使用。</td></tr>
+    <tr><td><code>Niko-Studio_9.26.2_x64_en-US.msi</code></td><td>MSI 安装包（en-US）</td><td>适合企业环境或偏好 MSI 部署的场景。</td></tr>
+    <tr><td><code>Niko-Studio_9.26.2_x64_zh-CN.msi</code></td><td>MSI 安装包（zh-CN）</td><td>适合中文环境下的 MSI 部署。</td></tr>
   </tbody>
 </table>
 <h2>当前交付状态</h2>
 <ul>
   <li>Current-head local sign-off：<strong>GO</strong></li>
-  <li>GitHub release tag：<code>v9.26.1</code></li>
-  <li>Current release commit：<code>f13df0f</code></li>
+  <li>GitHub release tag：<code>v9.26.2</code></li>
+  <li>Current release commit：<code>0ed4bb9</code></li>
 </ul>
 `;
 

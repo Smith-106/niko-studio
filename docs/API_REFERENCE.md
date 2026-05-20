@@ -1,7 +1,7 @@
 # Niko Studio Gateway API Reference
 
-**Version**: 9.26.1
-**Updated**: 2026-05-14
+**Version**: 9.26.2
+**Updated**: 2026-05-20
 **Base URL**: `http://localhost:8000`
 
 ---

@@ -22,7 +22,7 @@ const log = createLogger('config')
 // Version - authoritative release version for cross-surface consistency checks
 // ---------------------------------------------------------------------------
 
-const APP_VERSION = '9.26.1'
+const APP_VERSION = '9.26.2'
 
 // ---------------------------------------------------------------------------
 // Enum & helper types

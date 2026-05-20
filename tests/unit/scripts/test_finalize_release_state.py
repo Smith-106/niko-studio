@@ -24,53 +24,53 @@ def _load() -> ModuleType:
 def test_sync_readme_updates_release_snapshot() -> None:
     module = _load()
     state = module.ReleaseState(
-        head_sha="f13df0f3f38ada475f55df300a96e1965f055287",
-        release_tag="v9.26.1",
-        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1",
-        asset_names=("Niko-Studio_9.26.1_x64-setup.exe",),
+        head_sha="0ed4bb92a0827eb99955a10f172d780ca2840d98",
+        release_tag="v9.26.2",
+        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2",
+        asset_names=("Niko-Studio_9.26.2_x64-setup.exe",),
     )
     text = """
-- Current release tag: `v9.26.1`
+- Current release tag: `v9.26.2`
 - Current release commit: `ee391eea0088b0bc63b6b63ac0502f6296b8bf16`
-- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1`
+- GitHub release: `https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2`
 *Version 9.25.8 Platform Edition | Updated: 2026-05-14*
 """
     updated = module.sync_readme(text, state)
-    assert "f13df0f3f38ada475f55df300a96e1965f055287" in updated
-    assert "Version 9.26.1 Platform Edition | Updated: 2026-05-19" in updated
+    assert "0ed4bb92a0827eb99955a10f172d780ca2840d98" in updated
+    assert "Version 9.26.2 Platform Edition | Updated: 2026-05-19" in updated
 
 
 def test_sync_release_notes_updates_current_head_commit() -> None:
     module = _load()
     state = module.ReleaseState(
-        head_sha="f13df0f3f38ada475f55df300a96e1965f055287",
-        release_tag="v9.26.1",
-        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1",
+        head_sha="0ed4bb92a0827eb99955a10f172d780ca2840d98",
+        release_tag="v9.26.2",
+        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2",
         asset_names=(),
     )
     text = """
-- GitHub release：`https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1`
-- Release tag：`v9.26.1`
+- GitHub release：`https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2`
+- Release tag：`v9.26.2`
 - Current-head release commit：`ee391eea0088b0bc63b6b63ac0502f6296b8bf16`
 """
     updated = module.sync_release_notes(text, state)
-    assert "Current-head release commit：`f13df0f3f38ada475f55df300a96e1965f055287`" in updated
+    assert "Current-head release commit：`0ed4bb92a0827eb99955a10f172d780ca2840d98`" in updated
 
 
 def test_sync_release_snapshot_fragment_updates_short_commit() -> None:
     module = _load()
     state = module.ReleaseState(
-        head_sha="f13df0f3f38ada475f55df300a96e1965f055287",
-        release_tag="v9.26.1",
-        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1",
+        head_sha="0ed4bb92a0827eb99955a10f172d780ca2840d98",
+        release_tag="v9.26.2",
+        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2",
         asset_names=(),
     )
     text = """
-<p><strong>当前推荐版本：</strong><code>v9.26.1</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1">Niko-Studio v9.26.1</a>。</p>
+<p><strong>当前推荐版本：</strong><code>v9.26.2</code>。当前对外发布入口为 GitHub Releases：<a href="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2">Niko-Studio v9.26.2</a>。</p>
 <li>Current release commit：<code>ee391ee</code></li>
 """
     updated = module.sync_release_snapshot_fragment(text, state)
-    assert "<code>f13df0f</code>" in updated
+    assert "<code>0ed4bb9</code>" in updated
 
 
 def test_sync_local_artifact_updates_top_level_head_sha() -> None:
@@ -86,9 +86,9 @@ def test_sync_local_artifact_updates_top_level_head_sha() -> None:
         "trace": {"trace_id": "release-readiness-old"},
     }
     state = module.ReleaseState(
-        head_sha="f13df0f3f38ada475f55df300a96e1965f055287",
-        release_tag="v9.26.1",
-        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1",
+        head_sha="0ed4bb92a0827eb99955a10f172d780ca2840d98",
+        release_tag="v9.26.2",
+        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2",
         asset_names=(),
     )
     updated = module.sync_local_artifact(payload, state)
@@ -100,9 +100,9 @@ def test_sync_local_artifact_updates_top_level_head_sha() -> None:
 def test_check_mode_detects_old_commit_markers(tmp_path: Path, monkeypatch) -> None:
     module = _load()
     monkeypatch.setattr(module, "load_release_state", lambda _tag: module.ReleaseState(
-        head_sha="f13df0f3f38ada475f55df300a96e1965f055287",
-        release_tag="v9.26.1",
-        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.1",
+        head_sha="0ed4bb92a0827eb99955a10f172d780ca2840d98",
+        release_tag="v9.26.2",
+        release_url="https://github.com/Smith-106/niko-studio/releases/tag/v9.26.2",
         asset_names=(),
     ))
     readme = tmp_path / "README.md"

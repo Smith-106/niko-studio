@@ -23,7 +23,7 @@ LOCAL_SUMMARY_PATH = PROJECT_ROOT / "release-check-summary.md"
 LOCAL_ARTIFACT_PATH = (
     PROJECT_ROOT / ".workflow" / "evidence" / "release" / "release-readiness-artifact.json"
 )
-CURRENT_VERSION = "9.26.1"
+CURRENT_VERSION = "9.26.2"
 
 
 @dataclass(frozen=True)

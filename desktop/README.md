@@ -96,7 +96,7 @@ Windows 本地若常见 `8000` 端口占用，可使用仓库内启动器自动�
 - `npm run local:pre-commit`: 仓库级 pre-commit 入口，会串行执行 desktop / src-ts 的 `check:pre-commit` 与 Python scripts 的 Ruff 校验。
 - 启用 git commit hook：`python -m pre_commit install`
 - `npm run check`: 较轻的构建型校验入口，当前只执行 `typecheck && build`，适合确认桌面前端可以完成编译，但不等同于完整本地验收。
-- `npm run check:local`: 当前权威的本地验证路径；它映射到 `check:release`，会串行执行 `lint`、`format:check`、`test`、`build:sidecar`、`validate:sidecar-contract` 和 `build`，应作为本地交付前的标准质量门禁。
+- `npm run check:local`: 当前权威的本地验证路径；它映射到 `check:release`，会串行执行 `lint`、`format:check`、`test:serial`、`build:sidecar`、`validate:sidecar-contract` 和 `build`，应作为本地交付前的标准质量门禁。
 - `npm run validate:package:dry-run`: 显式打包证明命令；它会在当前 Windows x64 支持矩阵下要求预置 compatibility sidecar artifact，因此与 `check:local` 属于不同层级的验证。
 - `npm run package:e2e:checklist`: 安装包级安装/启动/使用验收留痕入口；它把 exact retained artifact 的安装包验收结果写入 `.workflow/evidence/release/package-e2e-acceptance.json`。
 - `npm run hydrate:packaged-compat`: 当仓库已保留 `src-tauri/target/**/debug/niko-gateway.exe` 时，把该 compatibility artifact 复制回 `src-tauri/bin/`，供显式打包证明使用。
