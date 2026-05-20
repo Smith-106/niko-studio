@@ -39,7 +39,7 @@ describe('useAppRuntimeHealth', () => {
     vi.restoreAllMocks()
   })
 
-  it('calls checkBackend on mount', () => {
+  it('calls checkBackend on mount', async () => {
     renderHook(() =>
       useAppRuntimeHealth({
         backendStatus: true,
@@ -47,7 +47,9 @@ describe('useAppRuntimeHealth', () => {
       }),
     )
 
-    expect(mockCheckBackend).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(mockCheckBackend).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('returns null initially before health check resolves', () => {

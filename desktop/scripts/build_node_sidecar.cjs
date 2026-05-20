@@ -178,6 +178,21 @@ function stageDist() {
   fs.mkdirSync(STAGE_DIR, { recursive: true });
   copyTreeSync(path.join(SRC_TS_DIR, 'dist'), STAGE_DIR, { ignoreNames: [] });
 
+  // Runtime JSON catalogs are loaded from relative disk paths and are not emitted by tsc.
+  const writingCraftCatalogSrc = path.join(
+    SRC_TS_DIR,
+    'narrative',
+    'writing-craft',
+    'catalog-data',
+  );
+  const writingCraftCatalogDest = path.join(
+    STAGE_DIR,
+    'narrative',
+    'writing-craft',
+    'catalog-data',
+  );
+  copyTreeSync(writingCraftCatalogSrc, writingCraftCatalogDest, { ignoreNames: [] });
+
   // Copy package.json + package-lock.json so npm ci --omit=dev can hydrate native modules.
   // We use the full package.json (not a trimmed subset) to ensure the version lockfile resolves.
   fs.copyFileSync(

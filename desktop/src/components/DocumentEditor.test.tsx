@@ -11,6 +11,10 @@ vi.mock('./StoryBiblePanel', () => ({
   StoryBiblePanel: () => <div>Story Bible</div>,
 }))
 
+vi.mock('./HistoryPanel', () => ({
+  HistoryPanel: () => <div data-testid="history-panel" />,
+}))
+
 vi.mock('./NikoEditor', () => ({
   NikoEditor: ({ initialContent }: { initialContent?: string }) => (
     <div data-testid="editor-props">{initialContent ?? ''}</div>
@@ -33,6 +37,14 @@ vi.mock('../services/versionService', () => ({
   restoreSnapshot: vi.fn(() => Promise.resolve()),
 }))
 
+async function renderDocumentEditor() {
+  await act(async () => {
+    render(<DocumentEditor onOpenWritingHelper={() => {}} />)
+  })
+
+  await screen.findByText('Story Bible')
+}
+
 describe('DocumentEditor accessibility semantics', () => {
   beforeEach(() => {
     useSettingsStore.getState().updateSettings({ language: 'zh' })
@@ -49,8 +61,8 @@ describe('DocumentEditor accessibility semantics', () => {
     })
   })
 
-  it('adds deterministic id and name attributes to the document title field', () => {
-    render(<DocumentEditor onOpenWritingHelper={() => {}} />)
+  it('adds deterministic id and name attributes to the document title field', async () => {
+    await renderDocumentEditor()
 
     const titleInput = screen.getByRole('textbox', { name: '文档标题' })
 
@@ -58,7 +70,7 @@ describe('DocumentEditor accessibility semantics', () => {
     expect(titleInput).toHaveAttribute('name', 'document-title-input')
   })
 
-  it('binds the title field to the selected conversation title', () => {
+  it('binds the title field to the selected conversation title', async () => {
     useAppStore.setState((state) => ({
       ...state,
       currentConversationId: 'conv-1',
@@ -75,7 +87,7 @@ describe('DocumentEditor accessibility semantics', () => {
       allConversationIds: ['conv-1'],
     }))
 
-    render(<DocumentEditor onOpenWritingHelper={() => {}} />)
+    await renderDocumentEditor()
 
     expect(screen.getByRole('textbox', { name: '文档标题' })).toHaveValue('新对话')
   })
@@ -98,7 +110,7 @@ describe('DocumentEditor accessibility semantics', () => {
       allConversationIds: ['conv-1'],
     }))
 
-    render(<DocumentEditor onOpenWritingHelper={() => {}} />)
+    await renderDocumentEditor()
 
     const titleInput = screen.getByRole('textbox', { name: '文档标题' })
     await user.clear(titleInput)
@@ -132,7 +144,7 @@ describe('DocumentEditor accessibility semantics', () => {
       allConversationIds: ['conv-2', 'conv-1'],
     }))
 
-    render(<DocumentEditor onOpenWritingHelper={() => {}} />)
+    await renderDocumentEditor()
 
     expect(screen.getByRole('textbox', { name: '文档标题' })).toHaveValue('新对话')
 
@@ -153,7 +165,11 @@ describe('DocumentEditor accessibility semantics', () => {
       currentChapterId: 'chapter-1',
     }))
 
-    render(<DocumentEditor onOpenWritingHelper={() => {}} />)
+    await renderDocumentEditor()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-props')).toHaveTextContent('"type":"doc"')
+    })
 
     expect(useAppStore.getState().sessionIntelligenceSummary).not.toBeUndefined()
   })

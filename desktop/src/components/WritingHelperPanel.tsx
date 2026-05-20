@@ -296,7 +296,9 @@ export function WritingHelperPanel({ onClose, onOpenSettings, draftState, onDraf
     : ''
   const personalizedCraftSummary = useAppStore((state) => state.personalizedCraftSummary)
   const personalizedCraftTrajectory = useAppStore((state) => state.personalizedCraftTrajectory)
-  const personalizedCraftRecommendations = useAppStore((state) => state.personalizedCraftRecommendations)
+  const personalizedCraftRecommendations = useAppStore((state) => (
+    Array.isArray(state.personalizedCraftRecommendations) ? state.personalizedCraftRecommendations : []
+  ))
   const guidanceTitle = isZh ? '交接说明' : 'Handoff guidance'
   const guidanceHint = isZh
     ? '这段说明会作为本次处理的附加指令，你可以保留它，也可以清除后按自己的思路继续。'

@@ -17,6 +17,10 @@ const hookMocks = vi.hoisted(() => ({
   useI18nMock: vi.fn(),
 }))
 
+type AppStoreMockWithState = typeof hookMocks.useAppStoreMock & {
+  getState: ReturnType<typeof vi.fn>
+}
+
 vi.mock('../stores/appStore', () => ({
   useAppStore: hookMocks.useAppStoreMock,
 }))
@@ -71,6 +75,16 @@ describe('useAppViewModel', () => {
   })
 
   it('collects shell inputs from the app hooks and forwards them into useAppShellViewModel', () => {
+    const appStoreState = {
+      setSessionIntelligenceEnabled: vi.fn(),
+      setSessionIntelligenceSummary: vi.fn(),
+      setSessionIntelligenceInsights: vi.fn(),
+      setSessionIntelligenceSessionId: vi.fn(),
+      setPersonalizedCraftEnabled: vi.fn(),
+      setPersonalizedCraftSummary: vi.fn(),
+      setPersonalizedCraftTrajectory: vi.fn(),
+      setPersonalizedCraftRecommendations: vi.fn(),
+    }
     const backendStore = {
       backendStatus: false,
       checkBackend: vi.fn(),
@@ -91,6 +105,18 @@ describe('useAppViewModel', () => {
       },
       setWritingHelperDraft: vi.fn(),
       clearWritingHelperDraft: vi.fn(),
+      sessionIntelligenceState: {
+        enabled: false,
+        summary: null,
+        insights: [],
+        sessionId: null,
+      },
+      personalizedCraftState: {
+        enabled: false,
+        summary: null,
+        trajectory: null,
+        recommendations: [],
+      },
     }
     const contextUsageView = {
       contextUsage: {
@@ -154,7 +180,9 @@ describe('useAppViewModel', () => {
       restoreSuccess: 'Restore successful',
     }
 
-    hookMocks.useAppStoreMock.mockReturnValue(backendStore)
+    const appStoreMock = hookMocks.useAppStoreMock as AppStoreMockWithState
+    appStoreMock.mockReturnValue(backendStore)
+    appStoreMock.getState = vi.fn(() => appStoreState)
     hookMocks.useBackendStatusMock.mockReturnValue(backendStore.backendStatus)
     hookMocks.useCheckBackendMock.mockReturnValue(backendStore.checkBackend)
     hookMocks.useAppUiPersistenceMock.mockReturnValue(uiPersistence)
@@ -217,7 +245,19 @@ describe('useAppViewModel', () => {
 
   it('skips editor selection reads while the evaluation panel is closed', () => {
     const checkBackendFn = vi.fn()
-    hookMocks.useAppStoreMock.mockReturnValue({ backendStatus: false, checkBackend: checkBackendFn })
+    const appStoreState = {
+      setSessionIntelligenceEnabled: vi.fn(),
+      setSessionIntelligenceSummary: vi.fn(),
+      setSessionIntelligenceInsights: vi.fn(),
+      setSessionIntelligenceSessionId: vi.fn(),
+      setPersonalizedCraftEnabled: vi.fn(),
+      setPersonalizedCraftSummary: vi.fn(),
+      setPersonalizedCraftTrajectory: vi.fn(),
+      setPersonalizedCraftRecommendations: vi.fn(),
+    }
+    const appStoreMock = hookMocks.useAppStoreMock as AppStoreMockWithState
+    appStoreMock.mockReturnValue({ backendStatus: false, checkBackend: checkBackendFn })
+    appStoreMock.getState = vi.fn(() => appStoreState)
     hookMocks.useBackendStatusMock.mockReturnValue(false)
     hookMocks.useCheckBackendMock.mockReturnValue(checkBackendFn)
     hookMocks.useAppUiPersistenceMock.mockReturnValue({
@@ -230,6 +270,18 @@ describe('useAppViewModel', () => {
       writingHelperDraft: { content: 'Current draft', mode: 'polish', maxSentences: 3, maxItems: 6, guidance: '' },
       setWritingHelperDraft: vi.fn(),
       clearWritingHelperDraft: vi.fn(),
+      sessionIntelligenceState: {
+        enabled: false,
+        summary: null,
+        insights: [],
+        sessionId: null,
+      },
+      personalizedCraftState: {
+        enabled: false,
+        summary: null,
+        trajectory: null,
+        recommendations: [],
+      },
     })
     hookMocks.useLatestAssistantMessageContentMock.mockReturnValue('Latest assistant reply')
     hookMocks.useAppContextUsageMock.mockReturnValue({ contextUsage: { usedK: 0, totalK: 128, percent: 0 }, handleContextUsageChange: vi.fn() })

@@ -18,6 +18,10 @@ const appShellMocks = vi.hoisted(() => ({
   useSettingsStoreMock: vi.fn(),
 }))
 
+type AppStoreMockWithState = typeof appShellMocks.useAppStoreMock & {
+  getState: ReturnType<typeof vi.fn>
+}
+
 vi.mock('./components/Sidebar', () => ({
   Sidebar: (props: {
     collapsed: boolean
@@ -156,6 +160,16 @@ describe('App shell integration', () => {
 
   it('renders the real app shell wiring through useAppViewModel and routes shell actions to the right coordinators', async () => {
     const user = userEvent.setup()
+    const appStoreState = {
+      setSessionIntelligenceEnabled: vi.fn(),
+      setSessionIntelligenceSummary: vi.fn(),
+      setSessionIntelligenceInsights: vi.fn(),
+      setSessionIntelligenceSessionId: vi.fn(),
+      setPersonalizedCraftEnabled: vi.fn(),
+      setPersonalizedCraftSummary: vi.fn(),
+      setPersonalizedCraftTrajectory: vi.fn(),
+      setPersonalizedCraftRecommendations: vi.fn(),
+    }
     const uiPersistence = {
       sidebarCollapsed: false,
       setSidebarCollapsed: vi.fn(),
@@ -172,6 +186,18 @@ describe('App shell integration', () => {
       },
       setWritingHelperDraft: vi.fn(),
       clearWritingHelperDraft: vi.fn(),
+      sessionIntelligenceState: {
+        enabled: false,
+        summary: null,
+        insights: [],
+        sessionId: null,
+      },
+      personalizedCraftState: {
+        enabled: false,
+        summary: null,
+        trajectory: null,
+        recommendations: [],
+      },
     }
     const panelOrchestration = {
       settingsOpen: false,
@@ -202,10 +228,12 @@ describe('App shell integration', () => {
       restoreStatus: null,
     }
 
-    appShellMocks.useAppStoreMock.mockReturnValue({
+    const appStoreMock = appShellMocks.useAppStoreMock as AppStoreMockWithState
+    appStoreMock.mockReturnValue({
       backendStatus: false,
       checkBackend: vi.fn(),
     })
+    appStoreMock.getState = vi.fn(() => appStoreState)
     appShellMocks.useLatestAssistantMessageContentMock.mockReturnValue('Latest assistant reply')
     appShellMocks.useAppRuntimeHealthMock.mockReturnValue({
       connectionState: 'degraded',

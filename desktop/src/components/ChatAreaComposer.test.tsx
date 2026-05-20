@@ -105,7 +105,7 @@ describe('ChatAreaComposer toolbar buttons', () => {
 describe('ChatAreaComposer clipboard tests', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('renders copy last reply button and copies content when lastAssistantContent is non-empty', () => {
+  it('renders copy last reply button and copies content when lastAssistantContent is non-empty', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { clipboard: { writeText } })
 
@@ -113,7 +113,9 @@ describe('ChatAreaComposer clipboard tests', () => {
 
     const button = screen.getByRole('button', { name: 'copy last reply' })
     expect(button).toBeInTheDocument()
-    fireEvent.click(button)
+    await act(async () => {
+      fireEvent.click(button)
+    })
     expect(writeText).toHaveBeenCalledWith('hello reply')
   })
 
@@ -121,51 +123,55 @@ describe('ChatAreaComposer clipboard tests', () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { clipboard: { writeText } })
     vi.useFakeTimers()
+    try {
+      render(<ChatAreaComposer {...baseProps} lastAssistantContent="hello reply" />)
 
-    render(<ChatAreaComposer {...baseProps} lastAssistantContent="hello reply" />)
+      const button = screen.getByRole('button', { name: 'copy last reply' })
+      fireEvent.click(button)
 
-    const button = screen.getByRole('button', { name: 'copy last reply' })
-    fireEvent.click(button)
+      await act(async () => {
+        vi.advanceTimersByTime(0)
+      })
 
-    await act(async () => {
-      vi.advanceTimersByTime(0)
-    })
+      expect(screen.getByRole('button', { name: 'copied!' })).toBeInTheDocument()
 
-    expect(screen.getByRole('button', { name: 'copied!' })).toBeInTheDocument()
+      await act(async () => {
+        vi.advanceTimersByTime(1500)
+      })
 
-    await act(async () => {
-      vi.advanceTimersByTime(1500)
-    })
-
-    expect(screen.getByRole('button', { name: 'copy last reply' })).toBeInTheDocument()
-    vi.useRealTimers()
+      expect(screen.getByRole('button', { name: 'copy last reply' })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('announces copy status via live region for screen readers', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { clipboard: { writeText } })
     vi.useFakeTimers()
+    try {
+      render(<ChatAreaComposer {...baseProps} lastAssistantContent="test content" />)
 
-    render(<ChatAreaComposer {...baseProps} lastAssistantContent="test content" />)
+      const button = screen.getByRole('button', { name: 'copy last reply' })
+      fireEvent.click(button)
 
-    const button = screen.getByRole('button', { name: 'copy last reply' })
-    fireEvent.click(button)
+      await act(async () => {
+        vi.advanceTimersByTime(0)
+      })
 
-    await act(async () => {
-      vi.advanceTimersByTime(0)
-    })
+      const liveRegions = screen.getAllByRole('status')
+      const copyRegion = liveRegions.find(el => el.classList.contains('sr-only'))
+      expect(copyRegion).toBeTruthy()
+      expect(copyRegion!.textContent).toContain('Copied!')
 
-    const liveRegions = screen.getAllByRole('status')
-    const copyRegion = liveRegions.find(el => el.classList.contains('sr-only'))
-    expect(copyRegion).toBeTruthy()
-    expect(copyRegion!.textContent).toContain('Copied!')
+      await act(async () => {
+        vi.advanceTimersByTime(1500)
+      })
 
-    await act(async () => {
-      vi.advanceTimersByTime(1500)
-    })
-
-    expect(copyRegion!.textContent).toBe('')
-    vi.useRealTimers()
+      expect(copyRegion!.textContent).toBe('')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

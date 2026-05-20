@@ -405,7 +405,7 @@ describe('graph/graph-manager', () => {
         error: expect.stringContaining('missing_graph_table'),
       });
       expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Cypher execution error:'),
+        expect.stringContaining('"message":"Cypher execution error"'),
       );
     } finally {
       manager.close();

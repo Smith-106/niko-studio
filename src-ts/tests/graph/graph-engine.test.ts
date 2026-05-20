@@ -167,9 +167,15 @@ describe('graph/graph-engine', () => {
           }),
         }),
       ]);
-      expect(warnSpy).toHaveBeenCalledWith('Blocked non-string graph query input');
-      expect(warnSpy).toHaveBeenCalledWith('Blocked oversized graph query');
-      expect(warnSpy).toHaveBeenCalledWith('Blocked graph query outside MATCH/MERGE subset');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"message":"Blocked non-string graph query input"'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"message":"Blocked oversized graph query"'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"message":"Blocked graph query outside MATCH/MERGE subset"'),
+      );
     } finally {
       engine.close();
       rmSync(join(dbPath, '..'), { recursive: true, force: true });
@@ -449,7 +455,7 @@ describe('graph/graph-engine', () => {
       expect(okPlugin.load).toHaveBeenCalledTimes(1);
       expect(badPlugin.load).toHaveBeenCalledTimes(1);
       expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Graph plugin load failed: bad-plugin:'),
+        expect.stringContaining('"message":"Graph plugin load failed: bad-plugin"'),
       );
 
       const healthWhileOpen = await engine.healthCheck();
@@ -608,12 +614,14 @@ describe('graph/graph-engine', () => {
       });
       expect(String(healthAfterClose.error)).toContain('database connection is not open');
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Neo4j entity projection failed, local-first path preserved:'),
+        expect.stringContaining('"message":"Neo4j entity projection failed, local-first path preserved"'),
       );
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Neo4j relation projection failed, local-first path preserved:'),
+        expect.stringContaining('"message":"Neo4j relation projection failed, local-first path preserved"'),
       );
-      expect(warnSpy).toHaveBeenCalledWith('Blocked oversized entity name pattern');
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"message":"Blocked oversized entity name pattern"'),
+      );
     } finally {
       if (!engineClosed) {
         engine.close();
@@ -1647,7 +1655,7 @@ describe('graph/graph-engine', () => {
         await pluginEngine.initialize();
         const pluginHealth = await pluginEngine.healthCheck();
         expect(errorSpy).toHaveBeenCalledWith(
-          expect.stringContaining('Graph plugin load failed: unknown:'),
+          expect.stringContaining('"message":"Graph plugin load failed: unknown"'),
         );
         expect(pluginHealth.plugins).toMatchObject({
           unknown: {

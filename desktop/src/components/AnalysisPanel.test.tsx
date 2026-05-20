@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useState, type ReactNode } from 'react'
+
+const MOCK_CHAPTERS = [{ id: 'chapter-1', title: '第一章' }]
 
 const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
   const state = {
@@ -12,7 +15,7 @@ const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
     clearAnalysis: vi.fn(),
     currentProjectId: 'project-1',
     currentChapterContent: '这是当前章节的正文，用于触发写作工艺分析。',
-    getChaptersForProject: vi.fn(() => [{ id: 'chapter-1', title: '第一章' }]),
+    getChaptersForProject: vi.fn(() => MOCK_CHAPTERS),
   }
 
   const resetMockAppStore = () => {
@@ -25,7 +28,7 @@ const { resetMockAppStore, useAppStoreMock } = vi.hoisted(() => {
     state.clearAnalysis = vi.fn()
     state.currentProjectId = 'project-1'
     state.currentChapterContent = '这是当前章节的正文，用于触发写作工艺分析。'
-    state.getChaptersForProject = vi.fn(() => [{ id: 'chapter-1', title: '第一章' }])
+    state.getChaptersForProject = vi.fn(() => MOCK_CHAPTERS)
   }
 
   const useAppStoreMock = Object.assign(
@@ -90,6 +93,65 @@ vi.mock('../api/m10-apis', () => ({
 vi.mock('../api/writing-craft', () => ({
   analyzeWritingCraft: analyzeWritingCraftMock,
   analyzeWritingCraftLLM: analyzeWritingCraftLLMMock,
+}))
+
+vi.mock('./intelligence', () => ({
+  AccordionWrapper: ({ items }: { items: Array<{ id: string; content: ReactNode }> }) => (
+    <div data-testid="accordion-wrapper">
+      {items.map((item) => (
+        <div key={item.id}>{item.content}</div>
+      ))}
+    </div>
+  ),
+  IntelligenceBadge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  MetricValue: ({ value, label }: { value: string; label: string }) => (
+    <div>
+      <span>{label}</span>
+      <span>{value}</span>
+    </div>
+  ),
+  ProgressBar: ({ value }: { value: number }) => <div data-testid="progress-bar">{value}</div>,
+  SectionHeader: ({ title }: { title: string }) => <h3>{title}</h3>,
+  WritingDashboard: ({
+    text,
+    visible,
+    llmConfig,
+  }: {
+    text: string
+    visible: boolean
+    llmConfig?: { api_key: string; base_url: string; model: string }
+  }) => {
+    const [showResult, setShowResult] = useState(false)
+
+    if (!visible) {
+      return null
+    }
+
+    return (
+      <div>
+        <p>写作质量分析</p>
+        <button
+          onClick={async () => {
+            await analyzeWritingCraftMock(text)
+            setShowResult(true)
+          }}
+        >
+          开始分析
+        </button>
+        {showResult ? <div>反面模式预警</div> : null}
+        <button
+          onClick={async () => {
+            if (!llmConfig) {
+              return
+            }
+            await analyzeWritingCraftLLMMock(text, llmConfig, ['structure'])
+          }}
+        >
+          AI 深度分析
+        </button>
+      </div>
+    )
+  },
 }))
 
 import { AnalysisPanel } from './AnalysisPanel'
