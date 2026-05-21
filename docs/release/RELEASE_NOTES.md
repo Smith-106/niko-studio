@@ -13,7 +13,7 @@
 
 - Cut `v9.26.2` from the current `main` commit after the desktop gate, retained evidence, and release alignment all converged to GO.
 - Refreshed retained release evidence for writing-helper acceptance and installed-package acceptance on the same HEAD.
-- Published the verified NSIS installer for the current-head GO snapshot.
+- Published the verified Windows installer set for the current-head GO snapshot.
 
 ### 本次修复
 
@@ -24,7 +24,8 @@
 ### 已发布资产
 
 - `Niko-Studio_9.26.2_x64-setup.exe`
-- MSI assets are pending follow-up WiX `light.exe` repair and were not attached to the GitHub release.
+- `Niko-Studio_9.26.2_x64_en-US.msi`
+- `Niko-Studio_9.26.2_x64_zh-CN.msi`
 
 ## 发布级别矩阵
 
