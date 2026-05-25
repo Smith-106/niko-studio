@@ -128,14 +128,13 @@ describe('writing endpoints local fallback parity', () => {
     }));
 
     expect(response.statusCode).toBe(200);
-    expect(response.body).toMatchObject({
-      streaming: true,
-      events: expect.arrayContaining([
-        expect.objectContaining({
-          event: 'done',
-          data: expect.objectContaining({ skills_used: ['character-forge'] }),
-        }),
-      ]),
-    });
+    expect(response.headers?.['Content-Type']).toContain('text/event-stream');
+
+    // Parse SSE text format: "event: done\ndata: {...}\n\n"
+    const body = String(response.body);
+    const doneMatch = body.match(/event: done\ndata: (.+)\n\n/);
+    expect(doneMatch).not.toBeNull();
+    const doneData = JSON.parse(doneMatch![1]);
+    expect(doneData.skills_used).toEqual(['character-forge']);
   });
 });

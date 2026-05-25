@@ -146,7 +146,7 @@ describe('store/openkl-contract', () => {
   it('covers ingestFile validation, auto-generated ids, CRUD fallbacks, and filtered iteration', () => {
     const basePath = createBasePath();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     try {
       const contract = new OpenKLContract(basePath);
@@ -342,7 +342,7 @@ describe('store/openkl-contract', () => {
       expect(reloaded.listDocuments().map((doc) => doc.doc_id)).toEqual(
         expect.arrayContaining([generatedId]),
       );
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid mapping line:'));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid mapping line'));
     } finally {
       warnSpy.mockRestore();
       vi.useRealTimers();
