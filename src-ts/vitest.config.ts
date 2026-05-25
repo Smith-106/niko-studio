@@ -13,6 +13,11 @@ export const baseVitestConfig: UserConfig = {
     globals: true,
     environment: 'node',
     pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     globalSetup: 'tests/globalTeardown.ts',
     exclude: ['**/.claude/**', '**/.ccw/**', '**/node_modules/**'],
     coverage: {
