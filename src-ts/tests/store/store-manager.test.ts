@@ -56,8 +56,8 @@ describe('store/store-manager', () => {
       expect(updated).toBe(true);
       expect(missingUpdate).toBe(false);
       expect(missingDelete).toBe(false);
-      expect(warnSpy).toHaveBeenCalledWith('Document not found for update: missing-doc');
-      expect(warnSpy).toHaveBeenCalledWith('Document not found for deletion: missing-doc');
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Document not found for update'));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Document not found for deletion'));
       expect(loaded).toMatchObject({
         id: docId,
         format: DocumentFormat.MARKDOWN,
@@ -507,7 +507,7 @@ describe('store/store-manager', () => {
 
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       expect(manager.rechunkDocument('missing-doc', 24, 4)).toBe(0);
-      expect(warnSpy).toHaveBeenCalledWith('Document not found: missing-doc');
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Document not found'));
 
       const rechunked = manager.rechunkDocument(importedFileId, 24, 4);
       expect(rechunked).toBe(manager.getChunks(importedFileId).length);
@@ -660,7 +660,7 @@ describe('store/store-manager', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const invalidDocManager = new StoreManager({ basePath: invalidDocBasePath });
       expect(invalidDocManager.documentCount).toBe(0);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to load document:'));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to load document'));
       warnSpy.mockRestore();
 
       const invalidJsonStoreRoot = join(invalidJsonBasePath, 'store');
@@ -671,7 +671,7 @@ describe('store/store-manager', () => {
       const brokenManager = new StoreManager({ basePath: invalidJsonBasePath });
       expect(brokenManager.documentCount).toBe(0);
       expect(invalidJsonErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to load index:'),
+        expect.stringContaining('Failed to load index'),
       );
       invalidJsonErrorSpy.mockRestore();
 
@@ -687,7 +687,7 @@ describe('store/store-manager', () => {
 
       const blockedDocId = blockedSaveManager.addDocument('blocked.md', 'blocked write body');
       expect(blockedDocId).toBeTruthy();
-      expect(saveErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to save index:'));
+      expect(saveErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to save index'));
       saveErrorSpy.mockRestore();
     } finally {
       rmSync(tempRoot, { recursive: true, force: true });

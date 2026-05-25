@@ -35,7 +35,10 @@ import {
 } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 
+import { createLogger } from '../logger/index.js';
 import { MemoryChunk, TextChunker } from '../memory/memory-chunk';
+
+const _log = createLogger('store-manager');
 
 // ---------------------------------------------------------------------------
 // DocumentFormat enum
@@ -363,11 +366,11 @@ export class StoreManager {
           const doc = Document.fromDict(docData);
           this._documents.set(doc.id, doc);
         } catch (e) {
-          console.warn(`Failed to load document: ${e}`);
+          _log.warn(`Failed to load document`, { detail: String(e) });
         }
       }
     } catch (e) {
-      console.error(`Failed to load index: ${e}`);
+      _log.error(`Failed to load index`, { detail: String(e) });
     }
   }
 
@@ -380,7 +383,7 @@ export class StoreManager {
       };
       writeFileSync(this.indexPath, JSON.stringify(indexData, null, 2), 'utf-8');
     } catch (e) {
-      console.error(`Failed to save index: ${e}`);
+      _log.error(`Failed to save index`, { detail: String(e) });
     }
   }
 
@@ -485,7 +488,7 @@ normalized_at: ${now}
   ): boolean {
     const doc = this._documents.get(docId);
     if (!doc) {
-      console.warn(`Document not found for update: ${docId}`);
+      _log.warn(`Document not found for update`, { docId });
       return false;
     }
 
@@ -522,7 +525,7 @@ normalized_at: ${now}
   deleteDocument(docId: string): boolean {
     const doc = this._documents.get(docId);
     if (!doc) {
-      console.warn(`Document not found for deletion: ${docId}`);
+      _log.warn(`Document not found for deletion`, { docId });
       return false;
     }
 
@@ -853,7 +856,7 @@ normalized_at: ${now}
   ): number {
     const doc = this._documents.get(docId);
     if (!doc) {
-      console.warn(`Document not found: ${docId}`);
+      _log.warn(`Document not found`, { docId });
       return 0;
     }
 

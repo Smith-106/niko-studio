@@ -6,6 +6,10 @@
  * Migrated from src/workflow/modes/plan_act.py
  */
 
+import { createLogger } from '../../logger/index.js';
+
+const _log = createLogger('workflow-plan-act');
+
 // ============================================================
 // WorkflowPhase enum
 // ============================================================
@@ -211,7 +215,7 @@ export class PlanPhaseExecutor implements IPhaseExecutor {
       );
     } catch (e) {
       const error = e instanceof Error ? e : new Error(String(e));
-      console.error(`Plan phase failed: ${error.message}`);
+      _log.error(`Plan phase failed: ${error.message}`);
       return failPhaseResult(WorkflowPhase.PLAN, error);
     }
   }
@@ -261,7 +265,7 @@ export class ActPhaseExecutor implements IPhaseExecutor {
       );
     } catch (e) {
       const error = e instanceof Error ? e : new Error(String(e));
-      console.error(`Act phase failed: ${error.message}`);
+      _log.error(`Act phase failed: ${error.message}`);
       return failPhaseResult(WorkflowPhase.ACT, error);
     }
   }
@@ -319,7 +323,7 @@ export class ReviewPhaseExecutor implements IPhaseExecutor {
         nextPhase = WorkflowPhase.REVISE;
       } else {
         nextPhase = WorkflowPhase.COMPLETE;
-        console.warn(`Max iterations reached, accepting output with score ${overallScore}`);
+        _log.warn(`Max iterations reached, accepting output with score ${overallScore}`);
       }
 
       return okPhaseResult(
@@ -331,7 +335,7 @@ export class ReviewPhaseExecutor implements IPhaseExecutor {
       );
     } catch (e) {
       const error = e instanceof Error ? e : new Error(String(e));
-      console.error(`Review phase failed: ${error.message}`);
+      _log.error(`Review phase failed: ${error.message}`);
       return failPhaseResult(WorkflowPhase.REVIEW, error);
     }
   }
@@ -381,7 +385,7 @@ export class RevisePhaseExecutor implements IPhaseExecutor {
       );
     } catch (e) {
       const error = e instanceof Error ? e : new Error(String(e));
-      console.error(`Revise phase failed: ${error.message}`);
+      _log.error(`Revise phase failed: ${error.message}`);
       return failPhaseResult(WorkflowPhase.REVISE, error);
     }
   }
@@ -465,7 +469,7 @@ export class PlanActMode {
       const executor = this._executors.get(state.currentPhase);
 
       if (!executor) {
-        console.error(`No executor for phase: ${state.currentPhase}`);
+        _log.error(`No executor for phase: ${state.currentPhase}`);
         break;
       }
 
@@ -477,7 +481,7 @@ export class PlanActMode {
       state.phaseHistory.push(result);
 
       if (!result.success) {
-        console.error(`Phase ${state.currentPhase} failed: ${result.error?.message}`);
+        _log.error(`Phase ${state.currentPhase} failed: ${result.error?.message}`);
         return result;
       }
 

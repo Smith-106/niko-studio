@@ -11,6 +11,9 @@
  */
 
 import { randomUUID } from "crypto";
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("temporal");
 
 /** Represents a temporal validity window. */
 export class ValidityWindow {
@@ -185,7 +188,7 @@ export class TemporalMemoryTracker implements ITemporalTracker {
 
   constructor(dbConnection?: TemporalDbConnection | null) {
     this.db = dbConnection ?? null;
-    console.log("TemporalMemoryTracker initialized");
+    _log.info("TemporalMemoryTracker initialized");
   }
 
   /** Set or update database connection. */
@@ -541,7 +544,7 @@ export class TemporalMemoryTracker implements ITemporalTracker {
       );
       this.db.commit();
     } catch (e) {
-      console.error(`Failed to persist fact ${fact.id}: ${e}`);
+      _log.error(`Failed to persist fact ${fact.id}: ${e}`);
     }
   }
 
@@ -569,7 +572,7 @@ export class TemporalMemoryTracker implements ITemporalTracker {
       );
       this.db.commit();
     } catch (e) {
-      console.error(`Failed to update validity for ${factId}: ${e}`);
+      _log.error(`Failed to update validity for ${factId}: ${e}`);
     }
   }
 
@@ -583,7 +586,7 @@ export class TemporalMemoryTracker implements ITemporalTracker {
       this.db.execute("DELETE FROM memories WHERE id = ?", [factId]);
       this.db.commit();
     } catch (e) {
-      console.error(`Failed to delete fact ${factId}: ${e}`);
+      _log.error(`Failed to delete fact ${factId}: ${e}`);
     }
   }
 

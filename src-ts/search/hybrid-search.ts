@@ -13,6 +13,9 @@
 
 import type { SearchInterface } from '../protocols/search';
 import { rrfMerge as rrfMergeUtil, type RrfSource } from './utils/rrf-fusion';
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('search-hybrid');
 
 /**
  * Search strategy weight configuration
@@ -133,7 +136,7 @@ export class HybridSearch implements SearchInterface {
       try {
         await search.index(id, content, options);
       } catch (error) {
-        console.error(`Failed to index to strategy ${name}:`, error);
+        _log.error(`Failed to index to strategy ${name}`, { detail: error });
       }
     });
 
@@ -149,7 +152,7 @@ export class HybridSearch implements SearchInterface {
       try {
         return await search.delete(id);
       } catch (error) {
-        console.error(`Failed to delete from strategy ${name}:`, error);
+        _log.error(`Failed to delete from strategy ${name}`, { detail: error });
         return false;
       }
     });
@@ -169,8 +172,9 @@ export class HybridSearch implements SearchInterface {
     const resultsByStrategy = new Map<string, HybridSearchResult[]>();
 
     if (this.parallelExecution) {
-      // Parallel execution
-      const searchPromises = this.strategies.map(async ({ name, search, weight }) => {
+      // Parallel execution — snapshot strategies to avoid concurrent mutation
+      const currentStrategies = [...this.strategies];
+      const searchPromises = currentStrategies.map(async ({ name, search, weight }) => {
         try {
           const searchOptions = {
             topK: options.topK,
@@ -193,7 +197,7 @@ export class HybridSearch implements SearchInterface {
 
           return { name, results: hybridResults };
         } catch (error) {
-          console.error(`Strategy ${name} search failed:`, error);
+          _log.error(`Strategy ${name} search failed`, { detail: error });
           return { name, results: [] };
         }
       });
@@ -227,7 +231,7 @@ export class HybridSearch implements SearchInterface {
 
           resultsByStrategy.set(name, hybridResults);
         } catch (error) {
-          console.error(`Strategy ${name} search failed:`, error);
+          _log.error(`Strategy ${name} search failed`, { detail: error });
           resultsByStrategy.set(name, []);
         }
       }

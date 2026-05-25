@@ -10,6 +10,10 @@
  * Each layer has different TTL, scope, and persistence characteristics.
  */
 
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("layers");
+
 /** Memory layer types with TTL characteristics. */
 export enum LayerType {
   EPHEMERAL = "ephemeral", // < 1 hour
@@ -219,7 +223,7 @@ export class BaseMemoryLayer implements IMemoryLayer {
 
   constructor(config: LayerConfig) {
     this._config = config;
-    console.log(`Initialized ${config.layerType} layer`);
+    _log.info(`Initialized ${config.layerType} layer`);
   }
 
   get layerType(): LayerType {
@@ -298,7 +302,7 @@ export class BaseMemoryLayer implements IMemoryLayer {
     }
 
     if (expiredIds.length > 0) {
-      console.log(
+      _log.info(
         `Expired ${expiredIds.length} entries from ${this.layerType} layer`
       );
     }
@@ -352,7 +356,7 @@ export class BaseMemoryLayer implements IMemoryLayer {
   async clear(): Promise<number> {
     const count = this._entries.size;
     this._entries.clear();
-    console.log(`Cleared ${count} entries from ${this.layerType} layer`);
+    _log.info(`Cleared ${count} entries from ${this.layerType} layer`);
     return count;
   }
 
@@ -524,7 +528,7 @@ export class LayerManager {
       [LayerType.USER, new UserLayer(userId ?? null)],
       [LayerType.PROJECT, new ProjectLayer(projectId ?? null)],
     ]);
-    console.log("LayerManager initialized with all layers");
+    _log.info("LayerManager initialized with all layers");
   }
 
   /** Get a specific layer. */

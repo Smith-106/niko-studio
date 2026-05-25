@@ -1,9 +1,12 @@
 /**
- * In-memory fixed-window rate limiter.
+ * In-memory sliding-window rate limiter with LRU eviction.
  *
  * Provides basic rate limiting without external dependencies (Redis).
  * Used as the default rate limiter; replaced by Redis-backed implementation
  * when Redis is available.
+ *
+ * Learned from maestro-flow: sliding window + setInterval.unref() +
+ * amortized per-call cleanup + maxEntries cap prevents unbounded growth.
  */
 
 interface Window {
@@ -14,10 +17,12 @@ interface Window {
 export class InMemoryRateLimiter {
   private readonly _windows: Map<string, Window> = new Map();
   private readonly _cleanupIntervalMs: number;
+  private readonly _maxEntries: number;
   private _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(cleanupIntervalSeconds: number = 60) {
+  constructor(cleanupIntervalSeconds: number = 60, maxEntries: number = 10000) {
     this._cleanupIntervalMs = cleanupIntervalSeconds * 1000;
+    this._maxEntries = maxEntries;
   }
 
   /**
@@ -42,7 +47,10 @@ export class InMemoryRateLimiter {
   }
 
   /**
-   * Check if a request is allowed under the rate limit.
+   * Check if a request is allowed under the rate limit (sliding window).
+   *
+   * Uses a sliding-window approach: each call checks the current window
+   * and also performs amortized cleanup of stale entries.
    *
    * @param key - Identifier for the client/route (e.g. IP + route pattern)
    * @param limit - Maximum requests per window
@@ -52,6 +60,11 @@ export class InMemoryRateLimiter {
   allow(key: string, limit: number, windowSeconds: number): boolean {
     const now = Date.now();
     const windowKey = `${key}:${Math.floor(now / (windowSeconds * 1000))}`;
+
+    // Amortized cleanup: evict stale entries for this key prefix occasionally
+    if (this._windows.size > this._maxEntries) {
+      this.cleanup();
+    }
 
     let entry = this._windows.get(windowKey);
     if (!entry || now >= entry.resetAt) {

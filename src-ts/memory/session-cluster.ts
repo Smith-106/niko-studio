@@ -12,6 +12,9 @@
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("session-cluster");
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -290,9 +293,9 @@ export class SessionClusterManager {
           }
         }
       }
-      console.log(`Loaded ${this._clusters.size} clusters`);
+      _log.info(`Loaded ${this._clusters.size} clusters`);
     } catch (e) {
-      console.error(`Failed to load clusters: ${e}`);
+      _log.error(`Failed to load clusters: ${e}`);
     }
   }
 
@@ -362,7 +365,7 @@ export class SessionClusterManager {
     this._clusters.set(clusterId, cluster);
     this._saveCluster(cluster);
 
-    console.log(`Created cluster: ${clusterId} (${name})`);
+    _log.info(`Created cluster: ${clusterId} (${name})`);
     return cluster;
   }
 
@@ -398,7 +401,7 @@ export class SessionClusterManager {
     cluster.updatedAt = Date.now() / 1000;
     this._saveCluster(cluster);
 
-    console.log(`Updated cluster: ${clusterId}`);
+    _log.info(`Updated cluster: ${clusterId}`);
     return cluster;
   }
 
@@ -429,7 +432,7 @@ export class SessionClusterManager {
     this._clusters.delete(clusterId);
     this._saveIndex();
 
-    console.log(`Deleted cluster: ${clusterId}`);
+    _log.info(`Deleted cluster: ${clusterId}`);
     return true;
   }
 
@@ -444,7 +447,7 @@ export class SessionClusterManager {
     cluster.updatedAt = Date.now() / 1000;
     this._saveCluster(cluster);
 
-    console.log(`Archived cluster: ${clusterId}`);
+    _log.info(`Archived cluster: ${clusterId}`);
     return true;
   }
 
@@ -466,7 +469,7 @@ export class SessionClusterManager {
     // Check if already member
     const existing = cluster.getMember(sessionId);
     if (existing) {
-      console.warn(`Session ${sessionId} already in cluster ${clusterId}`);
+      _log.warn(`Session ${sessionId} already in cluster ${clusterId}`);
       return existing;
     }
 
@@ -488,7 +491,7 @@ export class SessionClusterManager {
 
     this._saveCluster(cluster);
 
-    console.log(`Added member ${sessionId} to cluster ${clusterId}`);
+    _log.info(`Added member ${sessionId} to cluster ${clusterId}`);
     return member;
   }
 
@@ -511,7 +514,7 @@ export class SessionClusterManager {
 
     this._saveCluster(cluster);
 
-    console.log(`Removed member ${sessionId} from cluster ${clusterId}`);
+    _log.info(`Removed member ${sessionId} from cluster ${clusterId}`);
     return true;
   }
 
@@ -529,7 +532,7 @@ export class SessionClusterManager {
     cluster.updatedAt = Date.now() / 1000;
     this._saveCluster(cluster);
 
-    console.log(`Updated role for ${sessionId} in ${clusterId} to ${role}`);
+    _log.info(`Updated role for ${sessionId} in ${clusterId} to ${role}`);
     return true;
   }
 
@@ -553,7 +556,7 @@ export class SessionClusterManager {
     // Check for existing relation
     for (const rel of source.relations) {
       if (rel.toCluster === toCluster) {
-        console.warn(`Relation already exists: ${fromCluster} -> ${toCluster}`);
+        _log.warn(`Relation already exists: ${fromCluster} -> ${toCluster}`);
         return rel;
       }
     }
@@ -571,7 +574,7 @@ export class SessionClusterManager {
     source.updatedAt = Date.now() / 1000;
     this._saveCluster(source);
 
-    console.log(`Added relation: ${fromCluster} -> ${toCluster} (${relationType})`);
+    _log.info(`Added relation: ${fromCluster} -> ${toCluster} (${relationType})`);
     return relation;
   }
 
@@ -590,7 +593,7 @@ export class SessionClusterManager {
     source.updatedAt = Date.now() / 1000;
     this._saveCluster(source);
 
-    console.log(`Removed relation: ${fromCluster} -> ${toCluster}`);
+    _log.info(`Removed relation: ${fromCluster} -> ${toCluster}`);
     return true;
   }
 
@@ -625,7 +628,7 @@ export class SessionClusterManager {
     newDescription: string = "",
   ): SessionCluster | null {
     if (clusterIds.length < 2) {
-      console.warn("Need at least 2 clusters to merge");
+      _log.warn("Need at least 2 clusters to merge");
       return null;
     }
 
@@ -636,7 +639,7 @@ export class SessionClusterManager {
     }
 
     if (clusters.length < 2) {
-      console.warn("Not enough valid clusters to merge");
+      _log.warn("Not enough valid clusters to merge");
       return null;
     }
 
@@ -703,7 +706,7 @@ export class SessionClusterManager {
       this.deleteCluster(cid);
     }
 
-    console.log(`Merged ${clusters.length} clusters into ${newCluster.clusterId}`);
+    _log.info(`Merged ${clusters.length} clusters into ${newCluster.clusterId}`);
     return newCluster;
   }
 

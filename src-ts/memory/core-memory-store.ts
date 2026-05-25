@@ -16,6 +16,9 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { SearchInterface } from "../protocols/search";
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("memory-core");
 
 type DatabaseType = InstanceType<typeof BetterSqlite3>;
 
@@ -529,7 +532,7 @@ export class CoreMemoryStore {
         }
         this._setPendingVectorSync(memoryId, false);
       } catch (e) {
-        console.warn(
+        _log.warn(
           `Vector upsert failed for memory ${memoryId.slice(0, 8)}...: ${e}`
         );
         this._setPendingVectorSync(memoryId, true);
@@ -912,7 +915,7 @@ export class CoreMemoryStore {
         return this._searchMemoriesSqlite({ query, topK, includeArchived });
       }
     } catch (e) {
-      console.warn(
+      _log.warn(
         `Vector search failed, fallback to sqlite search: ${e}`
       );
       return this._searchMemoriesSqlite({ query, topK, includeArchived });
@@ -1022,7 +1025,7 @@ export class CoreMemoryStore {
         }
         this._setPendingVectorSync(memoryId, false);
       } catch (e) {
-        console.error(
+        _log.error(
           `Vector archive failed for memory ${memoryId.slice(0, 8)}...: ${e}`
         );
         this._setPendingVectorSync(memoryId, true);
@@ -1058,7 +1061,7 @@ export class CoreMemoryStore {
       try {
         this.delete(memoryId);
       } catch (e) {
-        console.error(
+        _log.error(
           `Vector delete failed for memory ${memoryId.slice(0, 8)}...: ${e}`
         );
         return false;
@@ -1106,7 +1109,7 @@ export class CoreMemoryStore {
     }
 
     if (!memory) {
-      console.warn(`Memory not found: ${memoryId}`);
+      _log.warn(`Memory not found: ${memoryId}`);
       return "";
     }
 
@@ -1132,7 +1135,7 @@ export class CoreMemoryStore {
           summary = (tool as (s: string) => string)(memory.content);
         }
       } catch (e) {
-        console.error(`Summary generation failed: ${e}`);
+        _log.error(`Summary generation failed: ${e}`);
         summary = null;
       }
     }
@@ -1142,7 +1145,7 @@ export class CoreMemoryStore {
       try {
         summary = this._summaryGenerator(memory.content);
       } catch (e) {
-        console.error(`Summary generation failed: ${e}`);
+        _log.error(`Summary generation failed: ${e}`);
         summary = null;
       }
     }
@@ -1176,7 +1179,7 @@ export class CoreMemoryStore {
         this._updateVectorSummary(memoryId, summary);
         this._setPendingVectorSync(memoryId, false);
       } catch (e) {
-        console.error(
+        _log.error(
           `Vector summary update failed for memory ${memoryId.slice(0, 8)}...: ${e}`
         );
         this._setPendingVectorSync(memoryId, true);

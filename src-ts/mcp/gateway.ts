@@ -15,6 +15,9 @@ import {
 } from './config';
 import { type GatewayServerStartOptions, startGatewayServer } from './gateway-bootstrap';
 import { getMetricsSnapshot as getCanonicalMetricsSnapshot } from './metrics';
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('mcp-gateway');
 
 // ============================================================
 // Types
@@ -299,7 +302,7 @@ export class McpGateway {
 
   async start(): Promise<void> {
     if (this.requestHandlers.size > 0) {
-      console.warn('Legacy McpGateway.registerHandler is ignored; route-based gateway authority is canonical.');
+      _log.warn('Legacy McpGateway.registerHandler is ignored; route-based gateway authority is canonical.');
     }
 
     const options: GatewayServerStartOptions = {
@@ -364,5 +367,5 @@ export class McpGateway {
 export async function startSidecar(): Promise<void> {
   const gateway = new McpGateway();
   await gateway.start();
-  console.log('Legacy MCP sidecar started via canonical gateway bootstrap');
+  _log.info('Legacy MCP sidecar started via canonical gateway bootstrap');
 }

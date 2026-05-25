@@ -15,9 +15,12 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { createLogger } from '../logger/index.js';
 import type { SearchInterface } from '../protocols/search';
 import type { EmbeddingService } from '../protocols/embedding';
 import type { SmartSearchResult, SearchResultMetadata, SearchResultLocation } from './smart-search';
+
+const _log = createLogger('search-vector');
 
 export interface HNSWConfig {
   dimension: number;
@@ -314,7 +317,7 @@ export class VectorSearch implements SearchInterface {
         topK
       );
     } catch (error) {
-      console.warn('Hybrid search failed, falling back to vector search:', error);
+      _log.warn('Hybrid search failed, falling back to vector search', { detail: error });
       return this.vectorSearch(query, { topK, minScore, typeFilter });
     }
   }
@@ -357,7 +360,7 @@ export class VectorSearch implements SearchInterface {
         );
       });
     } catch (error) {
-      console.warn('FTS5 search failed, using LIKE fallback:', error);
+      _log.warn('FTS5 search failed, using LIKE fallback', { detail: error });
       return this.likeSearch(query, { topK, typeFilter });
     }
   }

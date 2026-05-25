@@ -13,6 +13,9 @@
  */
 
 import { createHash, randomUUID } from "crypto";
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("chunk");
 
 // ============================================================
 // MemoryChunk data structure
@@ -195,7 +198,7 @@ export class ChunkBuffer {
 
     // Capacity check
     if (this._buffer.length >= this._maxBufferSize) {
-      console.warn(`Buffer full (${this._maxBufferSize}), rejecting chunk`);
+      _log.warn(`Buffer full (${this._maxBufferSize}), rejecting chunk`);
       return false;
     }
 
@@ -238,7 +241,7 @@ export class ChunkBuffer {
       return [];
     }
 
-    console.log(`Flushing buffer: ${chunksToEmbed.length} chunks`);
+    _log.info(`Flushing buffer: ${chunksToEmbed.length} chunks`);
 
     // Batch generate embeddings
     const embeddedChunks = await this._embedBatch(chunksToEmbed, embedder);
@@ -311,10 +314,10 @@ export class ChunkBuffer {
         chunks[i].embedded = true;
       }
 
-      console.log(`Embedded ${chunks.length} chunks`);
+      _log.info(`Embedded ${chunks.length} chunks`);
       return chunks;
     } catch (e) {
-      console.error(`Batch embedding failed: ${e}`);
+      _log.error(`Batch embedding failed: ${e}`);
       throw e;
     }
   }
@@ -834,7 +837,7 @@ export class ChunkedMemoryAdapter {
       chunkIds.push(chunk.id);
     }
 
-    console.log(
+    _log.info(
       `Added chunked memory: ${sourceId.slice(0, 8)}... (${chunkIds.length} chunks)`
     );
 

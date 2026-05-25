@@ -7,6 +7,9 @@
  */
 
 export type DocumentParserName = 'builtin-text' | 'pdf-parse' | 'mammoth';
+
+import { createLogger } from "../logger/index.js";
+const _log = createLogger("svc-doc-loader");
 export type DocumentLoadMode = 'sync' | 'async';
 export type DocumentLoadErrorCode =
   | 'UNSUPPORTED_FILE_TYPE'
@@ -95,7 +98,7 @@ export class DocumentLoader {
       }
       throw DocumentLoader.createUnsupportedFileTypeError(fileExt || 'unknown', 'sync');
     } catch (e) {
-      console.error(`Error loading file ${fileName}: ${String(e)}`);
+      _log.error(`Error loading file ${fileName}: ${String(e)}`);
       throw e;
     }
   }
@@ -118,7 +121,7 @@ export class DocumentLoader {
       }
       throw DocumentLoader.createUnsupportedFileTypeError(fileExt || 'unknown', 'async');
     } catch (e) {
-      console.error(`Error loading file ${fileName}: ${String(e)}`);
+      _log.error(`Error loading file ${fileName}: ${String(e)}`);
       throw e;
     }
   }

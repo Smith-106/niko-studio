@@ -36,9 +36,9 @@ class PoolSemaphore {
   acquire(pool: AsyncConnectionPool): Promise<DatabaseType> {
     return new Promise((resolve, reject) => {
       // 池中有空闲连接，直接获取
-      if (this._available > 0 && pool['_pool'].length > 0) {
+      if (this._available > 0 && pool.connections.length > 0) {
         this._available--;
-        resolve(pool['_pool'].pop()!);
+        resolve(pool.connections.pop()!);
         return;
       }
 
@@ -67,8 +67,8 @@ class PoolSemaphore {
 
     // 无等待者，归还到池
     this._available++;
-    if (pool['_pool'].length < pool['_poolSize']) {
-      pool['_pool'].push(conn);
+    if (pool.connections.length < pool.poolSize) {
+      pool.connections.push(conn);
     } else {
       try { conn.close(); } catch { /* 忽略关闭错误 */ }
     }
@@ -94,14 +94,16 @@ class PoolSemaphore {
  */
 export class AsyncConnectionPool {
   private _dbPath: string;
-  private _poolSize: number;
-  private _pool: DatabaseType[] = [];
+  /** Pool size — accessible by PoolSemaphore for capacity checks. */
+  readonly poolSize: number;
+  /** Available connections — accessible by PoolSemaphore for acquire/release. */
+  readonly connections: DatabaseType[] = [];
   private _initialized = false;
   private _semaphore: PoolSemaphore;
 
   constructor(dbPath: string, poolSize: number = 5) {
-    this._poolSize = Math.min(Math.max(poolSize, 1), 10);
-    this._semaphore = new PoolSemaphore(this._poolSize);
+    this.poolSize = Math.min(Math.max(poolSize, 1), 10);
+    this._semaphore = new PoolSemaphore(this.poolSize);
     this._dbPath = dbPath;
   }
 
@@ -113,12 +115,12 @@ export class AsyncConnectionPool {
       mkdirSync(dir, { recursive: true });
     }
 
-    for (let i = 0; i < this._poolSize; i++) {
+    for (let i = 0; i < this.poolSize; i++) {
       const db = new BetterSqlite3(this._dbPath);
       db.pragma('journal_mode = WAL');
       db.pragma('synchronous = NORMAL');
       db.pragma('cache_size = -64000');
-      this._pool.push(db);
+      this.connections.push(db);
     }
 
     this._initialized = true;
@@ -142,17 +144,16 @@ export class AsyncConnectionPool {
 
   close(): void {
     this._semaphore.drain();
-    for (const db of this._pool) {
+    for (const db of this.connections) {
       try { db.close(); } catch { /* 忽略关闭错误 */ }
     }
-    this._pool = [];
+    this.connections.length = 0;
     this._initialized = false;
-    // 重建信号量以重置状态
-    this._semaphore = new PoolSemaphore(this._poolSize);
+    this._semaphore = new PoolSemaphore(this.poolSize);
   }
 
   get isInitialized(): boolean { return this._initialized; }
-  get availableConnections(): number { return this._pool.length; }
+  get availableConnections(): number { return this.connections.length; }
   get pendingCount(): number { return this._semaphore.pendingCount; }
 }
 

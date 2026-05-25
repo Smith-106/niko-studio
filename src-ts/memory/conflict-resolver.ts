@@ -14,6 +14,10 @@
  * - MANUAL: Defer to user decision
  */
 
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("conflict");
+
 /** Strategies for resolving memory conflicts. */
 export enum ConflictResolutionStrategy {
   AUTO = "auto", // Automatic: newer supersedes older
@@ -178,7 +182,7 @@ export class ConflictResolver implements IConflictResolver {
     this.db = dbConnection ?? null;
     this.similarityThreshold = similarityThreshold;
     this._embedder = null;
-    console.log("ConflictResolver initialized");
+    _log.info("ConflictResolver initialized");
   }
 
   /** Set or update database connection. */
@@ -265,7 +269,7 @@ export class ConflictResolver implements IConflictResolver {
 
       return conflicts;
     } catch (e) {
-      console.error(`Conflict check failed: ${e}`);
+      _log.error(`Conflict check failed: ${e}`);
       return [];
     }
   }

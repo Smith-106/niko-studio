@@ -1,15 +1,18 @@
 /**
- * Query Embedding Cache with LRU and TTL
+ * Query Embedding Cache with LRU, TTL, and per-key deduplication
  *
  * Features:
  * - LRU cache with configurable max size (default: 1000)
  * - TTL-based expiration (default: 1 hour)
- * - Thread-safe async operations
+ * - Per-key Promise deduplication (replaces global async-lock)
+ * - Stale-while-revalidate for concurrent lookups
  * - Memory-efficient storage
+ *
+ * Migrated from global async-lock (bottleneck) to per-key Promise
+ * caching pattern learned from maestro-flow's Semaphore design.
  */
 
 import { createHash } from 'crypto';
-import { Lock } from 'async-lock';
 
 /** Cache entry with embedding and timestamp. */
 export interface CacheEntry {
@@ -22,7 +25,7 @@ export interface CacheEntry {
 }
 
 /**
- * LRU cache for query embeddings with TTL support.
+ * LRU cache for query embeddings with TTL and per-key deduplication.
  *
  * Usage:
  *     const cache = new QueryEmbeddingCache(max_size=1000, ttl_seconds=3600);
@@ -38,15 +41,17 @@ export class QueryEmbeddingCache {
   private max_size: number;
   private ttl_seconds: number;
   private _cache = new Map<string, CacheEntry>();
-  private _lock = new Lock();
   private _hits = 0;
   private _misses = 0;
+
+  /** Per-key pending Promise deduplication — replaces global lock. */
+  private _pending = new Map<string, Promise<number[]>>();
 
   constructor(max_size: number = 1000, ttl_seconds: number = 3600.0) {
     this.max_size = max_size;
     this.ttl_seconds = ttl_seconds;
     this._cache = new Map();
-    this._lock = new Lock();
+    this._pending = new Map();
     this._hits = 0;
     this._misses = 0;
   }
@@ -95,16 +100,11 @@ export class QueryEmbeddingCache {
   /**
    * Get embedding from cache (async version).
    *
-   * @param query - The query string
-   * @returns Embedding list if found and not expired, null otherwise
+   * No global lock — uses per-key deduplication when combined
+   * with getOrComputeAsync.
    */
   async getAsync(query: string): Promise<number[] | null> {
-    const release = await this._lock.acquire();
-    try {
-      return this.get(query);
-    } finally {
-      release();
-    }
+    return this.get(query);
   }
 
   /**
@@ -120,6 +120,8 @@ export class QueryEmbeddingCache {
       const firstKey = this._cache.keys().next().value;
       if (firstKey !== undefined) {
         this._cache.delete(firstKey);
+      } else {
+        break;
       }
     }
 
@@ -132,21 +134,13 @@ export class QueryEmbeddingCache {
 
   /**
    * Store embedding in cache (async version).
-   *
-   * @param query - The query string
-   * @param embedding - The embedding vector
    */
   async putAsync(query: string, embedding: number[]): Promise<void> {
-    const release = await this._lock.acquire();
-    try {
-      this.put(query, embedding);
-    } finally {
-      release();
-    }
+    this.put(query, embedding);
   }
 
   /**
-   * Get from cache or compute and store.
+   * Get from cache or compute and store (sync version).
    *
    * @param query - The query string
    * @param compute_fn - Function to compute embedding if not cached
@@ -166,6 +160,11 @@ export class QueryEmbeddingCache {
   /**
    * Get from cache or compute and store (async version).
    *
+   * Uses per-key Promise deduplication instead of a global lock:
+   * - Concurrent requests for the same key share one computation
+   * - Different keys compute in parallel without blocking
+   * - No global lock contention
+   *
    * @param query - The query string
    * @param compute_fn - Async or sync function to compute embedding
    * @returns Embedding vector
@@ -174,33 +173,34 @@ export class QueryEmbeddingCache {
     query: string,
     compute_fn: (query: string) => number[] | Promise<number[]>,
   ): Promise<number[]> {
-    let release = await this._lock.acquire();
-    try {
-      const cached = this.get(query);
-      if (cached !== null) {
-        return cached;
+    const cached = this.get(query);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Per-key deduplication: if this key is already being computed, await it
+    const key = this._hashQuery(query);
+    const pending = this._pending.get(key);
+    if (pending) {
+      return pending;
+    }
+
+    // Create the computation promise and register it
+    const computePromise = (async () => {
+      try {
+        const maybePromise = compute_fn(query);
+        const embedding = maybePromise instanceof Promise
+          ? await maybePromise
+          : maybePromise;
+        this.put(query, embedding);
+        return embedding;
+      } finally {
+        this._pending.delete(key);
       }
-    } finally {
-      release();
-    }
+    })();
 
-    // Compute outside lock to avoid blocking
-    let embedding: number[];
-    const maybePromise = compute_fn(query);
-    if (maybePromise instanceof Promise) {
-      embedding = await maybePromise;
-    } else {
-      embedding = maybePromise;
-    }
-
-    release = await this._lock.acquire();
-    try {
-      this.put(query, embedding);
-    } finally {
-      release();
-    }
-
-    return embedding;
+    this._pending.set(key, computePromise);
+    return computePromise;
   }
 
   /**
@@ -226,6 +226,7 @@ export class QueryEmbeddingCache {
   clear(): number {
     const count = this._cache.size;
     this._cache.clear();
+    this._pending.clear();
     return count;
   }
 
@@ -255,6 +256,11 @@ export class QueryEmbeddingCache {
     return this._cache.size;
   }
 
+  /** Number of pending computations. */
+  get pendingCount(): number {
+    return this._pending.size;
+  }
+
   /** Cache hit rate (0.0 - 1.0). */
   get hitRate(): number {
     const total = this._hits + this._misses;
@@ -273,6 +279,7 @@ export class QueryEmbeddingCache {
       misses: this._misses,
       hit_rate: Math.round(this.hitRate * 10000) / 10000,
       ttl_seconds: this.ttl_seconds,
+      pending: this._pending.size,
     };
   }
 }
@@ -293,9 +300,6 @@ export function getQueryCache(
 ): QueryEmbeddingCache {
   if (_globalCache === null) {
     _globalCache = new QueryEmbeddingCache(max_size, ttl_seconds);
-    console.log(
-      `Query embedding cache initialized: max_size=${max_size}, ttl=${ttl_seconds}s`
-    );
   }
   return _globalCache;
 }

@@ -11,6 +11,9 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { createLogger } from '../../logger/index.js';
+
+const _log = createLogger('workflow-resume');
 
 // ============================================================
 // Enums
@@ -174,7 +177,7 @@ export abstract class ResumeStrategy {
       const checkpoints = (data['checkpoints'] as Record<string, unknown>[]) ?? [];
       return checkpoints.map(cp => checkpointStateFromDict(cp));
     } catch (e) {
-      console.warn(`Failed to load checkpoints for ${sessionId}: ${e}`);
+      _log.warn(`Failed to load checkpoints for ${sessionId}: ${e}`);
       return [];
     }
   }
@@ -222,7 +225,7 @@ export class NativeResumeStrategy extends ResumeStrategy {
       try {
         this.sessionMapping = JSON.parse(fs.readFileSync(mappingFile, 'utf-8'));
       } catch (e) {
-        console.warn(`Failed to load native mapping: ${e}`);
+        _log.warn(`Failed to load native mapping: ${e}`);
       }
     }
   }
@@ -457,17 +460,17 @@ export class HybridStrategy extends ResumeStrategy {
     if (this.nativeStrategy.canResume(sessionId)) {
       try {
         const context = this.nativeStrategy.resume(sessionId);
-        console.info(`Resumed session ${sessionId} with native strategy`);
+        _log.info(`Resumed session ${sessionId} with native strategy`);
         return context;
       } catch (e) {
-        console.warn(`Native resume failed for ${sessionId}, falling back to concat: ${e}`);
+        _log.warn(`Native resume failed for ${sessionId}, falling back to concat: ${e}`);
       }
     }
 
     if (this.concatStrategy.canResume(sessionId)) {
       const context = this.concatStrategy.resume(sessionId);
       context.metadata = { ...(context.metadata ?? {}), fallback_used: true, original_mode: ResumeMode.NATIVE };
-      console.info(`Resumed session ${sessionId} with concat fallback`);
+      _log.info(`Resumed session ${sessionId} with concat fallback`);
       return context;
     }
 

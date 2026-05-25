@@ -189,7 +189,7 @@ export class GraphEngine {
     this._integrationAdapters = createIntegrationAdapters();
     this._initSchema();
 
-    console.info(`Graph engine initialized: ${this.dbPath}`);
+    log.info(`Graph engine initialized`, { dbPath: this.dbPath });
 
     if (plugins) {
       this._registerPlugins(plugins);
@@ -1256,7 +1256,7 @@ export class GraphEngine {
       created_at: now,
     });
 
-    console.info(`Created entity: ${entityType}/${name}`);
+    log.info(`Created entity`, { entityType, name });
     return { id: entityId, status: 'created' };
   }
 
@@ -1303,7 +1303,7 @@ export class GraphEngine {
       created_at: now,
     });
 
-    console.info(`Created relation: ${fromName} -[${relationType}]-> ${toName}`);
+    log.info(`Created relation`, { fromName, relationType, toName });
     return { id: relationId, status: 'created' };
   }
 

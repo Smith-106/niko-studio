@@ -11,6 +11,9 @@ import type { BaseState } from './state';
 import type { IWorkflowGraph } from './adapters/base-adapter';
 import { type NodeFunction, type RoutingFunction } from './adapters/base-adapter';
 import { DistillationManager } from '../memory/distillation-manager.js';
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('workflow-graph');
 
 // ============================================================
 // Distillation Types
@@ -131,14 +134,14 @@ export class SimpleWorkflowGraph implements IWorkflowGraph {
 
         while (nextNode && iteration < maxIterations) {
           if (visited.has(nextNode)) {
-            console.error(`Graph cycle detected at node: ${nextNode}`);
+            _log.error(`Graph cycle detected at node: ${nextNode}`);
             break;
           }
           visited.add(nextNode);
 
           const nodeFn = nodes.get(nextNode);
           if (!nodeFn) {
-            console.error(`Node not found: ${nextNode}`);
+            _log.error(`Node not found: ${nextNode}`);
             break;
           }
 
@@ -282,5 +285,5 @@ const LEGACY_WARNING =
   'Use WorkflowEngine entry API as the single public authority.';
 
 export function warnLegacyEntrypoint(source: string): void {
-  console.warn(`${LEGACY_WARNING} source=${source}`);
+  _log.warn(`${LEGACY_WARNING} source=${source}`);
 }

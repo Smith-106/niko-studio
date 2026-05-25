@@ -31,6 +31,9 @@ import {
 import { evaluateNovelQuality } from '../novel-quality.js';
 import { RevisionLoop } from '../revision-loop.js';
 import { ContentType, SessionManager } from '../session/session-manager.js';
+import { createLogger } from '../../logger/index.js';
+
+const _log = createLogger('workflow-novel-adapter');
 
 // ============================================================
 // Novel adapter config defaults (mirror Python DEFAULT_CONFIG)
@@ -206,9 +209,9 @@ export class NovelAdapter extends BaseDomainAdapter {
   // ========================================
 
   async commanderNode(state: WritingState): Promise<Partial<WritingState>> {
-    console.log('\n' + '='.repeat(50));
-    console.log('Commander Agent: Analyzing task and routing...');
-    console.log('='.repeat(50));
+    _log.info('\n' + '='.repeat(50));
+    _log.info('Commander Agent: Analyzing task and routing...');
+    _log.info('='.repeat(50));
 
     // In TypeScript, the Commander agent's routing is handled internally
     // by the WorkflowEngine's route() method. This node records the
@@ -220,7 +223,7 @@ export class NovelAdapter extends BaseDomainAdapter {
     const isRapid = rapidKeywords.some(kw => userIdea.includes(kw));
     const workflowLevel = isRapid ? 'rapid' : 'standard';
 
-    console.log(`Workflow level: ${workflowLevel}`);
+    _log.info(`Workflow level: ${workflowLevel}`);
 
     return {
       workflow_level: isRapid ? 1 : 3,
@@ -234,24 +237,24 @@ export class NovelAdapter extends BaseDomainAdapter {
   routeAfterCommander(state: WritingState): string {
     const level = state.workflow_level;
     if (level === 1) {
-      console.log('L1 rapid mode: going directly to Writer');
+      _log.info('L1 rapid mode: going directly to Writer');
       return 'writer';
     } else {
-      console.log('Standard mode: entering Architect for structure planning');
+      _log.info('Standard mode: entering Architect for structure planning');
       return 'architect';
     }
   }
 
   async architectNode(state: WritingState): Promise<Partial<WritingState>> {
-    console.log('\n' + '='.repeat(50));
-    console.log('Architect Agent: Planning story structure...');
-    console.log('='.repeat(50));
+    _log.info('\n' + '='.repeat(50));
+    _log.info('Architect Agent: Planning story structure...');
+    _log.info('='.repeat(50));
 
     const sceneCards = this.buildSceneCards(state);
 
     const firstScene: SceneCard = sceneCards[0] ?? {};
 
-    console.log(`Generated ${sceneCards.length} scene cards`);
+    _log.info(`Generated ${sceneCards.length} scene cards`);
 
     return {
       story_blueprint: {
@@ -274,15 +277,15 @@ export class NovelAdapter extends BaseDomainAdapter {
     const revisionCount = state.revision_count ?? 0;
     const version = (state.draft_version ?? 0) + 1;
 
-    console.log('\n' + '='.repeat(50));
-    console.log(`Writer Agent: Writing version ${version} draft...`);
-    console.log('='.repeat(50));
+    _log.info('\n' + '='.repeat(50));
+    _log.info(`Writer Agent: Writing version ${version} draft...`);
+    _log.info('='.repeat(50));
 
     const scene = state.current_scene ?? {};
     const feedback = state.feedback_context ?? '';
 
     if (revisionCount > 0 && feedback) {
-      console.log(`   Revising based on Critic feedback (revision ${revisionCount})`);
+      _log.info(`   Revising based on Critic feedback (revision ${revisionCount})`);
     }
 
     this.injectPlaybookIntoWriterInput(state);
@@ -290,7 +293,7 @@ export class NovelAdapter extends BaseDomainAdapter {
     const draft = this.composeDraft(state, version);
     const wordcount = draft.length;
 
-    console.log(`Generated draft: ${wordcount} characters`);
+    _log.info(`Generated draft: ${wordcount} characters`);
 
     return {
       draft_content: draft,
@@ -301,9 +304,9 @@ export class NovelAdapter extends BaseDomainAdapter {
   }
 
   async distillationNode(state: WritingState): Promise<Partial<WritingState>> {
-    console.log('\n' + '='.repeat(50));
-    console.log('Distillation Node: Running knowledge distillation...');
-    console.log('='.repeat(50));
+    _log.info('\n' + '='.repeat(50));
+    _log.info('Distillation Node: Running knowledge distillation...');
+    _log.info('='.repeat(50));
 
     const scene = state.current_scene ?? {};
     const result: Record<string, unknown> = {
@@ -347,7 +350,7 @@ export class NovelAdapter extends BaseDomainAdapter {
       ],
     };
 
-    console.log(`Distillation complete: entities=${result.entities_count}`);
+    _log.info(`Distillation complete: entities=${result.entities_count}`);
 
     return {
       distillation_result: result as WritingState['distillation_result'],
@@ -358,9 +361,9 @@ export class NovelAdapter extends BaseDomainAdapter {
   async criticNode(state: WritingState): Promise<Partial<WritingState>> {
     const revisionCount = state.revision_count ?? 0;
 
-    console.log('\n' + '='.repeat(50));
-    console.log(`Critic Agent: Reviewing draft (review ${revisionCount + 1})...`);
-    console.log('='.repeat(50));
+    _log.info('\n' + '='.repeat(50));
+    _log.info(`Critic Agent: Reviewing draft (review ${revisionCount + 1})...`);
+    _log.info('='.repeat(50));
 
     const qualityResult = evaluateNovelQuality(state.draft_content ?? '', {
       qualityLevel: state.effective_quality_level ?? state.requested_quality_level ?? 'high',
@@ -455,7 +458,7 @@ export class NovelAdapter extends BaseDomainAdapter {
         }
         (response as Record<string, unknown>).self_learning = selfLearningState;
       } catch (exc) {
-        console.warn(`Self-learning skipped (non-blocking): ${exc}`);
+        _log.warn(`Self-learning skipped (non-blocking): ${exc}`);
       }
     }
 
@@ -489,24 +492,24 @@ export class NovelAdapter extends BaseDomainAdapter {
       }
     }
 
-    console.log(`Score: ${critiquePayload.total_score ?? 0}`);
-    console.log(`Decision: ${critiquePayload.decision}`);
+    _log.info(`Score: ${critiquePayload.total_score ?? 0}`);
+    _log.info(`Decision: ${critiquePayload.decision}`);
 
     return response;
   }
 
   humanReviewNode(state: WritingState): Partial<WritingState> {
-    console.log('\n' + '='.repeat(50));
-    console.log('Human Review: Requires manual review');
-    console.log('='.repeat(50));
+    _log.info('\n' + '='.repeat(50));
+    _log.info('Human Review: Requires manual review');
+    _log.info('='.repeat(50));
 
     const critique = state.critique_result ?? ({} as CritiqueResult);
 
-    console.log(`   Score: ${critique.total_score ?? 'N/A'}`);
-    console.log(`   Decision: ${critique.decision ?? 'N/A'}`);
-    console.log(`   Reason: ${critique.decision_reason ?? 'N/A'}`);
-    console.log(`   Revisions: ${state.revision_count ?? 0}`);
-    console.log('   [Human Review] Needs manual confirmation to continue');
+    _log.info(`   Score: ${critique.total_score ?? 'N/A'}`);
+    _log.info(`   Decision: ${critique.decision ?? 'N/A'}`);
+    _log.info(`   Reason: ${critique.decision_reason ?? 'N/A'}`);
+    _log.info(`   Revisions: ${state.revision_count ?? 0}`);
+    _log.info('   [Human Review] Needs manual confirmation to continue');
 
     return {
       requires_human_intervention: true,
@@ -521,9 +524,9 @@ export class NovelAdapter extends BaseDomainAdapter {
   }
 
   finalizeNode(state: WritingState): Partial<WritingState> {
-    console.log('\n' + '='.repeat(50));
-    console.log('Writing complete!');
-    console.log('='.repeat(50));
+    _log.info('\n' + '='.repeat(50));
+    _log.info('Writing complete!');
+    _log.info('='.repeat(50));
 
     const critique = state.critique_result ?? ({} as CritiqueResult);
 
@@ -544,10 +547,10 @@ export class NovelAdapter extends BaseDomainAdapter {
     const distillEnabled = (config.enable_distillation as boolean) ?? true;
 
     if (hasDraft && notDistilled && distillEnabled) {
-      console.log('Entering distillation node...');
+      _log.info('Entering distillation node...');
       return 'distillation';
     } else {
-      console.log('Skipping distillation, going directly to Critic');
+      _log.info('Skipping distillation, going directly to Critic');
       return 'critic';
     }
   }
@@ -571,33 +574,33 @@ export class NovelAdapter extends BaseDomainAdapter {
     if (decision === 'APPROVED' || (totalScore >= passScore && cScore >= minCScore)) {
       if (!this.contextGovernancePassed(state)) {
         if (revisionCount >= maxRevisions) {
-          console.log('Quality passed but context governance failed, and revision limit reached, sending to human review');
+          _log.info('Quality passed but context governance failed, and revision limit reached, sending to human review');
           return 'human_reviewer';
         }
-        console.log('Quality passed but context governance failed, sending back to Writer');
+        _log.info('Quality passed but context governance failed, sending back to Writer');
         return 'writer';
       }
 
-      console.log(`Review passed! (Score: ${totalScore}, C: ${cScore})`);
+      _log.info(`Review passed! (Score: ${totalScore}, C: ${cScore})`);
       return 'finalize';
     }
 
     if (revisionCount >= maxRevisions) {
-      console.log(`Max revisions reached (${maxRevisions}), requires human intervention`);
+      _log.info(`Max revisions reached (${maxRevisions}), requires human intervention`);
       return 'human_reviewer';
     }
 
     if (decision === 'REWRITE') {
-      console.log(`Quality too low (${totalScore}), requires human intervention`);
+      _log.info(`Quality too low (${totalScore}), requires human intervention`);
       return 'human_reviewer';
     }
 
     if (decision === 'HUMAN_REVIEW' || totalScore >= humanReviewScore) {
-      console.log(`Score ${totalScore} suggests human review`);
+      _log.info(`Score ${totalScore} suggests human review`);
       return 'human_reviewer';
     }
 
-    console.log(`Score ${totalScore} not met, sending back to Writer (revision ${revisionCount}/${maxRevisions})...`);
+    _log.info(`Score ${totalScore} not met, sending back to Writer (revision ${revisionCount}/${maxRevisions})...`);
     return 'writer';
   }
 
@@ -803,7 +806,7 @@ export class NovelAdapter extends BaseDomainAdapter {
     if (cappedRules.length === 0) return;
 
     const summary = cappedRules.map(r => `- ${r}`).join('\n');
-    console.log(`\nPlaybook strategy:\n${summary}\n`);
+    _log.info(`\nPlaybook strategy:\n${summary}\n`);
   }
 
   private contextGovernancePassed(state: WritingState): boolean {

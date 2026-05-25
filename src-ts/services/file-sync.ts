@@ -17,6 +17,9 @@ import { join, dirname, basename, extname, resolve, relative } from 'node:path';
 import { watch, FSWatcher } from 'node:fs';
 import { EventEmitter } from 'node:events';
 
+import { createLogger } from "../logger/index.js";
+const _log = createLogger("svc-file-sync");
+
 /**
  * Represents a file change event with metadata.
  */
@@ -88,7 +91,7 @@ export class FileWatcher {
    */
   watch(directory: string): boolean {
     if (!existsSync(directory)) {
-      console.warn(`Directory does not exist: ${directory}`);
+      _log.warn(`Directory does not exist: ${directory}`);
       return false;
     }
 
@@ -115,17 +118,17 @@ export class FileWatcher {
       });
 
       watcher.on('error', (err) => {
-        console.warn(`FileWatcher error on ${dirResolved}: ${err.message}`);
+        _log.warn(`FileWatcher error on ${dirResolved}: ${err.message}`);
       });
 
       this.watchers.push(watcher);
       this.watchedDirs.add(dirResolved);
       this.running = true;
 
-      console.log(`Started watching directory: ${directory}`);
+      _log.info(`Started watching directory: ${directory}`);
       return true;
     } catch (e) {
-      console.error(`Failed to watch directory ${directory}: ${e}`);
+      _log.error(`Failed to watch directory ${directory}: ${e}`);
       return false;
     }
   }
@@ -142,7 +145,7 @@ export class FileWatcher {
     this.callbacks = [];
     this.lastEvents.clear();
     this.running = false;
-    console.log('FileWatcher stopped');
+    _log.info('FileWatcher stopped');
   }
 
   /**
@@ -188,7 +191,7 @@ export class FileWatcher {
       try {
         callback(event);
       } catch (e) {
-        console.error(`Callback error for ${event.path}: ${e}`);
+        _log.error(`Callback error for ${event.path}: ${e}`);
       }
     }
   }
@@ -259,9 +262,9 @@ export class FileSyncService {
         const data = readFileSync(indexPath, 'utf-8');
         const parsed = JSON.parse(data) as Record<string, string>;
         this.fileHashes = new Map(Object.entries(parsed));
-        console.log(`Loaded ${this.fileHashes.size} file hashes from index`);
+        _log.info(`Loaded ${this.fileHashes.size} file hashes from index`);
       } catch (e) {
-        console.warn(`Failed to load hash index: ${e}`);
+        _log.warn(`Failed to load hash index: ${e}`);
       }
     }
   }
@@ -278,7 +281,7 @@ export class FileSyncService {
       this.fileHashes.forEach((v, k) => { obj[k] = v; });
       writeFileSync(indexPath, JSON.stringify(obj, null, 2), 'utf-8');
     } catch (e) {
-      console.error(`Failed to save hash index: ${e}`);
+      _log.error(`Failed to save hash index: ${e}`);
     }
   }
 
@@ -359,12 +362,12 @@ export class FileSyncService {
       result.contentHash = contentHash;
       this.syncHistory.push(result);
 
-      console.log(`Synced file: ${filePath} -> ${action}`);
+      _log.info(`Synced file: ${filePath} -> ${action}`);
       return result;
     } catch (e) {
       const result = new SyncResult(filePath, false, 'error', String(e));
       this.syncHistory.push(result);
-      console.error(`Failed to sync file ${filePath}: ${e}`);
+      _log.error(`Failed to sync file ${filePath}: ${e}`);
       return result;
     }
   }
@@ -380,7 +383,7 @@ export class FileSyncService {
     const results: SyncResult[] = [];
 
     if (!existsSync(directory)) {
-      console.warn(`Directory does not exist: ${directory}`);
+      _log.warn(`Directory does not exist: ${directory}`);
       return results;
     }
 
@@ -389,7 +392,7 @@ export class FileSyncService {
       await this._walkAndSync(directory, ext, force, results);
     }
 
-    console.log(`Directory sync complete: ${results.length} files processed`);
+    _log.info(`Directory sync complete: ${results.length} files processed`);
     return results;
   }
 
@@ -427,15 +430,15 @@ export class FileSyncService {
             }
           });
           this.watchers.push(watcher);
-          console.log(`Watching directory: ${path}`);
+          _log.info(`Watching directory: ${path}`);
         } catch (e) {
-          console.warn(`Failed to watch ${path}: ${e}`);
+          _log.warn(`Failed to watch ${path}: ${e}`);
         }
       } else {
-        console.warn(`Watch directory does not exist: ${path}`);
+        _log.warn(`Watch directory does not exist: ${path}`);
       }
     }
-    console.log('FileSyncService started.');
+    _log.info('FileSyncService started.');
   }
 
   /**
@@ -447,7 +450,7 @@ export class FileSyncService {
     }
     this.watchers = [];
     this._saveHashIndex();
-    console.log('FileSyncService stopped.');
+    _log.info('FileSyncService stopped.');
   }
 
   /**

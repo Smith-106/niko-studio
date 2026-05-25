@@ -16,6 +16,9 @@
 
 import type { LLMService } from '../protocols/llm';
 
+import { createLogger } from "../logger/index.js";
+const _log = createLogger("svc-distill");
+
 /**
  * Distillation template types
  */
@@ -395,7 +398,7 @@ export class DistillationService {
     try {
       return await this.llmClient.generate(prompt);
     } catch (error) {
-      console.error('LLM call failed:', error);
+      _log.error('LLM call failed', { error });
       return this.simpleDistill(prompt, DistillationTemplate.SUMMARY);
     }
   }

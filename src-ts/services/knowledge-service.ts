@@ -30,6 +30,9 @@ import type { LLMService } from '../protocols/llm';
 import type { EmbeddingService } from '../protocols/embedding';
 import { DistillationService, DistillationTemplate } from './distill-service';
 
+import { createLogger } from "../logger/index.js";
+const _log = createLogger("svc-knowledge");
+
 /**
  * Knowledge error types
  */
@@ -158,7 +161,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
           model: this.embeddingModel,
         });
       } catch (error) {
-        console.error('Failed to generate embedding:', error);
+        _log.error('Failed to generate embedding', { error });
       }
     }
 
@@ -262,7 +265,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
           },
         }));
       } catch (error) {
-        console.error('Vector search failed:', error);
+        _log.error('Vector search failed', { error });
       }
     }
 
@@ -651,7 +654,7 @@ export class KnowledgeServiceImpl implements KnowledgeService {
           : [],
       };
     } catch (error) {
-      console.warn('Failed to load knowledge snapshot:', error);
+      _log.warn('Failed to load knowledge snapshot', { error });
       return EMPTY_SNAPSHOT;
     }
   }

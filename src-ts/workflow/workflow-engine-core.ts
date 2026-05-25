@@ -14,7 +14,8 @@ import * as crypto from 'crypto';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { OpenAILLMProvider } from '../knowledge/providers/openai-llm.js';
+import type { LLMService } from '../protocols/llm.js';
+import type { IWorkflowStateStore } from './iworkflow-state-store.js';
 
 import { WorkflowLevel, WorkflowDecision, ensureContractPayload } from './types.js';
 import {
@@ -398,9 +399,14 @@ export class WorkflowEngine {
   private _sessionNamespace: string;
   private _moduleLocks: Map<string, Promise<void>> = new Map();
   private _moduleOwners: Map<string, string> = new Map();
+  private _llmService: LLMService | null = null;
+  private _stateStore: IWorkflowStateStore | null = null;
 
-  constructor(workspace?: string, sessionNamespace?: string) {
+  constructor(workspace?: string, sessionNamespace?: string, llmService?: LLMService, stateStore?: IWorkflowStateStore) {
     this.workspace = workspace ?? process.cwd();
+    this._sessionNamespace = sessionNamespace ?? 'default';
+    if (llmService) this._llmService = llmService;
+    if (stateStore) this._stateStore = stateStore;
     this.checkpointStrategy = new DefaultWorkflowCheckpointStrategy({
       workspace: this.workspace,
       checkpoints: this.checkpoints,
@@ -817,6 +823,7 @@ export class WorkflowEngine {
     planObj.plan_hash = this._computePlanHash(planObj);
 
     this.plans.set(planId, planObj);
+    this._syncPlanToStore(planObj);
     this._persistPlanState(planObj, 'planned');
 
     return this._withContract(buildWorkflowPlanResponse({
@@ -1282,12 +1289,30 @@ export class WorkflowEngine {
     const sections = (structureOutput['structure'] as string[]) ?? ['开场', '发展', '结尾'];
     const structureHint = sections.join('、');
 
+    // Try injected LLM service first (DI pattern), then direct provider, then stub
+    if (this._llmService) {
+      try {
+        const result = await this._llmService.generate(task, {
+              model: process.env.NIKO_DEFAULT_MODEL ?? 'gpt-4o-mini',
+              temperature: 0.8,
+              systemPrompt: '你是一个专业的中文写作助手，擅长写作小说、故事和散文。请直接输出正文内容，不要加解释。',
+            });
+        const content = typeof result === 'string' ? result : String(result);
+        if (content && content.trim()) {
+          return { draft: content.trim(), source_task: task, section_count: sections.length };
+        }
+      } catch {
+        // fall through to direct provider or stub
+      }
+    }
+
     const apiKey = process.env.OPENAI_API_KEY;
     const baseUrl = process.env.OPENAI_BASE_URL ?? process.env.OPENAI_API_BASE;
     const model = process.env.NIKO_DEFAULT_MODEL ?? 'gpt-4o-mini';
 
     if (apiKey) {
       try {
+        const { OpenAILLMProvider } = await import('../knowledge/providers/openai-llm.js');
         const provider = new OpenAILLMProvider({ apiKey, baseUrl: baseUrl ?? null });
         const response = await provider.complete(task, model, {
           systemPrompt: '你是一个专业的中文写作助手，擅长写作小说、故事和散文。请直接输出正文内容，不要加解释。',
@@ -1668,6 +1693,7 @@ export class WorkflowEngine {
     currentPhase?: string | null,
     checkpointId?: string,
   ): Record<string, unknown> {
+    this._syncPlanToStore(plan);
     return persistWorkflowPlanState({
       plan,
       currentPhase,
@@ -1687,6 +1713,38 @@ export class WorkflowEngine {
       },
       getPlanSessionId: (planId) => this.getPlanSessionId(planId),
     });
+  }
+
+  /** Sync plan to state store (fire-and-forget, non-blocking). */
+  private _syncPlanToStore(plan: WorkflowPlan): void {
+    if (!this._stateStore) return;
+    this._stateStore.savePlan(plan).catch(() => {});
+  }
+
+  /** Get the injected state store, if any. */
+  getStateStore(): IWorkflowStateStore | null {
+    return this._stateStore;
+  }
+
+  /** Load state from the store into internal Maps (for persistence hydration). */
+  async hydrateFromStore(): Promise<void> {
+    if (!this._stateStore) return;
+    const plans = await this._stateStore.listPlans();
+    for (const plan of plans) {
+      this.plans.set(plan.id, plan);
+      const session = await this._stateStore.loadPlanSession(plan.id);
+      if (session) this.planSessions.set(plan.id, session);
+      const authority = await this._stateStore.loadPlanAuthority(plan.id);
+      if (authority) this.planAuthorities.set(plan.id, authority);
+    }
+  }
+
+  /** Flush all internal Maps to the store (for graceful shutdown). */
+  async flushToStore(): Promise<void> {
+    if (!this._stateStore) return;
+    for (const [id, plan] of this.plans) {
+      await this._stateStore.savePlan(plan);
+    }
   }
 
   private _stateResumeMetadata(plan: WorkflowPlan): WorkflowStateResumeMetadataContract {

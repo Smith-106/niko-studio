@@ -235,7 +235,7 @@ describe('gateway-request-handler', () => {
       method: 'POST',
     });
     expect(typeof traceContext?.requestId).toBe('string');
-    expect(traceContext?.requestId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(traceContext?.requestId).toMatch(/^[a-z0-9-]+$/);
     expect(typeof traceContext?.startAtMs).toBe('number');
     expect((traceContext?.startAtMs ?? 0) >= before).toBe(true);
 

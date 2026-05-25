@@ -181,7 +181,7 @@ describe('DistillationService', () => {
       // Should fallback to simple distillation
       expect(result.content).toBeDefined();
       expect(result.content.length).toBeGreaterThan(0);
-      expect(errorSpy).toHaveBeenCalledWith('LLM call failed:', expect.any(Error));
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('LLM call failed'));
     });
   });
 

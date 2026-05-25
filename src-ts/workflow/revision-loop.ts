@@ -15,6 +15,9 @@ import {
   NOVEL_SCORE_IMPROVEMENT_THRESHOLD,
 } from './novel-state.js';
 import { type ContentType as SessionContentType } from './session/session-manager.js';
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('workflow-revision-loop');
 
 // ============================================================
 // Types
@@ -527,7 +530,7 @@ export async function runRevisionLoop(options: RunRevisionLoopOptions): Promise<
   while (true) {
     // Evaluate current draft
     if (verbose) {
-      console.log(`\n\u{1F9D0} \u7B2C ${loop.state.revision_count + 1} \u6B21\u8BC4\u4F30...`);
+      _log.info(`\n\uD83E\uDDD0 \u7B2C ${loop.state.revision_count + 1} \u6B21\u8BC4\u4F30...`);
     }
 
     try {
@@ -552,8 +555,8 @@ export async function runRevisionLoop(options: RunRevisionLoopOptions): Promise<
       const decision = loop.updateFromCritic(criticResult);
 
       if (verbose) {
-        console.log(`   \u5206\u6570: ${loop.state.current_score.toFixed(1)}`);
-        console.log(`   \u51B3\u7B56: ${decision}`);
+        _log.info(`   \u5206\u6570: ${loop.state.current_score.toFixed(1)}`);
+        _log.info(`   \u51B3\u7B56: ${decision}`);
       }
 
       // Check whether to continue
@@ -563,7 +566,7 @@ export async function runRevisionLoop(options: RunRevisionLoopOptions): Promise<
       const feedback = loop.getFeedbackForWriter();
 
       if (verbose) {
-        console.log(`\n\u270D\uFE0F \u7B2C ${loop.state.revision_count} \u6B21\u4FEE\u8BA2...`);
+        _log.info(`\n\u270D\uFE0F \u7B2C ${loop.state.revision_count} \u6B21\u4FEE\u8BA2...`);
       }
 
       try {
@@ -586,7 +589,7 @@ export async function runRevisionLoop(options: RunRevisionLoopOptions): Promise<
           const degraded = loop.handleRuntimeEvent('timeout', 'writer');
           if (degraded) {
             if (verbose) {
-              console.log(`   \u8D28\u91CF\u964D\u7EA7: writer timeout -> ${loop.state.effective_quality_level}`);
+              _log.info(`   \u8D28\u91CF\u964D\u7EA7: writer timeout -> ${loop.state.effective_quality_level}`);
             }
             continue;
           }
@@ -598,7 +601,7 @@ export async function runRevisionLoop(options: RunRevisionLoopOptions): Promise<
           const degraded = loop.handleRuntimeEvent('error', 'writer', detail);
           if (degraded) {
             if (verbose) {
-              console.log(`   \u8D28\u91CF\u964D\u7EA7: writer error -> ${loop.state.effective_quality_level}`);
+              _log.info(`   \u8D28\u91CF\u964D\u7EA7: writer error -> ${loop.state.effective_quality_level}`);
             }
             continue;
           }
@@ -615,7 +618,7 @@ export async function runRevisionLoop(options: RunRevisionLoopOptions): Promise<
         const degraded = loop.handleRuntimeEvent('timeout', 'critic');
         if (degraded) {
           if (verbose) {
-            console.log(`   \u8D28\u91CF\u964D\u7EA7: critic timeout -> ${loop.state.effective_quality_level}`);
+            _log.info(`   \u8D28\u91CF\u964D\u7EA7: critic timeout -> ${loop.state.effective_quality_level}`);
           }
           continue;
         }
@@ -627,7 +630,7 @@ export async function runRevisionLoop(options: RunRevisionLoopOptions): Promise<
         const degraded = loop.handleRuntimeEvent('error', 'critic', detail);
         if (degraded) {
           if (verbose) {
-            console.log(`   \u8D28\u91CF\u964D\u7EA7: critic error -> ${loop.state.effective_quality_level}`);
+            _log.info(`   \u8D28\u91CF\u964D\u7EA7: critic error -> ${loop.state.effective_quality_level}`);
           }
           continue;
         }
@@ -643,12 +646,12 @@ export async function runRevisionLoop(options: RunRevisionLoopOptions): Promise<
   (summary as Record<string, unknown>)['final_draft'] = currentDraft;
 
   if (verbose) {
-    console.log(`\n${'='.repeat(50)}`);
-    console.log('\u4FEE\u8BA2\u5FAA\u73AF\u5B8C\u6210');
-    console.log(`   \u603B\u4FEE\u8BA2\u6B21\u6570: ${summary.total_revisions}`);
-    console.log(`   \u6700\u7EC8\u5206\u6570: ${(summary.final_score as number).toFixed(1)}`);
-    console.log(`   \u6700\u7EC8\u51B3\u7B56: ${summary.final_decision}`);
-    console.log('='.repeat(50));
+    _log.info(`\n${'='.repeat(50)}`);
+    _log.info('\u4FEE\u8BA2\u5FAA\u73AF\u5B8C\u6210');
+    _log.info(`   \u603B\u4FEE\u8BA2\u6B21\u6570: ${summary.total_revisions}`);
+    _log.info(`   \u6700\u7EC8\u5206\u6570: ${(summary.final_score as number).toFixed(1)}`);
+    _log.info(`   \u6700\u7EC8\u51B3\u7B56: ${summary.final_decision}`);
+    _log.info('='.repeat(50));
   }
 
   return summary;

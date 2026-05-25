@@ -14,6 +14,9 @@ import { createHash } from 'node:crypto';
 import { IndexingService } from './indexing-service';
 import type { FileChangeEvent } from './file-sync';
 
+import { createLogger } from "../logger/index.js";
+const _log = createLogger("svc-knowledge-layer");
+
 /**
  * Hybrid search result combining vector chunks and graph entities
  */
@@ -111,7 +114,7 @@ export class AgentKnowledgeLayer {
         USING fts5(name, entity_id UNINDEXED, tokenize='unicode61')
       `);
     } catch {
-      console.warn('FTS5 table may already exist or FTS5 is not available');
+      _log.warn('FTS5 table may already exist or FTS5 is not available');
     }
 
     // Triggers to keep FTS in sync
@@ -132,7 +135,7 @@ export class AgentKnowledgeLayer {
         END;
       `);
     } catch {
-      console.warn('FTS triggers may already exist');
+      _log.warn('FTS triggers may already exist');
     }
 
     // Relation table
@@ -165,11 +168,11 @@ export class AgentKnowledgeLayer {
       const ftsCount = (db.prepare('SELECT count(*) as cnt FROM entities_fts').get() as { cnt: number }).cnt;
 
       if (entCount > 0 && ftsCount === 0) {
-        console.log('Backfilling entities_fts index...');
+        _log.info('Backfilling entities_fts index...');
         db.exec("INSERT INTO entities_fts(name, entity_id) SELECT name, id FROM entities");
       }
     } catch (e) {
-      console.warn('Failed to populate FTS (schema might be initializing):', e);
+      _log.warn('Failed to populate FTS (schema might be initializing)', { error: e });
     }
   }
 
@@ -182,7 +185,7 @@ export class AgentKnowledgeLayer {
    */
   addDocument(docId: string, content: string, sourceType: string = 'general'): void {
     this.vectorStore.addDocument(docId, content, sourceType);
-    console.log(`Ingested document ${docId} into unified store.`);
+    _log.info(`Ingested document ${docId} into unified store.`);
   }
 
   /**
@@ -259,7 +262,7 @@ export class AgentKnowledgeLayer {
         results.entities = rows;
       } catch {
         // Fallback if FTS table doesn't exist or query is malformed
-        console.warn('FTS search failed. Falling back to full scan.');
+        _log.warn('FTS search failed. Falling back to full scan.');
         const rows = db.prepare(
           "SELECT * FROM entities WHERE instr(lower(?), lower(name)) > 0"
         ).all(queryText) as EntityRecord[];
@@ -310,7 +313,7 @@ export class AgentKnowledgeLayer {
    */
   syncFile(filePath: string, force: boolean = false): SyncFileResult {
     if (!existsSync(filePath)) {
-      console.warn(`File does not exist: ${filePath}`);
+      _log.warn(`File does not exist: ${filePath}`);
       return { success: false, action: 'error', message: 'File not found' };
     }
 
@@ -331,7 +334,7 @@ export class AgentKnowledgeLayer {
 
       this.addDocument(docId, content, sourceType);
 
-      console.log(`Synced file to knowledge layer: ${filePath} (type=${sourceType})`);
+      _log.info(`Synced file to knowledge layer: ${filePath} (type=${sourceType})`);
 
       return {
         success: true,
@@ -341,7 +344,7 @@ export class AgentKnowledgeLayer {
         doc_id: docId,
       };
     } catch (e) {
-      console.error(`Failed to sync file ${filePath}: ${e}`);
+      _log.error(`Failed to sync file ${filePath}: ${e}`);
       return { success: false, action: 'error', message: String(e) };
     }
   }
@@ -356,7 +359,7 @@ export class AgentKnowledgeLayer {
     const results: Array<SyncFileResult & { path?: string }> = [];
 
     if (!existsSync(directory)) {
-      console.warn(`Directory does not exist: ${directory}`);
+      _log.warn(`Directory does not exist: ${directory}`);
       return results;
     }
 
@@ -370,7 +373,7 @@ export class AgentKnowledgeLayer {
       });
     }
 
-    console.log(`Directory sync complete: ${results.length} files`);
+    _log.info(`Directory sync complete: ${results.length} files`);
     return results;
   }
 

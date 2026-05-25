@@ -17,6 +17,9 @@ import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import type { CitationManager, PersistedCitation } from "./citation-manager";
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("distillation");
 
 // ---------------------------------------------------------------------------
 // DistillationTemplate enum
@@ -320,7 +323,7 @@ export class DistillationManager {
     }
 
     this._loadIndex();
-    console.log(`DistillationManager initialized at ${this.distillationDir}`);
+    _log.info(`DistillationManager initialized at ${this.distillationDir}`);
   }
 
   /** Set CitationManager for DerivedFrom tracking. */
@@ -394,7 +397,7 @@ export class DistillationManager {
     }
     this._templateIndex.get(resolvedTemplate)!.push(resultId);
 
-    console.log(`Created distillation result: ${resultId} (template=${resolvedTemplate})`);
+    _log.info(`Created distillation result: ${resultId} (template=${resolvedTemplate})`);
     return result;
   }
 
@@ -406,7 +409,7 @@ export class DistillationManager {
     if (!result) return [];
 
     if (!this._citationManager) {
-      console.warn("CitationManager not configured");
+      _log.warn("CitationManager not configured");
       return [];
     }
 
@@ -455,7 +458,7 @@ export class DistillationManager {
         this._resultsIndex.set(resultId, result);
         return result;
       } catch (e) {
-        console.warn(`Failed to load result ${resultId}: ${e}`);
+        _log.warn(`Failed to load result ${resultId}: ${e}`);
       }
     }
 
@@ -480,7 +483,7 @@ export class DistillationManager {
     const filePath = this._getResultPath(resultId);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-    console.log(`Deleted distillation result: ${resultId}`);
+    _log.info(`Deleted distillation result: ${resultId}`);
     return true;
   }
 
@@ -499,7 +502,7 @@ export class DistillationManager {
     topics?: string[] | null,
   ): string | null {
     if (!this._memoryManager) {
-      console.warn("MemoryManager not configured");
+      _log.warn("MemoryManager not configured");
       return null;
     }
 
@@ -514,7 +517,7 @@ export class DistillationManager {
       },
     });
 
-    console.log(`Created memory from distillation: ${entry.id}`);
+    _log.info(`Created memory from distillation: ${entry.id}`);
     return entry.id;
   }
 
@@ -532,7 +535,7 @@ export class DistillationManager {
         const result = this.distill(sources, t, sourceIds);
         results.set(t, result);
       } catch (e) {
-        console.warn(`Batch distill failed for ${t}: ${e}`);
+        _log.warn(`Batch distill failed for ${t}: ${e}`);
       }
     }
 
@@ -665,7 +668,7 @@ export class DistillationManager {
         }
         this._templateIndex.get(result.template)!.push(result.resultId);
       } catch (e) {
-        console.warn(`Failed to load ${file}: ${e}`);
+        _log.warn(`Failed to load ${file}: ${e}`);
       }
     }
   }
@@ -717,10 +720,10 @@ export class DistillationManager {
       if (typeof client.generate === "function") return client.generate(prompt) as string;
       if (typeof client.complete === "function") return client.complete(prompt) as string;
 
-      console.warn("LLM client interface not recognized");
+      _log.warn("LLM client interface not recognized");
       return this._simpleDistill(prompt, DistillationTemplate.SUMMARY);
     } catch (e) {
-      console.error(`LLM call failed: ${e}`);
+      _log.error(`LLM call failed: ${e}`);
       return this._simpleDistill(prompt, DistillationTemplate.SUMMARY);
     }
   }

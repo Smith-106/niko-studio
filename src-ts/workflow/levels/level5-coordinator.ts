@@ -23,6 +23,9 @@ import { Level2Lite } from './level2-lite.js';
 import { Level3Standard } from './level3-standard.js';
 import { Level4Brainstorm } from './level4-brainstorm.js';
 import { ContentType, SessionManager } from '../session/session-manager.js';
+import { createLogger } from '../../logger/index.js';
+
+const _log = createLogger('workflow-level5');
 
 // ============================================================
 // Minimal SessionManager interface (not yet migrated)
@@ -766,7 +769,7 @@ export class Level5Coordinator {
       await mkdir(this.persistDir, { recursive: true });
       await writeFile(filePath, JSON.stringify(payload, null, 2), 'utf-8');
     } catch (e) {
-      console.warn(`Failed to persist state to file: ${e}`);
+      _log.warn(`Failed to persist state to file: ${e}`);
     }
 
     try {
@@ -776,7 +779,7 @@ export class Level5Coordinator {
         JSON.stringify(payload, null, 2),
       );
     } catch (exc) {
-      console.warn(`SessionManager 状态持久化失败: ${exc}`);
+      _log.warn(`SessionManager 状态持久化失败: ${exc}`);
     }
 
     return coordinatorState.sessionId;
@@ -793,7 +796,7 @@ export class Level5Coordinator {
         return coordinatorStateFromDict(JSON.parse(payload));
       }
     } catch (exc) {
-      console.warn(`SessionManager 状态恢复失败: ${exc}`);
+      _log.warn(`SessionManager 状态恢复失败: ${exc}`);
     }
 
     // Fallback to file

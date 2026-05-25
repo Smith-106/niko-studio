@@ -12,6 +12,10 @@
  * Each dimension classifies and processes content specific to its domain.
  */
 
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("sixd");
+
 /** Six memory dimensions for content classification. */
 export enum DimensionType {
   TIMELINE = "timeline", // Event timeline
@@ -524,7 +528,7 @@ export class DimensionRouter {
       [DimensionType.PREFERENCE, new PreferenceProcessor()],
       [DimensionType.EXPERIENCE, new ExperienceProcessor()],
     ]);
-    console.log("DimensionRouter initialized with all processors");
+    _log.info("DimensionRouter initialized with all processors");
   }
 
   /** Get a specific dimension processor. */

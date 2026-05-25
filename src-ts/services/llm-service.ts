@@ -15,6 +15,9 @@
 
 import type { LLMService, LLMProvider, LLMRequest, LLMResponse, StreamChunk } from '../protocols/llm';
 
+import { createLogger } from "../logger/index.js";
+const _log = createLogger("svc-llm");
+
 /**
  * Model tier for complexity-based routing
  */
@@ -212,7 +215,7 @@ export class LLMServiceImpl implements LLMService {
               );
             }
 
-            console.warn(
+            _log.warn(
               `${operationName} failed (attempt ${attempt + 1}/${this.retryConfig.maxRetries + 1}), ` +
               `retrying in ${delay}ms: ${error.message}`
             );
@@ -330,7 +333,11 @@ export class LLMServiceImpl implements LLMService {
   }
 
   /**
-   * Stream text response
+   * Stream text response with retry on transient errors.
+   *
+   * On retryable errors (network timeout, 429, 5xx), the stream is
+   * reconnected from the beginning. Non-retryable errors (4xx except 429)
+   * fail immediately.
    */
   async *stream(
     prompt: string,
@@ -343,14 +350,45 @@ export class LLMServiceImpl implements LLMService {
   ): AsyncIterableIterator<StreamChunk> {
     const provider = this.getProvider();
     const modelName = this.resolveModel(options?.model, provider);
+    const maxStreamRetries = 2;
 
-    // Streaming doesn't use retry for simplicity
-    // (would need to buffer chunks and handle errors differently)
-    yield* provider.streamComplete(prompt, modelName, {
-      temperature: options?.temperature,
-      maxTokens: options?.maxTokens,
-      systemPrompt: options?.systemPrompt,
-    });
+    for (let attempt = 0; attempt <= maxStreamRetries; attempt++) {
+      try {
+        const stream = provider.streamComplete(prompt, modelName, {
+          temperature: options?.temperature,
+          maxTokens: options?.maxTokens,
+          systemPrompt: options?.systemPrompt,
+        });
+
+        for await (const chunk of stream) {
+          yield chunk;
+        }
+        return; // Stream completed successfully
+      } catch (error: any) {
+        const isRetryable =
+          error?.status === 429 ||
+          (error?.status >= 500 && error?.status < 600) ||
+          error?.code === 'ECONNRESET' ||
+          error?.code === 'ETIMEDOUT' ||
+          error?.code === 'ENOTFOUND' ||
+          error?.name === 'AbortError';
+
+        if (!isRetryable || attempt >= maxStreamRetries) {
+          throw error;
+        }
+
+        const delay = Math.min(
+          this.retryConfig.baseDelay * Math.pow(this.retryConfig.exponentialBase, attempt),
+          this.retryConfig.maxDelay
+        );
+
+        // For 429, respect retry-after header if present
+        const retryAfter = error?.headers?.['retry-after'];
+        const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : delay;
+
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
+    }
   }
 
   /**

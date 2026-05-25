@@ -11,6 +11,9 @@ import Database from 'better-sqlite3';
 import { join, dirname } from 'node:path';
 import { mkdirSync, existsSync } from 'node:fs';
 
+import { createLogger } from "../logger/index.js";
+const _log = createLogger("svc-indexing");
+
 /**
  * Search result from the indexing service
  */
@@ -160,7 +163,7 @@ export class IndexingService {
     insertStmt.run(docId, docId, sourceType, content, embeddingBytes, Date.now() / 1000);
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(4);
-    console.log(`Indexed document ${docId} in ${elapsed}s`);
+    _log.info(`Indexed document ${docId} in ${elapsed}s`);
   }
 
   /**

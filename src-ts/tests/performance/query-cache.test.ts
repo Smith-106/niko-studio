@@ -26,18 +26,7 @@
  *   after the delete.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-// Mock async-lock: the source imports { Lock } but the actual module exports itself
-// as the constructor. Provide a shim so the test can instantiate QueryEmbeddingCache.
-vi.mock('async-lock', () => {
-  class Lock {
-    async acquire(): Promise<() => void> {
-      return () => {};
-    }
-  }
-  return { Lock };
-});
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import {
   QueryEmbeddingCache,

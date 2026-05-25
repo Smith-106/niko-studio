@@ -11,6 +11,10 @@
  *   logger.error('Gateway error', { error: err.message, stack: err.stack });
  */
 
+import { JsonlFileTransport } from './jsonl-file-transport.js';
+
+export { JsonlFileTransport } from './jsonl-file-transport.js';
+
 export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
@@ -49,11 +53,17 @@ export class StructuredLogger implements Logger {
   private readonly _level: LogLevel;
   private readonly _module: string;
   private readonly _jsonOutput: boolean;
+  private _transports: JsonlFileTransport[] = [];
 
   constructor(level?: LogLevel, module?: string) {
     this._level = level ?? parseLevel(process.env.LOG_LEVEL);
     this._module = module ?? 'gateway';
     this._jsonOutput = (process.env.LOG_FORMAT ?? 'json').toLowerCase() === 'json';
+  }
+
+  /** Add a file transport for persistent JSONL logging. */
+  addTransport(transport: JsonlFileTransport): void {
+    this._transports.push(transport);
   }
 
   debug(message: string, meta?: Record<string, unknown>): void {
@@ -80,16 +90,22 @@ export class StructuredLogger implements Logger {
   private _log(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
     if (level < this._level) return;
 
+    const entry: Record<string, unknown> = {
+      timestamp: new Date().toISOString(),
+      level: LEVEL_NAMES[level],
+      module: this._module,
+      message,
+    };
+    if (meta) {
+      Object.assign(entry, meta);
+    }
+
+    // Write to all file transports
+    for (const transport of this._transports) {
+      transport.write(entry);
+    }
+
     if (this._jsonOutput) {
-      const entry: Record<string, unknown> = {
-        timestamp: new Date().toISOString(),
-        level: LEVEL_NAMES[level],
-        module: this._module,
-        message,
-      };
-      if (meta) {
-        Object.assign(entry, meta);
-      }
       const output = JSON.stringify(entry);
 
       if (level >= LogLevel.ERROR) {

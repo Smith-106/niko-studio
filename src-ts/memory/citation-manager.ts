@@ -8,6 +8,9 @@
 import { createHash, randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import { createLogger } from "../logger/index.js";
+
+const _log = createLogger("citation");
 
 // ---------------------------------------------------------------------------
 // Types (mirroring SearchResultLocation from vector-search)
@@ -309,7 +312,7 @@ export class CitationManager {
     fs.mkdirSync(this.citationsDir, { recursive: true });
     this._memoryManager = memoryManager ?? null;
     this._transientTtl = transientTtl;
-    console.log(`CitationManager initialized at ${this.citationsDir}`);
+    _log.info(`CitationManager initialized at ${this.citationsDir}`);
   }
 
   /** Set the MemoryManager for integration. */
@@ -461,12 +464,12 @@ export class CitationManager {
   ): PersistedCitation | null {
     const transient = this._transientCache.get(transientId);
     if (!transient) {
-      console.warn(`Transient citation not found: ${transientId}`);
+      _log.warn(`Transient citation not found: ${transientId}`);
       return null;
     }
 
     if (transient.isExpired()) {
-      console.warn(`Transient citation expired: ${transientId}`);
+      _log.warn(`Transient citation expired: ${transientId}`);
       this._transientCache.delete(transientId);
       return null;
     }
@@ -495,7 +498,7 @@ export class CitationManager {
     this._saveCitation(persisted);
     this._transientCache.delete(transientId);
 
-    console.log(`Persisted citation: ${transientId}`);
+    _log.info(`Persisted citation: ${transientId}`);
     return persisted;
   }
 
@@ -529,7 +532,7 @@ export class CitationManager {
     });
 
     this._saveCitation(persisted);
-    console.log(`Made citation: ${transient.citationId}`);
+    _log.info(`Made citation: ${transient.citationId}`);
     return persisted;
   }
 
@@ -547,7 +550,7 @@ export class CitationManager {
   verifyCitationDetailed(citationId: string): VerificationResult {
     const citation = this.getCitation(citationId);
     if (!citation) {
-      console.warn(`Citation not found for verification: ${citationId}`);
+      _log.warn(`Citation not found for verification: ${citationId}`);
       return { valid: false, error: "Citation not found" };
     }
 
@@ -567,7 +570,7 @@ export class CitationManager {
       citation.verifiedAt = new Date().toISOString();
       this._saveCitation(citation);
     } else {
-      console.warn(
+      _log.warn(
         `Citation verification failed: ${citationId} (expected=${citation.sourceHash}, got=${currentHash})`,
       );
     }
@@ -598,7 +601,7 @@ export class CitationManager {
 
       return citation;
     } catch (e) {
-      console.warn(`Failed to load citation ${citationId}: ${e}`);
+      _log.warn(`Failed to load citation ${citationId}: ${e}`);
       return null;
     }
   }
@@ -698,7 +701,7 @@ export class CitationManager {
     }
 
     if (deletedIds.length > 0) {
-      console.log(`GC cleaned ${deletedIds.length} citations (dryRun=${dryRun})`);
+      _log.info(`GC cleaned ${deletedIds.length} citations (dryRun=${dryRun})`);
     }
 
     return deletedIds;
@@ -767,13 +770,13 @@ export class CitationManager {
     contextChars: number = 100,
   ): TransientCitation | null {
     if (!this._memoryManager) {
-      console.warn("MemoryManager not configured");
+      _log.warn("MemoryManager not configured");
       return null;
     }
 
     const entry = this._memoryManager.get(memoryId);
     if (!entry) {
-      console.warn(`Memory not found: ${memoryId}`);
+      _log.warn(`Memory not found: ${memoryId}`);
       return null;
     }
 
