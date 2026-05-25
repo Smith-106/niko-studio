@@ -16,9 +16,12 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { performance } from 'node:perf_hooks'
 
+import { createLogger } from '../logger/index.js'
 import { GraphEngine } from '../graph/graph-engine'
 import { UnifiedMemoryEngine } from '../memory/unified-memory'
 import { RerankerFactory } from '../services/reranker/factory'
+
+const _log = createLogger('iterative-retriever')
 import type { RankedDocument } from '../services/reranker/models'
 
 import { rrfMerge, heatDecayScore, type RrfSource, DEFAULT_RRF_K } from './utils/rrf-fusion'
@@ -277,7 +280,7 @@ export class IterativeRetriever {
         reranked = await this.rerankCandidates(query, candidates, activeProfile.rerank.topK)
       } catch (exc) {
         rerankFallback = true
-        console.warn('Rerank failed, fallback to original order:', exc)
+        _log.warn('Rerank failed, fallback to original order', { detail: exc })
         reranked = candidates
       }
     }
@@ -531,7 +534,7 @@ export class IterativeRetriever {
       ])
       response = result
     } catch (exc) {
-      console.warn('Elasticsearch route failed, fallback to legacy search:', exc)
+      _log.warn('Elasticsearch route failed, fallback to legacy search', { detail: exc })
       return []
     }
 
@@ -1040,7 +1043,7 @@ export class IterativeRetriever {
           return null
       }
     } catch (exc) {
-      console.warn(`Failed to resolve reference @${contextType}:${refValue}:`, exc)
+      _log.warn(`Failed to resolve reference @${contextType}:${refValue}`, { detail: exc })
       return null
     }
   }

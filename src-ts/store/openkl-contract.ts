@@ -36,6 +36,10 @@ import { join, dirname, basename, extname, relative } from 'node:path';
 import { homedir, platform } from 'node:os';
 import { createHash } from 'node:crypto';
 
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('store-contract');
+
 // ---------------------------------------------------------------------------
 // OpenKLPaths
 // ---------------------------------------------------------------------------
@@ -200,7 +204,7 @@ export class OpenKLContract {
     this._ensureStructure();
     this._loadMappings();
 
-    console.info(`OpenKL contract initialized at: ${this.paths.basePath}`);
+    _log.info(`OpenKL contract initialized`, { basePath: this.paths.basePath });
   }
 
   // -----------------------------------------------------------------------
@@ -236,12 +240,12 @@ export class OpenKLContract {
           this._mappings.set(mapping.docId, mapping);
         } catch (e) {
           if (e instanceof SyntaxError) {
-            console.warn(`Invalid mapping line: ${e.message}`);
+            _log.warn(`Invalid mapping line`, { detail: e.message });
           }
         }
       }
     } catch (e) {
-      console.error(`Failed to load mappings: ${e}`);
+      _log.error(`Failed to load mappings`, { detail: String(e) });
     }
   }
 
@@ -253,7 +257,7 @@ export class OpenKLContract {
       );
       writeFileSync(this.paths.mappingFile, lines.join(''), 'utf-8');
     } catch (e) {
-      console.error(`Failed to save mappings: ${e}`);
+      _log.error(`Failed to save mappings`, { detail: String(e) });
     }
   }
 
@@ -263,7 +267,7 @@ export class OpenKLContract {
       const line = JSON.stringify(mapping.toDict()) + '\n';
       appendFileSync(this.paths.mappingFile, line, 'utf-8');
     } catch (e) {
-      console.error(`Failed to append mapping: ${e}`);
+      _log.error(`Failed to append mapping`, { detail: String(e) });
     }
   }
 
@@ -376,7 +380,7 @@ format: ok.md
     this._mappings.set(docId, mapping);
     this._appendMapping(mapping);
 
-    console.info(`Ingested document: ${docId} from ${sourcePath}`);
+    _log.info(`Ingested document`, { docId, sourcePath });
     return docId;
   }
 
@@ -439,7 +443,7 @@ format: ok.md
     this._mappings.set(docId, mapping);
     this._appendMapping(mapping);
 
-    console.info(`Ingested content as document: ${docId}`);
+    _log.info(`Ingested content as document: ${docId}`);
     return docId;
   }
 
@@ -456,7 +460,7 @@ format: ok.md
 
     const docPath = join(this.paths.basePath, mapping.path);
     if (!existsSync(docPath)) {
-      console.warn(`Document file missing: ${docPath}`);
+      _log.warn(`Document file missing: ${docPath}`);
       return null;
     }
 
@@ -505,7 +509,7 @@ format: ok.md
     this._mappings.delete(docId);
     this._saveMappings();
 
-    console.info(`Deleted document: ${docId}`);
+    _log.info(`Deleted document: ${docId}`);
     return true;
   }
 
@@ -610,7 +614,7 @@ metadata: ${JSON.stringify(metadata ?? {})}
       }
     }
 
-    console.info(`Created memory: ${memoryId}`);
+    _log.info(`Created memory: ${memoryId}`);
     return memoryPath;
   }
 

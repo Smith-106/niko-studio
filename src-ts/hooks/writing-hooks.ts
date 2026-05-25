@@ -4,6 +4,10 @@
  * Provides lifecycle hooks for writing operations with pre/post/error handling.
  */
 
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('writing-hooks');
+
 // ============================================================
 // Enums
 // ============================================================
@@ -327,7 +331,7 @@ function createErrorLoggingHook(): Hook {
     hookType: HookType.ON_ERROR,
     priority: HookPriority.CRITICAL,
     func: (ctx: HookContext): HookResult => {
-      if (ctx.error) console.error(`Writing error in skill=${ctx.skillId}, agent=${ctx.agentId}: ${ctx.error}`);
+      if (ctx.error) _log.error(`Writing error in skill=${ctx.skillId}, agent=${ctx.agentId}`, { detail: ctx.error });
       return hookOk();
     },
   });

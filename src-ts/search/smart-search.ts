@@ -13,6 +13,10 @@
 
 import { execFile } from 'node:child_process';
 
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('smart-search');
+
 import type { SearchInterface } from '../protocols/search';
 import type { EmbeddingService } from '../protocols/embedding';
 
@@ -337,13 +341,13 @@ export class SmartSearch implements SearchInterface {
     try {
       fuzzyResults = await this.fuzzySearch(query, { topK: topK * 2, typeFilter });
     } catch (error) {
-      console.error('Fuzzy search failed:', error);
+      _log.error('Fuzzy search failed', { detail: error });
     }
 
     try {
       semanticResults = await this.semanticSearch(query, { topK: topK * 2, typeFilter });
     } catch (error) {
-      console.error('Semantic search failed:', error);
+      _log.error('Semantic search failed', { detail: error });
     }
 
     // RRF Fusion

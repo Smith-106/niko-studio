@@ -360,7 +360,7 @@ export class GraphManager {
     // Per-instance override via setVectorSearch() takes precedence at call time.
     this._vectorSearch = defaultEntityVectorSearch;
 
-    console.info(`GraphManager initialized: ${this.db_path}`);
+    log.info(`GraphManager initialized`, { dbPath: this.db_path });
   }
 
   // -----------------------------------------------------------------------
@@ -981,7 +981,7 @@ export class GraphManager {
     // 写操作后清除该实体的属性缓存，确保后续读取拿到最新数据
     this._propsCache.delete(entity.id);
 
-    console.info(`Created entity: ${entity.type}/${entity.name} (${entity.id})`);
+    log.info(`Created entity`, { type: entity.type, name: entity.name, id: entity.id });
 
     // Fire-and-forget semantic embedding (no await — keeps CRUD synchronous).
     this._embedEntity(entity);
@@ -1015,7 +1015,7 @@ export class GraphManager {
       // 写操作后清除该实体的属性缓存，确保后续读取拿到最新数据
       this._propsCache.delete(entity.id);
 
-      console.info(`Updated entity: ${entity.id}`);
+      log.info(`Updated entity`, { id: entity.id });
       // Re-embed on update so semantic search reflects the new content.
       this._embedEntity(entity);
     }
@@ -1039,7 +1039,7 @@ export class GraphManager {
       // 删除操作后清除该实体及其关联关系的属性缓存
       this._propsCache.delete(entityId);
 
-      console.info(`Deleted entity: ${entityId}`);
+      log.info(`Deleted entity: ${entityId}`);
       // Drop the corresponding embedding so stale vectors don't surface.
       this._removeEntityEmbedding(entityId);
     }
@@ -1077,7 +1077,7 @@ export class GraphManager {
     // 写操作后清除该关系的属性缓存
     this._propsCache.delete(relationship.id);
 
-    console.info(
+    log.info(
       `Created relationship: ${relationship.source_id} -[${relationship.type}]-> ${relationship.target_id}`
     );
     return relationship.id;
@@ -1117,7 +1117,7 @@ export class GraphManager {
       // 删除操作后清除该关系的属性缓存
       this._propsCache.delete(relationshipId);
 
-      console.info(`Deleted relationship: ${relationshipId}`);
+      log.info(`Deleted relationship: ${relationshipId}`);
     }
     return success;
   }
@@ -1326,7 +1326,7 @@ export class GraphManager {
       this._conn.close();
       this._conn = null;
       this._propsCache.clear();
-      console.info('GraphManager closed');
+      log.info('GraphManager closed');
     }
   }
 

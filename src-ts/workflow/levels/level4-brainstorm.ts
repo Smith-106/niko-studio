@@ -13,6 +13,9 @@
 import type { BaseState } from '../state.js';
 import { AgentType } from '../../agents/base.js';
 import type { IServiceContainer } from './level1-rapid.js';
+import { createLogger } from '../../logger/index.js';
+
+const _log = createLogger('workflow-brainstorm');
 
 // ============================================================
 // BrainstormRole enum
@@ -309,7 +312,7 @@ export class Level4Brainstorm {
       state.score = (verification.score as number) ?? 85;
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      console.error(`Brainstorm execution failed: ${errorMsg}`);
+      _log.error(`Brainstorm execution failed`, { detail: errorMsg });
       state.errors = [...(state.errors ?? []), `头脑风暴执行失败: ${errorMsg}`];
       state.decision = 'FAILED';
     }
@@ -354,10 +357,10 @@ export class Level4Brainstorm {
       try {
         const analysis = this._analyzeAsRole(role, topic, context);
         analyses.push(analysis);
-        console.log(`Role ${getRoleDisplayName(role)} analysis completed`);
+        _log.info(`Role analysis completed`, { role: getRoleDisplayName(role) });
       } catch (e) {
         const errorMsg = e instanceof Error ? e.message : String(e);
-        console.warn(`Role ${getRoleDisplayName(role)} analysis failed: ${errorMsg}`);
+        _log.warn(`Role analysis failed`, { role: getRoleDisplayName(role), detail: errorMsg });
         analyses.push({
           role,
           analysisContent: `分析失败: ${errorMsg}`,
@@ -414,7 +417,7 @@ export class Level4Brainstorm {
         const reasonMsg = result.reason instanceof Error
           ? result.reason.message
           : String(result.reason);
-        console.warn(`Role ${getRoleDisplayName(role)} analysis failed: ${reasonMsg}`);
+        _log.warn(`Role ${getRoleDisplayName(role)} analysis failed`, { detail: reasonMsg });
         analyses.push({
           role,
           analysisContent: `分析失败: ${reasonMsg}`,
@@ -555,7 +558,7 @@ export class Level4Brainstorm {
       return this._parseAnalysisResult(role, content);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      console.error(`Analysis failed for role ${getRoleDisplayName(role)}: ${errorMsg}`);
+      _log.error(`Analysis failed for role ${getRoleDisplayName(role)}`, { detail: errorMsg });
       return {
         role,
         analysisContent: `分析过程中出错: ${errorMsg}`,
@@ -600,7 +603,7 @@ export class Level4Brainstorm {
       return this._analyzeAsRole(role, topic, context);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      console.error(`Analysis failed for role ${getRoleDisplayName(role)}: ${errorMsg}`);
+      _log.error(`Analysis failed for role ${getRoleDisplayName(role)}`, { detail: errorMsg });
       return {
         role,
         analysisContent: `分析过程中出错: ${errorMsg}`,

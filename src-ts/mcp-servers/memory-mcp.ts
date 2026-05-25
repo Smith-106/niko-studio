@@ -19,6 +19,10 @@ import * as path from "path";
 import * as crypto from "crypto";
 import { homedir } from "node:os";
 
+import { createLogger } from '../logger/index.js';
+
+const _log = createLogger('mcp-server-memory');
+
 // ============================================================
 // Types
 // ============================================================
@@ -96,7 +100,7 @@ export class KnowledgeGraphStore {
     // Auto-migrate from legacy JSON if it exists
     this._migrateFromJson();
 
-    console.info(`KnowledgeGraphStore initialized: ${this.dbPath}`);
+    _log.info(`KnowledgeGraphStore initialized: ${this.dbPath}`);
   }
 
   // ---------- Schema ----------
@@ -199,9 +203,9 @@ export class KnowledgeGraphStore {
 
       // Rename JSON to .bak (rollback point)
       fs.renameSync(jsonPath, bakPath);
-      console.info(`Migrated ${jsonPath} → ${this.dbPath} (backup: ${bakPath})`);
+      _log.info(`Migrated ${jsonPath} → ${this.dbPath} (backup: ${bakPath})`);
     } catch (err) {
-      console.error("JSON migration failed:", err);
+      _log.error("JSON migration failed:", { error: String(err) });
     }
   }
 
