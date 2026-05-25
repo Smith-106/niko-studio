@@ -13,6 +13,7 @@
 
 import * as fs from 'fs'
 import * as path from 'path'
+import * as os from 'os'
 import { EventEmitter } from 'events'
 import { createLogger } from '../logger/index.js'
 
@@ -74,6 +75,7 @@ export interface MemoryConfig {
   cacheMaxSize: number
   chunkSize: number
   chunkOverlap: number
+  backend: 'sqlite' | 'fs'
 }
 
 export interface WorkflowConfig {
@@ -88,6 +90,7 @@ export interface WorkflowConfig {
   degradeOnError: boolean
   criticalGateAlwaysOn: boolean
   qualityPhaseTimeoutSeconds: number
+  persistence: 'sqlite' | 'memory'
 }
 
 export interface GraphConfig {
@@ -220,6 +223,7 @@ function defaultMemoryConfig(): MemoryConfig {
     cacheMaxSize: 2000,
     chunkSize: 1000,
     chunkOverlap: 200,
+    backend: 'sqlite',
   }
 }
 
@@ -236,6 +240,7 @@ function defaultWorkflowConfig(): WorkflowConfig {
     degradeOnError: true,
     criticalGateAlwaysOn: true,
     qualityPhaseTimeoutSeconds: 30,
+    persistence: 'memory',
   }
 }
 
@@ -543,10 +548,13 @@ export class ConfigManager extends EventEmitter {
     // 1. Defaults
     this.config = defaultAppConfig()
 
-    // 2. Environment variables
+    // 2. Global config (~/.niko/config.yaml or ~/.niko/config.json)
+    this.loadGlobalConfig()
+
+    // 3. Environment variables
     this.loadFromEnv()
 
-    // 3. Config file
+    // 4. Project config file
     if (this.configPath) {
       if (fs.existsSync(this.configPath)) {
         this.loadFromFile()
@@ -555,8 +563,30 @@ export class ConfigManager extends EventEmitter {
       }
     }
 
-    // 4. Runtime overrides
+    // 5. Runtime overrides
     this.applyOverrides()
+  }
+
+  private loadGlobalConfig(): void {
+    const homeDir = os.homedir()
+    const globalPaths = [
+      path.join(homeDir, '.niko', 'config.yaml'),
+      path.join(homeDir, '.niko', 'config.json'),
+    ]
+    for (const gPath of globalPaths) {
+      if (fs.existsSync(gPath)) {
+        try {
+          const content = fs.readFileSync(gPath, 'utf-8')
+          const data = gPath.endsWith('.json')
+            ? JSON.parse(content) as Record<string, unknown>
+            : parseSimpleYaml(content)
+          this.applyDictToConfig(data)
+          return
+        } catch {
+          // skip malformed global config
+        }
+      }
+    }
   }
 
   private loadFromEnv(): void {
@@ -592,6 +622,10 @@ export class ConfigManager extends EventEmitter {
     // Memory
     if (env.NIKO_VECTOR_DB_PATH) this.config.memory.vectorDbPath = env.NIKO_VECTOR_DB_PATH
     if (env.NIKO_EMBEDDING_MODEL) this.config.memory.embeddingModel = env.NIKO_EMBEDDING_MODEL
+    if (env.NIKO_MEMORY_BACKEND) {
+      const v = env.NIKO_MEMORY_BACKEND.toLowerCase();
+      if (v === 'sqlite' || v === 'fs') this.config.memory.backend = v;
+    }
 
     // Graph
     if (env.NIKO_GRAPH_DB_PATH) this.config.graph.dbPath = env.NIKO_GRAPH_DB_PATH
@@ -604,6 +638,10 @@ export class ConfigManager extends EventEmitter {
     if (env.NIKO_WORKFLOW_CRITICAL_GATE_ALWAYS_ON) this.config.workflow.criticalGateAlwaysOn = parseBool(env.NIKO_WORKFLOW_CRITICAL_GATE_ALWAYS_ON)
     if (env.NIKO_WORKFLOW_QUALITY_PHASE_TIMEOUT_SECONDS) {
       this.config.workflow.qualityPhaseTimeoutSeconds = parseInt(env.NIKO_WORKFLOW_QUALITY_PHASE_TIMEOUT_SECONDS, 10)
+    }
+    if (env.NIKO_WORKFLOW_PERSISTENCE) {
+      const v = env.NIKO_WORKFLOW_PERSISTENCE.toLowerCase();
+      if (v === 'sqlite' || v === 'memory') this.config.workflow.persistence = v;
     }
 
     // Gateway
@@ -1023,4 +1061,41 @@ export function ensureEnvironment(strict: boolean = false): void {
   } else {
     throw new Error(msg)
   }
+}
+
+/**
+ * Validate the current AppConfig, returning issues grouped by severity.
+ * Pattern learned from maestro-flow: runtime validation without Zod dependency.
+ */
+export function validateConfig(): { errors: string[]; warnings: string[] } {
+  const config = getConfig()
+  const errors: string[] = []
+  const warnings: string[] = []
+
+  // Agent
+  if (config.agent.maxCostPerRequest < 0) errors.push('agent.maxCostPerRequest must be >= 0')
+  if (config.agent.maxCostPerSession < 0) errors.push('agent.maxCostPerSession must be >= 0')
+  if (config.agent.maxTokensPerRequest < 1) errors.push('agent.maxTokensPerRequest must be >= 1')
+
+  // Memory
+  if (config.memory.backend !== 'sqlite' && config.memory.backend !== 'fs') {
+    errors.push('memory.backend must be "sqlite" or "fs"')
+  }
+  if (config.memory.cacheMaxSize < 0) warnings.push('memory.cacheMaxSize < 0 may cause cache issues')
+  if (config.memory.chunkSize < 100) warnings.push('memory.chunkSize < 100 may produce poor chunks')
+
+  // Workflow
+  if (config.workflow.persistence !== 'sqlite' && config.workflow.persistence !== 'memory') {
+    errors.push('workflow.persistence must be "sqlite" or "memory"')
+  }
+  if (config.workflow.sessionTimeout < 60) warnings.push('workflow.sessionTimeout < 60s may cause premature expiry')
+
+  // Gateway
+  if (config.gateway.port < 1 || config.gateway.port > 65535) errors.push('gateway.port must be 1-65535')
+
+  // Graph
+  if (config.graph.maxConnections < 1) errors.push('graph.maxConnections must be >= 1')
+  if (config.graph.relationDepth < 1) warnings.push('graph.relationDepth < 1 disables traversal')
+
+  return { errors, warnings }
 }

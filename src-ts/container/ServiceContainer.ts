@@ -362,6 +362,18 @@ export class ServiceContainer {
     }
 
     this.initialized = true;
+
+    // Hydrate WorkflowEngine state from persistent store if available
+    try {
+      const wfInstance = this.workflow;
+      if ('hydrateFromStore' in wfInstance && typeof wfInstance.hydrateFromStore === 'function') {
+        await wfInstance.hydrateFromStore();
+        log.info('WorkflowEngine state hydrated from store');
+      }
+    } catch (error) {
+      log.warn('WorkflowEngine hydration skipped', { error: String(error) });
+    }
+
     const elapsed = (Date.now() - startTime) / 1000;
     log.info(`Engines pre-warmed in ${elapsed.toFixed(2)}s`);
   }
@@ -374,6 +386,19 @@ export class ServiceContainer {
     this.initPromises.clear();
     this.initialized = false;
     this._initPromise = null;
+  }
+
+  /** Graceful shutdown: flush WorkflowEngine state to persistent store. */
+  async shutdown(): Promise<void> {
+    try {
+      const wfInstance = this.workflow;
+      if ('flushToStore' in wfInstance && typeof wfInstance.flushToStore === 'function') {
+        await wfInstance.flushToStore();
+        log.info('WorkflowEngine state flushed to store');
+      }
+    } catch (error) {
+      log.warn('WorkflowEngine flush skipped', { error: String(error) });
+    }
   }
 }
 

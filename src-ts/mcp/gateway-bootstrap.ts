@@ -4,6 +4,10 @@ import { initializeGatewayControlPlane, prewarmGatewayControlPlane } from '../co
 import { resolveGatewayHostPort } from './config';
 import { createGatewayRequestHandler } from './gateway-request-handler';
 import { gatewayRoutes } from './routes';
+import { createLogger } from '../logger/index.js';
+import { initConfig, validateConfig, ensureEnvironment } from '../config/index.js';
+
+const _log = createLogger('mcp-bootstrap');
 
 export interface GatewayServerStartOptions {
   host?: string;
@@ -27,18 +31,14 @@ export function resolveGatewayServerStartOptions(
 }
 
 function logGatewayStartup(host: string, port: number): void {
-  console.log(`
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║     NIKO Studio Gateway (Node.js)                           ║
-    ║     http://${host}:${port}                                    ║
-    ╚═══════════════════════════════════════════════════════════════╝
-    `);
-  console.log(`  Health:  http://localhost:${port}/health`);
-  console.log(`  Memory:  http://localhost:${port}/memory/search`);
-  console.log(`  Graph:   http://localhost:${port}/graph/query`);
-  console.log(`  Skills:  http://localhost:${port}/skills/list`);
-  console.log(`  Workflow: http://localhost:${port}/workflow/route`);
-  console.log('');
+  _log.info('NIKO Studio Gateway started', { host, port });
+  _log.info('Endpoints available', {
+    health: `http://localhost:${port}/health`,
+    memory: `http://localhost:${port}/memory/search`,
+    graph: `http://localhost:${port}/graph/query`,
+    skills: `http://localhost:${port}/skills/list`,
+    workflow: `http://localhost:${port}/workflow/route`,
+  });
 }
 
 function listen(server: Server, host: string, port: number): Promise<void> {
@@ -50,6 +50,17 @@ function listen(server: Server, host: string, port: number): Promise<void> {
 export async function startGatewayServer(
   options: GatewayServerStartOptions = {},
 ): Promise<Server> {
+  // Initialize config from project file + validate
+  initConfig();
+  const { errors, warnings } = validateConfig();
+  if (errors.length > 0) {
+    _log.error('Config validation failed', { errors });
+    throw new Error(`Config validation errors:\n- ${errors.join('\n- ')}`);
+  }
+  for (const w of warnings) {
+    _log.warn('Config warning', { warning: w });
+  }
+
   const { host, port } = resolveGatewayServerStartOptions(options);
   const { container } = initializeGatewayControlPlane();
 

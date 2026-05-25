@@ -12,6 +12,10 @@ import { createHash } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { createLogger } from "../logger/index.js";
+import type { IMemoryStore, MemorySearchQuery, MemorySearchResult } from "./imemory-store.js";
+import { createMemoryStore } from "./memory-store-factory.js";
+const _log = createLogger("memory");
 
 // ---------------------------------------------------------------------------
 // Simple YAML front-matter utilities (no external dependency)
@@ -67,7 +71,7 @@ function yamlSafeLoad(text: string): Record<string, any> {
       try {
         val = JSON.parse(val);
       } catch {
-        // keep as string
+        // JSON parse failed — keep as raw string
       }
       currentArray.push(val);
       continue;
@@ -256,8 +260,9 @@ export class MemoryManager {
   topicsDir: string;
   indexPath: string;
   private _index: MemoryIndex;
+  private _store: IMemoryStore | null = null;
 
-  constructor(basePath: string = ".writing") {
+  constructor(basePath: string = ".writing", store?: IMemoryStore) {
     this.basePath = basePath;
     this.memoriesDir = path.join(basePath, "memories");
     this.byDateDir = path.join(this.memoriesDir, "by_date");
@@ -266,6 +271,21 @@ export class MemoryManager {
 
     this._ensureDirectories();
     this._index = this._loadIndex();
+    if (store) this._store = store;
+  }
+
+  /** Get the underlying store (if injected). */
+  getStore(): IMemoryStore | null {
+    return this._store;
+  }
+
+  /** Initialize the default store based on environment capabilities. */
+  async initStore(options?: { preferBackend?: 'sqlite' | 'fs' }): Promise<void> {
+    if (this._store) return;
+    this._store = await createMemoryStore({
+      basePath: this.memoriesDir,
+      preferBackend: options?.preferBackend,
+    });
   }
 
   private _ensureDirectories(): void {
@@ -279,7 +299,7 @@ export class MemoryManager {
       try {
         return JSON.parse(fs.readFileSync(this.indexPath, "utf-8"));
       } catch {
-        console.warn("Corrupted index, rebuilding...");
+        _log.warn("Corrupted index, rebuilding...");
         return this._rebuildIndex();
       }
     }
@@ -328,7 +348,7 @@ export class MemoryManager {
                 index.entities[entry.entityId].push(entry.id);
               }
             } catch (e) {
-              console.warn(`Failed to index ${memoryFile}: ${e}`);
+              _log.warn(`Failed to index ${memoryFile}: ${e}`);
             }
           }
         }
@@ -418,8 +438,20 @@ export class MemoryManager {
 
     this._saveIndex();
 
-    console.log(`Added memory: ${memoryId}`);
+    _log.info(`Added memory: ${memoryId}`);
+
+    // Dual-write to IMemoryStore (fire-and-forget)
+    this._syncToStore(entry);
+
     return entry;
+  }
+
+  /** Sync an entry to the underlying store (fire-and-forget). */
+  private _syncToStore(entry: MemoryEntry): void {
+    if (!this._store) return;
+    // Omit id via spread — store generates its own ID
+    const { id: _id, ...storeEntry } = entry;
+    this._store.add(storeEntry as Omit<MemoryEntry, 'id'>).catch(() => {});
   }
 
   private _createTopicLinks(entry: MemoryEntry, sourceFile: string): void {
@@ -448,7 +480,7 @@ export class MemoryManager {
         try {
           fs.writeFileSync(linkPath, fs.readFileSync(sourceFile, "utf-8"), "utf-8");
         } catch (e2) {
-          console.warn(`Failed to create topic link for ${topic}: ${e2}`);
+          _log.warn(`Failed to create topic link for ${topic}: ${e2}`);
         }
       }
     }
@@ -464,7 +496,7 @@ export class MemoryManager {
     const filePath = path.join(this.memoriesDir, relativePath);
 
     if (!fs.existsSync(filePath)) {
-      console.warn(`Memory file not found: ${filePath}`);
+      _log.warn(`Memory file not found: ${filePath}`);
       return null;
     }
 
@@ -546,7 +578,18 @@ export class MemoryManager {
     const filePath = path.join(this.memoriesDir, relativePath);
     fs.writeFileSync(filePath, entry.toYamlFrontmatter(), "utf-8");
 
-    console.log(`Updated memory: ${memoryId}`);
+    _log.info(`Updated memory: ${memoryId}`);
+
+    // Dual-write to IMemoryStore
+    if (this._store) {
+      this._store.update(memoryId, {
+        content: entry.content,
+        topics: entry.topics,
+        importance: entry.importance,
+        metadata: entry.metadata,
+      }).catch(() => {});
+    }
+
     return entry;
   }
 
@@ -581,7 +624,7 @@ export class MemoryManager {
     oldEntry.validUntil = new Date().toISOString();
     this.update(oldMemoryId, undefined, undefined, oldEntry.validUntil, undefined, { supersededBy: newEntry.id });
 
-    console.log(`Superseded ${oldMemoryId} with ${newEntry.id}`);
+    _log.info(`Superseded ${oldMemoryId} with ${newEntry.id}`);
     return newEntry;
   }
 
@@ -626,7 +669,13 @@ export class MemoryManager {
 
     this._saveIndex();
 
-    console.log(`Deleted memory: ${memoryId}`);
+    _log.info(`Deleted memory: ${memoryId}`);
+
+    // Dual-write: remove from IMemoryStore
+    if (this._store) {
+      this._store.delete(memoryId).catch(() => {});
+    }
+
     return true;
   }
 
@@ -678,7 +727,7 @@ export class MemoryManager {
         if (!includeSuperseded && entry.supersededBy) continue;
         entries.push(entry);
       } catch (e) {
-        console.warn(`Failed to read ${file}: ${e}`);
+        _log.warn(`Failed to read ${file}: ${e}`);
       }
     }
 
@@ -852,6 +901,37 @@ export class MemoryManager {
     results.sort((a, b) => b.importance - a.importance);
     return results;
   }
+
+  /** Async search via IMemoryStore (uses FTS5 when available). Falls back to sync search. */
+  async searchAsync(
+    query: string,
+    topics?: string[] | null,
+    entityId?: string | null,
+    limit: number = 20,
+  ): Promise<MemoryEntry[]> {
+    if (!this._store) return this.search(query, topics, entityId, limit);
+
+    try {
+      const result = await this._store.search({
+        query,
+        topics: topics ?? undefined,
+        entityId: entityId ?? undefined,
+        limit,
+      });
+
+      // Convert store results back to MemoryEntry via file system
+      const entries: MemoryEntry[] = [];
+      for (const mem of result.memories) {
+        if (mem.id in this._index.memories) {
+          const fileEntry = this.get(mem.id);
+          if (fileEntry) entries.push(fileEntry);
+        }
+      }
+      return entries;
+    } catch {
+      return this.search(query, topics, entityId, limit);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -912,7 +992,7 @@ export class MemoryManagerAdapter {
           );
         }
       } catch (e) {
-        console.warn(`Failed to index in vector store: ${e}`);
+        _log.warn(`Failed to index in vector store: ${e}`);
       }
     }
 
@@ -965,7 +1045,7 @@ export class MemoryManagerAdapter {
           }
         }
       } catch (e) {
-        console.warn(`Vector search failed: ${e}`);
+        _log.warn(`Vector search failed: ${e}`);
       }
     }
 
